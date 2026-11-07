@@ -34,25 +34,18 @@ fn cancel_status_refusal(
     props: &serde_json::Map<String, serde_json::Value>,
     now_s: f64,
 ) -> Option<medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus> {
-    if matches!(
-        property_string(props, "status"),
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    ) {
+    if super::machine::is_terminal_row(props) {
         return Some(
             medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Noop,
         );
     }
-    if matches!(property_string(props, "status"), "leased" | "running")
-        && property_f64(props, "lease_expires_at") >= now_s
-    {
+    if super::machine::holds_lease_row(props) && property_f64(props, "lease_expires_at") >= now_s {
         return Some(
             medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight,
         );
     }
-    if !matches!(
-        property_string(props, "status"),
-        "submitted" | "ready" | "leased" | "running"
-    ) {
+    // Every known live state is cancellable; only an unknown stored text is not.
+    if super::machine::stored_status(props).is_err() {
         return Some(
             medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable,
         );
@@ -75,10 +68,17 @@ pub fn cancel_requested(props: &serde_json::Map<String, serde_json::Value>) -> b
 fn stamp_cancel_request(
     props: &mut serde_json::Map<String, serde_json::Value>,
     now_ms: u64,
-) -> bool {
+) -> Result<bool, String> {
     if cancel_requested(props) {
-        return false;
+        return Ok(false);
     }
+    // W19/W20: RequestCancel keeps the live lease and its state; it stamps only.
+    let facts = super::machine::row_facts(props, now_ms as f64 / 1000.0, true);
+    super::machine::fire(
+        props,
+        medulla_work_types::work_item_machine::WorkItemEvent::RequestCancel,
+        &facts,
+    )?;
     props.insert(
         CANCEL_REQUESTED_AT_MS.into(),
         serde_json::Value::from(now_ms),
@@ -87,7 +87,7 @@ fn stamp_cancel_request(
         "updated_at".into(),
         serde_json::Value::from(now_ms as f64 / 1000.0),
     );
-    true
+    Ok(true)
 }
 
 /// Retire an expired lease whose cancel was requested: `cancelled`, never
@@ -132,10 +132,13 @@ fn apply_cancelled_work_item_props(
     let next_fencing_token = property_u64(props, "fencing_token")
         .checked_add(1)
         .ok_or_else(|| "CancelWorkItem fencing token overflow".to_string())?;
-    props.insert(
-        "status".into(),
-        serde_json::Value::String("cancelled".into()),
-    );
+    // W15/W16, or W17/W18: every caller has established that no lease is live.
+    let facts = super::machine::row_facts(props, now_s, false);
+    super::machine::fire(
+        props,
+        medulla_work_types::work_item_machine::WorkItemEvent::Cancel,
+        &facts,
+    )?;
     props.insert("completed_at".into(), serde_json::Value::from(now_s));
     props.insert("updated_at".into(), serde_json::Value::from(now_s));
     props.insert(
@@ -190,7 +193,7 @@ pub fn apply_cancel_work_item_row(
     if let Some(status) = cancel_status_refusal(&props, now_s) {
         if status
             == medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight
-            && stamp_cancel_request(&mut props, now_ms)
+            && stamp_cancel_request(&mut props, now_ms)?
         {
             write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
             return cancel_transition_result(
@@ -207,10 +210,6 @@ pub fn apply_cancel_work_item_row(
         return cancel_transition_result(unchanged_transition(status, Some(work_item_id)))
             .map(Some);
     }
-    // Phase-1 mirror: capture the pre-status (a cancellable non-terminal state)
-    // before the authority marks it cancelled.
-    #[cfg(feature = "statechart")]
-    let pre_status = property_string(&props, "status").to_string();
     let (next_epoch, next_fencing_token) =
         apply_cancelled_work_item_props(&mut props, reason_ref, now_s)?;
     development_lane::transition_work_item_terminal_hold(
@@ -230,15 +229,6 @@ pub fn apply_cancel_work_item_row(
         policies,
         crypto,
     )?;
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        &mut props,
-        work_item_id,
-        &pre_status,
-        medulla_store::work_item_statechart::EV_CANCEL,
-        serde_json::json!({ "cancellable": true }),
-        Some("cancelled"),
-    );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
     cancel_transition_result(
         medulla_protocol_types::result_contract::coordination::WorkItemTransition {
@@ -271,7 +261,7 @@ fn defer_lease_is_valid(
 ) -> bool {
     property_string(props, "tenant") == tenant
         && property_string(props, "lease_owner") == worker_id
-        && matches!(property_string(props, "status"), "leased" | "running")
+        && super::machine::holds_lease_row(props)
         && property_u64(props, "lease_epoch") == lease_epoch
         && property_u64(props, "fencing_token") == fencing_token
         && property_f64(props, "lease_expires_at") >= now_s
@@ -293,7 +283,16 @@ fn apply_deferred_work_item_props(
         .ok_or_else(|| "DeferWorkItem fencing token overflow".to_string())?;
     let attempts = property_u64(props, "attempt").saturating_sub(1);
     let defer_count = property_u64(props, "defer_count").saturating_add(1);
-    props.insert("status".into(), serde_json::Value::String("ready".into()));
+    // W21/W22 under the fence and live lease the caller validated.
+    let facts = medulla_work_types::work_item_machine::WorkItemFacts {
+        fence_matches: true,
+        ..super::machine::row_facts(props, now_s, true)
+    };
+    super::machine::fire(
+        props,
+        medulla_work_types::work_item_machine::WorkItemEvent::Defer,
+        &facts,
+    )?;
     props.insert(
         "next_retry_at".into(),
         serde_json::Value::from(next_retry_at_ms as f64 / 1000.0),
@@ -350,21 +349,8 @@ pub fn apply_defer_work_item_row(
         ))
         .map(Some);
     }
-    // Phase-1 mirror: capture the leased|running pre-status before the fenced
-    // lease is released back to `ready`.
-    #[cfg(feature = "statechart")]
-    let pre_status = property_string(&props, "status").to_string();
     let (next_epoch, next_fencing_token, attempts, defer_count) =
         apply_deferred_work_item_props(&mut props, reason_ref, next_retry_at_ms, now_s)?;
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        &mut props,
-        work_item_id,
-        &pre_status,
-        medulla_store::work_item_statechart::EV_DEFER,
-        serde_json::json!({ "fence_valid": true }),
-        Some("ready"),
-    );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
     deferral_result(
         medulla_protocol_types::result_contract::coordination::WorkItemDeferral {
@@ -476,11 +462,11 @@ mod tests {
             Some(medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight)
         );
         assert!(!cancel_requested(&props));
-        assert!(stamp_cancel_request(&mut props, 50_000));
+        assert!(stamp_cancel_request(&mut props, 50_000).unwrap());
         assert!(cancel_requested(&props));
         assert_eq!(property_u64(&props, CANCEL_REQUESTED_AT_MS), 50_000);
         assert!(
-            !stamp_cancel_request(&mut props, 60_000),
+            !stamp_cancel_request(&mut props, 60_000).unwrap(),
             "first stamp wins"
         );
         assert_eq!(property_u64(&props, CANCEL_REQUESTED_AT_MS), 50_000);

@@ -52,7 +52,7 @@ pub fn apply_renew_work_item_lease_row(
     let mut props = decode(&bytes)?;
     let valid = property_string(&props, "tenant") == tenant
         && property_string(&props, "lease_owner") == worker_id
-        && matches!(property_string(&props, "status"), "leased" | "running")
+        && super::machine::holds_lease_row(&props)
         && property_u64(&props, "lease_epoch") == lease_epoch
         && property_u64(&props, "fencing_token") == fencing_token
         && property_f64(&props, "lease_expires_at") >= now_ms as f64 / 1000.0;
@@ -62,26 +62,26 @@ pub fn apply_renew_work_item_lease_row(
         )
         .map(Some);
     }
-    // Phase-1 mirror: the lease was validated (fence_valid), so leased|running →
-    // running. Capture the pre-status before the authority overwrites it.
-    #[cfg(feature = "statechart")]
-    let pre_status = property_string(&props, "status").to_string();
     let now_s = now_ms as f64 / 1000.0;
-    props.insert("status".into(), serde_json::Value::String("running".into()));
+    // W03 (Leased: the first heartbeat starts the work) or W04 (Running: heartbeat),
+    // under the fence validated above.
+    let event = if super::machine::stored_status(&props)?
+        == medulla_work_types::work_item_machine::WorkItemStatus::Leased
+    {
+        medulla_work_types::work_item_machine::WorkItemEvent::Start
+    } else {
+        medulla_work_types::work_item_machine::WorkItemEvent::Heartbeat
+    };
+    let facts = medulla_work_types::work_item_machine::WorkItemFacts {
+        fence_matches: true,
+        ..super::machine::row_facts(&props, now_s, true)
+    };
+    super::machine::fire(&mut props, event, &facts)?;
     props.insert("heartbeat_at".into(), serde_json::Value::from(now_s));
     props.insert("updated_at".into(), serde_json::Value::from(now_s));
     props.insert(
         "lease_expires_at".into(),
         serde_json::Value::from(now_s + lease_ms as f64 / 1000.0),
-    );
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        &mut props,
-        work_item_id,
-        &pre_status,
-        medulla_store::work_item_statechart::EV_RENEW,
-        serde_json::json!({ "fence_valid": true }),
-        Some("running"),
     );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
     lease_renewed(

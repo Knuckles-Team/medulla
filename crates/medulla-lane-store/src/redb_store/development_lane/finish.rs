@@ -71,9 +71,8 @@ pub fn work_item_identity_mismatch(
         || medulla_store::redb_store::property_string(pre_props, "kind")
             != work_item_kind_name(DevelopmentLaneWorkItemKind::Lifecycle)
         || medulla_store::redb_store::property_string(pre_props, "tenant") != hold.tenant_ref
-        || !matches!(
+        || !medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(
             medulla_store::redb_store::property_string(pre_props, "status"),
-            "leased" | "running"
         )
 }
 
@@ -196,10 +195,8 @@ pub fn transition_work_item_terminal_hold(
         return Err("development lane WorkItem/hold intent mismatch".to_string());
     }
 
-    let terminal = matches!(
-        next_status,
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    );
+    let terminal =
+        medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(next_status);
     if !terminal {
         return Err(ACTIVE_HOLD_REQUIRES_TERMINAL_WORK_ITEM.to_string());
     }
@@ -271,10 +268,7 @@ pub fn transition_terminal_hold(
     global_policy_revision: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
-    if !matches!(
-        terminal_state,
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    ) {
+    if !medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(terminal_state) {
         return Err("development lane terminal state is invalid".to_string());
     }
     let retained = row
@@ -416,7 +410,7 @@ pub fn finish_retained_replay(
         Ok(value) => value,
         Err(decision) => return Ok((finish_result(decision, Some(row), policy_revision)?, false)),
     };
-    if !finish_state_matches(request.terminal_state, &work_item.status)
+    if !finish_state_matches(request.terminal_state, work_item.status.as_stored())
         || !lane_intent_matches_hold(
             work_item.lane_intent.as_ref(),
             &row.hold,
@@ -486,7 +480,7 @@ pub fn finish_live_hold(
         Ok(value) => value,
         Err(decision) => return Ok((finish_result(decision, Some(&row), policy_revision)?, false)),
     };
-    if !finish_state_matches(request.terminal_state, &work_item.status) {
+    if !finish_state_matches(request.terminal_state, work_item.status.as_stored()) {
         return Ok((
             finish_result(LaneDecision::InputConflict, Some(&row), policy_revision)?,
             false,

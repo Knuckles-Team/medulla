@@ -13,6 +13,9 @@ pub mod acl;
 pub mod agent_bus;
 // MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.
 pub mod branch;
+// MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
+// the one generic transition function and the typed `TransitionRefused`.
+pub mod transition_refused;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.

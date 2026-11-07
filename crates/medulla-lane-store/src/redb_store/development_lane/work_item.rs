@@ -115,7 +115,8 @@ pub fn work_item_lease_decision(
         // checks (e.g. `WrongFence` above covers two distinct mismatches).
         return Err(LaneDecision::Terminal);
     }
-    if !terminal && !matches!(status, "leased" | "running") {
+    if !terminal && !medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(status)
+    {
         // A future lease timestamp on a ready/pending row is not a claim.  A
         // lane lifecycle or cleanup action must be tied to the WorkItem's
         // current live claim, not merely to an echoed fence tuple.
@@ -142,7 +143,9 @@ pub fn work_item_owner_decision(
     let Some(owner) = owner else {
         return Ok(());
     };
-    let current_owner = if terminal || !matches!(status, "leased" | "running") {
+    let current_owner = if terminal
+        || !medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(status)
+    {
         medulla_store::redb_store::property_string(props, "last_lease_owner")
     } else {
         medulla_store::redb_store::property_string(props, "lease_owner")
@@ -202,6 +205,17 @@ pub fn work_item_cleanup_projection(
     })
 }
 
+/// The WorkItem machine state of a lane's WorkItem row. An older record whose status
+/// names no WorkItem state (such as the retired `completed`) is refused.
+pub fn lane_work_item_status(
+    props: &serde_json::Map<String, serde_json::Value>,
+) -> Result<medulla_work_types::work_item_machine::WorkItemStatus, LaneDecision> {
+    medulla_work_types::work_item_machine::WorkItemStatus::decode_stored(
+        medulla_store::redb_store::property_string(props, "status"),
+    )
+    .map_err(|_| LaneDecision::Invalid)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn load_work_item(
     nodes: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
@@ -223,19 +237,16 @@ pub fn load_work_item(
     let props = load_work_item_props(nodes, graph, work_item_id, crypto)?;
     work_item_identity_decision(&props, tenant, expected_kind)?;
     work_item_tuple_decision(&props, attempt, lease_epoch, fencing_token, work_item_fence)?;
-    let status = medulla_store::redb_store::property_string(&props, "status").to_string();
-    let terminal = matches!(
-        status.as_str(),
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    );
+    let status = lane_work_item_status(&props)?;
+    let terminal = status.is_terminal();
     let expectation = if require_terminal {
         WorkItemTerminalExpectation::Terminal
     } else {
         WorkItemTerminalExpectation::Live
     };
     let lease_expires_at_ms =
-        work_item_lease_decision(&props, &status, terminal, expectation, now_ms)?;
-    work_item_owner_decision(&props, owner, &status, terminal)?;
+        work_item_lease_decision(&props, status.as_stored(), terminal, expectation, now_ms)?;
+    work_item_owner_decision(&props, owner, status.as_stored(), terminal)?;
     let projection = match expected_kind {
         DevelopmentLaneWorkItemKind::Lifecycle => {
             work_item_lifecycle_projection(&props, tenant, owner, expected_intent)?
@@ -247,7 +258,6 @@ pub fn load_work_item(
     let cleanup = projection.cleanup;
     Ok(LaneWorkItem {
         status,
-        terminal,
         lease_expires_at_ms,
         host_ref: projection.host_ref,
         resource_reservation_id: projection.resource_reservation_id,

@@ -96,15 +96,15 @@ fn preceding_run(
     if !admission_matches(&original, head) {
         return Err("CONVERSATION_UNAVAILABLE: predecessor admission binding changed".into());
     }
-    match property_string(&row, "status") {
-        "succeeded" => Ok(()),
-        "failed" | "cancelled" | "dead_letter" => {
+    match medulla_work_types::work_item_machine::WorkItemStatus::from_stored(property_string(
+        &row, "status",
+    )) {
+        Some(medulla_work_types::work_item_machine::WorkItemStatus::Succeeded) => Ok(()),
+        Some(status) if status.is_terminal() => {
             Err("CONVERSATION_PREDECESSOR_FAILED: explicit recovery is required".into())
         }
-        "submitted" | "ready" | "leased" | "running" => {
-            Err("CONVERSATION_BUSY: preceding turn is still active".into())
-        }
-        _ => Err("CONVERSATION_UNAVAILABLE: predecessor state is unknown".into()),
+        Some(_) => Err("CONVERSATION_BUSY: preceding turn is still active".into()),
+        None => Err("CONVERSATION_UNAVAILABLE: predecessor state is unknown".into()),
     }
 }
 
@@ -276,10 +276,9 @@ pub fn reserve_child_input(
     if !super::run_owner::owned(&row, graph, tenant, &input.child_run_id, &child_id, owner) {
         return Err("ACCESS_DENIED: child run is unavailable".into());
     }
-    if matches!(
-        property_string(&row, "status"),
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    ) {
+    if medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(property_string(
+        &row, "status",
+    )) {
         return Err("CHILD_TARGET_TERMINAL: child run already finished".into());
     }
     let current = property_u64(&row, WORK_ITEM_LIFECYCLE_REVISION);

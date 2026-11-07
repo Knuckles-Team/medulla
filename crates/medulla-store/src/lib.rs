@@ -80,8 +80,3 @@ pub mod redb_store;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sidecar_store;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "statechart")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod work_item_statechart;

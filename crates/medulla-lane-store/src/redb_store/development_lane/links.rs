@@ -30,11 +30,11 @@ pub fn lifecycle_work_item_owner_matches(
     status: &str,
     expected_owner: &str,
 ) -> bool {
-    match status {
-        "leased" | "running" => {
+    match medulla_work_types::work_item_machine::WorkItemStatus::from_stored(status) {
+        Some(state) if state.holds_lease() => {
             medulla_store::redb_store::property_string(props, "lease_owner") == expected_owner
         }
-        "succeeded" | "failed" | "cancelled" | "dead_letter" => {
+        Some(state) if state.is_terminal() => {
             medulla_store::redb_store::property_string(props, "lease_owner").is_empty()
                 && medulla_store::redb_store::property_string(props, "last_lease_owner")
                     == expected_owner
@@ -90,7 +90,7 @@ pub fn checkpoint_cleanup_fence_mismatch(
     fence: &str,
 ) -> bool {
     let status = medulla_store::redb_store::property_string(props, "status");
-    let terminal = matches!(status, "succeeded" | "failed" | "cancelled" | "dead_letter");
+    let terminal = medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(status);
     medulla_store::redb_store::property_string(props, "node_type") != "WorkItem"
         || medulla_store::redb_store::property_string(props, "tenant") != hold.tenant_ref
         || medulla_store::redb_store::property_string(props, "kind")
@@ -99,7 +99,8 @@ pub fn checkpoint_cleanup_fence_mismatch(
         || medulla_store::redb_store::property_u64(props, "lease_epoch") != lease_epoch
         || medulla_store::redb_store::property_u64(props, "fencing_token") != fencing_token
         || medulla_store::redb_store::property_string(props, "work_item_fence") != fence
-        || (!terminal && !matches!(status, "leased" | "running"))
+        || (!terminal
+            && !medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(status))
 }
 
 /// A cleaned hold must still carry its distinct cleanup WorkItem, with the
@@ -350,13 +351,13 @@ where
 
 /// The WorkItem statuses that mean the lifecycle attempt has finished.
 pub fn checkpoint_terminal_status(status: &str) -> bool {
-    matches!(status, "succeeded" | "failed" | "cancelled" | "dead_letter")
+    medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(status)
 }
 
 /// A live hold must still have the current lease claim and no terminal replay
 /// tuple.  Ready/pending rows are not authoritative claims.
 pub fn checkpoint_live_status_matches(row: &DurableLaneHold, status: &str) -> bool {
-    matches!(status, "leased" | "running")
+    medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(status)
         && !checkpoint_terminal_status(status)
         && row.terminal_state.is_none()
         && row.terminal_expected_hold_revision.is_none()
@@ -366,7 +367,8 @@ pub fn checkpoint_live_status_matches(row: &DurableLaneHold, status: &str) -> bo
 /// leased/running claim and an exact terminal outcome remain cleanable, but
 /// neither may carry a finish terminal replay tuple.
 pub fn checkpoint_expired_status_matches(row: &DurableLaneHold, status: &str) -> bool {
-    (matches!(status, "leased" | "running") || checkpoint_terminal_status(status))
+    (medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(status)
+        || checkpoint_terminal_status(status))
         && row.terminal_state.is_none()
         && row.terminal_expected_hold_revision.is_none()
         && row.hold.tombstone
@@ -615,7 +617,7 @@ pub fn durable_hold_terminal_bounds(row: &DurableLaneHold) -> Result<(), String>
         text(value, "stored terminal state").map_err(|decision| {
             format!("stored development lane hold: {}", decision_name(decision))
         })?;
-        if !matches!(value, "succeeded" | "failed" | "cancelled" | "dead_letter") {
+        if !medulla_work_types::work_item_machine::WorkItemStatus::is_terminal_text(value) {
             return Err("stored development lane terminal state is invalid".to_string());
         }
     }

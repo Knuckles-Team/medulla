@@ -87,7 +87,9 @@ pub fn apply_mark_effect_started(
     let live = property_string(props, "node_type") == "WorkItem"
         && property_string(props, "tenant") == fence.tenant
         && property_string(props, "lease_owner") == fence.worker_id
-        && matches!(property_string(props, "status"), "leased" | "running")
+        && medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(
+            property_string(props, "status"),
+        )
         && property_u64(props, "lease_epoch") == fence.lease_epoch
         && property_u64(props, "fencing_token") == fence.fencing_token
         && property_f64(props, "lease_expires_at") >= now_s;

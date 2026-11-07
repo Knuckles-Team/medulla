@@ -370,6 +370,7 @@ closed_error_codes! {
         TelemetryWindowTooLarge => "TELEMETRY_WINDOW_TOO_LARGE",
         TenantScopeRequired => "TENANT_SCOPE_REQUIRED",
         Timeout => "TIMEOUT",
+        TransitionRefused => "TRANSITION_REFUSED",
         TranscriptBaseConflict => "TRANSCRIPT_BASE_CONFLICT",
         TranscriptEventConflict => "TRANSCRIPT_EVENT_CONFLICT",
         TranscriptNotFinal => "TRANSCRIPT_NOT_FINAL",

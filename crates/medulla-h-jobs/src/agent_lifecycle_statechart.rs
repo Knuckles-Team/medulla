@@ -9,7 +9,7 @@
 //! thread, no heartbeat**. This module is that template: the ONE canonical, reusable,
 //! content-addressed [`medulla_statechart::StatechartDef`] for an agent instance's own
 //! lifecycle, exactly as [`crate::loop_statechart`] is for a Loop and
-//! [`crate::work_item_statechart`] is for a unit of work.
+//! `medulla_work_types::work_item_machine` is for a unit of work.
 //!
 //! ```text
 //!   dormant ──activate──▶ active ──deactivate──▶ dormant        (the activation cycle)
@@ -20,7 +20,7 @@
 //! ## Two lifecycles, never one (ADR-6 §2, the anti-sprawl rule)
 //!
 //! An agent instance's lifecycle (this chart: `dormant ⇄ active`) is DISTINCT from an
-//! **activation's** lifecycle (the [`crate::work_item_statechart`]: `submitted → ready →
+//! **activation's** lifecycle (the `medulla_work_types::work_item_machine`: `submitted → ready →
 //! leased → running → …`). They compose, they do not duplicate:
 //!
 //! * An **event** (CDC match, timer, broker message, direct call) creates a **WorkItem**
@@ -41,7 +41,7 @@
 //!
 //! Every transition is [`medulla_statechart::Guard::Always`]: the worker has ALREADY passed
 //! the real gate (it holds the WorkItem's fencing-token lease) before it drives this
-//! chart, exactly as [`crate::work_item_statechart`]'s `ready --claim--> leased` edge is
+//! chart, exactly as `medulla_work_types::work_item_machine`'s `ready --claim--> leased` edge is
 //! unconditional because native candidate-selection already ran. This chart therefore
 //! keeps an empty `Context`; it is a pure structural authority for "which lifecycle edge
 //! is legal", independently validated by [`medulla_statechart::validate`].

@@ -2955,13 +2955,13 @@ fn cas_work_item_metadata_applied_write_survives_restart() {
     let _ = std::fs::remove_file(path);
 }
 
-/// ADR-5 / W2.2 acceptance: a `kill -9` mid-transition resumes correctly. The
-/// WorkItem lifecycle `status` and its co-located statechart MIRROR (`machine_state`)
-/// are one row written in ONE redb write transaction, so a crash BEFORE the commit
-/// rolls both back and a crash AFTER the commit lands both — they can never split.
-#[cfg(feature = "statechart")]
+/// A `kill -9` mid-transition resumes correctly. The WorkItem lifecycle `status` is the
+/// one persisted state field (MEDULLA-ORCH-VOCAB-R812.2): a crash BEFORE the commit
+/// leaves it unchanged and a crash AFTER the commit lands it. No second state field
+/// (the retired statechart mirror's `machine_state`) is ever written.
+// spec: MEDULLA-ORCH-VOCAB-R812.2
 #[test]
-fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
+fn work_item_status_commits_atomically_across_kill9() {
     use medulla_result_types::epistemic_operations::ClaimWorkItemRequest;
     use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
 
@@ -3025,7 +3025,7 @@ fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
         }
     };
 
-    // Scenario A — crash BEFORE the redb commit: NEITHER status nor its mirror persist.
+    // Scenario A — crash BEFORE the redb commit: the status does not advance.
     {
         let path = temp_path("wi-kill9-precommit");
         {
@@ -3041,12 +3041,11 @@ fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
         let db = open(&path);
         let (status, machine) = read_pair(&db);
         assert_eq!(status.as_deref(), Some("ready"), "status must not advance");
-        assert_eq!(machine, None, "the mirror must not advance either");
+        assert_eq!(machine, None, "no second state field exists");
         let _ = std::fs::remove_file(path);
     }
 
-    // Scenario B — crash AFTER the redb commit (before ack): BOTH status AND its
-    // mirror are already durably on disk, together.
+    // Scenario B — crash AFTER the redb commit (before ack): the status is durable.
     {
         let path = temp_path("wi-kill9-postcommit");
         {
@@ -3066,76 +3065,9 @@ fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
             Some("leased"),
             "status committed durably"
         );
-        assert_eq!(
-            machine.as_deref(),
-            Some("leased"),
-            "mirror committed durably and atomically with status"
-        );
+        assert_eq!(machine, None, "no second state field is written");
         let _ = std::fs::remove_file(path);
     }
-}
-
-/// ADR-5 / W2.2 acceptance: the dual-write divergence alarm fires on an induced
-/// divergence. Drives the redb integration point (`apply_work_item_mirror`) with an
-/// authoritative next state the chart would never compute, and asserts the
-/// `medulla_statechart_divergence_total` counter increments while the agreeing
-/// case does not.
-#[cfg(all(feature = "statechart", feature = "metrics"))]
-#[test]
-fn work_item_mirror_divergence_raises_the_alarm() {
-    fn divergence_count() -> u64 {
-        for line in medulla_kernel::metrics::render().lines() {
-            if line.starts_with("medulla_statechart_divergence_total{machine=\"work_item\"}") {
-                return line
-                    .rsplit(' ')
-                    .next()
-                    .and_then(|v| v.parse::<f64>().ok())
-                    .map(|f| f as u64)
-                    .unwrap_or(0);
-            }
-        }
-        0
-    }
-
-    // Induced divergence: `ready --claim-->` the chart decides `leased`, but the
-    // (hypothetically buggy) authority claims it landed `succeeded`.
-    let before = divergence_count();
-    let mut props = serde_json::Map::new();
-    apply_work_item_mirror(
-        &mut props,
-        "wi",
-        "ready",
-        medulla_store::work_item_statechart::EV_CLAIM,
-        serde_json::json!({}),
-        Some("succeeded"),
-    );
-    assert_eq!(
-        divergence_count(),
-        before + 1,
-        "an induced divergence must increment the alarm counter"
-    );
-    // The mirror still records ITS OWN decision, so the divergence is queryable at rest.
-    assert_eq!(
-        props.get("machine_state").and_then(|v| v.as_str()),
-        Some("leased")
-    );
-
-    // The agreeing case does NOT alarm.
-    let steady = divergence_count();
-    let mut props2 = serde_json::Map::new();
-    apply_work_item_mirror(
-        &mut props2,
-        "wi2",
-        "ready",
-        medulla_store::work_item_statechart::EV_CLAIM,
-        serde_json::json!({}),
-        Some("leased"),
-    );
-    assert_eq!(divergence_count(), steady, "agreement must not alarm");
-    assert_eq!(
-        props2.get("machine_state").and_then(|v| v.as_str()),
-        Some("leased")
-    );
 }
 
 #[test]
