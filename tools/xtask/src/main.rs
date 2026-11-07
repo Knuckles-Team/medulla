@@ -62,14 +62,14 @@ const CHECKS: &[Check] = &[
         name: ci_affected_crates::NAME,
         summary: ci_affected_crates::SUMMARY,
         run: ci_affected_crates::run,
-        standalone: false,
+        standalone: true,
         needs_git: false,
     },
     Check {
         name: ci_change_scope::NAME,
         summary: ci_change_scope::SUMMARY,
         run: ci_change_scope::run,
-        standalone: false,
+        standalone: true,
         needs_git: false,
     },
     Check {
