@@ -4673,6 +4673,8 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "oxrdf",
+ "oxttl",
  "parking_lot",
  "petgraph",
  "quick-xml 0.41.0",

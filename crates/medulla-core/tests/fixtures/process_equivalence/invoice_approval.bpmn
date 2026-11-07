@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="invoice" name="Invoice approval">
+    <laneSet id="ls"><lane id="l1" name="Accounts payable"><flowNodeRef>check</flowNodeRef><flowNodeRef>book</flowNodeRef></lane><lane id="l2" name="Finance manager"><flowNodeRef>approve</flowNodeRef></lane></laneSet>
+    <startEvent id="received" name="Invoice received"/>
+    <userTask id="check" name="Check invoice"/>
+    <exclusiveGateway id="amount" name="Amount above limit?"/>
+    <userTask id="approve" name="Approve invoice"/>
+    <exclusiveGateway id="merge" name="Merge"/>
+    <serviceTask id="book" name="Book invoice"/>
+    <endEvent id="booked" name="Invoice booked"/>
+    <sequenceFlow id="f1" sourceRef="received" targetRef="check"/>
+    <sequenceFlow id="f2" sourceRef="check" targetRef="amount"/>
+    <sequenceFlow id="f3" sourceRef="amount" targetRef="approve"><conditionExpression>amount &gt; limit</conditionExpression></sequenceFlow>
+    <sequenceFlow id="f4" sourceRef="amount" targetRef="merge"><conditionExpression>amount &lt;= limit</conditionExpression></sequenceFlow>
+    <sequenceFlow id="f5" sourceRef="approve" targetRef="merge"/>
+    <sequenceFlow id="f6" sourceRef="merge" targetRef="book"/>
+    <sequenceFlow id="f7" sourceRef="book" targetRef="booked"/>
+  </process>
+</definitions>

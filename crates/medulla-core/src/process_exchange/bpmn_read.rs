@@ -199,6 +199,7 @@ pub fn parse_bpmn(bytes: &[u8], limits: BpmnLimits) -> Result<BpmnDocument, Proc
                     }
                     let attrs = attributes(&element, bytes, offset)?;
                     state.doc.id = attrs.get("id").cloned().unwrap_or_default();
+                    state.doc.namespaces = root_namespaces(&element);
                     frames.push(Frame::Definitions);
                     continue;
                 }
@@ -239,6 +240,7 @@ pub fn parse_bpmn(bytes: &[u8], limits: BpmnLimits) -> Result<BpmnDocument, Proc
                         _ if in_model && local == "definitions" => {
                             let attrs = attributes(&element, bytes, offset)?;
                             state.doc.id = attrs.get("id").cloned().unwrap_or_default();
+                            state.doc.namespaces = root_namespaces(&element);
                             return Ok(state.doc);
                         }
                         _ => String::new(),
@@ -452,4 +454,18 @@ fn leave(state: &mut State, frame: Frame) {
         }
         Frame::Definitions | Frame::LaneSet | Frame::EventDefinition | Frame::Skip => {}
     }
+}
+
+/// The `xmlns:<prefix>` declarations of the root element.
+fn root_namespaces(element: &BytesStart<'_>) -> BTreeMap<String, String> {
+    element
+        .attributes()
+        .flatten()
+        .filter_map(|attribute| {
+            let key = std::str::from_utf8(attribute.key.as_ref()).ok()?;
+            let prefix = key.strip_prefix("xmlns:")?;
+            let value = std::str::from_utf8(&attribute.value).ok()?;
+            Some((prefix.to_string(), value.to_string()))
+        })
+        .collect()
 }

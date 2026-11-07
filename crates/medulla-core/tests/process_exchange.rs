@@ -4,7 +4,9 @@ use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::{ProcessExchangeError, BPMN_NODE_KINDS};
 use medulla_core::process_import::canonicalize;
-use medulla_types::process_import::{LoweredFlow, LoweredStep, ProcessSourceSystem, StepKind};
+use medulla_types::process_import::{
+    LoweredFlow, LoweredProcess, LoweredStep, ProcessSourceSystem, StepKind,
+};
 
 const EVERY_KIND: &[u8] = include_bytes!("fixtures/process_exchange/every_kind.bpmn");
 
@@ -131,13 +133,14 @@ fn workflow_exports_as_deployable_bpmn() {
             }
         })
         .collect();
-    let workflow = canonicalize(
-        "Book invoice",
-        ProcessSourceSystem::ArisEpc,
-        "m",
+    let workflow = canonicalize(LoweredProcess {
+        name: "Book invoice".into(),
+        system: ProcessSourceSystem::ArisEpc,
+        model_id: "m".into(),
         steps,
         flows,
-    )
+        annex: Vec::new(),
+    })
     .unwrap();
     let doc = workflow_to_bpmn(&workflow).unwrap();
     let process = &doc.processes[0];
@@ -166,4 +169,53 @@ fn workflow_exports_as_deployable_bpmn() {
         workflow_to_bpmn(&empty),
         Err(ProcessExchangeError::NotDeployable { .. })
     ));
+}
+
+// spec: MEDULLA-CQ-ORCH-R702.6
+#[test]
+fn bpmn_write_then_read_keeps_digest() {
+    use medulla_core::process_exchange::bpmn_lower::{bpmn_kind_annotations, bpmn_source_graph};
+    use medulla_core::process_exchange::bpmn_write::write_bpmn;
+    use medulla_core::process_import::compile_process;
+
+    let digest = |bytes: &[u8]| {
+        let doc = parse_bpmn(bytes, BpmnLimits::default()).unwrap();
+        let graph = bpmn_source_graph(&doc).unwrap();
+        compile_process(&graph, bpmn_kind_annotations().unwrap())
+            .unwrap()
+            .digest
+    };
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/process_equivalence");
+    let mut seen = 0;
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("bpmn") {
+            continue;
+        }
+        let original = std::fs::read(&path).unwrap();
+        let written = write_bpmn(&parse_bpmn(&original, BpmnLimits::default()).unwrap()).unwrap();
+        assert_eq!(digest(&written), digest(&original), "{}", path.display());
+        let again = write_bpmn(&parse_bpmn(&written, BpmnLimits::default()).unwrap()).unwrap();
+        assert_eq!(again, written, "writing is canonical: {}", path.display());
+        seen += 1;
+    }
+    assert_eq!(seen, 7);
+
+    // Every element kind and every preserved fragment survives a round trip.
+    let doc = parse_bpmn(EVERY_KIND, BpmnLimits::default()).unwrap();
+    let written = write_bpmn(&doc).unwrap();
+    assert!(String::from_utf8_lossy(&written).contains("isExecutable=\"true\""));
+    let back = parse_bpmn(&written, BpmnLimits::default()).unwrap();
+    let (a, b) = (&doc.processes[0], &back.processes[0]);
+    assert_eq!(b.nodes.len(), a.nodes.len());
+    assert_eq!(b.flows, {
+        let mut flows = a.flows.clone();
+        flows.sort_by(|x, y| x.id.cmp(&y.id));
+        flows
+    });
+    assert_eq!(b.lanes, a.lanes);
+    assert_eq!(b.preserved.len(), a.preserved.len());
+    assert_eq!(back.preserved.len(), doc.preserved.len());
+    assert_eq!(back.collaborations, doc.collaborations);
 }

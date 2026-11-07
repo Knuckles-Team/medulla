@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="deflt" name="Route ticket">
+    <startEvent id="s" name="Ticket opened"/>
+    <exclusiveGateway id="g" name="Severity?" default="f3"/>
+    <userTask id="page" name="Page on-call engineer"/>
+    <userTask id="queue" name="Queue ticket"/>
+    <endEvent id="e1" name="Engineer paged"/>
+    <endEvent id="e2" name="Ticket queued"/>
+    <sequenceFlow id="f1" sourceRef="s" targetRef="g"/>
+    <sequenceFlow id="f2" sourceRef="g" targetRef="page"><conditionExpression>severity = critical</conditionExpression></sequenceFlow>
+    <sequenceFlow id="f3" sourceRef="g" targetRef="queue"/>
+    <sequenceFlow id="f4" sourceRef="page" targetRef="e1"/>
+    <sequenceFlow id="f5" sourceRef="queue" targetRef="e2"/>
+  </process>
+</definitions>

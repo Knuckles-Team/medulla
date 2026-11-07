@@ -206,5 +206,6 @@ pub fn workflow_to_bpmn(
         processes: vec![process],
         collaborations: Vec::new(),
         preserved: Vec::new(),
+        namespaces: BTreeMap::new(),
     })
 }

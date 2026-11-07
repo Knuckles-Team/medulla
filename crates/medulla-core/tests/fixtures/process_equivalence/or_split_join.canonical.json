@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Notify customer",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Order shipped"
+    },
+    {
+      "id": "s2",
+      "kind": "fork",
+      "gate": "or",
+      "label": "Channels"
+    },
+    {
+      "id": "s3",
+      "kind": "agent",
+      "label": "Send e-mail"
+    },
+    {
+      "id": "s4",
+      "kind": "agent",
+      "label": "Send text message"
+    },
+    {
+      "id": "s5",
+      "kind": "join",
+      "gate": "or",
+      "label": "Channels done"
+    },
+    {
+      "id": "s6",
+      "kind": "end",
+      "label": "Customer notified"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "condition": "wants mail",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s4",
+      "condition": "wants text",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s5",
+      "target": "s6",
+      "default": false
+    }
+  ],
+  "digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "orsplit",
+    "elements": {
+      "s1": "s",
+      "s2": "split",
+      "s3": "mail",
+      "s4": "sms",
+      "s5": "join",
+      "s6": "e"
+    }
+  }
+}

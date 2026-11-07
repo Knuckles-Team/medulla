@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Await reply",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Offer sent"
+    },
+    {
+      "id": "s2",
+      "kind": "wait",
+      "gate": "xor",
+      "label": "First reply"
+    },
+    {
+      "id": "s3",
+      "kind": "wait",
+      "label": "Offer accepted",
+      "ref": "acceptance"
+    },
+    {
+      "id": "s4",
+      "kind": "wait",
+      "label": "Two weeks passed",
+      "ref": "timer"
+    },
+    {
+      "id": "s5",
+      "kind": "agent",
+      "label": "Close offer"
+    },
+    {
+      "id": "s6",
+      "kind": "end",
+      "label": "Offer closed"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s4",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s5",
+      "target": "s6",
+      "default": false
+    }
+  ],
+  "digest": "fc962d8804f80b25bc95b3849302cad4e51904f387a9675eab258a81e3f4bde0",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "evwait",
+    "elements": {
+      "s1": "s",
+      "s2": "g",
+      "s3": "accepted",
+      "s4": "timeout",
+      "s5": "close",
+      "s6": "e"
+    }
+  }
+}

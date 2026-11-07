@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Onboard supplier",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Supplier applied"
+    },
+    {
+      "id": "s2",
+      "kind": "call",
+      "label": "Verify identity",
+      "ref": "identity_check"
+    },
+    {
+      "id": "s3",
+      "kind": "agent",
+      "label": "Create supplier record"
+    },
+    {
+      "id": "s4",
+      "kind": "end",
+      "label": "Supplier onboarded"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s4",
+      "default": false
+    }
+  ],
+  "digest": "7be0673ffdfc4233080d808c79d3e49cca78a93e3a6c5bffe8643a34265bfd6d",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "called",
+    "elements": {
+      "s1": "s",
+      "s2": "kyc",
+      "s3": "create",
+      "s4": "e"
+    }
+  }
+}

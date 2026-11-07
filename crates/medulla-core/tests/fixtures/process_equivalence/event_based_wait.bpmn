@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="evwait" name="Await reply">
+    <startEvent id="s" name="Offer sent"/>
+    <eventBasedGateway id="g" name="First reply"/>
+    <intermediateCatchEvent id="accepted" name="Offer accepted"><messageEventDefinition id="m1" messageRef="acceptance"/></intermediateCatchEvent>
+    <intermediateCatchEvent id="timeout" name="Two weeks passed"><timerEventDefinition id="t1"><timeDuration>P14D</timeDuration></timerEventDefinition></intermediateCatchEvent>
+    <serviceTask id="close" name="Close offer"/>
+    <endEvent id="e" name="Offer closed"/>
+    <sequenceFlow id="f1" sourceRef="s" targetRef="g"/>
+    <sequenceFlow id="f2" sourceRef="g" targetRef="accepted"/>
+    <sequenceFlow id="f3" sourceRef="g" targetRef="timeout"/>
+    <sequenceFlow id="f4" sourceRef="accepted" targetRef="close"/>
+    <sequenceFlow id="f5" sourceRef="timeout" targetRef="close"/>
+    <sequenceFlow id="f6" sourceRef="close" targetRef="e"/>
+  </process>
+</definitions>

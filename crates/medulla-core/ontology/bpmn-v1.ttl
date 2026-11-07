@@ -1,0 +1,118 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# BPMN 2.0 flow-node classes (MEDULLA-ORCH-VOCAB-R014.2) and the canonical
+# step kind and gate each one carries (MEDULLA-ORCH-VOCAB-R014.9,
+# MEDULLA-CQ-ORCH-R701.7). Process compilation reads :dagNodeKind and
+# :canonicalGateKind from here; no class name is mapped in code. A complex
+# gateway carries no :dagNodeKind and is refused as unmapped.
+
+<http://knuckles.team/kg/bpmn-v1> a owl:Ontology ;
+    rdfs:label "BPMN 2.0 element classes" .
+
+:BpmnTask a owl:Class ;
+    rdfs:label "BPMN Task" ;
+    :dagNodeKind "agent" .
+
+:BpmnUserTask a owl:Class ;
+    rdfs:label "BPMN UserTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "human" .
+
+:BpmnManualTask a owl:Class ;
+    rdfs:label "BPMN ManualTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "human" .
+
+:BpmnServiceTask a owl:Class ;
+    rdfs:label "BPMN ServiceTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "agent" .
+
+:BpmnScriptTask a owl:Class ;
+    rdfs:label "BPMN ScriptTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "agent" .
+
+:BpmnSendTask a owl:Class ;
+    rdfs:label "BPMN SendTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "agent" .
+
+:BpmnReceiveTask a owl:Class ;
+    rdfs:label "BPMN ReceiveTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "wait" .
+
+:BpmnBusinessRuleTask a owl:Class ;
+    rdfs:label "BPMN BusinessRuleTask" ;
+    rdfs:subClassOf :BpmnTask ;
+    :dagNodeKind "decision" .
+
+:BpmnSubProcess a owl:Class ;
+    rdfs:label "BPMN SubProcess" ;
+    :dagNodeKind "call" .
+
+:BpmnCallActivity a owl:Class ;
+    rdfs:label "BPMN CallActivity" ;
+    :dagNodeKind "call" .
+
+:BpmnGateway a owl:Class ;
+    rdfs:label "BPMN Gateway" .
+
+:BpmnExclusiveGateway a owl:Class ;
+    rdfs:label "BPMN ExclusiveGateway" ;
+    rdfs:subClassOf :BpmnGateway ;
+    :dagNodeKind "branch" ;
+    :canonicalGateKind "xor" .
+
+:BpmnParallelGateway a owl:Class ;
+    rdfs:label "BPMN ParallelGateway" ;
+    rdfs:subClassOf :BpmnGateway ;
+    :dagNodeKind "fork" ;
+    :canonicalGateKind "and" .
+
+:BpmnInclusiveGateway a owl:Class ;
+    rdfs:label "BPMN InclusiveGateway" ;
+    rdfs:subClassOf :BpmnGateway ;
+    :dagNodeKind "fork" ;
+    :canonicalGateKind "or" .
+
+:BpmnEventBasedGateway a owl:Class ;
+    rdfs:label "BPMN EventBasedGateway" ;
+    rdfs:subClassOf :BpmnGateway ;
+    :dagNodeKind "wait" ;
+    :canonicalGateKind "xor" .
+
+:BpmnComplexGateway a owl:Class ;
+    rdfs:label "BPMN ComplexGateway" ;
+    rdfs:subClassOf :BpmnGateway .
+
+:BpmnEvent a owl:Class ;
+    rdfs:label "BPMN Event" .
+
+:BpmnStartEvent a owl:Class ;
+    rdfs:label "BPMN StartEvent" ;
+    rdfs:subClassOf :BpmnEvent ;
+    :dagNodeKind "start" .
+
+:BpmnEndEvent a owl:Class ;
+    rdfs:label "BPMN EndEvent" ;
+    rdfs:subClassOf :BpmnEvent ;
+    :dagNodeKind "end" .
+
+:BpmnIntermediateCatchEvent a owl:Class ;
+    rdfs:label "BPMN IntermediateCatchEvent" ;
+    rdfs:subClassOf :BpmnEvent ;
+    :dagNodeKind "wait" .
+
+:BpmnIntermediateThrowEvent a owl:Class ;
+    rdfs:label "BPMN IntermediateThrowEvent" ;
+    rdfs:subClassOf :BpmnEvent ;
+    :dagNodeKind "agent" .
+
+:BpmnBoundaryEvent a owl:Class ;
+    rdfs:label "BPMN BoundaryEvent" ;
+    rdfs:subClassOf :BpmnEvent ;
+    :dagNodeKind "boundary" .

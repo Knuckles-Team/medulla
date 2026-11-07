@@ -103,6 +103,71 @@ pub struct LoweredFlow {
     pub default: bool,
 }
 
+/// One element of a source document viewed as a graph: the input of Lower
+/// (MEDULLA-CQ-ORCH-R701.11). `class` is the source element class; Lower
+/// reads its kind only through a [`KindAnnotation`].
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceNode {
+    pub element_id: String,
+    pub class: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(rename = "ref", default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+}
+
+/// The source document as a typed graph, with the annex its parse kept.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceGraph {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub nodes: Vec<SourceNode>,
+    pub edges: Vec<LoweredFlow>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
+/// The step kind and gate a source class carries (`:dagNodeKind`,
+/// `:canonicalGateKind`). `kind: None` is the source-only kind `state`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KindAnnotation {
+    pub class: &'static str,
+    pub kind: Option<StepKind>,
+    pub gate: Option<GateKind>,
+}
+
+/// The output of Lower: steps and flows with no canonical id yet.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoweredProcess {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub steps: Vec<LoweredStep>,
+    pub flows: Vec<LoweredFlow>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
+/// The output of Allocate: canonical ids `s1` to `sn` and sorted flows.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AllocatedProcess {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub steps: Vec<CanonicalStep>,
+    pub flows: Vec<CanonicalFlow>,
+    /// Step id to source element id.
+    pub elements: BTreeMap<String, String>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
 /// The system a canonical workflow was imported from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -204,6 +269,48 @@ impl std::error::Error for ImportError {}
 /// Annex construct: BPMN diagram interchange or extension XML, restored on
 /// a BPMN re-export (MEDULLA-CQ-ORCH-R702.8).
 pub const ANNEX_BPMN_PRESERVED_XML: &str = "bpmn-preserved-xml";
+
+/// Annex construct: an intermediate EPC state event.
+pub const ANNEX_EPC_STATE_EVENT: &str = "epc-state-event";
+/// Annex construct: an EPC event after a split that carries an arm condition.
+pub const ANNEX_EPC_CONDITION_EVENT: &str = "epc-condition-event";
+/// Annex construct: an EPC attachment other than performer, IT support or rule.
+pub const ANNEX_EPC_ATTACHMENT: &str = "epc-attachment";
+
+/// The canonical constructs EPC cannot express, and the one treatment the
+/// EPC adapter applies to each (MEDULLA-CQ-ORCH-R701.8).
+pub const EPC_EXPORT_TREATMENTS: &[(&str, &str)] = &[
+    ("wait", "typed-trigger"),
+    ("boundary", "boundary-event"),
+    ("default-flow", "default-flow"),
+    ("event-based-wait", "event-based-gateway"),
+    ("decision", "decision-table"),
+];
+
+/// The treatment of an annex entry a target cannot hold.
+pub const LOSS_ANNEX_NOT_HELD: &str = "annex-not-held";
+
+impl ProcessSourceSystem {
+    /// The annex constructs this source keeps for its own re-export.
+    pub fn annex_constructs(self) -> &'static [&'static str] {
+        match self {
+            Self::ArisEpc => &[
+                ANNEX_EPC_STATE_EVENT,
+                ANNEX_EPC_CONDITION_EVENT,
+                ANNEX_EPC_ATTACHMENT,
+            ],
+            Self::Bpmn20 => &[ANNEX_BPMN_PRESERVED_XML],
+        }
+    }
+
+    /// The canonical constructs this format cannot express, with treatments.
+    pub fn inexpressible(self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            Self::ArisEpc => EPC_EXPORT_TREATMENTS,
+            Self::Bpmn20 => &[],
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,9 +1,85 @@
-//! Canonical process form (MEDULLA-CQ-ORCH-R701.2 and the stages of R701.11).
+//! Process compilation (MEDULLA-CQ-ORCH-R701.2, R701.8 and the stages of R701.11).
 
-use medulla_core::process_import::{admit_canonical, canonicalize, lower_rules, normalize_text};
-use medulla_types::process_import::{
-    AnnexEntry, GateKind, ImportError, LoweredFlow, LoweredStep, ProcessSourceSystem, StepKind,
+use medulla_core::process_import::{
+    admit_canonical, allocate, canonicalize, emit, export_canonical, export_canonical_strict,
+    lower, normalize_text, relower,
 };
+use medulla_types::process_import::{
+    AllocatedProcess, AnnexEntry, CanonicalWorkflow, GateKind, ImportError, KindAnnotation,
+    LoweredFlow, LoweredProcess, LoweredStep, ProcessSourceSystem, SourceGraph, SourceNode,
+    StepKind, ANNEX_EPC_ATTACHMENT, ANNEX_EPC_STATE_EVENT,
+};
+
+fn canon(
+    name: &str,
+    system: ProcessSourceSystem,
+    model_id: &str,
+    steps: Vec<LoweredStep>,
+    flows: Vec<LoweredFlow>,
+) -> Result<CanonicalWorkflow, ImportError> {
+    canonicalize(LoweredProcess {
+        name: name.into(),
+        system,
+        model_id: model_id.into(),
+        steps,
+        flows,
+        annex: Vec::new(),
+    })
+}
+
+/// Lower a hand-built graph whose classes are the kind names.
+fn lower_steps(
+    steps: Vec<LoweredStep>,
+    flows: Vec<LoweredFlow>,
+) -> (Vec<LoweredStep>, Vec<LoweredFlow>) {
+    const ANNOTATIONS: &[KindAnnotation] = &[
+        KindAnnotation {
+            class: "start",
+            kind: Some(StepKind::Start),
+            gate: None,
+        },
+        KindAnnotation {
+            class: "human",
+            kind: Some(StepKind::Human),
+            gate: None,
+        },
+        KindAnnotation {
+            class: "xor",
+            kind: Some(StepKind::Branch),
+            gate: Some(GateKind::Xor),
+        },
+        KindAnnotation {
+            class: "end",
+            kind: Some(StepKind::End),
+            gate: None,
+        },
+    ];
+    let class = |s: &LoweredStep| match s.kind {
+        StepKind::Start => "start",
+        StepKind::Human => "human",
+        StepKind::End => "end",
+        _ => "xor",
+    };
+    let graph = SourceGraph {
+        name: "g".into(),
+        system: ProcessSourceSystem::Bpmn20,
+        model_id: "m".into(),
+        nodes: steps
+            .iter()
+            .map(|s| SourceNode {
+                element_id: s.element_id.clone(),
+                class: class(s).into(),
+                label: s.label.clone(),
+                role: None,
+                reference: None,
+            })
+            .collect(),
+        edges: flows,
+        annex: Vec::new(),
+    };
+    let lowered = lower(&graph, ANNOTATIONS).unwrap();
+    (lowered.steps, lowered.flows)
+}
 
 fn step(id: &str, kind: StepKind, gate: Option<GateKind>, label: &str) -> LoweredStep {
     LoweredStep {
@@ -73,7 +149,7 @@ fn shuffle<T>(items: &mut [T], seed: u64) {
 fn canonical_ids_and_digest_are_stable() {
     for n in [10usize, 1_000, 100_000] {
         let (steps, flows) = process(n);
-        let first = canonicalize(
+        let first = canon(
             "P",
             ProcessSourceSystem::Bpmn20,
             "m",
@@ -91,14 +167,14 @@ fn canonical_ids_and_digest_are_stable() {
         let (mut s2, mut f2) = (steps.clone(), flows.clone());
         shuffle(&mut s2, n as u64);
         shuffle(&mut f2, n as u64 + 1);
-        let second = canonicalize("P", ProcessSourceSystem::ArisEpc, "other", s2, f2).unwrap();
+        let second = canon("P", ProcessSourceSystem::ArisEpc, "other", s2, f2).unwrap();
         assert_eq!(second.steps, first.steps, "n={n}");
         assert_eq!(second.flows, first.flows, "n={n}");
         assert_eq!(second.digest, first.digest, "n={n}");
         if n == 10 {
             let mut relabelled = steps.clone();
             relabelled[3].label = "Changed".into();
-            let changed = canonicalize(
+            let changed = canon(
                 "P",
                 ProcessSourceSystem::Bpmn20,
                 "m",
@@ -126,7 +202,7 @@ fn canonical_ids_and_digest_are_stable() {
 #[test]
 fn admission_refuses_a_non_canonical_or_misdigested_document() {
     let (steps, flows) = process(10);
-    let workflow = canonicalize("P", ProcessSourceSystem::Bpmn20, "m", steps, flows).unwrap();
+    let workflow = canon("P", ProcessSourceSystem::Bpmn20, "m", steps, flows).unwrap();
     assert_eq!(admit_canonical(&workflow).unwrap(), workflow);
 
     let mut wrong_digest = workflow.clone();
@@ -164,7 +240,7 @@ fn text_is_nfc_and_degree_gives_split_and_join() {
         flow("g", "c"),
         flow("g", "d"),
     ];
-    let (lowered, lowered_flows) = lower_rules(steps, flows);
+    let (lowered, lowered_flows) = lower_steps(steps, flows);
     let kinds: Vec<_> = lowered
         .iter()
         .map(|s| (s.element_id.as_str(), s.kind))
@@ -180,5 +256,210 @@ fn text_is_nfc_and_degree_gives_split_and_join() {
             .filter(|f| f.source == "g#split")
             .count()
             == 2
+    );
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.8
+#[test]
+fn losses_are_listed_never_dropped() {
+    let steps = vec![
+        step("e1", StepKind::Start, None, "Invoice received"),
+        step("e2", StepKind::Wait, None, "Payment due"),
+        step("e3", StepKind::Decision, None, "Check limits"),
+        step("e4", StepKind::End, None, "Done"),
+    ];
+    let flows = vec![flow("e1", "e2"), flow("e2", "e3"), flow("e3", "e4")];
+    let mut workflow = canon("P", ProcessSourceSystem::ArisEpc, "m", steps, flows).unwrap();
+    for (n, construct) in [ANNEX_EPC_STATE_EVENT, ANNEX_EPC_ATTACHMENT]
+        .iter()
+        .enumerate()
+    {
+        workflow.annex.push(AnnexEntry {
+            schema_version: 1,
+            after: Some("s1".into()),
+            before: Some("s2".into()),
+            construct: construct.to_string(),
+            element_id: format!("x{n}"),
+            label: "kept".into(),
+            type_num: None,
+        });
+    }
+
+    let to_bpmn = export_canonical(&workflow, ProcessSourceSystem::Bpmn20);
+    assert_eq!(to_bpmn.losses.len(), 2, "one loss per annex entry");
+    assert!(to_bpmn.annex.is_empty());
+    assert_eq!(admit_canonical(&to_bpmn).unwrap().digest, workflow.digest);
+    let refused =
+        export_canonical_strict(&workflow, ProcessSourceSystem::Bpmn20, true).unwrap_err();
+    assert_eq!(refused.code(), "PROCESS_EXPORT_LOSSY");
+    assert_eq!(refused.losses, to_bpmn.losses);
+
+    let same = export_canonical(&workflow, ProcessSourceSystem::ArisEpc);
+    assert_eq!(same.annex, workflow.annex, "same source keeps the annex");
+    let treatments: Vec<&str> = same.losses.iter().map(|l| l.treatment.as_str()).collect();
+    assert_eq!(treatments, ["typed-trigger", "decision-table"]);
+    assert_eq!(admit_canonical(&same).unwrap().digest, workflow.digest);
+}
+
+fn lowered_process(n: usize) -> LoweredProcess {
+    let (steps, flows) = process(n);
+    LoweredProcess {
+        name: "P".into(),
+        system: ProcessSourceSystem::Bpmn20,
+        model_id: "m".into(),
+        steps,
+        flows,
+        annex: Vec::new(),
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.11
+#[test]
+fn each_stage_reads_only_the_previous_form() {
+    // Each stage is a function from one typed form to the next.
+    let _lower: fn(&SourceGraph, &[KindAnnotation]) -> Result<LoweredProcess, ImportError> = lower;
+    let _allocate: fn(LoweredProcess) -> Result<AllocatedProcess, ImportError> = allocate;
+    let _emit: fn(AllocatedProcess) -> CanonicalWorkflow = emit;
+
+    let once = allocate(lowered_process(1_000)).unwrap();
+    let twice = allocate(relower(&once)).unwrap();
+    assert_eq!(twice, once, "allocation is idempotent");
+
+    let graph = SourceGraph {
+        name: " Two  steps ".into(),
+        system: ProcessSourceSystem::ArisEpc,
+        model_id: "m".into(),
+        nodes: vec![
+            SourceNode {
+                element_id: "a".into(),
+                class: "go".into(),
+                label: "Go".into(),
+                role: None,
+                reference: None,
+            },
+            SourceNode {
+                element_id: "x".into(),
+                class: "noted".into(),
+                label: "Noted".into(),
+                role: None,
+                reference: None,
+            },
+            SourceNode {
+                element_id: "b".into(),
+                class: "stop".into(),
+                label: "Stop".into(),
+                role: None,
+                reference: None,
+            },
+        ],
+        edges: vec![flow("a", "x"), flow("x", "b")],
+        annex: Vec::new(),
+    };
+    let annotations = [
+        KindAnnotation {
+            class: "go",
+            kind: Some(StepKind::Start),
+            gate: None,
+        },
+        KindAnnotation {
+            class: "noted",
+            kind: None,
+            gate: None,
+        },
+        KindAnnotation {
+            class: "stop",
+            kind: Some(StepKind::End),
+            gate: None,
+        },
+    ];
+    let lowered = lower(&graph, &annotations).unwrap();
+    assert_eq!(lowered.name, "Two steps");
+    assert_eq!(lowered.steps.len(), 2, "a state never reaches a step");
+    assert_eq!(lowered.flows, vec![flow("a", "b")]);
+    assert_eq!(lowered.annex[0].element_id, "x");
+    assert!(matches!(
+        lower(&graph, &annotations[..1]),
+        Err(ImportError::UnmappedElement { element_type }) if element_type == "noted"
+    ));
+
+    // No stage names a source format.
+    let source = include_str!("../src/process_import.rs");
+    for word in ["Bpmn", "Epc", "bpmn", "aris"] {
+        assert!(!source.contains(word), "process_import.rs names {word}");
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.11
+#[test]
+fn canonicalize_is_the_composition_of_the_stages() {
+    for n in [10usize, 1_000] {
+        let lowered = lowered_process(n);
+        let composed = emit(allocate(lowered.clone()).unwrap());
+        assert_eq!(canonicalize(lowered).unwrap(), composed);
+        assert_eq!(admit_canonical(&composed).unwrap(), composed);
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.7
+#[test]
+fn bpmn_classes_map_through_annotations() {
+    use medulla_core::process_exchange::bpmn_lower::bpmn_kind_annotations;
+    use medulla_core::process_exchange::BPMN_NODE_KINDS;
+    let annotations = bpmn_kind_annotations().unwrap();
+    let expected = [
+        ("task", StepKind::Agent, None),
+        ("userTask", StepKind::Human, None),
+        ("manualTask", StepKind::Human, None),
+        ("serviceTask", StepKind::Agent, None),
+        ("scriptTask", StepKind::Agent, None),
+        ("sendTask", StepKind::Agent, None),
+        ("receiveTask", StepKind::Wait, None),
+        ("businessRuleTask", StepKind::Decision, None),
+        ("subProcess", StepKind::Call, None),
+        ("callActivity", StepKind::Call, None),
+        ("exclusiveGateway", StepKind::Branch, Some(GateKind::Xor)),
+        ("parallelGateway", StepKind::Fork, Some(GateKind::And)),
+        ("inclusiveGateway", StepKind::Fork, Some(GateKind::Or)),
+        ("eventBasedGateway", StepKind::Wait, Some(GateKind::Xor)),
+        ("startEvent", StepKind::Start, None),
+        ("endEvent", StepKind::End, None),
+        ("intermediateCatchEvent", StepKind::Wait, None),
+        ("intermediateThrowEvent", StepKind::Agent, None),
+        ("boundaryEvent", StepKind::Boundary, None),
+    ];
+    for kind in BPMN_NODE_KINDS {
+        let graph = SourceGraph {
+            name: "one".into(),
+            system: ProcessSourceSystem::Bpmn20,
+            model_id: "m".into(),
+            nodes: vec![SourceNode {
+                element_id: "n".into(),
+                class: kind.to_string(),
+                label: "n".into(),
+                role: None,
+                reference: None,
+            }],
+            edges: Vec::new(),
+            annex: Vec::new(),
+        };
+        match expected.iter().find(|(name, _, _)| name == kind) {
+            Some((_, step, gate)) => {
+                let lowered = lower(&graph, annotations).unwrap();
+                assert_eq!(lowered.steps[0].kind, *step, "{kind}");
+                assert_eq!(lowered.steps[0].gate, *gate, "{kind}");
+            }
+            None => {
+                assert_eq!(*kind, "complexGateway");
+                assert!(matches!(
+                    lower(&graph, annotations),
+                    Err(ImportError::UnmappedElement { element_type }) if element_type == "complexGateway"
+                ));
+            }
+        }
+    }
+    let lowering = include_str!("../src/process_exchange/bpmn_lower.rs");
+    assert!(
+        !lowering.contains("StepKind::"),
+        "no BPMN class is mapped in code"
     );
 }
