@@ -71,11 +71,7 @@ impl CarrierAuthority {
                     .to_string(),
             );
         }
-        let tenant_scope = if opaque_scope(tenant, "carrier-tenant") {
-            tenant.to_string()
-        } else {
-            crate::batch_compile::opaque_coordinator_key("carrier-tenant", "verified", tenant)
-        };
+        let tenant_scope = tenant_scope_of(tenant);
         let actor_scope = if opaque_scope(principal, "principal:sha256") {
             principal.to_string()
         } else {
@@ -248,6 +244,17 @@ impl CarrierAuthority {
                 "ACCESS_DENIED: {domain} has no per-row ownership and requires kg:admin"
             ))
         }
+    }
+}
+
+/// The opaque carrier tenant scope of `tenant`: the scope itself when `tenant`
+/// already is one (the replicated apply context carries only the scope), else
+/// its one-way digest.
+pub fn tenant_scope_of(tenant: &str) -> String {
+    if opaque_scope(tenant, "carrier-tenant") {
+        tenant.to_string()
+    } else {
+        crate::batch_compile::opaque_coordinator_key("carrier-tenant", "verified", tenant)
     }
 }
 
