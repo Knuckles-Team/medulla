@@ -6,6 +6,7 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
+mod mint_lease_call_sites;
 mod orphan_modules;
 mod p2_analytics_reasoning_architecture;
 mod p2_modality_architecture;
@@ -35,6 +36,11 @@ const CHECKS: &[Check] = &[
         name: canonical_property_schema::NAME,
         summary: canonical_property_schema::SUMMARY,
         run: canonical_property_schema::run,
+    },
+    Check {
+        name: mint_lease_call_sites::NAME,
+        summary: mint_lease_call_sites::SUMMARY,
+        run: mint_lease_call_sites::run,
     },
     Check {
         name: orphan_modules::NAME,

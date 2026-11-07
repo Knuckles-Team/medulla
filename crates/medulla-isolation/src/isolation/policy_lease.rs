@@ -553,7 +553,7 @@ impl IsolationLayer {
     /// requires AND hardened beyond it — non-constructible `PolicyDecisionLease`,
     /// now non-constructible `MintAuthorization`-gated identity, re-run
     /// `check_access`, digest captured from the durable store only. See
-    /// `scripts/check_mint_lease_call_sites.py` for the CI gate that keeps
+    /// `cargo xtask mint-lease-call-sites` for the CI gate that keeps
     /// this the one production call site.
     #[cfg(feature = "security")]
     pub fn mint_policy_decision_lease(

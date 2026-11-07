@@ -75,28 +75,6 @@ def test_universal_read_cache_key_follows_query_children() -> None:
         module.require_query_result_cache_rls(broken, rdf, dispatch)
 
 
-def test_mint_guard_rejects_a_call_site_without_verified_mac_binding(tmp_path) -> None:
-    module = _load_gate("check_mint_lease_call_sites.py", "e1_mint_guard")
-    sites = module.find_call_sites(module.ROOT)
-    production = [site for site in sites if not module._is_test_only(site[0])]
-    only_path, only_line = module.require_sole_owning_call_site(module.ROOT, production)
-    module.require_self_constructed_authorization(module.ROOT, only_path, only_line)
-    router = module.ROOT / only_path
-
-    target = tmp_path / only_path
-    target.parent.mkdir(parents=True)
-    target.write_text(
-        router.read_text(encoding="utf-8").replace(
-            "MintAuthorization::new", "MintAuthorization::construct", 1
-        ),
-        encoding="utf-8",
-    )
-    with pytest.raises(
-        SystemExit, match="does not construct its own MintAuthorization"
-    ):
-        module.require_self_constructed_authorization(tmp_path, only_path, only_line)
-
-
 def test_universal_read_guard_rejects_an_unprojected_sql_snapshot() -> None:
     module = _load_gate("check_universal_read_rls.py", "e1_universal_rls_guard")
     wire = module.read("crates/medulla-wire-core/src/wire/mod.rs")

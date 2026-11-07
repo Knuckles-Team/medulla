@@ -412,7 +412,7 @@ repos:
   # second call site is in the W6-MINT lane report.
   - id: mint-lease-call-sites
     name: mint_policy_decision_lease has one production call site
-    entry: python3 scripts/check_mint_lease_call_sites.py
+    entry: cargo xtask mint-lease-call-sites
     language: system
     pass_filenames: false
     always_run: true
