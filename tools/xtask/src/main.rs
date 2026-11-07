@@ -5,8 +5,11 @@
 
 mod build_profiles;
 mod decide_budgets;
+mod fanout_host_groups;
+mod registry_test_ownership;
 mod repo_root_parity;
 mod sdist_completeness;
+mod sole_write_envelope;
 mod spec_paths;
 #[cfg(test)]
 mod tempdir;
@@ -35,6 +38,16 @@ const CHECKS: &[Check] = &[
         run: decide_budgets::run,
     },
     Check {
+        name: fanout_host_groups::NAME,
+        summary: fanout_host_groups::SUMMARY,
+        run: fanout_host_groups::run,
+    },
+    Check {
+        name: registry_test_ownership::NAME,
+        summary: registry_test_ownership::SUMMARY,
+        run: registry_test_ownership::run,
+    },
+    Check {
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
@@ -43,6 +56,11 @@ const CHECKS: &[Check] = &[
         name: sdist_completeness::NAME,
         summary: sdist_completeness::SUMMARY,
         run: sdist_completeness::run,
+    },
+    Check {
+        name: sole_write_envelope::NAME,
+        summary: sole_write_envelope::SUMMARY,
+        run: sole_write_envelope::run,
     },
     Check {
         name: spec_paths::NAME,
