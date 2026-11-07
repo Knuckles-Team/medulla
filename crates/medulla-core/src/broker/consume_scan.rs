@@ -8,7 +8,9 @@
 //! pass is advisory only: the core revalidates the winner inside one topology transaction,
 //! so nothing here can publish a stale delivery.
 
+use super::message_machine::{Claimable as MachineClaimable, MessageFacts, MessageState};
 use super::*;
+use medulla_types::transition_refused::MachineState;
 
 /// A claim candidate distilled from a scanned message node.
 pub(super) struct Candidate {
@@ -64,8 +66,8 @@ pub(super) fn scan_queue(core: &GraphCore, label: &str, consumer: &str, now_ms: 
             Claimability::Skip => {}
             Claimability::InFlight => scan.inflight += 1,
             Claimability::Expired => scan.expired.push(id.clone()),
-            Claimability::Claimable { reclaimed } => {
-                scan.best = prefer(scan.best, scan_candidate(id, obj, reclaimed));
+            Claimability::Claimable(stored) => {
+                scan.best = prefer(scan.best, scan_candidate(id, obj, stored));
             }
         }
     }
@@ -81,55 +83,52 @@ enum Claimability {
     InFlight,
     /// TTL-expired (MEDULLA-277): never deliver it; dead-letter it lazily instead.
     Expired,
-    /// Claimable now — `reclaimed` when it is a `claimed` message whose visibility lease
-    /// expired (MEDULLA-280 lease-return) rather than a plain `pending` one.
-    Claimable { reclaimed: bool },
+    /// Claimable now from the stored state the core revalidates.
+    Claimable(MessageState),
 }
 
-/// Classify one queue message for `consumer` at `now_ms`.
+/// The guard facts of one stored message.
+pub(super) fn message_facts(obj: &serde_json::Map<String, serde_json::Value>) -> MessageFacts {
+    MessageFacts {
+        lease_until: f_u64(obj, "lease_until"),
+        deliver_at: f_u64(obj, "deliver_at"),
+        expires_at: f_u64(obj, "expires_at"),
+        claimant_matches: false,
+        attempts_below_max: false,
+    }
+}
+
+/// Classify one queue message for `consumer` at `now_ms` with `MessageState::claimable`.
 fn claimability(
     obj: &serde_json::Map<String, serde_json::Value>,
     consumer: &str,
     now_ms: u64,
 ) -> Claimability {
-    let reclaimed = match f_str(obj, "status") {
-        "claimed" => {
-            // A live (unexpired) lease is held by someone → not claimable.
-            let leased = f_u64(obj, "lease_until")
-                .map(|l| l > now_ms)
-                .unwrap_or(true);
-            if leased {
-                return if f_str(obj, "owner_consumer") == consumer {
-                    Claimability::InFlight
-                } else {
-                    Claimability::Skip
-                };
-            }
-            true // lease expired (MEDULLA-280) → this message returns to the pool
-        }
-        "pending" => false,
-        _ => return Claimability::Skip, // done / unknown → not claimable
+    let Some(state) = MessageState::from_stored(f_str(obj, "status")) else {
+        return Claimability::Skip; // done / unknown → not claimable
     };
-    if f_u64(obj, "expires_at").is_some_and(|ea| ea <= now_ms) {
-        return Claimability::Expired;
+    match state.claimable(&message_facts(obj), now_ms) {
+        MachineClaimable::No => Claimability::Skip,
+        MachineClaimable::LiveLease if f_str(obj, "owner_consumer") == consumer => {
+            Claimability::InFlight
+        }
+        MachineClaimable::LiveLease => Claimability::Skip,
+        MachineClaimable::Expired => Claimability::Expired,
+        MachineClaimable::Yes(stored) => Claimability::Claimable(stored),
     }
-    if f_u64(obj, "deliver_at").is_some_and(|da| da > now_ms) {
-        return Claimability::Skip;
-    }
-    Claimability::Claimable { reclaimed }
 }
 
-/// The scan candidate for a claimable message.
+/// The scan candidate for a claimable message; it carries the stored state unchanged.
 fn scan_candidate(
     id: &str,
     obj: &serde_json::Map<String, serde_json::Value>,
-    reclaimed: bool,
+    stored: MessageState,
 ) -> Candidate {
     Candidate {
         id: id.to_string(),
         priority: f_i64(obj, "priority", 0),
         seq: f_i64(obj, "seq", i64::MAX),
-        status: if reclaimed { "claimed" } else { "pending" }.into(),
+        status: stored.stored().into(),
         lease_until: f_u64(obj, "lease_until"),
     }
 }
