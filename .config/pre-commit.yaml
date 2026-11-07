@@ -196,13 +196,6 @@ repos:
     pass_filenames: false
     require_serial: true
     stages: [manual]
-  - id: quality-gates
-    name: Combined quality gate (cccc, KISS, Dupehound, jscpd, privacy; one verdict)
-    entry: python3 scripts/check_quality_gates.py
-    language: system
-    pass_filenames: false
-    require_serial: true
-    stages: [manual]
   - id: jscpd-census
     name: jscpd — tracked-tree census (advisory; no baseline)
     entry: python3 scripts/check_duplication.py census
@@ -808,14 +801,14 @@ repos:
 
   - id: check-root-hygiene
     name: Repository root hygiene (manifest-declared entries only)
-    entry: python3 scripts/check_root_hygiene.py
+    entry: pipelines-hook root-hygiene
     language: system
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: check-gitignore-convergence
     name: .gitignore carries the fleet-shared REQUIRED set
-    entry: python3 scripts/check_gitignore_convergence.py
+    entry: pipelines-hook gitignore-convergence
     language: system
     pass_filenames: false
     always_run: true

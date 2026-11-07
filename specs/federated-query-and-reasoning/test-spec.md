@@ -461,9 +461,9 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R709` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R709.1` | `crates/medulla-rdf/tests/geosparql.rs::functions_registered` |
 | `MEDULLA-FEDERATED-QUERY-R709.2` | `crates/medulla-rdf/tests/geosparql.rs::topology_matches_kernel` |
-| `MEDULLA-FEDERATED-QUERY-R709.3` | `tests/test_geosparql_served.py::test_within_query` |
-| `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/test_geosparql_served.py::test_geo_refusals` |
-| `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/test_geosparql_served.py::test_explain_names_spatial_index` |
+| `MEDULLA-FEDERATED-QUERY-R709.3` | `tests/federated/test_geosparql_served.py::test_within_query` |
+| `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/federated/test_geosparql_served.py::test_geo_refusals` |
+| `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/federated/test_geosparql_served.py::test_explain_names_spatial_index` |
 | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
 | `MEDULLA-FEDERATED-QUERY-R709.7` | `crates/medulla-rdf/tests/geosparql.rs::indexed_and_scanned_results_are_equal` (planned) |
 

@@ -19,8 +19,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T013 [US2] MEDULLA-CONTRACT-R006.2 Complete canonical qualification of the codec artifact
 - [ ] T014 [US2] MEDULLA-CONTRACT-R006.3 Export fresh typed contracts for parity repair
 - [ ] T015 [US4] MEDULLA-CONTRACT-R007 Dispatch decomposition test is current and runs in CI
-- [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Typed resolved-checkout parity contract (producer-first split of R008)
-- [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 check_five_repo_parity.py CLI wires in the typed parity contract
+- [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Resolved-checkout parity contract (producer-first split of R008)
+- [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 The repo-root-parity xtask command wires in the parity contract
 - [ ] T018 [US4] MEDULLA-CONTRACT-R009 CI runs the full root Python test suite
 - [ ] T019 [US4] MEDULLA-CONTRACT-R010 Complexity gate scores exhaustive matches by arm body, not count
 - [ ] T020 [US4] MEDULLA-CONTRACT-R011.1 Fan-out host-group manifest is structurally valid before any gate work is dispatched
@@ -94,6 +94,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T085 [US5] MEDULLA-CONTRACT-R056.8 Step 7: the decide, query, admin and transaction cycle breaks through `server-api` traits
 - [ ] T086 [US5] MEDULLA-CONTRACT-R056.9 Step 8: `medulla-wire` holds the wire protocols behind one feature per protocol
 - [ ] T087 [US5] MEDULLA-CONTRACT-R056.10 Step 9: the facade is link-only, and pull-request CI builds the changed-crate closure
+- [ ] T112 [US5] MEDULLA-CONTRACT-R056.10 Resolve the 910 spec-row paths with no successor: name the current owner file in the row, mark it planned, or drop the stale row (list: inventory operations/business-validation/spec-repath.md, section a)
+- [ ] T113 [US5] MEDULLA-CONTRACT-R056.10 Resolve the 91 spec-row paths with several candidate files by choosing the owner (same list, section b)
 - [ ] T088 [US5] MEDULLA-CONTRACT-R056.11 Scaffold: every empty crate exists before any parallel lane
 - [ ] T089 [US5] MEDULLA-CONTRACT-R056.12 Lane landing: a step lands on a passing build-train run of its changed crates
 - [ ] T090 [US5] MEDULLA-CONTRACT-R056.13 Lane order and parallel groups

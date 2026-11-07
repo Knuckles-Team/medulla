@@ -353,18 +353,18 @@ No test named here has run; names describe acceptance obligations, not evidence.
 - `MEDULLA-TYPED-PACKS-R101.11`: `crates/medulla-h-admin/src/admin/connector_pack/tests/scale.rs::an_undeclared_type_is_refused_with_a_typed_error`.
 - `MEDULLA-TYPED-PACKS-R102`: Rollup closes when every child `.1` to `.7` passes its proving test.
 - `MEDULLA-TYPED-PACKS-R102.1`: `crates/medulla-shacl/tests/connector_pack_shapes.rs::surface_shapes_accept_valid_and_refuse_invalid`.
-- `MEDULLA-TYPED-PACKS-R102.2`: `src/server/connector_pack_projection/surface_tests.rs::surface_nodes_follow_pack_head`.
-- `MEDULLA-TYPED-PACKS-R102.3`: `src/server/handlers/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused`.
-- `MEDULLA-TYPED-PACKS-R102.4`: `src/server/connector_pack_projection/surface_tests.rs::outbox_consumer_writes_surface_nodes`.
-- `MEDULLA-TYPED-PACKS-R102.5`: `src/server/handlers/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged`.
-- `MEDULLA-TYPED-PACKS-R102.6`: `src/server/connector_pack_projection/surface_tests.rs::surface_nodes_carry_pack_digest`.
+- `MEDULLA-TYPED-PACKS-R102.2`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_follow_pack_head`.
+- `MEDULLA-TYPED-PACKS-R102.3`: `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused`.
+- `MEDULLA-TYPED-PACKS-R102.4`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::outbox_consumer_writes_surface_nodes`.
+- `MEDULLA-TYPED-PACKS-R102.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged`.
+- `MEDULLA-TYPED-PACKS-R102.6`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_carry_pack_digest`.
 - `MEDULLA-TYPED-PACKS-R102.7`: `tests/typed_packs/test_connector_surface_rdf_served.py::test_surface_query_follows_pack_head`.
 - `MEDULLA-TYPED-PACKS-R103`: Rollup closes when every child `.1` to `.6` passes its proving test.
 - `MEDULLA-TYPED-PACKS-R103.1`: `crates/medulla-catalog-types/src/graph_schema.rs::tests::ontology_import_ops_round_trip`.
-- `MEDULLA-TYPED-PACKS-R103.2`: `src/server/graph_schema/ontology_import_tests.rs::import_is_idempotent_by_digest_and_revises`.
-- `MEDULLA-TYPED-PACKS-R103.3`: `src/server/graph_schema/ontology_import_tests.rs::gateway_routes_ontology_import`.
-- `MEDULLA-TYPED-PACKS-R103.4`: `src/server/graph_schema/ontology_import_tests.rs::ontology_import_refusals_leave_schema_unchanged`.
-- `MEDULLA-TYPED-PACKS-R103.5`: `src/server/graph_schema/ontology_import_tests.rs::revision_records_digest_importer_and_classes`.
+- `MEDULLA-TYPED-PACKS-R103.2`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::import_is_idempotent_by_digest_and_revises`.
+- `MEDULLA-TYPED-PACKS-R103.3`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::gateway_routes_ontology_import`.
+- `MEDULLA-TYPED-PACKS-R103.4`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::ontology_import_refusals_leave_schema_unchanged`.
+- `MEDULLA-TYPED-PACKS-R103.5`: `crates/medulla-h-admin/src/graph_schema/ontology_import_tests.rs::revision_records_digest_importer_and_classes`.
 - `MEDULLA-TYPED-PACKS-R103.6`: `tests/typed_packs/test_runtime_ontology_import_served.py::test_import_revise_withdraw_end_to_end`.
 
 ## MEDULLA-TYPED-PACKS-R104 acceptance

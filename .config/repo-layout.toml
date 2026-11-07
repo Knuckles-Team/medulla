@@ -1,5 +1,5 @@
 # Repository-root directory-justification manifest, read by
-# scripts/check_root_hygiene.py.
+# `pipelines-hook root-hygiene`.
 #
 # This is NOT a ratchet. A ratchet (a "baseline" a gate compares against
 # instead of an absolute standard) hides existing findings from view and only
@@ -10,13 +10,12 @@
 #   * it grows only by a deliberate human (or human-reviewed) edit that adds
 #     a one-line reason, never by a tool re-writing it to match the tree;
 #   * a listed entry that stops being tracked is ALSO a gate failure (see
-#     check_root_hygiene.py's stale-entry check) -- so unlike a baseline, this
+#     the hook's stale-entry check) -- so unlike a baseline, this
 #     file cannot rot into fiction by silently outliving what it describes.
 #
 # Every tracked root directory, and every tracked non-dot root file, must have
 # a line here. The few dot-FILES a tool discovers only at the root (.gitignore,
-# .python-version, ...) are enumerated in scripts/check_root_hygiene.py's
-# ALLOWED_DOTFILES -- see that module's docstring for why the split. Every tool
+# .python-version, ...) are declared in the [dotfiles] table. Every tool
 # input that accepts a path override lives in .config/ (or is folded into
 # pyproject.toml); the root keeps only what a tool discovers nowhere else.
 #
@@ -33,6 +32,7 @@
 specs = "tracked repository-owned specifications, templates, and acceptance evidence"
 src = "root medulla package: server binary (src/bin/main.rs) + PyO3 facade that maturin builds the wheel from"
 crates = "the 48-member cargo workspace; the library surface src/ composes (see Cargo.toml [workspace].members)"
+tools = "xtask crate: engine-specific repository checks and certification campaigns (cargo xtask <check>)"
 medulla = "the pure-Python client package (parser/cli/client/pool/asr_provider/quant/...) shipped alongside the compiled extension; maturin's python-source root"
 architecture = "RF-ADR-005 owner manifest: component-registry.yml declares this repository's component and capability identities at the fixed path the registry gate discovers through workspace.yml. Every component is status=proposed and NOTHING here is accepted yet -- it is the ownership authority the refactor designs cite, not a description of enforced state."
 benches = "criterion benchmarks: cold/warm reopen, massive-scale, pyo3 in-process vs UDS transport, redb group-commit, provenance-anchor"
@@ -66,3 +66,9 @@ vendor = "exact-hash-pinned upstream Rust source snapshots used for the security
 "rust-toolchain.toml" = "pinned rustc channel (1.96.0) and components (clippy, rustfmt) for reproducible builds; rustup discovers it only in the working directory or a parent (RUSTUP_TOOLCHAIN cannot carry the component list)"
 "mkdocs.yml" = "mkdocs site config; mkdocs and the shared pages_pipeline read it only at the root, and its INHERIT/docs_dir paths are root-relative"
 "uv.lock" = "uv lockfile (uv reads it only beside pyproject.toml)"
+
+[dotfiles]
+".gitattributes" = "git reads attributes only from the root file"
+".gitignore" = "git reads the root exclusion file"
+".mergequeue.yaml" = "repository-manager's merge queue and lane doctor read <repo>/.mergequeue.yaml only"
+".python-version" = "uv, pyenv and CI setup-python discover the pinned interpreter only from the root"

@@ -12,7 +12,7 @@ This standard applies to every row bound after 2026-10-30. It implements AD-5 in
 |---|---|---|
 | L1 Unit | `#[cfg(test)]` module or crate test | No |
 | L2 Property and golden vector | `proptest`, committed byte vectors, exhaustive small models | No |
-| L3 Served (Rust) | `Harness` in `src/server/handlers/decide/stat_tests`, which runs the real handler and dispatch | Yes |
+| L3 Served (Rust) | `Harness` in `crates/medulla-h-decide/src/decide/stat_tests`, which runs the real handler and dispatch | Yes |
 | L4 Served (client) | `tests/decide/*_served.py` over a loopback engine with authentication | Yes |
 | L5 Cross-repository consumer | The owner repository's test against medulla's published types | For the consumer row only |
 | L6 Nightly qualification | Benchmarks, fuzzing, cross-target replay | For AD-9 and R007 rows only |
@@ -843,9 +843,9 @@ No test in this section has run.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test, and `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` passes.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
-- `MEDULLA-DECISION-ENGINE-R172.12.3`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records`.
-- `MEDULLA-DECISION-ENGINE-R172.12.4`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
-- `MEDULLA-DECISION-ENGINE-R172.12.5`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
+- `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records`.
+- `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
+- `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
@@ -1200,7 +1200,7 @@ Do not infer it from these fixtures or generated status.
 | Observation configuration per participant per session | `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-decision-stats/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat`; `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
 | Appending a turn enqueues one derive job | `MEDULLA-DECISION-ENGINE-R651.11` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
 | Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
-| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `src/server/handlers/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
+| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `src/server/handlers/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
 | Memory events enter the graph outbox | `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
@@ -1660,7 +1660,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.6` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-stats/src/decision/load_set.rs::tests::bounded_union_in_stable_order` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set.rs::tests::bounded_union_in_stable_order` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::other_tenant_packs_never_enter_the_set` | (planned) |
