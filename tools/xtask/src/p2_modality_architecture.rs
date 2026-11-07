@@ -229,7 +229,7 @@ fn sanitized_command(raft: &str) -> Result<(String, String), String> {
 
 /// The replicated modality command is closed and carries no source field.
 fn require_modality_raft_replication(root: &Path) -> Result<(), String> {
-    let raft = module_tree::compiler_family(root, RAFT)?;
+    let raft = module_tree::compiler_family(root, RAFT)?.production;
     let (attrs, body) = sanitized_command(&raft)?;
     let field = Regex::new(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(\w+)\s*:").expect("static regex");
     let source_named = Regex::new(r"(?:^|_)source(?:_|$)").expect("static regex");

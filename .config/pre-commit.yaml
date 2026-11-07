@@ -320,6 +320,13 @@ repos:
   # no wheel build, each <0.3s measured cold on this worktree. Same shape as
   # canonical-property-schema/epistemic-operations-protocol
   # above (already local); this closes the rest of that job's cheap-script surface.
+  - id: dispatch-decomposition
+    name: Dispatch module cut, route ownership and route order
+    entry: cargo xtask dispatch-decomposition
+    language: system
+    pass_filenames: false
+    always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: p2-modality-architecture
     name: P2 modality architecture gate
     entry: cargo xtask p2-modality-architecture

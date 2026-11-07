@@ -3997,7 +3997,6 @@ components:
       - "tests/test_decay.py"
       - "tests/test_derivatives_kernels.py"
       - "tests/test_discover.py"
-      - "tests/test_dispatch_decomposition.py"
       - "tests/test_documentation_privacy.py"
       - "tests/test_dupehound_census.py"
       - "tests/test_dupehound_ledger.py"

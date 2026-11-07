@@ -4,7 +4,7 @@
 //! view keeps everything. Missing, ambiguous, cyclic, unsupported and orphaned declarations are
 //! errors, never silently skipped, so no contract-bearing source can escape a scan built on this.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
 use regex::Regex;
@@ -74,9 +74,15 @@ pub fn load(
     })
 }
 
-/// The production source, after proving a test-inclusive walk reaches every `*.rs` below the root:
-/// rejects any `*.rs` below the root that no declaration reaches.
-pub fn compiler_family(root: &Path, relative: &str) -> Result<String, String> {
+/// A module family: its production source and every declared file's raw text, by repository path.
+pub struct Family {
+    pub production: String,
+    pub files: BTreeMap<String, String>,
+}
+
+/// The family of `relative`, after proving a test-inclusive walk reaches every `*.rs` below the
+/// root: rejects any `*.rs` below the root that no declaration reaches.
+pub fn compiler_family(root: &Path, relative: &str) -> Result<Family, String> {
     let production = load(root, relative, false, false)?;
     let with_tests = load(root, relative, true, false)?;
     if production.module_dir != with_tests.module_dir {
@@ -102,7 +108,26 @@ pub fn compiler_family(root: &Path, relative: &str) -> Result<String, String> {
             ));
         }
     }
-    Ok(production.source)
+    let canonical = root.canonicalize().map_err(|e| e.to_string())?;
+    let mut files = BTreeMap::new();
+    for path in &with_tests.paths {
+        let name = path
+            .strip_prefix(&canonical)
+            .map_err(|_| {
+                format!(
+                    "Rust module path escapes root directory: {}",
+                    path.display()
+                )
+            })?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {name}: {e}"))?;
+        files.insert(name, text);
+    }
+    Ok(Family {
+        production: production.source,
+        files,
+    })
 }
 
 struct State {
