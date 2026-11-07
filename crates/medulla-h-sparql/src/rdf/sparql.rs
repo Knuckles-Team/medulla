@@ -33,8 +33,7 @@ impl SparqlProofMode {
 #[cfg(feature = "sparql")]
 pub(super) async fn handle_sparql(
     req_id: u64,
-    core: Arc<GraphCore>,
-    packs: Vec<(String, Arc<GraphCore>)>,
+    (core, packs): (Arc<GraphCore>, Vec<(String, Arc<GraphCore>)>),
     query: String,
     proj: medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,

@@ -142,8 +142,7 @@ async fn try_handle_sparql(
                 Ok(packs) => {
                     super::sparql::handle_sparql(
                         req_id,
-                        core,
-                        packs,
+                        (core, packs),
                         query.clone(),
                         medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
                         super::sparql::SparqlProofMode::of(*explain),
