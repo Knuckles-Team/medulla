@@ -3,8 +3,15 @@
 //! One module per check; each module exposes `NAME`, `SUMMARY` and `run`. A check that every
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
+mod analysis;
 mod build_profiles;
+mod canonical_property_schema;
 mod decide_budgets;
+mod dispatch_decomposition;
+mod mint_lease_call_sites;
+mod orphan_modules;
+mod p2_analytics_reasoning_architecture;
+mod p2_modality_architecture;
 mod repo_root_parity;
 mod sdist_completeness;
 #[cfg(test)]
@@ -32,6 +39,36 @@ const CHECKS: &[Check] = &[
         name: decide_budgets::NAME,
         summary: decide_budgets::SUMMARY,
         run: decide_budgets::run,
+    },
+    Check {
+        name: canonical_property_schema::NAME,
+        summary: canonical_property_schema::SUMMARY,
+        run: canonical_property_schema::run,
+    },
+    Check {
+        name: dispatch_decomposition::NAME,
+        summary: dispatch_decomposition::SUMMARY,
+        run: dispatch_decomposition::run,
+    },
+    Check {
+        name: mint_lease_call_sites::NAME,
+        summary: mint_lease_call_sites::SUMMARY,
+        run: mint_lease_call_sites::run,
+    },
+    Check {
+        name: orphan_modules::NAME,
+        summary: orphan_modules::SUMMARY,
+        run: orphan_modules::run,
+    },
+    Check {
+        name: p2_analytics_reasoning_architecture::NAME,
+        summary: p2_analytics_reasoning_architecture::SUMMARY,
+        run: p2_analytics_reasoning_architecture::run,
+    },
+    Check {
+        name: p2_modality_architecture::NAME,
+        summary: p2_modality_architecture::SUMMARY,
+        run: p2_modality_architecture::run,
     },
     Check {
         name: repo_root_parity::NAME,

@@ -27,6 +27,6 @@ External connectors normalize source-native schema at ingress and persist
 `relationship`. They do not store source aliases alongside the canonical field. This
 keeps every query surface and reasoning subsystem on the same physical representation.
 
-`scripts/check_canonical_property_schema.py` enforces this contract in pre-commit and
+`cargo xtask canonical-property-schema` enforces this contract in pre-commit and
 Rust CI. The gate is intentionally scoped to structural readers and writers, so it does
 not ban legitimate domain payloads named `type`.
