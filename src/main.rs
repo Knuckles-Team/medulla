@@ -584,7 +584,7 @@ async fn spawn_metrics_listener(
                 metrics_addr
             );
             tokio::spawn(async move {
-                medulla_kernel::metrics::serve(listener).await;
+                medulla_kernel::metrics::process().serve(listener).await;
             });
         }
         #[cfg(not(feature = "metrics"))]
@@ -881,7 +881,8 @@ where
             wait_for_periodic_tick(&mut ticker).await;
             let loop_started = std::time::Instant::now();
             sweep().await;
-            medulla_kernel::metrics::loop_tick(metric_name, loop_started.elapsed().as_secs_f64());
+            medulla_kernel::metrics::process()
+                .loop_tick(metric_name, loop_started.elapsed().as_secs_f64());
         }
     });
 }
@@ -1722,7 +1723,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                         n
                     );
                 }
-                medulla_kernel::metrics::loop_tick(
+                medulla_kernel::metrics::process().loop_tick(
                     "ann_warm_sweep",
                     __loop_tick_started.elapsed().as_secs_f64(),
                 );
@@ -1766,10 +1767,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                     stats.nodes_pruned,
                     stats.edges_pruned
                 );
-                medulla_kernel::metrics::loop_tick(
-                    "decay_sweep",
-                    __loop_tick_started.elapsed().as_secs_f64(),
-                );
+                medulla_kernel::metrics::process()
+                    .loop_tick("decay_sweep", __loop_tick_started.elapsed().as_secs_f64());
             }
         });
     }

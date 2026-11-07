@@ -172,7 +172,7 @@ pub mod worker {
 
     fn report(outcome: &OutboxClaimOutcome) {
         if !outcome.dead_lettered.is_empty() {
-            medulla_kernel::metrics::outbox_dead_lettered(
+            medulla_kernel::metrics::process().outbox_dead_lettered(
                 CONSUMER,
                 CONNECTOR_PACK_IMPORT_TOPIC,
                 "exhausted",
@@ -181,7 +181,7 @@ pub mod worker {
         }
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let head = outcome.claims.first();
-        medulla_kernel::metrics::set_outbox_head(
+        medulla_kernel::metrics::process().set_outbox_head(
             CONSUMER,
             CONNECTOR_PACK_IMPORT_TOPIC,
             head.map_or(0, |lease| now_ms.saturating_sub(lease.record.created_at_ms)),
@@ -252,7 +252,7 @@ pub mod worker {
             )
             .await;
         };
-        medulla_kernel::metrics::outbox_dead_lettered(
+        medulla_kernel::metrics::process().outbox_dead_lettered(
             CONSUMER,
             CONNECTOR_PACK_IMPORT_TOPIC,
             reject_cause(reason),

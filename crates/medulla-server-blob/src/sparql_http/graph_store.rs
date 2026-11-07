@@ -51,7 +51,7 @@ async fn graph_read(
 ) -> (&'static str, &'static str, String) {
     // Unlike writes below, this leg has no verified request-carrier mechanism yet.
     if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return (
             "403 Forbidden",
             "text/plain",

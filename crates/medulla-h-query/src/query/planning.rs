@@ -734,7 +734,7 @@ async fn served_decision_leg(
         if !required {
             return Ok(None);
         }
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return Err("ACCESS_DENIED: DECISIONS requires a verified tenant carrier".to_string());
     };
     let source = match medulla_server_ops::api::admin::decide_seam(state).await {

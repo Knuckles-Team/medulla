@@ -902,7 +902,8 @@ pub fn resolve_envelope_conflict(
             strategy,
             winner: ConflictWinner::Existing,
         };
-        medulla_kernel::metrics::write_conflict(strategy.as_str(), evidence.winner.as_str());
+        medulla_kernel::metrics::process()
+            .write_conflict(strategy.as_str(), evidence.winner.as_str());
         EnvelopeConflictRefusal {
             conflict,
             evidence,
@@ -956,7 +957,7 @@ pub fn resolve_envelope_conflict(
         return Err(refuse(conflict));
     }
     let winner = ConflictWinner::for_strategy(strategy);
-    medulla_kernel::metrics::write_conflict(strategy.as_str(), winner.as_str());
+    medulla_kernel::metrics::process().write_conflict(strategy.as_str(), winner.as_str());
     Ok((
         resolved,
         WriteConflictEvidence {

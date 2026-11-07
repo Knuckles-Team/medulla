@@ -79,7 +79,7 @@ impl SlowQuery {
         if ms < thr as f64 {
             return;
         }
-        crate::metrics::slow_query();
+        crate::metrics::process().slow_query();
         tracing::warn!(
             target: "medulla_kernel::slow_query",
             kind = self.kind,

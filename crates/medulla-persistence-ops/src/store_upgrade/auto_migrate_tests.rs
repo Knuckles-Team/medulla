@@ -255,7 +255,7 @@ fn every_step_is_counted_on_the_metrics_registry() {
     let held = lock(dir.path());
     migrate_on_open(dir.path(), &held).unwrap();
 
-    let rendered = medulla_kernel::metrics::render();
+    let rendered = medulla_kernel::metrics::process().render();
     for needle in [
         "medulla_store_migration_steps_total{outcome=\"written\",step=\"journal\"}",
         "medulla_store_migration_steps_total{outcome=\"upgraded\",step=\"store\"}",

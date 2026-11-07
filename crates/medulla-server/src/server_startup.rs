@@ -365,7 +365,7 @@ fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::Persis
             "Automatic store migration is off ({}=false)",
             upgrade::AUTO_MIGRATE_ENV
         );
-        medulla_kernel::metrics::store_migration_step("run", "disabled");
+        medulla_kernel::metrics::process().store_migration_step("run", "disabled");
         return;
     }
     let migration = upgrade::migrate_on_open(std::path::Path::new(dir), lock)

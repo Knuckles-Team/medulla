@@ -284,7 +284,7 @@ fn owned_instance(
     if instance.tenant == tenant && instance.actor == actor {
         Ok(instance)
     } else {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         Err(not_found())
     }
 }

@@ -98,7 +98,11 @@ fn end_stage(span: &tracing::Span, stage: Stage, family: &str, ok: bool, started
     let elapsed = started.elapsed();
     span.record("outcome", if ok { "ok" } else { "error" });
     span.record("duration_ms", elapsed.as_millis() as u64);
-    medulla_kernel::metrics::decide_stage_seconds(family, stage.as_str(), elapsed.as_secs_f64());
+    medulla_kernel::metrics::process().decide_stage_seconds(
+        family,
+        stage.as_str(),
+        elapsed.as_secs_f64(),
+    );
 }
 
 /// Run one synchronous stage inside its span.
@@ -145,13 +149,12 @@ pub(super) fn family(kind: medulla_decision_types::decision::statistical::Questi
 pub(super) fn assembled(record: &medulla_decision_types::decision::DecisionRecord) {
     use medulla_decision_types::decision::DecisionOutcome;
     match &record.outcome {
-        DecisionOutcome::Solved { certificate, .. } => medulla_kernel::metrics::solver_nodes_ratio(
-            certificate.nodes_expanded,
-            record.inputs.solver.node_budget,
-        ),
+        DecisionOutcome::Solved { certificate, .. } => medulla_kernel::metrics::process()
+            .solver_nodes_ratio(certificate.nodes_expanded, record.inputs.solver.node_budget),
         DecisionOutcome::Abstained { reasons } => {
             for reason in reasons.iter() {
-                medulla_kernel::metrics::decide_abstentions(&variant_token(&format!("{reason:?}")));
+                medulla_kernel::metrics::process()
+                    .decide_abstentions(&variant_token(&format!("{reason:?}")));
             }
         }
     }
@@ -193,13 +196,13 @@ pub(super) fn decided(record: &StatisticalDecisionRecord, candidates: usize, sta
     let evidence = format!("{:?}", record.evidence_class);
     if outcome == "abstained" {
         for code in reasons.split(',').filter(|code| !code.is_empty()) {
-            medulla_kernel::metrics::decide_abstentions(code);
+            medulla_kernel::metrics::process().decide_abstentions(code);
         }
     }
-    medulla_kernel::metrics::decision_answered(outcome, &evidence, &reasons);
-    medulla_kernel::metrics::decision_latency("Decide", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process().decision_answered(outcome, &evidence, &reasons);
+    medulla_kernel::metrics::process().decision_latency("Decide", started.elapsed().as_secs_f64());
     if record.inputs.exploration.is_some() {
-        medulla_kernel::metrics::decision_explored(matches!(
+        medulla_kernel::metrics::process().decision_explored(matches!(
             record.outcome,
             StatisticalOutcome::Explored { .. }
         ));
@@ -221,7 +224,8 @@ pub(super) fn decided(record: &StatisticalDecisionRecord, candidates: usize, sta
 
 /// One finished replay evaluation (EH-528).
 pub(super) fn replayed(run: &EvaluationRun, started: Instant) {
-    medulla_kernel::metrics::decision_latency("DecisionEval", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process()
+        .decision_latency("DecisionEval", started.elapsed().as_secs_f64());
     tracing::info!(
         target: "medulla.decide",
         run_digest = %run.run_digest,
@@ -237,8 +241,9 @@ pub(super) fn replayed(run: &EvaluationRun, started: Instant) {
 
 /// One finished evaluation.
 pub(super) fn evaluated(receipt: &DecisionEvalReceipt, started: Instant) {
-    medulla_kernel::metrics::decision_evaluated(receipt.passed);
-    medulla_kernel::metrics::decision_latency("DecisionEval", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process().decision_evaluated(receipt.passed);
+    medulla_kernel::metrics::process()
+        .decision_latency("DecisionEval", started.elapsed().as_secs_f64());
     let min_ess = receipt
         .estimates
         .iter()
@@ -276,20 +281,17 @@ pub(super) fn threshold_assessed(assessment: Option<&DecisionThresholdAssessment
     } else {
         "ok"
     };
-    medulla_kernel::metrics::decision_threshold_assessed("support", support);
-    medulla_kernel::metrics::decision_threshold_assessed(
-        "coverage",
-        result(assessment.coverage_below_policy),
-    );
-    medulla_kernel::metrics::decision_threshold_assessed(
-        "act_risk",
-        result(assessment.act_risk_above_policy),
-    );
+    medulla_kernel::metrics::process().decision_threshold_assessed("support", support);
+    medulla_kernel::metrics::process()
+        .decision_threshold_assessed("coverage", result(assessment.coverage_below_policy));
+    medulla_kernel::metrics::process()
+        .decision_threshold_assessed("act_risk", result(assessment.act_risk_above_policy));
 }
 
 /// One finished fit.
 pub(super) fn fitted(n_training: u64, calibrated: bool, started: Instant) {
-    medulla_kernel::metrics::decision_latency("DecisionFit", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process()
+        .decision_latency("DecisionFit", started.elapsed().as_secs_f64());
     tracing::info!(
         target: "medulla.decide",
         n_training,
@@ -302,7 +304,7 @@ pub(super) fn fitted(n_training: u64, calibrated: bool, started: Instant) {
 /// One refused call.
 pub(super) fn refused(method: &'static str, error: &str) {
     let code = refusal_code(error);
-    medulla_kernel::metrics::decision_refused(method, code);
+    medulla_kernel::metrics::process().decision_refused(method, code);
     tracing::info!(target: "medulla.decide", method, code, "decision call refused");
 }
 
@@ -320,7 +322,8 @@ fn refusal_code(error: &str) -> &str {
 
 /// One served decision-log call.
 pub(super) fn logged(ok: bool, started: Instant) {
-    medulla_kernel::metrics::decision_latency("DecisionLog", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process()
+        .decision_latency("DecisionLog", started.elapsed().as_secs_f64());
     tracing::info!(
         target: "medulla.decide",
         ok,

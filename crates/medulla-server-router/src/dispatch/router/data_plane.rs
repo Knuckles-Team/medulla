@@ -603,7 +603,7 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
                         }
                         medulla_isolation::isolation::MintLeaseError::UnknownActor
                         | medulla_isolation::isolation::MintLeaseError::AccessDenied => {
-                            medulla_kernel::metrics::access_denied();
+                            medulla_kernel::metrics::process().access_denied();
                             Response::err(req_id, "ACCESS_DENIED")
                         }
                     })?;

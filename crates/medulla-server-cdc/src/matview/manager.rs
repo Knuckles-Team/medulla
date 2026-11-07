@@ -114,7 +114,7 @@ fn enforce_view_ceiling(t: &mut Tracked, ceiling: u64) {
         return;
     }
     let reason = ServerErrorCode::StateBudgetExceeded.as_str();
-    medulla_kernel::metrics::view_demoted("plan", reason);
+    medulla_kernel::metrics::process().view_demoted("plan", reason);
     tracing::warn!(
         target: "medulla::matview",
         view = %t.def.name,

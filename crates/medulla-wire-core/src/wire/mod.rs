@@ -1443,14 +1443,14 @@ impl WireSession {
         };
         let context = medulla_server_auth::auth::verify_request(&server, &secret, request)
             .map_err(|message| {
-                medulla_kernel::metrics::auth_failure();
+                medulla_kernel::metrics::process().auth_failure();
                 WireError {
                     code: "28000".to_string(),
                     message,
                 }
             })?;
         let verified_authority = CarrierAuthority::from_verified(&context).map_err(|message| {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             WireError {
                 code: "28000".to_string(),
                 message,
@@ -1459,7 +1459,7 @@ impl WireSession {
 
         let policy = medulla_capabilities::policy(&request.method);
         if !context.allows_method(policy.authz_action, policy.mutates) {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Err(WireError {
                 code: "42501".to_string(),
                 message: format!(
@@ -1518,7 +1518,7 @@ impl WireSession {
         verified_actor: &str,
     ) -> WireResult<()> {
         if verified_actor.trim().is_empty() {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Err(WireError {
                 code: "28000".to_string(),
                 message: "verified wire identity is required".to_string(),
@@ -1886,7 +1886,7 @@ impl WireSession {
         if medulla_server_auth::access::decide_graph_access(&s.isolation, &query) {
             Ok(())
         } else {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             Err(WireError {
                 // 42501 — insufficient_privilege (what a real pg ACL denial reports).
                 code: "42501".to_owned(),

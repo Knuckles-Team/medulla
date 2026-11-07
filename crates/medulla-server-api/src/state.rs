@@ -587,7 +587,8 @@ pub async fn timed_write(
 ) -> tokio::sync::RwLockWriteGuard<'_, ServerState> {
     let started = std::time::Instant::now();
     let guard = state.write().await;
-    medulla_kernel::metrics::observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process()
+        .observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
     guard
 }
 

@@ -193,7 +193,7 @@ async fn commit_finalize_refreshes_the_graph_size_gauges() {
     let graph_name = "g-medulla-p0-2-gauge-refresh";
 
     fn gauge_value(metric: &str, graph_name: &str) -> Option<i64> {
-        let rendered = medulla_kernel::metrics::render();
+        let rendered = medulla_kernel::metrics::process().render();
         let needle = format!("{metric}{{graph=\"{graph_name}\"}} ");
         rendered.lines().find_map(|line| {
             line.strip_prefix(&needle)

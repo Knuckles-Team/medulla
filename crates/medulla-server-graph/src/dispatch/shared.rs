@@ -225,7 +225,8 @@ pub async fn timed_read(
 ) -> tokio::sync::RwLockReadGuard<'_, ServerState> {
     let started = DispatchLockInstant::now();
     let guard = state.read().await;
-    medulla_kernel::metrics::observe_dispatch_lock_wait("read", started.elapsed().as_secs_f64());
+    medulla_kernel::metrics::process()
+        .observe_dispatch_lock_wait("read", started.elapsed().as_secs_f64());
     guard
 }
 

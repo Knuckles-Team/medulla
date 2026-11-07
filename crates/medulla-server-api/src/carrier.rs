@@ -65,7 +65,7 @@ impl CarrierAuthority {
         let principal = context.principal().trim();
         let agent_id = context.agent_id().trim();
         if tenant.is_empty() || principal.is_empty() || agent_id.is_empty() {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Err(
                 "ACCESS_DENIED: verified data carrier is missing tenant, principal, or actor"
                     .to_string(),
@@ -239,7 +239,7 @@ impl CarrierAuthority {
         if self.admin {
             Ok(())
         } else {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             Err(format!(
                 "ACCESS_DENIED: {domain} has no per-row ownership and requires kg:admin"
             ))
@@ -314,7 +314,7 @@ impl GraphReadAuthority {
         {
             let actor = context.agent_id().trim().to_string();
             if actor.is_empty() {
-                medulla_kernel::metrics::access_denied();
+                medulla_kernel::metrics::process().access_denied();
                 return Err(
                     "ACCESS_DENIED: verified row-level graph read has no actor identity"
                         .to_string(),
@@ -361,12 +361,12 @@ impl GraphReadAuthority {
         let actor = match self.carrier.as_ref() {
             Some(carrier) => carrier.agent_id(),
             None => {
-                medulla_kernel::metrics::access_denied();
+                medulla_kernel::metrics::process().access_denied();
                 return Err("ACCESS_DENIED: verified row-level actor is required".to_string());
             }
         };
         if actor.trim().is_empty() {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             Err("ACCESS_DENIED: verified row-level actor is required".to_string())
         } else {
             Ok(actor)
@@ -513,7 +513,7 @@ impl GraphReadAuthority {
         let actor = self.actor.clone();
         let current_version = core.version();
         if let Some(cached) = core.cached_projection(&actor, current_version) {
-            medulla_kernel::metrics::projection_cache_hit();
+            medulla_kernel::metrics::process().projection_cache_hit();
             return cached;
         }
 
@@ -525,11 +525,12 @@ impl GraphReadAuthority {
         // `GraphCore::projection_cache_generation`'s doc.
         let generation = core.projection_cache_generation();
         // D-EGP-1 (t1-grounding-0802): time the rebuild a miss triggers — see
-        // `medulla_kernel::metrics::projection_cache_miss` for why this is the decisive
+        // `medulla_kernel::metrics::KernelMetrics::projection_cache_miss` for why this is the decisive
         // measurement for the RLS-cache-thrash hypothesis.
         let build_started = std::time::Instant::now();
         let projected = self.build_projection(core);
-        medulla_kernel::metrics::projection_cache_miss(build_started.elapsed().as_secs_f64());
+        medulla_kernel::metrics::process()
+            .projection_cache_miss(build_started.elapsed().as_secs_f64());
         core.put_cached_projection(actor, current_version, generation, projected.clone());
         projected
     }

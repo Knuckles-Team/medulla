@@ -27,7 +27,7 @@ pub fn answer_shard_writer_width(
     if let Err(denied) =
         super::native_write_authority::require_carrier_tenant(tenant, verified_tenant)
     {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return Response::err(req_id, denied);
     }
     let payload = shard_writer_width(tenant, persistence).and_then(
