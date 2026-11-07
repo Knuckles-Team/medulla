@@ -17,11 +17,14 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
+  # Exit 143 (SIGTERM) mid-compile on the 4-vCPU/16 GiB hosted runner is memory pressure from
+  # many parallel rustc/LTO jobs over the `full` tree; two jobs fit, as in medulla-release-x86.yml.
+  CARGO_BUILD_JOBS: "2"
 
 jobs:
   decide-budgets:
     if: github.ref == 'refs/heads/main'
-    timeout-minutes: 180
+    timeout-minutes: 300
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
