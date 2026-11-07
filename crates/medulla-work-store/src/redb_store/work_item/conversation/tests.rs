@@ -127,16 +127,15 @@ fn admission_refuses_failed_cancelled_and_unknown_predecessors() {
     admit(&temp.shard, &request("one", 0, None), "owner").unwrap();
     for status in ["failed", "cancelled", "dead_letter", "unknown"] {
         state(&temp.shard, "one", status);
+        // An unrecognized stored status fails closed with the WorkItem machine's typed
+        // refusal (MEDULLA-ORCH-VOCAB-R812.4) before continuity is examined.
         let refusal = if status == "unknown" {
-            "CONVERSATION_UNAVAILABLE"
+            "WORK_ITEM_STATUS_UNKNOWN"
         } else {
             "CONVERSATION_PREDECESSOR_FAILED"
         };
-        assert!(
-            admit(&temp.shard, &request(status, 1, Some("one")), "owner")
-                .unwrap_err()
-                .contains(refusal)
-        );
+        let err = admit(&temp.shard, &request(status, 1, Some("one")), "owner").unwrap_err();
+        assert!(err.contains(refusal), "{status}: {err}");
         assert_eq!(read_head(&temp.shard).revision, 1);
     }
 }

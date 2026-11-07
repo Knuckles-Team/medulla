@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="boundary" name="Review contract">
+    <startEvent id="s" name="Contract drafted"/>
+    <userTask id="review" name="Review contract"/>
+    <boundaryEvent id="late" name="Review overdue" attachedToRef="review"><timerEventDefinition id="t1"/></boundaryEvent>
+    <serviceTask id="escalate" name="Escalate review"/>
+    <endEvent id="e1" name="Contract reviewed"/>
+    <endEvent id="e2" name="Review escalated"/>
+    <sequenceFlow id="f1" sourceRef="s" targetRef="review"/>
+    <sequenceFlow id="f2" sourceRef="review" targetRef="e1"/>
+    <sequenceFlow id="f3" sourceRef="late" targetRef="escalate"/>
+    <sequenceFlow id="f4" sourceRef="escalate" targetRef="e2"/>
+  </process>
+</definitions>

@@ -1,8 +1,8 @@
 //! MEDULLA-CQ-ORCH-R810.1 — the broker message as one explicit state machine.
 //!
 //! `MessageState::apply` is the one transition function. The edge table is B01 to B08.
-//! The broker writers (`broker.rs`, `broker/consume_scan.rs` and the graph-core claim and
-//! reclaim paths) move to it in the cutover step of the row.
+//! The broker writers in `broker.rs` and `broker/consume_scan.rs` decide every status
+//! change with it (MEDULLA-CQ-ORCH-R810.3).
 
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
@@ -188,6 +188,99 @@ impl MessageState {
         guard_holds: impl Fn(&'static str) -> bool,
     ) -> Result<Self, TransitionRefused> {
         transition(&BROKER_MESSAGE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
+}
+
+/// The time and ownership facts the broker guards read for one message.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MessageFacts {
+    /// The visibility lease deadline; `None` means a lease with no expiry.
+    pub lease_until: Option<u64>,
+    /// The earliest delivery time.
+    pub deliver_at: Option<u64>,
+    /// The time-to-live deadline.
+    pub expires_at: Option<u64>,
+    /// The caller names the current claimant.
+    pub claimant_matches: bool,
+    /// The delivery count is below the queue's maximum.
+    pub attempts_below_max: bool,
+}
+
+impl MessageFacts {
+    /// Answer each guard of `BrokerMessageMachine` at `now_ms`.
+    pub fn guard(&self, now_ms: u64) -> impl Fn(&'static str) -> bool + '_ {
+        move |guard| {
+            let expired = self.expires_at.is_some_and(|at| at <= now_ms);
+            let lease_lapsed = self.lease_until.is_some_and(|at| at <= now_ms);
+            match guard {
+                BROKER_MESSAGE_GUARD_DELIVER_AT_PASSED_NOT_EXPIRED => {
+                    !expired && self.deliver_at.is_none_or(|at| at <= now_ms)
+                }
+                BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES_LEASE_LIVE => {
+                    self.claimant_matches && !lease_lapsed
+                }
+                BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES_ATTEMPTS_BELOW_MAX => {
+                    self.claimant_matches && self.attempts_below_max
+                }
+                BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES => self.claimant_matches,
+                BROKER_MESSAGE_GUARD_CLAIMANT_MATCHES_ATTEMPTS_REACHED_MAX => {
+                    self.claimant_matches && !self.attempts_below_max
+                }
+                BROKER_MESSAGE_GUARD_LEASE_UNTIL_PASSED => lease_lapsed,
+                BROKER_MESSAGE_GUARD_EXPIRES_AT_PASSED => expired,
+                _ => false,
+            }
+        }
+    }
+}
+
+/// What one stored message is to a consumer at a given time, decided by the machine.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Claimable {
+    /// Not claimable now: another holder's live lease or not yet due.
+    No,
+    /// Held under a live lease; the caller compares the owner.
+    LiveLease,
+    /// The time-to-live has passed: `Expire` applies.
+    Expired,
+    /// `Claim` applies from this state (a lapsed claim first takes `LeaseLapse`).
+    Yes(MessageState),
+}
+
+impl MessageState {
+    /// Read the stored status text of a live message. Terminal messages are removed from
+    /// the queue, so only `pending` and `claimed` are stored on a live row.
+    pub fn from_stored(text: &str) -> Option<Self> {
+        match text {
+            "pending" => Some(Self::Pending),
+            "claimed" => Some(Self::Claimed),
+            _ => None,
+        }
+    }
+
+    /// Settle a stored state at `now_ms`: a claimed message whose lease lapsed takes
+    /// `LeaseLapse` and is pending again.
+    pub fn settled(self, facts: &MessageFacts, now_ms: u64) -> Self {
+        self.apply(MessageEvent::LeaseLapse, facts.guard(now_ms))
+            .unwrap_or(self)
+    }
+
+    /// Whether the message can be claimed at `now_ms`, decided by `apply` alone.
+    pub fn claimable(self, facts: &MessageFacts, now_ms: u64) -> Claimable {
+        let state = self.settled(facts, now_ms);
+        if state
+            .apply(MessageEvent::Expire, facts.guard(now_ms))
+            .is_ok()
+        {
+            return Claimable::Expired;
+        }
+        if state == Self::Claimed {
+            return Claimable::LiveLease;
+        }
+        match state.apply(MessageEvent::Claim, facts.guard(now_ms)) {
+            Ok(_) => Claimable::Yes(self),
+            Err(_) => Claimable::No,
+        }
     }
 }
 
@@ -386,5 +479,68 @@ mod tests {
                 assert_eq!(legal, has_edge, "{state:?} {event:?}");
             }
         }
+    }
+
+    /// The writer half of a source file: everything above its test module.
+    fn writer_source(text: &str) -> &str {
+        text.split("#[cfg(test)]").next().unwrap_or(text)
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.3
+
+    #[test]
+    fn no_writer_sets_status_outside_apply() {
+        for (name, text) in [
+            ("broker.rs", include_str!("../broker.rs")),
+            ("consume_scan.rs", include_str!("consume_scan.rs")),
+        ] {
+            let writer = writer_source(text);
+            for literal in ["\"pending\"", "\"claimed\""] {
+                assert!(
+                    !writer.contains(literal),
+                    "{name} writes or matches the status text {literal} outside the machine"
+                );
+            }
+            assert!(
+                !writer.contains("reclaimed"),
+                "{name} still carries the reclaimed hint"
+            );
+            assert!(
+                !writer.contains("match (status"),
+                "{name} still matches a status tuple"
+            );
+        }
+    }
+
+    // spec: MEDULLA-CQ-ORCH-R810.3
+
+    #[test]
+    fn lease_lapse_makes_a_claimed_message_pending() {
+        use super::{Claimable, MessageFacts};
+        let facts = MessageFacts {
+            lease_until: Some(100),
+            ..MessageFacts::default()
+        };
+        assert_eq!(
+            MessageState::Claimed.settled(&facts, 99),
+            MessageState::Claimed
+        );
+        assert_eq!(
+            MessageState::Claimed.claimable(&facts, 99),
+            Claimable::LiveLease
+        );
+        assert_eq!(
+            MessageState::Claimed.settled(&facts, 100),
+            MessageState::Pending
+        );
+        assert_eq!(
+            MessageState::Claimed.claimable(&facts, 100),
+            Claimable::Yes(MessageState::Claimed)
+        );
+        let no_expiry = MessageFacts::default();
+        assert_eq!(
+            MessageState::Claimed.settled(&no_expiry, u64::MAX),
+            MessageState::Claimed
+        );
     }
 }

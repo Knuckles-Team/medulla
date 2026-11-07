@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Onboard supplier",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Supplier applied"
+    },
+    {
+      "id": "s2",
+      "kind": "call",
+      "label": "Verify identity",
+      "ref": "identity_check"
+    },
+    {
+      "id": "s3",
+      "kind": "agent",
+      "label": "Create supplier record"
+    },
+    {
+      "id": "s4",
+      "kind": "end",
+      "label": "Supplier onboarded"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s4",
+      "default": false
+    }
+  ],
+  "digest": "7be0673ffdfc4233080d808c79d3e49cca78a93e3a6c5bffe8643a34265bfd6d",
+  "source": {
+    "schema_version": 1,
+    "system": "aris_epc",
+    "model_id": "epc:called_subprocess",
+    "elements": {
+      "s1": "epc-s1",
+      "s2": "epc-s2",
+      "s3": "epc-s3",
+      "s4": "epc-s4"
+    }
+  },
+  "annex": [
+    {
+      "schema_version": 1,
+      "after": "s1",
+      "before": "s2",
+      "construct": "epc-state-event",
+      "element_id": "epc-state-1",
+      "label": "Onboard supplier ready"
+    }
+  ]
+}

@@ -460,7 +460,7 @@ units = [
   "medulla-server-router",
 ]
 
-# Outer adapters: the facade package, the Python engine and the cross-crate test harnesses.
+# Outer adapters: the facade package, the Python engine, the cross-crate test harnesses and the repository tooling (`cargo xtask`), which no crate depends on.
 [[tool.pipelines_hooks.coupling.cargo_layers]]
 name = "adapters"
 units = [
@@ -473,7 +473,7 @@ units = [
   "medulla-sql-tests",
   "medulla-store-apply-tests",
   "medulla-test-ambient-auth",
-  "xtask",
+  "medulla-xtask",
 ]
 
 [tool.pipelines_hooks.cargo_advisories]

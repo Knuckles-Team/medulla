@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Review contract",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Contract drafted"
+    },
+    {
+      "id": "s2",
+      "kind": "human",
+      "label": "Review contract"
+    },
+    {
+      "id": "s3",
+      "kind": "end",
+      "label": "Contract reviewed"
+    },
+    {
+      "id": "s4",
+      "kind": "boundary",
+      "label": "Review overdue",
+      "ref": "timer"
+    },
+    {
+      "id": "s5",
+      "kind": "agent",
+      "label": "Escalate review"
+    },
+    {
+      "id": "s6",
+      "kind": "end",
+      "label": "Review escalated"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s4",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s5",
+      "target": "s6",
+      "default": false
+    }
+  ],
+  "digest": "a8490c179aff3409078b363dba2c37dfba2e83045ac8e80d38aa89c8568dda99",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "boundary",
+    "elements": {
+      "s1": "s",
+      "s2": "review",
+      "s3": "e1",
+      "s4": "late",
+      "s5": "escalate",
+      "s6": "e2"
+    }
+  }
+}

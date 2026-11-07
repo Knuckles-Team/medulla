@@ -572,9 +572,13 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
                 "medulla-core -p medulla-compute --all-features --no-fail-fast"
             ),
         ),
-        # The script wraps one `cargo test -p medulla-federation` key-quoting
-        # fixture run; the step itself names no cargo command.
-        ("Lint (generated Cypher property keys are quoted)"): (),
+        ("Lint (generated Cypher property keys are quoted)"): (
+            (
+                "python3 scripts/cargo_test_rescue.py cargo test --locked -p "
+                "medulla-federation --features federation --lib "
+                "federation_cypher_unbound::tests::key_quoting_fixtures -- --exact"
+            ),
+        ),
         ("Test (canonical capability policy)"): (
             (
                 "python3 scripts/cargo_test_rescue.py cargo test --locked -p "

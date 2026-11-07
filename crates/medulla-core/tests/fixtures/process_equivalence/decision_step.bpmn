@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="decide" name="Price order">
+    <startEvent id="s" name="Order placed"/>
+    <businessRuleTask id="discount" name="Determine discount" decisionRef="discount_table"/>
+    <serviceTask id="invoice" name="Issue invoice"/>
+    <endEvent id="e" name="Order priced"/>
+    <sequenceFlow id="f1" sourceRef="s" targetRef="discount"/>
+    <sequenceFlow id="f2" sourceRef="discount" targetRef="invoice"/>
+    <sequenceFlow id="f3" sourceRef="invoice" targetRef="e"/>
+  </process>
+</definitions>

@@ -36,6 +36,8 @@ use medulla_graph_core::graph::GraphCore;
 
 // MEDULLA-CQ-ORCH-R810.1 — the broker message machine (edge table B01 to B08).
 pub mod message_machine;
+use medulla_types::transition_refused::{MachineState, TransitionRefused};
+use message_machine::{MessageEvent, MessageFacts, MessageState};
 mod producer;
 mod routing;
 
@@ -318,15 +320,15 @@ pub fn broker_reject(
     node_id: &str,
     requeue: bool,
     now_ms: u64,
-) -> String {
+) -> Result<String, TransitionRefused> {
     let Some(blob) = core.get_node_properties(node_id) else {
-        return "absent".into();
+        return Ok("absent".into());
     };
     let Ok(v) = decode_property(&blob) else {
-        return "absent".into();
+        return Ok("absent".into());
     };
     let Some(obj) = v.as_object() else {
-        return "absent".into();
+        return Ok("absent".into());
     };
     let dc = f_i64(obj, "delivery_count", 0);
     // MEDULLA-284: retire this delivery's tag reverse-lookup — a requeue/dead-letter ends
@@ -340,16 +342,33 @@ pub fn broker_reject(
         .max_delivery_count
         .map(|m| (dc as i128) < (m as i128))
         .unwrap_or(true);
-    if requeue && under_max {
+    let Some(state) = MessageState::from_stored(f_str(obj, "status")) else {
+        return Ok("absent".into());
+    };
+    // A node-id reject is addressed by the claimant's own handle.
+    let facts = MessageFacts {
+        claimant_matches: true,
+        attempts_below_max: under_max,
+        ..consume_scan::message_facts(obj)
+    };
+    let event = if requeue {
+        MessageEvent::NackRetry
+    } else {
+        MessageEvent::NackDead
+    };
+    if state.apply(event, facts.guard(now_ms))? == MessageState::Pending {
         // Return to the claimable pool (keep delivery_count — it counts the attempt).
         let mut updates = serde_json::Map::new();
-        updates.insert("status".into(), serde_json::Value::String("pending".into()));
+        updates.insert(
+            "status".into(),
+            serde_json::Value::String(MessageState::Pending.stored().into()),
+        );
         updates.insert("lease_until".into(), serde_json::Value::Null);
         updates.insert("owner_consumer".into(), serde_json::Value::Null);
         updates.insert("owner_group".into(), serde_json::Value::Null);
         updates.insert("delivery_tag".into(), serde_json::Value::Null);
         core.compare_and_set_fields(node_id, &serde_json::Map::new(), &updates);
-        return "requeued".into();
+        return Ok("requeued".into());
     }
     let reason = if requeue {
         "max-delivery-exceeded"
@@ -358,11 +377,11 @@ pub fn broker_reject(
     };
     let had_dlx = policy.dl_exchange.is_some();
     dead_letter(core, queue, node_id, &v, reason, now_ms);
-    if had_dlx {
+    Ok(if had_dlx {
         "dead-lettered".into()
     } else {
         "dropped".into()
-    }
+    })
 }
 
 /// Dead-letter one message (CONCEPT:MEDULLA-KG.compute.dead-letter-queues): if the queue has a `dl_exchange`,
@@ -459,22 +478,22 @@ pub fn sweep_expired(core: &GraphCore, now_ms: u64) -> usize {
             let Some(object) = value.as_object() else {
                 continue;
             };
-            let status = f_str(object, "status");
-            let lease_until = f_u64(object, "lease_until");
-            let lease_expired = status == "claimed" && lease_until.is_some_and(|l| l <= now_ms);
-            let ttl_expired =
-                f_u64(object, "expires_at").is_some_and(|expires_at| expires_at <= now_ms);
-            match (status, lease_expired, ttl_expired) {
-                ("pending", _, true) | ("claimed", true, true) => {
-                    dead_letter(core, queue, &id, &value, "expired", now_ms);
-                    acted += 1;
-                }
-                ("claimed", true, false)
-                    if core.broker_release_expired_delivery(&id, lease_until, now_ms) =>
-                {
-                    acted += 1;
-                }
-                _ => {}
+            let Some(state) = MessageState::from_stored(f_str(object, "status")) else {
+                continue;
+            };
+            let facts = consume_scan::message_facts(object);
+            if state
+                .apply(MessageEvent::Expire, facts.guard(now_ms))
+                .is_ok()
+            {
+                dead_letter(core, queue, &id, &value, "expired", now_ms);
+                acted += 1;
+            } else if state
+                .apply(MessageEvent::LeaseLapse, facts.guard(now_ms))
+                .is_ok()
+                && core.broker_release_expired_delivery(&id, facts.lease_until, now_ms)
+            {
+                acted += 1;
             }
         }
         acted
@@ -1133,7 +1152,10 @@ mod tests {
         assert_eq!(publish(&core, "ex", "k", b"boom"), 1);
         let (id, _) = broker_consume(&core, "q", "g", "c", 1000, 0, 0).unwrap();
         // reject WITHOUT requeue → straight to the DLQ.
-        assert_eq!(broker_reject(&core, "q", &id, false, 1000), "dead-lettered");
+        assert_eq!(
+            broker_reject(&core, "q", &id, false, 1000).unwrap(),
+            "dead-lettered"
+        );
         // original message is gone from the source queue …
         assert!(broker_consume(&core, "q", "g", "c", 1001, 0, 0).is_none());
         // … and present on the DLQ with payload + x-death metadata preserved.
@@ -1163,13 +1185,19 @@ mod tests {
         // Delivery #1 → reject/requeue (1 < 2) → back to claimable.
         let (id, p1) = broker_consume(&core, "q", "g", "c", 10, 0, 0).unwrap();
         assert_eq!(p1.get("delivery_count").and_then(|v| v.as_i64()), Some(1));
-        assert_eq!(broker_reject(&core, "q", &id, true, 10), "requeued");
+        assert_eq!(
+            broker_reject(&core, "q", &id, true, 10).unwrap(),
+            "requeued"
+        );
 
         // Delivery #2 → reject/requeue but 2 is NOT < 2 → dead-lettered.
         let (id2, p2) = broker_consume(&core, "q", "g", "c", 20, 0, 0).unwrap();
         assert_eq!(id2, id, "same message redelivered");
         assert_eq!(p2.get("delivery_count").and_then(|v| v.as_i64()), Some(2));
-        assert_eq!(broker_reject(&core, "q", &id2, true, 20), "dead-lettered");
+        assert_eq!(
+            broker_reject(&core, "q", &id2, true, 20).unwrap(),
+            "dead-lettered"
+        );
 
         assert!(broker_consume(&core, "q", "g", "c", 30, 0, 0).is_none());
         let (_, dl) = consume_dlq(&core, 40).expect("dead-lettered after max deliveries");
@@ -1186,7 +1214,7 @@ mod tests {
         let core = rig();
         assert_eq!(publish(&core, "ex", "k", b"x"), 1);
         let (id, _) = broker_consume(&core, "q", "g", "c", 1, 0, 0).unwrap();
-        assert_eq!(broker_reject(&core, "q", &id, false, 1), "dropped");
+        assert_eq!(broker_reject(&core, "q", &id, false, 1).unwrap(), "dropped");
         assert!(!core.has_node(&id));
     }
 

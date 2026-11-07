@@ -496,7 +496,8 @@ repos:
   - id: rustfmt-scope
     name: rustfmt (pinned, changed files, check-only)
     entry: pipelines-hook rustfmt-scope
-    language: system
+    language: python
+    additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     files: '(^|/)(Cargo\.toml|rust-toolchain\.toml|rustfmt\.toml)$|\.rs$|^\.config/pre-commit\.yaml$|^\.mergequeue\.yaml$'
     pass_filenames: true
     stages: [pre-push, manual]
@@ -666,7 +667,8 @@ repos:
   - id: cargo-deny-advisories
     name: cargo deny check advisories (Rust dependency CVE gate)
     entry: pipelines-hook cargo-advisories
-    language: system
+    language: python
+    additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|\.config/deny\.toml|\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py)$
     pass_filenames: false
   # crates.io-only dependency edict (AGENTS.md, "crates.io-only Rust dependency
@@ -682,7 +684,8 @@ repos:
   - id: check-crates-io-only
     name: crates.io-only Rust dependency edict
     entry: pipelines-hook crates-io-only
-    language: system
+    language: python
+    additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml)$
     pass_filenames: false
   # release-build.yml parity — build the ONE main wheel (CONCEPT:MEDULLA-359: `full`, the
@@ -799,14 +802,16 @@ repos:
   - id: check-root-hygiene
     name: Repository root hygiene (manifest-declared entries only)
     entry: pipelines-hook root-hygiene
-    language: system
+    language: python
+    additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: check-gitignore-convergence
     name: .gitignore carries the fleet-shared REQUIRED set
     entry: pipelines-hook gitignore-convergence
-    language: system
+    language: python
+    additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)

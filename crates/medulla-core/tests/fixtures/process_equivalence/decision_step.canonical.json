@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Price order",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Order placed"
+    },
+    {
+      "id": "s2",
+      "kind": "decision",
+      "label": "Determine discount",
+      "ref": "discount_table"
+    },
+    {
+      "id": "s3",
+      "kind": "agent",
+      "label": "Issue invoice"
+    },
+    {
+      "id": "s4",
+      "kind": "end",
+      "label": "Order priced"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s4",
+      "default": false
+    }
+  ],
+  "digest": "47e45d2d912b1e15d09b3be1c08f6e5a2518b4471523c96e5c249afb66f1c638",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "decide",
+    "elements": {
+      "s1": "s",
+      "s2": "discount",
+      "s3": "invoice",
+      "s4": "e"
+    }
+  }
+}
