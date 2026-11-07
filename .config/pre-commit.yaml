@@ -60,10 +60,7 @@ repos:
     exclude: |
       (?x)^(?:vendor/.*|tests/release_campaigns/campaign_.*|scripts/(?:
         bounded_test_runner|
-        campaign_knowledge_batch|
-        certify_exact_multimodal|
         certify_exact_performance|
-        campaign_reasoning_repair|
         check_complexity_staged|
         check_dupehound|
         check_dupehound_census|

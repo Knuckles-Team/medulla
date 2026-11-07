@@ -219,7 +219,7 @@ def _load_campaign_trees(errors: list[str]) -> dict[str, ast.AST | None]:
         relative: _check_harness_baseline(relative, _read(relative), errors)
         for relative in (
             "tests/release_campaigns/campaign_protocol_authorization.py",
-            "scripts/certify_exact_multimodal.py",
+            "tests/release_campaigns/campaign_multimodal.py",
             "tests/release_campaigns/campaign_knowledge_batch.py",
             "tests/release_campaigns/campaign_reasoning_repair.py",
         )
@@ -355,7 +355,6 @@ def _check_feature_contract(errors: list[str]) -> None:
 def _check_release_wrapper(errors: list[str]) -> None:
     wrappers = [ROOT / "tests" / "release_campaigns" / "campaign_runner.py"]
     wrappers.extend(sorted((ROOT / "tests" / "release_campaigns").glob("test_*.py")))
-    wrappers.append(ROOT / "tests" / "test_exact_release_campaigns.py")
     for wrapper in wrappers:
         # test_fault_restart.py is held by check_exact_fault_restart_harness.py.
         if not wrapper.is_file() or wrapper.name == "test_fault_restart.py":
@@ -381,7 +380,7 @@ def main() -> int:
     errors: list[str] = []
     trees = _load_campaign_trees(errors)
     protocol_relative = "tests/release_campaigns/campaign_protocol_authorization.py"
-    multimodal_relative = "scripts/certify_exact_multimodal.py"
+    multimodal_relative = "tests/release_campaigns/campaign_multimodal.py"
     batch_relative = "tests/release_campaigns/campaign_knowledge_batch.py"
     reasoning_relative = "tests/release_campaigns/campaign_reasoning_repair.py"
     _check_protocol_campaign(trees[protocol_relative], errors)

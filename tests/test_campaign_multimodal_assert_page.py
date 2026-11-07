@@ -1,9 +1,9 @@
-"""Unit tests for scripts/certify_exact_multimodal.py's `_assert_page` and its
+"""Unit tests for `_assert_page` in `release_campaigns/campaign_multimodal.py` and its
 extracted helpers (`_sole_page_record`, `_assert_record_identity`,
 `_assert_value_normalized`).
 
 The full G-14 certification campaign only runs opt-in against a real built
-artifact (see `tests/test_exact_release_campaigns.py`), so `_assert_page`
+artifact (see `tests/release_campaigns/test_multimodal.py`), so `_assert_page`
 otherwise has no direct test -- these pin its page/record/value validation
 shape (positive and negative) before it is decomposed into three helpers, so
 a change that regresses any branch fails this test.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import hashlib
 
-import certify_exact_multimodal as cem
+import campaign_multimodal as cem
 import pytest
 
 # Pure/static test -- never needs the shared native engine (see

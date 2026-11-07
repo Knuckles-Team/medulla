@@ -15,12 +15,13 @@ absent; they do not downgrade to a smaller feature set.
 ## Four served production modalities
 
 ```bash
-python scripts/certify_exact_multimodal.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --performance-evidence "${G37_JSON_EVIDENCE:?}" \
-  --performance-evidence-sha256 "${G37_JSON_EVIDENCE_SHA256:?}" \
-  --output "${MULTIMODAL_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_PERFORMANCE_EVIDENCE="${G37_JSON_EVIDENCE:?}" \
+MEDULLA_PERFORMANCE_EVIDENCE_SHA256="${G37_JSON_EVIDENCE_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${MULTIMODAL_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k multimodal
 ```
 
 The G-14 campaign requires document, image, audio, and video from the exact `full`
@@ -120,21 +121,23 @@ acknowledgement. A support removal must flip a belief and survive a second resta
 
 ## Pytest release entry point
 
-The opt-in wrapper runs the four campaigns serially against one explicitly supplied
+All four campaigns (and the fault/restart campaign) are `release_campaign` tests under
+`tests/release_campaigns/`; pytest runs them serially against one explicitly supplied
 artifact:
 
 ```bash
+MEDULLA_EXACT_CERTIFICATION=1 \
 MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
 MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
 MEDULLA_PERFORMANCE_EVIDENCE="${G37_JSON_EVIDENCE:?}" \
 MEDULLA_PERFORMANCE_EVIDENCE_SHA256="${G37_JSON_EVIDENCE_SHA256:?}" \
-python -m pytest tests/test_exact_release_campaigns.py -q
+python -m pytest -m release_campaign -q
 ```
 
-Supplying neither environment variable skips the opt-in wrapper. Supplying only one,
-or supplying an invalid artifact, fails. The shared suite engine is not started for an
-exact-artifact-only selection, so the campaign does not compile another binary or run
-two engine instances concurrently.
+Without `MEDULLA_EXACT_CERTIFICATION=1` the campaigns skip. With it, a missing
+environment variable or an invalid artifact fails. The shared suite engine is not
+started for an exact-artifact-only selection, so the campaign does not compile another
+binary or run two engine instances concurrently.
 
 ## Evidence and cleanup
 
