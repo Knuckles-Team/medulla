@@ -50,6 +50,9 @@
 # the fleet installs it (`apt-get install sccache` / see AGENTS.md); a
 # personal checkout without it installed should override with
 # `CARGO_BUILD_RUSTC_WRAPPER=` (empty) rather than editing this file.
+[alias]
+xtask = "run --quiet --package xtask --"
+
 [build]
 target-dir = "target-isolated"
 
