@@ -341,7 +341,7 @@ while not batch["cursor"]["exhausted"]:
 ```
 
 The `knowledge-batch` and `modality-serving` facade features are part of `full`, and
-`full` is the default deployment. `scripts/check_p2_modality_architecture.py`
+`full` is the default deployment. `cargo xtask p2-modality-architecture`
 bans the retired shapes (no-op runtimes or codec features, TCK exemptions, the
 compatibility projection, a source-bearing receipt digest or Raft command field),
 enforces that graph ACL and placement resolve before KnowledgeStream is routed, and
@@ -353,7 +353,7 @@ behavioral contracts themselves are proven by the Rust suites below.
 Run these serially on a resource-constrained build host:
 
 ```bash
-python3 scripts/check_p2_modality_architecture.py
+cargo xtask p2-modality-architecture
 cargo test -p medulla-modality --test served_runtime
 cargo test -p medulla-modality --test fleet_tck -- --nocapture
 cargo test --features modality-serving server::handlers::modality::tests::resource_gate_is_bounded_and_every_leaf_is_12_of_12

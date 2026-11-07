@@ -3,7 +3,11 @@
 //! One module per check; each module exposes `NAME`, `SUMMARY` and `run`. A check that every
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
+mod analysis;
 mod build_profiles;
+mod canonical_property_schema;
+mod p2_analytics_reasoning_architecture;
+mod p2_modality_architecture;
 mod repo_root_parity;
 mod spec_paths;
 #[cfg(test)]
@@ -25,6 +29,21 @@ const CHECKS: &[Check] = &[
         name: build_profiles::NAME,
         summary: build_profiles::SUMMARY,
         run: build_profiles::run,
+    },
+    Check {
+        name: canonical_property_schema::NAME,
+        summary: canonical_property_schema::SUMMARY,
+        run: canonical_property_schema::run,
+    },
+    Check {
+        name: p2_analytics_reasoning_architecture::NAME,
+        summary: p2_analytics_reasoning_architecture::SUMMARY,
+        run: p2_analytics_reasoning_architecture::run,
+    },
+    Check {
+        name: p2_modality_architecture::NAME,
+        summary: p2_modality_architecture::SUMMARY,
+        run: p2_modality_architecture::run,
     },
     Check {
         name: repo_root_parity::NAME,

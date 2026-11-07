@@ -14011,7 +14011,9 @@ name = "xtask"
 version = "0.0.0"
 dependencies = [
  "regex",
+ "syn 2.0.119",
  "toml_edit",
+ "walkdir",
 ]
 
 [[package]]

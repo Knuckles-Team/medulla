@@ -4070,7 +4070,6 @@ components:
       - "tests/test_object_path.py"
       - "tests/test_orphan_modules_gate.py"
       - "tests/test_otlp_log_client_served.py"
-      - "tests/test_p2_analytics_gate_contract.py"
       - "tests/test_pb_clients.py"
       - "tests/test_persisted_mutation_contract.py"
       - "tests/test_sole_write_envelope.py"

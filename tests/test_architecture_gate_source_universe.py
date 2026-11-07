@@ -446,7 +446,6 @@ def test_mint_lease_gate_passes_on_the_current_tree() -> None:
     [
         "check_epistemic_operations_protocol",
         "check_exact_fault_restart_harness",
-        "check_p2_analytics_reasoning_architecture",
     ],
 )
 def test_repaired_architecture_gate_passes_on_the_current_tree(gate_name: str) -> None:

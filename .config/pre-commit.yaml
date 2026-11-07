@@ -292,7 +292,7 @@ repos:
     stages: [manual]
   - id: canonical-property-schema
     name: Canonical structural property schema
-    entry: python3 scripts/check_canonical_property_schema.py
+    entry: cargo xtask canonical-property-schema
     language: system
     pass_filenames: false
     always_run: true
@@ -322,14 +322,14 @@ repos:
   # above (already local); this closes the rest of that job's cheap-script surface.
   - id: p2-modality-architecture
     name: P2 modality architecture gate
-    entry: python3 scripts/check_p2_modality_architecture.py
+    entry: cargo xtask p2-modality-architecture
     language: system
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: p2-analytics-reasoning-architecture
     name: P2 analytics and reasoning architecture gate
-    entry: python3 scripts/check_p2_analytics_reasoning_architecture.py
+    entry: cargo xtask p2-analytics-reasoning-architecture
     language: system
     pass_filenames: false
     always_run: true

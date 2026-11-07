@@ -96,7 +96,7 @@ owned by a higher storage layer.
 Run these serially on a resource-constrained host:
 
 ```bash
-python scripts/check_p2_modality_architecture.py
+cargo xtask p2-modality-architecture
 cargo test -p medulla-modality --test fleet_tck -- --nocapture
 cargo test -p medulla-modality --test served_runtime
 cargo test -p medulla-document --features serving

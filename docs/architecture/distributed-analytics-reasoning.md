@@ -190,7 +190,7 @@ transaction item labels are pseudonymized before persistence.
 ## Verification
 
 The source architecture gate is
-`python scripts/check_p2_analytics_reasoning_architecture.py`; the current persisted
+`cargo xtask p2-analytics-reasoning-architecture`; the current persisted
 watermark shape is also covered by
 `python scripts/check_persisted_mutation_contract.py`. Focused tests are
 in the `medulla-jobs` store/claim modules, association-mining cancellation tests, and
