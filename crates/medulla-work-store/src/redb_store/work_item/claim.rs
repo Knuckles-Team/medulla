@@ -510,13 +510,22 @@ mod tests {
         }
     }
 
+    // MEDULLA-ORCH-VOCAB-R812.1: there is no Claim edge from Running. A running item whose
+    // lease expired is reclaimed first (W24, guard: lease expired, attempts left) and the
+    // Ready row is then granted (W02) under a fresh epoch and fencing token.
     #[test]
     fn grant_advances_beyond_both_authority_counters() {
-        for (epoch, token) in [(4, 9), (9, 4), (u64::MAX - 1, u64::MAX - 1)] {
+        for (epoch, token) in [(4, 9), (9, 4), (u64::MAX - 3, u64::MAX - 3)] {
             let mut props = lease_props(epoch, token);
-            let next = epoch.max(token) + 1;
             assert_eq!(
-                claim_grant_lease(&mut props, "new-worker", 2.0, 3.0),
+                claim_reclaim_expired_lease(&mut props, "work-1", "running", 2.0),
+                Ok(false)
+            );
+            let counter = |key: &str| props[key].as_u64().unwrap_or(0);
+            let next = counter("lease_epoch").max(counter("fencing_token")) + 1;
+            assert!(next > epoch.max(token) + 1, "the grant moves past the reclaim fence");
+            assert_eq!(
+                claim_grant_lease(&mut props, "new-worker", 1.0e9, 1.0e9 + 1.0),
                 Ok((next, 2))
             );
             assert_eq!(props["lease_epoch"], next);
