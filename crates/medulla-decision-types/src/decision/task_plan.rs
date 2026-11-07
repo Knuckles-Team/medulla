@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 mod aggregation;
 mod call;

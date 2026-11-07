@@ -5,7 +5,7 @@
 //! deliveries may contain. For each delivery the engine infers the record
 //! shape from the sampled records ([`InferredRecordShape::infer`]) and takes
 //! its per-delivery digest under the canonical
-//! [`crate::contract::Digest256`] framing
+//! [`medulla_types::contract::Digest256`] framing
 //! ([`InferredRecordShape::shape_digest`]). [`classify`] then places the
 //! delivery against the approved contract in the closed five-way
 //! [`DriftClass`]:

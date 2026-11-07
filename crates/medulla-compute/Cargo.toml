@@ -119,6 +119,8 @@ ast-extended = [
 [dependencies]
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
 # Reuse medulla-geo's generic symmetric distance-matrix traversal for t-SNE's
 # squared-vector metric. Optional with the mining domain so slim builds keep
@@ -249,7 +251,6 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 # DEV-only — never linked into the engine binary.
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }

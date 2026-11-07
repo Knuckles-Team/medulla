@@ -16,8 +16,8 @@ use medulla_decision_types::{
     decision::TraceFidelityLevel, decision::UnitRationalWire, decision::UnknownCostRule,
     decision::DECISION_POLICY_SCHEMA_VERSION,
 };
+use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::Scalar;
 
 pub const OPTIONS: usize = 3;
 pub const FEATURES: [&str; 2] = ["quality", "noise"];

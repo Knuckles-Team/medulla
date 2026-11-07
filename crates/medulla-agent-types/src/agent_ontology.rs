@@ -324,7 +324,7 @@ pub fn ontology_digest() -> String {
             requires: term.requires,
         })
         .collect();
-    medulla_types::solve_scalar::digest_text(AGENT_ONTOLOGY_DIGEST_DOMAIN, &view)
+    medulla_query_types::solve_scalar::digest_text(AGENT_ONTOLOGY_DIGEST_DOMAIN, &view)
 }
 
 /// Resolve one term, or `None` if it is not in the native vocabulary.

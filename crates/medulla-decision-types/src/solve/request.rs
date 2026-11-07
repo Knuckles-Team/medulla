@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::certificate::{Certificate, SolverConfigSpec};
 use super::spec::ModelSpec;
+use medulla_query_types::solve_scalar::Sha256Digest;
 use medulla_types::closed_error_codes;
-use medulla_types::solve_scalar::Sha256Digest;
 
 /// Format identity (RF-ADR-006) of [`SolveResult`].
 pub const SOLVE_RESULT_SCHEMA_VERSION: u16 = 1;

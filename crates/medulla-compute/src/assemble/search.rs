@@ -26,8 +26,8 @@ use medulla_decision_types::{
     decision::digest, decision::AbstainReason, decision::CandidateFacts,
     decision::DecisionErrorCode, decision::DecisionInputs, decision::TemplateFacts,
 };
+use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::Scalar;
 
 use super::model::Built;
 use super::AssembleError;
@@ -220,7 +220,7 @@ fn budget_exhausted(context: &SolveContext<'_>, certificate: &Certificate) -> Ab
             .iter()
             .map(|(_, candidate)| candidate.component_id.as_str())
             .collect();
-        medulla_types::solve_scalar::digest_text("eg/decision-incumbent/v1", &ids)
+        medulla_query_types::solve_scalar::digest_text("eg/decision-incumbent/v1", &ids)
     });
     AbstainReason::BudgetExhausted {
         incumbent,

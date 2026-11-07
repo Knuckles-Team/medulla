@@ -30,7 +30,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
 };
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 use super::served_adapter::{adapter_key, read_fitted};
 use super::stat_executor::ExecutionContext;

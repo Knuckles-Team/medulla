@@ -24,8 +24,8 @@ use medulla_decision_types::{
     decision::statistical::retrieval::RetrievalPathTemplate,
     decision::statistical::retrieval::ReturnedEvidence,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_tables::schema::ColumnType;
-use medulla_types::solve_scalar::digest_text;
 use serde_json::Value;
 
 use super::stat_log::LogReader;

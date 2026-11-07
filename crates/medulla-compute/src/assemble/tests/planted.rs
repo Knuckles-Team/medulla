@@ -234,7 +234,7 @@ fn a_result_the_deterministic_search_would_not_reach_is_not_committable() {
     aborted.outcome = DecisionOutcome::Abstained {
         reasons: bounded(vec![AbstainReason::BudgetExhausted {
             incumbent: None,
-            lower_bound: medulla_types::solve_scalar::Scalar::new(0),
+            lower_bound: medulla_query_types::solve_scalar::Scalar::new(0),
         }]),
     };
     aborted.resolution_kind = medulla_decision_types::decision::ResolutionKind::Abstention;

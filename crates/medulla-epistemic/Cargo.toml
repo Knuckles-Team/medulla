@@ -13,6 +13,7 @@ name = "medulla_epistemic"
 # Bottom of the DAG: the stored typed model + Distribution value.
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 # The GraphView snapshot the propagation walk runs over (read-only, off-lock).
 medulla-core = { path = "../medulla-core" }
 # The conjugate Bayesian backend — `probabilistic::bayesian_update` IS the
@@ -34,7 +35,6 @@ tracing = { version = "0.1", optional = true }
 # trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }

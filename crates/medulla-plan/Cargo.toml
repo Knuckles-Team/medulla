@@ -267,6 +267,7 @@ medulla-exec = { path = "../medulla-exec" }
 # below, gated by medulla-plan's `geo`) does.
 medulla-types = { path = "../medulla-types", features = ["query", "geo"] }
 medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
 # The `ModalityContract` trait + the `EvidenceLocus` shape (CONCEPT:E4/X1). Sits at
 # the SAME DAG level as `medulla-types` (its own deps = `medulla-types` only, per its crate
@@ -410,7 +411,6 @@ rayon = { version = "1.12", optional = true }
 arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-semantic-index = { path = "../medulla-semantic-index" }

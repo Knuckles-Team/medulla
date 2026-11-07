@@ -19,7 +19,7 @@ use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
     decision::statistical::dataset::LabelledItem,
 };
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
 use super::evaluate_bandit::{bandit_gates, BanditReport};

@@ -34,6 +34,7 @@ pub mod plan_cache_key;
 pub mod quantum;
 // MEDULLA-TYPED-PACKS-R803.1 — typed sensitive-data detector and detection records.
 pub mod sensitive_detect;
+pub mod solve_scalar;
 pub mod telemetry_derive;
 pub mod topology;
 #[cfg(feature = "viz")]

@@ -163,7 +163,7 @@ impl HarnessComponentVersion {
     /// The one digest scheme the vocabulary uses for content: the engine's
     /// canonical text digest over the content reference.
     pub fn content_digest(content_ref: &str) -> String {
-        medulla_types::solve_scalar::digest_text(
+        medulla_query_types::solve_scalar::digest_text(
             "eg/harness-component-content/v1",
             &content_ref.to_string(),
         )

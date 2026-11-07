@@ -24,7 +24,7 @@ use medulla_decision_types::{
     decision::statistical::head::HeadCalibration, decision::statistical::head::HeadKind,
     decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
 use super::fit_calibrate::{calibrate, calibrate_scorer};

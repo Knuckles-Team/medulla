@@ -33,7 +33,6 @@ STAY_SET = frozenset(
 REMAINING = (
     "acl",
     "agent_bus",
-    "architecture_view",
     "asset_usage",
     "atomic_primitive",
     "attached_source_dialect",
@@ -110,7 +109,6 @@ REMAINING = (
     "series_expr",
     "shared_db_platform",
     "skill_plan",
-    "solve_scalar",
     "source_changeset",
     "source_governance",
     "source_symbol_edit",
@@ -190,6 +188,7 @@ QUERY_MODULES = (
     "plan_cache_key",
     "quantum",
     "sensitive_detect",
+    "solve_scalar",
     "telemetry_derive",
     "topology",
     "viz",

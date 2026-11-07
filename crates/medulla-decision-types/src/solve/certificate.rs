@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 
 use super::objective::ObjectiveValue;
 use super::spec::{RowId, VarId};
-use medulla_types::{solve_scalar::Scalar, solve_scalar::Sha256Digest};
+use medulla_query_types::solve_scalar::{Scalar, Sha256Digest};
 
 /// Default deterministic node-expansion budget.
 pub const DEFAULT_NODE_BUDGET: u64 = 100_000;

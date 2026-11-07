@@ -21,6 +21,7 @@ medulla-graphql = { path = "../medulla-graphql", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -30,7 +31,6 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-agent-types = { path = "../medulla-agent-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }

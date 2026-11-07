@@ -12,8 +12,8 @@ use std::collections::BTreeMap;
 use super::knobs::{KnobName, KnobSpec, KnobValue};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::DecisionErrorCode;
+use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::Scalar;
 
 /// The engine default node budget when a policy does not name one.
 pub const DEFAULT_DECISION_NODE_BUDGET: u64 = 100_000;

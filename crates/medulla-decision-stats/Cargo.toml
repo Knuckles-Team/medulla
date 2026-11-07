@@ -16,6 +16,7 @@ medulla-numeric = { path = "../medulla-numeric" }
 rand_chacha = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 medulla-types = { path = "../medulla-types", optional = true }
+medulla-query-types = { path = "../medulla-query-types", optional = true }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 serde_json = "1.0"

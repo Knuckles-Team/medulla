@@ -16,8 +16,6 @@ pub mod branch;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
 pub mod transition_refused;
-// MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
-pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
 pub mod attached_source_governance;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.1 — typed model distinguishing the MySQL and
@@ -257,7 +255,6 @@ pub mod finance_research;
 // MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
 // `Method::WalletKeyTrustGet`.
 pub mod finance_wallet_trust;
-pub mod solve_scalar;
 // Typed RDF input and the ontology inspection view, so orchestration callers
 // never build or parse RDF text themselves.
 pub mod ontology_inspection;

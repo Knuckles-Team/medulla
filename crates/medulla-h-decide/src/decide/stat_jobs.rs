@@ -43,8 +43,8 @@ use medulla_decision_types::{
     decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobState,
     decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::digest_text;
 
 use super::stat_log::{logged_dataset, LogReader};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
