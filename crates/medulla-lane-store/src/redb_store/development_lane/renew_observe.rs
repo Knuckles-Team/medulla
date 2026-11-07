@@ -10,7 +10,7 @@ use super::types::LaneDecision;
 use super::work_item::load_work_item;
 use super::DurableLaneHold;
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
-use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
+use medulla_result_types::epistemic_operations::HoldEvent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
