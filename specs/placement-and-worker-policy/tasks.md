@@ -72,6 +72,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
 - [ ] T067 [US4] MEDULLA-PLACEMENT-R751.758 Run observability.
 - [ ] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.
+- [ ] T087 [US4] MEDULLA-PLACEMENT-R751.760 Exclusion group with minimum spacing across schedules.
 - [ ] T069 [US4] MEDULLA-PLACEMENT-R780 Development lane hold is one explicit state machine
 - [ ] T070 [US4] MEDULLA-PLACEMENT-R780.1 Hold transition function
 - [ ] T071 [US4] MEDULLA-PLACEMENT-R780.2 Terminal work item releases the hold by event, and the machine is described
