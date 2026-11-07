@@ -147,6 +147,15 @@ fn default_architecture_view_max_containers() -> u32 {
     DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS
 }
 
+/// Default bound on the steps plus flows of one imported process (MEDULLA-CQ-ORCH-R701.2).
+pub const DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS: u64 = 100_000;
+/// Accepted range of `process_import_max_elements`.
+pub const PROCESS_IMPORT_MAX_ELEMENTS_RANGE: std::ops::RangeInclusive<u64> = 100..=1_000_000;
+
+fn default_process_import_max_elements() -> u64 {
+    DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS
+}
+
 /// Engine-owned policy. Pool size and queue bound must be configured explicitly.
 /// Zero workers, zero CPU share, or zero queue depth can disable that resource;
 /// no implicit minimum may override those limits. Lane IDs are engine-defined
@@ -187,6 +196,9 @@ pub struct SchedulerConfig {
     /// Most files of one commit that enter pair counting.
     #[serde(default = "default_history_max_files_per_commit")]
     pub history_max_files_per_commit: u64,
+    /// Most steps plus flows of one imported process.
+    #[serde(default = "default_process_import_max_elements")]
+    pub process_import_max_elements: u64,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -196,6 +208,7 @@ pub enum InvalidSchedulerConfig {
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
     ArchitectureViewMaxContainersOutOfRange,
+    ProcessImportMaxElementsOutOfRange,
     OversubscribedFloors { total_workers: u32 },
     HydrationScopeCapOutOfRange,
     HydrationSplitTargetOutOfRange,
@@ -217,6 +230,10 @@ impl std::fmt::Display for InvalidSchedulerConfig {
             Self::ArchitectureViewMaxContainersOutOfRange => write!(
                 f,
                 "scheduler architecture_view_max_containers must be in [16, 4096]"
+            ),
+            Self::ProcessImportMaxElementsOutOfRange => write!(
+                f,
+                "scheduler process_import_max_elements must be in [100, 1000000]"
             ),
             Self::OversubscribedFloors { total_workers } => {
                 write!(
@@ -271,6 +288,9 @@ impl SchedulerConfig {
         if !ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE.contains(&self.architecture_view_max_containers)
         {
             return Err(InvalidSchedulerConfig::ArchitectureViewMaxContainersOutOfRange);
+        }
+        if !PROCESS_IMPORT_MAX_ELEMENTS_RANGE.contains(&self.process_import_max_elements) {
+            return Err(InvalidSchedulerConfig::ProcessImportMaxElementsOutOfRange);
         }
         if !(ENRICH_TIMEOUT_MS_BOUNDS.0..=ENRICH_TIMEOUT_MS_BOUNDS.1)
             .contains(&self.enrich_timeout_ms)
