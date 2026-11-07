@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 import tomllib
+from test_wheel_privacy import audit_wheel
 
-from scripts.check_wheel_privacy import audit_wheel
 from scripts.inject_numeric_kernel import inject
 from scripts.normalize_wheel_sbom import normalize_wheel
 from scripts.strip_wheel_executables import strip_executables

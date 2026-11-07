@@ -6,9 +6,12 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
+mod ci_affected_crates;
+mod ci_change_scope;
 mod decide_budgets;
 mod dispatch_decomposition;
 mod fanout_host_groups;
+mod integration_baseline;
 mod mint_lease_call_sites;
 mod orphan_modules;
 mod p2_analytics_reasoning_architecture;
@@ -21,6 +24,7 @@ mod spec_paths;
 #[cfg(test)]
 mod tempdir;
 mod wheel_completeness;
+mod wheel_privacy;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -53,6 +57,20 @@ const CHECKS: &[Check] = &[
         needs_git: false,
     },
     Check {
+        name: ci_affected_crates::NAME,
+        summary: ci_affected_crates::SUMMARY,
+        run: ci_affected_crates::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: ci_change_scope::NAME,
+        summary: ci_change_scope::SUMMARY,
+        run: ci_change_scope::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
         name: decide_budgets::NAME,
         summary: decide_budgets::SUMMARY,
         run: decide_budgets::run,
@@ -71,6 +89,13 @@ const CHECKS: &[Check] = &[
         summary: fanout_host_groups::SUMMARY,
         run: fanout_host_groups::run,
         standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: integration_baseline::NAME,
+        summary: integration_baseline::SUMMARY,
+        run: integration_baseline::run,
+        standalone: true,
         needs_git: false,
     },
     Check {
@@ -141,6 +166,13 @@ const CHECKS: &[Check] = &[
         summary: wheel_completeness::SUMMARY,
         run: wheel_completeness::run,
         standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: wheel_privacy::NAME,
+        summary: wheel_privacy::SUMMARY,
+        run: wheel_privacy::run,
+        standalone: false,
         needs_git: false,
     },
 ];

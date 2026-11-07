@@ -28,7 +28,7 @@ The public engine contract is the Rust method and error declarations, because se
 | Python models | `medulla/generated/models.py` and the typed senders in `medulla/generated/*.py` | Re-export wire classes; one class per wire shape. |
 | Canonical signing | `crates/medulla-method-codec` and `scripts/build_method_codec_wasm.py` | Use its body bytes in Go and JS; do not port canonicalization by hand. |
 | Go and JS consumers | `clients/go/`, `clients/js/` | Run vector tests against the embedded WASM. |
-| Release checks | `scripts/check_wheel_completeness.py`, `scripts/check_wheel_privacy.py`, `scripts/ci_parity.sh`, `.github/workflows/release.yml` | Keep hosted checks hermetic and bound to one source revision. |
+| Release checks | `scripts/check_wheel_completeness.py`, `cargo xtask wheel-privacy`, `scripts/ci_parity.sh`, `.github/workflows/release.yml` | Keep hosted checks hermetic and bound to one source revision. |
 
 ### Contract data model
 

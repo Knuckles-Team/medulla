@@ -474,13 +474,14 @@ def test_locked_pytest_uses_test_interpreter_and_lock() -> None:
 
 # The digests were re-blessed once, for the rename cutover (3b67ca6c4): the only
 # differences in these step mappings since the previous digests are the
-# epistemic-graph -> medulla renames of crate paths, env names and step names.
+# epistemic-graph -> medulla renames of crate paths, env names and step names, and
+# again for the wheel privacy audit running as `cargo xtask wheel-privacy`.
 @pytest.mark.parametrize(
     ("job_name", "steps_digest"),
     [
         (
             "gates-wheel",
-            "c767a9cd3d521a20700bb19d34680f6e2ca696e0a50f98b1ffedab59c15f84e7",
+            "7ffc56dc07c23153cdb71878a16ac2e90b6b077bf3438669316085b59ac97a0f",
         ),
         (
             "gates-whisper",
@@ -687,7 +688,7 @@ def test_validated_wheel_packaging_refuses_invalid_inputs(
         "Cargo.lock rust-toolchain.toml pyproject.toml .github/workflows/ci.yml "
         "scripts/inject_numeric_kernel.py scripts/strip_wheel_executables.py "
         "scripts/normalize_wheel_sbom.py scripts/normalize_wheel_build_paths.py "
-        "scripts/check_wheel_privacy.py tools/xtask/src/wheel_completeness.rs"
+        "tools/xtask/src/wheel_privacy.rs tools/xtask/src/wheel_completeness.rs"
     ).split()
     for name in recipes:
         path = repo / name

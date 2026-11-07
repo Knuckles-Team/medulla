@@ -26,7 +26,11 @@ const ALL_GATES_PATHS: [&str; 2] = [".github/", "tools/xtask/src/ci_change_scope
 /// dispatch events always run them.
 fn path_gate_table() -> Vec<(&'static str, Vec<&'static str>)> {
     let with_toolchain = |paths: &[&'static str]| -> Vec<&'static str> {
-        paths.iter().chain(TOOLCHAIN_PATHS.iter()).copied().collect()
+        paths
+            .iter()
+            .chain(TOOLCHAIN_PATHS.iter())
+            .copied()
+            .collect()
     };
     vec![
         (
@@ -80,7 +84,7 @@ fn path_gate_table() -> Vec<(&'static str, Vec<&'static str>)> {
                 "scripts/strip_wheel_executables.py",
                 "scripts/normalize_wheel_sbom.py",
                 "scripts/normalize_wheel_build_paths.py",
-                "scripts/check_wheel_privacy.py",
+                "tools/xtask/src/wheel_privacy.rs",
                 "tools/xtask/src/wheel_completeness.rs",
                 "scripts/configure_rust_path_remap.py",
             ]),
@@ -101,14 +105,19 @@ pub fn run(_root: &Path, args: &[String]) -> Result<(), String> {
             other => return Err(format!("unknown argument `{other}`")),
         }
     }
-    let event = event.ok_or("usage: cargo xtask ci-change-scope --event E [--base SHA --head SHA] [--path-gates]")?;
+    let event = event.ok_or(
+        "usage: cargo xtask ci-change-scope --event E [--base SHA --head SHA] [--path-gates]",
+    )?;
     let code = requires_code(&event, &base, &head, &git);
     println!("code={code}");
     if gates {
         let selected = if code {
             path_gates(&event, &base, &head, &git)
         } else {
-            path_gate_table().into_iter().map(|(g, _)| (g, false)).collect()
+            path_gate_table()
+                .into_iter()
+                .map(|(g, _)| (g, false))
+                .collect()
         };
         for (gate, on) in selected {
             println!("{gate}={on}");
@@ -124,11 +133,16 @@ fn git(args: &[&str]) -> Option<Vec<u8>> {
 }
 
 fn is_sha(reference: &str) -> bool {
-    reference.len() == 40 && reference.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+    reference.len() == 40
+        && reference
+            .bytes()
+            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 fn posix_parts(path: &str) -> Vec<&str> {
-    path.split('/').filter(|p| !p.is_empty() && *p != ".").collect()
+    path.split('/')
+        .filter(|p| !p.is_empty() && *p != ".")
+        .collect()
 }
 
 /// Only non-executable prose and generated spec status can bypass builds.
@@ -212,7 +226,10 @@ pub fn gates_for_paths(paths: &[String]) -> Vec<(&'static str, bool)> {
 /// Unknown refs, unavailable history and non-PR events run every gate.
 pub fn path_gates(event: &str, base: &str, head: &str, git: Git) -> Vec<(&'static str, bool)> {
     let every = || -> Vec<(&'static str, bool)> {
-        path_gate_table().into_iter().map(|(g, _)| (g, true)).collect()
+        path_gate_table()
+            .into_iter()
+            .map(|(g, _)| (g, true))
+            .collect()
     };
     if event != "pull_request" || !is_sha(base) || !is_sha(head) {
         return every();
@@ -266,7 +283,12 @@ mod tests {
 
     #[test]
     fn documentation_only_diff() {
-        for path in ["README.md", "docs/guide.md", "specs/demo/spec.md", "specs/demo/status.json"] {
+        for path in [
+            "README.md",
+            "docs/guide.md",
+            "specs/demo/spec.md",
+            "specs/demo/status.json",
+        ] {
             assert!(docs(&m(path)), "{path}");
             assert!(docs(&raw(path, "100644", "000000", "D")), "{path}");
             assert!(docs(&raw(path, "000000", "100644", "A")), "{path}");
@@ -320,12 +342,24 @@ mod tests {
         assert!(gates(&["crates/medulla-sql/src/lib.rs"]).is_empty());
         assert_eq!(gates(&["clients/js/index.mjs"]), ["clients"]);
         assert_eq!(gates(&["crates/medulla-types/src/lib.rs"]), ["clients"]);
-        assert_eq!(gates(&["crates/medulla-asr-whisper/src/lib.rs"]), ["whisper"]);
-        assert_eq!(gates(&["crates/medulla-audio/src/lib.rs"]), ["whisper", "tts"]);
+        assert_eq!(
+            gates(&["crates/medulla-asr-whisper/src/lib.rs"]),
+            ["whisper"]
+        );
+        assert_eq!(
+            gates(&["crates/medulla-audio/src/lib.rs"]),
+            ["whisper", "tts"]
+        );
         assert_eq!(gates(&["crates/medulla-tts-piper/src/lib.rs"]), ["tts"]);
         assert_eq!(gates(&["pyproject.toml"]), ["packaging"]);
-        assert_eq!(gates(&["crates/medulla-pyengine/src/lib.rs"]), ["packaging"]);
-        assert_eq!(gates(&["crates/medulla-core/ontology/core.ttl"]), ["ontology"]);
+        assert_eq!(
+            gates(&["crates/medulla-pyengine/src/lib.rs"]),
+            ["packaging"]
+        );
+        assert_eq!(
+            gates(&["crates/medulla-core/ontology/core.ttl"]),
+            ["ontology"]
+        );
         assert_eq!(gates(&["src/server/graph_schema/compose.rs"]), ["ontology"]);
         assert_eq!(gates(&["Cargo.lock"]), everything);
         assert_eq!(gates(&[".github/workflows/ci.yml"]), everything);
@@ -342,8 +376,12 @@ mod tests {
 
     #[test]
     fn unavailable_or_invalid_history_runs_everything() {
-        assert!(path_gates("pull_request", A, B, NONE).iter().all(|(_, on)| *on));
-        assert!(path_gates("pull_request", "", B, NONE).iter().all(|(_, on)| *on));
+        assert!(path_gates("pull_request", A, B, NONE)
+            .iter()
+            .all(|(_, on)| *on));
+        assert!(path_gates("pull_request", "", B, NONE)
+            .iter()
+            .all(|(_, on)| *on));
         assert!(requires_code("pull_request", "", B, NONE));
         assert!(requires_code("pull_request", A, B, NONE));
     }
@@ -357,7 +395,10 @@ mod tests {
         diff.extend(m("src/a.rs"));
         let range = format!("{A}...{B}");
         let fake = move |args: &[&str]| {
-            assert_eq!(args, ["diff", "--raw", "--no-renames", "-z", range.as_str()]);
+            assert_eq!(
+                args,
+                ["diff", "--raw", "--no-renames", "-z", range.as_str()]
+            );
             Some(diff.clone())
         };
         assert!(requires_code("pull_request", A, B, &fake));
@@ -370,7 +411,11 @@ mod tests {
     }
 
     fn git_in(dir: &Path, args: &[&str]) -> String {
-        let out = Command::new("git").args(args).current_dir(dir).output().expect("git");
+        let out = Command::new("git")
+            .args(args)
+            .current_dir(dir)
+            .output()
+            .expect("git");
         assert!(out.status.success(), "git {args:?}");
         String::from_utf8_lossy(&out.stdout).trim().to_string()
     }
@@ -379,7 +424,10 @@ mod tests {
     #[test]
     fn normalized_document_modes_keep_real_git_ranges_conservative() {
         for mode in ["100755", "120000", "160000"] {
-            let tree = Tree::new(&[("docs/guide.md", "original\n"), ("src/lib.rs", "original\n")]);
+            let tree = Tree::new(&[
+                ("docs/guide.md", "original\n"),
+                ("src/lib.rs", "original\n"),
+            ]);
             let dir = tree.path();
             let g = |args: &[&str]| git_in(dir, args);
             g(&["init", "-q"]);
@@ -420,7 +468,12 @@ mod tests {
                     g(&["add", "docs/guide.md"]);
                 }
                 _ => {
-                    g(&["update-index", "--add", "--cacheinfo", &format!("160000,{prose},docs/guide.md")]);
+                    g(&[
+                        "update-index",
+                        "--add",
+                        "--cacheinfo",
+                        &format!("160000,{prose},docs/guide.md"),
+                    ]);
                 }
             }
             g(&["commit", "-qm", "non-document mode requires full CI"]);

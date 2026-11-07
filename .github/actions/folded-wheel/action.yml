@@ -177,7 +177,7 @@ runs:
       run: |
         python scripts/normalize_wheel_sbom.py dist-${{ inputs.pass }}/*.whl
         python scripts/normalize_wheel_build_paths.py dist-${{ inputs.pass }}/*.whl
-        python scripts/check_wheel_privacy.py dist-${{ inputs.pass }}/*.whl
+        CARGO_TARGET_DIR="$RUNNER_TEMP/xtask-target" cargo --locked xtask wheel-privacy dist-${{ inputs.pass }}/*.whl
 
     # Assert the artifact is COMPLETE after every step that rewrites it (inject,
     # sbom, build-path normalization). Published 2.14.0-2.23.0 wheels shipped with

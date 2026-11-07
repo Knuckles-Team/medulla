@@ -248,7 +248,7 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         "scripts/inject_numeric_kernel.py",
         "scripts/normalize_wheel_sbom.py",
         "scripts/normalize_wheel_build_paths.py",
-        "scripts/check_wheel_privacy.py",
+        "xtask wheel-privacy",
         "scripts/inject_server_binary.py",
         "xtask wheel-completeness --require-engine-kernel",
     ):
@@ -271,10 +271,10 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         ("inject_numeric_kernel", 1),
         ("normalize_wheel_sbom", 2),
         ("normalize_wheel_build_paths", 2),
-        ("check_wheel_privacy", 2),
     ):
         pattern = rf"(?m)^\s*python3? scripts/{script}\.py(?=\s|$)"
         assert len(re.findall(pattern, commands)) == expected, script
+    assert len(re.findall(r"cargo --locked xtask wheel-privacy ", commands)) == 2
     assert "Remove primary native build state" in raw
     assert "release wheel digest mismatch" in both
 

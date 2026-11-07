@@ -708,10 +708,10 @@ repos:
   # it never ran the fold + normalize + audit + completeness chain
   # release-build.yml's "Normalize and audit primary wheel" / "Require a
   # complete primary wheel" steps run (normalize_wheel_sbom.py →
-  # normalize_wheel_build_paths.py → check_wheel_privacy.py →
+  # normalize_wheel_build_paths.py → cargo xtask wheel-privacy →
   # cargo xtask wheel-completeness). That gap is exactly how a wheel privacy
   # audit failure (5 `privileged-home-prefix` leaks) shipped past every local
-  # gate straight into CI: nothing local ever ran check_wheel_privacy.py at
+  # gate straight into CI: nothing local ever ran `cargo xtask wheel-privacy` at
   # all. scripts/wheel_privacy_gate.sh now runs the full sequence (mirroring
   # w4-engine-down run_gates.sh reproduction of release-build.yml's exact
   # steps), folding a matching
@@ -758,12 +758,12 @@ repos:
     # build failure still fails the gate loudly and says so -- it simply no
     # longer masquerades as the whole suite timing out.
     # The suite is gated DIFFERENTIALLY against tests/integration_failure_baseline.txt
-    # rather than on absolute green -- see scripts/check_integration_baseline.py
+    # rather than on absolute green -- see tools/xtask/src/integration_baseline.rs
     # for why, and for the three ways it still fails (a new failure, a baselined
     # test that starts passing, an entry past its review-by date). Absolute green
     # here would block every push on 17 failures that predate any branch under
     # test and were only invisible because this gate could not run at all.
-    entry: bash -c 'export MATURIN_PEP517_ARGS="--profile dev"; test_target="tests"; for d in tests/unit test/unit tests test; do if [ -d "$d" ]; then test_target="$d"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then cargo build --features full --bin medulla-server || { echo "REFUSED - cannot build medulla-server for the integration suite" >&2; exit 1; }; for d in "$CARGO_TARGET_DIR" target-isolated target; do if [ -n "$d" ] && [ -x "$d/debug/medulla-server" ]; then MEDULLA_TEST_BINARY="$(cd "$d/debug" && pwd)/medulla-server"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then echo "REFUSED - built medulla-server but cannot find it under CARGO_TARGET_DIR/target-isolated/target" >&2; exit 1; fi; export MEDULLA_TEST_BINARY; fi; if [ -f uv.lock ]; then uv run --all-extras python scripts/check_integration_baseline.py -- "$test_target" -q --tb=short -m "not slow" --timeout=60; else python scripts/check_integration_baseline.py -- "$test_target" -q --tb=short -m "not slow" --timeout=60; fi'
+    entry: bash -c 'export MATURIN_PEP517_ARGS="--profile dev"; test_target="tests"; for d in tests/unit test/unit tests test; do if [ -d "$d" ]; then test_target="$d"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then cargo build --features full --bin medulla-server || { echo "REFUSED - cannot build medulla-server for the integration suite" >&2; exit 1; }; for d in "$CARGO_TARGET_DIR" target-isolated target; do if [ -n "$d" ] && [ -x "$d/debug/medulla-server" ]; then MEDULLA_TEST_BINARY="$(cd "$d/debug" && pwd)/medulla-server"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then echo "REFUSED - built medulla-server but cannot find it under CARGO_TARGET_DIR/target-isolated/target" >&2; exit 1; fi; export MEDULLA_TEST_BINARY; fi; if [ -f uv.lock ]; then uv run --all-extras cargo xtask integration-baseline -- "$test_target" -q --tb=short -m "not slow" --timeout=60; else cargo xtask integration-baseline -- "$test_target" -q --tb=short -m "not slow" --timeout=60; fi'
     language: system
     types: [python]
     pass_filenames: false

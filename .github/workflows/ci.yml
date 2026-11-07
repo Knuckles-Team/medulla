@@ -401,7 +401,9 @@ jobs:
       - name: Normalize retained native build paths (numeric kernel wheel)
         run: python scripts/normalize_wheel_build_paths.py numdist-gates/*.whl
       - name: Audit numeric kernel wheel for retained build identity
-        run: python scripts/check_wheel_privacy.py numdist-gates/*.whl
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+        run: cargo --locked xtask wheel-privacy numdist-gates/*.whl
       # The base wheel is the medulla-pyengine PyO3 crate plus the pure-Python package
       # (`[tool.maturin] manifest-path`), the SAME build the release folds the numeric
       # module into. It compiles only extension modules -- no server crate or bin
@@ -417,10 +419,12 @@ jobs:
       - name: Strip console executables from the gates wheel (executable-free wheel)
         run: python scripts/strip_wheel_executables.py dist-gates/*.whl
       - name: Normalize and audit the folded gates wheel
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
         run: |
           python scripts/normalize_wheel_sbom.py dist-gates/*.whl
           python scripts/normalize_wheel_build_paths.py dist-gates/*.whl
-          python scripts/check_wheel_privacy.py dist-gates/*.whl
+          cargo --locked xtask wheel-privacy dist-gates/*.whl
       - name: Require a complete gates wheel (numeric + engine kernels + no executables + RECORD)
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
@@ -523,7 +527,7 @@ jobs:
           sha256sum Cargo.lock rust-toolchain.toml pyproject.toml \
             .github/workflows/ci.yml scripts/inject_numeric_kernel.py \
             scripts/strip_wheel_executables.py scripts/normalize_wheel_sbom.py \
-            scripts/normalize_wheel_build_paths.py scripts/check_wheel_privacy.py \
+            scripts/normalize_wheel_build_paths.py tools/xtask/src/wheel_privacy.rs \
             tools/xtask/src/wheel_completeness.rs > "$bundle/build-recipe.sha256"
           (cd "$bundle" && sha256sum source.sha source.tree build-recipe.sha256 \
             medulla-*.whl > SHA256SUMS)

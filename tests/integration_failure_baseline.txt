@@ -1,4 +1,4 @@
-# Integration tests known to fail, gated by scripts/check_integration_baseline.py.
+# Integration tests known to fail, gated by tools/xtask/src/integration_baseline.rs.
 #
 # READ THIS BEFORE ADDING A LINE.
 #
