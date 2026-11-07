@@ -93,8 +93,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T085 [US5] MEDULLA-CONTRACT-R056.8 Step 7: the decide, query, admin and transaction cycle breaks through `server-api` traits
 - [ ] T086 [US5] MEDULLA-CONTRACT-R056.9 Step 8: `medulla-wire` holds the wire protocols behind one feature per protocol
 - [ ] T087 [US5] MEDULLA-CONTRACT-R056.10 Step 9: the facade is link-only, and pull-request CI builds the changed-crate closure
-- [ ] T087a [US5] MEDULLA-CONTRACT-R056.10 Resolve the 910 spec-row paths with no successor: name the current owner file in the row, mark it planned, or drop the stale row (list: inventory operations/business-validation/spec-repath.md, section a)
-- [ ] T087b [US5] MEDULLA-CONTRACT-R056.10 Resolve the 91 spec-row paths with several candidate files by choosing the owner (same list, section b)
+- [ ] T112 [US5] MEDULLA-CONTRACT-R056.10 Resolve the 910 spec-row paths with no successor: name the current owner file in the row, mark it planned, or drop the stale row (list: inventory operations/business-validation/spec-repath.md, section a)
+- [ ] T113 [US5] MEDULLA-CONTRACT-R056.10 Resolve the 91 spec-row paths with several candidate files by choosing the owner (same list, section b)
 - [ ] T088 [US5] MEDULLA-CONTRACT-R056.11 Scaffold: every empty crate exists before any parallel lane
 - [ ] T089 [US5] MEDULLA-CONTRACT-R056.12 Lane landing: a step lands on a passing build-train run of its changed crates
 - [ ] T090 [US5] MEDULLA-CONTRACT-R056.13 Lane order and parallel groups
