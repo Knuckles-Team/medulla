@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Route ticket",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Ticket opened"
+    },
+    {
+      "id": "s2",
+      "kind": "branch",
+      "gate": "xor",
+      "label": "Severity?"
+    },
+    {
+      "id": "s3",
+      "kind": "human",
+      "label": "Page on-call engineer"
+    },
+    {
+      "id": "s4",
+      "kind": "human",
+      "label": "Queue ticket"
+    },
+    {
+      "id": "s5",
+      "kind": "end",
+      "label": "Engineer paged"
+    },
+    {
+      "id": "s6",
+      "kind": "end",
+      "label": "Ticket queued"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "condition": "severity = critical",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s4",
+      "default": true
+    },
+    {
+      "source": "s3",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s6",
+      "default": false
+    }
+  ],
+  "digest": "274a97d558cc941045383b327d4d962802167be7e9f527c81382720a098ef68b",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "deflt",
+    "elements": {
+      "s1": "s",
+      "s2": "g",
+      "s3": "page",
+      "s4": "queue",
+      "s5": "e1",
+      "s6": "e2"
+    }
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Await reply",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Offer sent"
+    },
+    {
+      "id": "s2",
+      "kind": "wait",
+      "gate": "xor",
+      "label": "First reply"
+    },
+    {
+      "id": "s3",
+      "kind": "wait",
+      "label": "Offer accepted",
+      "ref": "acceptance"
+    },
+    {
+      "id": "s4",
+      "kind": "wait",
+      "label": "Two weeks passed",
+      "ref": "timer"
+    },
+    {
+      "id": "s5",
+      "kind": "agent",
+      "label": "Close offer"
+    },
+    {
+      "id": "s6",
+      "kind": "end",
+      "label": "Offer closed"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s4",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s5",
+      "target": "s6",
+      "default": false
+    }
+  ],
+  "digest": "fc962d8804f80b25bc95b3849302cad4e51904f387a9675eab258a81e3f4bde0",
+  "source": {
+    "schema_version": 1,
+    "system": "aris_epc",
+    "model_id": "epc:event_based_wait",
+    "elements": {
+      "s1": "epc-s1",
+      "s2": "epc-s2",
+      "s3": "epc-s3",
+      "s4": "epc-s4",
+      "s5": "epc-s5",
+      "s6": "epc-s6"
+    }
+  },
+  "annex": [
+    {
+      "schema_version": 1,
+      "after": "s1",
+      "before": "s2",
+      "construct": "epc-state-event",
+      "element_id": "epc-state-1",
+      "label": "Await reply ready"
+    }
+  ],
+  "losses": [
+    {
+      "schema_version": 1,
+      "element": "s2",
+      "construct": "event-based-wait",
+      "target": "aris_epc",
+      "treatment": "event-based-gateway"
+    },
+    {
+      "schema_version": 1,
+      "element": "s3",
+      "construct": "wait",
+      "target": "aris_epc",
+      "treatment": "typed-trigger"
+    },
+    {
+      "schema_version": 1,
+      "element": "s4",
+      "construct": "wait",
+      "target": "aris_epc",
+      "treatment": "typed-trigger"
+    }
+  ]
+}

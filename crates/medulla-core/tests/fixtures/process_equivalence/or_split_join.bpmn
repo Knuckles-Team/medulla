@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs">
+  <process id="orsplit" name="Notify customer">
+    <startEvent id="s" name="Order shipped"/>
+    <inclusiveGateway id="split" name="Channels"/>
+    <sendTask id="mail" name="Send e-mail"/>
+    <sendTask id="sms" name="Send text message"/>
+    <inclusiveGateway id="join" name="Channels done"/>
+    <endEvent id="e" name="Customer notified"/>
+    <sequenceFlow id="f1" sourceRef="s" targetRef="split"/>
+    <sequenceFlow id="f2" sourceRef="split" targetRef="mail"><conditionExpression>wants mail</conditionExpression></sequenceFlow>
+    <sequenceFlow id="f3" sourceRef="split" targetRef="sms"><conditionExpression>wants text</conditionExpression></sequenceFlow>
+    <sequenceFlow id="f4" sourceRef="mail" targetRef="join"/>
+    <sequenceFlow id="f5" sourceRef="sms" targetRef="join"/>
+    <sequenceFlow id="f6" sourceRef="join" targetRef="e"/>
+  </process>
+</definitions>

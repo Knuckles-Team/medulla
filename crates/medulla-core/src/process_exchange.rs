@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+pub mod bpmn_lower;
 pub mod bpmn_read;
 pub mod workflow_bpmn;
 

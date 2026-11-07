@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "schema": "medulla.process.canonical/v1",
+  "name": "Invoice approval",
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "start",
+      "label": "Invoice received"
+    },
+    {
+      "id": "s2",
+      "kind": "human",
+      "label": "Check invoice",
+      "role": "Accounts payable"
+    },
+    {
+      "id": "s3",
+      "kind": "branch",
+      "gate": "xor",
+      "label": "Amount above limit?"
+    },
+    {
+      "id": "s4",
+      "kind": "human",
+      "label": "Approve invoice",
+      "role": "Finance manager"
+    },
+    {
+      "id": "s5",
+      "kind": "join",
+      "gate": "xor",
+      "label": "Merge"
+    },
+    {
+      "id": "s6",
+      "kind": "agent",
+      "label": "Book invoice",
+      "role": "Accounts payable"
+    },
+    {
+      "id": "s7",
+      "kind": "end",
+      "label": "Invoice booked"
+    }
+  ],
+  "flows": [
+    {
+      "source": "s1",
+      "target": "s2",
+      "default": false
+    },
+    {
+      "source": "s2",
+      "target": "s3",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s4",
+      "condition": "amount > limit",
+      "default": false
+    },
+    {
+      "source": "s3",
+      "target": "s5",
+      "condition": "amount <= limit",
+      "default": false
+    },
+    {
+      "source": "s4",
+      "target": "s5",
+      "default": false
+    },
+    {
+      "source": "s5",
+      "target": "s6",
+      "default": false
+    },
+    {
+      "source": "s6",
+      "target": "s7",
+      "default": false
+    }
+  ],
+  "digest": "3502ae3e78c741a8bbfb0c4527868a4829626adaf9a883242427dc3d93555af6",
+  "source": {
+    "schema_version": 1,
+    "system": "bpmn20",
+    "model_id": "invoice",
+    "elements": {
+      "s1": "received",
+      "s2": "check",
+      "s3": "amount",
+      "s4": "approve",
+      "s5": "merge",
+      "s6": "book",
+      "s7": "booked"
+    }
+  }
+}
