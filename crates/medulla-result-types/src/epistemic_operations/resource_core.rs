@@ -1,5 +1,8 @@
 use super::common::deserialize_required_option;
 use super::resource_status::ResourceTargetSnapshot;
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,6 +45,146 @@ pub enum ResourceReservationRecordState {
     Superseded,
     #[serde(rename = "absent")]
     Absent,
+}
+
+// MEDULLA-PLACEMENT-R781.1 — the reservation edge table and its one transition function.
+// ResourceReservationMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `ResourceReservationMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ReservationEvent {
+    /// The `Reserve` event.
+    Reserve,
+    /// The `Release` event.
+    Release,
+    /// The `Reclaim` event.
+    Reclaim,
+    /// The `Expire` event.
+    Expire,
+    /// The `Supersede` event.
+    Supersede,
+}
+
+impl MachineState for ResourceReservationRecordState {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Absent => "absent",
+            Self::Reserved => "reserved",
+            Self::Released => "released",
+            Self::Reclaimed => "reclaimed",
+            Self::Expired => "expired",
+            Self::Superseded => "superseded",
+        }
+    }
+}
+
+impl MachineEvent for ReservationEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Reserve => "Reserve",
+            Self::Release => "Release",
+            Self::Reclaim => "Reclaim",
+            Self::Expire => "Expire",
+            Self::Supersede => "Supersede",
+        }
+    }
+}
+
+/// Guard of `ResourceReservationMachine`: the resource is free.
+pub const RESOURCE_RESERVATION_GUARD_RESOURCE_FREE: &str = "ResourceFree";
+/// Guard of `ResourceReservationMachine`: the owner matches.
+pub const RESOURCE_RESERVATION_GUARD_OWNER_MATCHES: &str = "OwnerMatches";
+/// Guard of `ResourceReservationMachine`: the reclaimer is authorized.
+pub const RESOURCE_RESERVATION_GUARD_RECLAIMER_AUTHORIZED: &str = "ReclaimerAuthorized";
+/// Guard of `ResourceReservationMachine`: the expiry time has passed.
+pub const RESOURCE_RESERVATION_GUARD_EXPIRY_PASSED: &str = "ExpiryPassed";
+/// Guard of `ResourceReservationMachine`: a newer reservation of the same resource is admitted.
+pub const RESOURCE_RESERVATION_GUARD_NEWER_RESERVATION_ADMITTED: &str = "NewerReservationAdmitted";
+
+/// `ResourceReservationMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static RESOURCE_RESERVATION_MACHINE: MachineDef<
+    ResourceReservationRecordState,
+    ReservationEvent,
+    &'static str,
+> = MachineDef {
+    name: "ResourceReservationMachine",
+    states: &[
+        ResourceReservationRecordState::Absent,
+        ResourceReservationRecordState::Reserved,
+        ResourceReservationRecordState::Released,
+        ResourceReservationRecordState::Reclaimed,
+        ResourceReservationRecordState::Expired,
+        ResourceReservationRecordState::Superseded,
+    ],
+    initial: ResourceReservationRecordState::Absent,
+    terminals: &[
+        ResourceReservationRecordState::Released,
+        ResourceReservationRecordState::Reclaimed,
+        ResourceReservationRecordState::Expired,
+        ResourceReservationRecordState::Superseded,
+    ],
+    events: &[
+        ReservationEvent::Reserve,
+        ReservationEvent::Release,
+        ReservationEvent::Reclaim,
+        ReservationEvent::Expire,
+        ReservationEvent::Supersede,
+    ],
+    guards: &[
+        RESOURCE_RESERVATION_GUARD_RESOURCE_FREE,
+        RESOURCE_RESERVATION_GUARD_OWNER_MATCHES,
+        RESOURCE_RESERVATION_GUARD_RECLAIMER_AUTHORIZED,
+        RESOURCE_RESERVATION_GUARD_EXPIRY_PASSED,
+        RESOURCE_RESERVATION_GUARD_NEWER_RESERVATION_ADMITTED,
+    ],
+    edges: &[
+        Edge {
+            id: "V01",
+            from: ResourceReservationRecordState::Absent,
+            event: ReservationEvent::Reserve,
+            guard: Some(RESOURCE_RESERVATION_GUARD_RESOURCE_FREE),
+            to: ResourceReservationRecordState::Reserved,
+        },
+        Edge {
+            id: "V02",
+            from: ResourceReservationRecordState::Reserved,
+            event: ReservationEvent::Release,
+            guard: Some(RESOURCE_RESERVATION_GUARD_OWNER_MATCHES),
+            to: ResourceReservationRecordState::Released,
+        },
+        Edge {
+            id: "V03",
+            from: ResourceReservationRecordState::Reserved,
+            event: ReservationEvent::Reclaim,
+            guard: Some(RESOURCE_RESERVATION_GUARD_RECLAIMER_AUTHORIZED),
+            to: ResourceReservationRecordState::Reclaimed,
+        },
+        Edge {
+            id: "V04",
+            from: ResourceReservationRecordState::Reserved,
+            event: ReservationEvent::Expire,
+            guard: Some(RESOURCE_RESERVATION_GUARD_EXPIRY_PASSED),
+            to: ResourceReservationRecordState::Expired,
+        },
+        Edge {
+            id: "V05",
+            from: ResourceReservationRecordState::Reserved,
+            event: ReservationEvent::Supersede,
+            guard: Some(RESOURCE_RESERVATION_GUARD_NEWER_RESERVATION_ADMITTED),
+            to: ResourceReservationRecordState::Superseded,
+        },
+    ],
+};
+
+impl ResourceReservationRecordState {
+    /// The one transition function of `ResourceReservationMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: ReservationEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&RESOURCE_RESERVATION_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

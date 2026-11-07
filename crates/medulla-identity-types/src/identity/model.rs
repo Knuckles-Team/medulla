@@ -3,6 +3,9 @@
 
 use std::collections::BTreeSet;
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 /// Whether a principal is a person or a workload.
@@ -33,6 +36,183 @@ impl UserStatus {
     /// Only an active principal holds authority or may sign in.
     pub fn is_active(self) -> bool {
         matches!(self, Self::Active)
+    }
+}
+
+// MEDULLA-IDENTITY-R721.1 — the user status edge table and its one transition function.
+// UserStatusMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `UserStatusMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum UserStatusEvent {
+    /// The `Disable` event.
+    Disable,
+    /// The `Enable` event.
+    Enable,
+    /// The `RequireReset` event.
+    RequireReset,
+    /// The `CompleteReset` event.
+    CompleteReset,
+    /// The `Verify` event.
+    Verify,
+    /// The `Deprovision` event.
+    Deprovision,
+}
+
+impl MachineState for UserStatus {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Disabled => "disabled",
+            Self::PendingReset => "pending_reset",
+            Self::PendingVerification => "pending_verification",
+            Self::Deprovisioned => "deprovisioned",
+        }
+    }
+}
+
+impl MachineEvent for UserStatusEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Disable => "Disable",
+            Self::Enable => "Enable",
+            Self::RequireReset => "RequireReset",
+            Self::CompleteReset => "CompleteReset",
+            Self::Verify => "Verify",
+            Self::Deprovision => "Deprovision",
+        }
+    }
+}
+
+/// Guard of `UserStatusMachine`: the principal is not the last active administrator.
+pub const USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR: &str = "NotLastActiveAdministrator";
+/// Guard of `UserStatusMachine`: the new credential is set.
+pub const USER_STATUS_GUARD_NEW_CREDENTIAL_SET: &str = "NewCredentialSet";
+/// Guard of `UserStatusMachine`: the verification proof matches.
+pub const USER_STATUS_GUARD_VERIFICATION_PROOF_MATCHES: &str = "VerificationProofMatches";
+
+/// `UserStatusMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static USER_STATUS_MACHINE: MachineDef<UserStatus, UserStatusEvent, &'static str> =
+    MachineDef {
+        name: "UserStatusMachine",
+        states: &[
+            UserStatus::Active,
+            UserStatus::Disabled,
+            UserStatus::PendingReset,
+            UserStatus::PendingVerification,
+            UserStatus::Deprovisioned,
+        ],
+        initial: UserStatus::Active,
+        terminals: &[UserStatus::Deprovisioned],
+        events: &[
+            UserStatusEvent::Disable,
+            UserStatusEvent::Enable,
+            UserStatusEvent::RequireReset,
+            UserStatusEvent::CompleteReset,
+            UserStatusEvent::Verify,
+            UserStatusEvent::Deprovision,
+        ],
+        guards: &[
+            USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR,
+            USER_STATUS_GUARD_NEW_CREDENTIAL_SET,
+            USER_STATUS_GUARD_VERIFICATION_PROOF_MATCHES,
+        ],
+        edges: &[
+            Edge {
+                id: "U01",
+                from: UserStatus::Active,
+                event: UserStatusEvent::Disable,
+                guard: Some(USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR),
+                to: UserStatus::Disabled,
+            },
+            Edge {
+                id: "U02",
+                from: UserStatus::Disabled,
+                event: UserStatusEvent::Enable,
+                guard: None,
+                to: UserStatus::Active,
+            },
+            Edge {
+                id: "U03",
+                from: UserStatus::Active,
+                event: UserStatusEvent::RequireReset,
+                guard: Some(USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR),
+                to: UserStatus::PendingReset,
+            },
+            Edge {
+                id: "U04",
+                from: UserStatus::Disabled,
+                event: UserStatusEvent::RequireReset,
+                guard: None,
+                to: UserStatus::PendingReset,
+            },
+            Edge {
+                id: "U05",
+                from: UserStatus::PendingReset,
+                event: UserStatusEvent::CompleteReset,
+                guard: Some(USER_STATUS_GUARD_NEW_CREDENTIAL_SET),
+                to: UserStatus::Active,
+            },
+            Edge {
+                id: "U06",
+                from: UserStatus::PendingReset,
+                event: UserStatusEvent::Disable,
+                guard: None,
+                to: UserStatus::Disabled,
+            },
+            Edge {
+                id: "U07",
+                from: UserStatus::PendingVerification,
+                event: UserStatusEvent::Verify,
+                guard: Some(USER_STATUS_GUARD_VERIFICATION_PROOF_MATCHES),
+                to: UserStatus::Active,
+            },
+            Edge {
+                id: "U08",
+                from: UserStatus::PendingVerification,
+                event: UserStatusEvent::Disable,
+                guard: None,
+                to: UserStatus::Disabled,
+            },
+            Edge {
+                id: "U09",
+                from: UserStatus::Active,
+                event: UserStatusEvent::Deprovision,
+                guard: Some(USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR),
+                to: UserStatus::Deprovisioned,
+            },
+            Edge {
+                id: "U10",
+                from: UserStatus::Disabled,
+                event: UserStatusEvent::Deprovision,
+                guard: None,
+                to: UserStatus::Deprovisioned,
+            },
+            Edge {
+                id: "U11",
+                from: UserStatus::PendingReset,
+                event: UserStatusEvent::Deprovision,
+                guard: None,
+                to: UserStatus::Deprovisioned,
+            },
+            Edge {
+                id: "U12",
+                from: UserStatus::PendingVerification,
+                event: UserStatusEvent::Deprovision,
+                guard: None,
+                to: UserStatus::Deprovisioned,
+            },
+        ],
+    };
+
+impl UserStatus {
+    /// The one transition function of `UserStatusMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: UserStatusEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&USER_STATUS_MACHINE, self, event, guard_holds).map(|edge| edge.to)
     }
 }
 

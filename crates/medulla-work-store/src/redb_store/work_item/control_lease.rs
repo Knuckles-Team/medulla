@@ -127,19 +127,20 @@ pub fn apply_transition_control_lease_row(
     let expired = request.to == ControlLeaseTarget::Consumed
         && (committed_at_ms >= current.expires_at_ms
             || committed_at_ms >= current.hard_expires_at_ms);
-    if !request.to.allowed_from(current.status)
-        || current.revision != request.expected_revision
-        || expired
-    {
+    // MEDULLA-PLACEMENT-R782.3: the machine decides the edge. A refused edge (illegal,
+    // terminal, stale revision or elapsed expiry) keeps the served `Conflict` outcome
+    // until the served error mapper carries `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.5).
+    let guards_hold = current.revision == request.expected_revision && !expired;
+    let Ok(next) = current.status.apply(request.to.event(), |_| guards_hold) else {
         return transition_result(
             ControlLeaseTransitionOutcome::Conflict,
             Some(current),
             false,
         );
-    }
+    };
     let pair = pending_call::transition(graph, request, &row, nodes, committed_at_ms, crypto)?;
     let plan = plan_pair::consume(graph, request, &row, nodes, committed_at_ms, crypto)?;
-    row.insert("status".into(), request.to.status().as_stored().into());
+    row.insert("status".into(), next.as_stored().into());
     write_work_item_props(nodes, graph, &request.lease_id, &mut row, crypto)?;
     let ended = ControlLeaseView::from_row(&request.lease_id, &row)?;
     let mut changed = pending_call::write_pair(graph, pair, nodes, crypto)?;

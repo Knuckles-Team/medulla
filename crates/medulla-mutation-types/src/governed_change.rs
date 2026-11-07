@@ -22,6 +22,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 use medulla_identity_types::{
@@ -120,6 +123,141 @@ pub enum GovernedStatus {
     Consumed,
     Revoked,
     Expired,
+}
+
+// MEDULLA-IDENTITY-R720.1 — GovernedStatus::apply is the one assign site.
+// GovernedChangeMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `GovernedChangeMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum GovernedEvent {
+    /// The `Approve` event.
+    Approve,
+    /// The `Revoke` event.
+    Revoke,
+    /// The `Lapse` event.
+    Lapse,
+    /// The `Consume` event.
+    Consume,
+}
+
+impl MachineState for GovernedStatus {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Proposed => "proposed",
+            Self::Approved => "approved",
+            Self::Consumed => "consumed",
+            Self::Revoked => "revoked",
+            Self::Expired => "expired",
+        }
+    }
+}
+
+impl MachineEvent for GovernedEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Approve => "Approve",
+            Self::Revoke => "Revoke",
+            Self::Lapse => "Lapse",
+            Self::Consume => "Consume",
+        }
+    }
+}
+
+/// Guard of `GovernedChangeMachine`: the digest matches and the approver is authorized.
+pub const GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_APPROVER_AUTHORIZED: &str =
+    "DigestMatchesApproverAuthorized";
+/// Guard of `GovernedChangeMachine`: the actor is authorized.
+pub const GOVERNED_CHANGE_GUARD_ACTOR_AUTHORIZED: &str = "ActorAuthorized";
+/// Guard of `GovernedChangeMachine`: the window has elapsed.
+pub const GOVERNED_CHANGE_GUARD_WINDOW_ELAPSED: &str = "WindowElapsed";
+/// Guard of `GovernedChangeMachine`: the digest matches and the approval window is live.
+pub const GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_WINDOW_LIVE: &str = "DigestMatchesWindowLive";
+
+/// `GovernedChangeMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static GOVERNED_CHANGE_MACHINE: MachineDef<GovernedStatus, GovernedEvent, &'static str> =
+    MachineDef {
+        name: "GovernedChangeMachine",
+        states: &[
+            GovernedStatus::Proposed,
+            GovernedStatus::Approved,
+            GovernedStatus::Consumed,
+            GovernedStatus::Revoked,
+            GovernedStatus::Expired,
+        ],
+        initial: GovernedStatus::Proposed,
+        terminals: &[
+            GovernedStatus::Consumed,
+            GovernedStatus::Revoked,
+            GovernedStatus::Expired,
+        ],
+        events: &[
+            GovernedEvent::Approve,
+            GovernedEvent::Revoke,
+            GovernedEvent::Lapse,
+            GovernedEvent::Consume,
+        ],
+        guards: &[
+            GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_APPROVER_AUTHORIZED,
+            GOVERNED_CHANGE_GUARD_ACTOR_AUTHORIZED,
+            GOVERNED_CHANGE_GUARD_WINDOW_ELAPSED,
+            GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_WINDOW_LIVE,
+        ],
+        edges: &[
+            Edge {
+                id: "G01",
+                from: GovernedStatus::Proposed,
+                event: GovernedEvent::Approve,
+                guard: Some(GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_APPROVER_AUTHORIZED),
+                to: GovernedStatus::Approved,
+            },
+            Edge {
+                id: "G02",
+                from: GovernedStatus::Proposed,
+                event: GovernedEvent::Revoke,
+                guard: Some(GOVERNED_CHANGE_GUARD_ACTOR_AUTHORIZED),
+                to: GovernedStatus::Revoked,
+            },
+            Edge {
+                id: "G03",
+                from: GovernedStatus::Proposed,
+                event: GovernedEvent::Lapse,
+                guard: Some(GOVERNED_CHANGE_GUARD_WINDOW_ELAPSED),
+                to: GovernedStatus::Expired,
+            },
+            Edge {
+                id: "G04",
+                from: GovernedStatus::Approved,
+                event: GovernedEvent::Consume,
+                guard: Some(GOVERNED_CHANGE_GUARD_DIGEST_MATCHES_WINDOW_LIVE),
+                to: GovernedStatus::Consumed,
+            },
+            Edge {
+                id: "G05",
+                from: GovernedStatus::Approved,
+                event: GovernedEvent::Revoke,
+                guard: Some(GOVERNED_CHANGE_GUARD_ACTOR_AUTHORIZED),
+                to: GovernedStatus::Revoked,
+            },
+            Edge {
+                id: "G06",
+                from: GovernedStatus::Approved,
+                event: GovernedEvent::Lapse,
+                guard: Some(GOVERNED_CHANGE_GUARD_WINDOW_ELAPSED),
+                to: GovernedStatus::Expired,
+            },
+        ],
+    };
+
+impl GovernedStatus {
+    /// The one transition function of `GovernedChangeMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: GovernedEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&GOVERNED_CHANGE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
 }
 
 /// One governed change.
@@ -459,9 +597,10 @@ impl GovernedLedger {
         if actor.shares_party(&change.proposer_parties) {
             return Err(GovernedRefusal::SelfApproval);
         }
-        if change.status_at(now_ms) != GovernedStatus::Proposed {
-            return Err(GovernedRefusal::Conflict);
-        }
+        let next = change
+            .status_at(now_ms)
+            .apply(GovernedEvent::Approve, |_| true)
+            .map_err(|_| GovernedRefusal::Conflict)?;
         if change.digest != request.digest {
             return Err(GovernedRefusal::DigestMismatch);
         }
@@ -469,7 +608,7 @@ impl GovernedLedger {
             .changes
             .get_mut(&request.change_id)
             .ok_or(GovernedRefusal::NotFound)?;
-        change.status = GovernedStatus::Approved;
+        change.status = next;
         change.approver = Some(actor.agent_id.clone());
         change.approved_until_ms = Some(now_ms.saturating_add(change.window_ms));
         let approved = change.clone();
@@ -498,18 +637,15 @@ impl GovernedLedger {
         if !party && !actor.scopes.contains(approve) {
             return Err(GovernedRefusal::NotAuthorized);
         }
-        let live = matches!(
-            change.status_at(now_ms),
-            GovernedStatus::Proposed | GovernedStatus::Approved
-        );
-        if !live {
-            return Err(GovernedRefusal::Conflict);
-        }
+        let next = change
+            .status_at(now_ms)
+            .apply(GovernedEvent::Revoke, |_| true)
+            .map_err(|_| GovernedRefusal::Conflict)?;
         let change = self
             .changes
             .get_mut(change_id)
             .ok_or(GovernedRefusal::NotFound)?;
-        change.status = GovernedStatus::Revoked;
+        change.status = next;
         change.ended_at_ms = Some(now_ms);
         let revoked = change.clone();
         self.record(
@@ -539,14 +675,15 @@ impl GovernedLedger {
         if !exact {
             return Err(GovernedRefusal::DigestMismatch);
         }
-        if change.status_at(now_ms) != GovernedStatus::Approved {
-            return Err(GovernedRefusal::Conflict);
-        }
+        let next = change
+            .status_at(now_ms)
+            .apply(GovernedEvent::Consume, |_| true)
+            .map_err(|_| GovernedRefusal::Conflict)?;
         let change = self
             .changes
             .get_mut(&consumption.change_id)
             .ok_or(GovernedRefusal::NotFound)?;
-        change.status = GovernedStatus::Consumed;
+        change.status = next;
         change.ended_at_ms = Some(now_ms);
         let consumed = change.clone();
         self.record(

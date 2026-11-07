@@ -3,6 +3,7 @@
 use medulla_core::lifecycle::defect::{
     normalize_symptom, signature_digest, DefectBook, FileOutcome,
 };
+use medulla_source_types::defect_machine::{DefectEvent, DefectFacts};
 use medulla_source_types::{lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Symptom};
 
 fn symptom(text: &str, at: u64) -> Symptom {
@@ -58,7 +59,21 @@ fn same_signature_reuses_open_defect() {
     assert_eq!(book.defects().len(), 2);
 
     // A closed defect with the same signature reopens, with the new symptom.
-    book.set_status(&id, DefectStatus::Closed);
+    let facts = DefectFacts {
+        fix_reference_recorded: true,
+        verification_evidence_recorded: true,
+        reason_recorded: true,
+    };
+    for event in [
+        DefectEvent::Triage,
+        DefectEvent::StartFix,
+        DefectEvent::Fix,
+        DefectEvent::Verify,
+        DefectEvent::Close,
+    ] {
+        book.fire(&id, event, facts).unwrap();
+    }
+    assert_eq!(book.defects()[0].status, DefectStatus::Closed);
     let again = book.file(
         "medulla",
         DefectIntake::Incident,

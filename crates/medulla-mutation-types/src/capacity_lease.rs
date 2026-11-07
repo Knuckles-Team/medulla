@@ -50,6 +50,9 @@
 
 use std::collections::BTreeMap;
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 /// Current wire/on-disk schema version for this module's types.
@@ -190,29 +193,124 @@ impl CapacityCell {
     }
 }
 
-/// Lifecycle state of one `CapacityLease` (mirrors `work_item.py`'s closed
-/// state vocabulary convention — a plain closed string-like enum, not an
-/// open-ended status field).
+/// Lifecycle state of one `CapacityLease` (MEDULLA-PLACEMENT-R782.1). A renewal is a
+/// count (`renewed_count`), not a state, and expiry is derived from `expires_at_ms` by
+/// `CapacityLease::is_expired`: a timestamp records a fact, not a state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum LeaseState {
+pub enum CapacityLeaseState {
     Active,
-    Renewed,
     Released,
-    /// Expiry reached with no renewal; capacity is reclaimable. A holder that
-    /// keeps working past this point is the classic fencing defect this module
-    /// exists to prevent — `try_renew`/`try_release` reject a caller presenting
-    /// a lease in (or past) this state.
-    Expired,
     /// An `ReclaimExpired` sweep already returned this lease's amount to the
     /// cell. Terminal, like `Released`.
     Reclaimed,
 }
 
-impl LeaseState {
+impl CapacityLeaseState {
     fn is_terminal(self) -> bool {
-        matches!(self, LeaseState::Released | LeaseState::Reclaimed)
+        CAPACITY_LEASE_MACHINE.is_terminal(self)
+    }
+}
+
+// MEDULLA-PLACEMENT-R782.1 — the capacity lease edge table and its one transition function.
+// CapacityLeaseMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `CapacityLeaseMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CapacityLeaseEvent {
+    /// The `Renew` event.
+    Renew,
+    /// The `Release` event.
+    Release,
+    /// The `Reclaim` event.
+    Reclaim,
+}
+
+impl MachineState for CapacityLeaseState {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Released => "released",
+            Self::Reclaimed => "reclaimed",
+        }
+    }
+}
+
+impl MachineEvent for CapacityLeaseEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Renew => "Renew",
+            Self::Release => "Release",
+            Self::Reclaim => "Reclaim",
+        }
+    }
+}
+
+/// Guard of `CapacityLeaseMachine`: can_renew holds: the owner matches and the lease is live.
+pub const CAPACITY_LEASE_GUARD_CAN_RENEW: &str = "CanRenew";
+/// Guard of `CapacityLeaseMachine`: can_release holds: the owner matches.
+pub const CAPACITY_LEASE_GUARD_CAN_RELEASE: &str = "CanRelease";
+/// Guard of `CapacityLeaseMachine`: lease_until has passed; the sweeper acts.
+pub const CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED: &str = "LeaseUntilPassed";
+
+/// `CapacityLeaseMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static CAPACITY_LEASE_MACHINE: MachineDef<
+    CapacityLeaseState,
+    CapacityLeaseEvent,
+    &'static str,
+> = MachineDef {
+    name: "CapacityLeaseMachine",
+    states: &[
+        CapacityLeaseState::Active,
+        CapacityLeaseState::Released,
+        CapacityLeaseState::Reclaimed,
+    ],
+    initial: CapacityLeaseState::Active,
+    terminals: &[CapacityLeaseState::Released, CapacityLeaseState::Reclaimed],
+    events: &[
+        CapacityLeaseEvent::Renew,
+        CapacityLeaseEvent::Release,
+        CapacityLeaseEvent::Reclaim,
+    ],
+    guards: &[
+        CAPACITY_LEASE_GUARD_CAN_RENEW,
+        CAPACITY_LEASE_GUARD_CAN_RELEASE,
+        CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED,
+    ],
+    edges: &[
+        Edge {
+            id: "C01",
+            from: CapacityLeaseState::Active,
+            event: CapacityLeaseEvent::Renew,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RENEW),
+            to: CapacityLeaseState::Active,
+        },
+        Edge {
+            id: "C02",
+            from: CapacityLeaseState::Active,
+            event: CapacityLeaseEvent::Release,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RELEASE),
+            to: CapacityLeaseState::Released,
+        },
+        Edge {
+            id: "C03",
+            from: CapacityLeaseState::Active,
+            event: CapacityLeaseEvent::Reclaim,
+            guard: Some(CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED),
+            to: CapacityLeaseState::Reclaimed,
+        },
+    ],
+};
+
+impl CapacityLeaseState {
+    /// The one transition function of `CapacityLeaseMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: CapacityLeaseEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&CAPACITY_LEASE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
     }
 }
 
@@ -276,7 +374,7 @@ pub struct CapacityLease {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_budget: Option<u64>,
     pub idempotency_key: String,
-    pub state: LeaseState,
+    pub state: CapacityLeaseState,
 }
 
 impl CapacityLease {
@@ -319,9 +417,7 @@ impl CapacityLease {
     /// authority is the timestamp comparison itself, so two independent
     /// reclaimers can never race on "is it expired").
     pub fn is_expired(&self, now_ms: u64) -> bool {
-        self.state.is_terminal()
-            || self.state == LeaseState::Expired
-            || now_ms >= self.expires_at_ms
+        self.state.is_terminal() || now_ms >= self.expires_at_ms
     }
 }
 
@@ -477,7 +573,7 @@ impl CapacityLedger {
             cost_budget_micros: None,
             token_budget: None,
             idempotency_key: idempotency_key.to_string(),
-            state: LeaseState::Active,
+            state: CapacityLeaseState::Active,
         };
         self.leases.insert(lease_id.clone(), lease.clone());
         self.idempotency.insert(replay_key, lease_id);
@@ -501,7 +597,6 @@ impl CapacityLedger {
             .get_mut(lease_id)
             .ok_or(CapacityDenial::NotFound)?;
         if lease.is_expired(now_ms) {
-            lease.state = LeaseState::Expired;
             return Err(CapacityDenial::LeaseExpired);
         }
         if lease_epoch < cell_epoch {
@@ -513,9 +608,13 @@ impl CapacityLedger {
         if lease.fence_token != fence_token {
             return Err(CapacityDenial::StaleFence);
         }
+        let next = lease
+            .state
+            .apply(CapacityLeaseEvent::Renew, |_| true)
+            .map_err(|_refused| CapacityDenial::LeaseExpired)?;
         lease.expires_at_ms = now_ms + ttl_ms;
         lease.renewed_count += 1;
-        lease.state = LeaseState::Renewed;
+        lease.state = next;
         Ok(lease.clone())
     }
 
@@ -540,7 +639,6 @@ impl CapacityLedger {
             return Ok(());
         }
         if lease.is_expired(now_ms) {
-            lease.state = LeaseState::Expired;
             return Err(CapacityDenial::LeaseExpired);
         }
         if lease_epoch < cell_epoch {
@@ -552,7 +650,10 @@ impl CapacityLedger {
         if lease.fence_token != fence_token {
             return Err(CapacityDenial::StaleFence);
         }
-        lease.state = LeaseState::Released;
+        lease.state = lease
+            .state
+            .apply(CapacityLeaseEvent::Release, |_| true)
+            .map_err(|_refused| CapacityDenial::LeaseExpired)?;
         Ok(())
     }
 
@@ -563,8 +664,9 @@ impl CapacityLedger {
     pub fn reclaim_expired(&mut self, now_ms: u64) -> Vec<String> {
         let mut reclaimed = Vec::new();
         for (id, lease) in self.leases.iter_mut() {
-            if !lease.state.is_terminal() && now_ms >= lease.expires_at_ms {
-                lease.state = LeaseState::Reclaimed;
+            let lapsed = now_ms >= lease.expires_at_ms;
+            if let Ok(next) = lease.state.apply(CapacityLeaseEvent::Reclaim, |_| lapsed) {
+                lease.state = next;
                 reclaimed.push(id.clone());
             }
         }
@@ -578,6 +680,170 @@ impl CapacityLedger {
 
 #[cfg(test)]
 mod tests {
+    // MEDULLA-PLACEMENT-R782.1 — the capacity lease machine.
+    use super::{CapacityLeaseEvent, CapacityLeaseState, CAPACITY_LEASE_MACHINE};
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    fn capacity_edge_case(
+        id: &str,
+        from: CapacityLeaseState,
+        event: CapacityLeaseEvent,
+        to: CapacityLeaseState,
+    ) {
+        let edge = CAPACITY_LEASE_MACHINE
+            .edges
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap();
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+        assert_eq!(from.apply(event, |_| true), Ok(to));
+        if edge.guard.is_some() {
+            let refused = from.apply(event, |_| false).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        }
+    }
+
+    /// Every (state, event) pair with no edge.
+    fn capacity_illegal_pairs() -> Vec<(CapacityLeaseState, CapacityLeaseEvent)> {
+        let machine = &CAPACITY_LEASE_MACHINE;
+        let mut out = Vec::new();
+        for &state in machine.states {
+            for &event in machine.events {
+                if !machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    out.push((state, event));
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn edge_c01_active_renew() {
+        capacity_edge_case(
+            "C01",
+            CapacityLeaseState::Active,
+            CapacityLeaseEvent::Renew,
+            CapacityLeaseState::Active,
+        );
+    }
+
+    #[test]
+    fn edge_c02_active_release() {
+        capacity_edge_case(
+            "C02",
+            CapacityLeaseState::Active,
+            CapacityLeaseEvent::Release,
+            CapacityLeaseState::Released,
+        );
+    }
+
+    #[test]
+    fn edge_c03_active_reclaim() {
+        capacity_edge_case(
+            "C03",
+            CapacityLeaseState::Active,
+            CapacityLeaseEvent::Reclaim,
+            CapacityLeaseState::Reclaimed,
+        );
+    }
+
+    #[test]
+    fn every_illegal_pair_is_refused() {
+        let machine = &CAPACITY_LEASE_MACHINE;
+        let pairs = capacity_illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            let expected = if machine.is_terminal(state) {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        }
+        for &terminal in machine.terminals {
+            for &event in machine.events {
+                assert!(terminal.apply(event, |_| true).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn refusal_carries_machine_from_event() {
+        let refused = CapacityLeaseState::Released
+            .apply(CapacityLeaseEvent::Renew, |_| true)
+            .unwrap_err();
+        assert_eq!(refused.machine, "CapacityLeaseMachine");
+        assert_eq!(refused.from, CapacityLeaseState::Released.stored());
+        assert_eq!(refused.event, "Renew");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
+    /// file's `#[cfg(test)] mod tests`.
+    fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a str> {
+        let needle = format!(".{field} = {ty}::");
+        let mut out = Vec::new();
+        let mut previous = "";
+        for line in source.lines().map(str::trim) {
+            if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+                break;
+            }
+            previous = line;
+            if !line.starts_with("//") && line.contains(&needle) {
+                out.push(line);
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/capacity_lease.rs");
+        let source = std::fs::read_to_string(path).expect("writer source");
+        let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
+        assert!(
+            writes.is_empty(),
+            "direct state writes in src/capacity_lease.rs: {writes:?}"
+        );
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-resource-store/src/redb_store/capacity_lease.rs"
+        );
+        let source = std::fs::read_to_string(path).expect("writer source");
+        let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
+        assert!(writes.is_empty(), "direct state writes in ../medulla-resource-store/src/redb_store/capacity_lease.rs: {writes:?}");
+    }
+
+    #[test]
+    fn every_transition_and_refusal_is_covered() {
+        let machine = &CAPACITY_LEASE_MACHINE;
+        assert_eq!(machine.edges.len(), 3);
+        assert_eq!(machine.states.len(), 3);
+        let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+        ids.dedup();
+        assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+        for edge in machine.edges {
+            assert!(
+                !machine.is_terminal(edge.from),
+                "{} leaves a terminal state",
+                edge.id
+            );
+        }
+        for &state in machine.states {
+            assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+            for &event in machine.events {
+                let legal = state.apply(event, |_| true).is_ok();
+                let has_edge = machine.edges_from(state).any(|e| e.event == event);
+                assert_eq!(legal, has_edge, "{state:?} {event:?}");
+            }
+        }
+    }
+
     use super::*;
 
     fn cell(epoch: u64) -> CapacityCell {

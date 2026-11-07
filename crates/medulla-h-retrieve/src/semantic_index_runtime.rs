@@ -12,6 +12,8 @@ mod activation;
 mod upgrade;
 
 pub use activation::PendingRf019Activation;
+// MEDULLA-DURABLE-KERNEL-R872.1 — the upgrade phase machine, exported for the ontology check.
+pub use upgrade::{UpgradeEvent, UpgradePhase, SEMANTIC_INDEX_UPGRADE_MACHINE};
 
 pub fn preflight_rf019_activation(
     persist_dir: &std::path::Path,

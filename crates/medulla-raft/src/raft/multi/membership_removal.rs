@@ -203,7 +203,9 @@ async fn persist_safety_phases(
         MembershipShrinkPhase::LeadershipTransferred,
         MembershipShrinkPhase::SafetyChecked,
     ] {
-        journal = journal.advance(phase, evidence.clone())?;
+        journal = journal
+            .advance(phase, evidence.clone())
+            .map_err(|refused| refused.to_string())?;
         multi.persist_membership_shrink_journal(&journal).await?;
     }
     if !journal.ready_for_removal() {
@@ -248,8 +250,12 @@ async fn complete_shrink_journal(
     journal: MembershipShrinkJournal,
     committed: MembershipShrinkEvidence,
 ) -> Result<(), String> {
-    let journal = journal.advance(MembershipShrinkPhase::RemovalCommitted, committed.clone())?;
+    let journal = journal
+        .advance(MembershipShrinkPhase::RemovalCommitted, committed.clone())
+        .map_err(|refused| refused.to_string())?;
     multi.persist_membership_shrink_journal(&journal).await?;
-    let journal = journal.advance(MembershipShrinkPhase::Completed, committed)?;
+    let journal = journal
+        .advance(MembershipShrinkPhase::Completed, committed)
+        .map_err(|refused| refused.to_string())?;
     multi.persist_membership_shrink_journal(&journal).await
 }

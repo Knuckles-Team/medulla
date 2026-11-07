@@ -68,7 +68,8 @@ pub use delegation::{
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
 pub use model::{
     ApiKeyRecord, ExternalIdentity, OneTimeToken, PasswordCredential, SessionRecord, TokenPurpose,
-    TotpRecord, UserKind, UserRecord, UserStatus, WebauthnRecord,
+    TotpRecord, UserKind, UserRecord, UserStatus, UserStatusEvent, WebauthnRecord,
+    USER_STATUS_MACHINE,
 };
 pub use ops::{
     AccessOp, ConfigOp, CredentialOp, DelegationOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta,

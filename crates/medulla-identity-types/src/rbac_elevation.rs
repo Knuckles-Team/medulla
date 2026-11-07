@@ -37,9 +37,9 @@ use sha2::{Digest, Sha256};
 mod ledger;
 
 pub use ledger::{
-    ElevationAuditEntry, ElevationEvent, ElevationLease, ElevationLedger, ElevationStatus,
-    ELEVATION_RETENTION_MS, MAX_ELEVATION_AUDIT_ENTRIES, MAX_ELEVATION_LEASES,
-    MAX_LIVE_ELEVATIONS_PER_GRANTEE,
+    ElevationAuditEntry, ElevationEvent, ElevationLease, ElevationLedger, ElevationMachineEvent,
+    ElevationStatus, ELEVATION_RETENTION_MS, MAX_ELEVATION_AUDIT_ENTRIES, MAX_ELEVATION_LEASES,
+    MAX_LIVE_ELEVATIONS_PER_GRANTEE, RBAC_ELEVATION_MACHINE,
 };
 
 /// The reserved control-lease kind of an elevation.
