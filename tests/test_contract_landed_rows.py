@@ -100,3 +100,11 @@ def test_duplication_gate_compares_the_combined_diff_to_a_base_ref() -> None:
     assert "check_duplication.py enforce" in entry
     assert "--base-ref" in entry
     assert "origin/main" in entry or "gate_base_ref" in entry
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.10")
+def test_the_shared_spec_hook_runs_on_pre_push() -> None:
+    config = yaml.safe_load((ROOT / ".config/pre-commit.yaml").read_text())
+    repos = [r for r in config["repos"] if r["repo"].endswith("/pipelines")]
+    hooks = {h["id"]: h for r in repos for h in r["hooks"]}
+    assert "pre-push" in hooks["spec"]["stages"]
