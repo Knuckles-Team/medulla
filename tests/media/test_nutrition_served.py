@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -71,11 +72,18 @@ def test_food_pack_import_answers_composition_query() -> None:
                 ],
             )
             assert accepted["result"] != "rejected", accepted
-            rows = await client.rdf.sparql(
-                "PREFIX : <http://knuckles.team/kg#> "
-                "SELECT ?id WHERE { ?amount a :NutrientAmount ; :nutrientId ?id }"
-            )
-            assert any(row.get("id") == "1003" for row in rows), rows
+            # The pack graph is projected after the import commits; its rows
+            # join the default graph once the projection is visible.
+            deadline = time.monotonic() + 60
+            while True:
+                rows = await client.rdf.sparql(
+                    "PREFIX : <http://knuckles.team/kg#> "
+                    "SELECT ?id WHERE { ?amount a :NutrientAmount ; :nutrientId ?id }"
+                )
+                if any(row.get("id") == "1003" for row in rows):
+                    break
+                assert time.monotonic() < deadline, rows
+                await asyncio.sleep(0.5)
         finally:
             await client.close()
 
