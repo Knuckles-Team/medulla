@@ -1,0 +1,80 @@
+name: Nightly wheel reproducibility
+
+# MEDULLA-CONTRACT-R053.14: the release fixed point for wheels. Tag runs compare
+# the sdist and the server images; building every wheel twice on a tag would
+# double the release matrix, so the wheel pair runs on a manual release
+# dispatch and here, nightly, for the Linux x86_64 leg only. Two passes of the
+# same folded-wheel action build from the same pinned inputs (SOURCE_DATE_EPOCH
+# from the commit, neutral source paths, the tracked toolchain, the lock), the
+# second from empty native build state, and the pair must be byte-identical.
+# Publishes nothing.
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  CARGO_INCREMENTAL: "0"
+  PYTHONDONTWRITEBYTECODE: "1"
+  # Two jobs fit the 4-vCPU/16 GiB hosted runner, as in medulla-release-x86.yml.
+  CARGO_BUILD_JOBS: "2"
+  MATURIN_FEATURES: full,ast-extended
+  MEDULLA_WHEEL_TARGET: x86_64-unknown-linux-gnu
+  MEDULLA_WHEEL_MATURIN_ARGS: ""
+  MEDULLA_WHEEL_JOBS_ARG: --jobs 2
+  MEDULLA_WHEEL_MANYLINUX: "2_28"
+
+jobs:
+  wheel-fixed-point:
+    name: wheel linux-x86_64 built twice
+    if: github.repository == 'Knuckles-Team/medulla' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - id: rust-toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      - name: Bind build time to the source revision
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
+      - name: Configure identity-neutral Rust source paths
+        shell: bash
+        run: python scripts/configure_rust_path_remap.py --github-env "$GITHUB_ENV" --target "$MEDULLA_WHEEL_TARGET"
+
+      - name: Build primary wheel
+        uses: ./.github/actions/folded-wheel
+        with:
+          pass: primary
+
+      - name: Remove primary native build state
+        shell: bash
+        run: >-
+          python -c "import os,shutil; from pathlib import Path;
+          root=Path(os.environ['RUNNER_TEMP']).resolve();
+          target=(root/'medulla-release-target').resolve();
+          assert target.parent==root and target.name=='medulla-release-target';
+          shutil.rmtree(target) if target.exists() else None"
+
+      - name: Build reproduction wheel
+        uses: ./.github/actions/folded-wheel
+        with:
+          pass: reproduction
+
+      - name: Require byte-identical folded wheels
+        shell: bash
+        run: python scripts/compare_wheel_reproducibility.py dist-primary dist-reproduction

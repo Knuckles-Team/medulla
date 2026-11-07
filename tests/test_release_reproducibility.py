@@ -92,3 +92,23 @@ def test_publish_jobs_need_the_release_fixed_point_job() -> None:
     assert "SOURCE_DATE_EPOCH" in image
     sdist = "\n".join(step.get("run", "") for step in jobs["build-sdist"]["steps"])
     assert "SOURCE_DATE_EPOCH" in sdist and "dist-sdist-reproduction" in sdist
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.14")
+def test_nightly_builds_the_linux_x86_64_wheel_twice_and_compares() -> None:
+    doc = yaml.safe_load(
+        (RELEASE.parent / "nightly-wheel-reproducibility.yml").read_text("utf-8")
+    )
+    triggers = doc[True] if True in doc else doc["on"]
+    assert "schedule" in triggers
+    assert doc["env"]["MEDULLA_WHEEL_TARGET"] == "x86_64-unknown-linux-gnu"
+    (job,) = doc["jobs"].values()
+    passes = [
+        step["with"]["pass"]
+        for step in job["steps"]
+        if step.get("uses") == "./.github/actions/folded-wheel"
+    ]
+    assert passes == ["primary", "reproduction"]
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "compare_wheel_reproducibility.py dist-primary dist-reproduction" in runs
+    assert "SOURCE_DATE_EPOCH" in runs
