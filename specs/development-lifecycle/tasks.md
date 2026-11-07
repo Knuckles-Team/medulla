@@ -118,3 +118,6 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T111 [US6] MEDULLA-SDLC-R019.15 Hot-path proof: served delivery journey.
 - [X] T112 [P] MEDULLA-SDLC-R020 Concurrent changes merge without registry conflicts.
 - [X] T113 [P] MEDULLA-SDLC-R020.1 No generated artifact is committed; no freshness gate.
+- [ ] T114 [US1] MEDULLA-SDLC-R021 Crate dependencies follow declared stability layers.
+- [ ] T115 [US1] MEDULLA-SDLC-R022 Repository scripts hold no gate or certification logic.
+- [ ] T116 [US1] MEDULLA-SDLC-R023 Process-wide state is explicit.
