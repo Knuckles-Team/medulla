@@ -218,6 +218,29 @@ The first two fields set the pattern. The request-context policy is a `Result<Re
 
 The remaining statics follow the same move, one change per group, in this order: the `medulla-server-api` caches and samplers (`denial_sample`, `icv_guard`, `identity_view`, `read_audit`, `schema_compose`, `txn` fences, `routed_write_coalescer` locks, `state` caps), then the knob install (`knob_config::INSTALLED`, which `ServerContext::build` takes as an argument instead), then the statics of the other crates by crate, server first.
 
+#### Static census (R023, 2026-11-07, `origin/main` plus the layers branch)
+
+Scan: `static`, `thread_local!`, `lazy_static!`, `OnceLock`, `LazyLock`, `OnceCell` declarations in `crates/*/src` and `src`, struct fields and type aliases excluded. 292 declarations: **60 immutable** (they stay), **213 mutable state** (they move), **19 test-harness only** (they leave with the harness, row `R023` last step). Counts are from a scripted scan with a reviewed name list (class split by declaration name, so a few rows sit in a neighbouring class); a few `OnceLock` fields on structs are per-instance already and are not counted.
+
+| Class | Meaning | Count |
+|---|---|---|
+| IMMUTABLE | compiled regex, constant tables, statechart definitions, CUDA/CPU backend probes, schema catalogs built once from constants, hardware capability probes | 60 |
+| MUTABLE: metrics | Prometheus registry and collectors (`medulla-kernel` `metrics*.rs`, `lazy_static!`) | 78 |
+| MUTABLE: caches and registries | plan, result, schema, view, handler, semantic-owner, federation stats and limiter registries, view status board, modality registry | 30 |
+| MUTABLE: locks and fences | striped write locks, transaction fences, pause holds, env-guard locks | 13 |
+| MUTABLE: policy installed once | knob config, qos scheduler, validators, signer registry, tier policy, resource capacity, cost state | 41 |
+| MUTABLE: process-unique sequences | `AtomicU64` counters that mint temp-file names, request ids and connection ids | 37 |
+| MUTABLE: thread-local scratch | cancellation tokens, edge-order cache, method-codec buffers, cypher counters | 14 |
+| TEST harness | `*_ENV_LOCK`, injected-failure slots, harness registries | 19 |
+
+Mutable declarations by crate (production code): `medulla-kernel` 87, `medulla-server-auth` 11, `medulla-server-api` 11, `medulla-h-retrieve` 8, `medulla-wire-msg` 7, `medulla-cypher` 7, `medulla-federation` 6, `medulla-h-query` 5, `medulla-h-jobs` 5, `medulla-wire` 4, `medulla-store` 4, `medulla-sql` 3, `medulla-exec` 3, `medulla-server-mutation` 3, `medulla-raft` 3, `medulla-store-apply` 3, `medulla-server-obs` 3, `medulla-server-ops` 3, `medulla-semantic-index` 2, `medulla-core` 2, `medulla-method-codec` 2, `medulla-direct-state` 2, `medulla-ann-codes` 2, `medulla-persistence` 2, `medulla-h-admin` 2, `medulla-work-store` 1, `medulla-mining` 1, `medulla-server-router` 1, `medulla-server-identity` 1, `medulla-server-cdc` 1, `medulla-jobs` 1, `medulla-graph-core` 1, `medulla-tensor` 1, `medulla-rdf` 1, `medulla-resource-store` 1, `medulla-kvcache` 1, `medulla-h-decide` 1, `medulla-types` 1, `medulla-table-store` 1, `medulla-agent-types` 1, `medulla-h-sparql` 1, `medulla-lane-store` 1, `medulla-storage` 1, `medulla-h-graph` 1, `medulla-server-lake` 1, `medulla-modality` 1, `medulla-server` 1, `medulla-graphql` 1.
+
+Decision for the sequences: a counter that only has to be unique within the process (temp-file suffix, connection id) holds no server state and two contexts sharing it is harmless, but it is still a static written after init. They move last, into the context of the crate that mints them, because a unique id from a shared counter is the one case where sharing is the safe behaviour; the owner may rule that group IMMUTABLE-by-intent instead.
+
+Order of moves, one crate per commit: (1) `medulla-server-api` (`denial_sample` first, then `icv_guard`, `identity_view`, `read_audit`, `schema_compose`, `txn` fences, `routed_write_coalescer` locks, `state` caps, `knob_config`); (2) `medulla-server-auth`, `medulla-server-router`, `medulla-server-ops`, `medulla-server-mutation`, `medulla-server-obs`, `medulla-server-cdc`, `medulla-server-identity`; (3) `medulla-kernel` (metrics registry becomes a `KernelMetrics` value held by the kernel); (4) the `medulla-h-*` crates; (5) the rest by crate.
+
+Where a state belongs to a layer that already exists, it moves into that layer instead of the server context: the denial sampler is a field of `IsolationLayer` (the layer that writes the samples into its audit trail), so a policy clone shares it and two layers built apart share nothing.
+
 ### Interfaces and data model
 
 - `RecordRelease { tenant, repo, version, ref, changeset_head, artifact_digests }` returns the sealed release record.

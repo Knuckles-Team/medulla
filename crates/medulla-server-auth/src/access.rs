@@ -143,7 +143,7 @@ fn check_graph_access_with_policy(
     } else {
         medulla_kernel::metrics::access_denied();
         #[cfg(feature = "security")]
-        medulla_server_api::denial_sample::offer(agent, graph_name, "GRAPH_ACCESS_DENIED");
+        isolation.offer_denial(agent, graph_name, "GRAPH_ACCESS_DENIED");
         Err(format!(
             "ACCESS_DENIED: verified principal lacks {access:?} access to graph '{graph_name}'"
         ))

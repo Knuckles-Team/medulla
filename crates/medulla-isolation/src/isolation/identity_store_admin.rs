@@ -283,6 +283,28 @@ impl IsolationLayer {
         outcome
     }
 
+    /// Offer one denial to this layer's sampler. Never blocks on durable
+    /// state and never fails the denial it describes.
+    pub fn offer_denial(&self, principal: &str, action: &str, reason: &str) {
+        let sample = DenialSample {
+            at_ms: super::access_clock_ms(),
+            principal: principal.to_string(),
+            action: action.to_string(),
+            reason: reason.to_string(),
+        };
+        if let Ok(mut sampler) = self.denials.lock() {
+            sampler.offer(sample);
+        }
+    }
+
+    /// Take the kept denial samples and the count dropped since the last drain.
+    pub fn drain_denials(&self) -> (Vec<DenialSample>, u64) {
+        self.denials
+            .lock()
+            .map(|mut sampler| sampler.drain())
+            .unwrap_or_default()
+    }
+
     /// Write a drained denial sample into the identity trail in one save.
     pub fn try_record_denials(
         &mut self,

@@ -64,3 +64,21 @@ fn two_contexts_in_one_process_do_not_share_replay_state() {
     assert_eq!(a.seal_replay_ledger().unwrap(), 1);
     assert_eq!(refused.seal_replay_ledger().unwrap(), 0);
 }
+
+// spec: MEDULLA-SDLC-R023
+#[test]
+fn two_contexts_in_one_process_do_not_share_denial_samples() {
+    use medulla_isolation::isolation::IsolationLayer;
+    let (a, b) = (IsolationLayer::new(), IsolationLayer::new());
+    a.offer_denial("agent-a", "graph:read", "SCOPE_DENIED");
+    // A policy clone of one layer shares its sampler; a layer built apart does not.
+    let (samples, dropped) = a.clone().drain_denials();
+    assert_eq!((samples.len(), dropped), (1, 0));
+    assert_eq!(samples[0].principal, "agent-a");
+    assert_eq!(b.drain_denials().0.len(), 0, "B saw A's denial");
+    assert_eq!(
+        a.drain_denials().0.len(),
+        0,
+        "the drain emptied the shared sampler"
+    );
+}

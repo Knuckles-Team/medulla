@@ -1,14 +1,13 @@
 //! The durable denial sample.
 //!
 //! Every authorization denial already counts in metrics. The denial paths
-//! also OFFER a sample here -- an in-memory, bounded, rate-limited sampler,
+//! also OFFER a sample to the isolation layer (`IsolationLayer::offer_denial`) -- an in-memory, bounded, rate-limited sampler,
 //! cheap on the hot path -- and the engine periodically writes what it kept
 //! into the identity store's hash-chained audit trail in ONE durable write.
 #![cfg(feature = "security")]
 
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::Arc;
 
-use medulla_identity_types::{identity::DenialSample, identity::DenialSampler};
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
@@ -16,31 +15,9 @@ use crate::state::ServerState;
 /// How often kept samples are written.
 const FLUSH_EVERY: std::time::Duration = std::time::Duration::from_secs(60);
 
-fn sampler() -> &'static Mutex<DenialSampler> {
-    static SAMPLER: OnceLock<Mutex<DenialSampler>> = OnceLock::new();
-    SAMPLER.get_or_init(|| Mutex::new(DenialSampler::default()))
-}
-
-/// Offer one denial. Never blocks on durable state and never fails the
-/// denial it describes.
-pub fn offer(principal: &str, action: &str, reason: &str) {
-    let sample = DenialSample {
-        at_ms: medulla_isolation::isolation::access_clock_ms(),
-        principal: principal.to_string(),
-        action: action.to_string(),
-        reason: reason.to_string(),
-    };
-    if let Ok(mut sampler) = sampler().lock() {
-        sampler.offer(sample);
-    }
-}
-
 /// Write every kept sample into the identity audit trail.
 pub(crate) async fn flush(state: &Arc<RwLock<ServerState>>) {
-    let (samples, dropped) = match sampler().lock() {
-        Ok(mut sampler) => sampler.drain(),
-        Err(_) => return,
-    };
+    let (samples, dropped) = state.read().await.isolation.drain_denials();
     if samples.is_empty() && dropped == 0 {
         return;
     }

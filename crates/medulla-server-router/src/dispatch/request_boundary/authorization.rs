@@ -371,7 +371,7 @@ pub async fn check_scope_and_admin_authority(
     {
         medulla_kernel::metrics::access_denied();
         #[cfg(feature = "security")]
-        medulla_server_api::denial_sample::offer(
+        timed_read(state).await.isolation.offer_denial(
             verified_context.principal(),
             action,
             "SCOPE_DENIED",
