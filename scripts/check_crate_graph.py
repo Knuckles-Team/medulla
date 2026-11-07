@@ -11,8 +11,8 @@ pass):
   (``medulla-h-*``) and wire crate (``medulla-wire*``) is an optional
   dependency of ``medulla-server``, and its ``full`` feature enables each one.
 * ``layer_findings`` (MEDULLA-SDLC-R021): every workspace crate sits in exactly
-  one layer of ``architecture/crate-layers.yml`` and depends only on crates of
-  its own or an earlier layer.
+  one ``cargo_layers`` entry of the coupling policy in ``pyproject.toml`` and
+  depends only on crates of its own or an earlier layer.
 
 The crate set comes from ``cargo metadata`` when cargo is on the path, else
 from the workspace members in the root ``Cargo.toml``.
@@ -32,7 +32,6 @@ from pathlib import Path
 from typing import Any
 
 import tomllib
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER_CRATE_PREFIXES = ("medulla-server", "medulla-persistence")
@@ -43,7 +42,7 @@ MOD_DECL = re.compile(
     rf"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+{FORBIDDEN_MODULE}\b", re.MULTILINE
 )
 SPLIT_CRATE = re.compile(r"^medulla-(?:h-[a-z0-9-]+|wire(?:-[a-z0-9-]+)?)$")
-LAYERS_FILE = Path("architecture/crate-layers.yml")
+LAYERS_FILE = Path("pyproject.toml")
 LAYERED_TABLES = ("dependencies", "build-dependencies")
 
 
@@ -166,7 +165,11 @@ def layer_findings(root: Path = ROOT) -> list[str]:
     layers_path = root / LAYERS_FILE
     if not layers_path.is_file():
         return [f"{LAYERS_FILE}: the crate layers file is missing"]
-    layers = yaml.safe_load(layers_path.read_text(encoding="utf-8"))["layers"]
+    policy = tomllib.loads(layers_path.read_text(encoding="utf-8"))
+    layers = [
+        {"name": entry["name"], "crates": entry["units"]}
+        for entry in policy["tool"]["pipelines_hooks"]["coupling"]["cargo_layers"]
+    ]
     crates = workspace_crates(root)
     findings: list[str] = []
     rank: dict[str, int] = {}
