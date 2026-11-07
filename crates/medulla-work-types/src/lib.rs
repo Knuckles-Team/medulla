@@ -59,6 +59,9 @@ pub mod work_item_command_log;
 pub mod run_completion;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_read;
+// MEDULLA-ORCH-VOCAB-R812 — the WorkItem lifecycle as one explicit state machine:
+// the edge table W01-W26 and `WorkItemStatus::apply`, the only transition function.
+pub mod work_item_machine;
 // graph-os MEDULLA-2 — native control leases: a tenant-bound, time-boxed grant with
 // a one-way active -> revoked|expired lifecycle (not a capacity admission).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

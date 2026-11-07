@@ -172,6 +172,15 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 - A caller submits `MineAssociate` through served `SubmitJob`, handled in `crates/medulla-h-jobs/src/jobs/submit.rs`.
 - The tenant client (`medulla/placement.py`) asks the engine for the route (`PlacementRouteRequest`) and the object store open check consumes it (MEDULLA-OBJECT-STORAGE-BACKEND-R004).
 
+### Machine wiring
+
+- `LaneHoldMachine`: entry point served reserve and cleanup operations → `reserve.rs` and `cleanup.rs` under `crates/medulla-result-types/src/epistemic_operations/` → `HoldState::apply` in `crates/medulla-result-types/src/epistemic_operations/hold_machine.rs` → stored state field. Attach points: `reserve.rs:358` and `cleanup.rs:67,131,368`. Wiring row: MEDULLA-PLACEMENT-R780.1. Hot-path proof row: `terminal_work_item_releases_hold` of MEDULLA-PLACEMENT-R780.2.
+- `ResourceReservationMachine`: entry point served resource lifecycle methods → `resource/write_lifecycle.rs` → `ResourceReservationRecordState::apply` in `crates/medulla-result-types/src/epistemic_operations/resource_core.rs` → stored state field. Attach points: `write_lifecycle.rs:115`. Wiring row: MEDULLA-PLACEMENT-R781.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R781.1.
+- `CapacityLeaseMachine`: entry point served capacity lease methods → the lease store in `crates/medulla-resource-store` → `CapacityLeaseState::apply` in `crates/medulla-mutation-types/src/capacity_lease.rs` → stored state field. Attach points: `capacity_lease.rs:770,772,942`. Wiring row: MEDULLA-PLACEMENT-R782.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R782.1.
+- `ControlLeaseMachine`: entry point served control lease transition method → `apply_transition_control_lease_row` → `ControlLeaseStatus::apply` in `crates/medulla-work-types/src/control_lease.rs`, called by `apply_transition_control_lease_row` → stored state field. Attach points: `control_lease.rs:142` of the work store. Wiring row: MEDULLA-PLACEMENT-R782.3. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R782.3.
+- `MembershipShrinkMachine`: entry point the shrink controller → `advance` and `abort` → `advance` (`:210`) and `abort` (`:240`) in `crates/medulla-raft/src/raft/membership_shrink.rs` → stored state field. Attach points: `membership_shrink.rs:210,240`. Wiring row: MEDULLA-PLACEMENT-R783.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R783.2.
+- Sibling raft machines: inventory only in MEDULLA-PLACEMENT-R783.3; the edge tables are not yet extracted.
+
 ## Cross-repo seams
 
 | Seam | Provider | Consumer |
@@ -182,3 +191,7 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 | ingest-worker-wording | medulla MEDULLA-INGEST-WORKER-R001 | medulla MEDULLA-PLACEMENT-R002 |
 | worker-runner | medulla MEDULLA-PLACEMENT-R002 | scion-sdk SCION-SOURCE-INGEST-R011.1 |
 | object-storage-route | medulla MEDULLA-PLACEMENT-R611 | medulla MEDULLA-OBJECT-STORAGE-BACKEND-R004 |
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-PLACEMENT-R780`, `MEDULLA-PLACEMENT-R781`, `MEDULLA-PLACEMENT-R782`, `MEDULLA-PLACEMENT-R783` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

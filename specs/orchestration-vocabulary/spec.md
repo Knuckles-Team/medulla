@@ -128,6 +128,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 - **FR-008**: Harness components and the improvement library keep versioned, evidenced history. Rows: `MEDULLA-ORCH-VOCAB-R801`, `MEDULLA-ORCH-VOCAB-R802`, `MEDULLA-ORCH-VOCAB-R810`.
 - **FR-009**: BPMN 2.0 and DMN classes and the step binding properties roll up to six core process terms. Rows: `MEDULLA-ORCH-VOCAB-R014`.
 - **FR-010**: every process class of every source, BPMN or EPC, states its canonical step kind with one closed annotation, so sources map onto one canonical workflow. Rows: `MEDULLA-ORCH-VOCAB-R014.9`, `MEDULLA-ORCH-VOCAB-R014.10`.
+- **FR-011**: Each lifecycle named in these rows is an explicit state machine with one transition function, one stored state field, a typed refusal of illegal transitions and an ontology description (organization constitution Article XXXI). Rows: `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R811.1`, `MEDULLA-ORCH-VOCAB-R811.2`, `MEDULLA-ORCH-VOCAB-R811.3`, `MEDULLA-ORCH-VOCAB-R811.4`, `MEDULLA-ORCH-VOCAB-R811.5`, `MEDULLA-ORCH-VOCAB-R811.6`, `MEDULLA-ORCH-VOCAB-R811.7`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R812.1`, `MEDULLA-ORCH-VOCAB-R812.2`, `MEDULLA-ORCH-VOCAB-R812.3`, `MEDULLA-ORCH-VOCAB-R812.4`, `MEDULLA-ORCH-VOCAB-R812.5`, `MEDULLA-ORCH-VOCAB-R813`.
 
 ## Success Criteria
 

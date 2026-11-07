@@ -80,58 +80,6 @@ pub fn write_work_item_props(
     Ok(())
 }
 
-/// Drive the phase-1 statechart MIRROR for one WorkItem transition (ADR-5 / W2.2) and
-/// fold its durable `MachineInstance` projection back INTO the same `props` map — so the
-/// mirror commits in the SAME redb write transaction as the authoritative lifecycle
-/// `status` on the SAME shard. That co-location is what makes a `kill -9` mid-transition
-/// unable to split the row from its mirror (both land, or neither does), and it keeps the
-/// mirror state Cypher-queryable as ordinary node properties (`machine_state`).
-///
-/// The redb row's `status` REMAINS the authority in phase 1; this only compares the
-/// chart's independently-computed next state against it and raises the divergence alarm on
-/// a mismatch (a chart bug caught before the phase-2 authority flip). `pre_status` is the
-/// row status BEFORE the authority mutated it; `authoritative_next` is `Some(status)` the
-/// authority persisted (the firing handlers always transition, so it is always `Some`).
-#[cfg(feature = "statechart")]
-pub fn apply_work_item_mirror(
-    props: &mut serde_json::Map<String, serde_json::Value>,
-    work_item_id: &str,
-    pre_status: &str,
-    event: &str,
-    payload: serde_json::Value,
-    authoritative_next: Option<&str>,
-) {
-    let outcome =
-        crate::work_item_statechart::mirror_outcome(pre_status, event, payload, authoritative_next);
-    if outcome.diverged {
-        crate::work_item_statechart::emit_divergence(
-            work_item_id,
-            pre_status,
-            event,
-            authoritative_next,
-            &outcome.next_state,
-        );
-    }
-    let prior_version = property_u64(props, "machine_version");
-    let next_version = if outcome.fired {
-        prior_version.saturating_add(1)
-    } else {
-        prior_version
-    };
-    props.insert(
-        "machine_state".into(),
-        serde_json::Value::String(outcome.next_state),
-    );
-    props.insert(
-        "machine_version".into(),
-        serde_json::Value::from(next_version),
-    );
-    props.insert(
-        "machine_def_id".into(),
-        serde_json::Value::String(crate::work_item_statechart::WORK_ITEM_DEF_ID.clone()),
-    );
-}
-
 /// Read and decode one encrypted durable row while preserving each table's
 /// typed key and decoder.  A missing table is the same as a missing row: older
 /// stores may not have introduced every table yet, so callers must see a

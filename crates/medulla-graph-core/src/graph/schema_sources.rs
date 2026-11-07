@@ -1117,6 +1117,24 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: None,
         },
+        // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and its
+        // shapes, which every pack machine extends.
+        CoreSpec {
+            module: "state_machines",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/state-machines-v1.ttl"
+            )),
+        },
+        CoreSpec {
+            module: "state_machines-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/state-machines-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         CoreSpec {
             module: "personal",
             version: 1,
@@ -1830,6 +1848,15 @@ mod tests {
             (
                 "orchestration-shapes",
                 "c7462c9fe1037ef33283e59766645931956cb90f66aad23e2bb4c894015a119f",
+            ),
+            // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and shapes.
+            (
+                "state_machines",
+                "7efc5eb2b7bcd7c7f6a24f97cdf5a84c1ba8718b7148812f0d76a9cdf17a4052",
+            ),
+            (
+                "state_machines-shapes",
+                "33d359241e989cab677206d9292b1cda3031637844d5f53d57aaad4b09b2da63",
             ),
             (
                 "personal",

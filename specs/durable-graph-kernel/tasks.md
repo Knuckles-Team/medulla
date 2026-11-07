@@ -263,3 +263,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads
 - [ ] T257 MEDULLA-DURABLE-KERNEL-R870 Read-RLS path-prefix predicate
 - [ ] T258 MEDULLA-DURABLE-KERNEL-R871 Tight agent loops stay inside a round-trip budget
+- [ ] T259 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
+- [ ] T260 MEDULLA-DURABLE-KERNEL-R872.1 Upgrade phase transition function
+- [ ] T261 MEDULLA-DURABLE-KERNEL-R872.2 Describe the semantic index upgrade machine in the ontology

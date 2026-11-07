@@ -29,3 +29,13 @@ This file describes the ontology terms, record types and nodes that the rows of 
 ### Refusal tables
 
 - The composed answer, the architecture view, the compiler and the importer each declare a `REFUSALS` const collected by the uniqueness test of `MEDULLA-DECISION-ENGINE-R010.100.1`.
+
+## State machine types
+
+- Rows `MEDULLA-CQ-ORCH-R810`, `MEDULLA-CQ-ORCH-R811`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Deleted fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+
+### State machine fields
+
+- `BrokerMessageMachine`. States: `Pending`, `Claimed`, `Acked`, `Expired`, `DeadLettered`. Persisted state: `status` (stored text of `MessageState`, record built at `crates/medulla-core/src/broker.rs:344`). `lease_until` and `deliver_at` are data of their state.
+- `AnalyticsJobMachine`. States: `Submitted`, `Running`, `Publishing`, `CancelRequested`, `Backoff`, `Succeeded`, `Failed`, `Cancelled`. Persisted state: `state` (enum `JobState`, `crates/medulla-jobs/src/model.rs:167`). the lease belongs to Running, Publishing and CancelRequested. `not_before` belongs to Backoff.

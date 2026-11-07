@@ -208,16 +208,18 @@ pub fn validate_and_resolve_submit_work_item_dependencies(
     Ok((max_inflight, dependencies, dependency_rows))
 }
 
+/// Whether a row is one of the tenant's in-flight WorkItems. A row whose stored status
+/// names no state (such as the retired `completed`) is a typed decode error.
 pub fn is_submit_work_item_inflight_row(
     props: &serde_json::Map<String, serde_json::Value>,
     context_tenant: &str,
-) -> bool {
-    property_string(props, "node_type") == "WorkItem"
-        && property_string(props, "tenant") == context_tenant
-        && !matches!(
-            property_string(props, "status"),
-            "succeeded" | "failed" | "cancelled" | "dead_letter" | "completed"
-        )
+) -> Result<bool, String> {
+    if property_string(props, "node_type") != "WorkItem"
+        || property_string(props, "tenant") != context_tenant
+    {
+        return Ok(false);
+    }
+    Ok(!super::machine::stored_status(props)?.is_terminal())
 }
 
 pub fn count_submit_work_item_tenant_inflight(
@@ -239,7 +241,7 @@ pub fn count_submit_work_item_tenant_inflight(
         }
         let props: serde_json::Map<String, serde_json::Value> =
             decode_durable(&crypto.unseal(value.value())?)?;
-        if is_submit_work_item_inflight_row(&props, context_tenant) {
+        if is_submit_work_item_inflight_row(&props, context_tenant)? {
             inflight = inflight.saturating_add(1);
         }
     }
@@ -326,12 +328,11 @@ fn admit_and_identify_submit_work_item(
     Ok((inflight, work_item_id, command_sequence))
 }
 
+/// The admitted state: the machine's initial state, with W01 fired at once when no
+/// dependency is open.
 pub fn submit_work_item_status(pending_dependencies: usize) -> &'static str {
-    if pending_dependencies == 0 {
-        "ready"
-    } else {
-        "submitted"
-    }
+    medulla_work_types::work_item_machine::WorkItemStatus::initial(pending_dependencies as u64)
+        .as_stored()
 }
 
 fn insert_submit_work_item_identity_props(
@@ -361,7 +362,6 @@ fn insert_submit_work_item_identity_props(
         serde_json::Value::String(request.kind.clone()),
     );
     props.insert("status".into(), serde_json::Value::String(status.into()));
-    props.insert("state".into(), serde_json::Value::String(status.into()));
     props.insert("priority".into(), serde_json::Value::from(request.priority));
     props.insert(
         "prio_bucket".into(),

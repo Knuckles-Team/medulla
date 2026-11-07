@@ -21,8 +21,9 @@ struct StoredPlan {
 }
 
 pub fn live(row: &Row, worker: &str, epoch: u64, token: u64, now_ms: u64) -> bool {
-    matches!(property_string(row, "status"), "leased" | "running")
-        && row.get("lease_epoch").and_then(serde_json::Value::as_u64) == Some(epoch)
+    medulla_work_types::work_item_machine::WorkItemStatus::holds_lease_text(property_string(
+        row, "status",
+    )) && row.get("lease_epoch").and_then(serde_json::Value::as_u64) == Some(epoch)
         && row.get("fencing_token").and_then(serde_json::Value::as_u64) == Some(token)
         && property_string(row, "lease_owner") == worker
         && !worker.is_empty()

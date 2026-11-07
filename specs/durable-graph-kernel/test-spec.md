@@ -716,6 +716,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R864` | `tests/scheduler/test_loop_control_served.py::test_run_is_idempotent_and_pause_holds` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R866` | `tests/task_queue_served.rs::only_one_work_claim_table_exists` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R871` | `tests/test_agent_loop_batch_served.py::test_batch_commits_once_and_refuses_oversize` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R872` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_transition_and_refusal_is_covered` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R872.1` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x01_inspect_begin_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x02_installing_finish_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_illegal_pair_is_refused`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::refusal_carries_machine_from_event`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::no_writer_sets_state_outside_apply` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R872.2` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_matches_edge_table`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_classes_extend_core` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R865` | `tests/test_child_input_served.py::test_child_input_record_reads_over_the_wire` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.7` | `tests/test_engine_bench_gate.py::test_gate_loads_records` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.4` | `tests/test_graph_change_feed_client.py::test_client_reads_feed_from_a_served_engine` (planned) |

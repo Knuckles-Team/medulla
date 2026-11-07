@@ -103,6 +103,7 @@ A caller asks for the plan of a stored workflow. The plan reads only the canonic
 - **FR-007**: BPMN 2.0 and DMN documents import natively and export round-trip safe, and process models sync two ways with every process source. Rows: `MEDULLA-CQ-ORCH-R702`, `MEDULLA-CQ-ORCH-R703`.
 - **FR-008**: a stored canonical workflow becomes one canonical agent DAG plan with tool, agent, decision, approval, branch and join steps, built from the canonical form only. Rows: `MEDULLA-CQ-ORCH-R704`.
 - **FR-009**: the architecture model exports and imports in the ArchiMate Open Exchange Format and syncs with the architecture-modelling connector. Rows: `MEDULLA-CQ-ORCH-R705`.
+- **FR-010**: Each lifecycle named in these rows is an explicit state machine with one transition function, one stored state field, a typed refusal of illegal transitions and an ontology description (organization constitution Article XXXI). Rows: `MEDULLA-CQ-ORCH-R810`, `MEDULLA-CQ-ORCH-R810.1`, `MEDULLA-CQ-ORCH-R810.2`, `MEDULLA-CQ-ORCH-R811`, `MEDULLA-CQ-ORCH-R811.1`, `MEDULLA-CQ-ORCH-R811.2`.
 
 ## Success Criteria
 

@@ -93,6 +93,7 @@ An application writer needs declared durability classes, native point and struct
 - **FR-13**: RESP and SQL extended-protocol batches receive one admission and one group commit with ordered N replies. A failed member cannot yield earlier success replies implying durability. Rows: MEDULLA-DURABLE-KERNEL-R040. Proof: partial failure and response-order tests.
 - **FR-14**: The native route handles point/structure requests without a DataFusion session. SQL plans are keyed by statement digest and schema version and invalidated with the existing dependency clock. Rows: MEDULLA-DURABLE-KERNEL-R037, MEDULLA-DURABLE-KERNEL-R041. Proof: route and invalidation tests.
 - **FR-15**: Native row hot/cold union, store-engine choice, replication-out and operational compatibility are admitted only with differential, restore and workload evidence; no mirror or external cache becomes a read authority. Rows: MEDULLA-DURABLE-KERNEL-R032, MEDULLA-DURABLE-KERNEL-R033, MEDULLA-DURABLE-KERNEL-R035, MEDULLA-DURABLE-KERNEL-R042. Proof: ADR, corpus, restore drill and benchmark report.
+- **FR-016**: Each lifecycle named in these rows is an explicit state machine with one transition function, one stored state field, a typed refusal of illegal transitions and an ontology description (organization constitution Article XXXI). Rows: `MEDULLA-DURABLE-KERNEL-R872`, `MEDULLA-DURABLE-KERNEL-R872.1`, `MEDULLA-DURABLE-KERNEL-R872.2`.
 
 ## Success Criteria
 

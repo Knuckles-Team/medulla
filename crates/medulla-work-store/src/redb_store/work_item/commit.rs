@@ -12,7 +12,7 @@ pub fn commit_work_item_lease_is_valid(
     now_ms: u64,
 ) -> bool {
     property_string(props, "lease_owner") == worker_id
-        && matches!(property_string(props, "status"), "leased" | "running")
+        && super::machine::holds_lease_row(props)
         && property_u64(props, "lease_epoch") == lease_epoch
         && property_u64(props, "fencing_token") == fencing_token
         && property_f64(props, "lease_expires_at") >= now_ms as f64 / 1000.0
@@ -40,10 +40,7 @@ pub fn commit_work_item_result_precheck(
             None,
         ));
     }
-    if matches!(
-        property_string(props, "status"),
-        "succeeded" | "failed" | "cancelled" | "dead_letter"
-    ) {
+    if super::machine::is_terminal_row(props) {
         return Some(unchanged_transition(
             medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Noop,
             Some(work_item_id),
@@ -58,24 +55,32 @@ pub fn commit_work_item_result_precheck(
     None
 }
 
-/// Write the committed status into `props` and report it.  A retryable failure
-/// below the attempt ceiling reschedules (`ready` + backoff + bumped fence) and
-/// reports `retry_scheduled`; otherwise the item goes terminal (`dead_letter`
-/// for an exhausted retryable failure, else the outcome verb itself).
-pub fn commit_work_item_apply_status<'o>(
+/// Fire the commit edge (W05 to W14) and report the committed status. A retryable
+/// failure with attempts left goes back to `ready` with backoff and a bumped fence and
+/// reports `retry_scheduled`; otherwise the item goes terminal (`dead_letter` for a
+/// retryable failure whose attempts are spent, else the outcome itself). The caller has
+/// validated the fence and the live lease.
+pub fn commit_work_item_apply_status(
     props: &mut serde_json::Map<String, serde_json::Value>,
-    outcome: &'o str,
+    outcome: &str,
     retryable: bool,
     lease_epoch: u64,
     fencing_token: u64,
     now_s: f64,
-) -> &'o str {
+) -> Result<&'static str, String> {
+    use medulla_work_types::work_item_machine::{CommitOutcome, WorkItemEvent, WorkItemFacts};
+    let commit = CommitOutcome::from_commit(outcome, retryable).ok_or_else(|| {
+        "CommitWorkItemResult outcome must be succeeded, failed, or cancelled".to_string()
+    })?;
     let attempts = property_u64(props, "attempt");
-    let max_attempts = property_u64(props, "max_attempts").max(1);
-    if outcome == "failed" && retryable && attempts < max_attempts {
+    let facts = WorkItemFacts {
+        fence_matches: true,
+        ..super::machine::row_facts(props, now_s, true)
+    };
+    let next = super::machine::fire(props, WorkItemEvent::Commit(commit), &facts)?;
+    if !next.is_terminal() {
         let backoff = property_f64(props, "backoff_base_s").max(1.0)
             * 2f64.powi(attempts.saturating_sub(1).min(31) as i32);
-        props.insert("status".into(), serde_json::Value::String("ready".into()));
         props.insert(
             "next_retry_at".into(),
             serde_json::Value::from(now_s + backoff),
@@ -88,16 +93,10 @@ pub fn commit_work_item_apply_status<'o>(
             "fencing_token".into(),
             serde_json::Value::from((fencing_token).saturating_add(1)),
         );
-        return "retry_scheduled";
+        return Ok("retry_scheduled");
     }
-    let terminal = if outcome == "failed" && retryable {
-        "dead_letter"
-    } else {
-        outcome
-    };
-    props.insert("status".into(), serde_json::Value::String(terminal.into()));
     props.insert("completed_at".into(), serde_json::Value::from(now_s));
-    terminal
+    Ok(next.as_stored())
 }
 
 /// Record the commit's lease/result bookkeeping on the item.
@@ -159,8 +158,17 @@ pub fn commit_work_item_release_downstream(
             decode_durable(&child_bytes)?;
         let count = property_u64(&child_props, "dep_count").saturating_sub(1);
         child_props.insert("dep_count".into(), serde_json::Value::from(count));
-        if count == 0 && property_string(&child_props, "status") == "submitted" {
-            child_props.insert("status".into(), serde_json::Value::String("ready".into()));
+        // W01: the last open dependency cleared.
+        if count == 0
+            && super::machine::stored_status(&child_props)?
+                == medulla_work_types::work_item_machine::WorkItemStatus::Submitted
+        {
+            let facts = super::machine::row_facts(&child_props, now_s, false);
+            super::machine::fire(
+                &mut child_props,
+                medulla_work_types::work_item_machine::WorkItemEvent::DepsSatisfied,
+                &facts,
+            )?;
         }
         child_props.insert("updated_at".into(), serde_json::Value::from(now_s));
         write_work_item_props(nodes, graph, child, &mut child_props, crypto)?;
@@ -255,14 +263,6 @@ pub fn apply_commit_work_item_result_row(
         ensure_receipt_rows_absent(input.graph, &extension.receipt_nodes, input.nodes)?;
     }
     let now_s = input.now_ms as f64 / 1000.0;
-    // Phase-1 mirror inputs: pre-status (leased|running, validated above) + the
-    // DLQ-threshold policy boolean (retryable && attempt < max_attempts) that the
-    // chart reads as a pre-computed guard input.
-    #[cfg(feature = "statechart")]
-    let pre_status = property_string(&props, "status").to_string();
-    #[cfg(feature = "statechart")]
-    let commit_retry_eligible =
-        property_u64(&props, "attempt") < property_u64(&props, "max_attempts").max(1);
     let committed_status = commit_work_item_apply_status(
         &mut props,
         input.outcome,
@@ -270,7 +270,7 @@ pub fn apply_commit_work_item_result_row(
         input.lease_epoch,
         input.fencing_token,
         now_s,
-    );
+    )?;
     commit_work_item_record_result_refs(
         &mut props,
         input.worker_id,
@@ -295,31 +295,6 @@ pub fn apply_commit_work_item_result_row(
         input.policies,
         input.crypto,
     )?;
-    // Phase-1 mirror: the commit outcome maps to the chart's commit_* event; the
-    // authoritative next state is whatever the handler persisted (ready on a
-    // scheduled retry, else the terminal). The chart must independently agree.
-    #[cfg(feature = "statechart")]
-    {
-        let event = match input.outcome {
-            "succeeded" => medulla_store::work_item_statechart::EV_COMMIT_SUCCEEDED,
-            "cancelled" => medulla_store::work_item_statechart::EV_COMMIT_CANCELLED,
-            _ => medulla_store::work_item_statechart::EV_COMMIT_FAILED,
-        };
-        let mirror_payload = serde_json::json!({
-            "fence_valid": true,
-            "retryable": input.retryable,
-            "retry_eligible": commit_retry_eligible,
-        });
-        let authoritative_next = property_string(&props, "status").to_string();
-        apply_work_item_mirror(
-            &mut props,
-            input.work_item_id,
-            &pre_status,
-            event,
-            mirror_payload,
-            Some(&authoritative_next),
-        );
-    }
     record_outcome_refs(&mut props, committed_status, input.outcome_extension)?;
     if let Some(completion) = input.run_completion {
         use sha2::{Digest, Sha256};

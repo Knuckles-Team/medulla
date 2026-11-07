@@ -118,3 +118,6 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T111 [US6] MEDULLA-SDLC-R019.15 Hot-path proof: served delivery journey.
 - [X] T112 [P] MEDULLA-SDLC-R020 Concurrent changes merge without registry conflicts.
 - [X] T113 [P] MEDULLA-SDLC-R020.1 No generated artifact is committed; no freshness gate.
+- [ ] T114 MEDULLA-SDLC-R030 Defect lifecycle is one explicit state machine
+- [ ] T115 MEDULLA-SDLC-R030.1 Defect transition function and edge table
+- [ ] T116 MEDULLA-SDLC-R030.2 Describe the defect machine in the ontology

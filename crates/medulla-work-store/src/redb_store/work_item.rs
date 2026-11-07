@@ -74,6 +74,7 @@ pub mod current_plan;
 mod dispatch;
 pub mod effect;
 mod lease;
+pub mod machine;
 mod market;
 mod policy_record;
 pub mod read;

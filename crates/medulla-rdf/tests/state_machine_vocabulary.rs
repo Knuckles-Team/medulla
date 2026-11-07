@@ -1,0 +1,500 @@
+//! The core state-machine vocabulary and the WorkItem machine description
+//! (MEDULLA-ORCH-VOCAB-R811 and R812.3, R812.5).
+#![cfg(feature = "rdf")]
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use medulla_rdf::mapping::parse_turtle;
+use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
+use medulla_shacl::validate_turtle;
+use medulla_types::transition_refused::{MachineEvent, MachineState};
+use medulla_work_types::work_item_machine::{
+    WorkItemEvent, WorkItemStatus, WORK_ITEM_EDGES, WORK_ITEM_MACHINE, WORK_ITEM_STATES,
+};
+
+const KG: &str = "http://knuckles.team/kg#";
+const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+const SUBCLASS: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
+const DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
+const RANGE: &str = "http://www.w3.org/2000/01/rdf-schema#range";
+const OWL_IMPORTS: &str = "http://www.w3.org/2002/07/owl#imports";
+
+const FOUNDATION: &str = include_str!("../../medulla-core/ontology/core-foundation-v1.ttl");
+const MACHINES: &str = include_str!("../../medulla-core/ontology/state-machines-v1.ttl");
+const SHAPES: &str = include_str!("../../medulla-core/ontology/state-machines-v1.shapes.ttl");
+
+const CORE_CLASSES: [&str; 6] = [
+    "StateMachine",
+    "State",
+    "TerminalState",
+    "Transition",
+    "TransitionEvent",
+    "TransitionGuard",
+];
+
+fn kg(local: &str) -> String {
+    format!("{KG}{local}")
+}
+
+fn iri(term: &Term) -> Option<String> {
+    match term {
+        Term::NamedNode(node) => Some(node.as_str().to_string()),
+        _ => None,
+    }
+}
+
+fn subject(triple: &Triple) -> Option<String> {
+    match &triple.subject {
+        NamedOrBlankNode::NamedNode(node) => Some(node.as_str().to_string()),
+        _ => None,
+    }
+}
+
+/// The triples of a set of documents.
+struct Doc(Vec<Triple>);
+
+impl Doc {
+    fn of(documents: &[&str]) -> Self {
+        Self(
+            documents
+                .iter()
+                .flat_map(|document| parse_turtle(document).expect("the document parses"))
+                .collect(),
+        )
+    }
+
+    fn objects(&self, s: &str, p: &str) -> Vec<String> {
+        self.0
+            .iter()
+            .filter(|t| subject(t).as_deref() == Some(s) && t.predicate.as_str() == p)
+            .filter_map(|t| iri(&t.object))
+            .collect()
+    }
+
+    fn literal(&self, s: &str, p: &str) -> Option<String> {
+        self.0
+            .iter()
+            .filter(|t| subject(t).as_deref() == Some(s) && t.predicate.as_str() == p)
+            .find_map(|t| match &t.object {
+                Term::Literal(literal) => Some(literal.value().to_string()),
+                _ => None,
+            })
+    }
+
+    fn subjects(&self, p: &str, o: &str) -> Vec<String> {
+        self.0
+            .iter()
+            .filter(|t| t.predicate.as_str() == p && iri(&t.object).as_deref() == Some(o))
+            .filter_map(subject)
+            .collect()
+    }
+
+    /// Every class `class` reaches through rdfs:subClassOf, itself included.
+    fn ancestors(&self, class: &str) -> BTreeSet<String> {
+        let mut seen = BTreeSet::new();
+        let mut stack = vec![class.to_string()];
+        while let Some(next) = stack.pop() {
+            if seen.insert(next.clone()) {
+                stack.extend(self.objects(&next, SUBCLASS));
+            }
+        }
+        seen
+    }
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811
+#[test]
+fn state_machine_terms_roll_up_to_core() {
+    let doc = Doc::of(&[FOUNDATION, MACHINES]);
+    for class in CORE_CLASSES {
+        assert!(
+            doc.ancestors(&kg(class)).contains(&kg("Concept")),
+            ":{class} does not reach :Concept"
+        );
+    }
+    assert!(!MACHINES.contains("owl:imports"));
+    assert!(!SHAPES.contains("owl:imports"));
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.1
+#[test]
+fn state_machine_classes_resolve() {
+    let doc = Doc::of(&[FOUNDATION, MACHINES]);
+    for class in CORE_CLASSES {
+        assert!(
+            doc.objects(&kg(class), RDF_TYPE)
+                .contains(&"http://www.w3.org/2002/07/owl#Class".to_string()),
+            ":{class} is not declared"
+        );
+        assert!(doc.ancestors(&kg(class)).contains(&kg("Concept")));
+    }
+    assert!(doc.ancestors(&kg("TerminalState")).contains(&kg("State")));
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.1
+#[test]
+fn transition_event_is_distinct_from_core_event() {
+    let doc = Doc::of(&[FOUNDATION, MACHINES]);
+    assert!(
+        !doc.objects(&kg("Event"), RDF_TYPE).is_empty(),
+        "core :Event exists"
+    );
+    assert!(!doc.ancestors(&kg("TransitionEvent")).contains(&kg("Event")));
+    assert!(!doc.ancestors(&kg("Event")).contains(&kg("TransitionEvent")));
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.2
+#[test]
+fn state_machine_properties_resolve() {
+    let doc = Doc::of(&[MACHINES]);
+    let expected: [(&str, Option<&str>, &str); 8] = [
+        ("hasState", Some("StateMachine"), "State"),
+        ("initialState", Some("StateMachine"), "State"),
+        ("fromState", Some("Transition"), "State"),
+        ("toState", Some("Transition"), "State"),
+        ("firedBy", Some("Transition"), "TransitionEvent"),
+        ("guardedBy", Some("Transition"), "TransitionGuard"),
+        ("currentState", None, "State"),
+        (
+            "storedForm",
+            Some("State"),
+            "http://www.w3.org/2001/XMLSchema#string",
+        ),
+    ];
+    for (property, domain, range) in expected {
+        let domains = doc.objects(&kg(property), DOMAIN);
+        match domain {
+            Some(domain) => assert_eq!(domains, [kg(domain)], ":{property} domain"),
+            None => assert!(domains.is_empty(), ":{property} has no domain"),
+        }
+        let range = if range.starts_with("http") {
+            range.to_string()
+        } else {
+            kg(range)
+        };
+        assert_eq!(
+            doc.objects(&kg(property), RANGE),
+            [range],
+            ":{property} range"
+        );
+    }
+}
+
+const PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> . \
+     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ";
+
+/// A minimal well-formed machine: A to B on Go, B terminal.
+const GOOD: &str = ":M a :StateMachine ; :initialState :M_A ; :hasState :M_A, :M_B . \
+     :M_A a :State ; :storedForm \"a\" . \
+     :M_B a :TerminalState ; :storedForm \"b\" . \
+     :M_Event_Go a :TransitionEvent . \
+     :M_T1 :fromState :M_A ; :toState :M_B ; :firedBy :M_Event_Go . \
+     :rec :currentState :M_A .";
+
+fn violations(data: &str) -> Vec<String> {
+    let report = validate_turtle(SHAPES, &format!("{PREFIXES}{data}")).expect("fixtures parse");
+    if report.conforms {
+        return Vec::new();
+    }
+    vec![format!("{report:?}")]
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.3
+#[test]
+fn state_machine_shapes_refuse_planted_faults() {
+    assert!(violations(GOOD).is_empty(), "{:?}", violations(GOOD));
+    let faults: [(&str, String, &str); 8] = [
+        (
+            "two from states",
+            format!("{GOOD} :M_T1 :fromState :M_B ."),
+            "fromState",
+        ),
+        (
+            "no event",
+            GOOD.replace(" ; :firedBy :M_Event_Go", ""),
+            "firedBy",
+        ),
+        (
+            "leaves a terminal state",
+            format!("{GOOD} :M_T2 :fromState :M_B ; :toState :M_A ; :firedBy :M_Event_Go ."),
+            "terminal",
+        ),
+        (
+            "states of two machines",
+            format!(
+                "{GOOD} :N a :StateMachine ; :initialState :N_X ; :hasState :N_X . \
+                 :N_X a :State ; :storedForm \"x\" . \
+                 :M_T3 :fromState :M_A ; :toState :N_X ; :firedBy :M_Event_Go ."
+            ),
+            "one machine",
+        ),
+        (
+            "two current states",
+            format!("{GOOD} :rec :currentState :M_B ."),
+            "currentState",
+        ),
+        (
+            "two initial states",
+            format!("{GOOD} :M :initialState :M_B ."),
+            "initialState",
+        ),
+        (
+            "missing stored form",
+            GOOD.replace(":M_A a :State ; :storedForm \"a\" .", ":M_A a :State ."),
+            "storedForm",
+        ),
+        (
+            "duplicate stored form",
+            GOOD.replace(":storedForm \"b\"", ":storedForm \"a\""),
+            "storedForm",
+        ),
+    ];
+    for (name, data, needle) in faults {
+        let found = violations(&data);
+        assert!(!found.is_empty(), "planted fault '{name}' was not refused");
+        assert!(
+            found[0].contains(needle),
+            "fault '{name}' failed the wrong constraint: {}",
+            found[0]
+        );
+    }
+}
+
+/// The pack extension rule of R811.6 for one document: every `:StateMachine` instance has
+/// state, transition, event and guard classes that reach the core classes through
+/// rdfs:subClassOf, and the document has no owl:imports.
+fn pack_machine_conformance(document: &str, with: &Doc) -> Result<usize, String> {
+    let own = Doc::of(&[document]);
+    let machines = own.subjects(RDF_TYPE, &kg("StateMachine"));
+    if machines.is_empty() {
+        return Ok(0);
+    }
+    if own.0.iter().any(|t| t.predicate.as_str() == OWL_IMPORTS) {
+        return Err("a pack machine file uses owl:imports".into());
+    }
+    let combined = Doc(with
+        .0
+        .iter()
+        .cloned()
+        .chain(own.0.iter().cloned())
+        .collect());
+    for machine in &machines {
+        let states = combined.objects(machine, &kg("hasState"));
+        if states.is_empty() {
+            return Err(format!("{machine} declares no state"));
+        }
+        let typed = |instance: &str, core: &str| {
+            combined
+                .objects(instance, RDF_TYPE)
+                .iter()
+                .any(|class| combined.ancestors(class).contains(&kg(core)))
+        };
+        for state in &states {
+            if !typed(state, "State") {
+                return Err(format!("{state} has no core :State ancestor"));
+            }
+        }
+        for transition in combined.subjects(&kg("fromState"), &states[0]) {
+            if !typed(&transition, "Transition") {
+                return Err(format!("{transition} has no core :Transition ancestor"));
+            }
+            for event in combined.objects(&transition, &kg("firedBy")) {
+                if !typed(&event, "TransitionEvent") {
+                    return Err(format!("{event} has no core :TransitionEvent ancestor"));
+                }
+            }
+            for guard in combined.objects(&transition, &kg("guardedBy")) {
+                if !typed(&guard, "TransitionGuard") {
+                    return Err(format!("{guard} has no core :TransitionGuard ancestor"));
+                }
+            }
+        }
+    }
+    Ok(machines.len())
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.6
+#[test]
+fn every_pack_machine_extends_core() {
+    let core = Doc::of(&[FOUNDATION, MACHINES]);
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../medulla-core/ontology");
+    let mut machines = 0;
+    for entry in std::fs::read_dir(dir).unwrap().flatten() {
+        let path = entry.path();
+        if path.extension().is_none_or(|ext| ext != "ttl") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap();
+        if !text.contains("StateMachine") {
+            continue;
+        }
+        machines += pack_machine_conformance(&text, &core)
+            .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    }
+    assert!(machines >= 1, "the WorkItem machine is found");
+}
+
+const PACK: &str = "@prefix : <http://knuckles.team/kg#> . \
+     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . \
+     :LampState rdfs:subClassOf :State . :LampTransition rdfs:subClassOf :Transition . \
+     :LampEvent rdfs:subClassOf :TransitionEvent . \
+     :LampMachine a :StateMachine ; :initialState :LampMachine_Off ; \
+         :hasState :LampMachine_Off, :LampMachine_On . \
+     :LampMachine_Off a :LampState ; :storedForm \"off\" . \
+     :LampMachine_On a :LampState ; :storedForm \"on\" . \
+     :LampMachine_Event_Toggle a :LampEvent . \
+     :LampMachine_L01 a :LampTransition ; :fromState :LampMachine_Off ; \
+         :toState :LampMachine_On ; :firedBy :LampMachine_Event_Toggle .";
+
+// spec: MEDULLA-ORCH-VOCAB-R811.6
+#[test]
+fn pack_machine_with_owl_imports_is_refused() {
+    let core = Doc::of(&[FOUNDATION, MACHINES]);
+    assert_eq!(pack_machine_conformance(PACK, &core), Ok(1));
+    let imports =
+        format!("{PACK} <http://example.org/lamp> <{OWL_IMPORTS}> <http://knuckles.team/kg> .");
+    assert!(pack_machine_conformance(&imports, &core)
+        .unwrap_err()
+        .contains("owl:imports"));
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R811.6
+#[test]
+fn pack_machine_without_core_ancestor_is_refused() {
+    let core = Doc::of(&[FOUNDATION, MACHINES]);
+    let detached = PACK.replace(":LampEvent rdfs:subClassOf :TransitionEvent .", "");
+    assert!(pack_machine_conformance(&detached, &core)
+        .unwrap_err()
+        .contains("TransitionEvent"));
+    let detached = PACK.replace(":LampState rdfs:subClassOf :State .", "");
+    assert!(pack_machine_conformance(&detached, &core)
+        .unwrap_err()
+        .contains(":State"));
+}
+
+fn state_name(state: WorkItemStatus) -> &'static str {
+    match state {
+        WorkItemStatus::Submitted => "Submitted",
+        WorkItemStatus::Ready => "Ready",
+        WorkItemStatus::Leased => "Leased",
+        WorkItemStatus::Running => "Running",
+        WorkItemStatus::Succeeded => "Succeeded",
+        WorkItemStatus::Failed => "Failed",
+        WorkItemStatus::Cancelled => "Cancelled",
+        WorkItemStatus::DeadLetter => "DeadLetter",
+    }
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R812.3
+#[test]
+fn work_item_machine_matches_edge_table() {
+    let doc = Doc::of(&[MACHINES]);
+    let local = |value: &str| value.trim_start_matches(KG).to_string();
+    let mut described = BTreeMap::new();
+    for transition in doc.subjects(RDF_TYPE, &kg("WorkItemTransition")) {
+        let id = doc.literal(&transition, &kg("edgeId")).expect("edge id");
+        assert_eq!(transition, kg(&format!("WorkItemMachine_{id}")));
+        let one = |p: &str| {
+            let values = doc.objects(&transition, &kg(p));
+            assert!(values.len() <= 1, "{transition} has several :{p}");
+            values.first().map(|v| local(v))
+        };
+        described.insert(
+            id,
+            (
+                one("fromState"),
+                one("firedBy"),
+                one("guardedBy"),
+                one("toState"),
+            ),
+        );
+    }
+    let table: BTreeMap<_, _> = WORK_ITEM_EDGES
+        .iter()
+        .map(|edge| {
+            (
+                edge.id.to_string(),
+                (
+                    Some(format!("WorkItemMachine_{}", state_name(edge.from))),
+                    Some(format!(
+                        "WorkItemMachine_Event_{}",
+                        edge.event.ontology_name()
+                    )),
+                    edge.guard
+                        .map(|guard| format!("WorkItemMachine_Guard_{}", guard.ontology_name())),
+                    Some(format!("WorkItemMachine_{}", state_name(edge.to))),
+                ),
+            )
+        })
+        .collect();
+    assert_eq!(described, table);
+    assert_eq!(
+        doc.objects(&kg("WorkItemMachine"), &kg("initialState")),
+        [kg(&format!(
+            "WorkItemMachine_{}",
+            state_name(WORK_ITEM_MACHINE.initial)
+        ))]
+    );
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R812.3
+#[test]
+fn work_item_machine_classes_extend_core() {
+    let doc = Doc::of(&[FOUNDATION, MACHINES]);
+    for (class, core) in [
+        ("WorkItemState", "State"),
+        ("WorkItemTerminalState", "TerminalState"),
+        ("WorkItemTransition", "Transition"),
+        ("WorkItemEvent", "TransitionEvent"),
+        ("WorkItemGuard", "TransitionGuard"),
+    ] {
+        let ancestors = doc.ancestors(&kg(class));
+        assert!(
+            ancestors.contains(&kg(core)),
+            ":{class} does not extend :{core}"
+        );
+        assert!(ancestors.contains(&kg("Concept")));
+    }
+    assert!(!MACHINES.contains("owl:imports"));
+    assert!(pack_machine_conformance(MACHINES, &Doc::of(&[FOUNDATION])).is_ok());
+    let whole = format!("{MACHINES}\n{FOUNDATION}");
+    assert!(
+        validate_turtle(SHAPES, &whole).expect("parses").conforms,
+        "the WorkItem description conforms to the core shapes"
+    );
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R812.5
+#[test]
+fn work_item_exports_match_rust_enum() {
+    let doc = Doc::of(&[MACHINES]);
+    let machine = kg("WorkItemMachine");
+    let states: BTreeSet<String> = doc.objects(&machine, &kg("hasState")).into_iter().collect();
+    let expected: BTreeSet<String> = WORK_ITEM_STATES
+        .iter()
+        .map(|s| kg(&format!("WorkItemMachine_{}", state_name(*s))))
+        .collect();
+    assert_eq!(states, expected);
+    for state in WORK_ITEM_STATES {
+        let instance = kg(&format!("WorkItemMachine_{}", state_name(state)));
+        assert_eq!(
+            doc.literal(&instance, &kg("storedForm")).as_deref(),
+            Some(state.stored())
+        );
+        let terminal = doc
+            .objects(&instance, RDF_TYPE)
+            .contains(&kg("WorkItemTerminalState"));
+        assert_eq!(terminal, state.is_terminal(), "{instance}");
+    }
+    let events: BTreeSet<String> = doc
+        .subjects(RDF_TYPE, &kg("WorkItemEvent"))
+        .into_iter()
+        .collect();
+    let expected: BTreeSet<String> = WorkItemEvent::ALL
+        .iter()
+        .map(|e| kg(&format!("WorkItemMachine_Event_{}", e.ontology_name())))
+        .collect();
+    assert_eq!(events, expected);
+    // Event names are stable wire text.
+    assert!(WorkItemEvent::ALL.iter().all(|e| !e.name().is_empty()));
+}

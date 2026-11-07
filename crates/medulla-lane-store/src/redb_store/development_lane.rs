@@ -139,6 +139,9 @@ pub mod finish;
 pub mod identity;
 #[path = "development_lane/invocation.rs"]
 mod invocation;
+#[cfg(test)]
+#[path = "development_lane/tests/lane_work_item_state.rs"]
+mod lane_work_item_state;
 #[path = "development_lane/lifecycle_shared.rs"]
 pub mod lifecycle_shared;
 #[path = "development_lane/links.rs"]

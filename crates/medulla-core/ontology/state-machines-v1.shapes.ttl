@@ -1,0 +1,106 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Shapes of the core state-machine vocabulary (MEDULLA-ORCH-VOCAB-R811.3). The native
+# SHACL engine does not infer rdfs:subClassOf for targets, so each shape targets the
+# subjects or objects of a core property, which every pack machine uses unchanged.
+# The SHACL-SPARQL evaluator declines property paths and EXISTS, so a terminal state is
+# matched directly or through one rdfs:subClassOf step (the pack rule of R811.6), and an
+# absence is an OPTIONAL with an unbound filter.
+
+# spec: MEDULLA-ORCH-VOCAB-R811.3
+:TransitionShape a sh:NodeShape ;
+    sh:targetSubjectsOf :fromState, :toState, :firedBy ;
+    sh:property [
+        sh:path :fromState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A transition has exactly one :fromState." ;
+    ] ;
+    sh:property [
+        sh:path :toState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A transition has exactly one :toState." ;
+    ] ;
+    sh:property [
+        sh:path :firedBy ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A transition has exactly one :firedBy." ;
+    ] ;
+    sh:sparql [
+        sh:message "A transition leaves a terminal state." ;
+        sh:select """
+            PREFIX : <http://knuckles.team/kg#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            SELECT $this WHERE {
+                $this :fromState ?state .
+                { ?state a :TerminalState . }
+                UNION { ?state a ?kind . ?kind rdfs:subClassOf :TerminalState . }
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "The two states of a transition do not belong to one machine." ;
+        sh:select """
+            PREFIX : <http://knuckles.team/kg#>
+            SELECT $this WHERE {
+                $this :fromState ?from ; :toState ?to .
+                OPTIONAL { ?machine :hasState ?from . ?machine :hasState ?to . }
+                FILTER (!BOUND(?machine))
+            }
+        """
+    ] .
+
+:StateMachineShape a sh:NodeShape ;
+    sh:targetClass :StateMachine ;
+    sh:targetSubjectsOf :hasState ;
+    sh:property [
+        sh:path :initialState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A machine has exactly one :initialState." ;
+    ] .
+
+:MachineStateShape a sh:NodeShape ;
+    sh:targetObjectsOf :hasState ;
+    sh:property [
+        sh:path :storedForm ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "A state has exactly one :storedForm string." ;
+    ] ;
+    sh:sparql [
+        sh:message "Two states of one machine share a :storedForm." ;
+        sh:select """
+            PREFIX : <http://knuckles.team/kg#>
+            SELECT $this WHERE {
+                ?machine :hasState $this , ?other .
+                $this :storedForm ?text .
+                ?other :storedForm ?text .
+                FILTER ($this != ?other)
+            }
+        """
+    ] .
+
+:CurrentStateShape a sh:NodeShape ;
+    sh:targetSubjectsOf :currentState ;
+    sh:property [
+        sh:path :currentState ;
+        sh:maxCount 1 ;
+        sh:message "A record has at most one :currentState." ;
+    ] ;
+    sh:sparql [
+        sh:message "A record's current state belongs to no machine." ;
+        sh:select """
+            PREFIX : <http://knuckles.team/kg#>
+            SELECT $this WHERE {
+                $this :currentState ?state .
+                OPTIONAL { ?machine :hasState ?state . }
+                FILTER (!BOUND(?machine))
+            }
+        """
+    ] .

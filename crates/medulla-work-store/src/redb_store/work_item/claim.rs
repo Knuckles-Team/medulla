@@ -44,20 +44,12 @@ fn next_claim_epoch(props: &serde_json::Map<String, serde_json::Value>) -> Resul
         .ok_or_else(|| "ClaimWorkItem lease fence overflow".to_string())
 }
 
-/// Retire an expired lease that has reached its attempt ceiling.
+/// The row bookkeeping of a LeaseExpire edge into `dead_letter` (W25/W26).
 fn retire_exhausted_lease(
     props: &mut serde_json::Map<String, serde_json::Value>,
-    node_id: &str,
-    status: &str,
     now_s: f64,
     next_epoch: u64,
 ) {
-    #[cfg(not(feature = "statechart"))]
-    let _ = (node_id, status);
-    props.insert(
-        "status".into(),
-        serde_json::Value::String("dead_letter".into()),
-    );
     props.insert("lease_epoch".into(), serde_json::Value::from(next_epoch));
     props.insert("fencing_token".into(), serde_json::Value::from(next_epoch));
     props.insert("lease_owner".into(), serde_json::Value::Null);
@@ -68,71 +60,45 @@ fn retire_exhausted_lease(
         "error_ref".into(),
         serde_json::Value::String("lease_exhausted".into()),
     );
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        props,
-        node_id,
-        status,
-        medulla_store::work_item_statechart::EV_LEASE_EXHAUSTED,
-        serde_json::json!({}),
-        Some("dead_letter"),
-    );
 }
 
-/// Return an expired lease to the ready queue with a fresh fence.
-fn reclaim_expired_lease(
-    props: &mut serde_json::Map<String, serde_json::Value>,
-    node_id: &str,
-    status: &str,
-    next_epoch: u64,
-) {
-    #[cfg(not(feature = "statechart"))]
-    let _ = (node_id, status);
-    props.insert("status".into(), serde_json::Value::String("ready".into()));
+/// The row bookkeeping of a LeaseExpire edge back to `ready` (W23/W24): a fresh fence.
+fn reclaim_expired_lease(props: &mut serde_json::Map<String, serde_json::Value>, next_epoch: u64) {
     props.insert("lease_epoch".into(), serde_json::Value::from(next_epoch));
     props.insert("fencing_token".into(), serde_json::Value::from(next_epoch));
     props.insert("lease_owner".into(), serde_json::Value::Null);
     props.insert("lease_expires_at".into(), serde_json::Value::Null);
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        props,
-        node_id,
-        status,
-        medulla_store::work_item_statechart::EV_LEASE_RECLAIM,
-        serde_json::json!({}),
-        Some("ready"),
-    );
 }
 
 /// Fence out an expired lease owner before the item participates in selection.
-/// Returns `true` when the attempt ceiling was reached and the item was retired
-/// to `dead_letter`; `false` when it was reclaimed back to `ready`.  Either way
-/// the update is still private to the held transaction.
+/// Returns `true` when the item went terminal (`cancelled` for a requested cancel, else
+/// `dead_letter` once its attempts are spent); `false` when it was reclaimed back to
+/// `ready`. The machine's LeaseExpire guards decide: an item whose effect may have
+/// happened keeps its attempt and is never dead-lettered (MEDULLA-DURABLE-KERNEL-R820.2).
+/// Either way the update is still private to the held transaction.
 pub fn claim_reclaim_expired_lease(
     props: &mut serde_json::Map<String, serde_json::Value>,
     node_id: &str,
     status: &str,
     now_s: f64,
 ) -> Result<bool, String> {
-    let attempts = property_u64(props, "attempt");
-    let max_attempts = property_u64(props, "max_attempts").max(1);
+    let _ = (node_id, status);
     let next_epoch = next_claim_epoch(props)?;
-    // An item whose effect may have happened is never dead-lettered: it
-    // returns to `ready` with its attempt unchanged until a receipt resolves
-    // it (MEDULLA-DURABLE-KERNEL-R820.2).
     if super::cancel::cancel_requested(props) {
         super::cancel::retire_cancel_requested_lease(props, &None, now_s)?;
         return Ok(true);
     }
-    if super::effect::effect_started(props) {
-        reclaim_expired_lease(props, node_id, status, next_epoch);
-        return Ok(false);
-    }
-    if attempts >= max_attempts {
-        retire_exhausted_lease(props, node_id, status, now_s, next_epoch);
+    let facts = super::machine::row_facts(props, now_s, false);
+    let next = super::machine::fire(
+        props,
+        medulla_work_types::work_item_machine::WorkItemEvent::LeaseExpire,
+        &facts,
+    )?;
+    if next.is_terminal() {
+        retire_exhausted_lease(props, now_s, next_epoch);
         Ok(true)
     } else {
-        reclaim_expired_lease(props, node_id, status, next_epoch);
+        reclaim_expired_lease(props, next_epoch);
         Ok(false)
     }
 }
@@ -145,7 +111,8 @@ pub fn claim_candidate_is_excluded(
     request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     now_s: f64,
 ) -> bool {
-    property_string(props, "status") != "ready"
+    super::machine::stored_status(props).ok()
+        != Some(medulla_work_types::work_item_machine::WorkItemStatus::Ready)
         || request
             .queue_ref
             .as_deref()
@@ -163,6 +130,12 @@ pub fn claim_candidate_is_excluded(
                 property_string(props, "fairness_group") != fairness_group
             })
         || property_f64(props, "next_retry_at") > now_s
+        || medulla_work_types::work_item_machine::WorkItemStatus::Ready
+            .apply(
+                medulla_work_types::work_item_machine::WorkItemEvent::Claim,
+                &super::machine::row_facts(props, now_s, false),
+            )
+            .is_err()
         || props
             .get("deadline_unix")
             .and_then(serde_json::Value::as_f64)
@@ -200,9 +173,8 @@ pub fn classify_claim_row(
         return Ok(ClaimRowOutcome::Skip);
     }
     let status = property_string(&props, "status").to_string();
-    if matches!(status.as_str(), "leased" | "running")
-        && property_f64(&props, "lease_expires_at") > now_s
-    {
+    let holds_lease = super::machine::holds_lease_row(&props);
+    if holds_lease && property_f64(&props, "lease_expires_at") > now_s {
         return Ok(ClaimRowOutcome::InFlight);
     }
     if request
@@ -212,9 +184,7 @@ pub fn classify_claim_row(
     {
         return Ok(ClaimRowOutcome::Skip);
     }
-    if matches!(status.as_str(), "leased" | "running")
-        && claim_reclaim_expired_lease(&mut props, node_id, &status, now_s)?
-    {
+    if holds_lease && claim_reclaim_expired_lease(&mut props, node_id, &status, now_s)? {
         return Ok(ClaimRowOutcome::Exhausted(props));
     }
     if claim_candidate_is_excluded(&props, request, now_s) {
@@ -309,13 +279,19 @@ pub fn claim_grant_lease(
     lease_until_s: f64,
 ) -> Result<(u64, u64), String> {
     let epoch = next_claim_epoch(props)?;
+    // W02: Ready to Leased on Claim; the selection filter already proved the guard.
+    let facts = super::machine::row_facts(props, now_s, false);
+    super::machine::fire(
+        props,
+        medulla_work_types::work_item_machine::WorkItemEvent::Claim,
+        &facts,
+    )?;
     // A claim of a `Started` item continues the same attempt.
     let attempt = if super::effect::effect_started(props) {
         property_u64(props, "attempt")
     } else {
         property_u64(props, "attempt").saturating_add(1)
     };
-    props.insert("status".into(), serde_json::Value::String("leased".into()));
     props.insert(
         "lease_owner".into(),
         serde_json::Value::String(worker_id.to_string()),
@@ -399,18 +375,6 @@ fn apply_claimed_work_item(
     let kind = property_string(&props, "kind").to_string();
     let payload_ref = property_string(&props, "payload_ref").to_string();
     let max_attempts = property_u64(&props, "max_attempts").max(1);
-    // Phase-1 statechart mirror: the picked candidate was `ready` (it passed the
-    // `status != "ready"` filter above); selection already happened outside the
-    // chart, so its `ready --claim--> leased` edge is unconditional.
-    #[cfg(feature = "statechart")]
-    apply_work_item_mirror(
-        &mut props,
-        &node_id,
-        "ready",
-        medulla_store::work_item_statechart::EV_CLAIM,
-        serde_json::json!({}),
-        Some("leased"),
-    );
     write_work_item_props(nodes, graph, &node_id, &mut props, crypto)?;
     work_item_capability::record_native_claim_in_wtx(
         native_work_items,

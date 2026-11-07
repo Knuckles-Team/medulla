@@ -122,3 +122,9 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof
 - [ ] T117 [US2] MEDULLA-CQ-ORCH-R012.1 Steps come from imported tool-use contracts
 - [ ] T118 [US2] MEDULLA-CQ-ORCH-R012.2 The guiding skill and agent prompt come from imported links
+- [ ] T119 [US2] MEDULLA-CQ-ORCH-R810 Broker message is one explicit state machine
+- [ ] T120 [US2] MEDULLA-CQ-ORCH-R810.1 Broker message transition function
+- [ ] T121 [US2] MEDULLA-CQ-ORCH-R810.2 Describe the broker message machine in the ontology
+- [ ] T122 [US2] MEDULLA-CQ-ORCH-R811 Analytics job is one explicit state machine
+- [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function
+- [ ] T124 [US2] MEDULLA-CQ-ORCH-R811.2 Route all job writers through step and describe the machine

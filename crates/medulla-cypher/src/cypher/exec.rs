@@ -5564,13 +5564,12 @@ mod tests {
         );
     }
 
-    /// ADR-5 / W2.2 item 5: the WorkItem lifecycle-state DISTRIBUTION is queryable via
-    /// Cypher over the co-located statechart projection (the `machine_state` node
-    /// property the phase-1 mirror writes). A grouped `count(*)` over `machine_state`
+    /// The WorkItem lifecycle-state DISTRIBUTION is queryable via Cypher over the one
+    /// persisted state field, `status` (MEDULLA-ORCH-VOCAB-R812). A grouped `count(*)` over `status`
     /// answers "how many work items are in each lifecycle state" directly against the
     /// authoritative graph — no bespoke aggregation endpoint needed.
     #[test]
-    fn work_item_machine_state_distribution_is_queryable() {
+    fn work_item_status_distribution_is_queryable() {
         let core = GraphCore::new();
         // A small fleet: 2 leased, 1 running, 1 succeeded, plus a non-WorkItem node the
         // label filter must exclude.
@@ -5585,8 +5584,6 @@ mod tests {
                 pbytes(serde_json::json!({
                     "node_type": "WorkItem",
                     "status": state,
-                    "machine_state": state,
-                    "machine_version": 1,
                 })),
             );
         }
@@ -5598,7 +5595,7 @@ mod tests {
 
         let qr = exec_cypher(
             &v,
-            "MATCH (w:WorkItem) RETURN w.machine_state AS state, count(*) AS n",
+            "MATCH (w:WorkItem) RETURN w.status AS state, count(*) AS n",
         )
         .unwrap();
         // One row per distinct lifecycle state (implicit GROUP BY the non-agg key).
@@ -5622,7 +5619,7 @@ mod tests {
         // "which work items are stuck in X" operator question.
         let leased = exec_cypher(
             &v,
-            "MATCH (w:WorkItem) WHERE w.machine_state = 'leased' RETURN w.id AS id",
+            "MATCH (w:WorkItem) WHERE w.status = 'leased' RETURN w.id AS id",
         )
         .unwrap();
         assert_eq!(leased.rows.len(), 2, "exactly the two leased work items");

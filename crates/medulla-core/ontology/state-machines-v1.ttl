@@ -1,0 +1,437 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# The core state-machine vocabulary (MEDULLA-ORCH-VOCAB-R811, organization constitution
+# Article XXXI). Every machine of every pack describes its states and transitions with
+# these terms and extends these classes by rdfs:subClassOf only, never by importing.
+# The core class :Event means a temporally bounded happening, so the event that fires a
+# transition is :TransitionEvent.
+# IRI scheme: a machine is :<Name>Machine; a state :<Name>Machine_<State>; an event
+# :<Name>Machine_Event_<Event>; a guard :<Name>Machine_Guard_<Guard>; a transition
+# :<Name>Machine_<EdgeId>.
+
+# spec: MEDULLA-ORCH-VOCAB-R811.1
+:StateMachine a owl:Class ;
+    rdfs:label "State Machine" ;
+    rdfs:comment "A closed set of states and the guarded transitions between them; one persisted field holds a record's current state." ;
+    rdfs:subClassOf :Concept .
+
+:State a owl:Class ;
+    rdfs:label "State" ;
+    rdfs:comment "One state of a state machine, identified by its stored text." ;
+    rdfs:subClassOf :Concept .
+
+:TerminalState a owl:Class ;
+    rdfs:label "Terminal State" ;
+    rdfs:comment "A state that accepts no event: no transition leaves it." ;
+    rdfs:subClassOf :State .
+
+:Transition a owl:Class ;
+    rdfs:label "Transition" ;
+    rdfs:comment "One edge of a state machine: from one state to another, fired by one event and guarded by at most one guard." ;
+    rdfs:subClassOf :Concept .
+
+:TransitionEvent a owl:Class ;
+    rdfs:label "Transition Event" ;
+    rdfs:comment "A named input that fires a transition. Distinct from the core :Event, which is a temporally bounded happening." ;
+    rdfs:subClassOf :Concept .
+
+:TransitionGuard a owl:Class ;
+    rdfs:label "Transition Guard" ;
+    rdfs:comment "A named condition that must hold for a transition to fire." ;
+    rdfs:subClassOf :Concept .
+
+# spec: MEDULLA-ORCH-VOCAB-R811.2
+:hasState a owl:ObjectProperty ;
+    rdfs:label "has state" ;
+    rdfs:comment "A state of this machine." ;
+    rdfs:domain :StateMachine ;
+    rdfs:range :State .
+
+:initialState a owl:ObjectProperty ;
+    rdfs:label "initial state" ;
+    rdfs:comment "The state a new record of this machine starts in." ;
+    rdfs:domain :StateMachine ;
+    rdfs:range :State .
+
+:fromState a owl:ObjectProperty ;
+    rdfs:label "from state" ;
+    rdfs:comment "The state this transition leaves." ;
+    rdfs:domain :Transition ;
+    rdfs:range :State .
+
+:toState a owl:ObjectProperty ;
+    rdfs:label "to state" ;
+    rdfs:comment "The state this transition enters." ;
+    rdfs:domain :Transition ;
+    rdfs:range :State .
+
+:firedBy a owl:ObjectProperty ;
+    rdfs:label "fired by" ;
+    rdfs:comment "The event that fires this transition." ;
+    rdfs:domain :Transition ;
+    rdfs:range :TransitionEvent .
+
+:guardedBy a owl:ObjectProperty ;
+    rdfs:label "guarded by" ;
+    rdfs:comment "The guard that must hold for this transition to fire." ;
+    rdfs:domain :Transition ;
+    rdfs:range :TransitionGuard .
+
+:currentState a owl:ObjectProperty ;
+    rdfs:label "current state" ;
+    rdfs:comment "The state a persisted record is in. Any record may carry it, so it has no domain." ;
+    rdfs:range :State .
+
+:storedForm a owl:DatatypeProperty ;
+    rdfs:label "stored form" ;
+    rdfs:comment "The text a persisted record stores for this state." ;
+    rdfs:domain :State ;
+    rdfs:range xsd:string .
+
+:edgeId a owl:DatatypeProperty ;
+    rdfs:label "edge id" ;
+    rdfs:comment "The id of this transition in its machine's edge table, such as W08." ;
+    rdfs:domain :Transition ;
+    rdfs:range xsd:string .
+
+# spec: MEDULLA-ORCH-VOCAB-R812.3
+# The WorkItem queue row machine. The Rust edge table WORK_ITEM_EDGES in
+# crates/medulla-work-types/src/work_item_machine.rs is the same table; the ontology test
+# asserts equal edge sets.
+:WorkItemState a owl:Class ;
+    rdfs:label "WorkItem State" ;
+    rdfs:comment "A state of the WorkItem machine." ;
+    rdfs:subClassOf :State .
+
+:WorkItemTerminalState a owl:Class ;
+    rdfs:label "WorkItem Terminal State" ;
+    rdfs:comment "A terminal state of the WorkItem machine." ;
+    rdfs:subClassOf :TerminalState, :WorkItemState .
+
+:WorkItemTransition a owl:Class ;
+    rdfs:label "WorkItem Transition" ;
+    rdfs:comment "A transition of the WorkItem machine." ;
+    rdfs:subClassOf :Transition .
+
+:WorkItemEvent a owl:Class ;
+    rdfs:label "WorkItem Event" ;
+    rdfs:comment "An event of the WorkItem machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:WorkItemGuard a owl:Class ;
+    rdfs:label "WorkItem Guard" ;
+    rdfs:comment "A guard of the WorkItem machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:WorkItemMachine a :StateMachine ;
+    rdfs:label "WorkItem machine" ;
+    rdfs:comment "The WorkItem queue row lifecycle: eight states, four terminal, edges W01 to W26." ;
+    :initialState :WorkItemMachine_Submitted ;
+    :hasState :WorkItemMachine_Submitted, :WorkItemMachine_Ready, :WorkItemMachine_Leased, :WorkItemMachine_Running, :WorkItemMachine_Succeeded, :WorkItemMachine_Failed, :WorkItemMachine_Cancelled, :WorkItemMachine_DeadLetter .
+
+:WorkItemMachine_Submitted a :WorkItemState ;
+    rdfs:label "WorkItem Submitted" ;
+    :storedForm "submitted" .
+
+:WorkItemMachine_Ready a :WorkItemState ;
+    rdfs:label "WorkItem Ready" ;
+    :storedForm "ready" .
+
+:WorkItemMachine_Leased a :WorkItemState ;
+    rdfs:label "WorkItem Leased" ;
+    :storedForm "leased" .
+
+:WorkItemMachine_Running a :WorkItemState ;
+    rdfs:label "WorkItem Running" ;
+    :storedForm "running" .
+
+:WorkItemMachine_Succeeded a :WorkItemTerminalState ;
+    rdfs:label "WorkItem Succeeded" ;
+    :storedForm "succeeded" .
+
+:WorkItemMachine_Failed a :WorkItemTerminalState ;
+    rdfs:label "WorkItem Failed" ;
+    :storedForm "failed" .
+
+:WorkItemMachine_Cancelled a :WorkItemTerminalState ;
+    rdfs:label "WorkItem Cancelled" ;
+    :storedForm "cancelled" .
+
+:WorkItemMachine_DeadLetter a :WorkItemTerminalState ;
+    rdfs:label "WorkItem DeadLetter" ;
+    :storedForm "dead_letter" .
+
+:WorkItemMachine_Event_DepsSatisfied a :WorkItemEvent ;
+    rdfs:label "WorkItem event DepsSatisfied" .
+
+:WorkItemMachine_Event_Claim a :WorkItemEvent ;
+    rdfs:label "WorkItem event Claim" .
+
+:WorkItemMachine_Event_Start a :WorkItemEvent ;
+    rdfs:label "WorkItem event Start" .
+
+:WorkItemMachine_Event_Heartbeat a :WorkItemEvent ;
+    rdfs:label "WorkItem event Heartbeat" .
+
+:WorkItemMachine_Event_CommitSucceeded a :WorkItemEvent ;
+    rdfs:label "WorkItem event CommitSucceeded" .
+
+:WorkItemMachine_Event_CommitFailedFinal a :WorkItemEvent ;
+    rdfs:label "WorkItem event CommitFailedFinal" .
+
+:WorkItemMachine_Event_CommitCancelled a :WorkItemEvent ;
+    rdfs:label "WorkItem event CommitCancelled" .
+
+:WorkItemMachine_Event_CommitFailedRetryable a :WorkItemEvent ;
+    rdfs:label "WorkItem event CommitFailedRetryable" .
+
+:WorkItemMachine_Event_Cancel a :WorkItemEvent ;
+    rdfs:label "WorkItem event Cancel" .
+
+:WorkItemMachine_Event_RequestCancel a :WorkItemEvent ;
+    rdfs:label "WorkItem event RequestCancel" .
+
+:WorkItemMachine_Event_Defer a :WorkItemEvent ;
+    rdfs:label "WorkItem event Defer" .
+
+:WorkItemMachine_Event_LeaseExpire a :WorkItemEvent ;
+    rdfs:label "WorkItem event LeaseExpire" .
+
+:WorkItemMachine_Guard_NoOpenDependency a :WorkItemGuard ;
+    rdfs:label "WorkItem guard NoOpenDependency" .
+
+:WorkItemMachine_Guard_RetryDueAttemptLeft a :WorkItemGuard ;
+    rdfs:label "WorkItem guard RetryDueAttemptLeft" .
+
+:WorkItemMachine_Guard_FenceLive a :WorkItemGuard ;
+    rdfs:label "WorkItem guard FenceLive" .
+
+:WorkItemMachine_Guard_FenceLiveAttemptLeft a :WorkItemGuard ;
+    rdfs:label "WorkItem guard FenceLiveAttemptLeft" .
+
+:WorkItemMachine_Guard_FenceLiveAttemptsSpent a :WorkItemGuard ;
+    rdfs:label "WorkItem guard FenceLiveAttemptsSpent" .
+
+:WorkItemMachine_Guard_LeaseExpired a :WorkItemGuard ;
+    rdfs:label "WorkItem guard LeaseExpired" .
+
+:WorkItemMachine_Guard_LeaseLive a :WorkItemGuard ;
+    rdfs:label "WorkItem guard LeaseLive" .
+
+:WorkItemMachine_Guard_FenceLiveCountersOk a :WorkItemGuard ;
+    rdfs:label "WorkItem guard FenceLiveCountersOk" .
+
+:WorkItemMachine_Guard_LeaseExpiredAttemptLeft a :WorkItemGuard ;
+    rdfs:label "WorkItem guard LeaseExpiredAttemptLeft" .
+
+:WorkItemMachine_Guard_LeaseExpiredAttemptsSpent a :WorkItemGuard ;
+    rdfs:label "WorkItem guard LeaseExpiredAttemptsSpent" .
+
+:WorkItemMachine_W01 a :WorkItemTransition ;
+    rdfs:label "WorkItem W01" ;
+    :edgeId "W01" ;
+    :fromState :WorkItemMachine_Submitted ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_NoOpenDependency ;
+    :firedBy :WorkItemMachine_Event_DepsSatisfied .
+
+:WorkItemMachine_W02 a :WorkItemTransition ;
+    rdfs:label "WorkItem W02" ;
+    :edgeId "W02" ;
+    :fromState :WorkItemMachine_Ready ;
+    :toState :WorkItemMachine_Leased ;
+    :guardedBy :WorkItemMachine_Guard_RetryDueAttemptLeft ;
+    :firedBy :WorkItemMachine_Event_Claim .
+
+:WorkItemMachine_W03 a :WorkItemTransition ;
+    rdfs:label "WorkItem W03" ;
+    :edgeId "W03" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Running ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_Start .
+
+:WorkItemMachine_W04 a :WorkItemTransition ;
+    rdfs:label "WorkItem W04" ;
+    :edgeId "W04" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Running ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_Heartbeat .
+
+:WorkItemMachine_W05 a :WorkItemTransition ;
+    rdfs:label "WorkItem W05" ;
+    :edgeId "W05" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Succeeded ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitSucceeded .
+
+:WorkItemMachine_W06 a :WorkItemTransition ;
+    rdfs:label "WorkItem W06" ;
+    :edgeId "W06" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Failed ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitFailedFinal .
+
+:WorkItemMachine_W07 a :WorkItemTransition ;
+    rdfs:label "WorkItem W07" ;
+    :edgeId "W07" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Cancelled ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitCancelled .
+
+:WorkItemMachine_W08 a :WorkItemTransition ;
+    rdfs:label "WorkItem W08" ;
+    :edgeId "W08" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveAttemptLeft ;
+    :firedBy :WorkItemMachine_Event_CommitFailedRetryable .
+
+:WorkItemMachine_W09 a :WorkItemTransition ;
+    rdfs:label "WorkItem W09" ;
+    :edgeId "W09" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_DeadLetter ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveAttemptsSpent ;
+    :firedBy :WorkItemMachine_Event_CommitFailedRetryable .
+
+:WorkItemMachine_W10 a :WorkItemTransition ;
+    rdfs:label "WorkItem W10" ;
+    :edgeId "W10" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Succeeded ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitSucceeded .
+
+:WorkItemMachine_W11 a :WorkItemTransition ;
+    rdfs:label "WorkItem W11" ;
+    :edgeId "W11" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Failed ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitFailedFinal .
+
+:WorkItemMachine_W12 a :WorkItemTransition ;
+    rdfs:label "WorkItem W12" ;
+    :edgeId "W12" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Cancelled ;
+    :guardedBy :WorkItemMachine_Guard_FenceLive ;
+    :firedBy :WorkItemMachine_Event_CommitCancelled .
+
+:WorkItemMachine_W13 a :WorkItemTransition ;
+    rdfs:label "WorkItem W13" ;
+    :edgeId "W13" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveAttemptLeft ;
+    :firedBy :WorkItemMachine_Event_CommitFailedRetryable .
+
+:WorkItemMachine_W14 a :WorkItemTransition ;
+    rdfs:label "WorkItem W14" ;
+    :edgeId "W14" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_DeadLetter ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveAttemptsSpent ;
+    :firedBy :WorkItemMachine_Event_CommitFailedRetryable .
+
+:WorkItemMachine_W15 a :WorkItemTransition ;
+    rdfs:label "WorkItem W15" ;
+    :edgeId "W15" ;
+    :fromState :WorkItemMachine_Submitted ;
+    :toState :WorkItemMachine_Cancelled ;
+    :firedBy :WorkItemMachine_Event_Cancel .
+
+:WorkItemMachine_W16 a :WorkItemTransition ;
+    rdfs:label "WorkItem W16" ;
+    :edgeId "W16" ;
+    :fromState :WorkItemMachine_Ready ;
+    :toState :WorkItemMachine_Cancelled ;
+    :firedBy :WorkItemMachine_Event_Cancel .
+
+:WorkItemMachine_W17 a :WorkItemTransition ;
+    rdfs:label "WorkItem W17" ;
+    :edgeId "W17" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Cancelled ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpired ;
+    :firedBy :WorkItemMachine_Event_Cancel .
+
+:WorkItemMachine_W18 a :WorkItemTransition ;
+    rdfs:label "WorkItem W18" ;
+    :edgeId "W18" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Cancelled ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpired ;
+    :firedBy :WorkItemMachine_Event_Cancel .
+
+:WorkItemMachine_W19 a :WorkItemTransition ;
+    rdfs:label "WorkItem W19" ;
+    :edgeId "W19" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Leased ;
+    :guardedBy :WorkItemMachine_Guard_LeaseLive ;
+    :firedBy :WorkItemMachine_Event_RequestCancel .
+
+:WorkItemMachine_W20 a :WorkItemTransition ;
+    rdfs:label "WorkItem W20" ;
+    :edgeId "W20" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Running ;
+    :guardedBy :WorkItemMachine_Guard_LeaseLive ;
+    :firedBy :WorkItemMachine_Event_RequestCancel .
+
+:WorkItemMachine_W21 a :WorkItemTransition ;
+    rdfs:label "WorkItem W21" ;
+    :edgeId "W21" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveCountersOk ;
+    :firedBy :WorkItemMachine_Event_Defer .
+
+:WorkItemMachine_W22 a :WorkItemTransition ;
+    rdfs:label "WorkItem W22" ;
+    :edgeId "W22" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_FenceLiveCountersOk ;
+    :firedBy :WorkItemMachine_Event_Defer .
+
+:WorkItemMachine_W23 a :WorkItemTransition ;
+    rdfs:label "WorkItem W23" ;
+    :edgeId "W23" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpiredAttemptLeft ;
+    :firedBy :WorkItemMachine_Event_LeaseExpire .
+
+:WorkItemMachine_W24 a :WorkItemTransition ;
+    rdfs:label "WorkItem W24" ;
+    :edgeId "W24" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_Ready ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpiredAttemptLeft ;
+    :firedBy :WorkItemMachine_Event_LeaseExpire .
+
+:WorkItemMachine_W25 a :WorkItemTransition ;
+    rdfs:label "WorkItem W25" ;
+    :edgeId "W25" ;
+    :fromState :WorkItemMachine_Leased ;
+    :toState :WorkItemMachine_DeadLetter ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpiredAttemptsSpent ;
+    :firedBy :WorkItemMachine_Event_LeaseExpire .
+
+:WorkItemMachine_W26 a :WorkItemTransition ;
+    rdfs:label "WorkItem W26" ;
+    :edgeId "W26" ;
+    :fromState :WorkItemMachine_Running ;
+    :toState :WorkItemMachine_DeadLetter ;
+    :guardedBy :WorkItemMachine_Guard_LeaseExpiredAttemptsSpent ;
+    :firedBy :WorkItemMachine_Event_LeaseExpire .

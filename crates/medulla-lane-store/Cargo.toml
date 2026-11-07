@@ -20,6 +20,8 @@ hex = "0.4"
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-storage = { path = "../medulla-storage" }
 medulla-types = { path = "../medulla-types" }
+# MEDULLA-ORCH-VOCAB-R813: the lane work item reuses the WorkItem machine.
+medulla-work-types = { path = "../medulla-work-types" }
 redb = { workspace = true }
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }

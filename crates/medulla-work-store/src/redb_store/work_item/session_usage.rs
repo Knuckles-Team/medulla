@@ -96,10 +96,7 @@ fn session_membership(
         return Ok(SessionMembership::Other);
     };
     if !run_owner::owned(row, graph, tenant, run, id, principal)
-        || !matches!(
-            property_string(row, "status"),
-            "succeeded" | "failed" | "cancelled" | "dead_letter"
-        )
+        || !super::machine::is_terminal_row(row)
     {
         return Ok(SessionMembership::Other);
     }

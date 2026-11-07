@@ -98,6 +98,7 @@ An owner lets the platform deliver open rows as pull requests. The engine opens 
 - **FR-012**: Every codebase has a project mode, and promotion to `evolving` needs operator approval. Rows: `MEDULLA-SDLC-R012.8`.
 - **FR-013**: Release bundle plans ingest as records. Rows: `MEDULLA-SDLC-R018`.
 - **FR-014**: The engine records each autonomous delivery and routes its feedback. It decides review rounds, merge arming and supersession. Rows: `MEDULLA-SDLC-R019`.
+- **FR-015**: Each lifecycle named in these rows is an explicit state machine with one transition function, one stored state field, a typed refusal of illegal transitions and an ontology description (organization constitution Article XXXI). Rows: `MEDULLA-SDLC-R030`, `MEDULLA-SDLC-R030.1`, `MEDULLA-SDLC-R030.2`.
 - **SC-001**: A rebuild of every derived edge from the changeset log reproduces the edge set byte for byte. Rows: `MEDULLA-SDLC-R001.5`.
 - **SC-002**: The derived requirement states equal the output of the shared status generator on the same revision. Rows: `MEDULLA-SDLC-R005.5`.
 - **SC-003**: A one-file spec change re-ingests in under 1 s, and a full spec set in under 30 s. Rows: `MEDULLA-SDLC-R014.2`.
