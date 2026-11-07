@@ -27,6 +27,7 @@ VIEW: dict[str, Any] = {
     "metadata": {"au:description": "summarize"},
     "version": 2,
     "updated_at_ms": 1_000,
+    "effect_phase": "unstarted",
 }
 
 
