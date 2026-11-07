@@ -10,6 +10,10 @@
 
 use std::collections::BTreeSet;
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefusalReason,
+    TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -33,6 +37,231 @@ pub enum MembershipShrinkPhase {
     RemovalCommitted,
     Completed,
     Aborted,
+}
+
+// MEDULLA-PLACEMENT-R783.2 — the shrink edge table; `advance` and `abort` fire its events.
+// MembershipShrinkMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `MembershipShrinkMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MembershipShrinkEvent {
+    /// The `RequestDrain` event.
+    RequestDrain,
+    /// The `ConfirmDrained` event.
+    ConfirmDrained,
+    /// The `ConfirmLearnerCaughtUp` event.
+    ConfirmLearnerCaughtUp,
+    /// The `ConfirmLeadershipTransferred` event.
+    ConfirmLeadershipTransferred,
+    /// The `ConfirmSafety` event.
+    ConfirmSafety,
+    /// The `CommitRemoval` event.
+    CommitRemoval,
+    /// The `Complete` event.
+    Complete,
+    /// The `Abort` event.
+    Abort,
+}
+
+impl MachineState for MembershipShrinkPhase {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Proposed => "proposed",
+            Self::DrainRequested => "drain_requested",
+            Self::Drained => "drained",
+            Self::LearnerCaughtUp => "learner_caught_up",
+            Self::LeadershipTransferred => "leadership_transferred",
+            Self::SafetyChecked => "safety_checked",
+            Self::RemovalCommitted => "removal_committed",
+            Self::Completed => "completed",
+            Self::Aborted => "aborted",
+        }
+    }
+}
+
+impl MachineEvent for MembershipShrinkEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::RequestDrain => "RequestDrain",
+            Self::ConfirmDrained => "ConfirmDrained",
+            Self::ConfirmLearnerCaughtUp => "ConfirmLearnerCaughtUp",
+            Self::ConfirmLeadershipTransferred => "ConfirmLeadershipTransferred",
+            Self::ConfirmSafety => "ConfirmSafety",
+            Self::CommitRemoval => "CommitRemoval",
+            Self::Complete => "Complete",
+            Self::Abort => "Abort",
+        }
+    }
+}
+
+/// Guard of `MembershipShrinkMachine`: the evidence shows the node drained.
+pub const MEMBERSHIP_SHRINK_GUARD_NODE_DRAINED: &str = "NodeDrained";
+/// Guard of `MembershipShrinkMachine`: the evidence shows the learner caught up.
+pub const MEMBERSHIP_SHRINK_GUARD_LEARNER_CAUGHT_UP: &str = "LearnerCaughtUp";
+/// Guard of `MembershipShrinkMachine`: the evidence shows leadership left the target.
+pub const MEMBERSHIP_SHRINK_GUARD_LEADERSHIP_LEFT_TARGET: &str = "LeadershipLeftTarget";
+/// Guard of `MembershipShrinkMachine`: quorum, failure domain, headroom and disruption budget are preserved.
+pub const MEMBERSHIP_SHRINK_GUARD_SAFETY_PRESERVED: &str = "SafetyPreserved";
+/// Guard of `MembershipShrinkMachine`: the evidence shows the removal committed with the remaining voters.
+pub const MEMBERSHIP_SHRINK_GUARD_REMOVAL_COMMITTED: &str = "RemovalCommitted";
+/// Guard of `MembershipShrinkMachine`: the evidence shows the target absent.
+pub const MEMBERSHIP_SHRINK_GUARD_TARGET_ABSENT: &str = "TargetAbsent";
+/// Guard of `MembershipShrinkMachine`: the reason is non-empty, bounded and has no control character.
+pub const MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED: &str = "ReasonBounded";
+
+/// `MembershipShrinkMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static MEMBERSHIP_SHRINK_MACHINE: MachineDef<
+    MembershipShrinkPhase,
+    MembershipShrinkEvent,
+    &'static str,
+> = MachineDef {
+    name: "MembershipShrinkMachine",
+    states: &[
+        MembershipShrinkPhase::Proposed,
+        MembershipShrinkPhase::DrainRequested,
+        MembershipShrinkPhase::Drained,
+        MembershipShrinkPhase::LearnerCaughtUp,
+        MembershipShrinkPhase::LeadershipTransferred,
+        MembershipShrinkPhase::SafetyChecked,
+        MembershipShrinkPhase::RemovalCommitted,
+        MembershipShrinkPhase::Completed,
+        MembershipShrinkPhase::Aborted,
+    ],
+    initial: MembershipShrinkPhase::Proposed,
+    terminals: &[
+        MembershipShrinkPhase::Completed,
+        MembershipShrinkPhase::Aborted,
+    ],
+    events: &[
+        MembershipShrinkEvent::RequestDrain,
+        MembershipShrinkEvent::ConfirmDrained,
+        MembershipShrinkEvent::ConfirmLearnerCaughtUp,
+        MembershipShrinkEvent::ConfirmLeadershipTransferred,
+        MembershipShrinkEvent::ConfirmSafety,
+        MembershipShrinkEvent::CommitRemoval,
+        MembershipShrinkEvent::Complete,
+        MembershipShrinkEvent::Abort,
+    ],
+    guards: &[
+        MEMBERSHIP_SHRINK_GUARD_NODE_DRAINED,
+        MEMBERSHIP_SHRINK_GUARD_LEARNER_CAUGHT_UP,
+        MEMBERSHIP_SHRINK_GUARD_LEADERSHIP_LEFT_TARGET,
+        MEMBERSHIP_SHRINK_GUARD_SAFETY_PRESERVED,
+        MEMBERSHIP_SHRINK_GUARD_REMOVAL_COMMITTED,
+        MEMBERSHIP_SHRINK_GUARD_TARGET_ABSENT,
+        MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED,
+    ],
+    edges: &[
+        Edge {
+            id: "S01",
+            from: MembershipShrinkPhase::Proposed,
+            event: MembershipShrinkEvent::RequestDrain,
+            guard: None,
+            to: MembershipShrinkPhase::DrainRequested,
+        },
+        Edge {
+            id: "S02",
+            from: MembershipShrinkPhase::DrainRequested,
+            event: MembershipShrinkEvent::ConfirmDrained,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_NODE_DRAINED),
+            to: MembershipShrinkPhase::Drained,
+        },
+        Edge {
+            id: "S03",
+            from: MembershipShrinkPhase::Drained,
+            event: MembershipShrinkEvent::ConfirmLearnerCaughtUp,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_LEARNER_CAUGHT_UP),
+            to: MembershipShrinkPhase::LearnerCaughtUp,
+        },
+        Edge {
+            id: "S04",
+            from: MembershipShrinkPhase::LearnerCaughtUp,
+            event: MembershipShrinkEvent::ConfirmLeadershipTransferred,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_LEADERSHIP_LEFT_TARGET),
+            to: MembershipShrinkPhase::LeadershipTransferred,
+        },
+        Edge {
+            id: "S05",
+            from: MembershipShrinkPhase::LeadershipTransferred,
+            event: MembershipShrinkEvent::ConfirmSafety,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_SAFETY_PRESERVED),
+            to: MembershipShrinkPhase::SafetyChecked,
+        },
+        Edge {
+            id: "S06",
+            from: MembershipShrinkPhase::SafetyChecked,
+            event: MembershipShrinkEvent::CommitRemoval,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REMOVAL_COMMITTED),
+            to: MembershipShrinkPhase::RemovalCommitted,
+        },
+        Edge {
+            id: "S07",
+            from: MembershipShrinkPhase::RemovalCommitted,
+            event: MembershipShrinkEvent::Complete,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_TARGET_ABSENT),
+            to: MembershipShrinkPhase::Completed,
+        },
+        Edge {
+            id: "S08",
+            from: MembershipShrinkPhase::Proposed,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S09",
+            from: MembershipShrinkPhase::DrainRequested,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S10",
+            from: MembershipShrinkPhase::Drained,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S11",
+            from: MembershipShrinkPhase::LearnerCaughtUp,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S12",
+            from: MembershipShrinkPhase::LeadershipTransferred,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S13",
+            from: MembershipShrinkPhase::SafetyChecked,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+        Edge {
+            id: "S14",
+            from: MembershipShrinkPhase::RemovalCommitted,
+            event: MembershipShrinkEvent::Abort,
+            guard: Some(MEMBERSHIP_SHRINK_GUARD_REASON_BOUNDED),
+            to: MembershipShrinkPhase::Aborted,
+        },
+    ],
+};
+
+impl MembershipShrinkPhase {
+    /// The one transition function of `MembershipShrinkMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: MembershipShrinkEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&MEMBERSHIP_SHRINK_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
 }
 
 impl MembershipShrinkPhase {
@@ -211,44 +440,66 @@ impl MembershipShrinkJournal {
         &self,
         next: MembershipShrinkPhase,
         evidence: MembershipShrinkEvidence,
-    ) -> Result<Self, String> {
-        if !self.validate() || self.phase.terminal() {
-            return Err("membership shrink journal is not advanceable".to_string());
+    ) -> Result<Self, TransitionRefused> {
+        use MembershipShrinkPhase as P;
+        let event = match next {
+            P::DrainRequested => MembershipShrinkEvent::RequestDrain,
+            P::Drained => MembershipShrinkEvent::ConfirmDrained,
+            P::LearnerCaughtUp => MembershipShrinkEvent::ConfirmLearnerCaughtUp,
+            P::LeadershipTransferred => MembershipShrinkEvent::ConfirmLeadershipTransferred,
+            P::SafetyChecked => MembershipShrinkEvent::ConfirmSafety,
+            P::RemovalCommitted => MembershipShrinkEvent::CommitRemoval,
+            P::Completed => MembershipShrinkEvent::Complete,
+            P::Proposed | P::Aborted => {
+                let event = MembershipShrinkEvent::Abort;
+                return Err(shrink_refusal(
+                    self.phase,
+                    event,
+                    TransitionRefusalReason::IllegalTransition,
+                ));
+            }
+        };
+        // A stale or foreign evidence set (or an invalid journal) fails the edge guard.
+        if !self.phase.terminal() && (!self.validate() || !self.evidence_matches(next, &evidence)) {
+            return Err(shrink_refusal(
+                self.phase,
+                event,
+                TransitionRefusalReason::GuardFailed,
+            ));
         }
-        if !self.evidence_matches(next, &evidence) {
-            return Err("membership shrink evidence is stale or targets another set".to_string());
-        }
-        if !transition_is_valid(
-            self.phase,
-            next,
-            &evidence,
-            self.target,
-            &self.remaining_voters,
-        ) {
-            return Err(format!(
-                "membership shrink phase {:?} cannot advance to {:?} with supplied evidence",
-                self.phase, next
+        let to = self.phase.apply(event, |_| {
+            transition_is_valid(
+                self.phase,
+                next,
+                &evidence,
+                self.target,
+                &self.remaining_voters,
+            )
+        })?;
+        if to != next {
+            return Err(shrink_refusal(
+                self.phase,
+                event,
+                TransitionRefusalReason::IllegalTransition,
             ));
         }
         let mut updated = self.clone();
-        updated.phase = next;
+        updated.phase = to;
         updated.evidence = Some(evidence);
         Ok(updated)
     }
 
     /// Abort is itself durable recovery evidence and never deletes the journal.
-    pub fn abort(&self, reason: &str) -> Result<Self, String> {
-        if !self.validate() || self.phase.terminal() {
-            return Err("membership shrink journal is not abortable".to_string());
-        }
-        if reason.is_empty()
-            || reason.len() > MAX_EVIDENCE_REF
-            || reason.bytes().any(|byte| byte.is_ascii_control())
-        {
-            return Err("membership shrink abort reason is invalid".to_string());
-        }
+    pub fn abort(&self, reason: &str) -> Result<Self, TransitionRefused> {
+        let bounded = !reason.is_empty()
+            && reason.len() <= MAX_EVIDENCE_REF
+            && !reason.bytes().any(|byte| byte.is_ascii_control());
+        let valid = self.validate();
+        let to = self
+            .phase
+            .apply(MembershipShrinkEvent::Abort, |_| valid && bounded)?;
         let mut updated = self.clone();
-        updated.phase = MembershipShrinkPhase::Aborted;
+        updated.phase = to;
         updated.abort_reason = Some(reason.to_string());
         Ok(updated)
     }
@@ -358,6 +609,21 @@ fn journal_evidence_is_valid(journal: &MembershipShrinkJournal) -> bool {
 /// pair deliberately ends in a catch-all: most of the 9x9 phase-pair space is
 /// not a defined transition at all, so there is no exhaustiveness guarantee
 /// to preserve here.
+/// The typed refusal of a shrink event that the guard or the journal refuses before the
+/// edge table is consulted.
+fn shrink_refusal(
+    from: MembershipShrinkPhase,
+    event: MembershipShrinkEvent,
+    reason: TransitionRefusalReason,
+) -> TransitionRefused {
+    TransitionRefused {
+        machine: MEMBERSHIP_SHRINK_MACHINE.name.to_string(),
+        from: from.stored().to_string(),
+        event: event.name().to_string(),
+        reason,
+    }
+}
+
 fn transition_is_valid(
     phase: MembershipShrinkPhase,
     next: MembershipShrinkPhase,
@@ -446,6 +712,310 @@ fn is_valid_phase_step(phase: MembershipShrinkPhase, next: MembershipShrinkPhase
 
 #[cfg(test)]
 mod tests {
+    // MEDULLA-PLACEMENT-R783.2 — the membership shrink machine.
+    use super::{MembershipShrinkEvent, MembershipShrinkPhase, MEMBERSHIP_SHRINK_MACHINE};
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    fn shrink_edge_case(
+        id: &str,
+        from: MembershipShrinkPhase,
+        event: MembershipShrinkEvent,
+        to: MembershipShrinkPhase,
+    ) {
+        let edge = MEMBERSHIP_SHRINK_MACHINE
+            .edges
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap();
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+        // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+        assert_eq!(from.apply(event, |g| Some(g) == edge.guard), Ok(to));
+        if edge.guard.is_some() {
+            let refused = from.apply(event, |_| false).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        }
+    }
+
+    /// Every (state, event) pair with no edge.
+    fn shrink_illegal_pairs() -> Vec<(MembershipShrinkPhase, MembershipShrinkEvent)> {
+        let machine = &MEMBERSHIP_SHRINK_MACHINE;
+        let mut out = Vec::new();
+        for &state in machine.states {
+            for &event in machine.events {
+                if !machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    out.push((state, event));
+                }
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s01_proposed_request_drain() {
+        shrink_edge_case(
+            "S01",
+            MembershipShrinkPhase::Proposed,
+            MembershipShrinkEvent::RequestDrain,
+            MembershipShrinkPhase::DrainRequested,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s02_drain_requested_confirm_drained() {
+        shrink_edge_case(
+            "S02",
+            MembershipShrinkPhase::DrainRequested,
+            MembershipShrinkEvent::ConfirmDrained,
+            MembershipShrinkPhase::Drained,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s03_drained_confirm_learner_caught_up() {
+        shrink_edge_case(
+            "S03",
+            MembershipShrinkPhase::Drained,
+            MembershipShrinkEvent::ConfirmLearnerCaughtUp,
+            MembershipShrinkPhase::LearnerCaughtUp,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s04_learner_caught_up_confirm_leadership_transferred() {
+        shrink_edge_case(
+            "S04",
+            MembershipShrinkPhase::LearnerCaughtUp,
+            MembershipShrinkEvent::ConfirmLeadershipTransferred,
+            MembershipShrinkPhase::LeadershipTransferred,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s05_leadership_transferred_confirm_safety() {
+        shrink_edge_case(
+            "S05",
+            MembershipShrinkPhase::LeadershipTransferred,
+            MembershipShrinkEvent::ConfirmSafety,
+            MembershipShrinkPhase::SafetyChecked,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s06_safety_checked_commit_removal() {
+        shrink_edge_case(
+            "S06",
+            MembershipShrinkPhase::SafetyChecked,
+            MembershipShrinkEvent::CommitRemoval,
+            MembershipShrinkPhase::RemovalCommitted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s07_removal_committed_complete() {
+        shrink_edge_case(
+            "S07",
+            MembershipShrinkPhase::RemovalCommitted,
+            MembershipShrinkEvent::Complete,
+            MembershipShrinkPhase::Completed,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s08_proposed_abort() {
+        shrink_edge_case(
+            "S08",
+            MembershipShrinkPhase::Proposed,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s09_drain_requested_abort() {
+        shrink_edge_case(
+            "S09",
+            MembershipShrinkPhase::DrainRequested,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s10_drained_abort() {
+        shrink_edge_case(
+            "S10",
+            MembershipShrinkPhase::Drained,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s11_learner_caught_up_abort() {
+        shrink_edge_case(
+            "S11",
+            MembershipShrinkPhase::LearnerCaughtUp,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s12_leadership_transferred_abort() {
+        shrink_edge_case(
+            "S12",
+            MembershipShrinkPhase::LeadershipTransferred,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s13_safety_checked_abort() {
+        shrink_edge_case(
+            "S13",
+            MembershipShrinkPhase::SafetyChecked,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn edge_s14_removal_committed_abort() {
+        shrink_edge_case(
+            "S14",
+            MembershipShrinkPhase::RemovalCommitted,
+            MembershipShrinkEvent::Abort,
+            MembershipShrinkPhase::Aborted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn every_illegal_pair_is_refused() {
+        let machine = &MEMBERSHIP_SHRINK_MACHINE;
+        let pairs = shrink_illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            let expected = if machine.is_terminal(state) {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        }
+        for &terminal in machine.terminals {
+            for &event in machine.events {
+                assert!(terminal.apply(event, |_| true).is_err());
+            }
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn refusal_carries_machine_from_event() {
+        let refused = MembershipShrinkPhase::Proposed
+            .apply(MembershipShrinkEvent::ConfirmDrained, |_| true)
+            .unwrap_err();
+        assert_eq!(refused.machine, "MembershipShrinkMachine");
+        assert_eq!(refused.from, MembershipShrinkPhase::Proposed.stored());
+        assert_eq!(refused.event, "ConfirmDrained");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
+    /// file's `#[cfg(test)] mod tests`.
+    fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a str> {
+        let needle = format!(".{field} = {ty}::");
+        let mut out = Vec::new();
+        let mut previous = "";
+        for line in source.lines().map(str::trim) {
+            if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+                break;
+            }
+            previous = line;
+            if !line.starts_with("//") && line.contains(&needle) {
+                out.push(line);
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/raft/membership_shrink.rs");
+        let source = std::fs::read_to_string(path).expect("writer source");
+        let writes = direct_state_writes(&source, "phase", "MembershipShrinkPhase");
+        assert!(
+            writes.is_empty(),
+            "direct state writes in src/raft/membership_shrink.rs: {writes:?}"
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
+
+    #[test]
+    fn every_transition_and_refusal_is_covered() {
+        let machine = &MEMBERSHIP_SHRINK_MACHINE;
+        assert_eq!(machine.edges.len(), 14);
+        assert_eq!(machine.states.len(), 9);
+        let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+        ids.dedup();
+        assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+        for edge in machine.edges {
+            assert!(
+                !machine.is_terminal(edge.from),
+                "{} leaves a terminal state",
+                edge.id
+            );
+        }
+        for &state in machine.states {
+            assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+            for &event in machine.events {
+                let legal = state.apply(event, |_| true).is_ok();
+                let has_edge = machine.edges_from(state).any(|e| e.event == event);
+                assert_eq!(legal, has_edge, "{state:?} {event:?}");
+            }
+        }
+    }
+
     use super::*;
 
     fn evidence(voters: Vec<NodeId>) -> MembershipShrinkEvidence {

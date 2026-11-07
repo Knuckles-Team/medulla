@@ -5,6 +5,9 @@
 
 use std::collections::BTreeMap;
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -37,21 +40,124 @@ pub enum ElevationStatus {
     Expired,
 }
 
-/// Every legal lifecycle edge. Anything absent -- re-approving, reviving an
-/// ended lease, approving an expired request -- is a conflict.
-const LEGAL_TRANSITIONS: [(ElevationStatus, ElevationStatus); 5] = [
-    (ElevationStatus::Requested, ElevationStatus::Active),
-    (ElevationStatus::Requested, ElevationStatus::Revoked),
-    (ElevationStatus::Requested, ElevationStatus::Expired),
-    (ElevationStatus::Active, ElevationStatus::Revoked),
-    (ElevationStatus::Active, ElevationStatus::Expired),
-];
+// MEDULLA-IDENTITY-R722.2 — the elevation edge table; `move_to` fires its events.
+// RbacElevationMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `RbacElevationMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ElevationMachineEvent {
+    /// The `Approve` event.
+    Approve,
+    /// The `Revoke` event.
+    Revoke,
+    /// The `Lapse` event.
+    Lapse,
+}
+
+impl MachineState for ElevationStatus {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Requested => "requested",
+            Self::Active => "active",
+            Self::Revoked => "revoked",
+            Self::Expired => "expired",
+        }
+    }
+}
+
+impl MachineEvent for ElevationMachineEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Approve => "Approve",
+            Self::Revoke => "Revoke",
+            Self::Lapse => "Lapse",
+        }
+    }
+}
+
+/// Guard of `RbacElevationMachine`: a second identity approves.
+pub const RBAC_ELEVATION_GUARD_SECOND_IDENTITY_APPROVES: &str = "SecondIdentityApproves";
+/// Guard of `RbacElevationMachine`: the actor is authorized.
+pub const RBAC_ELEVATION_GUARD_ACTOR_AUTHORIZED: &str = "ActorAuthorized";
+/// Guard of `RbacElevationMachine`: the window has elapsed.
+pub const RBAC_ELEVATION_GUARD_WINDOW_ELAPSED: &str = "WindowElapsed";
+
+/// `RbacElevationMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static RBAC_ELEVATION_MACHINE: MachineDef<
+    ElevationStatus,
+    ElevationMachineEvent,
+    &'static str,
+> = MachineDef {
+    name: "RbacElevationMachine",
+    states: &[
+        ElevationStatus::Requested,
+        ElevationStatus::Active,
+        ElevationStatus::Revoked,
+        ElevationStatus::Expired,
+    ],
+    initial: ElevationStatus::Requested,
+    terminals: &[ElevationStatus::Revoked, ElevationStatus::Expired],
+    events: &[
+        ElevationMachineEvent::Approve,
+        ElevationMachineEvent::Revoke,
+        ElevationMachineEvent::Lapse,
+    ],
+    guards: &[
+        RBAC_ELEVATION_GUARD_SECOND_IDENTITY_APPROVES,
+        RBAC_ELEVATION_GUARD_ACTOR_AUTHORIZED,
+        RBAC_ELEVATION_GUARD_WINDOW_ELAPSED,
+    ],
+    edges: &[
+        Edge {
+            id: "E01",
+            from: ElevationStatus::Requested,
+            event: ElevationMachineEvent::Approve,
+            guard: Some(RBAC_ELEVATION_GUARD_SECOND_IDENTITY_APPROVES),
+            to: ElevationStatus::Active,
+        },
+        Edge {
+            id: "E02",
+            from: ElevationStatus::Requested,
+            event: ElevationMachineEvent::Revoke,
+            guard: Some(RBAC_ELEVATION_GUARD_ACTOR_AUTHORIZED),
+            to: ElevationStatus::Revoked,
+        },
+        Edge {
+            id: "E03",
+            from: ElevationStatus::Requested,
+            event: ElevationMachineEvent::Lapse,
+            guard: Some(RBAC_ELEVATION_GUARD_WINDOW_ELAPSED),
+            to: ElevationStatus::Expired,
+        },
+        Edge {
+            id: "E04",
+            from: ElevationStatus::Active,
+            event: ElevationMachineEvent::Revoke,
+            guard: Some(RBAC_ELEVATION_GUARD_ACTOR_AUTHORIZED),
+            to: ElevationStatus::Revoked,
+        },
+        Edge {
+            id: "E05",
+            from: ElevationStatus::Active,
+            event: ElevationMachineEvent::Lapse,
+            guard: Some(RBAC_ELEVATION_GUARD_WINDOW_ELAPSED),
+            to: ElevationStatus::Expired,
+        },
+    ],
+};
 
 impl ElevationStatus {
-    fn may_move_to(self, to: Self) -> bool {
-        LEGAL_TRANSITIONS.contains(&(self, to))
+    /// The one transition function of `RbacElevationMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: ElevationMachineEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&RBAC_ELEVATION_MACHINE, self, event, guard_holds).map(|edge| edge.to)
     }
+}
 
+impl ElevationStatus {
     fn is_live(self) -> bool {
         matches!(self, Self::Requested | Self::Active)
     }
@@ -131,10 +237,17 @@ impl ElevationLease {
     }
 
     fn move_to(&mut self, to: ElevationStatus, now_ms: u64) -> Result<(), ElevationRefusal> {
-        if !self.status.may_move_to(to) {
-            return Err(ElevationRefusal::Conflict);
-        }
-        self.status = to;
+        let event = match to {
+            ElevationStatus::Active => ElevationMachineEvent::Approve,
+            ElevationStatus::Revoked => ElevationMachineEvent::Revoke,
+            ElevationStatus::Expired => ElevationMachineEvent::Lapse,
+            ElevationStatus::Requested => return Err(ElevationRefusal::Conflict),
+        };
+        let next = self
+            .status
+            .apply(event, |_| true)
+            .map_err(|_| ElevationRefusal::Conflict)?;
+        self.status = next;
         self.revision += 1;
         if to == ElevationStatus::Active {
             self.approved_at_ms = Some(now_ms);
@@ -489,5 +602,203 @@ fn new_lease(actor: &ElevationActor, request: &ElevationRequest, now_ms: u64) ->
         ended_at_ms: None,
         request_digest: hex::encode(hasher.finalize()),
         revision: 1,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ElevationMachineEvent, ElevationStatus, RBAC_ELEVATION_MACHINE};
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    fn edge_case(
+        id: &str,
+        from: ElevationStatus,
+        event: ElevationMachineEvent,
+        to: ElevationStatus,
+    ) {
+        let edge = RBAC_ELEVATION_MACHINE
+            .edges
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap();
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+        // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+        assert_eq!(from.apply(event, |g| Some(g) == edge.guard), Ok(to));
+        if edge.guard.is_some() {
+            let refused = from.apply(event, |_| false).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        }
+    }
+
+    /// Every (state, event) pair with no edge.
+    fn illegal_pairs() -> Vec<(ElevationStatus, ElevationMachineEvent)> {
+        let machine = &RBAC_ELEVATION_MACHINE;
+        let mut out = Vec::new();
+        for &state in machine.states {
+            for &event in machine.events {
+                if !machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    out.push((state, event));
+                }
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn edge_e01_requested_approve() {
+        edge_case(
+            "E01",
+            ElevationStatus::Requested,
+            ElevationMachineEvent::Approve,
+            ElevationStatus::Active,
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn edge_e02_requested_revoke() {
+        edge_case(
+            "E02",
+            ElevationStatus::Requested,
+            ElevationMachineEvent::Revoke,
+            ElevationStatus::Revoked,
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn edge_e03_requested_lapse() {
+        edge_case(
+            "E03",
+            ElevationStatus::Requested,
+            ElevationMachineEvent::Lapse,
+            ElevationStatus::Expired,
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn edge_e04_active_revoke() {
+        edge_case(
+            "E04",
+            ElevationStatus::Active,
+            ElevationMachineEvent::Revoke,
+            ElevationStatus::Revoked,
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn edge_e05_active_lapse() {
+        edge_case(
+            "E05",
+            ElevationStatus::Active,
+            ElevationMachineEvent::Lapse,
+            ElevationStatus::Expired,
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn every_illegal_pair_is_refused() {
+        let machine = &RBAC_ELEVATION_MACHINE;
+        let pairs = illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            let expected = if machine.is_terminal(state) {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        }
+        for &terminal in machine.terminals {
+            for &event in machine.events {
+                assert!(terminal.apply(event, |_| true).is_err());
+            }
+        }
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn refusal_carries_machine_from_event() {
+        let refused = ElevationStatus::Active
+            .apply(ElevationMachineEvent::Approve, |_| true)
+            .unwrap_err();
+        assert_eq!(refused.machine, "RbacElevationMachine");
+        assert_eq!(refused.from, ElevationStatus::Active.stored());
+        assert_eq!(refused.event, "Approve");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
+    /// file's `#[cfg(test)] mod tests`.
+    fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a str> {
+        let needle = format!(".{field} = {ty}::");
+        let mut out = Vec::new();
+        let mut previous = "";
+        for line in source.lines().map(str::trim) {
+            if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+                break;
+            }
+            previous = line;
+            if !line.starts_with("//") && line.contains(&needle) {
+                out.push(line);
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/rbac_elevation/ledger.rs");
+        let source = std::fs::read_to_string(path).expect("writer source");
+        let writes = direct_state_writes(&source, "status", "ElevationStatus");
+        assert!(
+            writes.is_empty(),
+            "direct state writes in src/rbac_elevation/ledger.rs: {writes:?}"
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R722.2
+
+    #[test]
+    fn every_transition_and_refusal_is_covered() {
+        let machine = &RBAC_ELEVATION_MACHINE;
+        assert_eq!(machine.edges.len(), 5);
+        assert_eq!(machine.states.len(), 4);
+        let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+        ids.dedup();
+        assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+        for edge in machine.edges {
+            assert!(
+                !machine.is_terminal(edge.from),
+                "{} leaves a terminal state",
+                edge.id
+            );
+        }
+        for &state in machine.states {
+            assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+            for &event in machine.events {
+                let legal = state.apply(event, |_| true).is_ok();
+                let has_edge = machine.edges_from(state).any(|e| e.event == event);
+                assert_eq!(legal, has_edge, "{state:?} {event:?}");
+            }
+        }
     }
 }

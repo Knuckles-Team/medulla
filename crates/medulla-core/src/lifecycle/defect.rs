@@ -2,10 +2,12 @@
 //! and deduplication. An open defect with the same signature absorbs a new
 //! symptom; a closed one reopens.
 
+use medulla_source_types::defect_machine::{DefectEvent, DefectFacts};
 use medulla_source_types::{
     lifecycle::sha256_hex, lifecycle::Defect, lifecycle::DefectIntake, lifecycle::DefectStatus,
     lifecycle::Severity, lifecycle::Symptom,
 };
+use medulla_types::transition_refused::TransitionRefused;
 
 fn is_hex_address(token: &str) -> bool {
     token
@@ -89,15 +91,19 @@ impl DefectBook {
         &self.defects
     }
 
-    /// Move a defect to a status. Transition legality is the caller's rule.
-    pub fn set_status(&mut self, id: &str, status: DefectStatus) -> bool {
-        match self.defects.iter_mut().find(|d| d.id == id) {
-            Some(defect) => {
-                defect.status = status;
-                true
-            }
-            None => false,
-        }
+    /// Fire a defect machine event (MEDULLA-SDLC-R030.1). Returns the new status, `None`
+    /// for an unknown id, or the typed refusal of an illegal transition.
+    pub fn fire(
+        &mut self,
+        id: &str,
+        event: DefectEvent,
+        facts: DefectFacts,
+    ) -> Result<Option<DefectStatus>, TransitionRefused> {
+        let Some(defect) = self.defects.iter_mut().find(|d| d.id == id) else {
+            return Ok(None);
+        };
+        defect.status = defect.status.apply(event, facts)?;
+        Ok(Some(defect.status))
     }
 
     fn find(&self, repo: &str, signature: &str) -> Option<usize> {
@@ -138,7 +144,15 @@ impl DefectBook {
         let defect = &mut self.defects[index];
         let reopened = !is_open(defect.status);
         if reopened {
-            defect.status = DefectStatus::New;
+            // The re-observed symptom is the recorded reason of D08/D09.
+            let reason = DefectFacts {
+                reason_recorded: true,
+                ..DefectFacts::default()
+            };
+            defect.status = defect
+                .status
+                .apply(DefectEvent::Reopen, reason)
+                .expect("closed and rejected defects reopen");
         }
         defect.symptoms.push(symptom);
         if reopened {

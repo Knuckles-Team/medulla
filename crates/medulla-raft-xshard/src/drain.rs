@@ -14,6 +14,9 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 
 use medulla_raft::raft::{GroupId, NodeId};
@@ -192,6 +195,215 @@ pub enum DrainPhase {
     /// A restart saw an in-flight pre-shrink operation.  No old observation or
     /// command may resume it; a new fenced operation must be planned.
     RecoveryRequired,
+}
+
+// MEDULLA-PLACEMENT-R783.4 — the drain edge table; every phase write fires one of its events.
+// ShardDrainMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `ShardDrainMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum DrainMachineEvent {
+    /// The `RequestAdmissionStop` event.
+    RequestAdmissionStop,
+    /// The `ConfirmAdmissionStopped` event.
+    ConfirmAdmissionStopped,
+    /// The `ObserveDrain` event.
+    ObserveDrain,
+    /// The `RequestShrink` event.
+    RequestShrink,
+    /// The `CommitShrink` event.
+    CommitShrink,
+    /// The `Complete` event.
+    Complete,
+    /// The `ReportPostShrinkFailure` event.
+    ReportPostShrinkFailure,
+    /// The `CommitRollback` event.
+    CommitRollback,
+    /// The `Restart` event.
+    Restart,
+}
+
+impl MachineState for DrainPhase {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Proposed => "proposed",
+            Self::AdmissionStopRequested => "admission_stop_requested",
+            Self::AdmissionStopped => "admission_stopped",
+            Self::DrainObserved => "drain_observed",
+            Self::ShrinkRequested => "shrink_requested",
+            Self::ShrinkCommitted => "shrink_committed",
+            Self::Completed => "completed",
+            Self::RollbackRequired => "rollback_required",
+            Self::RolledBack => "rolled_back",
+            Self::RecoveryRequired => "recovery_required",
+        }
+    }
+}
+
+impl MachineEvent for DrainMachineEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::RequestAdmissionStop => "RequestAdmissionStop",
+            Self::ConfirmAdmissionStopped => "ConfirmAdmissionStopped",
+            Self::ObserveDrain => "ObserveDrain",
+            Self::RequestShrink => "RequestShrink",
+            Self::CommitShrink => "CommitShrink",
+            Self::Complete => "Complete",
+            Self::ReportPostShrinkFailure => "ReportPostShrinkFailure",
+            Self::CommitRollback => "CommitRollback",
+            Self::Restart => "Restart",
+        }
+    }
+}
+
+/// Guard of `ShardDrainMachine`: the shard no longer accepts writes.
+pub const SHARD_DRAIN_GUARD_ADMISSION_NOT_ACCEPTING: &str = "AdmissionNotAccepting";
+/// Guard of `ShardDrainMachine`: admission is stopped, no work is outstanding, the writer is the planned authoritative writer and healthy voters reach the planned minimum.
+pub const SHARD_DRAIN_GUARD_DRAIN_SAFE: &str = "DrainSafe";
+/// Guard of `ShardDrainMachine`: the observed voters, writer and healthy voters validate against the plan.
+pub const SHARD_DRAIN_GUARD_VOTER_OBSERVATION_VALID: &str = "VoterObservationValid";
+/// Guard of `ShardDrainMachine`: the restored voters equal the original voters, keep the planned writer, reach quorum and the healthy-voter minimum.
+pub const SHARD_DRAIN_GUARD_ROLLBACK_SAFE: &str = "RollbackSafe";
+
+/// `ShardDrainMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static SHARD_DRAIN_MACHINE: MachineDef<DrainPhase, DrainMachineEvent, &'static str> =
+    MachineDef {
+        name: "ShardDrainMachine",
+        states: &[
+            DrainPhase::Proposed,
+            DrainPhase::AdmissionStopRequested,
+            DrainPhase::AdmissionStopped,
+            DrainPhase::DrainObserved,
+            DrainPhase::ShrinkRequested,
+            DrainPhase::ShrinkCommitted,
+            DrainPhase::Completed,
+            DrainPhase::RollbackRequired,
+            DrainPhase::RolledBack,
+            DrainPhase::RecoveryRequired,
+        ],
+        initial: DrainPhase::Proposed,
+        terminals: &[DrainPhase::Completed, DrainPhase::RolledBack],
+        events: &[
+            DrainMachineEvent::RequestAdmissionStop,
+            DrainMachineEvent::ConfirmAdmissionStopped,
+            DrainMachineEvent::ObserveDrain,
+            DrainMachineEvent::RequestShrink,
+            DrainMachineEvent::CommitShrink,
+            DrainMachineEvent::Complete,
+            DrainMachineEvent::ReportPostShrinkFailure,
+            DrainMachineEvent::CommitRollback,
+            DrainMachineEvent::Restart,
+        ],
+        guards: &[
+            SHARD_DRAIN_GUARD_ADMISSION_NOT_ACCEPTING,
+            SHARD_DRAIN_GUARD_DRAIN_SAFE,
+            SHARD_DRAIN_GUARD_VOTER_OBSERVATION_VALID,
+            SHARD_DRAIN_GUARD_ROLLBACK_SAFE,
+        ],
+        edges: &[
+            Edge {
+                id: "DR01",
+                from: DrainPhase::Proposed,
+                event: DrainMachineEvent::RequestAdmissionStop,
+                guard: None,
+                to: DrainPhase::AdmissionStopRequested,
+            },
+            Edge {
+                id: "DR02",
+                from: DrainPhase::AdmissionStopRequested,
+                event: DrainMachineEvent::ConfirmAdmissionStopped,
+                guard: Some(SHARD_DRAIN_GUARD_ADMISSION_NOT_ACCEPTING),
+                to: DrainPhase::AdmissionStopped,
+            },
+            Edge {
+                id: "DR03",
+                from: DrainPhase::AdmissionStopped,
+                event: DrainMachineEvent::ObserveDrain,
+                guard: Some(SHARD_DRAIN_GUARD_DRAIN_SAFE),
+                to: DrainPhase::DrainObserved,
+            },
+            Edge {
+                id: "DR04",
+                from: DrainPhase::DrainObserved,
+                event: DrainMachineEvent::RequestShrink,
+                guard: None,
+                to: DrainPhase::ShrinkRequested,
+            },
+            Edge {
+                id: "DR05",
+                from: DrainPhase::ShrinkRequested,
+                event: DrainMachineEvent::CommitShrink,
+                guard: Some(SHARD_DRAIN_GUARD_VOTER_OBSERVATION_VALID),
+                to: DrainPhase::ShrinkCommitted,
+            },
+            Edge {
+                id: "DR06",
+                from: DrainPhase::ShrinkCommitted,
+                event: DrainMachineEvent::Complete,
+                guard: None,
+                to: DrainPhase::Completed,
+            },
+            Edge {
+                id: "DR07",
+                from: DrainPhase::ShrinkCommitted,
+                event: DrainMachineEvent::ReportPostShrinkFailure,
+                guard: None,
+                to: DrainPhase::RollbackRequired,
+            },
+            Edge {
+                id: "DR08",
+                from: DrainPhase::RollbackRequired,
+                event: DrainMachineEvent::CommitRollback,
+                guard: Some(SHARD_DRAIN_GUARD_ROLLBACK_SAFE),
+                to: DrainPhase::RolledBack,
+            },
+            Edge {
+                id: "DR09",
+                from: DrainPhase::ShrinkCommitted,
+                event: DrainMachineEvent::Restart,
+                guard: None,
+                to: DrainPhase::RollbackRequired,
+            },
+            Edge {
+                id: "DR10",
+                from: DrainPhase::AdmissionStopRequested,
+                event: DrainMachineEvent::Restart,
+                guard: None,
+                to: DrainPhase::RecoveryRequired,
+            },
+            Edge {
+                id: "DR11",
+                from: DrainPhase::AdmissionStopped,
+                event: DrainMachineEvent::Restart,
+                guard: None,
+                to: DrainPhase::RecoveryRequired,
+            },
+            Edge {
+                id: "DR12",
+                from: DrainPhase::DrainObserved,
+                event: DrainMachineEvent::Restart,
+                guard: None,
+                to: DrainPhase::RecoveryRequired,
+            },
+            Edge {
+                id: "DR13",
+                from: DrainPhase::ShrinkRequested,
+                event: DrainMachineEvent::Restart,
+                guard: None,
+                to: DrainPhase::RecoveryRequired,
+            },
+        ],
+    };
+
+impl DrainPhase {
+    /// The one transition function of `ShardDrainMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: DrainMachineEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&SHARD_DRAIN_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
 }
 
 impl DrainPhase {
@@ -374,34 +586,27 @@ impl ShardDrain {
     /// planned.  A committed shrink is different: the side effect may already
     /// be durable, so recovery requires an explicit rollback observation.
     pub fn recover_after_restart(&mut self) -> DrainPhase {
-        self.phase = match self.phase {
-            DrainPhase::Proposed
-            | DrainPhase::Completed
-            | DrainPhase::RolledBack
-            | DrainPhase::RecoveryRequired
-            | DrainPhase::RollbackRequired => self.phase,
-            DrainPhase::ShrinkCommitted => {
+        // Restart moves only an in-flight phase (DR09 to DR13); every other phase has no
+        // Restart edge and stays as it is.
+        if let Ok(next) = self.phase.apply(DrainMachineEvent::Restart, |_| true) {
+            if self.phase == DrainPhase::ShrinkCommitted {
                 self.failure = Some(DrainFailure::PostShrinkApplyFailed);
-                DrainPhase::RollbackRequired
             }
-            DrainPhase::AdmissionStopRequested
-            | DrainPhase::AdmissionStopped
-            | DrainPhase::DrainObserved
-            | DrainPhase::ShrinkRequested => DrainPhase::RecoveryRequired,
-        };
+            self.phase = next;
+        }
         self.phase
     }
 
-    fn require_phase(&self, expected: DrainPhase) -> Result<(), DrainError> {
-        if self.phase == expected {
-            Ok(())
-        } else if self.phase == DrainPhase::RecoveryRequired {
-            Err(DrainError::RecoveryRequired)
-        } else if self.phase == DrainPhase::RollbackRequired {
-            Err(DrainError::RollbackRequired)
-        } else {
-            Err(DrainError::UnexpectedPhase)
-        }
+    /// The phase `event` leads to, or the drain error of a refused event. The caller
+    /// checks the edge guard (its typed drain error) and then stores the phase.
+    fn next_phase(&self, event: DrainMachineEvent) -> Result<DrainPhase, DrainError> {
+        self.phase
+            .apply(event, |_| true)
+            .map_err(|_refused| match self.phase {
+                DrainPhase::RecoveryRequired => DrainError::RecoveryRequired,
+                DrainPhase::RollbackRequired => DrainError::RollbackRequired,
+                _ => DrainError::UnexpectedPhase,
+            })
     }
 }
 
@@ -413,17 +618,16 @@ impl ShardDrain {
 // to `ShardDrain`'s private fields/methods as a method would.
 
 fn apply_admission_stop_requested(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::Proposed)?;
-    drain.phase = DrainPhase::AdmissionStopRequested;
+    drain.phase = drain.next_phase(DrainMachineEvent::RequestAdmissionStop)?;
     Ok(())
 }
 
 fn apply_admission_stopped(drain: &mut ShardDrain, accepting: bool) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::AdmissionStopRequested)?;
+    let next = drain.next_phase(DrainMachineEvent::ConfirmAdmissionStopped)?;
     if accepting {
         return Err(DrainError::AdmissionMustBeStopped);
     }
-    drain.phase = DrainPhase::AdmissionStopped;
+    drain.phase = next;
     Ok(())
 }
 
@@ -434,7 +638,7 @@ fn apply_drain_observed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::AdmissionStopped)?;
+    let next = drain.next_phase(DrainMachineEvent::ObserveDrain)?;
     if !admission_stopped {
         return Err(DrainError::AdmissionMustBeStopped);
     }
@@ -447,13 +651,12 @@ fn apply_drain_observed(
     if healthy_voters < drain.plan.minimum_healthy_voters {
         return Err(DrainError::HealthyVoterFloor);
     }
-    drain.phase = DrainPhase::DrainObserved;
+    drain.phase = next;
     Ok(())
 }
 
 fn apply_shrink_requested(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::DrainObserved)?;
-    drain.phase = DrainPhase::ShrinkRequested;
+    drain.phase = drain.next_phase(DrainMachineEvent::RequestShrink)?;
     Ok(())
 }
 
@@ -463,17 +666,16 @@ fn apply_shrink_committed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::ShrinkRequested)?;
+    let next = drain.next_phase(DrainMachineEvent::CommitShrink)?;
     drain
         .plan
         .validates_voter_observation(&voters_after, authoritative_writer, healthy_voters)?;
-    drain.phase = DrainPhase::ShrinkCommitted;
+    drain.phase = next;
     Ok(())
 }
 
 fn apply_completed(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::ShrinkCommitted)?;
-    drain.phase = DrainPhase::Completed;
+    drain.phase = drain.next_phase(DrainMachineEvent::Complete)?;
     Ok(())
 }
 
@@ -481,11 +683,12 @@ fn apply_post_shrink_failure(
     drain: &mut ShardDrain,
     reason: DrainFailure,
 ) -> Result<(), DrainError> {
-    if drain.phase != DrainPhase::ShrinkCommitted {
-        return Err(DrainError::UnexpectedPhase);
-    }
+    let next = drain
+        .phase
+        .apply(DrainMachineEvent::ReportPostShrinkFailure, |_| true)
+        .map_err(|_refused| DrainError::UnexpectedPhase)?;
     drain.failure = Some(reason);
-    drain.phase = DrainPhase::RollbackRequired;
+    drain.phase = next;
     Ok(())
 }
 
@@ -495,7 +698,7 @@ fn apply_rollback_committed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    drain.require_phase(DrainPhase::RollbackRequired)?;
+    let next = drain.next_phase(DrainMachineEvent::CommitRollback)?;
     if restored_voters != drain.plan.original_voters {
         return Err(DrainError::VoterSetMismatch);
     }
@@ -510,7 +713,7 @@ fn apply_rollback_committed(
     if healthy_voters < drain.plan.minimum_healthy_voters {
         return Err(DrainError::HealthyVoterFloor);
     }
-    drain.phase = DrainPhase::RolledBack;
+    drain.phase = next;
     Ok(())
 }
 
@@ -559,6 +762,293 @@ impl std::error::Error for DrainError {}
 
 #[cfg(test)]
 mod tests {
+    // MEDULLA-PLACEMENT-R783.4 — the shard drain machine.
+    use super::{DrainMachineEvent, DrainPhase, SHARD_DRAIN_MACHINE};
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    fn drain_edge_case(id: &str, from: DrainPhase, event: DrainMachineEvent, to: DrainPhase) {
+        let edge = SHARD_DRAIN_MACHINE
+            .edges
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap();
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+        // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+        assert_eq!(from.apply(event, |g| Some(g) == edge.guard), Ok(to));
+        if edge.guard.is_some() {
+            let refused = from.apply(event, |_| false).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        }
+    }
+
+    /// Every (state, event) pair with no edge.
+    fn drain_illegal_pairs() -> Vec<(DrainPhase, DrainMachineEvent)> {
+        let machine = &SHARD_DRAIN_MACHINE;
+        let mut out = Vec::new();
+        for &state in machine.states {
+            for &event in machine.events {
+                if !machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    out.push((state, event));
+                }
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr01_proposed_request_admission_stop() {
+        drain_edge_case(
+            "DR01",
+            DrainPhase::Proposed,
+            DrainMachineEvent::RequestAdmissionStop,
+            DrainPhase::AdmissionStopRequested,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr02_admission_stop_requested_confirm_admission_stopped() {
+        drain_edge_case(
+            "DR02",
+            DrainPhase::AdmissionStopRequested,
+            DrainMachineEvent::ConfirmAdmissionStopped,
+            DrainPhase::AdmissionStopped,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr03_admission_stopped_observe_drain() {
+        drain_edge_case(
+            "DR03",
+            DrainPhase::AdmissionStopped,
+            DrainMachineEvent::ObserveDrain,
+            DrainPhase::DrainObserved,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr04_drain_observed_request_shrink() {
+        drain_edge_case(
+            "DR04",
+            DrainPhase::DrainObserved,
+            DrainMachineEvent::RequestShrink,
+            DrainPhase::ShrinkRequested,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr05_shrink_requested_commit_shrink() {
+        drain_edge_case(
+            "DR05",
+            DrainPhase::ShrinkRequested,
+            DrainMachineEvent::CommitShrink,
+            DrainPhase::ShrinkCommitted,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr06_shrink_committed_complete() {
+        drain_edge_case(
+            "DR06",
+            DrainPhase::ShrinkCommitted,
+            DrainMachineEvent::Complete,
+            DrainPhase::Completed,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr07_shrink_committed_report_post_shrink_failure() {
+        drain_edge_case(
+            "DR07",
+            DrainPhase::ShrinkCommitted,
+            DrainMachineEvent::ReportPostShrinkFailure,
+            DrainPhase::RollbackRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr08_rollback_required_commit_rollback() {
+        drain_edge_case(
+            "DR08",
+            DrainPhase::RollbackRequired,
+            DrainMachineEvent::CommitRollback,
+            DrainPhase::RolledBack,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr09_shrink_committed_restart() {
+        drain_edge_case(
+            "DR09",
+            DrainPhase::ShrinkCommitted,
+            DrainMachineEvent::Restart,
+            DrainPhase::RollbackRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr10_admission_stop_requested_restart() {
+        drain_edge_case(
+            "DR10",
+            DrainPhase::AdmissionStopRequested,
+            DrainMachineEvent::Restart,
+            DrainPhase::RecoveryRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr11_admission_stopped_restart() {
+        drain_edge_case(
+            "DR11",
+            DrainPhase::AdmissionStopped,
+            DrainMachineEvent::Restart,
+            DrainPhase::RecoveryRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr12_drain_observed_restart() {
+        drain_edge_case(
+            "DR12",
+            DrainPhase::DrainObserved,
+            DrainMachineEvent::Restart,
+            DrainPhase::RecoveryRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn edge_dr13_shrink_requested_restart() {
+        drain_edge_case(
+            "DR13",
+            DrainPhase::ShrinkRequested,
+            DrainMachineEvent::Restart,
+            DrainPhase::RecoveryRequired,
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn every_illegal_pair_is_refused() {
+        let machine = &SHARD_DRAIN_MACHINE;
+        let pairs = drain_illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            let expected = if machine.is_terminal(state) {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        }
+        for &terminal in machine.terminals {
+            for &event in machine.events {
+                assert!(terminal.apply(event, |_| true).is_err());
+            }
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn refusal_carries_machine_from_event() {
+        let refused = DrainPhase::Proposed
+            .apply(DrainMachineEvent::ConfirmAdmissionStopped, |_| true)
+            .unwrap_err();
+        assert_eq!(refused.machine, "ShardDrainMachine");
+        assert_eq!(refused.from, DrainPhase::Proposed.stored());
+        assert_eq!(refused.event, "ConfirmAdmissionStopped");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
+    /// file's `#[cfg(test)] mod tests`.
+    fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a str> {
+        let needle = format!(".{field} = {ty}::");
+        let mut out = Vec::new();
+        let mut previous = "";
+        for line in source.lines().map(str::trim) {
+            if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+                break;
+            }
+            previous = line;
+            if !line.starts_with("//") && line.contains(&needle) {
+                out.push(line);
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/drain.rs");
+        let source = std::fs::read_to_string(path).expect("writer source");
+        let writes = direct_state_writes(&source, "phase", "DrainPhase");
+        assert!(
+            writes.is_empty(),
+            "direct state writes in src/drain.rs: {writes:?}"
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
+
+    #[test]
+    fn every_transition_and_refusal_is_covered() {
+        let machine = &SHARD_DRAIN_MACHINE;
+        assert_eq!(machine.edges.len(), 13);
+        assert_eq!(machine.states.len(), 10);
+        let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+        ids.dedup();
+        assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+        for edge in machine.edges {
+            assert!(
+                !machine.is_terminal(edge.from),
+                "{} leaves a terminal state",
+                edge.id
+            );
+        }
+        for &state in machine.states {
+            assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+            for &event in machine.events {
+                let legal = state.apply(event, |_| true).is_ok();
+                let has_edge = machine.edges_from(state).any(|e| e.event == event);
+                assert_eq!(legal, has_edge, "{state:?} {event:?}");
+            }
+        }
+    }
+
     use super::*;
 
     fn voters(nodes: &[NodeId]) -> BTreeSet<NodeId> {

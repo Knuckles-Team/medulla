@@ -9,3 +9,7 @@
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod redb_store;
+
+// MEDULLA-PLACEMENT-R781.1 — reservation machine tests.
+#[cfg(test)]
+mod tests;

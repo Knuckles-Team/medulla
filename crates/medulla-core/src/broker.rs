@@ -34,6 +34,8 @@ use serde::{Deserialize, Serialize};
 use medulla_graph_core::broker_keys::*;
 use medulla_graph_core::graph::GraphCore;
 
+// MEDULLA-CQ-ORCH-R810.1 — the broker message machine (edge table B01 to B08).
+pub mod message_machine;
 mod producer;
 mod routing;
 

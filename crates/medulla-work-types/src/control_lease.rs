@@ -26,6 +26,9 @@
 //! seconds converts with `floor` -- which can shorten a lease by less than a
 //! millisecond and can never extend one.
 
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -86,16 +89,119 @@ pub enum ControlLeaseTarget {
     Expired,
 }
 
-/// Every legal `(from, to)` edge. A table so the lifecycle is read off one
-/// list; anything absent -- leaving `revoked`/`expired`, consuming twice,
-/// re-activating -- is a `conflict`.
-const LEGAL_TRANSITIONS: [(ControlLeaseStatus, ControlLeaseTarget); 5] = [
-    (ControlLeaseStatus::Active, ControlLeaseTarget::Consumed),
-    (ControlLeaseStatus::Active, ControlLeaseTarget::Revoked),
-    (ControlLeaseStatus::Active, ControlLeaseTarget::Expired),
-    (ControlLeaseStatus::Consumed, ControlLeaseTarget::Revoked),
-    (ControlLeaseStatus::Consumed, ControlLeaseTarget::Expired),
-];
+// MEDULLA-PLACEMENT-R782.3 — the control lease edge table and its one transition function.
+// ControlLeaseMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `ControlLeaseMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ControlLeaseEvent {
+    /// The `Consume` event.
+    Consume,
+    /// The `Revoke` event.
+    Revoke,
+    /// The `Reclaim` event.
+    Reclaim,
+}
+
+impl MachineState for ControlLeaseStatus {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Consumed => "consumed",
+            Self::Revoked => "revoked",
+            Self::Expired => "expired",
+        }
+    }
+}
+
+impl MachineEvent for ControlLeaseEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Consume => "Consume",
+            Self::Revoke => "Revoke",
+            Self::Reclaim => "Reclaim",
+        }
+    }
+}
+
+/// Guard of `ControlLeaseMachine`: the revision matches and neither expiry has passed.
+pub const CONTROL_LEASE_GUARD_REVISION_MATCHES_NOT_EXPIRED: &str = "RevisionMatchesNotExpired";
+/// Guard of `ControlLeaseMachine`: the revision matches.
+pub const CONTROL_LEASE_GUARD_REVISION_MATCHES: &str = "RevisionMatches";
+/// Guard of `ControlLeaseMachine`: the expiry has passed; the sweeper acts.
+pub const CONTROL_LEASE_GUARD_EXPIRY_PASSED: &str = "ExpiryPassed";
+
+/// `ControlLeaseMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static CONTROL_LEASE_MACHINE: MachineDef<ControlLeaseStatus, ControlLeaseEvent, &'static str> =
+    MachineDef {
+        name: "ControlLeaseMachine",
+        states: &[
+            ControlLeaseStatus::Active,
+            ControlLeaseStatus::Consumed,
+            ControlLeaseStatus::Revoked,
+            ControlLeaseStatus::Expired,
+        ],
+        initial: ControlLeaseStatus::Active,
+        terminals: &[ControlLeaseStatus::Revoked, ControlLeaseStatus::Expired],
+        events: &[
+            ControlLeaseEvent::Consume,
+            ControlLeaseEvent::Revoke,
+            ControlLeaseEvent::Reclaim,
+        ],
+        guards: &[
+            CONTROL_LEASE_GUARD_REVISION_MATCHES_NOT_EXPIRED,
+            CONTROL_LEASE_GUARD_REVISION_MATCHES,
+            CONTROL_LEASE_GUARD_EXPIRY_PASSED,
+        ],
+        edges: &[
+            Edge {
+                id: "L01",
+                from: ControlLeaseStatus::Active,
+                event: ControlLeaseEvent::Consume,
+                guard: Some(CONTROL_LEASE_GUARD_REVISION_MATCHES_NOT_EXPIRED),
+                to: ControlLeaseStatus::Consumed,
+            },
+            Edge {
+                id: "L02",
+                from: ControlLeaseStatus::Active,
+                event: ControlLeaseEvent::Revoke,
+                guard: Some(CONTROL_LEASE_GUARD_REVISION_MATCHES),
+                to: ControlLeaseStatus::Revoked,
+            },
+            Edge {
+                id: "L03",
+                from: ControlLeaseStatus::Active,
+                event: ControlLeaseEvent::Reclaim,
+                guard: Some(CONTROL_LEASE_GUARD_EXPIRY_PASSED),
+                to: ControlLeaseStatus::Expired,
+            },
+            Edge {
+                id: "L04",
+                from: ControlLeaseStatus::Consumed,
+                event: ControlLeaseEvent::Revoke,
+                guard: Some(CONTROL_LEASE_GUARD_REVISION_MATCHES),
+                to: ControlLeaseStatus::Revoked,
+            },
+            Edge {
+                id: "L05",
+                from: ControlLeaseStatus::Consumed,
+                event: ControlLeaseEvent::Reclaim,
+                guard: Some(CONTROL_LEASE_GUARD_EXPIRY_PASSED),
+                to: ControlLeaseStatus::Expired,
+            },
+        ],
+    };
+
+impl ControlLeaseStatus {
+    /// The one transition function of `ControlLeaseMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: ControlLeaseEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&CONTROL_LEASE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
+}
 
 impl ControlLeaseTarget {
     pub fn status(self) -> ControlLeaseStatus {
@@ -106,9 +212,13 @@ impl ControlLeaseTarget {
         }
     }
 
-    /// Whether a lease currently in `from` may move to this target.
-    pub fn allowed_from(self, from: ControlLeaseStatus) -> bool {
-        LEGAL_TRANSITIONS.contains(&(from, self))
+    /// The machine event that moves a lease to this target.
+    pub fn event(self) -> ControlLeaseEvent {
+        match self {
+            Self::Consumed => ControlLeaseEvent::Consume,
+            Self::Revoked => ControlLeaseEvent::Revoke,
+            Self::Expired => ControlLeaseEvent::Reclaim,
+        }
     }
 }
 

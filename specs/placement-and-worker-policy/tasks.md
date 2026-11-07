@@ -86,3 +86,5 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T080 [US4] MEDULLA-PLACEMENT-R783.1 Describe the raft membership-shrink machine in the ontology
 - [ ] T081 [US4] MEDULLA-PLACEMENT-R783.2 Membership-shrink refusals are typed
 - [ ] T082 [US4] MEDULLA-PLACEMENT-R783.3 Inventory the sibling raft machines
+- [ ] T083 [US4] MEDULLA-PLACEMENT-R783.4 Shard drain machine
+- [ ] T084 [US4] MEDULLA-PLACEMENT-R783.5 Partition move machine: edge table

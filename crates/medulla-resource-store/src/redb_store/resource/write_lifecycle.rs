@@ -1,4 +1,5 @@
 use super::*;
+use medulla_result_types::epistemic_operations::{ReservationEvent, RESOURCE_RESERVATION_MACHINE};
 
 /// Tenant / record / terminal-state prechecks of a release-or-reclaim commit.
 /// A reserve that finds a live row is itself idempotent.  `Ok(Some(..))` decides
@@ -110,27 +111,31 @@ pub fn resource_build_released_record(
     is_reclaim: bool,
     work_item_fence: &ResourceWorkItemFence,
     debt: u64,
-) -> DurableResourceReservation {
-    let mut next = stored.clone();
-    next.record.state = if is_reclaim {
-        if work_item_fence.is_superseded() {
-            ResourceReservationRecordState::Superseded
-        } else {
-            ResourceReservationRecordState::Reclaimed
-        }
-    } else {
-        ResourceReservationRecordState::Released
+) -> Result<DurableResourceReservation, String> {
+    let event = match (is_reclaim, work_item_fence.is_superseded()) {
+        (false, _) => ReservationEvent::Release,
+        (true, true) => ReservationEvent::Supersede,
+        (true, false) => ReservationEvent::Reclaim,
     };
+    // MEDULLA-PLACEMENT-R781.1: the machine moves the state; the tombstone is derived.
+    // The caller has already checked owner, fence and lifecycle revision (the guards).
+    let state = stored
+        .record
+        .state
+        .apply(event, |_| true)
+        .map_err(|refused| refused.to_string())?;
+    let mut next = stored.clone();
+    next.record.state = state;
     next.record.revision = next.record.revision.saturating_add(1);
     next.record.lifecycle_revision = next.record.lifecycle_revision.saturating_add(1);
     next.record.expected_lifecycle_revision = request.expected_lifecycle_revision;
-    next.record.tombstone = true;
+    next.record.tombstone = RESOURCE_RESERVATION_MACHINE.is_terminal(state);
     next.held_cpu_weight = 0;
     next.held_memory_mib = 0;
     next.held_disk_mib = 0;
     next.held_process_slots = 0;
     next.fairness_debt = debt;
-    next
+    Ok(next)
 }
 
 /// Drop the exclusivity keys this reservation owned and clear its disk-policy
@@ -234,7 +239,7 @@ pub fn resource_commit_release_or_reclaim(
     )?;
     let debt = debt_row.debt;
     let next =
-        resource_build_released_record(stored, request, mode.is_reclaim(), work_item_fence, debt);
+        resource_build_released_record(stored, request, mode.is_reclaim(), work_item_fence, debt)?;
     resource_put_reservation(tables.reservations, graph, &next, tables.crypto)?;
     let concurrency_key = resource_concurrency_scope_key(&request.concurrency_key);
     resource_adjust_concurrency(tables.concurrency, graph, &concurrency_key, -1)?;

@@ -435,3 +435,1601 @@
     :toState :WorkItemMachine_DeadLetter ;
     :guardedBy :WorkItemMachine_Guard_LeaseExpiredAttemptsSpent ;
     :firedBy :WorkItemMachine_Event_LeaseExpire .
+
+# spec: MEDULLA-IDENTITY-R720.2
+# The GovernedChange machine. The Rust edge table GOVERNED_CHANGE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:GovernedChangeState a owl:Class ;
+    rdfs:label "GovernedChange State" ;
+    rdfs:comment "A state of the GovernedChange machine." ;
+    rdfs:subClassOf :State .
+
+:GovernedChangeTerminalState a owl:Class ;
+    rdfs:label "GovernedChange Terminal State" ;
+    rdfs:comment "A terminal state of the GovernedChange machine." ;
+    rdfs:subClassOf :TerminalState, :GovernedChangeState .
+
+:GovernedChangeTransition a owl:Class ;
+    rdfs:label "GovernedChange Transition" ;
+    rdfs:comment "A transition of the GovernedChange machine." ;
+    rdfs:subClassOf :Transition .
+
+:GovernedChangeEvent a owl:Class ;
+    rdfs:label "GovernedChange Event" ;
+    rdfs:comment "A event of the GovernedChange machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GovernedChangeGuard a owl:Class ;
+    rdfs:label "GovernedChange Guard" ;
+    rdfs:comment "A guard of the GovernedChange machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GovernedChangeMachine a :StateMachine ;
+    rdfs:label "GovernedChange machine" ;
+    :initialState :GovernedChangeMachine_Proposed ;
+    :hasState :GovernedChangeMachine_Proposed, :GovernedChangeMachine_Approved, :GovernedChangeMachine_Consumed, :GovernedChangeMachine_Revoked, :GovernedChangeMachine_Expired .
+
+:GovernedChangeMachine_Proposed a :GovernedChangeState ;
+    rdfs:label "GovernedChange Proposed" ;
+    :storedForm "proposed" .
+
+:GovernedChangeMachine_Approved a :GovernedChangeState ;
+    rdfs:label "GovernedChange Approved" ;
+    :storedForm "approved" .
+
+:GovernedChangeMachine_Consumed a :GovernedChangeTerminalState ;
+    rdfs:label "GovernedChange Consumed" ;
+    :storedForm "consumed" .
+
+:GovernedChangeMachine_Revoked a :GovernedChangeTerminalState ;
+    rdfs:label "GovernedChange Revoked" ;
+    :storedForm "revoked" .
+
+:GovernedChangeMachine_Expired a :GovernedChangeTerminalState ;
+    rdfs:label "GovernedChange Expired" ;
+    :storedForm "expired" .
+
+:GovernedChangeMachine_Event_Approve a :GovernedChangeEvent ;
+    rdfs:label "GovernedChange Approve" .
+
+:GovernedChangeMachine_Event_Revoke a :GovernedChangeEvent ;
+    rdfs:label "GovernedChange Revoke" .
+
+:GovernedChangeMachine_Event_Lapse a :GovernedChangeEvent ;
+    rdfs:label "GovernedChange Lapse" .
+
+:GovernedChangeMachine_Event_Consume a :GovernedChangeEvent ;
+    rdfs:label "GovernedChange Consume" .
+
+:GovernedChangeMachine_Guard_DigestMatchesApproverAuthorized a :GovernedChangeGuard ;
+    rdfs:label "GovernedChange DigestMatchesApproverAuthorized" ;
+    rdfs:comment "Guard: the digest matches and the approver is authorized." .
+
+:GovernedChangeMachine_Guard_ActorAuthorized a :GovernedChangeGuard ;
+    rdfs:label "GovernedChange ActorAuthorized" ;
+    rdfs:comment "Guard: the actor is authorized." .
+
+:GovernedChangeMachine_Guard_WindowElapsed a :GovernedChangeGuard ;
+    rdfs:label "GovernedChange WindowElapsed" ;
+    rdfs:comment "Guard: the window has elapsed." .
+
+:GovernedChangeMachine_Guard_DigestMatchesWindowLive a :GovernedChangeGuard ;
+    rdfs:label "GovernedChange DigestMatchesWindowLive" ;
+    rdfs:comment "Guard: the digest matches and the approval window is live." .
+
+:GovernedChangeMachine_G01 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G01" ;
+    :edgeId "G01" ;
+    :fromState :GovernedChangeMachine_Proposed ;
+    :toState :GovernedChangeMachine_Approved ;
+    :guardedBy :GovernedChangeMachine_Guard_DigestMatchesApproverAuthorized ;
+    :firedBy :GovernedChangeMachine_Event_Approve .
+
+:GovernedChangeMachine_G02 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G02" ;
+    :edgeId "G02" ;
+    :fromState :GovernedChangeMachine_Proposed ;
+    :toState :GovernedChangeMachine_Revoked ;
+    :guardedBy :GovernedChangeMachine_Guard_ActorAuthorized ;
+    :firedBy :GovernedChangeMachine_Event_Revoke .
+
+:GovernedChangeMachine_G03 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G03" ;
+    :edgeId "G03" ;
+    :fromState :GovernedChangeMachine_Proposed ;
+    :toState :GovernedChangeMachine_Expired ;
+    :guardedBy :GovernedChangeMachine_Guard_WindowElapsed ;
+    :firedBy :GovernedChangeMachine_Event_Lapse .
+
+:GovernedChangeMachine_G04 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G04" ;
+    :edgeId "G04" ;
+    :fromState :GovernedChangeMachine_Approved ;
+    :toState :GovernedChangeMachine_Consumed ;
+    :guardedBy :GovernedChangeMachine_Guard_DigestMatchesWindowLive ;
+    :firedBy :GovernedChangeMachine_Event_Consume .
+
+:GovernedChangeMachine_G05 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G05" ;
+    :edgeId "G05" ;
+    :fromState :GovernedChangeMachine_Approved ;
+    :toState :GovernedChangeMachine_Revoked ;
+    :guardedBy :GovernedChangeMachine_Guard_ActorAuthorized ;
+    :firedBy :GovernedChangeMachine_Event_Revoke .
+
+:GovernedChangeMachine_G06 a :GovernedChangeTransition ;
+    rdfs:label "GovernedChange G06" ;
+    :edgeId "G06" ;
+    :fromState :GovernedChangeMachine_Approved ;
+    :toState :GovernedChangeMachine_Expired ;
+    :guardedBy :GovernedChangeMachine_Guard_WindowElapsed ;
+    :firedBy :GovernedChangeMachine_Event_Lapse .
+
+# spec: MEDULLA-IDENTITY-R721.2
+# The UserStatus machine. The Rust edge table USER_STATUS_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:UserStatusState a owl:Class ;
+    rdfs:label "UserStatus State" ;
+    rdfs:comment "A state of the UserStatus machine." ;
+    rdfs:subClassOf :State .
+
+:UserStatusTerminalState a owl:Class ;
+    rdfs:label "UserStatus Terminal State" ;
+    rdfs:comment "A terminal state of the UserStatus machine." ;
+    rdfs:subClassOf :TerminalState, :UserStatusState .
+
+:UserStatusTransition a owl:Class ;
+    rdfs:label "UserStatus Transition" ;
+    rdfs:comment "A transition of the UserStatus machine." ;
+    rdfs:subClassOf :Transition .
+
+:UserStatusEvent a owl:Class ;
+    rdfs:label "UserStatus Event" ;
+    rdfs:comment "A event of the UserStatus machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:UserStatusGuard a owl:Class ;
+    rdfs:label "UserStatus Guard" ;
+    rdfs:comment "A guard of the UserStatus machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:UserStatusMachine a :StateMachine ;
+    rdfs:label "UserStatus machine" ;
+    :initialState :UserStatusMachine_Active ;
+    :hasState :UserStatusMachine_Active, :UserStatusMachine_Disabled, :UserStatusMachine_PendingReset, :UserStatusMachine_PendingVerification, :UserStatusMachine_Deprovisioned .
+
+:UserStatusMachine_Active a :UserStatusState ;
+    rdfs:label "UserStatus Active" ;
+    :storedForm "active" .
+
+:UserStatusMachine_Disabled a :UserStatusState ;
+    rdfs:label "UserStatus Disabled" ;
+    :storedForm "disabled" .
+
+:UserStatusMachine_PendingReset a :UserStatusState ;
+    rdfs:label "UserStatus PendingReset" ;
+    :storedForm "pending_reset" .
+
+:UserStatusMachine_PendingVerification a :UserStatusState ;
+    rdfs:label "UserStatus PendingVerification" ;
+    :storedForm "pending_verification" .
+
+:UserStatusMachine_Deprovisioned a :UserStatusTerminalState ;
+    rdfs:label "UserStatus Deprovisioned" ;
+    :storedForm "deprovisioned" .
+
+:UserStatusMachine_Event_Disable a :UserStatusEvent ;
+    rdfs:label "UserStatus Disable" .
+
+:UserStatusMachine_Event_Enable a :UserStatusEvent ;
+    rdfs:label "UserStatus Enable" .
+
+:UserStatusMachine_Event_RequireReset a :UserStatusEvent ;
+    rdfs:label "UserStatus RequireReset" .
+
+:UserStatusMachine_Event_CompleteReset a :UserStatusEvent ;
+    rdfs:label "UserStatus CompleteReset" .
+
+:UserStatusMachine_Event_Verify a :UserStatusEvent ;
+    rdfs:label "UserStatus Verify" .
+
+:UserStatusMachine_Event_Deprovision a :UserStatusEvent ;
+    rdfs:label "UserStatus Deprovision" .
+
+:UserStatusMachine_Guard_NotLastActiveAdministrator a :UserStatusGuard ;
+    rdfs:label "UserStatus NotLastActiveAdministrator" ;
+    rdfs:comment "Guard: the principal is not the last active administrator." .
+
+:UserStatusMachine_Guard_NewCredentialSet a :UserStatusGuard ;
+    rdfs:label "UserStatus NewCredentialSet" ;
+    rdfs:comment "Guard: the new credential is set." .
+
+:UserStatusMachine_Guard_VerificationProofMatches a :UserStatusGuard ;
+    rdfs:label "UserStatus VerificationProofMatches" ;
+    rdfs:comment "Guard: the verification proof matches." .
+
+:UserStatusMachine_U01 a :UserStatusTransition ;
+    rdfs:label "UserStatus U01" ;
+    :edgeId "U01" ;
+    :fromState :UserStatusMachine_Active ;
+    :toState :UserStatusMachine_Disabled ;
+    :guardedBy :UserStatusMachine_Guard_NotLastActiveAdministrator ;
+    :firedBy :UserStatusMachine_Event_Disable .
+
+:UserStatusMachine_U02 a :UserStatusTransition ;
+    rdfs:label "UserStatus U02" ;
+    :edgeId "U02" ;
+    :fromState :UserStatusMachine_Disabled ;
+    :toState :UserStatusMachine_Active ;
+    :firedBy :UserStatusMachine_Event_Enable .
+
+:UserStatusMachine_U03 a :UserStatusTransition ;
+    rdfs:label "UserStatus U03" ;
+    :edgeId "U03" ;
+    :fromState :UserStatusMachine_Active ;
+    :toState :UserStatusMachine_PendingReset ;
+    :guardedBy :UserStatusMachine_Guard_NotLastActiveAdministrator ;
+    :firedBy :UserStatusMachine_Event_RequireReset .
+
+:UserStatusMachine_U04 a :UserStatusTransition ;
+    rdfs:label "UserStatus U04" ;
+    :edgeId "U04" ;
+    :fromState :UserStatusMachine_Disabled ;
+    :toState :UserStatusMachine_PendingReset ;
+    :firedBy :UserStatusMachine_Event_RequireReset .
+
+:UserStatusMachine_U05 a :UserStatusTransition ;
+    rdfs:label "UserStatus U05" ;
+    :edgeId "U05" ;
+    :fromState :UserStatusMachine_PendingReset ;
+    :toState :UserStatusMachine_Active ;
+    :guardedBy :UserStatusMachine_Guard_NewCredentialSet ;
+    :firedBy :UserStatusMachine_Event_CompleteReset .
+
+:UserStatusMachine_U06 a :UserStatusTransition ;
+    rdfs:label "UserStatus U06" ;
+    :edgeId "U06" ;
+    :fromState :UserStatusMachine_PendingReset ;
+    :toState :UserStatusMachine_Disabled ;
+    :firedBy :UserStatusMachine_Event_Disable .
+
+:UserStatusMachine_U07 a :UserStatusTransition ;
+    rdfs:label "UserStatus U07" ;
+    :edgeId "U07" ;
+    :fromState :UserStatusMachine_PendingVerification ;
+    :toState :UserStatusMachine_Active ;
+    :guardedBy :UserStatusMachine_Guard_VerificationProofMatches ;
+    :firedBy :UserStatusMachine_Event_Verify .
+
+:UserStatusMachine_U08 a :UserStatusTransition ;
+    rdfs:label "UserStatus U08" ;
+    :edgeId "U08" ;
+    :fromState :UserStatusMachine_PendingVerification ;
+    :toState :UserStatusMachine_Disabled ;
+    :firedBy :UserStatusMachine_Event_Disable .
+
+:UserStatusMachine_U09 a :UserStatusTransition ;
+    rdfs:label "UserStatus U09" ;
+    :edgeId "U09" ;
+    :fromState :UserStatusMachine_Active ;
+    :toState :UserStatusMachine_Deprovisioned ;
+    :guardedBy :UserStatusMachine_Guard_NotLastActiveAdministrator ;
+    :firedBy :UserStatusMachine_Event_Deprovision .
+
+:UserStatusMachine_U10 a :UserStatusTransition ;
+    rdfs:label "UserStatus U10" ;
+    :edgeId "U10" ;
+    :fromState :UserStatusMachine_Disabled ;
+    :toState :UserStatusMachine_Deprovisioned ;
+    :firedBy :UserStatusMachine_Event_Deprovision .
+
+:UserStatusMachine_U11 a :UserStatusTransition ;
+    rdfs:label "UserStatus U11" ;
+    :edgeId "U11" ;
+    :fromState :UserStatusMachine_PendingReset ;
+    :toState :UserStatusMachine_Deprovisioned ;
+    :firedBy :UserStatusMachine_Event_Deprovision .
+
+:UserStatusMachine_U12 a :UserStatusTransition ;
+    rdfs:label "UserStatus U12" ;
+    :edgeId "U12" ;
+    :fromState :UserStatusMachine_PendingVerification ;
+    :toState :UserStatusMachine_Deprovisioned ;
+    :firedBy :UserStatusMachine_Event_Deprovision .
+
+# spec: MEDULLA-IDENTITY-R722.1
+# The RbacElevation machine. The Rust edge table RBAC_ELEVATION_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:RbacElevationState a owl:Class ;
+    rdfs:label "RbacElevation State" ;
+    rdfs:comment "A state of the RbacElevation machine." ;
+    rdfs:subClassOf :State .
+
+:RbacElevationTerminalState a owl:Class ;
+    rdfs:label "RbacElevation Terminal State" ;
+    rdfs:comment "A terminal state of the RbacElevation machine." ;
+    rdfs:subClassOf :TerminalState, :RbacElevationState .
+
+:RbacElevationTransition a owl:Class ;
+    rdfs:label "RbacElevation Transition" ;
+    rdfs:comment "A transition of the RbacElevation machine." ;
+    rdfs:subClassOf :Transition .
+
+:RbacElevationEvent a owl:Class ;
+    rdfs:label "RbacElevation Event" ;
+    rdfs:comment "A event of the RbacElevation machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:RbacElevationGuard a owl:Class ;
+    rdfs:label "RbacElevation Guard" ;
+    rdfs:comment "A guard of the RbacElevation machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:RbacElevationMachine a :StateMachine ;
+    rdfs:label "RbacElevation machine" ;
+    :initialState :RbacElevationMachine_Requested ;
+    :hasState :RbacElevationMachine_Requested, :RbacElevationMachine_Active, :RbacElevationMachine_Revoked, :RbacElevationMachine_Expired .
+
+:RbacElevationMachine_Requested a :RbacElevationState ;
+    rdfs:label "RbacElevation Requested" ;
+    :storedForm "requested" .
+
+:RbacElevationMachine_Active a :RbacElevationState ;
+    rdfs:label "RbacElevation Active" ;
+    :storedForm "active" .
+
+:RbacElevationMachine_Revoked a :RbacElevationTerminalState ;
+    rdfs:label "RbacElevation Revoked" ;
+    :storedForm "revoked" .
+
+:RbacElevationMachine_Expired a :RbacElevationTerminalState ;
+    rdfs:label "RbacElevation Expired" ;
+    :storedForm "expired" .
+
+:RbacElevationMachine_Event_Approve a :RbacElevationEvent ;
+    rdfs:label "RbacElevation Approve" .
+
+:RbacElevationMachine_Event_Revoke a :RbacElevationEvent ;
+    rdfs:label "RbacElevation Revoke" .
+
+:RbacElevationMachine_Event_Lapse a :RbacElevationEvent ;
+    rdfs:label "RbacElevation Lapse" .
+
+:RbacElevationMachine_Guard_SecondIdentityApproves a :RbacElevationGuard ;
+    rdfs:label "RbacElevation SecondIdentityApproves" ;
+    rdfs:comment "Guard: a second identity approves." .
+
+:RbacElevationMachine_Guard_ActorAuthorized a :RbacElevationGuard ;
+    rdfs:label "RbacElevation ActorAuthorized" ;
+    rdfs:comment "Guard: the actor is authorized." .
+
+:RbacElevationMachine_Guard_WindowElapsed a :RbacElevationGuard ;
+    rdfs:label "RbacElevation WindowElapsed" ;
+    rdfs:comment "Guard: the window has elapsed." .
+
+:RbacElevationMachine_E01 a :RbacElevationTransition ;
+    rdfs:label "RbacElevation E01" ;
+    :edgeId "E01" ;
+    :fromState :RbacElevationMachine_Requested ;
+    :toState :RbacElevationMachine_Active ;
+    :guardedBy :RbacElevationMachine_Guard_SecondIdentityApproves ;
+    :firedBy :RbacElevationMachine_Event_Approve .
+
+:RbacElevationMachine_E02 a :RbacElevationTransition ;
+    rdfs:label "RbacElevation E02" ;
+    :edgeId "E02" ;
+    :fromState :RbacElevationMachine_Requested ;
+    :toState :RbacElevationMachine_Revoked ;
+    :guardedBy :RbacElevationMachine_Guard_ActorAuthorized ;
+    :firedBy :RbacElevationMachine_Event_Revoke .
+
+:RbacElevationMachine_E03 a :RbacElevationTransition ;
+    rdfs:label "RbacElevation E03" ;
+    :edgeId "E03" ;
+    :fromState :RbacElevationMachine_Requested ;
+    :toState :RbacElevationMachine_Expired ;
+    :guardedBy :RbacElevationMachine_Guard_WindowElapsed ;
+    :firedBy :RbacElevationMachine_Event_Lapse .
+
+:RbacElevationMachine_E04 a :RbacElevationTransition ;
+    rdfs:label "RbacElevation E04" ;
+    :edgeId "E04" ;
+    :fromState :RbacElevationMachine_Active ;
+    :toState :RbacElevationMachine_Revoked ;
+    :guardedBy :RbacElevationMachine_Guard_ActorAuthorized ;
+    :firedBy :RbacElevationMachine_Event_Revoke .
+
+:RbacElevationMachine_E05 a :RbacElevationTransition ;
+    rdfs:label "RbacElevation E05" ;
+    :edgeId "E05" ;
+    :fromState :RbacElevationMachine_Active ;
+    :toState :RbacElevationMachine_Expired ;
+    :guardedBy :RbacElevationMachine_Guard_WindowElapsed ;
+    :firedBy :RbacElevationMachine_Event_Lapse .
+
+# spec: MEDULLA-PLACEMENT-R782.2
+# The ControlLease machine. The Rust edge table CONTROL_LEASE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:ControlLeaseState a owl:Class ;
+    rdfs:label "ControlLease State" ;
+    rdfs:comment "A state of the ControlLease machine." ;
+    rdfs:subClassOf :State .
+
+:ControlLeaseTerminalState a owl:Class ;
+    rdfs:label "ControlLease Terminal State" ;
+    rdfs:comment "A terminal state of the ControlLease machine." ;
+    rdfs:subClassOf :TerminalState, :ControlLeaseState .
+
+:ControlLeaseTransition a owl:Class ;
+    rdfs:label "ControlLease Transition" ;
+    rdfs:comment "A transition of the ControlLease machine." ;
+    rdfs:subClassOf :Transition .
+
+:ControlLeaseEvent a owl:Class ;
+    rdfs:label "ControlLease Event" ;
+    rdfs:comment "A event of the ControlLease machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ControlLeaseGuard a owl:Class ;
+    rdfs:label "ControlLease Guard" ;
+    rdfs:comment "A guard of the ControlLease machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ControlLeaseMachine a :StateMachine ;
+    rdfs:label "ControlLease machine" ;
+    :initialState :ControlLeaseMachine_Active ;
+    :hasState :ControlLeaseMachine_Active, :ControlLeaseMachine_Consumed, :ControlLeaseMachine_Revoked, :ControlLeaseMachine_Expired .
+
+:ControlLeaseMachine_Active a :ControlLeaseState ;
+    rdfs:label "ControlLease Active" ;
+    :storedForm "active" .
+
+:ControlLeaseMachine_Consumed a :ControlLeaseState ;
+    rdfs:label "ControlLease Consumed" ;
+    :storedForm "consumed" .
+
+:ControlLeaseMachine_Revoked a :ControlLeaseTerminalState ;
+    rdfs:label "ControlLease Revoked" ;
+    :storedForm "revoked" .
+
+:ControlLeaseMachine_Expired a :ControlLeaseTerminalState ;
+    rdfs:label "ControlLease Expired" ;
+    :storedForm "expired" .
+
+:ControlLeaseMachine_Event_Consume a :ControlLeaseEvent ;
+    rdfs:label "ControlLease Consume" .
+
+:ControlLeaseMachine_Event_Revoke a :ControlLeaseEvent ;
+    rdfs:label "ControlLease Revoke" .
+
+:ControlLeaseMachine_Event_Reclaim a :ControlLeaseEvent ;
+    rdfs:label "ControlLease Reclaim" .
+
+:ControlLeaseMachine_Guard_RevisionMatchesNotExpired a :ControlLeaseGuard ;
+    rdfs:label "ControlLease RevisionMatchesNotExpired" ;
+    rdfs:comment "Guard: the revision matches and neither expiry has passed." .
+
+:ControlLeaseMachine_Guard_RevisionMatches a :ControlLeaseGuard ;
+    rdfs:label "ControlLease RevisionMatches" ;
+    rdfs:comment "Guard: the revision matches." .
+
+:ControlLeaseMachine_Guard_ExpiryPassed a :ControlLeaseGuard ;
+    rdfs:label "ControlLease ExpiryPassed" ;
+    rdfs:comment "Guard: the expiry has passed; the sweeper acts." .
+
+:ControlLeaseMachine_L01 a :ControlLeaseTransition ;
+    rdfs:label "ControlLease L01" ;
+    :edgeId "L01" ;
+    :fromState :ControlLeaseMachine_Active ;
+    :toState :ControlLeaseMachine_Consumed ;
+    :guardedBy :ControlLeaseMachine_Guard_RevisionMatchesNotExpired ;
+    :firedBy :ControlLeaseMachine_Event_Consume .
+
+:ControlLeaseMachine_L02 a :ControlLeaseTransition ;
+    rdfs:label "ControlLease L02" ;
+    :edgeId "L02" ;
+    :fromState :ControlLeaseMachine_Active ;
+    :toState :ControlLeaseMachine_Revoked ;
+    :guardedBy :ControlLeaseMachine_Guard_RevisionMatches ;
+    :firedBy :ControlLeaseMachine_Event_Revoke .
+
+:ControlLeaseMachine_L03 a :ControlLeaseTransition ;
+    rdfs:label "ControlLease L03" ;
+    :edgeId "L03" ;
+    :fromState :ControlLeaseMachine_Active ;
+    :toState :ControlLeaseMachine_Expired ;
+    :guardedBy :ControlLeaseMachine_Guard_ExpiryPassed ;
+    :firedBy :ControlLeaseMachine_Event_Reclaim .
+
+:ControlLeaseMachine_L04 a :ControlLeaseTransition ;
+    rdfs:label "ControlLease L04" ;
+    :edgeId "L04" ;
+    :fromState :ControlLeaseMachine_Consumed ;
+    :toState :ControlLeaseMachine_Revoked ;
+    :guardedBy :ControlLeaseMachine_Guard_RevisionMatches ;
+    :firedBy :ControlLeaseMachine_Event_Revoke .
+
+:ControlLeaseMachine_L05 a :ControlLeaseTransition ;
+    rdfs:label "ControlLease L05" ;
+    :edgeId "L05" ;
+    :fromState :ControlLeaseMachine_Consumed ;
+    :toState :ControlLeaseMachine_Expired ;
+    :guardedBy :ControlLeaseMachine_Guard_ExpiryPassed ;
+    :firedBy :ControlLeaseMachine_Event_Reclaim .
+
+# spec: MEDULLA-PLACEMENT-R781.2
+# The ResourceReservation machine. The Rust edge table RESOURCE_RESERVATION_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:ResourceReservationState a owl:Class ;
+    rdfs:label "ResourceReservation State" ;
+    rdfs:comment "A state of the ResourceReservation machine." ;
+    rdfs:subClassOf :State .
+
+:ResourceReservationTerminalState a owl:Class ;
+    rdfs:label "ResourceReservation Terminal State" ;
+    rdfs:comment "A terminal state of the ResourceReservation machine." ;
+    rdfs:subClassOf :TerminalState, :ResourceReservationState .
+
+:ResourceReservationTransition a owl:Class ;
+    rdfs:label "ResourceReservation Transition" ;
+    rdfs:comment "A transition of the ResourceReservation machine." ;
+    rdfs:subClassOf :Transition .
+
+:ResourceReservationEvent a owl:Class ;
+    rdfs:label "ResourceReservation Event" ;
+    rdfs:comment "A event of the ResourceReservation machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ResourceReservationGuard a owl:Class ;
+    rdfs:label "ResourceReservation Guard" ;
+    rdfs:comment "A guard of the ResourceReservation machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ResourceReservationMachine a :StateMachine ;
+    rdfs:label "ResourceReservation machine" ;
+    :initialState :ResourceReservationMachine_Absent ;
+    :hasState :ResourceReservationMachine_Absent, :ResourceReservationMachine_Reserved, :ResourceReservationMachine_Released, :ResourceReservationMachine_Reclaimed, :ResourceReservationMachine_Expired, :ResourceReservationMachine_Superseded .
+
+:ResourceReservationMachine_Absent a :ResourceReservationState ;
+    rdfs:label "ResourceReservation Absent" ;
+    :storedForm "absent" .
+
+:ResourceReservationMachine_Reserved a :ResourceReservationState ;
+    rdfs:label "ResourceReservation Reserved" ;
+    :storedForm "reserved" .
+
+:ResourceReservationMachine_Released a :ResourceReservationTerminalState ;
+    rdfs:label "ResourceReservation Released" ;
+    :storedForm "released" .
+
+:ResourceReservationMachine_Reclaimed a :ResourceReservationTerminalState ;
+    rdfs:label "ResourceReservation Reclaimed" ;
+    :storedForm "reclaimed" .
+
+:ResourceReservationMachine_Expired a :ResourceReservationTerminalState ;
+    rdfs:label "ResourceReservation Expired" ;
+    :storedForm "expired" .
+
+:ResourceReservationMachine_Superseded a :ResourceReservationTerminalState ;
+    rdfs:label "ResourceReservation Superseded" ;
+    :storedForm "superseded" .
+
+:ResourceReservationMachine_Event_Reserve a :ResourceReservationEvent ;
+    rdfs:label "ResourceReservation Reserve" .
+
+:ResourceReservationMachine_Event_Release a :ResourceReservationEvent ;
+    rdfs:label "ResourceReservation Release" .
+
+:ResourceReservationMachine_Event_Reclaim a :ResourceReservationEvent ;
+    rdfs:label "ResourceReservation Reclaim" .
+
+:ResourceReservationMachine_Event_Expire a :ResourceReservationEvent ;
+    rdfs:label "ResourceReservation Expire" .
+
+:ResourceReservationMachine_Event_Supersede a :ResourceReservationEvent ;
+    rdfs:label "ResourceReservation Supersede" .
+
+:ResourceReservationMachine_Guard_ResourceFree a :ResourceReservationGuard ;
+    rdfs:label "ResourceReservation ResourceFree" ;
+    rdfs:comment "Guard: the resource is free." .
+
+:ResourceReservationMachine_Guard_OwnerMatches a :ResourceReservationGuard ;
+    rdfs:label "ResourceReservation OwnerMatches" ;
+    rdfs:comment "Guard: the owner matches." .
+
+:ResourceReservationMachine_Guard_ReclaimerAuthorized a :ResourceReservationGuard ;
+    rdfs:label "ResourceReservation ReclaimerAuthorized" ;
+    rdfs:comment "Guard: the reclaimer is authorized." .
+
+:ResourceReservationMachine_Guard_ExpiryPassed a :ResourceReservationGuard ;
+    rdfs:label "ResourceReservation ExpiryPassed" ;
+    rdfs:comment "Guard: the expiry time has passed." .
+
+:ResourceReservationMachine_Guard_NewerReservationAdmitted a :ResourceReservationGuard ;
+    rdfs:label "ResourceReservation NewerReservationAdmitted" ;
+    rdfs:comment "Guard: a newer reservation of the same resource is admitted." .
+
+:ResourceReservationMachine_V01 a :ResourceReservationTransition ;
+    rdfs:label "ResourceReservation V01" ;
+    :edgeId "V01" ;
+    :fromState :ResourceReservationMachine_Absent ;
+    :toState :ResourceReservationMachine_Reserved ;
+    :guardedBy :ResourceReservationMachine_Guard_ResourceFree ;
+    :firedBy :ResourceReservationMachine_Event_Reserve .
+
+:ResourceReservationMachine_V02 a :ResourceReservationTransition ;
+    rdfs:label "ResourceReservation V02" ;
+    :edgeId "V02" ;
+    :fromState :ResourceReservationMachine_Reserved ;
+    :toState :ResourceReservationMachine_Released ;
+    :guardedBy :ResourceReservationMachine_Guard_OwnerMatches ;
+    :firedBy :ResourceReservationMachine_Event_Release .
+
+:ResourceReservationMachine_V03 a :ResourceReservationTransition ;
+    rdfs:label "ResourceReservation V03" ;
+    :edgeId "V03" ;
+    :fromState :ResourceReservationMachine_Reserved ;
+    :toState :ResourceReservationMachine_Reclaimed ;
+    :guardedBy :ResourceReservationMachine_Guard_ReclaimerAuthorized ;
+    :firedBy :ResourceReservationMachine_Event_Reclaim .
+
+:ResourceReservationMachine_V04 a :ResourceReservationTransition ;
+    rdfs:label "ResourceReservation V04" ;
+    :edgeId "V04" ;
+    :fromState :ResourceReservationMachine_Reserved ;
+    :toState :ResourceReservationMachine_Expired ;
+    :guardedBy :ResourceReservationMachine_Guard_ExpiryPassed ;
+    :firedBy :ResourceReservationMachine_Event_Expire .
+
+:ResourceReservationMachine_V05 a :ResourceReservationTransition ;
+    rdfs:label "ResourceReservation V05" ;
+    :edgeId "V05" ;
+    :fromState :ResourceReservationMachine_Reserved ;
+    :toState :ResourceReservationMachine_Superseded ;
+    :guardedBy :ResourceReservationMachine_Guard_NewerReservationAdmitted ;
+    :firedBy :ResourceReservationMachine_Event_Supersede .
+
+# spec: MEDULLA-PLACEMENT-R783.1
+# The MembershipShrink machine. The Rust edge table MEMBERSHIP_SHRINK_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:MembershipShrinkState a owl:Class ;
+    rdfs:label "MembershipShrink State" ;
+    rdfs:comment "A state of the MembershipShrink machine." ;
+    rdfs:subClassOf :State .
+
+:MembershipShrinkTerminalState a owl:Class ;
+    rdfs:label "MembershipShrink Terminal State" ;
+    rdfs:comment "A terminal state of the MembershipShrink machine." ;
+    rdfs:subClassOf :TerminalState, :MembershipShrinkState .
+
+:MembershipShrinkTransition a owl:Class ;
+    rdfs:label "MembershipShrink Transition" ;
+    rdfs:comment "A transition of the MembershipShrink machine." ;
+    rdfs:subClassOf :Transition .
+
+:MembershipShrinkEvent a owl:Class ;
+    rdfs:label "MembershipShrink Event" ;
+    rdfs:comment "A event of the MembershipShrink machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MembershipShrinkGuard a owl:Class ;
+    rdfs:label "MembershipShrink Guard" ;
+    rdfs:comment "A guard of the MembershipShrink machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MembershipShrinkMachine a :StateMachine ;
+    rdfs:label "MembershipShrink machine" ;
+    :initialState :MembershipShrinkMachine_Proposed ;
+    :hasState :MembershipShrinkMachine_Proposed, :MembershipShrinkMachine_DrainRequested, :MembershipShrinkMachine_Drained, :MembershipShrinkMachine_LearnerCaughtUp, :MembershipShrinkMachine_LeadershipTransferred, :MembershipShrinkMachine_SafetyChecked, :MembershipShrinkMachine_RemovalCommitted, :MembershipShrinkMachine_Completed, :MembershipShrinkMachine_Aborted .
+
+:MembershipShrinkMachine_Proposed a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink Proposed" ;
+    :storedForm "proposed" .
+
+:MembershipShrinkMachine_DrainRequested a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink DrainRequested" ;
+    :storedForm "drain_requested" .
+
+:MembershipShrinkMachine_Drained a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink Drained" ;
+    :storedForm "drained" .
+
+:MembershipShrinkMachine_LearnerCaughtUp a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink LearnerCaughtUp" ;
+    :storedForm "learner_caught_up" .
+
+:MembershipShrinkMachine_LeadershipTransferred a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink LeadershipTransferred" ;
+    :storedForm "leadership_transferred" .
+
+:MembershipShrinkMachine_SafetyChecked a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink SafetyChecked" ;
+    :storedForm "safety_checked" .
+
+:MembershipShrinkMachine_RemovalCommitted a :MembershipShrinkState ;
+    rdfs:label "MembershipShrink RemovalCommitted" ;
+    :storedForm "removal_committed" .
+
+:MembershipShrinkMachine_Completed a :MembershipShrinkTerminalState ;
+    rdfs:label "MembershipShrink Completed" ;
+    :storedForm "completed" .
+
+:MembershipShrinkMachine_Aborted a :MembershipShrinkTerminalState ;
+    rdfs:label "MembershipShrink Aborted" ;
+    :storedForm "aborted" .
+
+:MembershipShrinkMachine_Event_RequestDrain a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink RequestDrain" .
+
+:MembershipShrinkMachine_Event_ConfirmDrained a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink ConfirmDrained" .
+
+:MembershipShrinkMachine_Event_ConfirmLearnerCaughtUp a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink ConfirmLearnerCaughtUp" .
+
+:MembershipShrinkMachine_Event_ConfirmLeadershipTransferred a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink ConfirmLeadershipTransferred" .
+
+:MembershipShrinkMachine_Event_ConfirmSafety a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink ConfirmSafety" .
+
+:MembershipShrinkMachine_Event_CommitRemoval a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink CommitRemoval" .
+
+:MembershipShrinkMachine_Event_Complete a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink Complete" .
+
+:MembershipShrinkMachine_Event_Abort a :MembershipShrinkEvent ;
+    rdfs:label "MembershipShrink Abort" .
+
+:MembershipShrinkMachine_Guard_NodeDrained a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink NodeDrained" ;
+    rdfs:comment "Guard: the evidence shows the node drained." .
+
+:MembershipShrinkMachine_Guard_LearnerCaughtUp a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink LearnerCaughtUp" ;
+    rdfs:comment "Guard: the evidence shows the learner caught up." .
+
+:MembershipShrinkMachine_Guard_LeadershipLeftTarget a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink LeadershipLeftTarget" ;
+    rdfs:comment "Guard: the evidence shows leadership left the target." .
+
+:MembershipShrinkMachine_Guard_SafetyPreserved a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink SafetyPreserved" ;
+    rdfs:comment "Guard: quorum, failure domain, headroom and disruption budget are preserved." .
+
+:MembershipShrinkMachine_Guard_RemovalCommitted a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink RemovalCommitted" ;
+    rdfs:comment "Guard: the evidence shows the removal committed with the remaining voters." .
+
+:MembershipShrinkMachine_Guard_TargetAbsent a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink TargetAbsent" ;
+    rdfs:comment "Guard: the evidence shows the target absent." .
+
+:MembershipShrinkMachine_Guard_ReasonBounded a :MembershipShrinkGuard ;
+    rdfs:label "MembershipShrink ReasonBounded" ;
+    rdfs:comment "Guard: the reason is non-empty, bounded and has no control character." .
+
+:MembershipShrinkMachine_S01 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S01" ;
+    :edgeId "S01" ;
+    :fromState :MembershipShrinkMachine_Proposed ;
+    :toState :MembershipShrinkMachine_DrainRequested ;
+    :firedBy :MembershipShrinkMachine_Event_RequestDrain .
+
+:MembershipShrinkMachine_S02 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S02" ;
+    :edgeId "S02" ;
+    :fromState :MembershipShrinkMachine_DrainRequested ;
+    :toState :MembershipShrinkMachine_Drained ;
+    :guardedBy :MembershipShrinkMachine_Guard_NodeDrained ;
+    :firedBy :MembershipShrinkMachine_Event_ConfirmDrained .
+
+:MembershipShrinkMachine_S03 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S03" ;
+    :edgeId "S03" ;
+    :fromState :MembershipShrinkMachine_Drained ;
+    :toState :MembershipShrinkMachine_LearnerCaughtUp ;
+    :guardedBy :MembershipShrinkMachine_Guard_LearnerCaughtUp ;
+    :firedBy :MembershipShrinkMachine_Event_ConfirmLearnerCaughtUp .
+
+:MembershipShrinkMachine_S04 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S04" ;
+    :edgeId "S04" ;
+    :fromState :MembershipShrinkMachine_LearnerCaughtUp ;
+    :toState :MembershipShrinkMachine_LeadershipTransferred ;
+    :guardedBy :MembershipShrinkMachine_Guard_LeadershipLeftTarget ;
+    :firedBy :MembershipShrinkMachine_Event_ConfirmLeadershipTransferred .
+
+:MembershipShrinkMachine_S05 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S05" ;
+    :edgeId "S05" ;
+    :fromState :MembershipShrinkMachine_LeadershipTransferred ;
+    :toState :MembershipShrinkMachine_SafetyChecked ;
+    :guardedBy :MembershipShrinkMachine_Guard_SafetyPreserved ;
+    :firedBy :MembershipShrinkMachine_Event_ConfirmSafety .
+
+:MembershipShrinkMachine_S06 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S06" ;
+    :edgeId "S06" ;
+    :fromState :MembershipShrinkMachine_SafetyChecked ;
+    :toState :MembershipShrinkMachine_RemovalCommitted ;
+    :guardedBy :MembershipShrinkMachine_Guard_RemovalCommitted ;
+    :firedBy :MembershipShrinkMachine_Event_CommitRemoval .
+
+:MembershipShrinkMachine_S07 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S07" ;
+    :edgeId "S07" ;
+    :fromState :MembershipShrinkMachine_RemovalCommitted ;
+    :toState :MembershipShrinkMachine_Completed ;
+    :guardedBy :MembershipShrinkMachine_Guard_TargetAbsent ;
+    :firedBy :MembershipShrinkMachine_Event_Complete .
+
+:MembershipShrinkMachine_S08 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S08" ;
+    :edgeId "S08" ;
+    :fromState :MembershipShrinkMachine_Proposed ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S09 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S09" ;
+    :edgeId "S09" ;
+    :fromState :MembershipShrinkMachine_DrainRequested ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S10 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S10" ;
+    :edgeId "S10" ;
+    :fromState :MembershipShrinkMachine_Drained ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S11 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S11" ;
+    :edgeId "S11" ;
+    :fromState :MembershipShrinkMachine_LearnerCaughtUp ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S12 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S12" ;
+    :edgeId "S12" ;
+    :fromState :MembershipShrinkMachine_LeadershipTransferred ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S13 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S13" ;
+    :edgeId "S13" ;
+    :fromState :MembershipShrinkMachine_SafetyChecked ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+:MembershipShrinkMachine_S14 a :MembershipShrinkTransition ;
+    rdfs:label "MembershipShrink S14" ;
+    :edgeId "S14" ;
+    :fromState :MembershipShrinkMachine_RemovalCommitted ;
+    :toState :MembershipShrinkMachine_Aborted ;
+    :guardedBy :MembershipShrinkMachine_Guard_ReasonBounded ;
+    :firedBy :MembershipShrinkMachine_Event_Abort .
+
+# spec: MEDULLA-CQ-ORCH-R810.2
+# The BrokerMessage machine. The Rust edge table BROKER_MESSAGE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:BrokerMessageState a owl:Class ;
+    rdfs:label "BrokerMessage State" ;
+    rdfs:comment "A state of the BrokerMessage machine." ;
+    rdfs:subClassOf :State .
+
+:BrokerMessageTerminalState a owl:Class ;
+    rdfs:label "BrokerMessage Terminal State" ;
+    rdfs:comment "A terminal state of the BrokerMessage machine." ;
+    rdfs:subClassOf :TerminalState, :BrokerMessageState .
+
+:BrokerMessageTransition a owl:Class ;
+    rdfs:label "BrokerMessage Transition" ;
+    rdfs:comment "A transition of the BrokerMessage machine." ;
+    rdfs:subClassOf :Transition .
+
+:BrokerMessageEvent a owl:Class ;
+    rdfs:label "BrokerMessage Event" ;
+    rdfs:comment "A event of the BrokerMessage machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:BrokerMessageGuard a owl:Class ;
+    rdfs:label "BrokerMessage Guard" ;
+    rdfs:comment "A guard of the BrokerMessage machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:BrokerMessageMachine a :StateMachine ;
+    rdfs:label "BrokerMessage machine" ;
+    :initialState :BrokerMessageMachine_Pending ;
+    :hasState :BrokerMessageMachine_Pending, :BrokerMessageMachine_Claimed, :BrokerMessageMachine_Acked, :BrokerMessageMachine_Expired, :BrokerMessageMachine_DeadLettered .
+
+:BrokerMessageMachine_Pending a :BrokerMessageState ;
+    rdfs:label "BrokerMessage Pending" ;
+    :storedForm "pending" .
+
+:BrokerMessageMachine_Claimed a :BrokerMessageState ;
+    rdfs:label "BrokerMessage Claimed" ;
+    :storedForm "claimed" .
+
+:BrokerMessageMachine_Acked a :BrokerMessageTerminalState ;
+    rdfs:label "BrokerMessage Acked" ;
+    :storedForm "acked" .
+
+:BrokerMessageMachine_Expired a :BrokerMessageTerminalState ;
+    rdfs:label "BrokerMessage Expired" ;
+    :storedForm "expired" .
+
+:BrokerMessageMachine_DeadLettered a :BrokerMessageTerminalState ;
+    rdfs:label "BrokerMessage DeadLettered" ;
+    :storedForm "dead_lettered" .
+
+:BrokerMessageMachine_Event_Claim a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage Claim" .
+
+:BrokerMessageMachine_Event_Ack a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage Ack" .
+
+:BrokerMessageMachine_Event_NackRetry a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage NackRetry" .
+
+:BrokerMessageMachine_Event_NackDead a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage NackDead" .
+
+:BrokerMessageMachine_Event_LeaseLapse a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage LeaseLapse" .
+
+:BrokerMessageMachine_Event_Expire a :BrokerMessageEvent ;
+    rdfs:label "BrokerMessage Expire" .
+
+:BrokerMessageMachine_Guard_DeliverAtPassedNotExpired a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage DeliverAtPassedNotExpired" ;
+    rdfs:comment "Guard: deliver_at has passed and the message has not expired." .
+
+:BrokerMessageMachine_Guard_ClaimantMatchesLeaseLive a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage ClaimantMatchesLeaseLive" ;
+    rdfs:comment "Guard: the claimant matches and the lease is live." .
+
+:BrokerMessageMachine_Guard_ClaimantMatchesAttemptsBelowMax a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage ClaimantMatchesAttemptsBelowMax" ;
+    rdfs:comment "Guard: the claimant matches and attempts are below the maximum." .
+
+:BrokerMessageMachine_Guard_ClaimantMatches a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage ClaimantMatches" ;
+    rdfs:comment "Guard: the claimant matches." .
+
+:BrokerMessageMachine_Guard_ClaimantMatchesAttemptsReachedMax a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage ClaimantMatchesAttemptsReachedMax" ;
+    rdfs:comment "Guard: the claimant matches and attempts reached the maximum." .
+
+:BrokerMessageMachine_Guard_LeaseUntilPassed a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage LeaseUntilPassed" ;
+    rdfs:comment "Guard: lease_until has passed." .
+
+:BrokerMessageMachine_Guard_ExpiresAtPassed a :BrokerMessageGuard ;
+    rdfs:label "BrokerMessage ExpiresAtPassed" ;
+    rdfs:comment "Guard: expires_at has passed." .
+
+:BrokerMessageMachine_B01 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B01" ;
+    :edgeId "B01" ;
+    :fromState :BrokerMessageMachine_Pending ;
+    :toState :BrokerMessageMachine_Claimed ;
+    :guardedBy :BrokerMessageMachine_Guard_DeliverAtPassedNotExpired ;
+    :firedBy :BrokerMessageMachine_Event_Claim .
+
+:BrokerMessageMachine_B02 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B02" ;
+    :edgeId "B02" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_Acked ;
+    :guardedBy :BrokerMessageMachine_Guard_ClaimantMatchesLeaseLive ;
+    :firedBy :BrokerMessageMachine_Event_Ack .
+
+:BrokerMessageMachine_B03 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B03" ;
+    :edgeId "B03" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_Pending ;
+    :guardedBy :BrokerMessageMachine_Guard_ClaimantMatchesAttemptsBelowMax ;
+    :firedBy :BrokerMessageMachine_Event_NackRetry .
+
+:BrokerMessageMachine_B04 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B04" ;
+    :edgeId "B04" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_DeadLettered ;
+    :guardedBy :BrokerMessageMachine_Guard_ClaimantMatches ;
+    :firedBy :BrokerMessageMachine_Event_NackDead .
+
+:BrokerMessageMachine_B05 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B05" ;
+    :edgeId "B05" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_DeadLettered ;
+    :guardedBy :BrokerMessageMachine_Guard_ClaimantMatchesAttemptsReachedMax ;
+    :firedBy :BrokerMessageMachine_Event_NackRetry .
+
+:BrokerMessageMachine_B06 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B06" ;
+    :edgeId "B06" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_Pending ;
+    :guardedBy :BrokerMessageMachine_Guard_LeaseUntilPassed ;
+    :firedBy :BrokerMessageMachine_Event_LeaseLapse .
+
+:BrokerMessageMachine_B07 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B07" ;
+    :edgeId "B07" ;
+    :fromState :BrokerMessageMachine_Pending ;
+    :toState :BrokerMessageMachine_Expired ;
+    :guardedBy :BrokerMessageMachine_Guard_ExpiresAtPassed ;
+    :firedBy :BrokerMessageMachine_Event_Expire .
+
+:BrokerMessageMachine_B08 a :BrokerMessageTransition ;
+    rdfs:label "BrokerMessage B08" ;
+    :edgeId "B08" ;
+    :fromState :BrokerMessageMachine_Claimed ;
+    :toState :BrokerMessageMachine_Expired ;
+    :guardedBy :BrokerMessageMachine_Guard_ExpiresAtPassed ;
+    :firedBy :BrokerMessageMachine_Event_Expire .
+
+# spec: MEDULLA-SDLC-R030.2
+# The Defect machine. The Rust edge table DEFECT_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:DefectState a owl:Class ;
+    rdfs:label "Defect State" ;
+    rdfs:comment "A state of the Defect machine." ;
+    rdfs:subClassOf :State .
+
+:DefectTerminalState a owl:Class ;
+    rdfs:label "Defect Terminal State" ;
+    rdfs:comment "A terminal state of the Defect machine." ;
+    rdfs:subClassOf :TerminalState, :DefectState .
+
+:DefectTransition a owl:Class ;
+    rdfs:label "Defect Transition" ;
+    rdfs:comment "A transition of the Defect machine." ;
+    rdfs:subClassOf :Transition .
+
+:DefectEvent a owl:Class ;
+    rdfs:label "Defect Event" ;
+    rdfs:comment "A event of the Defect machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:DefectGuard a owl:Class ;
+    rdfs:label "Defect Guard" ;
+    rdfs:comment "A guard of the Defect machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:DefectMachine a :StateMachine ;
+    rdfs:label "Defect machine" ;
+    :initialState :DefectMachine_New ;
+    :hasState :DefectMachine_New, :DefectMachine_Triaged, :DefectMachine_Fixing, :DefectMachine_Fixed, :DefectMachine_Verified, :DefectMachine_Closed, :DefectMachine_Rejected .
+
+:DefectMachine_New a :DefectState ;
+    rdfs:label "Defect New" ;
+    :storedForm "new" .
+
+:DefectMachine_Triaged a :DefectState ;
+    rdfs:label "Defect Triaged" ;
+    :storedForm "triaged" .
+
+:DefectMachine_Fixing a :DefectState ;
+    rdfs:label "Defect Fixing" ;
+    :storedForm "fixing" .
+
+:DefectMachine_Fixed a :DefectState ;
+    rdfs:label "Defect Fixed" ;
+    :storedForm "fixed" .
+
+:DefectMachine_Verified a :DefectState ;
+    rdfs:label "Defect Verified" ;
+    :storedForm "verified" .
+
+:DefectMachine_Closed a :DefectState ;
+    rdfs:label "Defect Closed" ;
+    :storedForm "closed" .
+
+:DefectMachine_Rejected a :DefectState ;
+    rdfs:label "Defect Rejected" ;
+    :storedForm "rejected" .
+
+:DefectMachine_Event_Triage a :DefectEvent ;
+    rdfs:label "Defect Triage" .
+
+:DefectMachine_Event_StartFix a :DefectEvent ;
+    rdfs:label "Defect StartFix" .
+
+:DefectMachine_Event_Fix a :DefectEvent ;
+    rdfs:label "Defect Fix" .
+
+:DefectMachine_Event_Verify a :DefectEvent ;
+    rdfs:label "Defect Verify" .
+
+:DefectMachine_Event_Close a :DefectEvent ;
+    rdfs:label "Defect Close" .
+
+:DefectMachine_Event_Reject a :DefectEvent ;
+    rdfs:label "Defect Reject" .
+
+:DefectMachine_Event_Reopen a :DefectEvent ;
+    rdfs:label "Defect Reopen" .
+
+:DefectMachine_Guard_FixReferenceRecorded a :DefectGuard ;
+    rdfs:label "Defect FixReferenceRecorded" ;
+    rdfs:comment "Guard: a fix reference is recorded." .
+
+:DefectMachine_Guard_VerificationEvidenceRecorded a :DefectGuard ;
+    rdfs:label "Defect VerificationEvidenceRecorded" ;
+    rdfs:comment "Guard: verification evidence is recorded." .
+
+:DefectMachine_Guard_ReasonRecorded a :DefectGuard ;
+    rdfs:label "Defect ReasonRecorded" ;
+    rdfs:comment "Guard: a reason is recorded." .
+
+:DefectMachine_D01 a :DefectTransition ;
+    rdfs:label "Defect D01" ;
+    :edgeId "D01" ;
+    :fromState :DefectMachine_New ;
+    :toState :DefectMachine_Triaged ;
+    :firedBy :DefectMachine_Event_Triage .
+
+:DefectMachine_D02 a :DefectTransition ;
+    rdfs:label "Defect D02" ;
+    :edgeId "D02" ;
+    :fromState :DefectMachine_Triaged ;
+    :toState :DefectMachine_Fixing ;
+    :firedBy :DefectMachine_Event_StartFix .
+
+:DefectMachine_D03 a :DefectTransition ;
+    rdfs:label "Defect D03" ;
+    :edgeId "D03" ;
+    :fromState :DefectMachine_Fixing ;
+    :toState :DefectMachine_Fixed ;
+    :guardedBy :DefectMachine_Guard_FixReferenceRecorded ;
+    :firedBy :DefectMachine_Event_Fix .
+
+:DefectMachine_D04 a :DefectTransition ;
+    rdfs:label "Defect D04" ;
+    :edgeId "D04" ;
+    :fromState :DefectMachine_Fixed ;
+    :toState :DefectMachine_Verified ;
+    :guardedBy :DefectMachine_Guard_VerificationEvidenceRecorded ;
+    :firedBy :DefectMachine_Event_Verify .
+
+:DefectMachine_D05 a :DefectTransition ;
+    rdfs:label "Defect D05" ;
+    :edgeId "D05" ;
+    :fromState :DefectMachine_Verified ;
+    :toState :DefectMachine_Closed ;
+    :firedBy :DefectMachine_Event_Close .
+
+:DefectMachine_D06 a :DefectTransition ;
+    rdfs:label "Defect D06" ;
+    :edgeId "D06" ;
+    :fromState :DefectMachine_New ;
+    :toState :DefectMachine_Rejected ;
+    :guardedBy :DefectMachine_Guard_ReasonRecorded ;
+    :firedBy :DefectMachine_Event_Reject .
+
+:DefectMachine_D07 a :DefectTransition ;
+    rdfs:label "Defect D07" ;
+    :edgeId "D07" ;
+    :fromState :DefectMachine_Triaged ;
+    :toState :DefectMachine_Rejected ;
+    :guardedBy :DefectMachine_Guard_ReasonRecorded ;
+    :firedBy :DefectMachine_Event_Reject .
+
+:DefectMachine_D08 a :DefectTransition ;
+    rdfs:label "Defect D08" ;
+    :edgeId "D08" ;
+    :fromState :DefectMachine_Closed ;
+    :toState :DefectMachine_New ;
+    :guardedBy :DefectMachine_Guard_ReasonRecorded ;
+    :firedBy :DefectMachine_Event_Reopen .
+
+:DefectMachine_D09 a :DefectTransition ;
+    rdfs:label "Defect D09" ;
+    :edgeId "D09" ;
+    :fromState :DefectMachine_Rejected ;
+    :toState :DefectMachine_New ;
+    :guardedBy :DefectMachine_Guard_ReasonRecorded ;
+    :firedBy :DefectMachine_Event_Reopen .
+
+# spec: MEDULLA-DURABLE-KERNEL-R872.2
+# The SemanticIndexUpgrade machine. The Rust edge table SEMANTIC_INDEX_UPGRADE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:SemanticIndexUpgradeState a owl:Class ;
+    rdfs:label "SemanticIndexUpgrade State" ;
+    rdfs:comment "A state of the SemanticIndexUpgrade machine." ;
+    rdfs:subClassOf :State .
+
+:SemanticIndexUpgradeTerminalState a owl:Class ;
+    rdfs:label "SemanticIndexUpgrade Terminal State" ;
+    rdfs:comment "A terminal state of the SemanticIndexUpgrade machine." ;
+    rdfs:subClassOf :TerminalState, :SemanticIndexUpgradeState .
+
+:SemanticIndexUpgradeTransition a owl:Class ;
+    rdfs:label "SemanticIndexUpgrade Transition" ;
+    rdfs:comment "A transition of the SemanticIndexUpgrade machine." ;
+    rdfs:subClassOf :Transition .
+
+:SemanticIndexUpgradeEvent a owl:Class ;
+    rdfs:label "SemanticIndexUpgrade Event" ;
+    rdfs:comment "A event of the SemanticIndexUpgrade machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SemanticIndexUpgradeGuard a owl:Class ;
+    rdfs:label "SemanticIndexUpgrade Guard" ;
+    rdfs:comment "A guard of the SemanticIndexUpgrade machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SemanticIndexUpgradeMachine a :StateMachine ;
+    rdfs:label "SemanticIndexUpgrade machine" ;
+    :initialState :SemanticIndexUpgradeMachine_Inspect ;
+    :hasState :SemanticIndexUpgradeMachine_Inspect, :SemanticIndexUpgradeMachine_Installing, :SemanticIndexUpgradeMachine_Installed .
+
+:SemanticIndexUpgradeMachine_Inspect a :SemanticIndexUpgradeState ;
+    rdfs:label "SemanticIndexUpgrade Inspect" ;
+    :storedForm "inspect" .
+
+:SemanticIndexUpgradeMachine_Installing a :SemanticIndexUpgradeState ;
+    rdfs:label "SemanticIndexUpgrade Installing" ;
+    :storedForm "installing" .
+
+:SemanticIndexUpgradeMachine_Installed a :SemanticIndexUpgradeTerminalState ;
+    rdfs:label "SemanticIndexUpgrade Installed" ;
+    :storedForm "installed" .
+
+:SemanticIndexUpgradeMachine_Event_BeginInstall a :SemanticIndexUpgradeEvent ;
+    rdfs:label "SemanticIndexUpgrade BeginInstall" .
+
+:SemanticIndexUpgradeMachine_Event_FinishInstall a :SemanticIndexUpgradeEvent ;
+    rdfs:label "SemanticIndexUpgrade FinishInstall" .
+
+:SemanticIndexUpgradeMachine_Guard_InspectionPassed a :SemanticIndexUpgradeGuard ;
+    rdfs:label "SemanticIndexUpgrade InspectionPassed" ;
+    rdfs:comment "Guard: the inspection passed." .
+
+:SemanticIndexUpgradeMachine_Guard_DestinationVerified a :SemanticIndexUpgradeGuard ;
+    rdfs:label "SemanticIndexUpgrade DestinationVerified" ;
+    rdfs:comment "Guard: the destination index is verified." .
+
+:SemanticIndexUpgradeMachine_X01 a :SemanticIndexUpgradeTransition ;
+    rdfs:label "SemanticIndexUpgrade X01" ;
+    :edgeId "X01" ;
+    :fromState :SemanticIndexUpgradeMachine_Inspect ;
+    :toState :SemanticIndexUpgradeMachine_Installing ;
+    :guardedBy :SemanticIndexUpgradeMachine_Guard_InspectionPassed ;
+    :firedBy :SemanticIndexUpgradeMachine_Event_BeginInstall .
+
+:SemanticIndexUpgradeMachine_X02 a :SemanticIndexUpgradeTransition ;
+    rdfs:label "SemanticIndexUpgrade X02" ;
+    :edgeId "X02" ;
+    :fromState :SemanticIndexUpgradeMachine_Installing ;
+    :toState :SemanticIndexUpgradeMachine_Installed ;
+    :guardedBy :SemanticIndexUpgradeMachine_Guard_DestinationVerified ;
+    :firedBy :SemanticIndexUpgradeMachine_Event_FinishInstall .
+
+# spec: MEDULLA-PLACEMENT-R783.4
+# The ShardDrain machine. The Rust edge table SHARD_DRAIN_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:ShardDrainState a owl:Class ;
+    rdfs:label "ShardDrain State" ;
+    rdfs:comment "A state of the ShardDrain machine." ;
+    rdfs:subClassOf :State .
+
+:ShardDrainTerminalState a owl:Class ;
+    rdfs:label "ShardDrain Terminal State" ;
+    rdfs:comment "A terminal state of the ShardDrain machine." ;
+    rdfs:subClassOf :TerminalState, :ShardDrainState .
+
+:ShardDrainTransition a owl:Class ;
+    rdfs:label "ShardDrain Transition" ;
+    rdfs:comment "A transition of the ShardDrain machine." ;
+    rdfs:subClassOf :Transition .
+
+:ShardDrainEvent a owl:Class ;
+    rdfs:label "ShardDrain Event" ;
+    rdfs:comment "A event of the ShardDrain machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ShardDrainGuard a owl:Class ;
+    rdfs:label "ShardDrain Guard" ;
+    rdfs:comment "A guard of the ShardDrain machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ShardDrainMachine a :StateMachine ;
+    rdfs:label "ShardDrain machine" ;
+    :initialState :ShardDrainMachine_Proposed ;
+    :hasState :ShardDrainMachine_Proposed, :ShardDrainMachine_AdmissionStopRequested, :ShardDrainMachine_AdmissionStopped, :ShardDrainMachine_DrainObserved, :ShardDrainMachine_ShrinkRequested, :ShardDrainMachine_ShrinkCommitted, :ShardDrainMachine_Completed, :ShardDrainMachine_RollbackRequired, :ShardDrainMachine_RolledBack, :ShardDrainMachine_RecoveryRequired .
+
+:ShardDrainMachine_Proposed a :ShardDrainState ;
+    rdfs:label "ShardDrain Proposed" ;
+    :storedForm "proposed" .
+
+:ShardDrainMachine_AdmissionStopRequested a :ShardDrainState ;
+    rdfs:label "ShardDrain AdmissionStopRequested" ;
+    :storedForm "admission_stop_requested" .
+
+:ShardDrainMachine_AdmissionStopped a :ShardDrainState ;
+    rdfs:label "ShardDrain AdmissionStopped" ;
+    :storedForm "admission_stopped" .
+
+:ShardDrainMachine_DrainObserved a :ShardDrainState ;
+    rdfs:label "ShardDrain DrainObserved" ;
+    :storedForm "drain_observed" .
+
+:ShardDrainMachine_ShrinkRequested a :ShardDrainState ;
+    rdfs:label "ShardDrain ShrinkRequested" ;
+    :storedForm "shrink_requested" .
+
+:ShardDrainMachine_ShrinkCommitted a :ShardDrainState ;
+    rdfs:label "ShardDrain ShrinkCommitted" ;
+    :storedForm "shrink_committed" .
+
+:ShardDrainMachine_Completed a :ShardDrainTerminalState ;
+    rdfs:label "ShardDrain Completed" ;
+    :storedForm "completed" .
+
+:ShardDrainMachine_RollbackRequired a :ShardDrainState ;
+    rdfs:label "ShardDrain RollbackRequired" ;
+    :storedForm "rollback_required" .
+
+:ShardDrainMachine_RolledBack a :ShardDrainTerminalState ;
+    rdfs:label "ShardDrain RolledBack" ;
+    :storedForm "rolled_back" .
+
+:ShardDrainMachine_RecoveryRequired a :ShardDrainState ;
+    rdfs:label "ShardDrain RecoveryRequired" ;
+    :storedForm "recovery_required" .
+
+:ShardDrainMachine_Event_RequestAdmissionStop a :ShardDrainEvent ;
+    rdfs:label "ShardDrain RequestAdmissionStop" .
+
+:ShardDrainMachine_Event_ConfirmAdmissionStopped a :ShardDrainEvent ;
+    rdfs:label "ShardDrain ConfirmAdmissionStopped" .
+
+:ShardDrainMachine_Event_ObserveDrain a :ShardDrainEvent ;
+    rdfs:label "ShardDrain ObserveDrain" .
+
+:ShardDrainMachine_Event_RequestShrink a :ShardDrainEvent ;
+    rdfs:label "ShardDrain RequestShrink" .
+
+:ShardDrainMachine_Event_CommitShrink a :ShardDrainEvent ;
+    rdfs:label "ShardDrain CommitShrink" .
+
+:ShardDrainMachine_Event_Complete a :ShardDrainEvent ;
+    rdfs:label "ShardDrain Complete" .
+
+:ShardDrainMachine_Event_ReportPostShrinkFailure a :ShardDrainEvent ;
+    rdfs:label "ShardDrain ReportPostShrinkFailure" .
+
+:ShardDrainMachine_Event_CommitRollback a :ShardDrainEvent ;
+    rdfs:label "ShardDrain CommitRollback" .
+
+:ShardDrainMachine_Event_Restart a :ShardDrainEvent ;
+    rdfs:label "ShardDrain Restart" .
+
+:ShardDrainMachine_Guard_AdmissionNotAccepting a :ShardDrainGuard ;
+    rdfs:label "ShardDrain AdmissionNotAccepting" ;
+    rdfs:comment "Guard: the shard no longer accepts writes." .
+
+:ShardDrainMachine_Guard_DrainSafe a :ShardDrainGuard ;
+    rdfs:label "ShardDrain DrainSafe" ;
+    rdfs:comment "Guard: admission is stopped, no work is outstanding, the writer is the planned authoritative writer and healthy voters reach the planned minimum." .
+
+:ShardDrainMachine_Guard_VoterObservationValid a :ShardDrainGuard ;
+    rdfs:label "ShardDrain VoterObservationValid" ;
+    rdfs:comment "Guard: the observed voters, writer and healthy voters validate against the plan." .
+
+:ShardDrainMachine_Guard_RollbackSafe a :ShardDrainGuard ;
+    rdfs:label "ShardDrain RollbackSafe" ;
+    rdfs:comment "Guard: the restored voters equal the original voters, keep the planned writer, reach quorum and the healthy-voter minimum." .
+
+:ShardDrainMachine_DR01 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR01" ;
+    :edgeId "DR01" ;
+    :fromState :ShardDrainMachine_Proposed ;
+    :toState :ShardDrainMachine_AdmissionStopRequested ;
+    :firedBy :ShardDrainMachine_Event_RequestAdmissionStop .
+
+:ShardDrainMachine_DR02 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR02" ;
+    :edgeId "DR02" ;
+    :fromState :ShardDrainMachine_AdmissionStopRequested ;
+    :toState :ShardDrainMachine_AdmissionStopped ;
+    :guardedBy :ShardDrainMachine_Guard_AdmissionNotAccepting ;
+    :firedBy :ShardDrainMachine_Event_ConfirmAdmissionStopped .
+
+:ShardDrainMachine_DR03 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR03" ;
+    :edgeId "DR03" ;
+    :fromState :ShardDrainMachine_AdmissionStopped ;
+    :toState :ShardDrainMachine_DrainObserved ;
+    :guardedBy :ShardDrainMachine_Guard_DrainSafe ;
+    :firedBy :ShardDrainMachine_Event_ObserveDrain .
+
+:ShardDrainMachine_DR04 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR04" ;
+    :edgeId "DR04" ;
+    :fromState :ShardDrainMachine_DrainObserved ;
+    :toState :ShardDrainMachine_ShrinkRequested ;
+    :firedBy :ShardDrainMachine_Event_RequestShrink .
+
+:ShardDrainMachine_DR05 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR05" ;
+    :edgeId "DR05" ;
+    :fromState :ShardDrainMachine_ShrinkRequested ;
+    :toState :ShardDrainMachine_ShrinkCommitted ;
+    :guardedBy :ShardDrainMachine_Guard_VoterObservationValid ;
+    :firedBy :ShardDrainMachine_Event_CommitShrink .
+
+:ShardDrainMachine_DR06 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR06" ;
+    :edgeId "DR06" ;
+    :fromState :ShardDrainMachine_ShrinkCommitted ;
+    :toState :ShardDrainMachine_Completed ;
+    :firedBy :ShardDrainMachine_Event_Complete .
+
+:ShardDrainMachine_DR07 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR07" ;
+    :edgeId "DR07" ;
+    :fromState :ShardDrainMachine_ShrinkCommitted ;
+    :toState :ShardDrainMachine_RollbackRequired ;
+    :firedBy :ShardDrainMachine_Event_ReportPostShrinkFailure .
+
+:ShardDrainMachine_DR08 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR08" ;
+    :edgeId "DR08" ;
+    :fromState :ShardDrainMachine_RollbackRequired ;
+    :toState :ShardDrainMachine_RolledBack ;
+    :guardedBy :ShardDrainMachine_Guard_RollbackSafe ;
+    :firedBy :ShardDrainMachine_Event_CommitRollback .
+
+:ShardDrainMachine_DR09 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR09" ;
+    :edgeId "DR09" ;
+    :fromState :ShardDrainMachine_ShrinkCommitted ;
+    :toState :ShardDrainMachine_RollbackRequired ;
+    :firedBy :ShardDrainMachine_Event_Restart .
+
+:ShardDrainMachine_DR10 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR10" ;
+    :edgeId "DR10" ;
+    :fromState :ShardDrainMachine_AdmissionStopRequested ;
+    :toState :ShardDrainMachine_RecoveryRequired ;
+    :firedBy :ShardDrainMachine_Event_Restart .
+
+:ShardDrainMachine_DR11 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR11" ;
+    :edgeId "DR11" ;
+    :fromState :ShardDrainMachine_AdmissionStopped ;
+    :toState :ShardDrainMachine_RecoveryRequired ;
+    :firedBy :ShardDrainMachine_Event_Restart .
+
+:ShardDrainMachine_DR12 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR12" ;
+    :edgeId "DR12" ;
+    :fromState :ShardDrainMachine_DrainObserved ;
+    :toState :ShardDrainMachine_RecoveryRequired ;
+    :firedBy :ShardDrainMachine_Event_Restart .
+
+:ShardDrainMachine_DR13 a :ShardDrainTransition ;
+    rdfs:label "ShardDrain DR13" ;
+    :edgeId "DR13" ;
+    :fromState :ShardDrainMachine_ShrinkRequested ;
+    :toState :ShardDrainMachine_RecoveryRequired ;
+    :firedBy :ShardDrainMachine_Event_Restart .
+
+# spec: MEDULLA-PLACEMENT-R782.2
+# The CapacityLease machine. The Rust edge table CAPACITY_LEASE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:CapacityLeaseState a owl:Class ;
+    rdfs:label "CapacityLease State" ;
+    rdfs:comment "A state of the CapacityLease machine." ;
+    rdfs:subClassOf :State .
+
+:CapacityLeaseTerminalState a owl:Class ;
+    rdfs:label "CapacityLease Terminal State" ;
+    rdfs:comment "A terminal state of the CapacityLease machine." ;
+    rdfs:subClassOf :TerminalState, :CapacityLeaseState .
+
+:CapacityLeaseTransition a owl:Class ;
+    rdfs:label "CapacityLease Transition" ;
+    rdfs:comment "A transition of the CapacityLease machine." ;
+    rdfs:subClassOf :Transition .
+
+:CapacityLeaseEvent a owl:Class ;
+    rdfs:label "CapacityLease Event" ;
+    rdfs:comment "A event of the CapacityLease machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:CapacityLeaseGuard a owl:Class ;
+    rdfs:label "CapacityLease Guard" ;
+    rdfs:comment "A guard of the CapacityLease machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:CapacityLeaseMachine a :StateMachine ;
+    rdfs:label "CapacityLease machine" ;
+    :initialState :CapacityLeaseMachine_Active ;
+    :hasState :CapacityLeaseMachine_Active, :CapacityLeaseMachine_Released, :CapacityLeaseMachine_Reclaimed .
+
+:CapacityLeaseMachine_Active a :CapacityLeaseState ;
+    rdfs:label "CapacityLease Active" ;
+    :storedForm "active" .
+
+:CapacityLeaseMachine_Released a :CapacityLeaseTerminalState ;
+    rdfs:label "CapacityLease Released" ;
+    :storedForm "released" .
+
+:CapacityLeaseMachine_Reclaimed a :CapacityLeaseTerminalState ;
+    rdfs:label "CapacityLease Reclaimed" ;
+    :storedForm "reclaimed" .
+
+:CapacityLeaseMachine_Event_Renew a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Renew" .
+
+:CapacityLeaseMachine_Event_Release a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Release" .
+
+:CapacityLeaseMachine_Event_Reclaim a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Reclaim" .
+
+:CapacityLeaseMachine_Guard_CanRenew a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease CanRenew" ;
+    rdfs:comment "Guard: can_renew holds: the owner matches and the lease is live." .
+
+:CapacityLeaseMachine_Guard_CanRelease a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease CanRelease" ;
+    rdfs:comment "Guard: can_release holds: the owner matches." .
+
+:CapacityLeaseMachine_Guard_LeaseUntilPassed a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease LeaseUntilPassed" ;
+    rdfs:comment "Guard: lease_until has passed; the sweeper acts." .
+
+:CapacityLeaseMachine_C01 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease C01" ;
+    :edgeId "C01" ;
+    :fromState :CapacityLeaseMachine_Active ;
+    :toState :CapacityLeaseMachine_Active ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRenew ;
+    :firedBy :CapacityLeaseMachine_Event_Renew .
+
+:CapacityLeaseMachine_C02 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease C02" ;
+    :edgeId "C02" ;
+    :fromState :CapacityLeaseMachine_Active ;
+    :toState :CapacityLeaseMachine_Released ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRelease ;
+    :firedBy :CapacityLeaseMachine_Event_Release .
+
+:CapacityLeaseMachine_C03 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease C03" ;
+    :edgeId "C03" ;
+    :fromState :CapacityLeaseMachine_Active ;
+    :toState :CapacityLeaseMachine_Reclaimed ;
+    :guardedBy :CapacityLeaseMachine_Guard_LeaseUntilPassed ;
+    :firedBy :CapacityLeaseMachine_Event_Reclaim .

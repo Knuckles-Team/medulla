@@ -101,7 +101,11 @@ fn only_the_declared_edges_are_legal() {
                 (from, to),
                 (Active, _) | (Consumed, To::Revoked | To::Expired)
             );
-            assert_eq!(to.allowed_from(from), legal, "{from:?} -> {to:?}");
+            let moved = from.apply(to.event(), |_| true);
+            assert_eq!(moved.is_ok(), legal, "{from:?} -> {to:?}");
+            if legal {
+                assert_eq!(moved, Ok(to.status()));
+            }
         }
     }
 }
@@ -256,4 +260,194 @@ fn paired_plan_preimage_is_bounded_and_cannot_name_another_pending_lease() {
         "x".repeat(MAX_CONTROL_LEASE_GRANT_BYTES).into(),
     );
     assert!(plan.validate().is_err());
+}
+
+// MEDULLA-PLACEMENT-R782.3 — the control lease machine.
+use super::{ControlLeaseEvent, ControlLeaseStatus, CONTROL_LEASE_MACHINE};
+use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+fn edge_case(id: &str, from: ControlLeaseStatus, event: ControlLeaseEvent, to: ControlLeaseStatus) {
+    let edge = CONTROL_LEASE_MACHINE
+        .edges
+        .iter()
+        .find(|e| e.id == id)
+        .unwrap();
+    assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+    assert_eq!(from.apply(event, |_| true), Ok(to));
+    if edge.guard.is_some() {
+        let refused = from.apply(event, |_| false).unwrap_err();
+        assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+    }
+}
+
+/// Every (state, event) pair with no edge.
+fn illegal_pairs() -> Vec<(ControlLeaseStatus, ControlLeaseEvent)> {
+    let machine = &CONTROL_LEASE_MACHINE;
+    let mut out = Vec::new();
+    for &state in machine.states {
+        for &event in machine.events {
+            if !machine
+                .edges
+                .iter()
+                .any(|e| e.from == state && e.event == event)
+            {
+                out.push((state, event));
+            }
+        }
+    }
+    out
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn edge_l01_active_consume() {
+    edge_case(
+        "L01",
+        ControlLeaseStatus::Active,
+        ControlLeaseEvent::Consume,
+        ControlLeaseStatus::Consumed,
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn edge_l02_active_revoke() {
+    edge_case(
+        "L02",
+        ControlLeaseStatus::Active,
+        ControlLeaseEvent::Revoke,
+        ControlLeaseStatus::Revoked,
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn edge_l03_active_reclaim() {
+    edge_case(
+        "L03",
+        ControlLeaseStatus::Active,
+        ControlLeaseEvent::Reclaim,
+        ControlLeaseStatus::Expired,
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn edge_l04_consumed_revoke() {
+    edge_case(
+        "L04",
+        ControlLeaseStatus::Consumed,
+        ControlLeaseEvent::Revoke,
+        ControlLeaseStatus::Revoked,
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn edge_l05_consumed_reclaim() {
+    edge_case(
+        "L05",
+        ControlLeaseStatus::Consumed,
+        ControlLeaseEvent::Reclaim,
+        ControlLeaseStatus::Expired,
+    );
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn every_illegal_pair_is_refused() {
+    let machine = &CONTROL_LEASE_MACHINE;
+    let pairs = illegal_pairs();
+    assert!(!pairs.is_empty());
+    for (state, event) in pairs {
+        let refused = state.apply(event, |_| true).unwrap_err();
+        let expected = if machine.is_terminal(state) {
+            TransitionRefusalReason::TerminalState
+        } else {
+            TransitionRefusalReason::IllegalTransition
+        };
+        assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+    }
+    for &terminal in machine.terminals {
+        for &event in machine.events {
+            assert!(terminal.apply(event, |_| true).is_err());
+        }
+    }
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn refusal_carries_machine_from_event() {
+    let refused = ControlLeaseStatus::Consumed
+        .apply(ControlLeaseEvent::Consume, |_| true)
+        .unwrap_err();
+    assert_eq!(refused.machine, "ControlLeaseMachine");
+    assert_eq!(refused.from, ControlLeaseStatus::Consumed.stored());
+    assert_eq!(refused.event, "Consume");
+    assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+}
+
+/// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
+/// file's `#[cfg(test)] mod tests`.
+fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a str> {
+    let needle = format!(".{field} = {ty}::");
+    let mut out = Vec::new();
+    let mut previous = "";
+    for line in source.lines().map(str::trim) {
+        if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+            break;
+        }
+        previous = line;
+        if !line.starts_with("//") && line.contains(&needle) {
+            out.push(line);
+        }
+    }
+    out
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn no_writer_sets_state_outside_apply() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../medulla-work-store/src/redb_store/work_item/control_lease.rs"
+    );
+    let source = std::fs::read_to_string(path).expect("writer source");
+    let writes = direct_state_writes(&source, "status", "ControlLeaseStatus");
+    assert!(writes.is_empty(), "direct state writes in ../medulla-work-store/src/redb_store/work_item/control_lease.rs: {writes:?}");
+}
+
+// spec: MEDULLA-PLACEMENT-R782.3
+
+#[test]
+fn every_transition_and_refusal_is_covered() {
+    let machine = &CONTROL_LEASE_MACHINE;
+    assert_eq!(machine.edges.len(), 5);
+    assert_eq!(machine.states.len(), 4);
+    let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+    ids.dedup();
+    assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+    for edge in machine.edges {
+        assert!(
+            !machine.is_terminal(edge.from),
+            "{} leaves a terminal state",
+            edge.id
+        );
+    }
+    for &state in machine.states {
+        assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+        for &event in machine.events {
+            let legal = state.apply(event, |_| true).is_ok();
+            let has_edge = machine.edges_from(state).any(|e| e.event == event);
+            assert_eq!(legal, has_edge, "{state:?} {event:?}");
+        }
+    }
 }

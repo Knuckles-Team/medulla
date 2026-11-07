@@ -19,6 +19,9 @@ use medulla_storage::{
     prove_semantic_owner_union_read_only, strict_recovery_evidence_read_only, OwnerLayout,
     PhysicalStoreIdentity, StrictRecoveryEvidence,
 };
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::io::Read;
@@ -121,7 +124,106 @@ fn inspect_under_lease(
     binding_ids: &[String],
     max_total_bytes: u64,
 ) -> Result<TenantOwnerUpgradeInspection, String> {
-    inspect_under_lease_with_destination(persist_dir, tenant, binding_ids, max_total_bytes, false)
+    inspect_under_lease_with_destination(
+        persist_dir,
+        tenant,
+        binding_ids,
+        max_total_bytes,
+        UpgradePhase::Inspect,
+    )
+}
+
+/// MEDULLA-DURABLE-KERNEL-R872.1 — the phase of a tenant semantic-index upgrade. It
+/// replaces the `destination_installed` flag. `UpgradePhase::apply` is the one
+/// transition function.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum UpgradePhase {
+    /// The destination is absent and the sources are inspected.
+    Inspect,
+    /// The destination is being installed.
+    Installing,
+    /// The destination is installed.
+    Installed,
+}
+
+// SemanticIndexUpgradeMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
+/// An event of `SemanticIndexUpgradeMachine`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum UpgradeEvent {
+    /// The `BeginInstall` event.
+    BeginInstall,
+    /// The `FinishInstall` event.
+    FinishInstall,
+}
+
+impl MachineState for UpgradePhase {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Inspect => "inspect",
+            Self::Installing => "installing",
+            Self::Installed => "installed",
+        }
+    }
+}
+
+impl MachineEvent for UpgradeEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::BeginInstall => "BeginInstall",
+            Self::FinishInstall => "FinishInstall",
+        }
+    }
+}
+
+/// Guard of `SemanticIndexUpgradeMachine`: the inspection passed.
+pub const SEMANTIC_INDEX_UPGRADE_GUARD_INSPECTION_PASSED: &str = "InspectionPassed";
+/// Guard of `SemanticIndexUpgradeMachine`: the destination index is verified.
+pub const SEMANTIC_INDEX_UPGRADE_GUARD_DESTINATION_VERIFIED: &str = "DestinationVerified";
+
+/// `SemanticIndexUpgradeMachine`: the closed edge table. Every other pair of state and event is refused.
+pub static SEMANTIC_INDEX_UPGRADE_MACHINE: MachineDef<UpgradePhase, UpgradeEvent, &'static str> =
+    MachineDef {
+        name: "SemanticIndexUpgradeMachine",
+        states: &[
+            UpgradePhase::Inspect,
+            UpgradePhase::Installing,
+            UpgradePhase::Installed,
+        ],
+        initial: UpgradePhase::Inspect,
+        terminals: &[UpgradePhase::Installed],
+        events: &[UpgradeEvent::BeginInstall, UpgradeEvent::FinishInstall],
+        guards: &[
+            SEMANTIC_INDEX_UPGRADE_GUARD_INSPECTION_PASSED,
+            SEMANTIC_INDEX_UPGRADE_GUARD_DESTINATION_VERIFIED,
+        ],
+        edges: &[
+            Edge {
+                id: "X01",
+                from: UpgradePhase::Inspect,
+                event: UpgradeEvent::BeginInstall,
+                guard: Some(SEMANTIC_INDEX_UPGRADE_GUARD_INSPECTION_PASSED),
+                to: UpgradePhase::Installing,
+            },
+            Edge {
+                id: "X02",
+                from: UpgradePhase::Installing,
+                event: UpgradeEvent::FinishInstall,
+                guard: Some(SEMANTIC_INDEX_UPGRADE_GUARD_DESTINATION_VERIFIED),
+                to: UpgradePhase::Installed,
+            },
+        ],
+    };
+
+impl UpgradePhase {
+    /// The one transition function of `SemanticIndexUpgradeMachine`. `guard_holds` answers each guard
+    /// by name; an unguarded edge always holds.
+    pub fn apply(
+        self,
+        event: UpgradeEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        transition(&SEMANTIC_INDEX_UPGRADE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
 }
 
 fn inspect_under_lease_with_destination(
@@ -129,11 +231,10 @@ fn inspect_under_lease_with_destination(
     tenant: &str,
     binding_ids: &[String],
     max_total_bytes: u64,
-    destination_installed: bool,
+    phase: UpgradePhase,
 ) -> Result<TenantOwnerUpgradeInspection, String> {
     let unique = validate_request(tenant, binding_ids, max_total_bytes)?;
-    let destination =
-        validate_directory_census(persist_dir, tenant, binding_ids, destination_installed)?;
+    let destination = validate_directory_census(persist_dir, tenant, binding_ids, phase)?;
 
     let mut sources = Vec::with_capacity(binding_ids.len());
     let mut total_bytes = 0_u64;
@@ -221,7 +322,7 @@ pub(super) fn observe_promoted_tenant_owner_under_existing_lease(
         tenant,
         binding_ids,
         max_source_bytes,
-        true,
+        UpgradePhase::Installed,
     )?;
     if current.source_census_digest != promoted.source_census_digest
         || current.destination != promoted.destination
@@ -478,7 +579,7 @@ fn verify_promoted_under_lease(
         tenant,
         binding_ids,
         max_total_bytes,
-        true,
+        UpgradePhase::Installed,
     )?;
     let candidate = current.destination.with_extension("candidate.redb");
     let alias_exists = match std::fs::symlink_metadata(&candidate) {
@@ -749,13 +850,20 @@ fn validate_directory_census(
     persist_dir: &Path,
     tenant: &str,
     binding_ids: &[String],
-    destination_installed: bool,
+    phase: UpgradePhase,
 ) -> Result<PathBuf, String> {
+    let destination_present = match phase {
+        UpgradePhase::Inspect => false,
+        UpgradePhase::Installed => true,
+        UpgradePhase::Installing => {
+            return Err("semantic tenant destination is mid-install".to_string())
+        }
+    };
     let destination = tenant_semantic_owner_file(persist_dir, tenant);
     match std::fs::symlink_metadata(&destination) {
-        Ok(metadata) if destination_installed && metadata.file_type().is_file() => {}
+        Ok(metadata) if destination_present && metadata.file_type().is_file() => {}
         Ok(_) => return Err("semantic tenant destination has the wrong state".to_string()),
-        Err(error) if !destination_installed && error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) if !destination_present && error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => {
             return Err(format!(
                 "semantic tenant destination is unavailable: {error}"
@@ -766,7 +874,7 @@ fn validate_directory_census(
     let fence = tenant_semantic_migration_fence_file(persist_dir, tenant);
     match std::fs::symlink_metadata(&fence) {
         Ok(_) => require_migration_fence(persist_dir, tenant, &destination)?,
-        Err(error) if !destination_installed && error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) if !destination_present && error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(format!("semantic migration fence unavailable: {error}")),
     }
     match std::fs::symlink_metadata(&candidate) {
@@ -1379,5 +1487,144 @@ mod tests {
         let root = Path::new("/tmp/semantic-upgrade-missing");
         assert!(inspect_tenant_owner_upgrade(root, "t", &["a".into()], 0).is_err());
         assert!(inspect_tenant_owner_upgrade(root, "t", &["a".into(), "a".into()], 1).is_err());
+    }
+
+    // MEDULLA-DURABLE-KERNEL-R872.1 — the upgrade phase machine.
+    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+
+    fn edge_case(id: &str, from: UpgradePhase, event: UpgradeEvent, to: UpgradePhase) {
+        let edge = SEMANTIC_INDEX_UPGRADE_MACHINE
+            .edges
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap();
+        assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
+        // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+        assert_eq!(from.apply(event, |g| Some(g) == edge.guard), Ok(to));
+        if edge.guard.is_some() {
+            let refused = from.apply(event, |_| false).unwrap_err();
+            assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        }
+    }
+
+    /// Every (state, event) pair with no edge.
+    fn illegal_pairs() -> Vec<(UpgradePhase, UpgradeEvent)> {
+        let machine = &SEMANTIC_INDEX_UPGRADE_MACHINE;
+        let mut out = Vec::new();
+        for &state in machine.states {
+            for &event in machine.events {
+                if !machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
+                    out.push((state, event));
+                }
+            }
+        }
+        out
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn edge_x01_inspect_begin_install() {
+        edge_case(
+            "X01",
+            UpgradePhase::Inspect,
+            UpgradeEvent::BeginInstall,
+            UpgradePhase::Installing,
+        );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn edge_x02_installing_finish_install() {
+        edge_case(
+            "X02",
+            UpgradePhase::Installing,
+            UpgradeEvent::FinishInstall,
+            UpgradePhase::Installed,
+        );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn every_illegal_pair_is_refused() {
+        let machine = &SEMANTIC_INDEX_UPGRADE_MACHINE;
+        let pairs = illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            let expected = if machine.is_terminal(state) {
+                TransitionRefusalReason::TerminalState
+            } else {
+                TransitionRefusalReason::IllegalTransition
+            };
+            assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        }
+        for &terminal in machine.terminals {
+            for &event in machine.events {
+                assert!(terminal.apply(event, |_| true).is_err());
+            }
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn refusal_carries_machine_from_event() {
+        let refused = UpgradePhase::Inspect
+            .apply(UpgradeEvent::FinishInstall, |_| true)
+            .unwrap_err();
+        assert_eq!(refused.machine, "SemanticIndexUpgradeMachine");
+        assert_eq!(refused.from, UpgradePhase::Inspect.stored());
+        assert_eq!(refused.event, "FinishInstall");
+        assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn every_transition_and_refusal_is_covered() {
+        let machine = &SEMANTIC_INDEX_UPGRADE_MACHINE;
+        assert_eq!(machine.edges.len(), 2);
+        assert_eq!(machine.states.len(), 3);
+        let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
+        ids.dedup();
+        assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
+        for edge in machine.edges {
+            assert!(
+                !machine.is_terminal(edge.from),
+                "{} leaves a terminal state",
+                edge.id
+            );
+        }
+        for &state in machine.states {
+            assert_eq!(machine.state_from_stored(state.stored()), Some(state));
+            for &event in machine.events {
+                let legal = state.apply(event, |_| true).is_ok();
+                let has_edge = machine.edges_from(state).any(|e| e.event == event);
+                assert_eq!(legal, has_edge, "{state:?} {event:?}");
+            }
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let source = include_str!("upgrade.rs");
+        let flag = ["destination_installed", ": bool"].concat();
+        assert!(!source.contains(&flag), "the boolean phase flag is back");
+        assert!(validate_directory_census(
+            Path::new("/nonexistent"),
+            "t",
+            &[],
+            UpgradePhase::Installing
+        )
+        .is_err());
     }
 }

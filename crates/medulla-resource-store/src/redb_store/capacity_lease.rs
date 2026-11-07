@@ -20,7 +20,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use medulla_mutation_types::{
-    capacity_lease::CapacityCell, capacity_lease::CapacityLease, capacity_lease::LeaseState,
+    capacity_lease::CapacityCell, capacity_lease::CapacityLease,
+    capacity_lease::CapacityLeaseEvent, capacity_lease::CapacityLeaseState,
 };
 use medulla_storage::{
     GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTable, ScopedOwnerTableMut,
@@ -554,7 +555,7 @@ fn issue_acquired_lease(
         cost_budget_micros: request.cost_budget_micros,
         token_budget: request.token_budget,
         idempotency_key: request.idempotency_key.clone(),
-        state: LeaseState::Active,
+        state: CapacityLeaseState::Active,
     };
     lease
         .validate()
@@ -732,7 +733,7 @@ fn check_lease_fence(
     }
     if matches!(
         current.state,
-        LeaseState::Released | LeaseState::Expired | LeaseState::Reclaimed
+        CapacityLeaseState::Released | CapacityLeaseState::Reclaimed
     ) {
         return Ok(FenceCheck::Rejected(Box::new(CapacityMutationResult {
             schema_version: NativeControlSchemaVersion::V1,
@@ -767,9 +768,15 @@ fn apply_lease_mutation(
         let ttl_ms = request.ttl_ms.unwrap_or(DEFAULT_TTL_MS);
         lease.expires_at_ms = request.now_ms.saturating_add(ttl_ms);
         lease.renewed_count = lease.renewed_count.saturating_add(1);
-        lease.state = LeaseState::Renewed;
+        lease.state = lease
+            .state
+            .apply(CapacityLeaseEvent::Renew, |_| true)
+            .map_err(|refused| refused.to_string())?;
     } else {
-        lease.state = LeaseState::Released;
+        lease.state = lease
+            .state
+            .apply(CapacityLeaseEvent::Release, |_| true)
+            .map_err(|refused| refused.to_string())?;
         let mut row = usage
             .get((graph, lease.cell_id.as_str()))?
             .map(|value| decode_durable::<DurableUsage>(&crypto.unseal(value.value())?))
@@ -914,7 +921,7 @@ fn scan_expired_candidates(
             continue;
         }
         let lease: CapacityLease = decode_durable(&crypto.unseal(value.value())?)?;
-        if !matches!(lease.state, LeaseState::Active | LeaseState::Renewed)
+        if lease.state != CapacityLeaseState::Active
             || lease.expires_at_ms > now_ms
             || tenant.is_some_and(|wanted| wanted != lease.tenant_ref)
             || cell_id.is_some_and(|wanted| wanted != lease.cell_id)
@@ -939,7 +946,11 @@ fn reclaim_one_lease(
     mut lease: CapacityLease,
     crypto: DurableCrypto<'_>,
 ) -> Result<String, String> {
-    lease.state = LeaseState::Reclaimed;
+    // The expiry scan selected only leases whose `expires_at_ms` passed (the C03 guard).
+    lease.state = lease
+        .state
+        .apply(CapacityLeaseEvent::Reclaim, |_| true)
+        .map_err(|refused| refused.to_string())?;
     let mut row = usage
         .get((graph, lease.cell_id.as_str()))?
         .map(|value| decode_durable::<DurableUsage>(&crypto.unseal(value.value())?))

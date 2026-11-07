@@ -16,6 +16,7 @@ mod revocation;
 mod session_evidence;
 mod sql_dump;
 mod tokens;
+mod user_status_machine;
 mod verdicts;
 
 /// A registry fixture with one scope of every class.
