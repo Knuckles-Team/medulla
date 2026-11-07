@@ -99,8 +99,10 @@ runs:
     - name: Verify the prebuilt server executable checksum
       if: ${{ inputs.server-artifact != '' }}
       shell: bash
+      env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
       run: |
-        python scripts/fetch_server_binary.py verify dist-server-bin
+        cargo --locked xtask fetch-server-binary verify dist-server-bin
         chmod 0755 dist-server-bin/medulla-server* || true
 
     - name: Build the release server executable (native)
@@ -164,7 +166,9 @@ runs:
 
     - name: Fold the server executable into the medulla wheel
       shell: bash
-      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "dist-server-bin/$(ls dist-server-bin | grep -xE 'medulla-server(\.exe)?')"
+      env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+      run: cargo --locked xtask inject-server-binary "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "dist-server-bin/$(ls dist-server-bin | grep -xE 'medulla-server(\.exe)?')"
 
     # Safety net: the server is package data, never a console script; drop any
     # `*.data/scripts/*` member a future build change might emit.

@@ -79,7 +79,7 @@ fn path_gate_table() -> Vec<(&'static str, Vec<&'static str>)> {
                 "Cargo.toml",
                 "scripts/inject_numeric_kernel.py",
                 "scripts/inject_ontology.py",
-                "scripts/inject_server_binary.py",
+                "tools/xtask/src/inject_server_binary.rs",
                 "scripts/build_release_server.sh",
                 "scripts/strip_wheel_executables.py",
                 "scripts/normalize_wheel_sbom.py",

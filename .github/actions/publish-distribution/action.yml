@@ -15,12 +15,13 @@ runs:
     - name: Upload to PyPI
       shell: bash
       env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ inputs.pypi-token }}
         PUBLISH_PATTERN: ${{ inputs.pattern }}
       run: |
         set -euo pipefail
-        python scripts/verify_release_tag.py
+        cargo --locked xtask verify-release-tag
         python -m pip install --upgrade twine
         # shellcheck disable=SC2086
         python -m twine upload --skip-existing $PUBLISH_PATTERN

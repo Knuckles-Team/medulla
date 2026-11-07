@@ -32,7 +32,7 @@ gh workflow run publish-tombstones.yml -f confirm=publish-tombstones
 uploads both with `twine` using the org-level `PYPI_API_TOKEN` secret, the same token
 every ecosystem release uses. It stays separate from `release.yml`.
 `release.yml` publishes only from a canonical `v*` tag push: its uploader calls
-`scripts/verify_release_tag.py` and refuses anything else. A tombstone is a one-off
+`cargo xtask verify-release-tag` and refuses anything else. A tombstone is a one-off
 manual act.
 
 The workflow refuses to run unless:

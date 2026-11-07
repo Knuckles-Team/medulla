@@ -249,7 +249,7 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         "scripts/normalize_wheel_sbom.py",
         "scripts/normalize_wheel_build_paths.py",
         "xtask wheel-privacy",
-        "scripts/inject_server_binary.py",
+        "xtask inject-server-binary",
         "xtask wheel-completeness --require-engine-kernel",
     ):
         assert wheel_pass.count(script) == 1, script

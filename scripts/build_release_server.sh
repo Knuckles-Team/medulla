@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the release `medulla-server` executable for the wheel being built and
 # copy it to dist-server-bin/, where the folded-wheel action injects it into the
-# medulla wheel as medulla/_bin/medulla-server (scripts/inject_server_binary.py).
+# medulla wheel as medulla/_bin/medulla-server (cargo xtask inject-server-binary).
 #
 # On Linux the folded-wheel action sources this inside the manylinux container
 # of the engine wheel build (after the linker setup), so the server links

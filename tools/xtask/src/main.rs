@@ -11,6 +11,8 @@ mod ci_change_scope;
 mod decide_budgets;
 mod dispatch_decomposition;
 mod fanout_host_groups;
+mod fetch_server_binary;
+mod inject_server_binary;
 mod integration_baseline;
 mod mint_lease_call_sites;
 mod orphan_modules;
@@ -23,6 +25,7 @@ mod sole_write_envelope;
 mod spec_paths;
 #[cfg(test)]
 mod tempdir;
+mod verify_release_tag;
 mod wheel_completeness;
 mod wheel_privacy;
 
@@ -89,6 +92,20 @@ const CHECKS: &[Check] = &[
         summary: fanout_host_groups::SUMMARY,
         run: fanout_host_groups::run,
         standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: fetch_server_binary::NAME,
+        summary: fetch_server_binary::SUMMARY,
+        run: fetch_server_binary::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: inject_server_binary::NAME,
+        summary: inject_server_binary::SUMMARY,
+        run: inject_server_binary::run,
+        standalone: true,
         needs_git: false,
     },
     Check {
@@ -162,6 +179,13 @@ const CHECKS: &[Check] = &[
         needs_git: false,
     },
     Check {
+        name: verify_release_tag::NAME,
+        summary: verify_release_tag::SUMMARY,
+        run: verify_release_tag::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
         name: wheel_completeness::NAME,
         summary: wheel_completeness::SUMMARY,
         run: wheel_completeness::run,
@@ -172,7 +196,7 @@ const CHECKS: &[Check] = &[
         name: wheel_privacy::NAME,
         summary: wheel_privacy::SUMMARY,
         run: wheel_privacy::run,
-        standalone: false,
+        standalone: true,
         needs_git: false,
     },
 ];
