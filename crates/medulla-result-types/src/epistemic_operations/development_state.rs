@@ -20,23 +20,16 @@ pub enum DevelopmentLaneHoldHostTargetKind {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+/// The states of `LaneHoldMachine` (MEDULLA-PLACEMENT-R780.1, see `hold_machine.rs`).
 pub enum DevelopmentLaneHoldState {
-    #[serde(rename = "allocating")]
-    Allocating,
     #[serde(rename = "active")]
     Active,
-    #[serde(rename = "submitted")]
-    Submitted,
-    #[serde(rename = "released")]
-    Released,
     #[serde(rename = "expired")]
     Expired,
     #[serde(rename = "cleanup_pending")]
     CleanupPending,
     #[serde(rename = "cleaned")]
     Cleaned,
-    #[serde(rename = "aborted")]
-    Aborted,
     #[serde(rename = "absent")]
     Absent,
 }

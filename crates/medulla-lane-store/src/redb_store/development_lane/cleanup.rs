@@ -19,7 +19,7 @@ use medulla_resource_store::redb_store::resource::resource_encode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
 use medulla_storage::ScopedOwnerTableMut;
@@ -365,7 +365,12 @@ pub fn cleanup_live_hold(
         return Err("development lane tenant tombstone index is missing".to_string());
     }
     row.hold.retained_disk_bytes = 0;
-    row.hold.state = DevelopmentLaneHoldState::Cleaned;
+    // The correlation and expected-revision checks above are the guard.
+    row.hold.state = row
+        .hold
+        .state
+        .apply(HoldEvent::Cleanup, |_| true)
+        .map_err(|refused| refused.to_string())?;
     row.hold.cleanup_work_item_id = Some(request.cleanup_work_item_id.clone());
     row.hold.cleanup_work_item_fence = Some(request.cleanup_work_item_fence.clone());
     row.hold.cleanup_attempt = Some(request.cleanup_attempt);
@@ -461,9 +466,7 @@ pub fn apply_cleanup(
     }
     if !matches!(
         row.hold.state,
-        DevelopmentLaneHoldState::CleanupPending
-            | DevelopmentLaneHoldState::Released
-            | DevelopmentLaneHoldState::Expired
+        DevelopmentLaneHoldState::CleanupPending | DevelopmentLaneHoldState::Expired
     ) {
         return Ok((
             cleanup_result(LaneDecision::CleanupRequired, Some(&row), policy_revision)?,

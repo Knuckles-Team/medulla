@@ -198,10 +198,7 @@ pub fn require_drained_holds(
         durable_hold_bounds(&row)?;
         if matches!(
             row.hold.state,
-            DevelopmentLaneHoldState::Allocating
-                | DevelopmentLaneHoldState::Active
-                | DevelopmentLaneHoldState::Submitted
-                | DevelopmentLaneHoldState::Released
+            DevelopmentLaneHoldState::Active
                 | DevelopmentLaneHoldState::Expired
                 | DevelopmentLaneHoldState::CleanupPending
         ) || row.hold.active_count_charged

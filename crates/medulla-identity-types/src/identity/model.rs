@@ -25,10 +25,10 @@ pub enum UserKind {
 pub enum UserStatus {
     Active,
     Disabled,
-    /// Must set a new password (admin reset, or local mode entered without a
-    /// credential) before any session is issued.
+    /// Must set a new password (admin reset) before any session is issued.
     PendingReset,
     PendingVerification,
+    /// Holds no authority. The directory can re-provision it (edge U13).
     Deprovisioned,
 }
 
@@ -56,6 +56,8 @@ pub enum UserStatusEvent {
     Verify,
     /// The `Deprovision` event.
     Deprovision,
+    /// The `Reprovision` event.
+    Reprovision,
 }
 
 impl MachineState for UserStatus {
@@ -79,6 +81,7 @@ impl MachineEvent for UserStatusEvent {
             Self::CompleteReset => "CompleteReset",
             Self::Verify => "Verify",
             Self::Deprovision => "Deprovision",
+            Self::Reprovision => "Reprovision",
         }
     }
 }
@@ -89,6 +92,8 @@ pub const USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR: &str = "NotLastActive
 pub const USER_STATUS_GUARD_NEW_CREDENTIAL_SET: &str = "NewCredentialSet";
 /// Guard of `UserStatusMachine`: the verification proof matches.
 pub const USER_STATUS_GUARD_VERIFICATION_PROOF_MATCHES: &str = "VerificationProofMatches";
+/// Guard of `UserStatusMachine`: the directory that provisioned the principal re-provisions it.
+pub const USER_STATUS_GUARD_DIRECTORY_REPROVISION: &str = "DirectoryReprovision";
 
 /// `UserStatusMachine`: the closed edge table. Every other pair of state and event is refused.
 pub static USER_STATUS_MACHINE: MachineDef<UserStatus, UserStatusEvent, &'static str> =
@@ -102,7 +107,7 @@ pub static USER_STATUS_MACHINE: MachineDef<UserStatus, UserStatusEvent, &'static
             UserStatus::Deprovisioned,
         ],
         initial: UserStatus::Active,
-        terminals: &[UserStatus::Deprovisioned],
+        terminals: &[],
         events: &[
             UserStatusEvent::Disable,
             UserStatusEvent::Enable,
@@ -110,11 +115,13 @@ pub static USER_STATUS_MACHINE: MachineDef<UserStatus, UserStatusEvent, &'static
             UserStatusEvent::CompleteReset,
             UserStatusEvent::Verify,
             UserStatusEvent::Deprovision,
+            UserStatusEvent::Reprovision,
         ],
         guards: &[
             USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR,
             USER_STATUS_GUARD_NEW_CREDENTIAL_SET,
             USER_STATUS_GUARD_VERIFICATION_PROOF_MATCHES,
+            USER_STATUS_GUARD_DIRECTORY_REPROVISION,
         ],
         edges: &[
             Edge {
@@ -201,6 +208,13 @@ pub static USER_STATUS_MACHINE: MachineDef<UserStatus, UserStatusEvent, &'static
                 guard: None,
                 to: UserStatus::Deprovisioned,
             },
+            Edge {
+                id: "U13",
+                from: UserStatus::Deprovisioned,
+                event: UserStatusEvent::Reprovision,
+                guard: Some(USER_STATUS_GUARD_DIRECTORY_REPROVISION),
+                to: UserStatus::Active,
+            },
         ],
     };
 
@@ -213,6 +227,15 @@ impl UserStatus {
         guard_holds: impl Fn(&'static str) -> bool,
     ) -> Result<Self, TransitionRefused> {
         transition(&USER_STATUS_MACHINE, self, event, guard_holds).map(|edge| edge.to)
+    }
+
+    /// The event of the one operator-driven edge from `self` to `to`, if there is one. The
+    /// directory edge (`Reprovision`) is never chosen by target: only the directory fires it.
+    pub fn event_to(self, to: Self) -> Option<UserStatusEvent> {
+        USER_STATUS_MACHINE
+            .edges_from(self)
+            .find(|edge| edge.to == to && edge.event != UserStatusEvent::Reprovision)
+            .map(|edge| edge.event)
     }
 }
 

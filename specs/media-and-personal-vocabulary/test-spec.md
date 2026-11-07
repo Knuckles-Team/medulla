@@ -54,6 +54,8 @@ Every row below names a test that does not exist yet. The test file and function
 | T-041 | MEDULLA-MEDIA-VOCAB-R653 | L1 | `crates/medulla-core/tests/connector_competency_ontology_terms.rs::ontology_audit_personal_v1::totalAmount_covers_purchase_invoice` | totalAmount covers purchase invoices proves its row as stated in requirements.md |
 | T-042 | MEDULLA-MEDIA-VOCAB-R654 | L3 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_transcript_clock_tests.rs::segments_carry_three_typed_clocks` | Transcript segments carry storage, event and narrative time proves its row as stated in requirements.md |
 | T-043 | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-core/tests/nutrition_pack.rs::nutrient_ids_map_and_records_conform` | Food composition and nutrient reference types proves its row as stated in requirements.md |
+| T-043a | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-persistence-tests/src/cold_offload_tests.rs::cold_pack_graphs_open_on_first_union_resolve` | A pack graph that is cold after a restart opens on the first union read |
+| T-043b | MEDULLA-MEDIA-VOCAB-R655 | L2 | `crates/medulla-h-admin/src/admin/connector_pack/reproject/surface.rs::tests::a_newer_head_drops_the_individuals_it_no_longer_names` | An individual dropped from a newer head disappears from the pack graph |
 
 ## Negative and boundary cases
 

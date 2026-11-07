@@ -884,7 +884,8 @@ ex:parent a owl:AsymmetricProperty .
         // +739: the measured composed count after the re-rooted modules
         // (MEDULLA-TYPED-PACKS-R071.2), the generated decision module's core parents (+4),
         // the nutrition schema.org mappings (+6) and the vocabulary landed since.
-        assert_eq!(composed.ontology.len(), 18_761);
+        // +1856: the state-machine vocabulary (state-machines-v1.ttl) joins the core corpus.
+        assert_eq!(composed.ontology.len(), 20_617);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -979,7 +980,7 @@ ex:parent a owl:AsymmetricProperty .
         // +210 (MEDULLA-TYPED-PACKS-R071.2): the core-rooting `rdfs:subClassOf` axioms.
         // +737: the semantic share of the +739 total above (the other 2 are the
         // import edges); headers are unchanged at 150 triples.
-        assert_eq!(semantic_axioms, 18_530);
+        assert_eq!(semantic_axioms, 20_386);
 
         let count_type = |object: &str| {
             composed
@@ -1061,7 +1062,8 @@ ex:parent a owl:AsymmetricProperty .
             // +230 (measured): the 210 core-rooting edges of MEDULLA-TYPED-PACKS-R071.2
             // and 20 named placements in the vocabulary of the +739 total above
             // (the decision module's core parents among them).
-            962
+            // +90 (measured): the state-machine vocabulary's class edges (MEDULLA-ORCH-VOCAB-R811.1).
+            1052
         );
     }
 

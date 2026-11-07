@@ -616,7 +616,7 @@
     rdfs:label "UserStatus PendingVerification" ;
     :storedForm "pending_verification" .
 
-:UserStatusMachine_Deprovisioned a :UserStatusTerminalState ;
+:UserStatusMachine_Deprovisioned a :UserStatusState ;
     rdfs:label "UserStatus Deprovisioned" ;
     :storedForm "deprovisioned" .
 
@@ -638,6 +638,9 @@
 :UserStatusMachine_Event_Deprovision a :UserStatusEvent ;
     rdfs:label "UserStatus Deprovision" .
 
+:UserStatusMachine_Event_Reprovision a :UserStatusEvent ;
+    rdfs:label "UserStatus Reprovision" .
+
 :UserStatusMachine_Guard_NotLastActiveAdministrator a :UserStatusGuard ;
     rdfs:label "UserStatus NotLastActiveAdministrator" ;
     rdfs:comment "Guard: the principal is not the last active administrator." .
@@ -649,6 +652,10 @@
 :UserStatusMachine_Guard_VerificationProofMatches a :UserStatusGuard ;
     rdfs:label "UserStatus VerificationProofMatches" ;
     rdfs:comment "Guard: the verification proof matches." .
+
+:UserStatusMachine_Guard_DirectoryReprovision a :UserStatusGuard ;
+    rdfs:label "UserStatus DirectoryReprovision" ;
+    rdfs:comment "Guard: the directory that provisioned the principal re-provisions it." .
 
 :UserStatusMachine_U01 a :UserStatusTransition ;
     rdfs:label "UserStatus U01" ;
@@ -738,6 +745,14 @@
     :fromState :UserStatusMachine_PendingVerification ;
     :toState :UserStatusMachine_Deprovisioned ;
     :firedBy :UserStatusMachine_Event_Deprovision .
+
+:UserStatusMachine_U13 a :UserStatusTransition ;
+    rdfs:label "UserStatus U13" ;
+    :edgeId "U13" ;
+    :fromState :UserStatusMachine_Deprovisioned ;
+    :toState :UserStatusMachine_Active ;
+    :guardedBy :UserStatusMachine_Guard_DirectoryReprovision ;
+    :firedBy :UserStatusMachine_Event_Reprovision .
 
 # spec: MEDULLA-IDENTITY-R722.1
 # The RbacElevation machine. The Rust edge table RBAC_ELEVATION_MACHINE is the same table; the ontology
@@ -2033,3 +2048,239 @@
     :toState :CapacityLeaseMachine_Reclaimed ;
     :guardedBy :CapacityLeaseMachine_Guard_LeaseUntilPassed ;
     :firedBy :CapacityLeaseMachine_Event_Reclaim .
+
+# spec: MEDULLA-PLACEMENT-R780.2
+# The LaneHold machine. The Rust edge table LANE_HOLD_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:LaneHoldState a owl:Class ;
+    rdfs:label "LaneHold State" ;
+    rdfs:comment "A state of the LaneHold machine." ;
+    rdfs:subClassOf :State .
+
+:LaneHoldTerminalState a owl:Class ;
+    rdfs:label "LaneHold Terminal State" ;
+    rdfs:comment "A terminal state of the LaneHold machine." ;
+    rdfs:subClassOf :TerminalState, :LaneHoldState .
+
+:LaneHoldTransition a owl:Class ;
+    rdfs:label "LaneHold Transition" ;
+    rdfs:comment "A transition of the LaneHold machine." ;
+    rdfs:subClassOf :Transition .
+
+:LaneHoldEvent a owl:Class ;
+    rdfs:label "LaneHold Event" ;
+    rdfs:comment "A event of the LaneHold machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:LaneHoldGuard a owl:Class ;
+    rdfs:label "LaneHold Guard" ;
+    rdfs:comment "A guard of the LaneHold machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:LaneHoldMachine a :StateMachine ;
+    rdfs:label "LaneHold machine" ;
+    :initialState :LaneHoldMachine_Absent ;
+    :hasState :LaneHoldMachine_Absent, :LaneHoldMachine_Active, :LaneHoldMachine_Expired, :LaneHoldMachine_CleanupPending, :LaneHoldMachine_Cleaned .
+
+:LaneHoldMachine_Absent a :LaneHoldState ;
+    rdfs:label "LaneHold Absent" ;
+    :storedForm "absent" .
+
+:LaneHoldMachine_Active a :LaneHoldState ;
+    rdfs:label "LaneHold Active" ;
+    :storedForm "active" .
+
+:LaneHoldMachine_Expired a :LaneHoldState ;
+    rdfs:label "LaneHold Expired" ;
+    :storedForm "expired" .
+
+:LaneHoldMachine_CleanupPending a :LaneHoldState ;
+    rdfs:label "LaneHold CleanupPending" ;
+    :storedForm "cleanup_pending" .
+
+:LaneHoldMachine_Cleaned a :LaneHoldTerminalState ;
+    rdfs:label "LaneHold Cleaned" ;
+    :storedForm "cleaned" .
+
+:LaneHoldMachine_Event_Reserve a :LaneHoldEvent ;
+    rdfs:label "LaneHold Reserve" .
+
+:LaneHoldMachine_Event_Finish a :LaneHoldEvent ;
+    rdfs:label "LaneHold Finish" .
+
+:LaneHoldMachine_Event_Expire a :LaneHoldEvent ;
+    rdfs:label "LaneHold Expire" .
+
+:LaneHoldMachine_Event_Renew a :LaneHoldEvent ;
+    rdfs:label "LaneHold Renew" .
+
+:LaneHoldMachine_Event_Cleanup a :LaneHoldEvent ;
+    rdfs:label "LaneHold Cleanup" .
+
+:LaneHoldMachine_Guard_ReservationAdmitted a :LaneHoldGuard ;
+    rdfs:label "LaneHold ReservationAdmitted" ;
+    rdfs:comment "Guard: the reservation request is admitted." .
+
+:LaneHoldMachine_Guard_WorkItemTerminal a :LaneHoldGuard ;
+    rdfs:label "LaneHold WorkItemTerminal" ;
+    rdfs:comment "Guard: the work item machine reached a terminal state." .
+
+:LaneHoldMachine_Guard_TimeLimitPassed a :LaneHoldGuard ;
+    rdfs:label "LaneHold TimeLimitPassed" ;
+    rdfs:comment "Guard: the hold time limit has passed." .
+
+:LaneHoldMachine_Guard_LiveAndFresh a :LaneHoldGuard ;
+    rdfs:label "LaneHold LiveAndFresh" ;
+    rdfs:comment "Guard: the observation is fresh and the time limit has not passed." .
+
+:LaneHoldMachine_Guard_CleanupHoldMatches a :LaneHoldGuard ;
+    rdfs:label "LaneHold CleanupHoldMatches" ;
+    rdfs:comment "Guard: the cleanup request names this hold and its expected revision." .
+
+:LaneHoldMachine_H01 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H01" ;
+    :edgeId "H01" ;
+    :fromState :LaneHoldMachine_Absent ;
+    :toState :LaneHoldMachine_Active ;
+    :guardedBy :LaneHoldMachine_Guard_ReservationAdmitted ;
+    :firedBy :LaneHoldMachine_Event_Reserve .
+
+:LaneHoldMachine_H02 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H02" ;
+    :edgeId "H02" ;
+    :fromState :LaneHoldMachine_Active ;
+    :toState :LaneHoldMachine_CleanupPending ;
+    :guardedBy :LaneHoldMachine_Guard_WorkItemTerminal ;
+    :firedBy :LaneHoldMachine_Event_Finish .
+
+:LaneHoldMachine_H03 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H03" ;
+    :edgeId "H03" ;
+    :fromState :LaneHoldMachine_Active ;
+    :toState :LaneHoldMachine_Expired ;
+    :guardedBy :LaneHoldMachine_Guard_TimeLimitPassed ;
+    :firedBy :LaneHoldMachine_Event_Expire .
+
+:LaneHoldMachine_H04 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H04" ;
+    :edgeId "H04" ;
+    :fromState :LaneHoldMachine_CleanupPending ;
+    :toState :LaneHoldMachine_Cleaned ;
+    :guardedBy :LaneHoldMachine_Guard_CleanupHoldMatches ;
+    :firedBy :LaneHoldMachine_Event_Cleanup .
+
+:LaneHoldMachine_H05 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H05" ;
+    :edgeId "H05" ;
+    :fromState :LaneHoldMachine_Expired ;
+    :toState :LaneHoldMachine_Cleaned ;
+    :guardedBy :LaneHoldMachine_Guard_CleanupHoldMatches ;
+    :firedBy :LaneHoldMachine_Event_Cleanup .
+
+:LaneHoldMachine_H06 a :LaneHoldTransition ;
+    rdfs:label "LaneHold H06" ;
+    :edgeId "H06" ;
+    :fromState :LaneHoldMachine_Active ;
+    :toState :LaneHoldMachine_Active ;
+    :guardedBy :LaneHoldMachine_Guard_LiveAndFresh ;
+    :firedBy :LaneHoldMachine_Event_Renew .
+
+# spec: MEDULLA-PLACEMENT-R783.5
+# The PartitionMove machine, over the partition state kind. The Rust edge table PARTITION_MOVE_MACHINE
+# is the same table; the ontology test asserts equal edge sets.
+
+:PartitionMoveState a owl:Class ;
+    rdfs:label "PartitionMove State" ;
+    rdfs:comment "A state of the PartitionMove machine." ;
+    rdfs:subClassOf :State .
+
+:PartitionMoveTerminalState a owl:Class ;
+    rdfs:label "PartitionMove Terminal State" ;
+    rdfs:comment "A terminal state of the PartitionMove machine." ;
+    rdfs:subClassOf :TerminalState, :PartitionMoveState .
+
+:PartitionMoveTransition a owl:Class ;
+    rdfs:label "PartitionMove Transition" ;
+    rdfs:comment "A transition of the PartitionMove machine." ;
+    rdfs:subClassOf :Transition .
+
+:PartitionMoveEvent a owl:Class ;
+    rdfs:label "PartitionMove Event" ;
+    rdfs:comment "A event of the PartitionMove machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:PartitionMoveGuard a owl:Class ;
+    rdfs:label "PartitionMove Guard" ;
+    rdfs:comment "A guard of the PartitionMove machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:PartitionMoveMachine a :StateMachine ;
+    rdfs:label "PartitionMove machine" ;
+    :initialState :PartitionMoveMachine_Active ;
+    :hasState :PartitionMoveMachine_Active, :PartitionMoveMachine_Moving .
+
+:PartitionMoveMachine_Active a :PartitionMoveState ;
+    rdfs:label "PartitionMove Active" ;
+    :storedForm "active" .
+
+:PartitionMoveMachine_Moving a :PartitionMoveState ;
+    rdfs:label "PartitionMove Moving" ;
+    :storedForm "moving" .
+
+:PartitionMoveMachine_Event_StartMove a :PartitionMoveEvent ;
+    rdfs:label "PartitionMove StartMove" .
+
+:PartitionMoveMachine_Event_FenceCutover a :PartitionMoveEvent ;
+    rdfs:label "PartitionMove FenceCutover" .
+
+:PartitionMoveMachine_Event_AbortMove a :PartitionMoveEvent ;
+    rdfs:label "PartitionMove AbortMove" .
+
+:PartitionMoveMachine_Guard_TargetNotOwner a :PartitionMoveGuard ;
+    rdfs:label "PartitionMove TargetNotOwner" ;
+    rdfs:comment "Guard: the target is not the owning group." .
+
+:PartitionMoveMachine_Guard_TargetIsMoveTarget a :PartitionMoveGuard ;
+    rdfs:label "PartitionMove TargetIsMoveTarget" ;
+    rdfs:comment "Guard: the target equals the move target." .
+
+:PartitionMoveMachine_Guard_MovingToRequestedTarget a :PartitionMoveGuard ;
+    rdfs:label "PartitionMove MovingToRequestedTarget" ;
+    rdfs:comment "Guard: the partition is moving to the requested target." .
+
+:PartitionMoveMachine_Guard_SourceOwnsAtOriginalEpoch a :PartitionMoveGuard ;
+    rdfs:label "PartitionMove SourceOwnsAtOriginalEpoch" ;
+    rdfs:comment "Guard: the source still owns the partition at the original epoch and the move target matches." .
+
+:PartitionMoveMachine_P01 a :PartitionMoveTransition ;
+    rdfs:label "PartitionMove P01" ;
+    :edgeId "P01" ;
+    :fromState :PartitionMoveMachine_Active ;
+    :toState :PartitionMoveMachine_Moving ;
+    :guardedBy :PartitionMoveMachine_Guard_TargetNotOwner ;
+    :firedBy :PartitionMoveMachine_Event_StartMove .
+
+:PartitionMoveMachine_P02 a :PartitionMoveTransition ;
+    rdfs:label "PartitionMove P02" ;
+    :edgeId "P02" ;
+    :fromState :PartitionMoveMachine_Moving ;
+    :toState :PartitionMoveMachine_Moving ;
+    :guardedBy :PartitionMoveMachine_Guard_TargetIsMoveTarget ;
+    :firedBy :PartitionMoveMachine_Event_StartMove .
+
+:PartitionMoveMachine_P03 a :PartitionMoveTransition ;
+    rdfs:label "PartitionMove P03" ;
+    :edgeId "P03" ;
+    :fromState :PartitionMoveMachine_Moving ;
+    :toState :PartitionMoveMachine_Active ;
+    :guardedBy :PartitionMoveMachine_Guard_MovingToRequestedTarget ;
+    :firedBy :PartitionMoveMachine_Event_FenceCutover .
+
+:PartitionMoveMachine_P04 a :PartitionMoveTransition ;
+    rdfs:label "PartitionMove P04" ;
+    :edgeId "P04" ;
+    :fromState :PartitionMoveMachine_Moving ;
+    :toState :PartitionMoveMachine_Active ;
+    :guardedBy :PartitionMoveMachine_Guard_SourceOwnsAtOriginalEpoch ;
+    :firedBy :PartitionMoveMachine_Event_AbortMove .

@@ -10,7 +10,7 @@ use super::types::LaneDecision;
 use super::work_item::load_work_item;
 use super::DurableLaneHold;
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::HoldEvent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
@@ -71,7 +71,12 @@ pub fn renew_live_hold(
         .now_ms
         .checked_add(request.ttl_ms)
         .ok_or_else(|| "development lane renewal expiry overflow".to_string())?;
-    row.hold.state = DevelopmentLaneHoldState::Active;
+    // The work item, intent and observation freshness checks above are the guard.
+    row.hold.state = row
+        .hold
+        .state
+        .apply(HoldEvent::Renew, |_| true)
+        .map_err(|refused| refused.to_string())?;
     row.hold.expires_at_ms = expires_at_ms;
     row.hold.last_renewed_at_ms = request.now_ms;
     row.hold.hold_revision = row

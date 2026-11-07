@@ -3,7 +3,7 @@ use super::types::LaneDecision;
 use super::{DurableLaneHold, DurableLanePolicy};
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::HoldEvent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
@@ -102,7 +102,12 @@ pub fn expire_active_hold(
     )?;
     row.hold.active_count_charged = false;
     row.hold.retained_disk_bytes = retained;
-    row.hold.state = DevelopmentLaneHoldState::Expired;
+    // The caller proved `now_ms >= expires_at_ms`.
+    row.hold.state = row
+        .hold
+        .state
+        .apply(HoldEvent::Expire, |_| true)
+        .map_err(|refused| refused.to_string())?;
     row.hold.tombstone = true;
     row.hold.hold_revision = row
         .hold

@@ -16,7 +16,7 @@ use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequestTerminalState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::DurableCrypto;
 
@@ -53,12 +53,7 @@ pub fn finish_state_name(state: DevelopmentLaneFinishRequestTerminalState) -> &'
 /// A live hold must be tombstone-free and in one of the pre-terminal states.
 pub fn hold_not_live(hold: &DevelopmentLaneHold) -> bool {
     hold.tombstone
-        || !matches!(
-            hold.state,
-            DevelopmentLaneHoldState::Allocating
-                | DevelopmentLaneHoldState::Active
-                | DevelopmentLaneHoldState::Submitted
-        )
+        || !matches!(hold.state, DevelopmentLaneHoldState::Active)
 }
 
 /// Is the WorkItem pre-image not a leased/running lifecycle row for this
@@ -304,7 +299,12 @@ pub fn transition_terminal_hold(
     row.hold.work_item_fence = terminal_work_item_fence.to_string();
     row.hold.active_count_charged = false;
     row.hold.retained_disk_bytes = retained;
-    row.hold.state = DevelopmentLaneHoldState::CleanupPending;
+    // The caller proved the work item is terminal (`is_terminal_text` above).
+    row.hold.state = row
+        .hold
+        .state
+        .apply(HoldEvent::Finish, |_| true)
+        .map_err(|refused| refused.to_string())?;
     row.hold.tombstone = true;
     row.terminal_state = Some(terminal_state.to_string());
     row.terminal_expected_hold_revision = Some(expected_hold_revision);

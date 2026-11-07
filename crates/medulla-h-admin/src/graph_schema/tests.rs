@@ -54,14 +54,14 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             _ => None,
         })
         .collect();
-    // The listing reports the exact immutable catalog of 60 core sources.
+    // The listing reports the exact immutable catalog of 62 core sources (the state-machine vocabulary and its shapes included).
     // Eight sources own both document kinds; every other source owns exactly
     // one document kind.
     let catalog = core.schema_sources();
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 60);
+    assert_eq!(core_ids.len(), 62);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -76,7 +76,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.ontology_sha256.is_some())
             .count(),
-        47
+        48
     );
     assert_eq!(
         initial
@@ -84,7 +84,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        21
+        22
     );
     for source in &initial.core_sources {
         let expected = if matches!(

@@ -226,13 +226,7 @@ fn checkpoint_restore_status_mapping_is_exact_for_retained_states() {
     expired.terminal_state = Some("succeeded".into());
     assert!(!checkpoint_lifecycle_status_matches(&expired, "succeeded"));
 
-    let mut released = cleanup_pending.clone();
-    released.hold.state = DevelopmentLaneHoldState::Released;
-    assert!(checkpoint_lifecycle_status_matches(&released, "succeeded"));
-    released.terminal_state = Some("failed".into());
-    assert!(!checkpoint_lifecycle_status_matches(&released, "succeeded"));
-
-    let mut cleaned = released.clone();
+    let mut cleaned = cleanup_pending.clone();
     cleaned.hold.state = DevelopmentLaneHoldState::Cleaned;
     cleaned.hold.retained_disk_bytes = 0;
     cleaned.terminal_state = Some("succeeded".into());

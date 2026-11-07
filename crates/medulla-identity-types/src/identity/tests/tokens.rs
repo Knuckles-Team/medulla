@@ -294,7 +294,7 @@ fn a_deny_jit_idp_refuses_an_unlinked_subject_and_admits_a_linked_one() {
 }
 
 #[test]
-fn leaving_external_puts_credentialless_humans_into_pending_reset() {
+fn leaving_external_leaves_credentialless_humans_untouched() {
     let mut store = keycloak_store(JitPolicy::Create);
     let (op, stamp) = external("erin", &[], "e1");
     apply_kept(&mut store, &op, &stamp, NOW).unwrap();
@@ -309,7 +309,7 @@ fn leaving_external_puts_credentialless_humans_into_pending_reset() {
     });
     apply_kept(&mut store, &back, &admin(), NOW).unwrap();
     let erin = store.resolve("usr:jit-erin", &TestRegistry).unwrap();
-    assert_eq!(erin.status, UserStatus::PendingReset);
+    assert_eq!(erin.status, UserStatus::Active, "no mass reset on a mode switch");
     assert!(
         store.manages("usr:jit-erin"),
         "the account and its link are kept"

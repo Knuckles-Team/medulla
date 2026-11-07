@@ -83,15 +83,13 @@ impl IdentityStore {
             },
         );
         // MEDULLA-IDENTITY-R721.1 U05: a credential that need not change completes a reset.
-        if let Some(user) = self.users.get_mut(principal_id) {
-            if user.status == UserStatus::PendingReset {
-                if let Ok(next) = user
-                    .status
-                    .apply(UserStatusEvent::CompleteReset, |_| !must_change)
-                {
-                    user.status = next;
-                }
-            }
+        let pending = self
+            .users
+            .get(principal_id)
+            .is_some_and(|user| user.status == UserStatus::PendingReset);
+        if pending {
+            // A refused edge (the new credential must still change) leaves the status alone.
+            let _ = self.transition_status(principal_id, UserStatusEvent::CompleteReset, now_ms);
         }
     }
 

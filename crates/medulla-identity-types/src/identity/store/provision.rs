@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::access::{IdpConfig, IdpKind};
 use super::super::audit::IdentityEvent;
-use super::super::model::{ExternalIdentity, UserKind, UserRecord, UserStatus};
+use super::super::model::{ExternalIdentity, UserKind, UserRecord, UserStatus, UserStatusEvent};
 use super::super::ops::{IdpOp, IDENTITY_AUTHENTICATE_SCOPE, IDENTITY_PROVISION_SCOPE};
 use super::super::requests_admin::MAX_PAGE;
 use super::super::requests_provision::{
@@ -274,15 +274,13 @@ impl IdentityStore {
         let user = self.users.get(principal).ok_or(IdentityRefusal::NotFound)?;
         let restorable =
             user.status == UserStatus::Deprovisioned && user.source == directory_source(idp);
-        let target = match (active, restorable) {
-            (false, _) => UserStatus::Deprovisioned,
-            (true, true) => UserStatus::Active,
+        let event = match (active, restorable) {
+            (false, _) if user.status == UserStatus::Deprovisioned => return Ok(()),
+            (false, _) => UserStatusEvent::Deprovision,
+            (true, true) => UserStatusEvent::Reprovision,
             (true, false) => return Ok(()),
         };
-        if user.status == target {
-            return Ok(());
-        }
-        self.transition_status(principal, target, now_ms)
+        self.transition_status(principal, event, now_ms)
     }
 
     /// Recompute one link's IdP bindings over its provisioned claims plus
