@@ -610,13 +610,20 @@ fn staged_program_identity(
     }
     Ok(parsed)
 }
+/// What a governed submit binds besides its kind: the admitting policy, the
+/// declared purpose, and the worker capabilities the job requires (a job kind
+/// that needs more capabilities adds them here).
+pub struct JobGovernance<'a> {
+    pub policy_fingerprint: &'a str,
+    pub purpose: &'a str,
+    pub required_capabilities: &'a mut Vec<String>,
+}
+
 pub fn govern_job_kind(
     authority: &CarrierAuthority,
     req_id: u64,
-    policy_fingerprint: &str,
-    purpose: &str,
     kind: JobKind,
-    required_capabilities: &mut Vec<String>,
+    governance: JobGovernance<'_>,
 ) -> Result<(JobKind, String, String, serde_json::Value), Response> {
     match kind {
         JobKind::MineAssociate {
@@ -636,18 +643,22 @@ pub fn govern_job_kind(
         JobKind::ProgramOptimize { request_msgpack } => submit_job_program_optimize(
             authority,
             req_id,
-            policy_fingerprint,
-            purpose,
+            governance.policy_fingerprint,
+            governance.purpose,
             request_msgpack,
-            required_capabilities,
+            governance.required_capabilities,
         ),
         // `jobs` always compiles the variant in; without this crate's
         // handler it is refused instead of submitted.
         #[cfg(not(feature = "program-optimization"))]
-        JobKind::ProgramOptimize { .. } => Err(Response::err(
-            req_id,
-            "INVALID_ARGUMENT: program optimization jobs are not built into this server",
-        )),
+        JobKind::ProgramOptimize { .. } => {
+            // Nothing to bind: the refusal leaves the capabilities untouched.
+            let JobGovernance { .. } = governance;
+            Err(Response::err(
+                req_id,
+                "INVALID_ARGUMENT: program optimization jobs are not built into this server",
+            ))
+        }
     }
 }
 
@@ -674,10 +685,12 @@ async fn finalize_submit(
     let (governed_kind, algorithm_family, algorithm, params) = match govern_job_kind(
         authority,
         req_id,
-        &policy_fingerprint,
-        &spec.purpose,
         spec.kind.clone(),
-        &mut spec.required_capabilities,
+        JobGovernance {
+            policy_fingerprint: &policy_fingerprint,
+            purpose: &spec.purpose,
+            required_capabilities: &mut spec.required_capabilities,
+        },
     ) {
         Ok(value) => value,
         Err(response) => return response,

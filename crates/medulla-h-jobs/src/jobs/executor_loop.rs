@@ -105,12 +105,14 @@ pub(super) async fn worker_loop(
         "native",
         &slot.to_string(),
     );
-    let mut capabilities = vec![
-        opaque_worker_capability("mining.association"),
-        opaque_worker_capability("pool:default"),
-    ];
-    #[cfg(feature = "program-optimization")]
-    capabilities.push(opaque_worker_capability("program.optimization"));
+    let capabilities: Vec<_> = [
+        Some(opaque_worker_capability("mining.association")),
+        Some(opaque_worker_capability("pool:default")),
+        program_optimization_capability(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     let quota = tenant_worker_quota();
     loop {
         match store.claim_next(
@@ -153,6 +155,18 @@ pub(super) async fn worker_loop(
             }
             Ok(None) | Err(_) => tokio::time::sleep(Duration::from_millis(timing.poll_ms)).await,
         }
+    }
+}
+
+/// The program-optimization capability, advertised only by builds that carry the handler.
+fn program_optimization_capability() -> Option<String> {
+    #[cfg(feature = "program-optimization")]
+    {
+        Some(opaque_worker_capability("program.optimization"))
+    }
+    #[cfg(not(feature = "program-optimization"))]
+    {
+        None
     }
 }
 

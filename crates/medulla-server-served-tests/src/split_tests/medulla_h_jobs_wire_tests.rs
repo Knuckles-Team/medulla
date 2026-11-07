@@ -1,7 +1,7 @@
 //! Wire-decode tests for the analytics job governor. They drive the native transport
 //! decoder, which lives in a sibling handler crate, so they run from the facade.
 
-use medulla_h_jobs::jobs::govern_job_kind;
+use medulla_h_jobs::jobs::{govern_job_kind, JobGovernance};
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_work_types::{jobs::JobKind, jobs::JobOp};
@@ -26,7 +26,16 @@ mod mine_associate_wire_tests {
     }
 
     fn govern(kind: JobKind) -> Result<(JobKind, String, String, serde_json::Value), Response> {
-        govern_job_kind(&authority(), 82, "policy:test", "", kind, &mut Vec::new())
+        govern_job_kind(
+            &authority(),
+            82,
+            kind,
+            JobGovernance {
+                policy_fingerprint: "policy:test",
+                purpose: "",
+                required_capabilities: &mut Vec::new(),
+            },
+        )
     }
 
     fn mining_kind(support: f64, confidence: f64, algorithm: &str) -> JobKind {
