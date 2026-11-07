@@ -156,3 +156,4 @@ Mutation proof must observe the committed result and the owner's refusal, replay
 A direct native operation must use its own entry point; forcing it through the planner changes the architecture.
 Record revision, feature profile, entry point, command, exit result, artifact digest, and observed effect for each execution claim.
 Keep unexecuted cases explicit.
+| MEDULLA-CONTRACT-R059 | `tests/test_client_derives_from_catalog.py::test_every_catalog_method_is_callable_and_no_wrapper_is_tracked` (planned) | The Python client is a thin layer over the served catalog. |
