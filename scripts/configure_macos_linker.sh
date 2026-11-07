@@ -16,7 +16,7 @@ medulla_configure_macos_linker() {
     SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" || return
     sdk_version="$(xcrun --sdk macosx --show-sdk-version)" || return
     case "$1:$sdk_version" in
-        aarch64-apple-darwin:14.5) ;;
+        aarch64-apple-darwin:15.5) ;;
         *) echo "Unprobed SDK for $1: $sdk_version" >&2; return 1 ;;
     esac
     export CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS}"$'\x1f'"-Clink-arg=-fuse-ld=$linker"

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def invoke_helper(
-    tmp_path: Path, *, lld: str = "22.1.2", flags: str = "remap", sdk: str = "14.5"
+    tmp_path: Path, *, lld: str = "22.1.2", flags: str = "remap", sdk: str = "15.5"
 ):
     tools = tmp_path / "tools"
     tools.mkdir()
