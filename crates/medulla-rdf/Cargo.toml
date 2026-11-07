@@ -129,7 +129,6 @@ medulla-source-types = { path = "../medulla-source-types" }
 # edges with each machine's Rust edge table. Dev-dependency cycles (raft, h-retrieve, core
 # broker) affect only the medulla-rdf test build.
 medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-work-types = { path = "../medulla-work-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-raft = { path = "../medulla-raft", features = ["raft"] }
 medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["raft"] }
