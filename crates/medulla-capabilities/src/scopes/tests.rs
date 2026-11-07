@@ -232,3 +232,37 @@ fn graph_os_curated_scopes_preserve_principal_and_key_boundaries() {
         assert_eq!(ScopeRegistry.class_of(&wildcard), None);
     }
 }
+
+/// The web interface scopes: chat history, workspace files and user-class
+/// reads of blast radius and the cached cluster hierarchy. The refresh and
+/// every other graph algorithm stay service-only.
+// spec: MEDULLA-IDENTITY-R004.1
+#[test]
+fn web_interface_scopes_are_user_class_and_bind_the_compute_reads() {
+    for (scope, owner) in [
+        ("chats:own", "graph-os"),
+        ("workspace:read", "graph-os"),
+        ("workspace:write", "graph-os"),
+        ("compute:graph-read", "engine"),
+    ] {
+        let entry = scope_entry(scope).expect("web interface scope is registered");
+        assert_eq!(entry.class, ScopeClass::User, "{scope}");
+        assert_eq!(entry.owner, owner, "{scope}");
+    }
+    let action = |method: &str| {
+        crate::method_policy_entries()
+            .find(|(name, _, _)| *name == method)
+            .map(|(_, policy, _)| policy.authz_action)
+            .expect("method is declared")
+    };
+    for method in [
+        "GetBlastRadius",
+        "ClusterHierarchyClusters",
+        "ClusterHierarchyExpand",
+    ] {
+        assert_eq!(action(method), "compute:graph-read", "{method}");
+    }
+    for method in ["ClusterHierarchyRefresh", "PageRank", "GetShortestPath"] {
+        assert_eq!(action(method), "compute:graph-algo", "{method}");
+    }
+}

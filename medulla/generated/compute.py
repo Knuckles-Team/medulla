@@ -337,7 +337,7 @@ async def send_get_blast_radius(
     Method:
         GetBlastRadius
     Authorization:
-        compute:graph-algo
+        compute:graph-read
     Durability:
         None
     Replay:
@@ -1079,7 +1079,7 @@ async def send_cluster_hierarchy_clusters(
     Method:
         ClusterHierarchyClusters
     Authorization:
-        compute:graph-algo
+        compute:graph-read
     Durability:
         None
     Replay:
@@ -1120,7 +1120,7 @@ async def send_cluster_hierarchy_expand(
     Method:
         ClusterHierarchyExpand
     Authorization:
-        compute:graph-algo
+        compute:graph-read
     Durability:
         None
     Replay:

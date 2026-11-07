@@ -111,11 +111,15 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("channel:admin", Admin, "engine"),
     entry("channel:read", User, "engine"),
     entry("channel:write", User, "engine"),
+    // MEDULLA-IDENTITY-R004.1: web interface chat history, rows owned by the verified subject.
+    entry("chats:own", User, "graph-os"),
     entry("cluster:placement-read", User, "engine"),
     entry("cluster:topology-read", User, "engine"),
     entry("compute:datascience", ServiceOnly, "engine"),
     entry("compute:finance", ServiceOnly, "engine"),
     entry("compute:graph-algo", ServiceOnly, "engine"),
+    // MEDULLA-IDENTITY-R004.1: user-class reads of blast radius and the cached cluster hierarchy.
+    entry("compute:graph-read", User, "engine"),
     entry("compute:parse", ServiceOnly, "engine"),
     entry("compute:semantic", ServiceOnly, "engine"),
     entry("compute:solve", ServiceOnly, "engine"),
@@ -275,6 +279,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:write", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
     entry("workflow:registry", User, "engine"),
+    // MEDULLA-IDENTITY-R004.1: web interface workspace files under the configured root.
+    entry("workspace:read", User, "graph-os"),
+    entry("workspace:write", User, "graph-os"),
 ];
 
 /// The registry entry of `scope`.
