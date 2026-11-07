@@ -5,6 +5,7 @@
 
 mod build_profiles;
 mod repo_root_parity;
+mod sdist_completeness;
 mod spec_paths;
 #[cfg(test)]
 mod tempdir;
@@ -30,6 +31,11 @@ const CHECKS: &[Check] = &[
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
+    },
+    Check {
+        name: sdist_completeness::NAME,
+        summary: sdist_completeness::SUMMARY,
+        run: sdist_completeness::run,
     },
     Check {
         name: spec_paths::NAME,

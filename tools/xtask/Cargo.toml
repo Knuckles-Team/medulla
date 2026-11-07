@@ -6,5 +6,7 @@ publish = false
 description = "Repository checks and certification campaigns, one subcommand each (cargo xtask <name>)."
 
 [dependencies]
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 regex = "1"
+tar = { version = "0.4", default-features = false }
 toml_edit = { version = "0.25", default-features = false, features = ["parse"] }
