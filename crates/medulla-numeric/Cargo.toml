@@ -135,6 +135,7 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", f
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types" }
 libc = "0.2"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

@@ -12,7 +12,7 @@ pytestmark = pytest.mark.no_engine
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL = (
     "crates/medulla-decision-types/src/solve/",
-    "crates/medulla-types/src/solve_scalar.rs",
+    "crates/medulla-query-types/src/solve_scalar.rs",
 )
 DECLARATION = re.compile(
     r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|type)\s+(\w+)", re.M
