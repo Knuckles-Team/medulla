@@ -1066,7 +1066,8 @@ ex:parent a owl:AsymmetricProperty .
             // and 20 named placements in the vocabulary of the +739 total above
             // (the decision module's core parents among them).
             // +90 (measured): the state-machine vocabulary's class edges (MEDULLA-ORCH-VOCAB-R811.1).
-            1052
+            // +1: the workstream record class edge (MEDULLA-IDENTITY-R723).
+            1053
         );
     }
 
