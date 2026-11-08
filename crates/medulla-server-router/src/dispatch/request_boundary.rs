@@ -142,7 +142,7 @@ pub async fn dispatch_authenticated_broker_actor(
         match VerifiedRequestContext::authenticated_broker_actor(&server, actor_ref, request_id) {
             Ok(context) => context,
             Err(error) => {
-                medulla_kernel::metrics::auth_failure();
+                medulla_kernel::metrics::process().auth_failure();
                 return method_errors::enforce(
                     (&req.method).into(),
                     Response::err(request_id, error),
@@ -191,7 +191,7 @@ pub async fn dispatch_with_context(
     if let Some(start) = start {
         let elapsed = start.elapsed();
         #[cfg(feature = "metrics")]
-        medulla_kernel::metrics::record_request(op, elapsed.as_secs_f64());
+        medulla_kernel::metrics::process().record_request(op, elapsed.as_secs_f64());
         if let Some(slow) = slow {
             slow.log_if_slow(elapsed);
         }
@@ -450,7 +450,7 @@ async fn dispatch_inner(
             match s.request_authority(&req) {
                 Ok(context) => context,
                 Err(error) => {
-                    medulla_kernel::metrics::auth_failure();
+                    medulla_kernel::metrics::process().auth_failure();
                     return Response::err(
                         req.id,
                         medulla_server_auth::auth::authentication_refusal(&error),

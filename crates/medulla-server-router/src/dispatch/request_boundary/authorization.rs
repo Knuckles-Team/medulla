@@ -99,7 +99,7 @@ fn enforce_controller_scope(
     {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err(Response::err(
         req.id,
         format!(
@@ -147,7 +147,7 @@ fn enforce_bus_scope(
     };
     if let Method::BusRoster { tenant, .. } = &req.method {
         if tenant != verified_context.tenant() {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Err(Response::err(
                 req.id,
                 "ACCESS_DENIED: BusRoster tenant must match verified request tenant",
@@ -158,7 +158,7 @@ fn enforce_bus_scope(
     {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err(Response::err(
         req.id,
         format!(
@@ -192,7 +192,7 @@ fn enforce_memory_scope(
     {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err(Response::err(
         req.id,
         medulla_types::contract::ServerErrorCode::MemsyncNotAvailable.as_str(),
@@ -235,7 +235,7 @@ async fn check_resource_and_capacity_scope(
             let capability_authorized = verified_context.allows_action("work:claim-capability")
                 || verified_context.allows_action("kg:admin");
             if !capability_authorized {
-                medulla_kernel::metrics::access_denied();
+                medulla_kernel::metrics::process().access_denied();
                 return Err(Response::err(
                     req.id,
                     "ACCESS_DENIED: WorkItem claim capability requires work:claim-capability",
@@ -323,7 +323,7 @@ fn check_cross_tenant_scope(
     if !names_other_tenant || cross_tenant_access_allowed(&req.method, verified_context) {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err(Response::err(
         req.id,
         "ACCESS_DENIED: resource tenant must match verified request tenant",
@@ -369,7 +369,7 @@ pub async fn check_scope_and_admin_authority(
         && !authority.identity_bootstrap
         && !ledger_allows(req, verified_context, action, mutates)
     {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         #[cfg(feature = "security")]
         timed_read(state).await.isolation.offer_denial(
             verified_context.principal(),

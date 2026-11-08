@@ -102,7 +102,7 @@ pub fn note_hibernated(graph: &str, incarnation_id: &str, hibernated: bool) {
         set.remove(&identity);
     }
     let any_hibernated = set.iter().any(|entry| entry.name.as_str() == graph);
-    medulla_kernel::metrics::set_graph_hibernated(graph, any_hibernated);
+    medulla_kernel::metrics::process().set_graph_hibernated(graph, any_hibernated);
 }
 
 /// Is this exact graph incarnation currently hibernated by the enforcer?
@@ -123,7 +123,7 @@ pub fn forget_graph(graph: &str) {
     // Deletion/admission teardown must not recreate a label series after the
     // caller has dropped the graph's metrics.  `drop_graph` is idempotent and
     // also frees the bounded label slot.
-    medulla_kernel::metrics::drop_graph(graph);
+    medulla_kernel::metrics::process().drop_graph(graph);
 }
 
 /// Clear one incarnation without touching a concurrently recreated identity.
@@ -137,7 +137,7 @@ pub fn forget_graph_incarnation(graph: &str, incarnation_id: &str) {
         .iter()
         .any(|identity| identity.name.as_str() == graph)
     {
-        medulla_kernel::metrics::drop_graph(graph);
+        medulla_kernel::metrics::process().drop_graph(graph);
     }
 }
 
@@ -512,7 +512,7 @@ async fn collect_resource_stats_inner(
     let rss = process_rss_bytes().await;
     let (coalescer_queue_depth, coalescer_queue_bytes, coalescer_operations_total) =
         medulla_kernel::write_coalescer::global_stats();
-    medulla_kernel::metrics::set_resource_stats(
+    medulla_kernel::metrics::process().set_resource_stats(
         capacity.reserved_cpus().min(i64::MAX as usize) as i64,
         capacity.reserved_ram_bytes().min(i64::MAX as u64) as i64,
         rss.min(i64::MAX as u64) as i64,

@@ -14,7 +14,7 @@
 //! ## The listener
 //!
 //! A HAND-ROLLED HTTP/1.1 listener over `tokio::net::TcpListener` — the SAME
-//! dependency-free idiom as [`medulla_kernel::metrics::serve`] and
+//! dependency-free idiom as [`medulla_kernel::metrics::KernelMetrics::serve`] and
 //! [`crate::sparql_http`] (NO axum/hyper/warp, so the Pi contract holds).
 //! Bound via `MEDULLA_OBS_ADDR`. It accepts log records over three
 //! interchange shapes so EXISTING agents/collectors point at it unchanged:

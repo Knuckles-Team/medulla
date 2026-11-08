@@ -151,7 +151,7 @@ pub async fn preflight_open_txn_authority(
     if let Some(entry) = state_guard.open_txns.get(txn_id) {
         let txn = entry.value().lock();
         if txn.tenant_scope != authority.tenant_scope() || txn.agent != authority.owner_scope() {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Err(Response::err(
                 req_id,
                 "ACCESS_DENIED: transaction is not owned by caller",

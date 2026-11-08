@@ -44,8 +44,8 @@ pub(super) async fn record(
         return Ok(());
     }
     audit(ctx, op, &result).await?;
-    medulla_kernel::metrics::work_item_uncertain_effect(result.outcome_label());
-    medulla_kernel::metrics::work_item_uncertain_open_add(open_delta(op));
+    medulla_kernel::metrics::process().work_item_uncertain_effect(result.outcome_label());
+    medulla_kernel::metrics::process().work_item_uncertain_open_add(open_delta(op));
     Ok(())
 }
 

@@ -198,7 +198,7 @@ async fn handle_conn(
     let verified = match verify_request(&server, &secret, &request) {
         Ok(context) => context,
         Err(_) => {
-            medulla_kernel::metrics::auth_failure();
+            medulla_kernel::metrics::process().auth_failure();
             return write_simple(&mut stream, "401 Unauthorized", "authentication required").await;
         }
     };
@@ -209,7 +209,7 @@ async fn handle_conn(
     // kg:write, and kg:admin follow the same VerifiedRequestContext rules as native reads.
     let method_policy = medulla_capabilities::policy(&request.method);
     if !verified.allows_method(method_policy.authz_action, false) {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return write_simple(&mut stream, "403 Forbidden", "access denied").await;
     }
 

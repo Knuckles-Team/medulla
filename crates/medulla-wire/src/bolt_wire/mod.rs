@@ -425,7 +425,7 @@ fn authorize_cypher(
     };
     let action = medulla_capabilities::policy(&method).authz_action;
     if !verified.allows_method(action, is_write) {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return Err(BoltFailure::client(
             "Neo.ClientError.Security.Forbidden",
             "Cypher scope is not authorized",

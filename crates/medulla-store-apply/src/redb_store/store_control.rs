@@ -258,8 +258,9 @@ pub fn commit_ops(
     total.finish();
     if result.is_ok() {
         let physical_grown = shard.physical_file_len().saturating_sub(physical_before);
-        medulla_kernel::metrics::observe_commit_ops_bytes("logical", logical_bytes);
-        medulla_kernel::metrics::observe_commit_ops_bytes("physical_delta", physical_grown);
+        medulla_kernel::metrics::process().observe_commit_ops_bytes("logical", logical_bytes);
+        medulla_kernel::metrics::process()
+            .observe_commit_ops_bytes("physical_delta", physical_grown);
     }
     result
 }

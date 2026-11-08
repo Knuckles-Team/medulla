@@ -268,6 +268,8 @@ Order of moves, one crate per commit: (1) `medulla-server-api` (`denial_sample` 
 
 Where a state belongs to a layer that already exists, it moves into that layer instead of the server context: the denial sampler is a field of `IsolationLayer` (the layer that writes the samples into its audit trail), so a policy clone shares it and two layers built apart share nothing.
 
+The kernel metrics set the pattern for a registry-shaped static. All 78 declarations (the registry, the graph-label slots and the 76 collectors, across `metrics.rs` and its `decision`, `outbox`, `views`, `work_item` and `store_migration` files) are fields of one `KernelMetrics` (`crates/medulla-kernel/src/metrics/series.rs`). `KernelMetrics::new` builds a fresh registry and registers every series on it, so two values share no series and no label slots; the recording calls are methods (`record.rs` and the family files), and the exposition endpoint is `KernelMetrics::serve`. Without the `metrics` feature `KernelMetrics` is an empty value with no-op methods. The process holds one value, `metrics::process()`, which `main` serves and the OTLP export renders; every call site names it (`medulla_kernel::metrics::process().access_denied()`), so the sites left to wire are one grep. The next step per crate: the struct the call sites already hold takes the value (`ServerState` first, handed `process()` by `main`, so the exposition is unchanged), its call sites record on that field, and `process()` goes when no site names it. Bound test: `crates/medulla-kernel/src/metrics/tests.rs::two_kernel_metrics_values_share_no_series`.
+
 ### Interfaces and data model
 
 - `RecordRelease { tenant, repo, version, ref, changeset_head, artifact_digests }` returns the sealed release record.

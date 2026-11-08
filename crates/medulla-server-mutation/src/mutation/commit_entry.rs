@@ -230,7 +230,7 @@ pub(super) fn commit_finalize_refresh_size_gauges(ctx: &MutationCtx<'_>, plan: &
     if !plan.mutates {
         return;
     }
-    medulla_kernel::metrics::set_graph_size(
+    medulla_kernel::metrics::process().set_graph_size(
         ctx.graph_name,
         ctx.core.node_count() as i64,
         ctx.core.edge_count() as i64,

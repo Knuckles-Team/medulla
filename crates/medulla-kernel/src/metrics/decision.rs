@@ -4,203 +4,101 @@
 //! evidence class, refusal code token, gate pass/fail), so cardinality is
 //! bounded by the contract rather than by traffic.
 
+use super::KernelMetrics;
+
 #[cfg(feature = "metrics")]
-mod imp {
-    use lazy_static::lazy_static;
-    use prometheus::{Histogram, HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts};
-
-    use super::super::imp::REGISTRY;
-
-    fn counter_vec(name: &str, help: &str, labels: &[&str]) -> IntCounterVec {
-        let metric = IntCounterVec::new(Opts::new(name, help), labels).expect("valid metric");
-        REGISTRY
-            .register(Box::new(metric.clone()))
-            .expect("unique metric");
-        metric
-    }
-
-    use super::super::imp::gauge_vec;
-
-    lazy_static! {
-        static ref ABSTENTIONS: IntCounterVec = counter_vec(
-            "medulla_decide_abstentions_total",
-            "Decisions that abstained, by closed abstention code",
-            &["code"],
-        );
-        static ref HEAD_DRIFT: IntGaugeVec = gauge_vec(
-            "medulla_head_drift",
-            "Latest drift reading (Q16 population stability index) by head",
-            &["head"],
-        );
-        static ref SOLVER_NODES_RATIO: Histogram = {
-            let metric = Histogram::with_opts(
-                HistogramOpts::new(
-                    "medulla_solver_nodes_ratio",
-                    "Solver nodes expanded over the node budget, per solved assembly",
-                )
-                .buckets(vec![0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0]),
-            )
-            .expect("valid metric");
-            REGISTRY
-                .register(Box::new(metric.clone()))
-                .expect("unique metric");
-            metric
-        };
-        static ref STAGE_SECONDS: HistogramVec = {
-            let metric = HistogramVec::new(
-                HistogramOpts::new(
-                    "medulla_decide_stage_seconds",
-                    "Decide pipeline stage latency, by family and stage",
-                )
-                .buckets(prometheus::exponential_buckets(0.0001, 2.5, 14).expect("valid buckets")),
-                &["family", "stage"],
-            )
-            .expect("valid metric");
-            REGISTRY
-                .register(Box::new(metric.clone()))
-                .expect("unique metric");
-            metric
-        };
-        static ref DECISIONS: IntCounterVec = counter_vec(
-            "medulla_decisions_total",
-            "Statistical decisions answered, by outcome and evidence class",
-            &["outcome", "evidence", "reason"],
-        );
-        static ref REFUSALS: IntCounterVec = counter_vec(
-            "medulla_decision_refusals_total",
-            "Decide-layer calls refused, by method and refusal code",
-            &["method", "code"],
-        );
-        static ref EXPLORATION: IntCounterVec = counter_vec(
-            "medulla_decision_exploration_total",
-            "Decisions drawn by the exploration budget versus the greedy branch",
-            &["branch"],
-        );
-        static ref EVALUATIONS: IntCounterVec = counter_vec(
-            "medulla_decision_evaluations_total",
-            "Decision-head evaluations, by promotion verdict",
-            &["verdict"],
-        );
-        static ref THRESHOLD_ASSESSMENTS: IntCounterVec = {
-            let metric = counter_vec(
-                "medulla_decision_threshold_assessments_total",
-                "Persisted, independently labelled decision evaluations assessed against their pinned policy",
-                &["signal", "result"],
-            );
-            for signal in ["support", "coverage", "act_risk"] {
-                for result in ["ok", "breach", "unavailable"] {
-                    metric.with_label_values(&[signal, result]).inc_by(0);
-                }
-            }
-            metric
-        };
-        static ref LATENCY: HistogramVec = {
-            let metric = HistogramVec::new(
-                HistogramOpts::new(
-                    "medulla_decision_duration_seconds",
-                    "Decide-layer latency, by method",
-                )
-                .buckets(prometheus::exponential_buckets(0.0005, 2.5, 14).expect("valid buckets")),
-                &["method"],
-            )
-            .expect("valid metric");
-            REGISTRY
-                .register(Box::new(metric.clone()))
-                .expect("unique metric");
-            metric
-        };
-    }
-
+impl KernelMetrics {
     /// One finished pipeline stage.
-    pub fn decide_stage_seconds(family: &str, stage: &str, seconds: f64) {
-        STAGE_SECONDS
+    pub fn decide_stage_seconds(&self, family: &str, stage: &str, seconds: f64) {
+        self.decision_stage_seconds
             .with_label_values(&[family, stage])
             .observe(seconds);
     }
 
     /// One abstention, by its closed code.
-    pub fn decide_abstentions(code: &str) {
-        ABSTENTIONS.with_label_values(&[code]).inc();
+    pub fn decide_abstentions(&self, code: &str) {
+        self.decision_abstentions.with_label_values(&[code]).inc();
     }
 
     /// Nodes expanded over the node budget for one solved assembly.
-    pub fn solver_nodes_ratio(nodes: u64, budget: u64) {
+    pub fn solver_nodes_ratio(&self, nodes: u64, budget: u64) {
         if budget > 0 {
-            SOLVER_NODES_RATIO.observe(nodes as f64 / budget as f64);
+            self.decision_solver_nodes_ratio
+                .observe(nodes as f64 / budget as f64);
         }
     }
 
     /// The latest drift reading of one head.
-    pub fn head_drift(head: &str, drift_q16: i64) {
-        HEAD_DRIFT.with_label_values(&[head]).set(drift_q16);
+    pub fn head_drift(&self, head: &str, drift_q16: i64) {
+        self.decision_head_drift
+            .with_label_values(&[head])
+            .set(drift_q16);
     }
 
     /// One answered decision.
-    pub fn decision_answered(outcome: &str, evidence: &str, reason: &str) {
-        DECISIONS
+    pub fn decision_answered(&self, outcome: &str, evidence: &str, reason: &str) {
+        self.decisions
             .with_label_values(&[outcome, evidence, reason])
             .inc();
     }
 
     /// One refused Decide-layer call.
-    pub fn decision_refused(method: &str, code: &str) {
-        REFUSALS.with_label_values(&[method, code]).inc();
+    pub fn decision_refused(&self, method: &str, code: &str) {
+        self.decision_refusals
+            .with_label_values(&[method, code])
+            .inc();
     }
 
     /// One exploration draw's branch.
-    pub fn decision_explored(explored: bool) {
+    pub fn decision_explored(&self, explored: bool) {
         let branch = if explored { "explore" } else { "greedy" };
-        EXPLORATION.with_label_values(&[branch]).inc();
+        self.decision_exploration.with_label_values(&[branch]).inc();
     }
 
     /// One evaluation verdict.
-    pub fn decision_evaluated(passed: bool) {
+    pub fn decision_evaluated(&self, passed: bool) {
         let verdict = if passed { "passed" } else { "failed" };
-        EVALUATIONS.with_label_values(&[verdict]).inc();
+        self.decision_evaluations
+            .with_label_values(&[verdict])
+            .inc();
     }
 
     /// One policy-bound threshold signal from a newly persisted evaluation.
     /// Callers supply only the closed signal and result vocabulary.
-    pub fn decision_threshold_assessed(signal: &'static str, result: &'static str) {
-        THRESHOLD_ASSESSMENTS
+    pub fn decision_threshold_assessed(&self, signal: &'static str, result: &'static str) {
+        self.decision_threshold_assessments
             .with_label_values(&[signal, result])
             .inc();
     }
 
-    /// Register all closed label pairs before the first evaluation arrives.
-    pub fn initialize_threshold_assessments() {
-        let _ = &*THRESHOLD_ASSESSMENTS;
-    }
-
     /// One Decide-layer call's latency.
-    pub fn decision_latency(method: &str, seconds: f64) {
-        LATENCY.with_label_values(&[method]).observe(seconds);
+    pub fn decision_latency(&self, method: &str, seconds: f64) {
+        self.decision_latency
+            .with_label_values(&[method])
+            .observe(seconds);
     }
 }
 
 #[cfg(not(feature = "metrics"))]
 #[allow(missing_docs)] // no-op shims; the metrics build documents the same functions
-mod imp {
-    pub fn decide_stage_seconds(_family: &str, _stage: &str, _seconds: f64) {}
-    pub fn decide_abstentions(_code: &str) {}
-    pub fn solver_nodes_ratio(_nodes: u64, _budget: u64) {}
-    pub fn head_drift(_head: &str, _drift_q16: i64) {}
-    pub fn decision_answered(_outcome: &str, _evidence: &str, _reason: &str) {}
-    pub fn decision_refused(_method: &str, _code: &str) {}
-    pub fn decision_explored(_explored: bool) {}
-    pub fn decision_evaluated(_passed: bool) {}
-    pub fn decision_threshold_assessed(_signal: &'static str, _result: &'static str) {}
-    pub fn initialize_threshold_assessments() {}
-    pub fn decision_latency(_method: &str, _seconds: f64) {}
+impl KernelMetrics {
+    pub fn decide_stage_seconds(&self, _family: &str, _stage: &str, _seconds: f64) {}
+    pub fn decide_abstentions(&self, _code: &str) {}
+    pub fn solver_nodes_ratio(&self, _nodes: u64, _budget: u64) {}
+    pub fn head_drift(&self, _head: &str, _drift_q16: i64) {}
+    pub fn decision_answered(&self, _outcome: &str, _evidence: &str, _reason: &str) {}
+    pub fn decision_refused(&self, _method: &str, _code: &str) {}
+    pub fn decision_explored(&self, _explored: bool) {}
+    pub fn decision_evaluated(&self, _passed: bool) {}
+    pub fn decision_threshold_assessed(&self, _signal: &'static str, _result: &'static str) {}
+    pub fn decision_latency(&self, _method: &str, _seconds: f64) {}
 }
-
-pub use imp::*;
 
 #[cfg(all(test, feature = "metrics"))]
 mod tests {
     #[test]
     fn threshold_series_have_closed_zero_baselines() {
-        let text = crate::metrics::render();
+        let text = crate::metrics::KernelMetrics::new().render();
         for signal in ["support", "coverage", "act_risk"] {
             for result in ["ok", "breach", "unavailable"] {
                 // The text encoder orders labels by name, so match each label

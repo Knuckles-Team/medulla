@@ -31,7 +31,7 @@ pub(crate) async fn handle_graphql_mutation(
     let carrier = match read_authority.and_then(GraphReadAuthority::carrier) {
         Some(carrier) => carrier,
         None => {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             return Ok(Response::err(
                 req_id,
                 "ACCESS_DENIED: GraphQL mutation requires verified tenant+actor authority",

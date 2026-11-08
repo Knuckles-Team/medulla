@@ -211,7 +211,7 @@ where
         Ok(resp) => resp,
         Err(_) => {
             cancel.cancel();
-            medulla_kernel::metrics::dispatch_deadline_exceeded();
+            medulla_kernel::metrics::process().dispatch_deadline_exceeded();
             error!(
                 req_id,
                 deadline_secs = deadline.as_secs(),
@@ -311,7 +311,7 @@ fn admit_request(
     // READ under write saturation: the reserved lane, bypassing the per-graph cap.
     match read_sem.clone().try_acquire_owned() {
         Ok(rp) => {
-            medulla_kernel::metrics::read_reserved_admitted();
+            medulla_kernel::metrics::process().read_reserved_admitted();
             Admission::Granted {
                 global: None,
                 per_graph: None,
@@ -362,7 +362,7 @@ async fn admit_qos_request(
         server.request_authority(req)
     }
     .map_err(|error| {
-        medulla_kernel::metrics::auth_failure();
+        medulla_kernel::metrics::process().auth_failure();
         // Same typed refusal as dispatch: QoS admission verifies first when it is
         // enabled, so a generic refusal here would hide the cause class.
         Response::err(
@@ -373,20 +373,20 @@ async fn admit_qos_request(
     let principal_scope = context.principal_persistence_id();
     let qos_request = medulla_server_obs::qos::classify(&principal_scope, context.priority())
         .map_err(|error| {
-            medulla_kernel::metrics::auth_failure();
+            medulla_kernel::metrics::process().auth_failure();
             Response::err(req.id, error)
         })?;
     match scheduler.try_admit(&qos_request) {
         medulla_server_obs::qos::QosDecision::Admit(permit) => {
-            medulla_kernel::metrics::qos_admitted(qos_request.class.label());
+            medulla_kernel::metrics::process().qos_admitted(qos_request.class.label());
             Ok(QosAdmission {
                 context: Some(context),
                 permit: Some(permit),
             })
         }
         medulla_server_obs::qos::QosDecision::Reject(why) => {
-            medulla_kernel::metrics::qos_shed(qos_request.class.label(), why.label());
-            medulla_kernel::metrics::busy_rejected();
+            medulla_kernel::metrics::process().qos_shed(qos_request.class.label(), why.label());
+            medulla_kernel::metrics::process().busy_rejected();
             Err(Response::err(req.id, why.busy_message()))
         }
     }
@@ -458,7 +458,7 @@ async fn reserve_request(
             qos,
         }),
         Admission::Busy => {
-            medulla_kernel::metrics::busy_rejected();
+            medulla_kernel::metrics::process().busy_rejected();
             let response = Response::err(req.id, "BUSY: server at capacity, retry with backoff");
             drop(connection);
             let failure = queue_admission_rejection(tx, response).await;
@@ -494,10 +494,8 @@ async fn dispatch_reserved_request(
     let response =
         dispatch_within_deadline(boxed, limits.dispatch_deadline, req_id, &peer_gone).await;
     if let Some(class) = qos_class {
-        medulla_kernel::metrics::qos_dispatch_finished(
-            class.label(),
-            dispatch_start.elapsed().as_secs_f64(),
-        );
+        medulla_kernel::metrics::process()
+            .qos_dispatch_finished(class.label(), dispatch_start.elapsed().as_secs_f64());
     }
     let _ = tx
         .send(encode_bounded_frame(&response, limits.response_bytes))
@@ -507,7 +505,7 @@ async fn dispatch_reserved_request(
     drop(reservation.global);
     drop(reservation.qos.permit);
     drop(reservation.connection);
-    medulla_kernel::metrics::connection_request_finished(global_pool.available_permits());
+    medulla_kernel::metrics::process().connection_request_finished(global_pool.available_permits());
 }
 
 /// Handle one client connection with single-connection request PIPELINING
@@ -567,7 +565,8 @@ where
                 Err(AdmissionFailure::Rejected) => continue,
                 Err(AdmissionFailure::Closed) => break,
             };
-        medulla_kernel::metrics::connection_request_started(pools.global.available_permits());
+        medulla_kernel::metrics::process()
+            .connection_request_started(pools.global.available_permits());
         tokio::spawn(dispatch_reserved_request(
             req,
             state.clone(),

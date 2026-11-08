@@ -124,7 +124,7 @@ impl<D: OwnerDomain> SidecarStore<D> {
             total_ms = total_elapsed.as_millis() as u64,
             "redb: owner store opened",
         );
-        medulla_kernel::metrics::store_open(
+        medulla_kernel::metrics::process().store_open(
             &[
                 ("file_open", report.file_open.as_secs_f64()),
                 ("table_validation", report.table_validation.as_secs_f64()),

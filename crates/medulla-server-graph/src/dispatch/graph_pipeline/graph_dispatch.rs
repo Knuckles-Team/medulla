@@ -209,7 +209,7 @@ pub async fn dispatch_graph_op_inner(
         Err(method) => method,
     };
 
-    medulla_kernel::metrics::graph_op(capture.graph_name);
+    medulla_kernel::metrics::process().graph_op(capture.graph_name);
     let response = run_dispatch_pipeline(
         DispatchPipelineCtx {
             state: capture.state,

@@ -1,38 +1,24 @@
 //! Tests of the engine metrics registry (moved out of `metrics.rs` to keep
 //! the module under the per-file line cap).
 use super::*;
-use crate::lock_recovery::LockRecovery;
-
-// The Prometheus REGISTRY and the bounded graph-label cap (SEEN_GRAPHS) are
-// process-global singletons. Tests that depend on the labelled-series set must
-// not run concurrently with the cardinality test that saturates the 128-slot
-// cap (which would aggregate their graph into `__overflow__` and drop the
-// labelled needle). Serialize those tests on this lock.
-static GLOBAL_LABEL_STATE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[test]
 fn test_render_contains_recorded_series() {
-    let _guard = GLOBAL_LABEL_STATE.lock_recovering("global metric label state");
-    record_request("Ping", 0.0007);
-    graph_op("agent:metrics-test");
-    set_graph_size("agent:metrics-test", 3, 2);
-    auth_failure();
-    access_denied();
-    busy_rejected();
-    checkpoint_completed(0.02);
+    let m = KernelMetrics::new();
+    m.record_request("Ping", 0.0007);
+    m.graph_op("agent:metrics-test");
+    m.set_graph_size("agent:metrics-test", 3, 2);
+    m.auth_failure();
+    m.access_denied();
+    m.busy_rejected();
+    m.checkpoint_completed(0.02);
     // CONCEPT:MEDULLA-OS.observability.write-lock-gap-histogram — write-lock-gap histograms register + render.
-    observe_write_lock_wait("agent:metrics-test", 0.003);
-    observe_write_lock_hold("agent:metrics-test", 0.0005);
-    set_resource_stats(2, 1024, 2048, 3, 256, 10);
+    m.observe_write_lock_wait("agent:metrics-test", 0.003);
+    m.observe_write_lock_hold("agent:metrics-test", 0.0005);
+    m.set_resource_stats(2, 1024, 2048, 3, 256, 10);
 
-    let out = render();
-    // Note: the per-graph label series (graph_ops_total{graph=...}, graph_nodes,
-    // graph_edges) are NOT asserted by exact label here — the graph-label space is
-    // a process-global bounded cap (SEEN_GRAPHS, 128) that concurrent server
-    // dispatch tests also populate via graph_op(), so a specific label can spill to
-    // `__overflow__` under parallel load. The cap/overflow behavior is covered by
-    // test_graph_label_cardinality_is_bounded; here we only assert the metric
-    // FAMILIES are registered + rendered (robust to the shared global registry).
+    let out = m.render();
+    // Each test owns its value, so no other test shares this registry.
     for needle in [
         "medulla_requests_total{op=\"Ping\"}",
         "medulla_request_duration_seconds_bucket{op=\"Ping\"",
@@ -59,32 +45,32 @@ fn test_render_contains_recorded_series() {
 
 #[test]
 fn test_graph_label_cardinality_is_bounded() {
-    let _guard = GLOBAL_LABEL_STATE.lock_recovering("global metric label state");
+    let m = KernelMetrics::new();
     // Saturate the label space, then confirm new names aggregate.
     for i in 0..200 {
-        graph_op(&format!("agent:cardinality-{i}"));
+        m.graph_op(&format!("agent:cardinality-{i}"));
     }
-    let out = render();
+    let out = m.render();
     assert!(
         out.contains("medulla_graph_ops_total{graph=\"__overflow__\"}"),
         "expected overflow aggregation past the label cap"
     );
     // Deleting frees the slot and removes the series.
-    drop_graph("agent:cardinality-0");
-    assert!(!render().contains("graph=\"agent:cardinality-0\""));
+    m.drop_graph("agent:cardinality-0");
+    assert!(!m.render().contains("graph=\"agent:cardinality-0\""));
 
     // Deleting any graph clears the shared overflow series. Recreating a
     // name after all tracked slots are freed must acquire a fresh bounded
     // raw slot rather than inheriting stale `__overflow__` state.
     for i in 1..200 {
-        drop_graph(&format!("agent:cardinality-{i}"));
+        m.drop_graph(&format!("agent:cardinality-{i}"));
     }
     assert!(
-        !render().contains("graph=\"__overflow__\""),
+        !m.render().contains("graph=\"__overflow__\""),
         "last deleted overflow owner must clear every overflow series"
     );
-    graph_op("agent:cardinality-recreated");
-    let recreated = render();
+    m.graph_op("agent:cardinality-recreated");
+    let recreated = m.render();
     assert!(
         recreated.contains("graph=\"agent:cardinality-recreated\""),
         "a recreated graph should receive a fresh bounded label slot"
@@ -94,12 +80,13 @@ fn test_graph_label_cardinality_is_bounded() {
 #[cfg(feature = "server")]
 #[tokio::test]
 async fn test_http_exposition_endpoint() {
+    let m: &'static KernelMetrics = Box::leak(Box::new(KernelMetrics::new()));
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    record_request("Health", 0.001);
+    m.record_request("Health", 0.001);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move { serve(listener).await });
+    tokio::spawn(m.serve(listener));
 
     let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
     stream
@@ -117,11 +104,12 @@ async fn test_http_exposition_endpoint() {
 /// Verifies MEDULLA-INCREMENTAL-VIEWS-R005.4: Prometheus view metrics
 #[test]
 fn view_metrics_render_with_bounded_labels() {
-    view_changes_applied("plan", 3);
-    view_demoted("plan", "MATVIEW_NOT_INCREMENTAL");
-    view_shadow_checked("sql", "match");
-    set_view_state_bytes("plan", 128);
-    let out = render();
+    let m = KernelMetrics::new();
+    m.view_changes_applied("plan", 3);
+    m.view_demoted("plan", "MATVIEW_NOT_INCREMENTAL");
+    m.view_shadow_checked("sql", "match");
+    m.set_view_state_bytes("plan", 128);
+    let out = m.render();
     for needle in [
         "medulla_view_changes_applied_total{family=\"plan\"}",
         "medulla_view_demotions_total{family=\"plan\",reason_code=\"MATVIEW_NOT_INCREMENTAL\"}",
@@ -138,4 +126,36 @@ fn view_metrics_render_with_bounded_labels() {
             "{line}"
         );
     }
+}
+
+// spec: MEDULLA-SDLC-R023
+/// Verifies MEDULLA-SDLC-R023: the kernel series are one owned value; two
+/// values in one process share no registry, no series and no graph-label slots.
+#[test]
+fn two_kernel_metrics_values_share_no_series() {
+    let first = KernelMetrics::new();
+    let second = KernelMetrics::new();
+    first.record_request("Ping", 0.001);
+    first.access_denied();
+    for i in 0..200 {
+        first.graph_op(&format!("agent:first-{i}"));
+    }
+    second.graph_op("agent:second");
+
+    let one = first.render();
+    let two = second.render();
+    assert!(
+        one.contains("medulla_requests_total{op=\"Ping\"} 1"),
+        "{one}"
+    );
+    assert!(one.contains("medulla_access_denied_total 1"), "{one}");
+    assert!(!two.contains("medulla_requests_total{op="), "{two}");
+    assert!(two.contains("medulla_access_denied_total 0"), "{two}");
+    // The first value saturated its own label cap; the second still has slots.
+    assert!(one.contains("graph=\"__overflow__\""), "{one}");
+    assert!(
+        two.contains("medulla_graph_ops_total{graph=\"agent:second\"} 1"),
+        "{two}"
+    );
+    assert!(!two.contains("__overflow__"), "{two}");
 }

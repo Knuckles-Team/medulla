@@ -124,7 +124,8 @@ fn conflicts_total(strategy: &str, winner: &str) -> u64 {
     }
     let prefix =
         format!("medulla_write_conflicts_total{{strategy=\"{strategy}\",winner=\"{winner}\"}} ");
-    medulla_kernel::metrics::render()
+    medulla_kernel::metrics::process()
+        .render()
         .lines()
         .find_map(|line| line.strip_prefix(prefix.as_str()))
         .and_then(|value| value.trim().parse().ok())

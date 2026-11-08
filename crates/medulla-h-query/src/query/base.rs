@@ -157,7 +157,7 @@ pub fn served_tsdb_scope(
     let carrier = read_authority
         .and_then(GraphReadAuthority::carrier)
         .ok_or_else(|| {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             "ACCESS_DENIED: TsScan requires a verified tenant+actor carrier".to_string()
         })?;
     Ok(Some((

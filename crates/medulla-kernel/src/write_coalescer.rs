@@ -130,7 +130,7 @@ pub(crate) fn queue_admitted(bytes: u64) {
         Some(value.saturating_add(bytes))
     });
     let (depth, queued_bytes, operations) = global_stats();
-    crate::metrics::set_coalescer_stats(depth, queued_bytes, operations);
+    crate::metrics::process().set_coalescer_stats(depth, queued_bytes, operations);
 }
 
 pub(crate) fn queue_released(bytes: u64) {
@@ -143,7 +143,7 @@ pub(crate) fn queue_released(bytes: u64) {
         Some(value.saturating_sub(bytes))
     });
     let (depth, queued_bytes, operations) = global_stats();
-    crate::metrics::set_coalescer_stats(depth, queued_bytes, operations);
+    crate::metrics::process().set_coalescer_stats(depth, queued_bytes, operations);
 }
 
 pub(crate) fn operations_applied(ops: usize) {
@@ -152,7 +152,7 @@ pub(crate) fn operations_applied(ops: usize) {
         Some(value.saturating_add(ops))
     });
     let (depth, queued_bytes, operations) = global_stats();
-    crate::metrics::set_coalescer_stats(depth, queued_bytes, operations);
+    crate::metrics::process().set_coalescer_stats(depth, queued_bytes, operations);
 }
 
 /// One queued structural write against a graph, with a reply channel. These mirror
@@ -830,7 +830,7 @@ fn apply_batch(
                               // hold window (acquire → release) = the contention readers/other writers block on.
     let acquired = Instant::now();
     for (enqueued, _) in &batch {
-        crate::metrics::observe_write_lock_wait(
+        crate::metrics::process().observe_write_lock_wait(
             graph_name,
             acquired.saturating_duration_since(*enqueued).as_secs_f64(),
         );
@@ -862,9 +862,9 @@ fn apply_batch(
     }
     drop(txn); // release the lock; reads + the next batch can proceed.
                // CONCEPT:MEDULLA-KG.compute.parse-resolve-span — hold = acquire → release: the window readers were blocked.
-    crate::metrics::observe_write_lock_hold(graph_name, acquired.elapsed().as_secs_f64());
+    crate::metrics::process().observe_write_lock_hold(graph_name, acquired.elapsed().as_secs_f64());
     record_flush(stats, n);
-    crate::metrics::write_batch_committed(graph_name, n);
+    crate::metrics::process().write_batch_committed(graph_name, n);
 }
 
 /// Lazily-created per-graph writers, keyed by graph name. Mirrors

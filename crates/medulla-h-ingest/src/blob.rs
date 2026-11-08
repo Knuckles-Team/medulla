@@ -311,7 +311,7 @@ async fn handle_blob_fetch_begin(
             ))
         }
         Ok(Ok(Some(_))) | Ok(Ok(None)) => {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             Ok(Response::err(req_id, "unknown blob digest"))
         }
         Ok(Err(error)) => Ok(Response::err(req_id, error)),
@@ -548,7 +548,7 @@ fn ensure_blob_owner(cursors: &BlobCursors, digest: &str, owner_scope: &str) -> 
     match cursors.store.get_manifest(digest)? {
         Some(manifest) if manifest.owner_scope == owner_scope => Ok(()),
         _ => {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             Err("unknown blob digest".to_string())
         }
     }

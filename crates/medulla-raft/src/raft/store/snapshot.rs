@@ -167,7 +167,7 @@ impl MedullaStore {
         if let Some(tracker) = s.cold_tracker() {
             tracker.forget(name);
         }
-        medulla_kernel::metrics::set_graph_size(
+        medulla_kernel::metrics::process().set_graph_size(
             name,
             i64::try_from(core.node_count()).unwrap_or(i64::MAX),
             i64::try_from(core.edge_count()).unwrap_or(i64::MAX),
@@ -194,7 +194,7 @@ impl MedullaStore {
         if let Some(tracker) = s.cold_tracker() {
             tracker.forget(name);
         }
-        medulla_kernel::metrics::drop_graph(name);
+        medulla_kernel::metrics::process().drop_graph(name);
         Ok(())
     }
 

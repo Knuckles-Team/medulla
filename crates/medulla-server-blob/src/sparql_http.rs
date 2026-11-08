@@ -245,7 +245,7 @@ async fn handle_nl(
     // read-only adapter to every local caller now that the stub is gone
     // elsewhere in this file.
     if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return (
             "403 Forbidden",
             "application/json",
@@ -362,7 +362,7 @@ async fn run_query(
         &["kg:read"],
     );
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return (
             "403 Forbidden",
             "text/plain",

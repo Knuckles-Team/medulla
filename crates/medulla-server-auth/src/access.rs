@@ -48,7 +48,7 @@ impl OwnerScopedCall<'_> {
         method: &str,
     ) -> Result<CarrierAuthority, medulla_protocol_types::protocol::Response> {
         self.carrier.cloned().ok_or_else(|| {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             medulla_protocol_types::protocol::Response::err(
                 self.req_id,
                 format!("ACCESS_DENIED: {method} requires a verified tenant carrier"),
@@ -141,7 +141,7 @@ fn check_graph_access_with_policy(
     if decide_graph_access(isolation, &query) {
         Ok(())
     } else {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         #[cfg(feature = "security")]
         isolation.offer_denial(agent, graph_name, "GRAPH_ACCESS_DENIED");
         Err(format!(
@@ -217,7 +217,7 @@ pub fn check_caller_is_known(
     if isolation.is_registered(agent) {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err(format!(
         "ACCESS_DENIED: verified principal lacks {access:?} access to graph '{graph_name}'"
     ))
@@ -230,7 +230,7 @@ fn require_verified_caller(caller: Option<&str>) -> Result<&str, String> {
     caller
         .filter(|agent| !agent.trim().is_empty())
         .ok_or_else(|| {
-            medulla_kernel::metrics::access_denied();
+            medulla_kernel::metrics::process().access_denied();
             "ACCESS_DENIED: verified caller identity is required".to_string()
         })
 }
@@ -239,7 +239,7 @@ fn require_provisioned_policy(isolation: &IsolationLayer) -> Result<(), String> 
     if isolation.has_rules() {
         return Ok(());
     }
-    medulla_kernel::metrics::access_denied();
+    medulla_kernel::metrics::process().access_denied();
     Err("ACCESS_DENIED: a provisioned identity/RBAC policy is required".to_string())
 }
 
@@ -456,7 +456,7 @@ fn require_admin_capability_with_policy(
 ) -> Result<(), String> {
     let agent = require_verified_caller(caller)?;
     if !isolation.has_rules() {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         return Err(format!(
             "ACCESS_DENIED: a provisioned identity/RBAC policy is required for '{action}'"
         ));
@@ -464,7 +464,7 @@ fn require_admin_capability_with_policy(
     if isolation.has_admin_capability(agent) {
         Ok(())
     } else {
-        medulla_kernel::metrics::access_denied();
+        medulla_kernel::metrics::process().access_denied();
         Err(format!(
             "ACCESS_DENIED: verified principal lacks admin capability required for '{action}'"
         ))

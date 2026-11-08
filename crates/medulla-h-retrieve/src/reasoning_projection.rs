@@ -482,8 +482,8 @@ async fn process_lease(
         watermark.cloned(),
     )
     .await?;
-    medulla_kernel::metrics::epistemic_materializations_staled(newly_stale as u64);
-    medulla_kernel::metrics::set_epistemic_materializations_stale(stale_count as i64);
+    medulla_kernel::metrics::process().epistemic_materializations_staled(newly_stale as u64);
+    medulla_kernel::metrics::process().set_epistemic_materializations_stale(stale_count as i64);
     // The acknowledgement IS the cursor advance: the kernel marks the delivery
     // row delivered and writes the `(scope, consumer)` watermark in ONE admitted
     // transaction. A crash between the two is not representable, so there is no
@@ -862,7 +862,7 @@ pub async fn recompute_materialization(
         ))
     })
     .await?;
-    medulla_kernel::metrics::set_epistemic_materializations_stale(stale_count as i64);
+    medulla_kernel::metrics::process().set_epistemic_materializations_stale(stale_count as i64);
     Ok((materialization, fence_epoch))
 }
 

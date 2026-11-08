@@ -36,7 +36,7 @@ pub struct CommitPhaseTimer {
 
 impl CommitPhaseTimer {
     /// Start timing `phase`. The label set is fixed and small -- see
-    /// `medulla_kernel::metrics::observe_commit_ops_phase`'s doc for the exact values --
+    /// `medulla_kernel::metrics::KernelMetrics::observe_commit_ops_phase`'s doc for the exact values --
     /// so cardinality never grows with graphs, drains or callers.
     pub fn start(phase: &'static str) -> Self {
         Self {
@@ -49,9 +49,7 @@ impl CommitPhaseTimer {
     /// Stop timing and record the elapsed wall time against this phase's
     /// histogram series.
     pub fn finish(self) {
-        medulla_kernel::metrics::observe_commit_ops_phase(
-            self.phase,
-            self.started.elapsed().as_secs_f64(),
-        );
+        medulla_kernel::metrics::process()
+            .observe_commit_ops_phase(self.phase, self.started.elapsed().as_secs_f64());
     }
 }
