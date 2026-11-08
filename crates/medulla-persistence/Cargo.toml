@@ -37,6 +37,7 @@ medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"
+object_store = { workspace = true, optional = true }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
@@ -59,6 +60,7 @@ medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
+object-store = ["dep:object_store", "dep:tracing-subscriber", "medulla-storage/object-archive"]
 test-support = ["dep:tempfile", "medulla-server-auth/test-support", "medulla-protocol-types/test-support", "medulla-identity-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-direct-state/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-store-apply/test-support", "medulla-resource-store/test-support", "medulla-work-store/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support"]
 cold-tier = ["medulla-core/cold-tier", "medulla-graph-core/cold-tier"]
 cold-tier-s3 = ["cold-tier", "redb", "server"]
@@ -119,3 +121,4 @@ medulla-server-blob = { path = "../medulla-server-blob", features = ["test-suppo
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"
+futures-util = { version = "0.3", default-features = false }

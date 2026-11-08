@@ -6124,6 +6124,7 @@ name = "medulla-persistence"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures-util",
  "hex",
  "medulla-agent-types",
  "medulla-capabilities",
@@ -6159,6 +6160,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "object_store 0.14.2",
  "parking_lot",
  "redb",
  "rmp-serde",
