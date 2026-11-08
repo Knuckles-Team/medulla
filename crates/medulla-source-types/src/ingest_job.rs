@@ -223,6 +223,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.1
+    /// Verifies MEDULLA-INGEST-WORKER-R001.1: Typed ingest job envelope with refusal tests.
     #[test]
     fn envelope_round_trips_and_refuses_invalid_shapes() {
         let ok = envelope();
@@ -270,6 +271,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.2
+    /// Verifies MEDULLA-INGEST-WORKER-R001.2: Typed job kinds and lane derivation.
     #[test]
     fn lane_for_every_kind() {
         assert_eq!(lane_for(IngestJobKind::Document), IngestLane::General);
@@ -287,6 +289,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.3
+    /// Verifies MEDULLA-INGEST-WORKER-R001.3: Partition key function.
     #[test]
     fn partition_key_orders_per_tenant_and_corpus() {
         let a = envelope();
