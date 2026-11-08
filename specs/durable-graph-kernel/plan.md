@@ -70,6 +70,14 @@ No unknowns; no research.md.
 
 The sections below bind the rows. Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
+- **Owner.** Medulla's durable kernel: the storage, transaction and persistence crates, and the identity types they validate.
+- **Cohesion.** Each row extends the one store, ledger or upgrade path it names. No row adds a second store or upgrade runner.
+- **Dependency direction.** Storage and transaction crates sit below the handler crates. Handlers call them; they never call handlers.
+- **Interface depth.** Operators use one `store-upgrade` command and the served methods each row names.
+- **Special cases.** One: a stored authority record may carry the pre-rename protocol id (R070.3). A new write may not.
+- **State.** Durable state lives in the redb owner stores. Every format change goes through the lineage registry (R003, R070).
+- **Environment.** The persist directory and `MEDULLA_STORE_AUTO_MIGRATE`. The upgrade gate also reads the production-release pin.
+
 ### Build sequence
 
 1. **Baseline and proof harness.** Pin one main revision and inventory the listed entry points. Record existing focused and hosted gate results. Add reproducible fault/cluster fixtures. Mark each work ID as queued, built, landed, or accepted only from actual evidence.
@@ -1020,6 +1028,13 @@ A store left by an unclean shutdown is not inspected at open. Its ordinary open 
 **Copied-store restore.** `StoreIncarnation::derive` binds a store root to its files' device and inode.
 That binding stops a copied file from replacing a live store unnoticed. R862 keeps it for the ordinary open.
 Only an explicit restore or `rebind` re-binds a store, and only after a content-digest check.
+
+**Upgrade from the last production release (R070.3, R070.4).** The 3.0 rename changed the authority protocol id.
+Every record a 2.x engine stored carries the old id inside its signed digest, so migration refused those stores.
+Persisted records now validate under the id they were signed with; new writes accept only the current id.
+A diff of string constants between 2.27.10 and 3.3.0 found no other changed identifier on a store-open path.
+The CI job `production-upgrade` proves the pinned production release's store opens on every main commit.
+The tag `guard` requires that commit's main CI, so the proof gates every release.
 
 #### R030.1 issuer-bound host-start records
 
