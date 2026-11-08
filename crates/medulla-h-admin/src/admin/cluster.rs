@@ -484,7 +484,7 @@ async fn handle_restore(
     if let Err(error) = create_private_directory(&stage) {
         return Ok(Response::err(req_id, error));
     }
-    match medulla_persistence::backup::restore_bundle(&source, &stage, target_shards) {
+    match medulla_persistence::backup::restore_bundle(&source, &stage, target_shards, None) {
         Ok(r) => {
             // The receipt is portable and contains no local username or
             // filesystem reference. The deterministic stage token is

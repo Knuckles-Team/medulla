@@ -48,6 +48,10 @@ pub enum ArchiveRefusal {
     },
     /// The `--to-time` target is present but not a parsable RFC3339 timestamp.
     MalformedTargetTime { reason: String },
+    /// The `--archive` backend spec is not one this restore can bind. The
+    /// CLI's only accepted form today is `directory://<bundle-dir>`; anything
+    /// else refuses here, before any destination effect.
+    UnsupportedArchiveBackend { spec: String },
 }
 
 /// What an archive can replay to, certified by its MANIFEST read: the first

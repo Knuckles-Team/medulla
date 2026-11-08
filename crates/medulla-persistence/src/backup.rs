@@ -349,6 +349,51 @@ impl BackupManifest {
     }
 }
 
+/// Derive the replay bounds an offline restore may order a point-in-time
+/// target against, from the ONE manifest `restore_bundle` already re-derives
+/// (``read_manifest``): the captured bundle records exactly the ledger state
+/// its census declared, so the ceiling of retained xshard coordinator
+/// decisions IS the last replayable sequence of that archive, and the
+/// caller-supplied backup timestamp converts to the fixed-width RFC3339 UTC
+/// form the target ordering compares. Derived, never invented: every field
+/// comes from data the validation pass above already checked.
+pub fn archive_bounds_from_manifest(
+    manifest: &BackupManifest,
+) -> Result<medulla_storage::ArchiveBounds, String> {
+    Ok(medulla_storage::ArchiveBounds {
+        begin_sequence: 0,
+        end_sequence: manifest.xshard_decisions,
+        end_time: rfc3339_from_timestamp(manifest.timestamp),
+    })
+}
+
+/// RFC3339 UTC from a caller-supplied Unix-seconds timestamp (fixed-width
+/// `YYYY-MM-DDTHH:MM:SSZ`, civil-from-days). No clock dependency: the instant
+/// is caller-supplied, the library never reads a wall clock, and the fixed
+/// `Z`-suffixed width keeps the lexicographic ordering
+/// [`medulla_storage::replay_to`] uses on `Time` targets total.
+pub fn rfc3339_from_timestamp(unix_seconds: u64) -> String {
+    let days = (unix_seconds / 86_400) as i64;
+    let secs_of_day = unix_seconds % 86_400;
+    // Howard Hinnant's civil_from_days: days since 1970-01-01 -> (y, m, d).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        secs_of_day / 3600,
+        (secs_of_day % 3600) / 60,
+        secs_of_day % 60
+    )
+}
+
 pub fn opaque_text_ref(value: &str) -> String {
     use std::fmt::Write as _;
 
@@ -802,8 +847,21 @@ pub fn restore_bundle(
     bundle_dir: &Path,
     persist_dir: &Path,
     target_shards: usize,
+    target: Option<medulla_storage::ReplayTarget>,
 ) -> Result<RestoreReport, String> {
     let manifest = read_manifest(bundle_dir)?;
+    // The point-in-time boundary (MEDULLA-DURABLE-KERNEL-R007.1) is checked
+    // BEFORE any destination effect: a refused target is typed —
+    // [`medulla_storage::ArchiveRefusal`] — and because the check happens while
+    // the manifest is the only thing held, no shard file has been touched in
+    // `persist_dir` yet. Reuses the manifest read above via
+    // [`archive_bounds_from_manifest`]; no second manifest read, no second
+    // implementation of `replay_to`.
+    if let Some(target) = target.as_ref() {
+        medulla_storage::replay_to(target, &archive_bounds_from_manifest(&manifest)?).map_err(
+            |refusal| serde_json::to_string(&refusal).unwrap_or_else(|_| format!("{refusal:?}")),
+        )?;
+    }
     #[cfg(feature = "security")]
     validate_restore_key(&manifest)?;
     if !(1..=64).contains(&target_shards) {

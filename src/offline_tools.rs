@@ -7,6 +7,8 @@
 
 use std::ffi::OsString;
 
+#[cfg(feature = "redb")]
+mod archive;
 #[cfg(feature = "lake")]
 mod lake_fixture_export;
 #[cfg(feature = "redb")]
@@ -20,6 +22,7 @@ mod rf019_observe;
 /// Names of the offline tools, whether or not this build compiled them in.
 const TOOLS: &[&str] = &[
     "restore",
+    "archive",
     "migrate-shards",
     "medulla-rf019-observe",
     "lake-fixture-export",
@@ -49,6 +52,10 @@ pub(crate) fn run_if_requested() {
         "restore" => restore::run(argv),
         #[cfg(not(feature = "redb"))]
         "restore" => missing_feature("restore", "redb"),
+        #[cfg(feature = "redb")]
+        "archive" => archive::run(argv),
+        #[cfg(not(feature = "redb"))]
+        "archive" => missing_feature("archive", "redb"),
         #[cfg(feature = "redb")]
         "migrate-shards" => migrate_shards::run(argv),
         #[cfg(not(feature = "redb"))]
