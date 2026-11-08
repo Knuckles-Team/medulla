@@ -29,8 +29,8 @@ use crate::solve::SolverConfig;
 use crate::solve::SolverConfigSpec;
 use crate::solve::Term;
 use crate::solve::VarId;
-use medulla_types::solve_scalar::Scalar;
-use medulla_types::solve_scalar::Sha256Digest;
+use medulla_query_types::solve_scalar::Scalar;
+use medulla_query_types::solve_scalar::Sha256Digest;
 
 /// A model with one of every constraint body shape.
 pub fn model() -> ModelSpec {

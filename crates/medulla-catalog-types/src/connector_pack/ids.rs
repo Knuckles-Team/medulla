@@ -55,7 +55,7 @@ pub fn escape_pack_name(name: &str) -> String {
     escaped
 }
 
-/// A connector id is a [`crate::contract::ResourceId`] that also contains no
+/// A connector id is a [`medulla_types::contract::ResourceId`] that also contains no
 /// `/`: `mcp:<connector>/<kind>/<name>` is an unambiguous prefix only if the
 /// connector cannot itself contain the separator. A grant-scoped probe that
 /// sees a different tool set is its own connector

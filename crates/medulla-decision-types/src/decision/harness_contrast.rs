@@ -513,8 +513,8 @@ mod tests {
         DecisionPolicyRef, EvidenceClass, PremiseRef, ResolutionKind, StatisticalOutcome,
         TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
+    use medulla_query_types::solve_scalar::digest_text;
     use medulla_types::contract::BoundedVec;
-    use medulla_types::solve_scalar::digest_text;
     use medulla_work_types::orchestration::improvement::HarnessProbeRun;
 
     /// The input-digest domain the server's `seal` uses for statistical

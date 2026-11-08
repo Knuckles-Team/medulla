@@ -65,6 +65,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 tempfile = "3"
 regex = "1"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types" }
 
 [features]
 default = []
@@ -141,14 +142,14 @@ modality-serving = ["medulla-types/modality-serving", "medulla-protocol-types/mo
 # `policy()`'s one `Method::Quantum` arm together, so the two can never drift. The
 # root `medulla-engine` package's `quantum-agent-api` facade feature enables BOTH
 # `medulla-types/quantum` and `medulla-capabilities/quantum` in lockstep.
-quantum = ["medulla-types/quantum", "medulla-protocol-types/quantum"]
+quantum = ["medulla-query-types/quantum", "medulla-protocol-types/quantum"]
 # GOC-33 (`OWNER-VOICE-ASR`) -- see the module doc above. Mirrors `medulla-types/asr-native`
 # 1:1 (same lockstep contract as `jobs`/`quantum`): this feature enables
 # `medulla-types/asr-native` AND cfg-gates `policy()`'s one `Method::Asr` arm together, so
 # the two can never drift. The root `medulla-engine` package's `asr-whisper` facade
 # feature enables both `medulla-types/asr-native` and `medulla-capabilities/asr-native` in
 # lockstep.
-asr-native = ["medulla-types/asr-native", "medulla-protocol-types/asr-native"]
+asr-native = ["medulla-query-types/asr-native", "medulla-protocol-types/asr-native"]
 # D-VZ-1 (lanes V4/V6) -- see the module doc above. Mirrors `medulla-types/viz` 1:1 (same
 # lockstep contract as `jobs`/`statechart`): `viz` is deliberately EXCLUDED from
 # `full` (unlike most medulla-types features this crate force-enables above), so this
@@ -157,7 +158,7 @@ asr-native = ["medulla-types/asr-native", "medulla-protocol-types/asr-native"]
 # out of sync. The root `medulla-engine` package's `viz` facade feature enables
 # `medulla-capabilities?/viz` (weak-dep syntax: only takes effect if `medulla-capabilities` is
 # ALSO linked via `server` from elsewhere) in lockstep -- see root Cargo.toml.
-viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
+viz = ["medulla-query-types/viz", "medulla-protocol-types/viz"]
 # MEDULLA-DECISION-ENGINE-R054.1: the decision-contract ontology generator
 # (`decision_ontology`) reads the decision types' JSON schemas.
 contract-schema = ["dep:schemars", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema"]

@@ -13,6 +13,7 @@ use medulla_graph_algos::{
     graph_algos::impact::ImpactPath, graph_algos::impact::Seed, graph_algos::impact::Semantics,
 };
 use medulla_protocol_types::result_contract::compute as results;
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_result_types::{
     compute_result::mining::EcosystemQuery, compute_result::mining::EcosystemSeverity,
     compute_result::mining::ImpactOptions, compute_result::mining::ImpactPathRow,
@@ -20,7 +21,6 @@ use medulla_result_types::{
     compute_result::mining::PackageImpactRow, compute_result::mining::RiskPropagationMiningResult,
     compute_result::mining::RiskScoreRow, compute_result::mining::SeedAttributionRow,
 };
-use medulla_types::solve_scalar::digest_text;
 
 /// Domain of an impact run's provenance digest.
 pub(crate) const IMPACT_DIGEST_DOMAIN: &str = "eg/impact-propagation/v1";

@@ -42,6 +42,7 @@ medulla-store = { path = "../medulla-store" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-wire = { path = "../medulla-wire" }
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"

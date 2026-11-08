@@ -21,7 +21,7 @@
 //! hierarchical clustering plugs into. Until that lane merges, [`crate::demo`]
 //! provides a deterministic, seeded, in-memory implementation -- the SAME
 //! "engine-side generated, clearly labeled, never a fabricated real dataset"
-//! idiom `medulla_types::viz::VizDatasetSource::SyntheticGraph` already uses in
+//! idiom `medulla_query_types::viz::VizDatasetSource::SyntheticGraph` already uses in
 //! production for the (nodes-only) `MarkKind::Graph` static-export demo path.
 //! Swapping in the real implementation later changes only which `GraphSource`
 //! this crate's callers construct -- neither the contract types nor the wire

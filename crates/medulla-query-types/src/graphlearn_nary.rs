@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn nary_refusals_are_registered_server_error_codes() {
-        use crate::contract::ServerErrorCode;
+        use medulla_types::contract::ServerErrorCode;
         for code in [
             NARY_ARITY_INVALID,
             NARY_CONSTRAINT_INVALID,

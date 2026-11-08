@@ -17,7 +17,7 @@ use medulla_numeric::evaluation::skill::{
     bootstrap_ic_interval, ic_decay, information_coefficient_checked, information_ratio,
 };
 use medulla_numeric::series::window::{pearson, ranks};
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 use super::quant::{item_rows, q32, raw_value};
 use super::refusal::{bounded, Refusal, RefusalResult};

@@ -14,6 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 serde_bytes = "0.11.19"
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 thiserror = "2.0"
@@ -27,8 +28,8 @@ medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-result-types/wire-contract"]
-wire-complete = ["wire-contract", "jobs", "program-optimization", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-result-types/wire-complete"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-result-types/contract-schema", "medulla-work-types/contract-schema"]
+wire-complete = ["wire-contract", "jobs", "program-optimization", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-result-types/wire-complete"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-result-types/contract-schema", "medulla-work-types/contract-schema"]
 jobs = ["medulla-types/jobs", "medulla-work-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization", "medulla-work-types/program-optimization"]
 test-support = ["medulla-types/test-support", "medulla-work-types/test-support"]

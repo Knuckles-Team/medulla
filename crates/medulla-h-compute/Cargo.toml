@@ -18,6 +18,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-viz-columnstore = { path = "../medulla-viz-columnstore", optional = true }
 medulla-viz-core = { path = "../medulla-viz-core", optional = true }
 medulla-viz-export = { path = "../medulla-viz-export", optional = true }
@@ -52,7 +53,7 @@ viz-interactive = ["dep:medulla-viz-kernels", "viz-static-export", "medulla-viz-
 viz-static-export = ["dep:medulla-viz-export", "medulla-server-api/viz-static-export", "viz-columnstore", "server"]
 wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-types/wasm-udf", "server"]
 viz-columnstore = ["dep:medulla-viz-columnstore", "medulla-server-api/viz-columnstore", "viz"]
-viz = ["dep:medulla-viz-core", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz", "medulla-viz-core?/viz", "medulla-viz-graph-tiles?/viz", "medulla-viz-kernels?/viz"]
+viz = ["dep:medulla-viz-core", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-query-types/viz", "medulla-viz-core?/viz", "medulla-viz-graph-tiles?/viz", "medulla-viz-kernels?/viz"]
 server = ["medulla-server-api/server"]
 
 [dev-dependencies]

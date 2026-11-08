@@ -6,7 +6,7 @@
 //! the same fact. The record is pure data; the derivation lives in
 //! `medulla-plan` and the write goes through the served `ApplyMutation`.
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
 /// The only rule-form version this build understands.

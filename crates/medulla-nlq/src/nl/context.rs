@@ -906,7 +906,7 @@ fn feedback_hint(hint: &str, steps: &[NlPlanStep]) -> String {
 pub fn rewrite_follow_up(
     planner: &dyn NlPlanner,
     question: &str,
-    history: &[medulla_types::nl_query::NlTurn],
+    history: &[medulla_query_types::nl_query::NlTurn],
 ) -> Result<String, NlQueryError> {
     if history.is_empty() {
         return Ok(question.to_string());
@@ -921,17 +921,17 @@ pub fn rewrite_follow_up(
             "the planner returned an empty question".into(),
         ));
     }
-    if chars > medulla_types::nl_query::NL_TURN_QUESTION_MAX_CHARS {
+    if chars > medulla_query_types::nl_query::NL_TURN_QUESTION_MAX_CHARS {
         return Err(NlQueryError::RewriteFailed(format!(
             "the rewritten question holds {chars} characters, more than {}",
-            medulla_types::nl_query::NL_TURN_QUESTION_MAX_CHARS
+            medulla_query_types::nl_query::NL_TURN_QUESTION_MAX_CHARS
         )));
     }
     Ok(rewritten.to_string())
 }
 
 /// The rewrite instruction: the earlier turns, then the reply contract.
-fn rewrite_hint(history: &[medulla_types::nl_query::NlTurn]) -> String {
+fn rewrite_hint(history: &[medulla_query_types::nl_query::NlTurn]) -> String {
     let mut out = String::from(
         "Rewrite the question as ONE standalone question. Resolve every pronoun and \
          reference against the earlier turns below. Reply with the question only, not a \

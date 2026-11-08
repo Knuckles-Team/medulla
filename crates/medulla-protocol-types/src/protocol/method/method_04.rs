@@ -646,7 +646,7 @@ $($variants)*
     /// never committed — like `AnalyticsJob`/`Statechart`/`TsAppend`/`Kv*`).
     #[cfg(feature = "quantum")]
     Quantum {
-        op: medulla_types::quantum::QuantumOp,
+        op: medulla_query_types::quantum::QuantumOp,
     },
 
 
@@ -664,7 +664,7 @@ $($variants)*
     /// boundary, owned by future worker/AU-orchestration work).
     #[cfg(feature = "asr-native")]
     Asr {
-        op: medulla_types::asr_wire::AsrOp,
+        op: medulla_query_types::asr_wire::AsrOp,
     },
 
 

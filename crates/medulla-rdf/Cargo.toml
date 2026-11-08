@@ -95,6 +95,7 @@ rmp-serde = "1.3"
 # Shared allocation-free MessagePack preflight for property blobs. Keeping this
 # policy in medulla-types avoids a second parser in the RDF/SPARQL projection layer.
 medulla-types = { path = "../medulla-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 # RDF term model + parsers/serializers (feature `rdf`). Pure Rust, no native deps.
 oxrdf = { version = "0.3", optional = true }
@@ -117,7 +118,6 @@ oxjsonld = { version = "0.2", optional = true }
 # OFF) — a default/node/full build links none of it and `owl::ProofNode` carries no
 # new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }

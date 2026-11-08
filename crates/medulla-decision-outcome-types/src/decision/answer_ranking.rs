@@ -14,7 +14,7 @@ use medulla_types::contract::BoundedVec;
 use medulla_decision_types::{
     decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
 };
-use medulla_types::solve_scalar::digest_text;
+use medulla_query_types::solve_scalar::digest_text;
 
 pub const ANSWER_RANKING_SCHEMA: &str = "answer-candidate-ranking/v1";
 pub const MAX_ANSWER_CANDIDATES: usize = 16;

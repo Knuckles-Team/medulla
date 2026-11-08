@@ -77,8 +77,8 @@ pub const VIEW_DIGEST_DOMAIN: &str = "eg/architecture-view/v1";
 
 /// The SHA-256 digest of the canonical view, 64 lowercase hex characters.
 pub fn view_digest(view: &ArchitectureView) -> String {
-    let text = crate::solve_scalar::digest_text(VIEW_DIGEST_DOMAIN, view);
-    text.strip_prefix(crate::solve_scalar::DIGEST_TEXT_PREFIX)
+    let text = medulla_query_types::solve_scalar::digest_text(VIEW_DIGEST_DOMAIN, view);
+    text.strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
         .map(str::to_owned)
         .unwrap_or(text)
 }
@@ -106,9 +106,19 @@ pub enum ViewAbstained {
     /// The repository id is invisible to the tenant.
     UnknownRepository,
     /// The stated revision differs from the newest snapshot digest.
-    StaleRevision { stated: String, newest: String },
+    StaleRevision {
+        /// The revision the caller stated.
+        stated: String,
+        /// The newest snapshot digest.
+        newest: String,
+    },
     /// More containers than `architecture_view_max_containers`.
-    TooLarge { containers: usize, limit: usize },
+    TooLarge {
+        /// The number of containers in the scope.
+        containers: usize,
+        /// The configured maximum number of containers.
+        limit: usize,
+    },
 }
 
 impl ViewAbstained {

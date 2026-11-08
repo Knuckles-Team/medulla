@@ -33,6 +33,7 @@ medulla-store = { path = "../medulla-store" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"
@@ -79,7 +80,7 @@ sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf", "medulla-kernel/sparql
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]
 jobs = ["medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "query", "redb", "server"]
 statechart = ["medulla-capabilities/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-types/statechart", "medulla-work-store/statechart", "server"]
-viz = ["medulla-capabilities/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
+viz = ["medulla-capabilities/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-query-types/viz"]
 modality-serving = ["medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server"]
 asr-whisper = ["medulla-capabilities/asr-native", "medulla-server-api/asr-whisper", "server"]
 knowledge-batch = ["medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]

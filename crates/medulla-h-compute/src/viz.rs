@@ -76,7 +76,9 @@ use medulla_protocol_types::{
     result_contract::ingestion::VizRenderResponse as VizRenderResult,
     result_contract::ingestion::VizViewResult,
 };
-use medulla_types::viz::{VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest};
+use medulla_query_types::viz::{
+    VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest,
+};
 use medulla_viz_columnstore::{ColumnData, ColumnInput, ColumnStore};
 use medulla_viz_core::{
     CapabilityMatrix, FrameBudget, StaticExportBackend, StaticExportFormat, ViewSpec,

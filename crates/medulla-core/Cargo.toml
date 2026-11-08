@@ -48,7 +48,7 @@ security = ["medulla-isolation/security", "medulla-graph-core/security", "dep:re
 # Version-keyed query-RESULT cache (CONCEPT:KG-2.233) on `GraphCore`. Pure-Rust
 # bounded LRU + 128-bit query hash — no new dep — so the facade folds it into the
 # lean Pi tier as well as node/cluster/full.
-result-cache = ["medulla-graph-core/result-cache", "medulla-query-cache/result-cache", ]
+result-cache = ["medulla-graph-core/result-cache", "medulla-query-cache/result-cache"]
 # Durable JSONPath index persistence (CONCEPT:MEDULLA-308): the redb-backed
 # `RedbPathIndexStore` impl of the dep-free `PathIndexPersistence` seam, so the
 # demand-driven MEDULLA-084 JSONPath index (`path → value → ids` / `path → ids`) is
@@ -62,7 +62,7 @@ path-persist = ["medulla-graph-core/path-persist", "dep:redb", "dep:medulla-stor
 # serialized state and rehydrating on access. The trait + default are dep-free
 # (Pi-safe); the facade layers a redb/S3 impl on top. Folded into pi/node/cluster/
 # full alongside `result-cache`.
-cold-tier = ["medulla-graph-core/cold-tier", ]
+cold-tier = ["medulla-graph-core/cold-tier"]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 # index::NodeChange` + the `modality_conformance_tests!` battery. OFF by default,
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
@@ -71,6 +71,7 @@ cold-tier = ["medulla-graph-core/cold-tier", ]
 contract = ["medulla-graph-core/contract", "medulla-ann/contract"]
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-ann = { path = "../medulla-ann" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
@@ -120,7 +121,6 @@ sha2 = { version = "0.10", optional = true }
 # (same gate as `sha2` above).
 hmac = { version = "0.12", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }

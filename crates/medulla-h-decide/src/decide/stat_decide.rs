@@ -31,8 +31,8 @@ use medulla_decision_types::{
     decision::PremiseRef, decision::QuantScaleTag, decision::ResolutionKind,
     decision::TraceFidelity, decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::digest_text;
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 

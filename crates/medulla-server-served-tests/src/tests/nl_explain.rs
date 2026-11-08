@@ -43,7 +43,7 @@ async fn send(state: &Arc<RwLock<ServerState>>, id: u64, method: Method) -> Resp
     dispatch_on_heap(state, request(id, "__commons__", None, method)).await
 }
 
-fn explain_body(resp: &Response) -> medulla_types::nl_query::NlQueryExplainResult {
+fn explain_body(resp: &Response) -> medulla_query_types::nl_query::NlQueryExplainResult {
     match &resp.result {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
         other => panic!(
@@ -53,7 +53,7 @@ fn explain_body(resp: &Response) -> medulla_types::nl_query::NlQueryExplainResul
     }
 }
 
-fn plan_body(resp: &Response) -> medulla_types::nl_query::NlQueryPlanResult {
+fn plan_body(resp: &Response) -> medulla_query_types::nl_query::NlQueryPlanResult {
     match &resp.result {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
         other => panic!("expected Raw plan result, got {other:?} / {:?}", resp.error),

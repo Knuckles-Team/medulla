@@ -274,7 +274,7 @@ pub(super) fn graph_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Graph {
-            plan_digest: medulla_types::solve_scalar::digest_text(
+            plan_digest: medulla_query_types::solve_scalar::digest_text(
                 "eg/decide-candidate-plan/v1",
                 &(graph, plan),
             ),
@@ -415,7 +415,7 @@ pub(super) fn declared_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Declared {
-            options_digest: medulla_types::solve_scalar::digest_text(
+            options_digest: medulla_query_types::solve_scalar::digest_text(
                 DECLARED_OPTIONS_DOMAIN,
                 &options,
             ),

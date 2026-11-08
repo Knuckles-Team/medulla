@@ -142,7 +142,7 @@ pub(super) fn state_digest(
     policy: &ResolvedPolicy,
     now_ms: u64,
 ) -> String {
-    medulla_types::solve_scalar::digest_text(
+    medulla_query_types::solve_scalar::digest_text(
         "eg/decide-state/v1",
         &(
             question,

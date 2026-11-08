@@ -256,7 +256,7 @@ pub const TOPOLOGY_FACTS_DIGEST_DOMAIN: &str = "eg/topology-facts/v1";
 
 /// `sha256:<hex>` of `facts` in the decision surface's one digest scheme.
 pub fn facts_digest(facts: &TopologyFacts) -> String {
-    let digest = String::from(medulla_types::solve_scalar::Sha256Digest::of_json(
+    let digest = String::from(medulla_query_types::solve_scalar::Sha256Digest::of_json(
         TOPOLOGY_FACTS_DIGEST_DOMAIN,
         facts,
     ));

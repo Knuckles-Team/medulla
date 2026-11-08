@@ -4,7 +4,7 @@ use medulla_document::cascade::{
     plan_cascade, CascadePlan, CascadeReader, CascadeRefusal, EdgeKey, NodeKey, OrphanReport,
     CASCADE_TOO_LARGE,
 };
-use medulla_types::document_ops::{DocumentDeleteReceipt, DocumentDeleteRequest};
+use medulla_query_types::document_ops::{DocumentDeleteReceipt, DocumentDeleteRequest};
 
 fn node(label: &str, id: &str) -> NodeKey {
     NodeKey {

@@ -1,5 +1,5 @@
 //! A deterministic, seeded, in-memory [`GraphSource`] — the SAME idiom
-//! `medulla_types::viz::VizDatasetSource::SyntheticGraph` already uses in
+//! `medulla_query_types::viz::VizDatasetSource::SyntheticGraph` already uses in
 //! production (engine-side generated, clearly labeled, never a fabricated
 //! real dataset): it exists so the binary tile protocol has a real caller and
 //! real measurements TODAY, without waiting on VIZ-1's GraphCore-backed

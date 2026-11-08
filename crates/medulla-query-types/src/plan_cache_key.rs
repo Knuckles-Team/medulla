@@ -9,7 +9,7 @@
 //! dispatcher and keying invalidation to the engine's existing dependency
 //! clock is a later child.
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Identifies one cached SQL execution plan: the exact statement text's
 /// digest, plus the schema version the plan was compiled against.

@@ -24,12 +24,12 @@ use medulla_graph_algos::{
     graphlearn::link_predict::KanLinkConfig, graphlearn::link_predict::KanLinkModel,
 };
 use medulla_protocol_types::result_contract::compute as results;
+use medulla_query_types::graphlearn_nary::{NaryBounds, NaryHypothesis, NaryRefusal, NaryRequest};
 use medulla_result_types::{
     compute_result::graphlearn::EdgeFunctionRow, compute_result::graphlearn::LinkPrediction,
     compute_result::graphlearn::LinkPredictorFit, compute_result::graphlearn::NaryPrediction,
     compute_result::graphlearn::PredictedLink,
 };
-use medulla_types::graphlearn_nary::{NaryBounds, NaryHypothesis, NaryRefusal, NaryRequest};
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphLearnParams;

@@ -80,9 +80,9 @@ method_results! {
     RankByProvenance(RankByProvenance) => Raw<RankByProvenanceResult>;
     NlQuery(NlQuery) => Raw<Vec<(String, Option<f32>)>>;
     // The executed UQL text alongside the same `[node id, score | nil]` rows as `NlQuery`.
-    NlQueryExplain(NlQueryExplain) => Raw<medulla_types::nl_query::NlQueryExplainResult>;
+    NlQueryExplain(NlQueryExplain) => Raw<medulla_query_types::nl_query::NlQueryExplainResult>;
     // The unexecuted UQL candidate and its pins for the exact empty-parameter text.
-    NlQueryPlan(NlQueryPlan) => Raw<medulla_types::nl_query::NlQueryPlanResult>;
+    NlQueryPlan(NlQueryPlan) => Raw<medulla_query_types::nl_query::NlQueryPlanResult>;
     TxnUnifiedQuery(TxnUnifiedQuery) => Raw<Vec<(String, Option<f32>)>>;
     // A UQL statement's result inside a transaction (EH-434).
     #[cfg(feature = "query")]

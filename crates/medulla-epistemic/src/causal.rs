@@ -982,8 +982,8 @@ pub fn verify_fit(
     graph: &CausalGraph,
     observations: &[std::collections::BTreeMap<String, f64>],
     nrmse_max: f64,
-) -> Result<medulla_types::causal_wire::CausalVerdict, CausalFitError> {
-    use medulla_types::causal_wire::{CausalVerdict, CausalVerdictKind, VariableFit};
+) -> Result<medulla_query_types::causal_wire::CausalVerdict, CausalFitError> {
+    use medulla_query_types::causal_wire::{CausalVerdict, CausalVerdictKind, VariableFit};
     if observations.len() < MIN_FIT_OBSERVATIONS {
         return Err(CausalFitError::ObservationsInsufficient {
             observed: observations.len(),
@@ -1508,7 +1508,7 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R608.2
     #[test]
     fn fit_verdict_at_boundary_nrmse() {
-        use medulla_types::causal_wire::CausalVerdictKind;
+        use medulla_query_types::causal_wire::CausalVerdictKind;
         use std::collections::BTreeMap;
         // y = 2x + residual; x alternates ±1 (std 1 for x around mean 0 with a
         // root equation bias 0 so x's own residual equals x itself, std == rmse).

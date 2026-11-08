@@ -212,46 +212,6 @@ knowledge-batch = ["query"]
 # Governed document/image/audio/video serving. This adds only pure-serde wire
 # operations; concrete runtimes and persistence remain above `medulla-types`.
 modality-serving = ["security", "streaming"]
-# CONCEPT:MEDULLA-KG.compute.quantum-agent-api (Q8, quantum-native.md / quantum-external-
-# providers.md §1.5): gates the `Method::Quantum { op: QuantumOp }` variant + its
-# `QuantumOp`/`QuantumRankCandidate`/`QuantumQaoaEdge` wire DTOs -- the ONE wire op
-# that makes the quantum surface (`medulla-quantum-core`/`medulla-quantum-gates`/
-# `medulla-quantum-sim`, all Rust-internal until this feature) callable through the
-# engine's own wire protocol. PURE serde: `QuantumOp::Expectation.program` rides an
-# opaque `serde_json::Value` (the same shape `medulla_quantum_core::ir::QuantumProgram`
-# round-trips as JSON), so this crate does NOT depend on `medulla-quantum-core` -- no new
-# crate in the dependency tree, exactly like every other Method-gating feature here.
-# A build without it drops the variant (-> the dispatch "not available in this
-# build" catch-all). Mirrors `jobs`/`statechart`: NEVER forced on unconditionally by
-# `medulla-capabilities` (see that crate's own Cargo.toml doc) -- it carries its own
-# mirrored `quantum` feature turned on in lockstep by the root package's
-# `quantum-agent-api` facade feature.
-quantum = []
-# CONCEPT:MEDULLA-KG.compute.native-asr-whisper-provider (GOC-33, `OWNER-VOICE-ASR`): gates the
-# `Method::Asr` variant + its `AsrOp` wire enum (`asr_wire.rs`). PURE serde -- no
-# heavy dep here (whisper-rs/whisper.cpp live in the separate `medulla-asr-whisper`
-# crate, linked only by the facade's own `asr-whisper` feature); a build without
-# this feature drops the variant (-> the dispatch "not available in this build"
-# catch-all), exactly like `quantum`.
-asr-native = []
-# D-VZ-1 (lanes V4/V6): the native-visualization engine's wire op (`VizOp`) +
-# `Method::Viz`, gated `viz`. Pure serde/enum-variant gate, same shape as
-# `jobs`/`statechart`; the real ColumnStore/LOD/render engine (`medulla-viz-core`/
-# `medulla-viz-columnstore`/`medulla-viz-export`, a SEPARATE leaf DAG above this crate) is
-# wired by the facade through its own `viz`/`viz-columnstore`/`viz-static-export`
-# features, deliberately EXCLUDED from `full` (see root `Cargo.toml`) since it is
-# not yet an operator-facing default.
-viz = []
-# Every pure type gate above, so a consumer that must DECODE any wire `Method`
-# (the wheel's native `eg2.` canonical-body codec, `medulla-numeric/python`) sees the
-# complete variant set the contract publishes. The Python method-body vector
-# gate (`tests/test_method_body_vectors.py`) fails for any method a missing gate
-# would hide.
-wire-complete = [
-    "wire-contract", "timeseries", "probabilistic", "jobs", "statechart",
-    "program-optimization", "knowledge-batch", "modality-serving", "quantum",
-    "asr-native", "viz",
-]
 # The type gates the capability ledger (`medulla-capabilities`) always compiles
 # against: every wire family whose policy rows are unconditional. The
 # cfg-mirrored families (`jobs`, `statechart`, ...) stay out: medulla-capabilities
@@ -291,3 +251,4 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-query-types = { path = "../medulla-query-types" }

@@ -7,7 +7,7 @@
 
 use medulla_document::cascade::CascadePlan;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::document_ops::{
+use medulla_query_types::document_ops::{
     DocumentDeleteReceipt, DocumentDeletion, DOCUMENT_DELETION_TYPE,
 };
 use serde_json::json;

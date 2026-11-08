@@ -161,7 +161,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "SupersedeEdge",
         &["VALIDITY_INVERTED", "EDGE_ALREADY_CLOSED", "EDGE_NOT_FOUND"],
     ),
-    // The n-ary hypothesis read's typed refusals (medulla_types::graphlearn_nary).
+    // The n-ary hypothesis read's typed refusals (medulla_query_types::graphlearn_nary).
     (
         "GraphLearnPredictNary",
         &[

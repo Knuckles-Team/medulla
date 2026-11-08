@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::solve_scalar::Scalar;
+use medulla_query_types::solve_scalar::Scalar;
 
 /// Value of one objective level under an assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

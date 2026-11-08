@@ -41,7 +41,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use sha2::{Digest, Sha256};
 
-use medulla_types::viz::VizFormat;
+use medulla_query_types::viz::VizFormat;
 use medulla_viz_columnstore::ColumnStore;
 use medulla_viz_core::{FrameBudget, ViewResult};
 

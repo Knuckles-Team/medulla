@@ -36,8 +36,8 @@ use medulla_finance_market::{
     market::validation::deflated_sharpe_ratio, market::validation::diebold_mariano,
     market::validation::probability_of_backtest_overfit,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::digest_text;
 
 use super::stat_jobs::{candidate_head, dataset_digest, EvalInputs, JobRun};
 use super::stat_support::refusal;

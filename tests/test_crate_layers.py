@@ -37,13 +37,15 @@ def _workspace(
         + "]\n",
         encoding="utf-8",
     )
-    lines = ["layers:"]
+    lines: list[str] = []
     for name, crates in layers.items():
-        lines += [f"  - name: {name}", "    crates:"] + [f"      - {c}" for c in crates]
-    (root / "architecture").mkdir()
-    (root / "architecture" / "crate-layers.yml").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+        units = ", ".join(f'"{c}"' for c in crates)
+        lines += [
+            "[[tool.pipelines_hooks.coupling.cargo_layers]]",
+            f'name = "{name}"',
+            f"units = [{units}]",
+        ]
+    (root / "pyproject.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _findings(root: Path, monkeypatch: pytest.MonkeyPatch) -> list[str]:
@@ -82,7 +84,7 @@ def test_crate_dependencies_follow_layers(
     _crate(unlayered, "a-types")
     _crate(unlayered, "c-loose")
     assert _findings(unlayered, monkeypatch) == [
-        "architecture/crate-layers.yml: c-loose sits in no layer"
+        "pyproject.toml: c-loose sits in no layer"
     ]
 
     twice = tmp_path / "twice"
@@ -91,6 +93,6 @@ def test_crate_dependencies_follow_layers(
     _crate(twice, "a-types")
     (twice / "crates" / "ghost").mkdir()
     assert _findings(twice, monkeypatch) == [
-        "architecture/crate-layers.yml: a-types sits in more than one layer",
-        "architecture/crate-layers.yml: ghost is not a workspace crate",
+        "pyproject.toml: a-types sits in more than one layer",
+        "pyproject.toml: ghost is not a workspace crate",
     ]

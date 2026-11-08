@@ -122,7 +122,7 @@ impl medulla_document::cascade::CascadeReader for VisibleGraph<'_, '_> {
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 pub async fn handle_document_delete(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::document_ops::DocumentDeleteRequest,
+    request: medulla_query_types::document_ops::DocumentDeleteRequest,
 ) -> Response {
     use medulla_document::cascade::{plan_cascade, CascadeRefusal, DOCUMENT_LABEL};
     let req_id = ctx.req_id;
@@ -191,7 +191,7 @@ pub async fn apply_cascade(
 #[cfg(not(all(feature = "query", feature = "modality-serving")))]
 pub async fn handle_document_delete(
     ctx: GraphOpRouting<'_>,
-    _request: medulla_types::document_ops::DocumentDeleteRequest,
+    _request: medulla_query_types::document_ops::DocumentDeleteRequest,
 ) -> Response {
     Response::err(
         ctx.req_id,

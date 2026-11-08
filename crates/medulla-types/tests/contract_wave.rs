@@ -391,9 +391,9 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
         digest::record_digest(&record),
         "the record digest must not depend on the field that carries it"
     );
-    assert!(first.starts_with(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX));
+    assert!(first.starts_with(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX));
 
-    let policy_under_record_domain = medulla_types::solve_scalar::digest_text(
+    let policy_under_record_domain = medulla_query_types::solve_scalar::digest_text(
         digest::DECISION_RECORD_DIGEST_DOMAIN,
         &decision::policy(),
     );

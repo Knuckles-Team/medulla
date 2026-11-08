@@ -34,7 +34,7 @@ use medulla_asr_whisper::{
     decode_wav_16k_mono, verify_model, CancelFlag, TranscribeOptions, WhisperAsrProvider,
 };
 use medulla_audio::asr::AsrError;
-use medulla_types::asr_wire::{AsrOp, AsrTranscriptSegment, AsrTranscription};
+use medulla_query_types::asr_wire::{AsrOp, AsrTranscriptSegment, AsrTranscription};
 
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;

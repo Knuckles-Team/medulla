@@ -32,6 +32,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }

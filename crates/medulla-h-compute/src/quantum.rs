@@ -85,7 +85,7 @@ use medulla_quantum_core::planner::{select_backend, PlannerDecision, PlannerOpti
 use medulla_quantum_core::result::{Outcome, QuantumResult};
 use medulla_quantum_sim::stabilizer::StabilizerSimulator;
 use medulla_quantum_sim::statevector::StateVectorSimulator;
-use medulla_types::quantum::{
+use medulla_query_types::quantum::{
     QuantumExpectationResult, QuantumOp, QuantumOperationKind, QuantumPlannerAuditEntry,
     QuantumPlannerReport, QuantumQaoaEdge, QuantumQaoaResult, QuantumRankCandidate,
     QuantumRankResult, QuantumRankedCandidate, QuantumRunMetadata,

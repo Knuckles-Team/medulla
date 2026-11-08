@@ -12,7 +12,7 @@ use super::policy::DecisionPolicy;
 use super::record::{CandidateFacts, DecisionInputs, DecisionRecord};
 use super::statistical::StatisticalDecisionRecord;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::{solve_scalar::digest_text, solve_scalar::DIGEST_TEXT_PREFIX};
+use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 
 /// Domain of a v1 (assembly) decision record.
 pub const DECISION_RECORD_DIGEST_DOMAIN: &str = "eg/decision-record/v1";

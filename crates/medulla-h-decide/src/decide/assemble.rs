@@ -171,7 +171,7 @@ pub(crate) fn selected_model(
     let revision = slot
         .component
         .definition_digest
-        .strip_prefix(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .strip_prefix(medulla_query_types::solve_scalar::DIGEST_TEXT_PREFIX)
         .unwrap_or(&slot.component.definition_digest)
         .to_string();
     let declared = entries

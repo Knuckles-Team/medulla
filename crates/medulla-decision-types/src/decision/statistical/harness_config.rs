@@ -665,7 +665,7 @@ mod tests {
             kind: QuestionKind::Route,
             safety: QuestionSafety::Ordinary,
         };
-        medulla_types::solve_scalar::digest_text(
+        medulla_query_types::solve_scalar::digest_text(
             "eg/decision-statistical-inputs/v1",
             &(&question, inputs),
         )

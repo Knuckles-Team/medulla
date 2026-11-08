@@ -10,8 +10,8 @@ use super::premise::Violation;
 use crate::solve::Certificate;
 use crate::solve::ObjectiveValue;
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::Scalar;
 
 /// One slot of the assembled graph and the component bound to it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

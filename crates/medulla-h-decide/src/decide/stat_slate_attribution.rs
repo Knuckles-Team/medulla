@@ -28,8 +28,8 @@ use medulla_finance::{
     attribution::additive_fit, attribution::shapley_exact, attribution::Attribution,
     attribution::LoggedGame,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
-use medulla_types::solve_scalar::digest_text;
 
 use super::stat_log::{LogReader, MAX_LOG_ROWS};
 use super::stat_slate::{evaluated_slates, Slate, SLATE_QUESTION};

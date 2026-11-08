@@ -82,9 +82,9 @@ pub struct NlQueryPlanResult {
     /// The exact UQL produced by the server-owned planner.
     pub uql: String,
     /// SHA-256 of the parsed plan for the exact UQL.
-    pub plan_digest: crate::contract::Digest256,
+    pub plan_digest: medulla_types::contract::Digest256,
     /// SHA-256 of the exact UQL and typed empty parameter map.
-    pub query_digest: crate::contract::Digest256,
+    pub query_digest: medulla_types::contract::Digest256,
     /// The standalone question planned in place of a follow-up; `Some` exactly when the
     /// request carried history (MEDULLA-FEDERATED-QUERY-R058.8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn plan_result_encodes_exact_uql_and_server_pins() {
-        let digest = crate::contract::Digest256::sha256(b"pin");
+        let digest = medulla_types::contract::Digest256::sha256(b"pin");
         let result = NlQueryPlanResult {
             uql: "MATCH (:Doc) |> LIMIT 1".into(),
             plan_digest: digest,

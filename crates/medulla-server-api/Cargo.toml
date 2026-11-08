@@ -38,6 +38,8 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-viz-columnstore = { path = "../medulla-viz-columnstore", optional = true }
 medulla-viz-core = { path = "../medulla-viz-core", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
@@ -54,7 +56,6 @@ ureq = { version = "3.4.2", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-agent-types = { path = "../medulla-agent-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-index-types = { path = "../medulla-index-types" }
@@ -140,7 +141,7 @@ stream = ["dep:medulla-stream", "medulla-stream/stream", "dep:medulla-plan", "me
 streaming = ["server", "medulla-protocol-types/streaming", "medulla-types/streaming"]
 text = ["dep:medulla-plan", "medulla-plan/text", "medulla-exec/text", "query", "medulla-federation?/text", "medulla-types/text"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-exec/timeseries", "server", "redb", "medulla-store/tsdb"]
-viz = ["dep:medulla-viz-core", "medulla-capabilities/viz", "medulla-protocol-types/viz", "medulla-types/viz", "medulla-viz-core?/viz"]
+viz = ["dep:medulla-viz-core", "medulla-capabilities/viz", "medulla-protocol-types/viz", "medulla-query-types/viz", "medulla-viz-core?/viz"]
 viz-static-export = ["server", "viz-columnstore"]
 wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "medulla-exec/wasm-udf", "server", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf"]
 epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-redaction", "epistemic", "oidc", "query", "redb", "security"]

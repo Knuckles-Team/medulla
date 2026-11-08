@@ -108,3 +108,5 @@ pub mod clickhouse_attached_catalog;
 // bridge wiring are later children.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod relational_attached_catalog;
+// MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
+pub mod architecture_view;

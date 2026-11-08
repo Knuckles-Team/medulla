@@ -22,7 +22,7 @@ use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
-use medulla_types::solve_scalar::Scalar;
+use medulla_query_types::solve_scalar::Scalar;
 
 use super::contract_solver as solver;
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};
