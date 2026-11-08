@@ -4154,6 +4154,8 @@ components:
       - "tests/test_startup.py"
       - "tests/test_statespace_kernels.py"
       - "tests/test_store_auto_migrate.py"
+      - "tests/test_store_upgrade_from_production.py"
+      - "tests/_production_store_writer.py"
       - "tests/test_streaming_cdc.py"
       - "tests/test_sync_client_lifecycle.py"
       - "tests/test_transport.py"

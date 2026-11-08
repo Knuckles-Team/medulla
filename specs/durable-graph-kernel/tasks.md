@@ -102,6 +102,8 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T096 MEDULLA-DURABLE-KERNEL-R069 Scrub cursor fixture reliably tests the no-key encryption state
 - [ ] T097 [US3] MEDULLA-DURABLE-KERNEL-R070.1 The engine migrates an older supported store when it opens it
 - [ ] T098 [US3] MEDULLA-DURABLE-KERNEL-R070.2 Hot-path proof: a previous-patch store migrates and serves at open
+- [ ] T262 [US3] MEDULLA-DURABLE-KERNEL-R070.3 Persisted authority records keep the protocol id they were signed with
+- [ ] T263 [US3] MEDULLA-DURABLE-KERNEL-R070.4 Release gate: a store of the last production release migrates and serves
 - [ ] T099 MEDULLA-DURABLE-KERNEL-R072 Served task-queue methods over the durable job store
 - [ ] T100 MEDULLA-DURABLE-KERNEL-R073 Python client methods for the task queue
 - [ ] T101 MEDULLA-DURABLE-KERNEL-R074.1 Typed worker registry producer and pure lifecycle
