@@ -572,7 +572,7 @@ jobs:
     name: Release fixed point
     needs: [build-sdist, server-image]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     permissions:
       contents: read
     steps:

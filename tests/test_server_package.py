@@ -106,7 +106,12 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
 def test_release_builds_publish_and_verify_only_medulla() -> None:
     jobs = _yaml(RELEASE)["jobs"]
     assert "build-server" not in jobs
-    assert set(jobs["verify-pypi"]["needs"]) == {"build", "publish-x86", "build-sdist"}
+    assert set(jobs["verify-pypi"]["needs"]) == {
+        "build",
+        "publish-x86",
+        "build-sdist",
+        "release-fixed-point",
+    }
     verify = _script(jobs["verify-pypi"])
     assert "--package medulla " in verify
     for tag in ("manylinux_2_28_x86_64", "manylinux_2_28_aarch64", "win_amd64"):
@@ -153,7 +158,7 @@ def test_image_is_built_from_the_medulla_wheel_and_published_as_one_manifest() -
     }
     assert "push-by-digest=true" in _script(image)
     manifest = jobs["server-manifest"]
-    assert manifest["needs"] == "server-image"
+    assert manifest["needs"] == ["server-image", "release-fixed-point"]
     assert "docker buildx imagetools create" in _script(manifest)
     assert "medulla-server" in str(manifest["steps"])
 
@@ -182,7 +187,7 @@ def test_one_version_and_a_build_only_dispatch() -> None:
 def test_tag_release_creates_the_github_release_after_pypi() -> None:
     """The GitHub release follows the PyPI check and the codec requalification."""
     job = _yaml(RELEASE)["jobs"]["github-release"]
-    assert job["needs"] == ["verify-pypi", "method-codec"]
+    assert job["needs"] == ["verify-pypi", "method-codec", "release-fixed-point"]
     assert job["permissions"] == {"contents": "write"}
     script = _script(job)
     assert "https://pypi.org/project/medulla/$version/" in script

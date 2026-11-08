@@ -80,6 +80,7 @@ def test_each_platform_publishes_on_its_own_behind_the_guard() -> None:
         "build",
         "publish-x86",
         "build-sdist",
+        "release-fixed-point",
     }
     assert "twine upload" not in "\n".join(
         s.get("run", "") for s in jobs["verify-pypi"]["steps"]
