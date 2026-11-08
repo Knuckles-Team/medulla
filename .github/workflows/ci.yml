@@ -1016,6 +1016,66 @@ jobs:
           rm -rf "$BT"
           exit $rc
 
+  # Upgrade from the last production release (MEDULLA-DURABLE-KERNEL-R070.4): a
+  # main-push gate. The release pinned in tests/fixtures/production_release.json
+  # writes a store with its own published engine and client; this commit's engine
+  # must migrate it at open and serve every row. The tag `guard` publishes only
+  # a commit whose main CI passed, so this proof gates every release.
+  production-upgrade:
+    timeout-minutes: 30
+    name: Upgrade from the last production release
+    needs: [changes, python-kernels, python-server]
+    if: always() && needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful native preparation
+        env:
+          KERNELS_RESULT: ${{ needs.python-kernels.result }}
+          SERVER_RESULT: ${{ needs.python-server.result }}
+        run: |
+          [ "$KERNELS_RESULT" = success ] && [ "$SERVER_RESULT" = success ] || {
+            echo "::error title=Upstream not ready::python-kernels=$KERNELS_RESULT python-server=$SERVER_RESULT, so the upgrade proof did not run."
+            exit 1
+          }
+      - *medulla-python-checkout
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: '.python-version'
+      - *medulla-gates-uv
+      - *medulla-gates-pydeps
+      - name: Install pytest and maturin (metadata only)
+        run: python -m pip install --disable-pip-version-check pytest pytest-timeout pytest-asyncio pyyaml 'maturin>=1,<2'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-kernels-${{ github.sha }}
+          path: ${{ runner.temp }}/python-kernels/
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-server-${{ github.sha }}
+          path: ${{ runner.temp }}/python-server/
+      - name: Verify and restore exact-revision native inputs
+        run: |
+          bash scripts/python_suite_artifact.sh unpack kernels
+          bash scripts/python_suite_artifact.sh unpack server
+      - name: Generate installed-distribution metadata (no compile)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/medulla-dist-info"
+          maturin pep517 write-dist-info --metadata-directory "$RUNNER_TEMP/medulla-dist-info" --interpreter "$(command -v python3)"
+          echo "MEDULLA_DIST_INFO_DIR=$RUNNER_TEMP/medulla-dist-info" >> "$GITHUB_ENV"
+      - name: Fetch the pinned production engine and client
+        run: python3 -I scripts/fetch_production_engine.py "$RUNNER_TEMP/production"
+      - name: Prove a production store migrates and serves
+        run: |
+          # The migration refuses a store under /tmp; keep the base outside it.
+          BT="$RUNNER_TEMP/production-upgrade"
+          MEDULLA_TEST_BINARY="$PWD/target-isolated/debug/medulla-server" \
+            MEDULLA_PRODUCTION_SERVER_BINARY="$RUNNER_TEMP/production/server" \
+            MEDULLA_PRODUCTION_PYTHON="$RUNNER_TEMP/production/venv/bin/python" \
+            MEDULLA_REQUIRE_PRODUCTION_UPGRADE=1 \
+            PYTHONPATH="$MEDULLA_DIST_INFO_DIR${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 -m pytest tests/test_store_upgrade_from_production.py -p no:cacheprovider --timeout=900 --basetemp="$BT" -q -rfEs
+
   # Isolated-mode qualification over a private Unix socket (MEDULLA-IDENTITY-R003.3,
   # D53): a main-push gate, never a pull-request gate (MEDULLA-CONTRACT-R053.7: a PR
   # needs only the `ci` job). The runner permits Unix sockets in the job container. One run
@@ -1765,6 +1825,7 @@ jobs:
       - python-server
       - python-suite
       - no-auth-uds
+      - production-upgrade
       - tts-piper-inference
       - language-clients
       - quality-advisory
@@ -1794,6 +1855,7 @@ jobs:
           PYTHON_SERVER_RESULT: ${{ needs.python-server.result }}
           PYTHON_SUITE_RESULT: ${{ needs.python-suite.result }}
           NO_AUTH_UDS_RESULT: ${{ needs.no-auth-uds.result }}
+          PRODUCTION_UPGRADE_RESULT: ${{ needs.production-upgrade.result }}
           TTS_PIPER_INFERENCE_RESULT: ${{ needs.tts-piper-inference.result }}
           LANGUAGE_CLIENTS_RESULT: ${{ needs.language-clients.result }}
           QUALITY_ADVISORY_RESULT: ${{ needs.quality-advisory.result }}
@@ -1847,6 +1909,7 @@ jobs:
           # above has already exited).
           if [[ "$EVENT_NAME" != pull_request ]]; then
             results+=("no-auth-uds=$NO_AUTH_UDS_RESULT")
+            results+=("production-upgrade=$PRODUCTION_UPGRADE_RESULT")
           fi
           failures=()
           for entry in "${results[@]}"; do
