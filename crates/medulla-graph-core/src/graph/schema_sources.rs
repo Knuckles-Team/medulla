@@ -1843,7 +1843,7 @@ mod tests {
             ),
             (
                 "orchestration",
-                "0edd8961c1d739ea513fad823f385bceb1474b924704d062c69c418589f3e8ed",
+                "2e40ac70f6483732ac1caedbd2bc41aaf961fdf2951222a46f2a11b960e62fc6",
             ),
             (
                 "orchestration-shapes",
