@@ -533,6 +533,74 @@ pub(crate) fn copy_declared_owner_tables(
     Ok(rows)
 }
 
+/// The owner-table snapshot dump of MEDULLA-OBJECT-STORAGE-BACKEND-R002: every
+/// declared owner table of `layout`, one row each, as the same closed census
+/// `copy_declared_owner_tables` walks. Rows keep the table's raw key and value
+/// bytes so the dump round-trips into a restored store.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct OwnerDumpRow {
+    pub table: String,
+    pub key: Vec<u8>,
+    pub value: Vec<u8>,
+}
+
+pub(crate) fn dump_declared_owner_tables(
+    source: &ReadTransaction,
+    layout: OwnerLayout,
+) -> Result<Vec<OwnerDumpRow>, String> {
+    fn dump_table<K, V>(
+        source: &ReadTransaction,
+        definition: TableDefinition<'static, K, V>,
+        rows: &mut Vec<OwnerDumpRow>,
+    ) -> Result<(), String>
+    where
+        K: Key + 'static,
+        V: Value + 'static,
+    {
+        let table = source
+            .open_table(definition)
+            .map_err(|error| error.to_string())?;
+        for row in table.iter().map_err(|error| error.to_string())? {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            rows.push(OwnerDumpRow {
+                table: definition.name().to_string(),
+                key: K::as_bytes(&key.value()).as_ref().to_vec(),
+                value: V::as_bytes(&value.value()).as_ref().to_vec(),
+            });
+        }
+        Ok(())
+    }
+    let mut rows = Vec::new();
+    macro_rules! dump {
+        ($table:expr) => {{
+            dump_table(source, $table, &mut rows)?;
+        }};
+    }
+    visit_owner_tables!(layout, dump);
+    Ok(rows)
+}
+
+/// The snapshot-segment bytes of MEDULLA-OBJECT-STORAGE-BACKEND-R002: a
+/// self-describing msgpack document carrying the manifest layout name and the
+/// row dump of [`dump_declared_owner_tables`].
+pub(crate) fn encode_owner_table_dump(
+    layout_name: &str,
+    rows: &[OwnerDumpRow],
+) -> Result<Vec<u8>, String> {
+    #[derive(serde::Serialize)]
+    struct OwnerTableDump<'a> {
+        schema_version: u32,
+        layout: &'a str,
+        rows: &'a [OwnerDumpRow],
+    }
+    rmp_serde::encode::to_vec_named(&OwnerTableDump {
+        schema_version: 1,
+        layout: layout_name,
+        rows,
+    })
+    .map_err(|e| format!("owner-table dump encode: {e}"))
+}
+
 pub(crate) fn prove_declared_owner_rows(
     source: &ReadTransaction,
     target: &ReadTransaction,

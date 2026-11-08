@@ -145,6 +145,7 @@ mod tests {
         assert_eq!(StorageBackendSpec::Local.admit(), Ok(()));
     }
 
+    // spec: MEDULLA-OBJECT-STORAGE-BACKEND-R001
     #[test]
     fn both_variants_round_trip_over_the_wire() {
         for spec in [StorageBackendSpec::Local, good()] {
@@ -155,6 +156,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-OBJECT-STORAGE-BACKEND-R001
     #[test]
     fn refusals_are_typed_and_pure() {
         assert_eq!(good().validate(), Ok(()));
