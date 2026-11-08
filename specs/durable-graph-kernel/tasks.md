@@ -25,7 +25,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T019 [US5] MEDULLA-DURABLE-KERNEL-R012 Raft native command sealing and placement routing are correct
 - [ ] T020 [US5] MEDULLA-DURABLE-KERNEL-R013 Raft cluster test failures capture a causal trace automatically
 - [x] T021 [US5] MEDULLA-DURABLE-KERNEL-R014.1 A typed flake-budget / retry-policy model bounds how a load-test run retries past a transient failure
-- [ ] T022 [US5] MEDULLA-DURABLE-KERNEL-R014.2 Bounded representative CPU load
+- [x] T022 [US5] MEDULLA-DURABLE-KERNEL-R014.2 Bounded representative CPU load
 - [ ] T023 [US5] MEDULLA-DURABLE-KERNEL-R014.3.1 Repeated fail-closed loaded execution
 - [ ] T024 [US5] MEDULLA-DURABLE-KERNEL-R014.3.2 Bounded diagnostic retry integration
 - [ ] T025 [US5] MEDULLA-DURABLE-KERNEL-R014.4 Loaded leader-rebalance acceptance
