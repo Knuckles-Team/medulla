@@ -39,6 +39,14 @@
 //! a Keycloak signing-key rotation self-heals without a restart. Validation
 //! NEVER panics — any failure is a rejected request (`None`/`false`), the
 //! fail-closed posture.
+//!
+//! [`IssuerTrustList`] is the ordered multi-issuer trust list of
+//! MEDULLA-IDENTITY-R001: each entry pairs an issuer, its JWKS source, its
+//! audience and the one principal kind it may mint. The verifier tries the
+//! entries in order, refuses an ambiguous (duplicate-issuer) list at
+//! construction, and enforces the per-issuer `allowed_kind` against the
+//! token's declared `principal_kind` claim before the verified claims can be
+//! used to build the request envelope.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
@@ -182,6 +190,12 @@ struct BindingClaims {
     /// matching this deployment's issuer convention.
     #[serde(default)]
     scp: Option<String>,
+    /// The class of principal the IdP mints this token for — `"user"` or
+    /// `"service"` (MEDULLA-IDENTITY-R001). An absent or unrecognized value
+    /// projects to `None`, which the trust list's per-issuer `allowed_kind`
+    /// check treats as a refusal, not a default.
+    #[serde(default)]
+    principal_kind: Option<String>,
 }
 
 /// Keycloak realm-level role grants (`realm_access.roles`).
@@ -198,6 +212,29 @@ struct ResourceAccessEntry {
     roles: Vec<String>,
 }
 
+/// The class of principal a trusted issuer may mint. MEDULLA-IDENTITY-R001:
+/// principal kind is restricted per issuer — an external identity-provider
+/// issuer and the arbora issuer both hold the service-only kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrincipalKind {
+    /// A human or agent principal.
+    User,
+    /// A service principal (machine identity).
+    Service,
+}
+
+impl PrincipalKind {
+    /// Parse the token's `principal_kind` claim. An absent or unrecognized
+    /// spelling parses to `None`; the trust list then fails closed.
+    pub fn parse(claim: &str) -> Option<Self> {
+        match claim.trim() {
+            "user" => Some(Self::User),
+            "service" => Some(Self::Service),
+            _ => None,
+        }
+    }
+}
+
 /// Verified bearer-token claims projected for `eg2.` identity binding. Every
 /// field here has already passed RSA/JWKS signature, issuer, audience, and
 /// expiry verification — this is trusted data, not caller input.
@@ -207,6 +244,10 @@ pub struct VerifiedTokenClaims {
     pub tenant: Option<String>,
     pub roles: HashSet<String>,
     pub scopes: HashSet<String>,
+    /// The token's declared principal kind, if the issuer mints one
+    /// (MEDULLA-IDENTITY-R001). The trust list compares it against the
+    /// matched entry's `allowed_kind`.
+    pub kind: Option<PrincipalKind>,
 }
 
 /// A Keycloak-realm JWT validator with a lazily-refreshed JWKS key cache.
@@ -215,6 +256,13 @@ pub struct JwtValidator {
     audience: String,
     jwks_url: String,
     keys: RwLock<HashMap<String, DecodingKey>>, // kid -> RSA decoding key
+    /// MEDULLA-IDENTITY-R001: signing keys rotated OUT of the realm's JWKS
+    /// are kept here (kid -> key) so they can keep authorizing until the
+    /// entry's declared `overlap_until`; after that they fail closed.
+    retired: RwLock<HashMap<String, DecodingKey>>,
+    /// Unix seconds after which a rotated-out signing key stops authorizing
+    /// (MEDULLA-IDENTITY-R001). `None` retires a rotated key immediately.
+    overlap_until: Option<u64>,
 }
 
 impl std::fmt::Debug for JwtValidator {
@@ -224,7 +272,136 @@ impl std::fmt::Debug for JwtValidator {
                 "cached_kids",
                 &self.keys.read().map(|m| m.len()).unwrap_or(0),
             )
+            .field(
+                "retired_kids",
+                &self.retired.read().map(|m| m.len()).unwrap_or(0),
+            )
             .finish()
+    }
+}
+
+/// One entry of the ordered multi-issuer OIDC trust list
+/// (MEDULLA-IDENTITY-R001).
+#[derive(Debug, Clone)]
+pub struct IssuerTrust {
+    /// The exact `iss` value this entry trusts.
+    pub issuer: String,
+    /// The source of this issuer's JWKS document (its URL).
+    pub jwks_source: String,
+    /// The `aud` value this issuer mints for this deployment.
+    pub audience: String,
+    /// The one principal kind this issuer may mint — the per-issuer kind
+    /// limit. The arbora issuer and every external identity-provider issuer
+    /// hold the service-only kind.
+    pub allowed_kind: PrincipalKind,
+    /// Unix seconds after which a rotated-out signing key of this issuer
+    /// stops being accepted. `None` retires a rotated key immediately.
+    pub overlap_until: Option<u64>,
+}
+
+/// The ordered multi-issuer OIDC trust list (MEDULLA-IDENTITY-R001).
+///
+/// `entries` and `validators` are positional: entry `i` is verified by
+/// validator `i`. This list is the one trust authority for the primary
+/// protocol — there is no second trust list anywhere else in the engine.
+pub struct IssuerTrustList {
+    entries: Vec<IssuerTrust>,
+    validators: Vec<JwtValidator>,
+}
+
+impl std::fmt::Debug for IssuerTrustList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IssuerTrustList")
+            .field(
+                "issuers",
+                &self
+                    .entries
+                    .iter()
+                    .map(|e| e.issuer.as_str())
+                    .collect::<Vec<_>>(),
+            )
+            .finish()
+    }
+}
+
+impl IssuerTrustList {
+    /// Validate and order the trust list.
+    ///
+    /// Ambiguity is refused here, at construction, so it can never reach a
+    /// request: an issuer declared in more than one entry is an ambiguous
+    /// match and the list refuses to build rather than guess which entry
+    /// answers. Entry/validator agreement (issuer, audience, overlap
+    /// window) is checked pair by pair, and every field is non-empty.
+    pub fn new(entries: Vec<IssuerTrust>, validators: Vec<JwtValidator>) -> Result<Self, String> {
+        if entries.len() != validators.len() {
+            return Err("issuer trust list: entry and validator counts disagree".to_string());
+        }
+        let mut seen: HashSet<String> = HashSet::new();
+        for (entry, validator) in entries.iter().zip(validators.iter()) {
+            for (field, value) in [
+                ("issuer", entry.issuer.as_str()),
+                ("jwks_source", entry.jwks_source.as_str()),
+                ("audience", entry.audience.as_str()),
+            ] {
+                if value.trim().is_empty() {
+                    return Err(format!("issuer trust list: {field} must not be empty"));
+                }
+            }
+            if validator.issuer() != entry.issuer || validator.audience() != entry.audience {
+                return Err(format!(
+                    "issuer trust list: validator does not match issuer '{}'",
+                    entry.issuer
+                ));
+            }
+            if validator.overlap_until() != entry.overlap_until {
+                return Err(format!(
+                    "issuer trust list: overlap window disagrees with entry '{}'",
+                    entry.issuer
+                ));
+            }
+            if !seen.insert(entry.issuer.clone()) {
+                return Err(format!(
+                    "issuer trust list: ambiguous issuer '{}' is declared more than once",
+                    entry.issuer
+                ));
+            }
+        }
+        Ok(Self {
+            entries,
+            validators,
+        })
+    }
+
+    /// The trust entries, in order.
+    pub fn entries(&self) -> &[IssuerTrust] {
+        &self.entries
+    }
+
+    /// Try the entries IN ORDER and verify the bearer token against the first
+    /// one that answers. Because a duplicate issuer is refused at
+    /// construction, at most one entry can match the token's `iss`, so the
+    /// match is unambiguous; every other entry refuses the token by its own
+    /// issuer/audience/expiry check.
+    ///
+    /// The matched entry's `allowed_kind` is enforced HERE, against the
+    /// token's declared `principal_kind` claim, before the verified claims
+    /// can be used to build the request envelope — an absent, unrecognized,
+    /// or mismatched kind is a refusal (fail closed), and a token signed by
+    /// an issuer that is not in the list never reaches the binding step.
+    /// `now` is the unix-seconds clock the rotated-key overlap window is
+    /// checked against.
+    pub fn validate_claims(&self, token: &str, now: u64) -> Option<(usize, VerifiedTokenClaims)> {
+        for (idx, (entry, validator)) in self.entries.iter().zip(self.validators.iter()).enumerate()
+        {
+            let Some(claims) = validator.validate_claims_at(token, now) else {
+                continue;
+            };
+            if claims.kind != Some(entry.allowed_kind) {
+                return None;
+            }
+            return Some((idx, claims));
+        }
+        None
     }
 }
 
@@ -335,6 +512,8 @@ impl JwtValidator {
             audience,
             jwks_url,
             keys: RwLock::new(HashMap::new()),
+            retired: RwLock::new(HashMap::new()),
+            overlap_until: None,
         };
         // Prime the key cache once; a failure here is non-fatal (validate()
         // re-fetches on demand) but we log it so a misconfigured JWKS URL is
@@ -352,17 +531,34 @@ impl JwtValidator {
     /// issuer/audience/expiry checks a live JWKS fetch would produce, without
     /// a real HTTP server. `jwks_url` is left empty, so a `kid` miss fails
     /// closed (no network fetch is attempted) rather than refreshing.
+    /// Rotated-out keys retire immediately (no overlap window).
     #[cfg(any(test, feature = "test-support"))]
     pub fn from_parts(
         issuer: impl Into<String>,
         audience: impl Into<String>,
         keys: HashMap<String, DecodingKey>,
     ) -> Self {
+        Self::from_parts_with_overlap(issuer, audience, keys, None)
+    }
+
+    /// As [`from_parts`](Self::from_parts) but with the declared
+    /// MEDULLA-IDENTITY-R001 overlap window: a signing key rotated OUT of
+    /// the JWKS keeps authorizing until `overlap_until` (unix seconds) and
+    /// fails closed afterwards.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn from_parts_with_overlap(
+        issuer: impl Into<String>,
+        audience: impl Into<String>,
+        keys: HashMap<String, DecodingKey>,
+        overlap_until: Option<u64>,
+    ) -> Self {
         JwtValidator {
             issuer: issuer.into(),
             audience: audience.into(),
             jwks_url: String::new(),
             keys: RwLock::new(keys),
+            retired: RwLock::new(HashMap::new()),
+            overlap_until,
         }
     }
 
@@ -386,18 +582,79 @@ impl JwtValidator {
                 }
             }
         }
-        if map.is_empty() {
+        self.merge_keys(map)
+    }
+
+    /// Apply a freshly fetched (or test-supplied) JWKS key set to the cache,
+    /// keeping the bookkeeping MEDULLA-IDENTITY-R001 requires: a kid that was
+    /// cached but is GONE from the realm's JWKS is a rotated-out key — it
+    /// moves to the `retired` set, where it keeps authorizing only while the
+    /// entry's overlap window is open. A kid reappearing in the JWKS drops
+    /// back out of `retired`.
+    fn merge_keys(&self, fresh: HashMap<String, DecodingKey>) -> Result<(), String> {
+        if fresh.is_empty() {
             return Err("jwks contained no usable RSA keys".to_string());
         }
-        *self.keys.write().map_err(|_| "keys lock poisoned")? = map;
+        let mut current = self.keys.write().map_err(|_| "keys lock poisoned")?;
+        let mut retired = self.retired.write().map_err(|_| "retired lock poisoned")?;
+        // Kids cached before this snapshot that are gone from it are the
+        // rotated-out keys; collect the list first so the immutable scan
+        // borrow does not live across the mutable `remove` below.
+        let rotated_out: Vec<String> = current
+            .keys()
+            .cloned()
+            .filter(|kid| !fresh.contains_key(kid))
+            .collect();
+        for kid in rotated_out {
+            if let Some(key) = current.remove(&kid) {
+                retired.insert(kid, key);
+            }
+        }
+        retired.retain(|kid, _| !fresh.contains_key(kid));
+        *current = fresh;
         Ok(())
+    }
+
+    /// Test-only: apply a JWKS snapshot without a network fetch, running the
+    /// exact rotated-key bookkeeping [`refresh`](Self::refresh) runs on a
+    /// live fetch (MEDULLA-IDENTITY-R001).
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn adopt_jwks(&self, keys: HashMap<String, DecodingKey>) -> Result<(), String> {
+        self.merge_keys(keys)
+    }
+
+    /// The issuer this validator answers for (trust-list consistency check).
+    pub fn issuer(&self) -> &str {
+        &self.issuer
+    }
+
+    /// The audience this validator answers for (trust-list consistency
+    /// check).
+    pub fn audience(&self) -> &str {
+        &self.audience
+    }
+
+    /// The overlap window a rotated-out key is accepted until (trust-list
+    /// consistency check).
+    pub fn overlap_until(&self) -> Option<u64> {
+        self.overlap_until
+    }
+
+    fn now_secs() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
     }
 
     /// Network-free verification core: RSA signature (against the cached JWKS
     /// key) + issuer + audience + expiry. Every public entry point funnels
     /// through this so a live HTTP-fetched JWKS and a test fixture key are
     /// checked identically. Fail-closed: any error ⇒ `None`.
-    fn decode_with<T: serde::de::DeserializeOwned>(&self, token: &str) -> Option<T> {
+    ///
+    /// `now` (unix seconds) is the clock a rotated-out key's overlap window
+    /// is checked against (MEDULLA-IDENTITY-R001).
+    fn decode_with_at<T: serde::de::DeserializeOwned>(&self, token: &str, now: u64) -> Option<T> {
         let header = decode_header(token).ok()?;
         // Only RSA-signed tokens (Keycloak's RS256 family); never `none`/HMAC —
         // an attacker must not be able to downgrade the algorithm.
@@ -424,6 +681,18 @@ impl JwtValidator {
                     .map(|data| data.claims);
             }
         }
+        // A rotated-out key (cached before, removed from the realm's JWKS):
+        // it authorizes only inside its declared overlap window. No window
+        // declared ⇒ it retires immediately.
+        if let Some(key) = self.retired.read().ok()?.get(&kid) {
+            let inside_window = self.overlap_until.map(|until| now < until).unwrap_or(false);
+            if !inside_window {
+                return None;
+            }
+            return decode::<T>(token, key, &validation)
+                .ok()
+                .map(|data| data.claims);
+        }
         // kid miss ⇒ a possible signing-key rotation: re-fetch once, then retry.
         if self.refresh().is_err() {
             return None;
@@ -433,6 +702,11 @@ impl JwtValidator {
         decode::<T>(token, key, &validation)
             .ok()
             .map(|data| data.claims)
+    }
+
+    /// [`decode_with_at`](Self::decode_with_at) on the deployment's own clock.
+    fn decode_with<T: serde::de::DeserializeOwned>(&self, token: &str) -> Option<T> {
+        self.decode_with_at(token, Self::now_secs())
     }
 
     /// Validate a bearer token: RSA signature (against a cached JWKS key) +
@@ -447,7 +721,15 @@ impl JwtValidator {
     /// so the caller can bind it against the envelope's asserted identity.
     /// `None` on any validation failure.
     pub fn validate_claims(&self, token: &str) -> Option<VerifiedTokenClaims> {
-        let claims = self.decode_with::<BindingClaims>(token)?;
+        self.validate_claims_at(token, Self::now_secs())
+    }
+
+    /// [`validate_claims`](Self::validate_claims) with the rotated-key
+    /// overlap window checked against `now` (unix seconds) instead of the
+    /// deployment's own clock — the network-free path the trust-list tests
+    /// use (MEDULLA-IDENTITY-R001).
+    pub fn validate_claims_at(&self, token: &str, now: u64) -> Option<VerifiedTokenClaims> {
+        let claims = self.decode_with_at::<BindingClaims>(token, now)?;
         let mut roles: HashSet<String> = claims.roles.into_iter().collect();
         if let Some(realm) = claims.realm_access {
             roles.extend(realm.roles);
@@ -475,6 +757,10 @@ impl JwtValidator {
             tenant,
             roles,
             scopes,
+            kind: claims
+                .principal_kind
+                .as_deref()
+                .and_then(PrincipalKind::parse),
         })
     }
 }
@@ -630,5 +916,191 @@ pub mod tests {
         // refresh path fails closed rather than serving a stale/absent key.
         let token = sign("some-other-kid", &base_claims());
         assert!(!validator().validate(&token));
+    }
+
+    // ── MEDULLA-IDENTITY-R001: multi-issuer trust list with per-issuer
+    //    kind limits ──────────────────────────────────────────────────────
+
+    fn trust_entry(issuer: &str, audience: &str, kind: PrincipalKind) -> IssuerTrust {
+        IssuerTrust {
+            issuer: issuer.to_string(),
+            jwks_source: format!("{issuer}/protocol/openid-connect/certs"),
+            audience: audience.to_string(),
+            allowed_kind: kind,
+            overlap_until: None,
+        }
+    }
+
+    fn trust_validator(issuer: &str, audience: &str) -> JwtValidator {
+        let n = hex::decode(TEST_RSA_MODULUS_HEX).expect("modulus hex");
+        let e = hex::decode(TEST_RSA_EXPONENT_HEX).expect("exponent hex");
+        let mut keys = HashMap::new();
+        keys.insert(
+            KID.to_string(),
+            DecodingKey::from_rsa_raw_components(&n, &e),
+        );
+        JwtValidator::from_parts_with_overlap(issuer, audience, keys, None)
+    }
+
+    // spec: MEDULLA-IDENTITY-R001
+    #[test]
+    fn unknown_ambiguous_or_disallowed_kind_issuer_fails_before_dispatch() {
+        // Two issuers, separate audiences and separate kind limits — the
+        // trust list the primary verifier consults instead of one issuer.
+        let issuer_a = format!("{ISSUER}/trust-a");
+        let issuer_b = format!("{ISSUER}/trust-b");
+        let list = IssuerTrustList::new(
+            vec![
+                trust_entry(&issuer_a, "aud-a", PrincipalKind::Service),
+                trust_entry(&issuer_b, "aud-b", PrincipalKind::User),
+            ],
+            vec![
+                trust_validator(&issuer_a, "aud-a"),
+                trust_validator(&issuer_b, "aud-b"),
+            ],
+        )
+        .expect("two distinct issuers with distinct audiences are not ambiguous");
+        let now = now();
+
+        // The positive case: issuer A's service principal binds to entry 0.
+        let mut claims = base_claims();
+        claims["iss"] = serde_json::json!(issuer_a);
+        claims["aud"] = serde_json::json!("aud-a");
+        claims["principal_kind"] = serde_json::json!("service");
+        let token = sign(KID, &claims);
+        let (idx, verified) = list
+            .validate_claims(&token, now)
+            .expect("a listed issuer with the allowed kind binds");
+        assert_eq!(idx, 0);
+        assert_eq!(verified.subject, "agent:planner");
+
+        // 1. Unknown issuer: signed by a listed issuer's key, but its `iss`
+        //    is not in the trust list — refused before any binding.
+        let mut claims = base_claims();
+        claims["iss"] = serde_json::json!("https://not-listed.example.test/realms/c");
+        claims["aud"] = serde_json::json!("aud-a");
+        claims["principal_kind"] = serde_json::json!("service");
+        let token = sign(KID, &claims);
+        assert!(
+            list.validate_claims(&token, now).is_none(),
+            "an issuer absent from the trust list fails before dispatch"
+        );
+
+        // 2. Ambiguous issuer: the same issuer declared twice is refused at
+        //    construction, so the list can never answer for it.
+        let ambiguous = IssuerTrustList::new(
+            vec![
+                trust_entry(&issuer_a, "aud-a", PrincipalKind::Service),
+                trust_entry(&issuer_a, "aud-a", PrincipalKind::Service),
+            ],
+            vec![
+                trust_validator(&issuer_a, "aud-a"),
+                trust_validator(&issuer_a, "aud-a"),
+            ],
+        );
+        assert!(
+            ambiguous.is_err(),
+            "a duplicate issuer is an ambiguous match the list refuses to build"
+        );
+
+        // 3. Disallowed kind: entry 0 allows service principals only — a
+        //    user-kind token, and a token with no kind claim at all, are
+        //    both refused before the envelope is built.
+        for (label, kind_claim) in [("user", Some("user")), ("absent", None)] {
+            let mut claims = base_claims();
+            claims["iss"] = serde_json::json!(issuer_a);
+            claims["aud"] = serde_json::json!("aud-a");
+            if let Some(kind) = kind_claim {
+                claims["principal_kind"] = serde_json::json!(kind);
+            }
+            let token = sign(KID, &claims);
+            assert!(
+                list.validate_claims(&token, now).is_none(),
+                "a {label} principal kind is disallowed by issuer A's entry"
+            );
+        }
+
+        // The limit is per issuer, not global: issuer B allows user kinds.
+        let mut claims = base_claims();
+        claims["iss"] = serde_json::json!(issuer_b);
+        claims["aud"] = serde_json::json!("aud-b");
+        claims["principal_kind"] = serde_json::json!("user");
+        let token = sign(KID, &claims);
+        assert_eq!(
+            list.validate_claims(&token, now).map(|(idx, _)| idx),
+            Some(1)
+        );
+    }
+
+    // spec: MEDULLA-IDENTITY-R001
+    #[test]
+    fn rotated_jwks_key_is_accepted_only_in_its_overlap_window() {
+        let now = now();
+        let rotated_kid = "test-kid-rotated";
+        let keys_for = |kids: &[&str]| -> HashMap<String, DecodingKey> {
+            let n = hex::decode(TEST_RSA_MODULUS_HEX).expect("modulus hex");
+            let e = hex::decode(TEST_RSA_EXPONENT_HEX).expect("exponent hex");
+            kids.iter()
+                .map(|kid| {
+                    (
+                        kid.to_string(),
+                        DecodingKey::from_rsa_raw_components(&n, &e),
+                    )
+                })
+                .collect()
+        };
+        let claims = base_claims();
+        let token_old = sign(KID, &claims);
+        let token_rotated = sign(rotated_kid, &claims);
+
+        // While the declared window is open, the rotated-out key keeps
+        // authorizing alongside the replacement.
+        let in_window = JwtValidator::from_parts_with_overlap(
+            ISSUER,
+            AUDIENCE,
+            keys_for(&[KID]),
+            Some(now + 3600),
+        );
+        assert!(in_window.validate_claims_at(&token_old, now).is_some());
+        in_window
+            .adopt_jwks(keys_for(&[rotated_kid]))
+            .expect("the rotated JWKS snapshot applies");
+        assert!(
+            in_window.validate_claims_at(&token_old, now).is_some(),
+            "the retired key still authorizes inside its overlap window"
+        );
+        assert!(
+            in_window.validate_claims_at(&token_rotated, now).is_some(),
+            "the rotated key authorizes as soon as it reaches the JWKS"
+        );
+
+        // Once the window closes, the rotated-out key stops authorizing.
+        let past_due = JwtValidator::from_parts_with_overlap(
+            ISSUER,
+            AUDIENCE,
+            keys_for(&[KID]),
+            Some(now - 60),
+        );
+        past_due
+            .adopt_jwks(keys_for(&[rotated_kid]))
+            .expect("the rotated JWKS snapshot applies");
+        assert!(
+            past_due.validate_claims_at(&token_old, now).is_none(),
+            "the retired key is refused once its overlap window has closed"
+        );
+        assert!(past_due.validate_claims_at(&token_rotated, now).is_some());
+
+        // No window declared ⇒ a rotated-out key retires immediately.
+        let no_window =
+            JwtValidator::from_parts_with_overlap(ISSUER, AUDIENCE, keys_for(&[KID]), None);
+        no_window
+            .adopt_jwks(keys_for(&[rotated_kid]))
+            .expect("the rotated JWKS snapshot applies");
+        assert!(no_window.validate_claims_at(&token_old, now).is_none());
+
+        // A kid this validator never cached is not a rotated key: it is
+        // unknown and fails closed (no reachable JWKS URL in the fixture).
+        let token_unknown = sign("test-kid-never-seen", &claims);
+        assert!(in_window.validate_claims_at(&token_unknown, now).is_none());
     }
 }
