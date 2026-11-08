@@ -982,7 +982,8 @@ ex:parent a owl:AsymmetricProperty .
         // +210 (MEDULLA-TYPED-PACKS-R071.2): the core-rooting `rdfs:subClassOf` axioms.
         // +737: the semantic share of the +739 total above (the other 2 are the
         // import edges); headers are unchanged at 150 triples.
-        assert_eq!(semantic_axioms, 20_386);
+        // +57 (MEDULLA-IDENTITY-R723): the workstream record vocabulary, all semantic axioms.
+        assert_eq!(semantic_axioms, 20_443);
 
         let count_type = |object: &str| {
             composed

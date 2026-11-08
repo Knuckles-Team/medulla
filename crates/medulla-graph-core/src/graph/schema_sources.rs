@@ -1823,7 +1823,7 @@ mod tests {
             ),
             (
                 "identity",
-                "935fc84f4b3185a946f64c40171be005adc2dd690d3e8d40f73482403bd8e100",
+                "475e321e4af6c441942a7b02e79ad78abd1a76da619e3806a77044f388fd01e3",
             ),
             (
                 "identity-shapes",
