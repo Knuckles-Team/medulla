@@ -518,6 +518,15 @@ name = "live_artifact_refresh"
 path = "benches/live_artifact_refresh.rs"
 harness = false
 
+# ── Incremental view maintenance delta cost (MEDULLA-INCREMENTAL-VIEWS-R001.10) ──────────
+# 1,000-row deltas against a 1,000,000-row `Scan |> Filter` circuit; asserts p99 <= 20 ms
+# and <= 64 bytes of circuit state per member row. Nightly (L6) only.
+[[bench]]
+name = "incremental_delta"
+path = "benches/incremental_delta.rs"
+harness = false
+required-features = ["query"]
+
 # ── Integration test targets, explicitly gated (D-EGTC-10 / w5-medulla-ci-truly-green) ──
 # Every file under `tests/` names `query`-gated (or narrower) public API
 # (`execute`/`PlanCtx`/`PlanDag`/`Circuit`/`federation::ForeignSourceRegistry`/

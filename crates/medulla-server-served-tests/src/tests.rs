@@ -34,7 +34,7 @@ const SECRET: &str = "dispatch-test-secret";
 /// this module through here -- raising the thread stack size via a process
 /// environment override would only mask the class (see
 /// `check_current_only_architecture.py`'s gate against exactly that).
-fn dispatch_on_heap<'a>(
+pub(crate) fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     request: Request,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>> {
