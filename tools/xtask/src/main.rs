@@ -6,6 +6,7 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
+mod crate_isolation;
 mod ci_affected_crates;
 mod ci_change_scope;
 mod decide_budgets;
@@ -18,7 +19,6 @@ mod mint_lease_call_sites;
 mod orphan_modules;
 mod p2_analytics_reasoning_architecture;
 mod p2_modality_architecture;
-mod registry_test_ownership;
 mod repo_root_parity;
 mod sdist_completeness;
 mod sole_write_envelope;
@@ -143,13 +143,6 @@ const CHECKS: &[Check] = &[
         needs_git: false,
     },
     Check {
-        name: registry_test_ownership::NAME,
-        summary: registry_test_ownership::SUMMARY,
-        run: registry_test_ownership::run,
-        standalone: false,
-        needs_git: true,
-    },
-    Check {
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
@@ -181,6 +174,13 @@ const CHECKS: &[Check] = &[
         name: wheel_completeness::NAME,
         summary: wheel_completeness::SUMMARY,
         run: wheel_completeness::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: crate_isolation::NAME,
+        summary: crate_isolation::SUMMARY,
+        run: crate_isolation::run,
         standalone: true,
         needs_git: false,
     },
