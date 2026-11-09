@@ -99,7 +99,7 @@ serde_json = "1.0"
 
 [package]
 name = "medulla-engine"
-version = "3.3.2"
+version = "3.3.3"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
 description = "Rust-native durable multimodal and epistemic database for governed SI systems"
