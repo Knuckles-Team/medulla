@@ -616,6 +616,11 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
     assert "actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success" in script
     assert "force_untested" in str(guard["steps"])
     assert "REFUSING to publish" in script
+    # A local-gate attestation counts only from the owner, on the exact commit.
+    assert guard["permissions"]["statuses"] == "read"
+    assert "repos/${REPO}/commits/${SHA}/statuses" in script
+    assert '.context == \\"CI required\\"' in script
+    assert ".creator.login == " in script
     # Every gate, feature build and benchmark lives in ci.yml.
     ci = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
     ci_triggers = ci[True] if True in ci else ci["on"]
