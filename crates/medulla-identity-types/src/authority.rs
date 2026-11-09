@@ -9,7 +9,8 @@ mod evidence;
 mod replay;
 
 pub use self::context::{
-    AuthorityContext, AuthorityScope, AUTHORITY_CONTEXT_SCHEMA_V1, AUTHORITY_PROTOCOL_V1,
+    is_recorded_authority_protocol, AuthorityContext, AuthorityScope, AUTHORITY_CONTEXT_SCHEMA_V1,
+    AUTHORITY_PROTOCOL_V1, PRE_RENAME_AUTHORITY_PROTOCOL,
 };
 pub use self::evidence::{SignedAuthorityEnvelopeEvidence, VerifiedAuthority};
 pub use self::replay::{NonceReplayKey, OperationReplayIdentity, ReplayReceipt};

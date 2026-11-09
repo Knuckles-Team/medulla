@@ -12,6 +12,7 @@ impl MutationRequestEnvelope {
     /// admit execution.
     pub fn new(parts: MutationRequestEnvelopeParts) -> Result<Self, String> {
         parts.payload.validate()?;
+        parts.verified_authority.context.validate_new()?;
         let operation_replay_digest = parts.operation_identity.digest()?;
         let nonce_replay_digest = parts.nonce_replay_key.digest()?;
         let canonical_payload_digest = parts.payload.canonical_payload_digest()?;
