@@ -121,7 +121,10 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
         std::process::exit(2);
     }
     for shard in std::fs::read_dir(bundle)
-        .unwrap_or_else(|e| panic!("archive: read bundle dir: {}", bundle.display()))
+        .unwrap_or_else(|error| {
+            eprintln!("archive REFUSED: read bundle dir {}: {error}", bundle.display());
+            std::process::exit(2);
+        })
     {
         let shard = match shard {
             Ok(shard) => shard,
