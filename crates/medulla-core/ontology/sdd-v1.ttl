@@ -242,3 +242,107 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
     rdfs:comment "Links a SourceRecord to the SourceContainer that holds it." ;
     rdfs:domain :SourceRecord ;
     rdfs:range :SourceContainer .
+
+# Row-level vocabulary of the spec standard. A spec row is a :Requirement.
+# Every class below extends a class that already rolls up to the core.
+
+:RowStatus a owl:Class ;
+    rdfs:label "Row status" ;
+    rdfs:comment "One of the three computed states of a row: SPECIFIED, LANDED or VERIFIED. Computed from commits and bound tests, never written by an author." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:SpecifiedStatus a owl:Class ; rdfs:label "Specified status" ; rdfs:subClassOf :RowStatus .
+:LandedStatus a owl:Class ; rdfs:label "Landed status" ; rdfs:subClassOf :RowStatus .
+:VerifiedStatus a owl:Class ; rdfs:label "Verified status" ; rdfs:subClassOf :RowStatus .
+
+:BoundTest a owl:Class ;
+    rdfs:label "Bound test" ;
+    rdfs:comment "A test named by a row. It binds to the row ID and proves it." ;
+    rdfs:subClassOf :TestCase .
+
+:SeamSide a owl:Class ;
+    rdfs:label "Seam side" ;
+    rdfs:comment "One end of a cross-repository seam: the repository and the row that provide or consume it. A seam has a provider side and a consumer side." ;
+    rdfs:subClassOf :Specification .
+
+:RefusalCode a owl:Class ;
+    rdfs:label "Refusal code" ;
+    rdfs:comment "A typed code that a row names for a refused request." ;
+    rdfs:subClassOf :GlossaryTerm .
+
+:ShapeStatement a owl:Class ;
+    rdfs:label "Shape statement" ;
+    rdfs:comment "The Shape sentence of a row: the files, types and helpers the row reuses." ;
+    rdfs:subClassOf :Specification .
+
+:rowStatus a owl:ObjectProperty ;
+    rdfs:label "row status" ;
+    rdfs:comment "Links a Requirement to its computed RowStatus." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :RowStatus .
+
+:rowId a owl:DatatypeProperty ;
+    rdfs:label "row ID" ;
+    rdfs:comment "The stable row identifier, for example MEDULLA-SDLC-R014.10." ;
+    rdfs:domain :Requirement ;
+    rdfs:range xsd:string .
+
+:dependsOnRow a owl:ObjectProperty ;
+    rdfs:label "depends on row" ;
+    rdfs:comment "Links a Requirement to a Requirement named in its Depends on line." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :Requirement .
+
+:seamProvider a owl:ObjectProperty ;
+    rdfs:label "seam provider" ;
+    rdfs:comment "Links a Requirement to the provider SeamSide of a seam it crosses." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :SeamSide .
+
+:seamConsumer a owl:ObjectProperty ;
+    rdfs:label "seam consumer" ;
+    rdfs:comment "Links a Requirement to the consumer SeamSide of a seam it crosses." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :SeamSide .
+
+:boundTest a owl:ObjectProperty ;
+    rdfs:label "bound test" ;
+    rdfs:comment "Links a Requirement to a test bound to its ID." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :BoundTest .
+
+:verifiedBy a owl:ObjectProperty ;
+    rdfs:label "verified by" ;
+    rdfs:comment "Links a Requirement to the BoundTest whose file exists on the default branch." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :BoundTest .
+
+:refusesWith a owl:ObjectProperty ;
+    rdfs:label "refuses with" ;
+    rdfs:comment "Links a Requirement to a RefusalCode it names." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :RefusalCode .
+
+:statedBy a owl:ObjectProperty ;
+    rdfs:label "stated by" ;
+    rdfs:comment "Links a Requirement to its ShapeStatement." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :ShapeStatement .
+
+:usesTerm a owl:ObjectProperty ;
+    rdfs:label "uses term" ;
+    rdfs:comment "Links a Requirement to a GlossaryTerm its text uses." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :GlossaryTerm .
+
+:commitHash a owl:DatatypeProperty ;
+    rdfs:label "commit hash" ;
+    rdfs:comment "The full hash of a Commit carrying a Spec trailer." ;
+    rdfs:domain :Commit ;
+    rdfs:range xsd:string .
+
+:implementedByCommit a owl:ObjectProperty ;
+    rdfs:label "implemented by commit" ;
+    rdfs:comment "Links a Requirement to each Commit whose Spec trailer names it. The shared implementedBy keeps its SoftwareFeature domain, so this row-grain link is separate." ;
+    rdfs:domain :Requirement ;
+    rdfs:range :Commit .
