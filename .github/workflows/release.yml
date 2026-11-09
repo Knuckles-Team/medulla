@@ -469,12 +469,6 @@ jobs:
           name: source-distribution-reproduction
           path: dist-sdist-reproduction/*.tar.gz
           if-no-files-found: error
-      - name: Publish the source distribution to PyPI
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        uses: ./.github/actions/publish-distribution
-        with:
-          pattern: dist-sdist/*.tar.gz
-          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
 
   # The Linux x86_64 wheel is built by the immutable reusable workflow above (it
   # cannot hold the PyPI token), so it is published by this job the moment that
@@ -695,6 +689,14 @@ jobs:
             exit 1
           fi
           echo "required wheels present:"; ls -1 dist/*.whl
+      # The source archive publishes last, after every required wheel exists.
+      # Published first, it made a version source-only on PyPI for hours, and
+      # an installer on a platform still waiting for its wheel built from source.
+      - name: Publish the source distribution to PyPI
+        uses: ./.github/actions/publish-distribution
+        with:
+          pattern: dist/*.tar.gz
+          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: '.python-version'
