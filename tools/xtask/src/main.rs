@@ -6,9 +6,9 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
-mod crate_isolation;
 mod ci_affected_crates;
 mod ci_change_scope;
+mod crate_isolation;
 mod decide_budgets;
 mod dispatch_decomposition;
 mod fanout_host_groups;
