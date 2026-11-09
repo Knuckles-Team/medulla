@@ -21,11 +21,11 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T015 MEDULLA-DURABLE-KERNEL-R011.1 RequiredTestModuleCategory/RequiredTestModule are a typed category and a validated declaration, refusing an unrecognized category name or an unselectable declaration
 - [x] T016 MEDULLA-DURABLE-KERNEL-R011.2 Concrete required-module manifest
 - [ ] T017 MEDULLA-DURABLE-KERNEL-R011.3 Pull requests execute the required runtime manifest through the shared gate
-- [ ] T018 MEDULLA-DURABLE-KERNEL-R011.5 Required Clippy profile declarations
+- [x] T018 MEDULLA-DURABLE-KERNEL-R011.5 Required Clippy profile declarations
 - [ ] T019 [US5] MEDULLA-DURABLE-KERNEL-R012 Raft native command sealing and placement routing are correct
 - [ ] T020 [US5] MEDULLA-DURABLE-KERNEL-R013 Raft cluster test failures capture a causal trace automatically
 - [x] T021 [US5] MEDULLA-DURABLE-KERNEL-R014.1 A typed flake-budget / retry-policy model bounds how a load-test run retries past a transient failure
-- [ ] T022 [US5] MEDULLA-DURABLE-KERNEL-R014.2 Bounded representative CPU load
+- [x] T022 [US5] MEDULLA-DURABLE-KERNEL-R014.2 Bounded representative CPU load
 - [ ] T023 [US5] MEDULLA-DURABLE-KERNEL-R014.3.1 Repeated fail-closed loaded execution
 - [ ] T024 [US5] MEDULLA-DURABLE-KERNEL-R014.3.2 Bounded diagnostic retry integration
 - [ ] T025 [US5] MEDULLA-DURABLE-KERNEL-R014.4 Loaded leader-rebalance acceptance
@@ -102,6 +102,8 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T096 MEDULLA-DURABLE-KERNEL-R069 Scrub cursor fixture reliably tests the no-key encryption state
 - [ ] T097 [US3] MEDULLA-DURABLE-KERNEL-R070.1 The engine migrates an older supported store when it opens it
 - [ ] T098 [US3] MEDULLA-DURABLE-KERNEL-R070.2 Hot-path proof: a previous-patch store migrates and serves at open
+- [ ] T262 [US3] MEDULLA-DURABLE-KERNEL-R070.3 Persisted authority records keep the protocol id they were signed with
+- [ ] T263 [US3] MEDULLA-DURABLE-KERNEL-R070.4 Release gate: a store of the last production release migrates and serves
 - [ ] T099 MEDULLA-DURABLE-KERNEL-R072 Served task-queue methods over the durable job store
 - [ ] T100 MEDULLA-DURABLE-KERNEL-R073 Python client methods for the task queue
 - [ ] T101 MEDULLA-DURABLE-KERNEL-R074.1 Typed worker registry producer and pure lifecycle

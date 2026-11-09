@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::context::{
-    digest_purpose, validate_operation_purpose, AuthorityContext, AuthorityScope,
-    AUTHORITY_PROTOCOL_V1,
+    digest_purpose, is_recorded_authority_protocol, validate_operation_purpose, AuthorityContext,
+    AuthorityScope,
 };
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::Digest256, contract::EffectState,
@@ -77,7 +77,7 @@ impl OperationReplayIdentity {
 
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version.as_str() != "operation-replay-identity.v1"
-            || self.protocol_id.as_str() != AUTHORITY_PROTOCOL_V1
+            || !is_recorded_authority_protocol(self.protocol_id.as_str())
         {
             return Err("operation replay identity schema or protocol is invalid".into());
         }
@@ -156,7 +156,7 @@ impl NonceReplayKey {
     }
 
     pub fn digest(&self) -> Result<Digest256, String> {
-        if self.protocol_id.as_str() != AUTHORITY_PROTOCOL_V1 {
+        if !is_recorded_authority_protocol(self.protocol_id.as_str()) {
             return Err("nonce replay key protocol is invalid".into());
         }
         Digest256::framed(
