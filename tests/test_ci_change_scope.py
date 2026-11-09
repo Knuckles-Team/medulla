@@ -26,6 +26,13 @@ CENTRAL_RUNNER = (
 )
 
 
+FULL_MATRIX = (
+    "(github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch' || "
+    "startsWith(github.ref, 'refs/tags/v'))"
+)
+
+
 def native_acceptance_steps(steps: list[dict]) -> list[dict]:
     """Expose the fixed composite's original steps to workflow contract checks."""
     expanded = []
@@ -98,7 +105,7 @@ def test_workflow_keeps_security_and_spec_checks_and_full_publication() -> None:
         assert "if" not in security[name]
     for name in ("Install pinned cargo-deny", "Rust dependency advisory gate"):
         assert security[name]["if"] == "needs.changes.outputs.code != 'false'"
-    assert jobs["security"]["if"] == "always() && github.event_name != 'pull_request'"
+    assert jobs["security"]["if"] == f"always() && {FULL_MATRIX}"
     assert jobs["security"]["needs"] == "changes"
     assert {"light-gates", "changes"} <= set(jobs["engine-main-wheel"]["needs"])
     assert "lint-and-architecture" not in jobs["engine-main-wheel"]["needs"]
@@ -477,7 +484,7 @@ def test_split_native_acceptance_preserves_commands_and_release_dependencies(
     gate = {"gates-wheel": "packaging", "gates-whisper": "whisper"}[job_name]
     assert job["if"] == (
         "needs.changes.outputs.code == 'true' && "
-        "(github.event_name != 'pull_request' || "
+        f"({FULL_MATRIX} || "
         f"needs.changes.outputs.{gate} == 'true')"
     )
     assert job["runs-on"] == jobs["gates"]["runs-on"]
@@ -769,8 +776,8 @@ def test_native_artifacts_use_pinned_libc_and_fresh_cache_namespaces() -> None:
                 runs_on = job["runs-on"]
                 assert runs_on.endswith("|| 'ubuntu-24.04' }}"), name
                 assert (
-                    "github.event.pull_request.head.repo.full_name == github.repository"
-                    in runs_on
+                    "(github.event.pull_request.head.repo.full_name"
+                    " || github.repository) == github.repository" in runs_on
                 )
                 assert "needs.pr-scope.outputs.code == 'true'" in runs_on
                 assert job["needs"] == "pr-scope"
