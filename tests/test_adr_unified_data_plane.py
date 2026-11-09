@@ -1,9 +1,11 @@
 """MEDULLA-UNIFIED-DATA-PLANE-R001: the unified data-plane ADR record.
 
 The ADR (docs/architecture/unified_data_plane_adr.md) is the only artifact of
-the row: it records five accepted decisions, so the test pins the record's
-shape — five `## Decision` headings, the Accepted status, and the no-go
-wording — rather than re-litigating the decisions.
+the row: it records five accepted decisions (attached-source default, one
+converged engine, native hosting earned through the R026 gate, no synced
+second store, pgrx no-go), so the test pins the record's shape — five `##
+Decision` headings, the Accepted status, the no-synced-store decision and
+the no-go wording — rather than re-litigating the decisions.
 """
 
 from __future__ import annotations
@@ -47,6 +49,13 @@ def test_adr_records_five_accepted_decisions() -> None:
     # Native hosting is earned per application through the R026 gate.
     decision_3 = text.split("## Decision 3")[1].split("## Decision 4")[0]
     assert "MEDULLA-UNIFIED-DATA-PLANE-R026" in decision_3, decision_3
+
+    # No synced second store: the only copy of attached data allowed is the
+    # R038 watermark-bound accelerated cache.
+    decision_4 = text.split("## Decision 4")[1].split("## Decision 5")[0]
+    assert "no synced second store" in decision_4.casefold(), decision_4
+    assert "watermark" in decision_4.casefold(), decision_4
+    assert "MEDULLA-UNIFIED-DATA-PLANE-R038" in decision_4, decision_4
 
     # The pgrx companion is a no-go here: its go/no-go is decided separately.
     decision_5 = text.split("## Decision 5")[1]
