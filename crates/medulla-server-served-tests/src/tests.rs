@@ -1866,7 +1866,6 @@ async fn test_cypher_match_returns_rows() {
     assert_eq!(pair[1]["id"].as_str(), Some("bob"));
 }
 
-
 /// The request reached the not-built catch-all: the method's feature is off in this build.
 #[cfg(any(
     not(feature = "cypher"),
