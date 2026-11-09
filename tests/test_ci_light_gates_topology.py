@@ -34,13 +34,14 @@ REQUIRED_BLOCKING_JOBS = [
     "python-server",
     "python-suite",
     "no-auth-uds",
+    "production-upgrade",
     "tts-piper-inference",
     "language-clients",
     "quality-advisory",
 ]
 # Main-push gates the aggregate requires only outside pull requests: they skip
 # on a pull request (a PR needs only `ci`) and must succeed on every push.
-MAIN_PUSH_REQUIRED_JOBS = {"no-auth-uds"}
+MAIN_PUSH_REQUIRED_JOBS = {"no-auth-uds", "production-upgrade"}
 MAIN_ONLY_JOBS = {
     "gates",
     "gates-plan-fuzz",
@@ -109,6 +110,7 @@ def test_all_native_scope_consumers_keep_the_changes_output_edge() -> None:
         "python-server",
         "python-suite",
         "no-auth-uds",
+        "production-upgrade",
         "tts-piper-inference",
         "language-clients",
         "quality-advisory",
