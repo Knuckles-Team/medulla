@@ -55,6 +55,7 @@ const CONTRACT: &str = r#"@prefix ac: <https://knuckles-team.github.io/agent-con
  ac:sourceId "suppliers" ; ac:accessKind "mcp_tool" ; ac:operation "list_suppliers" ;
  ac:entity "Supplier" ; ac:keyField "id" ."#;
 
+// spec: MEDULLA-FEDERATED-QUERY-R722.2
 #[tokio::test]
 async fn approve_source_requires_current_head_and_contract_digest() {
     let connector = "r722-approval";
@@ -479,6 +480,7 @@ impl medulla_federation::federation::ForeignSource for BoundRows {
     }
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R722.3
 #[tokio::test]
 async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     let connector = "r722-bind";
