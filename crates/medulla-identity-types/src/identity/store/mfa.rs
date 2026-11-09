@@ -109,7 +109,7 @@ impl IdentityStore {
         let session = self
             .sessions
             .get(hash)
-            .filter(|session| session.is_live(now_ms) && session.mfa_pending)
+            .filter(|session| self.session_admissible(session, now_ms) && session.mfa_pending)
             .ok_or(IdentityRefusal::NotFound)?;
         Ok((hash.to_string(), session.principal_id.clone()))
     }

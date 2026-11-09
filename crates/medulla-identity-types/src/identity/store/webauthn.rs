@@ -131,7 +131,7 @@ impl IdentityStore {
         let principal = self
             .sessions
             .get(stamp.token_hash(0)?)
-            .filter(|session| session.is_live(now_ms))
+            .filter(|session| self.session_admissible(session, now_ms))
             .map(|session| session.principal_id.as_str())
             .filter(|principal| self.is_active(principal))
             .ok_or(IdentityRefusal::NotAuthorized)?;

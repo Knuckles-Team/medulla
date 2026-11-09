@@ -237,6 +237,11 @@ medulla_types::closed_error_codes! {
         /// A liveness check named a session reference the store does not hold,
         /// or one outside the caller's deployment tenant.
         SessionReferenceUnknown => "SESSION_REFERENCE_UNKNOWN",
+        /// A session fact minted under an older mode epoch is presented after
+        /// the commit that bumped the stored epoch (MEDULLA-IDENTITY-R003.6);
+        /// admission refuses it, and the existing authentication path reports
+        /// `AUTHENTICATION_REQUIRED` for it on the wire.
+        SessionEpochStale => "SESSION_EPOCH_STALE",
     }
 }
 

@@ -283,6 +283,96 @@ fn bootstrap_sessions_exist_only_in_none_mode() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R003.6
+#[test]
+fn sessions_older_than_epoch_refuse_after_commit_only() {
+    let mut store = store_in(AuthMode::Local);
+    open_session(&mut store, "root-admin", BOOTSTRAP_PRINCIPAL, "old-session");
+    let mut store = external_store(store);
+    // The session admits under the epoch it was minted, before the commit.
+    assert_eq!(
+        store.session_principal("old-session", NOW),
+        Some(BOOTSTRAP_PRINCIPAL)
+    );
+    // The commit bumps the epoch, records the request's issuer key id, and
+    // revokes every session in the same apply.
+    apply_kept(&mut store, &transition(AuthMode::Local, 1), &admin(), NOW).unwrap();
+    let config = store.config().unwrap();
+    assert_eq!(config.epoch, 2);
+    assert_eq!(config.issuer_kid_current.as_deref(), Some("kid-1"));
+    // The older session refuses after the commit: nothing outlives it.
+    assert_eq!(store.session_principal("old-session", NOW), None);
+    // The identity audit chain records the transition and the issuer key id.
+    let IdentityReply::Audit(entries) = apply_kept(
+        &mut store,
+        &IdentityOp::Config(ConfigOp::Audit {
+            request: ListQuery {
+                after: None,
+                limit: 10,
+            },
+        }),
+        &admin(),
+        NOW,
+    )
+    .unwrap() else {
+        panic!("audit answers the entries");
+    };
+    assert!(
+        entries.iter().any(|entry| {
+            entry.event == IdentityEvent::ModeTransition && entry.target.as_deref() == Some("kid-1")
+        }),
+        "the audit chain records the transition and its issuer key id"
+    );
+
+    // A session fact that survives an epoch bump without being cleared (a
+    // policy update bumps the epoch but keeps the sessions) is refused the
+    // typed code at admission.
+    let mut store = store_in(AuthMode::Local);
+    open_session(
+        &mut store,
+        "root-admin",
+        BOOTSTRAP_PRINCIPAL,
+        "stale-session",
+    );
+    apply_kept(
+        &mut store,
+        &IdentityOp::Config(ConfigOp::UpdatePolicy {
+            request: PolicyUpdate {
+                expected_epoch: 1,
+                registration_policy: None,
+                local_fallback: None,
+                password_min_chars: None,
+            },
+        }),
+        &admin(),
+        NOW,
+    )
+    .unwrap();
+    assert_eq!(store.config().unwrap().epoch, 2);
+    assert_eq!(
+        store.session_principal("stale-session", NOW),
+        None,
+        "the surviving session is stale under the bumped epoch"
+    );
+    let mut stamp = broker();
+    stamp.token_hashes = vec!["stale-session".to_string()];
+    let resolve = IdentityOp::Session(SessionOp::Resolve {
+        request: SessionTouch {
+            refresh: None,
+            session_token: Secret::default(),
+            code: Secret::default(),
+        },
+    });
+    assert_eq!(
+        apply_kept(&mut store, &resolve, &stamp, NOW),
+        Err(IdentityRefusal::SessionEpochStale)
+    );
+    assert_eq!(
+        IdentityRefusal::SessionEpochStale.as_str(),
+        "SESSION_EPOCH_STALE"
+    );
+}
+
 #[test]
 fn update_policy_is_epoch_guarded_and_bounded() {
     let mut store = store_in(AuthMode::Local);
