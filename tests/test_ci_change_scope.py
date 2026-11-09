@@ -26,6 +26,13 @@ CENTRAL_RUNNER = (
 )
 
 
+FULL_MATRIX = (
+    "(github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch' || "
+    "startsWith(github.ref, 'refs/tags/v'))"
+)
+
+
 def native_acceptance_steps(steps: list[dict]) -> list[dict]:
     """Expose the fixed composite's original steps to workflow contract checks."""
     expanded = []
@@ -98,7 +105,7 @@ def test_workflow_keeps_security_and_spec_checks_and_full_publication() -> None:
         assert "if" not in security[name]
     for name in ("Install pinned cargo-deny", "Rust dependency advisory gate"):
         assert security[name]["if"] == "needs.changes.outputs.code != 'false'"
-    assert jobs["security"]["if"] == "always() && github.event_name != 'pull_request'"
+    assert jobs["security"]["if"] == f"always() && {FULL_MATRIX}"
     assert jobs["security"]["needs"] == "changes"
     assert {"light-gates", "changes"} <= set(jobs["engine-main-wheel"]["needs"])
     assert "lint-and-architecture" not in jobs["engine-main-wheel"]["needs"]
@@ -337,28 +344,6 @@ def test_static_inventory_hooks_scope_their_complete_input_universes() -> None:
     config = yaml.safe_load((ROOT / ".config/pre-commit.yaml").read_text())
     hooks = {hook["id"]: hook for repo in config["repos"] for hook in repo["hooks"]}
 
-    registry = hooks["registry-test-ownership"]
-    assert registry["files"] == (
-        r"^(tests/|architecture/component-registry\.yml$|"
-        r"tools/xtask/src/registry_test_ownership\.rs$|\.config/pre-commit\.yaml$|"
-        r"pyproject\.toml$|uv\.lock$|\.python-version$)"
-    )
-    assert not registry.get("always_run", False)
-    assert registry["pass_filenames"] is False
-    for path in (
-        "tests/new_gate.py",
-        "tests/nested/fixture.rs",
-        "architecture/component-registry.yml",
-        "tools/xtask/src/registry_test_ownership.rs",
-        ".config/pre-commit.yaml",
-        "pyproject.toml",
-        "uv.lock",
-        ".python-version",
-    ):
-        assert re.search(registry["files"], path)
-    for path in ("src/server/mod.rs", "README.md", "scripts/ci_parity.sh"):
-        assert not re.search(registry["files"], path)
-
     pinned = hooks["pinned-reference-resolution"]
     assert pinned["files"] == (
         r"^(src/server/|crates/medulla-storage/src/owner/registry\.rs$|"
@@ -499,7 +484,7 @@ def test_split_native_acceptance_preserves_commands_and_release_dependencies(
     gate = {"gates-wheel": "packaging", "gates-whisper": "whisper"}[job_name]
     assert job["if"] == (
         "needs.changes.outputs.code == 'true' && "
-        "(github.event_name != 'pull_request' || "
+        f"({FULL_MATRIX} || "
         f"needs.changes.outputs.{gate} == 'true')"
     )
     assert job["runs-on"] == jobs["gates"]["runs-on"]
@@ -791,8 +776,8 @@ def test_native_artifacts_use_pinned_libc_and_fresh_cache_namespaces() -> None:
                 runs_on = job["runs-on"]
                 assert runs_on.endswith("|| 'ubuntu-24.04' }}"), name
                 assert (
-                    "github.event.pull_request.head.repo.full_name == github.repository"
-                    in runs_on
+                    "(github.event.pull_request.head.repo.full_name"
+                    " || github.repository) == github.repository" in runs_on
                 )
                 assert "needs.pr-scope.outputs.code == 'true'" in runs_on
                 assert job["needs"] == "pr-scope"

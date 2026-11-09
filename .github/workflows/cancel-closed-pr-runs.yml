@@ -1,0 +1,33 @@
+# Cancels every queued or in-progress run of the closed pull request's branch,
+# so a merged or abandoned PR stops holding runner slots.
+name: Cancel runs of closed pull requests
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    name: Cancel queued and in-progress runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Cancel runs on the pull request branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          for status in queued in_progress waiting pending requested; do
+            gh api --paginate "repos/${REPO}/actions/runs?branch=${BRANCH}&status=${status}&per_page=100" --jq '.workflow_runs[] | select(.event == "pull_request") | .id' |
+              while read -r id; do
+                echo "cancelling run ${id} (${status})"
+                gh api -X POST "repos/${REPO}/actions/runs/${id}/cancel" > /dev/null || true
+              done
+          done
