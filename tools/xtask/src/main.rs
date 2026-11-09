@@ -6,6 +6,7 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
+mod crate_isolation;
 mod ci_affected_crates;
 mod ci_change_scope;
 mod decide_budgets;
@@ -173,6 +174,13 @@ const CHECKS: &[Check] = &[
         name: wheel_completeness::NAME,
         summary: wheel_completeness::SUMMARY,
         run: wheel_completeness::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: crate_isolation::NAME,
+        summary: crate_isolation::SUMMARY,
+        run: crate_isolation::run,
         standalone: true,
         needs_git: false,
     },

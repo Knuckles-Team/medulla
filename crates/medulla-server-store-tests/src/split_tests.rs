@@ -5,6 +5,7 @@
 mod admin_agent_library_security;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
 mod impact_watch;
 #[cfg(all(test, feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
