@@ -20,6 +20,7 @@ RUNNER = (
 # Every job that can run on a pull request. Main-only jobs fail the workflow
 # run release.yml requires, not the branch-protection aggregate.
 REQUIRED_BLOCKING_JOBS = [
+    "pr-scope",
     "ci",
     "light-gates",
     "changes",
@@ -39,8 +40,12 @@ REQUIRED_BLOCKING_JOBS = [
     "language-clients",
     "quality-advisory",
 ]
-# Main-push gates the aggregate requires only outside pull requests: they skip
-# on a pull request (a PR needs only `ci`) and must succeed on every push.
+# Gates the aggregate requires only on the full matrix (nightly, `v*` tag,
+# manual dispatch): a pull request and a push to main need only `ci`.
+FULL = (
+    "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' "
+    "|| startsWith(github.ref, 'refs/tags/v'))"
+)
 MAIN_PUSH_REQUIRED_JOBS = {"no-auth-uds", "production-upgrade"}
 MAIN_ONLY_JOBS = {
     "gates",
@@ -136,13 +141,12 @@ def test_main_only_and_path_gated_jobs_skip_on_pull_requests() -> None:
     jobs = _jobs()
     for name in MAIN_ONLY_JOBS | MAIN_PUSH_REQUIRED_JOBS:
         assert jobs[name]["if"] == (
-            "needs.changes.outputs.code == 'true' && "
-            "github.event_name != 'pull_request'"
+            f"needs.changes.outputs.code == 'true' && {FULL}"
         ), name
     for name, gate in PATH_GATED_JOBS.items():
         assert jobs[name]["if"] == (
             "needs.changes.outputs.code == 'true' && "
-            "(github.event_name != 'pull_request' || "
+            f"({FULL} || "
             f"needs.changes.outputs.{gate} == 'true')"
         ), name
     assert "scanner-quality" not in jobs
@@ -194,3 +198,43 @@ def test_ci_required_is_the_fail_closed_branch_protection_aggregate() -> None:
     assert "expected skipped for documentation-only scope" in run
     assert "failures=()" in run
     assert "exit 1" in run
+
+
+def test_pr_scope_skips_ci_only_for_an_owner_local_gate_attestation() -> None:
+    jobs = _jobs()
+    scope = jobs["pr-scope"]
+    assert scope["permissions"]["statuses"] == "read"
+    attest = scope["steps"][0]
+    assert attest["id"] == "attest"
+    assert attest["env"]["ATTESTERS"] == "${{ vars.MEDULLA_TRAIN_ATTESTERS }}"
+    assert '.context == "CI required"' in attest["run"]
+    assert 'startswith("local-ci:")' in attest["run"]
+    assert ".creator.login" in attest["run"]
+    assert scope["outputs"]["attested"] == "${{ steps.attest.outputs.attested }}"
+    assert "needs.pr-scope.outputs.attested != 'true'" in jobs["ci"]["if"]
+    assert "pr-scope" in _needs(jobs["ci-required"])
+    run = jobs["ci-required"]["steps"][0]["run"]
+    assert '"$ATTESTED" == true && "$CI_RESULT" == skipped' in run
+
+
+def test_main_push_runs_only_ci_and_light_gates() -> None:
+    doc = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    triggers = doc[True] if True in doc else doc["on"]
+    assert triggers["push"] == {"branches": ["main"], "tags": ["v*"]}
+    jobs = doc["jobs"]
+    assert "github.ref == 'refs/heads/main'" in jobs["ci"]["if"]
+    assert jobs["light-gates"]["if"] == "github.event_name != 'pull_request'"
+    for name, job in jobs.items():
+        if name in {"pr-scope", "ci", "ci-required", "light-gates"}:
+            continue
+        assert "github.event_name == 'push' &&" not in str(job.get("if", "")), name
+
+
+def test_closed_pull_request_cancels_its_runs() -> None:
+    doc = yaml.safe_load(
+        (WORKFLOW.parent / "cancel-closed-pr-runs.yml").read_text(encoding="utf-8")
+    )
+    triggers = doc[True] if True in doc else doc["on"]
+    assert triggers == {"pull_request": {"types": ["closed"]}}
+    assert doc["permissions"] == {"actions": "write", "contents": "read"}
+    assert "/cancel" in str(doc["jobs"]["cancel"]["steps"])

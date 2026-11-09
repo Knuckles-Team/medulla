@@ -60,7 +60,7 @@ def test_cargo_deny_cache_is_versioned_verified_and_main_only():
     assert "verified=true" in verify_run
 
     save_if = save["if"]
-    assert "github.event_name == 'push'" in save_if
+    assert "github.event_name == 'schedule'" in save_if
     assert "github.ref == 'refs/heads/main'" in save_if
     assert "steps.cargo-deny-cache.outputs.cache-hit != 'true'" in save_if
     assert "steps.cargo-deny-verified.outputs.verified == 'true'" in save_if
