@@ -41,3 +41,6 @@ placement:relativeCost a owl:DatatypeProperty ;
     rdfs:domain placement:Target ;
     rdfs:range xsd:nonNegativeInteger ;
     rdfs:comment "The target's relative cost; feasible targets rank cheapest first, ties by option id." .
+
+# Every class of this module reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/placement#Target> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

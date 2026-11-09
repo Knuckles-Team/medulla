@@ -887,7 +887,10 @@ ex:parent a owl:AsymmetricProperty .
         // +1856: the state-machine vocabulary (state-machines-v1.ttl) joins the core corpus.
         // +57 (MEDULLA-IDENTITY-R723): the workstream record class, its properties and the
         // attachedTo session link in identity-v1.ttl.
-        assert_eq!(composed.ontology.len(), 20_674);
+        // +112: the deployment-placement vocabulary (MEDULLA-PLACEMENT-R001.5) --
+        // the placement ontology document, its DomainEntity root, and the
+        // catalog entries it joins (the pin is the measured composed count).
+        assert_eq!(composed.ontology.len(), 20_786);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -925,7 +928,8 @@ ex:parent a owl:AsymmetricProperty .
         // +1: the shared data-platform vocabulary header.
         // +2: the commercial and newly registered supply-chain module headers.
         // +1: the connector-pack ingest vocabulary header (R101.1).
-        assert_eq!(ontology_subjects.len(), 46);
+        // +1 (MEDULLA-PLACEMENT-R001.5): the placement module's own header.
+        assert_eq!(ontology_subjects.len(), 47);
         // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
         // `owl:imports <.../core>`; +6: the service-operations module's five
         // imports and its catalog entry; +5: the metadata-catalog module's four
@@ -983,7 +987,9 @@ ex:parent a owl:AsymmetricProperty .
         // +737: the semantic share of the +739 total above (the other 2 are the
         // import edges); headers are unchanged at 150 triples.
         // +57 (MEDULLA-IDENTITY-R723): the workstream record vocabulary, all semantic axioms.
-        assert_eq!(semantic_axioms, 20_443);
+        // +109: the placement vocabulary's semantic axioms -- the Target class and
+        // its four fact properties (headers excluded) (MEDULLA-PLACEMENT-R001.5).
+        assert_eq!(semantic_axioms, 20_552);
 
         let count_type = |object: &str| {
             composed
@@ -1067,7 +1073,10 @@ ex:parent a owl:AsymmetricProperty .
             // (the decision module's core parents among them).
             // +90 (measured): the state-machine vocabulary's class edges (MEDULLA-ORCH-VOCAB-R811.1).
             // +1: the workstream record class edge (MEDULLA-IDENTITY-R723).
-            1053
+            // +9 (measured): the placement Target's DomainEntity root edge plus
+            // the composed subclass placements of its module imports
+            // (MEDULLA-PLACEMENT-R001.5).
+            1062
         );
     }
 

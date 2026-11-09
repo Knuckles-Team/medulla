@@ -1949,7 +1949,7 @@ mod tests {
             // pin follows the ontology.
             (
                 "placement",
-                "c88a8a45324c7c38df25256788c0fb873540f70208789b538c642225b4467fc8",
+                "1d0570b7d5ad4addbdbf5f02f73f1cd0e878343a7e743f361a0ddbe1c9e270ae",
             ),
             // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
             // records; semantic acceptance/refusal fixtures live in
