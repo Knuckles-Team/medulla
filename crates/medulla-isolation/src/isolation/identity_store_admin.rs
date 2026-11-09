@@ -63,10 +63,27 @@ pub const STORE_NAMESPACE: &str =
     "IDENTITY_STORE_NAMESPACE: idm: roles and grants are owned by the identity store";
 
 /// Who performed an RBAC write, for the identity audit trail.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AuditActor<'a> {
     pub principal: &'a str,
     pub now_ms: u64,
+    /// The tenant the write was made under, for the audit entry (`None`
+    /// when the caller has no verified tenant in scope yet).
+    pub tenant: Option<String>,
+}
+
+/// An audit annotation (MEDULLA-IDENTITY-R002) that must commit in the
+/// policy store save the write triggers: the tenant and the before/after
+/// authorization digests for the entries recorded after `before_seq`.
+/// `expected_last_seq` is the trail's newest seq when the annotation was
+/// staged; a save reached after further entries were recorded drops the
+/// annotation instead of naming the wrong entries.
+#[derive(Debug, Clone)]
+pub(crate) struct PendingAuditAnnotate {
+    pub(crate) before_seq: Option<u64>,
+    pub(crate) expected_last_seq: Option<u64>,
+    pub(crate) tenant: Option<String>,
+    pub(crate) before_digest: String,
 }
 
 impl IsolationLayer {
@@ -112,11 +129,22 @@ impl IsolationLayer {
         // identity is still registered through the dedicated bootstrap path
         // (or, after it, repaired by an administrator below).
         let previous = (self.rbac.clone(), self.agents.clone());
+        let before_seq = self.rbac.identity_store().audit_trail().last_seq();
+        let before_digest = self.image_digest();
         *self.rbac.identity_store_mut() = next;
         self.project_identity_store();
         if let Some(agent_id) = system_repair_target(op) {
             self.merge_system_identity(agent_id);
         }
+        // The tenant and the change of the authorization digest the
+        // recompute produced commit in this same save (R002): the write
+        // applies the staged annotation before it stores the image.
+        self.pending_audit_annotate = Some(PendingAuditAnnotate {
+            before_seq,
+            expected_last_seq: self.rbac.identity_store().audit_trail().last_seq(),
+            tenant: stamp.session_tenant.clone(),
+            before_digest,
+        });
         if let Err(error) = self.persist_state() {
             (self.rbac, self.agents) = previous;
             return Err(IdentityStoreError::Persist(error));
@@ -257,9 +285,26 @@ impl IsolationLayer {
         Ok(changed)
     }
 
+    /// The canonical digest of the current authorization image (policy and
+    /// identities together), for the audit trail; empty when it cannot be
+    /// computed.
+    fn image_digest(&self) -> String {
+        {
+            let identities: std::collections::BTreeMap<String, AgentIdentity> = self
+                .agents
+                .iter()
+                .map(|(id, identity)| (id.clone(), identity.clone()))
+                .collect();
+            crate::rbac_persist::authorization_digest(self.rbac(), &identities).unwrap_or_default()
+        }
+    }
+
     /// Run `write` (which persists) with an audit entry appended to the
     /// identity trail BEFORE it, so the entry rides the write's own save and
-    /// is rolled back with it.
+    /// is rolled back with it. The entry's tenant and the change of the
+    /// authorization digest are staged as a pending annotation that the
+    /// write's own save commits before it writes the image; the fields sit
+    /// outside the chain link, so annotating never disturbs a successor.
     fn audited(
         &mut self,
         actor: AuditActor<'_>,
@@ -268,6 +313,8 @@ impl IsolationLayer {
         write: impl FnOnce(&mut Self) -> Result<(), String>,
     ) -> Result<(), String> {
         let previous = self.rbac.identity_store().clone();
+        let before_seq = self.rbac.identity_store().audit_trail().last_seq();
+        let before_digest = self.image_digest();
         self.rbac.identity_store_mut().record(AuditRecord {
             at_ms: actor.now_ms,
             actor: actor.principal.to_string(),
@@ -275,6 +322,14 @@ impl IsolationLayer {
             target: Some(target.to_string()),
             ip_prefix: None,
             detail: String::new(),
+            tenant: actor.tenant.clone(),
+            authorization_digest: None,
+        });
+        self.pending_audit_annotate = Some(PendingAuditAnnotate {
+            before_seq,
+            expected_last_seq: self.rbac.identity_store().audit_trail().last_seq(),
+            tenant: actor.tenant.clone(),
+            before_digest,
         });
         let outcome = write(self);
         if outcome.is_err() {
@@ -325,6 +380,8 @@ impl IsolationLayer {
                 target: Some(sample.action),
                 ip_prefix: None,
                 detail: sample.reason,
+                tenant: None,
+                authorization_digest: None,
             });
         }
         if dropped > 0 {
@@ -335,6 +392,8 @@ impl IsolationLayer {
                 target: None,
                 ip_prefix: None,
                 detail: format!("dropped={dropped}"),
+                tenant: None,
+                authorization_digest: None,
             });
         }
         if let Err(error) = self.persist_state() {
