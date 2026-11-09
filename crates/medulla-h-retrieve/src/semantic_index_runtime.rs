@@ -97,6 +97,20 @@ use medulla_server_auth::{
 };
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
+/// The declared refusal text for a semantic index storage error. It never carries backend text.
+pub(crate) fn semantic_failure_message(
+    error: &medulla_ann_codes::semantic_ann_codes::SemanticCodeError,
+) -> &'static str {
+    use medulla_ann_codes::semantic_ann_codes::SemanticCodeError;
+    match error {
+        SemanticCodeError::Refused(_) => "CONFLICT: semantic index operation refused",
+        SemanticCodeError::Io(_) | SemanticCodeError::Kernel(_) => {
+            "ENGINE_UNAVAILABLE: semantic index storage is unavailable"
+        }
+        SemanticCodeError::Corrupt(_) => "INTERNAL: semantic index state is invalid",
+    }
+}
+
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
         SemanticIndexError::ApprovalRequired
