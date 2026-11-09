@@ -28,6 +28,7 @@ fn iri_triple(subject: &str, predicate: &str, object: &str) -> Triple {
     )
 }
 
+/// Verifies MEDULLA-ORCH-VOCAB-R001.1: the TaskStep class loads and precedes accepts it
 // spec: MEDULLA-ORCH-VOCAB-R001.1
 #[test]
 fn task_step_resolves_and_precedes_accepts_it() {
@@ -417,6 +418,7 @@ mod vocabulary {
         format!("<{KG}{name}>")
     }
 
+    /// Verifies MEDULLA-ORCH-VOCAB-R001.2: the hasStep property resolves
     // spec: MEDULLA-ORCH-VOCAB-R001.2
     #[test]
     fn has_step_resolves() {
@@ -425,6 +427,7 @@ mod vocabulary {
         consistent_with(FIXTURE);
     }
 
+    /// Verifies MEDULLA-ORCH-VOCAB-R001.3: the step-order acyclicity shape
     // spec: MEDULLA-ORCH-VOCAB-R001.3
     #[test]
     fn step_shape_rejects_a_precedes_cycle() {
