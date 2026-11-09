@@ -219,6 +219,7 @@ def test_signal_with_fast_command_exit_is_not_success(
     assert_stopped(record)
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 def test_repeats_both_cluster_tests(harness: tuple[dict[str, str], Path]) -> None:
     env, record = harness
@@ -240,6 +241,7 @@ def test_repeats_both_cluster_tests(harness: tuple[dict[str, str], Path]) -> Non
     assert_stopped(record)
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 def test_repetition_preserves_failure_and_trace(
     harness: tuple[dict[str, str], Path],
@@ -262,6 +264,7 @@ def test_repetition_preserves_failure_and_trace(
     assert_stopped(record)
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 def test_empty_selection_refused(harness: tuple[dict[str, str], Path]) -> None:
     env, record = harness
@@ -274,6 +277,7 @@ def test_empty_selection_refused(harness: tuple[dict[str, str], Path]) -> None:
     assert_stopped(record)
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 @pytest.mark.parametrize("value", ["0", "1", "101", "-1", "", "1.5"])
 def test_invalid_repeat_count_refused(
@@ -287,6 +291,7 @@ def test_invalid_repeat_count_refused(
     assert not record.exists()
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 @pytest.mark.parametrize(
     "options, expected",
@@ -315,6 +320,7 @@ def test_repeated_interruption_retains_result(
     assert not stat.exists() or stat.read_text().split()[2] == "Z"
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R014.3.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.1")
 def test_direct_repeat_requires_count(harness: tuple[dict[str, str], Path]) -> None:
     env, _ = harness

@@ -507,7 +507,8 @@ def test_ci_concurrency_supersedes_older_runs_per_pr_only() -> None:
     concurrency = doc["concurrency"]
     assert (
         concurrency["cancel-in-progress"]
-        == "${{ github.event_name == 'pull_request' }}"
+        == "${{ github.event_name == 'pull_request' || "
+        "(github.event_name == 'push' && github.ref == 'refs/heads/main') }}"
     )
     group = concurrency["group"]
     assert "github.workflow" in group
@@ -614,8 +615,16 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
     assert guard["permissions"]["actions"] == "read"
     script = "\n".join(step.get("run", "") for step in guard["steps"])
     assert "actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success" in script
+    # Hosted path: a successful push run on main or on the tag itself.
+    assert "&event=push" in script
+    assert '.head_branch == "main" or (.head_branch | startswith("v"))' in script
     assert "force_untested" in str(guard["steps"])
     assert "REFUSING to publish" in script
+    # A local-gate attestation counts only from the owner, on the exact commit.
+    assert guard["permissions"]["statuses"] == "read"
+    assert "repos/${REPO}/commits/${SHA}/statuses" in script
+    assert '.context == \\"CI required\\"' in script
+    assert ".creator.login == " in script
     # Every gate, feature build and benchmark lives in ci.yml.
     ci = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
     ci_triggers = ci[True] if True in ci else ci["on"]
@@ -625,7 +634,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "schedule",
         "workflow_dispatch",
     }
-    assert ci_triggers["push"] == {"branches": ["main"]}
+    assert ci_triggers["push"] == {"branches": ["main"], "tags": ["v*"]}
     assert {"gates", "feature-matrix", "benchmarks", "engine-main-wheel"} <= set(
         ci["jobs"]
     )

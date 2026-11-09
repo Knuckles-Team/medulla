@@ -1,0 +1,11 @@
+{
+  "version": "2.27.10",
+  "server_image": "knucklessg1/epistemic-graph-server:2.27.10",
+  "server_path": "usr/local/bin/epistemic-graph-server",
+  "server_sha256": "f46ef5640a2bb965f93b5376a10b330487f0f0432f0c9d923c84db714f6ed2a4",
+  "client_requirement": "medulla==2.27.10",
+  "client_wheel_sha256": "d6b82ad4d94a4813d24c34cb312408a1587d484fafc35e5665f36c26a5d82090",
+  "client_module": "epistemic_graph.client",
+  "client_class": "SyncEpistemicGraphClient",
+  "env_prefix": "EPISTEMIC_GRAPH_"
+}

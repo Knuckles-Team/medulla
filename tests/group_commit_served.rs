@@ -103,6 +103,73 @@ async fn full_queue_refuses_commit_queue_full() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Verifies MEDULLA-ENGINE-PARITY-R001.2: Wiring and refusal — a request that
+/// cannot enqueue while the queue is held full fails alone with
+/// `COMMIT_QUEUE_FULL`; the requests already in the held batch still commit,
+/// and nothing that was enqueued is dropped.
+// spec: MEDULLA-ENGINE-PARITY-R001.2
+#[tokio::test(flavor = "multi_thread")]
+async fn one_failure_does_not_fail_batch() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = test_support::fresh_dir("group-commit-failure-isolation");
+    let (control, entered_rx, release_tx) = RedbGroupCommitTestControl::new();
+    let backend = Arc::new(
+        RedbBackend::open_with_group_commit_config(
+            dir.to_string_lossy().to_string(),
+            1,
+            RedbGroupCommitConfig {
+                linger: Duration::from_millis(2),
+                shallow_threshold: 32,
+                enqueue_timeout: Duration::from_millis(150),
+                test_control: Some(control),
+            },
+        )
+        .expect("open"),
+    );
+    let mut release = ReleaseOnDrop::new(release_tx);
+    backend
+        .register_graph("g", "g", GraphType::Global)
+        .await
+        .expect("register graph");
+    let shard = backend.shard_for("g");
+    let stats = shard.stats.clone();
+
+    // The writer takes the first command off the channel and parks at the gate;
+    // the second fills the capacity-1 channel.
+    let (first, first_rx) = mutation("g", "ok-a");
+    shard.tx.send(first).expect("writer alive");
+    wait_gate(entered_rx).await;
+    let (second, second_rx) = mutation("g", "ok-b");
+    shard.tx.send(second).expect("room for one queued command");
+
+    // The third request cannot enqueue while the queue is held full: it fails
+    // alone, and the batch around it is untouched.
+    let refused = backend.record_durable("g", &add_node("failed")).await;
+    let message = refused.expect_err("the held-full queue must refuse the one request");
+    assert!(
+        message.starts_with("COMMIT_QUEUE_FULL"),
+        "refusal must carry the registered code: {message}"
+    );
+    assert_eq!(backend.commit_stats().refused_full(), 1);
+
+    release.release().expect("writer still held");
+    first_rx.await.expect("completion").expect("ok-a commits");
+    second_rx.await.expect("completion").expect("ok-b commits");
+    assert!(backend.read_node("g", "ok-a").await.unwrap().is_some());
+    assert!(backend.read_node("g", "ok-b").await.unwrap().is_some());
+    assert!(
+        backend.read_node("g", "failed").await.unwrap().is_none(),
+        "the failed request changes nothing"
+    );
+    assert_eq!(
+        stats.ops(),
+        2,
+        "the batch around the failure commits intact"
+    );
+    backend.shutdown();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// Verifies MEDULLA-ENGINE-PARITY-R001.3: Hot-path proof
 // spec: MEDULLA-ENGINE-PARITY-R001.3
 #[tokio::test(flavor = "multi_thread")]

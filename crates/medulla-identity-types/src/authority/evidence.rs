@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::context::{AuthorityContext, AUTHORITY_PROTOCOL_V1};
+use super::context::{is_recorded_authority_protocol, AuthorityContext};
 use super::replay::{NonceReplayKey, OperationReplayIdentity, ReplayReceipt};
 use medulla_types::{
     contract::AdmissionOutcome, contract::DecisionOutcome, contract::Digest256,
@@ -35,7 +35,7 @@ pub struct SignedAuthorityEnvelopeEvidence {
 
 impl SignedAuthorityEnvelopeEvidence {
     pub fn validate(&self) -> Result<(), String> {
-        if self.protocol_id.as_str() != AUTHORITY_PROTOCOL_V1
+        if !is_recorded_authority_protocol(self.protocol_id.as_str())
             || self.schema_version.as_str() != "signed-authority-envelope.v1"
             || self.signature_algorithm.as_str() != "ed25519"
             || self.canonicalization.as_str() != "canonical-msgpack.v1"
