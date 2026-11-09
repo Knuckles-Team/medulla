@@ -120,12 +120,13 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
         eprintln!("archive REFUSED: failed to copy manifest: {error}");
         std::process::exit(2);
     }
-    for shard in std::fs::read_dir(bundle)
-        .unwrap_or_else(|error| {
-            eprintln!("archive REFUSED: read bundle dir {}: {error}", bundle.display());
-            std::process::exit(2);
-        })
-    {
+    for shard in std::fs::read_dir(bundle).unwrap_or_else(|error| {
+        eprintln!(
+            "archive REFUSED: read bundle dir {}: {error}",
+            bundle.display()
+        );
+        std::process::exit(2);
+    }) {
         let shard = match shard {
             Ok(shard) => shard,
             Err(error) => {
