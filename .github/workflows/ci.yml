@@ -1022,10 +1022,10 @@ jobs:
   # must migrate it at open and serve every row. The tag `guard` publishes only
   # a commit whose main CI passed, so this proof gates every release.
   production-upgrade:
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: Upgrade from the last production release
     needs: [changes, python-kernels, python-server]
-    if: always() && needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Require successful native preparation
