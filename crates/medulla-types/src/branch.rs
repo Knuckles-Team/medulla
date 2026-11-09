@@ -115,7 +115,6 @@ impl BranchCommit {
     /// A plain branch commit carries exactly ONE parent, the prior head. Merge
     /// commits gain their second parent at publication (R007), by replacing the
     /// single-parent record — never by sneaking a second chain in here.
-    #[allow(clippy::too_many_arguments)]
     pub fn single_parent_commit(
         id: impl Into<String>,
         branch: impl Into<String>,
