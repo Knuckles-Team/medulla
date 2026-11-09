@@ -440,3 +440,9 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T422 [US4] MEDULLA-FEDERATED-QUERY-R733 UQL aggregates rows by key: the GROUP stage. Size: M, 2 PRs, 6 hours.
 - [ ] T423 [US4] MEDULLA-FEDERATED-QUERY-R734 UQL orders and pages rows: the ORDER and SKIP stages. Size: M, 1 PR, 5 hours.
 - [ ] T424 [US4] MEDULLA-FEDERATED-QUERY-R735 UQL reads edges as rows: the EDGES source. Size: M, 1 PR, 5 hours.
+- [ ] T425 [US1] MEDULLA-FEDERATED-QUERY-R736 Query-aware evidence forest for context selection (rollup).
+- [ ] T426 [US1] MEDULLA-FEDERATED-QUERY-R736.1 Model: candidate graph, scores and forest.
+- [ ] T427 [US1] MEDULLA-FEDERATED-QUERY-R736.2 Behavior: expand seeds and score candidates.
+- [ ] T428 [US1] MEDULLA-FEDERATED-QUERY-R736.3 Behavior: select a forest under a token budget.
+- [ ] T429 [US1] MEDULLA-FEDERATED-QUERY-R736.4 Wiring: the retrieval round returns the forest.
+- [ ] T430 [US1] MEDULLA-FEDERATED-QUERY-R736.5 Hot-path proof and benchmark: forest quality and cost.
