@@ -89,8 +89,6 @@ repos:
   # One spec check: standard, decomposition, status computed at read time, commit trailers.
   - id: spec
     stages: [pre-push, manual]
-  - id: spec-templates
-    stages: [pre-push, manual]
 - repo: https://github.com/jendrikseipp/vulture
   rev: b0f67ba0044693aa9ec0d38fe460590facc98004 # v2.16
   hooks:
@@ -435,17 +433,6 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
-  - id: registry-test-ownership
-    name: Every tracked tests/ file is owned in the component registry
-    entry: cargo xtask registry-test-ownership
-    language: system
-    # The scanner's complete input universe is the tracked tests/ tree, the
-    # registry/tool configuration it reads, and the scanner itself. A new test
-    # under tests/ still selects it, while unrelated Rust/docs changes do not
-    # spend a full pass.
-    files: ^(tests/|architecture/component-registry\.yml$|tools/xtask/src/registry_test_ownership\.rs$|\.config/pre-commit\.yaml$|pyproject\.toml$|uv\.lock$|\.python-version$)
-    pass_filenames: false
     stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: durable-table-registration-push
     name: Every durable table is in the owner registry, manifest and census
