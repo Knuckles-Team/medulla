@@ -85,7 +85,7 @@ impl SemanticIndexServerAdapter {
         self.authorize_binding_worker(binding, authority)?;
         self.service
             .subscribe_stage_consumer(authority.agent_id())
-            .map_err(|error| crate::semantic_index::semantic_failure_message(&error).to_string())
+            .map_err(|error| super::semantic_failure_message(&error).to_string())
     }
 
     /// Claim a bounded page from the existing durable semantic outbox. The
@@ -100,6 +100,6 @@ impl SemanticIndexServerAdapter {
         self.authorize_binding_worker(binding, authority)?;
         self.service
             .claim_stage_leases(authority.agent_id(), budget)
-            .map_err(|error| crate::semantic_index::semantic_failure_message(&error).to_string())
+            .map_err(|error| super::semantic_failure_message(&error).to_string())
     }
 }
