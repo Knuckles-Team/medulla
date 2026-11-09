@@ -723,3 +723,26 @@ def test_platform_only_code_declares_its_platform_crates():
             if module in used and f"{package} =" not in declared:
                 missing.append((crate.name, package))
     assert not missing, missing
+
+
+def test_source_distribution_publishes_after_every_required_wheel():
+    # A version must never be source-only on PyPI: an installer on a platform
+    # still waiting for its wheel would build from source instead.
+    jobs = yaml.safe_load(
+        (REPO / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    )["jobs"]
+    assert not any(
+        "publish-distribution" in str(step.get("uses", ""))
+        for step in jobs["build-sdist"]["steps"]
+    )
+    names = [step.get("name", "") for step in jobs["verify-pypi"]["steps"]]
+    wheels = names.index("Require the Linux and Windows wheels")
+    sdist = names.index("Publish the source distribution to PyPI")
+    assert sdist > wheels
+
+
+def test_build_backend_lock_has_a_windows_path():
+    # The source build must run on every supported OS (constitution XXX).
+    source = (REPO / "build_backend.py").read_text(encoding="utf-8")
+    assert "msvcrt.locking" in source
+    assert "require POSIX file locking" not in source

@@ -90,4 +90,4 @@ medulla-work-types = { path = "../medulla-work-types", features = ["test-support
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture", "redb"] }

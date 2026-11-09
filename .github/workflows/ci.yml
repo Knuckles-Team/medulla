@@ -782,6 +782,12 @@ jobs:
         if: always()
         run: *medulla-validation-compiler-cache-stats
 
+      # Every crate builds alone with its own default features. A workspace
+      # build unifies features and hides a crate that leans on a neighbour.
+      - name: Every crate builds alone
+        if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+        run: cargo --locked xtask crate-isolation
+
   gates-storage:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 30 || 60 }}
     name: gates (storage crate)
