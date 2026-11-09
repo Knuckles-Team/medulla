@@ -3,6 +3,7 @@
 use medulla_server::*;
 use medulla_server_api::state::ServerState;
 use medulla_server_cdc::cdc::CdcStateExt;
+#[cfg(feature = "federation")]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 
 use medulla_protocol_types::protocol::GraphType;
@@ -1863,6 +1864,27 @@ async fn test_cypher_match_returns_rows() {
     let pair: Vec<serde_json::Value> = rmp_serde::from_slice(&qr2.rows[0]).unwrap();
     assert_eq!(pair[0]["id"].as_str(), Some("alice"));
     assert_eq!(pair[1]["id"].as_str(), Some("bob"));
+}
+
+
+/// The request reached the not-built catch-all: the method's feature is off in this build.
+#[cfg(any(
+    not(feature = "cypher"),
+    not(feature = "reasoning"),
+    not(feature = "query"),
+    all(feature = "epistemic", not(feature = "evidence-graph"))
+))]
+fn assert_not_built(resp: &Response, label: &str) {
+    assert!(
+        resp.error.as_deref() == Some("METHOD_NOT_YET_SERVED")
+            && resp
+                .error_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("not available in this server build")),
+        "{label}: expected the not-built catch-all, got: ok={:?} err={:?}",
+        resp.result,
+        resp.error
+    );
 }
 
 /// Feature-gating contract for the Cypher surface (CONCEPT:MEDULLA-KG.query.dep-free-behind): with the
