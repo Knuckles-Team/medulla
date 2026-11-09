@@ -6,6 +6,7 @@ use medulla_resource_store::redb_store::capacity_lease;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
 use medulla_store::redb_store::NODES;
+#[cfg(feature = "matview")]
 use medulla_store::redb_store::PLAN_MATVIEWS;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
