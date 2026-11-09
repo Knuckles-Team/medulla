@@ -1851,55 +1851,52 @@ pub fn verify_multisig_mutation_signatures(
 }
 
 #[cfg(test)]
-// ── issuer material rotation (MEDULLA-IDENTITY-R003.6) ─────────────────────
-//
-// A mode transition's commit records the new `issuer_kid_current` in the
-// identity store; the serving handler then rotates the issuer material to
-// that key. A crash between the commit and the rotation leaves the loaded
-// issuer behind the stored one; at boot the stored config is authoritative,
-// so the rotation a crash interrupted is finished there.
-
-/// The issuer's current signing key id, as loaded from the deployment.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IssuerMaterial {
-    kid: String,
-}
-
-impl IssuerMaterial {
-    /// The material loaded from the deployment's current issuer key.
-    pub fn loaded(kid: impl Into<String>) -> Self {
-        Self { kid: kid.into() }
-    }
-
-    /// The key id the material currently signs with.
-    pub fn kid(&self) -> &str {
-        &self.kid
-    }
-
-    /// Rotate the material to `kid`. Idempotent per epoch: a rotation to
-    /// the key already held changes nothing and reports no change.
-    pub fn rotate(&mut self, kid: impl Into<String>) -> bool {
-        let kid = kid.into();
-        if kid == self.kid {
-            return false;
-        }
-        self.kid = kid;
-        true
-    }
-
-    /// Boot reconciliation: the committed transition recorded
-    /// `issuer_kid_current`; if it names a different key than the loaded
-    /// material, a crash interrupted the rotation after the commit, so
-    /// finish it now. Reports whether a rotation was applied.
-    pub fn finish_interrupted_rotation(&mut self, issuer_kid_current: Option<&str>) -> bool {
-        issuer_kid_current.is_some_and(|kid| self.rotate(kid))
-    }
-}
-
 mod tests {
-    /// Verifies MEDULLA-DURABLE-KERNEL-R750.750.1: The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
-    // spec: MEDULLA-DURABLE-KERNEL-R750.750.1
-    #[test]
+    // ── issuer material rotation (MEDULLA-IDENTITY-R003.6) ─────────────────────
+    //
+    // A mode transition's commit records the new `issuer_kid_current` in the
+    // identity store; the serving handler then rotates the issuer material to
+    // that key. A crash between the commit and the rotation leaves the loaded
+    // issuer behind the stored one; at boot the stored config is authoritative,
+    // so the rotation a crash interrupted is finished there.
+
+    /// The issuer's current signing key id, as loaded from the deployment.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct IssuerMaterial {
+        kid: String,
+    }
+
+    impl IssuerMaterial {
+        /// The material loaded from the deployment's current issuer key.
+        pub fn loaded(kid: impl Into<String>) -> Self {
+            Self { kid: kid.into() }
+        }
+
+        /// The key id the material currently signs with.
+        pub fn kid(&self) -> &str {
+            &self.kid
+        }
+
+        /// Rotate the material to `kid`. Idempotent per epoch: a rotation to
+        /// the key already held changes nothing and reports no change.
+        pub fn rotate(&mut self, kid: impl Into<String>) -> bool {
+            let kid = kid.into();
+            if kid == self.kid {
+                return false;
+            }
+            self.kid = kid;
+            true
+        }
+
+        /// Boot reconciliation: the committed transition recorded
+        /// `issuer_kid_current`; if it names a different key than the loaded
+        /// material, a crash interrupted the rotation after the commit, so
+        /// finish it now. Reports whether a rotation was applied.
+        pub fn finish_interrupted_rotation(&mut self, issuer_kid_current: Option<&str>) -> bool {
+            issuer_kid_current.is_some_and(|kid| self.rotate(kid))
+        }
+    }
+
     // spec: MEDULLA-IDENTITY-R003.6
     #[test]
     fn crash_between_commit_and_rotation_is_finished_at_boot() {
@@ -1921,6 +1918,9 @@ mod tests {
         assert_eq!(fresh.kid(), "kid-c");
     }
 
+    /// Verifies MEDULLA-DURABLE-KERNEL-R750.750.1: The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
+    // spec: MEDULLA-DURABLE-KERNEL-R750.750.1
+    #[test]
     fn dispatch_carrier_verifies_and_any_changed_field_refuses() {
         use medulla_work_types::agent_turn::AgentTurnEnvelope;
         let envelope = AgentTurnEnvelope {
