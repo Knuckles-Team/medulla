@@ -41,8 +41,8 @@ use tokio::sync::RwLock;
 
 use crate::semantic_index_runtime::open_semantic_service;
 use crate::semantic_index_runtime::semantic_cursor_secret;
-use crate::semantic_index_runtime::SemanticIndexServerAdapter;
 use crate::semantic_index_runtime::semantic_failure_message;
+use crate::semantic_index_runtime::SemanticIndexServerAdapter;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::carrier::CarrierAuthority;
@@ -270,7 +270,6 @@ where
 pub(crate) fn semantic_failure_response(req_id: u64, error: SemanticCodeError) -> Response {
     Response::err(req_id, semantic_failure_message(&error))
 }
-
 
 pub(super) fn reply<M, T>(req_id: u64, result: Result<T, Response>) -> Response
 where
