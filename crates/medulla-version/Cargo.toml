@@ -1,6 +1,6 @@
 [package]
 name = "medulla-version"
-version = "3.4.0-dev"
+version = "3.3.2"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
 description = "The single engine release version every crate reports (Health, store migration journal, job lineage, backup manifests)."

@@ -13,6 +13,20 @@ use medulla_types::{
 pub const AUTHORITY_CONTEXT_SCHEMA_V1: &str = "authority-context.v1";
 pub const AUTHORITY_PROTOCOL_V1: &str = "au-medulla.query.v1";
 
+/// The authority protocol id that releases before 3.0 signed every record with.
+///
+/// The protocol id is part of each record's canonical digest, so a stored
+/// record cannot be rewritten to the current id. A persisted record keeps
+/// validating under the id it was signed with. This build never mints it: a new
+/// write passes [`AuthorityContext::validate_new`], which accepts only
+/// [`AUTHORITY_PROTOCOL_V1`].
+pub const PRE_RENAME_AUTHORITY_PROTOCOL: &str = "au-eg.query.v1";
+
+/// Whether `protocol` is an id a persisted authority record may carry.
+pub fn is_recorded_authority_protocol(protocol: &str) -> bool {
+    protocol == AUTHORITY_PROTOCOL_V1 || protocol == PRE_RENAME_AUTHORITY_PROTOCOL
+}
+
 /// A materialized scope derived from verified authority. Parent scopes must be
 /// sorted and unique so equal authority never has multiple byte spellings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,6 +132,16 @@ pub struct AuthorityContext {
 }
 
 impl AuthorityContext {
+    /// Validate a context this build is about to mint into a new write. A new
+    /// write carries only the current protocol id; [`Self::validate`] also
+    /// accepts the id a persisted record was signed with.
+    pub fn validate_new(&self) -> Result<(), String> {
+        if self.protocol_id.as_str() != AUTHORITY_PROTOCOL_V1 {
+            return Err("new authority context protocol must be au-medulla.query.v1".into());
+        }
+        self.validate()
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         self.validate_header()?;
         self.authority_scope.validate()?;
@@ -184,7 +208,7 @@ impl AuthorityContext {
         if self.schema_version.as_str() != AUTHORITY_CONTEXT_SCHEMA_V1 {
             return Err("authority context schema must be authority-context.v1".into());
         }
-        if self.protocol_id.as_str() != AUTHORITY_PROTOCOL_V1 {
+        if !is_recorded_authority_protocol(self.protocol_id.as_str()) {
             return Err("authority context protocol must be au-medulla.query.v1".into());
         }
         Ok(())

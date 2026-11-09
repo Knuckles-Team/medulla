@@ -387,6 +387,8 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 | Graph listing survives a restart and a patch upgrade | `MEDULLA-DURABLE-KERNEL-R861.2` | `tests/test_upgrade_store_listing.py::test_reopened_store_lists_graphs_for_the_stored_policy` |
 | Engine migrates an older supported store at open | `MEDULLA-DURABLE-KERNEL-R070.1` | `crates/medulla-persistence-ops/src/store_upgrade/auto_migrate_tests.rs::an_interrupted_migration_resumes_at_the_next_open` and the other tests of that file |
 | Previous-patch store migrates and serves at open | `MEDULLA-DURABLE-KERNEL-R070.2` | `tests/test_store_auto_migrate.py::test_open_migrates_a_previous_patch_store_and_serves` |
+| Persisted authority records keep their signed protocol id | `MEDULLA-DURABLE-KERNEL-R070.3` | `crates/medulla-identity-types/src/authority/tests.rs::a_record_signed_under_the_pre_rename_protocol_still_validates` |
+| Last production release store migrates and serves | `MEDULLA-DURABLE-KERNEL-R070.4` | `tests/test_store_upgrade_from_production.py::test_a_production_store_migrates_and_serves_with_data_intact` |
 | Copied store or bundle restores onto new files (rollup) | `MEDULLA-DURABLE-KERNEL-R862` | Rollup: satisfied when the test of every child passes. |
 | Restore reads bundle sources by content | `MEDULLA-DURABLE-KERNEL-R862.1` | Copied-bundle restore unit test (not yet written; see #709). |
 | Explicit rebind of a copied data directory | `MEDULLA-DURABLE-KERNEL-R862.2` | `store-upgrade rebind` command tests (not yet written; see #709). |

@@ -654,6 +654,7 @@ impl MutationEnvelope {
             context_digest: Digest256::from_bytes([0_u8; 32]),
         };
         authority.context_digest = authority.recompute_context_digest()?;
+        authority.validate_new()?;
         let envelope = OperationEnvelope {
             authority,
             method: parts.method,

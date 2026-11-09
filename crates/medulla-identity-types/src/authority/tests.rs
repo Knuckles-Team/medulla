@@ -319,3 +319,61 @@ fn extract_and_audit_require_stable_idempotency() {
         assert!(value.validate().is_err());
     }
 }
+
+/// A context signed under the pre-rename protocol id, as releases before 3.0
+/// stored it: same fields, digest recomputed over that id.
+fn pre_rename_context() -> AuthorityContext {
+    let mut value = context(3, "request:1", 100);
+    value.protocol_id = ProtocolId::new(PRE_RENAME_AUTHORITY_PROTOCOL).unwrap();
+    value.context_digest = value.recompute_context_digest().unwrap();
+    value
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R070.3
+#[test]
+fn a_record_signed_under_the_pre_rename_protocol_still_validates() {
+    let context = pre_rename_context();
+    assert!(context.validate().is_ok());
+    let operation = operation(&context, digest(9));
+    let nonce = NonceReplayKey::from_context(&context).unwrap();
+    assert_eq!(
+        operation.protocol_id.as_str(),
+        PRE_RENAME_AUTHORITY_PROTOCOL
+    );
+    let authority = verified(context, &operation, &nonce);
+    assert!(authority
+        .validate_evidence_bindings(&operation, &nonce)
+        .is_ok());
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R070.3
+#[test]
+fn the_protocol_id_stays_bound_into_the_record_digests() {
+    let current = context(3, "request:1", 100);
+    let pre_rename = pre_rename_context();
+    assert_ne!(current.context_digest, pre_rename.context_digest);
+    // Relabelling a stored record to the current id breaks its digest.
+    let mut relabelled = pre_rename.clone();
+    relabelled.protocol_id = ProtocolId::new(AUTHORITY_PROTOCOL_V1).unwrap();
+    assert!(relabelled.validate().is_err());
+    // One evidence aggregate never mixes the two ids.
+    let operation = operation(&current, digest(9));
+    let nonce = NonceReplayKey::from_context(&pre_rename).unwrap();
+    let mut authority = verified(current, &operation, &nonce);
+    authority.evidence_digest = authority.recompute_evidence_digest().unwrap();
+    assert!(authority
+        .validate_evidence_bindings(&operation, &nonce)
+        .is_err());
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R070.3
+#[test]
+fn a_new_write_accepts_only_the_current_protocol() {
+    assert!(context(3, "request:1", 100).validate_new().is_ok());
+    assert!(pre_rename_context().validate_new().is_err());
+    let mut unknown = context(3, "request:1", 100);
+    unknown.protocol_id = ProtocolId::new("au-other.query.v1").unwrap();
+    unknown.context_digest = unknown.recompute_context_digest().unwrap();
+    assert!(unknown.validate().is_err());
+    assert!(!is_recorded_authority_protocol("au-other.query.v1"));
+}

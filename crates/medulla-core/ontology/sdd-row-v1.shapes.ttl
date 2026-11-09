@@ -1,0 +1,64 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Row-level shapes that mirror the spec-standard checks. A violation is a
+# report entry, never an automatic edit.
+
+:RowBoundTestShape a sh:NodeShape ;
+    sh:description "A row that is not a rollup parent has at least one bound test." ;
+    sh:name "Row Bound Test Shape" ;
+    sh:targetClass :Requirement ;
+    sh:property [ sh:path :boundTest ;
+            sh:minCount 1 ;
+            sh:message "ROW_TEST_UNBOUND: the row has no bound test." ] .
+
+:RowSeamShape a sh:NodeShape ;
+    sh:description "A seam is named on both sides: a row with a provider side has a consumer side, and the reverse." ;
+    sh:name "Row Seam Shape" ;
+    sh:targetClass :Requirement ;
+    sh:sparql [ a sh:SPARQLConstraint ;
+            sh:message "SEAM_SIDE_MISSING: the seam is named on one side only." ;
+            sh:select """SELECT $this WHERE {
+                { $this :seamProvider ?p . FILTER NOT EXISTS { $this :seamConsumer ?c } }
+                UNION
+                { $this :seamConsumer ?c . FILTER NOT EXISTS { $this :seamProvider ?p } } }""" ] .
+
+:RowDependsOnShape a sh:NodeShape ;
+    sh:description "Every Depends on target is a row that exists." ;
+    sh:name "Row Depends On Shape" ;
+    sh:targetClass :Requirement ;
+    sh:property [ sh:path :dependsOnRow ;
+            sh:class :Requirement ;
+            sh:message "DEPENDS_ON_UNRESOLVED: a Depends on target is not a row." ] .
+
+:RowLandedShape a sh:NodeShape ;
+    sh:description "A LANDED or VERIFIED row has at least one commit." ;
+    sh:name "Row Landed Shape" ;
+    sh:targetClass :Requirement ;
+    sh:sparql [ a sh:SPARQLConstraint ;
+            sh:message "LANDED_WITHOUT_COMMIT: the row is LANDED or VERIFIED and no commit carries its Spec trailer." ;
+            sh:select """SELECT $this WHERE {
+                $this :rowStatus ?s . ?s a ?k .
+                FILTER (?k IN (:LandedStatus, :VerifiedStatus))
+                FILTER NOT EXISTS { $this :implementedByCommit ?c } }""" ] .
+
+:RowVerifiedShape a sh:NodeShape ;
+    sh:description "A VERIFIED row names a bound test that exists." ;
+    sh:name "Row Verified Shape" ;
+    sh:targetClass :Requirement ;
+    sh:sparql [ a sh:SPARQLConstraint ;
+            sh:message "VERIFIED_WITHOUT_TEST: the row is VERIFIED and its bound test does not exist." ;
+            sh:select """SELECT $this WHERE {
+                $this :rowStatus ?s . ?s a :VerifiedStatus .
+                FILTER NOT EXISTS { $this :verifiedBy ?t } }""" ] .
+
+:CommitHashShape a sh:NodeShape ;
+    sh:description "A commit that implements a row has one 40-character hash." ;
+    sh:name "Commit Hash Shape" ;
+    sh:targetClass :Commit ;
+    sh:property [ sh:path :commitHash ;
+            sh:maxCount 1 ;
+            sh:datatype xsd:string ;
+            sh:pattern "^[0-9a-f]{40}$" ;
+            sh:message "commitHash is one 40-character hexadecimal hash." ] .
