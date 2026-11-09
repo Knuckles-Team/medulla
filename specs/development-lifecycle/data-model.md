@@ -50,3 +50,7 @@ The derived stage is not a record. `derive_stage` computes it on each read (R019
 ### State machine fields
 
 - `DefectMachine`. States: `New`, `Triaged`, `Fixing`, `Fixed`, `Verified`, `Closed`, `Rejected`. Persisted state: `status` (enum `DefectStatus`, `crates/medulla-source-types/src/lifecycle.rs:256`).
+
+## Row-level spec vocabulary (R014.10)
+
+A spec row is a `:Requirement`. Its computed state is a `:RowStatus` (`:SpecifiedStatus`, `:LandedStatus`, `:VerifiedStatus`). A row links to rows it needs by `dependsOnRow`. It links to the provider and consumer `:SeamSide` of each seam. It links to its `:BoundTest` by `boundTest`, and by `verifiedBy` when the test file exists. It links to each `:Commit` by `implementedByCommit`. A `:Commit` carries one `commitHash`. A row links to its `:RefusalCode`, `:ShapeStatement` and `:GlossaryTerm` records. Every new class extends a class that rolls up to the core.
