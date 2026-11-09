@@ -3929,7 +3929,6 @@ components:
       - "tests/test_strip_wheel_executables.py"
       - "tests/test_ontology_package.py"
       - "tests/test_gate_base_ref.py"
-      - "tests/test_check_registry_test_ownership_completeness.py"
       - "tests/test_check_duplication_no_suppression.py"
       - "tests/test_client_capability_contract.py"
       - "tests/test_client_no_auth.py"
