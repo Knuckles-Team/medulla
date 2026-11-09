@@ -23,19 +23,21 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   schedule:
-    # Nightly full validation: main-push runs are often superseded by the next
-    # merge, so this guarantees one complete run of the main-only jobs a day.
+    # Nightly full validation. The full matrix runs only here, on `v*` tag
+    # pushes and on manual dispatch; a pull request and a push to main run the
+    # `ci` job and the light gates only.
     - cron: '17 6 * * *'
   workflow_dispatch:
 
-# One in-flight run per pull request: a newer push supersedes the older run.
-# Runs on main, the nightly schedule and manual dispatch queue behind each other
-# and always finish, so every merged commit gets a verdict.
+# One in-flight run per pull request: a newer push supersedes the older run, and
+# a newer push to main supersedes an older main run. The nightly schedule, tags
+# and manual dispatch queue behind each other and always finish.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name == 'schedule' && 'schedule-' || '' }}${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 permissions:
   contents: read
@@ -77,7 +79,7 @@ jobs:
   changes:
     timeout-minutes: 5
     name: Change scope and path gates
-    if: github.event_name != 'pull_request'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.scope.outputs.code }}
@@ -94,8 +96,8 @@ jobs:
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           cargo --locked xtask ci-change-scope --path-gates --event "$EVENT" --base "$BASE" --head "$HEAD" | tee -a "$GITHUB_OUTPUT"
@@ -105,7 +107,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: Security checks
     needs: changes
-    if: always() && github.event_name != 'pull_request'
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,7 +120,7 @@ jobs:
 
       - name: Secret-history scan
         env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
@@ -189,7 +191,7 @@ jobs:
       - name: Save pinned cargo-deny
         if: >-
           needs.changes.outputs.code != 'false' &&
-          github.event_name == 'push' &&
+          github.event_name == 'schedule' &&
           github.ref == 'refs/heads/main' &&
           steps.cargo-deny-cache.outputs.cache-hit != 'true' &&
           steps.cargo-deny-verified.outputs.verified == 'true'
@@ -218,7 +220,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates
     needs: changes
-    if: &medulla-main-only needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
+    if: &medulla-main-only needs.changes.outputs.code == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
     # Pin the libc baseline while ubuntu-latest rolls to newer distributions.
     # Native artifacts must remain executable on supported older Linux hosts.
     runs-on: &medulla-native-validation-runner ubuntu-24.04
@@ -354,7 +356,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (installed wheel)
     needs: changes
-    if: &medulla-packaging-change needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.packaging == 'true')
+    if: &medulla-packaging-change needs.changes.outputs.code == 'true' && ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) || needs.changes.outputs.packaging == 'true')
     runs-on: *medulla-native-validation-runner
     steps:
       - *medulla-gates-checkout
@@ -613,7 +615,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (Whisper real model)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.whisper == 'true')
+    if: needs.changes.outputs.code == 'true' && ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) || needs.changes.outputs.whisper == 'true')
     runs-on: *medulla-native-validation-runner
     steps:
       - *medulla-gates-checkout
@@ -637,7 +639,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 30 || 60 }}
     name: gates (ontology composition)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.ontology == 'true')
+    if: needs.changes.outputs.code == 'true' && ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) || needs.changes.outputs.ontology == 'true')
     runs-on: *medulla-native-validation-runner
     env: *medulla-validation-compiler-cache-backend
     steps:
@@ -1025,7 +1027,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: Upgrade from the last production release
     needs: [changes, python-kernels, python-server]
-    if: needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
+    if: needs.changes.outputs.code == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     steps:
       - name: Require successful native preparation
@@ -1150,7 +1152,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: medulla-tts-piper real-inference tests
     needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.tts == 'true')
+    if: needs.changes.outputs.code == 'true' && ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) || needs.changes.outputs.tts == 'true')
     runs-on: *medulla-native-validation-runner
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1193,7 +1195,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: Go and JavaScript clients
     needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.clients == 'true')
+    if: needs.changes.outputs.code == 'true' && ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')) || needs.changes.outputs.clients == 'true')
     runs-on: ubuntu-latest
     # `shell: bash` runs every step as `bash -eo pipefail`, so no step can hide a
     # failing command behind a later one in a pipe.
@@ -1403,7 +1405,7 @@ jobs:
     name: wheel cache ${{ matrix.name }}
     if: >-
       github.repository == 'Knuckles-Team/medulla'
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && github.event_name == 'schedule'
     runs-on: ${{ matrix.runner }}
     continue-on-error: true
     env:
@@ -1464,7 +1466,7 @@ jobs:
     needs: [light-gates, changes, gates, gates-plan-fuzz, gates-wheel, gates-facade, gates-whisper, gates-variants, gates-crates, gates-storage, gates-pyo3, python-suite, quality-advisory, clippy-release-profiles, security]
     if: >-
       github.repository == 'Knuckles-Team/medulla'
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && github.event_name == 'schedule'
       && needs.gates.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -1537,21 +1539,49 @@ jobs:
   # skips `ci`, and `ci-required` requires `ci` to succeed (MEDULLA-CONTRACT-R053.7).
   pr-scope:
     name: PR scope
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     timeout-minutes: 5
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: read
     outputs:
       code: ${{ steps.scope.outputs.code }}
+      attested: ${{ steps.attest.outputs.attested }}
     steps:
+      # The owner's local gate runs the hooks, tests and type checks on build
+      # hosts and posts a `CI required` success status whose description starts
+      # with `local-ci:` on the exact head commit. That status, from a listed
+      # attester, makes the hosted `ci` job redundant. A status posted by hand
+      # (no `local-ci:` prefix) or by anyone else never skips it.
+      - name: Detect a local-gate attestation on the head commit
+        id: attest
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          ATTESTERS: ${{ vars.MEDULLA_TRAIN_ATTESTERS }}
+        run: |
+          set -euo pipefail
+          attested=false
+          if [[ -n "${ATTESTERS:-}" ]]; then
+            n="$(gh api "repos/${REPO}/commits/${HEAD}/statuses?per_page=100" | jq --arg a "${ATTESTERS}" '[.[] | select(.context == "CI required" and .state == "success" and ((.description // "") | startswith("local-ci:")) and (.creator.login as $c | ($a | split(",") | map(gsub("^\s+|\s+$"; "")) | index($c)) != null))] | length' 2>/dev/null || echo 0)"
+            [[ "${n}" -ge 1 ]] && attested=true
+          fi
+          echo "attested=${attested}" >> "$GITHUB_OUTPUT"
+          echo "local-gate attestation for ${HEAD}: ${attested}"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.attest.outputs.attested != 'true'
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Classify the diff
         id: scope
+        if: steps.attest.outputs.attested != 'true'
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
@@ -1569,12 +1599,12 @@ jobs:
   ci:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 180 || 180 }}
     name: CI
-    if: github.event_name == 'pull_request'
+    if: (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && needs.pr-scope.outputs.attested != 'true'
     needs: pr-scope
     # Same-repository code pull requests run on the warm self-hosted pool
     # (persistent cargo target + local sccache); spec/docs-only and fork pull
     # requests stay on GitHub-hosted.
-    runs-on: ${{ (needs.pr-scope.outputs.code == 'true' && vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
+    runs-on: ${{ (needs.pr-scope.outputs.code == 'true' && vars.MEDULLA_WARM_CI_RUNNER == 'true' && (github.event.pull_request.head.repo.full_name || github.repository) == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1619,8 +1649,8 @@ jobs:
       - name: Scope the diff (changed files, docs-only, affected crates)
         id: scope
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
@@ -1640,7 +1670,7 @@ jobs:
       - name: Classify the change (shared gate-to-class map)
         id: gates-scope
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook change-scope --base-ref "$BASE" --config .config/pre-commit.yaml
       # Spec-only means the shared classifier says spec and no workspace package
       # is selected for the changed paths (MEDULLA-CONTRACT-R053.7.2).
@@ -1730,16 +1760,16 @@ jobs:
       - name: Lint the changed files (pre-commit)
         env:
           SCOPE_SKIP: ${{ steps.spec-scope.outputs.skip-hooks }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: SKIP="lane-guard,cargo-deny-advisories${SCOPE_SKIP:+,$SCOPE_SKIP}" pre-commit run --config .config/pre-commit.yaml --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
       # Whole-repo scans run at pre-push locally, never at commit; PR CI runs
       # them here so every one still gates the merge (MEDULLA-CONTRACT-R053.7.1).
       - name: Whole-repo gates (pre-push stage)
         env:
           SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           WHOLE_REPO_HOOKS: vulture check-bumpversion epistemic-operations-protocol no-version-suffixes universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
         run: |
           set -euo pipefail
@@ -1811,6 +1841,7 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     name: CI required
     needs:
+      - pr-scope
       - ci
       - light-gates
       - changes
@@ -1836,6 +1867,8 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           CI_RESULT: ${{ needs.ci.result }}
+          PR_SCOPE_RESULT: ${{ needs.pr-scope.result }}
+          ATTESTED: ${{ needs.pr-scope.outputs.attested }}
           CODE_SCOPE: ${{ needs.changes.outputs.code }}
           CLIENTS_SCOPE: ${{ needs.changes.outputs.clients }}
           WHISPER_SCOPE: ${{ needs.changes.outputs.whisper }}
@@ -1863,14 +1896,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          # A pull request has one gate: the `CI` job. Everything else is
-          # main / nightly / dispatch only and must be skipped here.
-          if [[ "$EVENT_NAME" == pull_request ]]; then
-            [[ "$CI_RESULT" == success ]] || { echo "CI=$CI_RESULT" >&2; exit 1; }
-            echo "pull-request gate CI passed"
+          # A pull request and a push to main have one gate: the `CI` job.
+          # Everything else is nightly / tag / dispatch only and must be
+          # skipped here. A pull request whose head commit carries the owner's
+          # local-gate attestation skips `CI` (it already ran the same gates).
+          if [[ "$EVENT_NAME" == pull_request || "$EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]]; then
+            if [[ "$ATTESTED" == true && "$CI_RESULT" == skipped && "$PR_SCOPE_RESULT" == success ]]; then
+              echo "pull-request gate satisfied by the local-gate attestation"
+            else
+              [[ "$CI_RESULT" == success ]] || { echo "CI=$CI_RESULT" >&2; exit 1; }
+              echo "CI gate passed"
+            fi
+            if [[ "$EVENT_NAME" == push ]]; then
+              [[ "$LIGHT_GATES_RESULT" == success ]] || { echo "light-gates=$LIGHT_GATES_RESULT" >&2; exit 1; }
+            fi
             exit 0
           fi
-          [[ "$CI_RESULT" == skipped ]] || { echo "CI job ran outside a pull request: $CI_RESULT" >&2; exit 1; }
+          [[ "$CI_RESULT" == skipped ]] || { echo "CI job ran outside a pull request or main push: $CI_RESULT" >&2; exit 1; }
 
           if [[ "$CODE_SCOPE" != true && "$CODE_SCOPE" != false ]]; then
             echo "changes.outputs.code is missing or invalid: ${CODE_SCOPE:-<empty>}" >&2
@@ -1905,9 +1947,9 @@ jobs:
             "language-clients=$LANGUAGE_CLIENTS_RESULT"
             "quality-advisory=$QUALITY_ADVISORY_RESULT"
           )
-          # Main-push gates: required only outside pull requests (the PR branch
-          # above has already exited).
-          if [[ "$EVENT_NAME" != pull_request ]]; then
+          # Nightly / tag / dispatch gates: the PR and main-push branch above
+          # has already exited.
+          if true; then
             results+=("no-auth-uds=$NO_AUTH_UDS_RESULT")
             results+=("production-upgrade=$PRODUCTION_UPGRADE_RESULT")
           fi

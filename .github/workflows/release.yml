@@ -87,11 +87,13 @@ jobs:
         run: |
           set -euo pipefail
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&branch=main" --jq '.total_count')"
-          echo "successful main ci.yml runs for ${SHA}: ${count}"
+          # A successful ci.yml push run for this exact commit counts: the
+          # push to main that landed it, or the `v*` tag push itself.
+          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&per_page=100" --jq '[.workflow_runs[] | select(.head_branch == "main" or (.head_branch | startswith("v")))] | length')"
+          echo "successful main or tag ci.yml runs for ${SHA}: ${count}"
           if [ "${count}" -ge 1 ]; then
             echo "### Guard passed" >> "$GITHUB_STEP_SUMMARY"
-            echo "ci.yml concluded success on main for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "ci.yml concluded success on push to main or the tag for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # The local gate runs the same gates on build hosts and posts a
@@ -110,7 +112,7 @@ jobs:
             echo "No successful main ci.yml run for \`${SHA}\`; dispatched by ${GITHUB_ACTOR}." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "::error::REFUSING to publish: ci.yml has no successful main run and no local-gate attestation for ${SHA}. Wait for main CI, attest it with the local gate, or dispatch with force_untested for an emergency."
+          echo "::error::REFUSING to publish: ci.yml has no successful main or tag run and no local-gate attestation for ${SHA}. Wait for main CI, attest it with the local gate, or dispatch with force_untested for an emergency."
           exit 1
 
   # MEDULLA-CONTRACT-R006.2: every tag requalifies the embedded method codec --
