@@ -507,7 +507,8 @@ def test_ci_concurrency_supersedes_older_runs_per_pr_only() -> None:
     concurrency = doc["concurrency"]
     assert (
         concurrency["cancel-in-progress"]
-        == "${{ github.event_name == 'pull_request' }}"
+        == "${{ github.event_name == 'pull_request' || "
+        "(github.event_name == 'push' && github.ref == 'refs/heads/main') }}"
     )
     group = concurrency["group"]
     assert "github.workflow" in group
@@ -614,6 +615,9 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
     assert guard["permissions"]["actions"] == "read"
     script = "\n".join(step.get("run", "") for step in guard["steps"])
     assert "actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success" in script
+    # Hosted path: a successful push run on main or on the tag itself.
+    assert "&event=push" in script
+    assert '.head_branch == "main" or (.head_branch | startswith("v"))' in script
     assert "force_untested" in str(guard["steps"])
     assert "REFUSING to publish" in script
     # A local-gate attestation counts only from the owner, on the exact commit.
@@ -630,7 +634,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "schedule",
         "workflow_dispatch",
     }
-    assert ci_triggers["push"] == {"branches": ["main"]}
+    assert ci_triggers["push"] == {"branches": ["main"], "tags": ["v*"]}
     assert {"gates", "feature-matrix", "benchmarks", "engine-main-wheel"} <= set(
         ci["jobs"]
     )
@@ -719,3 +723,26 @@ def test_platform_only_code_declares_its_platform_crates():
             if module in used and f"{package} =" not in declared:
                 missing.append((crate.name, package))
     assert not missing, missing
+
+
+def test_source_distribution_publishes_after_every_required_wheel():
+    # A version must never be source-only on PyPI: an installer on a platform
+    # still waiting for its wheel would build from source instead.
+    jobs = yaml.safe_load(
+        (REPO / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    )["jobs"]
+    assert not any(
+        "publish-distribution" in str(step.get("uses", ""))
+        for step in jobs["build-sdist"]["steps"]
+    )
+    names = [step.get("name", "") for step in jobs["verify-pypi"]["steps"]]
+    wheels = names.index("Require the Linux and Windows wheels")
+    sdist = names.index("Publish the source distribution to PyPI")
+    assert sdist > wheels
+
+
+def test_build_backend_lock_has_a_windows_path():
+    # The source build must run on every supported OS (constitution XXX).
+    source = (REPO / "build_backend.py").read_text(encoding="utf-8")
+    assert "msvcrt.locking" in source
+    assert "require POSIX file locking" not in source

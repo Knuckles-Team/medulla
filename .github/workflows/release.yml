@@ -87,11 +87,13 @@ jobs:
         run: |
           set -euo pipefail
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&branch=main" --jq '.total_count')"
-          echo "successful main ci.yml runs for ${SHA}: ${count}"
+          # A successful ci.yml push run for this exact commit counts: the
+          # push to main that landed it, or the `v*` tag push itself.
+          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&per_page=100" --jq '[.workflow_runs[] | select(.head_branch == "main" or (.head_branch | startswith("v")))] | length')"
+          echo "successful main or tag ci.yml runs for ${SHA}: ${count}"
           if [ "${count}" -ge 1 ]; then
             echo "### Guard passed" >> "$GITHUB_STEP_SUMMARY"
-            echo "ci.yml concluded success on main for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "ci.yml concluded success on push to main or the tag for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # The local gate runs the same gates on build hosts and posts a
@@ -110,7 +112,7 @@ jobs:
             echo "No successful main ci.yml run for \`${SHA}\`; dispatched by ${GITHUB_ACTOR}." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "::error::REFUSING to publish: ci.yml has no successful main run and no local-gate attestation for ${SHA}. Wait for main CI, attest it with the local gate, or dispatch with force_untested for an emergency."
+          echo "::error::REFUSING to publish: ci.yml has no successful main or tag run and no local-gate attestation for ${SHA}. Wait for main CI, attest it with the local gate, or dispatch with force_untested for an emergency."
           exit 1
 
   # MEDULLA-CONTRACT-R006.2: every tag requalifies the embedded method codec --
@@ -467,12 +469,6 @@ jobs:
           name: source-distribution-reproduction
           path: dist-sdist-reproduction/*.tar.gz
           if-no-files-found: error
-      - name: Publish the source distribution to PyPI
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        uses: ./.github/actions/publish-distribution
-        with:
-          pattern: dist-sdist/*.tar.gz
-          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
 
   # The Linux x86_64 wheel is built by the immutable reusable workflow above (it
   # cannot hold the PyPI token), so it is published by this job the moment that
@@ -693,6 +689,14 @@ jobs:
             exit 1
           fi
           echo "required wheels present:"; ls -1 dist/*.whl
+      # The source archive publishes last, after every required wheel exists.
+      # Published first, it made a version source-only on PyPI for hours, and
+      # an installer on a platform still waiting for its wheel built from source.
+      - name: Publish the source distribution to PyPI
+        uses: ./.github/actions/publish-distribution
+        with:
+          pattern: dist/*.tar.gz
+          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: '.python-version'

@@ -47,4 +47,5 @@ mod medulla_server_obs_telemetry_snapshot_tests;
 mod medulla_wire_wire_tests;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "query")]
 mod wired_edge_index;

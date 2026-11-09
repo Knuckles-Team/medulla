@@ -268,6 +268,8 @@ fn ordinary_completion_binding_corruption_is_not_legacy_unavailability() {
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R028.6
+// Reads committed batches through the transaction crate, which the `redb` feature brings in.
+#[cfg(feature = "redb")]
 #[test]
 fn ordinary_completion_projection_requires_exact_committed_payload() {
     use medulla_work_types::run_completion::*;
