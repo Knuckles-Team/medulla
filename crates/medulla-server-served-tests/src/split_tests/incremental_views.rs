@@ -229,8 +229,9 @@ async fn send(
     let reply = crate::tests::dispatch_on_heap(state, request(id, COMMONS, method)).await;
     assert!(
         reply.error.is_none(),
-        "request {id} failed: {:?}",
-        reply.error
+        "request {id} failed: {:?}, detail: {:?}",
+        reply.error,
+        reply.error_detail
     );
     reply
 }
