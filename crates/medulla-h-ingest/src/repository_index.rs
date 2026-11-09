@@ -27,6 +27,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
+pub mod delta;
 pub mod ecosystem;
 pub mod enrich;
 pub mod scope_facts;
