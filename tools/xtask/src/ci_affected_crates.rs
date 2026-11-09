@@ -1,15 +1,23 @@
-//! MEDULLA-CONTRACT-R053.7: select the workspace crates a pull request affects and print the cargo runs.
+//! MEDULLA-CONTRACT-R053.7: select the workspace crates a change affects and print the cargo runs.
 //!
-//! `cargo xtask ci-affected-crates <cargo-metadata.json> [--list] < changed-paths`. The metadata
-//! is `cargo metadata --format-version 1 --no-deps`; the changed paths (stdin, one per line) are
-//! repository-relative. The affected set is every workspace package that owns a changed file plus
-//! every package that depends on one of those (normal, dev or build edge, transitively); a change
-//! to a workspace-wide input (`Cargo.lock`, the root manifest, the toolchain or `.cargo/`) affects
-//! every package. Output is one cargo invocation per line, `{tool}` standing for `clippy` or
-//! `nextest`, with the feature profile main CI already uses for that package: the root facade
-//! `--features full`; the pyo3 crates every feature except `python`; the storage crate
-//! `--all-features` with one test thread; every other package `--all-features`. Empty output means
-//! no Rust package is affected.
+//! `cargo xtask ci-affected-crates <cargo-metadata.json> [--list] [--transitive] < changed-paths`.
+//! The metadata is `cargo metadata --format-version 1 --no-deps`; the changed paths (stdin, one per
+//! line) are repository-relative.
+//!
+//! Pull request mode (the default) keeps a pull request to what it changed: clippy and nextest
+//! run on the packages that own a changed file, and the packages that depend on one of those
+//! directly (normal, dev or build edge) are compile-checked only, marked `{checkonly}`. A change
+//! to a workspace-wide input (`Cargo.lock`, the root manifest, the toolchain or `.cargo/`) is one
+//! compile check of the whole workspace. The deeper checks run on main and nightly.
+//!
+//! `--transitive` (main) selects the owners plus every package that depends on them,
+//! transitively, and every package for a workspace-wide input; all of them get clippy and nextest.
+//!
+//! Output is one cargo invocation per line, `{tool}` standing for `clippy` or `nextest` (or
+//! `check` on a `{checkonly}` line), with the feature profile main CI already uses for that
+//! package: the root facade `--features full`; the pyo3 crates every feature except `python`; the
+//! storage crate `--all-features` with one test thread; every other package `--all-features`.
+//! Empty output means no Rust package is affected.
 
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -43,6 +51,7 @@ const OWN_JOB_PACKAGES: [&str; 1] = ["medulla-tts-piper"];
 
 pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
     let list = args.iter().any(|a| a == "--list");
+    let transitive = args.iter().any(|a| a == "--transitive");
     let metadata_path = args.iter().find(|a| !a.starts_with("--")).ok_or(
         "usage: cargo xtask ci-affected-crates <cargo-metadata.json> [--list] < changed-paths",
     )?;
@@ -60,11 +69,32 @@ pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
         .map(String::from)
         .collect();
     let packages = packages(&metadata);
-    let selected = affected(root, &metadata, &changed);
-    let lines = if list {
-        selected
+    let lines = if transitive {
+        let selected = affected(root, &metadata, &changed);
+        if list {
+            selected
+        } else {
+            commands(&packages, &selected)
+        }
     } else {
-        commands(&packages, &selected)
+        match owners(root, &metadata, &changed) {
+            None if list => packages.keys().cloned().collect(),
+            None => vec![WORKSPACE_CHECK.to_string()],
+            Some(owned) => {
+                let dependents = direct_dependents(&metadata, &owned);
+                if list {
+                    owned.into_iter().chain(dependents).collect()
+                } else {
+                    let mut runs = commands(&packages, &owned);
+                    runs.extend(
+                        commands(&packages, &dependents)
+                            .into_iter()
+                            .map(|run| format!("{run} {{checkonly}}")),
+                    );
+                    runs
+                }
+            }
+        }
     };
     for line in lines {
         println!("{line}");
@@ -227,25 +257,24 @@ fn is_root_package_source(path: &str) -> bool {
             && path.ends_with(".rs"))
 }
 
-/// Owning packages of the changed files plus their reverse dependencies.
-pub fn affected(root: &Path, metadata: &Value, changed: &[String]) -> Vec<String> {
+/// The pull request run for a workspace-wide input: compile the whole workspace once.
+pub const WORKSPACE_CHECK: &str = "{tool} --workspace {checkonly}";
+
+/// Packages that own a changed file. `None` when a workspace-wide input changed.
+pub fn owners(root: &Path, metadata: &Value, changed: &[String]) -> Option<Vec<String>> {
     let packages = packages(metadata);
-    let every = || packages.keys().cloned().collect::<Vec<_>>();
     if changed.iter().any(|p| {
-        WORKSPACE_WIDE
-            .iter()
-            .any(|w| p == w || (w.ends_with('/') && p.starts_with(w)))
+        p == "Cargo.toml"
+            || WORKSPACE_WIDE
+                .iter()
+                .any(|w| p == w || (w.ends_with('/') && p.starts_with(w)))
     }) {
-        return every();
+        return None;
     }
     let root_pkg = owner("Cargo.toml", &packages);
     let mut cache = BTreeMap::new();
     let mut seeds: BTreeSet<String> = BTreeSet::new();
     for path in changed {
-        if path == "Cargo.toml" {
-            // The root manifest holds [workspace] and shared dependency versions.
-            return every();
-        }
         match owner(path, &packages) {
             Some(name) if Some(&name) != root_pkg.as_ref() || is_root_package_source(path) => {
                 seeds.insert(name);
@@ -253,6 +282,29 @@ pub fn affected(root: &Path, metadata: &Value, changed: &[String]) -> Vec<String
             _ => seeds.extend(readers(root, path, &packages, &mut cache)),
         }
     }
+    Some(seeds.into_iter().collect())
+}
+
+/// Packages that depend directly on one of `owned`, excluding `owned` itself.
+pub fn direct_dependents(metadata: &Value, owned: &[String]) -> Vec<String> {
+    let packages = packages(metadata);
+    let names: BTreeSet<&String> = packages.keys().collect();
+    let rdeps = reverse_edges(metadata, &names);
+    let mut out: BTreeSet<String> = BTreeSet::new();
+    for name in owned {
+        out.extend(rdeps.get(name).into_iter().flatten().cloned());
+    }
+    out.retain(|n| !owned.contains(n));
+    out.into_iter().collect()
+}
+
+/// Owning packages of the changed files plus their reverse dependencies, transitively (main).
+pub fn affected(root: &Path, metadata: &Value, changed: &[String]) -> Vec<String> {
+    let packages = packages(metadata);
+    let Some(owned) = owners(root, metadata, changed) else {
+        return packages.keys().cloned().collect();
+    };
+    let seeds: BTreeSet<String> = owned.into_iter().collect();
     let names: BTreeSet<&String> = packages.keys().collect();
     let rdeps = reverse_edges(metadata, &names);
     let mut out = seeds.clone();
@@ -404,6 +456,27 @@ mod tests {
         assert_eq!(sel(r, &["src/main.rs"]), ["facade"]);
         assert_eq!(sel(r, &["Cargo.lock"]), all);
         assert_eq!(sel(r, &["Cargo.toml"]), all);
+    }
+
+    #[test]
+    fn pull_request_tests_owners_and_checks_direct_dependents() {
+        let none = Tree::new(&[]);
+        let r = none.path();
+        let own = |changed: &[&str]| {
+            let changed: Vec<String> = changed.iter().map(|c| c.to_string()).collect();
+            owners(r, &meta(), &changed)
+        };
+        assert_eq!(
+            own(&["crates/medulla-types/src/lib.rs"]),
+            Some(vec!["medulla-types".to_string()])
+        );
+        assert_eq!(own(&["Cargo.lock"]), None);
+        assert_eq!(own(&["Cargo.toml"]), None);
+        let dependents = direct_dependents(&meta(), &["medulla-types".to_string()]);
+        assert!(!dependents.contains(&"medulla-types".to_string()));
+        let transitive = sel(r, &["crates/medulla-types/src/lib.rs"]);
+        assert!(dependents.iter().all(|d| transitive.contains(d)));
+        assert_eq!(WORKSPACE_CHECK, "{tool} --workspace {checkonly}");
     }
 
     #[test]
