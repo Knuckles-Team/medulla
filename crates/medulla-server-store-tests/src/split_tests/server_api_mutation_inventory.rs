@@ -1,5 +1,6 @@
 //! Cross-crate check: the server-api mutation ledger against raft's native consensus methods (moved up from
 //! medulla-server-api because it needs medulla-raft; MEDULLA-CONTRACT-R056).
+#[cfg(feature = "raft")]
 use medulla_server_mutation::{mutation::plan, mutation::plan::*};
 
 /// Clustered admission has no deferred mutation family. The union of the
