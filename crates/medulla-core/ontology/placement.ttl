@@ -1,0 +1,43 @@
+# Deployment-placement vocabulary (MEDULLA-PLACEMENT-R001.5).
+#
+# An EG core schema source (`core:placement@1`) declaring the deployment
+# targets offered to placement decisions. Target facts are data, not code:
+# an admin-attached source states per target supportsHa, supportsVolumes,
+# maxReplicas and relativeCost, and the placement decision
+# (MEDULLA-PLACEMENT-R001) evaluates them; the engine hardcodes none of them.
+# The closed four-member target registry (MEDULLA-PLACEMENT-R001.3) matches
+# the option ids; systemd is intentionally absent (ARBORA-DEPLOY-R017.6).
+
+@prefix placement: <http://knuckles.team/kg/placement#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+<http://knuckles.team/kg/placement> a owl:Ontology ;
+    rdfs:label "Deployment placement" ;
+    rdfs:comment "Deployment targets offered to placement decisions: the declared per-target facts the engine evaluates, with no target-specific planner." .
+
+# --- Classes ---------------------------------------------------------------
+
+placement:Target a owl:Class ;
+    rdfs:label "Placement target" ;
+    rdfs:comment "A deployment target a workload may be placed on. Every instance declares the four facts, exactly once each (core:placement shapes)." .
+
+# --- Properties ------------------------------------------------------------
+
+placement:supportsHa a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether the target can serve the placed workload with high availability." .
+placement:supportsVolumes a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether the target supports persistent volumes for the placed workload." .
+placement:maxReplicas a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The maximum replica count the target hosts." .
+placement:relativeCost a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The target's relative cost; feasible targets rank cheapest first, ties by option id." .
