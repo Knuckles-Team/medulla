@@ -42,7 +42,16 @@ fn builds_alone(root: &Path, krate: &str, clippy: bool) -> bool {
     let mut cmd = Command::new("cargo");
     cmd.current_dir(root);
     if clippy {
-        cmd.args(["clippy", "--locked", "-p", krate, "--all-targets", "--", "-D", "warnings"]);
+        cmd.args([
+            "clippy",
+            "--locked",
+            "-p",
+            krate,
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ]);
     } else {
         cmd.args(["check", "--locked", "-p", krate, "--all-targets"]);
     }
@@ -60,7 +69,10 @@ pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
         }
     }
     if failed.is_empty() {
-        println!("crate-isolation: PASS: {} crate(s) each build alone", names.len());
+        println!(
+            "crate-isolation: PASS: {} crate(s) each build alone",
+            names.len()
+        );
         return Ok(());
     }
     Err(format!(
