@@ -63,7 +63,8 @@ env:
   CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
-  # A tag publishes only a commit main CI already passed.
+  # A tag publishes only a commit that main CI passed, or that the owner's
+  # local gate attested with a successful `CI required` status.
   guard:
     name: Require a passing ci.yml run for this commit
     runs-on: ubuntu-latest
@@ -71,6 +72,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      statuses: read
     outputs:
       sha: ${{ steps.guard.outputs.sha }}
     steps:
@@ -81,14 +83,27 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_untested }}
+          LOCAL_GATE_ATTESTER: Knucklessg1
         run: |
           set -euo pipefail
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&branch=main" --jq '.total_count')"
-          echo "successful main ci.yml runs for ${SHA}: ${count}"
+          # A successful ci.yml push run for this exact commit counts: the
+          # push to main that landed it, or the `v*` tag push itself.
+          count="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&event=push&per_page=100" --jq '[.workflow_runs[] | select(.head_branch == "main" or (.head_branch | startswith("v")))] | length')"
+          echo "successful main or tag ci.yml runs for ${SHA}: ${count}"
           if [ "${count}" -ge 1 ]; then
             echo "### Guard passed" >> "$GITHUB_STEP_SUMMARY"
-            echo "ci.yml concluded success on main for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "ci.yml concluded success on push to main or the tag for \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # The local gate runs the same gates on build hosts and posts a
+          # `CI required` success status on the exact commit it tags. Only the
+          # repository owner's status counts.
+          attested="$(gh api "repos/${REPO}/commits/${SHA}/statuses?per_page=100" --jq "[.[] | select(.context == \"CI required\" and .state == \"success\" and .creator.login == \"${LOCAL_GATE_ATTESTER}\")] | length")"
+          echo "local-gate attestations for ${SHA}: ${attested}"
+          if [ "${attested}" -ge 1 ]; then
+            echo "### Guard passed (local gate)" >> "$GITHUB_STEP_SUMMARY"
+            echo "The owner's local gate attested \`${SHA}\` with a successful \`CI required\` status." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           if [ "${FORCE}" = "true" ]; then
@@ -97,7 +112,7 @@ jobs:
             echo "No successful main ci.yml run for \`${SHA}\`; dispatched by ${GITHUB_ACTOR}." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "::error::REFUSING to publish: ci.yml has no successful main run for ${SHA}. Wait for main CI, or dispatch with force_untested for an emergency."
+          echo "::error::REFUSING to publish: ci.yml has no successful main or tag run and no local-gate attestation for ${SHA}. Wait for main CI, attest it with the local gate, or dispatch with force_untested for an emergency."
           exit 1
 
   # MEDULLA-CONTRACT-R006.2: every tag requalifies the embedded method codec --
