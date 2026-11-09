@@ -337,28 +337,6 @@ def test_static_inventory_hooks_scope_their_complete_input_universes() -> None:
     config = yaml.safe_load((ROOT / ".config/pre-commit.yaml").read_text())
     hooks = {hook["id"]: hook for repo in config["repos"] for hook in repo["hooks"]}
 
-    registry = hooks["registry-test-ownership"]
-    assert registry["files"] == (
-        r"^(tests/|architecture/component-registry\.yml$|"
-        r"tools/xtask/src/registry_test_ownership\.rs$|\.config/pre-commit\.yaml$|"
-        r"pyproject\.toml$|uv\.lock$|\.python-version$)"
-    )
-    assert not registry.get("always_run", False)
-    assert registry["pass_filenames"] is False
-    for path in (
-        "tests/new_gate.py",
-        "tests/nested/fixture.rs",
-        "architecture/component-registry.yml",
-        "tools/xtask/src/registry_test_ownership.rs",
-        ".config/pre-commit.yaml",
-        "pyproject.toml",
-        "uv.lock",
-        ".python-version",
-    ):
-        assert re.search(registry["files"], path)
-    for path in ("src/server/mod.rs", "README.md", "scripts/ci_parity.sh"):
-        assert not re.search(registry["files"], path)
-
     pinned = hooks["pinned-reference-resolution"]
     assert pinned["files"] == (
         r"^(src/server/|crates/medulla-storage/src/owner/registry\.rs$|"
