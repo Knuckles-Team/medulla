@@ -175,6 +175,8 @@ impl IdentityStore {
             target: target.map(str::to_string),
             ip_prefix: ip.map(str::to_string),
             detail: String::new(),
+            tenant: stamp.session_tenant.clone(),
+            authorization_digest: None,
         });
     }
 
