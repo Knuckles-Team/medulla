@@ -6337,6 +6337,7 @@ dependencies = [
  "medulla-types",
  "medulla-uql",
  "medulla-wasm",
+ "medulla-work-types",
  "parking_lot",
  "petgraph",
  "proptest",
