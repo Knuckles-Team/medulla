@@ -218,6 +218,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("rdf:read", User, "engine"),
     entry("rdf:write", User, "engine"),
     entry("reasoning:read", User, "engine"),
+    entry("reasoning:run", User, "engine"),
     entry("reasoning:write", User, "engine"),
     entry("record:retire", Admin, "engine"),
     entry("registry:read", User, "engine"),

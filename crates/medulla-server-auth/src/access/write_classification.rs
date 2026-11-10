@@ -468,6 +468,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::FinanceRecordPut { .. }
                 | Method::FinanceAlertRaise { .. }
                 | Method::FinanceFactorRecord { .. }
+                // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert
+                // commits graph nodes through the gateway.
+                | Method::ArgumentMapPut { .. }
         )
     )
 }

@@ -1,4 +1,6 @@
 #[cfg(feature = "query")]
+use super::argument_map::{dispatch_argument_map, is_argument_map_method};
+#[cfg(feature = "query")]
 use super::live_artifact::{dispatch_live_artifact, is_live_artifact_method};
 #[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
@@ -95,6 +97,10 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     if is_live_artifact_method(&method) {
         return dispatch_live_artifact(hctx, method).await;
+    }
+    #[cfg(feature = "query")]
+    if is_argument_map_method(&method) {
+        return dispatch_argument_map(hctx, method).await;
     }
     #[cfg(feature = "query")]
     if is_explain_method(&method) {

@@ -20,6 +20,7 @@ enum Route {
     FinanceRecords,
     WorkflowRegistry,
     SchemaProjections,
+    ArgumentMap,
     Other,
 }
 
@@ -150,6 +151,10 @@ fn is_schema_projections(method: &Method) -> bool {
     matches!(method, Method::SchemaProjections { .. })
 }
 
+fn is_argument_map(method: &Method) -> bool {
+    matches!(method, Method::ArgumentMapPut { .. })
+}
+
 /// A predicate selecting the methods one gateway route owns.
 type RouteMatcher = fn(&Method) -> bool;
 
@@ -172,6 +177,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_finance_record, Route::FinanceRecords),
     (is_workflow_registry, Route::WorkflowRegistry),
     (is_schema_projections, Route::SchemaProjections),
+    (is_argument_map, Route::ArgumentMap),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -193,6 +199,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Lifecycle
         | Route::Import
         | Route::Analytics
+        | Route::ArgumentMap
         | Route::FinanceRecords
         | Route::WorkflowRegistry
         | Route::SchemaProjections => RouteHandler::Admin,
@@ -272,6 +279,7 @@ async fn try_handle_admin(
         Route::WorkflowRegistry => {
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
         }
+        Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
         Route::SchemaProjections => {
             super::super::schema_boundary::handle_boundary_put(ctx, method).await
         }

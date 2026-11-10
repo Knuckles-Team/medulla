@@ -53,6 +53,7 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
 
 /// A method-specific family wins over the wider domain family.
 const METHOD_PREFIXES: &[(&str, &[&str])] = &[
+    ("ArgumentMap", &["AIF_"]),
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     (
         "Source",

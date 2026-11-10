@@ -110,6 +110,9 @@ pub fn apply(core: &GraphCore, m: &Method) {
     if apply_base_graph(core, m) {
         return;
     }
+    if apply_argument_map(core, m) {
+        return;
+    }
     if apply_broker_exchange(core, m) {
         return;
     }
@@ -313,6 +316,85 @@ fn apply_base_embedding(core: &GraphCore, m: &Method) -> bool {
         _ => handled = false,
     }
     handled
+}
+
+/// Argument-map upsert (MEDULLA-FEDERATED-QUERY-R700.3): deterministic replay
+/// of the one atomic batch the staged gateway committed. The logged method
+/// already carries a validated map — `ArgumentMap::checked` is pure
+/// validation, and a refused map commits nothing — so replay is a plain
+/// re-run over the same pre-image: drop the prior projection, then write the
+/// `ArgumentMap` node, its `AifNode` projections and `AIF_EDGE`
+/// relationships in logged order (same ids/property shapes as the
+/// serving-side handler in `medulla-h-graph` `graph_ops::argument_map`).
+fn apply_argument_map(core: &GraphCore, m: &Method) -> bool {
+    let Method::ArgumentMapPut { map_id, map } = m else {
+        return false;
+    };
+    let map_node = format!("argument_map:{map_id}");
+    let aif_node = |aif_id: &str| format!("aif_node:{map_id}:{aif_id}");
+    if let Some(blob) = core.get_node_properties(&map_node) {
+        if let Ok(props) = medulla_types::msgpack::decode_property_object(&blob) {
+            if let Some(json_text) = props
+                .get("json")
+                .and_then(|value| value.as_str())
+                .map(str::to_owned)
+            {
+                if let Ok(previous) = serde_json::from_str::<
+                    medulla_result_types::argument_map::ArgumentMap,
+                >(&json_text)
+                {
+                    for node in &previous.nodes {
+                        core.remove_node(aif_node(&node.node_id));
+                    }
+                }
+            }
+        }
+    }
+    core.remove_node(map_node.clone());
+    let json = match serde_json::to_string(map) {
+        Ok(json) => json,
+        Err(error) => {
+            tracing::warn!(
+                map_id = map_id.as_str(),
+                %error,
+                "ArgumentMapPut replay: map encoding failed"
+            );
+            return true;
+        }
+    };
+    let map_props = serde_json::json!({
+        "type": "ArgumentMap",
+        "map_id": map_id,
+        "json": json,
+    });
+    let _ = core.add_node(
+        map_node.clone(),
+        rmp_serde::to_vec_named(&map_props).unwrap_or_default(),
+    );
+    for node in &map.nodes {
+        let props = serde_json::json!({
+            "type": "AifNode",
+            "aif_id": node.node_id,
+            "kind": node.kind,
+            "text": node.text,
+        });
+        let _ = core.add_node(
+            aif_node(&node.node_id),
+            rmp_serde::to_vec_named(&props).unwrap_or_default(),
+        );
+    }
+    for edge in &map.edges {
+        let props = serde_json::json!({
+            "relationship": "AIF_EDGE",
+            "edge_id": edge.edge_id,
+        });
+        let _ = core.add_edge(
+            aif_node(&edge.from_id),
+            aif_node(&edge.to_id),
+            rmp_serde::to_vec_named(&props).unwrap_or_default(),
+        );
+    }
+    true
 }
 
 #[cfg(feature = "broker")]

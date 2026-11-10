@@ -624,6 +624,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::LiveArtifactPut { .. }
         | Method::LiveArtifactGet { .. }
         | Method::LiveArtifactRefresh { .. }
+        // MEDULLA-FEDERATED-QUERY-R700.3: argument map write; the reads are query-family.
+        | Method::ArgumentMapPut { .. }
+        | Method::ArgumentMapGet { .. }
+        | Method::ArgumentMapEvaluate { .. }
         | Method::GetEdges
         | Method::DsComputeStats { .. }
         | Method::AgentTemplate { .. }

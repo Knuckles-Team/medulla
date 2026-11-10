@@ -577,6 +577,31 @@ $($variants)*
         id: String,
         expected_version: u64,
     },
+
+    // ── Argument maps with a Dung projection (MEDULLA-FEDERATED-QUERY-R700.3) ──
+    /// Create or replace a stored argument map. The interchange document must
+    /// pass `ArgumentMap::checked`; the commit is one atomic batch: the
+    /// `ArgumentMap` node (canonical interchange JSON), one `AifNode` node per
+    /// map node and one `AIF_EDGE` relationship per map edge.
+    ArgumentMapPut {
+        map_id: String,
+        map: medulla_result_types::argument_map::ArgumentMap,
+    },
+
+    /// Read a stored argument map back in interchange spelling.
+    ArgumentMapGet {
+        map_id: String,
+    },
+
+    /// Evaluate the Dung projection of a stored argument map. `semantics` is
+    /// `grounded` or `preferred`; `node_budget` caps the search nodes
+    /// `preferred` explores and defaults to the `argument.node_budget` knob.
+    ArgumentMapEvaluate {
+        map_id: String,
+        semantics: String,
+        #[serde(default)]
+        node_budget: Option<u64>,
+    },
         ]);
     };
 }

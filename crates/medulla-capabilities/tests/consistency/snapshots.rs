@@ -11,6 +11,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "AddSceneObject",
     "AddTriples",
     "AppendStep",
+    // MEDULLA-FEDERATED-QUERY-R700.3: gateway-routed argument-map upsert.
+    "ArgumentMapPut",
     "ApplyChangeEnvelope",
     // A draft becomes ApplyChangeEnvelope(s) at the request boundary, so it
     // carries their mutation, durability, audit and CDC effects.
@@ -261,6 +263,10 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     "GapSettle",
     "WorkOfferPut",
     "RetireSealedRecord",
+    // MEDULLA-FEDERATED-QUERY-R700.3: gateway-routed argument-map upsert; the
+    // staged gateway commits the one atomic batch, replay re-runs it through
+    // `durable_apply::apply_argument_map`.
+    "ArgumentMapPut",
     "ClaimNext",
     "ClaimWorkItem",
     "ClearGraph",
@@ -468,6 +474,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "AddSceneObject",
     "AddTriples",
     "AppendStep",
+    // MEDULLA-FEDERATED-QUERY-R700.3: gateway-routed argument-map upsert.
+    "ArgumentMapPut",
     "ApplyChangeEnvelope",
     // A draft becomes ApplyChangeEnvelope(s) at the request boundary, so it
     // carries their mutation, durability, audit and CDC effects.

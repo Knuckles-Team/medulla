@@ -4,6 +4,9 @@
 
 METHOD_IDS = frozenset(
     {
+        "ArgumentMapPut",
+        "ArgumentMapGet",
+        "ArgumentMapEvaluate",
         "CreateGraph",
         "DeleteGraph",
         "ListGraphs",

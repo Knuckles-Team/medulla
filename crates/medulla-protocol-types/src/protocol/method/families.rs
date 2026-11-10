@@ -45,7 +45,8 @@ impl Method {
             | Self::RemoveEdge { .. }
             | Self::InvalidateEdge { .. }
             | Self::SupersedeEdge { .. }
-            | Self::BatchUpdate { .. } => MethodWriteFamily::GraphElement,
+            | Self::BatchUpdate { .. }
+            | Self::ArgumentMapPut { .. } => MethodWriteFamily::GraphElement,
             Self::KgDelegate { .. }
             | Self::SubmitWorkItem { .. }
             | Self::SubmitWorkItems { .. } => MethodWriteFamily::WorkItemSubmission,
