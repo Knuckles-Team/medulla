@@ -19,11 +19,20 @@
 //! Identical bytes store once in the CAS: re-verifying an already-stored ref,
 //! or a second upload of the same content, returns the same digest and adds
 //! no storage.
+//!
+//! Path-set acceptance (MEDULLA-SCM-R003.1): the accept phase decides, by
+//! the shared `medulla_transaction::occ::disjoint` over the two write-set
+//! footprints built from the path sets, whether the submitted changeset
+//! shares no path with the changesets after `base_head`. Disjoint path sets
+//! land in parallel with no branch-wide lock; an overlap enters the
+//! three-way merge (MEDULLA-BRANCH-MERGE-R004). No second disjointness
+//! check exists on the accept path.
 
 use std::io::Write;
 
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
 use medulla_server_blob::blob::stream::stream_blob_get;
+use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::source_changeset::{ChangesetRefusal, SubmittedBlobRef};
 use sha2::{Digest, Sha256};
 
@@ -148,6 +157,50 @@ pub fn accept_blobs(
         }
     }
     Ok(())
+}
+
+/// The table of the changeset-chain key space: one point key per changed
+/// path.
+const PATH_SET_TABLE: &str = "source_changeset_paths";
+
+/// Build the write-set [`TxnFootprint`] of a changeset path set
+/// (MEDULLA-SCM-R003.1).
+///
+/// Each changed path is a point key in the chain's path table, so two
+/// footprints share a key range exactly when the two changesets touch the
+/// same path. Reads stay empty: a changeset's concurrency claim is the set
+/// of paths it writes.
+fn path_set_footprint(paths: &[String]) -> TxnFootprint {
+    TxnFootprint {
+        snapshot_seq: 0,
+        reads: Vec::new(),
+        writes: paths
+            .iter()
+            .map(|path| KeyRange::point(PATH_SET_TABLE, path.as_bytes()))
+            .collect(),
+    }
+}
+
+/// Path-set acceptance (MEDULLA-SCM-R003.1): `true` when the submitted
+/// changeset's path set shares no path with any changeset after `base_head`.
+///
+/// The decision is the shared `medulla_transaction::occ::disjoint` over the
+/// two write-set footprints built from the path sets — the only
+/// disjointness check on the accept path. Disjoint path sets land in
+/// parallel with no branch-wide lock; an overlap enters the three-way merge
+/// of MEDULLA-BRANCH-MERGE-R004 per overlapping path, so the engine never
+/// rebases silently.
+pub fn path_set_disjoint(submitted: &[String], since_base: &[Vec<String>]) -> bool {
+    let since = TxnFootprint {
+        snapshot_seq: 0,
+        reads: Vec::new(),
+        writes: since_base
+            .iter()
+            .flat_map(|paths| paths.iter())
+            .map(|path| KeyRange::point(PATH_SET_TABLE, path.as_bytes()))
+            .collect(),
+    };
+    medulla_transaction::occ::disjoint(&path_set_footprint(submitted), &since)
 }
 
 #[cfg(test)]
@@ -304,5 +357,73 @@ mod tests {
             ),
             Err(ChangesetRefusal::BlobDigestMismatch)
         );
+    }
+
+    // spec: MEDULLA-SCM-R003.1
+    #[test]
+    fn disjoint_path_sets_are_disjoint_and_overlapping_sets_are_not() {
+        // Two changesets sharing no path range are disjoint: both land
+        // with no branch-wide lock.
+        assert!(path_set_disjoint(
+            &["src/a.rs".into(), "docs/b.md".into()],
+            &[vec!["src/c.rs".into()]]
+        ));
+        // An overlap on one path is not: it enters the three-way merge.
+        assert!(!path_set_disjoint(
+            &["src/a.rs".into()],
+            &[vec!["src/a.rs".into()]]
+        ));
+        // The overlap may sit in any changeset after the base.
+        assert!(!path_set_disjoint(
+            &["src/a.rs".into()],
+            &[vec!["x/y.rs".into()], vec!["src/a.rs".into()]]
+        ));
+        // A fresh base (no changeset after it) is disjoint of any submission.
+        assert!(path_set_disjoint(&["src/a.rs".into()], &[]));
+        // A path is a point key: a directory entry is not its files.
+        assert!(path_set_disjoint(
+            &["src/a.rs".into()],
+            &[vec!["src/".into()]]
+        ));
+    }
+
+    // spec: MEDULLA-SCM-R003.1
+    #[test]
+    fn path_set_footprint_feeds_the_shared_occ_disjoint() {
+        // The decision is the shared `occ::disjoint` over write-set
+        // footprints: point keys in the chain's path table, no reads.
+        let fp = path_set_footprint(&["src/a.rs".to_string(), "src/b.rs".to_string()]);
+        assert_eq!(fp.snapshot_seq, 0);
+        assert_eq!(fp.reads, Vec::<KeyRange>::new());
+        assert_eq!(
+            fp.writes,
+            vec![
+                KeyRange::point(PATH_SET_TABLE, b"src/a.rs"),
+                KeyRange::point(PATH_SET_TABLE, b"src/b.rs"),
+            ]
+        );
+        // The module's decision equals the shared check over the same
+        // construction, on both the disjoint and the overlapping case.
+        let submitted = vec!["src/a.rs".to_string()];
+        let cases: [(Vec<String>, bool); 2] = [
+            (vec!["src/b.rs".to_string()], true),
+            (vec!["src/b.rs".to_string(), "src/a.rs".to_string()], false),
+        ];
+        for (since, expected) in cases {
+            let since_fp = TxnFootprint {
+                snapshot_seq: 0,
+                reads: Vec::new(),
+                writes: since
+                    .iter()
+                    .map(|path| KeyRange::point(PATH_SET_TABLE, path.as_bytes()))
+                    .collect(),
+            };
+            assert_eq!(
+                path_set_disjoint(&submitted, &[since.clone()]),
+                medulla_transaction::occ::disjoint(&path_set_footprint(&submitted), &since_fp),
+                "the decision must equal the shared occ::disjoint verdict"
+            );
+            assert_eq!(path_set_disjoint(&submitted, &[since]), expected);
+        }
     }
 }

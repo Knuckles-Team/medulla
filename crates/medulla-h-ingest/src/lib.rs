@@ -45,7 +45,8 @@ pub mod repository_index;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_batch;
 
-/// Blob phase of source-changeset acceptance (MEDULLA-SCM-R001).
+/// Blob phase and path-set acceptance of source-changeset intake
+/// (MEDULLA-SCM-R001, MEDULLA-SCM-R003.1).
 #[cfg(feature = "blob")]
 pub mod source_changeset;
 
