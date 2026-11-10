@@ -49,8 +49,18 @@ pub const ENRICH_TIMEOUT_MS_BOUNDS: (u64, u64) = (100, 600_000);
 /// Environment key overriding `enrich_timeout_ms` at startup.
 pub const ENV_ENRICH_TIMEOUT_MS: &str = "MEDULLA_ENRICH_TIMEOUT_MS";
 
+/// Default bound of one submitted changeset blob, in bytes
+/// (MEDULLA-SCM-R001).
+pub const DEFAULT_CHANGESET_MAX_BLOB_BYTES: u64 = 134_217_728;
+/// Inclusive bounds of `changeset_max_blob_bytes`.
+pub const CHANGESET_MAX_BLOB_BYTES_BOUNDS: (u64, u64) = (1_048_576, 4_294_967_296);
+
 fn default_enrich_timeout_ms() -> u64 {
     DEFAULT_ENRICH_TIMEOUT_MS
+}
+
+fn default_changeset_max_blob_bytes() -> u64 {
+    DEFAULT_CHANGESET_MAX_BLOB_BYTES
 }
 
 /// The startup value of `enrich_timeout_ms`: the default, or the
@@ -223,6 +233,9 @@ pub struct SchedulerConfig {
     /// Deepest element nesting of a process document.
     #[serde(default = "default_process_document_max_depth")]
     pub process_document_max_depth: u32,
+    /// Largest bytes of one submitted changeset blob (MEDULLA-SCM-R001).
+    #[serde(default = "default_changeset_max_blob_bytes")]
+    pub changeset_max_blob_bytes: u64,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -238,6 +251,7 @@ pub enum InvalidSchedulerConfig {
     HydrationScopeCapOutOfRange,
     HydrationSplitTargetOutOfRange,
     EnrichTimeoutOutOfRange,
+    ChangesetMaxBlobBytesOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
@@ -283,6 +297,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler enrich_timeout_ms must be within [{}, {}]",
                 ENRICH_TIMEOUT_MS_BOUNDS.0, ENRICH_TIMEOUT_MS_BOUNDS.1
+            ),
+            Self::ChangesetMaxBlobBytesOutOfRange => write!(
+                f,
+                "scheduler changeset_max_blob_bytes must be within [{}, {}]",
+                CHANGESET_MAX_BLOB_BYTES_BOUNDS.0, CHANGESET_MAX_BLOB_BYTES_BOUNDS.1
             ),
             Self::HistoryKnobOutOfRange(key) => {
                 write!(f, "{key} is outside its accepted range")
@@ -334,6 +353,11 @@ impl SchedulerConfig {
             .contains(&self.enrich_timeout_ms)
         {
             return Err(InvalidSchedulerConfig::EnrichTimeoutOutOfRange);
+        }
+        if !(CHANGESET_MAX_BLOB_BYTES_BOUNDS.0..=CHANGESET_MAX_BLOB_BYTES_BOUNDS.1)
+            .contains(&self.changeset_max_blob_bytes)
+        {
+            return Err(InvalidSchedulerConfig::ChangesetMaxBlobBytesOutOfRange);
         }
         let history = [
             self.history_max_commits,
@@ -531,6 +555,29 @@ mod tests {
             serde_json::from_str::<SchedulerConfig>(&encoded).unwrap(),
             config
         );
+    }
+
+    // spec: MEDULLA-SCM-R001
+    #[test]
+    fn changeset_max_blob_bytes_defaults_and_bounds() {
+        assert_eq!(config().changeset_max_blob_bytes, 134_217_728);
+        assert_eq!(config().validate(), Ok(()));
+        for (value, expected) in [
+            (1_048_576u64, Ok(())),
+            (4_294_967_296u64, Ok(())),
+            (
+                1_048_575u64,
+                Err(InvalidSchedulerConfig::ChangesetMaxBlobBytesOutOfRange),
+            ),
+            (
+                4_294_967_297u64,
+                Err(InvalidSchedulerConfig::ChangesetMaxBlobBytesOutOfRange),
+            ),
+        ] {
+            let mut candidate = config();
+            candidate.changeset_max_blob_bytes = value;
+            assert_eq!(candidate.validate(), expected, "bound {value}");
+        }
     }
 
     // spec: MEDULLA-PLACEMENT-R002.2

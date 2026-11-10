@@ -313,9 +313,11 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
 
 :verifiedBy a owl:ObjectProperty ;
     rdfs:label "verified by" ;
-    rdfs:comment "Links a Requirement to the BoundTest whose file exists on the default branch." ;
+    rdfs:comment """Links a Requirement to the test that verifies it: the row-level
+    BoundTest whose file exists on the default branch, or the TestCase the
+    verified.binding rule derives (MEDULLA-SDLC-R001.1).""" ;
     rdfs:domain :Requirement ;
-    rdfs:range :BoundTest .
+    rdfs:range :TestCase .
 
 :refusesWith a owl:ObjectProperty ;
     rdfs:label "refuses with" ;
@@ -346,3 +348,115 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
     rdfs:comment "Links a Requirement to each Commit whose Spec trailer names it. The shared implementedBy keeps its SoftwareFeature domain, so this row-grain link is separate." ;
     rdfs:domain :Requirement ;
     rdfs:range :Commit .
+
+# Lifecycle record kinds and edges (MEDULLA-SDLC-R001.1). Release, Deployment and
+# Defect are append-only fact histories: they have no challenger, so they are not
+# revision subjects. The endpoint classes keep their owners — :Requirement here,
+# :Changeset and :GateVerdict in MEDULLA-SCM, :CodeSymbol and :TestCase in the
+# MEDULLA-REPO-INGEST-R600 entities, :RunTrace in the orchestration module, and
+# :Incident in the core foundation — and are referenced, never redeclared.
+# Every class below extends a class that rolls up to the core.
+
+:Release a owl:Class ;
+    rdfs:label "Release" ;
+    rdfs:comment """A published release of one repository: version, ref, changeset head
+    and artifact digests. It contains the changesets after the previous release head
+    up to and including its own head. BFO:GenericallyDependentContinuant.""" ;
+    rdfs:subClassOf bfo:0000031 .
+
+:Deployment a owl:Class ;
+    rdfs:label "Deployment" ;
+    rdfs:comment """One rollout of an image to an environment. It deploys the release
+    whose artifact digest it names; a digest no release names stays unattributed and
+    is never guessed. BFO:Process.""" ;
+    rdfs:subClassOf bfo:0000015 .
+
+:Defect a owl:Class ;
+    rdfs:label "Defect" ;
+    rdfs:comment """A code fault, deduplicated by the digest of its normalized symptom.
+    A defect is not an incident: an incident may raise a defect.
+    BFO:GenericallyDependentContinuant.""" ;
+    rdfs:subClassOf bfo:0000031 .
+
+:implements a owl:ObjectProperty ;
+    rdfs:label "implements" ;
+    rdfs:comment """Lifecycle facet (MEDULLA-SDLC-R001.1): links a CodeSymbol to the
+    Requirement(s) its changeset cites on the default branch. The sdlc_lifecycle
+    module keeps its Spec to CodeChange facet on the shared name; this module
+    carries no rdfs:domain or rdfs:range of its own.""" .
+
+:changes a owl:ObjectProperty ;
+    rdfs:label "changes" ;
+    rdfs:comment "Links a Changeset to each CodeSymbol whose path span it touches." ;
+    rdfs:domain :Changeset ;
+    rdfs:range :CodeSymbol .
+
+:citesRequirement a owl:ObjectProperty ;
+    rdfs:label "cites requirement" ;
+    rdfs:comment "Links a Changeset to each Requirement named in its structured spec_ids." ;
+    rdfs:domain :Changeset ;
+    rdfs:range :Requirement .
+
+:exercises a owl:ObjectProperty ;
+    rdfs:label "exercises" ;
+    rdfs:comment "Links a TestCase to each CodeSymbol it calls." ;
+    rdfs:domain :TestCase ;
+    rdfs:range :CodeSymbol .
+
+:judges a owl:ObjectProperty ;
+    rdfs:label "judges" ;
+    rdfs:comment "Links a GateVerdict to the Changeset it judges." ;
+    rdfs:domain :GateVerdict ;
+    rdfs:range :Changeset .
+
+:producedBy a owl:ObjectProperty ;
+    rdfs:label "produced by" ;
+    rdfs:comment """Lifecycle facet (MEDULLA-SDLC-R001.1): links a Changeset to the
+    RunTrace that produced it. The orchestration module keeps its RunTrace to
+    DurableExecutionUnit facet on the shared name; this module carries no
+    rdfs:domain or rdfs:range of its own.""" .
+
+:affects a owl:ObjectProperty ;
+    rdfs:label "affects" ;
+    rdfs:comment """Lifecycle facet (MEDULLA-SDLC-R001.1): links a Defect to each
+    CodeSymbol it affects. The service-operations module keeps its incident facet
+    on the shared name; this module carries no rdfs:domain or rdfs:range of its
+    own.""" .
+
+:introducedBy a owl:ObjectProperty ;
+    rdfs:label "introduced by" ;
+    rdfs:comment "Links a Defect to the Changeset the bisect names as its culprit." ;
+    rdfs:domain :Defect ;
+    rdfs:range :Changeset .
+
+:fixedBy a owl:ObjectProperty ;
+    rdfs:label "fixed by" ;
+    rdfs:comment "Links a Defect to each Changeset whose structured fixes names it." ;
+    rdfs:domain :Defect ;
+    rdfs:range :Changeset .
+
+:contains a owl:ObjectProperty ;
+    rdfs:label "contains" ;
+    rdfs:comment """Lifecycle facet (MEDULLA-SDLC-R001.1): links a Release to each
+    Changeset after the previous release head up to and including its own head. The
+    core foundation keeps its spatial facet on the shared name; this module carries
+    no rdfs:domain or rdfs:range of its own.""" .
+
+:deploys a owl:ObjectProperty ;
+    rdfs:label "deploys" ;
+    rdfs:comment """Lifecycle facet (MEDULLA-SDLC-R001.1): links a Deployment to the
+    Release whose artifact digest it names. The sdlc_lifecycle module keeps its
+    container-image facet on the shared name; this module carries no rdfs:domain or
+    rdfs:range of its own.""" .
+
+:observedIn a owl:ObjectProperty ;
+    rdfs:label "observed in" ;
+    rdfs:comment "Links an Incident to the Deployment in which it was observed." ;
+    rdfs:domain :Incident ;
+    rdfs:range :Deployment .
+
+:raises a owl:ObjectProperty ;
+    rdfs:label "raises" ;
+    rdfs:comment "Links an Incident to the Defect it raises." ;
+    rdfs:domain :Incident ;
+    rdfs:range :Defect .

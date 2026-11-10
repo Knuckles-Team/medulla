@@ -14,6 +14,9 @@ pub mod asr;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
 
+/// Served ingest queue entry: enqueue maps onto the served task queue with
+/// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
+pub mod ingest_queue;
 /// Producing-rung recording and overwrite resistance for ingest producers
 /// (MEDULLA-DECISION-ENGINE-R080.2).
 pub mod ingestion_rung;
@@ -41,6 +44,10 @@ pub mod repository_index;
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_batch;
+
+/// Blob phase of source-changeset acceptance (MEDULLA-SCM-R001).
+#[cfg(feature = "blob")]
+pub mod source_changeset;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
