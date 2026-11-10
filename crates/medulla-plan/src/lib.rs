@@ -71,6 +71,10 @@ pub mod freshness_router;
 pub mod code_context;
 // MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.
 pub mod corpus_retrieval;
+// MEDULLA-FEDERATED-QUERY-R702.2: search-task synthesis — the multi-hop clue
+// chain, the four linear shortcut detectors and the bounded refinement loop,
+// over the MEDULLA-FEDERATED-QUERY-R702.1 record types of medulla-work-types.
+pub mod search_task;
 
 /// The UQL text front-end (CONCEPT:AU-KG.query.top-nodes-by-degree) — `uql::parse(text) -> wire::Plan`. It
 /// is a pure parser (lexer + recursive descent, NO DataFusion), so it ships in a
