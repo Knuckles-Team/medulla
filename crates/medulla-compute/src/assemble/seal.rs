@@ -130,6 +130,7 @@ fn unsealed(
         derivations: bounded(decided.derivations.clone(), "derivations")?,
         outcome: decided.outcome.clone(),
         why_not: bounded(decided.why_not.clone(), "why_not")?,
+        uniqueness: bounded(decided.uniqueness.clone(), "uniqueness")?,
         record_digest: String::new(),
     })
 }
