@@ -1,6 +1,16 @@
 //! The identity audit trail: a bounded, hash-chained record of every
 //! identity event (§5.2), written in the same durable image as the change it
-//! records. No entry carries a secret, a hash or a sealed value.
+//! records. No entry carries a secret or a sealed value.
+//!
+//! MEDULLA-IDENTITY-R002: an entry may additionally name the tenant the
+//! change was made under and the change of the canonical authorization
+//! digest across the write (before and after the recomputed projection).
+//! Those two fields are recorded beside the chained core (`seq`, `at_ms`,
+//! `actor`, `event`, `target`, `ip_prefix`, `detail`) and are deliberately
+//! NOT part of the chain link: the digest change is only known once the
+//! write's recompute is done, so an already-saved entry may be annotated
+//! after its own save without breaking a successor's `prev` link, and
+//! entries persisted before the fields existed keep verifying unchanged.
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -71,6 +81,23 @@ pub enum IdentityEvent {
     DelegationRevoked,
 }
 
+/// The change of the canonical authorization digest across one identity or
+/// RBAC write: the digest of the durable authorization image before the
+/// write and after its recomputed projection. An empty change (the image
+/// did not move) records equal values; an entry recorded without a recompute
+/// in view leaves the whole field unset.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AuthorizationDigestChange {
+    /// Digest of the authorization image before the write.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Digest of the recomputed authorization image after the write.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+}
+
 /// One tamper-evident entry.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -92,6 +119,14 @@ pub struct IdentityAuditEntry {
     pub prev: String,
     /// sha256 over `prev` and every other field of this entry.
     pub chain: String,
+    /// The tenant the change was made under; `None` for engine-wide events.
+    /// Outside the chain link (see the module docs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tenant: Option<String>,
+    /// The authorization digest change the write produced, if one was
+    /// recorded. Outside the chain link (see the module docs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_digest: Option<AuthorizationDigestChange>,
 }
 
 /// What a caller records; the trail assigns `seq`, `prev` and `chain`.
@@ -103,6 +138,8 @@ pub struct AuditRecord {
     pub target: Option<String>,
     pub ip_prefix: Option<String>,
     pub detail: String,
+    pub tenant: Option<String>,
+    pub authorization_digest: Option<AuthorizationDigestChange>,
 }
 
 #[derive(Serialize)]
@@ -154,6 +191,35 @@ impl AuditTrail {
         self.entries.iter()
     }
 
+    /// The seq of the newest retained entry, if any.
+    pub fn last_seq(&self) -> Option<u64> {
+        self.entries.back().map(|entry| entry.seq)
+    }
+
+    /// Name the tenant and the authorization digest change on every entry
+    /// recorded after `after_seq` (on every entry when `None`). The fields
+    /// are outside the chain link, so this never disturbs a `prev` or
+    /// `chain` value and an already-saved entry may be annotated after its
+    /// own save.
+    pub fn annotate_since(
+        &mut self,
+        after_seq: Option<u64>,
+        tenant: Option<&str>,
+        authorization_digest: Option<AuthorizationDigestChange>,
+    ) {
+        let first = after_seq.map_or(0, |seq| seq + 1);
+        for entry in self.entries.iter_mut() {
+            if entry.seq >= first {
+                if let Some(tenant) = tenant {
+                    entry.tenant = Some(tenant.to_string());
+                }
+                if let Some(change) = &authorization_digest {
+                    entry.authorization_digest = Some(change.clone());
+                }
+            }
+        }
+    }
+
     /// Append one record, rolling the oldest entry off past the bound.
     pub fn append(&mut self, record: AuditRecord) {
         let prev = self
@@ -171,6 +237,8 @@ impl AuditTrail {
             detail: record.detail,
             prev,
             chain: String::new(),
+            tenant: record.tenant,
+            authorization_digest: record.authorization_digest,
         };
         entry.chain = entry.chain_of();
         self.next_seq += 1;
@@ -201,5 +269,69 @@ impl AuditTrail {
             .take(limit)
             .cloned()
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn record(event: IdentityEvent) -> AuditRecord {
+        AuditRecord {
+            at_ms: 1_800_000_000_000,
+            actor: "svc:au".to_string(),
+            event,
+            target: Some("t".to_string()),
+            ip_prefix: None,
+            detail: String::new(),
+            tenant: None,
+            authorization_digest: None,
+        }
+    }
+
+    // spec: MEDULLA-IDENTITY-R002
+    #[test]
+    fn entry_carries_tenant_and_the_authorization_digest_change() {
+        let mut trail = AuditTrail::default();
+        let change = AuthorizationDigestChange {
+            from: Some("a".repeat(128)),
+            to: Some("b".repeat(128)),
+        };
+        let before = trail.last_seq();
+        trail.append(record(IdentityEvent::RbacPolicyChanged));
+        trail.annotate_since(before, Some("tenant:homelab"), Some(change.clone()));
+        let entry = trail.entries().last().unwrap();
+        assert_eq!(entry.tenant.as_deref(), Some("tenant:homelab"));
+        assert_eq!(entry.authorization_digest.as_ref(), Some(&change));
+        assert!(trail.verify().is_ok());
+    }
+
+    // spec: MEDULLA-IDENTITY-R002
+    #[test]
+    fn annotate_since_leaves_older_entries_untouched() {
+        let mut trail = AuditTrail::default();
+        trail.append(record(IdentityEvent::UserCreated));
+        trail.append(record(IdentityEvent::RoleChanged));
+        trail.annotate_since(Some(0), Some("tenant:homelab"), None);
+        let entries: Vec<_> = trail.entries().collect();
+        assert!(entries[0].tenant.is_none());
+        assert_eq!(entries[1].tenant.as_deref(), Some("tenant:homelab"));
+        assert!(trail.verify().is_ok());
+    }
+
+    // spec: MEDULLA-IDENTITY-R002
+    #[test]
+    fn entries_serialized_before_the_r002_fields_still_deserialize_and_verify() {
+        let mut trail = AuditTrail::default();
+        trail.append(record(IdentityEvent::RbacIdentityRegistered));
+        let wire = serde_json::to_string(trail.entries().next().unwrap()).unwrap();
+        assert!(!wire.contains("\"tenant\""));
+        assert!(!wire.contains("\"authorization_digest\""));
+        // A stored entry in the pre-R002 shape deserializes with the new
+        // fields unset and keeps its chain, so an upgraded store verifies.
+        let legacy: IdentityAuditEntry = serde_json::from_str(&wire).unwrap();
+        assert!(legacy.tenant.is_none());
+        assert!(legacy.authorization_digest.is_none());
+        assert_eq!(legacy.chain, legacy.chain_of());
     }
 }

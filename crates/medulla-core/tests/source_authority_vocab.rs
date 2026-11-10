@@ -48,36 +48,46 @@ fn assert_terms(terms: &[(&str, &str)]) {
 // spec: MEDULLA-SRC-AUTH-R001.1
 #[test]
 fn the_authority_terms_are_in_the_core_vocabulary() {
+    let triples = core_vocabulary();
     assert_terms(&[
         ("SourceAuthority", "Class"),
         ("authoritativeSource", "ObjectProperty"),
         ("authorityFor", "ObjectProperty"),
         ("authorityRank", "DatatypeProperty"),
     ]);
+    assert!(domain(&triples, "authoritativeSource", "SourceAuthority"));
+    assert!(domain(&triples, "authorityFor", "SourceAuthority"));
+    assert!(domain(&triples, "authorityRank", "SourceAuthority"));
 }
 
 // spec: MEDULLA-SRC-AUTH-R001.2
 #[test]
 fn the_authority_facet_and_mapping_terms_exist() {
+    let triples = core_vocabulary();
     assert_terms(&[
         ("authorityFacet", "ObjectProperty"),
         ("authorityMapping", "ObjectProperty"),
     ]);
-    assert!(domain(
-        &core_vocabulary(),
-        "authorityMapping",
-        "SourceAuthority"
-    ));
+    assert!(domain(&triples, "authorityFacet", "SourceAuthority"));
+    assert!(domain(&triples, "authorityMapping", "SourceAuthority"));
 }
 
 // spec: MEDULLA-SRC-AUTH-R001.3
 #[test]
 fn the_authority_scope_and_freshness_terms_exist() {
+    let triples = core_vocabulary();
     assert_terms(&[
         ("scopeTenant", "DatatypeProperty"),
         ("scopePartition", "DatatypeProperty"),
         ("freshnessMaxAgeSeconds", "DatatypeProperty"),
     ]);
+    assert!(domain(&triples, "scopeTenant", "SourceAuthority"));
+    assert!(domain(&triples, "scopePartition", "SourceAuthority"));
+    assert!(domain(
+        &triples,
+        "freshnessMaxAgeSeconds",
+        "SourceAuthority"
+    ));
 }
 
 // spec: MEDULLA-SRC-AUTH-R001.4

@@ -502,6 +502,8 @@ impl GovernedLedger {
             target: Some(change_id.to_string()),
             ip_prefix: None,
             detail: String::new(),
+            tenant: None,
+            authorization_digest: None,
         });
     }
 
