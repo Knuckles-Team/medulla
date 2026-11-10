@@ -123,6 +123,7 @@ ANCHOR = re.compile(
 )
 
 
+# spec: MEDULLA-CONTRACT-R052.3
 @pytest.mark.no_engine
 @pytest.mark.spec("MEDULLA-CONTRACT-R052.3")
 def test_shared_contract_anchors_resolve_to_source() -> None:
