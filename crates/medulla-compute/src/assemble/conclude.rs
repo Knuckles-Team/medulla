@@ -13,8 +13,8 @@ use medulla_decision_types::{
     decision::AbstainReason, decision::CandidateFacts, decision::CoverageDerivation,
     decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
     decision::Elimination, decision::EvidenceClass, decision::PremiseRef, decision::ResolutionKind,
-    decision::SlotAssignment, decision::TemplateFacts, decision::Violation, decision::WhyNot,
-    decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
+    decision::SlotAssignment, decision::TemplateFacts, decision::UniquenessProof,
+    decision::Violation, decision::WhyNot, decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
 };
 use medulla_types::contract::BoundedVec;
 
@@ -22,7 +22,7 @@ use super::eliminate::Screened;
 use super::model::Building;
 use super::search::{search, Answer, SolveContext};
 use super::topology::{self, Posed, Question};
-use super::{agent, eliminate, facts, model, template, why_not, AssembleError};
+use super::{agent, eliminate, facts, model, template, uniqueness, why_not, AssembleError};
 use medulla_decision_policy::solve::Verdict;
 
 /// Every record field the decision function computes.
@@ -37,6 +37,7 @@ pub(super) struct Decided {
     pub model: Option<ModelSpec>,
     pub agents: Vec<AgentLibraryEntryDraft>,
     pub graph: Option<AgentGraphDraft>,
+    pub uniqueness: Vec<UniquenessProof>,
 }
 
 /// Whether a verified certificate supports a `Solved` outcome.
@@ -114,13 +115,21 @@ pub(super) fn decide_one(
     };
     let question = question.as_deref();
     match search(&context, &validator)? {
-        Ok(answer) => Ok(solved(
-            &context,
-            question,
-            &ladder.required,
-            eliminated,
-            answer,
-        )),
+        Ok(answer) => {
+            let uniqueness = if template.is_none() && question.is_none() {
+                uniqueness::unique_selection(ladder, &context, &answer)
+            } else {
+                uniqueness::Proofs::default()
+            };
+            Ok(solved(
+                &context,
+                question,
+                &ladder.required,
+                eliminated,
+                answer,
+                &uniqueness,
+            ))
+        }
         Err(reasons) => Ok(abstained(&ladder.required, eliminated, reasons)),
     }
 }
@@ -203,6 +212,7 @@ pub(super) fn abstained(
         model: None,
         agents: Vec::new(),
         graph: None,
+        uniqueness: Vec::new(),
     }
 }
 
@@ -220,6 +230,7 @@ fn solved(
     required: &[RequiredCapability],
     eliminated: Vec<Elimination>,
     answer: Answer,
+    uniqueness: &uniqueness::Proofs,
 ) -> Decided {
     let chosen = context.chosen(&answer.selected);
     let components = distinct(&chosen);
@@ -239,6 +250,7 @@ fn solved(
             .flat_map(|candidate| candidate.fact_premises.iter().cloned()),
     );
     premises.extend(question.map(Question::premises).unwrap_or_default());
+    premises.extend(uniqueness.premises.iter().cloned());
     let topology = question.map(|question| {
         let offset = context.built.vars.len();
         Box::new(question.plan(&context.built.shape, &answer.selected, offset))
@@ -261,7 +273,13 @@ fn solved(
         .map(|(slot, candidate)| slot_assignment(context.template, *slot, candidate))
         .collect();
     Decided {
-        resolution_kind: ResolutionKind::Optimization,
+        resolution_kind: if uniqueness.entailment {
+            ResolutionKind::Entailment
+        } else if !uniqueness.proofs.is_empty() {
+            ResolutionKind::Constraint
+        } else {
+            ResolutionKind::Optimization
+        },
         evidence_class,
         premises,
         eliminated,
@@ -276,6 +294,7 @@ fn solved(
         model: Some(answer.spec),
         agents,
         graph: Some(graph),
+        uniqueness: uniqueness.proofs.clone(),
     }
 }
 

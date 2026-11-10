@@ -92,6 +92,10 @@ members = ["tools/xtask", "crates/medulla-types", "crates/medulla-transaction", 
 # upgrade proves stable between inspection and restaging. Lift only together
 # with those upgrade paths.
 redb = "~4.1"
+# The object_store SDK, shared with the root package's `blob-s3` backend. Only
+# feature-gated members link it; the default build pulls no object-store SDK.
+object_store = { version = "0.14.2", default-features = false, features = ["aws"] }
+serde_json = "1.0"
 
 [package]
 name = "medulla-engine"
@@ -2049,6 +2053,12 @@ name = "work_item_effect_receipt"
 path = "benches/work_item_effect_receipt.rs"
 harness = false
 required-features = ["full"]
+# p95 < 2 ms at 10,000 units per read. Nightly only, never gates a pull request.
+[[bench]]
+name = "identity_segment_filter"
+path = "benches/identity_segment_filter.rs"
+harness = false
+required-features = ["redb"]
 
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field
