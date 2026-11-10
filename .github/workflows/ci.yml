@@ -1789,7 +1789,10 @@ jobs:
         run: cargo --locked xtask checks
       - name: Spec trailers
         if: ${{ !cancelled() }}
-        run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"
+        # PR events: the PR's base branch. Push events (main): the ref the
+        # push moved over — `github.base_ref` is empty on push, which used to
+        # render as "origin/" and made the hook CANNOT-RUN.
+        run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "${{ github.event.pull_request.base.ref != '' && format('origin/{0}', github.event.pull_request.base.ref) || github.event.before }}"
       - name: Select the affected crates
         id: crates
         if: steps.scope.outputs.code == 'true' && steps.spec-scope.outputs.scope != 'spec'
