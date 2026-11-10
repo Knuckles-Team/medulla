@@ -2,7 +2,10 @@
 //! This module does not serve RPCs, authenticate workers, or persist records.
 
 mod grants;
-pub use grants::{granted_slots, WorkerCapacityRefusal, WorkerSizingInput, WorkerSlotGrant};
+pub use grants::{
+    admit_reserved_worker_task, granted_slots, LaneLoad, WorkerAdmission, WorkerAdmissionRefusal,
+    WorkerCapacityRefusal, WorkerGrant, WorkerSizingInput, WorkerSlotGrant,
+};
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};

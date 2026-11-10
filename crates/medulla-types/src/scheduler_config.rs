@@ -174,6 +174,24 @@ fn default_process_document_max_depth() -> u32 {
     DEFAULT_PROCESS_DOCUMENT_MAX_DEPTH
 }
 
+/// Default task lease held by a claim, in milliseconds
+/// (MEDULLA-DURABLE-KERNEL-R076.2).
+pub const DEFAULT_TASK_LEASE_MS: u64 = 60_000;
+/// Inclusive bounds of `task_lease_ms`.
+pub const TASK_LEASE_MS_BOUNDS: (u64, u64) = (5_000, 300_000);
+/// Default admission back-off, in milliseconds (MEDULLA-DURABLE-KERNEL-R076.2).
+pub const DEFAULT_RETRY_AFTER_MS: u64 = 250;
+/// Inclusive bounds of `retry_after_ms`.
+pub const RETRY_AFTER_MS_BOUNDS: (u64, u64) = (50, 30_000);
+
+fn default_task_lease_ms() -> u64 {
+    DEFAULT_TASK_LEASE_MS
+}
+
+fn default_retry_after_ms() -> u64 {
+    DEFAULT_RETRY_AFTER_MS
+}
+
 /// Engine-owned policy. Pool size and queue bound must be configured explicitly.
 /// Zero workers, zero CPU share, or zero queue depth can disable that resource;
 /// no implicit minimum may override those limits. Lane IDs are engine-defined
@@ -185,6 +203,15 @@ pub struct SchedulerConfig {
     pub total_workers: u32,
     #[serde(default)]
     pub lane_floors: BTreeMap<String, u32>,
+    /// Task lease held by a claim, in milliseconds; the admission reply carries
+    /// it as `lease_seconds` (MEDULLA-DURABLE-KERNEL-R075, R076.2).
+    #[serde(default = "default_task_lease_ms")]
+    pub task_lease_ms: u64,
+    /// Back-off hint for an admission refusal, in milliseconds; the admission
+    /// reply carries it as `retry_after_seconds` (MEDULLA-DURABLE-KERNEL-R075,
+    /// R076.2).
+    #[serde(default = "default_retry_after_ms")]
+    pub retry_after_ms: u64,
     #[serde(default = "default_cores_per_mille")]
     pub cores_per_mille: u16,
     #[serde(default = "default_memory_per_worker_bytes")]
