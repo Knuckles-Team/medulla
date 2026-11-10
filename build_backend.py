@@ -296,22 +296,33 @@ def _assert_stable_cache_inputs(
 
 @contextmanager
 def _exclusive_file_lock(lock_path: Path):
-    """Hold one process-safe POSIX lock without placing it in mutable build output."""
+    """Hold one process-safe file lock without placing it in mutable build output.
 
-    try:
-        import fcntl
-    except ImportError as exc:  # pragma: no cover - Linux deployment contract
-        raise RuntimeError("medulla builds require POSIX file locking") from exc
+    POSIX uses ``fcntl.flock``; Windows uses ``msvcrt.locking`` on the first byte.
+    """
+
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        fcntl.flock(descriptor, fcntl.LOCK_EX)
-        yield
+        if sys.platform == "win32":
+            import msvcrt
+
+            msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
     finally:
-        try:
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
-        finally:
-            os.close(descriptor)
+        os.close(descriptor)
 
 
 @contextmanager

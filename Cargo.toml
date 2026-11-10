@@ -99,7 +99,7 @@ serde_json = "1.0"
 
 [package]
 name = "medulla-engine"
-version = "3.3.2"
+version = "3.3.3"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
 description = "Rust-native durable multimodal and epistemic database for governed SI systems"
@@ -2053,6 +2053,12 @@ name = "work_item_effect_receipt"
 path = "benches/work_item_effect_receipt.rs"
 harness = false
 required-features = ["full"]
+# p95 < 2 ms at 10,000 units per read. Nightly only, never gates a pull request.
+[[bench]]
+name = "identity_segment_filter"
+path = "benches/identity_segment_filter.rs"
+harness = false
+required-features = ["redb"]
 
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field

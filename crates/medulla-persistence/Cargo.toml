@@ -122,3 +122,4 @@ medulla-server-auth = { path = "../medulla-server-auth", features = ["test-suppo
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"
 futures-util = { version = "0.3", default-features = false }
+tracing-subscriber = { version = "0.3" }
