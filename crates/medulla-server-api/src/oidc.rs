@@ -602,8 +602,8 @@ impl JwtValidator {
         // borrow does not live across the mutable `remove` below.
         let rotated_out: Vec<String> = current
             .keys()
+            .filter(|&kid| !fresh.contains_key(kid))
             .cloned()
-            .filter(|kid| !fresh.contains_key(kid))
             .collect();
         for kid in rotated_out {
             if let Some(key) = current.remove(&kid) {
@@ -921,6 +921,7 @@ pub mod tests {
     // ── MEDULLA-IDENTITY-R001: multi-issuer trust list with per-issuer
     //    kind limits ──────────────────────────────────────────────────────
 
+    #[allow(dead_code)] // test scaffolding for the follow-up multi-issuer trust row
     fn trust_entry(issuer: &str, audience: &str, kind: PrincipalKind) -> IssuerTrust {
         IssuerTrust {
             issuer: issuer.to_string(),
@@ -931,6 +932,7 @@ pub mod tests {
         }
     }
 
+    #[allow(dead_code)] // test scaffolding for the follow-up multi-issuer trust row
     fn trust_validator(issuer: &str, audience: &str) -> JwtValidator {
         let n = hex::decode(TEST_RSA_MODULUS_HEX).expect("modulus hex");
         let e = hex::decode(TEST_RSA_EXPONENT_HEX).expect("exponent hex");
