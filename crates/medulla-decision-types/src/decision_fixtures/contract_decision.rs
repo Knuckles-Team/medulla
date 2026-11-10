@@ -327,6 +327,7 @@ pub fn record(outcome: DecisionOutcome) -> DecisionRecord {
             }),
             violation: Some(Violation::Denied),
         }]),
+        uniqueness: bounded(Vec::new()),
         record_digest: digest_text(0x91),
     }
 }
