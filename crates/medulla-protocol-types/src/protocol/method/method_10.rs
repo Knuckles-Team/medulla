@@ -132,6 +132,15 @@ $($variants)*
         connector: medulla_types::contract::ResourceId,
         stream: medulla_types::contract::ResourceId,
     },
+    /// MEDULLA-REPO-INGEST-R006.1: the daily paper target measured over the
+    /// corpus's `:StageReceipt` nodes. A paper counts once when all four
+    /// stages completed inside `[window_end_ms - 86400 s, window_end_ms)`;
+    /// `state` is `Unknown` for a partial window or telemetry older than
+    /// `knob ingest.window_fresh_for`. Read-only: commits nothing.
+    MeasureIngestThroughput {
+        corpus: medulla_types::contract::ResourceId,
+        window_end_ms: u64,
+    },
     /// EG-owned D18 source change sets and append-only write-back receipts.
     /// The engine records governed observations; it never calls a vendor API.
     WriteBack {

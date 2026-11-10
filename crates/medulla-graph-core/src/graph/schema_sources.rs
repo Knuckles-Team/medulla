@@ -1159,10 +1159,14 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/retrieval-v1.ttl"
             )),
         },
+        // MEDULLA-SDLC-R001.1: the lifecycle edge shapes companion, the same
+        // pattern as sdlc_lifecycle and documentation-shapes.
         CoreSpec {
             module: "sdd",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/sdd-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!("../../../medulla-core/ontology/sdd-v1.ttl")),
         },
         CoreSpec {
@@ -1868,7 +1872,7 @@ mod tests {
             ),
             (
                 "sdd",
-                "383283f769da7e57cb0ddda6af8319b3253501f8e777d3cd368d864f0e9d0f11",
+                "59a092b0199b1924b45ac8ebc29e1ed3a0622db9c6a590f6fc8e7cb95a35c65c",
             ),
             (
                 "service_operations",

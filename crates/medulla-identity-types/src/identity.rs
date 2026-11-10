@@ -56,7 +56,8 @@ pub use approval_key::{
     ApprovalKeyRecord, ApprovalKeyRegistration, ApprovalKeyRevocation,
 };
 pub use audit::{
-    AuditRecord, AuditTrail, IdentityAuditEntry, IdentityEvent, MAX_IDENTITY_AUDIT_ENTRIES,
+    AuditRecord, AuditTrail, AuthorizationDigestChange, IdentityAuditEntry, IdentityEvent,
+    MAX_IDENTITY_AUDIT_ENTRIES,
 };
 pub use config::{
     AuthMode, IdentityConfig, LocalFallback, ModeTransition, RegistrationPolicy,
