@@ -136,6 +136,101 @@ impl BranchCommit {
     }
 }
 
+/// One head over the commit DAG: the commit id plus its chain depth.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Head {
+    pub id: String,
+    pub generation: u64,
+}
+
+/// The closed set of merge outcomes (MEDULLA-BRANCH-MERGE-R003).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MergeOutcome {
+    /// `up_to_date`: the source head is an ancestor of the target head.
+    UpToDate,
+    /// `fast_forward`: the target head is an ancestor of the source head.
+    FastForward,
+    /// `merged`: both heads moved; three-way merge (R004/R005) then runs.
+    Merged,
+    /// `conflict`: the three-way merge produced conflicts that stayed open.
+    Conflict,
+}
+
+impl MergeOutcome {
+    /// The wire spelling is the snake_case name itself.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::UpToDate => "up_to_date",
+            Self::FastForward => "fast_forward",
+            Self::Merged => "merged",
+            Self::Conflict => "conflict",
+        }
+    }
+}
+
+/// MEDULLA-BRANCH-MERGE-R003 — the merge base is the common ancestor on the
+/// commit DAG chosen by the *highest* generation number; ties go to the
+/// lexicographically smallest commit id. Never an implicit base.
+pub fn merge_base(
+    commits: &[(String, u64, Vec<String>)],
+    source: &Head,
+    target: &Head,
+) -> Option<(String, u64)> {
+    let ancestors = |head: &Head| -> std::collections::BTreeMap<String, u64> {
+        let mut map = std::collections::BTreeMap::new();
+        let mut stack = vec![(head.id.clone(), head.generation)];
+        while let Some((id, gen)) = stack.pop() {
+            if map.insert(id.clone(), gen).is_some() {
+                continue;
+            }
+            if let Some((_, _, parents)) = commits.iter().find(|(cid, _, _)| *cid == id) {
+                stack.extend(parents.iter().map(|parent| {
+                    let gen = commits
+                        .iter()
+                        .find(|(cid, _, _)| *cid == *parent)
+                        .map(|(_, g, _)| *g)
+                        .unwrap_or(0);
+                    (parent.clone(), gen)
+                }));
+            }
+        }
+        map
+    };
+    let source_anc = ancestors(source);
+    let target_anc = ancestors(target);
+    let mut best: Option<(String, u64)> = None;
+    for (id, gen) in &source_anc {
+        if !target_anc.contains_key(id) {
+            continue;
+        }
+        best = match best {
+            Some((ref id0, gen0))
+                if gen0 > *gen || (gen0 == *gen && id0.as_str() <= id.as_str()) =>
+            {
+                best
+            }
+            _ => Some((id.clone(), *gen)),
+        };
+    }
+    best
+}
+
+/// MEDULLA-BRANCH-MERGE-R003 — classify the outcome between one-writer
+/// topologies: `up_to_date`, `fast_forward`, or (for diverged heads) `merged`.
+/// `None` means no common ancestor: `BRANCH_NO_COMMON_ANCESTOR`, never implicit.
+pub fn classify(source: &Head, target: &Head, base: Option<(String, u64)>) -> Option<MergeOutcome> {
+    if source.id == target.id {
+        return Some(MergeOutcome::UpToDate);
+    }
+    match base {
+        Some((base, _gen)) if base == source.id => Some(MergeOutcome::UpToDate),
+        Some((base, _gen)) if base == target.id => Some(MergeOutcome::FastForward),
+        Some((_, _)) => Some(MergeOutcome::Merged),
+        None => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,5 +308,82 @@ mod tests {
             );
         }
         assert_eq!(RESERVED_BRANCH_NAME, "main");
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R003
+    #[test]
+    fn merge_outcomes_up_to_date_and_fast_forward() {
+        // Linear chain: source-head ancestor of target = up_to_date; reverse = fast_forward.
+        let chain = vec![
+            ("b1".to_string(), 1u64, vec!["b0".to_string()]),
+            ("b2".to_string(), 2u64, vec!["b1".to_string()]),
+            ("b3".to_string(), 3u64, vec!["b2".to_string()]),
+        ];
+        let b2 = Head {
+            id: "b2".into(),
+            generation: 2,
+        };
+        let b3 = Head {
+            id: "b3".into(),
+            generation: 3,
+        };
+        assert_eq!(
+            classify(&b2, &b3, merge_base(&chain, &b2, &b3)),
+            Some(MergeOutcome::UpToDate)
+        );
+        assert_eq!(
+            classify(&b3, &b2, merge_base(&chain, &b3, &b2)),
+            Some(MergeOutcome::FastForward)
+        );
+        // Equal heads publish nothing.
+        assert_eq!(classify(&b3, &b3, None), Some(MergeOutcome::UpToDate));
+
+        // Diamond: merge base is the shared root `p`; diverged heads classify merged.
+        let diamond = vec![
+            ("p".to_string(), 1u64, vec!["r".to_string()]),
+            ("s".to_string(), 2u64, vec!["p".to_string()]),
+            ("t".to_string(), 2u64, vec!["p".to_string()]),
+            (
+                "m".to_string(),
+                3u64,
+                vec!["s".to_string(), "t".to_string()],
+            ),
+        ];
+        let s = Head {
+            id: "s".into(),
+            generation: 2,
+        };
+        let t = Head {
+            id: "t".into(),
+            generation: 2,
+        };
+        assert_eq!(
+            merge_base(&diamond, &s, &t).map(|(id, _)| id),
+            Some("p".into())
+        );
+        assert_eq!(
+            classify(&s, &t, Some(("p".into(), 1))),
+            Some(MergeOutcome::Merged)
+        );
+
+        // Disjoint chains: no common ancestor, never an implicit base.
+        let disjoint = vec![
+            ("x1".to_string(), 1u64, vec![]),
+            ("y1".to_string(), 1u64, vec![]),
+        ];
+        assert_eq!(
+            merge_base(
+                &disjoint,
+                &Head {
+                    id: "x1".into(),
+                    generation: 1
+                },
+                &Head {
+                    id: "y1".into(),
+                    generation: 1
+                },
+            ),
+            None
+        );
     }
 }

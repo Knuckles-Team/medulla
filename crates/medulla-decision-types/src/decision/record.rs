@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
 use super::request::AssemblyRequest;
-use crate::solve::Algorithm;
+use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
@@ -238,6 +238,29 @@ pub struct DecisionInputs {
     pub topology: Option<medulla_agent_types::agent_topology::TopologyInputs>,
 }
 
+/// The scope a uniqueness proof covers: the model the no-good re-solve
+/// ran over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UniquenessScope {
+    /// The solved model, after step 1b removed its candidates.
+    AfterElimination,
+    /// The model rebuilt over every candidate, before any removal.
+    AllCandidates,
+}
+
+/// One no-good re-solve that proved the solved selection unique in a scope:
+/// its certificate, whose model digest covers the cut model, so a reader can
+/// re-derive and verify the proof from the record's inputs alone.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UniquenessProof {
+    pub scope: UniquenessScope,
+    pub certificate: Certificate,
+}
+
 /// One assembly decision, in full.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -263,6 +286,11 @@ pub struct DecisionRecord {
     pub derivations: BoundedVec<CoverageDerivation, 32>,
     pub outcome: DecisionOutcome,
     pub why_not: BoundedVec<WhyNot, 64>,
+    /// No-good re-solves that proved the solved selection unique; empty --
+    /// and omitted from the wire -- when nothing was proven, so records
+    /// without proofs keep their bytes.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub uniqueness: BoundedVec<UniquenessProof, 2>,
     pub record_digest: String,
 }
 
