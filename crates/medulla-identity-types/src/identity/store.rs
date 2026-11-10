@@ -234,6 +234,12 @@ impl IdentityStore {
         &self.audit
     }
 
+    /// The identity audit trail (mutable; the write path annotates the
+    /// entries it just recorded before the one durable save).
+    pub fn audit_trail_mut(&mut self) -> &mut AuditTrail {
+        &mut self.audit
+    }
+
     /// Record an event that happened outside an identity op (RBAC writes,
     /// sampled denials) in the same trail.
     pub fn record(&mut self, record: AuditRecord) {
@@ -305,6 +311,8 @@ impl IdentityStore {
             target: target.map(str::to_string),
             ip_prefix: None,
             detail: String::new(),
+            tenant: stamp.session_tenant.clone(),
+            authorization_digest: None,
         });
     }
 }

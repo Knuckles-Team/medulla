@@ -218,6 +218,7 @@ fn actor() -> AuditActor<'static> {
     AuditActor {
         principal: "svc:au",
         now_ms: NOW,
+        tenant: None,
     }
 }
 
@@ -343,6 +344,7 @@ impl RbacPolicyStore for FailingStore {
     }
 }
 
+// spec: MEDULLA-IDENTITY-R002
 #[test]
 fn a_failed_write_rolls_back_the_store_and_the_projection_together() {
     let mut layer = seeded();
@@ -505,6 +507,49 @@ fn failed_session_touch_persistence_publishes_no_record_projection() {
         reply.session_record.unwrap().session_ref,
         "ses:stored-record"
     );
+}
+
+// spec: MEDULLA-IDENTITY-R002
+#[test]
+fn identity_write_records_tenant_and_the_authorization_digest_change() {
+    let mut layer = seeded();
+    let store = layer.policy_store().unwrap();
+    let version = store.current_version().unwrap();
+    let refused = apply(
+        &mut layer,
+        create_user("eve", Some("usr:eve")),
+        &stamp(IDENTITY_READ_SCOPE),
+    );
+    assert!(refused.is_err(), "the read scope cannot create users");
+    assert_eq!(
+        store.current_version().unwrap(),
+        version,
+        "a refusal saves nothing"
+    );
+    let before = store.authority_snapshot().unwrap();
+    let before_digest = format!("{}:{}", before.policy_digest(), before.identity_digest());
+    let mut create = stamp(IDENTITY_ADMIN_SCOPE);
+    create.minted_principal_id = Some("usr:bob".to_string());
+    create.session_tenant = Some("tenant:homelab".to_string());
+    apply(&mut layer, create_user("bob", Some("usr:bob")), &create).unwrap();
+    let after = store.authority_snapshot().unwrap();
+    let after_digest = format!("{}:{}", after.policy_digest(), after.identity_digest());
+    let (saved, _, _) = store.load().unwrap();
+    let trail = saved.identity_store().audit_trail();
+    assert!(trail.verify().is_ok());
+    let entry = trail
+        .entries()
+        .filter(|entry| entry.event == IdentityEvent::UserCreated)
+        .last()
+        .unwrap();
+    assert_eq!(entry.tenant.as_deref(), Some("tenant:homelab"));
+    let change = entry
+        .authorization_digest
+        .as_ref()
+        .expect("the write names the authorization digest change");
+    assert_eq!(change.from.as_deref(), Some(before_digest.as_str()));
+    assert_eq!(change.to.as_deref(), Some(after_digest.as_str()));
+    assert_ne!(change.from, change.to, "the recompute moved the image");
 }
 
 mod approval_keys;

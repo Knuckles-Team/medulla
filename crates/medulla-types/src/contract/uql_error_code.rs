@@ -3,7 +3,8 @@
 use crate::closed_error_codes;
 
 closed_error_codes! {
-    /// UQL parser and binding refusals exposed on the wire.
+    /// UQL parser and binding refusals, plus the served `WITH KNOWLEDGE` row-frame
+    /// refusals (MEDULLA-FEDERATED-QUERY-R028.1), exposed on the wire.
     pub enum UqlCode {
         UnexpectedCharacter => "UQL_UNEXPECTED_CHARACTER",
         UnterminatedString => "UQL_UNTERMINATED_STRING",
@@ -30,5 +31,13 @@ closed_error_codes! {
         ParameterType => "UQL_PARAMETER_TYPE",
         UnusedParameter => "UQL_UNUSED_PARAMETER",
         FeatureNotInBuild => "UQL_FEATURE_NOT_IN_BUILD",
+        /// `WITH KNOWLEDGE` (MEDULLA-FEDERATED-QUERY-R028.1): a row's provenance or
+        /// policy frame was omitted — no snapshot binding. A typed absence, never an
+        /// empty success; the annotated result is refused whole.
+        KnowledgeFrameMissing => "KNOWLEDGE_FRAME_MISSING",
+        /// `WITH KNOWLEDGE` (MEDULLA-FEDERATED-QUERY-R028.1): a row's frame came from
+        /// a different snapshot than the pinned one. The annotated result is refused
+        /// whole, never served partially.
+        KnowledgeFrameStale => "KNOWLEDGE_FRAME_STALE",
     }
 }

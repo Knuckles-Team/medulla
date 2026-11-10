@@ -901,6 +901,26 @@ pub struct UqlRow {
     pub proof: Option<UqlRowProof>,
 }
 
+/// A row's knowledge-frame state on the wire (EH-450 row contract,
+/// MEDULLA-FEDERATED-QUERY-R028.1): the wire form of
+/// `medulla_retrieval::knowledge::FrameState`. `resolved` is the only servable
+/// state — the row's provenance and policy frames came from the SAME pinned
+/// graph snapshot; `missing` is a typed absence (never an empty success);
+/// `stale` came from a different snapshot.
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UqlFrameState {
+    /// The frame's refs all came from one pinned graph snapshot.
+    Resolved,
+    /// The frame was omitted — no snapshot binding. Not an empty success.
+    #[default]
+    Missing,
+    /// The frame came from a different snapshot than the pinned one.
+    Stale,
+}
+
 /// A row's knowledge record (EH-450, UQL `WITH KNOWLEDGE [(col, …)]`) — the wire form of
 /// medulla-plan's `KnowledgeRow`, re-materialized from the SAME snapshot the query ran over.
 /// Times are the node's own bitemporal window; the list fields are the epistemic
@@ -924,6 +944,10 @@ pub struct UqlKnowledge {
     /// Ids of the row's committed evidence loci.
     pub evidence_refs: Vec<String>,
     pub policy_labels: Vec<String>,
+    /// Per-row provenance/policy frame states (MEDULLA-FEDERATED-QUERY-R028.1);
+    /// only `resolved` frames are served, refused otherwise.
+    pub provenance_frame: UqlFrameState,
+    pub policy_frame: UqlFrameState,
     pub contradiction_ids: Vec<String>,
     pub proof_ids: Vec<String>,
     pub transformation_ids: Vec<String>,

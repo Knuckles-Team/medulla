@@ -302,3 +302,30 @@ pub fn schema_version_for(request: &AssemblyRequest) -> u16 {
         None => super::DECISION_RECORD_SCHEMA_VERSION,
     }
 }
+
+#[cfg(test)]
+mod resolution_kind_tests {
+    use super::ResolutionKind;
+
+    // spec: MEDULLA-DECISION-ENGINE-R001.1
+    #[test]
+    fn resolution_kind_serialises_all_five_variants_with_stable_wire_names() {
+        let kinds = [
+            (ResolutionKind::Constraint, "constraint"),
+            (ResolutionKind::Entailment, "entailment"),
+            (ResolutionKind::Optimization, "optimization"),
+            (ResolutionKind::Statistical, "statistical"),
+            (ResolutionKind::Abstention, "abstention"),
+        ];
+        for (kind, wire) in kinds {
+            let serialized = serde_json::to_string(&kind).unwrap();
+            assert_eq!(serialized, format!("\"{wire}\""), "wire name {wire}");
+            assert_eq!(
+                serde_json::from_str::<ResolutionKind>(&serialized).unwrap(),
+                kind
+            );
+        }
+        // An unknown kind is refused, never guessed.
+        assert!(serde_json::from_str::<ResolutionKind>("\"heuristic\"").is_err());
+    }
+}
