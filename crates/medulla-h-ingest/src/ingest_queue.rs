@@ -95,7 +95,7 @@ pub fn enqueue_ingest_job(
     let body = serde_json::to_value(envelope)
         .map_err(|error| rejected(ServerErrorCode::IngestJobInvalid, error.to_string()))?;
     let deduplicated = jobs
-        .enqueue_ingest_task(&queue, &task, &partition.render(), body)
+        .enqueue_ingest_task(queue, &task, &partition.render(), body)
         .map_err(|error| rejected(ServerErrorCode::IngestJobInvalid, error))?;
     Ok(IngestEnqueueReceipt {
         task_id: task,
