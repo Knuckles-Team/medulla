@@ -563,6 +563,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-IDENTITY-R002
     #[test]
     fn audit_path_detects_a_tampered_leaf() {
         let leaves: Vec<Hash> = (0..5)

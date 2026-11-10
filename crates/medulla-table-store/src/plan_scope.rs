@@ -1,8 +1,11 @@
 //! Query-plan scope predicates (CONCEPT:MEDULLA-KG.query.plan-scope).
 //!
-//! This module contains only the immutable scope model. The plan rewriter,
-//! served-handler wiring, refusal, trace evidence, and served proof belong to
-//! the later `MEDULLA-FEDERATED-QUERY-R078.2` through `.6` requirements.
+//! The immutable scope model ([`PlanScope`] and its closed [`ScopePredicate`]
+//! set) plus the plan rewriter [`inject_scope`] (R078.2): it walks a bound
+//! plan and adds the tenant predicate to every graph, edge, and vector scan
+//! leaf under the default [`ScopeRule`] table entry `scan_all_leaves`. Served
+//! refusal, trace evidence, and served proof belong to the later
+//! `MEDULLA-FEDERATED-QUERY-R078.4` through `.6` requirements.
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -99,6 +102,96 @@ impl PlanScope {
     }
 }
 
+/// The named rules of the scope-injection table (R078.2). The default rule
+/// `scan_all_leaves` scopes every scan leaf; a replacement rule names the leaf
+/// classes it injects at, so a rule can narrow the default without inventing a
+/// predicate the closed [`ScopePredicate`] set does not carry.
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScopeRule {
+    /// The default: inject at every graph, edge, and vector scan leaf.
+    ScanAllLeaves,
+}
+
+#[cfg(feature = "query")]
+impl ScopeRule {
+    /// Whether this rule injects the scope at a leaf of the given class.
+    pub fn covers(self, leaf: medulla_types::wire::PlanScopeLeaf) -> bool {
+        match self {
+            ScopeRule::ScanAllLeaves => matches!(
+                leaf,
+                medulla_types::wire::PlanScopeLeaf::Graph
+                    | medulla_types::wire::PlanScopeLeaf::Edge
+                    | medulla_types::wire::PlanScopeLeaf::Vector
+            ),
+        }
+    }
+
+    /// The closed leaf classes this rule stamps onto the plan.
+    pub fn leaves(self) -> Vec<medulla_types::wire::PlanScopeLeaf> {
+        use medulla_types::wire::PlanScopeLeaf;
+        [
+            PlanScopeLeaf::Graph,
+            PlanScopeLeaf::Edge,
+            PlanScopeLeaf::Vector,
+        ]
+        .into_iter()
+        .filter(|leaf| self.covers(*leaf))
+        .collect()
+    }
+}
+
+/// Classify one plan op as a scorable scan leaf, or `None` for a transform op
+/// (`Filter`, `Limit`, `Project`, …) that carries no source of its own.
+/// Feature-gated plan ops (foreign, spatial, tsdb, tensor, OWL sources) are
+/// not leaves of this table; they scope under their own requirements.
+#[cfg(feature = "query")]
+pub fn scan_leaf(op: &medulla_types::wire::Op) -> Option<medulla_types::wire::PlanScopeLeaf> {
+    use medulla_types::wire::{Op, PlanScopeLeaf};
+    Some(match op {
+        Op::Scan { .. } | Op::ScanAll { .. } => PlanScopeLeaf::Graph,
+        Op::Traverse { .. } | Op::Expand { .. } => PlanScopeLeaf::Edge,
+        Op::Rank { .. } | Op::RankEmbed { .. } => PlanScopeLeaf::Vector,
+        _ => return None,
+    })
+}
+
+/// MEDULLA-FEDERATED-QUERY-R078.2: inject the caller's closed scope predicate
+/// set into `plan` under the default rule [`ScopeRule::ScanAllLeaves`]. The
+/// scope — the predicates built by [`PlanScope::predicate`], the leaf classes
+/// the rule names, and the `verified` flag — is stamped onto the plan, so the
+/// statement that reaches execution carries the predicate at every scan leaf
+/// and no scan runs unscoped.
+#[cfg(feature = "query")]
+pub fn inject_scope(
+    plan: &mut medulla_types::wire::Plan,
+    scope: &PlanScope,
+) -> Result<(), PlanScopeError> {
+    inject_scope_with_rule(plan, scope, ScopeRule::ScanAllLeaves)
+}
+
+/// The rule-parameterized form of [`inject_scope`]: a named rule from the
+/// [`ScopeRule`] table selects which scan leaves carry the predicate. The
+/// scope is server-owned: any plan scope the caller supplied is overwritten,
+/// never merged or appended.
+#[cfg(feature = "query")]
+pub fn inject_scope_with_rule(
+    plan: &mut medulla_types::wire::Plan,
+    scope: &PlanScope,
+    rule: ScopeRule,
+) -> Result<(), PlanScopeError> {
+    let predicates = scope.predicate()?;
+    plan.scope = Some(medulla_types::wire::PlanScope {
+        tenant: scope.tenant.clone(),
+        clearance_labels: scope.clearance_labels.clone(),
+        verified: scope.verified,
+        leaves: rule.leaves(),
+    });
+    debug_assert!(!predicates.is_empty(), "the closed set is never empty");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{PlanScope, ScopePredicate};
@@ -128,5 +221,120 @@ mod tests {
             br#"{"tenant":"","clearance_labels":[],"verified":true}"#
         )
         .is_err());
+    }
+}
+
+#[cfg(all(test, feature = "query"))]
+mod plan_injection_tests {
+    use super::{inject_scope, PlanScope, ScopeRule};
+    use medulla_types::wire::{Op, Plan, PlanScopeLeaf};
+
+    // spec: MEDULLA-FEDERATED-QUERY-R078.2
+    #[test]
+    fn three_leaf_plan_all_scoped() {
+        let scope = PlanScope::new("tenant-a", vec!["public".into()], true).expect("valid tenant");
+        let mut plan = Plan::new(vec![
+            Op::Scan {
+                label: "Doc".into(),
+            },
+            Op::Traverse {
+                rel: "CITES".into(),
+                min: 1,
+                max: 1,
+            },
+            Op::Rank {
+                query: vec![0.1, 0.2],
+            },
+            Op::Limit { k: 5 },
+        ]);
+
+        inject_scope(&mut plan, &scope).expect("a valid scope injects");
+
+        // Every scan leaf the plan carries is scoped: each leaf class present
+        // in the plan is named by the injected predicate's leaf set.
+        let leaves_in_plan = plan
+            .ops
+            .iter()
+            .filter_map(super::scan_leaf)
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(
+            leaves_in_plan,
+            std::collections::BTreeSet::from([
+                PlanScopeLeaf::Graph,
+                PlanScopeLeaf::Edge,
+                PlanScopeLeaf::Vector
+            ]),
+            "the plan has a graph, edge and vector scan leaf: {:?}",
+            plan.ops
+        );
+        let scoped = plan.scope.expect("the plan carries the caller scope");
+        for leaf in &leaves_in_plan {
+            assert!(
+                scoped.leaves.contains(leaf),
+                "the leaf {leaf:?} carries the tenant predicate"
+            );
+        }
+
+        // The closed predicate set rides with it, verbatim from R078.1.
+        assert_eq!(scoped.tenant, "tenant-a");
+        assert!(scoped.verified);
+        assert_eq!(scoped.clearance_labels, vec!["public".to_string()]);
+        assert_eq!(
+            scope.predicate().expect("valid predicates").len(),
+            2,
+            "tenant equality plus the clearance-label set"
+        );
+        assert_eq!(
+            plan.ops.len(),
+            4,
+            "the injection stamps the plan, it rewrites no op: {:?}",
+            plan.ops
+        );
+    }
+
+    #[test]
+    fn the_injection_overwrites_a_caller_supplied_scope() {
+        let caller_scope = PlanScope::new("tenant-a", Vec::new(), true).expect("valid tenant");
+        let mut plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        plan.scope = Some(medulla_types::wire::PlanScope {
+            tenant: "other-tenant".into(),
+            clearance_labels: vec!["secret".into()],
+            verified: false,
+            leaves: vec![PlanScopeLeaf::Vector],
+        });
+
+        inject_scope(&mut plan, &caller_scope).expect("a valid scope injects");
+
+        let scoped = plan.scope.expect("the plan carries the caller scope");
+        assert_eq!(scoped.tenant, "tenant-a");
+        assert!(scoped.verified);
+        assert!(scoped.clearance_labels.is_empty());
+        assert_eq!(
+            scoped.leaves,
+            ScopeRule::ScanAllLeaves.leaves(),
+            "the server scope overwrites the caller scope"
+        );
+    }
+
+    #[test]
+    fn the_rule_table_names_the_default_and_stays_closed() {
+        assert_eq!(
+            serde_json::from_str::<ScopeRule>("\"scan_all_leaves\"").expect("default rule"),
+            ScopeRule::ScanAllLeaves
+        );
+        assert!(
+            serde_json::from_str::<ScopeRule>("\"only_vector\"").is_err(),
+            "the rule table is closed"
+        );
+        assert_eq!(
+            ScopeRule::ScanAllLeaves.leaves(),
+            vec![
+                PlanScopeLeaf::Graph,
+                PlanScopeLeaf::Edge,
+                PlanScopeLeaf::Vector
+            ]
+        );
     }
 }

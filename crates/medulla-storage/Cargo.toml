@@ -24,6 +24,16 @@ uuid = { version = "1.28", features = ["v4"] }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 
+object_store = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+[features]
+# Archive segments over the S3-compatible object_store trait of
+# the read row MEDULLA-OBJECT-STORAGE-BACKEND-R002 and the archive row
+# MEDULLA-OBJECT-STORAGE-BACKEND-R006. Feature-gated so
+# the product bundles link no object-store SDK by default.
+object-archive = ["dep:object_store", "dep:serde_json"]
+
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.5", features = ["fs", "process"] }
 

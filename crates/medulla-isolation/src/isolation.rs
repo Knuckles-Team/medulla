@@ -126,6 +126,10 @@ pub struct IsolationLayer {
     /// apart share nothing.
     #[cfg(feature = "security")]
     denials: std::sync::Arc<std::sync::Mutex<medulla_identity_types::identity::DenialSampler>>,
+    /// The R002 audit annotation (tenant + authorization digest change)
+    /// staged to commit in this layer's next policy store save.
+    #[cfg(feature = "security")]
+    pending_audit_annotate: Option<crate::isolation::identity_store_admin::PendingAuditAnnotate>,
 }
 
 /// Extract the tenant slug from a graph name built by `agent-utilities`'

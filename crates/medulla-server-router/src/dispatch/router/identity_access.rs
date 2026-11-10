@@ -262,6 +262,9 @@ fn register_identity(
         let actor = medulla_isolation::isolation::AuditActor {
             principal: mode.actor,
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            // The registration arm carries no verified tenant in scope yet;
+            // the entry names one once it does (R002 follow-up).
+            tenant: None,
         };
         let outcome = state.isolation.try_register_agent_audited(identity, actor);
         state.publish_identity_view();
