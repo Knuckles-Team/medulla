@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use medulla_core::view_status;
 use medulla_exec::incremental::Circuit;
 use medulla_server_api::knob_config;
 use medulla_types::contract::ServerErrorCode;
@@ -87,6 +88,9 @@ struct Tracked {
     through_seq: u64,
     /// Unix milliseconds of the last change folded in (or of install); orders spills.
     last_change_ms: u64,
+    /// CDC changes folded into this view's circuit — advanced ONCE per
+    /// `apply_delta` call, not per row (MEDULLA-INCREMENTAL-VIEWS-R005.2).
+    applied_changes: u64,
 }
 
 impl Tracked {
@@ -97,6 +101,9 @@ impl Tracked {
         self.fallback_reason = Some(reason);
         self.through_seq = 0;
         self.stale = true;
+        // The mode flip is a state change: the board must not keep advertising the
+        // old mode (MEDULLA-INCREMENTAL-VIEWS-R005.2).
+        view_status::publish(status_of(self));
     }
 
     fn resident_bytes(&self) -> u64 {
@@ -104,6 +111,46 @@ impl Tracked {
             Some(CircuitSlot::Resident(circuit)) => circuit.state_bytes(),
             _ => 0,
         }
+    }
+
+    /// The view's maintained state in bytes for the status board
+    /// (MEDULLA-INCREMENTAL-VIEWS-R005.2): the resident circuit's incrementally
+    /// maintained total, the spilled blob's size while out of memory, zero for a
+    /// recompute view.
+    fn maintained_state_bytes(&self) -> u64 {
+        match &self.circuit {
+            Some(CircuitSlot::Resident(circuit)) => circuit.state_bytes(),
+            Some(CircuitSlot::Spilled { pending }) => {
+                pending.as_ref().map_or(0, |b| b.len() as u64)
+            }
+            None => 0,
+        }
+    }
+}
+
+/// The mode the status board reports for `t` — a spilled circuit reads as `Spilled`,
+/// mirroring [`PlanMatViewManager::mode`].
+fn view_mode_of(t: &Tracked) -> view_status::ViewMode {
+    match &t.circuit {
+        Some(CircuitSlot::Spilled { .. }) => view_status::ViewMode::Spilled,
+        _ if t.mode == Mode::Incremental => view_status::ViewMode::Incremental,
+        _ => view_status::ViewMode::Recompute,
+    }
+}
+
+/// The published status-board entry for `t` (MEDULLA-INCREMENTAL-VIEWS-R005.2).
+fn status_of(t: &Tracked) -> view_status::ViewStatus {
+    view_status::ViewStatus {
+        name: t.def.name.clone(),
+        family: view_status::ViewFamily::Plan,
+        graph: t.def.graph.clone(),
+        mode: view_mode_of(t),
+        reason_code: t.fallback_reason.clone(),
+        reason: None,
+        state_bytes: t.maintained_state_bytes(),
+        applied_changes: t.applied_changes,
+        shadow_checks: 0,
+        shadow_mismatches: 0,
     }
 }
 
@@ -154,18 +201,26 @@ impl PlanMatViewManager {
     }
 
     fn insert_recompute(&self, def: PlanMatView, fallback_reason: Option<String>) {
-        self.views.lock().insert(
-            def.name.clone(),
-            Tracked {
-                def,
-                stale: false,
-                mode: Mode::Recompute,
-                circuit: None,
-                fallback_reason,
-                through_seq: 0,
-                last_change_ms: 0,
-            },
-        );
+        let name = def.name.clone();
+        let status = {
+            let mut views = self.views.lock();
+            views.insert(
+                name.clone(),
+                Tracked {
+                    def,
+                    stale: false,
+                    mode: Mode::Recompute,
+                    circuit: None,
+                    fallback_reason,
+                    through_seq: 0,
+                    last_change_ms: 0,
+                    applied_changes: 0,
+                },
+            );
+            status_of(views.get(&name).expect("just-inserted view present"))
+        };
+        // MEDULLA-INCREMENTAL-VIEWS-R005.2: the board learns of the recompute view.
+        view_status::publish(status);
     }
 
     /// Install (or replace) a view in `Mode::Incremental` with its compiled + seeded
@@ -173,18 +228,26 @@ impl PlanMatViewManager {
     /// (MEDULLA-INCREMENTAL-VIEWS-R001). The circuit's maintained state is the
     /// authoritative result; `Get` projects it lazily.
     pub fn install_incremental(&self, def: PlanMatView, circuit: Circuit, through_seq: u64) {
-        self.views.lock().insert(
-            def.name.clone(),
-            Tracked {
-                def,
-                stale: false,
-                mode: Mode::Incremental,
-                circuit: Some(CircuitSlot::Resident(circuit)),
-                fallback_reason: None,
-                through_seq,
-                last_change_ms: now_ms(),
-            },
-        );
+        let name = def.name.clone();
+        let status = {
+            let mut views = self.views.lock();
+            views.insert(
+                name.clone(),
+                Tracked {
+                    def,
+                    stale: false,
+                    mode: Mode::Incremental,
+                    circuit: Some(CircuitSlot::Resident(circuit)),
+                    fallback_reason: None,
+                    through_seq,
+                    last_change_ms: now_ms(),
+                    applied_changes: 0,
+                },
+            );
+            status_of(views.get(&name).expect("just-inserted view present"))
+        };
+        // MEDULLA-INCREMENTAL-VIEWS-R005.2: the board learns of the incremental view.
+        view_status::publish(status);
     }
 
     /// The maintenance mode of `name`, if tracked.
@@ -379,10 +442,20 @@ impl PlanMatViewManager {
                     continue;
                 }
                 if self.fold_one(t, seq, delta, ceiling) {
+                    // MEDULLA-INCREMENTAL-VIEWS-R005.2: one increment per call, not per row.
+                    t.applied_changes = t.applied_changes.saturating_add(1);
                     changed.push(t.def.name.clone());
                 }
             }
-            self.spill_over_budget(&mut views, &changed, budget)
+            let puts = self.spill_over_budget(&mut views, &changed, budget);
+            // The board sees each maintained view's updated counters + state size
+            // (post-spill mode), once per call (MEDULLA-INCREMENTAL-VIEWS-R005.2).
+            for name in &changed {
+                if let Some(t) = views.get(name) {
+                    view_status::publish(status_of(t));
+                }
+            }
+            puts
         };
         self.flush_spills(puts);
         changed.len()
@@ -445,9 +518,11 @@ impl PlanMatViewManager {
         }
     }
 
-    /// Drop a view's tracking; returns whether it existed.
+    /// Drop a view's tracking (and its status-board entry); returns whether it existed.
     pub fn drop_view(&self, name: &str) -> bool {
-        self.views.lock().remove(name).is_some()
+        let existed = self.views.lock().remove(name).is_some();
+        view_status::remove(name);
+        existed
     }
 
     /// The sorted names of every tracked view (observability/tests).
@@ -829,5 +904,58 @@ mod tests {
         m.spill_acknowledged("vb", &put);
         drop(put);
         assert_eq!(m.incremental_rows("vb").unwrap().len(), 10);
+    }
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R005.2
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R005.2: The manager publishes every state change
+    #[test]
+    fn status_board_tracks_mode_and_changes() {
+        use medulla_core::view_status::{ViewFamily, ViewMode};
+        use medulla_types::wire::{Op, Plan};
+        let plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let circuit = Circuit::compile(&plan).unwrap();
+        let m = PlanMatViewManager::default();
+        let name = "iv_r005_2_status_view";
+        m.install_incremental(
+            PlanMatView {
+                name: name.into(),
+                graph: "g".into(),
+                plan,
+            },
+            circuit,
+            0,
+        );
+        let find = || view_status::snapshot().into_iter().find(|s| s.name == name);
+        let s = find().expect("install publishes the view");
+        assert_eq!(s.family, ViewFamily::Plan);
+        assert_eq!(s.graph, "g");
+        assert_eq!(s.mode, ViewMode::Incremental);
+        assert_eq!(s.applied_changes, 0);
+        assert_eq!(s.reason_code, None);
+
+        // one folded CDC change advances applied_changes once; state grows.
+        assert_eq!(
+            m.apply_delta("g", &add_node_event(0, "g", "a", "Doc", 2005)),
+            1
+        );
+        let s = find().expect("apply_delta re-publishes the view");
+        assert_eq!(s.applied_changes, 1);
+        assert!(s.state_bytes > 0, "state_bytes tracks the folded state");
+
+        // a fallback view publishes recompute mode with the typed reason code.
+        let f = "iv_r005_2_fallback_view";
+        m.note_fallback(def(f, "g"), "MATVIEW_NOT_INCREMENTAL".into());
+        let s = view_status::snapshot()
+            .into_iter()
+            .find(|s| s.name == f)
+            .expect("note_fallback publishes the view");
+        assert_eq!(s.mode, ViewMode::Recompute);
+        assert_eq!(s.reason_code.as_deref(), Some("MATVIEW_NOT_INCREMENTAL"));
+
+        // drop removes the board entry.
+        assert!(m.drop_view(name));
+        assert!(find().is_none());
+        view_status::remove(f);
     }
 }

@@ -57,6 +57,7 @@ mod ann_filter;
 /// authority, `nodes` through its batch slice — RF-019.
 mod ann_pushdown;
 mod catalog;
+mod catalog_matviews;
 /// `medulla_embed(text)` — the server-side text→vector SQL scalar function (design
 /// `plans/semantic-indexing/DESIGN-embedding-bindings.md` §3.1, §9 phase 2). Returns the
 /// `List<Float32>` a `vector(n)` column materializes as, so it drops straight into the
