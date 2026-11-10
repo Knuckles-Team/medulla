@@ -232,7 +232,7 @@ async fn head(store: &InMemory) -> ObjectHead {
         .get(&ObjPath::from(format!("{}/HEAD", base())))
         .await
         .unwrap();
-    serde_json::from_slice(&r.bytes().await.unwrap().to_vec()).unwrap()
+    serde_json::from_slice(&r.bytes().await.unwrap()).unwrap()
 }
 
 async fn object_absent(store: &InMemory, path: &str) -> bool {
@@ -365,7 +365,7 @@ async fn racy_conditional_puts_fence_one_head() {
         }
         _ => panic!("the fence must let exactly the winner advance HEAD"),
     }
-    assert_eq!(head(&store).await.version >= 1, true);
+    assert!(head(&store).await.version >= 1);
 }
 
 // spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003
