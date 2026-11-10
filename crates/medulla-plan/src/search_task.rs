@@ -27,8 +27,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_work_types::search_task::{
-    Clue, EvidenceGraph, RiskFinding, RiskReport, RiskThresholds, SearchTask,
-    SearchTaskRefusal, ShortcutDetector, SEARCH_TASK_INVALID,
+    Clue, EvidenceGraph, RiskFinding, RiskReport, RiskThresholds, SearchTask, SearchTaskRefusal,
+    ShortcutDetector, SEARCH_TASK_INVALID,
 };
 
 /// The output of one synthesis: the synthesized task, the complete detector
