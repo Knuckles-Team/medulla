@@ -38,11 +38,17 @@ mod tests {
     use super::*;
     use crate::tempdir::Tree;
 
+    // spec: MEDULLA-CONTRACT-R008.1
+    // spec: MEDULLA-CONTRACT-R008.2
     #[test]
     fn mismatched_resolved_checkout_fails_closed() {
         let t = Tree::new(&[("requested/a", ""), ("other/b", "")]);
-        let result = verify_resolved_checkout(&t.path().join("requested"), &t.path().join("other"));
-        assert!(result.is_err());
+        let requested = t.path().join("requested");
+        let checkout = t.path().join("other");
+        assert!(verify_resolved_checkout(&requested, &checkout).is_err());
+        // The command fails closed too: `main` calls `run` with the resolved
+        // checkout and the requested root as its only argument.
+        assert!(run(&checkout, &[requested.to_string_lossy().into()]).is_err());
     }
 
     #[test]

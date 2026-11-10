@@ -607,6 +607,9 @@ pub async fn apply_rbac_admin(
     let audit = medulla_isolation::isolation::AuditActor {
         principal: actor,
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        // The served RbacAdmin arm carries no verified tenant in scope yet;
+        // the entry names one once it does (R002 follow-up).
+        tenant: None,
     };
     let response = rbac_admin_response(&mut s, req_id, op, audit);
     s.publish_identity_view();

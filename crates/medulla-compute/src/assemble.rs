@@ -37,6 +37,7 @@ mod seal;
 mod search;
 mod template;
 mod topology;
+mod uniqueness;
 mod validate;
 mod why_not;
 
