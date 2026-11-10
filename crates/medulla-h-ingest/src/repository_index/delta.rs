@@ -16,10 +16,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::ingestion_wire::{
-    ExtractedEdge, ExtractedNode, IndexDelta, IndexResult, MAX_INDEX_DELTA_PATHS,
-};
+use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexDelta, IndexResult};
 
 /// A generation of the repository code map: only `complete` generations may
 /// become the current one, and only a generation whose `base_revision` matches
@@ -78,7 +75,7 @@ pub fn apply_delta(
                 dropped_ids.insert(node.node_id.as_str());
             }
             // Unchanged path: the parse artifact is reused untouched.
-            Other => nodes.push(copy_node(node, Other)),
+            other => nodes.push(copy_node(node, other)),
         }
     }
     let edges: Vec<ExtractedEdge> = result
@@ -155,7 +152,7 @@ fn removed_paths<'d>(
         .collect()
 }
 
-fn renames<'d>(delta: &'d IndexDelta) -> HashMap<&'d str, &'d str> {
+fn renames(delta: &IndexDelta) -> HashMap<&str, &str> {
     delta
         .renamed
         .iter()
@@ -268,7 +265,10 @@ fn exhausted(limit: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use medulla_types::ingestion_wire::{IndexDeltaChange, IndexDeltaRename};
+    use medulla_types::contract::BoundedVec;
+    use medulla_types::ingestion_wire::{
+        IndexDeltaChange, IndexDeltaRename, MAX_INDEX_DELTA_PATHS,
+    };
     use medulla_types::scheduler_config;
 
     use super::*;

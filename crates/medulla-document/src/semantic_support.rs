@@ -121,7 +121,7 @@ mod tests {
     // lookup.
     #[test]
     fn declared_languages_carry_a_shipped_parser_and_resolver() {
-        assert!(SEMANTIC_LANGUAGES_VERSION >= 1);
+        const _: () = assert!(SEMANTIC_LANGUAGES_VERSION >= 1);
         assert!(!SEMANTIC_LANGUAGES.is_empty());
         let names = SEMANTIC_LANGUAGES.iter().map(|entry| entry.language);
         names.clone().for_each(|name| {
