@@ -536,7 +536,12 @@ pub(crate) fn copy_declared_owner_tables(
 /// The owner-table snapshot dump of MEDULLA-OBJECT-STORAGE-BACKEND-R002: every
 /// declared owner table of `layout`, one row each, as the same closed census
 /// `copy_declared_owner_tables` walks. Rows keep the table's raw key and value
-/// bytes so the dump round-trips into a restored store.
+/// bytes so the dump round-trips into a restored store. The whole snapshot
+/// segment (these rows, the dump walk and its encoder) is only reachable
+/// behind `object-archive` (`Kernel::owner_snapshot_segment`), so it carries
+/// the same gate — without it the definitions are dead code in every other
+/// build and `-D warnings` fails the crate.
+#[cfg(feature = "object-archive")]
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OwnerDumpRow {
     pub table: String,
@@ -544,6 +549,7 @@ pub struct OwnerDumpRow {
     pub value: Vec<u8>,
 }
 
+#[cfg(feature = "object-archive")]
 pub(crate) fn dump_declared_owner_tables(
     source: &ReadTransaction,
     layout: OwnerLayout,
@@ -583,6 +589,7 @@ pub(crate) fn dump_declared_owner_tables(
 /// The snapshot-segment bytes of MEDULLA-OBJECT-STORAGE-BACKEND-R002: a
 /// self-describing msgpack document carrying the manifest layout name and the
 /// row dump of [`dump_declared_owner_tables`].
+#[cfg(feature = "object-archive")]
 pub(crate) fn encode_owner_table_dump(
     layout_name: &str,
     rows: &[OwnerDumpRow],
