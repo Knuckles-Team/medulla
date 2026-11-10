@@ -83,9 +83,9 @@ fn node_shapes(shapes: &[Triple]) -> Vec<String> {
                     Term::NamedNode(node) if node.as_str() == SHACL_NODE_SHAPE
                 )
         })
-        .filter_map(|triple| match &triple.subject {
-            NamedOrBlankNode::NamedNode(node) => Some(node.as_str().to_string()),
-            NamedOrBlankNode::BlankNode(node) => Some(format!("_:{}", node.as_str())),
+        .map(|triple| match &triple.subject {
+            NamedOrBlankNode::NamedNode(node) => node.as_str().to_string(),
+            NamedOrBlankNode::BlankNode(node) => format!("_:{}", node.as_str()),
         })
         .collect()
 }
