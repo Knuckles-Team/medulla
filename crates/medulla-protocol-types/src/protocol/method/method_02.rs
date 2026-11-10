@@ -299,6 +299,16 @@ $($variants)*
         request_id: String,
         #[serde(default)]
         audit_class: String,
+        /// IRI of the first plan tool outside the bound, when this append is
+        /// the `SCOPE_EXCEEDS_POLICY` refusal's audit entry
+        /// (MEDULLA-IDENTITY-R008.5); absent otherwise. An older request body
+        /// that leaves it off still decodes.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        subject_iri: Option<String>,
+        /// IRI of the stored bound's policy node (MEDULLA-IDENTITY-R008.5);
+        /// absent on every non-scope-refusal append.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        policy_iri: Option<String>,
     },
 
     /// Read one operation-audit event and verify the graph's current chain.

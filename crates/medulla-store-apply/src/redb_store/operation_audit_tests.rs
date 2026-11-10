@@ -54,6 +54,8 @@ pub fn event(request_id: &str, status: &str) -> OperationAuditEvent {
         status: status.into(),
         request_id: request_id.into(),
         audit_class: "event".into(),
+        subject_iri: None,
+        policy_iri: None,
     }
 }
 
@@ -342,4 +344,96 @@ fn stores_applying_the_same_events_hold_identical_audit_rows() {
     let (first, second) = (replica(), replica());
     assert_eq!(first, second);
     assert_eq!((first.1.len(), first.2.len()), (5, 4));
+}
+
+// spec: MEDULLA-IDENTITY-R008.5
+#[test]
+fn scope_refusal_iris_pass_the_two_kib_bound() {
+    let mut at_bound = event("req-iri", "ok");
+    at_bound.subject_iri = Some("x".repeat(2048));
+    at_bound.policy_iri = Some("y".repeat(2048));
+    assert!(
+        at_bound.validate().is_ok(),
+        "2048 bytes is inside the bound"
+    );
+    for smuggled in [
+        "x".repeat(2049),
+        "urn:bad IRI".to_string(),
+        "urn\u{1c}bad".to_string(),
+        String::new(),
+    ] {
+        let mut over = at_bound.clone();
+        over.subject_iri = Some(smuggled);
+        assert_eq!(
+            over.validate().unwrap_err(),
+            "invalid privacy-safe audit event fields"
+        );
+    }
+    let mut clean = at_bound.clone();
+    clean.subject_iri = Some("urn:ex.org/tools/erase".into());
+    clean.policy_iri = Some("urn:policy:run-scope:worker-1".into());
+    assert!(clean.validate().is_ok());
+    assert!(
+        event("req-iri", "ok").validate().is_ok(),
+        "absent IRIs stay legal"
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R008.5
+#[test]
+fn a_refused_scope_refusal_iri_appends_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = Store::seeded(dir.path());
+    let reserved = store.append(&event("request-a", "reserved")).unwrap();
+    let mut refused = event("request-b", "reserved");
+    refused.subject_iri = Some("x".repeat(2049));
+    assert_eq!(
+        store.append(&refused).unwrap_err(),
+        "invalid privacy-safe audit event fields"
+    );
+    assert_eq!(store.chain_entries(), 2, "seed and the one reservation");
+    assert_eq!(store.rows(AUDIT_REQUESTS).len(), 1);
+    // The refused request was never recorded: appended now as a first
+    // attempt, at the very next sequence.
+    let first = store.append(&event("request-b", "reserved")).unwrap();
+    assert!(!first.replayed);
+    assert_eq!(first.seq, reserved.seq + 1);
+}
+
+// spec: MEDULLA-IDENTITY-R008.5
+#[test]
+fn refusal_iris_are_part_of_the_reservation_outcome_equality() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = Store::seeded(dir.path());
+    let mut reserved = event("request-a", "reserved");
+    reserved.subject_iri = Some("urn:ex.org/tools/erase".into());
+    reserved.policy_iri = Some("urn:policy:run-scope:worker-1".into());
+    store.append(&reserved).unwrap();
+    let mut same = reserved.clone();
+    same.status = "ok".into();
+    let closed = store.append(&same).unwrap();
+    assert_eq!(closed.outcome_seq, Some(closed.seq));
+    let line = store.line(closed.seq);
+    assert!(
+        line.contains("subject_iri=urn:ex.org/tools/erase"),
+        "{line}"
+    );
+    assert!(
+        line.contains("policy_iri=urn:policy:run-scope:worker-1"),
+        "{line}"
+    );
+    // An outcome under the same request identity that names a different
+    // subject IRI does not close the reservation: the IRIs are inside the
+    // equality check, and nothing is appended by it.
+    let mut other = reserved.clone();
+    other.status = "ok".into();
+    other.subject_iri = Some("urn:ex.org/tools/write".into());
+    assert!(store.append(&other).is_err());
+    assert_eq!(
+        store.chain_entries(),
+        3,
+        "seed, reservation and one outcome"
+    );
+    let next = store.append(&event("request-b", "reserved")).unwrap();
+    assert_eq!(next.seq, 3);
 }

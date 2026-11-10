@@ -70,6 +70,13 @@ pub struct OperationAuditEvent {
     pub status: String,
     pub request_id: String,
     pub audit_class: String,
+    /// IRI of the first plan tool outside the bound, on the audit event of a
+    /// `SCOPE_EXCEEDS_POLICY` refusal (MEDULLA-IDENTITY-R008.5); absent on
+    /// every other event.
+    pub subject_iri: Option<String>,
+    /// IRI of the stored bound the plan was checked against (R008.5); absent
+    /// on every event that is not a scope refusal.
+    pub policy_iri: Option<String>,
 }
 
 fn token(value: &str, max: usize) -> bool {
@@ -80,6 +87,20 @@ fn token(value: &str, max: usize) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b"._:-/".contains(&b))
 }
 
+/// The bound of the optional audit-IRI fields (MEDULLA-IDENTITY-R008.5):
+/// absent, or 1 to 2048 bytes with no ASCII control character and no
+/// whitespace. Anything else is not a privacy-safe audit field.
+const IRI_FIELD_MAX: usize = 2048;
+
+fn bounded_iri(value: &Option<String>) -> bool {
+    match value {
+        None => true,
+        Some(iri) => {
+            (1..=IRI_FIELD_MAX).contains(&iri.len()) && !iri.bytes().any(|b| b <= 0x20 || b == 0x7f)
+        }
+    }
+}
+
 impl OperationAuditEvent {
     pub fn validate(&self) -> Result<(), String> {
         self.validate_class()?;
@@ -88,6 +109,8 @@ impl OperationAuditEvent {
             || !token(&self.op, 128)
             || !token(&self.surface, 32)
             || !token(&self.request_id, 128)
+            || !bounded_iri(&self.subject_iri)
+            || !bounded_iri(&self.policy_iri)
             || !matches!(self.status.as_str(), RESERVED | "ok" | "error" | "denied")
             || self.params_sha256.len() != 64
             || !self.params_sha256.bytes().all(|b| b.is_ascii_hexdigit())
@@ -130,7 +153,7 @@ impl OperationAuditEvent {
     /// Everything an outcome must share with its reservation.
     fn context_fingerprint(&self) -> Hash {
         Sha256::digest(format!(
-            "{}\0{}\0{}\0{}\0{}\0{}\0{}",
+            "{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
             self.tenant,
             self.principal,
             self.request_id,
@@ -138,6 +161,8 @@ impl OperationAuditEvent {
             self.surface,
             self.params_sha256,
             self.audit_class,
+            self.subject_iri.as_deref().unwrap_or(""),
+            self.policy_iri.as_deref().unwrap_or(""),
         ))
         .into()
     }
@@ -146,8 +171,16 @@ impl OperationAuditEvent {
     /// closes, so the link is part of the tamper-evident entry itself.
     fn line(&self, reservation: Option<u64>) -> String {
         let link = reservation.map_or_else(String::new, |seq| format!("|reservation={seq}"));
+        let subject = self
+            .subject_iri
+            .as_deref()
+            .map_or_else(String::new, |iri| format!("|subject_iri={iri}"));
+        let policy = self
+            .policy_iri
+            .as_deref()
+            .map_or_else(String::new, |iri| format!("|policy_iri={iri}"));
         format!(
-            "OP_AUDIT|v1|tenant={}|principal={}|op={}|surface={}|params_sha256={}|status={}|request_id={}|class={}{link}",
+            "OP_AUDIT|v1|tenant={}|principal={}|op={}|surface={}|params_sha256={}|status={}|request_id={}|class={}{subject}{policy}{link}",
             self.tenant,
             self.principal,
             self.op,

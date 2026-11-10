@@ -254,6 +254,13 @@ async fn audit_scope_refusal(
         use sha2::Digest;
         let persistence = state.read().await.persistence.clone();
         if let Some(redb) = persistence.as_ref().and_then(|p| p.as_redb()) {
+            let (subject_iri, policy_iri) = match refusal {
+                medulla_isolation::isolation::ScopeRefusal::ExceedsPolicy {
+                    tool_iri,
+                    policy_iri,
+                } => (Some(tool_iri.clone()), Some(policy_iri.clone())),
+                medulla_isolation::isolation::ScopeRefusal::Unreadable(_) => (None, None),
+            };
             let event = medulla_store::redb_store::OperationAuditEvent {
                 tenant: verified.tenant().to_string(),
                 principal: verified.principal_persistence_id(),
@@ -266,6 +273,8 @@ async fn audit_scope_refusal(
                 )),
                 audit_class: medulla_isolation::isolation::SCOPE_EXCEEDS_POLICY_AUDIT_CLASS
                     .to_string(),
+                subject_iri,
+                policy_iri,
             };
             redb.audit_append(&medulla_kernel::persist::sanitize(graph), event)
                 .await?;
