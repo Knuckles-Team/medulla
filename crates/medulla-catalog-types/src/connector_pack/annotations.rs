@@ -153,6 +153,7 @@ pub enum PackToolMode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_agent_types::agent_component::{ModelInputMediaType, ObservationRef};
 
     /// Verifies MEDULLA-TYPED-PACKS-R045.1: Annotation type carries side effects, declarer and schema size
     // spec: MEDULLA-TYPED-PACKS-R045.1, MEDULLA-TYPED-PACKS-R001.2
@@ -192,6 +193,125 @@ mod tests {
         let wire = serde_json::to_value(&legacy).unwrap();
         for field in ["side_effects", "declared_by", "schema_tokens"] {
             assert!(wire.get(field).is_none(), "{field} must stay off the wire");
+        }
+
+        // spec: MEDULLA-TYPED-PACKS-R001.2 — every section and annotation field
+        // round-trips, and malformed typed annotations refuse.
+        let full = PackAnnotations {
+            provides: BoundedVec::new(vec!["tool:search".to_string()]).unwrap(),
+            requires_capabilities: BoundedVec::new(vec!["cap:read".to_string()]).unwrap(),
+            modalities_in: BoundedVec::new(vec!["eg:modality/text".to_string()]).unwrap(),
+            modalities_out: BoundedVec::new(vec!["eg:modality/text".to_string()]).unwrap(),
+            required_scopes: BoundedVec::new(vec!["kg:read".to_string()]).unwrap(),
+            read_only_hint: Some(true),
+            destructive_hint: Some(true),
+            idempotent_hint: Some(false),
+            open_world_hint: Some(true),
+            contract_version: Some("1.2.3".to_string()),
+            cost: Some(DeclaredCost {
+                currency: "USD".to_string(),
+                per_call_micros: Some(5),
+                input_per_mtok_micros: Some(100),
+                output_per_mtok_micros: Some(200),
+            }),
+            latency_declared: Some(DeclaredLatency {
+                p50_ms: 120,
+                p95_ms: 480,
+            }),
+            model: Some(PackModelFacts {
+                provider: "acme".to_string(),
+                model_identity: "acme-1".to_string(),
+                context_window_tokens: 128_000,
+                max_output_tokens: 4_096,
+                supports_tools: Some(true),
+                supports_structured_output: Some(false),
+                supports_vision: Some(true),
+                input_capabilities: Some(ModelInputCapabilities {
+                    media_types: vec![ModelInputMediaType::Text, ModelInputMediaType::Png],
+                    max_aggregate_bytes: 1024,
+                    max_parts: 4,
+                }),
+                shell_proficiency: Some(MeasuredFact {
+                    value: ShellProficiency::High,
+                    evaluation_run_ref: ObservationRef {
+                        evaluation_id: "eval-shell".to_string(),
+                        digest: "3".repeat(64),
+                    },
+                }),
+                stopping_behaviour: Some(MeasuredFact {
+                    value: StoppingBehaviour::Balanced,
+                    evaluation_run_ref: ObservationRef {
+                        evaluation_id: "eval-stopping".to_string(),
+                        digest: "a".repeat(64),
+                    },
+                }),
+            }),
+            sdk_contract_pin: Some("graft-sdk-1".to_string()),
+            tool_mode: Some(PackToolMode::Condensed),
+            side_effects: Some(ToolSideEffects::Network),
+            declared_by: Some(ToolFactDeclarer::Certified),
+            schema_tokens: Some(4096),
+        };
+        let wire = serde_json::to_value(&full).unwrap();
+        assert_eq!(
+            serde_json::from_value::<PackAnnotations>(wire).unwrap(),
+            full
+        );
+        // The wire encoding is MessagePack on the import path.
+        let pack_bytes = rmp_serde::to_vec_named(&full).unwrap();
+        assert_eq!(
+            rmp_serde::from_slice::<PackAnnotations>(&pack_bytes).unwrap(),
+            full
+        );
+
+        for (wire, why) in [
+            (serde_json::json!({ "unexpected": 1 }), "an unknown field"),
+            (
+                serde_json::json!({ "tool_mode": "compact" }),
+                "an unknown tool mode",
+            ),
+            (
+                serde_json::json!({ "cost": { "currency": "USD", "per_call_micros": "many" } }),
+                "a non-numeric cost",
+            ),
+            (
+                serde_json::json!({
+                    "model": {
+                        "provider": "p",
+                        "model_identity": "m",
+                        "context_window_tokens": "big",
+                        "max_output_tokens": 1
+                    }
+                }),
+                "a non-numeric model field",
+            ),
+            (
+                serde_json::json!({
+                    "shell_proficiency": {
+                        "value": "expert",
+                        "evaluation_run_ref": { "evaluation_id": "e", "digest": "d" }
+                    }
+                }),
+                "an unknown proficiency value",
+            ),
+            (
+                serde_json::json!({
+                    "declared_by": "certified",
+                    "shell_proficiency": {
+                        "value": "high",
+                        "evaluation_run_ref": {
+                            "evaluation_id": " padded",
+                            "digest": "d"
+                        }
+                    }
+                }),
+                "a padded evaluation id",
+            ),
+        ] {
+            assert!(
+                serde_json::from_value::<PackAnnotations>(wire).is_err(),
+                "{why} must refuse"
+            );
         }
     }
 

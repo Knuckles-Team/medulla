@@ -27,6 +27,40 @@ pub struct ChangedPath {
     pub mode: u32,
 }
 
+/// One file version a changeset names (MEDULLA-SCM-R001). `digest` is the value
+/// `BlobCommit` returned for the stored bytes; `size` counts the bytes from 0
+/// to `changeset_max_blob_bytes`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubmittedBlobRef {
+    pub digest: String,
+    pub size: u64,
+}
+
+/// Typed refusal of the source-changeset family; each variant serves one
+/// stable refusal code.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangesetRefusal {
+    /// Declared and recomputed digests or sizes differ.
+    BlobDigestMismatch,
+    /// A declared blob exceeds `changeset_max_blob_bytes`.
+    BlobTooLarge,
+    /// The digest is unknown to the blob store, or unreadable.
+    BlobNotFound,
+}
+
+impl ChangesetRefusal {
+    /// The stable refusal code served on the wire.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::BlobDigestMismatch => "BLOB_DIGEST_MISMATCH",
+            Self::BlobTooLarge => "BLOB_TOO_LARGE",
+            Self::BlobNotFound => "BLOB_NOT_FOUND",
+        }
+    }
+}
+
 /// The structured form of the `Spec:`, `Fixes:` and `Spec-Withdraw:` trailers.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -131,5 +165,32 @@ mod tests {
         assert!(Trailers::parse("fix\n\nSpec: none (ci)")
             .spec_ids
             .is_empty());
+    }
+
+    /// Verifies MEDULLA-SCM-R001: the submitted blob ref is a closed wire
+    /// shape, and the family's blob refusals carry their stable codes.
+    // spec: MEDULLA-SCM-R001
+    #[test]
+    fn submitted_blob_ref_is_closed_and_refusal_codes_are_stable() {
+        let submitted = SubmittedBlobRef {
+            digest: "a".repeat(64),
+            size: 134_217_728,
+        };
+        let encoded = serde_json::to_string(&submitted).unwrap();
+        assert_eq!(
+            serde_json::from_str::<SubmittedBlobRef>(&encoded).unwrap(),
+            submitted
+        );
+        // The wire shape is closed: an unknown field is refused.
+        assert!(
+            serde_json::from_str::<SubmittedBlobRef>(r#"{"digest":"a","size":1,"extra":0}"#)
+                .is_err()
+        );
+        assert_eq!(
+            ChangesetRefusal::BlobDigestMismatch.code(),
+            "BLOB_DIGEST_MISMATCH"
+        );
+        assert_eq!(ChangesetRefusal::BlobTooLarge.code(), "BLOB_TOO_LARGE");
+        assert_eq!(ChangesetRefusal::BlobNotFound.code(), "BLOB_NOT_FOUND");
     }
 }

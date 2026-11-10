@@ -4,12 +4,12 @@
 //! is in the result ([`super::proof`]). `EXPLAIN` executes nothing, so it has no rows to
 //! annotate.
 
-use medulla_types::wire::{UqlKnowledge, UqlResult, UqlRow};
+use medulla_types::wire::{UqlFrameState, UqlKnowledge, UqlResult, UqlRow};
 
 use super::{binding_plan, proof};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::rowset::RowSet;
-use medulla_retrieval::knowledge::{KnowledgeRow, KnowledgeSet, ProvenanceFrame};
+use medulla_retrieval::knowledge::{FrameState, KnowledgeRow, KnowledgeSet, ProvenanceFrame};
 use medulla_uql::Statement;
 
 /// Attach the statement's requested annotations to `result`'s rows.
@@ -61,6 +61,15 @@ fn ensure_row_identity(rows: &[UqlRow], knowledge: &KnowledgeSet) -> Result<(), 
     Ok(())
 }
 
+/// The wire form of one row's frame state (MEDULLA-FEDERATED-QUERY-R028.1).
+fn wire_frame(state: FrameState) -> UqlFrameState {
+    match state {
+        FrameState::Resolved => UqlFrameState::Resolved,
+        FrameState::Missing => UqlFrameState::Missing,
+        FrameState::Stale => UqlFrameState::Stale,
+    }
+}
+
 /// The wire form of one knowledge record.
 fn wire_knowledge(record: KnowledgeRow, epistemic_resolved: bool) -> UqlKnowledge {
     UqlKnowledge {
@@ -79,6 +88,8 @@ fn wire_knowledge(record: KnowledgeRow, epistemic_resolved: bool) -> UqlKnowledg
             .map(|locus| locus.id.as_ref().to_string())
             .collect(),
         policy_labels: record.policy_labels,
+        provenance_frame: wire_frame(record.provenance_frame),
+        policy_frame: wire_frame(record.policy_frame),
         contradiction_ids: record.contradiction_ids,
         proof_ids: record.proof_ids,
         transformation_ids: record.transformation_ids,
@@ -117,6 +128,8 @@ mod tests {
             proof_ids: Vec::new(),
             transformation_ids: Vec::new(),
             alternative_ids: Vec::new(),
+            provenance_frame: FrameState::Missing,
+            policy_frame: FrameState::Missing,
         }
     }
 

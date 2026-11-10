@@ -1,0 +1,121 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Lifecycle edge shapes (MEDULLA-SDLC-R001.1): one NodeShape per edge of the
+# closed set. The domain is the shape target and the range is sh:class, so a
+# lifecycle edge with a foreign endpoint is a violation, not a new state. A
+# violation is a report entry, never an automatic edit (precedent:
+# sdd-row-v1.shapes.ttl).
+
+:ChangesEdgeShape a sh:NodeShape ;
+    sh:description "A changes edge links a Changeset to a CodeSymbol." ;
+    sh:name "Changes edge shape" ;
+    sh:targetClass :Changeset ;
+    sh:property [ sh:path :changes ;
+            sh:class :CodeSymbol ;
+            sh:message "LIFECYCLE_EDGE_CHANGES: a changes edge must link a Changeset to a CodeSymbol." ] .
+
+:CitesRequirementEdgeShape a sh:NodeShape ;
+    sh:description "A citesRequirement edge links a Changeset to a Requirement." ;
+    sh:name "Cites requirement edge shape" ;
+    sh:targetClass :Changeset ;
+    sh:property [ sh:path :citesRequirement ;
+            sh:class :Requirement ;
+            sh:message "LIFECYCLE_EDGE_CITES_REQUIREMENT: a citesRequirement edge must link a Changeset to a Requirement." ] .
+
+:ImplementsEdgeShape a sh:NodeShape ;
+    sh:description "An implements edge links a CodeSymbol to a Requirement." ;
+    sh:name "Implements edge shape" ;
+    sh:targetClass :CodeSymbol ;
+    sh:property [ sh:path :implements ;
+            sh:class :Requirement ;
+            sh:message "LIFECYCLE_EDGE_IMPLEMENTS: a lifecycle implements edge must link a CodeSymbol to a Requirement." ] .
+
+:VerifiedByEdgeShape a sh:NodeShape ;
+    sh:description "A verifiedBy edge links a Requirement to a TestCase." ;
+    sh:name "Verified by edge shape" ;
+    sh:targetClass :Requirement ;
+    sh:property [ sh:path :verifiedBy ;
+            sh:class :TestCase ;
+            sh:message "LIFECYCLE_EDGE_VERIFIED_BY: a verifiedBy edge must link a Requirement to a TestCase." ] .
+
+:ExercisesEdgeShape a sh:NodeShape ;
+    sh:description "An exercises edge links a TestCase to a CodeSymbol." ;
+    sh:name "Exercises edge shape" ;
+    sh:targetClass :TestCase ;
+    sh:property [ sh:path :exercises ;
+            sh:class :CodeSymbol ;
+            sh:message "LIFECYCLE_EDGE_EXERCISES: an exercises edge must link a TestCase to a CodeSymbol." ] .
+
+:JudgesEdgeShape a sh:NodeShape ;
+    sh:description "A judges edge links a GateVerdict to a Changeset." ;
+    sh:name "Judges edge shape" ;
+    sh:targetClass :GateVerdict ;
+    sh:property [ sh:path :judges ;
+            sh:class :Changeset ;
+            sh:message "LIFECYCLE_EDGE_JUDGES: a judges edge must link a GateVerdict to a Changeset." ] .
+
+:ProducedByEdgeShape a sh:NodeShape ;
+    sh:description "A producedBy edge links a Changeset to a RunTrace." ;
+    sh:name "Produced by edge shape" ;
+    sh:targetClass :Changeset ;
+    sh:property [ sh:path :producedBy ;
+            sh:class :RunTrace ;
+            sh:message "LIFECYCLE_EDGE_PRODUCED_BY: a producedBy edge must link a Changeset to a RunTrace." ] .
+
+:AffectsEdgeShape a sh:NodeShape ;
+    sh:description "An affects edge links a Defect to a CodeSymbol." ;
+    sh:name "Affects edge shape" ;
+    sh:targetClass :Defect ;
+    sh:property [ sh:path :affects ;
+            sh:class :CodeSymbol ;
+            sh:message "LIFECYCLE_EDGE_AFFECTS: an affects edge must link a Defect to a CodeSymbol." ] .
+
+:IntroducedByEdgeShape a sh:NodeShape ;
+    sh:description "An introducedBy edge links a Defect to a Changeset." ;
+    sh:name "Introduced by edge shape" ;
+    sh:targetClass :Defect ;
+    sh:property [ sh:path :introducedBy ;
+            sh:class :Changeset ;
+            sh:message "LIFECYCLE_EDGE_INTRODUCED_BY: an introducedBy edge must link a Defect to a Changeset." ] .
+
+:FixedByEdgeShape a sh:NodeShape ;
+    sh:description "A fixedBy edge links a Defect to a Changeset." ;
+    sh:name "Fixed by edge shape" ;
+    sh:targetClass :Defect ;
+    sh:property [ sh:path :fixedBy ;
+            sh:class :Changeset ;
+            sh:message "LIFECYCLE_EDGE_FIXED_BY: a fixedBy edge must link a Defect to a Changeset." ] .
+
+:ContainsEdgeShape a sh:NodeShape ;
+    sh:description "A contains edge links a Release to a Changeset." ;
+    sh:name "Contains edge shape" ;
+    sh:targetClass :Release ;
+    sh:property [ sh:path :contains ;
+            sh:class :Changeset ;
+            sh:message "LIFECYCLE_EDGE_CONTAINS: a lifecycle contains edge must link a Release to a Changeset." ] .
+
+:DeploysEdgeShape a sh:NodeShape ;
+    sh:description "A deploys edge links a Deployment to a Release." ;
+    sh:name "Deploys edge shape" ;
+    sh:targetClass :Deployment ;
+    sh:property [ sh:path :deploys ;
+            sh:class :Release ;
+            sh:message "LIFECYCLE_EDGE_DEPLOYS: a deploys edge must link a Deployment to a Release." ] .
+
+:ObservedInEdgeShape a sh:NodeShape ;
+    sh:description "An observedIn edge links an Incident to a Deployment." ;
+    sh:name "Observed in edge shape" ;
+    sh:targetClass :Incident ;
+    sh:property [ sh:path :observedIn ;
+            sh:class :Deployment ;
+            sh:message "LIFECYCLE_EDGE_OBSERVED_IN: an observedIn edge must link an Incident to a Deployment." ] .
+
+:RaisesEdgeShape a sh:NodeShape ;
+    sh:description "A raises edge links an Incident to a Defect." ;
+    sh:name "Raises edge shape" ;
+    sh:targetClass :Incident ;
+    sh:property [ sh:path :raises ;
+            sh:class :Defect ;
+            sh:message "LIFECYCLE_EDGE_RAISES: a raises edge must link an Incident to a Defect." ] .

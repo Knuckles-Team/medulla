@@ -351,6 +351,12 @@ knobs! {
     views_memory_bytes: u64 = "views.memory_bytes", U64(1_073_741_824), [16_777_216, 68_719_476_736], "bytes", Tunable;
     /// Ontology naming convention mode: 0 warns, 1 refuses (MEDULLA-TYPED-PACKS-R651.2).
     ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
+    /// Fraction of the answer-name tokens a search-task clue may expose (MEDULLA-FEDERATED-QUERY-R702.2).
+    search_task_expose_overlap: f64 = "search_task.expose_overlap", F64(0.5), [0.1, 1.0], "ratio", Tunable;
+    /// Answer-node degree that trips the prior-knowledge shortcut detector (MEDULLA-FEDERATED-QUERY-R702.2).
+    search_task_prior_degree: u64 = "search_task.prior_degree", U64(50), [5, 10_000], "edges", Tunable;
+    /// Refinement rounds a search task may take before it must stand (MEDULLA-FEDERATED-QUERY-R702.2).
+    search_task_refine_rounds: u32 = "search_task.refine_rounds", U64(3), [0, 8], "rounds", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
