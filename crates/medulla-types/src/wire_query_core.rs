@@ -873,12 +873,60 @@ pub enum Op {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Plan {
     pub ops: Vec<Op>,
+    /// The caller scope every scan leaf enforces, injected by the served Uql
+    /// path after planning (MEDULLA-FEDERATED-QUERY-R078.2/.3); `None` for a
+    /// plan that never passed scope injection. The scope is server-owned: the
+    /// served path overwrites any client-supplied value, and a statement whose
+    /// scope cannot bind is refused before execution.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<PlanScope>,
+}
+
+/// The scan-leaf classes a plan-level scope predicate rides on
+/// (MEDULLA-FEDERATED-QUERY-R078.2). Closed: a plan op is scorable only when
+/// it is one of these; the executor's feature-gated source leaves (foreign,
+/// spatial, tsdb, tensor, OWL) scope under their own requirements.
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum PlanScopeLeaf {
+    /// A graph node-scan leaf (`Op::Scan`, `Op::ScanAll`).
+    Graph,
+    /// A graph edge-scan leaf (`Op::Traverse`, `Op::Expand`).
+    Edge,
+    /// A vector-scan leaf (`Op::Rank`, `Op::RankEmbed`).
+    Vector,
+}
+
+/// The caller scope a plan carries into execution (MEDULLA-FEDERATED-QUERY-R078.2):
+/// the closed tenant and clearance predicate set every scoped scan leaf enforces.
+/// The validated owner is `medulla_table_store::plan_scope::PlanScope`; this wire
+/// form is what `inject_scope` stamps onto the plan so the statement that reaches
+/// execution carries the predicate.
+#[cfg(feature = "query")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlanScope {
+    /// The tenant whose rows may be read.
+    pub tenant: String,
+    /// Clearance labels available to the caller.
+    #[serde(default)]
+    pub clearance_labels: Vec<String>,
+    /// Whether the tenant and labels came from verified authority.
+    #[serde(default)]
+    pub verified: bool,
+    /// The closed leaf classes the predicate rides on — the default rule
+    /// `scan_all_leaves` names all three.
+    #[serde(default)]
+    pub leaves: Vec<PlanScopeLeaf>,
 }
 
 #[cfg(feature = "query")]
 impl Plan {
     pub fn new(ops: Vec<Op>) -> Self {
-        Self { ops }
+        Self { ops, scope: None }
     }
 }
 
@@ -899,6 +947,26 @@ pub struct UqlRow {
     /// `WITH PROOF` (EH-448): why the row is in the result; `None` without it.
     #[serde(default)]
     pub proof: Option<UqlRowProof>,
+}
+
+/// A row's knowledge-frame state on the wire (EH-450 row contract,
+/// MEDULLA-FEDERATED-QUERY-R028.1): the wire form of
+/// `medulla_retrieval::knowledge::FrameState`. `resolved` is the only servable
+/// state — the row's provenance and policy frames came from the SAME pinned
+/// graph snapshot; `missing` is a typed absence (never an empty success);
+/// `stale` came from a different snapshot.
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UqlFrameState {
+    /// The frame's refs all came from one pinned graph snapshot.
+    Resolved,
+    /// The frame was omitted — no snapshot binding. Not an empty success.
+    #[default]
+    Missing,
+    /// The frame came from a different snapshot than the pinned one.
+    Stale,
 }
 
 /// A row's knowledge record (EH-450, UQL `WITH KNOWLEDGE [(col, …)]`) — the wire form of
@@ -924,6 +992,10 @@ pub struct UqlKnowledge {
     /// Ids of the row's committed evidence loci.
     pub evidence_refs: Vec<String>,
     pub policy_labels: Vec<String>,
+    /// Per-row provenance/policy frame states (MEDULLA-FEDERATED-QUERY-R028.1);
+    /// only `resolved` frames are served, refused otherwise.
+    pub provenance_frame: UqlFrameState,
+    pub policy_frame: UqlFrameState,
     pub contradiction_ids: Vec<String>,
     pub proof_ids: Vec<String>,
     pub transformation_ids: Vec<String>,

@@ -334,6 +334,51 @@ pub struct PayloadRef {
     pub has_payload: bool,
 }
 
+/// The per-row frame state of a [`KnowledgeRow`] (MEDULLA-FEDERATED-QUERY-R028.1).
+/// Each row carries its own provenance-frame state and policy-frame state beside
+/// its id, `source_refs`, `evidence_refs` and `policy_labels`; the states are
+/// row-local, so one `KnowledgeSet` may hold `Resolved` rows beside `Missing` ones.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum FrameState {
+    /// The frame's refs all came from ONE pinned graph snapshot — the same
+    /// snapshot the row itself was materialized from. `Resolved` is the only
+    /// state a frame may be served in.
+    Resolved,
+    /// The frame was omitted: no snapshot binding, or no frame resolution ran
+    /// (a plain-`query` build). This is a typed absence — never an empty
+    /// success; the consumer must refuse, not treat it as "no data" (see
+    /// [`KnowledgeSet::frame_refusal`] and `KNOWLEDGE_FRAME_MISSING`).
+    #[default]
+    Missing,
+    /// The frame came from a different snapshot than the row's pinned one.
+    /// The annotated result must be refused whole (`KNOWLEDGE_FRAME_STALE`),
+    /// never served partially.
+    Stale,
+}
+
+/// The typed refusal for a row whose frame state is not [`FrameState::Resolved`]
+/// (MEDULLA-FEDERATED-QUERY-R028.1). `as_code` is the wire code registered in
+/// `medulla_capabilities`' error routing via `UqlCode`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FrameRefusal {
+    /// `KNOWLEDGE_FRAME_MISSING` — a row's provenance or policy frame was omitted.
+    Missing,
+    /// `KNOWLEDGE_FRAME_STALE` — a row's frame came from a different snapshot than
+    /// the pinned one.
+    Stale,
+}
+
+impl FrameRefusal {
+    /// The stable wire code (matches `UqlCode::KnowledgeFrameMissing` /
+    /// `UqlCode::KnowledgeFrameStale` in `medulla-types`).
+    pub const fn as_code(self) -> &'static str {
+        match self {
+            FrameRefusal::Missing => "KNOWLEDGE_FRAME_MISSING",
+            FrameRefusal::Stale => "KNOWLEDGE_FRAME_STALE",
+        }
+    }
+}
+
 /// The resolution mode used to populate `source_refs`/`evidence_refs` on the rows
 /// of a `KnowledgeSet`. No resolution work happens under plain `query`; the
 /// `epistemic` feature fills `Resolved` and performs the per-row lookups.
@@ -427,6 +472,15 @@ pub struct KnowledgeRow {
     /// produces these yet, an honest documented follow-up). Always `Vec::new()`
     /// without `epistemic`, and also empty when no such edge exists.
     pub alternative_ids: Vec<String>,
+    /// The row's own provenance-frame state (MEDULLA-FEDERATED-QUERY-R028.1):
+    /// `Resolved` only when this row's provenance refs came from the SAME pinned
+    /// graph snapshot the row was materialized from; `Missing` when no frame
+    /// binding exists (a typed absence, never an empty success); `Stale` when
+    /// they came from a different snapshot.
+    pub provenance_frame: FrameState,
+    /// The row's own policy-frame state — the row-local mirror of
+    /// `provenance_frame` for `policy_labels` (MEDULLA-FEDERATED-QUERY-R028.1).
+    pub policy_frame: FrameState,
 }
 
 /// RowSet v2 (additive): the enriched, ready-to-consume shape a caller builds
@@ -553,6 +607,17 @@ impl KnowledgeSet {
                     Vec<String>,
                 ) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
 
+                // MEDULLA-FEDERATED-QUERY-R028.1 — the per-row frame states. Both
+                // frames are resolved off the SAME `view` (the pinned snapshot)
+                // exactly when `epistemic` is on — mirroring the set-level frames
+                // below; without it no frame resolution ran, so both are `Missing`
+                // (a typed absence, never an empty success).
+                let row_frame = if cfg!(feature = "epistemic") {
+                    FrameState::Resolved
+                } else {
+                    FrameState::Missing
+                };
+
                 KnowledgeRow {
                     id: row.id.clone(),
                     kind,
@@ -569,6 +634,8 @@ impl KnowledgeSet {
                     proof_ids,
                     transformation_ids,
                     alternative_ids,
+                    provenance_frame: row_frame,
+                    policy_frame: row_frame,
                 }
             })
             .collect();
@@ -597,6 +664,25 @@ impl KnowledgeSet {
                 PolicyFrame::None
             },
         }
+    }
+
+    /// The one per-row frame refusal check (MEDULLA-FEDERATED-QUERY-R028.1):
+    /// `None` when every row's provenance and policy frames are
+    /// [`FrameState::Resolved`]; otherwise the first offending row in row order,
+    /// `Missing` (a frame omitted) reported before `Stale` (a frame from a
+    /// different snapshot). Callers must refuse the WHOLE annotated result on
+    /// `Some` — no partial result is ever served beside a refused frame.
+    pub fn frame_refusal(&self) -> Option<FrameRefusal> {
+        for row in &self.rows {
+            for state in [row.provenance_frame, row.policy_frame] {
+                match state {
+                    FrameState::Resolved => {}
+                    FrameState::Missing => return Some(FrameRefusal::Missing),
+                    FrameState::Stale => return Some(FrameRefusal::Stale),
+                }
+            }
+        }
+        None
     }
 
     pub fn len(&self) -> usize {
@@ -1418,5 +1504,120 @@ mod tests {
             assert!(ks.rows[0].transformation_ids.is_empty());
             assert!(ks.rows[0].alternative_ids.is_empty());
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R028.1
+    #[test]
+    fn frames_resolved_missing_stale_contract() {
+        fn row(id: &str, provenance: FrameState, policy: FrameState) -> KnowledgeRow {
+            KnowledgeRow {
+                id: id.into(),
+                kind: "Doc".into(),
+                score: Some(0.25),
+                payload_ref: None,
+                projection: Some(json!({ "title": format!("t-{id}") })),
+                valid_time: (None, None),
+                tx_time: (None, None),
+                confidence: 1.0,
+                source_refs: Vec::new(),
+                evidence_refs: Vec::new(),
+                policy_labels: Vec::new(),
+                contradiction_ids: Vec::new(),
+                proof_ids: Vec::new(),
+                transformation_ids: Vec::new(),
+                alternative_ids: Vec::new(),
+                provenance_frame: provenance,
+                policy_frame: policy,
+            }
+        }
+
+        // The set stays a superset of a plain row set: id, score and projection
+        // are untouched by the frame contract, and frame states are row-local.
+        let set = KnowledgeSet {
+            rows: vec![
+                row("a", FrameState::Resolved, FrameState::Resolved),
+                row("b", FrameState::Missing, FrameState::Missing),
+            ],
+            ..KnowledgeSet::default()
+        };
+        let plain = &set.rows[0];
+        assert_eq!(plain.id, "a");
+        assert_eq!(plain.score, Some(0.25));
+        assert_eq!(plain.projection.as_ref(), Some(&json!({ "title": "t-a" })));
+        assert_eq!(plain.provenance_frame, FrameState::Resolved);
+        assert_eq!(plain.policy_frame, FrameState::Resolved);
+        assert_eq!(set.rows[1].provenance_frame, FrameState::Missing);
+        assert_eq!(set.rows[1].policy_frame, FrameState::Missing);
+
+        // Independently omitted provenance, policy and snapshot binding: one typed
+        // refusal per omitted frame, and no partially annotated result is served.
+        assert_eq!(
+            KnowledgeSet {
+                rows: vec![row("a", FrameState::Missing, FrameState::Resolved)],
+                ..KnowledgeSet::default()
+            }
+            .frame_refusal()
+            .map(FrameRefusal::as_code),
+            Some("KNOWLEDGE_FRAME_MISSING")
+        );
+        assert_eq!(
+            KnowledgeSet {
+                rows: vec![row("a", FrameState::Resolved, FrameState::Missing)],
+                ..KnowledgeSet::default()
+            }
+            .frame_refusal()
+            .map(FrameRefusal::as_code),
+            Some("KNOWLEDGE_FRAME_MISSING")
+        );
+        assert_eq!(
+            KnowledgeSet {
+                rows: vec![row("a", FrameState::Stale, FrameState::Resolved)],
+                ..KnowledgeSet::default()
+            }
+            .frame_refusal()
+            .map(FrameRefusal::as_code),
+            Some("KNOWLEDGE_FRAME_STALE")
+        );
+        assert_eq!(
+            KnowledgeSet {
+                rows: vec![row("a", FrameState::Resolved, FrameState::Resolved)],
+                ..KnowledgeSet::default()
+            }
+            .frame_refusal(),
+            None
+        );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R028.1
+    #[cfg(not(feature = "epistemic"))]
+    #[test]
+    fn from_rowset_reports_missing_frames_without_epistemic() {
+        let view = fixture();
+        let rs = RowSet::from_ids(["d1".to_string()]);
+        let ks = KnowledgeSet::from_rowset(&rs, &view, &[]);
+        assert_eq!(ks.rows.len(), 1);
+        // Without `epistemic` no frame resolution ran: both per-row frames are a
+        // typed `Missing`, and the set refuses as such — never an empty success.
+        assert_eq!(ks.rows[0].provenance_frame, FrameState::Missing);
+        assert_eq!(ks.rows[0].policy_frame, FrameState::Missing);
+        assert_eq!(
+            ks.frame_refusal().map(FrameRefusal::as_code),
+            Some("KNOWLEDGE_FRAME_MISSING")
+        );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R028.1
+    #[cfg(feature = "epistemic")]
+    #[test]
+    fn from_rowset_reports_resolved_frames_under_epistemic() {
+        let view = fixture();
+        let rs = RowSet::from_ids(["d1".to_string()]);
+        let ks = KnowledgeSet::from_rowset(&rs, &view, &[]);
+        assert_eq!(ks.rows.len(), 1);
+        // Both frames resolved off the SAME pinned snapshot (`view`): `Resolved`,
+        // no refusal.
+        assert_eq!(ks.rows[0].provenance_frame, FrameState::Resolved);
+        assert_eq!(ks.rows[0].policy_frame, FrameState::Resolved);
+        assert_eq!(ks.frame_refusal(), None);
     }
 }

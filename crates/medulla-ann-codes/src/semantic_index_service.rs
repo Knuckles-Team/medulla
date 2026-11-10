@@ -843,6 +843,9 @@ pub use source_contract::{
     coalesce_sql_source_record_to_s1, sql_source_deletion_proof, sql_source_stage_artifact,
 };
 
+mod importance;
+pub use importance::{regularize, RegularizeError};
+
 mod operator;
 mod source_scan;
 mod source_turn;

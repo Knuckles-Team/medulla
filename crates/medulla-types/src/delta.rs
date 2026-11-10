@@ -177,6 +177,8 @@ mod tests {
 
     /// MEDULLA-INCREMENTAL-VIEWS-R002.2: equal rows sum, zero-weight rows drop, order is
     /// first-seen.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002: One weighted delta type for every view family.
     // spec: MEDULLA-INCREMENTAL-VIEWS-R002.2
     /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002.2: Consolidate and refuse overflow.
     #[test]

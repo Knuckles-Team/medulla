@@ -91,7 +91,8 @@ pub use record::{
     AbstainReason, CandidateFacts, CandidateSourceRecord, CoverageDerivation, DecisionInputs,
     DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, DerivationEdge, EdgeSource,
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-    SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, Violation, WhyNot,
+    SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope,
+    Violation, WhyNot,
 };
 pub use replay::{
     EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
