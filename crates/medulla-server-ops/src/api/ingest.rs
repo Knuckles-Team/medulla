@@ -53,6 +53,21 @@ pub trait JobsApi: Send + Sync {
     ) -> Result<medulla_jobs::TypedJobResult, String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
+
+    /// Enqueue one ingest task on the served task queue through the mutation
+    /// gateway (TaskQueueEnqueue). The write is idempotent on task id: a task
+    /// that already exists is not written again and the call reports
+    /// `deduplicated = true` (MEDULLA-INGEST-WORKER-R001.4).
+    #[allow(unused_variables)]
+    fn enqueue_ingest_task(
+        &self,
+        queue: &str,
+        task_id: &str,
+        partition: &str,
+        envelope: serde_json::Value,
+    ) -> Result<bool, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 }
 
 /// Compute handler behaviour reachable from crates below `medulla-h-compute`.

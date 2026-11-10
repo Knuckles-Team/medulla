@@ -1,8 +1,8 @@
 //! Typed ingest job envelope, lanes, partitioning and retry policy
-//! (MEDULLA-INGEST-WORKER-R001.1, R001.2, R001.3, R001.7, R001.8).
+//! (MEDULLA-INGEST-WORKER-R001.1, R001.2, R001.3, R001.4, R001.7, R001.8).
 //!
-//! Pure data and pure functions. The served queue, the claim/ack path and the
-//! dead-letter routing are later rows (R001.4, R001.9 to R001.11).
+//! Pure data and pure functions. The served queue write, the claim/ack path
+//! and the dead-letter routing are later rows (R001.9 to R001.12).
 
 use std::time::Duration;
 
@@ -81,6 +81,8 @@ pub enum IngestJobError {
     BaseAboveMax,
     #[error("ingest retry jitter must be a finite fraction in [0, 1]")]
     InvalidJitter,
+    #[error("ingest target must not embed credentials")]
+    TargetHasCredential,
 }
 
 impl IngestJobEnvelope {
@@ -130,6 +132,13 @@ pub struct IngestPartitionKey {
     pub tenant: String,
     pub corpus_key: String,
     pub kind: &'static str,
+}
+
+impl IngestPartitionKey {
+    /// The stable text form the queue stores as task metadata: tenant, corpus, kind.
+    pub fn render(&self) -> String {
+        format!("{}/{}/{}", self.tenant, self.corpus_key, self.kind)
+    }
 }
 
 pub fn partition_key(envelope: &IngestJobEnvelope) -> IngestPartitionKey {
@@ -194,6 +203,52 @@ pub fn next_delay(policy: &IngestRetryPolicy, attempt: u32, seed: u64) -> Durati
     let unit = (mix(seed, attempt) >> 11) as f64 / (1u64 << 53) as f64;
     let removed = (ceiling as f64 * policy.jitter.clamp(0.0, 1.0) * unit) as u64;
     Duration::from_millis(ceiling - removed.min(ceiling))
+}
+
+/// The receipt for a served `IngestEnqueue`: the task id, its queue, its
+/// partition and whether the write deduplicated
+/// (MEDULLA-INGEST-WORKER-R001.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IngestEnqueueReceipt {
+    /// 64 lowercase hex characters; stable for one (tenant, corpus, job).
+    pub task_id: String,
+    /// The served task-queue name the task is claimed from.
+    pub queue: String,
+    /// The partition the task orders within its queue, rendered
+    /// as tenant/corpus/kind.
+    pub partition: String,
+    /// True when the task already existed and the write did nothing.
+    pub deduplicated: bool,
+}
+
+/// The domain tag under which the ingest task id is framed.
+pub const INGEST_TASK_ID_DOMAIN: &[u8] = b"eg/ingest-task-id";
+
+/// The deterministic task id of an envelope: SHA-256 framed under
+/// `eg/ingest-task-id` over tenant, corpus key and job id
+/// (MEDULLA-INGEST-WORKER-R001.4).
+pub fn task_id(envelope: &IngestJobEnvelope) -> String {
+    medulla_types::contract::Digest256::framed(
+        INGEST_TASK_ID_DOMAIN,
+        &[
+            envelope.tenant.as_bytes(),
+            envelope.corpus_key.as_bytes(),
+            envelope.job_id.as_bytes(),
+        ],
+    )
+    .expect("string lengths always fit the digest framing limit")
+    .to_hex()
+}
+
+/// A target embeds a credential when the authority of a `scheme://` URI
+/// carries userinfo before the host (R001.4).
+pub fn target_embeds_credentials(target: &str) -> bool {
+    target
+        .split_once("://")
+        .and_then(|(_, rest)| rest.split('/').next())
+        .is_some_and(|authority| authority.contains('@'))
 }
 
 #[cfg(test)]
@@ -369,5 +424,58 @@ mod tests {
         assert_ne!(next_delay(&p, 3, 1), next_delay(&p, 3, 2));
         assert_eq!(next_delay(&p, 3, 1), next_delay(&p, 3, 1));
         assert!(next_delay(&p, u32::MAX, 9) <= Duration::from_millis(2_000));
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.4
+    #[test]
+    fn task_id_is_stable() {
+        let a = envelope();
+        let b = IngestJobEnvelope {
+            target: "docs/other.md".into(),
+            attempt: 2,
+            ..a.clone()
+        };
+        let id_a = task_id(&a);
+        assert_eq!(id_a.len(), 64);
+        assert!(id_a
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+        // Stable across the fields that do not name the job.
+        assert_eq!(task_id(&a), id_a);
+        assert_eq!(task_id(&a), task_id(&b));
+        // Distinct when the tenant, corpus or job identity changes.
+        let other_tenant = IngestJobEnvelope {
+            tenant: "t2".into(),
+            ..a.clone()
+        };
+        let other_corpus = IngestJobEnvelope {
+            corpus_key: "repo-b".into(),
+            ..a.clone()
+        };
+        let other_job = IngestJobEnvelope {
+            job_id: "job-2".into(),
+            ..a.clone()
+        };
+        for other in [other_tenant, other_corpus, other_job] {
+            assert_ne!(task_id(&other), id_a);
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.4
+    #[test]
+    fn credential_targets_are_refused() {
+        // Built at compile time so no credential-shaped literal is tracked.
+        assert!(target_embeds_credentials(concat!(
+            "postgres://user:pass",
+            "@host/db"
+        )));
+        assert!(target_embeds_credentials(concat!(
+            "s3://key",
+            "@bucket/object"
+        )));
+        assert!(target_embeds_credentials(concat!("amqp://", "@host/queue")));
+        assert!(!target_embeds_credentials("postgres://host/db"));
+        assert!(!target_embeds_credentials("host@not-a-uri"));
+        assert!(!target_embeds_credentials("docs/readme.md"));
     }
 }
