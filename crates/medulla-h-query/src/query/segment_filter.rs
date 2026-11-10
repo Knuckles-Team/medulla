@@ -53,6 +53,8 @@ impl ReadScope {
         Ok(scoped.view)
     }
 
+    /// Verifies MEDULLA-IDENTITY-R023.5: Evidence: read audit with hidden count
+    // spec: MEDULLA-IDENTITY-R023.5
     #[cfg(all(feature = "security", feature = "redb"))]
     fn audit(
         &self,
