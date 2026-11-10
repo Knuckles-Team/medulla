@@ -80,6 +80,10 @@ pub mod ast;
 mod contract;
 pub mod parser;
 pub mod screen;
+// MEDULLA-BRANCH-MERGE-R008 — pure diff3 line merge for file blobs; both the
+// accept path (`MEDULLA-SCM-R003`) and `merge_file` (`MEDULLA-BRANCH-MERGE-R010`)
+// call it. No handler type, std-only, always-on.
+pub mod line_merge;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
 pub mod source_symbol_edit;
 /// Shared parser fixtures for this crate's unit tests and downstream test
