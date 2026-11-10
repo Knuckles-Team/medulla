@@ -27,8 +27,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_work_types::search_task::{
-    Clue, EvidenceGraph, EvidenceNode, RiskFinding, RiskReport, RiskThresholds, SearchTask,
-    SearchTaskRefusal, ShortcutDetector, SEARCH_TASK_INVALID,
+    Clue, EvidenceGraph, RiskFinding, RiskReport, RiskThresholds, SearchTask, SearchTaskRefusal,
+    ShortcutDetector, SEARCH_TASK_INVALID,
 };
 
 /// The output of one synthesis: the synthesized task, the complete detector
@@ -423,9 +423,7 @@ pub fn synthesize(
             ShortcutDetector::CoCoverage | ShortcutDetector::PriorKnowledge => break,
         }
     }
-    if let Err(refusal) = task.validate(graph) {
-        return Err(refusal);
-    }
+    task.validate(graph)?;
     Ok(Synthesis {
         task,
         report,
@@ -436,7 +434,7 @@ pub fn synthesize(
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use medulla_work_types::search_task::EvidenceNode;
     fn node(id: &str, label: &str) -> EvidenceNode {
         EvidenceNode {
             id: id.into(),
