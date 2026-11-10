@@ -11,3 +11,4 @@ mod refusal;
 mod routing;
 mod template;
 mod topology;
+mod uniqueness;
