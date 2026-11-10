@@ -140,7 +140,6 @@ mod tests {
     /// test also stands for MEDULLA-FEDERATED-QUERY-R003 (no duplicated enforcement).
     // spec: MEDULLA-FEDERATED-QUERY-R001
     // spec: MEDULLA-FEDERATED-QUERY-R003
-    // spec: MEDULLA-FEDERATED-QUERY-R001
     // spec: MEDULLA-TYPED-PACKS-R058
     #[test]
     fn exact_budget_completes_and_one_less_is_exhausted() {

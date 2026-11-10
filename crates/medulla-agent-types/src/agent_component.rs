@@ -1585,6 +1585,210 @@ impl AgentComponentOutboxEvent {
 mod tests {
     use super::*;
 
+    /// R001.3: the `AgentComponent` operation and result shapes stay stable.
+    /// Every op is pinned to its committed wire tag, mutation flag and
+    /// authorization action — publish per component kind, because that
+    /// action is kind-dependent — and round-trips through both wire formats.
+    /// An op tag the wire does not define is refused at decode, a result
+    /// carrying a field the wire does not define is refused by name, and the
+    /// request validators still refuse the malformed shapes. A missing op
+    /// fails here at compile time; a missing `Method::AgentComponent` fails
+    /// the capability-ledger contract-registry bijection instead.
+    // spec: MEDULLA-TYPED-PACKS-R001.3
+    #[test]
+    fn agent_component_operation_and_result_shapes_are_stable() {
+        /// The committed descriptors for the non-publish ops: wire tag,
+        /// whether it commits durable state, and the authorization action.
+        const OPERATION_DESCRIPTORS: [(&str, bool, &str); 6] = [
+            ("content", false, "agent:component-read"),
+            ("current", false, "agent:component-read"),
+            ("history", false, "agent:component-read"),
+            ("retire", true, "agent:component-write"),
+            ("search", false, "agent:component-read"),
+            ("status", false, "agent:component-read"),
+        ];
+        /// The committed publish descriptors: every component kind and the
+        /// authorization action publishing it needs.
+        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 21] = [
+            (AgentComponentKind::ModelProfile, "agent:component-write"),
+            (AgentComponentKind::SystemPrompt, "agent:component-write"),
+            (AgentComponentKind::Tool, "agent:component-write"),
+            (AgentComponentKind::Toolset, "agent:component-write"),
+            (AgentComponentKind::McpServer, "agent:component-write"),
+            (AgentComponentKind::McpPrompt, "agent:component-write"),
+            (AgentComponentKind::McpResource, "agent:component-write"),
+            (AgentComponentKind::Skill, "agent:component-write"),
+            (AgentComponentKind::Ontology, "agent:component-write"),
+            (AgentComponentKind::Schema, "agent:component-write"),
+            (AgentComponentKind::OutputValidator, "agent:component-write"),
+            (AgentComponentKind::Predicate, "agent:component-write"),
+            (AgentComponentKind::Shapes, "agent:component-write"),
+            (AgentComponentKind::A2aAgentCard, "agent:component-write"),
+            (AgentComponentKind::DecisionRecord, "agent:component-write"),
+            (AgentComponentKind::GuardrailRule, "agent:component-write"),
+            (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
+            (AgentComponentKind::DecisionHead, "admin:decision-head"),
+            (AgentComponentKind::FeatureSchema, "admin:decision-catalog"),
+            (AgentComponentKind::Rubric, "admin:decision-catalog"),
+            (AgentComponentKind::NlTemplate, "admin:decision-catalog"),
+        ];
+
+        let ops = [
+            AgentComponentOp::Current {
+                tenant_id: "tenant-a".into(),
+                component_id: "shape-current".into(),
+            },
+            AgentComponentOp::History {
+                tenant_id: "tenant-a".into(),
+                component_id: "shape-history".into(),
+            },
+            AgentComponentOp::Status {
+                request: AgentComponentStatusRequest {
+                    context: mutation_context(),
+                    component_id: "shape-status".into(),
+                    kind: AgentComponentMutationKind::Republish,
+                },
+            },
+            AgentComponentOp::Search {
+                request: AgentComponentSearchRequest {
+                    tenant_id: "tenant-a".into(),
+                    task: None,
+                    capabilities: Vec::new(),
+                    kinds: vec![AgentComponentKind::Tool],
+                    read_only: false,
+                    limit: Some(10),
+                    cursor: None,
+                },
+            },
+            AgentComponentOp::Content {
+                request: AgentComponentContentRequest {
+                    tenant_id: "tenant-a".into(),
+                    component_id: "shape-content".into(),
+                    entry_revision: Some(1),
+                },
+            },
+            AgentComponentOp::Retire {
+                request: AgentComponentRetireRequest {
+                    context: mutation_context(),
+                    component_id: "shape-retire".into(),
+                },
+            },
+        ];
+
+        let mut observed: Vec<(String, bool, String)> = Vec::new();
+        for op in &ops {
+            op.validate().expect("the pinned sample is a valid request");
+            let wire = serde_json::to_value(op).unwrap();
+            let tag = wire["op"]
+                .as_str()
+                .expect("every op carries its tag")
+                .to_string();
+            assert_eq!(
+                serde_json::from_value::<AgentComponentOp>(wire).unwrap(),
+                *op
+            );
+            let packed = rmp_serde::to_vec_named(op).unwrap();
+            assert_eq!(
+                rmp_serde::from_slice::<AgentComponentOp>(&packed).unwrap(),
+                *op
+            );
+            observed.push((tag, op.is_mutation(), op.authz_action().to_string()));
+        }
+        observed.sort();
+        let mut committed: Vec<_> = OPERATION_DESCRIPTORS
+            .iter()
+            .map(|(tag, mutation, action)| (tag.to_string(), *mutation, action.to_string()))
+            .collect();
+        committed.sort();
+        assert_eq!(
+            observed, committed,
+            "an AgentComponent operation was added, removed or reshaped"
+        );
+
+        for (kind, action) in PUBLISH_DESCRIPTORS {
+            let op = AgentComponentOp::Publish {
+                request: Box::new(AgentComponentPublishRequest {
+                    context: mutation_context(),
+                    component: draft(&format!("shape-{kind:?}"), kind),
+                    evaluation_receipt_digest: None,
+                }),
+            };
+            let wire = serde_json::to_value(&op).unwrap();
+            assert_eq!(wire["op"].as_str().unwrap(), "publish");
+            assert!(op.is_mutation(), "{kind:?}: publish commits a revision");
+            assert_eq!(
+                op.authz_action(),
+                action,
+                "{kind:?}: the publish action moved off its committed descriptor"
+            );
+            assert_eq!(
+                serde_json::from_value::<AgentComponentOp>(wire).unwrap(),
+                op
+            );
+        }
+
+        let result = super::content::AgentComponentContentResult {
+            schema_version: super::content::COMPONENT_CONTENT_SCHEMA_VERSION,
+            component_id: "shape-content".into(),
+            entry_revision: 1,
+            definition_digest: digest('d'),
+            content_digest: digest('c'),
+            media_type: "application/json".into(),
+            body: vec![1, 2, 3],
+        };
+        let mut wire = serde_json::to_value(&result).unwrap();
+        assert_eq!(
+            serde_json::from_value::<super::content::AgentComponentContentResult>(wire.clone())
+                .unwrap(),
+            result
+        );
+        wire["not_a_field"] = serde_json::json!(1);
+        assert!(
+            serde_json::from_value::<super::content::AgentComponentContentResult>(wire).is_err(),
+            "a field the wire does not define must be refused"
+        );
+
+        for unknown in ["prepare", "commit", "abort", "body_read"] {
+            let error =
+                serde_json::from_value::<AgentComponentOp>(serde_json::json!({ "op": unknown }))
+                    .expect_err("no such op variant exists");
+            assert!(
+                error.to_string().contains("unknown variant"),
+                "op {unknown:?} must be refused as an unknown variant, got: {error}"
+            );
+        }
+
+        let empty_tenant = AgentComponentOp::Current {
+            tenant_id: String::new(),
+            component_id: "shape-current".into(),
+        };
+        assert!(
+            empty_tenant.validate().is_err(),
+            "an empty tenant must refuse"
+        );
+        let empty_component = AgentComponentOp::Content {
+            request: AgentComponentContentRequest {
+                tenant_id: "tenant-a".into(),
+                component_id: String::new(),
+                entry_revision: None,
+            },
+        };
+        assert!(
+            empty_component.validate().is_err(),
+            "an empty component id must refuse"
+        );
+        let reserved = AgentComponentOp::Retire {
+            request: AgentComponentRetireRequest {
+                context: mutation_context(),
+                component_id: "mcp:forged".into(),
+            },
+        };
+        assert!(
+            reserved.validate().is_err(),
+            "a reserved id prefix must refuse"
+        );
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R168.1
     #[test]
     fn lifecycle_boundaries_are_listed() {

@@ -199,6 +199,39 @@ fn failed_no_op_grant_audit_save_rolls_back_the_audit_entry() {
     assert_eq!(serde_json::to_string(layer.rbac()).unwrap(), before);
 }
 
+// spec: MEDULLA-IDENTITY-R002
+#[test]
+fn rbac_admin_entry_names_the_authorization_digest_change() {
+    let mut layer = seeded();
+    let store = layer.policy_store().unwrap();
+    let before = store.authority_snapshot().unwrap();
+    layer
+        .try_rbac_admin_audited(RbacAdminOp::AddRole(Role::new("ops")), actor())
+        .unwrap();
+    let after = store.authority_snapshot().unwrap();
+    // The next identity save commits the annotation of the earlier entry.
+    layer
+        .try_rbac_admin_audited(RbacAdminOp::AddRole(Role::new("ops2")), actor())
+        .unwrap();
+    let (saved, _, _) = store.load().unwrap();
+    let entry = saved
+        .identity_store()
+        .audit_trail()
+        .entries()
+        .find(|entry| entry.target.as_deref() == Some("ops"))
+        .unwrap();
+    assert_eq!(entry.event, IdentityEvent::RbacPolicyChanged);
+    let change = entry.authorization_digest.as_ref().unwrap();
+    assert_eq!(
+        change.from.as_deref(),
+        Some(format!("{}:{}", before.policy_digest(), before.identity_digest()).as_str())
+    );
+    assert_eq!(
+        change.to.as_deref(),
+        Some(format!("{}:{}", after.policy_digest(), after.identity_digest()).as_str())
+    );
+}
+
 #[test]
 fn tenant_role_removal_does_not_reappear_on_unrelated_identity_writes() {
     let mut layer = seeded();
