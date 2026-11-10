@@ -182,8 +182,10 @@ pub fn merge_entities(
                 claimed.insert(identity.clone());
             }
             (false, true) => {
-                plan.held_on_target
-                    .insert(identity.clone(), target_v.cloned().expect("changed implies present"));
+                plan.held_on_target.insert(
+                    identity.clone(),
+                    target_v.cloned().expect("changed implies present"),
+                );
                 claimed.insert(identity.clone());
             }
             (true, true) => plan.conflicts.push(identity.clone()),
@@ -201,7 +203,10 @@ pub fn merge_entities(
             }
         };
         if let Err(detail) = gate.checked_for_activation() {
-            return Err(MergeAdoptionRefusal { entity: identity, detail });
+            return Err(MergeAdoptionRefusal {
+                entity: identity,
+                detail,
+            });
         }
     }
 
@@ -302,10 +307,8 @@ mod tests {
             (knows.clone(), version(&[("since", "1900")])),
         ]);
         let target_side = base.clone();
-        let source_gates = ValidationGates::from([(
-            person42.clone(),
-            passed_gate("sha256:source-rename"),
-        )]);
+        let source_gates =
+            ValidationGates::from([(person42.clone(), passed_gate("sha256:source-rename"))]);
         let plan = merge_entities(&base, &source_side, &target_side, &source_gates)
             .expect("a one-sided change is adopted");
         assert_eq!(
@@ -322,9 +325,8 @@ mod tests {
         let source_delete = EntitySnapshot::from([(knows.clone(), version(&[("since", "1900")]))]);
         let delete_gates =
             ValidationGates::from([(person42.clone(), passed_gate("sha256:delete"))]);
-        let plan =
-            merge_entities(&base, &source_delete, &target_side, &delete_gates)
-                .expect("a one-sided deletion is adopted");
+        let plan = merge_entities(&base, &source_delete, &target_side, &delete_gates)
+            .expect("a one-sided deletion is adopted");
         assert_eq!(plan.adopted_from_source.get(&person42), Some(&None));
         assert_eq!(plan.published_target(&target_side).len(), 1);
 
@@ -334,9 +336,8 @@ mod tests {
             (knows.clone(), version(&[("since", "1900")])),
         ]);
         // Conflicts are not adopted, so no gate is recorded for them.
-        let plan =
-            merge_entities(&base, &source_side, &target_rename, &ValidationGates::new())
-                .expect("a both-sides change is a conflict, not a failure");
+        let plan = merge_entities(&base, &source_side, &target_rename, &ValidationGates::new())
+            .expect("a both-sides change is a conflict, not a failure");
         assert_eq!(plan.conflicts, vec![person42.clone()]);
         assert!(plan.adopted_from_source.is_empty());
         assert!(plan.held_on_target.is_empty());
@@ -369,9 +370,8 @@ mod tests {
         assert!(refusal.detail.contains("ShadowBranchIngested"));
 
         // A claimed entity with no recorded gate refuses the same way.
-        let refusal =
-            merge_entities(&base, &source_side, &target_side, &ValidationGates::new())
-                .expect_err("a missing gate refuses");
+        let refusal = merge_entities(&base, &source_side, &target_side, &ValidationGates::new())
+            .expect_err("a missing gate refuses");
         assert_eq!(refusal.entity, person42);
         assert_eq!(refusal.code(), MergeAdoptionRefusal::CODE);
     }
