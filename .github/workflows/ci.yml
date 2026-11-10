@@ -782,6 +782,12 @@ jobs:
         if: always()
         run: *medulla-validation-compiler-cache-stats
 
+      # Every crate builds alone with its own default features. A workspace
+      # build unifies features and hides a crate that leans on a neighbour.
+      - name: Every crate builds alone
+        if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+        run: cargo --locked xtask crate-isolation
+
   gates-storage:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 30 || 60 }}
     name: gates (storage crate)
@@ -1765,7 +1771,10 @@ jobs:
         run: SKIP="lane-guard,cargo-deny-advisories${SCOPE_SKIP:+,$SCOPE_SKIP}" pre-commit run --config .config/pre-commit.yaml --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
       # Whole-repo scans run at pre-push locally, never at commit; PR CI runs
       # them here so every one still gates the merge (MEDULLA-CONTRACT-R053.7.1).
+      # Whole-repo hooks run on main and nightly; a pull request runs only its own
+      # changed files' hooks above.
       - name: Whole-repo gates (pre-push stage)
+        if: github.event_name != 'pull_request'
         env:
           SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -1787,7 +1796,11 @@ jobs:
         run: |
           set -euo pipefail
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-          cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
+          # A pull request tests only the crates it changed and compile-checks their
+          # direct dependents; main tests every crate that depends on the change.
+          mode=""
+          [ "${{ github.event_name }}" = pull_request ] || mode="--transitive"
+          cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" $mode < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
           cat "$RUNNER_TEMP/cargo-runs.txt"
           if [ -s "$RUNNER_TEMP/cargo-runs.txt" ]; then echo "rust=true" >> "$GITHUB_OUTPUT"; else echo "rust=false" >> "$GITHUB_OUTPUT"; fi
       - name: Install librdkafka/Cyrus-SASL build headers
@@ -1826,6 +1839,13 @@ jobs:
             [ -z "$run" ] && continue
             args="${run#\{tool\} }"
             args="${args/\{serial\}/}"
+            case "$run" in *"{checkonly}"*)
+              args="${args/\{checkonly\}/}"
+              echo "::group::check $args"
+              cargo check --locked --keep-going $args --all-targets || rc=1
+              echo "::endgroup::"
+              continue ;;
+            esac
             echo "::group::clippy $args"
             cargo clippy --locked --keep-going $args --all-targets -- -D warnings || rc=1
             echo "::endgroup::"

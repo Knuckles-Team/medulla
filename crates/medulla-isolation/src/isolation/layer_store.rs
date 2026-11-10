@@ -22,6 +22,8 @@ impl IsolationLayer {
             )),
             #[cfg(feature = "security")]
             denials: Default::default(),
+            #[cfg(feature = "security")]
+            pending_audit_annotate: None,
         }
     }
 
@@ -70,6 +72,8 @@ impl IsolationLayer {
             persist_revision,
             persist: Some(store),
             denials: Default::default(),
+            #[cfg(feature = "security")]
+            pending_audit_annotate: None,
         })
     }
 
@@ -82,15 +86,38 @@ impl IsolationLayer {
     /// Write through the complete RBAC and identity state.
     #[cfg(feature = "security")]
     pub(super) fn persist_state(&mut self) -> Result<(), String> {
-        let store = self
-            .persist
-            .as_ref()
-            .ok_or_else(|| "identity/RBAC policy store is not bound".to_string())?;
         let identities: std::collections::BTreeMap<String, AgentIdentity> = self
             .agents
             .iter()
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
+        // MEDULLA-IDENTITY-R002: commit the staged audit annotation in this
+        // same save, before the image is written; drop it when later
+        // entries make it stale.
+        if let Some(pending) = self.pending_audit_annotate.take() {
+            if self.rbac.identity_store().audit_trail().last_seq() == pending.expected_last_seq {
+                let after_digest =
+                    crate::rbac_persist::authorization_digest(&self.rbac, &identities)
+                        .unwrap_or_default();
+                self.rbac
+                    .identity_store_mut()
+                    .audit_trail_mut()
+                    .annotate_since(
+                        pending.before_seq,
+                        pending.tenant.as_deref(),
+                        Some(
+                            medulla_identity_types::identity::AuthorizationDigestChange {
+                                from: Some(pending.before_digest),
+                                to: Some(after_digest),
+                            },
+                        ),
+                    );
+            }
+        }
+        let store = self
+            .persist
+            .as_ref()
+            .ok_or_else(|| "identity/RBAC policy store is not bound".to_string())?;
         let committed_revision = store
             .compare_and_save(
                 self.persist_revision,

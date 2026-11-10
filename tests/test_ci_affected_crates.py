@@ -20,15 +20,27 @@ def test_pull_request_runs_one_gate() -> None:
     ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     jobs = ci["jobs"]
     assert jobs["ci"]["name"] == "CI"
-    assert jobs["ci"]["if"] == "github.event_name == 'pull_request'"
+    assert jobs["ci"]["if"] == (
+        "(github.event_name == 'pull_request' || (github.event_name == 'push'"
+        " && github.ref == 'refs/heads/main'))"
+        " && needs.pr-scope.outputs.attested != 'true'"
+    )
     assert "ci" in jobs["ci-required"]["needs"]
-    for name in ("light-gates", "changes"):
-        assert jobs[name]["if"] == "github.event_name != 'pull_request'"
-    assert "pull_request" in jobs["security"]["if"]
+    assert jobs["light-gates"]["if"] == "github.event_name != 'pull_request'"
+    assert jobs["changes"]["if"] == (
+        "(github.event_name == 'schedule'"
+        " || github.event_name == 'workflow_dispatch'"
+        " || startsWith(github.ref, 'refs/tags/v'))"
+    )
+    # Security runs with the full matrix (nightly, tags, dispatch), not per PR.
+    assert "refs/tags/v" in jobs["security"]["if"]
     script = "\n".join(s.get("run", "") for s in jobs["ci"]["steps"])
     assert "xtask ci-affected-crates" in script
     assert "--from-ref" in script and "spec-trailers" in script
     assert "cargo nextest run" in script and "cargo clippy" in script
+    # A pull request tests what it changed and only compile-checks direct dependents.
+    assert "{checkonly}" in script and "cargo check --locked" in script
+    assert "--transitive" in script
     runs_on = jobs["ci"]["runs-on"]
     for needle in (
         "MEDULLA_WARM_CI_RUNNER",
