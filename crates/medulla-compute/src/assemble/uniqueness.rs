@@ -29,6 +29,7 @@ use super::model::{self, Building, VarRef};
 use super::search::{Answer, SolveContext};
 
 /// What the uniqueness re-solves proved, and the record fields they add.
+#[derive(Default)]
 pub(super) struct Proofs {
     /// One proof per proven scope: AfterElimination first, AllCandidates
     /// second.
@@ -37,16 +38,6 @@ pub(super) struct Proofs {
     pub(super) premises: Vec<PremiseRef>,
     /// Both scopes proven: the is_a coverage alone fixed the answer.
     pub(super) entailment: bool,
-}
-
-impl Default for Proofs {
-    fn default() -> Self {
-        Self {
-            proofs: Vec::new(),
-            premises: Vec::new(),
-            entailment: false,
-        }
-    }
 }
 
 /// The no-good re-solves over the solved selection, plain path only:
