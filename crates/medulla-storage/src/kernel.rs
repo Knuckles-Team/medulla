@@ -416,6 +416,18 @@ impl StorageKernel {
         ScopedSnapshot::capture(&self.store, owner)
     }
 
+    /// MEDULLA-OBJECT-STORAGE-BACKEND-R002 — the snapshot segment of the
+    /// object-store read path: the owner-table dump of
+    /// `copy_declared_owner_tables`, made reachable as bytes. The declared
+    /// census walks one read transaction; nothing writes.
+    #[cfg(feature = "object-archive")]
+    pub fn owner_snapshot_segment(&self) -> Result<Vec<u8>, String> {
+        let manifest = self.current_owner_manifest()?;
+        let read = self.store.begin_read().map_err(|error| error.to_string())?;
+        let rows = crate::owner::registry::dump_declared_owner_tables(&read, manifest.layout)?;
+        crate::owner::registry::encode_owner_table_dump(manifest.layout.canonical_name(), &rows)
+    }
+
     pub fn owner_manifest_digest(&self) -> Result<OwnerManifestDigest, String> {
         self.current_owner_manifest()?.digest()
     }

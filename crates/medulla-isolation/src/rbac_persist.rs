@@ -200,7 +200,7 @@ impl RbacAuthoritySnapshot {
     }
 }
 
-fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistError> {
+pub(crate) fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistError> {
     #[derive(serde::Serialize)]
     struct CanonicalPolicy<'a> {
         roles: BTreeMap<&'a str, &'a medulla_types::acl::Role>,
@@ -228,7 +228,7 @@ fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistErr
     Ok(hex::encode(hasher.finalize()))
 }
 
-fn authority_identity_digest(
+pub(crate) fn authority_identity_digest(
     identities: &BTreeMap<String, AgentIdentity>,
 ) -> Result<String, RbacPersistError> {
     let mut hasher = Sha256::new();
@@ -285,6 +285,20 @@ fn read_authority_image(
 /// the [`MutationKernel`] that holds the file's single move-once mutation
 /// authority. `owner` is the one authenticated, bound serving scope (see
 /// `native_security_control_identity`), validated once at open.
+/// The canonical digest of the whole authorization image -- the policy
+/// digest and the identity digest named together -- so an identity or RBAC
+/// write can record the change of the image in one audit field.
+pub(crate) fn authorization_digest(
+    policy: &RbacPolicy,
+    identities: &BTreeMap<String, AgentIdentity>,
+) -> Result<String, RbacPersistError> {
+    Ok(format!(
+        "{}:{}",
+        authority_policy_digest(policy)?,
+        authority_identity_digest(identities)?
+    ))
+}
+
 pub struct RbacStore {
     kernel: StorageKernel,
     mutations: MutationKernel,

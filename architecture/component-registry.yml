@@ -3946,6 +3946,7 @@ components:
       - "tests/connector_competency/test_cases_schema.py"
       - "tests/connector_competency/fixture_source.py"
       - "tests/connector_competency/test_fixture_source.py"
+      - "tests/connector_competency/test_contract_kinds_served.py"
       - "tests/typed_packs/test_model_harness_facts.py"
       - "tests/typed_packs/test_catalog_competency_queries.py"
       - "tests/typed_packs/test_concept_path_admission_served.py"

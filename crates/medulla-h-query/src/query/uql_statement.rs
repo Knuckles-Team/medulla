@@ -43,10 +43,23 @@ pub(crate) async fn handle_uql(
             ));
         }
     }
-    let (stmt, binding) = match bind_served_statement(req_id, &text, &params) {
+    let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params) {
         Ok(bound) => bound,
         Err(response) => return Ok(response),
     };
+    // MEDULLA-FEDERATED-QUERY-R078.3: the verified caller's tenant and clearance
+    // predicates enter the plan after binding and before execution — the plan
+    // that reaches `run_statement` carries the closed predicate set at every
+    // scan leaf, and a scope that cannot bind is refused before any leg binds
+    // or read runs (an unverified scope is refused by R078.4).
+    if let Err(detail) = served_plan_scope(ctx)
+        .and_then(|scope| inject_served_scope(&mut stmt, &mut binding, &scope))
+    {
+        return Ok(Response::err(
+            req_id,
+            format!("PLAN_SCOPE_INVALID: {detail}"),
+        ));
+    }
     let stmt_for_run = if prepare {
         let mut prepared = stmt.clone();
         prepared.mode = medulla_uql::Mode::Explain;
@@ -152,6 +165,49 @@ pub(crate) async fn handle_uql(
             started,
         }),
     ))
+}
+
+/// MEDULLA-FEDERATED-QUERY-R078.3: the caller scope a served statement's plan
+/// must carry into execution. The tenant is the graph the statement is served
+/// on — the cross-tenant chokepoint has already established the caller's
+/// authority over it; the clearance labels are the verified carrier's scopes.
+/// `verified` reflects whether a verified carrier actually exists (refusing an
+/// unverified scope is R078.4's).
+#[cfg(feature = "query")]
+fn served_plan_scope(
+    ctx: &QueryHandlerCtx<'_>,
+) -> Result<medulla_table_store::plan_scope::PlanScope, String> {
+    let carrier = ctx
+        .read_authority
+        .and_then(medulla_server_api::carrier::GraphReadAuthority::carrier);
+    let clearance_labels = carrier
+        .map(|carrier| carrier.scopes().to_vec())
+        .unwrap_or_default();
+    medulla_table_store::plan_scope::PlanScope::new(
+        ctx.graph_name,
+        clearance_labels,
+        carrier.is_some(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+/// MEDULLA-FEDERATED-QUERY-R078.3: inject the closed scope predicate set into
+/// the bound plan and the statement's pipeline body, so the plan that reaches
+/// `run_statement` carries the predicate at every scan leaf. A `Dag` body's
+/// linear binding carries the scope; its per-node execution is owned by the
+/// DAG rows.
+#[cfg(feature = "query")]
+fn inject_served_scope(
+    stmt: &mut medulla_uql::Statement,
+    binding: &mut medulla_exec::algebra::Plan,
+    scope: &medulla_table_store::plan_scope::PlanScope,
+) -> Result<(), String> {
+    use medulla_table_store::plan_scope::inject_scope;
+    inject_scope(binding, scope).map_err(|error| error.to_string())?;
+    if let medulla_uql::Body::Pipeline(plan) = &mut stmt.body {
+        inject_scope(plan, scope).map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 /// The statement's cache key and dependency set; `None` when its answer is not
@@ -298,7 +354,14 @@ mod served_tests {
 
         let params = std::collections::BTreeMap::new();
         let statement = medulla_uql::parse_statement(text, &params).expect("parse explain");
-        let binding = medulla_plan::uql::serve::binding_plan(&statement);
+        let mut binding = medulla_plan::uql::serve::binding_plan(&statement);
+        // MEDULLA-FEDERATED-QUERY-R078.3: the pin covers the plan the served
+        // path executes — the caller scope injected after binding (the test
+        // request signs scopes ["*"] on the "__commons__" graph).
+        let scope =
+            medulla_table_store::plan_scope::PlanScope::new("__commons__", vec!["*".into()], true)
+                .expect("test scope");
+        medulla_table_store::plan_scope::inject_scope(&mut binding, &scope).expect("scope injects");
         assert_eq!(
             query_digest,
             super::super::planning::foreign_uql_query_digest(text, &params).expect("query digest")
@@ -338,7 +401,14 @@ mod served_tests {
         };
         let params = std::collections::BTreeMap::new();
         let statement = medulla_uql::parse_statement(text, &params).expect("parse query");
-        let binding = medulla_plan::uql::serve::binding_plan(&statement);
+        let mut binding = medulla_plan::uql::serve::binding_plan(&statement);
+        // MEDULLA-FEDERATED-QUERY-R078.3: the pin covers the plan the served
+        // path executes — the caller scope injected after binding (the test
+        // request signs scopes ["*"] on the "__commons__" graph).
+        let scope =
+            medulla_table_store::plan_scope::PlanScope::new("__commons__", vec!["*".into()], true)
+                .expect("test scope");
+        medulla_table_store::plan_scope::inject_scope(&mut binding, &scope).expect("scope injects");
         assert_eq!(
             query_digest,
             super::super::planning::foreign_uql_query_digest(text, &params).expect("query digest")
