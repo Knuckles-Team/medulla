@@ -346,6 +346,15 @@ pub(super) const REASON_ONTOLOGY_CANONICAL_HASH: &str =
 // tenant binding are the complete read scope.
 pub(super) const REASON_SOURCE_INGESTION_MARKER: &str =
     "SourceIngestStatus reads one durable source-partition marker keyed by verified tenant, request graph, connector and stream behind source:ingest -- ingestion control state, never a GraphView/core.analysis_snapshot() row read";
+// MEDULLA-CONTRACT-R054: `DescribeContract` serves one bounded page of the
+// generated engine contract (the method descriptor rows, the scope registry on
+// the first page only, and the contract catalog digest on every page) from the
+// in-memory `medulla_capabilities` catalog. The handler is pure over that
+// catalog -- it opens no store, never constructs a GraphView/GraphCore, and
+// serves in every build (including non-`redb`) -- so there is no per-node row
+// for RLS to filter; the user-class `contract:read` capability is the scope.
+pub(super) const REASON_CONTRACT_CATALOG_CONTROL_STATE: &str =
+    "medulla_h_admin::admin::describe_contract::handle (routed from the control-plane admin arm, crates/medulla-server-router/src/dispatch/router/control_plane.rs) serves one bounded page of the generated engine contract from the in-memory medulla_capabilities::catalog::catalog_json() / contract_catalog_digest() -- method descriptor rows, the scope registry on the first page only and the catalog digest on every page: pure over the generated catalog, no durable substrates are read and no GraphView/core.analysis_snapshot() is ever constructed, so there is no per-node _owner/_visibility/_grants row for RLS to filter; authority is the user-class contract:read capability in allows_method";
 
 // RF-ADR-010 DL-4: `Decide` reads its candidates from ONE tenant-bound
 // agent_library.redb snapshot through `AgentComponent.Search`'s accessor, and
@@ -438,6 +447,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("OntologyCanonicalHash", REASON_ONTOLOGY_CANONICAL_HASH),
     // REASON_SOURCE_INGESTION_MARKER
     ("SourceIngestStatus", REASON_SOURCE_INGESTION_MARKER),
+    // REASON_CONTRACT_CATALOG_CONTROL_STATE (MEDULLA-CONTRACT-R054)
+    ("DescribeContract", REASON_CONTRACT_CATALOG_CONTROL_STATE),
     // REASON_SERVER_LIFECYCLE
     ("CancelRequest", REASON_SERVER_LIFECYCLE),
     ("Health", REASON_SERVER_LIFECYCLE),
@@ -639,6 +650,18 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
 // `REASON_NATIVE_DEVELOPMENT_LANE_READ` in `NON_ROW_SCOPED` above), so this list returns to its
 // intended empty end state.
 pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
+    // MEDULLA-REPO-INGEST-R006.1: `MeasureIngestThroughput` is declared in the
+    // policy table (medulla_capabilities::domains::ingestion, `source:ingest`,
+    // mutates false) but its serving handler is not wired yet: the row's
+    // caller chain (router source_ingest.rs -> medulla_h_ingest::
+    // ingest_throughput::measure) has not landed, so today a request reaches
+    // the terminal catch-all in medulla_h_graph::graph_ops::terminal::try_handle
+    // and is refused METHOD_NOT_YET_SERVED -- nothing is read at all yet, which
+    // is why there is no handler to trace either way. When it IS served, the
+    // row's intent is to read :StageReceipt graph rows, so burn this down by
+    // tracing the handler to its project_core/filter_view call site and moving
+    // it to RLS_ROUTED with the citation. Never assert NON_ROW_SCOPED for it.
+    ("MeasureIngestThroughput", "MEDULLA-REPO-INGEST-R006.1: declared in the policy table but not yet served (terminal catch-all refuses METHOD_NOT_YET_SERVED, nothing is read yet); when served it reads :StageReceipt graph rows, so it must move to RLS_ROUTED with a cited project_core/filter_view call site -- never NON_ROW_SCOPED"),
     // VIZ-1 hierarchical clustering (merged in 6fc8c552). These read the
     // non-authoritative `cluster_hierarchy_store`, not graph rows, so they do not
     // construct a GraphView -- which argues for NON_ROW_SCOPED. But cluster
