@@ -266,8 +266,17 @@ async fn recomputed_rows(state: &Arc<RwLock<ServerState>>) -> Vec<(String, Optio
     };
     let (snapshot, _) = core.analysis_snapshot_versioned();
     let semantic = core.semantic_store.read().clone();
-    let mut rows =
-        medulla_server_cdc::matview::materialize(&def, &snapshot, &semantic).expect("recompute");
+    // The oracle's FILTER leg drives DataFusion through a current-thread runtime
+    // (`medulla_sql::sql::exec_sql` builds one and `block_on`s it), which cannot nest
+    // inside this `#[tokio::test]` reactor — run it off-reactor, exactly as the
+    // served handler does.
+    let rows = tokio::task::spawn_blocking(move || {
+        medulla_server_cdc::matview::materialize(&def, &snapshot, &semantic)
+    })
+    .await
+    .expect("recompute oracle task")
+    .expect("recompute");
+    let mut rows = rows;
     rows.sort_by(|a, b| a.0.cmp(&b.0));
     rows
 }
