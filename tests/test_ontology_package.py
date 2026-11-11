@@ -73,6 +73,7 @@ def test_verify_rejects_missing_changed_and_extra(tmp_path: Path) -> None:
 @pytest.mark.skipif(
     "MEDULLA_ONTOLOGY_WHEEL" not in os.environ, reason="needs a built wheel path"
 )
+# spec: MEDULLA-CONTRACT-R015.1
 def test_built_wheel_contains_every_source_file() -> None:
     wheel = Path(os.environ["MEDULLA_ONTOLOGY_WHEEL"])
     inject_ontology.verify(wheel)
