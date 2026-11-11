@@ -1,0 +1,27 @@
+[
+  {
+    "method": "WalletKeyTrustGet",
+    "request": {
+      "method": "WalletKeyTrustGet",
+      "params": {
+        "account_id": "",
+        "network_id": "",
+        "wallet_id": ""
+      }
+    },
+    "result": {
+      "account_id": "",
+      "key_id": "",
+      "network_id": "",
+      "public_key": "",
+      "revoked": false,
+      "signer_ref": "",
+      "tenant_id": "",
+      "trust_revision": 0,
+      "valid_from": "",
+      "valid_until": "",
+      "wallet_id": ""
+    },
+    "sha256": "1af397d8757bfdba01ffb8e9d7f21e7148c57d446b35233e3f64ed0f3d6d077f"
+  }
+]

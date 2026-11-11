@@ -4,6 +4,7 @@
 
 METHOD_IDS = frozenset(
     {
+        "MeasureIngestThroughput",
         "CreateGraph",
         "DeleteGraph",
         "ListGraphs",

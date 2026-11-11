@@ -1,0 +1,272 @@
+[
+  {
+    "method": "GetRdf",
+    "request": {
+      "method": "GetRdf"
+    },
+    "result": "",
+    "sha256": "7139db6ccc05d2b9cb902f6e095a7d9e4200b7cd9ffc9e3fdafa9a1f2b183489"
+  },
+  {
+    "method": "GraphSchema",
+    "request": {
+      "method": "GraphSchema",
+      "params": {
+        "op": {
+          "if_composed_digest": "",
+          "ontology_ttl": "",
+          "op": "attach",
+          "shapes_ttl": "",
+          "source_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed": false,
+      "composed_digest": "",
+      "edit_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "graph": "",
+      "graph_version": 0,
+      "schema_version": 0
+    },
+    "sha256": "68062deb8ff5915ce793e0e9ae13ee5452a97728c57ee0c40bcd4c05d43a5103"
+  },
+  {
+    "method": "GraphSchemaClasses",
+    "request": {
+      "method": "GraphSchemaClasses",
+      "params": {
+        "cursor": "",
+        "kind": "class",
+        "limit": 0
+      }
+    },
+    "result": {
+      "composed_digest": "",
+      "graph": "",
+      "next_cursor": "",
+      "schema_version": 0,
+      "terms": [],
+      "total_terms": 0
+    },
+    "sha256": "96aab8f5949f6f42cd73d106e6d42dac864a7e5ea2589a1a01204a3a3100a7c9"
+  },
+  {
+    "method": "GraphSchemaList",
+    "request": {
+      "method": "GraphSchemaList"
+    },
+    "result": {
+      "composed_digest": "",
+      "core_catalog_digest": "",
+      "core_sources": [],
+      "dynamic_sources": [],
+      "graph": "",
+      "schema_version": 0
+    },
+    "sha256": "9ebbcdf27c6eedf797fcc4506b6bbb105a38573f2697ed1145a82239208d9132"
+  },
+  {
+    "method": "IcvConfigure",
+    "request": {
+      "method": "IcvConfigure",
+      "params": {
+        "graph": "",
+        "mode": "",
+        "shapes": ""
+      }
+    },
+    "result": false,
+    "sha256": "0eb18f5107d00c2336e6e00518390b8dd44c43549aacc1a29a6041309639f75a"
+  },
+  {
+    "method": "OntologyCanonicalHash",
+    "request": {
+      "method": "OntologyCanonicalHash",
+      "params": {
+        "turtle": ""
+      }
+    },
+    "result": {
+      "hash": ""
+    },
+    "sha256": "94b029a4533ccd7f2ae2683301544717e5be1f44ea16edcd08f7c56a2a1da036"
+  },
+  {
+    "method": "OntologyInspect",
+    "request": {
+      "method": "OntologyInspect",
+      "params": {
+        "documents": [],
+        "source_ids": []
+      }
+    },
+    "result": {
+      "canonical_digest": "",
+      "classes": [],
+      "committed": false,
+      "composed_digest": "",
+      "crosswalks": [],
+      "datatype_properties": [],
+      "object_properties": [],
+      "ontologies": [],
+      "schema_digests": [],
+      "shape_target_classes": [],
+      "triple_count": 0
+    },
+    "sha256": "3a64ab1f6a37276bb3f270f7f000b63dd29d4fd70263d43e2a116015136d1b7e"
+  },
+  {
+    "method": "OwlExplain",
+    "request": {
+      "method": "OwlExplain",
+      "params": {
+        "ontology": "",
+        "sub": "",
+        "sup": ""
+      }
+    },
+    "result": {
+      "consistent": false,
+      "found": false,
+      "schema_digests": [],
+      "tree": {
+        "axioms": [],
+        "confidence": 0.0,
+        "premises": [],
+        "rule": "",
+        "sub": "",
+        "sup": ""
+      },
+      "unsatisfiable": []
+    },
+    "sha256": "4d074c947c6548da46c629e6f2a0f5d2c4877ef6a9b7a1032ce7da1f0cef6506"
+  },
+  {
+    "method": "OwlReason",
+    "request": {
+      "method": "OwlReason",
+      "params": {
+        "class_base": "",
+        "min_confidence": 0.0,
+        "ontology": "",
+        "target_class": ""
+      }
+    },
+    "result": {
+      "consistent": false,
+      "direct_subclasses": [],
+      "instance_conf": [],
+      "instances": [],
+      "property_facts": [],
+      "schema_digests": [],
+      "subclass_conf": [],
+      "subclasses": [],
+      "unsatisfiable": []
+    },
+    "sha256": "5546c322a42a354c5f8cd80941591bca5d5b11eb04ac37c0725fdfbfffb738f7"
+  },
+  {
+    "method": "OwlReasonDistributed",
+    "request": {
+      "method": "OwlReasonDistributed",
+      "params": {
+        "class_base": "",
+        "graphs": [],
+        "min_confidence": 0.0,
+        "ontology": "",
+        "target_class": ""
+      }
+    },
+    "result": {
+      "consistent": false,
+      "direct_subclasses": [],
+      "instance_conf": [],
+      "instances": [],
+      "property_facts": [],
+      "schema_digests": [],
+      "subclass_conf": [],
+      "subclasses": [],
+      "unsatisfiable": []
+    },
+    "sha256": "4cc667e4665221836aaf7a89649a72db791a4e3e97b3c1f5093e628a1e8728f3"
+  },
+  {
+    "method": "RunDatalogReasoning",
+    "request": {
+      "method": "RunDatalogReasoning",
+      "params": {
+        "domain_rules": [],
+        "inverse_properties": [],
+        "property_chains": [],
+        "range_rules": [],
+        "subclass_relations": [],
+        "subproperty_relations": [],
+        "symmetric_properties": [],
+        "transitive_properties": []
+      }
+    },
+    "result": {
+      "inferred_count": 0,
+      "inferred_triples": [],
+      "schema_digests": []
+    },
+    "sha256": "881a6122a6f4dc92beb3c3896f410c066d4d4d8a2b3c5bc7a7899756ba98d045"
+  },
+  {
+    "method": "ShaclValidate",
+    "request": {
+      "method": "ShaclValidate",
+      "params": {
+        "data_graph": "",
+        "data_triples": [],
+        "shapes": ""
+      }
+    },
+    "result": {
+      "composed_digest": "",
+      "conforms": false,
+      "results": [],
+      "schema_digests": []
+    },
+    "sha256": "53486e7eb24a4d96f967928c8db17878ec1e07230c241e241cf7486118c01c37"
+  },
+  {
+    "method": "Sparql",
+    "request": {
+      "method": "Sparql",
+      "params": {
+        "base_iri": "",
+        "explain": false,
+        "query": "",
+        "type_convention": ""
+      }
+    },
+    "result": {
+      "proofs": [],
+      "rows": [],
+      "spatial": [],
+      "vars": []
+    },
+    "sha256": "afed0ee92e838c9354fb41739d3898e6584230c4f28f2c525ae553f0e0cfee30"
+  },
+  {
+    "method": "SparqlVirtual",
+    "request": {
+      "method": "SparqlVirtual",
+      "params": {
+        "external_sources": [],
+        "mapping": "",
+        "query": "",
+        "tables": []
+      }
+    },
+    "result": {
+      "proofs": [],
+      "rows": [],
+      "spatial": [],
+      "vars": []
+    },
+    "sha256": "813782d142065f72d0226da3811806ca376f8b44b326df8db2b6328b9c930177"
+  }
+]
