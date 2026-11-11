@@ -35,6 +35,7 @@ def _triples(client) -> set[tuple[str, str, str]]:
     return {(_canon(row["s"]), _canon(row["p"]), _canon(row["o"])) for row in rows}
 
 
+# spec: MEDULLA-FEDERATED-QUERY-R707.3
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R707.3")
 def test_insert_then_select(clean_graph):
     """INSERT DATA via the served update event, then read it back with a served
