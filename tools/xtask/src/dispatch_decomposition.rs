@@ -514,15 +514,13 @@ mod tests {
     fn elevation_route_ownership_drift_fails_closed() {
         let mut parts = parts();
         let owner = owner_of("dispatch_rbac_elevation");
-        let text = parts[owner]
-            .replacen("fn dispatch_rbac_elevation", "fn removed_rbac_elevation", 1);
+        let text =
+            parts[owner].replacen("fn dispatch_rbac_elevation", "fn removed_rbac_elevation", 1);
         parts.insert(owner.to_string(), text);
         // spec: MEDULLA-CONTRACT-R017
-        assert!(
-            check_inventory(&parts)
-                .unwrap_err()
-                .contains("dispatch_rbac_elevation ownership changed")
-        );
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("dispatch_rbac_elevation ownership changed"));
     }
 
     #[test]
@@ -536,11 +534,9 @@ mod tests {
         );
         parts.insert(owner.to_string(), text);
         // spec: MEDULLA-CONTRACT-R017
-        assert!(
-            check_inventory(&parts)
-                .unwrap_err()
-                .contains("handle_policy_evolution ownership changed")
-        );
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("handle_policy_evolution ownership changed"));
     }
 
     #[test]
@@ -556,11 +552,9 @@ mod tests {
         );
         parts.insert(target.to_string(), text);
         // spec: MEDULLA-CONTRACT-R017
-        assert!(
-            check_inventory(&parts)
-                .unwrap_err()
-                .contains("dispatch_telemetry_methods call missing")
-        );
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("dispatch_telemetry_methods call missing"));
     }
 
     #[test]
