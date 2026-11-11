@@ -4763,6 +4763,7 @@ name = "medulla-decision-policy"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "medulla-agent-types",
  "medulla-decision-types",
  "medulla-query-types",
  "medulla-types",
@@ -7689,6 +7690,7 @@ name = "medulla-source-types"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-agent-types",
  "medulla-catalog-types",
  "medulla-identity-types",
  "medulla-types",

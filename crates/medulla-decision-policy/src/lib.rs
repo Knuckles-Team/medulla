@@ -6,6 +6,10 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// Decision policy resolution, the seam the handler layers share
+/// (MEDULLA-SDLC-R006.7).
+pub mod policy;
+
 // Decide layer package A3 — general bounded 0-1 integer programming: validated
 // models, deterministic node-budgeted branch-and-bound, Lagrangian leaf-bound
 // certificates and an independent verifier. Integer-only, no heavy deps.

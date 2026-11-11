@@ -15,6 +15,7 @@ path = "src/lib.rs"
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-types = { path = "../medulla-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 thiserror = "2.0"

@@ -1,12 +1,20 @@
-//! Lifecycle trace walk (MEDULLA-SDLC-R006.2).
+//! Lifecycle trace walk (MEDULLA-SDLC-R006.2, limits from MEDULLA-SDLC-R006.7).
 
 use medulla_core::lifecycle::derive::DerivedEdge;
 use medulla_core::lifecycle::store::LifecycleStore;
 use medulla_core::lifecycle::trace::lifecycle_trace;
 use medulla_source_types::{
     lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K,
-    lifecycle::LifecycleTraceRequest, lifecycle::TRACE_NODE_BUDGET,
+    lifecycle::LifecycleTraceRequest, lifecycle::TraceLimits,
 };
+
+/// The limits the walk runs under; a value the caller resolves from the
+/// lifecycle knobs, not a constant (MEDULLA-SDLC-R006.7).
+const LIMITS: TraceLimits = TraceLimits {
+    max_depth: 8,
+    node_budget: NODE_BUDGET,
+};
+const NODE_BUDGET: usize = 10_000;
 
 fn edge(kind: E, from: &str, to: &str) -> DerivedEdge {
     DerivedEdge {
@@ -52,7 +60,7 @@ fn trace_respects_depth_and_budget() {
         .unwrap();
 
     let ids = |depth: u8, kinds: Vec<K>| -> Vec<String> {
-        lifecycle_trace(&store, &request("r", depth, kinds))
+        lifecycle_trace(&store, &request("r", depth, kinds), LIMITS)
             .records
             .into_iter()
             .map(|r| r.id)
@@ -63,7 +71,7 @@ fn trace_respects_depth_and_budget() {
     assert_eq!(ids(8, vec![]).len(), 7);
     // The walk passes through filtered kinds but returns only the asked kinds.
     assert_eq!(ids(8, vec![K::TestCase]), ["t1"]);
-    let answer = lifecycle_trace(&store, &request("r", 2, vec![]));
+    let answer = lifecycle_trace(&store, &request("r", 2, vec![]), LIMITS);
     assert_eq!(answer.edges.len(), 2);
     assert!(!answer.truncated);
     assert!(answer
@@ -71,23 +79,25 @@ fn trace_respects_depth_and_budget() {
         .iter()
         .all(|e| e.rule == "changes.span_overlap" && e.rule_version == 1));
     // An unknown anchor is an empty answer, not an error.
-    assert!(lifecycle_trace(&store, &request("ghost", 4, vec![]))
-        .records
-        .is_empty());
+    assert!(
+        lifecycle_trace(&store, &request("ghost", 4, vec![]), LIMITS)
+            .records
+            .is_empty()
+    );
 
     // The node budget stops a wide walk and reports it.
     let mut wide = LifecycleStore::default();
     wide.add_node("hub", K::Requirement);
     let mut edges = Vec::new();
-    for i in 0..TRACE_NODE_BUDGET + 500 {
+    for i in 0..NODE_BUDGET + 500 {
         let id = format!("leaf{i:05}");
         wide.add_node(&id, K::Changeset);
         edges.push(edge(E::CitesRequirement, &id, "hub"));
     }
     wide.apply_derived(edges).unwrap();
-    let answer = lifecycle_trace(&wide, &request("hub", 8, vec![]));
-    assert_eq!(answer.records.len(), TRACE_NODE_BUDGET);
+    let answer = lifecycle_trace(&wide, &request("hub", 8, vec![]), LIMITS);
+    assert_eq!(answer.records.len(), NODE_BUDGET);
     assert!(answer.truncated);
-    let small = lifecycle_trace(&store, &request("r", 8, vec![]));
+    let small = lifecycle_trace(&store, &request("r", 8, vec![]), LIMITS);
     assert!(!small.truncated);
 }

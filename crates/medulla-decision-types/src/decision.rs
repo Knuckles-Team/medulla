@@ -31,6 +31,7 @@ pub mod indexless_retrieval;
 pub mod ingestion_admission;
 pub mod jobs;
 pub mod knobs;
+pub mod lifecycle;
 pub mod numeric;
 pub mod policy;
 pub mod rapid_r015;
