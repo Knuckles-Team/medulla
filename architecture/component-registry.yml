@@ -2784,6 +2784,7 @@ components:
       - "crates/medulla-plan/tests"
       - "crates/medulla-plan/benches"
       - "tests/nl_query_bounded_steps.rs"
+      - "tests/plan_scope_tenant.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -4059,6 +4060,7 @@ components:
       - "tests/test_method_policy_registry.py"
       - "tests/identity/__init__.py"
       - "tests/identity/test_session_reference_served.py"
+      - "tests/identity/test_segment_retrieval_served.py"
       - "tests/workflows/__init__.py"
       - "tests/workflows/test_registry_served.py"
       - "tests/jobs/test_association_submit_served.py"
