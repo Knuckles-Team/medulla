@@ -5,6 +5,9 @@
 //! owner's admitted native mutation. A branch copies no graph data. Every
 //! refusal is decided before the registry write and writes nothing.
 
+// MEDULLA-BRANCH-MERGE-R004 — entity-level three-way merge.
+pub mod merge;
+
 use std::sync::Arc;
 
 use medulla_persistence::branch_registry_store::{

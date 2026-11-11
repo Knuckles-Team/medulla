@@ -108,7 +108,10 @@ async fn dispatch_cluster_admin_methods_arm_0(ctx: DispatchCtx<'_>, method: Meth
         // reach the concrete redb backend via `as_redb`. Non-redb builds return a clean
         // "not available" error from the handler.
         | Method::Backup { .. }
-        | Method::Restore { .. }) => {
+        | Method::Restore { .. }
+        // MEDULLA-CONTRACT-R054: the served contract read answers through the
+        // same admin seam; it needs no durable substrates.
+        | Method::DescribeContract { .. }) => {
             dispatch_boxed(
                 async {
     let req_id = req.id;
