@@ -11,22 +11,20 @@ use medulla_exec::policy_mask::{
 
 /// A canonical plan: source, a tenant filter, then the projection under test.
 fn plan_with_projection(channels: &[&str]) -> Plan {
-    Plan {
-        ops: vec![
-            Op::Scan {
-                label: "Person".into(),
-            },
-            Op::Filter {
-                preds: vec![Pred::Eq {
-                    prop: "tenant".into(),
-                    value: "acme".into(),
-                }],
-            },
-            Op::Project {
-                channels: channels.iter().map(|c| c.to_string()).collect(),
-            },
-        ],
-    }
+    Plan::new(vec![
+        Op::Scan {
+            label: "Person".into(),
+        },
+        Op::Filter {
+            preds: vec![Pred::Eq {
+                prop: "tenant".into(),
+                value: "acme".into(),
+            }],
+        },
+        Op::Project {
+            channels: channels.iter().map(|c| c.to_string()).collect(),
+        },
+    ])
 }
 
 /// Four mask methods on four tags, one extra tag exempt for `role:dpo`, and one

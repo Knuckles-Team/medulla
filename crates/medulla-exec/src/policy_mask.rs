@@ -164,9 +164,7 @@ pub fn mask_column_expr(method: MaskMethod, column: &str) -> String {
 /// UQL `RETURN` channels) adapted to the shared [`Plan`] IR, so the ONE rewrite
 /// [`apply_policies`] serves every language.
 pub fn projection_plan(columns: Vec<String>) -> Plan {
-    Plan {
-        ops: vec![Op::Project { channels: columns }],
-    }
+    Plan::new(vec![Op::Project { channels: columns }])
 }
 
 /// The shared predicate syntax → plan algebra (the R078 tenant predicates join the
@@ -568,27 +566,25 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R706.2
     #[test]
     fn apply_policies_masks_projection_and_and_joins_row_filters() {
-        let mut plan = Plan {
-            ops: vec![
-                Op::Scan {
-                    label: "Person".into(),
-                },
-                Op::Filter {
-                    preds: vec![Pred::Eq {
-                        prop: "tenant".into(),
-                        value: "acme".into(),
-                    }],
-                },
-                Op::Project {
-                    channels: vec![
-                        "pii.email".into(),
-                        "pii.ssn".into(),
-                        "pii.notes".into(),
-                        "plain".into(),
-                    ],
-                },
-            ],
-        };
+        let mut plan = Plan::new(vec![
+            Op::Scan {
+                label: "Person".into(),
+            },
+            Op::Filter {
+                preds: vec![Pred::Eq {
+                    prop: "tenant".into(),
+                    value: "acme".into(),
+                }],
+            },
+            Op::Project {
+                channels: vec![
+                    "pii.email".into(),
+                    "pii.ssn".into(),
+                    "pii.notes".into(),
+                    "plain".into(),
+                ],
+            },
+        ]);
         let set = PolicySet {
             masks: vec![
                 MaskPolicy {
