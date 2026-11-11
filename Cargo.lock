@@ -5270,6 +5270,7 @@ dependencies = [
  "dashmap",
  "hex",
  "medulla-agent-types",
+ "medulla-capabilities",
  "medulla-catalog-types",
  "medulla-core",
  "medulla-decision-types",

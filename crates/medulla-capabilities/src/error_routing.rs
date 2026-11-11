@@ -140,6 +140,11 @@ const HARNESS_RECORD_ADMISSION_ERRORS: &[&str] = &[
 ];
 
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-CONTRACT-R054: the served contract read's pagination refusals.
+    (
+        "DescribeContract",
+        &["DESCRIBE_CURSOR_INVALID", "DESCRIBE_LIMIT_INVALID"],
+    ),
     // MEDULLA-FEDERATED-QUERY-R709: a GeoSPARQL operand that is not WKT or
     // names an unsupported coordinate reference.
     ("Sparql", &["GEO_CRS_UNSUPPORTED", "GEO_LITERAL_INVALID"]),
