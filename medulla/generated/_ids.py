@@ -23,6 +23,7 @@ METHOD_IDS = frozenset(
         "FleetCatalog",
         "PlacementAdmin",
         "Ping",
+        "DescribeContract",
         "Health",
         "Shutdown",
         "CancelRequest",
