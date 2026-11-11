@@ -1,0 +1,5444 @@
+[
+  {
+    "method": "AcquireCapacity",
+    "request": {
+      "method": "AcquireCapacity",
+      "params": {
+        "request": {
+          "cost_budget_micros": 0,
+          "demands": [],
+          "idempotency_key": "",
+          "lease_id": "",
+          "now_ms": 0,
+          "owner_digest": "",
+          "priority": "interactive",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "token_budget": 0,
+          "ttl_ms": 0,
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "available": [],
+      "decision": "accepted",
+      "leases": [],
+      "message": "",
+      "schema_version": "1"
+    },
+    "sha256": "6b50d6279bc5a0a19faf54231881bb8d16ed189fc8cf939567841e7304af512b"
+  },
+  {
+    "method": "ActionRegister",
+    "request": {
+      "method": "ActionRegister",
+      "params": {
+        "spec": {
+          "criteria": [],
+          "effects": [],
+          "name": "",
+          "params": []
+        }
+      }
+    },
+    "result": "",
+    "sha256": "37b17b303104e1c631c75bdbc171b647d8e3cc338ec9eacfd7e96c94f3fb7f53"
+  },
+  {
+    "method": "ActionSubmit",
+    "request": {
+      "method": "ActionSubmit",
+      "params": {
+        "action": "",
+        "params": {}
+      }
+    },
+    "result": {
+      "action": "",
+      "effects": [],
+      "params": {},
+      "refusal": {
+        "code": "criterion_failed",
+        "detail": ""
+      },
+      "status": "applied",
+      "verdicts": []
+    },
+    "sha256": "3e925dd1c827300601be531498b55196c55617027d802e08b4e9c9dd1ba32fff"
+  },
+  {
+    "method": "AnalyticsJob",
+    "request": {
+      "method": "AnalyticsJob",
+      "params": {
+        "op": {
+          "Submit": {
+            "actor": "",
+            "backoff_ms": 0,
+            "deadline_unix_ms": 0,
+            "graph": "",
+            "io_bytes": 0,
+            "kind": {
+              "MineAssociate": {
+                "algorithm": "",
+                "min_confidence": 0.0,
+                "min_support": 0.0,
+                "transactions": []
+              }
+            },
+            "max_attempts": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0,
+            "priority": 0,
+            "purpose": "",
+            "quota_cpu_ms": 0,
+            "required_capabilities": [],
+            "tenant": "",
+            "worker_pool": "",
+            "worker_region": ""
+          }
+        }
+      }
+    },
+    "result": {
+      "Cancel": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "Resume": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "Status": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "Submit": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "WorkerCancel": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "WorkerCheckpoint": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "WorkerClaim": {
+        "job": {
+          "algo": {
+            "algorithm": "",
+            "code_version": "",
+            "env_version": "",
+            "family": "",
+            "params_digest": ""
+          },
+          "cancel_requested": false,
+          "created_at_ms": 0,
+          "input_payload": [],
+          "input_snapshot": {
+            "content_digest": "",
+            "dataset_ref": "",
+            "graph": "",
+            "version": 0
+          },
+          "job_id": "",
+          "last_worker_ref": "",
+          "lease": {
+            "acquired_at_ms": 0,
+            "epoch": 0,
+            "expires_at_ms": 0,
+            "worker_ref": ""
+          },
+          "lease_epoch": 0,
+          "not_before_ms": 0,
+          "output": {
+            "calibration": [
+              0.0,
+              0.0
+            ],
+            "content_digest": "",
+            "counterexample_refs": [],
+            "dataset_ref": "",
+            "evidence_refs": [],
+            "reproducibility": {
+              "algorithm_ref": "",
+              "environment_version": "",
+              "implementation_version": "",
+              "input_content_digest": "",
+              "input_dataset_ref": "",
+              "input_snapshot_version": 0,
+              "params_digest": "",
+              "policy_fingerprint": ""
+            },
+            "rows": [],
+            "schema": [],
+            "schema_version": 0,
+            "uncertainty": 0.0
+          },
+          "policy": {
+            "actor": "",
+            "deadline_unix_ms": 0,
+            "placement": {
+              "pool": "",
+              "region": "",
+              "required_capabilities": []
+            },
+            "policy_fingerprint": "",
+            "priority": 0,
+            "purpose": "",
+            "quota_cpu_ms": 0,
+            "resources": {
+              "cpu_ms": 0,
+              "io_bytes": 0,
+              "memory_bytes": 0,
+              "output_bytes": 0
+            },
+            "tenant": ""
+          },
+          "retry": {
+            "attempts_made": 0,
+            "backoff_ms": 0,
+            "max_attempts": 0
+          },
+          "state": "Submitted",
+          "updated_at_ms": 0
+        },
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        }
+      },
+      "WorkerFail": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "WorkerPublish": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      },
+      "WorkerRenew": {
+        "acquired_at_ms": 0,
+        "epoch": 0,
+        "expires_at_ms": 0,
+        "worker_ref": ""
+      },
+      "WorkerStage": {
+        "algo": {
+          "algorithm": "",
+          "code_version": "",
+          "env_version": "",
+          "family": "",
+          "params_digest": ""
+        },
+        "cancel_requested": false,
+        "created_at_ms": 0,
+        "input_snapshot": {
+          "content_digest": "",
+          "dataset_ref": "",
+          "graph": "",
+          "version": 0
+        },
+        "job_id": "",
+        "last_worker_ref": "",
+        "lease": {
+          "acquired_at_ms": 0,
+          "epoch": 0,
+          "expires_at_ms": 0,
+          "worker_ref": ""
+        },
+        "lease_epoch": 0,
+        "not_before_ms": 0,
+        "output": {
+          "calibration": [
+            0.0,
+            0.0
+          ],
+          "content_digest": "",
+          "counterexample_refs": [],
+          "dataset_ref": "",
+          "evidence_refs": [],
+          "reproducibility": {
+            "algorithm_ref": "",
+            "environment_version": "",
+            "implementation_version": "",
+            "input_content_digest": "",
+            "input_dataset_ref": "",
+            "input_snapshot_version": 0,
+            "params_digest": "",
+            "policy_fingerprint": ""
+          },
+          "rows": [],
+          "schema": [],
+          "schema_version": 0,
+          "uncertainty": 0.0
+        },
+        "policy": {
+          "actor": "",
+          "deadline_unix_ms": 0,
+          "placement": {
+            "pool": "",
+            "region": "",
+            "required_capabilities": []
+          },
+          "policy_fingerprint": "",
+          "priority": 0,
+          "purpose": "",
+          "quota_cpu_ms": 0,
+          "resources": {
+            "cpu_ms": 0,
+            "io_bytes": 0,
+            "memory_bytes": 0,
+            "output_bytes": 0
+          },
+          "tenant": ""
+        },
+        "retry": {
+          "attempts_made": 0,
+          "backoff_ms": 0,
+          "max_attempts": 0
+        },
+        "state": "Submitted",
+        "updated_at_ms": 0
+      }
+    },
+    "sha256": "70d6ee5643824939cf7d2071c96902f17839110339163a09b0bbdecd0447f3f1"
+  },
+  {
+    "method": "CancelWorkItem",
+    "request": {
+      "method": "CancelWorkItem",
+      "params": {
+        "idempotency_key": "",
+        "now_ms": 0,
+        "reason_ref": "",
+        "tenant": "",
+        "work_item_id": ""
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "fencing_token": 0,
+      "lease_epoch": 0,
+      "status": "cancelled",
+      "work_item_id": ""
+    },
+    "sha256": "e5b7be7f69aba2303d526665da502863180f6c02a84e39696f44eed423941a39"
+  },
+  {
+    "method": "CapacityStatus",
+    "request": {
+      "method": "CapacityStatus",
+      "params": {
+        "request": {
+          "cell_id": "",
+          "cursor": "",
+          "lease_id": "",
+          "max_count": 0,
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "cells": [],
+      "leases": [],
+      "next_cursor": "",
+      "schema_version": "1"
+    },
+    "sha256": "4e714e8ebd7c071638869c0916ed3288dd244be5f5986651709e09898a0efa57"
+  },
+  {
+    "method": "CasWorkItemMetadata",
+    "request": {
+      "method": "CasWorkItemMetadata",
+      "params": {
+        "request": {
+          "expected_checkpoint_id": "",
+          "expected_lease": {
+            "fencing_token": 0,
+            "lease_epoch": 0,
+            "worker_ref": ""
+          },
+          "expected_metadata_msgpack": [],
+          "expected_prio_bucket": 0,
+          "expected_status": [],
+          "now_ms": 0,
+          "schema_version": "1",
+          "set_checkpoint_id": "",
+          "set_metadata_msgpack": [],
+          "set_prio_bucket": 0,
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "outcome": "applied",
+      "schema_version": "1",
+      "work_item_id": ""
+    },
+    "sha256": "214e0c5a355372464dc3f860e9a63f6aecb927f8f59a9a698876ff20e91f75f7"
+  },
+  {
+    "method": "ClaimNext",
+    "request": {
+      "method": "ClaimNext",
+      "params": {
+        "label": "",
+        "updates_msgpack": []
+      }
+    },
+    "result": [
+      "",
+      null
+    ],
+    "sha256": "a2b1399166e9dbeb983aa7f70c2ffa0308e705ba82291b7fded4c17e3948d2b6"
+  },
+  {
+    "method": "ClaimWorkItem",
+    "request": {
+      "method": "ClaimWorkItem",
+      "params": {
+        "request": {
+          "fairness_group": "",
+          "lease_ms": 1,
+          "max_tenant_in_flight": 1,
+          "now_ms": 0,
+          "queue_ref": "",
+          "resource_class": "",
+          "schema_version": "1",
+          "tenant_ref": "a",
+          "work_item_id": "",
+          "worker_ref": "a"
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "claimed": false,
+      "fencing_token": 0,
+      "kind": "",
+      "lease_epoch": 0,
+      "lease_expires_at_ms": 0,
+      "lease_holder_ref": "",
+      "max_attempts": 0,
+      "payload_ref": "",
+      "reason": "claimed",
+      "schema_version": "1",
+      "tenant_in_flight": 0,
+      "work_item_id": ""
+    },
+    "sha256": "b845d3d3cd0ef876f96a0c9f7c15147931b59a1e20f51b39759f86dfdd2e38ba"
+  },
+  {
+    "method": "Claims",
+    "request": {
+      "method": "Claims",
+      "params": {
+        "op": {
+          "claim_id": "",
+          "op": "propose"
+        }
+      }
+    },
+    "result": {
+      "advance": {
+        "claim_id": "",
+        "contradiction_pairs": [],
+        "evidence": [],
+        "feeds": [],
+        "log_odds_micro": 0,
+        "stances": {},
+        "state": "proposed",
+        "tenant_id": "",
+        "transitions": []
+      },
+      "compile_artifact": {
+        "artifact_id": "",
+        "claim_ids": [],
+        "code_specs": [],
+        "cohort_id": "",
+        "exploration_edges": [],
+        "seal": {
+          "digest": ""
+        },
+        "tenant_id": ""
+      },
+      "get": {
+        "artifact": {
+          "artifact_id": "",
+          "claim_ids": [],
+          "code_specs": [],
+          "cohort_id": "",
+          "exploration_edges": [],
+          "seal": {
+            "digest": ""
+          },
+          "tenant_id": ""
+        },
+        "claim": {
+          "claim_id": "",
+          "contradiction_pairs": [],
+          "evidence": [],
+          "feeds": [],
+          "log_odds_micro": 0,
+          "stances": {},
+          "state": "proposed",
+          "tenant_id": "",
+          "transitions": []
+        }
+      },
+      "propose": {
+        "claim_id": "",
+        "contradiction_pairs": [],
+        "evidence": [],
+        "feeds": [],
+        "log_odds_micro": 0,
+        "stances": {},
+        "state": "proposed",
+        "tenant_id": "",
+        "transitions": []
+      },
+      "record_evidence": {
+        "claim_id": "",
+        "contradiction_pairs": [],
+        "evidence": [],
+        "feeds": [],
+        "log_odds_micro": 0,
+        "stances": {},
+        "state": "proposed",
+        "tenant_id": "",
+        "transitions": []
+      }
+    },
+    "sha256": "db28756b89d2665501180e55a508ecb5cbf085d5ff52cadf87f5aa4cdc57df94"
+  },
+  {
+    "method": "CleanupDevelopmentLane",
+    "request": {
+      "method": "CleanupDevelopmentLane",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "cleanup_attempt": 0,
+          "cleanup_fencing_token": 0,
+          "cleanup_lease_epoch": 0,
+          "cleanup_work_item_fence": "",
+          "cleanup_work_item_id": "",
+          "expected_hold_revision": 0,
+          "fencing_token": 0,
+          "hold_id": "",
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "removal_proof_ref": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_fence": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "quota_charge": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "fa01cccf3adf43a034cfdfbdddde9d044aa051c07ef7ecbb42ee17857622c644"
+  },
+  {
+    "method": "CommitWorkItemResult",
+    "request": {
+      "method": "CommitWorkItemResult",
+      "params": {
+        "error_ref": "",
+        "fencing_token": 0,
+        "idempotency_key": "",
+        "lease_epoch": 0,
+        "now_ms": 0,
+        "outcome": "",
+        "outcome_extension": {
+          "outcome_bundle": {
+            "artifacts": [],
+            "capability_digest": "",
+            "catalog_digest": "",
+            "completeness": "complete",
+            "delegation_id": "",
+            "delegator_id": "",
+            "event_sequence": 0,
+            "executor_lease_actor": "",
+            "fence_token": 0,
+            "langfuse_observation_refs": [],
+            "missing_refs": [],
+            "model_digest": "",
+            "outbox_id": "",
+            "outcome": "",
+            "outcome_ref": "",
+            "policy_digest": "",
+            "result_digest": "",
+            "result_ref": "",
+            "run_id": "",
+            "schema_version": 0,
+            "selected_agent_id": "",
+            "tool_call_refs": [],
+            "trace_ref": "",
+            "work_item_id": ""
+          },
+          "receipt_nodes": [],
+          "run_event": {
+            "capability_digest": "",
+            "carrier_digest": "",
+            "catalog_digest": "",
+            "completeness": "complete",
+            "cursor_token": "",
+            "delegation_id": "",
+            "delegator_id": "",
+            "event_sequence": 0,
+            "executor_lease_actor": "",
+            "fence_token": 0,
+            "kind": "",
+            "missing_refs": [],
+            "model_digest": "",
+            "outbox_id": "",
+            "outcome": "",
+            "outcome_ref": "",
+            "payload_digest": "",
+            "policy_digest": "",
+            "result_ref": "",
+            "run_id": "",
+            "schema_version": 0,
+            "selected_agent_id": "",
+            "timestamp_ms": 0,
+            "tool_call_ref": "",
+            "work_item_id": ""
+          }
+        },
+        "result_ref": "",
+        "retryable": false,
+        "run_completion": {
+          "run_id": "",
+          "schema_version": 0,
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "requests": 0,
+            "tool_calls": 0,
+            "total_tokens": 0
+          }
+        },
+        "tenant": "",
+        "work_item_id": "",
+        "worker_id": ""
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "fencing_token": 0,
+      "lease_epoch": 0,
+      "status": "succeeded",
+      "work_item_id": ""
+    },
+    "sha256": "736a54f1a7afed5a53f93427981d60ca23c6e75e877ddbc08690706df2c1e501"
+  },
+  {
+    "method": "DecisionEval",
+    "request": {
+      "method": "DecisionEval",
+      "params": {
+        "op": {
+          "op": "submit",
+          "request": {
+            "candidate": {
+              "candidate": "draft_artifact",
+              "length": 0,
+              "sha256": ""
+            },
+            "estimators": [],
+            "gold_set_digest": "",
+            "idempotency_key": "",
+            "mode": {
+              "mode": "off_policy"
+            },
+            "policy": {
+              "policy": "default"
+            },
+            "source": {
+              "dataset": {
+                "feature_names": [],
+                "feature_schema_digest": "",
+                "items": [],
+                "scale": "pico",
+                "schema_version": 0,
+                "synthetic": false
+              },
+              "source": "inline"
+            },
+            "tenant_id": "",
+            "window": {
+              "from_ms": 0,
+              "to_ms": 0
+            }
+          }
+        }
+      }
+    },
+    "result": {
+      "receipt": {
+        "calibration": {
+          "alpha": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "coverage_lower": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "coverage_upper": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "method": "vector",
+          "n_calibration": 0,
+          "synthetic": false
+        },
+        "estimates": [],
+        "exclusions": {
+          "below_fidelity_floor": 0,
+          "censored": 0,
+          "llm_resolved": 0,
+          "not_observation": 0,
+          "outside_window": 0,
+          "pinned": 0,
+          "propensity_not_executed_policy": 0,
+          "self_reported": 0,
+          "unapproved_principal": 0,
+          "wrong_regime": 0,
+          "zero_executed_propensity": 0
+        },
+        "failed_gates": [],
+        "feature_power": [],
+        "head_digest": "",
+        "metrics": {
+          "act_risk_upper": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "acted": 0,
+          "acted_wrong": 0,
+          "brier": {
+            "scale": "pico",
+            "value": 0
+          },
+          "coverage_lower": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "coverage_upper": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "covered": 0,
+          "expected_calibration_error": {
+            "scale": "pico",
+            "value": 0
+          },
+          "log_loss": {
+            "scale": "pico",
+            "value": 0
+          },
+          "n_items": 0,
+          "set_size_total": 0,
+          "top1_hits": 0
+        },
+        "n_records": 0,
+        "passed": false,
+        "policy_digest": "",
+        "pooled": [],
+        "promotion": {
+          "abstained": 0,
+          "answered": 0,
+          "answered_hits": 0,
+          "early_coverage": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "late_coverage": {
+            "denominator": 0,
+            "numerator": 0
+          },
+          "macs_total": 0,
+          "per_class": [],
+          "score_mae": {
+            "scale": "pico",
+            "value": 0
+          },
+          "soft_accuracy": {
+            "scale": "pico",
+            "value": 0
+          },
+          "stable_items": 0
+        },
+        "receipt_digest": "",
+        "synthetic": false
+      },
+      "receipts": {
+        "next_after": "",
+        "receipts": []
+      },
+      "status": {
+        "job_id": "",
+        "kind": "fit",
+        "request_digest": "",
+        "schema_version": 0,
+        "state": {
+          "state": "queued"
+        },
+        "submitted_at_ms": 0,
+        "tenant_id": ""
+      },
+      "submit": {
+        "job_id": "",
+        "kind": "fit",
+        "request_digest": "",
+        "schema_version": 0,
+        "state": {
+          "state": "queued"
+        },
+        "submitted_at_ms": 0,
+        "tenant_id": ""
+      },
+      "timeline": {
+        "entries": [],
+        "next_after": ""
+      }
+    },
+    "sha256": "63ea62c01cac1df5a247b3f8fa9e50795d9373e6cc0a58956cedfd8d25ae6b6c"
+  },
+  {
+    "method": "DecisionFit",
+    "request": {
+      "method": "DecisionFit",
+      "params": {
+        "op": {
+          "op": "submit",
+          "request": {
+            "feature_schema": {
+              "component_id": "",
+              "definition_digest": "",
+              "kind": "model_profile"
+            },
+            "head_kind": "weighted_features",
+            "idempotency_key": "",
+            "label_regime": {
+              "gold_set_digest": "",
+              "regime": "full_label"
+            },
+            "optimiser": {
+              "max_iterations": 0,
+              "seed": 0,
+              "tolerance": {
+                "scale": "pico",
+                "value": 0
+              }
+            },
+            "policy": {
+              "policy": "default"
+            },
+            "source": {
+              "dataset": {
+                "feature_names": [],
+                "feature_schema_digest": "",
+                "items": [],
+                "scale": "pico",
+                "schema_version": 0,
+                "synthetic": false
+              },
+              "source": "inline"
+            },
+            "tenant_id": "",
+            "window": {
+              "from_ms": 0,
+              "to_ms": 0
+            }
+          }
+        }
+      }
+    },
+    "result": {
+      "status": {
+        "job_id": "",
+        "kind": "fit",
+        "request_digest": "",
+        "schema_version": 0,
+        "state": {
+          "state": "queued"
+        },
+        "submitted_at_ms": 0,
+        "tenant_id": ""
+      },
+      "submit": {
+        "job_id": "",
+        "kind": "fit",
+        "request_digest": "",
+        "schema_version": 0,
+        "state": {
+          "state": "queued"
+        },
+        "submitted_at_ms": 0,
+        "tenant_id": ""
+      }
+    },
+    "sha256": "42a16b43f94df9478bc4867bfe8e29a8eabcc518cbd4bead1329a4f33172a5a5"
+  },
+  {
+    "method": "DecisionLog",
+    "request": {
+      "method": "DecisionLog",
+      "params": {
+        "op": {
+          "evaluator": {
+            "expires_at_ms": 1,
+            "principal": "1",
+            "role": "1"
+          },
+          "op": "commit",
+          "record": {
+            "audit": {
+              "inclusion_probability": {
+                "denominator": 4294967296,
+                "numerator": 1
+              },
+              "sampled": false
+            },
+            "calibration": {
+              "alpha": {
+                "denominator": 4294967296,
+                "numerator": 1
+              },
+              "coverage_lower": {
+                "denominator": 4294967296,
+                "numerator": 1
+              },
+              "coverage_upper": {
+                "denominator": 4294967296,
+                "numerator": 1
+              },
+              "method": "vector",
+              "n_calibration": 1,
+              "synthetic": false
+            },
+            "caller_principal": "1",
+            "candidate_source": {
+              "classification_under": "1",
+              "kinds": [],
+              "source": "agent_library"
+            },
+            "created_at_ms": 1,
+            "evidence_class": "proof",
+            "explanation": {
+              "contributions": [],
+              "option_id": "1"
+            },
+            "inputs": {
+              "classification_rules": "1",
+              "exploration": {
+                "budget_digest": "1",
+                "revealed_seed": "1",
+                "seed_commitment": "1"
+              },
+              "feature_matrix": {
+                "candidate_ids": [],
+                "feature_names": [],
+                "matrix": "inline",
+                "scale": "pico",
+                "values": []
+              },
+              "feature_schema": {
+                "component_id": "1",
+                "definition_digest": "1",
+                "kind": "model_profile"
+              },
+              "harness_contrast": {
+                "abstain_reason": "no_improvement",
+                "adopted_version_ref": "1",
+                "candidate_version_refs": [],
+                "conditions_digest": "1",
+                "deltas": [],
+                "probe_trace_ids": [],
+                "task_class": "1",
+                "task_ref": "1"
+              },
+              "harness_evaluation": {
+                "answer": {
+                  "action_space": {
+                    "status": "decided",
+                    "value": "tool_set"
+                  },
+                  "context_policy": {
+                    "status": "decided",
+                    "value": "none"
+                  },
+                  "hard_threshold": {
+                    "status": "decided",
+                    "value": {
+                      "denominator": 4294967296,
+                      "numerator": 1
+                    }
+                  },
+                  "plan_scaffold": {
+                    "status": "decided",
+                    "value": "on"
+                  },
+                  "recent_window_fraction": {
+                    "status": "decided",
+                    "value": {
+                      "denominator": 4294967296,
+                      "numerator": 1
+                    }
+                  },
+                  "soft_threshold": {
+                    "status": "decided",
+                    "value": {
+                      "denominator": 4294967296,
+                      "numerator": 1
+                    }
+                  },
+                  "tool_subset": {
+                    "status": "decided",
+                    "value": []
+                  }
+                },
+                "model_profile": {
+                  "component_id": "1",
+                  "definition_digest": "1",
+                  "kind": "model_profile"
+                },
+                "request": {
+                  "expected_trajectory_tokens": 1,
+                  "model_profile_ref": "1",
+                  "priority": "interactive",
+                  "task_class": "1",
+                  "usable_context_budget_tokens": 1
+                }
+              },
+              "head": {
+                "component_id": "1",
+                "definition_digest": "1",
+                "kind": "model_profile"
+              },
+              "params": [],
+              "policy": {
+                "policy": "default"
+              },
+              "policy_digest": "1",
+              "shortlist": {
+                "ann_recall_mode": "1",
+                "embedder_model_digest": "1",
+                "now_ms": 1
+              }
+            },
+            "inputs_digest": "1",
+            "logging_propensities": [],
+            "nl_binding": {
+              "params": [],
+              "source": {
+                "by": "engine"
+              },
+              "target": {
+                "question": {
+                  "kind": "route",
+                  "question_id": "1",
+                  "safety": "ordinary"
+                },
+                "target": "decide"
+              },
+              "template": {
+                "component_id": "1",
+                "definition_digest": "1",
+                "kind": "model_profile"
+              },
+              "unfilled": []
+            },
+            "outcome": {
+              "option_id": "1",
+              "outcome": "acted",
+              "prediction_set": [],
+              "propensity": {
+                "denominator": 1,
+                "numerator": 1
+              },
+              "risk": {
+                "delta": {
+                  "denominator": 1,
+                  "numerator": 1
+                },
+                "epsilon": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "method": "learn_then_test",
+                "n_calibration": 0
+              }
+            },
+            "premises": [],
+            "question": {
+              "kind": "route",
+              "question_id": "",
+              "safety": "ordinary"
+            },
+            "record_digest": "",
+            "record_id": "",
+            "resolution_kind": "constraint",
+            "schema_version": 0,
+            "synthetic_evidence": false,
+            "task_plan": {
+              "input_digest": "",
+              "max_concurrency": 0,
+              "max_steps": 0,
+              "output_task_id": "",
+              "plan_digest": "",
+              "policy_digest": "",
+              "policy_revision": "",
+              "tasks": [],
+              "total_tasks": 0
+            },
+            "tenant_id": "",
+            "trace_fidelity": {
+              "fidelity": "full_step"
+            }
+          }
+        }
+      }
+    },
+    "result": {
+      "aggregate": {
+        "attribution": {
+          "components": [],
+          "digest": "",
+          "evidence_class": "proof",
+          "grand": {
+            "scale": "pico",
+            "value": 0
+          },
+          "graph_digest": "",
+          "method": "shapley",
+          "observed_coalitions": 0
+        },
+        "min_support": 0,
+        "rows": [],
+        "schema_version": 0
+      },
+      "commit": {
+        "record_digest": "",
+        "record_id": "",
+        "replayed": false,
+        "schema_version": 0
+      },
+      "compact": {
+        "compacted": 0,
+        "more": false,
+        "retired": 0
+      },
+      "evaluate": {
+        "evaluation": {
+          "class": "proof",
+          "evaluation_id": "",
+          "fidelity": "full_step",
+          "lease_holder": "",
+          "record_id": "",
+          "selected_agent": "",
+          "success": false
+        },
+        "producer": "",
+        "recorded_at_ms": 0
+      },
+      "get": {
+        "committed_at_ms": 0,
+        "committed_by": "",
+        "inputs": {
+          "inputs": "inline"
+        },
+        "record": {
+          "audit": {
+            "inclusion_probability": {
+              "denominator": 0,
+              "numerator": 0
+            },
+            "sampled": false
+          },
+          "belief": [],
+          "calibration": {
+            "alpha": {
+              "denominator": 0,
+              "numerator": 0
+            },
+            "coverage_lower": {
+              "denominator": 0,
+              "numerator": 0
+            },
+            "coverage_upper": {
+              "denominator": 0,
+              "numerator": 0
+            },
+            "method": "vector",
+            "n_calibration": 0,
+            "synthetic": false
+          },
+          "caller_principal": "",
+          "candidate_source": {
+            "classification_under": "",
+            "kinds": [],
+            "source": "agent_library"
+          },
+          "created_at_ms": 0,
+          "evidence_class": "proof",
+          "explanation": {
+            "contributions": [],
+            "option_id": ""
+          },
+          "inputs": {
+            "belief_slices": [],
+            "classification_rules": "",
+            "exploration": {
+              "budget_digest": "",
+              "revealed_seed": "",
+              "seed_commitment": ""
+            },
+            "feature_matrix": {
+              "candidate_ids": [],
+              "feature_names": [],
+              "matrix": "inline",
+              "scale": "pico",
+              "values": []
+            },
+            "feature_schema": {
+              "component_id": "",
+              "definition_digest": "",
+              "kind": "model_profile"
+            },
+            "harness_contrast": {
+              "abstain_reason": "no_improvement",
+              "adopted_version_ref": "",
+              "candidate_version_refs": [],
+              "conditions_digest": "",
+              "deltas": [],
+              "probe_trace_ids": [],
+              "task_class": "",
+              "task_ref": ""
+            },
+            "harness_evaluation": {
+              "answer": {
+                "action_space": {
+                  "status": "decided",
+                  "value": "tool_set"
+                },
+                "context_policy": {
+                  "status": "decided",
+                  "value": "none"
+                },
+                "hard_threshold": {
+                  "status": "decided",
+                  "value": {
+                    "denominator": 0,
+                    "numerator": 0
+                  }
+                },
+                "plan_scaffold": {
+                  "status": "decided",
+                  "value": "on"
+                },
+                "recent_window_fraction": {
+                  "status": "decided",
+                  "value": {
+                    "denominator": 0,
+                    "numerator": 0
+                  }
+                },
+                "soft_threshold": {
+                  "status": "decided",
+                  "value": {
+                    "denominator": 0,
+                    "numerator": 0
+                  }
+                },
+                "tool_subset": {
+                  "status": "decided",
+                  "value": []
+                }
+              },
+              "model_profile": {
+                "component_id": "",
+                "definition_digest": "",
+                "kind": "model_profile"
+              },
+              "request": {
+                "expected_trajectory_tokens": 0,
+                "model_profile_ref": "",
+                "priority": "interactive",
+                "task_class": "",
+                "usable_context_budget_tokens": 0
+              }
+            },
+            "head": {
+              "component_id": "",
+              "definition_digest": "",
+              "kind": "model_profile"
+            },
+            "params": [],
+            "policy": {
+              "policy": "default"
+            },
+            "policy_digest": "",
+            "shortlist": {
+              "ann_recall_mode": "",
+              "embedder_model_digest": "",
+              "now_ms": 0
+            }
+          },
+          "inputs_digest": "",
+          "logging_propensities": [],
+          "nl_binding": {
+            "params": [],
+            "source": {
+              "by": "engine"
+            },
+            "target": {
+              "question": {
+                "kind": "route",
+                "question_id": "",
+                "safety": "ordinary"
+              },
+              "target": "decide"
+            },
+            "template": {
+              "component_id": "",
+              "definition_digest": "",
+              "kind": "model_profile"
+            },
+            "unfilled": []
+          },
+          "outcome": {
+            "option_id": "",
+            "outcome": "acted",
+            "prediction_set": [],
+            "propensity": {
+              "denominator": 0,
+              "numerator": 0
+            },
+            "risk": {
+              "delta": {
+                "denominator": 0,
+                "numerator": 0
+              },
+              "epsilon": {
+                "denominator": 0,
+                "numerator": 0
+              },
+              "method": "learn_then_test",
+              "n_calibration": 0
+            }
+          },
+          "premises": [],
+          "question": {
+            "kind": "route",
+            "question_id": "",
+            "safety": "ordinary"
+          },
+          "record_digest": "",
+          "record_id": "",
+          "resolution_kind": "constraint",
+          "schema_version": 0,
+          "synthetic_evidence": false,
+          "task_plan": {
+            "input_digest": "",
+            "max_concurrency": 0,
+            "max_steps": 0,
+            "output_task_id": "",
+            "plan_digest": "",
+            "policy_digest": "",
+            "policy_revision": "",
+            "tasks": [],
+            "total_tasks": 0
+          },
+          "tenant_id": "",
+          "trace_fidelity": {
+            "fidelity": "full_step"
+          }
+        },
+        "schema_version": 0,
+        "visibility": {
+          "visibility": "tenant"
+        }
+      },
+      "learn": {
+        "outcome": {
+          "cited": [],
+          "path": {
+            "anchor_class": "",
+            "composed_digest": "",
+            "edges": [],
+            "policy_version": "",
+            "rank": "unranked",
+            "skill_ref": "",
+            "slots": [],
+            "task_class": ""
+          },
+          "query": {
+            "q16": [],
+            "space_digest": ""
+          },
+          "record_id": "",
+          "returned": []
+        },
+        "producer": "",
+        "recorded": "outcome",
+        "recorded_at_ms": 0
+      },
+      "resolve": {
+        "class": "proof",
+        "producer": "",
+        "recorded_at_ms": 0,
+        "resolution": {
+          "option_id": "",
+          "record_id": "",
+          "resolution_id": "",
+          "resolver": {
+            "resolver": "human"
+          }
+        }
+      },
+      "verify": {
+        "record_digest": "",
+        "verification": "verified"
+      }
+    },
+    "sha256": "7e88d6f8db2807436ab733564d7a763ebf72c880503ff193a675cbb1b4438431"
+  },
+  {
+    "method": "DeferWorkItem",
+    "request": {
+      "method": "DeferWorkItem",
+      "params": {
+        "fencing_token": 0,
+        "idempotency_key": "",
+        "lease_epoch": 0,
+        "next_retry_at_ms": 0,
+        "now_ms": 0,
+        "reason_ref": "",
+        "tenant": "",
+        "work_item_id": "",
+        "worker_id": ""
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "defer_count": 0,
+      "fencing_token": 0,
+      "lease_epoch": 0,
+      "next_retry_at_ms": 0,
+      "status": "missing",
+      "work_item_id": ""
+    },
+    "sha256": "61fb50115f2ef9fa953c81d34715bb7977a0a5242dd499d0f02cd96224b1db5b"
+  },
+  {
+    "method": "DevelopmentLaneStatus",
+    "request": {
+      "method": "DevelopmentLaneStatus",
+      "params": {
+        "request": {
+          "cursor": "",
+          "hold_id": "",
+          "lane_id": "",
+          "limit": 0,
+          "now_ms": 0,
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "complete": false,
+      "counters": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "holds": [],
+      "next_cursor": "",
+      "schema_version": "1",
+      "tenant_active_count": 0,
+      "tenant_retained_disk_bytes": 0,
+      "tombstone": false
+    },
+    "sha256": "869926810299efd185aa25a29a40ec1c8d32a72cce8e6b3af9532c2b3696d707"
+  },
+  {
+    "method": "FinishDevelopmentLane",
+    "request": {
+      "method": "FinishDevelopmentLane",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "expected_hold_revision": 0,
+          "fencing_token": 0,
+          "hold_id": "",
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "terminal_state": "succeeded",
+          "work_item_fence": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "quota_charge": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "4783135646ef850f316b0d18847ad42dde086692454f4d6afb9c83072e083594"
+  },
+  {
+    "method": "GapGet",
+    "request": {
+      "method": "GapGet",
+      "params": {
+        "gap_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "concept_ids": [],
+      "created_at_ms": 0,
+      "domain": "",
+      "evidence": [],
+      "evidence_count": 0,
+      "gap_id": "",
+      "generation": 0,
+      "offer": {
+        "generation": 0,
+        "offer": {
+          "blast_radius": "local",
+          "cooldown_until_ms": 0,
+          "cost_uncertainty_ppm": 0,
+          "depends_on_gap_ids": [],
+          "evidence_digests": [],
+          "expected_cost_microunits": 0,
+          "expected_utility_micros": 0,
+          "probability_of_closure_ppm": 0,
+          "repository_scope": [],
+          "required_capabilities": [],
+          "reversible": false
+        },
+        "offered_at_ms": 0,
+        "stage": "",
+        "utility_rate": 0,
+        "version": 0,
+        "work_item_id": ""
+      },
+      "offer_version": 0,
+      "priority_bucket": 0,
+      "revision": 0,
+      "severity_ppm": 0,
+      "signature": "",
+      "source": "",
+      "spec_refs": [],
+      "statement": "",
+      "status": "open",
+      "updated_at_ms": 0,
+      "work": {
+        "kind": "",
+        "max_attempts": 0
+      },
+      "work_item_id": ""
+    },
+    "sha256": "cc9c57f492840c126928ee27e979346ed1d6e9056e7a1a5afd656495d7b23573"
+  },
+  {
+    "method": "GapList",
+    "request": {
+      "method": "GapList",
+      "params": {
+        "request": {
+          "cursor": "",
+          "limit": 0,
+          "source": "",
+          "status": "open",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "gaps": [],
+      "next_cursor": ""
+    },
+    "sha256": "827265ecb2d95d1f85410eb337da1bf81067569bd0b4a483cf40a3afe283301c"
+  },
+  {
+    "method": "GapSettle",
+    "request": {
+      "method": "GapSettle",
+      "params": {
+        "request": {
+          "gap_id": "",
+          "idempotency_key": "",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "gap": {
+        "concept_ids": [],
+        "created_at_ms": 0,
+        "domain": "",
+        "evidence": [],
+        "evidence_count": 0,
+        "gap_id": "",
+        "generation": 0,
+        "offer": {
+          "generation": 0,
+          "offer": {
+            "blast_radius": "local",
+            "cooldown_until_ms": 0,
+            "cost_uncertainty_ppm": 0,
+            "depends_on_gap_ids": [],
+            "evidence_digests": [],
+            "expected_cost_microunits": 0,
+            "expected_utility_micros": 0,
+            "probability_of_closure_ppm": 0,
+            "repository_scope": [],
+            "required_capabilities": [],
+            "reversible": false
+          },
+          "offered_at_ms": 0,
+          "stage": "",
+          "utility_rate": 0,
+          "version": 0,
+          "work_item_id": ""
+        },
+        "offer_version": 0,
+        "priority_bucket": 0,
+        "revision": 0,
+        "severity_ppm": 0,
+        "signature": "",
+        "source": "",
+        "spec_refs": [],
+        "statement": "",
+        "status": "open",
+        "updated_at_ms": 0,
+        "work": {
+          "kind": "",
+          "max_attempts": 0
+        },
+        "work_item_id": ""
+      },
+      "outcome": "resolved"
+    },
+    "sha256": "b9a916e79a02c24e7e1c6c6b9978c3477fea1a752877625902e0c8f7f9602c4a"
+  },
+  {
+    "method": "GapTransition",
+    "request": {
+      "method": "GapTransition",
+      "params": {
+        "request": {
+          "expected_revision": 0,
+          "gap_id": "",
+          "idempotency_key": "",
+          "reference": "",
+          "tenant": "",
+          "to": "specified"
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "gap": {
+        "concept_ids": [],
+        "created_at_ms": 0,
+        "domain": "",
+        "evidence": [],
+        "evidence_count": 0,
+        "gap_id": "",
+        "generation": 0,
+        "offer": {
+          "generation": 0,
+          "offer": {
+            "blast_radius": "local",
+            "cooldown_until_ms": 0,
+            "cost_uncertainty_ppm": 0,
+            "depends_on_gap_ids": [],
+            "evidence_digests": [],
+            "expected_cost_microunits": 0,
+            "expected_utility_micros": 0,
+            "probability_of_closure_ppm": 0,
+            "repository_scope": [],
+            "required_capabilities": [],
+            "reversible": false
+          },
+          "offered_at_ms": 0,
+          "stage": "",
+          "utility_rate": 0,
+          "version": 0,
+          "work_item_id": ""
+        },
+        "offer_version": 0,
+        "priority_bucket": 0,
+        "revision": 0,
+        "severity_ppm": 0,
+        "signature": "",
+        "source": "",
+        "spec_refs": [],
+        "statement": "",
+        "status": "open",
+        "updated_at_ms": 0,
+        "work": {
+          "kind": "",
+          "max_attempts": 0
+        },
+        "work_item_id": ""
+      },
+      "outcome": "applied"
+    },
+    "sha256": "d648359665ff67657de9ffb90e1cd2ed375bfa4a705061586ec46f442bfcbe50"
+  },
+  {
+    "method": "GapUpsert",
+    "request": {
+      "method": "GapUpsert",
+      "params": {
+        "request": {
+          "concept_ids": [],
+          "domain": "",
+          "evidence": [],
+          "gap_id": "",
+          "idempotency_key": "",
+          "severity_ppm": 0,
+          "signature": "",
+          "source": "",
+          "statement": "",
+          "tenant": "",
+          "work": {
+            "kind": "",
+            "max_attempts": 0
+          }
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "gap": {
+        "concept_ids": [],
+        "created_at_ms": 0,
+        "domain": "",
+        "evidence": [],
+        "evidence_count": 0,
+        "gap_id": "",
+        "generation": 0,
+        "offer": {
+          "generation": 0,
+          "offer": {
+            "blast_radius": "local",
+            "cooldown_until_ms": 0,
+            "cost_uncertainty_ppm": 0,
+            "depends_on_gap_ids": [],
+            "evidence_digests": [],
+            "expected_cost_microunits": 0,
+            "expected_utility_micros": 0,
+            "probability_of_closure_ppm": 0,
+            "repository_scope": [],
+            "required_capabilities": [],
+            "reversible": false
+          },
+          "offered_at_ms": 0,
+          "stage": "",
+          "utility_rate": 0,
+          "version": 0,
+          "work_item_id": ""
+        },
+        "offer_version": 0,
+        "priority_bucket": 0,
+        "revision": 0,
+        "severity_ppm": 0,
+        "signature": "",
+        "source": "",
+        "spec_refs": [],
+        "statement": "",
+        "status": "open",
+        "updated_at_ms": 0,
+        "work": {
+          "kind": "",
+          "max_attempts": 0
+        },
+        "work_item_id": ""
+      },
+      "outcome": "created",
+      "work_item_created": false
+    },
+    "sha256": "d479b079f26af13dd1dd12aa4ae9575fb50f9c5d23e0cfc192a1f20bba325e9d"
+  },
+  {
+    "method": "GetAdmittedRequest",
+    "request": {
+      "method": "GetAdmittedRequest",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "session_ref": "",
+          "tenant": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "payload_ref": "",
+      "request_ref": "",
+      "session_ref": "",
+      "tenant": ""
+    },
+    "sha256": "507440931f0bdf3e7f6f85731a286a87e0321fe93a19b9baeb27ccda40e63dd0"
+  },
+  {
+    "method": "GetControlLease",
+    "request": {
+      "method": "GetControlLease",
+      "params": {
+        "lease_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "expires_at_ms": 0,
+      "grant": {},
+      "hard_expires_at_ms": 0,
+      "host_start_provenance": {
+        "issuer_ref": "",
+        "schema_version": 0
+      },
+      "issued_at_ms": 0,
+      "kind": "",
+      "lease_id": "",
+      "revision": 0,
+      "status": "active"
+    },
+    "sha256": "200e82f6087cf3b16e5be12107721225de7c55a7efb21cf108567be014b7bd81"
+  },
+  {
+    "method": "GetCurrentPlan",
+    "request": {
+      "method": "GetCurrentPlan",
+      "params": {
+        "run_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "expires_at_ms": 0,
+      "items": [],
+      "observed_at_ms": 0,
+      "revision": 0,
+      "run_id": "",
+      "task_plan": {
+        "input_digest": "",
+        "max_concurrency": 0,
+        "max_steps": 0,
+        "output_task_id": "",
+        "plan_digest": "",
+        "policy_digest": "",
+        "policy_revision": "",
+        "tasks": [],
+        "total_tasks": 0
+      }
+    },
+    "sha256": "cdb8fdee3819505edd4f7d987c19339fc14f696b609239bc1eeb05ea81ebf295"
+  },
+  {
+    "method": "GetEffectReceipt",
+    "request": {
+      "method": "GetEffectReceipt",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "session_ref": "",
+          "tenant": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "committed_at": 0,
+      "job_id": "",
+      "outcome": "applied",
+      "principal_ref": "",
+      "receipt_ref": "",
+      "request_ref": ""
+    },
+    "sha256": "da9b6eba05c5d4390d01df7a5eef07dca86bda7e5c3224b6a71578032d5bc4e7"
+  },
+  {
+    "method": "GetRunCheckpoint",
+    "request": {
+      "method": "GetRunCheckpoint",
+      "params": {
+        "request": {
+          "context_id": "",
+          "current_claim": {
+            "fencing_token": 0,
+            "lease_epoch": 0,
+            "worker_id": ""
+          },
+          "run_id": "",
+          "tenant": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "content": "",
+      "context_id": "",
+      "long_term": [],
+      "payload_digest": "",
+      "revision": 0,
+      "short_term": [],
+      "work_item": {
+        "effect_phase": "unstarted",
+        "input_ref": "",
+        "kind": "",
+        "metadata": {},
+        "status": "succeeded",
+        "updated_at_ms": 0,
+        "version": 0,
+        "work_item_id": ""
+      }
+    },
+    "sha256": "eb2d0f21b2eb884d37b75059b02fa65e5de0ee8079c8f6a6d61c2255531e5b02"
+  },
+  {
+    "method": "GetRunWorkItem",
+    "request": {
+      "method": "GetRunWorkItem",
+      "params": {
+        "run_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "admission": {
+        "catalog_digest": "",
+        "child_input": {
+          "child_run_id": "",
+          "content_digest": "",
+          "expected_revision": 0,
+          "idempotency_key": "",
+          "state": "queued"
+        },
+        "command_digest": "",
+        "context": {
+          "agent_id": "",
+          "audience": "",
+          "authentication_method": "workload_identity",
+          "expires_at_ms": 0,
+          "graph": "",
+          "issued_at_ms": 0,
+          "placement_epoch": 0,
+          "policy_version": "",
+          "request_id": "",
+          "schema_version": "2",
+          "scopes": [],
+          "subject_id": "",
+          "tenant_id": "",
+          "trace_id": ""
+        },
+        "conversation": {
+          "context_id": "",
+          "expected_revision": 0,
+          "predecessor_run_id": "",
+          "schema_version": "1"
+        },
+        "deadline_unix": 0.0,
+        "depends_on": [],
+        "idempotency_key": "",
+        "input_ref": "",
+        "kind": "",
+        "max_attempts": 0,
+        "max_tenant_in_flight": 0,
+        "metadata": {},
+        "model_digest": "",
+        "policy_digest": "",
+        "priority": 0,
+        "provenance_refs": [],
+        "run_id": "",
+        "schema_version": "1",
+        "work_item_id": ""
+      },
+      "run_completion": {
+        "commit_sequence": 0,
+        "ordinal": 0,
+        "payload": {
+          "batch_id": "",
+          "completion": {
+            "run_id": "",
+            "schema_version": 0,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "requests": 0,
+              "tool_calls": 0,
+              "total_tokens": 0
+            }
+          },
+          "error_ref": "",
+          "outcome": "",
+          "result_ref": "",
+          "tenant": "",
+          "work_item_id": ""
+        },
+        "payload_digest": "",
+        "scope": {
+          "identity_digest": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "incarnation_id": "",
+          "scope": {
+            "graph": "",
+            "kind": "graph"
+          },
+          "tenant": ""
+        }
+      },
+      "work_item": {
+        "effect_phase": "unstarted",
+        "input_ref": "",
+        "kind": "",
+        "metadata": {},
+        "status": "succeeded",
+        "updated_at_ms": 0,
+        "version": 0,
+        "work_item_id": ""
+      }
+    },
+    "sha256": "adab60d35c3cc6261bd9e418168f468d2d6c8b6fdf71a09e84cbb21ae2794380"
+  },
+  {
+    "method": "GetSessionUsage",
+    "request": {
+      "method": "GetSessionUsage",
+      "params": {
+        "context_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "context_id": "",
+      "count_coverage": {},
+      "counts": {},
+      "expected_runs": 0,
+      "inventory_complete": false,
+      "missing_runs": 0,
+      "recorded_runs": 0
+    },
+    "sha256": "6f50ba85b32814428611f298840731302675072a830a1083d5f4287abaa1eb35"
+  },
+  {
+    "method": "GetShardWriterWidth",
+    "request": {
+      "method": "GetShardWriterWidth",
+      "params": {
+        "tenant": ""
+      }
+    },
+    "result": {
+      "shard_writers": 0,
+      "tenant": ""
+    },
+    "sha256": "36bec248228b2991a15c5121d5e30b0e8ba0bc8eef93e133b7ec76d58c10c36c"
+  },
+  {
+    "method": "GetWorkItem",
+    "request": {
+      "method": "GetWorkItem",
+      "params": {
+        "tenant": "",
+        "work_item_id": ""
+      }
+    },
+    "result": {
+      "effect_phase": "unstarted",
+      "input_ref": "",
+      "kind": "",
+      "metadata": {},
+      "status": "succeeded",
+      "updated_at_ms": 0,
+      "version": 0,
+      "work_item_id": ""
+    },
+    "sha256": "f45fb296286ed4ccce1fe09fb3e82f8ea0730ac04d2c611a3718060c9e70cb01"
+  },
+  {
+    "method": "GetWorkItemOutcome",
+    "request": {
+      "method": "GetWorkItemOutcome",
+      "params": {
+        "tenant": "",
+        "work_item_id": ""
+      }
+    },
+    "result": {
+      "outcome": {},
+      "outcome_ref": "",
+      "terminal_event": {
+        "reason": "legacy_unbound",
+        "status": "unavailable"
+      },
+      "tool_call_refs": [],
+      "trace_ref": "",
+      "work_item": {
+        "effect_phase": "unstarted",
+        "input_ref": "",
+        "kind": "",
+        "metadata": {},
+        "status": "succeeded",
+        "updated_at_ms": 0,
+        "version": 0,
+        "work_item_id": ""
+      }
+    },
+    "sha256": "bd4cca480e6cac356d0538d8565c96c15b3baaebfe14b9144f97ab0ed774fee3"
+  },
+  {
+    "method": "IssueControlLease",
+    "request": {
+      "method": "IssueControlLease",
+      "params": {
+        "request": {
+          "expires_at_ms": 0,
+          "grant": {},
+          "hard_expires_at_ms": 0,
+          "idempotency_key": "",
+          "issued_at_ms": 0,
+          "kind": "",
+          "lease_id": "",
+          "pending_call_registration": {
+            "expected_lease": {
+              "fencing_token": 0,
+              "lease_epoch": 0,
+              "worker_ref": ""
+            },
+            "plan": {
+              "expected_grant": {},
+              "expected_kind": "",
+              "expected_revision": 0,
+              "lease_id": ""
+            },
+            "work_item": {
+              "expected_metadata": {},
+              "expected_revision": 0,
+              "work_item_id": ""
+            }
+          },
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "lease": {
+        "expires_at_ms": 0,
+        "grant": {},
+        "hard_expires_at_ms": 0,
+        "host_start_provenance": {
+          "issuer_ref": "",
+          "schema_version": 0
+        },
+        "issued_at_ms": 0,
+        "kind": "",
+        "lease_id": "",
+        "revision": 0,
+        "status": "active"
+      },
+      "outcome": "issued"
+    },
+    "sha256": "a868d840e346310f56d7aa3a3ed5395f9bf03b4103ed541b4189738044fc6af1"
+  },
+  {
+    "method": "IssueHostStartGrant",
+    "request": {
+      "method": "IssueHostStartGrant",
+      "params": {
+        "request": {
+          "binding": {
+            "configuration_digest": "",
+            "interfaces": "terminal",
+            "policy_revision": "",
+            "principal_ref": "",
+            "session_expires_at_ms": 0,
+            "session_ref": "",
+            "web_logs": false,
+            "workspace_ref": ""
+          },
+          "expires_at_ms": 0,
+          "idempotency_key": "",
+          "lease_id": "",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "lease": {
+        "expires_at_ms": 0,
+        "grant": {},
+        "hard_expires_at_ms": 0,
+        "host_start_provenance": {
+          "issuer_ref": "",
+          "schema_version": 0
+        },
+        "issued_at_ms": 0,
+        "kind": "",
+        "lease_id": "",
+        "revision": 0,
+        "status": "active"
+      },
+      "outcome": "issued"
+    },
+    "sha256": "98bd99cc3e5c296b45de077096566abd3f28c259216618f9394eba015eb37278"
+  },
+  {
+    "method": "KgDelegate",
+    "request": {
+      "method": "KgDelegate",
+      "params": {
+        "request": {
+          "actor_scope": "",
+          "capability_digest": "",
+          "catalog_digest": "",
+          "command_digest": "",
+          "context": {
+            "agent_id": "",
+            "audience": "",
+            "authentication_method": "workload_identity",
+            "expires_at_ms": 0,
+            "graph": "",
+            "issued_at_ms": 0,
+            "placement_epoch": 0,
+            "policy_version": "",
+            "request_id": "",
+            "schema_version": "2",
+            "scopes": [],
+            "subject_id": "",
+            "tenant_id": "",
+            "trace_id": ""
+          },
+          "deadline_unix": 0.0,
+          "delegation_id": "",
+          "idempotency_key": "",
+          "input_ref": "",
+          "kind": "",
+          "max_attempts": 0,
+          "max_tenant_in_flight": 0,
+          "model_digest": "",
+          "policy_digest": "",
+          "priority": 0,
+          "purpose": "",
+          "run_id": "",
+          "schema_version": "2",
+          "target": {
+            "entry": {
+              "actor_scope": "",
+              "agent_id": "",
+              "definition_digest": "",
+              "entry_revision": 0,
+              "policy_digest": "",
+              "purpose_id": "",
+              "source_revision": "",
+              "source_revision_digest": "",
+              "tenant_id": ""
+            },
+            "target": "agent"
+          },
+          "trace_id": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "capability_digest": "",
+      "catalog_digest": "",
+      "command_digest": "",
+      "decision": "accepted",
+      "delegation_id": "",
+      "idempotency_key": "",
+      "model_digest": "",
+      "outbox_id": "",
+      "policy_digest": "",
+      "run_id": "",
+      "schema_version": "2",
+      "target": {
+        "entry": {
+          "actor_scope": "",
+          "agent_id": "",
+          "definition_digest": "",
+          "entry_revision": 0,
+          "policy_digest": "",
+          "purpose_id": "",
+          "source_revision": "",
+          "source_revision_digest": "",
+          "tenant_id": ""
+        },
+        "target": "agent"
+      },
+      "trace_id": "",
+      "work_item_id": ""
+    },
+    "sha256": "515a3d6a35ea5f186573df9c7e6a5b5b2325a7483763c7bbe588b7213932410e"
+  },
+  {
+    "method": "ListControlLeases",
+    "request": {
+      "method": "ListControlLeases",
+      "params": {
+        "request": {
+          "cursor": "",
+          "grant_match": {},
+          "kind": "",
+          "limit": 0,
+          "status": "active",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "leases": [],
+      "next_cursor": ""
+    },
+    "sha256": "bf7fc6f0edf8efb49630ee58f78ec7c24ebc990d8902778c486677b1e03c5c8d"
+  },
+  {
+    "method": "ListWorkItems",
+    "request": {
+      "method": "ListWorkItems",
+      "params": {
+        "cursor": "",
+        "kind": "",
+        "limit": 0,
+        "metadata_match": {},
+        "tenant": ""
+      }
+    },
+    "result": {
+      "items": [],
+      "next_cursor": ""
+    },
+    "sha256": "6de0b437f2a875c9171a6f06f7ffd01765bfaad1c362be74b8c61675d8cad080"
+  },
+  {
+    "method": "MarkWorkItemEffectStarted",
+    "request": {
+      "method": "MarkWorkItemEffectStarted",
+      "params": {
+        "request": {
+          "expected_revision": 0,
+          "fencing_token": 0,
+          "lease_epoch": 0,
+          "tenant": "",
+          "work_item_id": "",
+          "worker_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "receipt": {
+        "committed_at": 0,
+        "job_id": "",
+        "outcome": "applied",
+        "principal_ref": "",
+        "receipt_ref": "",
+        "request_ref": ""
+      },
+      "replayed": false,
+      "revision": 0,
+      "work_item_id": ""
+    },
+    "sha256": "2aecceee764ad5bf68c9c8c5922f3e2adcdf82545f1b3ba839d022be925fb7a5"
+  },
+  {
+    "method": "MintWorkItemClaimCapability",
+    "request": {
+      "method": "MintWorkItemClaimCapability",
+      "params": {
+        "request": {
+          "schema_version": "1",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "capability": [],
+      "decision": "minted",
+      "schema_version": "1",
+      "valid": false
+    },
+    "sha256": "d1208e11ad61ef78a85f3d98016f746a627271d1890bd7d52c4bc5fe7efe0bc5"
+  },
+  {
+    "method": "ObserveDevelopmentLane",
+    "request": {
+      "method": "ObserveDevelopmentLane",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "expected_hold_revision": 0,
+          "fencing_token": 0,
+          "hold_id": "",
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "observation_revision": 0,
+          "observed_disk_bytes": 0,
+          "owner_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_fence": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "quota_charge": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "4964866b75a6e65e17475193607dc35e960e9161c8a53c0a9e477a562097d8f3"
+  },
+  {
+    "method": "PublishCurrentPlan",
+    "request": {
+      "method": "PublishCurrentPlan",
+      "params": {
+        "request": {
+          "fencing_token": 0,
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "snapshot": {
+            "expires_at_ms": 0,
+            "items": [],
+            "observed_at_ms": 0,
+            "revision": 0,
+            "run_id": "",
+            "task_plan": {
+              "input_digest": "",
+              "max_concurrency": 0,
+              "max_steps": 0,
+              "output_task_id": "",
+              "plan_digest": "",
+              "policy_digest": "",
+              "policy_revision": "",
+              "tasks": [],
+              "total_tasks": 0
+            }
+          },
+          "task_plan_proposal": {
+            "max_concurrency": 0,
+            "max_steps": 0,
+            "output_task_id": "",
+            "tasks": []
+          },
+          "tenant": "",
+          "worker_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "payload_digest": "",
+      "revision": 0,
+      "run_id": ""
+    },
+    "sha256": "7ea1844469343796e7aabda63dbc01f87785a126dc1a3f3368984da96d7e83d4"
+  },
+  {
+    "method": "PublishRunCheckpoint",
+    "request": {
+      "method": "PublishRunCheckpoint",
+      "params": {
+        "request": {
+          "context_id": "",
+          "expected_revision": 0,
+          "fencing_token": 0,
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "run_id": "",
+          "snapshot": {
+            "content": "",
+            "long_term": [],
+            "payload_digest": "",
+            "short_term": []
+          },
+          "tenant": "",
+          "work_item_id": "",
+          "worker_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "context_id": "",
+      "payload_digest": "",
+      "replayed": false,
+      "revision": 0,
+      "run_id": "",
+      "work_item_id": ""
+    },
+    "sha256": "66930d438034d5d7fe415882a6e4f9caf9b693b11a2e6710d8b1751da94c002e"
+  },
+  {
+    "method": "QueryDevelopmentLane",
+    "request": {
+      "method": "QueryDevelopmentLane",
+      "params": {
+        "request": {
+          "hold_id": "",
+          "now_ms": 0,
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "33155d22254413b7d34718aed35b3c04db4c8d378d738806d2a9200869c09671"
+  },
+  {
+    "method": "QueryWorkItemReservation",
+    "request": {
+      "method": "QueryWorkItemReservation",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "cursor": "",
+          "fairness_group": "",
+          "fence": "",
+          "fencing_token": 0,
+          "host_ref": "",
+          "input_fingerprint": "",
+          "lease_epoch": 0,
+          "limit": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "reservation_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "fairness_debt": 0,
+      "fencing_token": 0,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_revision": 0,
+      "lease_epoch": 0,
+      "lifecycle_revision": 0,
+      "record": {
+        "anti_affinity": [],
+        "attempt": 0,
+        "branch": "",
+        "branch_exclusive": false,
+        "capacity_snapshot": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "host_revision": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "concurrency_key": "",
+        "concurrency_limit": 0,
+        "disk_high_watermark_mib": 0,
+        "disk_low_watermark_mib": 0,
+        "disk_policy_key": "",
+        "expected_host_revision": 0,
+        "expected_lifecycle_revision": 0,
+        "expires_at_ms": 0,
+        "fairness_cost": 0,
+        "fairness_group": "",
+        "fence": "",
+        "fencing_token": 0,
+        "host_ref": "",
+        "input_fingerprint": "",
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "owner_id": "",
+        "profile_name": "",
+        "profile_version": "",
+        "repository_exclusive": false,
+        "repository_id": "",
+        "required_labels": [],
+        "requirement": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "reservation_id": "",
+        "reserved_at_ms": 0,
+        "revision": 0,
+        "selected_target": {
+          "alias": "",
+          "capability_labels": [],
+          "kind": "local"
+        },
+        "state": "reserved",
+        "target_alias": "",
+        "target_kind": "local",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_id": ""
+      },
+      "reservation_id": "",
+      "schema_version": "1",
+      "state": "reserved",
+      "tombstone": false,
+      "work_item_id": ""
+    },
+    "sha256": "b09e005c68a158bea27510ddcc88b0b1b5410e4158800d6549b951d95aa82fc4"
+  },
+  {
+    "method": "ReclaimExpiredCapacity",
+    "request": {
+      "method": "ReclaimExpiredCapacity",
+      "params": {
+        "request": {
+          "cell_id": "",
+          "cursor": "",
+          "max_count": 0,
+          "now_ms": 0,
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "decision": "accepted",
+      "next_cursor": "",
+      "reclaimed_lease_ids": [],
+      "schema_version": "1"
+    },
+    "sha256": "0d9280fe58e7df97e6c4da0ed821f33942d90dba947673d2845eaba8fe5bc9aa"
+  },
+  {
+    "method": "ReclaimWorkItemResources",
+    "request": {
+      "method": "ReclaimWorkItemResources",
+      "params": {
+        "request": {
+          "anti_affinity": [],
+          "attempt": 0,
+          "branch": "",
+          "branch_exclusive": false,
+          "concurrency_key": "",
+          "concurrency_limit": 0,
+          "disk_high_watermark_mib": 0,
+          "disk_low_watermark_mib": 0,
+          "disk_policy_key": "",
+          "expected_host_revision": 0,
+          "expected_lifecycle_revision": 0,
+          "expires_at_ms": 0,
+          "fairness_cost": 0,
+          "fairness_group": "",
+          "fence": "",
+          "fencing_token": 0,
+          "host_ref": "",
+          "idempotency_key": "",
+          "input_fingerprint": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "profile_name": "",
+          "profile_version": "",
+          "repository_exclusive": false,
+          "repository_id": "",
+          "required_labels": [],
+          "requirement": {
+            "cpu_weight": 0,
+            "disk_mib": 0,
+            "memory_mib": 0,
+            "process_slots": 0
+          },
+          "reservation_id": "",
+          "reserved_at_ms": 0,
+          "schema_version": "1",
+          "target_alias": "",
+          "target_kind": "local",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "fairness_debt": 0,
+      "fencing_token": 0,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_revision": 0,
+      "lease_epoch": 0,
+      "lifecycle_revision": 0,
+      "record": {
+        "anti_affinity": [],
+        "attempt": 0,
+        "branch": "",
+        "branch_exclusive": false,
+        "capacity_snapshot": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "host_revision": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "concurrency_key": "",
+        "concurrency_limit": 0,
+        "disk_high_watermark_mib": 0,
+        "disk_low_watermark_mib": 0,
+        "disk_policy_key": "",
+        "expected_host_revision": 0,
+        "expected_lifecycle_revision": 0,
+        "expires_at_ms": 0,
+        "fairness_cost": 0,
+        "fairness_group": "",
+        "fence": "",
+        "fencing_token": 0,
+        "host_ref": "",
+        "input_fingerprint": "",
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "owner_id": "",
+        "profile_name": "",
+        "profile_version": "",
+        "repository_exclusive": false,
+        "repository_id": "",
+        "required_labels": [],
+        "requirement": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "reservation_id": "",
+        "reserved_at_ms": 0,
+        "revision": 0,
+        "selected_target": {
+          "alias": "",
+          "capability_labels": [],
+          "kind": "local"
+        },
+        "state": "reserved",
+        "target_alias": "",
+        "target_kind": "local",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_id": ""
+      },
+      "reservation_id": "",
+      "schema_version": "1",
+      "state": "reserved",
+      "tombstone": false,
+      "work_item_id": ""
+    },
+    "sha256": "760cdd86ae0a0b1f18c598069f9cf9b9f1df9071fef6247c99dcd5afd34413e6"
+  },
+  {
+    "method": "ReconcileCapacity",
+    "request": {
+      "method": "ReconcileCapacity",
+      "params": {
+        "request": {
+          "cell_id": "",
+          "cursor": "",
+          "lease_id": "",
+          "max_count": 0,
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "cells": [],
+      "leases": [],
+      "next_cursor": "",
+      "schema_version": "1"
+    },
+    "sha256": "4233dcf9b07544c0832adb1440c48459db749f0361960ab7be192cae360fff85"
+  },
+  {
+    "method": "RecordEffectReceipt",
+    "request": {
+      "method": "RecordEffectReceipt",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "expected_revision": 0,
+          "receipt": {
+            "committed_at": 0,
+            "job_id": "",
+            "outcome": "applied",
+            "principal_ref": "",
+            "receipt_ref": "",
+            "request_ref": ""
+          },
+          "tenant": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "receipt": {
+        "committed_at": 0,
+        "job_id": "",
+        "outcome": "applied",
+        "principal_ref": "",
+        "receipt_ref": "",
+        "request_ref": ""
+      },
+      "replayed": false,
+      "revision": 0,
+      "work_item_id": ""
+    },
+    "sha256": "a255d323508ffe8cfd35aac4a0f7da5991f712a653ad2bd31dcb572111ad429f"
+  },
+  {
+    "method": "ReleaseCapacity",
+    "request": {
+      "method": "ReleaseCapacity",
+      "params": {
+        "request": {
+          "idempotency_key": "",
+          "leases": [],
+          "now_ms": 0,
+          "owner_digest": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "ttl_ms": 0
+        }
+      }
+    },
+    "result": {
+      "decision": "accepted",
+      "leases": [],
+      "message": "",
+      "schema_version": "1"
+    },
+    "sha256": "26793d30ddef01230a77abd5c4588e79d4c32e39950bdde313ca14b39a970426"
+  },
+  {
+    "method": "ReleaseWorkItemResources",
+    "request": {
+      "method": "ReleaseWorkItemResources",
+      "params": {
+        "request": {
+          "anti_affinity": [],
+          "attempt": 0,
+          "branch": "",
+          "branch_exclusive": false,
+          "concurrency_key": "",
+          "concurrency_limit": 0,
+          "disk_high_watermark_mib": 0,
+          "disk_low_watermark_mib": 0,
+          "disk_policy_key": "",
+          "expected_host_revision": 0,
+          "expected_lifecycle_revision": 0,
+          "expires_at_ms": 0,
+          "fairness_cost": 0,
+          "fairness_group": "",
+          "fence": "",
+          "fencing_token": 0,
+          "host_ref": "",
+          "idempotency_key": "",
+          "input_fingerprint": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "profile_name": "",
+          "profile_version": "",
+          "repository_exclusive": false,
+          "repository_id": "",
+          "required_labels": [],
+          "requirement": {
+            "cpu_weight": 0,
+            "disk_mib": 0,
+            "memory_mib": 0,
+            "process_slots": 0
+          },
+          "reservation_id": "",
+          "reserved_at_ms": 0,
+          "schema_version": "1",
+          "target_alias": "",
+          "target_kind": "local",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "fairness_debt": 0,
+      "fencing_token": 0,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_revision": 0,
+      "lease_epoch": 0,
+      "lifecycle_revision": 0,
+      "record": {
+        "anti_affinity": [],
+        "attempt": 0,
+        "branch": "",
+        "branch_exclusive": false,
+        "capacity_snapshot": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "host_revision": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "concurrency_key": "",
+        "concurrency_limit": 0,
+        "disk_high_watermark_mib": 0,
+        "disk_low_watermark_mib": 0,
+        "disk_policy_key": "",
+        "expected_host_revision": 0,
+        "expected_lifecycle_revision": 0,
+        "expires_at_ms": 0,
+        "fairness_cost": 0,
+        "fairness_group": "",
+        "fence": "",
+        "fencing_token": 0,
+        "host_ref": "",
+        "input_fingerprint": "",
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "owner_id": "",
+        "profile_name": "",
+        "profile_version": "",
+        "repository_exclusive": false,
+        "repository_id": "",
+        "required_labels": [],
+        "requirement": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "reservation_id": "",
+        "reserved_at_ms": 0,
+        "revision": 0,
+        "selected_target": {
+          "alias": "",
+          "capability_labels": [],
+          "kind": "local"
+        },
+        "state": "reserved",
+        "target_alias": "",
+        "target_kind": "local",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_id": ""
+      },
+      "reservation_id": "",
+      "schema_version": "1",
+      "state": "reserved",
+      "tombstone": false,
+      "work_item_id": ""
+    },
+    "sha256": "2633fd80b4404c3108453fbd0144d3d65b33186bb6015bc9e9cf6fad61163b57"
+  },
+  {
+    "method": "RenewCapacity",
+    "request": {
+      "method": "RenewCapacity",
+      "params": {
+        "request": {
+          "idempotency_key": "",
+          "leases": [],
+          "now_ms": 0,
+          "owner_digest": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "ttl_ms": 0
+        }
+      }
+    },
+    "result": {
+      "decision": "accepted",
+      "leases": [],
+      "message": "",
+      "schema_version": "1"
+    },
+    "sha256": "0fb685d1ed5d1080a347835e329e97b297efeac8cd3cc984428ccbc52c33d9af"
+  },
+  {
+    "method": "RenewDevelopmentLane",
+    "request": {
+      "method": "RenewDevelopmentLane",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "expected_hold_revision": 0,
+          "fencing_token": 0,
+          "hold_id": "",
+          "idempotency_key": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "ttl_ms": 0,
+          "work_item_fence": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "quota_charge": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "bc0f4fdea21b9d4761ea92c4659adbf89fba356edc427ce1d6cba8242521c388"
+  },
+  {
+    "method": "RenewWorkItemLease",
+    "request": {
+      "method": "RenewWorkItemLease",
+      "params": {
+        "fencing_token": 0,
+        "lease_epoch": 0,
+        "lease_ms": 0,
+        "now_ms": 0,
+        "tenant": "",
+        "work_item_id": "",
+        "worker_id": ""
+      }
+    },
+    "result": {
+      "cancel_requested": false,
+      "changed_work_item_ids": [],
+      "fencing_token": 0,
+      "lease_epoch": 0,
+      "lease_expires_at_ms": 0,
+      "reason": "missing",
+      "renewed": false,
+      "work_item_id": ""
+    },
+    "sha256": "cff8f454c3a19e47e9084c13ee42f895c3c57d6451c4750cfc0066a6814711da"
+  },
+  {
+    "method": "ReserveDevelopmentLane",
+    "request": {
+      "method": "ReserveDevelopmentLane",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "fencing_token": 0,
+          "idempotency_key": "",
+          "intent": {
+            "base_ref": "a",
+            "base_sha": "",
+            "branch": "a",
+            "fairness_group": "a",
+            "host_ref": "a",
+            "host_target_alias": "a",
+            "host_target_kind": "local",
+            "input_fingerprint": "v1:0000000000000000000000000000000000000000000000000000000000000000",
+            "lane_id": "a",
+            "owner_id": "a",
+            "predicted_disk_bytes": 0,
+            "quota_policy_name": "a",
+            "quota_policy_version": "a",
+            "repository_id": "a",
+            "request_id": "a",
+            "resource_reservation_id": "a",
+            "schema_version": "1",
+            "session_id": "a",
+            "tenant_ref": "a",
+            "ttl_ms": 0,
+            "workspace_ref": "a",
+            "worktree_locator": ""
+          },
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_fence": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "hold": {
+        "active_count_charged": false,
+        "allocation_revision": 0,
+        "attempt": 0,
+        "base_ref": "",
+        "base_sha": "",
+        "branch": "",
+        "cleanup_attempt": 0,
+        "cleanup_fencing_token": 0,
+        "cleanup_lease_epoch": 0,
+        "cleanup_revision": 0,
+        "cleanup_work_item_fence": "",
+        "cleanup_work_item_id": "",
+        "expires_at_ms": 0,
+        "fairness_group": "",
+        "fencing_token": 0,
+        "hold_id": "",
+        "hold_revision": 0,
+        "host_ref": "",
+        "host_target_alias": "",
+        "host_target_kind": "local",
+        "input_fingerprint": "",
+        "lane_id": "",
+        "last_renewed_at_ms": 0,
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "observed_disk_bytes": 0,
+        "owner_id": "",
+        "predicted_disk_bytes": 0,
+        "quota_charge": {
+          "global_count": 0,
+          "global_observed_disk_bytes": 0,
+          "global_predicted_disk_bytes": 0,
+          "global_retained_disk_bytes": 0,
+          "host_count": 0,
+          "host_observed_disk_bytes": 0,
+          "host_predicted_disk_bytes": 0,
+          "host_retained_disk_bytes": 0,
+          "owner_count": 0,
+          "owner_observed_disk_bytes": 0,
+          "owner_predicted_disk_bytes": 0,
+          "owner_retained_disk_bytes": 0,
+          "policy_revision": 0,
+          "repository_count": 0,
+          "repository_observed_disk_bytes": 0,
+          "repository_predicted_disk_bytes": 0,
+          "repository_retained_disk_bytes": 0,
+          "revision": 0,
+          "schema_version": "1",
+          "session_count": 0,
+          "session_observed_disk_bytes": 0,
+          "session_predicted_disk_bytes": 0,
+          "session_retained_disk_bytes": 0,
+          "tenant_count": 0,
+          "tenant_observed_disk_bytes": 0,
+          "tenant_predicted_disk_bytes": 0,
+          "tenant_retained_disk_bytes": 0,
+          "workspace_count": 0,
+          "workspace_observed_disk_bytes": 0,
+          "workspace_predicted_disk_bytes": 0,
+          "workspace_retained_disk_bytes": 0
+        },
+        "quota_policy_name": "",
+        "quota_policy_version": "",
+        "repository_id": "",
+        "request_id": "",
+        "retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_id": "",
+        "state": "active",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_fence": "",
+        "work_item_id": "",
+        "workspace_ref": "",
+        "worktree_locator": ""
+      },
+      "hold_revision": 0,
+      "lifecycle_revision": 0,
+      "quota_charge": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "schema_version": "1",
+      "tombstone": false
+    },
+    "sha256": "c3edbf10c4cd4b95c26b6279f4df2ecf0fed72202e2d766ba5d929f7bdcf9bb4"
+  },
+  {
+    "method": "ReserveWorkItemResources",
+    "request": {
+      "method": "ReserveWorkItemResources",
+      "params": {
+        "request": {
+          "anti_affinity": [],
+          "attempt": 0,
+          "branch": "",
+          "branch_exclusive": false,
+          "concurrency_key": "",
+          "concurrency_limit": 0,
+          "disk_high_watermark_mib": 0,
+          "disk_low_watermark_mib": 0,
+          "disk_policy_key": "",
+          "expected_host_revision": 0,
+          "expected_lifecycle_revision": 0,
+          "expires_at_ms": 0,
+          "fairness_cost": 0,
+          "fairness_group": "",
+          "fence": "",
+          "fencing_token": 0,
+          "host_ref": "",
+          "idempotency_key": "",
+          "input_fingerprint": "",
+          "lease_epoch": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "profile_name": "",
+          "profile_version": "",
+          "repository_exclusive": false,
+          "repository_id": "",
+          "required_labels": [],
+          "requirement": {
+            "cpu_weight": 0,
+            "disk_mib": 0,
+            "memory_mib": 0,
+            "process_slots": 0
+          },
+          "reservation_id": "",
+          "reserved_at_ms": 0,
+          "schema_version": "1",
+          "target_alias": "",
+          "target_kind": "local",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "decision": "accepted",
+      "fairness_debt": 0,
+      "fencing_token": 0,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_revision": 0,
+      "lease_epoch": 0,
+      "lifecycle_revision": 0,
+      "record": {
+        "anti_affinity": [],
+        "attempt": 0,
+        "branch": "",
+        "branch_exclusive": false,
+        "capacity_snapshot": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "host_revision": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "concurrency_key": "",
+        "concurrency_limit": 0,
+        "disk_high_watermark_mib": 0,
+        "disk_low_watermark_mib": 0,
+        "disk_policy_key": "",
+        "expected_host_revision": 0,
+        "expected_lifecycle_revision": 0,
+        "expires_at_ms": 0,
+        "fairness_cost": 0,
+        "fairness_group": "",
+        "fence": "",
+        "fencing_token": 0,
+        "host_ref": "",
+        "input_fingerprint": "",
+        "lease_epoch": 0,
+        "lifecycle_revision": 0,
+        "owner_id": "",
+        "profile_name": "",
+        "profile_version": "",
+        "repository_exclusive": false,
+        "repository_id": "",
+        "required_labels": [],
+        "requirement": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "reservation_id": "",
+        "reserved_at_ms": 0,
+        "revision": 0,
+        "selected_target": {
+          "alias": "",
+          "capability_labels": [],
+          "kind": "local"
+        },
+        "state": "reserved",
+        "target_alias": "",
+        "target_kind": "local",
+        "tenant_ref": "",
+        "tombstone": false,
+        "work_item_id": ""
+      },
+      "reservation_id": "",
+      "schema_version": "1",
+      "state": "reserved",
+      "tombstone": false,
+      "work_item_id": ""
+    },
+    "sha256": "0da15f5c4718bd0d6f14dd573ccecbca86ea147ef3ad19958b599edaf5478bf2"
+  },
+  {
+    "method": "ResourceReservationStatus",
+    "request": {
+      "method": "ResourceReservationStatus",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "cursor": "",
+          "fairness_group": "",
+          "fence": "",
+          "fencing_token": 0,
+          "host_ref": "",
+          "input_fingerprint": "",
+          "lease_epoch": 0,
+          "limit": 0,
+          "now_ms": 0,
+          "owner_id": "",
+          "reservation_id": "",
+          "schema_version": "1",
+          "tenant_ref": "",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "complete": false,
+      "fairness_debt": 0,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_revision": 0,
+      "host_snapshot": {
+        "capacity": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "disk_capacity_mib": 0,
+        "disk_policies": [],
+        "disk_used_mib": 0,
+        "draining": false,
+        "heartbeat_at_ms": 0,
+        "heartbeat_ttl_ms": 0,
+        "held_cpu_weight": 0,
+        "held_disk_mib": 0,
+        "held_memory_mib": 0,
+        "held_process_slots": 0,
+        "host_ref": "",
+        "labels": [],
+        "observed": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "quarantined": false,
+        "revision": 0,
+        "target_alias": "",
+        "target_kind": "local"
+      },
+      "next_cursor": "",
+      "orphan_count": 0,
+      "reservations": [],
+      "schema_version": "1",
+      "superseded_count": 0
+    },
+    "sha256": "b7bd26154f8f5b657c1c23e1c1e908fe5da1d60afb8307d714ded3c93b673f7d"
+  },
+  {
+    "method": "ResourceStatsPage",
+    "request": {
+      "method": "ResourceStatsPage",
+      "params": {
+        "cursor": "",
+        "limit": 0,
+        "summary": false
+      }
+    },
+    "result": {
+      "budget_evictions_total": 0,
+      "budget_hibernations_total": 0,
+      "coalescer_operations_total": 0,
+      "coalescer_queue_bytes": 0,
+      "coalescer_queue_depth": 0,
+      "cursor": "",
+      "effective_cpu_cores": 0,
+      "effective_memory_limit_bytes": 0,
+      "global_ceiling_bytes": 0,
+      "graph_count": 0,
+      "graphs": [],
+      "has_more": false,
+      "hibernated_graphs": 0,
+      "in_flight": 0,
+      "inflight_permits_available": 0,
+      "limit": 0,
+      "next_cursor": "",
+      "process_rss_bytes": 0,
+      "resident_graphs": 0,
+      "summary": false,
+      "tenant_count": 0,
+      "tenant_count_truncated": false,
+      "tenants": [],
+      "total_edges": 0,
+      "total_memory_bytes": 0,
+      "total_nodes": 0
+    },
+    "sha256": "402d4b546d33a09faa9029f047467edb1a5232c8f525b1121ccde5eb2328b0c8"
+  },
+  {
+    "method": "RetireSealedRecord",
+    "request": {
+      "method": "RetireSealedRecord",
+      "params": {
+        "request": {
+          "digest": "",
+          "idempotency_key": "",
+          "node_id": "",
+          "reason": "",
+          "retired_at_ms": 0,
+          "retired_by": "",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "outcome": "retired",
+      "tombstone": {
+        "digest": "",
+        "node_id": "",
+        "reason": "",
+        "record_class": "",
+        "retired_at_ms": 0,
+        "retired_by": ""
+      }
+    },
+    "sha256": "c7e7022b0d44ae7dba7fb44ddc3c0db8ddd7088609421b06bf696b9c4dc1e3ac"
+  },
+  {
+    "method": "Statechart",
+    "request": {
+      "method": "Statechart",
+      "params": {
+        "op": {
+          "Define": {
+            "def_msgpack": []
+          }
+        }
+      }
+    },
+    "result": {
+      "Define": {
+        "def_id": ""
+      },
+      "GetState": {
+        "actor": "",
+        "configuration": {
+          "active": [],
+          "history": {}
+        },
+        "context": {},
+        "created_at_ms": 0,
+        "def_id": "",
+        "events_seen": 0,
+        "instance_id": "",
+        "status": "active",
+        "tenant": "",
+        "transitions_fired": 0,
+        "updated_at_ms": 0,
+        "version": 0
+      },
+      "Instantiate": {
+        "actor": "",
+        "configuration": {
+          "active": [],
+          "history": {}
+        },
+        "context": {},
+        "created_at_ms": 0,
+        "def_id": "",
+        "events_seen": 0,
+        "instance_id": "",
+        "status": "active",
+        "tenant": "",
+        "transitions_fired": 0,
+        "updated_at_ms": 0,
+        "version": 0
+      },
+      "List": {
+        "count": 0,
+        "instance_ids": []
+      },
+      "SendEvent": {
+        "actions": [],
+        "effects": [],
+        "fired": false,
+        "fired_label": "",
+        "instance": {
+          "actor": "",
+          "configuration": {
+            "active": [],
+            "history": {}
+          },
+          "context": {},
+          "created_at_ms": 0,
+          "def_id": "",
+          "events_seen": 0,
+          "instance_id": "",
+          "status": "active",
+          "tenant": "",
+          "transitions_fired": 0,
+          "updated_at_ms": 0,
+          "version": 0
+        },
+        "no_op_reason": ""
+      }
+    },
+    "sha256": "844b8becb5271d34375715e96a90cf4d06cf7d638d48fc88102f61474daedd9c"
+  },
+  {
+    "method": "SubmitAdmittedRequest",
+    "request": {
+      "method": "SubmitAdmittedRequest",
+      "params": {
+        "request": {
+          "attempt": 0,
+          "expected_revision": 0,
+          "request": {
+            "bytes": [],
+            "payload_digest": "",
+            "request_ref": "",
+            "session_ref": "",
+            "tenant": ""
+          },
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "attempt": 0,
+      "changed_work_item_ids": [],
+      "receipt": {
+        "committed_at": 0,
+        "job_id": "",
+        "outcome": "applied",
+        "principal_ref": "",
+        "receipt_ref": "",
+        "request_ref": ""
+      },
+      "replayed": false,
+      "revision": 0,
+      "work_item_id": ""
+    },
+    "sha256": "d1221c466fb1f321334f692cd662410e656664534fb29047b230f37e8b3339ef"
+  },
+  {
+    "method": "SubmitWorkItem",
+    "request": {
+      "method": "SubmitWorkItem",
+      "params": {
+        "request": {
+          "catalog_digest": "",
+          "child_input": {
+            "child_run_id": "",
+            "content_digest": "",
+            "expected_revision": 0,
+            "idempotency_key": "",
+            "state": "queued"
+          },
+          "command_digest": "",
+          "context": {
+            "agent_id": "",
+            "audience": "",
+            "authentication_method": "workload_identity",
+            "expires_at_ms": 0,
+            "graph": "",
+            "issued_at_ms": 0,
+            "placement_epoch": 0,
+            "policy_version": "",
+            "request_id": "",
+            "schema_version": "2",
+            "scopes": [],
+            "subject_id": "",
+            "tenant_id": "",
+            "trace_id": ""
+          },
+          "conversation": {
+            "context_id": "",
+            "expected_revision": 0,
+            "predecessor_run_id": "",
+            "schema_version": "1"
+          },
+          "deadline_unix": 0.0,
+          "depends_on": [],
+          "idempotency_key": "",
+          "input_ref": "",
+          "kind": "",
+          "max_attempts": 0,
+          "max_tenant_in_flight": 0,
+          "metadata": {},
+          "model_digest": "",
+          "policy_digest": "",
+          "priority": 0,
+          "provenance_refs": [],
+          "run_id": "",
+          "schema_version": "1",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "admitted_count": 0,
+      "changed_work_item_ids": [],
+      "command_digest": "",
+      "command_sequence": 0,
+      "created": false,
+      "dependency_count": 0,
+      "idempotency_key": "",
+      "max_tenant_in_flight": 0,
+      "outbox_id": "",
+      "provenance_refs": [],
+      "replayed": false,
+      "schema_version": "1",
+      "status": "",
+      "work_item_id": ""
+    },
+    "sha256": "b0d93f68da333ed51b27009a01d2fd7981fb67103387b6bc153500f15a358992"
+  },
+  {
+    "method": "SubmitWorkItems",
+    "request": {
+      "method": "SubmitWorkItems",
+      "params": {
+        "request": {
+          "context": {
+            "agent_id": "",
+            "audience": "",
+            "authentication_method": "workload_identity",
+            "expires_at_ms": 0,
+            "graph": "",
+            "issued_at_ms": 0,
+            "placement_epoch": 0,
+            "policy_version": "",
+            "request_id": "",
+            "schema_version": "2",
+            "scopes": [],
+            "subject_id": "",
+            "tenant_id": "",
+            "trace_id": ""
+          },
+          "enrichment_budget": {
+            "end_index": 0,
+            "expected_next_index": 0,
+            "expected_page_number": 0,
+            "expected_remaining_units": 0,
+            "page_key": "",
+            "reserve_units": 0,
+            "schema_version": "1",
+            "snapshot_digest": "",
+            "source_envelope": "",
+            "total_budget_units": 0
+          },
+          "idempotency_key": "",
+          "requests": [],
+          "schema_version": "1"
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "outbox_id": "",
+      "replayed": false,
+      "results": [],
+      "schema_version": "1"
+    },
+    "sha256": "012828e04e8a3f45871ae5cca6b765962c334b1cd3b7f2d961c1dee93824f5f5"
+  },
+  {
+    "method": "ThrottleCapacityCell",
+    "request": {
+      "method": "ThrottleCapacityCell",
+      "params": {
+        "request": {
+          "cell_id": "",
+          "now_ms": 0,
+          "sample": {
+            "errors": 0,
+            "requests": 0,
+            "window_end_ms": 0
+          },
+          "schema_version": "1"
+        }
+      }
+    },
+    "result": {
+      "action": {
+        "action": "narrowed",
+        "at_ms": 0,
+        "error_ppm": 0,
+        "errors": 0,
+        "from": 0,
+        "reason": "error_budget_exceeded",
+        "requests": 0,
+        "to": 0,
+        "window_end_ms": 0
+      },
+      "cell": {
+        "capacity": 0,
+        "cell_id": "",
+        "epoch": 0,
+        "parent_id": "",
+        "policy_digest": "",
+        "reserved_floor": 0,
+        "resource_class": "llm_generator",
+        "throttle": {
+          "ceiling": 0,
+          "history": [],
+          "last_change_at_ms": 0,
+          "last_window_end_ms": 0,
+          "policy": {
+            "cooldown_ms": 0,
+            "decrease_per_mille": 0,
+            "error_budget_ppm": 0,
+            "floor": 0,
+            "increase_step": 0,
+            "min_samples": 0,
+            "recovery_ppm": 0
+          }
+        },
+        "updated_at_ms": 0
+      },
+      "schema_version": "1"
+    },
+    "sha256": "d1b16f1a333fe27512c7ea08474e2e217a2d88a8e5f9ebb6893e7f89e7f577db"
+  },
+  {
+    "method": "TransitionControlLease",
+    "request": {
+      "method": "TransitionControlLease",
+      "params": {
+        "request": {
+          "expected_revision": 0,
+          "idempotency_key": "",
+          "lease_id": "",
+          "pending_call_consumption": {
+            "expected_grant": {},
+            "plan": {
+              "expected_grant": {},
+              "expected_kind": "",
+              "expected_revision": 0,
+              "lease_id": ""
+            },
+            "work_item": {
+              "expected_metadata": {},
+              "expected_revision": 0,
+              "work_item_id": ""
+            }
+          },
+          "tenant": "",
+          "to": "consumed"
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "lease": {
+        "expires_at_ms": 0,
+        "grant": {},
+        "hard_expires_at_ms": 0,
+        "host_start_provenance": {
+          "issuer_ref": "",
+          "schema_version": 0
+        },
+        "issued_at_ms": 0,
+        "kind": "",
+        "lease_id": "",
+        "revision": 0,
+        "status": "active"
+      },
+      "outcome": "applied"
+    },
+    "sha256": "653d1c1b85fd00e882b22d48674b0bd78341b14925c6d0a455815d1547bee23b"
+  },
+  {
+    "method": "UpdateCapacityCell",
+    "request": {
+      "method": "UpdateCapacityCell",
+      "params": {
+        "request": {
+          "cell": {
+            "capacity": 0,
+            "cell_id": "",
+            "epoch": 0,
+            "parent_id": "",
+            "policy_digest": "",
+            "reserved_floor": 0,
+            "resource_class": "llm_generator",
+            "throttle": {
+              "ceiling": 0,
+              "history": [],
+              "last_change_at_ms": 0,
+              "last_window_end_ms": 0,
+              "policy": {
+                "cooldown_ms": 0,
+                "decrease_per_mille": 0,
+                "error_budget_ppm": 0,
+                "floor": 0,
+                "increase_step": 0,
+                "min_samples": 0,
+                "recovery_ppm": 0
+              }
+            },
+            "updated_at_ms": 0
+          },
+          "expected_epoch": 0,
+          "now_ms": 0,
+          "schema_version": "1"
+        }
+      }
+    },
+    "result": {
+      "cell": {
+        "capacity": 0,
+        "cell_id": "",
+        "epoch": 0,
+        "parent_id": "",
+        "policy_digest": "",
+        "reserved_floor": 0,
+        "resource_class": "llm_generator",
+        "throttle": {
+          "ceiling": 0,
+          "history": [],
+          "last_change_at_ms": 0,
+          "last_window_end_ms": 0,
+          "policy": {
+            "cooldown_ms": 0,
+            "decrease_per_mille": 0,
+            "error_budget_ppm": 0,
+            "floor": 0,
+            "increase_step": 0,
+            "min_samples": 0,
+            "recovery_ppm": 0
+          }
+        },
+        "updated_at_ms": 0
+      },
+      "decision": "accepted",
+      "message": "",
+      "schema_version": "1"
+    },
+    "sha256": "6f71ecf71458aa702751b1af69774b7d2c2d6518aadb30a58cb46980e237c7c5"
+  },
+  {
+    "method": "UpdateDevelopmentLaneQuota",
+    "request": {
+      "method": "UpdateDevelopmentLaneQuota",
+      "params": {
+        "request": {
+          "expected_policy_revision": 0,
+          "expected_policy_version": "",
+          "idempotency_key": "",
+          "now_ms": 0,
+          "policy": {
+            "drain_only": false,
+            "global_count_limit": 0,
+            "global_observed_disk_bytes": 0,
+            "global_predicted_disk_bytes": 0,
+            "global_retained_disk_bytes": 0,
+            "host_count_limit": 0,
+            "host_observed_disk_bytes": 0,
+            "host_predicted_disk_bytes": 0,
+            "host_retained_disk_bytes": 0,
+            "max_observation_staleness_ms": 0,
+            "max_ttl_ms": 0,
+            "min_ttl_ms": 0,
+            "owner_count_limit": 0,
+            "owner_observed_disk_bytes": 0,
+            "owner_predicted_disk_bytes": 0,
+            "owner_retained_disk_bytes": 0,
+            "policy_name": "",
+            "policy_version": "",
+            "repository_count_limit": 0,
+            "repository_observed_disk_bytes": 0,
+            "repository_predicted_disk_bytes": 0,
+            "repository_retained_disk_bytes": 0,
+            "schema_version": "1",
+            "session_count_limit": 0,
+            "session_observed_disk_bytes": 0,
+            "session_predicted_disk_bytes": 0,
+            "session_retained_disk_bytes": 0,
+            "tenant_count_limit": 0,
+            "tenant_observed_disk_bytes": 0,
+            "tenant_predicted_disk_bytes": 0,
+            "tenant_retained_disk_bytes": 0,
+            "workspace_count_limit": 0,
+            "workspace_observed_disk_bytes": 0,
+            "workspace_predicted_disk_bytes": 0,
+            "workspace_retained_disk_bytes": 0
+          },
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "counters": {
+        "global_count": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "owner_count": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_revision": 0,
+        "repository_count": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "revision": 0,
+        "schema_version": "1",
+        "session_count": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "decision": "accepted",
+      "policy": {
+        "drain_only": false,
+        "global_count_limit": 0,
+        "global_observed_disk_bytes": 0,
+        "global_predicted_disk_bytes": 0,
+        "global_retained_disk_bytes": 0,
+        "host_count_limit": 0,
+        "host_observed_disk_bytes": 0,
+        "host_predicted_disk_bytes": 0,
+        "host_retained_disk_bytes": 0,
+        "max_observation_staleness_ms": 0,
+        "max_ttl_ms": 0,
+        "min_ttl_ms": 0,
+        "owner_count_limit": 0,
+        "owner_observed_disk_bytes": 0,
+        "owner_predicted_disk_bytes": 0,
+        "owner_retained_disk_bytes": 0,
+        "policy_name": "",
+        "policy_version": "",
+        "repository_count_limit": 0,
+        "repository_observed_disk_bytes": 0,
+        "repository_predicted_disk_bytes": 0,
+        "repository_retained_disk_bytes": 0,
+        "schema_version": "1",
+        "session_count_limit": 0,
+        "session_observed_disk_bytes": 0,
+        "session_predicted_disk_bytes": 0,
+        "session_retained_disk_bytes": 0,
+        "tenant_count_limit": 0,
+        "tenant_observed_disk_bytes": 0,
+        "tenant_predicted_disk_bytes": 0,
+        "tenant_retained_disk_bytes": 0,
+        "workspace_count_limit": 0,
+        "workspace_observed_disk_bytes": 0,
+        "workspace_predicted_disk_bytes": 0,
+        "workspace_retained_disk_bytes": 0
+      },
+      "policy_revision": 0,
+      "schema_version": "1"
+    },
+    "sha256": "024c2b3cd40e9003c201391908ce5ec7fe3d1ec68d2e5b7096b392658f599d37"
+  },
+  {
+    "method": "UpdateResourceHost",
+    "request": {
+      "method": "UpdateResourceHost",
+      "params": {
+        "request": {
+          "capacity": {
+            "cpu_weight": 0,
+            "disk_mib": 0,
+            "memory_mib": 0,
+            "process_slots": 0
+          },
+          "disk_capacity_mib": 0,
+          "disk_used_mib": 0,
+          "draining": false,
+          "heartbeat_at_ms": 0,
+          "heartbeat_ttl_ms": 0,
+          "host_ref": "",
+          "labels": [],
+          "now_ms": 0,
+          "observed": {
+            "cpu_weight": 0,
+            "disk_mib": 0,
+            "memory_mib": 0,
+            "process_slots": 0
+          },
+          "quarantined": false,
+          "revision": 0,
+          "schema_version": "1",
+          "target_alias": "",
+          "target_kind": "local",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "accepted": false,
+      "draining": false,
+      "held_cpu_weight": 0,
+      "held_disk_mib": 0,
+      "held_memory_mib": 0,
+      "held_process_slots": 0,
+      "host_ref": "",
+      "host_snapshot": {
+        "capacity": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "disk_capacity_mib": 0,
+        "disk_policies": [],
+        "disk_used_mib": 0,
+        "draining": false,
+        "heartbeat_at_ms": 0,
+        "heartbeat_ttl_ms": 0,
+        "held_cpu_weight": 0,
+        "held_disk_mib": 0,
+        "held_memory_mib": 0,
+        "held_process_slots": 0,
+        "host_ref": "",
+        "labels": [],
+        "observed": {
+          "cpu_weight": 0,
+          "disk_mib": 0,
+          "memory_mib": 0,
+          "process_slots": 0
+        },
+        "quarantined": false,
+        "revision": 0,
+        "target_alias": "",
+        "target_kind": "local"
+      },
+      "quarantined": false,
+      "reason": "accepted",
+      "revision": 0,
+      "schema_version": "1"
+    },
+    "sha256": "1a047ac554d158a336da6c3966bd45fe446bb09d90bf8b9bbf7ee758231d8c66"
+  },
+  {
+    "method": "VerifyWorkItemClaimCapability",
+    "request": {
+      "method": "VerifyWorkItemClaimCapability",
+      "params": {
+        "request": {
+          "capability": [],
+          "schema_version": "1",
+          "work_item_id": ""
+        }
+      }
+    },
+    "result": {
+      "capability": [],
+      "decision": "minted",
+      "schema_version": "1",
+      "valid": false
+    },
+    "sha256": "5c7dafef0a4c0fbcae1c4767c0820235e17c5b24e8b4dabbd972d29dd51245cd"
+  },
+  {
+    "method": "WorkOfferPut",
+    "request": {
+      "method": "WorkOfferPut",
+      "params": {
+        "request": {
+          "expected_offer_version": 0,
+          "gap_id": "",
+          "idempotency_key": "",
+          "offer": {
+            "blast_radius": "local",
+            "cooldown_until_ms": 0,
+            "cost_uncertainty_ppm": 0,
+            "depends_on_gap_ids": [],
+            "evidence_digests": [],
+            "expected_cost_microunits": 0,
+            "expected_utility_micros": 0,
+            "probability_of_closure_ppm": 0,
+            "repository_scope": [],
+            "required_capabilities": [],
+            "reversible": false
+          },
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "changed_work_item_ids": [],
+      "gap": {
+        "concept_ids": [],
+        "created_at_ms": 0,
+        "domain": "",
+        "evidence": [],
+        "evidence_count": 0,
+        "gap_id": "",
+        "generation": 0,
+        "offer": {
+          "generation": 0,
+          "offer": {
+            "blast_radius": "local",
+            "cooldown_until_ms": 0,
+            "cost_uncertainty_ppm": 0,
+            "depends_on_gap_ids": [],
+            "evidence_digests": [],
+            "expected_cost_microunits": 0,
+            "expected_utility_micros": 0,
+            "probability_of_closure_ppm": 0,
+            "repository_scope": [],
+            "required_capabilities": [],
+            "reversible": false
+          },
+          "offered_at_ms": 0,
+          "stage": "",
+          "utility_rate": 0,
+          "version": 0,
+          "work_item_id": ""
+        },
+        "offer_version": 0,
+        "priority_bucket": 0,
+        "revision": 0,
+        "severity_ppm": 0,
+        "signature": "",
+        "source": "",
+        "spec_refs": [],
+        "statement": "",
+        "status": "open",
+        "updated_at_ms": 0,
+        "work": {
+          "kind": "",
+          "max_attempts": 0
+        },
+        "work_item_id": ""
+      },
+      "outcome": "applied"
+    },
+    "sha256": "a2fb5e2a13a816b5feac807844305e210cd59e8e47e1082199a041208cb39a87"
+  },
+  {
+    "method": "WorkflowRegistry",
+    "request": {
+      "method": "WorkflowRegistry",
+      "params": {
+        "op": {
+          "op": "register",
+          "registration": {
+            "identity": {
+              "content_digest": "",
+              "version": "",
+              "workflow_id": ""
+            },
+            "lifecycle": "active",
+            "owner_scope": ""
+          }
+        }
+      }
+    },
+    "result": {
+      "read": {
+        "identity": {
+          "content_digest": "",
+          "version": "",
+          "workflow_id": ""
+        },
+        "lifecycle": "active",
+        "owner_scope": ""
+      },
+      "register": {
+        "identity": {
+          "content_digest": "",
+          "version": "",
+          "workflow_id": ""
+        },
+        "lifecycle": "active",
+        "owner_scope": ""
+      }
+    },
+    "sha256": "eae57a6ae8f0d490d7320558f70141cfcfe1baafd7d8812f3c5f060ee4bdfde2"
+  }
+]
