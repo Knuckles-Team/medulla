@@ -126,6 +126,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("compute:vision", ServiceOnly, "engine"),
     entry("connector:write-back", ServiceOnly, "engine"),
     entry("connector:write-back-read", ServiceOnly, "engine"),
+    // MEDULLA-CONTRACT-R054: the served contract read (method descriptors +
+    // scope registry).
+    entry("contract:read", User, "engine"),
     entry("decide:commit", ServiceOnly, "graph-os"),
     entry("distcompute:read", User, "engine"),
     entry("edge:read", User, "engine"),

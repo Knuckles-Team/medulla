@@ -17110,6 +17110,32 @@ class MedullaClient:
     async def health(self) -> dict[str, Any]:
         return (await _gen.cluster.send_health(self)).payload
 
+    async def describe_contract(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Read one bounded page of the served engine contract (MEDULLA-CONTRACT-R054).
+
+        ``cursor`` is the ``id`` of the last descriptor of the previous page
+        (at most 128 characters) and ``limit`` bounds the page to 1..=500
+        (default 500). The first page also carries the scope registry; every
+        page carries ``schema_digest``, which a client must restart on if it
+        changes between pages.
+        """
+        params: dict[str, Any] = {}
+        if cursor is not None:
+            params["cursor"] = cursor
+        if limit is not None:
+            params["limit"] = limit
+        result = await self._send(
+            "DescribeContract", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("DescribeContract must answer with an object")
+        return result
+
     async def cancel_request(self, target_req_id: int) -> bool:
         """Cooperatively cancel an IN-FLIGHT request by its ``target_req_id`` (L36) —
         e.g. a long-running :meth:`QueryClient.sql`/:meth:`~JobsClient.status` call
