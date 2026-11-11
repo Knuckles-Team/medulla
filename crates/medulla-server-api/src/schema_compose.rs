@@ -887,7 +887,12 @@ ex:parent a owl:AsymmetricProperty .
         // +1856: the state-machine vocabulary (state-machines-v1.ttl) joins the core corpus.
         // +57 (MEDULLA-IDENTITY-R723): the workstream record class, its properties and the
         // attachedTo session link in identity-v1.ttl.
-        assert_eq!(composed.ontology.len(), 20_674);
+        // +143 (measured composed delta, 20_674 -> 20_817): the BPMN vocabulary
+        // (bpmn-v1.ttl) joins the core corpus and orchestration-v1.ttl gains the BPMN
+        // links (39cfe696f); sdd-v1.ttl gains the row-level and SDLC lifecycle axioms
+        // (816b4b7d8, ef517a72c). The composed count deduplicates against existing
+        // corpus triples, so the raw file deltas (86 + 6 + 156) exceed the delta.
+        assert_eq!(composed.ontology.len(), 20_817);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -983,7 +988,9 @@ ex:parent a owl:AsymmetricProperty .
         // +737: the semantic share of the +739 total above (the other 2 are the
         // import edges); headers are unchanged at 150 triples.
         // +57 (MEDULLA-IDENTITY-R723): the workstream record vocabulary, all semantic axioms.
-        assert_eq!(semantic_axioms, 20_443);
+        // +143: the BPMN vocabulary and the SDLC row-level / lifecycle axioms
+        // (39cfe696f, 816b4b7d8, ef517a72c), all semantic axioms (see the total pin).
+        assert_eq!(semantic_axioms, 20_586);
 
         let count_type = |object: &str| {
             composed
@@ -1067,7 +1074,10 @@ ex:parent a owl:AsymmetricProperty .
             // (the decision module's core parents among them).
             // +90 (measured): the state-machine vocabulary's class edges (MEDULLA-ORCH-VOCAB-R811.1).
             // +1: the workstream record class edge (MEDULLA-IDENTITY-R723).
-            1053
+            // +10 (measured): the BPMN vocabulary and the SDLC row-level / lifecycle
+            // class edges (39cfe696f, 816b4b7d8, ef517a72c); the raw file additions
+            // (+17 and +11) deduplicate against existing corpus edges.
+            1063
         );
     }
 
