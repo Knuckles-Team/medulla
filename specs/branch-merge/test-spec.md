@@ -4,13 +4,17 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 
 ## Positive
 
-- `tests/test_branch_create.py::test_branch_create_and_refusals`. Branch creation round-trips the
+- `tests/test_branch_create.py::test_branch_create_and_refusals` (planned, L4). Branch creation round-trips the
   identity. Each refusal (empty name, duplicate, reserved namespace, foreign tenant, unresolvable
   base) returns a typed error. Each leaves no registry entry. *(MEDULLA-BRANCH-MERGE-R001)*
-- `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge`. A write on a branch
+- `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (planned, L4). A write on a branch
   shows on that branch. It stays invisible on main and on sibling branches. It is idempotent
   under a tenant-scoped branch idempotency key. *(MEDULLA-BRANCH-MERGE-R002)*
-- `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward`. Four fixture
+- `crates/medulla-types/src/branch.rs::tests::branch_commit_appends_one_parent_and_round_trips` (L2). A plain
+  branch commit appends exactly one parent, the prior head, and round-trips through serde.
+  `refusal_set_and_default_branch_are_closed` proves the typed refusal set is closed and the
+  default trunk name is reserved. *(MEDULLA-BRANCH-MERGE-R002.1)*
+- `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4). Four fixture
   topologies (contained, descendant, diverged, disjoint) return the declared outcomes from the
   closed set. Fast-forward produces a single-parent receipt. Up-to-date publishes nothing.
   *(MEDULLA-BRANCH-MERGE-R003)*

@@ -24,6 +24,7 @@ from check_duplication import _parser, guard_ambient_config
 pytestmark = pytest.mark.no_engine
 
 
+# spec: MEDULLA-CONTRACT-R022
 @pytest.mark.spec("MEDULLA-CONTRACT-R022")
 def test_gate_cli_has_no_baseline_or_suppression_flag() -> None:
     parser = _parser()

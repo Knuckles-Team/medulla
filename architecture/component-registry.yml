@@ -2784,6 +2784,7 @@ components:
       - "crates/medulla-plan/tests"
       - "crates/medulla-plan/benches"
       - "tests/nl_query_bounded_steps.rs"
+      - "tests/plan_scope_tenant.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -4059,6 +4060,7 @@ components:
       - "tests/test_method_policy_registry.py"
       - "tests/identity/__init__.py"
       - "tests/identity/test_session_reference_served.py"
+      - "tests/identity/test_segment_retrieval_served.py"
       - "tests/workflows/__init__.py"
       - "tests/workflows/test_registry_served.py"
       - "tests/jobs/test_association_submit_served.py"
@@ -4198,6 +4200,12 @@ components:
       - "tests/viz_dispatch.rs"
       - "tests/web_document_enrich_served.rs"
       - "tests/wire_listeners_one_store.rs"
+      - "tests/sdlc"
+      - "tests/jobs/test_worker_grant_served.py"
+      - "tests/test_check_wheel_completeness.py"
+      - "tests/test_describe_contract_served.py"
+      - "tests/test_fanout_adapter.py"
+      - "tests/test_wire_vectors.py"
       - "benches"
       - "examples"
     generated_roots: []
