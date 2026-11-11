@@ -25,6 +25,8 @@ pub(crate) mod statistical;
 #[cfg(feature = "decide")]
 mod candidates;
 #[cfg(feature = "decide")]
+mod family;
+#[cfg(feature = "decide")]
 mod stat_adapter;
 #[cfg(feature = "decide")]
 mod stat_belief;

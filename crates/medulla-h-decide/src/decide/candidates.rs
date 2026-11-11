@@ -21,28 +21,20 @@ use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentSearchRequest,
 };
 use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
-use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
 use medulla_decision_types::{
     decision::statistical::declared::check_declared,
     decision::statistical::declared::DeclaredOption,
 };
 use medulla_decision_types::{
-    decision::statistical::enrichment_schedule::EnrichmentCandidate,
-    decision::statistical::enrichment_schedule::EnrichmentScheduleRequest,
-    decision::statistical::enrichment_schedule::COST_KEY,
-    decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
-};
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::QuestionKind,
-    decision::statistical::StatisticalErrorCode,
+    decision::statistical::CandidateSource, decision::statistical::StatisticalErrorCode,
 };
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
 };
 
+use super::family::DecisionFamily;
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -287,7 +279,7 @@ pub(super) fn graph_candidates(
 /// The Q32 fact named `key` on `option`, or 0 when the option does not
 /// carry it -- absence is a feature-reading concern elsewhere, not a shape
 /// refusal here.
-fn declared_number(option: &DeclaredOption, key: &str) -> i64 {
+pub(super) fn declared_number(option: &DeclaredOption, key: &str) -> i64 {
     option
         .numbers
         .iter()
@@ -312,7 +304,7 @@ fn declared_number(option: &DeclaredOption, key: &str) -> i64 {
 /// `consumer_tests::an_unregistered_ingestion_lane_is_refused_through_decide`
 /// and `consumer_tests::a_negative_enrichment_cost_is_refused_through_decide`,
 /// which assert on the served response, not the type's own unit test).
-fn prefixed_refusal(detail: &str, prefix: &str, code: StatisticalErrorCode) -> String {
+pub(super) fn prefixed_refusal(detail: &str, prefix: &str, code: StatisticalErrorCode) -> String {
     match detail.strip_prefix(prefix) {
         Some(rest) => refusal(code, rest),
         None => refusal(StatisticalErrorCode::ParameterInvalid, detail),
@@ -322,75 +314,30 @@ fn prefixed_refusal(detail: &str, prefix: &str, code: StatisticalErrorCode) -> S
 /// Declared candidates: the caller's own options, each fact a claim, visible
 /// to the declaring principal only. Validated before any feature reads them.
 ///
-/// `kind` additionally gates a question-specific declared-option registry
-/// where one exists: `QuestionKind::IngestionLane` candidates must each name
-/// a registered [`medulla_decision_types::decision::statistical::ingestion_lane::IngestionLane`],
+/// The family's `validate_candidates` hook carries the question-specific
+/// declared-option registry gates (MEDULLA-DECISION-ENGINE-R001.101): an
+/// `IngestionLane` candidate must name a registered
+/// [`medulla_decision_types::decision::statistical::ingestion_lane::IngestionLane`],
 /// refused here rather than discovered later as an opaque abstention
-/// (MEDULLA-DECISION-ENGINE-R030). `QuestionKind::EnrichmentSchedule` candidates
-/// may not declare a negative `enrichment.cost_q32` -- it has no meaning on
-/// that scale and would let a candidate manufacture unbounded net value
-/// (MEDULLA-DECISION-ENGINE-R031).
-/// A `QuestionKind::RetrievalPlan` candidate whose
-/// option id claims the reserved
+/// (MEDULLA-DECISION-ENGINE-R030); an `EnrichmentSchedule` candidate may not
+/// declare a negative `enrichment.cost_q32` -- it has no meaning on that
+/// scale and would let a candidate manufacture unbounded net value
+/// (MEDULLA-DECISION-ENGINE-R031); a `RetrievalPlan` candidate whose option
+/// id claims the reserved
 /// [`medulla_decision_types::decision::statistical::retrieval_plan::OPTION_ID_PREFIX`]
 /// namespace must name a registered
 /// [`medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind`],
-/// refused the same way (MEDULLA-DECISION-ENGINE-R029). An option id outside that
-/// namespace is an ordinary declared option, unaffected by this registry.
+/// refused the same way (MEDULLA-DECISION-ENGINE-R029). An option id outside
+/// that namespace is an ordinary declared option, unaffected by this
+/// registry.
 pub(super) fn declared_candidates(
     options: &[DeclaredOption],
     principal: &str,
-    kind: QuestionKind,
+    family: &dyn DecisionFamily,
 ) -> Result<ReadCandidates, String> {
     check_declared(options)
         .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
-    if kind == QuestionKind::IngestionLane {
-        IngestionLaneRequest {
-            candidate_lanes: options.iter().map(|o| o.option_id.clone()).collect(),
-        }
-        .check()
-        .map_err(|detail| {
-            prefixed_refusal(
-                &detail,
-                "UNSUPPORTED_INGESTION_LANE: ",
-                StatisticalErrorCode::UnsupportedIngestionLane,
-            )
-        })?;
-    } else if kind == QuestionKind::EnrichmentSchedule {
-        let candidates: Vec<EnrichmentCandidate> = options
-            .iter()
-            .map(|option| EnrichmentCandidate {
-                work_id: option.option_id.clone(),
-                expected_value_q32: declared_number(option, EXPECTED_VALUE_KEY),
-                cost_q32: declared_number(option, COST_KEY),
-            })
-            .collect();
-        EnrichmentScheduleRequest { candidates }
-            .check()
-            .map_err(|detail| {
-                prefixed_refusal(
-                    &detail,
-                    "UNSUPPORTED_ENRICHMENT_COST: ",
-                    StatisticalErrorCode::UnsupportedEnrichmentCost,
-                )
-            })?;
-    }
-    if kind == QuestionKind::RetrievalPlan {
-        for option in options {
-            if RetrievalPlanKind::claims_registry_namespace(&option.option_id)
-                && RetrievalPlanKind::from_option_id(&option.option_id).is_none()
-            {
-                return Err(refusal(
-                    StatisticalErrorCode::ParameterInvalid,
-                    format!(
-                        "UNSUPPORTED_RETRIEVAL_PLAN: '{}' is not in the retrieval plan \
-                         registry (leanrag, reciprocal-rank-fusion, direct-sparql)",
-                        option.option_id
-                    ),
-                ));
-            }
-        }
-    }
+    family.validate_candidates(options, principal)?;
     let views = options
         .iter()
         .map(|option| {
@@ -429,20 +376,20 @@ pub(super) fn declared_candidates(
 
 /// Read the options `source` names. Graph candidates need the caller's
 /// filtered snapshot, which [`super::stat_decide`] takes under the state lock.
-/// `kind` is the question's kind, passed through to [`declared_candidates`]
-/// for its question-specific registry gate.
+/// `family` is the question's family, whose `validate_candidates` hook
+/// carries the declared candidates' question-specific registry gate.
 pub(super) fn read_candidates(
     store: &AgentLibraryStore,
     tenant_id: &str,
     source: &CandidateSource,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
     principal: &str,
-    kind: QuestionKind,
+    family: &dyn DecisionFamily,
 ) -> Result<ReadCandidates, String> {
     match source {
         CandidateSource::AgentLibrary { scope } => library_candidates(store, tenant_id, scope),
         CandidateSource::Declared { options } => {
-            declared_candidates(options.as_slice(), principal, kind)
+            declared_candidates(options.as_slice(), principal, family)
         }
         CandidateSource::Graph { graph, plan } => {
             let view = graph_view.ok_or_else(|| {
