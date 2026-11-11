@@ -166,6 +166,7 @@ pub mod meeting_transcript;
 pub mod entity_link_proposal;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
+pub mod contract_catalog;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
 // MEDULLA-TYPED-PACKS-R651.1 — append-only ontology edit chain records.
@@ -339,6 +340,7 @@ pub mod skill_plan;
 pub mod ingest_capabilities;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
 pub mod ingest_readback;
+pub mod ingest_throughput;
 // MEDULLA-CQ-ORCH-R701.1: canonical workflow records of every process source.
 pub mod process_import;
 // MEDULLA-CQ-ORCH-R702.1: process document records (BPMN 2.0, DMN 1.3).

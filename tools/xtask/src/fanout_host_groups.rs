@@ -134,6 +134,7 @@ mod tests {
         assert!(validate_groups(&groups).is_empty());
     }
 
+    // spec: MEDULLA-CONTRACT-R011.1
     #[test]
     fn overlapping_host_assignment_is_rejected() {
         let groups = [

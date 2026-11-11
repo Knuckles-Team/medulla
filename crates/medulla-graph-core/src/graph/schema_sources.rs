@@ -1159,10 +1159,14 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/retrieval-v1.ttl"
             )),
         },
+        // MEDULLA-SDLC-R001.1: the lifecycle edge shapes companion, the same
+        // pattern as sdlc_lifecycle and documentation-shapes.
         CoreSpec {
             module: "sdd",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/sdd-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!("../../../medulla-core/ontology/sdd-v1.ttl")),
         },
         CoreSpec {
@@ -1251,6 +1255,16 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/swarm_topology-v1.shapes.ttl"
             )),
             ontology: None,
+        },
+        // MEDULLA-PLACEMENT-R001.5: the placement target vocabulary and its
+        // four-fact shapes, one core source beside the swarm-topology pair.
+        CoreSpec {
+            module: "placement",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/placement.shapes.ttl"
+            )),
+            ontology: Some(include_str!("../../../medulla-core/ontology/placement.ttl")),
         },
         CoreSpec {
             module: "finance",
@@ -1468,7 +1482,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 62);
+        assert_eq!(sources.core.len(), 63);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1868,7 +1882,7 @@ mod tests {
             ),
             (
                 "sdd",
-                "383283f769da7e57cb0ddda6af8319b3253501f8e777d3cd368d864f0e9d0f11",
+                "59a092b0199b1924b45ac8ebc29e1ed3a0622db9c6a590f6fc8e7cb95a35c65c",
             ),
             (
                 "service_operations",
@@ -1933,6 +1947,12 @@ mod tests {
             (
                 "swarm-topology-shapes",
                 "1072f280c5761d749574f913967ab1fbdef04681795e43db961c8b5e9c3a4413",
+            ),
+            // MEDULLA-PLACEMENT-R001.5: the placement module (ontology plus its
+            // shapes companion) joins the catalog; the pin follows the ontology.
+            (
+                "placement",
+                "1e94bfd8f3c33e6e050ec55e1f090c94b86372d15b25d6df807156563ac772ec",
             ),
             // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
             // records; semantic acceptance/refusal fixtures live in

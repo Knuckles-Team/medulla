@@ -231,4 +231,6 @@ method_results! {
     GovernedRevoke(GovernedChange / "revoke") => Json<medulla_mutation_types::governed_change::GovernedChange>;
     GovernedGet(GovernedChange / "get") => Json<Option<medulla_mutation_types::governed_change::GovernedChange>>;
     GovernedList(GovernedChange / "list") => Json<Vec<medulla_mutation_types::governed_change::GovernedChange>>;
+    // MEDULLA-CONTRACT-R054: the served contract page (descriptors + scopes).
+    DescribeContract(DescribeContract) => Json<medulla_types::contract_catalog::DescribeContractPage>;
 }
