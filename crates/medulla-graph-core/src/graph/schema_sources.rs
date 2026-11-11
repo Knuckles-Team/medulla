@@ -1256,6 +1256,16 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: None,
         },
+        // MEDULLA-PLACEMENT-R001.5: the placement target vocabulary and its
+        // four-fact shapes, one core source beside the swarm-topology pair.
+        CoreSpec {
+            module: "placement",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/placement.shapes.ttl"
+            )),
+            ontology: Some(include_str!("../../../medulla-core/ontology/placement.ttl")),
+        },
         CoreSpec {
             module: "finance",
             version: 1,
@@ -1472,7 +1482,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 62);
+        assert_eq!(sources.core.len(), 63);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1937,6 +1947,12 @@ mod tests {
             (
                 "swarm-topology-shapes",
                 "1072f280c5761d749574f913967ab1fbdef04681795e43db961c8b5e9c3a4413",
+            ),
+            // MEDULLA-PLACEMENT-R001.5: the placement module (ontology plus its
+            // shapes companion) joins the catalog; the pin follows the ontology.
+            (
+                "placement",
+                "1e94bfd8f3c33e6e050ec55e1f090c94b86372d15b25d6df807156563ac772ec",
             ),
             // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
             // records; semantic acceptance/refusal fixtures live in

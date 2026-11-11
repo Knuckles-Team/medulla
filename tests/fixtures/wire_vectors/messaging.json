@@ -1,0 +1,621 @@
+[
+  {
+    "method": "BindQueue",
+    "request": {
+      "method": "BindQueue",
+      "params": {
+        "exchange": "",
+        "queue": "",
+        "routing_key": ""
+      }
+    },
+    "result": "",
+    "sha256": "b1440658cc93c9bc39f452e7cfe7baa070e5625637b946b553db682255409b43"
+  },
+  {
+    "method": "BrokerAck",
+    "request": {
+      "method": "BrokerAck",
+      "params": {
+        "node_id": "",
+        "queue": ""
+      }
+    },
+    "result": false,
+    "sha256": "408e755b2fb0aee1a657c71dfa15e6530e2f7530fd4fb84aa2fff0916a02a473"
+  },
+  {
+    "method": "BrokerAckTag",
+    "request": {
+      "method": "BrokerAckTag",
+      "params": {
+        "consumer": "",
+        "delivery_tag": 0
+      }
+    },
+    "result": false,
+    "sha256": "4b8ba5796ba09a3c26189db75d46672809b18bac922f22b28bfea4f6b45c8155"
+  },
+  {
+    "method": "BrokerConsume",
+    "request": {
+      "method": "BrokerConsume",
+      "params": {
+        "consumer": "",
+        "group": "",
+        "lease_ms": 0,
+        "now_ms": 0,
+        "prefetch": 0,
+        "queue": ""
+      }
+    },
+    "result": [
+      "",
+      null
+    ],
+    "sha256": "4e81c27cea0e9c8d77190650826e65938009a4aca60ab19a81bb290722270c7c"
+  },
+  {
+    "method": "BrokerNackTag",
+    "request": {
+      "method": "BrokerNackTag",
+      "params": {
+        "consumer": "",
+        "delivery_tag": 0,
+        "now_ms": 0,
+        "requeue": false
+      }
+    },
+    "result": "",
+    "sha256": "318109aa8a6b655f808461ce22352d820aa952263740e856b9c32a3ad6aba36d"
+  },
+  {
+    "method": "BrokerReject",
+    "request": {
+      "method": "BrokerReject",
+      "params": {
+        "node_id": "",
+        "now_ms": 0,
+        "queue": "",
+        "requeue": false
+      }
+    },
+    "result": "",
+    "sha256": "3904705e4a1e2ed461ac6f899575f806a65382941b896a8fd3dabae774296bc9"
+  },
+  {
+    "method": "BrokerRenewTag",
+    "request": {
+      "method": "BrokerRenewTag",
+      "params": {
+        "consumer": "",
+        "delivery_tag": 0,
+        "lease_ms": 0,
+        "now_ms": 0
+      }
+    },
+    "result": false,
+    "sha256": "2e71f1f7caffcd1cf6d36d0a7e9057eb0462bc8e1532bda99d5c28497af28388"
+  },
+  {
+    "method": "CdcRead",
+    "request": {
+      "method": "CdcRead",
+      "params": {
+        "from_seq": 0,
+        "graph": "",
+        "limit": 0
+      }
+    },
+    "result": {
+      "epoch": 0,
+      "events": [],
+      "gap": false,
+      "head_seq": 0,
+      "watermark": 0
+    },
+    "sha256": "c50b583cc16f495c875024681c07ae6e40ce7502fe2990b0b190adb475589249"
+  },
+  {
+    "method": "CepPoll",
+    "request": {
+      "method": "CepPoll",
+      "params": {
+        "sub_id": 0,
+        "timeout_ms": 0
+      }
+    },
+    "result": [],
+    "sha256": "7a77e7838720bff379c64d3214aafa58c0cf073c2db133e0c3ca1e1305758f91"
+  },
+  {
+    "method": "CepSubscribe",
+    "request": {
+      "method": "CepSubscribe",
+      "params": {
+        "buffer": 0,
+        "pattern_msgpack": []
+      }
+    },
+    "result": 0,
+    "sha256": "7ece0f5b30fc32259a87d4549e7671a3118f23dde9b8c0c2f12775fca3e5b615"
+  },
+  {
+    "method": "CepUnsubscribe",
+    "request": {
+      "method": "CepUnsubscribe",
+      "params": {
+        "sub_id": 0
+      }
+    },
+    "result": false,
+    "sha256": "e2f40592d5bfb2a7b17c672d81afbdd9895076d78756e2671ec0f403e4f75a91"
+  },
+  {
+    "method": "CloseChannel",
+    "request": {
+      "method": "CloseChannel",
+      "params": {
+        "channel_id": "",
+        "summary_embedding": [],
+        "topic_metadata": ""
+      }
+    },
+    "result": {
+      "channel_id": "",
+      "channel_type": "PeerToPeer",
+      "closed_at": 0,
+      "created_at": 0,
+      "creator": "",
+      "message_count": 0,
+      "participants": [],
+      "summary_embedding": [],
+      "topic_metadata": ""
+    },
+    "sha256": "e006cb87f7b7dcd70f6c32a83bee287a0fae70a2bbab10719f5ee79b83bd3ff7"
+  },
+  {
+    "method": "CreateChannel",
+    "request": {
+      "method": "CreateChannel",
+      "params": {
+        "channel_id": "",
+        "channel_type": "PeerToPeer",
+        "creator": "",
+        "initial_members": []
+      }
+    },
+    "result": {
+      "channel": ""
+    },
+    "sha256": "e365d8f10d9ee5a67a41bb8fc86170104498c90f78f8f54bb7c446ad30ef286e"
+  },
+  {
+    "method": "DeclareExchange",
+    "request": {
+      "method": "DeclareExchange",
+      "params": {
+        "exchange": "",
+        "kind": ""
+      }
+    },
+    "result": "",
+    "sha256": "2b79393225fdaf76814b4863b42dbef78344373a5a004a7be7bda9f4d840f99a"
+  },
+  {
+    "method": "DeclareQueue",
+    "request": {
+      "method": "DeclareQueue",
+      "params": {
+        "dl_exchange": "",
+        "dl_routing_key": "",
+        "max_delivery_count": 0,
+        "max_priority": 0,
+        "message_ttl_ms": 0,
+        "queue": "",
+        "queue_expiry_ms": 0
+      }
+    },
+    "result": "",
+    "sha256": "a4289eabf75ff77e18125a81c5ee9df21309e4a0ae5f314f332cab0dce72ce38"
+  },
+  {
+    "method": "DeleteExchange",
+    "request": {
+      "method": "DeleteExchange",
+      "params": {
+        "exchange": ""
+      }
+    },
+    "result": false,
+    "sha256": "2ebfb24a399d55c5ff407e88ec96dc9a55c40c31dd0cee8b12a26be7eaa120ba"
+  },
+  {
+    "method": "DropContinuousQuery",
+    "request": {
+      "method": "DropContinuousQuery",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": false,
+    "sha256": "ddee036e3619e617e3c22ae6295d983f84ce56c8bc8d3738d3456c6e05a0f6a6"
+  },
+  {
+    "method": "DropTrigger",
+    "request": {
+      "method": "DropTrigger",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": false,
+    "sha256": "e0695978fb515e93a0fed4aa6d71aec9faacd8eba25fe4ad27037f3524f7dd54"
+  },
+  {
+    "method": "FiredTriggers",
+    "request": {
+      "method": "FiredTriggers",
+      "params": {
+        "from_seq": 0,
+        "graph": "",
+        "limit": 0
+      }
+    },
+    "result": {
+      "epoch": 0,
+      "fired": [],
+      "gap": false,
+      "head_seq": 0,
+      "watermark": 0
+    },
+    "sha256": "130da4cd39551079ac60e09428b4ca591374bb5d15480fbf45988cf14c61ccf9"
+  },
+  {
+    "method": "FreshnessFeed",
+    "request": {
+      "method": "FreshnessFeed",
+      "params": {
+        "after_version": 0,
+        "limit": 0,
+        "policy_after": 0
+      }
+    },
+    "result": {
+      "epoch": 0,
+      "events": [],
+      "foreign": [],
+      "gap": false,
+      "head_version": 0,
+      "policy": [],
+      "policy_diagnostics": [],
+      "policy_version": 0
+    },
+    "sha256": "2c9d4ea6d524435d468eb455ebf1f6dcbb2fe73e71e6fc2346eb0f4caa90ba80"
+  },
+  {
+    "method": "GetChannelMembers",
+    "request": {
+      "method": "GetChannelMembers",
+      "params": {
+        "channel_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "4448330d1fb35fc2b4d8451e28bda4b447474b912c0cb1962c5de3038ec55ca4"
+  },
+  {
+    "method": "GetChannelMessages",
+    "request": {
+      "method": "GetChannelMessages",
+      "params": {
+        "channel_id": "",
+        "limit": 0
+      }
+    },
+    "result": [],
+    "sha256": "be32fba58a59d0936436c95c6d59a26b5fa1bebbf6c392e29286b1401a4151c3"
+  },
+  {
+    "method": "JoinChannel",
+    "request": {
+      "method": "JoinChannel",
+      "params": {
+        "agent_id": "",
+        "channel_id": ""
+      }
+    },
+    "result": "",
+    "sha256": "fbe9bae6eafa22eb95bb5f13488f82d614e1697d192dcd7373f0c2cc9bba93cf"
+  },
+  {
+    "method": "LeaveChannel",
+    "request": {
+      "method": "LeaveChannel",
+      "params": {
+        "agent_id": "",
+        "channel_id": ""
+      }
+    },
+    "result": {
+      "channel_id": "",
+      "channel_type": "PeerToPeer",
+      "closed_at": 0,
+      "created_at": 0,
+      "creator": "",
+      "message_count": 0,
+      "participants": [],
+      "summary_embedding": [],
+      "topic_metadata": ""
+    },
+    "sha256": "e4654260a5e3b4a6055d8f13d37d7dd7b77d9ce2721f240f00f17012cbce039e"
+  },
+  {
+    "method": "ListChannels",
+    "request": {
+      "method": "ListChannels"
+    },
+    "result": [],
+    "sha256": "6c201f79ca9cc95c4b946ab832ab2a0495dec25fba1aa76e6d20f8e1eec21ecf"
+  },
+  {
+    "method": "ListTriggers",
+    "request": {
+      "method": "ListTriggers",
+      "params": {
+        "graph": ""
+      }
+    },
+    "result": [],
+    "sha256": "7ffb65bc695fb53b58f312fb894022b0f48c5497420c686f146299cad4fb4160"
+  },
+  {
+    "method": "Publish",
+    "request": {
+      "method": "Publish",
+      "params": {
+        "exchange": "",
+        "payload": [],
+        "routing_key": ""
+      }
+    },
+    "result": 0,
+    "sha256": "a47fbec676e6c76e9967a57efe5110440aba1a4287919ec8fc6600a9ab4a6b43"
+  },
+  {
+    "method": "PublishConfirmed",
+    "request": {
+      "method": "PublishConfirmed",
+      "params": {
+        "delay_ms": 0,
+        "exchange": "",
+        "now_ms": 0,
+        "payload": [],
+        "priority": 0,
+        "routing_key": "",
+        "ttl_ms": 0
+      }
+    },
+    "result": {
+      "confirmed": false,
+      "delivery_tag": 0
+    },
+    "sha256": "2ef0c6b9853028bf120772d91b3e626d943903c13a4f2da39f5fe719b59fbe15"
+  },
+  {
+    "method": "PublishEx",
+    "request": {
+      "method": "PublishEx",
+      "params": {
+        "delay_ms": 0,
+        "exchange": "",
+        "now_ms": 0,
+        "payload": [],
+        "priority": 0,
+        "routing_key": "",
+        "ttl_ms": 0
+      }
+    },
+    "result": 0,
+    "sha256": "bbcd3c00ad410b4277d91ea11f2501b18739d688ce24b73370f2eb9a668768ee"
+  },
+  {
+    "method": "PublishIdempotent",
+    "request": {
+      "method": "PublishIdempotent",
+      "params": {
+        "delay_ms": 0,
+        "exchange": "",
+        "now_ms": 0,
+        "payload": [],
+        "priority": 0,
+        "producer_id": "",
+        "routing_key": "",
+        "seq": 0,
+        "ttl_ms": 0
+      }
+    },
+    "result": {
+      "confirmed": false,
+      "delivered": 0,
+      "duplicate": false
+    },
+    "sha256": "7bfbbcc18cd2239a6bd2785eee90e9daccbc0d549d4b672b0fcec405c5abc37d"
+  },
+  {
+    "method": "ReadContinuousQuery",
+    "request": {
+      "method": "ReadContinuousQuery",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": {
+      "name": "",
+      "through_seq": 0,
+      "value": 0.0
+    },
+    "sha256": "52d6862e1b58be2f32cfd566ace83b753a58b42ae29c65e4f15053c9a400474c"
+  },
+  {
+    "method": "RegisterContinuousQuery",
+    "request": {
+      "method": "RegisterContinuousQuery",
+      "params": {
+        "name": "",
+        "spec_msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "c97cd9b0dd5b2dd36d0761e3d20b0760aea42c5b0cd2824f56f591308a843a91"
+  },
+  {
+    "method": "RegisterTrigger",
+    "request": {
+      "method": "RegisterTrigger",
+      "params": {
+        "action_msgpack": [],
+        "graph": "",
+        "label": "",
+        "name": "",
+        "op": ""
+      }
+    },
+    "result": "",
+    "sha256": "c91de9e3d18615a00a056c31218169b962bf1783263c155f3ade1f25928e0e9d"
+  },
+  {
+    "method": "SendMessage",
+    "request": {
+      "method": "SendMessage",
+      "params": {
+        "channel_id": "",
+        "payload": "",
+        "sender": ""
+      }
+    },
+    "result": "",
+    "sha256": "c1f199435fb40d0cd7383cca227a32e771cef836ca7767e91149e933fbc747b4"
+  },
+  {
+    "method": "StreamCommitOffset",
+    "request": {
+      "method": "StreamCommitOffset",
+      "params": {
+        "group": "",
+        "offset": 0,
+        "stream": ""
+      }
+    },
+    "result": "",
+    "sha256": "a062bb838f5ddd7c435c6f0f7a1d4320c33f652f9ab5ea26ccfd8b15d18dc60b"
+  },
+  {
+    "method": "StreamCommittedOffset",
+    "request": {
+      "method": "StreamCommittedOffset",
+      "params": {
+        "group": "",
+        "stream": ""
+      }
+    },
+    "result": 0,
+    "sha256": "9326a80a09634622ca5afaa9a049cf5c79f975aa3a6ddd35560abb78577bca7b"
+  },
+  {
+    "method": "StreamDeclare",
+    "request": {
+      "method": "StreamDeclare",
+      "params": {
+        "max_age_ms": 0,
+        "max_messages": 0,
+        "stream": ""
+      }
+    },
+    "result": "",
+    "sha256": "273d23ef8f86cd7c8e4f5f272e4e411a0141dddf51c376871550119af6d2dc97"
+  },
+  {
+    "method": "StreamPublish",
+    "request": {
+      "method": "StreamPublish",
+      "params": {
+        "now_ms": 0,
+        "payload": [],
+        "stream": ""
+      }
+    },
+    "result": 0,
+    "sha256": "fc8b3f4657654e5037720eb5c4558dd37e2b0a5d9ed82fd09e1238af8f7d37c3"
+  },
+  {
+    "method": "StreamRead",
+    "request": {
+      "method": "StreamRead",
+      "params": {
+        "from_offset": 0,
+        "max": 0,
+        "stream": ""
+      }
+    },
+    "result": [],
+    "sha256": "1fe773e62cc74d1f8a3c799325145601e856f9b613c7a398448570e9742f93e9"
+  },
+  {
+    "method": "StreamTrim",
+    "request": {
+      "method": "StreamTrim",
+      "params": {
+        "now_ms": 0,
+        "stream": ""
+      }
+    },
+    "result": 0,
+    "sha256": "fce3c2491e99fb08d967db32ca686a54aba8e5983440c99278efcbc6af7a791c"
+  },
+  {
+    "method": "SweepExpired",
+    "request": {
+      "method": "SweepExpired",
+      "params": {
+        "now_ms": 0
+      }
+    },
+    "result": 0,
+    "sha256": "8ab734910f4ae40f9519285334dbe80531f52d84d88e135c959895bfd4742c36"
+  },
+  {
+    "method": "UnbindQueue",
+    "request": {
+      "method": "UnbindQueue",
+      "params": {
+        "exchange": "",
+        "queue": "",
+        "routing_key": ""
+      }
+    },
+    "result": false,
+    "sha256": "c176ee5042d2c76d3bd51228639f976b6752217eecf5465bf706ce7f1c337d06"
+  },
+  {
+    "method": "Watch",
+    "request": {
+      "method": "Watch",
+      "params": {
+        "from_seq": 0,
+        "graph": "",
+        "label": "",
+        "timeout_ms": 0
+      }
+    },
+    "result": {
+      "epoch": 0,
+      "events": [],
+      "gap": false,
+      "head_seq": 0,
+      "next_seq": 0,
+      "watermark": 0
+    },
+    "sha256": "0c12f6d30b02a92ec3a76f89d5989b69f9be2521e510e9914957e7132206edb5"
+  }
+]
