@@ -595,7 +595,7 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     if let Some(set) = ctx.policies {
         let principal = ctx
             .principal
-            .unwrap_or_else(|| crate::policy_mask::PrincipalRef(""));
+            .unwrap_or(crate::policy_mask::PrincipalRef(""));
         crate::policy_mask::apply_policies(&mut plan, set, &principal);
     }
     let pinned;
