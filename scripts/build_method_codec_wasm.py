@@ -25,6 +25,8 @@ gives the same bytes on every host.
 
 ``--export-dir`` saves the fresh module and a SHA-256/source/build provenance
 sidecar. Failed builds clear old exports and never advertise a completed export.
+``--check`` asserts that the two independent builds are byte-identical and
+within ``MAX_BYTES`` (MEDULLA-CONTRACT-R006), writing nothing.
 """
 
 from __future__ import annotations
@@ -185,8 +187,8 @@ def verify_no_imports(module: bytes) -> None:
             raise ValueError("method codec must have zero WebAssembly imports")
 
 
-def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
-    """Qualify two canonical builds, then place the module in every client."""
+def _qualify(module: bytes, rebuild: bytes | None = None) -> bool:
+    """Fail closed before any copy is written: canonical and within budget."""
 
     verify_no_imports(module)
     if rebuild is not None and rebuild != module:
@@ -195,12 +197,32 @@ def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
             f"vs sha256={_sha256(rebuild)}",
             file=sys.stderr,
         )
-        return 1
+        return False
     if len(module) > MAX_BYTES:
         print(
             f"REFUSED: {MODULE} is {len(module)} bytes, over MAX_BYTES={MAX_BYTES}",
             file=sys.stderr,
         )
+        return False
+    return True
+
+
+def check(module: bytes, rebuild: bytes | None = None) -> int:
+    """Assert two canonical builds are byte-identical and within MAX_BYTES."""
+
+    if not _qualify(module, rebuild):
+        return 1
+    print(
+        f"OK: {MODULE} sha256={_sha256(module)} "
+        f"({len(module)} bytes, at most MAX_BYTES={MAX_BYTES})"
+    )
+    return 0
+
+
+def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
+    """Qualify two canonical builds, then place the module in every client."""
+
+    if not _qualify(module, rebuild):
         return 1
     for client in CLIENT_DIRS:
         if (root / client / MODULE).is_symlink():
@@ -268,8 +290,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         help="also export the fresh WASM and its provenance to this directory",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "assert two independent builds are byte-identical and within "
+            "MAX_BYTES, writing nothing"
+        ),
+    )
     args = parser.parse_args(argv)
-    if args.export_dir:
+    if args.export_dir and not args.check:
         # Clear only our two outputs, before attempting a new build.
         for name in (MODULE, PROVENANCE):
             (args.export_dir / name).unlink(missing_ok=True)
@@ -279,6 +309,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     module = build(ROOT, target_dir.resolve())
     # The second canonical build is independent: its own fresh target directory.
     rebuild = build(ROOT, (target_dir / "method-codec-requalify").resolve())
+    if args.check:
+        # Pure assertion: it writes nothing, not even an export sidecar.
+        return check(module, rebuild)
     if args.export_dir:
         export(ROOT, args.export_dir, module)
     return write(ROOT, module, rebuild)

@@ -95,6 +95,14 @@ pub mod provenance_anchor;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rebalance;
 
+// MEDULLA-OBJECT-STORAGE-BACKEND-R003 — the object-store persistence backend.
+// Commit-before-ack: the local redb store is a cache the root overrides; the
+// ack is the object store's confirmation of the conditional `HEAD` put.
+// Feature-gated like the storage-authority `object-archive` seam; no default
+// feature links the object-store SDK.
+#[cfg(feature = "object-store")]
+pub mod object_store_backend;
+
 // MEDULLA-090 — online consistent backup/restore + PITR foundation. Redb-only:
 //   * `backup` — per-shard `begin_read()` MVCC snapshot (MEDULLA-027) streamed verbatim
 //     (reusing MEDULLA-030's raw-row copy) into a portable bundle + manifest, ONLINE (no

@@ -22,6 +22,7 @@ CONSUMED = [
 ]
 
 
+# spec: MEDULLA-CONTRACT-R005
 @pytest.mark.spec("MEDULLA-CONTRACT-R005")
 @pytest.mark.parametrize(("module", "union", "variant"), CONSUMED)
 @pytest.mark.spec("MEDULLA-CONTRACT-R005")
