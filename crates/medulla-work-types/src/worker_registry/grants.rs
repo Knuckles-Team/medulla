@@ -179,7 +179,7 @@ fn select_reserved_lane(record: &WorkerRecord, config: &SchedulerConfig) -> Stri
     let mut best: Option<(u32, &str)> = None;
     for lane in &record.lanes_supported {
         let floor = config.lane_floors.get(lane).copied().unwrap_or(0);
-        if best.map_or(true, |(top, _)| floor > top) {
+        if best.is_none_or(|(top, _)| floor > top) {
             best = Some((floor, lane));
         }
     }
@@ -211,9 +211,9 @@ pub fn admit_reserved_worker_task(
     };
     match granted_slots(record, config, input, shard_writer_width) {
         WorkerSlotGrant::Refused(reason) => {
-            return WorkerAdmission::Refused(WorkerAdmissionRefusal::WorkerCapacityZero {
+            WorkerAdmission::Refused(WorkerAdmissionRefusal::WorkerCapacityZero {
                 limit: reason.code().to_string(),
-            });
+            })
         }
         WorkerSlotGrant::Granted(slots) => {
             let slots = slots.get();
