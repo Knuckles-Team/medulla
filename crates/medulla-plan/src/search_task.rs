@@ -436,6 +436,7 @@ mod tests {
     use medulla_work_types::search_task::EvidenceNode;
 
     use super::*;
+    use medulla_work_types::search_task::EvidenceNode;
 
     fn node(id: &str, label: &str) -> EvidenceNode {
         EvidenceNode {

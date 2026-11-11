@@ -35,6 +35,7 @@ def test_no_caller_names_a_script_that_was_moved_out() -> None:
     assert not missing, missing
 
 
+# spec: MEDULLA-SDLC-R007
 @pytest.mark.spec("MEDULLA-SDLC-R007")
 def test_staged_scanners_are_separate_hooks() -> None:
     """Each staged scanner is its own hook and no combiner hook or script exists."""

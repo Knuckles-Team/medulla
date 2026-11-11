@@ -208,6 +208,7 @@ class NoVersionSuffixesTest(unittest.TestCase):
 
     @pytest.mark.spec("MEDULLA-CONTRACT-R020")
     def test_no_stray_version_suffixed_names(self):
+        # spec: MEDULLA-CONTRACT-R020
         violations = find_violations(self.ROOT)
         if violations:
             lines = [
