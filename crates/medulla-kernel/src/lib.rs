@@ -11,10 +11,12 @@
 #![deny(missing_docs)]
 
 // The leaf-crate modules these files name with their historical `crate::` paths.
+#[cfg(any(feature = "server", feature = "redb"))]
 pub(crate) use medulla_graph_algos::algorithms;
 pub(crate) use medulla_graph_core::graph;
 pub(crate) use medulla_graph_core::index;
 pub(crate) use medulla_protocol_types::{mutation_batch, protocol};
+#[cfg(feature = "security")]
 pub(crate) use medulla_types::acl;
 
 /// Prometheus metrics for the engine.
