@@ -1140,7 +1140,8 @@ pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
 
 #[cfg(test)]
 mod anonymous_store_tests {
-    use super::{anonymous_env_conflicts, prepare_auth_store};
+    use super::{anonymous_env_conflicts, prepare_auth_store, validate_auth_mode, ServerArgs};
+    use clap::Parser;
 
     #[test]
     fn anonymous_environment_conflicts_preserve_exact_prefix_and_value_rules() {
@@ -1162,6 +1163,109 @@ mod anonymous_store_tests {
         }
     }
 
+    // spec: MEDULLA-IDENTITY-R003.1
+    #[test]
+    fn anonymous_startup_requires_literal_loopback_and_refuses_auxiliary_or_cluster_config() {
+        // Test-local parser so the real CLI/env wiring (defaults, flags) is exercised.
+        #[derive(clap::Parser)]
+        struct StartupCli {
+            #[command(flatten)]
+            args: ServerArgs,
+        }
+
+        fn parsed(cli: &[&str]) -> ServerArgs {
+            let mut arguments: Vec<&str> = vec!["medulla-server"];
+            arguments.extend_from_slice(cli);
+            StartupCli::try_parse_from(arguments).unwrap().args
+        }
+
+        // Literal loopback native TCP qualifies with a durable directory and no secret.
+        let loopback = parsed(&[
+            "--auth-mode",
+            "none",
+            "--persist-dir",
+            "/tmp/anonymous-store",
+            "--tcp-addr",
+            "127.0.0.1:9100",
+        ]);
+        validate_auth_mode(&loopback, 0o600).unwrap();
+
+        let refusals: &[(&str, &[&str])] = &[
+            (
+                "remote listener",
+                &[
+                    "--auth-mode",
+                    "none",
+                    "--persist-dir",
+                    "/tmp/anonymous-store",
+                    "--tcp-addr",
+                    "0.0.0.0:9100",
+                ],
+            ),
+            (
+                "auxiliary listener",
+                &[
+                    "--auth-mode",
+                    "none",
+                    "--persist-dir",
+                    "/tmp/anonymous-store",
+                    "--tcp-addr",
+                    "127.0.0.1:9100",
+                    "--metrics-addr",
+                    "127.0.0.1:9101",
+                ],
+            ),
+            (
+                "cluster configuration",
+                &[
+                    "--auth-mode",
+                    "none",
+                    "--persist-dir",
+                    "/tmp/anonymous-store",
+                    "--tcp-addr",
+                    "127.0.0.1:9100",
+                    "--federated-addr",
+                    "127.0.0.1:9102",
+                ],
+            ),
+            (
+                "auth secret",
+                &[
+                    "--auth-mode",
+                    "none",
+                    "--persist-dir",
+                    "/tmp/anonymous-store",
+                    "--tcp-addr",
+                    "127.0.0.1:9100",
+                    "--auth-secret",
+                    "secret",
+                ],
+            ),
+            (
+                "missing durable directory",
+                &["--auth-mode", "none", "--tcp-addr", "127.0.0.1:9100"],
+            ),
+        ];
+        for (name, cli) in refusals {
+            assert!(validate_auth_mode(&parsed(cli), 0o600).is_err(), "{name}");
+        }
+
+        // Default authenticated startup is unchanged: with a secret and a durable
+        // directory it admits, and no loopback constraint applies to it.
+        let authenticated = parsed(&[
+            "--auth-mode",
+            "authenticated",
+            "--auth-secret",
+            "secret",
+            "--persist-dir",
+            "/tmp/protected-store",
+            "--tcp-addr",
+            "0.0.0.0:9100",
+        ]);
+        validate_auth_mode(&authenticated, 0o600).unwrap();
+    }
+
+    // spec: MEDULLA-IDENTITY-R003.1
     #[test]
     fn anonymous_store_mode_is_explicit_and_restart_stable() {
         let dir = tempfile::tempdir().unwrap();
@@ -1172,6 +1276,7 @@ mod anonymous_store_tests {
         assert!(prepare_auth_store("authenticated", root).is_err());
     }
 
+    // spec: MEDULLA-IDENTITY-R003.1
     #[test]
     fn anonymous_refuses_preexisting_unmarked_state() {
         let dir = tempfile::tempdir().unwrap();
