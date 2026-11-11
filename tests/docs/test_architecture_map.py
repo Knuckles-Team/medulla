@@ -77,6 +77,7 @@ def test_module_inventory_matches_workspace_manifests() -> None:
     assert {"medulla-types", "medulla-storage"} <= deps("medulla-transaction")
 
 
+# spec: MEDULLA-CONTRACT-R052.2
 @pytest.mark.no_engine
 @pytest.mark.spec("MEDULLA-CONTRACT-R052.2")
 def test_build_package_and_runtime_boundaries_match_source() -> None:
@@ -123,6 +124,7 @@ ANCHOR = re.compile(
 )
 
 
+# spec: MEDULLA-CONTRACT-R052.3
 @pytest.mark.no_engine
 @pytest.mark.spec("MEDULLA-CONTRACT-R052.3")
 def test_shared_contract_anchors_resolve_to_source() -> None:

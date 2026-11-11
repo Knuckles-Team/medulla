@@ -249,6 +249,7 @@ fn normalize_http_host(host: &str) -> Result<String, String> {
 }
 
 /// Exact allowlist matching only: no substrings, suffixes, globs, regexes, or CIDRs.
+#[cfg_attr(not(feature = "federation-sql"), allow(dead_code))]
 fn http_json_target_allowlisted(host: &str, port: u16, is_https: bool) -> bool {
     let Ok(raw) = std::env::var(HTTP_JSON_FEDERATION_ALLOW_ENV) else {
         return false;

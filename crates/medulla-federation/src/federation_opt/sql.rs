@@ -20,7 +20,7 @@ use super::remote::{Identity, RemoteFetch};
 use super::snapshot::{SnapshotBound, SnapshotConn};
 use medulla_exec::rowset::RowSet;
 use medulla_exec::sql_text::{quote_identifier, render_literal, validate_identifier, SqlDialect};
-use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// Keys per `IN` list (well under every driver's bind/statement limits).
 const MAX_SQL_KEYS: usize = 1000;
@@ -123,6 +123,7 @@ impl RemoteFetch for SqlRemote<'_> {
     fn open_snapshot(&self, bound: &SnapshotBound) -> Result<Option<SnapshotSemantics>, String> {
         #[cfg(feature = "federation-sql")]
         if self.dialect == Some(SqlDialect::Postgres) {
+            use medulla_types::metadata_acceleration::SnapshotIsolation;
             let (conn, token) = crate::federation::PgSnapshot::open(
                 self.spec.dsn,
                 self.spec.id_field,
