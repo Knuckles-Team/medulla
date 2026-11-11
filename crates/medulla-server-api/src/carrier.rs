@@ -385,6 +385,25 @@ impl GraphReadAuthority {
         }
     }
 
+    /// Whether THIS caller is actually subject to row-level security. `is_active`
+    /// is a build-level answer (the row-visibility predicate exists whenever
+    /// `security` is compiled in); this is the per-caller one: every non-`System`
+    /// caller's reads are row-filtered (`filter_view`/`can_see_row` apply the
+    /// predicate), while a `System` agent sees every row (`IsolationLayer::is_system`
+    /// is the first branch of `can_see_row`), so serving it an unscoped result
+    /// leaks nothing. `false` when `security` is off (no row-level predicate
+    /// exists at all).
+    pub fn row_level_security_active(&self) -> bool {
+        #[cfg(feature = "security")]
+        {
+            !self.isolation.is_system(&self.actor)
+        }
+        #[cfg(not(feature = "security"))]
+        {
+            false
+        }
+    }
+
     /// Apply the same lowest-level visibility predicate used by SQL/Cypher/RDF.
     pub fn filter_view(&self, view: &mut GraphView) {
         #[cfg(feature = "security")]

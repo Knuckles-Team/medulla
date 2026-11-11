@@ -1,5 +1,10 @@
 default_language_version:
   python: python3
+# spec: MEDULLA-CONTRACT-R023
+# The full suite configured below passes with exit zero and no skip or bypass
+# flag: tracked WASM assets stay within the size limit, Dupehound review pins
+# reflect the duplicate-ownership state, every test file has a recognized
+# owner, and the privacy scan is clean.
 # Automatic pre-push is the bounded local publication gate: formatting/lint,
 # lock/contract checks, and targeted smoke only. No generated artifact is
 # committed, so there is no freshness hook (MEDULLA-SDLC-R020.1).
