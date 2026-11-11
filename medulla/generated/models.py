@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import (
     AfterValidator,
@@ -12736,499 +12736,927 @@ class MethodSelectWebPages(BaseModel):
     params: MethodSelectWebPagesParams
 
 
+class MethodMeasureIngestThroughputParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    corpus: str
+    window_end_ms: int = Field(ge=0)
+
+
+class FinanceRecordKind(str, Enum):
+    ACCOUNT = "Account"
+    ACTIVITY = "Activity"
+    LOT = "Lot"
+    POSITION = "Position"
+    PORTFOLIO_GROUP = "PortfolioGroup"
+    STRATEGY_SPEC = "StrategySpec"
+    STRATEGY_RUN = "StrategyRun"
+    LEVERAGE_TERMS = "LeverageTerms"
+    DEBATE_ROUND = "DebateRound"
+    TRADE_JOURNAL_ENTRY = "TradeJournalEntry"
+    SENTIMENT_FUSION = "SentimentFusion"
+    GEOPOLITICAL_RISK = "GeopoliticalRisk"
+    STRATEGY_CARD = "StrategyCard"
+
+
+class FinanceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record_id: str
+    tenant: str
+    fields: dict[str, str]
+
+
+class MethodFinanceRecordPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: FinanceRecordKind
+    schema_version: str
+    record: FinanceRecord
+    expected_head: int | None = Field(default=None, ge=0)
+
+
+class MethodFinanceRecordGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: FinanceRecordKind
+    record_id: str
+
+
+class MethodAccessRequestDecide(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AccessRequestDecide"]
+    params: MethodAccessRequestDecideParams
+
+
+class MethodAccessRequestOpen(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AccessRequestOpen"]
+    params: MethodAccessRequestOpenParams
+
+
+class MethodActionRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ActionRegister"]
+    params: MethodActionRegisterParams
+
+
+class MethodActionSubmit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ActionSubmit"]
+    params: MethodActionSubmitParams
+
+
+class MethodBusHeartbeat(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BusHeartbeat"]
+    params: MethodBusHeartbeatParams
+
+
+class MethodBusRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BusRegister"]
+    params: MethodBusRegisterParams
+
+
+class MethodBusRoster(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BusRoster"]
+    params: MethodBusRosterParams
+
+
+class MethodClaims(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Claims"]
+    params: MethodClaimsParams
+
+
+class MethodContextFacts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ContextFacts"]
+    params: MethodContextFactsParams
+
+
+class MethodCreateBranch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CreateBranch"]
+    params: MethodCreateBranchParams
+
+
+class MethodDataProductRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DataProductRegister"]
+    params: MethodDataProductRegisterParams
+
+
+class MethodDocumentDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DocumentDelete"]
+    params: MethodDocumentDeleteParams
+
+
+class MethodFinanceAlertRaise(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceAlertRaise"]
+    params: MethodFinanceAlertRaiseParams
+
+
+class MethodFinanceFactorRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceFactorRecord"]
+    params: MethodFinanceFactorRecordParams
+
+
+class MethodFinancePatternClassify(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinancePatternClassify"]
+    params: MethodFinancePatternClassifyParams
+
+
+class MethodFinanceProfitAttribution(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceProfitAttribution"]
+    params: MethodFinanceProfitAttributionParams
+
+
+class MethodFinanceRecordGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceRecordGet"]
+    params: MethodFinanceRecordGetParams
+
+
+class MethodFinanceRecordPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceRecordPut"]
+    params: MethodFinanceRecordPutParams
+
+
+class MethodGetAdmittedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetAdmittedRequest"]
+    params: MethodGetAdmittedRequestParams
+
+
+class MethodGetDelegationRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetDelegationRecord"]
+    params: MethodGetDelegationRecordParams
+
+
+class MethodGetEffectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetEffectReceipt"]
+    params: MethodGetEffectReceiptParams
+
+
+class MethodGetShardWriterWidth(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetShardWriterWidth"]
+    params: MethodGetShardWriterWidthParams
+
+
+class MethodGetTelemetrySnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetTelemetrySnapshot"]
+    params: MethodGetTelemetrySnapshotParams
+
+
+class MethodGraphLearnPredictNary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GraphLearnPredictNary"]
+    params: MethodGraphLearnPredictNaryParams
+
+
+class MethodIncidentCorrelate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IncidentCorrelate"]
+    params: MethodIncidentCorrelateParams
+
+
+class MethodIncidentEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IncidentEvidence"]
+    params: MethodIncidentEvidenceParams
+
+
+class MethodIncidentRecordAnomaly(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IncidentRecordAnomaly"]
+    params: MethodIncidentRecordAnomalyParams
+
+
+class MethodIncidentRelatedClaims(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IncidentRelatedClaims"]
+    params: MethodIncidentRelatedClaimsParams
+
+
+class MethodIncidentSetStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IncidentSetStatus"]
+    params: MethodIncidentSetStatusParams
+
+
+class MethodLineageIngest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["LineageIngest"]
+    params: MethodLineageIngestParams
+
+
+class MethodListMemorySnapshots(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ListMemorySnapshots"]
+    params: MethodListMemorySnapshotsParams
+
+
+class MethodLiveArtifactGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["LiveArtifactGet"]
+    params: MethodLiveArtifactGetParams
+
+
+class MethodLiveArtifactPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["LiveArtifactPut"]
+    params: MethodLiveArtifactPutParams
+
+
+class MethodLiveArtifactRefresh(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["LiveArtifactRefresh"]
+    params: MethodLiveArtifactRefreshParams
+
+
+class MethodMarkWorkItemEffectStarted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MarkWorkItemEffectStarted"]
+    params: MethodMarkWorkItemEffectStartedParams
+
+
+class MethodMeasureIngestThroughput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeasureIngestThroughput"]
+    params: MethodMeasureIngestThroughputParams
+
+
+class MethodMeetingSummaryCommit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeetingSummaryCommit"]
+    params: MethodMeetingSummaryCommitParams
+
+
+class MethodMeetingSummaryContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeetingSummaryContext"]
+    params: MethodMeetingSummaryContextParams
+
+
+class MethodMeetingTranscriptRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeetingTranscriptRevision"]
+    params: MethodMeetingTranscriptRevisionParams
+
+
+class MethodOntologyCanonicalHash(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["OntologyCanonicalHash"]
+    params: MethodOntologyCanonicalHashParams
+
+
+class MethodReadMemorySnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ReadMemorySnapshot"]
+    params: MethodReadMemorySnapshotParams
+
+
+class MethodRecordEffectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RecordEffectReceipt"]
+    params: MethodRecordEffectReceiptParams
+
+
+class MethodSchemaProjections(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SchemaProjections"]
+    params: MethodSchemaProjectionsParams
+
+
+class MethodSubmitAdmittedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SubmitAdmittedRequest"]
+    params: MethodSubmitAdmittedRequestParams
+
+
+class MethodSyncMemorySnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SyncMemorySnapshot"]
+    params: MethodSyncMemorySnapshotParams
+
+
+class MethodWalletKeyTrustGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["WalletKeyTrustGet"]
+    params: MethodWalletKeyTrustGetParams
+
+
+class MethodWorkflowRegistry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["WorkflowRegistry"]
+    params: MethodWorkflowRegistryParams
+
+
+# The PEP 604 `|` chain spelling of this 539-member union overflows vulture's
+# AST recursion depth in the whole-repo pre-push scan; `typing.Union[...]` is a
+# single subscript node, shallow at any member count.
 Method = Annotated[
-    MethodAddNode
-    | MethodCreateNodeIfAbsent
-    | MethodRemoveNode
-    | MethodHasNode
-    | MethodGetNodes
-    | MethodGetNodesByLabel
-    | MethodGetNodeProperties
-    | MethodCompareAndSetNodeFields
-    | MethodClaimNext
-    | MethodDeclareExchange
-    | MethodDeleteExchange
-    | MethodBindQueue
-    | MethodUnbindQueue
-    | MethodPublish
-    | MethodDeclareQueue
-    | MethodPublishEx
-    | MethodBrokerConsume
-    | MethodBrokerAck
-    | MethodBrokerReject
-    | MethodClaimWorkItem
-    | MethodAcquireCapacity
-    | MethodRenewCapacity
-    | MethodReleaseCapacity
-    | MethodReclaimExpiredCapacity
-    | MethodReconcileCapacity
-    | MethodCapacityStatus
-    | MethodUpdateCapacityCell
-    | MethodThrottleCapacityCell
-    | MethodSubmitWorkItem
-    | MethodAgentLibrary
-    | MethodAgentGraph
-    | MethodAgentComponent
-    | MethodAgentTemplate
-    | MethodSemanticIndex
-    | MethodKgDelegate
-    | MethodSubmitWorkItems
-    | MethodMintWorkItemClaimCapability
-    | MethodVerifyWorkItemClaimCapability
-    | MethodRenewWorkItemLease
-    | MethodCommitWorkItemResult
-    | MethodCancelWorkItem
-    | MethodDeferWorkItem
-    | MethodCasWorkItemMetadata
-    | MethodReserveWorkItemResources
-    | MethodReleaseWorkItemResources
-    | MethodReclaimWorkItemResources
-    | MethodQueryWorkItemReservation
-    | MethodResourceReservationStatus
-    | MethodUpdateResourceHost
-    | MethodReserveDevelopmentLane
-    | MethodRenewDevelopmentLane
-    | MethodObserveDevelopmentLane
-    | MethodFinishDevelopmentLane
-    | MethodCleanupDevelopmentLane
-    | MethodQueryDevelopmentLane
-    | MethodDevelopmentLaneStatus
-    | MethodUpdateDevelopmentLaneQuota
-    | MethodSweepExpired
-    | MethodStreamDeclare
-    | MethodStreamPublish
-    | MethodStreamRead
-    | MethodStreamTrim
-    | MethodStreamCommitOffset
-    | MethodStreamCommittedOffset
-    | MethodPublishConfirmed
-    | MethodPublishIdempotent
-    | MethodBrokerAckTag
-    | MethodBrokerNackTag
-    | MethodBrokerRenewTag
-    | MethodCreateSummaryNode
-    | MethodConsolidate
-    | MethodReinforce
-    | MethodDecayNode
-    | MethodDecayMemories
-    | MethodEvictBelow
-    | MethodMaintain
-    | MethodSummaryChildren
-    | MethodSummariesAtLevel
-    | MethodAddSceneObject
-    | MethodSetPose
-    | MethodReparent
-    | MethodWorldTransform
-    | MethodSceneChildren
-    | MethodStartTrajectory
-    | MethodAppendStep
-    | MethodDiscountedReturn
-    | MethodBestTrajectory
-    | MethodGetNodePropertiesBatch
-    | MethodHasNodesBatch
-    | MethodNodeCount
-    | MethodNodeIds
-    | MethodAddEdge
-    | MethodRemoveEdge
-    | MethodInvalidateEdge
-    | MethodSupersedeEdge
-    | MethodHasEdge
-    | MethodGetEdges
-    | MethodGetEdgesPage
-    | MethodClearGraph
-    | MethodGetEdgeProperties
-    | MethodGetEdgePropertiesBatch
-    | MethodEdgeCount
-    | MethodInDegree
-    | MethodOutDegree
-    | MethodGetPredecessors
-    | MethodGetSuccessors
-    | MethodGetNeighbors
-    | MethodGetNeighborsBatch
-    | MethodUnionGetNodeProperties
-    | MethodUnionGetNodesByLabel
-    | MethodUnionGetNeighbors
-    | MethodTopologicalSort
-    | MethodFindCycle
-    | MethodGetShortestPath
-    | MethodGetBlastRadius
-    | MethodDegreeCentrality
-    | MethodDegreeCentralityAll
-    | MethodBetweennessCentrality
-    | MethodPageRank
-    | MethodPersonalizedPageRank
-    | MethodConnectedComponents
-    | MethodStronglyConnectedComponents
-    | MethodMinimumSpanningTree
-    | MethodCommunityDetection
-    | MethodCommunityDetectEphemeral
-    | MethodGraphColoring
-    | MethodComputeSimilarityEdges
-    | MethodResolveCandidates
-    | MethodClusterHierarchyRefresh
-    | MethodClusterHierarchyClusters
-    | MethodClusterHierarchyExpand
-    | MethodPruneByLifecycle
-    | MethodGetContextView
-    | MethodBatchUpdate
-    | MethodMultiGraphBatchUpdate
-    | MethodMetrics
-    | MethodEvictLRU
-    | MethodDecaySweep
-    | MethodTouchNodes
-    | MethodToMsgpack
-    | MethodFromMsgpack
-    | MethodGetLedger
-    | MethodClearLedger
-    | MethodApplyLedger
-    | MethodAuditVerify
-    | MethodAuditAppend
-    | MethodAuditReadEvent
-    | MethodAuditProveInclusion
-    | MethodGetSubgraph
-    | MethodFork
-    | MethodDiffAgainst
-    | MethodCompactNodesByType
-    | MethodRunDatalogReasoning
-    | MethodApplyChangeEnvelope
-    | MethodApplyChangeEnvelopes
-    | MethodApplyChangeEnvelopeDraft
-    | MethodApplyChangeEnvelopeDrafts
-    | MethodGetChangeEnvelope
-    | MethodGetContentVersion
-    | MethodGetChangeCursor
-    | MethodServedModality
-    | MethodCreateGraph
-    | MethodDeleteGraph
-    | MethodListGraphs
-    | MethodReshard
-    | MethodCatalogAssign
-    | MethodCatalogReassign
-    | MethodCatalogRemove
-    | MethodCatalogList
-    | MethodRebalancePlan
-    | MethodRebalanceExecute
-    | MethodRaftAddLearner
-    | MethodRaftChangeMembership
-    | MethodClusterMembers
-    | MethodRegisterServer
-    | MethodListRegisteredServers
-    | MethodFleetCatalog
-    | MethodPlacementRoute
-    | MethodPlacementAdmin
-    | MethodBackup
-    | MethodRestore
-    | MethodCreateChannel
-    | MethodJoinChannel
-    | MethodLeaveChannel
-    | MethodCloseChannel
-    | MethodSendMessage
-    | MethodGetChannelMessages
-    | MethodListChannels
-    | MethodGetChannelMembers
-    | MethodPing
-    | MethodHealth
-    | MethodShutdown
-    | MethodCancelRequest
-    | MethodResourceStatsPage
-    | MethodReconcile
-    | MethodApplyMutation
-    | MethodVf2SubgraphMatch
-    | MethodParseFile
-    | MethodParseFiles
-    | MethodIndexRepository
-    | MethodObserveScreen
-    | MethodAddEmbedding
-    | MethodSemanticSearch
-    | MethodDiscover
-    | MethodMatchOntologyTerms
-    | MethodBatchL2Normalize
-    | MethodFinanceOptimizePortfolio
-    | MethodFinanceRiskParity
-    | MethodFinanceBlackLitterman
-    | MethodFinanceEfficientFrontier
-    | MethodDsLinearRegression
-    | MethodDsKMeans
-    | MethodDsPca
-    | MethodDsComputeStats
-    | MethodDsTrainTestSplit
-    | MethodDsFitEstimator
-    | MethodDsPredictEstimator
-    | MethodDsSoftmax
-    | MethodDsLogSoftmax
-    | MethodDsCrossEntropy
-    | MethodDsDpoLoss
-    | MethodDsGrpoSurrogate
-    | MethodDsKlDivergence
-    | MethodDsAdamStep
-    | MethodDsSgdStep
-    | MethodFinanceVar
-    | MethodFinanceCvar
-    | MethodFinanceMaxDrawdown
-    | MethodFinanceDrawdownSeries
-    | MethodFinanceDownsideDeviation
-    | MethodFinanceRiskMetrics
-    | MethodFinanceMonteCarloVar
-    | MethodFinanceStressTest
-    | MethodFinanceDetectRegimes
-    | MethodFinanceSignalDecay
-    | MethodFinanceCombineAlphas
-    | MethodFinanceCrossSectionalRank
-    | MethodFinanceMomentum
-    | MethodFinanceMeanReversion
-    | MethodFinanceInformationCoefficient
-    | MethodFinanceTwap
-    | MethodFinanceVwap
-    | MethodFinanceMarketImpact
-    | MethodFinancePairsTrading
-    | MethodFinanceMatchOrders
-    | MethodFinanceAvellanedaStoikov
-    | MethodFinanceGltQuotes
-    | MethodFinanceLogitQuotes
-    | MethodFinanceGlostenMilgromSpread
-    | MethodFinanceExpectedPnlRate
-    | MethodFinanceBreakevenAlpha
-    | MethodFinanceOfiSeries
-    | MethodFinanceMicropriceSeries
-    | MethodFinanceVpinPm
-    | MethodFinanceHawkesMle
-    | MethodFinanceHardimanBouchaud
-    | MethodFinanceKyleLambda
-    | MethodFinanceSurveillanceRisk
-    | MethodFinanceKellyFraction
-    | MethodFinancePositionSize
-    | MethodFinanceDistributionShift
-    | MethodFinanceAmlScreen
-    | MethodFinanceCapitalRatios
-    | MethodFinanceExpectedLoss
-    | MethodFinanceSettlementChain
-    | MethodFinanceRegimeChain
-    | MethodFinanceExecutionSchedule
-    | MethodFinanceMarketMakingQuote
-    | MethodFinancePairsSignal
-    | MethodFinanceFactorRank
-    | MethodFinanceBayesianKelly
-    | MethodFinancePosteriorCredibleInterval
-    | MethodFinancePurgedCpcv
-    | MethodFinanceDeflatedSharpe
-    | MethodFinanceProbabilityBacktestOverfit
-    | MethodFinanceDieboldMariano
-    | MethodFinanceForensicReport
-    | MethodFinanceKalmanFilter1d
-    | MethodFinanceKalmanBeta
-    | MethodFinanceKalmanVolatility
-    | MethodFinanceAdfTest
-    | MethodFinanceOuCalibrate
-    | MethodFinanceOuOptimalThresholds
-    | MethodFinanceMarkovTransitionMatrix
-    | MethodFinanceOrderBookImbalance
-    | MethodFinanceQueueImbalance
-    | MethodFinanceRealizedVolTick
-    | MethodFinanceSpreadReversion
-    | MethodFinanceInformationRatio
-    | MethodFinanceEffectiveIndependentN
-    | MethodFinanceAlphaCombinationEngine
-    | MethodFinanceBrierScore
-    | MethodFinanceConvergenceGate
-    | MethodFinanceEmpiricalKelly
-    | MethodFinanceSabrImpliedVol
-    | MethodFinanceSabrSmile
-    | MethodFinanceSabrCalibrate
-    | MethodRegisterIdentity
-    | MethodGetIdentity
-    | MethodCheckAccess
-    | MethodRbacAdmin
-    | MethodRbacElevation
-    | MethodGovernedChange
-    | MethodIdentity
-    | MethodApplyMultisigMutation
-    | MethodAnalyticsJob
-    | MethodStatechart
-    | MethodQuantum
-    | MethodAsr
-    | MethodViz
-    | MethodSql
-    | MethodCypherQuery
-    | MethodGraphQl
-    | MethodKnowledgeStream
-    | MethodUnifiedQuery
-    | MethodUql
-    | MethodExplainPlan
-    | MethodExplainProvenance
-    | MethodExplainProvenanceByIds
-    | MethodExplainPolicy
-    | MethodExplainBelief
-    | MethodEpistemicStatus
-    | MethodWhatChanged
-    | MethodRecomputeMaterialization
-    | MethodMaterializationStatus
-    | MethodStaleMaterializations
-    | MethodResolveConflict
-    | MethodExplainEvidence
-    | MethodCausalEstimate
-    | MethodCausalCounterfactual
-    | MethodRankByProvenance
-    | MethodNlQuery
-    | MethodNlQueryExplain
-    | MethodNlQueryPlan
-    | MethodRegisterForeignSource
-    | MethodQueryForeignColumns
-    | MethodForeignReadOpen
-    | MethodForeignReadChunk
-    | MethodForeignReadComplete
-    | MethodForeignReadAbort
-    | MethodRegisterUdf
-    | MethodRunUdf
-    | MethodDistributedCompute
-    | MethodCreateMatView
-    | MethodGetMatView
-    | MethodRefreshMatView
-    | MethodPlanMatViewDefine
-    | MethodPlanMatViewGet
-    | MethodPlanMatViewRefresh
-    | MethodPlanMatViewDrop
-    | MethodBeginTxn
-    | MethodTxnAddNode
-    | MethodTxnRemoveNode
-    | MethodTxnAddEdge
-    | MethodTxnRemoveEdge
-    | MethodTxnCas
-    | MethodTxnAddEmbedding
-    | MethodTxnBlobRef
-    | MethodTxnAddMeasurement
-    | MethodTxnAxiom
-    | MethodTxnConstruct
-    | MethodTxnPlanWriteback
-    | MethodTxnMaterializeBelief
-    | MethodTxnUnifiedQuery
-    | MethodTxnUql
-    | MethodCommit
-    | MethodRollback
-    | MethodTsAppend
-    | MethodTsRange
-    | MethodTsAsofJoin
-    | MethodTsWindow
-    | MethodTsGapFill
-    | MethodTsEvict
-    | MethodTsDeleteSeries
-    | MethodTsListSeries
-    | MethodTsDefineSeries
-    | MethodBlobBegin
-    | MethodBlobChunkPut
-    | MethodBlobCommit
-    | MethodBlobFetchBegin
-    | MethodBlobChunkGet
-    | MethodBlobFetchEnd
-    | MethodBlobRef
-    | MethodBlobUnref
-    | MethodBlobGc
-    | MethodKvGet
-    | MethodKvPut
-    | MethodKvDelete
-    | MethodKvScan
-    | MethodKvCas
-    | MethodSqlSourceBatch
-    | MethodImportSqliteFile
-    | MethodExportSqliteFile
-    | MethodAddTriples
-    | MethodGetRdf
-    | MethodRemoveTriples
-    | MethodDropNamedGraph
-    | MethodSparql
-    | MethodSparqlVirtual
-    | MethodOwlReason
-    | MethodOwlReasonDistributed
-    | MethodOwlExplain
-    | MethodRunRules
-    | MethodShaclValidate
-    | MethodOntologyInspect
-    | MethodIcvConfigure
-    | MethodShexValidate
-    | MethodCdcRead
-    | MethodRegisterContinuousQuery
-    | MethodReadContinuousQuery
-    | MethodDropContinuousQuery
-    | MethodWatch
-    | MethodRegisterTrigger
-    | MethodDropTrigger
-    | MethodListTriggers
-    | MethodFiredTriggers
-    | MethodCepSubscribe
-    | MethodCepPoll
-    | MethodCepUnsubscribe
-    | MethodMineAssociate
-    | MethodMineCluster
-    | MethodMineAnomaly
-    | MethodMineClassifyFit
-    | MethodMineClassifyPredict
-    | MethodMineReduce
-    | MethodGraphLearnFit
-    | MethodGraphLearnPredict
-    | MethodMiningPipelineTrain
-    | MethodMiningPipelineEvaluate
-    | MethodMiningPipelineServe
-    | MethodMiningPipelinePredict
-    | MethodMiningPipelineCompare
-    | MethodMineSequence
-    | MethodMineForecast
-    | MethodMineText
-    | MethodMineSubgraph
-    | MethodMineEntityResolve
-    | MethodMineCausalImpact
-    | MethodMineProcess
-    | MethodMineRootCause
-    | MethodMineRiskPropagation
-    | MethodMineOntologyGap
-    | MethodMineRetrievalQuality
-    | MethodMineCommunity
-    | MethodAgentAssemble
-    | MethodCapabilityCoverage
-    | MethodGuardrailEntailment
-    | MethodDecisionCommit
-    | MethodDecide
-    | MethodDecisionFit
-    | MethodDecisionEval
-    | MethodDecisionLog
-    | MethodSolve
-    | MethodConnectorPack
-    | MethodSourceIngest
-    | MethodSourceIngestStatus
-    | MethodWriteBack
-    | MethodGraphSchema
-    | MethodGraphSchemaList
-    | MethodGraphSchemaClasses
-    | MethodMutationOutbox
-    | MethodEdgeIndex
-    | MethodEdgeSearch
-    | MethodPublishRunCheckpoint
-    | MethodGetRunCheckpoint
-    | MethodPublishCurrentPlan
-    | MethodGetCurrentPlan
-    | MethodGetSessionUsage
-    | MethodGetRunWorkItem
-    | MethodGetWorkItem
-    | MethodListWorkItems
-    | MethodGetWorkItemOutcome
-    | MethodIssueHostStartGrant
-    | MethodIssueControlLease
-    | MethodTransitionControlLease
-    | MethodGetControlLease
-    | MethodFreshnessFeed
-    | MethodPolicyEvolution
-    | MethodPolicyEvolutionStore
-    | MethodListControlLeases
-    | MethodGapUpsert
-    | MethodGapTransition
-    | MethodGapSettle
-    | MethodWorkOfferPut
-    | MethodGapGet
-    | MethodGapList
-    | MethodTelemetryDerive
-    | MethodFinanceMarket
-    | MethodFinanceSignalModels
-    | MethodRetireSealedRecord
-    | MethodEnrichDocument
-    | MethodSelectWebPages,
+    Union[  # noqa: UP007
+        MethodAddNode,
+        MethodCreateNodeIfAbsent,
+        MethodRemoveNode,
+        MethodHasNode,
+        MethodGetNodes,
+        MethodGetNodesByLabel,
+        MethodGetNodeProperties,
+        MethodCompareAndSetNodeFields,
+        MethodClaimNext,
+        MethodDeclareExchange,
+        MethodDeleteExchange,
+        MethodBindQueue,
+        MethodUnbindQueue,
+        MethodPublish,
+        MethodDeclareQueue,
+        MethodPublishEx,
+        MethodBrokerConsume,
+        MethodBrokerAck,
+        MethodBrokerReject,
+        MethodClaimWorkItem,
+        MethodAcquireCapacity,
+        MethodRenewCapacity,
+        MethodReleaseCapacity,
+        MethodReclaimExpiredCapacity,
+        MethodReconcileCapacity,
+        MethodCapacityStatus,
+        MethodUpdateCapacityCell,
+        MethodThrottleCapacityCell,
+        MethodSubmitWorkItem,
+        MethodAgentLibrary,
+        MethodAgentGraph,
+        MethodAgentComponent,
+        MethodAgentTemplate,
+        MethodSemanticIndex,
+        MethodKgDelegate,
+        MethodSubmitWorkItems,
+        MethodMintWorkItemClaimCapability,
+        MethodVerifyWorkItemClaimCapability,
+        MethodRenewWorkItemLease,
+        MethodCommitWorkItemResult,
+        MethodCancelWorkItem,
+        MethodDeferWorkItem,
+        MethodCasWorkItemMetadata,
+        MethodReserveWorkItemResources,
+        MethodReleaseWorkItemResources,
+        MethodReclaimWorkItemResources,
+        MethodQueryWorkItemReservation,
+        MethodResourceReservationStatus,
+        MethodUpdateResourceHost,
+        MethodReserveDevelopmentLane,
+        MethodRenewDevelopmentLane,
+        MethodObserveDevelopmentLane,
+        MethodFinishDevelopmentLane,
+        MethodCleanupDevelopmentLane,
+        MethodQueryDevelopmentLane,
+        MethodDevelopmentLaneStatus,
+        MethodUpdateDevelopmentLaneQuota,
+        MethodSweepExpired,
+        MethodStreamDeclare,
+        MethodStreamPublish,
+        MethodStreamRead,
+        MethodStreamTrim,
+        MethodStreamCommitOffset,
+        MethodStreamCommittedOffset,
+        MethodPublishConfirmed,
+        MethodPublishIdempotent,
+        MethodBrokerAckTag,
+        MethodBrokerNackTag,
+        MethodBrokerRenewTag,
+        MethodCreateSummaryNode,
+        MethodConsolidate,
+        MethodReinforce,
+        MethodDecayNode,
+        MethodDecayMemories,
+        MethodEvictBelow,
+        MethodMaintain,
+        MethodSummaryChildren,
+        MethodSummariesAtLevel,
+        MethodAddSceneObject,
+        MethodSetPose,
+        MethodReparent,
+        MethodWorldTransform,
+        MethodSceneChildren,
+        MethodStartTrajectory,
+        MethodAppendStep,
+        MethodDiscountedReturn,
+        MethodBestTrajectory,
+        MethodGetNodePropertiesBatch,
+        MethodHasNodesBatch,
+        MethodNodeCount,
+        MethodNodeIds,
+        MethodAddEdge,
+        MethodRemoveEdge,
+        MethodInvalidateEdge,
+        MethodSupersedeEdge,
+        MethodHasEdge,
+        MethodGetEdges,
+        MethodGetEdgesPage,
+        MethodClearGraph,
+        MethodGetEdgeProperties,
+        MethodGetEdgePropertiesBatch,
+        MethodEdgeCount,
+        MethodInDegree,
+        MethodOutDegree,
+        MethodGetPredecessors,
+        MethodGetSuccessors,
+        MethodGetNeighbors,
+        MethodGetNeighborsBatch,
+        MethodUnionGetNodeProperties,
+        MethodUnionGetNodesByLabel,
+        MethodUnionGetNeighbors,
+        MethodTopologicalSort,
+        MethodFindCycle,
+        MethodGetShortestPath,
+        MethodGetBlastRadius,
+        MethodDegreeCentrality,
+        MethodDegreeCentralityAll,
+        MethodBetweennessCentrality,
+        MethodPageRank,
+        MethodPersonalizedPageRank,
+        MethodConnectedComponents,
+        MethodStronglyConnectedComponents,
+        MethodMinimumSpanningTree,
+        MethodCommunityDetection,
+        MethodCommunityDetectEphemeral,
+        MethodGraphColoring,
+        MethodComputeSimilarityEdges,
+        MethodResolveCandidates,
+        MethodClusterHierarchyRefresh,
+        MethodClusterHierarchyClusters,
+        MethodClusterHierarchyExpand,
+        MethodPruneByLifecycle,
+        MethodGetContextView,
+        MethodBatchUpdate,
+        MethodMultiGraphBatchUpdate,
+        MethodMetrics,
+        MethodEvictLRU,
+        MethodDecaySweep,
+        MethodTouchNodes,
+        MethodToMsgpack,
+        MethodFromMsgpack,
+        MethodGetLedger,
+        MethodClearLedger,
+        MethodApplyLedger,
+        MethodAuditVerify,
+        MethodAuditAppend,
+        MethodAuditReadEvent,
+        MethodAuditProveInclusion,
+        MethodGetSubgraph,
+        MethodFork,
+        MethodDiffAgainst,
+        MethodCompactNodesByType,
+        MethodRunDatalogReasoning,
+        MethodApplyChangeEnvelope,
+        MethodApplyChangeEnvelopes,
+        MethodApplyChangeEnvelopeDraft,
+        MethodApplyChangeEnvelopeDrafts,
+        MethodGetChangeEnvelope,
+        MethodGetContentVersion,
+        MethodGetChangeCursor,
+        MethodServedModality,
+        MethodCreateGraph,
+        MethodDeleteGraph,
+        MethodListGraphs,
+        MethodReshard,
+        MethodCatalogAssign,
+        MethodCatalogReassign,
+        MethodCatalogRemove,
+        MethodCatalogList,
+        MethodRebalancePlan,
+        MethodRebalanceExecute,
+        MethodRaftAddLearner,
+        MethodRaftChangeMembership,
+        MethodClusterMembers,
+        MethodRegisterServer,
+        MethodListRegisteredServers,
+        MethodFleetCatalog,
+        MethodPlacementRoute,
+        MethodPlacementAdmin,
+        MethodBackup,
+        MethodRestore,
+        MethodCreateChannel,
+        MethodJoinChannel,
+        MethodLeaveChannel,
+        MethodCloseChannel,
+        MethodSendMessage,
+        MethodGetChannelMessages,
+        MethodListChannels,
+        MethodGetChannelMembers,
+        MethodPing,
+        MethodHealth,
+        MethodShutdown,
+        MethodCancelRequest,
+        MethodResourceStatsPage,
+        MethodReconcile,
+        MethodApplyMutation,
+        MethodVf2SubgraphMatch,
+        MethodParseFile,
+        MethodParseFiles,
+        MethodIndexRepository,
+        MethodObserveScreen,
+        MethodAddEmbedding,
+        MethodSemanticSearch,
+        MethodDiscover,
+        MethodMatchOntologyTerms,
+        MethodBatchL2Normalize,
+        MethodFinanceOptimizePortfolio,
+        MethodFinanceRiskParity,
+        MethodFinanceBlackLitterman,
+        MethodFinanceEfficientFrontier,
+        MethodDsLinearRegression,
+        MethodDsKMeans,
+        MethodDsPca,
+        MethodDsComputeStats,
+        MethodDsTrainTestSplit,
+        MethodDsFitEstimator,
+        MethodDsPredictEstimator,
+        MethodDsSoftmax,
+        MethodDsLogSoftmax,
+        MethodDsCrossEntropy,
+        MethodDsDpoLoss,
+        MethodDsGrpoSurrogate,
+        MethodDsKlDivergence,
+        MethodDsAdamStep,
+        MethodDsSgdStep,
+        MethodFinanceVar,
+        MethodFinanceCvar,
+        MethodFinanceMaxDrawdown,
+        MethodFinanceDrawdownSeries,
+        MethodFinanceDownsideDeviation,
+        MethodFinanceRiskMetrics,
+        MethodFinanceMonteCarloVar,
+        MethodFinanceStressTest,
+        MethodFinanceDetectRegimes,
+        MethodFinanceSignalDecay,
+        MethodFinanceCombineAlphas,
+        MethodFinanceCrossSectionalRank,
+        MethodFinanceMomentum,
+        MethodFinanceMeanReversion,
+        MethodFinanceInformationCoefficient,
+        MethodFinanceTwap,
+        MethodFinanceVwap,
+        MethodFinanceMarketImpact,
+        MethodFinancePairsTrading,
+        MethodFinanceMatchOrders,
+        MethodFinanceAvellanedaStoikov,
+        MethodFinanceGltQuotes,
+        MethodFinanceLogitQuotes,
+        MethodFinanceGlostenMilgromSpread,
+        MethodFinanceExpectedPnlRate,
+        MethodFinanceBreakevenAlpha,
+        MethodFinanceOfiSeries,
+        MethodFinanceMicropriceSeries,
+        MethodFinanceVpinPm,
+        MethodFinanceHawkesMle,
+        MethodFinanceHardimanBouchaud,
+        MethodFinanceKyleLambda,
+        MethodFinanceSurveillanceRisk,
+        MethodFinanceKellyFraction,
+        MethodFinancePositionSize,
+        MethodFinanceDistributionShift,
+        MethodFinanceAmlScreen,
+        MethodFinanceCapitalRatios,
+        MethodFinanceExpectedLoss,
+        MethodFinanceSettlementChain,
+        MethodFinanceRegimeChain,
+        MethodFinanceExecutionSchedule,
+        MethodFinanceMarketMakingQuote,
+        MethodFinancePairsSignal,
+        MethodFinanceFactorRank,
+        MethodFinanceBayesianKelly,
+        MethodFinancePosteriorCredibleInterval,
+        MethodFinancePurgedCpcv,
+        MethodFinanceDeflatedSharpe,
+        MethodFinanceProbabilityBacktestOverfit,
+        MethodFinanceDieboldMariano,
+        MethodFinanceForensicReport,
+        MethodFinanceKalmanFilter1d,
+        MethodFinanceKalmanBeta,
+        MethodFinanceKalmanVolatility,
+        MethodFinanceAdfTest,
+        MethodFinanceOuCalibrate,
+        MethodFinanceOuOptimalThresholds,
+        MethodFinanceMarkovTransitionMatrix,
+        MethodFinanceOrderBookImbalance,
+        MethodFinanceQueueImbalance,
+        MethodFinanceRealizedVolTick,
+        MethodFinanceSpreadReversion,
+        MethodFinanceInformationRatio,
+        MethodFinanceEffectiveIndependentN,
+        MethodFinanceAlphaCombinationEngine,
+        MethodFinanceBrierScore,
+        MethodFinanceConvergenceGate,
+        MethodFinanceEmpiricalKelly,
+        MethodFinanceSabrImpliedVol,
+        MethodFinanceSabrSmile,
+        MethodFinanceSabrCalibrate,
+        MethodRegisterIdentity,
+        MethodGetIdentity,
+        MethodCheckAccess,
+        MethodRbacAdmin,
+        MethodRbacElevation,
+        MethodGovernedChange,
+        MethodIdentity,
+        MethodApplyMultisigMutation,
+        MethodAnalyticsJob,
+        MethodStatechart,
+        MethodQuantum,
+        MethodAsr,
+        MethodViz,
+        MethodSql,
+        MethodCypherQuery,
+        MethodGraphQl,
+        MethodKnowledgeStream,
+        MethodUnifiedQuery,
+        MethodUql,
+        MethodExplainPlan,
+        MethodExplainProvenance,
+        MethodExplainProvenanceByIds,
+        MethodExplainPolicy,
+        MethodExplainBelief,
+        MethodEpistemicStatus,
+        MethodWhatChanged,
+        MethodRecomputeMaterialization,
+        MethodMaterializationStatus,
+        MethodStaleMaterializations,
+        MethodResolveConflict,
+        MethodExplainEvidence,
+        MethodCausalEstimate,
+        MethodCausalCounterfactual,
+        MethodRankByProvenance,
+        MethodNlQuery,
+        MethodNlQueryExplain,
+        MethodNlQueryPlan,
+        MethodRegisterForeignSource,
+        MethodQueryForeignColumns,
+        MethodForeignReadOpen,
+        MethodForeignReadChunk,
+        MethodForeignReadComplete,
+        MethodForeignReadAbort,
+        MethodRegisterUdf,
+        MethodRunUdf,
+        MethodDistributedCompute,
+        MethodCreateMatView,
+        MethodGetMatView,
+        MethodRefreshMatView,
+        MethodPlanMatViewDefine,
+        MethodPlanMatViewGet,
+        MethodPlanMatViewRefresh,
+        MethodPlanMatViewDrop,
+        MethodBeginTxn,
+        MethodTxnAddNode,
+        MethodTxnRemoveNode,
+        MethodTxnAddEdge,
+        MethodTxnRemoveEdge,
+        MethodTxnCas,
+        MethodTxnAddEmbedding,
+        MethodTxnBlobRef,
+        MethodTxnAddMeasurement,
+        MethodTxnAxiom,
+        MethodTxnConstruct,
+        MethodTxnPlanWriteback,
+        MethodTxnMaterializeBelief,
+        MethodTxnUnifiedQuery,
+        MethodTxnUql,
+        MethodCommit,
+        MethodRollback,
+        MethodTsAppend,
+        MethodTsRange,
+        MethodTsAsofJoin,
+        MethodTsWindow,
+        MethodTsGapFill,
+        MethodTsEvict,
+        MethodTsDeleteSeries,
+        MethodTsListSeries,
+        MethodTsDefineSeries,
+        MethodBlobBegin,
+        MethodBlobChunkPut,
+        MethodBlobCommit,
+        MethodBlobFetchBegin,
+        MethodBlobChunkGet,
+        MethodBlobFetchEnd,
+        MethodBlobRef,
+        MethodBlobUnref,
+        MethodBlobGc,
+        MethodKvGet,
+        MethodKvPut,
+        MethodKvDelete,
+        MethodKvScan,
+        MethodKvCas,
+        MethodSqlSourceBatch,
+        MethodImportSqliteFile,
+        MethodExportSqliteFile,
+        MethodAddTriples,
+        MethodGetRdf,
+        MethodRemoveTriples,
+        MethodDropNamedGraph,
+        MethodSparql,
+        MethodSparqlVirtual,
+        MethodOwlReason,
+        MethodOwlReasonDistributed,
+        MethodOwlExplain,
+        MethodRunRules,
+        MethodShaclValidate,
+        MethodOntologyInspect,
+        MethodIcvConfigure,
+        MethodShexValidate,
+        MethodCdcRead,
+        MethodRegisterContinuousQuery,
+        MethodReadContinuousQuery,
+        MethodDropContinuousQuery,
+        MethodWatch,
+        MethodRegisterTrigger,
+        MethodDropTrigger,
+        MethodListTriggers,
+        MethodFiredTriggers,
+        MethodCepSubscribe,
+        MethodCepPoll,
+        MethodCepUnsubscribe,
+        MethodMineAssociate,
+        MethodMineCluster,
+        MethodMineAnomaly,
+        MethodMineClassifyFit,
+        MethodMineClassifyPredict,
+        MethodMineReduce,
+        MethodGraphLearnFit,
+        MethodGraphLearnPredict,
+        MethodMiningPipelineTrain,
+        MethodMiningPipelineEvaluate,
+        MethodMiningPipelineServe,
+        MethodMiningPipelinePredict,
+        MethodMiningPipelineCompare,
+        MethodMineSequence,
+        MethodMineForecast,
+        MethodMineText,
+        MethodMineSubgraph,
+        MethodMineEntityResolve,
+        MethodMineCausalImpact,
+        MethodMineProcess,
+        MethodMineRootCause,
+        MethodMineRiskPropagation,
+        MethodMineOntologyGap,
+        MethodMineRetrievalQuality,
+        MethodMineCommunity,
+        MethodAgentAssemble,
+        MethodCapabilityCoverage,
+        MethodGuardrailEntailment,
+        MethodDecisionCommit,
+        MethodDecide,
+        MethodDecisionFit,
+        MethodDecisionEval,
+        MethodDecisionLog,
+        MethodSolve,
+        MethodConnectorPack,
+        MethodSourceIngest,
+        MethodSourceIngestStatus,
+        MethodWriteBack,
+        MethodGraphSchema,
+        MethodGraphSchemaList,
+        MethodGraphSchemaClasses,
+        MethodMutationOutbox,
+        MethodEdgeIndex,
+        MethodEdgeSearch,
+        MethodPublishRunCheckpoint,
+        MethodGetRunCheckpoint,
+        MethodPublishCurrentPlan,
+        MethodGetCurrentPlan,
+        MethodGetSessionUsage,
+        MethodGetRunWorkItem,
+        MethodGetWorkItem,
+        MethodListWorkItems,
+        MethodGetWorkItemOutcome,
+        MethodIssueHostStartGrant,
+        MethodIssueControlLease,
+        MethodTransitionControlLease,
+        MethodGetControlLease,
+        MethodFreshnessFeed,
+        MethodPolicyEvolution,
+        MethodPolicyEvolutionStore,
+        MethodListControlLeases,
+        MethodGapUpsert,
+        MethodGapTransition,
+        MethodGapSettle,
+        MethodWorkOfferPut,
+        MethodGapGet,
+        MethodGapList,
+        MethodTelemetryDerive,
+        MethodFinanceMarket,
+        MethodFinanceSignalModels,
+        MethodRetireSealedRecord,
+        MethodEnrichDocument,
+        MethodSelectWebPages,
+        MethodAccessRequestDecide,
+        MethodAccessRequestOpen,
+        MethodActionRegister,
+        MethodActionSubmit,
+        MethodBusHeartbeat,
+        MethodBusRegister,
+        MethodBusRoster,
+        MethodClaims,
+        MethodContextFacts,
+        MethodCreateBranch,
+        MethodDataProductRegister,
+        MethodDocumentDelete,
+        MethodFinanceAlertRaise,
+        MethodFinanceFactorRecord,
+        MethodFinancePatternClassify,
+        MethodFinanceProfitAttribution,
+        MethodFinanceRecordGet,
+        MethodFinanceRecordPut,
+        MethodGetAdmittedRequest,
+        MethodGetDelegationRecord,
+        MethodGetEffectReceipt,
+        MethodGetShardWriterWidth,
+        MethodGetTelemetrySnapshot,
+        MethodGraphLearnPredictNary,
+        MethodIncidentCorrelate,
+        MethodIncidentEvidence,
+        MethodIncidentRecordAnomaly,
+        MethodIncidentRelatedClaims,
+        MethodIncidentSetStatus,
+        MethodLineageIngest,
+        MethodListMemorySnapshots,
+        MethodLiveArtifactGet,
+        MethodLiveArtifactPut,
+        MethodLiveArtifactRefresh,
+        MethodMarkWorkItemEffectStarted,
+        MethodMeasureIngestThroughput,
+        MethodMeetingSummaryCommit,
+        MethodMeetingSummaryContext,
+        MethodMeetingTranscriptRevision,
+        MethodOntologyCanonicalHash,
+        MethodReadMemorySnapshot,
+        MethodRecordEffectReceipt,
+        MethodSchemaProjections,
+        MethodSubmitAdmittedRequest,
+        MethodSyncMemorySnapshot,
+        MethodWalletKeyTrustGet,
+        MethodWorkflowRegistry,
+    ],
     Field(discriminator="method"),
 ]
 
@@ -18442,6 +18870,7 @@ class Plan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     ops: list[Op]
+    scope: PlanScope | None = None
 
 
 class PlanItem(BaseModel):
@@ -18454,6 +18883,21 @@ class PlanItem(BaseModel):
 class PlanScaffold(str, Enum):
     ON = "on"
     OFF = "off"
+
+
+class PlanScope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant: str
+    clearance_labels: list[str] = []
+    verified: bool = False
+    leaves: list[PlanScopeLeaf] = []
+
+
+class PlanScopeLeaf(str, Enum):
+    GRAPH = "Graph"
+    EDGE = "Edge"
+    VECTOR = "Vector"
 
 
 class PlanStatus(str, Enum):
@@ -29155,6 +29599,8 @@ __all__ = [
     "FinancePatternClassifyResult",
     "FinancePurgedCpcvResult",
     "FinanceRealizedVolTickResult",
+    "FinanceRecord",
+    "FinanceRecordKind",
     "FinanceSabrSmileResult",
     "FinanceSettlementChainResult",
     "FinanceSignalDecayResult",
@@ -29777,11 +30223,15 @@ __all__ = [
     "MerkleProofStep",
     "MerkleSide",
     "Method",
+    "MethodAccessRequestDecide",
     "MethodAccessRequestDecideParams",
+    "MethodAccessRequestOpen",
     "MethodAccessRequestOpenParams",
     "MethodAcquireCapacity",
     "MethodAcquireCapacityParams",
+    "MethodActionRegister",
     "MethodActionRegisterParams",
+    "MethodActionSubmit",
     "MethodActionSubmitParams",
     "MethodAddEdge",
     "MethodAddEdgeParams",
@@ -29872,8 +30322,11 @@ __all__ = [
     "MethodBrokerRejectParams",
     "MethodBrokerRenewTag",
     "MethodBrokerRenewTagParams",
+    "MethodBusHeartbeat",
     "MethodBusHeartbeatParams",
+    "MethodBusRegister",
     "MethodBusRegisterParams",
+    "MethodBusRoster",
     "MethodBusRosterParams",
     "MethodCancelRequest",
     "MethodCancelRequestParams",
@@ -29910,6 +30363,7 @@ __all__ = [
     "MethodClaimNextParams",
     "MethodClaimWorkItem",
     "MethodClaimWorkItemParams",
+    "MethodClaims",
     "MethodClaimsParams",
     "MethodCleanupDevelopmentLane",
     "MethodCleanupDevelopmentLaneParams",
@@ -29944,7 +30398,9 @@ __all__ = [
     "MethodConnectorPackParams",
     "MethodConsolidate",
     "MethodConsolidateParams",
+    "MethodContextFacts",
     "MethodContextFactsParams",
+    "MethodCreateBranch",
     "MethodCreateBranchParams",
     "MethodCreateChannel",
     "MethodCreateChannelParams",
@@ -29958,6 +30414,7 @@ __all__ = [
     "MethodCreateSummaryNodeParams",
     "MethodCypherQuery",
     "MethodCypherQueryParams",
+    "MethodDataProductRegister",
     "MethodDataProductRegisterParams",
     "MethodDecayMemories",
     "MethodDecayMemoriesParams",
@@ -29998,6 +30455,7 @@ __all__ = [
     "MethodDiscoverParams",
     "MethodDistributedCompute",
     "MethodDistributedComputeParams",
+    "MethodDocumentDelete",
     "MethodDocumentDeleteParams",
     "MethodDropContinuousQuery",
     "MethodDropContinuousQueryParams",
@@ -30063,6 +30521,7 @@ __all__ = [
     "MethodExportSqliteFileParams",
     "MethodFinanceAdfTest",
     "MethodFinanceAdfTestParams",
+    "MethodFinanceAlertRaise",
     "MethodFinanceAlertRaiseParams",
     "MethodFinanceAlphaCombinationEngine",
     "MethodFinanceAlphaCombinationEngineParams",
@@ -30114,6 +30573,7 @@ __all__ = [
     "MethodFinanceExpectedPnlRateParams",
     "MethodFinanceFactorRank",
     "MethodFinanceFactorRankParams",
+    "MethodFinanceFactorRecord",
     "MethodFinanceFactorRecordParams",
     "MethodFinanceForensicReport",
     "MethodFinanceForensicReportParams",
@@ -30175,6 +30635,7 @@ __all__ = [
     "MethodFinancePairsSignalParams",
     "MethodFinancePairsTrading",
     "MethodFinancePairsTradingParams",
+    "MethodFinancePatternClassify",
     "MethodFinancePatternClassifyParams",
     "MethodFinancePositionSize",
     "MethodFinancePositionSizeParams",
@@ -30182,6 +30643,7 @@ __all__ = [
     "MethodFinancePosteriorCredibleIntervalParams",
     "MethodFinanceProbabilityBacktestOverfit",
     "MethodFinanceProbabilityBacktestOverfitParams",
+    "MethodFinanceProfitAttribution",
     "MethodFinanceProfitAttributionParams",
     "MethodFinancePurgedCpcv",
     "MethodFinancePurgedCpcvParams",
@@ -30189,6 +30651,10 @@ __all__ = [
     "MethodFinanceQueueImbalanceParams",
     "MethodFinanceRealizedVolTick",
     "MethodFinanceRealizedVolTickParams",
+    "MethodFinanceRecordGet",
+    "MethodFinanceRecordGetParams",
+    "MethodFinanceRecordPut",
+    "MethodFinanceRecordPutParams",
     "MethodFinanceRegimeChain",
     "MethodFinanceRegimeChainParams",
     "MethodFinanceRiskMetrics",
@@ -30251,6 +30717,7 @@ __all__ = [
     "MethodGapTransitionParams",
     "MethodGapUpsert",
     "MethodGapUpsertParams",
+    "MethodGetAdmittedRequest",
     "MethodGetAdmittedRequestParams",
     "MethodGetBlastRadius",
     "MethodGetBlastRadiusParams",
@@ -30270,6 +30737,7 @@ __all__ = [
     "MethodGetControlLeaseParams",
     "MethodGetCurrentPlan",
     "MethodGetCurrentPlanParams",
+    "MethodGetDelegationRecord",
     "MethodGetDelegationRecordParams",
     "MethodGetEdgeProperties",
     "MethodGetEdgePropertiesBatch",
@@ -30280,6 +30748,7 @@ __all__ = [
     "MethodGetEdgesPage",
     "MethodGetEdgesPageParams",
     "MethodGetEdgesPageParamsAfter",
+    "MethodGetEffectReceipt",
     "MethodGetEffectReceiptParams",
     "MethodGetIdentity",
     "MethodGetIdentityParams",
@@ -30306,6 +30775,7 @@ __all__ = [
     "MethodGetRunWorkItemParams",
     "MethodGetSessionUsage",
     "MethodGetSessionUsageParams",
+    "MethodGetShardWriterWidth",
     "MethodGetShardWriterWidthParams",
     "MethodGetShortestPath",
     "MethodGetShortestPathParams",
@@ -30313,6 +30783,7 @@ __all__ = [
     "MethodGetSubgraphParams",
     "MethodGetSuccessors",
     "MethodGetSuccessorsParams",
+    "MethodGetTelemetrySnapshot",
     "MethodGetTelemetrySnapshotParams",
     "MethodGetWorkItem",
     "MethodGetWorkItemOutcome",
@@ -30324,6 +30795,7 @@ __all__ = [
     "MethodGraphLearnFit",
     "MethodGraphLearnFitParams",
     "MethodGraphLearnPredict",
+    "MethodGraphLearnPredictNary",
     "MethodGraphLearnPredictNaryParams",
     "MethodGraphLearnPredictParams",
     "MethodGraphLearnPredictParamsCandidatePairsItem",
@@ -30351,10 +30823,15 @@ __all__ = [
     "MethodImportSqliteFileParams",
     "MethodInDegree",
     "MethodInDegreeParams",
+    "MethodIncidentCorrelate",
     "MethodIncidentCorrelateParams",
+    "MethodIncidentEvidence",
     "MethodIncidentEvidenceParams",
+    "MethodIncidentRecordAnomaly",
     "MethodIncidentRecordAnomalyParams",
+    "MethodIncidentRelatedClaims",
     "MethodIncidentRelatedClaimsParams",
+    "MethodIncidentSetStatus",
     "MethodIncidentSetStatusParams",
     "MethodIndexRepository",
     "MethodIndexRepositoryParams",
@@ -30382,11 +30859,13 @@ __all__ = [
     "MethodKvScanParams",
     "MethodLeaveChannel",
     "MethodLeaveChannelParams",
+    "MethodLineageIngest",
     "MethodLineageIngestParams",
     "MethodListChannels",
     "MethodListControlLeases",
     "MethodListControlLeasesParams",
     "MethodListGraphs",
+    "MethodListMemorySnapshots",
     "MethodListMemorySnapshotsParams",
     "MethodListRegisteredServers",
     "MethodListRegisteredServersParams",
@@ -30394,18 +30873,27 @@ __all__ = [
     "MethodListTriggersParams",
     "MethodListWorkItems",
     "MethodListWorkItemsParams",
+    "MethodLiveArtifactGet",
     "MethodLiveArtifactGetParams",
+    "MethodLiveArtifactPut",
     "MethodLiveArtifactPutParams",
+    "MethodLiveArtifactRefresh",
     "MethodLiveArtifactRefreshParams",
     "MethodMaintain",
     "MethodMaintainParams",
+    "MethodMarkWorkItemEffectStarted",
     "MethodMarkWorkItemEffectStartedParams",
     "MethodMatchOntologyTerms",
     "MethodMatchOntologyTermsParams",
     "MethodMaterializationStatus",
     "MethodMaterializationStatusParams",
+    "MethodMeasureIngestThroughput",
+    "MethodMeasureIngestThroughputParams",
+    "MethodMeetingSummaryCommit",
     "MethodMeetingSummaryCommitParams",
+    "MethodMeetingSummaryContext",
     "MethodMeetingSummaryContextParams",
+    "MethodMeetingTranscriptRevision",
     "MethodMeetingTranscriptRevisionParams",
     "MethodMetrics",
     "MethodMineAnomaly",
@@ -30475,6 +30963,7 @@ __all__ = [
     "MethodObserveDevelopmentLaneParams",
     "MethodObserveScreen",
     "MethodObserveScreenParams",
+    "MethodOntologyCanonicalHash",
     "MethodOntologyCanonicalHashParams",
     "MethodOntologyInspect",
     "MethodOntologyInspectParams",
@@ -30546,6 +31035,7 @@ __all__ = [
     "MethodRbacElevationParams",
     "MethodReadContinuousQuery",
     "MethodReadContinuousQueryParams",
+    "MethodReadMemorySnapshot",
     "MethodReadMemorySnapshotParams",
     "MethodRebalanceExecute",
     "MethodRebalanceExecuteParams",
@@ -30561,6 +31051,7 @@ __all__ = [
     "MethodReconcileCapacity",
     "MethodReconcileCapacityParams",
     "MethodReconcileParams",
+    "MethodRecordEffectReceipt",
     "MethodRecordEffectReceiptParams",
     "MethodRefreshMatView",
     "MethodRefreshMatViewParams",
@@ -30630,6 +31121,7 @@ __all__ = [
     "MethodRunUdfParams",
     "MethodSceneChildren",
     "MethodSceneChildrenParams",
+    "MethodSchemaProjections",
     "MethodSchemaProjectionsParams",
     "MethodSelectWebPages",
     "MethodSelectWebPagesParams",
@@ -30680,6 +31172,7 @@ __all__ = [
     "MethodStreamTrim",
     "MethodStreamTrimParams",
     "MethodStronglyConnectedComponents",
+    "MethodSubmitAdmittedRequest",
     "MethodSubmitAdmittedRequestParams",
     "MethodSubmitWorkItem",
     "MethodSubmitWorkItemParams",
@@ -30693,6 +31186,7 @@ __all__ = [
     "MethodSupersedeEdgeParams",
     "MethodSweepExpired",
     "MethodSweepExpiredParams",
+    "MethodSyncMemorySnapshot",
     "MethodSyncMemorySnapshotParams",
     "MethodTelemetryDerive",
     "MethodTelemetryDeriveParams",
@@ -30773,6 +31267,7 @@ __all__ = [
     "MethodVf2SubgraphMatchParams",
     "MethodViz",
     "MethodVizParams",
+    "MethodWalletKeyTrustGet",
     "MethodWalletKeyTrustGetParams",
     "MethodWatch",
     "MethodWatchParams",
@@ -30780,6 +31275,7 @@ __all__ = [
     "MethodWhatChangedParams",
     "MethodWorkOfferPut",
     "MethodWorkOfferPutParams",
+    "MethodWorkflowRegistry",
     "MethodWorkflowRegistryParams",
     "MethodWorldTransform",
     "MethodWorldTransformParams",
@@ -31082,6 +31578,8 @@ __all__ = [
     "Plan",
     "PlanItem",
     "PlanScaffold",
+    "PlanScope",
+    "PlanScopeLeaf",
     "PlanStatus",
     "PointerEvent",
     "PointerMovement",

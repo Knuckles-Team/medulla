@@ -4,6 +4,7 @@
 
 METHOD_IDS = frozenset(
     {
+        "MeasureIngestThroughput",
         "CreateGraph",
         "DeleteGraph",
         "ListGraphs",
@@ -23,6 +24,7 @@ METHOD_IDS = frozenset(
         "FleetCatalog",
         "PlacementAdmin",
         "Ping",
+        "DescribeContract",
         "Health",
         "Shutdown",
         "CancelRequest",
