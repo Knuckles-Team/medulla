@@ -63,3 +63,42 @@ fn rolling_z_score_one_implementation() {
         "shared authority no longer dispatches Rolling::Zscore to the single implementation"
     );
 }
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.2
+#[test]
+fn ewma_one_implementation() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let src = Path::new(manifest_dir).join("src");
+    let files = rs_files(&src);
+    assert!(
+        !files.is_empty(),
+        "census scanned zero .rs files under src/; the inventory guard is blind"
+    );
+
+    // The kernel's one implementation: `struct EwmaState` in `src/series/kernel.rs`. A second
+    // definition anywhere under `src/` is a duplicate authority and fails qualification.
+    let implementations = files
+        .iter()
+        .map(|path| {
+            let text = fs::read_to_string(path)
+                .unwrap_or_else(|error| panic!("census: reading {}: {error}", path.display()));
+            text.matches("struct EwmaState").count()
+        })
+        .sum::<usize>();
+    assert_eq!(
+        implementations,
+        1,
+        "EWMA kernel has {implementations} implementations across \
+         {} .rs files under src/; the single authority is series/kernel.rs::EwmaState",
+        files.len()
+    );
+
+    // The shared authority is the only route: `Spec::Ewma` builds that one state, which
+    // keeps its typed smoothing refusions (span / half-life) and non-finite refusal.
+    let kernel = fs::read_to_string(Path::new(manifest_dir).join("src/series/kernel.rs"))
+        .unwrap_or_else(|error| panic!("census: reading src/series/kernel.rs: {error}"));
+    assert!(
+        kernel.contains("Spec::Ewma(smoothing) => State::Ewma(EwmaState::new(smoothing))"),
+        "shared authority no longer dispatches Spec::Ewma to the single implementation"
+    );
+}

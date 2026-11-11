@@ -76,6 +76,66 @@ pub fn validate_branch_name(name: &str) -> Result<(), ServerErrorCode> {
     Ok(())
 }
 
+/// The single commit chain appends: one branch-scoped mutation's durable record.
+///
+/// MEDULLA-BRANCH-MERGE-R002.1 — branch writes stay invisible to the trunk and
+/// sibling branches until merge. A source changeset (MEDULLA-SCM-R002) is the
+/// payload of the branch commit that carries it. The idempotency key of the
+/// batch that produced this commit is scoped
+/// `(tenant, graph, branch, idempotency_key)` — MEDULLA-DURABLE-KERNEL-R019.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct BranchCommit {
+    pub id: String,
+    pub branch: String,
+    /// Prior heads this commit descends from; every plain branch commit
+    /// carries exactly one, the prior head (`ref` semantics).
+    pub parents: Vec<String>,
+    pub engine_version: u64,
+    pub manifest_digest: String,
+    pub actor: String,
+    pub created_at_ms: u64,
+}
+
+/// Typed refusals the branch-mutation path refuses before any graph change.
+///
+/// Nothing on this list accounts against graph state: an unknown, deleted, or
+/// foreign-tenant branch refuses resolution before the batch compiles.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum BranchMutationRefusal {
+    BranchUnknown,
+    BranchDeleted,
+    BranchTenantDenied,
+}
+
+impl BranchCommit {
+    /// A plain branch commit carries exactly ONE parent, the prior head. Merge
+    /// commits gain their second parent at publication (R007), by replacing the
+    /// single-parent record — never by sneaking a second chain in here.
+    pub fn single_parent_commit(
+        id: impl Into<String>,
+        branch: impl Into<String>,
+        parent: impl Into<String>,
+        engine_version: u64,
+        manifest_digest: impl Into<String>,
+        actor: impl Into<String>,
+        created_at_ms: u64,
+    ) -> Self {
+        BranchCommit {
+            id: id.into(),
+            branch: branch.into(),
+            parents: vec![parent.into()],
+            engine_version,
+            manifest_digest: manifest_digest.into(),
+            actor: actor.into(),
+            created_at_ms,
+        }
+    }
+}
+
 /// One head over the commit DAG: the commit id plus its chain depth.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Head {
@@ -209,6 +269,45 @@ mod tests {
             name: "b".into(),
         };
         assert_ne!(a.registry_key(), b.registry_key());
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002.1
+    #[test]
+    fn branch_commit_appends_one_parent_and_round_trips() {
+        let prior_head = "c0ffee0000000000000000000000000000000000".to_owned();
+        let commit = BranchCommit::single_parent_commit(
+            "aabbcc0000000000000000000000000000000000",
+            "feature/eg-style-fixes",
+            prior_head.clone(),
+            42,
+            "sha256:manifest",
+            "agent:medulla-expert",
+            1_762_279_040_000,
+        );
+        assert_eq!(commit.parents, vec![prior_head.clone()]);
+        assert_eq!(commit.branch, "feature/eg-style-fixes");
+        assert_eq!(commit.engine_version, 42);
+
+        let encoded = serde_json::to_string(&commit).expect("commit encodes");
+        let decoded: BranchCommit = serde_json::from_str(&encoded).expect("commit decodes");
+        assert_eq!(decoded, commit);
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002.1
+    #[test]
+    fn refusal_set_and_default_branch_are_closed() {
+        for refusal in [
+            BranchMutationRefusal::BranchUnknown,
+            BranchMutationRefusal::BranchDeleted,
+            BranchMutationRefusal::BranchTenantDenied,
+        ] {
+            let encoded = serde_json::to_string(&refusal).expect("refusal encodes");
+            assert_eq!(
+                serde_json::from_str::<BranchMutationRefusal>(&encoded).expect("refusal decodes"),
+                refusal
+            );
+        }
+        assert_eq!(RESERVED_BRANCH_NAME, "main");
     }
 
     // spec: MEDULLA-BRANCH-MERGE-R003
