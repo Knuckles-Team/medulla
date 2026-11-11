@@ -26,6 +26,9 @@
 
 pub mod enrichment_top_up;
 pub mod store_prelude;
+// Sole body consumers of the glob are the `any(test, test-support)` fixture
+// items below, so it follows their gate.
+#[cfg(any(test, feature = "test-support"))]
 use store_prelude::*;
 
 /// Durable rows are outside the native RPC frame validator and may be supplied
