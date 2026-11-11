@@ -160,6 +160,7 @@ fn valid_supersession_marker(
 /// Verify an exact Raft retry against durable owner rows. Later funded pages
 /// may advance the replacement checkpoint, so compare its immutable authority
 /// rather than requiring the original cursor bytes to remain unchanged.
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 pub fn verify_reactivation_replay(
     shard: &Shard,
     graph: &str,
@@ -201,6 +202,7 @@ pub fn verify_reactivation_replay(
     Ok(())
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn replay_marker_matches(
     marker: &Supersession,
     expected: &BudgetCheckpoint,
@@ -217,6 +219,7 @@ fn replay_marker_matches(
         && park.policy_digest == revision.prior_policy_digest.as_deref().unwrap_or_default()
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn replay_checkpoint_matches(
     checkpoint: &BudgetCheckpoint,
     replacement: &BudgetCheckpoint,
@@ -231,6 +234,7 @@ fn replay_checkpoint_matches(
         && checkpoint.page_number >= replacement.page_number
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 struct ReactivationRows<'a> {
     graph: &'a str,
     expected: &'a BudgetCheckpoint,
@@ -244,6 +248,7 @@ struct ReactivationRows<'a> {
 /// same transaction, resolve the old outbox delivery and publish the revised
 /// immutable source intent. This helper intentionally does not commit: clearing
 /// a park on its own would make the old underfunded intent claimable again.
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 pub fn stage_parked_reactivation(
     write: &ShardWrite<'_>,
     graph: &str,
@@ -276,6 +281,7 @@ pub fn stage_parked_reactivation(
 
 /// Compare all durable owner rows before writing any replacement row. The
 /// caller retains the admitted write transaction across this check and stage.
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn check_parked_reactivation(
     write: &ShardWrite<'_>,
     rows: &ReactivationRows<'_>,
@@ -316,6 +322,7 @@ fn check_parked_reactivation(
     check_policy_and_supersession(write, rows, crypto)
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn check_policy_and_supersession(
     write: &ShardWrite<'_>,
     rows: &ReactivationRows<'_>,
@@ -355,6 +362,7 @@ fn check_policy_and_supersession(
     Ok(())
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn policy_source_matches(
     old: &RepositoryEnrichmentPolicyRevision,
     rows: &ReactivationRows<'_>,
@@ -368,6 +376,7 @@ fn policy_source_matches(
         && old.policy_digest == rows.expected_park.policy_digest
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn policy_budget_and_sequence_match(
     old: &RepositoryEnrichmentPolicyRevision,
     rows: &ReactivationRows<'_>,
@@ -381,6 +390,7 @@ fn policy_budget_and_sequence_match(
 
 /// Stage all four row transitions in the same admitted transaction. Opening
 /// each table before the first insert preserves the original failure boundary.
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn stage_reactivation_rows(
     write: &ShardWrite<'_>,
     rows: &ReactivationRows<'_>,
@@ -434,6 +444,7 @@ fn stage_reactivation_rows(
     Ok(())
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn validate_policy_revision(
     revision: &RepositoryEnrichmentPolicyRevision,
     expected: &BudgetCheckpoint,
@@ -449,6 +460,7 @@ fn validate_policy_revision(
     Ok(())
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn revision_source_matches(
     revision: &RepositoryEnrichmentPolicyRevision,
     expected: &BudgetCheckpoint,
@@ -462,6 +474,7 @@ fn revision_source_matches(
         && revision.snapshot_digest == replacement.snapshot_digest
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn revision_budget_matches(
     revision: &RepositoryEnrichmentPolicyRevision,
     park: &EnrichmentBudgetPark,
@@ -474,6 +487,7 @@ fn revision_budget_matches(
         && revision.sequence != 0
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn revision_prior_and_caller_matches(
     revision: &RepositoryEnrichmentPolicyRevision,
     expected: &BudgetCheckpoint,
@@ -494,6 +508,7 @@ fn revision_prior_and_caller_matches(
             .is_some_and(bounded_envelope)
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn validate_reactivation_rows(
     expected: &BudgetCheckpoint,
     expected_park: &EnrichmentBudgetPark,
@@ -518,6 +533,7 @@ fn validate_reactivation_rows(
     Ok(())
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn replacement_source_matches(
     expected: &BudgetCheckpoint,
     expected_park: &EnrichmentBudgetPark,
@@ -534,6 +550,7 @@ fn replacement_source_matches(
         && replacement_policy_digest != expected_park.policy_digest
 }
 
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 fn replacement_cursor_matches(
     expected: &BudgetCheckpoint,
     replacement: &BudgetCheckpoint,

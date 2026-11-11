@@ -4200,6 +4200,12 @@ components:
       - "tests/viz_dispatch.rs"
       - "tests/web_document_enrich_served.rs"
       - "tests/wire_listeners_one_store.rs"
+      - "tests/sdlc"
+      - "tests/jobs/test_worker_grant_served.py"
+      - "tests/test_check_wheel_completeness.py"
+      - "tests/test_describe_contract_served.py"
+      - "tests/test_fanout_adapter.py"
+      - "tests/test_wire_vectors.py"
       - "benches"
       - "examples"
     generated_roots: []

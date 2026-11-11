@@ -140,6 +140,27 @@ async fn try_handle_sparql(
             match visible_pack_graphs(state, graph_name, read_authority).await {
                 Err(error) => Response::err(req_id, error),
                 Ok(packs) => {
+                    // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking +
+                    // row filters reach the SPARQL read through the projection
+                    // adapter: the ONE rewrite (apply_policies) over the shared
+                    // Plan IR. A row filter splices in as a FILTER; a column mask
+                    // cannot be expressed inline in SPARQL 1.1, so a tagged
+                    // projection is refused until the value-level boundary lands.
+                    // The caller's tenant policy set arrives via the R706.7
+                    // loader; until one is bound the rewrite is a byte-for-byte
+                    // no-op — the call itself is never skipped.
+                    #[cfg(feature = "security")]
+                    let principal = medulla_exec::policy_mask::PrincipalRef::from(caller);
+                    #[cfg(not(feature = "security"))]
+                    let principal = medulla_exec::policy_mask::PrincipalRef::from("");
+                    let query = match medulla_exec::policy_mask::sparql_read_rewrite(
+                        query,
+                        &medulla_exec::policy_mask::PolicySet::default(),
+                        &principal,
+                    ) {
+                        Ok((rewritten, _applied)) => rewritten,
+                        Err(refusal) => return Some(Response::err(req_id, refusal)),
+                    };
                     super::sparql::handle_sparql(
                         req_id,
                         (core, packs),

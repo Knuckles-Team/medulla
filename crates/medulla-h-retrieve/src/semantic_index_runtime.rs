@@ -64,14 +64,28 @@ pub fn observe_rf019_tenant_owner(
     }))
 }
 
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticBinding;
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticDigest;
+#[cfg(feature = "query")]
 use medulla_index_types::semantic_index::SemanticIndexError;
 #[cfg(feature = "query")]
-use medulla_index_types::semantic_index::{
-    SemanticBinding, SemanticDigest, SemanticSourceDirtyIntent, SemanticSqlSourceIdentity,
-    SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent, SemanticStageTransition,
-};
+use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
 #[cfg(feature = "query")]
-use medulla_mutation_types::mutation_scope::{MutationOutboxLease, MutationOutboxRecord};
+use medulla_index_types::semantic_index::SemanticSqlSourceIdentity;
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticSqlSourceManifest;
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticStage;
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticStageIntent;
+#[cfg(feature = "query")]
+use medulla_index_types::semantic_index::SemanticStageTransition;
+#[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+#[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -83,6 +97,7 @@ use medulla_ann_codes::semantic_index_service::{
 };
 #[cfg(feature = "query")]
 use medulla_protocol_types::protocol::Response;
+#[cfg(feature = "query")]
 use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
 use medulla_server_api::compute::compute_off_lock;
@@ -91,6 +106,7 @@ use medulla_server_auth::{
     sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot,
     sql_catalog_acl::SqlPrivilege,
 };
+#[cfg(feature = "query")]
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 /// The declared refusal text for a semantic index storage error. It never carries backend text.
@@ -107,10 +123,7 @@ pub(crate) fn semantic_failure_message(
     }
 }
 
-// Only the query-gated served path (and the test contract below) maps
-// validation errors to refusal text; without `query` this is dead in a
-// dependent's build.
-#[cfg_attr(not(feature = "query"), allow(dead_code))]
+#[cfg(feature = "query")]
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
         SemanticIndexError::ApprovalRequired
@@ -125,7 +138,7 @@ fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "query"))]
 mod error_contract_tests;
 
 /// The engine's own principal for the semantic-index owner.
@@ -397,10 +410,14 @@ fn sanitize_owner_segment(value: &str) -> String {
     )
 }
 
+// Gated with `crate::semantic_index` (`all(ann-redb, query)`): the authority
+// impl maps core errors through that module, so `ann-redb` alone cannot build it.
+#[cfg(feature = "query")]
 pub struct SemanticIndexServerAdapter {
     service: Arc<SemanticIndexService>,
 }
 
+#[cfg(feature = "query")]
 mod authority;
 
 /// Read-only SQL source capability used by semantic S1 coalescing.
