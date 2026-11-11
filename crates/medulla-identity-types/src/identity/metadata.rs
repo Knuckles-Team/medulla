@@ -244,7 +244,7 @@ mod tests {
     // spec: MEDULLA-IDENTITY-R023.7
     #[test]
     fn typed_metadata_variants_round_trip() {
-        let metadata = vec![
+        let metadata = [
             TypedMetadata::Preference(Preference {
                 schema_version: METADATA_SCHEMA_VERSION,
                 key: "theme".into(),
