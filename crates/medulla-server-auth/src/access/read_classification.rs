@@ -346,6 +346,13 @@ pub(super) const REASON_ONTOLOGY_CANONICAL_HASH: &str =
 // tenant binding are the complete read scope.
 pub(super) const REASON_SOURCE_INGESTION_MARKER: &str =
     "SourceIngestStatus reads one durable source-partition marker keyed by verified tenant, request graph, connector and stream behind source:ingest -- ingestion control state, never a GraphView/core.analysis_snapshot() row read";
+// MEDULLA-CONTRACT-R054: `DescribeContract` serves the engine's own contract --
+// one bounded page of method descriptors, the scope registry on the first page
+// and the contract catalog digest on every page -- from the static
+// `medulla_capabilities` catalog; no durable substrates are read, so it serves
+// in every build, including non-`redb`.
+pub(super) const REASON_CONTRACT_CATALOG_METADATA: &str =
+    "DescribeContract answers from the static medulla_capabilities catalog (medulla_h_admin::admin::describe_contract, routed by the control-plane admin arm in dispatch/router/control_plane.rs): one bounded page of method descriptors, the scope registry on the first page and the contract catalog digest on every page -- no durable substrates are read and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the contract:read scope";
 
 // RF-ADR-010 DL-4: `Decide` reads its candidates from ONE tenant-bound
 // agent_library.redb snapshot through `AgentComponent.Search`'s accessor, and
@@ -626,6 +633,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GapList", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     // REASON_SHARD_WRITER_WIDTH_CONFIG
     ("GetShardWriterWidth", REASON_SHARD_WRITER_WIDTH_CONFIG),
+    // REASON_CONTRACT_CATALOG_METADATA (MEDULLA-CONTRACT-R054)
+    ("DescribeContract", REASON_CONTRACT_CATALOG_METADATA),
 ];
 
 // L-RLS-1 burn-down (CONCEPT:EPI-P3-3/P3-6): the 5 methods this pass covered (see the
@@ -656,4 +665,10 @@ pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
     ("ClusterHierarchyRefresh", "VIZ-1: recomputes the hierarchy by reading the whole graph; writes only the derived cluster_hierarchy store. Widest read of the three; disclosure question untraced"),
     ("ClusterHierarchyClusters", "VIZ-1: reads the derived cluster_hierarchy store, not graph rows; cluster membership still reflects graph structure, and that disclosure question is untraced"),
     ("ClusterHierarchyExpand", "VIZ-1: same store and same untraced disclosure question as ClusterHierarchyClusters"),
+    // MEDULLA-REPO-INGEST-R006.1: the wire + policy declaration has landed but
+    // the serving handler has not. When it lands it reads the corpus's
+    // `:StageReceipt` node rows, so it must move to RLS_ROUTED with a cited
+    // project_core/filter_view call site at that point. Parked here as a
+    // flagged TODO, not assumed safe in either direction.
+    ("MeasureIngestThroughput", "MEDULLA-REPO-INGEST-R006.1: serving handler not yet landed; it will read :StageReceipt node rows of the corpus graph, so it must move to RLS_ROUTED with a cited project_core/filter_view call site when it does"),
 ];
