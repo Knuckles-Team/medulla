@@ -319,7 +319,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
+    stages: [pre-push, manual]  # whole-repo gate: pre-push and CI's whole-repo step (MEDULLA-CONTRACT-R007)
   - id: p2-modality-architecture
     name: P2 modality architecture gate
     entry: cargo xtask p2-modality-architecture
