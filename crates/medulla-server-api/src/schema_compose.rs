@@ -892,7 +892,9 @@ ex:parent a owl:AsymmetricProperty .
         // links (39cfe696f); sdd-v1.ttl gains the row-level and SDLC lifecycle axioms
         // (816b4b7d8, ef517a72c). The composed count deduplicates against existing
         // corpus triples, so the raw file deltas (86 + 6 + 156) exceed the delta.
-        assert_eq!(composed.ontology.len(), 20_817);
+        // +22 (measured composed delta, 20_817 -> 20_839): the placement target
+        // vocabulary (placement.ttl) joins the core corpus (MEDULLA-PLACEMENT-R001.5).
+        assert_eq!(composed.ontology.len(), 20_839);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -930,7 +932,8 @@ ex:parent a owl:AsymmetricProperty .
         // +1: the shared data-platform vocabulary header.
         // +2: the commercial and newly registered supply-chain module headers.
         // +1: the connector-pack ingest vocabulary header (R101.1).
-        assert_eq!(ontology_subjects.len(), 46);
+        // +1: the placement target vocabulary module header (MEDULLA-PLACEMENT-R001.5).
+        assert_eq!(ontology_subjects.len(), 47);
         // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
         // `owl:imports <.../core>`; +6: the service-operations module's five
         // imports and its catalog entry; +5: the metadata-catalog module's four
@@ -990,7 +993,10 @@ ex:parent a owl:AsymmetricProperty .
         // +57 (MEDULLA-IDENTITY-R723): the workstream record vocabulary, all semantic axioms.
         // +143: the BPMN vocabulary and the SDLC row-level / lifecycle axioms
         // (39cfe696f, 816b4b7d8, ef517a72c), all semantic axioms (see the total pin).
-        assert_eq!(semantic_axioms, 20_586);
+        // +22: the placement target vocabulary (MEDULLA-PLACEMENT-R001.5); of its
+        // 22 triples, the 3 module-header metadata triples are not semantic axioms,
+        // so +19 here.
+        assert_eq!(semantic_axioms, 20_605);
 
         let count_type = |object: &str| {
             composed
@@ -1077,7 +1083,8 @@ ex:parent a owl:AsymmetricProperty .
             // +10 (measured): the BPMN vocabulary and the SDLC row-level / lifecycle
             // class edges (39cfe696f, 816b4b7d8, ef517a72c); the raw file additions
             // (+17 and +11) deduplicate against existing corpus edges.
-            1063
+            // +1: placement:Target's kg:DomainEntity edge (MEDULLA-PLACEMENT-R001.5).
+            1064
         );
     }
 
