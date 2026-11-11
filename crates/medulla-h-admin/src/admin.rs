@@ -36,6 +36,7 @@ mod component_content;
 // each op refuses by name in a build without its durable substrates.
 // `pub(crate)` so the projection worker shares the admin re-projection path.
 pub(crate) mod connector_pack;
+mod describe_contract;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
 mod workflow_registry;
@@ -63,6 +64,7 @@ pub async fn try_handle(
     method: Method,
 ) -> Result<Response, Method> {
     match method {
+        Method::DescribeContract { .. } => Ok(describe_contract::handle(req_id, method)),
         Method::Reshard { .. }
         | Method::CatalogAssign { .. }
         | Method::CatalogReassign { .. }

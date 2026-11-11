@@ -435,6 +435,7 @@ pub fn synthesize(
 mod tests {
     use super::*;
     use medulla_work_types::search_task::EvidenceNode;
+
     fn node(id: &str, label: &str) -> EvidenceNode {
         EvidenceNode {
             id: id.into(),

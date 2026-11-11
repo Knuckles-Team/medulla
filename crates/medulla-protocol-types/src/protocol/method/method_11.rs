@@ -432,6 +432,19 @@ $($variants)*
         principal: String,
         approve: bool,
     },
+    /// The served engine contract (MEDULLA-CONTRACT-R054): one bounded page of
+    /// method descriptors in ascending `id` byte order plus, on the first page,
+    /// the scope registry. Scope `contract:read` (user class). `cursor` is the
+    /// `id` of the last descriptor of the previous page (at most 128
+    /// characters); the page starts at the first `id` strictly greater. `limit`
+    /// is 1 to 500, defaulting to 500. Refuses `DESCRIBE_CURSOR_INVALID` and
+    /// `DESCRIBE_LIMIT_INVALID`.
+    DescribeContract {
+        #[serde(default)]
+        cursor: Option<String>,
+        #[serde(default)]
+        limit: Option<u16>,
+    },
         ]);
     };
 }
