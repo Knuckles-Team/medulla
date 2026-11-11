@@ -1,0 +1,16 @@
+# Placement shapes (MEDULLA-PLACEMENT-R001.5).
+#
+# Every `placement:Target` declares exactly one value for each of the four
+# placement facts; a target missing any fact, or carrying a second value for
+# one, is refused at validation. Core source `core:placement@1`.
+
+@prefix placement: <http://knuckles.team/kg/placement#> .
+@prefix sh:        <http://www.w3.org/ns/shacl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+
+placement:TargetShape a sh:NodeShape ;
+    sh:targetClass placement:Target ;
+    sh:property [ sh:path placement:supportsHa ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [ sh:path placement:supportsVolumes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [ sh:path placement:maxReplicas ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] ;
+    sh:property [ sh:path placement:relativeCost ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] .

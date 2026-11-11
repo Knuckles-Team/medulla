@@ -166,6 +166,7 @@ pub mod meeting_transcript;
 pub mod entity_link_proposal;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
+pub mod contract_catalog;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
 // MEDULLA-TYPED-PACKS-R651.1 — append-only ontology edit chain records.

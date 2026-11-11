@@ -1,0 +1,17 @@
+{
+  "files": [
+    "cluster.json",
+    "compute.json",
+    "coordination.json",
+    "finance.json",
+    "graph.json",
+    "ingestion.json",
+    "messaging.json",
+    "query.json",
+    "reasoning.json",
+    "security.json",
+    "storage.json",
+    "transactions.json"
+  ],
+  "schema_digest": "8a978e0ac30ff766b36547cf6bd68c0f7782bf2eb65591252cc8cec230166cdb"
+}
