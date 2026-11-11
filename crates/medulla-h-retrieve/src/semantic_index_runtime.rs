@@ -64,18 +64,14 @@ pub fn observe_rf019_tenant_owner(
     }))
 }
 
-use medulla_index_types::semantic_index::SemanticBinding;
-use medulla_index_types::semantic_index::SemanticDigest;
 use medulla_index_types::semantic_index::SemanticIndexError;
-use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
-use medulla_index_types::semantic_index::SemanticSqlSourceIdentity;
-use medulla_index_types::semantic_index::SemanticSqlSourceManifest;
-use medulla_index_types::semantic_index::SemanticStage;
-use medulla_index_types::semantic_index::SemanticStageIntent;
-use medulla_index_types::semantic_index::SemanticStageTransition;
 #[cfg(feature = "query")]
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
-use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_index_types::semantic_index::{
+    SemanticBinding, SemanticDigest, SemanticSourceDirtyIntent, SemanticSqlSourceIdentity,
+    SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent, SemanticStageTransition,
+};
+#[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::{MutationOutboxLease, MutationOutboxRecord};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -111,6 +107,10 @@ pub(crate) fn semantic_failure_message(
     }
 }
 
+// Only the query-gated served path (and the test contract below) maps
+// validation errors to refusal text; without `query` this is dead in a
+// dependent's build.
+#[cfg_attr(not(feature = "query"), allow(dead_code))]
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
         SemanticIndexError::ApprovalRequired

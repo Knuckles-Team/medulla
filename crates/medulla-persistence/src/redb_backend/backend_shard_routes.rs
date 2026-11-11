@@ -96,6 +96,9 @@ impl RedbBackend {
     /// `configure_group_ring` (`0..K`) with K == N it reduces to the identity `g → shard g`.
     /// `K == 1` collapses every group onto `graph-0.redb` — byte-for-byte the pre-ADR-2
     /// single-shard behavior an un-migrated store keeps.
+    // Only the raft API (and its tests) routes through this; without `raft` it
+    // is dead in a dependent's build, so the allowance carries the feature gate.
+    #[cfg_attr(not(feature = "raft"), allow(dead_code))]
     pub(super) fn shard_for_group(&self, group_id: u64) -> &ShardWriter {
         &self.shards[(group_id as usize) % self.shards.len()]
     }

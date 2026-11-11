@@ -513,6 +513,10 @@ pub fn park_underfunded(
     Ok(())
 }
 
+// The reactivation transition helpers are reachable only behind `raft` (their
+// re-exports below are feature-gated), so without it they are dead in a
+// dependent's build; the allowance carries that feature gate.
+#[cfg_attr(not(feature = "raft"), allow(dead_code))]
 mod reactivation;
 pub use reactivation::is_superseded;
 pub use reactivation::read_policy_revision;

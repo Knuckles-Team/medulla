@@ -26,6 +26,9 @@
 
 pub mod enrichment_top_up;
 pub mod store_prelude;
+// Only the test-support fixture below pulls prelude names into this module's
+// scope; without it the glob is unused in a dependent's build.
+#[cfg_attr(not(any(test, feature = "test-support")), allow(unused_imports))]
 use store_prelude::*;
 
 /// Durable rows are outside the native RPC frame validator and may be supplied
