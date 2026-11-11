@@ -120,6 +120,7 @@ def test_unknown_fields_are_refused_at_every_depth(path: tuple[str, ...]) -> Non
     assert errors[0]["loc"][-1] == "unknown"
 
 
+# spec: MEDULLA-CONTRACT-R005
 @pytest.mark.spec("MEDULLA-CONTRACT-R001")
 @pytest.mark.spec("MEDULLA-CONTRACT-R005")
 def test_decode_validates_a_result_against_its_contract_model() -> None:

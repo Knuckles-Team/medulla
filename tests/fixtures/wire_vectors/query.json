@@ -1,0 +1,1191 @@
+[
+  {
+    "method": "CausalCounterfactual",
+    "request": {
+      "method": "CausalCounterfactual",
+      "params": {
+        "actual": {},
+        "do_values": {},
+        "variables": []
+      }
+    },
+    "result": {
+      "values": []
+    },
+    "sha256": "70bae5cc84b15201d36afb7056b8bb85ea97c1a101f2d2076182726f516995a5"
+  },
+  {
+    "method": "CausalEstimate",
+    "request": {
+      "method": "CausalEstimate",
+      "params": {
+        "do_values": {},
+        "mode": "Intervene",
+        "variables": []
+      }
+    },
+    "result": {
+      "estimates": []
+    },
+    "sha256": "2b2a3041d3155fa797d849f19a3accce4c101c60add17dfb47a1dc3f05206ba0"
+  },
+  {
+    "method": "CypherQuery",
+    "request": {
+      "method": "CypherQuery",
+      "params": {
+        "mode": "read",
+        "query": ""
+      }
+    },
+    "result": null,
+    "sha256": "c83a5fbb7c5ad0acc9093e053597c7226ede65f3e6b551bf6ca2bb5b0123d65b"
+  },
+  {
+    "method": "Decide",
+    "request": {
+      "method": "Decide",
+      "params": {
+        "request": {
+          "belief_as_of": [
+            1600000000000,
+            1650000000000
+          ],
+          "candidates": {
+            "scope": {
+              "classification_under": null,
+              "kinds": [
+                "tool"
+              ]
+            },
+            "source": "agent_library"
+          },
+          "feature_schema": {
+            "component_id": "feature-schema-a",
+            "definition_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "kind": "feature_schema"
+          },
+          "head": {
+            "component_id": "head-a",
+            "definition_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "kind": "decision_head"
+          },
+          "max_records": 16,
+          "params": [
+            {
+              "name": "param-0",
+              "value": {
+                "type": "bool",
+                "value": true
+              }
+            },
+            {
+              "name": "param-1",
+              "value": {
+                "type": "int",
+                "value": -7
+              }
+            },
+            {
+              "name": "param-2",
+              "value": {
+                "type": "text",
+                "value": "free text"
+              }
+            },
+            {
+              "name": "param-3",
+              "value": {
+                "type": "iri",
+                "value": "eg:capability/retrieval"
+              }
+            },
+            {
+              "name": "param-4",
+              "value": {
+                "type": "iri_list",
+                "value": [
+                  "eg:modality/text"
+                ]
+              }
+            },
+            {
+              "name": "param-5",
+              "value": {
+                "type": "rational",
+                "value": {
+                  "denominator": 4,
+                  "numerator": 1
+                }
+              }
+            }
+          ],
+          "policy": {
+            "policy": "default"
+          },
+          "question": {
+            "kind": "route",
+            "question_id": "route.ingestion",
+            "safety": "ordinary"
+          },
+          "tenant_id": "tenant-a"
+        }
+      }
+    },
+    "result": {
+      "inputs_digest": "",
+      "records": [],
+      "schema_version": 0
+    },
+    "sha256": "bf7ab415503a563c781fd8014cb08f7b0e8b3ec3928aff103aeb2d3bb6f3b2d5"
+  },
+  {
+    "method": "EdgeIndex",
+    "request": {
+      "method": "EdgeIndex",
+      "params": {
+        "op": {
+          "definition": {
+            "kind": {
+              "family": "vector",
+              "metric": "l2"
+            },
+            "name": "",
+            "property": "",
+            "purpose": ""
+          },
+          "op": "create"
+        }
+      }
+    },
+    "result": {
+      "indexes": []
+    },
+    "sha256": "36839e0cdb60cdd3159029591953c672552ad21cf53296e245f76d83ad6d72c0"
+  },
+  {
+    "method": "EdgeSearch",
+    "request": {
+      "method": "EdgeSearch",
+      "params": {
+        "request": {
+          "edge_type": null,
+          "index": "rel_text",
+          "k": 5,
+          "property_equals": [],
+          "purpose": "retrieval",
+          "query": {
+            "kind": "text",
+            "text": "graph"
+          }
+        }
+      }
+    },
+    "result": {
+      "fallback": "",
+      "generation": 0,
+      "hits": []
+    },
+    "sha256": "dcab25484764143b7aaaf7f2e2267c921ae887436185d18d3d94983319affb5b"
+  },
+  {
+    "method": "EpistemicStatus",
+    "request": {
+      "method": "EpistemicStatus",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": {
+      "status": {
+        "attacking": [],
+        "authority": {
+          "attack_multiplier": 0.0,
+          "prior_strength": 0.0,
+          "source_reliability": 0.0
+        },
+        "believed": false,
+        "claim": "",
+        "confidence": 0.0,
+        "contradicting": [],
+        "evidence": [],
+        "proof": {
+          "claim": "",
+          "confidence": 0.0,
+          "premises": [],
+          "rule": ""
+        },
+        "tx_time": [
+          0,
+          0
+        ],
+        "uncertainty": 0.0,
+        "valid_time": [
+          0,
+          0
+        ],
+        "what_would_invalidate": {
+          "believed_after": false,
+          "believed_now": false,
+          "claim": "",
+          "evidence_ids": []
+        },
+        "why_not": {
+          "blockers": [],
+          "claim": "",
+          "competing": [],
+          "confidence": 0.0,
+          "reason": ""
+        }
+      }
+    },
+    "sha256": "7fbab7f7c43f61abe87902d2e68be3e812a639b3ab43b24cd36c573ca4727a22"
+  },
+  {
+    "method": "ExplainBelief",
+    "request": {
+      "method": "ExplainBelief",
+      "params": {
+        "disclosure_level": "Full",
+        "node_id": ""
+      }
+    },
+    "result": {
+      "existence": "Supported",
+      "level": "Full",
+      "root": {
+        "claim": "",
+        "confidence": 0.0,
+        "premises": [],
+        "redaction_label": "",
+        "rule": ""
+      }
+    },
+    "sha256": "2dbe9df605043d5fec25eedecaa2d08d5cffaf06657116d9d33734ba82e5dd57"
+  },
+  {
+    "method": "ExplainEvidence",
+    "request": {
+      "method": "ExplainEvidence",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": {
+      "citations": []
+    },
+    "sha256": "f5f65f992e111a69b36900a4fb18a8d9b86f1a2b96ca18323ac8a9c98c862d51"
+  },
+  {
+    "method": "ExplainPlan",
+    "request": {
+      "method": "ExplainPlan",
+      "params": {
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        }
+      }
+    },
+    "result": {
+      "after": [],
+      "applied_rules": [],
+      "before": [],
+      "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "sha256": "d78d6cde0523246167778d290e21fb3b0397226f6626c6e44b0b4364fd779811"
+  },
+  {
+    "method": "ExplainPolicy",
+    "request": {
+      "method": "ExplainPolicy",
+      "params": {
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        }
+      }
+    },
+    "result": {
+      "policy_denied_ids": [],
+      "visible_ids": []
+    },
+    "sha256": "a193982c6ed5c176d4088a848d5288fe513d3a0fe3a39d8034beeb3c2b3d030c"
+  },
+  {
+    "method": "ExplainProvenance",
+    "request": {
+      "method": "ExplainProvenance",
+      "params": {
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        }
+      }
+    },
+    "result": {
+      "answer_ref": "",
+      "bundle_id": "a",
+      "claims": [],
+      "next_action_refs": [],
+      "policy_exclusions": [],
+      "resolved": false,
+      "schema_version": "1"
+    },
+    "sha256": "a89e2b566bf85a372cc0da7f4916bbdc0137bf3d3fcfaf9d7ed01540e517b783"
+  },
+  {
+    "method": "ExplainProvenanceByIds",
+    "request": {
+      "method": "ExplainProvenanceByIds",
+      "params": {
+        "ids": []
+      }
+    },
+    "result": {
+      "answer_ref": "",
+      "bundle_id": "a",
+      "claims": [],
+      "next_action_refs": [],
+      "policy_exclusions": [],
+      "resolved": false,
+      "schema_version": "1"
+    },
+    "sha256": "1f8585e45c61747b01c67007110206637584bc17d0e68f53ed18c6992d90a940"
+  },
+  {
+    "method": "ForeignReadAbort",
+    "request": {
+      "method": "ForeignReadAbort",
+      "params": {
+        "request": {
+          "execution": {
+            "execution_id": 0,
+            "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "reason": "",
+          "sequence": 0
+        }
+      }
+    },
+    "result": {
+      "execution": {
+        "execution_id": 0,
+        "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "reason": "",
+      "sequence": 0
+    },
+    "sha256": "8313b41c2b87cafe15b0685f6f3e939a7877eb15af6d7c3b1a4891368fe20250"
+  },
+  {
+    "method": "ForeignReadChunk",
+    "request": {
+      "method": "ForeignReadChunk",
+      "params": {
+        "request": {
+          "execution": {
+            "execution_id": 0,
+            "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "rows": [],
+          "sequence": 0,
+          "source_identity": {
+            "schema_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "snapshot_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "source_ref": "",
+            "source_revision": 0
+          }
+        }
+      }
+    },
+    "result": {
+      "accepted_rows": 0,
+      "execution": {
+        "execution_id": 0,
+        "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "next_sequence": 0,
+      "sequence": 0,
+      "total_bytes": 0,
+      "total_rows": 0
+    },
+    "sha256": "3393badddc99447ddeabdcfb7d7e5752a89e99f9b970eac5cd98dd4583078c02"
+  },
+  {
+    "method": "ForeignReadComplete",
+    "request": {
+      "method": "ForeignReadComplete",
+      "params": {
+        "request": {
+          "execution": {
+            "execution_id": 0,
+            "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "sequence": 0
+        }
+      }
+    },
+    "result": {
+      "execution": {
+        "execution_id": 0,
+        "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "sequence": 0,
+      "total_bytes": 0,
+      "total_rows": 0
+    },
+    "sha256": "c4efcaa1c6e9a2c12da910da7ae116bf29e39b1ee9de38fc1a15ce4c7b441f1d"
+  },
+  {
+    "method": "ForeignReadOpen",
+    "request": {
+      "method": "ForeignReadOpen",
+      "params": {
+        "request": {
+          "approval": {
+            "batch_id": "",
+            "committed_version": 0,
+            "connector": "a",
+            "contract_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "head": {
+              "binding_revision": 0,
+              "pack_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "registration": {
+              "approval": "held",
+              "class_iri": "",
+              "connector": "a",
+              "contract_iri": "",
+              "entity": "",
+              "key_field": "",
+              "operation": "",
+              "resource_uri": "",
+              "source_id": "",
+              "source_kind": "mcp_tool"
+            },
+            "schema_version": 0,
+            "tenant_id": ""
+          },
+          "limits": {
+            "chunk_bytes": 0,
+            "chunk_rows": 0,
+            "deadline_ms": 0,
+            "max_bytes": 0,
+            "max_rows": 0
+          },
+          "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema_version": 0,
+          "source_name": ""
+        }
+      }
+    },
+    "result": {
+      "execution": {
+        "execution_id": 0,
+        "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expires_at_ms": 0,
+      "next_sequence": 0,
+      "schema_version": 0,
+      "source_identity": {
+        "schema_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "snapshot_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_ref": "",
+        "source_revision": 0
+      }
+    },
+    "sha256": "7bb0f6ee77c1887d58770c49b6cf2b494624c06390f6c0c130d72fb97245a37a"
+  },
+  {
+    "method": "GetChangeCursor",
+    "request": {
+      "method": "GetChangeCursor",
+      "params": {
+        "partition": "",
+        "source": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "expected_previous": {
+        "kind": "sequence",
+        "value": 0
+      },
+      "partition": "",
+      "position": {
+        "kind": "sequence",
+        "value": 0
+      },
+      "source": ""
+    },
+    "sha256": "6829388ce00f3f48b4a5c6b4950d31cc7416f4c824670a62254a9ab0d1c041b5"
+  },
+  {
+    "method": "GetChangeEnvelope",
+    "request": {
+      "method": "GetChangeEnvelope",
+      "params": {
+        "envelope_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "committed_at_ms": 0,
+      "envelope": {
+        "blobs": [],
+        "commit_descriptor_ref": "",
+        "commit_seq": 0,
+        "content_version": {
+          "digest": "",
+          "digest_algorithm": "",
+          "object_id": "",
+          "previous_digest": "",
+          "source_version": {
+            "kind": "sequence",
+            "value": 0
+          }
+        },
+        "cursor": {
+          "expected_previous": {
+            "kind": "sequence",
+            "value": 0
+          },
+          "partition": "",
+          "position": {
+            "kind": "sequence",
+            "value": 0
+          },
+          "source": ""
+        },
+        "envelope_id": "",
+        "evidence": [],
+        "features": [],
+        "lineage": [],
+        "material_class": "attested",
+        "mutation": {
+          "authoritative_state": {
+            "algorithm": "",
+            "digest": "",
+            "source_graph_version": 0,
+            "target_graph_version": 0
+          },
+          "batch_id": "",
+          "created_at_ms": 0,
+          "envelope": {
+            "operation": {
+              "authority": {
+                "actor": "a",
+                "audience": "a",
+                "authority_scope": {
+                  "graph_incarnation": "a",
+                  "kind": "tenant",
+                  "parent_scope_ids": [],
+                  "scope_id": "a",
+                  "tenant": "a"
+                },
+                "catalog_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "expires_at": 0,
+                "idempotency_key": "a",
+                "ingress_surface": "au_rest",
+                "issued_at": 0,
+                "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "operation": "query",
+                "policy_decision_id": "a",
+                "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "policy_epoch": 0,
+                "policy_revision": "a",
+                "protocol_id": "a",
+                "purpose_kind": "graph_read",
+                "purpose_resource": "a",
+                "request_id": "a",
+                "schema_version": "a",
+                "tenant": "a",
+                "trace_id": "a"
+              },
+              "canonical_payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "method": "a",
+              "method_schema_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "method_schema_id": "a",
+              "serving_principal": "",
+              "verified_capabilities": []
+            }
+          },
+          "fencing_token": 0,
+          "identity": {
+            "identity_digest": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "incarnation_id": "",
+            "scope": {
+              "graph": "",
+              "kind": "graph"
+            },
+            "tenant": ""
+          },
+          "operations": [],
+          "outbox": [],
+          "placement_epoch": 0,
+          "schema_version": 0,
+          "version_expectation": {
+            "graph": 0
+          }
+        },
+        "policies": [],
+        "privacy": {
+          "policy_version": "",
+          "sanitized_payload_digest": "",
+          "sanitizer_version": ""
+        },
+        "schema_version": 0
+      }
+    },
+    "sha256": "752872040425c015a6861cfd34158240bd5f39fc9f063c480303f22198326992"
+  },
+  {
+    "method": "GetContentVersion",
+    "request": {
+      "method": "GetContentVersion",
+      "params": {
+        "object_id": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "digest": "",
+      "digest_algorithm": "",
+      "object_id": "",
+      "previous_digest": "",
+      "source_version": {
+        "kind": "sequence",
+        "value": 0
+      }
+    },
+    "sha256": "6b58bb8c625eb10e9dd374755a358052f6f86f928f69b94bc39353b4325f28b1"
+  },
+  {
+    "method": "GetContextView",
+    "request": {
+      "method": "GetContextView",
+      "params": {
+        "agent_id": "",
+        "max_tokens": 0
+      }
+    },
+    "result": {
+      "agent_id": "",
+      "budget_max": 0,
+      "budget_used": 0,
+      "edges": [],
+      "nodes": []
+    },
+    "sha256": "327a0eda91a9e5a278f34c24ce1f002025f19d2c6e57cbe5417ca20ca8eed817"
+  },
+  {
+    "method": "GraphQl",
+    "request": {
+      "method": "GraphQl",
+      "params": {
+        "query": "",
+        "variables": null
+      }
+    },
+    "result": null,
+    "sha256": "8ca448e7b8b56dc17e5ef8b58bff1174689218b88a94d0519501af902797d2a7"
+  },
+  {
+    "method": "KnowledgeStream",
+    "request": {
+      "method": "KnowledgeStream",
+      "params": {
+        "request": {
+          "batch_size": 0,
+          "cursor": {
+            "access_policy_ref": "",
+            "batch_index": 0,
+            "batch_size": 0,
+            "derivation_ref": "",
+            "evidence_set_ref": "",
+            "exhausted": false,
+            "family": "graph",
+            "integrity_ref": "",
+            "placement_ref": "",
+            "query_ref": "",
+            "row_offset": 0,
+            "schema_version": 0,
+            "snapshot_ref": "",
+            "tenant_ref": ""
+          },
+          "projection": "arrow_ipc",
+          "query": {
+            "family": "graph",
+            "label": "",
+            "limit": 0
+          },
+          "schema_version": 0
+        }
+      }
+    },
+    "result": {
+      "cursor": {
+        "access_policy_ref": "",
+        "batch_index": 0,
+        "batch_size": 0,
+        "derivation_ref": "",
+        "evidence_set_ref": "",
+        "exhausted": false,
+        "family": "graph",
+        "integrity_ref": "",
+        "placement_ref": "",
+        "query_ref": "",
+        "row_offset": 0,
+        "schema_version": 0,
+        "snapshot_ref": "",
+        "tenant_ref": ""
+      },
+      "family": "graph",
+      "payload": [],
+      "projection": "arrow_ipc",
+      "schema_version": 0
+    },
+    "sha256": "eefebc220b2ab29053f8f373d55f2405d3f3f58e5bb151726568875b55b5e73a"
+  },
+  {
+    "method": "LiveArtifactGet",
+    "request": {
+      "method": "LiveArtifactGet",
+      "params": {
+        "id": ""
+      }
+    },
+    "result": {
+      "artifact": {
+        "data": null,
+        "id": "",
+        "provenance": {
+          "derived_by": {
+            "ended_at_ms": 0,
+            "error": "",
+            "row_count": 0,
+            "started_at_ms": 0
+          },
+          "last_attempt": {
+            "ended_at_ms": 0,
+            "error": "",
+            "row_count": 0,
+            "started_at_ms": 0
+          }
+        },
+        "source": {
+          "language": "uql",
+          "text": ""
+        },
+        "template": "",
+        "version": 0
+      },
+      "refreshes": []
+    },
+    "sha256": "3afbe4d5d531672cd26c9421e49bdba0145372ab23b2aa342679f8f6f9f94f61"
+  },
+  {
+    "method": "LiveArtifactPut",
+    "request": {
+      "method": "LiveArtifactPut",
+      "params": {
+        "artifact": {
+          "data": null,
+          "id": "",
+          "provenance": {
+            "derived_by": {
+              "ended_at_ms": 0,
+              "error": "",
+              "row_count": 0,
+              "started_at_ms": 0
+            },
+            "last_attempt": {
+              "ended_at_ms": 0,
+              "error": "",
+              "row_count": 0,
+              "started_at_ms": 0
+            }
+          },
+          "source": {
+            "language": "uql",
+            "text": ""
+          },
+          "template": "",
+          "version": 0
+        }
+      }
+    },
+    "result": {
+      "data": null,
+      "id": "",
+      "provenance": {
+        "derived_by": {
+          "ended_at_ms": 0,
+          "error": "",
+          "row_count": 0,
+          "started_at_ms": 0
+        },
+        "last_attempt": {
+          "ended_at_ms": 0,
+          "error": "",
+          "row_count": 0,
+          "started_at_ms": 0
+        }
+      },
+      "source": {
+        "language": "uql",
+        "text": ""
+      },
+      "template": "",
+      "version": 0
+    },
+    "sha256": "2d7ccf9bf314488506038c5d1070e3f8d3383ce61d0192481a9b808a27fc0aa0"
+  },
+  {
+    "method": "LiveArtifactRefresh",
+    "request": {
+      "method": "LiveArtifactRefresh",
+      "params": {
+        "expected_version": 0,
+        "id": ""
+      }
+    },
+    "result": {
+      "new_version": 0,
+      "record": {
+        "ended_at_ms": 0,
+        "error": "",
+        "row_count": 0,
+        "started_at_ms": 0
+      }
+    },
+    "sha256": "db6165bef1424e8a9c91ab0bcfdf3e314bb178d9709741e80b59575d4d7e8b82"
+  },
+  {
+    "method": "MaterializationStatus",
+    "request": {
+      "method": "MaterializationStatus",
+      "params": {
+        "id": ""
+      }
+    },
+    "result": {
+      "source_graph_version": 0,
+      "status": ""
+    },
+    "sha256": "74bef5edb5eb20171c51479ae4e80b83c0018a61605b96c5c7dfb699e98a8428"
+  },
+  {
+    "method": "NlQuery",
+    "request": {
+      "method": "NlQuery",
+      "params": {
+        "graph": "",
+        "text": ""
+      }
+    },
+    "result": [],
+    "sha256": "1270fa5efc3db4cd6790504d2f065ba5d8a863afb0203dadd348802e2dfba150"
+  },
+  {
+    "method": "NlQueryExplain",
+    "request": {
+      "method": "NlQueryExplain",
+      "params": {
+        "graph": "",
+        "text": ""
+      }
+    },
+    "result": {
+      "rewritten_question": "",
+      "rows": [],
+      "uql": ""
+    },
+    "sha256": "1d5b4c5ccb7f99fdd4a722b2df2d40fa95dea7a71697642e0201b5e3b13a69a0"
+  },
+  {
+    "method": "NlQueryPlan",
+    "request": {
+      "method": "NlQueryPlan",
+      "params": {
+        "graph": "",
+        "text": ""
+      }
+    },
+    "result": {
+      "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "rewritten_question": "",
+      "uql": ""
+    },
+    "sha256": "8d73d9b15abcdef30cb50f6f02b9035a1ea3965efd7a6a7654b7e8ca69d99492"
+  },
+  {
+    "method": "QueryForeignColumns",
+    "request": {
+      "method": "QueryForeignColumns",
+      "params": {
+        "columns": [],
+        "name": "",
+        "predicates": []
+      }
+    },
+    "result": [],
+    "sha256": "5f50d92e853c54ee6f46c54d513c77380468b0f9750acbf4969e0a7724a00a68"
+  },
+  {
+    "method": "RankByProvenance",
+    "request": {
+      "method": "RankByProvenance",
+      "params": {
+        "candidates": [],
+        "weights": {
+          "evidence_quality": 0.0,
+          "similarity": 0.0
+        }
+      }
+    },
+    "result": {
+      "ranked": []
+    },
+    "sha256": "7d7ada578401ac5ec2e6a14fc5745d9468dca71e98fb67afc211f4ca95e512e3"
+  },
+  {
+    "method": "RecomputeMaterialization",
+    "request": {
+      "method": "RecomputeMaterialization",
+      "params": {
+        "derived_id": "",
+        "expected_source_graph_version": 0
+      }
+    },
+    "result": {
+      "depends_on": [],
+      "fence_epoch": 0,
+      "generating_activity": "",
+      "id": "",
+      "projection_pending": false,
+      "source_graph_version": 0,
+      "status": ""
+    },
+    "sha256": "3c719c860ec4b3b6f48da7cf1e15e2f5fdad8d00eb7059376cfbd646c652e98e"
+  },
+  {
+    "method": "ResolveConflict",
+    "request": {
+      "method": "ResolveConflict",
+      "params": {
+        "node_ids": [],
+        "semantics": ""
+      }
+    },
+    "result": {
+      "defeated": [],
+      "extension_sets": [],
+      "semantics": "",
+      "surviving": [],
+      "undecided": []
+    },
+    "sha256": "13757e9f877fc2d2788f69c0f9db7e78323fd93a2b76614a7a903831e15d17c0"
+  },
+  {
+    "method": "SelectWebPages",
+    "request": {
+      "method": "SelectWebPages",
+      "params": {
+        "request": {
+          "candidates": [],
+          "freshness_window_s": 0,
+          "max_fetches": 0,
+          "now_ms": 0,
+          "query": ""
+        }
+      }
+    },
+    "result": {
+      "considered": 0,
+      "max_fetches": 0,
+      "now_ms": 0,
+      "query_digest": "",
+      "selected": [],
+      "skipped": []
+    },
+    "sha256": "c2acd3c1c34c263d2daca07c4a34e679fb692413f302338fd13e42448a89bd9e"
+  },
+  {
+    "method": "Sql",
+    "request": {
+      "method": "Sql",
+      "params": {
+        "params_msgpack": [],
+        "query": ""
+      }
+    },
+    "result": null,
+    "sha256": "c682b5215e1c7f4087d18616e893d4ead73080bc0c5c2b31be73e7bdcef959f5"
+  },
+  {
+    "method": "StaleMaterializations",
+    "request": {
+      "method": "StaleMaterializations"
+    },
+    "result": {
+      "ids": [],
+      "source_graph_version": 0
+    },
+    "sha256": "a76483b950ab20dc9189a433088827dd8b852c860a2020e61edc5ff2ddeaa853"
+  },
+  {
+    "method": "TxnUnifiedQuery",
+    "request": {
+      "method": "TxnUnifiedQuery",
+      "params": {
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        },
+        "txn_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "50382d2803c4586e52a5b1a4ab7bbadc4f544e766d5cf71627813a35d174f646"
+  },
+  {
+    "method": "TxnUql",
+    "request": {
+      "method": "TxnUql",
+      "params": {
+        "params": {},
+        "text": "",
+        "txn_id": ""
+      }
+    },
+    "result": {
+      "Rows": {
+        "columns": [],
+        "knowledge_revision": 0,
+        "rows": [],
+        "snapshot_revision": 0,
+        "warnings": []
+      }
+    },
+    "sha256": "141f397f8601735c5bacc8b456fd5f95c808c4d8282e576c58b75474a8b67538"
+  },
+  {
+    "method": "UnifiedQuery",
+    "request": {
+      "method": "UnifiedQuery",
+      "params": {
+        "foreign_execution": {
+          "execution_id": 0,
+          "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        }
+      }
+    },
+    "result": [],
+    "sha256": "fe15fff0ede6dc726d0197d976ade19f4aeeeceda1f5d3091065462f9575bb57"
+  },
+  {
+    "method": "Uql",
+    "request": {
+      "method": "Uql",
+      "params": {
+        "foreign_execution": {
+          "execution_id": 0,
+          "query_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "params": {},
+        "text": ""
+      }
+    },
+    "result": {
+      "Rows": {
+        "columns": [],
+        "knowledge_revision": 0,
+        "rows": [],
+        "snapshot_revision": 0,
+        "warnings": []
+      }
+    },
+    "sha256": "693740000624038f1e8d5e7ebafdb5e1f44bd1bd0f3fda41ecedbad252c63f6a"
+  },
+  {
+    "method": "WhatChanged",
+    "request": {
+      "method": "WhatChanged",
+      "params": {
+        "tx_from": 0,
+        "tx_to": 0
+      }
+    },
+    "result": {
+      "changed": []
+    },
+    "sha256": "2c27d2bf8bbe459793f095425a87e5efb7458f6ee942a1d7098279ad169c0749"
+  }
+]

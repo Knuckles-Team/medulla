@@ -119,6 +119,7 @@ def test_python_suite_job_builds_the_real_artifacts_before_testing() -> None:
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R009")
+# spec: MEDULLA-CONTRACT-R009
 def test_pre_merge_gate_replica_runs_the_identical_suite() -> None:
     """The same job is the pre-merge gate on a PR and the release gate on push:
     one `timeout-minutes` expression, gated on `github.event_name ==
