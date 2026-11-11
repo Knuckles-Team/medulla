@@ -1,0 +1,41 @@
+# Placement vocabulary (MEDULLA-PLACEMENT-R001.5).
+#
+# An EG core schema source (`core:placement@1`) reasoned IN EG: the deployment
+# targets offered to a placement decision and the four facts each target
+# declares. The placement decision reads these nodes; it never re-derives the
+# facts. A tenant may extend this vocabulary under its own GraphSchema key.
+
+@prefix placement: <http://knuckles.team/kg/placement#> .
+@prefix kg:        <http://knuckles.team/kg#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+
+<http://knuckles.team/kg/placement> a owl:Ontology ;
+    rdfs:label "Placement" ;
+    rdfs:comment "Deployment targets and the placement facts each target declares." .
+
+# --- Facts ------------------------------------------------------------------
+
+placement:supportsHa a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether this target supports high-availability deployments; exactly one value per target." .
+placement:supportsVolumes a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether this target supports persistent volumes; exactly one value per target." .
+placement:maxReplicas a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The most replicas this target accepts; exactly one value per target." .
+placement:relativeCost a owl:DatatypeProperty ;
+    rdfs:domain placement:Target ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The target's relative cost, compared across candidates; exactly one value per target." .
+
+# --- Targets ----------------------------------------------------------------
+
+placement:Target a owl:Class ;
+    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:comment "One deployment target with its declared placement facts." .

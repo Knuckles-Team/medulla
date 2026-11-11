@@ -13,8 +13,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 
 /// The analytics-job control-plane operation (CONCEPT:INT-P2-1).
+///
+/// Closed wire contract: `spec: MEDULLA-PLACEMENT-R002.5` — the claim request
+/// (`WorkerClaim`) carries no lane or partition field, and no op variant
+/// accepts one; a forged routing field is refused at decode, before any
+/// worker-grant or registry lookup.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub enum JobOp {
     /// Submit a new job. Runs asynchronously off the request — the response carries
     /// the freshly durable `Submitted` job record (including its server-issued id),
