@@ -125,6 +125,21 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         Ok(snap) => snap,
         Err(refusal) => return refusal,
     };
+    // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking + row filters
+    // reach the SQL read through the projection adapter: the ONE rewrite
+    // (apply_policies) over the shared Plan IR, spliced into the pushed query —
+    // the masked projection, and the row-filter predicates AND-joined into the
+    // WHERE. The caller's tenant policy set arrives via the R706.7 loader; until
+    // one is bound the rewrite is a byte-for-byte no-op — the call itself is
+    // never skipped.
+    let (query, _applied) = match medulla_exec::policy_mask::sql_read_rewrite(
+        &query,
+        &medulla_exec::policy_mask::PolicySet::default(),
+        &medulla_exec::policy_mask::PrincipalRef::from(caller),
+    ) {
+        Ok(rewritten) => rewritten,
+        Err(refusal) => return Response::err(req_id, refusal),
+    };
     let graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
         name: graph_name.to_string(),
         core: Arc::clone(core),

@@ -268,8 +268,10 @@ pub async fn try_handle(
 }
 
 /// Admit `method` for dispatch, or reject it as an explicit response when it is a
-/// plan-backed matview method and RLS is active (those views are unscoped, so they
-/// cannot honor a caller-active row-level-security policy).
+/// plan-backed matview method and the caller is subject to row-level security
+/// (those views are unscoped, so they cannot honor a caller-active
+/// row-level-security policy; a `System` caller sees every row, so the
+/// unscoped result is safe for it and the methods are admitted).
 #[cfg(feature = "matview")]
 fn admit_plan_matview_under_rls(
     method: Method,
@@ -283,7 +285,9 @@ fn admit_plan_matview_under_rls(
             | Method::PlanMatViewRefresh { .. }
             | Method::PlanMatViewDrop { .. }
     );
-    if is_plan_matview_method && read_authority.is_some_and(GraphReadAuthority::is_active) {
+    if is_plan_matview_method
+        && read_authority.is_some_and(GraphReadAuthority::row_level_security_active)
+    {
         return Err(Response::err(
             req_id,
             "unscoped plan materialized views are unavailable under active RLS",
@@ -388,6 +392,7 @@ async fn resolve_core(
 #[cfg(feature = "matview")]
 async fn materialize_and_cache(
     state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
     def: &PlanMatView,
 ) -> Result<(Vec<u8>, usize), String> {
     let core = resolve_core(state, &def.graph).await.ok_or_else(|| {
@@ -398,16 +403,34 @@ async fn materialize_and_cache(
     })?;
     let (snap, version) = core.analysis_snapshot_versioned();
     let semantic = core.semantic_store.read().clone();
-    let rows = matview::materialize(def, &snap, &semantic)?;
-    let count = rows.len();
-    let bytes =
-        rmp_serde::to_vec_named(&rows).map_err(|e| format!("serialize matview rows: {e}"))?;
     let hash = matview::plan_hash(def);
+    let def = def.clone();
+    // The plan runtime's FILTER leg drives DataFusion through a current-thread runtime
+    // (`medulla_sql::sql::exec_sql` builds one and `block_on`s it), which panics with
+    // "Cannot start a runtime from within a runtime" when entered inline on a reactor
+    // worker — so, exactly like every other SQL-executing served path, run it
+    // off-reactor on the blocking pool via `compute_off_lock`.
+    let computed = medulla_server_api::compute::compute_off_lock(req_id, move || {
+        let rows = matview::materialize(&def, &snap, &semantic)?;
+        let count = rows.len();
+        let bytes =
+            rmp_serde::to_vec_named(&rows).map_err(|e| format!("serialize matview rows: {e}"))?;
+        Ok::<(Vec<u8>, usize), String>((bytes, count))
+    })
+    .await;
+    let (bytes, count) = match computed {
+        Ok(Ok(computed)) => computed,
+        Ok(Err(refusal)) => return Err(refusal),
+        Err(response) => {
+            return Err(response
+                .refusal_text()
+                .unwrap_or_else(|| "INTERNAL: blocking compute task failed".to_string()))
+        }
+    };
     core.result_cache()
         .put_scoped(hash, version, 0, bytes.clone());
     Ok((bytes, count))
 }
-
 /// `PlanMatViewDefine`: materialize once, cache, persist the definition, index in RAM.
 #[cfg(feature = "matview")]
 async fn define_plan_matview(
@@ -419,7 +442,7 @@ async fn define_plan_matview(
 ) -> Response {
     let operation_state = Arc::clone(state);
     match run_control_saga(state, req_id, caller, method, move |control| async move {
-        let (_, count) = materialize_and_cache(&operation_state, &def).await?;
+        let (_, count) = materialize_and_cache(&operation_state, req_id, &def).await?;
         let blob = matview::encode_def(&def)?;
         let redb = control
             .backend
@@ -536,7 +559,7 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
         }
     }
     // Stale (a write landed) or a cache miss (evicted / version bumped) → recompute.
-    match materialize_and_cache(state, &def).await {
+    match materialize_and_cache(state, req_id, &def).await {
         Ok((bytes, _)) => {
             matview::manager().mark_fresh(name);
             Response::ok(
@@ -564,7 +587,7 @@ async fn refresh_plan_matview(
         let Some(def) = matview::manager().get(name) else {
             return Err(format!("no plan materialized view '{name}'"));
         };
-        let (_, count) = materialize_and_cache(&operation_state, &def).await?;
+        let (_, count) = materialize_and_cache(&operation_state, req_id, &def).await?;
         let result = finish_control_saga(
             control,
             ResultPayload::scalar::<
