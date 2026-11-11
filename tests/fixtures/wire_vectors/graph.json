@@ -1,0 +1,1068 @@
+[
+  {
+    "method": "AddEdge",
+    "request": {
+      "method": "AddEdge",
+      "params": {
+        "properties_msgpack": [],
+        "source_id": "",
+        "target_id": ""
+      }
+    },
+    "result": "",
+    "sha256": "5299027c5e784ef2c6bf55a64a866f9ec255d51f79af3fb83e7dc2ef6f7fd512"
+  },
+  {
+    "method": "AddNode",
+    "request": {
+      "method": "AddNode",
+      "params": {
+        "node_id": "",
+        "properties_msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "40b638e5f8ce2c9387759d03235551e433edc86cfbb89f7a5712b3417add70a9"
+  },
+  {
+    "method": "AddTriples",
+    "request": {
+      "method": "AddTriples",
+      "params": {
+        "ntriples": "",
+        "turtle": ""
+      }
+    },
+    "result": {
+      "multivalue": 0,
+      "triples": 0
+    },
+    "sha256": "2e625ec7382fc6fda8e634a36e66e2fe86417d321fc13ee86f1688687c5800cd"
+  },
+  {
+    "method": "AppendStep",
+    "request": {
+      "method": "AppendStep",
+      "params": {
+        "action_msgpack": [],
+        "next_state_ref": "",
+        "reward": 0.0,
+        "state_ref": "",
+        "t": 0,
+        "traj_id": ""
+      }
+    },
+    "result": "",
+    "sha256": "85cc8705c16bd5e0900791b9291f2c75b9428e38cebcfc1b3a967c338f3b9978"
+  },
+  {
+    "method": "ApplyMutation",
+    "request": {
+      "method": "ApplyMutation",
+      "params": {
+        "event_type": "",
+        "query": ""
+      }
+    },
+    "result": {
+      "created_graphs": 0,
+      "deleted": 0,
+      "inserted": 0,
+      "operations": 0,
+      "updated_graphs": 0
+    },
+    "sha256": "dbb5e9512b857829fb0ff9667ce246055fb27685923efba214c037e8158c17f7"
+  },
+  {
+    "method": "BestTrajectory",
+    "request": {
+      "method": "BestTrajectory",
+      "params": {
+        "gamma": 0.0,
+        "traj_ids": []
+      }
+    },
+    "result": "",
+    "sha256": "a4ba1dc4e9601fac3a9bd1dc7eb16e6e22934481c173f5bc0931b4b8c67990d0"
+  },
+  {
+    "method": "BusHeartbeat",
+    "request": {
+      "method": "BusHeartbeat",
+      "params": {
+        "now_ms": 0,
+        "principal": "",
+        "session_ref": ""
+      }
+    },
+    "result": false,
+    "sha256": "63da9b96e802ffc24fae95600995569179a60699462b5325679117a7a6044da4"
+  },
+  {
+    "method": "BusRegister",
+    "request": {
+      "method": "BusRegister",
+      "params": {
+        "participant": {
+          "capabilities": [],
+          "host_ref": "",
+          "last_seen_ms": 0,
+          "session_ref": "",
+          "tenant": ""
+        },
+        "principal": ""
+      }
+    },
+    "result": false,
+    "sha256": "4a02c9ac30134277c17a83747d58e143b5871b9a42eb421ba253ed51f410f0eb"
+  },
+  {
+    "method": "BusRoster",
+    "request": {
+      "method": "BusRoster",
+      "params": {
+        "now_ms": 0,
+        "tenant": ""
+      }
+    },
+    "result": {
+      "participants": []
+    },
+    "sha256": "107dd49b4b175ba7cb2bb3e12d6742f41f93df9b40af92aa3e6a9712bfd57ac9"
+  },
+  {
+    "method": "ClearGraph",
+    "request": {
+      "method": "ClearGraph"
+    },
+    "result": "",
+    "sha256": "86636dcc3cca39160c700a4f6069eb272e5030a1b686d5e760dd94539f7a4caf"
+  },
+  {
+    "method": "CompareAndSetNodeFields",
+    "request": {
+      "method": "CompareAndSetNodeFields",
+      "params": {
+        "conditions_msgpack": [],
+        "node_id": "",
+        "updates_msgpack": []
+      }
+    },
+    "result": false,
+    "sha256": "d0d51dac49305d8b389a7c0021e43102f0fc8ac6a377760a2c94442e1d4452e4"
+  },
+  {
+    "method": "Consolidate",
+    "request": {
+      "method": "Consolidate",
+      "params": {
+        "episodic_ids": [],
+        "semantic_props_msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "4ac97b99218c85cd4b0ebd865d5853a5c6816920c2cdbd4e6ce32698cb2b9432"
+  },
+  {
+    "method": "ContextFacts",
+    "request": {
+      "method": "ContextFacts",
+      "params": {
+        "request": {
+          "max_facts_per_node": 0,
+          "node_ids": [],
+          "schema_version": 0,
+          "token_budget": 0
+        }
+      }
+    },
+    "result": {
+      "facts": [],
+      "omitted_count": 0,
+      "schema_version": 0,
+      "token_estimate_total": 0
+    },
+    "sha256": "977c2eef27e268339e75df1dc329323a87fb1ba0ac31b52f1dd37c3d8434f2dc"
+  },
+  {
+    "method": "CreateNodeIfAbsent",
+    "request": {
+      "method": "CreateNodeIfAbsent",
+      "params": {
+        "node_id": "",
+        "properties_msgpack": []
+      }
+    },
+    "result": false,
+    "sha256": "29aafb48e09f513bd1050f9f7c418644d6478b1c5cb30de75e63ecc9d6924ca4"
+  },
+  {
+    "method": "CreateSummaryNode",
+    "request": {
+      "method": "CreateSummaryNode",
+      "params": {
+        "child_ids": [],
+        "level": 0,
+        "props_msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "2c469787a13e2107f1a86b64a935a5129d4ab7e0c90d244bc0956573746372b5"
+  },
+  {
+    "method": "DecayMemories",
+    "request": {
+      "method": "DecayMemories",
+      "params": {
+        "half_life_ms": 0,
+        "ids": [],
+        "now_ms": 0
+      }
+    },
+    "result": 0,
+    "sha256": "22475398b72807bca6fb2c4b3951083ca2af4482bc2b35d4c5c9d3d095349a0f"
+  },
+  {
+    "method": "DecayNode",
+    "request": {
+      "method": "DecayNode",
+      "params": {
+        "half_life_ms": 0,
+        "node_id": "",
+        "now_ms": 0
+      }
+    },
+    "result": false,
+    "sha256": "f80c75ad6da269665b323fdd6e57f5e7c545741d6dd87c34e2b164e750afafda"
+  },
+  {
+    "method": "DecaySweep",
+    "request": {
+      "method": "DecaySweep",
+      "params": {
+        "floor": 0.0,
+        "half_life_secs": 0.0,
+        "prune": false
+      }
+    },
+    "result": {
+      "edges_decayed": 0,
+      "edges_pruned": 0,
+      "nodes_decayed": 0,
+      "nodes_pruned": 0
+    },
+    "sha256": "6b33f3f2e4c6d282ce03b03e14965b44847d3c04fa7b8097a4b8a52b567f8b3b"
+  },
+  {
+    "method": "DiffAgainst",
+    "request": {
+      "method": "DiffAgainst",
+      "params": {
+        "other_graph": ""
+      }
+    },
+    "result": {
+      "edges_added": [],
+      "edges_removed": [],
+      "nodes_added": [],
+      "nodes_modified": [],
+      "nodes_removed": []
+    },
+    "sha256": "93eae342dfeb6ebb2a757874f77be05e094d704ae25c8cd855979374461471d3"
+  },
+  {
+    "method": "DiscountedReturn",
+    "request": {
+      "method": "DiscountedReturn",
+      "params": {
+        "gamma": 0.0,
+        "traj_id": ""
+      }
+    },
+    "result": 0.0,
+    "sha256": "5e19d40379ce07e5f6154dda9697eb83adb57ae431cb2b7d46e575533bf2f5e9"
+  },
+  {
+    "method": "DropNamedGraph",
+    "request": {
+      "method": "DropNamedGraph"
+    },
+    "result": "",
+    "sha256": "80fee3e7e4f08c15ab01dcabd170fb21a03d9f4fa26eb2730094d26ab4567675"
+  },
+  {
+    "method": "EdgeCount",
+    "request": {
+      "method": "EdgeCount"
+    },
+    "result": 0,
+    "sha256": "3dae291273aa2a57df1b663c8610237a28546492b258c42f22a0a686121e840f"
+  },
+  {
+    "method": "EvictBelow",
+    "request": {
+      "method": "EvictBelow",
+      "params": {
+        "delete": false,
+        "ids": [],
+        "threshold": 0.0
+      }
+    },
+    "result": [],
+    "sha256": "53852131ee5d346a3a878bc94f5af057cb051f74cbf8894914ebdffc95e4835e"
+  },
+  {
+    "method": "EvictLRU",
+    "request": {
+      "method": "EvictLRU",
+      "params": {
+        "max_nodes": 0
+      }
+    },
+    "result": 0,
+    "sha256": "b0dafc0eb07d8a330be65c9e0254591518baa996b2d2d16b9ab2e1b1f23f3186"
+  },
+  {
+    "method": "FinanceAlertRaise",
+    "request": {
+      "method": "FinanceAlertRaise",
+      "params": {
+        "envelope": {
+          "event_id": "",
+          "kind": "price",
+          "listing_id": "",
+          "message": "",
+          "occurred_at_unix_nanos": 0
+        }
+      }
+    },
+    "result": "",
+    "sha256": "d71a6496639c61a7bf1af55a0b87684e42cb1291a214238a0fef2c3538b1aaa2"
+  },
+  {
+    "method": "FinanceFactorRecord",
+    "request": {
+      "method": "FinanceFactorRecord",
+      "params": {
+        "factor_ids": [],
+        "forward_returns": [],
+        "provenance_keys": [],
+        "signals": []
+      }
+    },
+    "result": [],
+    "sha256": "ab242bbe6ba30673d485171862797ea1a8855b19c2ead27f4e4d30151b57be20"
+  },
+  {
+    "method": "FinanceRecordGet",
+    "request": {
+      "method": "FinanceRecordGet",
+      "params": {
+        "kind": "Account",
+        "record_id": ""
+      }
+    },
+    "result": null,
+    "sha256": "72df6c0f8dc9d142ee14924778c932891fcb5b662c9e852b523f711883701bc4"
+  },
+  {
+    "method": "FinanceRecordPut",
+    "request": {
+      "method": "FinanceRecordPut",
+      "params": {
+        "expected_head": 0,
+        "kind": "Account",
+        "record": {
+          "fields": {},
+          "record_id": "",
+          "tenant": ""
+        },
+        "schema_version": ""
+      }
+    },
+    "result": 0,
+    "sha256": "407c715247a426c622d460da359cf8d4a7a10547971cdcdf259f2a0698bcf2b2"
+  },
+  {
+    "method": "Fork",
+    "request": {
+      "method": "Fork"
+    },
+    "result": null,
+    "sha256": "9fd14fa495222973f731e1ea57616caccca41765f0dd51a8013610fbbed9cda7"
+  },
+  {
+    "method": "GetEdgeProperties",
+    "request": {
+      "method": "GetEdgeProperties",
+      "params": {
+        "source_id": "",
+        "target_id": ""
+      }
+    },
+    "result": null,
+    "sha256": "674d133c9e677b4ad42d1f784fbff2b036967733bbd10c2d04f8de38680f08ed"
+  },
+  {
+    "method": "GetEdgePropertiesBatch",
+    "request": {
+      "method": "GetEdgePropertiesBatch",
+      "params": {
+        "edges": []
+      }
+    },
+    "result": [],
+    "sha256": "ddc5d2f87a17f818a3ea52a1d700c3d1ab0887c1f7eb24a5bf236ea829327a4c"
+  },
+  {
+    "method": "GetEdges",
+    "request": {
+      "method": "GetEdges"
+    },
+    "result": [],
+    "sha256": "e31f932545a633b1618a858fdf2d9dff53fa5e5945f4bb0754c3ab7e2bc5f9ce"
+  },
+  {
+    "method": "GetEdgesPage",
+    "request": {
+      "method": "GetEdgesPage",
+      "params": {
+        "after": [
+          "",
+          "",
+          0
+        ],
+        "limit": 0
+      }
+    },
+    "result": [],
+    "sha256": "7de599fb0b884011875fc37403d31a25bc5a9f7e6f05a1780c70e72af2584c2e"
+  },
+  {
+    "method": "GetNeighbors",
+    "request": {
+      "method": "GetNeighbors",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "1acc930d4f6efe6f2f1ddec02cd9c017dfc82e2896320e87096d735e1ba3f170"
+  },
+  {
+    "method": "GetNeighborsBatch",
+    "request": {
+      "method": "GetNeighborsBatch",
+      "params": {
+        "node_ids": []
+      }
+    },
+    "result": [],
+    "sha256": "d0da188c3b9df4f43374469f87d1eba978854239f77ca8c0597fa12d478cda20"
+  },
+  {
+    "method": "GetNodeProperties",
+    "request": {
+      "method": "GetNodeProperties",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": null,
+    "sha256": "1f6004aced0efd7b50d78c14589ba53fe751b2541e04edce043c32cb51da3bdd"
+  },
+  {
+    "method": "GetNodePropertiesBatch",
+    "request": {
+      "method": "GetNodePropertiesBatch",
+      "params": {
+        "node_ids": []
+      }
+    },
+    "result": [],
+    "sha256": "cc6ba084662a337e9ab5b38e4d02741fcc1381bae7781668e4d89be1347675a2"
+  },
+  {
+    "method": "GetNodes",
+    "request": {
+      "method": "GetNodes"
+    },
+    "result": [],
+    "sha256": "287144b42452b45bbf69082bcb75793c21d28f88d38e31fa5470ce611f7cbd21"
+  },
+  {
+    "method": "GetNodesByLabel",
+    "request": {
+      "method": "GetNodesByLabel",
+      "params": {
+        "after": "",
+        "label": "",
+        "limit": 0
+      }
+    },
+    "result": [],
+    "sha256": "cf4731ef08847a6e204a5472f61fffb772f69ec0bfdc244284f60cfca0fb16bb"
+  },
+  {
+    "method": "GetPredecessors",
+    "request": {
+      "method": "GetPredecessors",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "813fb3ccbb8d469ca3dc9d5bf6608be699cd4d92e58a95fcee073e645613a749"
+  },
+  {
+    "method": "GetSubgraph",
+    "request": {
+      "method": "GetSubgraph",
+      "params": {
+        "node_ids": []
+      }
+    },
+    "result": {
+      "edges": [],
+      "nodes": []
+    },
+    "sha256": "c65d07ecd463e2e29ef6e1d77557008d078bcff532fe81e8e29f0cfadc9c7d7f"
+  },
+  {
+    "method": "GetSuccessors",
+    "request": {
+      "method": "GetSuccessors",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "7acef9b62012f32cfa7a1ad0ebebec219768f147ba5ceedb9db95b3bfc52419c"
+  },
+  {
+    "method": "HasEdge",
+    "request": {
+      "method": "HasEdge",
+      "params": {
+        "source_id": "",
+        "target_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "1e4cf591dbd1d74db7c347dbdc7671a65c28554217495fbb391d7d400aa95573"
+  },
+  {
+    "method": "HasNode",
+    "request": {
+      "method": "HasNode",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "13d826efee08a8f8f7a707c0a6c4e92004b10b1e89054e8bb2a65b5d5ce0175e"
+  },
+  {
+    "method": "HasNodesBatch",
+    "request": {
+      "method": "HasNodesBatch",
+      "params": {
+        "node_ids": []
+      }
+    },
+    "result": [],
+    "sha256": "2371547f419f4f47d2951b9360008a505774a4af0f27b84d8738ebaa6fcfc18d"
+  },
+  {
+    "method": "InDegree",
+    "request": {
+      "method": "InDegree",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": 0,
+    "sha256": "cd4184235905c9d0f5f36ccbd8757affd6f38a0bd165740949b6cb1133220ead"
+  },
+  {
+    "method": "InvalidateEdge",
+    "request": {
+      "method": "InvalidateEdge",
+      "params": {
+        "invalid_at": 0,
+        "relationship": "",
+        "source_id": "",
+        "target_id": "",
+        "tx_now": 0
+      }
+    },
+    "result": 0,
+    "sha256": "5a909148e1e4fa105b1ceda7926741e5c9f5220b351a69e91409d2ee1545fd28"
+  },
+  {
+    "method": "ListMemorySnapshots",
+    "request": {
+      "method": "ListMemorySnapshots",
+      "params": {
+        "cursor": "",
+        "limit": 0,
+        "prefix": ""
+      }
+    },
+    "result": {
+      "heads": [],
+      "next_cursor": ""
+    },
+    "sha256": "bd2ede2591527fb1e9fea50845eff12b492b91f983d192969ee3c9ea90dd1a68"
+  },
+  {
+    "method": "Maintain",
+    "request": {
+      "method": "Maintain",
+      "params": {
+        "delete": false,
+        "evict_threshold": 0.0,
+        "half_life_ms": 0,
+        "ids": [],
+        "now_ms": 0
+      }
+    },
+    "result": [
+      0,
+      []
+    ],
+    "sha256": "26269b10f02ec4b9fb257a37b3a4ef971e895480cff0b489959bcb7080679c4a"
+  },
+  {
+    "method": "Metrics",
+    "request": {
+      "method": "Metrics"
+    },
+    "result": {
+      "active_nodes": 0,
+      "archived_nodes": 0,
+      "compacted_nodes": 0,
+      "edge_count": 0,
+      "last_prune_removed": 0,
+      "node_count": 0,
+      "total_mutations": 0
+    },
+    "sha256": "552b4268b068b89722a7d694b3feda8eb7c703c52fc7900bbc21b4affe5332e1"
+  },
+  {
+    "method": "NodeCount",
+    "request": {
+      "method": "NodeCount"
+    },
+    "result": 0,
+    "sha256": "33c270490aff75d1ee575345e413104700c0cbfa5195c8c5670a13d18a034772"
+  },
+  {
+    "method": "NodeIds",
+    "request": {
+      "method": "NodeIds"
+    },
+    "result": [],
+    "sha256": "3d861454d10172bf585b70a7aae1bcf20a95b63152c1f347ddb080d3be1e0648"
+  },
+  {
+    "method": "OutDegree",
+    "request": {
+      "method": "OutDegree",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": 0,
+    "sha256": "42525e380107274fc7d6ff96f2b493a7578254b52ae90b09a1e1630183b8363c"
+  },
+  {
+    "method": "PolicyEvolution",
+    "request": {
+      "method": "PolicyEvolution",
+      "params": {
+        "op": {
+          "op": "put_capability",
+          "request": {
+            "adapter_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "artifact_destination_ref": "a",
+            "base_checkpoint_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "controls": {
+              "capture": {
+                "enabled": false,
+                "scope": "a"
+              },
+              "promote": {
+                "enabled": false,
+                "scope": "a"
+              },
+              "train": {
+                "enabled": false,
+                "scope": "a"
+              }
+            },
+            "decode_params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "endpoint_ref": "a",
+            "logprobs": {
+              "auxiliary_draws": false,
+              "chosen_token": false,
+              "top_k": 0
+            },
+            "probe_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "probed_at_ms": 0,
+            "provider": "a",
+            "tokenizer_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    "result": {
+      "commit_capture": {
+        "disposition": "written",
+        "eligibility": "eligible",
+        "kind": "capability",
+        "observed_at_ms": 0,
+        "record_id": ""
+      },
+      "commit_policy_evaluation": {
+        "disposition": "written",
+        "eligibility": "eligible",
+        "kind": "capability",
+        "observed_at_ms": 0,
+        "record_id": ""
+      },
+      "commit_training_run": {
+        "disposition": "written",
+        "eligibility": "eligible",
+        "kind": "capability",
+        "observed_at_ms": 0,
+        "record_id": ""
+      },
+      "get": {
+        "record": {
+          "kind": "capability",
+          "record": {
+            "adapter_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "artifact_destination_ref": "a",
+            "base_checkpoint_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "controls": {
+              "capture": {
+                "enabled": false,
+                "scope": "a"
+              },
+              "promote": {
+                "enabled": false,
+                "scope": "a"
+              },
+              "train": {
+                "enabled": false,
+                "scope": "a"
+              }
+            },
+            "decode_params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "endpoint_ref": "a",
+            "logprobs": {
+              "auxiliary_draws": false,
+              "chosen_token": false,
+              "top_k": 0
+            },
+            "probe_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "probed_at_ms": 0,
+            "provider": "a",
+            "tokenizer_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        "record_id": "",
+        "recorded_at_ms": 0,
+        "recorded_by": ""
+      },
+      "put_capability": {
+        "disposition": "written",
+        "eligibility": "eligible",
+        "kind": "capability",
+        "observed_at_ms": 0,
+        "record_id": ""
+      },
+      "register_model_policy_version": {
+        "disposition": "written",
+        "eligibility": "eligible",
+        "kind": "capability",
+        "observed_at_ms": 0,
+        "record_id": ""
+      }
+    },
+    "sha256": "faa50152e88bb8cef76b9b445fb7a49d02e53835800755ddaeaf4ba3b83a76a5"
+  },
+  {
+    "method": "PruneByLifecycle",
+    "request": {
+      "method": "PruneByLifecycle",
+      "params": {
+        "max_age_secs": 0,
+        "min_score": 0.0
+      }
+    },
+    "result": {
+      "edges_removed": 0,
+      "nodes_archived": 0,
+      "nodes_removed": 0
+    },
+    "sha256": "b51b3b4b03b836db440c2e4e698c873fcf074cdddeb54460e6e70da5f9746a1d"
+  },
+  {
+    "method": "ReadMemorySnapshot",
+    "request": {
+      "method": "ReadMemorySnapshot",
+      "params": {
+        "doc_id": "",
+        "revision": 0
+      }
+    },
+    "result": {
+      "content": "",
+      "head": {
+        "content_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content_len": 0,
+        "doc_id": "",
+        "graph_incarnation": "",
+        "parent_revision": 0,
+        "provenance": {
+          "actor": "",
+          "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "request_id": ""
+        },
+        "retain_until_ms": 0,
+        "revision": 0
+      }
+    },
+    "sha256": "c9f49de1431f4ec743f747ac92e6442cef89b73d0050fbfb205b2dcb1b54b728"
+  },
+  {
+    "method": "Reconcile",
+    "request": {
+      "method": "Reconcile",
+      "params": {
+        "graph_name": "",
+        "msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "3f9ddcf818767285fc49b55fe6e5f820f59adb88de55f852cb655e387a5f9562"
+  },
+  {
+    "method": "Reinforce",
+    "request": {
+      "method": "Reinforce",
+      "params": {
+        "node_id": "",
+        "now_ms": 0,
+        "weight": 0.0
+      }
+    },
+    "result": false,
+    "sha256": "f0186f1e1b4e70d1beffc676fb96bf83889fd06eb3ad1ce9e406fb4c178c2309"
+  },
+  {
+    "method": "RemoveEdge",
+    "request": {
+      "method": "RemoveEdge",
+      "params": {
+        "source_id": "",
+        "target_id": ""
+      }
+    },
+    "result": "",
+    "sha256": "d775d5de20f65d5fb016f9f53cddc01a7284b24438a1b3775000f41f966af38c"
+  },
+  {
+    "method": "RemoveNode",
+    "request": {
+      "method": "RemoveNode",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": "",
+    "sha256": "d82dcccb757fa6ad1f14775e674caf9e1aab395398ff126017c7532bce9765fe"
+  },
+  {
+    "method": "RemoveTriples",
+    "request": {
+      "method": "RemoveTriples",
+      "params": {
+        "ntriples": "",
+        "turtle": ""
+      }
+    },
+    "result": 0,
+    "sha256": "6434758490b14e3a1b59d18b2ec38f9512d4b7312f730fa0203d3aef8135ea14"
+  },
+  {
+    "method": "SchemaProjections",
+    "request": {
+      "method": "SchemaProjections",
+      "params": {
+        "op": {
+          "boundary": {
+            "boundary_id": "",
+            "mapping_ref": "",
+            "required_scopes": [],
+            "tables": []
+          },
+          "op": "put"
+        }
+      }
+    },
+    "result": {
+      "list": {
+        "boundary_count": 0,
+        "entries": []
+      },
+      "put": {
+        "boundary_id": "",
+        "mapping_ref": "",
+        "required_scopes": [],
+        "tables": []
+      }
+    },
+    "sha256": "2f534171e462f49231119f41e0e7c1398a9c559e27fa15f8e00db60c77343288"
+  },
+  {
+    "method": "StartTrajectory",
+    "request": {
+      "method": "StartTrajectory",
+      "params": {
+        "props_msgpack": []
+      }
+    },
+    "result": "",
+    "sha256": "965379df5be3ee9521c271bb3512edc2b165f7989eac8e1605b68a1857f8ee97"
+  },
+  {
+    "method": "SummariesAtLevel",
+    "request": {
+      "method": "SummariesAtLevel",
+      "params": {
+        "level": 0
+      }
+    },
+    "result": [],
+    "sha256": "eb72d2572f420c9fcc5b816399f4dc9d7247958f69966f9b477e1592339f27ce"
+  },
+  {
+    "method": "SummaryChildren",
+    "request": {
+      "method": "SummaryChildren",
+      "params": {
+        "node_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "a4faf8b39cbf3b92d6ac3679a9f0615c1792450399e38cfcab9828beb59369cd"
+  },
+  {
+    "method": "SupersedeEdge",
+    "request": {
+      "method": "SupersedeEdge",
+      "params": {
+        "prior_relationship": "",
+        "prior_source": "",
+        "prior_target": "",
+        "properties_msgpack": [],
+        "source_id": "",
+        "target_id": "",
+        "tx_now": 0,
+        "valid_at": 0
+      }
+    },
+    "result": "",
+    "sha256": "88f6f196d8565c9b06ffc308ffd7b090cba578377783734ce2323a955eb26ed1"
+  },
+  {
+    "method": "SyncMemorySnapshot",
+    "request": {
+      "method": "SyncMemorySnapshot",
+      "params": {
+        "request": {
+          "action": {
+            "action": "observe_file",
+            "observed_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "doc_id": "1",
+          "request_id": "1"
+        },
+        "stamp": {
+          "actor": "",
+          "graph_incarnation": "",
+          "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    "result": {
+      "head": {
+        "content_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content_len": 0,
+        "doc_id": "",
+        "graph_incarnation": "",
+        "parent_revision": 0,
+        "provenance": {
+          "actor": "",
+          "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "request_id": ""
+        },
+        "retain_until_ms": 0,
+        "revision": 0
+      },
+      "outcome": "accepted"
+    },
+    "sha256": "fd1340276b951e1a2b9581f3339011a7326c2dfe8ca4fa0538884b1f0f1f7117"
+  },
+  {
+    "method": "TouchNodes",
+    "request": {
+      "method": "TouchNodes",
+      "params": {
+        "node_ids": []
+      }
+    },
+    "result": 0,
+    "sha256": "14af56b388262555f5e62e0740294c5c7a2616e5e845863522d9d05121505eb1"
+  },
+  {
+    "method": "UnionGetNeighbors",
+    "request": {
+      "method": "UnionGetNeighbors",
+      "params": {
+        "graphs": [],
+        "node_id": ""
+      }
+    },
+    "result": [],
+    "sha256": "586b5aaa11014e779b93e71847e500a9d76d7bf785c33e50fa9495781d2ee629"
+  },
+  {
+    "method": "UnionGetNodeProperties",
+    "request": {
+      "method": "UnionGetNodeProperties",
+      "params": {
+        "graphs": [],
+        "node_id": ""
+      }
+    },
+    "result": null,
+    "sha256": "dd36ddd5e05c93fec637867e8bd408814b1171c4d7d021cae2f7a48b4d8e7f49"
+  },
+  {
+    "method": "UnionGetNodesByLabel",
+    "request": {
+      "method": "UnionGetNodesByLabel",
+      "params": {
+        "graphs": [],
+        "label": "",
+        "limit": 0
+      }
+    },
+    "result": [],
+    "sha256": "31b1cd7403e34b9d7e4f62eced3a056d7d4b532818c7c0991639e5b25a638432"
+  }
+]

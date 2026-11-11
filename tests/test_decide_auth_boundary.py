@@ -27,14 +27,21 @@ and a served Agent Library pack journey (bind an importer, publish a pack
 through the Blob CAS, import it, then read its status back) against the same
 live engine, reusing ``tests/test_connector_pack_planted.py``'s served
 helpers rather than duplicating them. The "no source-tree imports" wheel
-install assertion from the full MEDULLA-CONTRACT-R002 acceptance text is left for
-a further slice.
+install assertion from the full MEDULLA-CONTRACT-R002 acceptance text landed
+as MEDULLA-CONTRACT-R002.3 in
+``tests/test_installed_wheel_decision_client_boundary.py`` (the installed-wheel
+gate). The parent row MEDULLA-CONTRACT-R002 itself lands as the final test of
+this module: one hosted journey that publishes, imports and reads back the
+pack and then issues Decide on both sides of the tenant boundary, through the
+installed client package's own surface modules.
 """
 
 from __future__ import annotations
 
 import asyncio
+import importlib
 import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -162,3 +169,98 @@ def test_served_pack_publish_import_and_status_journey() -> None:
         status,
         imported,
     )
+
+
+#: This checkout's source tree (the no-source-tree-import boundary's anchor,
+#: the same one MEDULLA-CONTRACT-R002.3's installed-wheel check uses).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+#: The client-surface modules the served journey exercises: the installed
+#: Python client's public surface MEDULLA-CONTRACT-R002's acceptance names as
+#: the no-source-tree-import boundary (with MEDULLA-CONTRACT-R002.3).
+_CLIENT_SURFACE_MODULES = (
+    "medulla.decision_client",
+    "medulla.connector_pack",
+    "medulla.client",
+)
+
+
+async def _decide_message(tenant_id: str) -> str:
+    """The engine's own refusal sentence for a ``Decide`` issued from the
+    verified session against ``tenant_id`` (the journey needs the code AND
+    the sentence, so the message is returned, not re-raised)."""
+    try:
+        await _decide_as_verified_session(tenant_id)
+    except RuntimeError as error:
+        return str(error)
+    raise AssertionError(
+        f"Decide for {tenant_id!r} succeeded; both journey sides expect the "
+        "engine to refuse it (the feature-schema pin is unpublished)"
+    )
+
+
+def _confirm_no_client_imports_from_the_source_tree() -> None:
+    """The parent row's third clause: the client the journey used is the
+    installed ``medulla`` distribution's own surface, not this checkout.
+
+    Every journey step ran through a module of the ``medulla`` package (its
+    origin sits inside the package directory itself), and when the suite
+    runs against the installed wheel -- the release workflow's gates-wheel
+    context, which sets ``MEDULLA_INSTALLED_WHEEL_GATE=1`` -- that origin
+    must be OUTSIDE this source tree, the same shadowing-avoidance
+    assertion MEDULLA-CONTRACT-R002.3 makes for the same three modules. In
+    the ordinary source-checkout suite the modules resolve from the tree by
+    design, so only the package-surface half of the check applies there."""
+    for name in _CLIENT_SURFACE_MODULES:
+        module = importlib.import_module(name)
+        source = module.__file__
+        if source is None:
+            raise AssertionError(f"{name} has no source file (namespace package?)")
+        origin = Path(source).resolve()
+        assert origin.parent.name == "medulla", (
+            f"{name} resolved to {origin}, not a module of the installed "
+            "medulla package"
+        )
+        if os.environ.get("MEDULLA_INSTALLED_WHEEL_GATE") == "1":
+            assert not origin.is_relative_to(_REPO_ROOT), (
+                f"{name} resolved to {origin}, inside this checkout "
+                f"{_REPO_ROOT} -- the client was imported from the source "
+                "tree, not the installed wheel"
+            )
+
+
+# spec: MEDULLA-CONTRACT-R002
+@pytest.mark.spec("MEDULLA-CONTRACT-R002")
+def test_served_agent_library_journey_publishes_reads_imports_and_decides() -> None:
+    """The full served Agent Library journey MEDULLA-CONTRACT-R002 names, in
+    one hosted test against the disposable engine the suite's session
+    fixture starts, through the installed client package only (no
+    in-process check): the journey publishes a pack through the Blob CAS,
+    imports it, reads its status back, and then issues Decide on both sides
+    of the tenant auth boundary -- the mismatched-tenant request the engine
+    refuses with ACCESS_DENIED, and the matching-tenant request that passes
+    the tenant check and fails only later, on the unpublished
+    feature-schema pin -- after which the client surface the journey used is
+    confirmed to be the installed distribution's own modules, not this
+    checkout."""
+    journey = asyncio.run(_pack_journey("agent-library-journey"))
+
+    imported = journey["imported"]
+    assert imported["receipt"]["binding_revision"] >= 1, imported
+
+    status = journey["status"]
+    assert status["connector"] == "agent-library-journey", status
+    assert status["head"]["pack_digest"] == imported["receipt"]["pack_digest"], (
+        status,
+        imported,
+    )
+
+    denied = asyncio.run(_decide_message(f"not-{TEST_TENANT}"))
+    assert "ACCESS_DENIED" in denied, denied
+    assert "tenant" in denied.lower(), denied
+
+    matched = asyncio.run(_decide_message(TEST_TENANT))
+    assert "ACCESS_DENIED" not in matched, matched
+    assert "Decide tenant must match" not in matched, matched
+
+    _confirm_no_client_imports_from_the_source_tree()

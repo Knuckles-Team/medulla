@@ -19,6 +19,7 @@ def _cargo() -> dict:
     return tomllib.loads((REPO / "Cargo.toml").read_text())
 
 
+# spec: MEDULLA-CONTRACT-R053.1
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.1")
 def test_only_server_and_nemesis_binaries_remain_and_tools_are_dispatched() -> None:
     assert {b["name"] for b in _cargo()["bin"]} == {"medulla-server", "nemesis"}

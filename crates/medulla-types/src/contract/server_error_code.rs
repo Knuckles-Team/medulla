@@ -134,6 +134,8 @@ closed_error_codes! {
         DebateRoundOutOfOrder => "DEBATE_ROUND_OUT_OF_ORDER",
         Decisions => "DECISIONS",
         DecisionLogTooLarge => "DECISION_LOG_TOO_LARGE",
+        DescribeCursorInvalid => "DESCRIBE_CURSOR_INVALID",
+        DescribeLimitInvalid => "DESCRIBE_LIMIT_INVALID",
         DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
         DerivedBoundMalformed => "DERIVED_BOUND_MALFORMED",
         DerivedOriginMissing => "DERIVED_ORIGIN_MISSING",

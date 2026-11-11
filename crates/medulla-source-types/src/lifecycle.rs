@@ -327,6 +327,38 @@ pub struct SpecStatusAnswer {
     pub rows: Vec<SpecRowState>,
 }
 
+/// The derived state of one task line.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TaskState {
+    Open,
+    Blocked,
+    Done,
+}
+
+/// One task with the evidence behind its state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TaskRowState {
+    pub id: String,
+    pub state: TaskState,
+    /// The requirement row the task refers to, when it has one.
+    pub row: Option<String>,
+    /// The unresolved targets that block the task, sorted: a `dependsOn`
+    /// row id absent from the tree, and the task's row when an
+    /// unresolved contract (R014.4) touches it.
+    pub blocked_by: Vec<String>,
+}
+
+/// The served answer of the task states: every task of one repository at one revision.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TaskStatusAnswer {
+    pub repo: String,
+    pub rev: String,
+    pub tasks: Vec<TaskRowState>,
+}
+
 /// Deepest walk a lifecycle trace accepts.
 pub const TRACE_MAX_DEPTH: u8 = 8;
 /// Records one trace may visit before it reports `truncated`.

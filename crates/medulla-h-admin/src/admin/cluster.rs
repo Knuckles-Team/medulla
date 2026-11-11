@@ -41,6 +41,11 @@ pub async fn try_handle(
     attempt_nonce: Option<Nonce>,
     method: Method,
 ) -> Result<Response, Method> {
+    // The served contract read needs no durable substrates (MEDULLA-CONTRACT-R054):
+    // serve it before the backend gate.
+    if let Method::DescribeContract { .. } = method {
+        return Ok(super::describe_contract::handle(req_id, method));
+    }
     // Keep the backend owner alive across every async helper call.
     let backend_arc = { state.read().await.persistence.clone() };
     let Some(backend) = backend_arc.as_ref().and_then(|p| p.as_redb()) else {
