@@ -123,7 +123,7 @@ repos:
     # `--with repository-manager` can never satisfy the import and the gate
     # fails everywhere it is declared. --no-project keeps the tool out of this
     # repo's own env (eg is Python 3.11; the tool needs >=3.12) and
-    # --prerelease=allow is required because agent-utilities depends on
+    # --prerelease=allow is required because meristem depends on
     # fastmcp>=4.0.0b1.
     entry: bash -c 'CANON_ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"; P=""; d="$CANON_ROOT"; while [ "$d" != "/" ]; do [ -d "$d/agent-packages/agents/repository-manager" ] && { P="$d/agent-packages/agents/repository-manager"; break; }; d=$(dirname "$d"); done; [ -n "$P" ] || P=repository-manager; uv run --no-project --python 3.14 --prerelease=allow --with "$P" python -m repository_manager.dependency_readiness .'
     language: system
@@ -137,20 +137,15 @@ repos:
     files: ^(uv\.lock|pyproject\.toml|uv\.toml)$
     pass_filenames: false
     stages: [pre-push, manual]
+- repo: https://github.com/Knuckles-Team/repository-manager
+  rev: 8b8cda37e0189c689b10d8f6012862a00f4d12af
+  hooks:
+  # Lane guard (canonical checkout read-only, generated ledger, stray
+  # CARGO_TARGET_DIR) is owned by repository-manager and resolves its target
+  # repository from the cwd, which pre-commit sets to THIS repo's root.
+  - id: lane-guard
 - repo: local
   hooks:
-  - id: lane-guard
-    name: Lane guard — canonical checkout read-only + stray CARGO_TARGET_DIR (D-CP-3/D-CP-4 reach)
-    # Reuses agent-utilities' OWN check_lane_guard.py unmodified from the sibling
-    # checkout --
-    # the script resolves its target repo from cwd, which pre-commit always
-    # sets to THIS repo's root, so it guards medulla, not agent-utilities.
-    # See docs/architecture/lane-concurrency.md (agent-utilities) and
-    # reports/deferred/lane-concurrency-protocol.md (D-CP-3, D-CP-4).
-    entry: python3 scripts/sibling_gate.py check_lane_guard.py
-    language: system
-    pass_filenames: false
-    always_run: true
   - id: check-bumpversion
     name: validate bumpversion config
     entry: |-
@@ -782,11 +777,11 @@ repos:
     # path, identity) can land in ANY tracked file type (docs, config,
     # fixtures, Rust source), not just one directory, so no `files:` regex
     # narrower than "everything tracked" can be proven not to miss one.
-    # Ported from agent-utilities' identically-named/identically-behaved
+    # Ported from meristem's identically-named/identically-behaved
     # gate (`scripts/check_tracked_privacy.py`'s own module docstring notes
     # the one intentional adaptation: this repo's own top-level source
-    # trees, not agent-utilities'). This repo publishes to a public GitHub
-    # org, same as agent-utilities.
+    # trees, not meristem's). This repo publishes to a public GitHub
+    # org, same as meristem.
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)

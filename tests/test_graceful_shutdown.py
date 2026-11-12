@@ -12,7 +12,7 @@ Two contracts, both proven against the actual compiled binary on a private socke
    immediately after a disconnect (the timer has not elapsed yet).
 
 2. **SIGTERM is graceful**: a long-living (no idle flag) server is sent SIGTERM
-   (what a supervisor / ``kill`` / agent-utilities stop uses) and must exit cleanly
+   (what a supervisor / ``kill`` / meristem stop uses) and must exit cleanly
    (code 0) without dropping the already committed write, proving the accept loop
    breaks on the signal and the process exits cleanly.
 

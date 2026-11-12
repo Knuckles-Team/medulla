@@ -1,6 +1,6 @@
 # Native Visualization (D-VZ-1)
 
-Neither `agent-utilities` nor Medulla ships a visualization library. `matplotlib` does not
+Neither `meristem` nor Medulla ships a visualization library. `matplotlib` does not
 scale here: it draws every point, whatever the pixel count. This engine ships its own
 **LOD-native** visualization stack instead. The stack has a declarative chart IR and a
 columnar store. It has decimation and density kernels, plus a static export backend. An

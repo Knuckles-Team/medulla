@@ -1,7 +1,7 @@
 # Epistemic Operations Protocol
 
 The Epistemic Operations Protocol is the current, language-neutral contract
-between agent-utilities and Medulla. It replaces parallel ad hoc
+between meristem and Medulla. It replaces parallel ad hoc
 envelopes with twelve strict JSON Schemas and generated Python/Rust projections.
 
 The authoritative catalog ships inside `agent_utilities.protocols.epistemic_operations`.
@@ -53,21 +53,21 @@ object, and compares ordered fields against both implementations. It also
 rejects duplicate JSON keys, references outside the catalog, unmarked dynamic
 maps, forbidden environment/credential/personal fields, and local-path
 markers. The engine keeps a generated manifest so its own source-only CI can
-detect serde drift without importing agent-utilities or compiling a binary.
+detect serde drift without importing meristem or compiling a binary.
 
 The generator writes the importable Pydantic DTOs and the serde enums/structs;
 the checked-in language projections are outputs, not parallel handwritten
 authorities. Placement, WorkItem claiming, provenance evidence, and structured
 redirect/error paths consume these projections directly.
 
-Run the full workspace proof from agent-utilities:
+Run the full workspace proof from meristem:
 
 ```bash
 python3 scripts/check_epistemic_operations_protocol.py \
   --medulla-root ../medulla
 ```
 
-An isolated agent-utilities CI checkout uses `--self-only`. After an intentional
+An isolated meristem CI checkout uses `--self-only`. After an intentional
 schema change, regenerate projections with `--write`, review both repository
 diffs, and run the full cross-repository check before merging.
 

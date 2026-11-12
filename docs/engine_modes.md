@@ -1,7 +1,7 @@
 # Engine modes & the auto-bundle
 
 Medulla is reachable three ways, resolved by **one** precedence so every entrypoint provisions
-an engine identically with no per-entrypoint code. In `agent-utilities` this is the `EngineResolver`
+an engine identically with no per-entrypoint code. In `meristem` this is the `EngineResolver`
 (CONCEPT:AU-OS.deployment.engine-resolver-auto-provision); every entrypoint — the arbora MCP server, the gateway/host daemon, the facade, the
 tenant engine pool, messaging, agent/serving — funnels through it.
 
@@ -19,7 +19,7 @@ service protocol see [Service Mode](service_mode.md).
 ```mermaid
 flowchart TB
     START["Process needs an engine"]
-    REMOTE{"Agent Utilities GRAPH_SERVICE_ENDPOINTS<br/>contains a configured endpoint?"}
+    REMOTE{"Meristem GRAPH_SERVICE_ENDPOINTS<br/>contains a configured endpoint?"}
     USEREMOTE["mode = remote: connect to the configured endpoint, never autostart"]
     PROBE{"local endpoint already serving?<br/>(cheap connect probe, or verified spawn-lock holder)"}
     SHARE["mode = shared: reuse the running engine, spawn nothing"]
@@ -120,14 +120,14 @@ configuration.
 
 | Symptom | Mode |
 |---------|------|
-| Agent Utilities `GRAPH_SERVICE_ENDPOINTS` contains a reachable endpoint | **remote** (or shared, if local) |
+| Meristem `GRAPH_SERVICE_ENDPOINTS` contains a reachable endpoint | **remote** (or shared, if local) |
 | Multiple processes on one host, one `medulla-server` PID | **shared-local** |
 | First process on a host, an engine appears under the socket | **autostart** (detached, supervised) |
 | No socket, calls go straight to the library | **embedded** |
 
-`GRAPH_SERVICE_ENDPOINTS` is the sole Agent Utilities client-topology selector.
+`GRAPH_SERVICE_ENDPOINTS` is the sole Meristem client-topology selector.
 `GRAPH_SERVICE_TCP_ADDR` and `GRAPH_SERVICE_SOCKET` configure Medulla
 server listeners, and a caller may also pass them explicitly to the native client.
-Neither selects an Agent Utilities resolver mode. See [Service Mode](service_mode.md)
+Neither selects an Meristem resolver mode. See [Service Mode](service_mode.md)
 for server variables and [Deployment](deployment.md) for the standalone-container
 path the `remote` mode connects to.

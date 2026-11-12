@@ -244,7 +244,7 @@ the tenant, has an expiry and can be revoked.
 ## Signal models (EH-423)
 
 `FinanceSignalModels` is a separate method that holds two closed-form models.
-They moved here from agent-utilities so that each model has one owner. Both are
+They moved here from meristem so that each model has one owner. Both are
 pure compute and informational only.
 
 `bayes_fuse` fuses directional calls (`1` up, `-1` down, `0` no call) into

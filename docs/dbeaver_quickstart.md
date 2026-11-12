@@ -4,7 +4,7 @@ Medulla speaks the **Postgres wire protocol** (`pgwire`, in the `node` and
 `full` tiers). Any Postgres client — **DBeaver**, `psql`, DataGrip, a BI tool, or an
 ORM driver — connects to it **unmodified** and runs real SQL: `CREATE TABLE`,
 `INSERT`, `SELECT`, joins to the graph `nodes`/`edges`, the works. No
-`agent-utilities`, no extra service — just the standalone engine (see
+`meristem`, no extra service — just the standalone engine (see
 [standalone deployment](standalone_deployment.md)).
 
 ---

@@ -16,7 +16,7 @@ For the entry-level map see [the overview](../overview.md); for build compositio
 
 ```mermaid
 flowchart TB
-    AGENT["SI agent fleet (agent-utilities, arbora, MCP)"]
+    AGENT["SI agent fleet (meristem, arbora, MCP)"]
     PSQL["psql / BI tools / ORMs"]
     DBCLI["Neo4j / Redis / MySQL / MSSQL / SQLite drivers"]
     MSG["AMQP / MQTT / STOMP pub-sub clients"]

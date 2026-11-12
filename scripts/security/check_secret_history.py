@@ -100,7 +100,7 @@ result over an old range is not evidence about a new one) via::
 
 ``--repository-root`` (GOC-59-W08/B7 — same declared flag every other
 ``scripts/security/check_*.py`` contract check carries, for parity with the
-convention agent-utilities' sibling scanner uses). This repo wires the gate
+convention meristem's sibling scanner uses). This repo wires the gate
 into ``.github/workflows/release.yml`` (``python3 scripts/security/
 check_secret_history.py --base "$BASE"``), not pre-commit or the merge
 queue — the repo root defaults to the current directory, which is correct

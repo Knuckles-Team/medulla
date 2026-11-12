@@ -742,7 +742,7 @@ cold-tier-s3 = ["medulla-persistence/cold-tier-s3", "medulla-persistence-ops/col
 # (durability-gated LRU, reusing the KG-2.191 path) and hibernated (KG-2.224) until it
 # is back under cap, with a global memory ceiling + fair per-tenant caps so one hot
 # tenant cannot starve others. Surfaces the autoscaler-facing signals an external
-# autoscaler (agent-utilities OS-5.27) consumes via `ResourceStatsPage` + the
+# autoscaler (meristem OS-5.27) consumes via `ResourceStatsPage` + the
 # Prometheus metrics endpoint. PURE-RUST (no DataFusion/openraft/object_store — the
 # enforcer is a periodic sweep over the registry + the existing evict/hibernate ops),
 # included in the one main build. Needs `server` (the
@@ -1423,14 +1423,14 @@ quantum-jobs-federation = ["quantum-jobs", "federation", "medulla-quantum-jobs/f
 # `Method::Quantum { op }` (`quantum_rank`/`optimize_with_qaoa`/`quantum_expectation`)
 # + `src/server/handlers/quantum.rs`'s dispatch, wired into `medulla-capabilities`'
 # machine-checked policy ledger (R5 override audit, Q9) + the `:ToolCall`/`RunTrace`
-# provenance model on the agent-utilities side. Pulls `quantum-sim` (a REAL backend
+# provenance model on the meristem side. Pulls `quantum-sim` (a REAL backend
 # to route to -- an agent op with no executable backend is still just contracts, not
 # "reachable") + `server` (Tokio dispatch + ServerState; `medulla-capabilities` itself is
 # folded into `server`) + the matching `medulla-types/quantum` and `medulla-capabilities/quantum`
 # wire/policy features (kept in LOCKSTEP -- see both crates' own docs on why
 # `medulla-types/quantum` can never be forced on unconditionally by `medulla-capabilities`,
 # exactly like `jobs`/`statechart`). This is the ONE feature that makes the quantum
-# surface reachable from graph-os/agent-utilities at all -- `quantum`/`quantum-sim`
+# surface reachable from arbora/meristem at all -- `quantum`/`quantum-sim`
 # alone remain Rust-internal, no wire protocol Method, no KG concept mapping.
 quantum-agent-api = ["medulla-server/quantum-agent-api", "medulla-server-router/quantum-agent-api", "medulla-wire/quantum-agent-api", "medulla-h-query/quantum-agent-api", "medulla-h-jobs/quantum-agent-api", "medulla-h-compute/quantum-agent-api",
     "medulla-raft/quantum-agent-api", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "quantum-sim", "server", "medulla-query-types/quantum", "medulla-capabilities/quantum", "medulla-protocol-types/quantum"]

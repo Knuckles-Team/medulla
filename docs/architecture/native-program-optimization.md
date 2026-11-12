@@ -147,8 +147,8 @@ promotion occurs only when aggregate improvement, per-modality non-regression,
 coverage, and minimum-evidence requirements all pass. Promotion still commits
 through `ChangeEnvelope` and `MutationBatch`.
 
-For an Agent Utilities or Arbora deployment, run the
-[live deployment doctor](https://github.com/Knuckles-Team/agent-utilities/blob/main/docs/guides/self-setup.md#8-check)
+For an Meristem or Arbora deployment, run the
+[live deployment doctor](https://github.com/Knuckles-Team/meristem/blob/main/docs/guides/self-setup.md#8-check)
 with `agent-utilities-doctor --live`; it checks that the connected engine
 advertises and runs the native optimization capability.
 

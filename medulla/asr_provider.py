@@ -1,7 +1,7 @@
 """GOC-33 (`OWNER-VOICE-ASR`): a thin `audio_transcriber.asr_providers`
 `TranscriptionProvider` factory backed by this package's own out-of-process
 `medulla.client` (MessagePack/UDS) — the SAME transport
-`agent-utilities` already uses, per the sibling lane's coordination note. No
+`meristem` already uses, per the sibling lane's coordination note. No
 second transport is introduced here.
 
 This module lives in `medulla`'s own Python surface (not in

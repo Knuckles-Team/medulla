@@ -1,14 +1,14 @@
 # Deploying Medulla as a database
 
 Medulla is a **durable, Rust-native graph database engine**. It is a hard base
-dependency of `agent-utilities`, so every Agent Utilities install carries the one supported
+dependency of `meristem`, so every Meristem install carries the one supported
 `medulla[full]` artifact. A local Arbora process can autostart and supervise that
 artifact over a private UDS socket, or it can connect to a **standalone, centralized database
 container** shared across multiple agents. This guide covers the standalone deployment: container
 recipes, connection configuration, the configuration surface, and the database architecture.
 
-> **Managed local process vs centralized service.** The `agent-utilities[mcp]` extra adds the
-> MCP serving surface on top of the same mandatory full engine; `agent-utilities[agent-runtime]`
+> **Managed local process vs centralized service.** The `meristem[mcp]` extra adds the
+> MCP serving surface on top of the same mandatory full engine; `meristem[agent-runtime]`
 > also adds model orchestration. Neither extra selects or owns a different engine
 > build. Run the standalone server (below) when the operator wants **one knowledge graph shared by
 > multiple agents**, durable separately from any agent process, or replicated for high
@@ -192,15 +192,15 @@ process-environment inspection and is not recommended.
 ## Connecting an agent
 
 Local native clients use the per-platform **UDS**; remote native clients use
-verified **TLS** (`9100`). Agent Utilities and Arbora select topology only from
+verified **TLS** (`9100`). Meristem and Arbora select topology only from
 `GRAPH_SERVICE_ENDPOINTS` and resolve authentication and trust through named
 AgentConfig references. The native Medulla client instead receives
 `socket_path` or `tcp_addr` explicitly; the listener variables in the
-configuration table below are server settings, not Agent Utilities topology
+configuration table below are server settings, not Meristem topology
 selectors.
 
 ```bash
-# Arbora / Agent Utilities topology (remote or local URI list)
+# Arbora / Meristem topology (remote or local URI list)
 : "${GRAPH_SERVICE_ENDPOINTS:?set canonical service endpoints}"
 # Select named authentication and TLS profiles in AgentConfig. Secrets and
 # certificate paths are resolved from references at runtime, not embedded here.
@@ -338,7 +338,7 @@ boot failure, not a degraded or partially-open service.
   `none`/HMAC-signed tokens to prevent an algorithm-downgrade attack.
 
 Nothing about this changes how Keycloak SSO works for humans; it only requires that the
-`medulla` server itself, and every direct `eg2.`-protocol caller (agent-utilities'
+`medulla` server itself, and every direct `eg2.`-protocol caller (meristem's
 `GraphSession`, service accounts, CLI tooling), present a Keycloak-issued token instead of
 relying on the shared HMAC secret alone.
 
@@ -353,7 +353,7 @@ RPC transports and owns the durable store.
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client (any agent / agent-utilities)"]
+    subgraph Client["Client (any agent / meristem)"]
         PY[medulla.MedullaClient]
     end
 

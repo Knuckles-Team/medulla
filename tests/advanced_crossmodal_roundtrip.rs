@@ -33,7 +33,7 @@
 //!
 //! Tracked-but-`#[ignore]`d (a north_star.md open row with its refined precise gap):
 //!  * MEDULLA-397 (test 11, CONCEPT:MEDULLA-KG.query.warmfork-fanout-open-reason) — KV-cache warm-fork fan-out. CROSS-REPO gap (the
-//!    warm-fork primitive lives in agent-utilities, not this engine).
+//!    warm-fork primitive lives in meristem, not this engine).
 //!
 //! Gated at the module level on `query` + `tsdb` + `owl-plan` (the in-txn cross-modal
 //! executor legs); it compiles + runs under `--features full`.
@@ -2989,14 +2989,14 @@ async fn cross_shard_raft_2pc_single_decision_eg396() {
 /// divergent writes.
 #[tokio::test]
 #[ignore = "CROSS-REPO GAP (CONCEPT:MEDULLA-KG.query.warmfork-fanout-open-reason): the warm-FORK sandbox primitive (ForkableSandbox / \
-            WarmParentRegistry / forkserver, ORCH-1.86..93) lives in agent-utilities, NOT this \
+            WarmParentRegistry / forkserver, ORCH-1.86..93) lives in meristem, NOT this \
             engine. Reachable engine-side seams are the KV page store (medulla-kvcache: dedup/LRU/\
             data-version MEDULLA-364) and the cross-modal read surface this file already proves — but \
             NEITHER is a fork primitive: there is no in-engine `os.fork`/forkserver/CoW child that \
             shares a warm parent's read context while isolating divergent writes. The fan-out test \
-            belongs to the agent-utilities warm-fork surface CONSUMING this engine's cross-modal \
+            belongs to the meristem warm-fork surface CONSUMING this engine's cross-modal \
             context (the child would open its own client/txn against the same engine); it cannot \
             be written green inside medulla. Tracked in docs/north_star.md."]
 async fn kvcache_warm_fork_fanout_eg397() {
-    // Contract asserted above; the warm-fork primitive lives in agent-utilities, not here.
+    // Contract asserted above; the warm-fork primitive lives in meristem, not here.
 }

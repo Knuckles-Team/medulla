@@ -13,7 +13,7 @@ Medulla already does **compute-near-data** for vectors (`semantic_search` and
 proven pattern into **one numeric kernel exposed on two surfaces**:
 
 - **Surface A — in-process Python.** `medulla.numeric` (a pyo3 extension) + the
-  kernel-required agent-utilities `xp` surface (`CONCEPT:AU-KG.compute.surface-analytics-program`). For
+  kernel-required meristem `xp` surface (`CONCEPT:AU-KG.compute.surface-analytics-program`). For
   **transient** data (finance dataframes, ad-hoc KG math) computed in-process.
 - **Surface B — engine operators.** The *same* rlib exposed as DataFusion SQL UDFs/UDAFs +
   graph/vector/timeseries analytics, for **engine-resident** data (embeddings, columnar,
@@ -31,9 +31,9 @@ in Python → Surface A. Never round-trip transient data into the DB just to com
 | SQL analytics | DataFusion `cosine_sim`, `l2_normalize`, `zscore`, `covariance`, `svd`, `pca`, and `kmeans` operators over resident data |
 | Native method | `BatchL2Normalize` through the engine client |
 | Cross-modal analytics | Graph ⋈ vector ⋈ time-series joins followed by PCA, clustering, or covariance in the shared query path (`CONCEPT:MEDULLA-KG.query.medulla-3`) |
-| Agent Utilities dependency | `medulla[full]`; `[full]` is a compatibility alias with no numeric runtime dependency. The `xp` surface is kernel-live over the bounded built-in scalar/sequence contract; unsupported shapes fail explicitly |
+| Meristem dependency | `medulla[full]`; `[full]` is a compatibility alias with no numeric runtime dependency. The `xp` surface is kernel-live over the bounded built-in scalar/sequence contract; unsupported shapes fail explicitly |
 
-> **Release policy.** Agent Utilities installs the approved
+> **Release policy.** Meristem installs the approved
 > `medulla[full]` artifact. Importing its numeric compatibility
 > surface without the compiled kernel fails immediately; there is no package-level
 > fallback or partial engine profile.
@@ -64,8 +64,8 @@ pyo3 sits behind the kernel crate's `python` feature and remains off in the serv
 ## References
 
 - Rust kernel and operation surface: **[numeric-kernel](numeric_kernel.md)** (`CONCEPT:AU-KG.compute.numeric-kernel`).
-- Agent Utilities `xp` surface: `agent_utilities/numeric/` (`CONCEPT:AU-KG.compute.surface-analytics-program`) and the
-  agent-utilities KV-cache-layering / numeric docs.
+- Meristem `xp` surface: `agent_utilities/numeric/` (`CONCEPT:AU-KG.compute.surface-analytics-program`) and the
+  meristem KV-cache-layering / numeric docs.
 - Full end-to-end program tracker: `plans/medulla-analytics_program.md` (workspace).
 
 ---

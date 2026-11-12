@@ -152,7 +152,7 @@ Two complementary layers fuzz the query surface:
 - The framing is length-prefixed (4-byte big-endian `u32` + MessagePack body),
   so binary payloads containing `0x0A` bytes round-trip intact — verified by
   `tests/test_no_pyo3_and_quant.py::test_length_prefixed_framing_is_binary_safe`.
-- The agent-utilities capacity model (`docs/scaling/capacity_model.py`) consumes
+- The meristem capacity model (`docs/scaling/capacity_model.py`) consumes
   these per-shard / per-agent figures for the full resident-population sizing.
 
 ## Phase-2: agent-memory + KV-cache benchmark (measured)

@@ -123,7 +123,7 @@ the change — a long-running process caches the resolution at start.
 ### Editable installs MUST include the compiled numeric kernel (the crash-on-restart trap)
 
 The containers run the **latest source** via `PYTHONPATH=/au:/eg` layered over **old, non-editable**
-pip wheels (`medulla 0.31.0`, `agent-utilities 0.51.0`). `/au` main now hard-requires the
+pip wheels (`medulla 0.31.0`, `meristem 0.51.0`). `/au` main now hard-requires the
 compiled **`medulla-numeric` kernel** (`agent_utilities.numeric`, no numpy fallback), which ships as
 `medulla/numeric.abi3.so` **inside the `medulla[numeric]` wheel** — NOT in the `/eg`
 source tree. Because `/eg` source shadows `medulla.*`, the compiled submodule can never
@@ -195,5 +195,5 @@ docker service update \
 - `scripts/transition_deploy.sh` — the implementation.
 - `scripts/promote_engine.sh` — the older single-node script (kept for the co-located UDS topology).
 - `services/medulla/flavors/split-storage.env` — the live flavor.
-- Engine resolution: agent-utilities `knowledge_graph/core/{shard_topology,engine_resolver}.py`.
+- Engine resolution: meristem `knowledge_graph/core/{shard_topology,engine_resolver}.py`.
 </content>

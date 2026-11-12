@@ -114,11 +114,11 @@ untagged rows are invisible unless policy grants ownership/access or the row is
 explicitly public. There is no runtime switch to make served reads permissive.
 
 The companion Arbora contract is documented as **Graph Authority
-Convergence** in agent-utilities, and the exact claim-key-level contract
+Convergence** in meristem, and the exact claim-key-level contract
 (required/optional field table, per-surface carrier status including this
 file's own `authenticated_iceberg_bearer` tenant-match boundary, and the
 consumer handoff for lanes minting caller identity) is frozen as
-**Checked Identity Carrier Contract (GOC-15)**, also in agent-utilities
+**Checked Identity Carrier Contract (GOC-15)**, also in meristem
 (`docs/architecture/verified-identity-carrier-contract.md`). Both should be
 read before adding a new auxiliary surface's identity binding (SPARQL,
 federation, observability) — the Iceberg-bearer tenant-match pattern above is

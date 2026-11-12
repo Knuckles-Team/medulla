@@ -8,7 +8,7 @@
 This maps the engine's footprint from a single Raspberry Pi 4+ node up to an HA `cluster` onto resource footprints so an
 operator can plan capacity: *given N tenants with an average working set, how much RAM /
 how multiple shards do I need?* It pairs with the runtime **per-tenant memory budget** + the
-**autoscale signals** (`Method::ResourceStatsPage`) that drive the agent-utilities autoscaler
+**autoscale signals** (`Method::ResourceStatsPage`) that drive the meristem autoscaler
 (AU-OS.config.health-gated-deploy-rollback).
 
 ## How the engine spends memory

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify the engine projection of Epistemic Operations Protocol v1.
 
-The manifest is generated from the authoritative agent-utilities JSON Schema
+The manifest is generated from the authoritative meristem JSON Schema
 catalog.  This standalone gate binds its digest and ordered object fields to
 the Rust serde DTOs without compiling the engine.  Workspace release validation
 also runs the canonical cross-repository gate, which byte-checks this manifest.

@@ -3,7 +3,7 @@
 # Copy to the repository root as `.mergequeue.yaml`.
 #
 # This file is the proof that the queue in repository_manager/merge_queue.py is
-# genuinely generic: nothing below is Python, pytest, ruff, or agent-utilities,
+# genuinely generic: nothing below is Python, pytest, ruff, or meristem,
 # and the queue needs no change to run it. Until this existed, medulla
 # had NO merge queue at all -- the engine lane had to hand-apply the discipline
 # from memory (verify the MERGED tree with `cargo check --all-features`,
@@ -51,7 +51,7 @@ gates:
   #
   # `--target-dir target-isolated`: a shared CARGO_TARGET_DIR both SERIALISES and
   # CORRUPTS concurrent worktree builds here (it is a PARTITION-class resource in
-  # agent-utilities' lane_resources.yaml). The gate runs in a throwaway
+  # meristem's lane_resources.yaml). The gate runs in a throwaway
   # materialized worktree, so a relative target dir keeps each gate run's build
   # artifacts entirely its own.
   - name: cargo-check

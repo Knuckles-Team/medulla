@@ -1,7 +1,7 @@
 # Ontology and SHACL authority
 
 Medulla is the sole runtime authority for OWL/RDF ontology composition,
-reasoning, Datalog materialization, and SHACL validation. Agent Utilities is a
+reasoning, Datalog materialization, and SHACL validation. Meristem is a
 control-plane consumer. It does not load a private root ontology, resolve
 `owl:imports`, run a Python reasoner, or validate with a local SHACL engine.
 
@@ -14,7 +14,7 @@ resources and attaches the resulting pack through `GraphSchema.AttachPack`.
 `GraphSchemaList` returns immutable and dynamic source sets plus the catalog and
 composed digests for the requested graph snapshot.
 
-Agent Utilities contributes one pack resource:
+Meristem contributes one pack resource:
 
 - `agent_utilities/ontology/shapes/governance.shapes.ttl`
 

@@ -611,7 +611,7 @@ surface. In priority order:
    guard this explicitly for the embedded case (e.g. two `arbora` processes must never
    both embed against the same directory) before it ships as a supported deployment
    shape.
-9. **`EngineResolver` / genesis wiring** (W-D, W-E). `agent-utilities`' engine resolution
+9. **`EngineResolver` / genesis wiring** (W-D, W-E). `meristem`' engine resolution
    needs a new "embedded" mode alongside its existing socket-autostart behavior
    (`MEDULLA_IDLE_SHUTDOWN_SECS`'s shared-tiny-daemon mode); `agent-os-genesis`
    needs to pick this shape for the self-contained default profile. Both are explicitly

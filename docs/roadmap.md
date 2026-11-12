@@ -13,7 +13,7 @@ route through shared current-only machinery.
 
 ## Current recommendation-program status
 
-The 2026-07-13 Medulla/Agent Utilities recommendation program has no
+The 2026-07-13 Medulla/Meristem recommendation program has no
 source-level items intentionally postponed. Its P0-P3 implementation surfaces,
 architecture gates, deployment manifests, failure harnesses, and certification
 commands are present. The generated capability ledger and the program closure
@@ -32,7 +32,7 @@ native DDS/RTPS legs, the Python LMCache driver, CUDA distance/tensor dispatch a
 device-gated parity tests, Iceberg v2 Avro manifests with column statistics,
 raster tile pyramids, PL/pgSQL bodies, memory-to-weights export, Calvin OLLP and
 deterministic epoch routing, SQLite file import/export, the Rust numeric kernel,
-and its Agent Utilities migration. See the capability matrix and owning deep
+and its Meristem migration. See the capability matrix and owning deep
 dives for exact scope.
 
 ## Product directions outside the current recommendation program

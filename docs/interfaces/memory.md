@@ -3,8 +3,8 @@
 Medulla carries a native **agent-memory** substrate in `medulla-core`: a multi-level summary/abstraction
 ladder, episodic→semantic consolidation, importance decay + reinforcement, hierarchical (LeanRAG-style)
 retrieval, episodic trajectory memory for policy learning, and a scene-graph world model. These are
-**deterministic engine primitives** the agent-utilities memory loop schedules — the *content* work (LLM
-distillation/summarization) stays in agent-utilities; the engine provides the fast, durable, provenance-
+**deterministic engine primitives** the meristem memory loop schedules — the *content* work (LLM
+distillation/summarization) stays in meristem; the engine provides the fast, durable, provenance-
 preserving operations. (Localized maintenance, not global reorganization, per arXiv 2606.24775.)
 
 > Status snapshot: the summary tier (MEDULLA-KG.compute.hierarchical-summary-tier-eg), consolidation (MEDULLA-KG.compute.consolidate-cluster), maintenance decay/reinforcement
@@ -18,7 +18,7 @@ preserving operations. (Localized maintenance, not global reorganization, per ar
 A native multi-level memory abstraction ladder: `:SummaryNode` graph nodes roll up a set of source
 memories with a **level** + provenance links (`SUMMARIZES`/`CONSOLIDATES`) to their children. A
 `summarize`/`rollup` primitive materializes a higher level from a cluster of lower-level memories. The
-engine owns the structure + provenance; the LLM distill content is provided by agent-utilities.
+engine owns the structure + provenance; the LLM distill content is provided by meristem.
 
 ## Episodic → semantic consolidation (MEDULLA-KG.compute.consolidate-cluster)
 
@@ -35,7 +35,7 @@ Each memory node carries **importance** + **access-count** + **last-access**:
 - `decay(now, half_life)` — time-based importance decay;
 - `evict_below(threshold)` / `forget` — prune low-value memories locally.
 
-Deterministic (caller-provided `now`), so it is Raft-safe. This is the substrate the agent-utilities
+Deterministic (caller-provided `now`), so it is Raft-safe. This is the substrate the meristem
 loop schedules (and it composes with the engine's Ebbinghaus fact-decay knobs
 `GRAPH_SERVICE_DECAY_HALF_LIFE`/`…_DECAY_FLOOR`/`…_DECAY_INTERVAL`).
 
@@ -62,10 +62,10 @@ The substrate for policy learning + replay; composes with the scene states (MEDU
 ## Driving it over the wire (MEDULLA-KG.memory.medulla-batch-decay-caller)
 
 The memory / scene / trajectory primitives were originally **in-process** medulla-core library calls. Program B
-adds an additive **wire surface** so agent-utilities / MCP drive them **remotely** over the same
+adds an additive **wire surface** so meristem / MCP drive them **remotely** over the same
 MessagePack transport as any other op: new `Method`s (CreateSummary / Consolidate / Maintain / SceneObject /
 Trajectory operations), their dispatch handlers, and **authoritative redb commits** for mutations (so they are
-durable + replicated + crash-recoverable like every other write). This is what lets the agent-utilities
+durable + replicated + crash-recoverable like every other write). This is what lets the meristem
 memory loop schedule summarize / consolidate / decay, scene-object, and trajectory ops against a **remote**
 engine — no in-process embedding required.
 
@@ -80,7 +80,7 @@ store.
 !!! success "Shipped — memory → weights distillation (CONCEPT:AU-KG.memory.memory-weights-distillation-export)"
     Distilling consolidated agent-memory (MEDULLA-KG.compute.hierarchical-summary-tier-eg/221) into **model weights** (a fine-tune / LoRA
     export), beyond the shipped retrieval-time context assembly (MEDULLA-195), is **shipped** — on the
-    agent-utilities side. `MemoryWeightsDistiller` (`agent_utilities.knowledge_graph.memory.weights_distillation`)
+    meristem side. `MemoryWeightsDistiller` (`agent_utilities.knowledge_graph.memory.weights_distillation`)
     reads the consolidated/procedural memory tiers, renders a training-ready corpus (SFT
     `{prompt, completion}`, DPO `{prompt, chosen, rejected}`, or — for MEDULLA-099 trajectory/reward
     sequences — GRPO `{prompt, samples:[{completion, reward, advantage}]}`), and hands it off via
@@ -89,11 +89,11 @@ store.
     (GPU-gated) and registers the resulting checkpoint back through the model-registry role-bind
     deploy seam — optionally hot-loading it onto a live vLLM/SGLang server (`POST
     /v1/load_lora_adapter`) so it is immediately servable with no manual restart. See
-    `agent-utilities`'s `docs/architecture/` for the AU-side design and the
+    `meristem`'s `docs/architecture/` for the AU-side design and the
     [forward roadmap](../roadmap.md) for what's still open beyond this.
 
 ---
-*These primitives live in `medulla-core` — durable, replicated engine state. The agent-utilities memory loop
+*These primitives live in `medulla-core` — durable, replicated engine state. The meristem memory loop
 drives the *policy* (when to summarize / consolidate / decay); the engine guarantees the *mechanics* are
 fast, deterministic, and provenance-preserving.*
 

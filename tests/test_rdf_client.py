@@ -3,7 +3,7 @@
 EH-377: the SPARQL reads decode through the contract model -- `sparql_result`
 returns the typed `SparqlResult`, and `sparql`, `sparql_explain` and
 `sparql_virtual` shape their rows from it, so a payload the contract does not
-declare raises `ContractViolation` instead of reaching a caller (agent-utilities'
+declare raises `ContractViolation` instead of reaching a caller (meristem's
 `GraphComputeEngine.sparql`) as an untyped dict.
 """
 

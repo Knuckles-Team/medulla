@@ -6,7 +6,7 @@
 
 The Medulla service layer is a long-running Tokio process that holds multiple named graphs in memory and serves requests over Unix Domain Socket (UDS) or TCP. It replaces the previous PyO3 in-process FFI approach as the primary compute backend.
 
-The Python `agent-utilities` API gateway's `GraphComputeEngine` (an async
+The Python `meristem` API gateway's `GraphComputeEngine` (an async
 UDS/TCP client) calls the `medulla-server` (Tokio, long-running),
 which holds the `GraphRegistry` (named graphs), `ChannelManager` (P2P, 1:1,
 many:many, bus), `IsolationLayer` (ACL enforcement), and
@@ -63,7 +63,7 @@ All connections require HMAC-SHA256 authentication:
 
 ## API Gateway Integration
 
-The service lifecycle is tied to the agent-utilities API gateway:
+The service lifecycle is tied to the meristem API gateway:
 - **Startup**: Gateway sends `Reconcile` to push authoritative state from the backend
 - **Shutdown**: Gateway sends `Checkpoint` to persist all graphs
 - The service process is the `medulla-server` Rust daemon (run via

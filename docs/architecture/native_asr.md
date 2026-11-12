@@ -56,7 +56,7 @@ summarizes; that module doc is authoritative.
 flowchart TB
     subgraph py["Python callers"]
         AT["audio-transcriber\nTranscriptionProvider seam\n(medulla/asr_provider.py)"]
-        AU["agent-utilities /\nother medulla.client callers"]
+        AU["meristem /\nother medulla.client callers"]
     end
 
     subgraph wire["medulla.client (MessagePack / UDS — no second transport)"]

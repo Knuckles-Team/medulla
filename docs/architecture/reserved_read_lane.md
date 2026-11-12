@@ -59,7 +59,7 @@ ingestion. The root cause was traced and is **not the engine**:
 - Engine reads already serve from `begin_read()` / in-memory snapshots
   (`CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer`), so they never contend for the write lock.
 - The literal `sqlite3.OperationalError: database is locked` came from the
-  agent-utilities **FanOut outbox** (`KG-2.74`, a sibling SQLite component).
+  meristem **FanOut outbox** (`KG-2.74`, a sibling SQLite component).
 
 The engine's *only* contribution to the unresponsiveness was the global
 `max_in_flight` semaphore shedding reads to `BUSY` under write saturation — which
@@ -211,10 +211,10 @@ asserted without standing up a server.
 ## Operating notes — end-to-end resource priority
 
 MEDULLA-KG.coordination.reserved-read-lane is the **engine half** of an end-to-end "interactive reads outrank
-background ingestion" guarantee. It composes with the agent-utilities
+background ingestion" guarantee. It composes with the meristem
 **resource-priority edict** (AU-ORCH.scheduling.resource-priority-edict/1.99) on the orchestration side:
 
-- **agent-utilities** keeps interactive orchestration from being starved by
+- **meristem** keeps interactive orchestration from being starved by
   background ingestion at the *task scheduling / lane* level (background
   ingestion lanes are capped so they cannot crowd out interactive work).
 - **MEDULLA-KG.coordination.reserved-read-lane** enforces the same priority one layer down, at the *engine

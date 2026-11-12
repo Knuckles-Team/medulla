@@ -140,6 +140,6 @@ def test_group_relative_advantage_grpo_and_dr_grpo():
     assert group_relative_advantage([2.0, 2.0, 2.0]) == [0.0, 0.0, 0.0]
 
 
-# (cross-package parity with agent-utilities' batch_normalized_advantage is asserted
-# from the agent-utilities side — tests/test_training_signals.py — where both packages
-# import cleanly; agent-utilities depends on medulla, not the reverse.)
+# (cross-package parity with meristem's batch_normalized_advantage is asserted
+# from the meristem side — tests/test_training_signals.py — where both packages
+# import cleanly; meristem depends on medulla, not the reverse.)

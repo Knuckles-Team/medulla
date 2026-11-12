@@ -13,7 +13,7 @@ flowchart TD
     end
 
     subgraph Optional["Optional — enhance, never required"]
-        AU["agent-utilities<br/>orchestrator + KG hub (arbora)"]
+        AU["meristem<br/>orchestrator + KG hub (arbora)"]
         WEBUI["overstory<br/>web visualization of the DB"]
         TUI["agent-terminal-ui<br/>terminal client"]
         GBOT["geniusbot<br/>desktop cockpit"]
@@ -34,10 +34,10 @@ flowchart TD
 | Component | Repo | What it is | Needs | Talks to the engine via | Required? |
 |-----------|------|------------|-------|-------------------------|-----------|
 | **Medulla** | `medulla` | The durable multi-modal database engine — the whole product. | nothing | *is* the engine | **Always** |
-| **agent-utilities** | `agent-utilities` | The orchestrator + Knowledge-Graph hub (`arbora`). Uses **every** engine feature — ontology/OWL reasoning, ingestion, agents, the loop engine — and exposes it to the fleet over MCP. | Medulla | MessagePack RPC (`GRAPH_SERVICE_TCP_ADDR`) or UDS + the native `medulla` client | Optional |
-| **overstory** | `overstory` | A web UI to **visualize and explore the database** (graphs, tables, query results). | agent-utilities (and/or direct engine reads) | through agent-utilities; can also read the DB directly | Optional |
-| **agent-terminal-ui** | `agent-terminal-ui` | A terminal client for the fleet. | agent-utilities | through agent-utilities | Optional |
-| **geniusbot** | `geniusbot` | A desktop "cockpit" (PySide6/Qt) — visual command centre over the fleet. | agent-utilities | through agent-utilities | Optional |
+| **meristem** | `meristem` | The orchestrator + Knowledge-Graph hub (`arbora`). Uses **every** engine feature — ontology/OWL reasoning, ingestion, agents, the loop engine — and exposes it to the fleet over MCP. | Medulla | MessagePack RPC (`GRAPH_SERVICE_TCP_ADDR`) or UDS + the native `medulla` client | Optional |
+| **overstory** | `overstory` | A web UI to **visualize and explore the database** (graphs, tables, query results). | meristem (and/or direct engine reads) | through meristem; can also read the DB directly | Optional |
+| **agent-terminal-ui** | `agent-terminal-ui` | A terminal client for the fleet. | meristem | through meristem | Optional |
+| **geniusbot** | `geniusbot` | A desktop "cockpit" (PySide6/Qt) — visual command centre over the fleet. | meristem | through meristem | Optional |
 
 > **The line to hold:** Medulla is a **stand-alone database**. It does not
 > depend on any of the components above and never calls back into them. They are
@@ -58,9 +58,9 @@ A durable database for SQL/graph/vector/etc. clients. No orchestrator, no UI.
 Use when: the operator wants a Postgres-wire-speaking graph+vector+SQL database and will drive
 it with the operator's own clients (psql, DBeaver, a BI tool, an app, an ORM).
 
-### 2. Engine + agent-utilities (the full platform)
+### 2. Engine + meristem (the full platform)
 
-Add the orchestrator/KG hub. The `agent-utilities` base install always carries the
+Add the orchestrator/KG hub. The `meristem` base install always carries the
 mandatory `medulla[full]` artifact. For a local dev box, Arbora autostarts and
 supervises its server binary over a private UDS socket; alternatively it connects to the
 **standalone engine container** the operator deployed in shape (1) for a shared, durable,
@@ -68,25 +68,25 @@ separately-scaled database. It layers on ontology-driven ingestion, an agent fle
 tools, and the loop engine — turning the raw database into a reasoning knowledge-graph
 platform.
 
-The engine is deployed **exactly the same way** whether or not agent-utilities is
-present; agent-utilities simply points its `GRAPH_SERVICE_TCP_ADDR` /
+The engine is deployed **exactly the same way** whether or not meristem is
+present; meristem simply points its `GRAPH_SERVICE_TCP_ADDR` /
 `GRAPH_SERVICE_AUTH_SECRET` at the running engine.
 
-→ agent-utilities deployment docs (see [interlinks](#interlinks-with-agent-utilities)).
+→ meristem deployment docs (see [interlinks](#interlinks-with-meristem)).
 
-### 3. Engine + agent-utilities + UIs
+### 3. Engine + meristem + UIs
 
 Add any of **overstory** (visualize the database in a browser),
 **agent-terminal-ui**, or **geniusbot** (desktop cockpit). These are front-ends over
 the orchestrator; **overstory** is the visualization tool for the database.
 
-→ agent-utilities [ecosystem / frontends docs](#interlinks-with-agent-utilities).
+→ meristem [ecosystem / frontends docs](#interlinks-with-meristem).
 
 ---
 
-## How agent-utilities enhances the engine
+## How meristem enhances the engine
 
-Deploying agent-utilities on top of a standalone engine adds, without changing how the
+Deploying meristem on top of a standalone engine adds, without changing how the
 engine itself is deployed:
 
 - **Ontology-driven modeling & OWL/RDF reasoning** over the graph.
@@ -101,12 +101,12 @@ a reasoning platform.
 
 ---
 
-## Interlinks with agent-utilities
+## Interlinks with meristem
 
-If the operator is deploying the full platform, these agent-utilities docs are the companion
-reading (paths are in the `agent-utilities` repo under `docs/`):
+If the operator is deploying the full platform, these meristem docs are the companion
+reading (paths are in the `meristem` repo under `docs/`):
 
-- **`docs/guides/deployment.md`** — canonical "Deploying agent-utilities" reference;
+- **`docs/guides/deployment.md`** — canonical "Deploying meristem" reference;
   install extras, backend selection, running `arbora` and the multiplexer. It uses
   this engine as the default backend.
 - **`docs/deploy.md`** — the top-level one-link self-deploy entry point (tiny /
@@ -123,7 +123,7 @@ reading (paths are in the `agent-utilities` repo under `docs/`):
 - **`docs/ecosystem.md`** — how overstory / agent-terminal-ui / geniusbot fit as
   peripherals to the platform.
 
-> **Reverse links wanted.** The agent-utilities docs above currently reference the
+> **Reverse links wanted.** The meristem docs above currently reference the
 > engine but do **not** link out to these standalone deploy docs. A docs pass should
 > add reverse-links from those AU pages to
 > [standalone deployment](standalone_deployment.md) and this topology page, so a

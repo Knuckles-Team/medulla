@@ -1,7 +1,7 @@
 # Standalone deployment — just the engine, nothing else
 
 Medulla is a **self-contained durable database**. The operator do **not** need
-`agent-utilities`, a KG hub, or any other service to run it — the shipped
+`meristem`, a KG hub, or any other service to run it — the shipped
 `medulla-server` binary *is* the whole product. This page is the copy-paste
 recipe to stand up a running database two ways:
 
@@ -14,8 +14,8 @@ Once it is up, point **any Postgres client** at the wire port and run
 to the optional orchestrator and UIs, see the
 **[deployment topology](deployment_topology.md)**.
 
-> **Nothing here depends on `agent-utilities`.** The engine is a stand-alone Rust
-> service. `agent-utilities` is an *optional* consumer that enhances it (see the
+> **Nothing here depends on `meristem`.** The engine is a stand-alone Rust
+> service. `meristem` is an *optional* consumer that enhances it (see the
 > [topology doc](deployment_topology.md)); it is never required to run, deploy, or
 > query the database.
 
@@ -219,6 +219,6 @@ docker run -d --name medulla \
 - **[SQL & pgwire](interfaces/sql.md)** — the full SQL surface (DDL, DML, `nodes`/
   `edges`, user tables, functions, vectors).
 - **[Deployment topology](deployment_topology.md)** — run just the engine, or add
-  the optional orchestrator (`agent-utilities`) and UIs.
+  the optional orchestrator (`meristem`) and UIs.
 - **[Operations runbook](operations/runbook.md)** — backups, TLS at the edge,
   metrics, tuning.

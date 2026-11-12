@@ -32,14 +32,14 @@ Never write code for a row that is not SPECIFIED in this repository's `specs/`. 
 
 Medulla is a standalone Rust database and compute engine for connected
 knowledge, evidence, and multimodal data. Applications can use it directly; it
-can also serve as the storage and reasoning engine beneath agent-utilities.
+can also serve as the storage and reasoning engine beneath meristem.
 Agent orchestration, connectors, and governed ingestion belong to that optional
 application layer, not to this database.
 
 ## Boundaries
 
 - **Owns:** facts, records, vocabulary, durable state and storage. It also owns query (UQL and natural language), retrieval, ingest, reasoning, decisions and choices. Code is native Rust, and each spec row sets budgets and names a benchmark.
-- **Never builds:** served operations, admission or auth (route them to arbora). Connector contracts and transports go to agent-connector-sdk. Run mechanics go to agent-utilities.
+- **Never builds:** served operations, admission or auth (route them to arbora). Connector contracts and transports go to scion-sdk. Run mechanics go to meristem.
 - **Allowed dependencies:** Rust crates, and its own Python client and bindings. It imports no other ecosystem package.
 
 Route every feature with the [ecosystem boundaries standard](https://github.com/Knuckles-Team/pipelines/blob/main/reference/ecosystem-boundaries.md) before any code. A part this repository does not own goes to its owner's specs.
@@ -82,7 +82,7 @@ scripts/bootstrap.sh              # pinned Python + test deps, Rust toolchain, g
 scripts/bootstrap.sh --scanners   # also cccc/kiss/dupehound/jscpd/arch-lint/cargo-deny (~15 min cold)
 ```
 
-Hooks that need a missing tool or the sibling `agent-utilities` checkout print
+Hooks that need a missing tool print
 `SKIPPED (<gate>): <reason>` locally and fail closed in CI. On a 4-CPU container
 keep `CARGO_BUILD_JOBS=3` and debuginfo off (the session hook sets both), and
 iterate with `cargo check`/`cargo test -p <crate>` rather than the whole `full`

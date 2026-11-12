@@ -52,7 +52,7 @@ authority, durability, audit, CDC, and transaction properties.
 ## Where this engine fits
 
 <figure class="site-card">
-  <img src="https://raw.githubusercontent.com/Knuckles-Team/medulla/main/docs/assets/runtime-architecture.svg" alt="People use browser, terminal, desktop, or messaging clients. Arbora serves clients. Agent Utilities coordinates agents. Medulla stores knowledge. Connectors synchronize source systems.">
+  <img src="https://raw.githubusercontent.com/Knuckles-Team/medulla/main/docs/assets/runtime-architecture.svg" alt="People use browser, terminal, desktop, or messaging clients. Arbora serves clients. Meristem coordinates agents. Medulla stores knowledge. Connectors synchronize source systems.">
   <figcaption>Medulla is the durable authority at the base of the shared runtime.</figcaption>
 </figure>
 

@@ -50,7 +50,7 @@ enforces the absence of PyO3 in source and built wheels.
 Built with the `redb` feature (in the one main build and the `cluster` layer), the
 persist dir is the **authoritative store**: an acked
 write is fsynced to redb before the Response (commit-before-ack) and survives `kill -9`.
-The optional Postgres/pg-age, neo4j, falkordb, or ladybug backends in `agent-utilities`
+The optional Postgres/pg-age, neo4j, falkordb, or ladybug backends in `meristem`
 are now **mirrors** written-through for interop / BI / DR — not the system of record.
 Served mode has one persistence contract: authoritative redb with
 commit-before-ack and a mandatory durable directory.
@@ -59,7 +59,7 @@ SPARQL is no longer rudimentary: the engine ships a native **SPARQL 1.1 SELECT**
 (spargebra → GraphView scans, CONCEPT:MEDULLA-KG.ontology.concept-11) plus an **OWL 2 EL⁺/RL reasoner**
 (CONCEPT:MEDULLA-KG.ontology.incremental-materialization), both composable into the unified planner. Trust scoring and
 human-in-the-loop gating remain **not** engine features — they live in the
-agent-utilities orchestration layer (request/grant-approval, risk-veto, blast-radius).
+meristem orchestration layer (request/grant-approval, risk-veto, blast-radius).
 See [the master-of-all engine](architecture/engine.md) for the durable + reasoning
 architecture.
 

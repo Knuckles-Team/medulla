@@ -202,7 +202,7 @@ loop is a *scheduled engine op*, not a Python reindex:
 - **LeanRAG hierarchical retrieval** (MEDULLA-195) — vector-retrieve at the summary level then look closer through
   provenance edges, beating flat top-k RAG on redundancy/coverage.
 
-The LLM *content* (distillation/summary text) stays in agent-utilities; the engine owns the deterministic,
+The LLM *content* (distillation/summary text) stays in meristem; the engine owns the deterministic,
 dependency-light graph primitives. Current `Method`s
 (CreateSummary/Consolidate/Maintain/SceneObject/Trajectory operations), dispatch handlers, and redb persistence
 let AU/MCP drive summary/consolidation/decay, scene-object, and trajectory operations remotely

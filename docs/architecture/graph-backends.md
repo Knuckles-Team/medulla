@@ -21,9 +21,9 @@ plus mirrors.
 > **Verified parity (KG-2.7).** Node properties (declared / ad-hoc / nested),
 > edge existence, **edge properties**, and vector search round-trip on **every**
 > backend; the full cross-backend matrix and how to run it live are in
-> [backend-parity-and-profile-testing](https://knuckles-team.github.io/agent-utilities/guides/backend-parity-and-profile-testing/).
+> [backend-parity-and-profile-testing](https://knuckles-team.github.io/meristem/guides/backend-parity-and-profile-testing/).
 > SPARQL is served **locally over any backend** via the OWL/RDF layer (see
-> [owl_rdf_layer](https://knuckles-team.github.io/agent-utilities/architecture/owl_rdf_layer/)).
+> [owl_rdf_layer](https://knuckles-team.github.io/meristem/architecture/owl_rdf_layer/)).
 
 > **PostgreSQL runs Apache AGE (`GRAPH_PG_AGE=1` / `backend_type=age`).** This
 > executes **real openCypher** via AGE's `cypher()` function — `count(r)`,
@@ -89,7 +89,7 @@ set `MEDULLA_PERSIST_BACKEND=snapshot` on the engine; the local `.mp`
 snapshot + WAL then exist only for fast warm restart. (A build without the `redb`
 feature is non-authoritative and boots clean with no warning.) This is an
 **engine-side** setting (`medulla-server` env), independent of the
-agent-utilities-side `GRAPH_MIRROR_TARGETS` mirror selection below.
+meristem-side `GRAPH_MIRROR_TARGETS` mirror selection below.
 
 ## Derived stores route to the engine, NOT a local DB (engine-only, CONCEPT:AU-KG.backend.cache-lives-as–2.248)
 
@@ -237,7 +237,7 @@ requires pgvector; BM25 requires pg_search.
 | `GRAPH_FUSEKI_USER` / `GRAPH_FUSEKI_PASSWORD` | — | Optional Fuseki credentials |
 | `KG_CONNECTIONS` | — | JSON list of named connections for the multi-connection registry (CONCEPT:AU-KG.backend.multi-connection-registry). See below. |
 
-These are the **agent-utilities-side** (mirror-selection) variables. Engine
+These are the **meristem-side** (mirror-selection) variables. Engine
 durability is configured on the **`medulla-server`** process itself
 (CONCEPT:AU-KG.backend.backend-modes) and is independent of `GRAPH_MIRROR_TARGETS`:
 
@@ -508,7 +508,7 @@ fixes a specific one.
 <div class="admonition architecture" markdown>
 <p class="admonition-title">Client/engine backstop boundary</p>
 
-On the client (`agent-utilities`): `iter_nodes_by_types()`/`get_node_data()`
+On the client (`meristem`): `iter_nodes_by_types()`/`get_node_data()`
 (`core/bounded_read.py`) deliberately avoids an unbounded `nodes(data=True)`
 scan (which would produce a 166K × 1024-dim, 1GB frame and a connection
 reset) by doing a per-label fetch — O(#type), not O(graph) — through the
@@ -650,4 +650,4 @@ Trino/Iceberg projection.
 - [KG as Bidirectional ETL Hub](https://knuckles-team.github.io/agent-connector-sdk/architecture/etl-hub/) — how these backends serve as ETL load
   targets (Stardog SPARQL data backend, fan-out mirrors) under the unified `graph_etl`
   interface, plus the one ingestion contract and data lineage.
-- [OWL/RDF Layer](https://knuckles-team.github.io/agent-utilities/architecture/owl_rdf_layer/) — local SPARQL + reasoning over any backend.
+- [OWL/RDF Layer](https://knuckles-team.github.io/meristem/architecture/owl_rdf_layer/) — local SPARQL + reasoning over any backend.

@@ -98,7 +98,7 @@ def group_relative_advantage(
 
     Names the within-group reward normalization (the same math already exposed for
     cross-sectional finance signals as ``cross_sectional_rank`` / ``rolling_zscore``)
-    as the canonical reinforcement-learning reward kernel, so agent-utilities'
+    as the canonical reinforcement-learning reward kernel, so meristem's
     ``graph/training_signals.batch_normalized_advantage`` has a native home to delegate
     the batch math to instead of recomputing it in the Python hot path (GRPO
     arXiv:2402.03300, REINFORCE++ arXiv:2501.03262).
@@ -180,7 +180,7 @@ def ucb1_scores(
     CONCEPT:MEDULLA-AHE.harness.online-exploit-explore-reference — pure-Python reference
     for
     the online exploit/explore
-    bandit mirrored by agent-utilities' ``ExploreExploitRouter`` (DecentMem
+    bandit mirrored by meristem's ``ExploreExploitRouter`` (DecentMem
     online routing, arXiv:2605.22721). Kept here next to the other quant
     primitives so the Python client and a future Rust kernel arm can be held to
     one bit-for-bit contract (the ``group_relative_advantage`` parity pattern).

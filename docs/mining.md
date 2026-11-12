@@ -48,8 +48,8 @@ algorithm", not "add a surface".
 | Protocol | `Method::Mine{Associate,Cluster,Anomaly}` in the `// ── Mining ──` section of `crates/medulla-protocol-types/src/protocol.rs` (feature `mining`) |
 | Handler | `crates/medulla-h-mining/src/mining.rs` — graph-derived rows + write-back over the live `GraphCore` |
 | Client | `client.mining.{associate,cluster,anomaly}(...)` (`medulla/client.py`) |
-| arbora MCP | `graph_mine action="associate\|cluster\|anomaly"` (agent-utilities `engine_surface_tools.py`) — plus the granular `engine_mining` verb |
-| REST twin | `POST /api/mining/{associate,cluster,anomaly}` (agent-utilities `kg_server.py`, same `_execute_tool` core — surface parity is a build gate) |
+| arbora MCP | `graph_mine action="associate\|cluster\|anomaly"` (meristem `engine_surface_tools.py`) — plus the granular `engine_mining` verb |
+| REST twin | `POST /api/mining/{associate,cluster,anomaly}` (meristem `kg_server.py`, same `_execute_tool` core — surface parity is a build gate) |
 
 ## Algorithms
 
@@ -149,7 +149,7 @@ res = c.mining.associate(..., writeback=True)
 rules = c.nodes.list_by_label("AssociationRule", 0)  # queryable typed nodes
 ```
 
-## First consumer — agent-utilities-evolution (concept↔capability rules)
+## First consumer — meristem-evolution (concept↔capability rules)
 
 The headline use case: mine **concept↔capability co-occurrence** to auto-suggest
 implementations. Seed a small graph where each `Paper` TOUCHES some `Concept`s and
@@ -205,7 +205,7 @@ for r in res["rules"]:
 print("wrote back", res["written_back"], ":AssociationRule nodes")
 ```
 
-`graph_loops` + the `agent-utilities-expert` already read typed KG nodes, so the
+`graph_loops` + the `meristem-expert` already read typed KG nodes, so the
 mined `:AssociationRule` nodes feed the evolution queue directly.
 
 ## Fused `retrieve → mine → writeback` (cross-modal plans, Phase 5)

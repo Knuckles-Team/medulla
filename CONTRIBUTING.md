@@ -1,7 +1,7 @@
 # Contributing to Medulla
 
 This is the **Rust compute engine** for the
-[`agent-utilities`](https://github.com/Knuckles-Team/agent-utilities) ecosystem —
+[`meristem`](https://github.com/Knuckles-Team/meristem) ecosystem —
 a long-running Tokio service exposed to Python **out-of-process** over
 length-prefixed MessagePack on UDS/TCP. There is **no PyO3 / in-process FFI**
 (enforced by `scripts/check_no_pyo3.sh`); the shipped wheel is the

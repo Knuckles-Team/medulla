@@ -2,7 +2,7 @@
 """SCALE-P2-1 real-engine soak/chaos runner — RUNS the workload against the actual
 Rust ``medulla-server`` binary (not a mock), then injects LOCAL faults.
 
-This is the honest, single-box companion to agent-utilities'
+This is the honest, single-box companion to meristem's
 ``scripts/scale/loadgen.py`` (the SCALE-P2-1 harness): that harness's ``--engine
 live`` path is CI-marked "not exercised in CI" and its 1,000,000-resident soak is
 documented as ``tests/scale/soak/test_hardware_pending.py`` — real, but never run.
@@ -16,7 +16,7 @@ Scope (read before trusting a number):
 
 * This measures the ENGINE's native write/read/claim primitives (``AddNode``,
   ``GetNodeProperties``, ``ClaimNext``, ``CompareAndSetNodeFields``) over the real
-  wire protocol against a real process. It does NOT invoke agent-utilities'
+  wire protocol against a real process. It does NOT invoke meristem's
   ``WorkItem``/``AgentBus`` Python orchestration layer (a different package/repo) —
   the ``queue_latency_ms``/``end_to_end_latency_ms`` SLO axes are approximated with
   the engine-native ``ClaimNext`` claim-queue primitive, not the full dispatch stack.
@@ -61,7 +61,7 @@ import msgpack
 REPO = Path(__file__).resolve().parents[1]
 
 # --------------------------------------------------------------------------- #
-# Workload contract constants — transcribed from agent-utilities'
+# Workload contract constants — transcribed from meristem's
 # docs/scaling/workload_contract.yml (v1, 2026-07). SLO targets and the skew
 # SHAPE never scale; population/rate axes scale by `residents / REFERENCE_*`.
 # --------------------------------------------------------------------------- #
@@ -267,7 +267,7 @@ async def compare_and_set(
 
 
 # --------------------------------------------------------------------------- #
-# Tenant plan (Zipf + elephant) — mirrors agent-utilities'
+# Tenant plan (Zipf + elephant) — mirrors meristem's
 # docs/scaling/workload_contract.py TenantPlan/ScaledWorkload exactly (same
 # formulas), reimplemented here so this script has no cross-repo dependency.
 # --------------------------------------------------------------------------- #

@@ -1,6 +1,6 @@
 //! HIGH-VALUE USE-CASE SUITE #1 — agent-memory retrieval (CONCEPT:MEDULLA-KG.query.usecase-agent-memory).
 //!
-//! The core use-case for agent-utilities: an agent's episodic memory is ingested as
+//! The core use-case for meristem: an agent's episodic memory is ingested as
 //! graph nodes + vector embeddings + a small OWL ontology, and ONE fused pipeline query
 //! honors EVERY retrieval signal at once — semantic (vector kNN), lexical (BM25 text),
 //! graph expansion (topology proximity / traversal), OWL inference (only real memories),

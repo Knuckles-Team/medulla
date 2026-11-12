@@ -6,7 +6,7 @@
 > of the run are stated plainly in "Scope" and "Execution conditions" — read them before
 > trusting any number.
 
-This page is the engine-scope companion to agent-utilities'
+This page is the engine-scope companion to meristem's
 `docs/scaling/workload_contract.yml` / `scripts/scale/loadgen.py` (the SCALE-P2-1
 soak/chaos harness). That harness's `--engine live` path against a real deployment
 is documented but never run (`tests/scale/soak/test_hardware_pending.py` is real,
@@ -25,7 +25,7 @@ python3 scripts/soak_scale.py --residents 1500 --nodes-per-resident 6 --duration
 
 * Measures the ENGINE's native write/read/claim primitives (`AddNode`,
   `GetNodeProperties`, `ClaimNext`, `CompareAndSetNodeFields`) over the real wire
-  protocol against a real process — NOT agent-utilities' `WorkItem`/`AgentBus`
+  protocol against a real process — NOT meristem's `WorkItem`/`AgentBus`
   Python orchestration (a different package). `queue`/`end_to_end` latency is
   approximated with the engine-native `ClaimNext` claim-queue primitive.
 * **Throughput is driver-paced, not max-load.** `soak_scale.py` drives at the
@@ -189,7 +189,7 @@ as hardware-pending at the orchestration layer:
 | Fault-domain loss under load | independent deployment members and an external fault injector | Run the cluster-endpoint soak harness while the operator removes one member |
 | Distributed rebalance under writes (M3 online resharding) | `reshard`/`rebalance_execute` currently move rows between local shards; distributed movement needs multi-Raft groups. The `PlacementCatalog` online-move surface also requires a wire `Method` | Run `resharding.rebalance_execute` under load against an operator-managed cluster |
 | Rolling upgrade | a supervised deployment that can replace members one at a time | Run the soak harness throughout an operator-managed rolling replacement and assert no lost or duplicate turns |
-| Real Kafka broker rebalance | the engine has no Kafka dep; this is an agent-utilities dispatch-layer scenario | `test_hardware_pending.py::test_broker_rebalance_and_partition_expansion_under_load` |
+| Real Kafka broker rebalance | the engine has no Kafka dep; this is an meristem dispatch-layer scenario | `test_hardware_pending.py::test_broker_rebalance_and_partition_expansion_under_load` |
 | Full cold activation of 1,000,000 synthetic residents | the measured run is N ≪ 1e6; the target population needs a production-scale durable-shard footprint | `soak_scale.py --residents 1000000 --duration-s <hours>` against an operator-managed distributed deployment |
 
 Guardrail this table enforces (matching `agent-utilities/docs/scaling/capacity_model.md`):

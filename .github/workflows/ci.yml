@@ -1716,10 +1716,6 @@ jobs:
           fi
       - name: Install uv, pre-commit and the hooks' one third-party import
         run: uv pip install --python "$(command -v python)" pre-commit==4.6.2 pyyaml==6.0.3
-      - name: Check out meristem gate scripts
-        run: |
-          git clone --depth 1 https://github.com/Knuckles-Team/meristem "$RUNNER_TEMP/meristem"
-          echo "AGENT_UTILITIES_ROOT=$RUNNER_TEMP/meristem" >> "$GITHUB_ENV"
       - name: Resolve the shared hook revision
         id: hook-rev
         run: |

@@ -8,7 +8,7 @@ structured operation results, and native development-lane lease/quota authority.
 
 Rust method and DTO declarations are the authority for request/result shapes.
 The canonical contract generator derives schemas, client models, method-body
-vectors and contract receipts from those declarations. Agent Utilities consumes
+vectors and contract receipts from those declarations. Meristem consumes
 the generated public engine client; its retired schema catalog is not an
 alternate authority or a compatibility contract. This is the current hard
 cutover contract under MEDULLA-C-01 and MEDULLA-C-04.

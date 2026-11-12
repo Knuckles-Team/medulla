@@ -23,7 +23,7 @@
 # that is idiomatic, not a defect to fix. `src/` is the root Rust package
 # (server binary + PyO3 facade, 193 files / ~231k LOC) that maturin builds the
 # wheel from; `crates/` is the 48-member cargo workspace of library crates
-# `src/` composes. Ported from the agent-utilities original of this gate per
+# `src/` composes. Ported from the meristem original of this gate per
 # CX-HYG-01; see that repo's own .config/repo-layout.toml for the shared
 # conventions (scripts/, .github, and .config).
 

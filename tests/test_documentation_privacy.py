@@ -18,7 +18,7 @@ PUBLIC_SURFACES = (
     "AGENTS.md",
     "docs/architecture/cluster_deployment.md",
     "docs/deploy/binary_promotion.md",
-    # Relocated from agent-utilities (RF-ADR-009, EH-366): AU's own
+    # Relocated from meristem (RF-ADR-009, EH-366): AU's own
     # equivalent gate (tests/gates/test_public_example_privacy.py)
     # dropped this file from its PUBLIC_EXAMPLES tuple on the assumption
     # this file already covered it -- it did not, until now.
@@ -33,7 +33,7 @@ MACHINE_HOME = re.compile(
     r"/(?:home|Users)/[^/\s]+|/mnt/[A-Z]/Users/[^/\s]+)"
 )
 ENVIRONMENT_DNS = re.compile(r"(?i)\b(?:[A-Za-z0-9-]+\.)+(?:arpa|local)\b")
-# EH-366: agent-utilities' equivalent regex
+# EH-366: meristem's equivalent regex
 # (ENVIRONMENT_DERIVED_HOST_ALIAS, tests/gates/test_public_example_privacy.py)
 # is `(?:rw?|gr)\d{3,}` -- it catches `gr`-prefixed machine aliases that this
 # pattern's `host` alternative did not. Union both vocabularies rather than
@@ -170,7 +170,7 @@ def test_public_platform_author_does_not_erase_real_identities(
     assert privacy._git_config_identifiers(tmp_path) == set()
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
-    monkeypatch.delenv("AGENT_UTILITIES_PRIVACY_IDENTIFIERS", raising=False)
+    monkeypatch.delenv("MERISTEM_PRIVACY_IDENTIFIERS", raising=False)
     monkeypatch.setattr(privacy, "_os_identifier_candidates", lambda: {"private-host"})
     monkeypatch.setattr(privacy, "_git_common_dir_identifiers", lambda _root: set())
     assert "private-host" in privacy.derive_local_identifiers(tmp_path)

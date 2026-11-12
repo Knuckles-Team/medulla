@@ -183,7 +183,7 @@ Every served build requires `security`. Other ops remain feature-gated on the se
 planner (NL). A build/deploy without one
 returns a clear "not available in this build" / "no planner configured" error — never a
 panic. NL→query also needs a configured `NlPlanner` (an OpenAI-compatible endpoint, e.g.
-agent-utilities' LLM); the client just carries the text.
+meristem's LLM); the client just carries the text.
 
 ## Client → Method → engine
 

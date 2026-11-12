@@ -52,7 +52,7 @@ slot and reuse it only when retrying that slot. Claim, stage, publish and cancel
 responses are idempotent for the same authenticated slot and epoch. Lease
 durations are clamped to 1–300 seconds, and quotas remain server-owned.
 
-The companion `agent-utilities` distribution exposes the standalone entry point
+The companion `meristem` distribution exposes the standalone entry point
 `arbora-analytics-worker`. It requires `GRAPH_SERVICE_ENDPOINTS` (or
 `GRAPH_SERVICE_TCP_ADDR`), `GRAPH_SERVICE_AUTH_SECRET`,
 `GRAPH_OS_ANALYTICS_PRINCIPAL`, `GRAPH_OS_ANALYTICS_TENANT`,
@@ -206,7 +206,7 @@ Program's GOC-11 lane found this document's own subject — the durable
 scope. Recorded here so a future pass does not re-derive it, and does not invent a
 second `AnalyticalJob`/`AnalyticalResult`/`DatasetSnapshot` vocabulary alongside the
 one below (`grep -rn "AnalyticalJob\|AnalyticalResult\|DatasetSnapshot"` across this
-repo and `agent-utilities` is empty — those exact names were never coined here;
+repo and `meristem` is empty — those exact names were never coined here;
 `AnalyticsJob`/`TypedJobResult`/`InputSnapshotHandle` already fill those roles).
 
 **Already durable and tested, matching the lane's invariants 1–4/6 and acceptance

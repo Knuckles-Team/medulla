@@ -55,7 +55,7 @@ Claims can retain their evidence, provenance, confidence, and time of validity,
 so applications can inspect why information is present and how it changes.
 Use Medulla directly through its clients and query interfaces. It also
 serves as the durable knowledge layer beneath [Arbora](https://knuckles-team.github.io/arbora/)
-and [Agent Utilities](https://knuckles-team.github.io/meristem/).
+and [Meristem](https://knuckles-team.github.io/meristem/).
 Medulla is the database. Agent execution and connector runtimes live in
 their respective ecosystem projects.
 
@@ -98,7 +98,7 @@ source distribution builds the extension modules and carries no server.
 
 <p align="center">
   <a href="https://knuckles-team.github.io/.github/architecture/#eg">
-  <img src="https://raw.githubusercontent.com/Knuckles-Team/medulla/main/docs/assets/runtime-architecture.svg" alt="People use browser, terminal, desktop, or messaging clients. Arbora serves clients. Agent Utilities coordinates agents. Medulla stores knowledge. Connectors synchronize source systems." width="960">
+  <img src="https://raw.githubusercontent.com/Knuckles-Team/medulla/main/docs/assets/runtime-architecture.svg" alt="People use browser, terminal, desktop, or messaging clients. Arbora serves clients. Meristem coordinates agents. Medulla stores knowledge. Connectors synchronize source systems." width="960">
   </a>
   <br><a href="https://knuckles-team.github.io/.github/architecture/#eg">Explore the live architecture</a>
 </p>

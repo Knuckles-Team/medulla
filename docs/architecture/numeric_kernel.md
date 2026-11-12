@@ -3,7 +3,7 @@
 > **Kernel foundation of the Analytics Program.** A slim, **BLAS/LAPACK-free**
 > Rust numeric kernel that serves **both** Python-side array math without a Python
 > numeric runtime dependency **and** in-database analytics over engine-resident data. The
-> compiled kernel, Agent Utilities numeric surface, and native engine operators
+> compiled kernel, Meristem numeric surface, and native engine operators
 > described here are the current contract.
 
 ## Thesis
@@ -101,7 +101,7 @@ not a Python array-runtime dependency:
 
 Every op is asserted against an isolated NumPy parity oracle on randomized inputs, with
 mandatory edge cases (nan/inf, singular matrices, empty arrays). The corpus contains
-**847 parity checks with 0 failures**. It lives in agent-utilities
+**847 parity checks with 0 failures**. It lives in meristem
 (`tests/test_numeric_parity.py`, AU-KG.compute.surface-analytics-program) and requires
 the compiled kernel; a missing kernel is an import failure. A **second, engine-side**
 corpus (`crates/medulla-numeric/tests/test_kernel_parity.py`,
@@ -113,7 +113,7 @@ not import or depend on it.
 ## Packaging: one published package — `medulla[full]` (CONCEPT:AU-KG.compute.is-installed-kernel-discovery / AU-KG.compute.shim-goes-kernel-live)
 
 The Surface-A kernel ships as package data folded into the single `medulla`
-wheel. The approved Agent Utilities runtime requires `medulla[full]`, which provides
+wheel. The approved Meristem runtime requires `medulla[full]`, which provides
 the compiled kernel importable as **`medulla.numeric`**.
 `agent_utilities.numeric.xp` is therefore **kernel-LIVE** (`HAVE_KERNEL == True`)
 or fails to import; it has no missing-kernel fallback
@@ -149,7 +149,7 @@ another package:
 
 PEP-660 environments must still carry the real server executable and numeric
 extension; an editable source pointer alone is incomplete. To avoid rebuilding
-those native payloads for every Agent Utilities worktree virtual environment,
+those native payloads for every Meristem worktree virtual environment,
 `build_backend.build_editable` keeps a per-user, content-addressed immutable cache
 under `$XDG_CACHE_HOME/medulla/native-artifacts/v1` (override with
 `MEDULLA_NATIVE_ARTIFACT_CACHE`).
@@ -212,14 +212,14 @@ Python 3.12 for the developer parity environment.
 ## Current surfaces
 
 - **Surface A:** `from agent_utilities.numeric import xp as np` is the supported
-  import across Agent Utilities. A missing compiled kernel raises immediately; the
+  import across Meristem. A missing compiled kernel raises immediately; the
   native boundary accepts bounded Python built-in scalars/rectangular sequences and
   returns Python scalars/nested lists.
 - **Surface B:** the same rlib is exposed as DataFusion UDFs/UDAFs + graph/vector/
   timeseries operators, re-homing KG-resident numerics (spectral_navigator, world_model)
   to compute-near-data; cross-modal joins then PCA/cluster in-engine. See the
   operator inventory below.
-- **Agent Utilities:** contains no direct NumPy/SciPy runtime dependency or
+- **Meristem:** contains no direct NumPy/SciPy runtime dependency or
   import. The approved dependency is `medulla[full]`; its Python `full`
   extra is a no-op compatibility alias. Unsupported shapes fail explicitly at the
   bounded native boundary; NumPy appears only in isolated developer parity tests.

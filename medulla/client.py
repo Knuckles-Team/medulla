@@ -155,12 +155,12 @@ class RequestContextClaims(_RequiredRequestContextClaims, total=False):
     the required base class -- most callers never set it directly.
 
     ``priority`` (W2.4 engine-native QoS lanes) is the advisory admission class
-    this request declares -- one of the agent-utilities ``PriorityClass`` wire
+    this request declares -- one of the meristem ``PriorityClass`` wire
     values ``"interactive"``/``"orchestration"``/``"hydration"``/
     ``"background_ingestion"``. It is MAC-covered exactly like every other claim
     (appended to the canonical envelope bytes as a distinct tag-``2`` trailer),
     so a principal cannot forge a higher class than it signed. Normally the
-    agent-utilities carrier layer sets it from the ambient ``PriorityClass``
+    meristem carrier layer sets it from the ambient ``PriorityClass``
     contextvar; absent, the engine treats the request as the orchestration
     default.
 
@@ -175,7 +175,7 @@ class RequestContextClaims(_RequiredRequestContextClaims, total=False):
     coverage -- a holder of the HMAC secret gains nothing by swapping it, since
     the engine's ``bind_verified_identity`` independently verifies the token
     and rejects any subject/tenant mismatch against ``context``). Normally the
-    agent-utilities delegation layer sets it from the ambient
+    meristem delegation layer sets it from the ambient
     ``SpawnDelegation.oidc_token`` (``GraphSession._apply_spawn_delegation``);
     absent, the envelope is unchanged from before this claim existed.
     """
@@ -3371,7 +3371,7 @@ class QuantumClient:
     epistemic commit path. Because the handler self-routes before
     ``dispatch_graph_op``, results never enter the per-graph tamper-evident audit
     chain; the ``PlannerDecision.audit`` trail returned in every response is the
-    Q9 observability record, which the agent-utilities caller persists into the
+    Q9 observability record, which the meristem caller persists into the
     same ``:ToolCall``/``RunTrace`` provenance model as everything else.
 
     ``backend_id`` is the R5 escape hatch on every op: ``None`` (the default)
@@ -7087,7 +7087,7 @@ class GraphOperationsClient:
         ``kind`` is ``"same_as"`` (mergeable duplicates) or ``"extends"`` (a
         subtype/version link). READ/propose only: nothing is mutated; apply accepted
         proposals via ``batch_update``. This is the escalation tier the
-        agent-utilities dedup ladder routes its residual through instead of an
+        meristem dedup ladder routes its residual through instead of an
         O(N²) client-side embedding pass.
         """
         return (
@@ -12343,7 +12343,7 @@ class QueryClient:
 
         Send free-text ``text`` to the engine's ``Method::NlQuery``: the
         configured/injected
-        ``NlPlanner`` (an OpenAI-compatible endpoint, e.g. agent-utilities' LLM, set via
+        ``NlPlanner`` (an OpenAI-compatible endpoint, e.g. meristem's LLM, set via
         config or ``MEDULLA_NL_ENDPOINT``) turns it into a UQL query STRING
         which then
         rides the IDENTICAL deterministic :meth:`uql` pipeline (no LLM in the engine
@@ -12791,7 +12791,7 @@ class TimeSeriesClient:
 
         ``entity_id`` is the KG node the series describes (e.g. a ``:Instrument`` or
         ``:Memory``); a downstream caller adds the ``:measures`` edge in its ontology
-        layer (agent-utilities owns the OWL mapping)."""
+        layer (meristem owns the OWL mapping)."""
         props: dict[str, Any] = {
             "type": "Series",
             "series_id": series_id,
@@ -13217,7 +13217,7 @@ class RdfClient:
         empty ⇒
         the IDENTITY projection (node-type
         and property keys emitted verbatim, no ``rdf:type`` synthesis), preserving the
-        prior behavior. A caller that passes ``base_iri`` (e.g. agent-utilities'
+        prior behavior. A caller that passes ``base_iri`` (e.g. meristem's
         ``http://agent-utilities.dev/ontology#``) + ``type_convention="camel"`` makes
         the engine project the live property graph into that vocabulary, so a by-class
         query (``?s a au:Agent``) resolves natively — the engine, not rdflib, answers.
@@ -17178,7 +17178,7 @@ class MedullaClient:
         """Return the per-tenant / per-graph resource snapshot
         (CONCEPT:MEDULLA-KG.compute.lane-v).
 
-        The autoscale signals an external autoscaler (agent-utilities OS-5.27)
+        The autoscale signals an external autoscaler (meristem OS-5.27)
         consumes in ONE round-trip: per-graph + per-tenant resident memory, node/edge
         counts, in-flight admission depth, hibernated-vs-resident counts, effective
         cgroup capacity, coalescer queue gauges, and cumulative budget totals, plus a
@@ -17233,7 +17233,7 @@ class MedullaClient:
         ``{graph_name, msgpack: Vec<u8>}`` with ``deny_unknown_fields``, so every call
         this wrapper ever made was rejected by the engine's deserializer. The old
         parameter name and payload were never a working contract; no caller in this
-        repo or in agent-utilities used them.
+        repo or in meristem used them.
         """
         return await _gen.graph.send_reconcile(
             self, {"graph_name": graph_name, "msgpack": msgpack_image}

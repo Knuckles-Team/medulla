@@ -25,7 +25,7 @@ authoritative redb data lives on the deployment-owned durable volume. There is n
 host-path binary hot-swap and no second standalone engine to scale up: an engine change is
 an image change followed by a digest-pinned Kubernetes rollout.
 
-The serving-plane source may be mounted from the canonical `agent-utilities` checkout.
+The serving-plane source may be mounted from the canonical `meristem` checkout.
 That means an AU-only change can ship by restarting the Deployment, but it does not replace
 the engine artifact in the image. Keep the engine image and the mounted AU revision as one
 tested release pair. Full artifact details and rationale: `docs/deploy/binary_promotion.md`.
@@ -85,7 +85,7 @@ image build and the Kubernetes rollout are separate reviewed stages:
    `promote_engine.sh --build` for this wheel.
 
 3. **Build the unified image.** Use the canonical image pipeline with the staged wheel and
-   matching `agent-utilities` source revision. For local or development work, the
+   matching `meristem` source revision. For local or development work, the
    parameterized Kubernetes/Kaniko job is
    `agent-packages/agent-utilities/docker/graphos-unified-kaniko-job.yaml`; for a rollout,
    prefer the internal GitLab `homelab/containers/images/graph-os-unified` pipeline. These
@@ -147,7 +147,7 @@ rollout and managed child are ready.
   `rollback` action. This is the helper's only automatic restoration path.
 - **Consumer or final-verification failure:** the helper exits after the failing action and
   does not restore automatically. The operator must explicitly roll back the Kubernetes
-  delivery: restore the previous image digest **and** matching `agent-utilities` source
+  delivery: restore the previous image digest **and** matching `meristem` source
   revision, review and apply the Deployment, wait for readiness, and reconnect consumers
   only after the managed child is healthy. If an adapter is in use, invoke its `rollback`
   action explicitly; do not assume the helper already did so.

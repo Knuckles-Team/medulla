@@ -2,7 +2,7 @@
 
 Full path: Python client -> UDS -> Rust dispatch -> result, over the
 session-scoped server + ``clean_graph`` sync client from conftest.py. The two
-models moved here from agent-utilities' Python; the reference values are the
+models moved here from meristem's Python; the reference values are the
 Python module's own outputs. Informational only.
 """
 

@@ -32,7 +32,7 @@ setting this same codebase reads -- `GRAPH_SERVICE_SOCKET`, `GRAPH_SERVICE_
 AUTH_SECRET`, `GRAPH_SERVICE_RPC_TIMEOUT`, etc, `medulla/client.py` --
 is read with a bare ``os.environ.get(...)``, and this repo's own Python code
 never imports a ``setting()`` indirection layer). **`GRAPH_SERVICE_PERSIST_DIR`
-is therefore a cross-repo contract name shared verbatim with `agent-utilities`
+is therefore a cross-repo contract name shared verbatim with `meristem`
 -- renaming it on either side without a coordinated migration silently breaks
 the other.**
 

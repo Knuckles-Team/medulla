@@ -4,13 +4,13 @@
 
 ## Overview
 
-`medulla` is a Unix Sockets-based Rust crate that provides the **sole high-performance compute backend** for `agent-utilities`. It replaces all previous graph computation libraries (including `medulla`) with a single, purpose-built engine.
+`medulla` is a Unix Sockets-based Rust crate that provides the **sole high-performance compute backend** for `meristem`. It replaces all previous graph computation libraries (including `medulla`) with a single, purpose-built engine.
 
 ## Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ Python (agent-utilities)                                    │
+│ Python (meristem)                                    │
 │                                                            │
 │  GraphComputeEngine ──────▶ Medulla (Unix Sockets)          │
 │  graph_primitives.py        │                              │
