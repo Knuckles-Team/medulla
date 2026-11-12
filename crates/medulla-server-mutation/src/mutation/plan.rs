@@ -92,6 +92,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reconcile",
     "ApplyMutation",
     "RunDatalogReasoning",
+    // MEDULLA-FEDERATED-QUERY-R700.3: argument map upsert; one atomic batch.
+    "ArgumentMapPut",
     // `IcvConfigure` is UNCONDITIONAL in the `Method` enum but its handler (and
     // hence its gateway arm) is behind `feature = "shacl"` — same shape as
     // `RunDatalogReasoning`/`reasoning` above. Its validated policy is graph
@@ -493,6 +495,7 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
         Method::CypherQuery { .. } => Some("CypherQuery"),
         Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
         Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
+        Method::ArgumentMapPut { .. } => Some("ArgumentMapPut"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),
         _ => None,

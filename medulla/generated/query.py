@@ -1767,6 +1767,16 @@ def __getattr__(name: str) -> Any:
 
 
 # Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_argument_map_evaluate = contract_sender(
+    "ArgumentMapEvaluate", "MethodArgumentMapEvaluateParams"
+)
+decode_argument_map_evaluate = contract_decoder(
+    "ArgumentMapEvaluate", "PreferredExtensions"
+)
+send_argument_map_get = contract_sender("ArgumentMapGet", "MethodArgumentMapGetParams")
+decode_argument_map_get = contract_decoder("ArgumentMapGet", "ArgumentMap")
+send_argument_map_put = contract_sender("ArgumentMapPut", "MethodArgumentMapPutParams")
+decode_argument_map_put = contract_decoder("ArgumentMapPut", "ArgumentMap")
 send_live_artifact_get = contract_sender(
     "LiveArtifactGet", "MethodLiveArtifactGetParams"
 )

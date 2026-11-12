@@ -26,6 +26,7 @@ use medulla_server_mutation::{
 };
 
 mod algorithms;
+mod argument_map;
 // MEDULLA-BRANCH-MERGE-R001 — served branch registry.
 #[cfg(feature = "redb")]
 pub mod branch;

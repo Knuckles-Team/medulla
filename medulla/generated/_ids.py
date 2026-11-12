@@ -5,6 +5,9 @@
 METHOD_IDS = frozenset(
     {
         "MeasureIngestThroughput",
+        "ArgumentMapPut",
+        "ArgumentMapGet",
+        "ArgumentMapEvaluate",
         "CreateGraph",
         "DeleteGraph",
         "ListGraphs",

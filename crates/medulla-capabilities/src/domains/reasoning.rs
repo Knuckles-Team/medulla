@@ -6,6 +6,10 @@ use super::{make_policy, spec, PolicyFlags, PolicyRow, NO_CONSUMER, PYTHON};
 
 pub(crate) const ROWS: &[PolicyRow] = &[
     ("RunDatalogReasoning", spec(make_policy(true, DurabilityDomain::GraphRedb, "reasoning:write", PolicyFlags { idempotent: true, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "state-backed MutationBatch commits inferred facts; operation-identity replay prevents duplicate materialization/audit/CDC"),
+    // MEDULLA-FEDERATED-QUERY-R700.3: argument maps with a Dung projection.
+    ("ArgumentMapPut", spec(make_policy(true, DurabilityDomain::GraphRedb, "reasoning:write", PolicyFlags { idempotent: false, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "creates or replaces a stored argument map; the map must pass ArgumentMap::checked; one atomic batch through the mutation gateway"),
+    ("ArgumentMapGet", spec(make_policy(false, DurabilityDomain::None, "reasoning:run", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), "reads a stored argument map back in interchange spelling"),
+    ("ArgumentMapEvaluate", spec(make_policy(false, DurabilityDomain::None, "reasoning:run", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), "computes the grounded or preferred extension of a stored map's Dung projection; stores nothing"),
     ("GetRdf", spec(make_policy(false, DurabilityDomain::None, "rdf:read", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
     ("Sparql", spec(make_policy(false, DurabilityDomain::None, "sparql:read", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
     ("SparqlVirtual", spec(make_policy(false, DurabilityDomain::None, "sparql:read", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),

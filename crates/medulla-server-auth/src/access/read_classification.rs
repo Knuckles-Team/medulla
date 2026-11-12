@@ -134,6 +134,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ListGraphs",
     // `graph_ops::memory_snapshot::{list, read}` read the projected core of
     // `terminal::try_handle`, like `BusRoster`.
+    "ArgumentMapEvaluate",
+    "ArgumentMapGet",
     "ListMemorySnapshots",
     "ListRegisteredServers",
     "ListTriggers",

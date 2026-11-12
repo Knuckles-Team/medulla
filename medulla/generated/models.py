@@ -1205,6 +1205,22 @@ class AgentTemplateStatusRequest(BaseModel):
     template_id: str
 
 
+class AifEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edgeID: str
+    fromID: str
+    toID: str
+
+
+class AifNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    nodeID: str
+    text: str
+    type: str
+
+
 class AllocationRule(str, Enum):
     PROPORTIONAL = "proportional"
 
@@ -1365,6 +1381,13 @@ class ApprovalKeyRevocation(BaseModel):
     expected_revision: Annotated[int, Field(ge=0)]
     key: ApprovalKeyLookup
     session_token: Secret
+
+
+class ArgumentMap(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges: list[AifEdge]
+    nodes: list[AifNode]
 
 
 class AsrOpTranscribeFile(BaseModel):
@@ -9330,6 +9353,27 @@ class MethodAddNode(BaseModel):
 
     method: Literal["AddNode"]
     params: MethodAddNodeParams
+
+
+class MethodArgumentMapEvaluateParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    map_id: str
+    node_budget: int | None = None
+    semantics: str
+
+
+class MethodArgumentMapGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    map_id: str
+
+
+class MethodArgumentMapPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    map: ArgumentMap
+    map_id: str
 
 
 class MethodCreateNodeIfAbsent(BaseModel):
@@ -19294,6 +19338,15 @@ class PredictedLink(BaseModel):
     src: str
 
 
+class PreferredExtensions(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    complete: bool
+    extensions: list[list[str]]
+    node_budget: Annotated[int, Field(ge=0)]
+    nodes_explored: Annotated[int, Field(ge=0)]
+
+
 class PrincipalResolution(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -28760,6 +28813,8 @@ __all__ = [
     "AgentTemplateRetireRequest",
     "AgentTemplateStatusRequest",
     "AgentUsageLimits",
+    "AifEdge",
+    "AifNode",
     "Algorithm",
     "AllocationRule",
     "AmlAlertResult",
@@ -28781,6 +28836,7 @@ __all__ = [
     "ApprovalKeyRecord",
     "ApprovalKeyRegistration",
     "ApprovalKeyRevocation",
+    "ArgumentMap",
     "ArrayEncoding",
     "ArtifactProvenance",
     "ArtifactSeal",
@@ -30273,6 +30329,9 @@ __all__ = [
     "MethodApplyMultisigMutationParams",
     "MethodApplyMutation",
     "MethodApplyMutationParams",
+    "MethodArgumentMapEvaluateParams",
+    "MethodArgumentMapGetParams",
+    "MethodArgumentMapPutParams",
     "MethodAsr",
     "MethodAsrParams",
     "MethodAuditAppend",
@@ -31663,6 +31722,7 @@ __all__ = [
     "PredSpatialWithin",
     "PredSpatialWithinBody",
     "PredictedLink",
+    "PreferredExtensions",
     "PremiseClass",
     "PremiseProvenance",
     "PremiseProvenanceCapacityCell",

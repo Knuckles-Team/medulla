@@ -221,6 +221,9 @@ pub(super) fn graph_crud_audit_line(method: &Method) -> Option<String> {
         } => Some(format!("REMOVE_EDGE|{source_id}|{target_id}")),
         Method::BatchUpdate { .. } => Some("BATCH_UPDATE".to_string()),
         Method::ClearGraph => Some("CLEAR_GRAPH".to_string()),
+        // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits one
+        // atomic batch of graph nodes.
+        Method::ArgumentMapPut { map_id, .. } => Some(format!("ARGUMENT_MAP_PUT|{map_id}")),
         _ => None,
     }
 }
