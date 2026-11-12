@@ -102,6 +102,7 @@ pub fn snapshot_digest(body: &[u8]) -> String {
 mod tests {
     use super::*;
 
+    // spec: MEDULLA-DURABLE-KERNEL-R043.100.1
     #[test]
     fn types_round_trip_and_cursor_binds_scope() {
         let cursor = GraphChangeCursor {

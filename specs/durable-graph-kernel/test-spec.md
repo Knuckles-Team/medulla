@@ -176,7 +176,7 @@ Read durable state through an independent authorized client after restart.
 
 - `MEDULLA-DURABLE-KERNEL-R085.1`: Planned: tests/memory_sync_contract.rs::bounded_contract_round_trips_and_refuses_invalid_fields.
 - `MEDULLA-DURABLE-KERNEL-R085.2`: Planned: tests/memory_sync_served.rs::authorized_read_list_and_cursor_isolation.
-- `MEDULLA-DURABLE-KERNEL-R085.3`: Planned: tests/memory_sync_served.rs::competing_saves_retain_both_and_resolve_once.
+- `MEDULLA-DURABLE-KERNEL-R085.3`: tests/memory_sync_served.rs::competing_saves_retain_both_and_resolve_once.
 - `MEDULLA-DURABLE-KERNEL-R085.4`: Planned: tests/memory_sync_served.rs::wire_methods_reach_durable_gateway.
 - `MEDULLA-DURABLE-KERNEL-R085.5`: Planned: tests/memory_sync_served.rs::denied_and_malformed_requests_have_no_effects.
 - `MEDULLA-DURABLE-KERNEL-R085.6`: Planned: tests/memory_sync_served.rs::provenance_and_materialization_ack_survive_restart.
@@ -581,7 +581,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R085`: Planned: `tests/memory_sync_served.rs::complete_memory_sync_journey` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.1`: Planned: `tests/memory_sync_contract.rs::bounded_contract_round_trips_and_refuses_invalid_fields` (L1).
 - `MEDULLA-DURABLE-KERNEL-R085.2`: Planned: `tests/memory_sync_served.rs::authorized_read_list_and_cursor_isolation` (L3).
-- `MEDULLA-DURABLE-KERNEL-R085.3`: Planned: `tests/memory_sync_served.rs::competing_saves_retain_both_and_resolve_once` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.3`: `tests/memory_sync_served.rs::competing_saves_retain_both_and_resolve_once` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.4`: Planned: `tests/memory_sync_served.rs::wire_methods_reach_durable_gateway` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.5`: Planned: `tests/memory_sync_served.rs::denied_and_malformed_requests_have_no_effects` (L3).
 - `MEDULLA-DURABLE-KERNEL-R085.6`: Planned: `tests/memory_sync_served.rs::provenance_and_materialization_ack_survive_restart` (L3).
@@ -660,13 +660,13 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::tick_enqueues_leased_jobs` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` |
 | `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R035.7` | `crates/medulla-wire/src/pgwire/replication.rs::serve_walsender` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R865` | `crates/medulla-work-store/src/redb_store/work_item/conversation/tests.rs::child_input_states_replay_and_refusals` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R820.2` | `crates/medulla-work-store/src/redb_store/work_item/effect.rs::started_expiry_keeps_attempt_and_blocks_dead_letter` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.2` | `crates/medulla-work-store/src/redb_store/work_item/effect.rs::started_expiry_keeps_attempt_and_blocks_dead_letter` |
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `crates/medulla-work-store/src/redb_store/work_item/lease/tests.rs::fenced_cas_before_exact_and_after_expiry` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.1` | `crates/medulla-work-types/src/host_start/tests.rs::bounded_references_and_expiry_clamps_validate` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.750` | `crates/medulla-work-types/src/work_item_read/tests.rs::cancel_requested_round_trips` (planned) |
@@ -720,7 +720,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R871` | `tests/test_agent_loop_batch_served.py::test_batch_commits_once_and_refuses_oversize` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R872` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_transition_and_refusal_is_covered` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R872.1` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x01_inspect_begin_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x02_installing_finish_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_illegal_pair_is_refused`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::refusal_carries_machine_from_event`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::no_writer_sets_state_outside_apply` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R872.2` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_matches_edge_table`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_classes_extend_core` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R872.2` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_matches_edge_table`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::semantic_index_upgrade_machine_classes_extend_core` |
 | `MEDULLA-DURABLE-KERNEL-R873` | `crates/medulla-server-served-tests/src/split_tests/observability.rs::frozen_paging_cursor_ends_typed_and_degrades_graph` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R873.1` | `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R873.2` | `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length` (planned) |

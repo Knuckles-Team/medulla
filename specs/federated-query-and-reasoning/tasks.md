@@ -246,11 +246,11 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T235 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.100 Retriever-bound query strategy and transfer revalidation
 - [ ] T236 [US2] MEDULLA-FEDERATED-QUERY-R081.102 Index-time distilled scorer with measured quality and zero query model calls
 - [ ] T237 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.100 Joint sparse nonnegative reconstruction selects a diverse document set
-- [ ] T238 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.1 Model of Native visualization static export
-- [ ] T239 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.2 Behavior of Native visualization static export
+- [x] T238 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.1 Model of Native visualization static export
+- [x] T239 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.2 Behavior of Native visualization static export
 - [ ] T240 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.3 Wiring of Native visualization static export
 - [ ] T241 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.4 Refusal of Native visualization static export
-- [ ] T242 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.6 Hot-path proof of Native visualization static export
+- [x] T242 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.6 Hot-path proof of Native visualization static export
 - [ ] T243 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.1 Model of UQL rows apply visibility before limits and carry a snapshot header
 - [ ] T244 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.2 Behavior of UQL rows apply visibility before limits and carry a snapshot header
 - [ ] T245 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.3 Wiring of UQL rows apply visibility before limits and carry a snapshot header

@@ -279,6 +279,7 @@ async fn synthetic_graph_large_resolves_at_density_tier() {
 }
 
 /// Verifies MEDULLA-FEDERATED-QUERY-R087.1: Model of Native visualization static export
+// spec: MEDULLA-FEDERATED-QUERY-R087.1
 #[tokio::test]
 async fn capability_matrix_is_reachable_over_the_wire() {
     let state = state();
@@ -512,6 +513,7 @@ async fn a_second_request_omitting_dataset_reuses_the_persistently_ingested_data
 }
 
 /// Verifies MEDULLA-FEDERATED-QUERY-R087.2: Behavior of Native visualization static export
+// spec: MEDULLA-FEDERATED-QUERY-R087.2
 #[tokio::test]
 async fn an_identical_repeat_render_request_is_served_from_the_cache() {
     let state = state();
@@ -710,6 +712,7 @@ async fn render_provenance_is_queryable_after_a_render_and_absent_before() {
 /// Verifies MEDULLA-FEDERATED-QUERY-R087.6: Hot-path proof of Native visualization static export.
 /// The served render entry point must expose all
 /// three declared static formats and refuse an unknown dataset reference.
+// spec: MEDULLA-FEDERATED-QUERY-R087.6
 #[tokio::test]
 async fn served_render_supports_png_svg_pdf_and_refuses_unknown_dataset() {
     let state = state();

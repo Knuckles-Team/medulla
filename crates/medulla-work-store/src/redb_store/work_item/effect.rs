@@ -457,6 +457,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R820.2
     #[test]
     fn started_expiry_keeps_attempt_and_blocks_dead_letter() {
         let mut props = claimed();

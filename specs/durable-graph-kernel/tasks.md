@@ -138,7 +138,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T130 MEDULLA-DURABLE-KERNEL-R084.6 Hot-path proof: two writers, one commit
 - [ ] T131 MEDULLA-DURABLE-KERNEL-R085.1 Model: memory snapshot, cursor, sync request and outcome
 - [ ] T132 MEDULLA-DURABLE-KERNEL-R085.2 Behavior: versioned reads and stable listing
-- [ ] T133 MEDULLA-DURABLE-KERNEL-R085.3 Behavior: sync decisions and compare-and-set
+- [x] T133 MEDULLA-DURABLE-KERNEL-R085.3 Behavior: sync decisions and compare-and-set
 - [ ] T134 MEDULLA-DURABLE-KERNEL-R085.4 Wiring: sync methods reach the durable gateway
 - [ ] T135 MEDULLA-DURABLE-KERNEL-R085.5 Refusals: authority before lookup, redaction and no effects
 - [ ] T136 MEDULLA-DURABLE-KERNEL-R085.6 Evidence: provenance and materialization acknowledgment
@@ -192,7 +192,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T184 MEDULLA-DURABLE-KERNEL-R750.752 Refusal
 - [ ] T185 MEDULLA-DURABLE-KERNEL-R750.753 Hot-path proof
 - [ ] T186 MEDULLA-DURABLE-KERNEL-R820.1 Model
-- [ ] T187 MEDULLA-DURABLE-KERNEL-R820.2 Behavior
+- [x] T187 MEDULLA-DURABLE-KERNEL-R820.2 Behavior
 - [ ] T188 MEDULLA-DURABLE-KERNEL-R820.3 Wiring
 - [ ] T189 MEDULLA-DURABLE-KERNEL-R820.4 Refusal
 - [ ] T190 MEDULLA-DURABLE-KERNEL-R820.5 Evidence
@@ -248,7 +248,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
 - [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic
 - [ ] T242 [US6] MEDULLA-DURABLE-KERNEL-R042.100.2 Measurement admission refusals
-- [ ] T243 [US1] MEDULLA-DURABLE-KERNEL-R043.100.1 Feed types and snapshot digest
+- [x] T243 [US1] MEDULLA-DURABLE-KERNEL-R043.100.1 Feed types and snapshot digest
 - [ ] T244 [US1] MEDULLA-DURABLE-KERNEL-R043.100.2 OpenGraphSnapshot returns the exact high-water cursor
 - [ ] T245 [US1] MEDULLA-DURABLE-KERNEL-R043.100.3 ReadGraphChanges pages events and revokes cursors
 - [ ] T246 [US1] MEDULLA-DURABLE-KERNEL-R043.100.4 Python client methods for the feed
@@ -267,7 +267,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T258 MEDULLA-DURABLE-KERNEL-R871 Tight agent loops stay inside a round-trip budget
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
 - [ ] T260 MEDULLA-DURABLE-KERNEL-R872.1 Upgrade phase transition function
-- [ ] T261 MEDULLA-DURABLE-KERNEL-R872.2 Describe the semantic index upgrade machine in the ontology
+- [x] T261 MEDULLA-DURABLE-KERNEL-R872.2 Describe the semantic index upgrade machine in the ontology
 - [ ] T262 MEDULLA-DURABLE-KERNEL-R873 Lazy paging proves forward progress
 - [ ] T263 MEDULLA-DURABLE-KERNEL-R873.1 A progress guard in `page_in_remaining`. Files: `crates/medulla-persistence/src/cold_offload.rs`. Test: `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed`.
 - [ ] T264 MEDULLA-DURABLE-KERNEL-R873.2 Paging resumes by seek, not by skip. Files: `crates/medulla-store-apply/src/redb_store/dump.rs`. Test: `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length`.
