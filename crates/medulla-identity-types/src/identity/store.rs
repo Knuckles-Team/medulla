@@ -214,11 +214,13 @@ impl IdentityStore {
             .map(|record| record.sealed_secret.as_str())
     }
 
-    /// The principal a live session hash belongs to.
+    /// The principal a live session hash belongs to. A session minted under
+    /// an older mode epoch is not live for admission purposes either
+    /// (MEDULLA-IDENTITY-R003.6).
     pub fn session_principal(&self, session_hash: &str, now_ms: u64) -> Option<&str> {
         self.sessions
             .get(session_hash)
-            .filter(|session| session.is_live(now_ms))
+            .filter(|session| self.session_admissible(session, now_ms))
             .map(|session| session.principal_id.as_str())
     }
 

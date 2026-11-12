@@ -83,7 +83,7 @@ impl IdentityStore {
         {
             return Err(IdentityRefusal::NotAuthorized);
         }
-        if !session.is_live(ctx.now_ms)
+        if !self.session_admissible(session, ctx.now_ms)
             || session.mfa_pending
             || !self.is_active(&session.principal_id)
         {
@@ -136,7 +136,7 @@ impl IdentityStore {
         }
         Ok(if session.revoked_at_ms.is_some() {
             SessionLiveness::Revoked
-        } else if session.is_live(now_ms) {
+        } else if self.session_admissible(session, now_ms) {
             SessionLiveness::Live
         } else {
             SessionLiveness::Expired

@@ -325,7 +325,14 @@ impl IdentityStore {
             ..config
         };
         self.config = Some(next.clone());
-        self.audit_event(stamp, now_ms, IdentityEvent::ModeTransition, None);
+        // The audit chain records the transition and the issuer key id it
+        // committed (MEDULLA-IDENTITY-R003.6).
+        self.audit_event(
+            stamp,
+            now_ms,
+            IdentityEvent::ModeTransition,
+            Some(request.issuer_kid.as_str()),
+        );
         Ok(IdentityReply::Config(next))
     }
 

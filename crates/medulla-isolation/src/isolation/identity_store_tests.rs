@@ -425,6 +425,7 @@ fn stale_policy_writer_cannot_restore_a_revoked_session() {
         ip_prefix: None,
         revoked_at_ms: None,
         revoke_reason: None,
+        mode_epoch: 0,
     })
     .unwrap();
     let policy = serde_json::from_value(value).unwrap();

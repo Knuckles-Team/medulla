@@ -648,6 +648,18 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
 // `REASON_NATIVE_DEVELOPMENT_LANE_READ` in `NON_ROW_SCOPED` above), so this list returns to its
 // intended empty end state.
 pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
+    // MEDULLA-REPO-INGEST-R006.1: `MeasureIngestThroughput` is declared in the
+    // policy table (medulla_capabilities::domains::ingestion, `source:ingest`,
+    // mutates false) but its serving handler is not wired yet: the row's
+    // caller chain (router source_ingest.rs -> medulla_h_ingest::
+    // ingest_throughput::measure) has not landed, so today a request reaches
+    // the terminal catch-all in medulla_h_graph::graph_ops::terminal::try_handle
+    // and is refused METHOD_NOT_YET_SERVED -- nothing is read at all yet, which
+    // is why there is no handler to trace either way. When it IS served, the
+    // row's intent is to read :StageReceipt graph rows, so burn this down by
+    // tracing the handler to its project_core/filter_view call site and moving
+    // it to RLS_ROUTED with the citation. Never assert NON_ROW_SCOPED for it.
+    ("MeasureIngestThroughput", "MEDULLA-REPO-INGEST-R006.1: declared in the policy table but not yet served (terminal catch-all refuses METHOD_NOT_YET_SERVED, nothing is read yet); when served it reads :StageReceipt graph rows, so it must move to RLS_ROUTED with a cited project_core/filter_view call site -- never NON_ROW_SCOPED"),
     // VIZ-1 hierarchical clustering (merged in 6fc8c552). These read the
     // non-authoritative `cluster_hierarchy_store`, not graph rows, so they do not
     // construct a GraphView -- which argues for NON_ROW_SCOPED. But cluster

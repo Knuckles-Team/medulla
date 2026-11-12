@@ -28,7 +28,7 @@ use medulla_store::redb_store::DurableCrypto;
 /// Load the bounded tenant/global policy snapshot.  The sorted pressure index
 /// supplies exact maxima for the non-tenant scope families; policy CAS never
 /// scans those families or the hold index.
-#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn policy_scope_rows(
     counters: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
     graph: &str,
@@ -93,7 +93,7 @@ pub fn policy_scope_rows(
     )
 }
 
-#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn policy_counter_snapshot(
     counters: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
     graph: &str,
@@ -176,7 +176,7 @@ pub fn policy_counter_snapshot(
 
 /// Is any field the cleanup-complete request must carry missing, or is its
 /// cleanup WorkItem the same node as the lifecycle one?
-#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn cleanup_request_incomplete(request: &DevelopmentLaneCleanupCompleteRequest) -> bool {
     request.tenant_ref.is_empty()
         || request.work_item_id.is_empty()
@@ -191,7 +191,7 @@ pub fn cleanup_request_incomplete(request: &DevelopmentLaneCleanupCompleteReques
 /// Prove both WorkItem authorities a cleanup needs: the current lifecycle
 /// terminal fence with its typed intent, and the distinct cleanup WorkItem
 /// with its typed correlation.  `Some(decision)` refuses the request.
-#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn cleanup_work_item_decision(
     graph: &str,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -260,7 +260,7 @@ pub fn cleanup_work_item_decision(
 }
 
 /// Does the tombstone already record exactly this cleanup?
-#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn cleanup_replay_matches(
     row: &DurableLaneHold,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -279,6 +279,7 @@ pub fn cleanup_replay_matches(
 /// both WorkItem authorities.  The stored replay tuple is necessary for exact
 /// idempotency, but it is not a substitute for the current lifecycle terminal
 /// fence or the typed cleanup correlation.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn cleanup_tombstone_replay(
     graph: &str,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -306,6 +307,7 @@ pub fn cleanup_tombstone_replay(
 /// retained charge and every exclusivity index, and tombstone the hold as
 /// Cleaned while keeping its tenant keyset row discoverable.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn cleanup_live_hold(
     graph: &str,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -407,6 +409,7 @@ pub fn cleanup_live_hold(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_cleanup(
     graph: &str,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -506,6 +509,7 @@ pub fn apply_cleanup(
 /// The graph-global quota-policy CAS, reached only through the frozen
 /// sentinel tenant.  It is the one route that may enter drain while the
 /// global counter is already over pressure.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_global_quota_update(
     graph: &str,
     request: &DevelopmentLaneQuotaUpdateRequest,
@@ -595,6 +599,7 @@ pub fn apply_global_quota_update(
 /// dimensions but cannot change the shared global controls, and cannot use
 /// its drain flag to undercut a live owner/session/workspace/repository/host
 /// charge.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_tenant_quota_update(
     graph: &str,
     request: &DevelopmentLaneQuotaUpdateRequest,

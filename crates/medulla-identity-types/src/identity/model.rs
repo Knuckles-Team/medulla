@@ -302,6 +302,14 @@ pub struct SessionRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_tenant: Option<String>,
     pub principal_id: String,
+    /// The mode epoch the session was minted under. Admission refuses a
+    /// session fact older than the stored `IdentityConfig.epoch`: the
+    /// transition's commit bumps the epoch in the same apply that revokes
+    /// every session, so nothing minted under an older epoch outlives it
+    /// (MEDULLA-IDENTITY-R003.6). A record written before the field existed
+    /// reads as epoch 0 and is therefore always stale.
+    #[serde(default)]
+    pub mode_epoch: u64,
     pub created_at_ms: u64,
     pub last_seen_at_ms: u64,
     pub idle_expires_at_ms: u64,

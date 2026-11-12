@@ -26,6 +26,7 @@ use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::{redb_store::DurableCrypto, redb_store::NODES};
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_quota_update(
     graph: &str,
     request: &DevelopmentLaneQuotaUpdateRequest,
@@ -52,6 +53,7 @@ pub fn apply_quota_update(
 /// Replay one already-committed invocation, or report an input conflict when
 /// the same idempotency key arrives with different request bytes.  `None` means
 /// the mutation has not been seen and must be applied.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn replay_lane_invocation(
     invocations: &ScopedOwnerTableMut<(&str, &str, &str), &[u8]>,
     graph: &str,
@@ -79,6 +81,7 @@ pub fn replay_lane_invocation(
 /// outcomes: persisting them makes acknowledgement loss deterministic while a
 /// fresh idempotency key can retry after policy/capacity changes -- so a
 /// stored refusal still commits even though nothing else changed.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn record_lane_invocation(
     invocations: &mut ScopedOwnerTableMut<(&str, &str, &str), &[u8]>,
     graph: &str,
@@ -96,6 +99,7 @@ pub fn record_lane_invocation(
 
 /// Apply one lane mutation to this graph's rows inside an already-admitted
 /// group.  Answers the generated result bytes and whether any row changed.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_lane_mutation(
     write: &ShardWrite<'_>,
     graph: &str,
@@ -210,6 +214,7 @@ pub fn apply_lane_mutation(
 /// result bytes.  `authoritative_now_ms` is supplied by the eventual dispatch
 /// seam; the caller's serialized `now_ms` is overwritten before validation,
 /// idempotency hashing, or persistence.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn commit_development_lane(
     shard: &Shard,
     graph: &str,
@@ -257,6 +262,7 @@ pub fn commit_development_lane(
     }
 }
 
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn read_lane_query(
     read: &ScopedRead<'_, GraphShardOwner>,
     graph: &str,
@@ -280,6 +286,7 @@ pub fn read_lane_query(
 /// Exact authenticated lane-hold/tombstone read.  The read is an MVCC snapshot;
 /// clustered ReadIndex/leader routing is intentionally added by the later server
 /// seam, not hidden in this redb-only checkpoint.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn read_development_lane(
     shard: &Shard,
     graph: &str,

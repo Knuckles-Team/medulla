@@ -76,6 +76,21 @@ impl IdentityStore {
         }
     }
 
+    /// The mode epoch of the stored `IdentityConfig`, or 0 for a store that
+    /// has not been initialized yet.
+    pub(crate) fn current_epoch(&self) -> u64 {
+        self.config.as_ref().map_or(0, |config| config.epoch)
+    }
+
+    /// Whether `session` is admissible right now: it must be live, and it
+    /// must not be minted under an older mode epoch. The commit of a mode
+    /// transition bumps the epoch in the same apply that revokes every
+    /// session, so no session outlives the commit and none is invalidated
+    /// before it (MEDULLA-IDENTITY-R003.6).
+    pub(crate) fn session_admissible(&self, session: &SessionRecord, now_ms: u64) -> bool {
+        session.is_live(now_ms) && session.mode_epoch >= self.current_epoch()
+    }
+
     /// The principal a broker op acts for: the owner of the live session
     /// whose hash is the op's FIRST token hash. A person is proven by a
     /// session in this store, never by a claim the broker forwards.
@@ -85,11 +100,16 @@ impl IdentityStore {
         now_ms: u64,
         pending: PendingSession,
     ) -> Result<String, IdentityRefusal> {
-        let session = self
-            .sessions
-            .get(stamp.token_hash(0)?)
-            .filter(|session| session.is_live(now_ms))
-            .ok_or(IdentityRefusal::NotAuthorized)?;
+        let hash = stamp.token_hash(0)?;
+        let Some(session) = self.sessions.get(hash) else {
+            return Err(IdentityRefusal::NotAuthorized);
+        };
+        if !session.is_live(now_ms) {
+            return Err(IdentityRefusal::NotAuthorized);
+        }
+        if session.mode_epoch < self.current_epoch() {
+            return Err(IdentityRefusal::SessionEpochStale);
+        }
         let principal = session.principal_id.clone();
         let pending_ok = match pending {
             PendingSession::Refuse => false,
@@ -125,11 +145,15 @@ impl IdentityStore {
     ) -> Result<IdentityReply, IdentityRefusal> {
         let hash = stamp.token_hash(0)?;
         let now_ms = ctx.now_ms;
-        let session = self
-            .sessions
-            .get(hash)
-            .filter(|session| session.is_live(now_ms))
-            .ok_or(IdentityRefusal::NotFound)?;
+        let Some(session) = self.sessions.get(hash) else {
+            return Err(IdentityRefusal::NotFound);
+        };
+        if !session.is_live(now_ms) {
+            return Err(IdentityRefusal::NotFound);
+        }
+        if session.mode_epoch < self.current_epoch() {
+            return Err(IdentityRefusal::SessionEpochStale);
+        }
         let principal = session.principal_id.clone();
         let pending = session.mfa_pending;
         if !self.is_active(&principal) {
@@ -233,6 +257,7 @@ impl IdentityStore {
                 session_ref: open.session_ref.map(str::to_string),
                 session_tenant: open.session_tenant.map(str::to_string),
                 principal_id: open.principal_id.to_string(),
+                mode_epoch: config.epoch,
                 created_at_ms: now_ms,
                 last_seen_at_ms: now_ms,
                 idle_expires_at_ms: now_ms.saturating_add(idle),
