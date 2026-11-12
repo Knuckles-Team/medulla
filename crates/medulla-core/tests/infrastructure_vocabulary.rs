@@ -7,7 +7,8 @@ use medulla_rdf::mapping::parse_turtle;
 mod ontology_audit_infrastructure {
     use super::*;
 
-    // MEDULLA-CQ-CONN-R068.1: the companion is registered and parseable even before
+    // spec: MEDULLA-CQ-CONN-R068.1
+    // The companion is registered and parseable even before
     // later term rows add their individual NodeShapes.
     #[test]
     fn shapes_module_loads() {

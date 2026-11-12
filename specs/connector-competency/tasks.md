@@ -14,7 +14,7 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T008 [US3] MEDULLA-CQ-CONN-R067.8 Fixture contract source
 - [ ] T009 [US3] MEDULLA-CQ-CONN-R067.9 Table-driven served acceptance test
 - [ ] T010 [US3] MEDULLA-CQ-CONN-R067.10 Abstention variants of the served acceptance test
-- [ ] T011 [US4] MEDULLA-CQ-CONN-R068.1 shapes companion for infrastructure-v1
+- [x] T011 [US4] MEDULLA-CQ-CONN-R068.1 shapes companion for infrastructure-v1
 - [ ] T012 [US4] MEDULLA-CQ-CONN-R068.2 AutomationJob
 - [ ] T013 [US4] MEDULLA-CQ-CONN-R068.3 AutomationJobTemplate
 - [ ] T014 [US4] MEDULLA-CQ-CONN-R068.4 jobStatus
