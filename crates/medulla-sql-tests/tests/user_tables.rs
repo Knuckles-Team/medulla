@@ -1946,3 +1946,95 @@ fn ne002_column_types_round_trip_through_insert_select_arrow() {
         ColumnType::Array(ArrayElemType::Text)
     );
 }
+
+#[path = "common/commit_batch.rs"]
+mod commit_batch;
+
+fn occ_accounts() -> TableSchema {
+    TableSchema::new(
+        "acct",
+        vec![
+            Column::new("id", ColumnType::BigInt, false, true),
+            Column::new("bal", ColumnType::BigInt, false, false),
+        ],
+    )
+}
+
+fn occ_update(id: i64, bal: i64) -> medulla_table_store::tables::TableTxn {
+    use medulla_table_store::tables::{TableTxn, TxnOp};
+    let mut set = serde_json::Map::new();
+    set.insert("bal".into(), json!(bal));
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::Update {
+        table: "acct".into(),
+        set,
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+            col: "id".into(),
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
+            value: json!(id),
+        },
+    });
+    txn
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R002.2
+#[test]
+fn stale_snapshot_commit_refuses() {
+    use medulla_table_store::tables::{TableTxn, TxnOp};
+    let (store, _path) = TableStore::open_temp().expect("temporary table store");
+    store.create_table(&occ_accounts(), false).expect("create");
+    let mut seed = TableTxn::new();
+    seed.push(TxnOp::Insert {
+        table: "acct".into(),
+        col_order: vec!["id".into(), "bal".into()],
+        rows: vec![
+            vec![1i64.into(), 10i64.into()],
+            vec![2i64.into(), 20i64.into()],
+        ],
+    });
+    store
+        .commit_txn_batch(&seed, &commit_batch::batch(&store, "seed", "idem-seed"), 1)
+        .expect("seed");
+
+    // Two sessions begin at the same snapshot.
+    let pinned = store.commit_seq();
+    let mut a = occ_update(1, 11);
+    a.pin(pinned);
+    let mut b = occ_update(1, 12);
+    b.pin(pinned);
+    let mut other = occ_update(2, 21);
+    other.pin(pinned);
+
+    store
+        .commit_txn_batch(&b, &commit_batch::batch(&store, "b", "idem-b"), 2)
+        .expect("first writer commits");
+    // The second writer of the same row refuses, naming the key, and the
+    // first writer's value stays.
+    let err = store
+        .commit_txn_batch(&a, &commit_batch::batch(&store, "a", "idem-a"), 3)
+        .expect_err("stale snapshot refuses");
+    assert!(err.starts_with("TXN_CONFLICT"), "{err}");
+    assert!(err.contains("acct/"), "{err}");
+    let bal = |id: i64| {
+        store
+            .scan("acct")
+            .unwrap()
+            .iter()
+            .find(|r| r.first() == Some(&Cell::Int(id)))
+            .and_then(|r| r.get(1).cloned())
+    };
+    assert_eq!(bal(1), Some(Cell::Int(12)));
+    // A disjoint row from the same snapshot still commits.
+    store
+        .commit_txn_batch(&other, &commit_batch::batch(&store, "o", "idem-o"), 4)
+        .expect("disjoint row commits");
+    assert_eq!(bal(2), Some(Cell::Int(21)));
+    // An auto-commit (unpinned) write is never refused by an old snapshot.
+    store
+        .commit_txn_batch(
+            &occ_update(1, 13),
+            &commit_batch::batch(&store, "c", "idem-c"),
+            5,
+        )
+        .expect("unpinned commit");
+}

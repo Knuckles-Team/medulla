@@ -130,8 +130,8 @@ use medulla_server_api::state::ServerState;
 
 mod seam;
 pub use seam::WireSeam;
-pub mod sqlstate;
 mod copy_out;
+pub mod sqlstate;
 
 // ── wire-neutral currency ────────────────────────────────────────────────────
 
@@ -3093,7 +3093,11 @@ impl WireSession {
         let projection = if plan.columns.is_empty() {
             "*".to_string()
         } else {
-            plan.columns.iter().map(|c| quote(c)).collect::<Vec<_>>().join(", ")
+            plan.columns
+                .iter()
+                .map(|c| quote(c))
+                .collect::<Vec<_>>()
+                .join(", ")
         };
         let select = format!("SELECT {projection} FROM {}", quote(&plan.table));
         let result = self.run_read(graph, select).await?;
@@ -5041,6 +5045,15 @@ impl WireSession {
         // the real error.
         if let Ok(core) = self.graph_core(graph).await {
             *self.txn_begin_version.lock() = Some(core.version());
+        }
+        // MEDULLA-ENGINE-PARITY-R002.2: pin the user-table snapshot at BEGIN to
+        // the store's commit sequence, so COMMIT validates the transaction's
+        // footprint against every commit made since. Best-effort like the
+        // capture above: a session without a table store commits unpinned.
+        if let Ok(store) = self.user_table_store().await {
+            if let Some(txn) = self.txn.lock().as_mut() {
+                txn.pin(store.commit_seq());
+            }
         }
         Ok(WireOutcome::TxnStart)
     }

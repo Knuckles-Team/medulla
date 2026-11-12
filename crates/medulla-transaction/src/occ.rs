@@ -6,7 +6,8 @@
 //! set is a conflict. Footprints that do not overlap are `disjoint` and
 //! validate without waiting on each other.
 
-/// A half-open key range `[start, end)` within one table.
+/// A half-open key range `[start, end)` within one table. An empty `end` is
+/// unbounded above, so the range `start = [], end = []` covers the whole table.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct KeyRange {
     pub table: String,
@@ -26,9 +27,21 @@ impl KeyRange {
         }
     }
 
+    /// The range covering every key of `table` (DDL, truncate).
+    pub fn whole_table(table: &str) -> Self {
+        Self {
+            table: table.to_string(),
+            start: Vec::new(),
+            end: Vec::new(),
+        }
+    }
+
     /// Whether the two ranges share at least one key.
     pub fn overlaps(&self, other: &KeyRange) -> bool {
-        self.table == other.table && self.start < other.end && other.start < self.end
+        let below = |start: &[u8], end: &[u8]| end.is_empty() || start < end;
+        self.table == other.table
+            && below(&self.start, &other.end)
+            && below(&other.start, &self.end)
     }
 }
 
@@ -142,6 +155,17 @@ mod tests {
         assert!(!p.overlaps(&key("other", "x")));
         // Half-open: a range ending where the point begins is disjoint.
         assert!(!range("oncall", b"a", b"x").overlaps(&p));
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R002.2
+    #[test]
+    fn whole_table_range_covers_every_key_of_its_table_only() {
+        let all = KeyRange::whole_table("acct");
+        assert!(all.overlaps(&key("acct", "anything")));
+        assert!(key("acct", "anything").overlaps(&all));
+        assert!(all.overlaps(&range("acct", b"a", b"b")));
+        assert!(all.overlaps(&KeyRange::whole_table("acct")));
+        assert!(!all.overlaps(&key("other", "anything")));
     }
 
     // spec: MEDULLA-ENGINE-PARITY-R002.1

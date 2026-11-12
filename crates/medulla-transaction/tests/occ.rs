@@ -94,3 +94,32 @@ fn disjoint_footprints_never_wait() {
         }
     });
 }
+
+// spec: MEDULLA-ENGINE-PARITY-R002.2
+#[test]
+fn conflict_refuses_and_writes_nothing() {
+    // A pinned transaction whose read key was rewritten after its snapshot
+    // refuses with every conflicting key, and validation itself changes no
+    // history: the same log validates identically a second time.
+    let fp = TxnFootprint {
+        snapshot_seq: 3,
+        reads: vec![key("acct", "a")],
+        writes: vec![key("acct", "a"), key("acct", "b")],
+    };
+    let log = vec![CommittedWrites {
+        commit_seq: 4,
+        writes: vec![key("acct", "b")],
+    }];
+    let before = log.clone();
+    let first = fp.validate(&log).unwrap_err();
+    assert_eq!(first.keys, vec![key("acct", "b")]);
+    assert_eq!(fp.validate(&log).unwrap_err(), first);
+    assert_eq!(log, before, "validation never writes history");
+    // A whole-table DDL range conflicts with every point write in that table.
+    let ddl = TxnFootprint {
+        snapshot_seq: 3,
+        reads: vec![],
+        writes: vec![KeyRange::whole_table("acct")],
+    };
+    assert!(ddl.validate(&log).is_err());
+}

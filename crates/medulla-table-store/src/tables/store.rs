@@ -62,6 +62,7 @@ mod authority;
 #[cfg(any(test, feature = "dev-scope-grant"))]
 pub mod dev_scope_grant;
 mod edge_durable;
+mod occ;
 mod outbox;
 mod row_insert;
 mod sequence;
@@ -72,6 +73,7 @@ pub use ann_durable::{GenerationWrite, StoredGeneration};
 pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
+pub use occ::{OccLog, TXN_CONFLICT, TXN_SNAPSHOT_EXPIRED};
 
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
@@ -536,6 +538,11 @@ impl PropertyGraphTxnOp {
 #[derive(Debug, Clone, Default)]
 pub struct TableTxn {
     pub ops: Vec<TxnOp>,
+    /// The snapshot pinned at `BEGIN` (MEDULLA-ENGINE-PARITY-R002.2): its
+    /// `snapshot_seq` is the store `commit_seq` the client began at. `None` is an
+    /// auto-commit statement, which has no earlier snapshot to conflict with.
+    /// The read and write sets are filled from the rows the ops touch, at commit.
+    pub footprint: Option<medulla_transaction::occ::TxnFootprint>,
 }
 
 impl TableTxn {
@@ -544,6 +551,13 @@ impl TableTxn {
     }
     pub fn push(&mut self, op: TxnOp) {
         self.ops.push(op);
+    }
+    /// Pin this transaction to the store's `commit_seq` seen at `BEGIN`.
+    pub fn pin(&mut self, snapshot_seq: u64) {
+        self.footprint = Some(medulla_transaction::occ::TxnFootprint {
+            snapshot_seq,
+            ..Default::default()
+        });
     }
 }
 
@@ -580,6 +594,9 @@ pub struct TableStore {
     /// Reserved-but-unissued sequence values, per sequence name (R013.1). A
     /// crash drops them; issuing resumes from the persisted high mark.
     sequence_blocks: Arc<sequence::SequenceBlocks>,
+    /// The commit sequence and the ring of recent write sets, shared by every
+    /// clone of this store (R002.2).
+    occ: Arc<occ::OccLog>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -682,6 +699,7 @@ impl TableStore {
             scope: Arc::from(tenant_scope),
             ann: Arc::default(),
             sequence_blocks: Arc::default(),
+            occ: Arc::default(),
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -2158,8 +2176,29 @@ impl TableStore {
             Begin::Apply { source_version } => source_version,
         };
         mutation.set_source_version(source_version);
+        let mut recorded: Option<u64> = None;
         let affected = match mutation.owner_rows(|wtx| {
-            apply_mutation_txn_ops_with_crashpoints(wtx, self.index_scope(), txn, batch, crashpoint)
+            let mut accum = occ::FootprintAccum::default();
+            let affected = apply_mutation_txn_ops_with_crashpoints(
+                wtx,
+                self.index_scope(),
+                txn,
+                batch,
+                crashpoint,
+                &mut accum,
+            )?;
+            // Validate inside the write transaction, after the ops are staged
+            // and before the commit point: a conflict returns here, the caller
+            // aborts, and redb discards every staged row.
+            if let Some(pinned) = &txn.footprint {
+                self.occ.validate(&medulla_transaction::occ::TxnFootprint {
+                    snapshot_seq: pinned.snapshot_seq,
+                    reads: accum.reads,
+                    writes: accum.writes.clone(),
+                })?;
+            }
+            recorded = self.occ.record(accum.writes);
+            Ok(affected)
         }) {
             Ok(affected) => affected,
             Err(error) => {
@@ -2171,7 +2210,26 @@ impl TableStore {
             Some(result) => result,
             None => rmp_serde::to_vec_named(&affected).map_err(|e| e.to_string())?,
         };
-        finish_and_commit_sql_mutation(mutation, batch, result_msgpack, committed_at_ms, crashpoint)
+        let committed = finish_and_commit_sql_mutation(
+            mutation,
+            batch,
+            result_msgpack,
+            committed_at_ms,
+            crashpoint,
+        );
+        if let (Err(error), Some(seq)) = (&committed, recorded) {
+            // A failure before the commit point leaves no commit behind; one
+            // after it (the injected acknowledgement loss) keeps its write set.
+            if !error.contains("after SQL mutation commit") {
+                self.occ.retract(seq);
+            }
+        }
+        committed
+    }
+
+    /// The commit sequence a `BEGIN` pins as its snapshot (R002.2).
+    pub fn commit_seq(&self) -> u64 {
+        self.occ.commit_seq()
     }
 
     /// Current authoritative mutation version of one SQL scope, for batch
@@ -2317,6 +2375,7 @@ fn apply_mutation_txn_ops_with_crashpoints(
     txn: &TableTxn,
     batch: &MutationBatch,
     crashpoint: Option<SqlMutationCrashpoint>,
+    accum: &mut occ::FootprintAccum,
 ) -> Result<usize, String> {
     if crashpoint == Some(SqlMutationCrashpoint::BeforeRows) {
         return Err("injected crash before SQL mutation rows".to_string());
@@ -2328,7 +2387,7 @@ fn apply_mutation_txn_ops_with_crashpoints(
 
     let mut affected = 0usize;
     for op in &txn.ops {
-        affected = affected.saturating_add(apply_txn_op(wtx, index_scope, op)?);
+        affected = affected.saturating_add(apply_txn_op_tracked(wtx, index_scope, op, accum)?);
     }
 
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
@@ -2388,6 +2447,72 @@ fn finish_and_commit_sql_mutation(
 // wraps one in its own begin/commit; `commit_txn` chains several in ONE txn. Reading
 // the catalog/rows THROUGH the same `wtx` (read-your-writes) is what lets a later op
 // in a multi-statement transaction see an earlier op's staged writes.
+
+/// [`apply_txn_op`] that also records the table keys the op read and wrote
+/// (MEDULLA-ENGINE-PARITY-R002.2): DML adds point keys by primary key, DDL adds
+/// the full-table range.
+fn apply_txn_op_tracked(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    op: &TxnOp,
+    accum: &mut occ::FootprintAccum,
+) -> Result<usize, String> {
+    match op {
+        TxnOp::Insert {
+            table,
+            col_order,
+            rows,
+        } => {
+            let inserted = insert_in(wtx, tenant_scope, table, col_order, rows)?;
+            if let Some(schema) = get_schema_in(wtx, table)? {
+                accum.inserted(table, &schema, &inserted);
+            }
+            Ok(inserted.len())
+        }
+        TxnOp::Update {
+            table,
+            set,
+            selector,
+        } => {
+            let changes = update_rows_in(wtx, tenant_scope, table, set, selector)?;
+            if let Some(schema) = get_schema_in(wtx, table)? {
+                accum.updated(table, &schema, &changes);
+            }
+            Ok(changes.len())
+        }
+        TxnOp::Delete { table, selector } => {
+            let removed = delete_in(wtx, tenant_scope, table, selector)?;
+            if let Some(schema) = get_schema_in(wtx, table)? {
+                accum.deleted(table, &schema, &removed);
+            }
+            Ok(removed.len())
+        }
+        other => {
+            let affected = apply_txn_op(wtx, tenant_scope, other)?;
+            for table in ddl_tables(other) {
+                accum.ddl(table);
+            }
+            Ok(affected)
+        }
+    }
+}
+
+/// The tables a DDL op rewrites.
+fn ddl_tables(op: &TxnOp) -> Vec<&str> {
+    match op {
+        TxnOp::CreateTable { schema, .. } => vec![schema.name.as_str()],
+        TxnOp::DropTable { name, .. } => vec![name.as_str()],
+        TxnOp::AddColumn { table, .. }
+        | TxnOp::DropColumn { table, .. }
+        | TxnOp::RenameColumn { table, .. }
+        | TxnOp::AlterColumnType { table, .. }
+        | TxnOp::DropConstraint { table, .. }
+        | TxnOp::AddConstraint { table, .. } => vec![table.as_str()],
+        TxnOp::RenameTable { table, new_name } => vec![table.as_str(), new_name.as_str()],
+        TxnOp::CreateView { name, .. } | TxnOp::DropView { name, .. } => vec![name.as_str()],
+        _ => Vec::new(),
+    }
+}
 
 fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<usize, String> {
     match op {
@@ -6718,11 +6843,25 @@ fn update_in(
     set: &serde_json::Map<String, Value>,
     selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
+    Ok(update_rows_in(wtx, tenant_scope, table, set, selector)?
+        .into_iter()
+        .map(|(_, new)| new)
+        .collect())
+}
+
+/// Every matched row as `(old cells, new cells)`.
+fn update_rows_in(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+    set: &serde_json::Map<String, Value>,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
+) -> Result<Vec<(Vec<Cell>, Vec<Cell>)>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
     let assigns = resolve_update_assignments(&schema, table, set)?;
     let width = schema.columns().len();
-    let mut updated: Vec<Vec<Cell>> = Vec::new();
+    let mut updated: Vec<(Vec<Cell>, Vec<Cell>)> = Vec::new();
     // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001 — `(rowid, old_cells, new_cells)` for the parent-side
     // referential-action pass AFTER the write is staged.
     let mut changed: Vec<(u64, Vec<Cell>, Vec<Cell>)> = Vec::new();
@@ -6760,8 +6899,8 @@ fn update_in(
             rows_t
                 .insert((table, rowid), blob.as_slice())
                 .map_err(map_err)?;
-            changed.push((rowid, old_cells, cells.clone()));
-            updated.push(cells);
+            updated.push((old_cells.clone(), cells.clone()));
+            changed.push((rowid, old_cells, cells));
         }
     }
     finish_update_pass_in(wtx, tenant_scope, table, &schema, &changed)?;

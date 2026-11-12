@@ -37,3 +37,7 @@ index.
 The conflict-heavy workload of `R005.1` needs optimistic commit validation, so
 `R005.1` depends on `R002.2`. `R001.3` keeps its nightly group in the same suite
 and lands with `R005.1`.
+
+## Decision: where the footprint is validated and how the history is configured (R002.2)
+
+The keys a transaction reads and writes are the rows its `UPDATE` and `DELETE` matched and the rows its inserts and updates wrote, and the store only knows them once the ops run inside the write transaction. Validation therefore runs there, after the ops are staged and before the commit point, and a conflict aborts the transaction; redb discards every staged row, so nothing is written. This is exact and needs no second scan of the table. The write set is recorded in the ring inside the same serialized write transaction, so no commit validates between the record and the commit point; a failure before the commit point retracts the record. A pinned footprint older than the ring refuses with `TXN_SNAPSHOT_EXPIRED`. The history size follows the precedent of the enqueue timeout of R001.1: an environment variable (`MEDULLA_TABLES_OCC_HISTORY_COMMITS`) that parses and clamps into the documented bounds. The `ON CONFLICT` insert path is not a buffered `TxnOp`, so it runs auto-commit and never carries a footprint.

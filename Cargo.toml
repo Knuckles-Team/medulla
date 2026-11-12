@@ -2005,6 +2005,13 @@ name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
 
+# Engine parity write workloads W1 to W5 (MEDULLA-ENGINE-PARITY-R005.1): nightly suite.
+[[bench]]
+name = "engine_parity"
+path = "benches/engine_parity.rs"
+harness = false
+required-features = ["full"]
+
 # Data-prep declaration at writer concurrency (MEDULLA-INGEST-WORKER-R001.1011): nightly budget.
 [[bench]]
 name = "data_prep_declare"

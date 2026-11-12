@@ -1572,3 +1572,68 @@ async fn wire_uql_is_deterministic() {
         "ranked n2 > n1"
     );
 }
+
+/// Two sessions begin at one snapshot and update the same row: the second
+/// commit refuses with SQLSTATE 40001 and the code `TXN_CONFLICT`, and the
+/// first writer's value stays. Sessions on disjoint rows both commit.
+// spec: MEDULLA-ENGINE-PARITY-R002.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn occ_conflict_over_wire() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let a = connect(&addr).await;
+    let b = connect(&addr).await;
+    let table = unique_table();
+
+    a.simple_query(&format!(
+        "CREATE TABLE {table} (id BIGINT PRIMARY KEY, bal BIGINT NOT NULL)"
+    ))
+    .await
+    .expect("CREATE TABLE");
+    a.simple_query(&format!("INSERT INTO {table} VALUES (1, 10), (2, 20)"))
+        .await
+        .expect("seed rows");
+
+    a.simple_query("BEGIN").await.expect("A BEGIN");
+    b.simple_query("BEGIN").await.expect("B BEGIN");
+    b.simple_query(&format!("UPDATE {table} SET bal = 12 WHERE id = 1"))
+        .await
+        .expect("B update");
+    b.simple_query("COMMIT").await.expect("B COMMIT");
+
+    a.simple_query(&format!("UPDATE {table} SET bal = 11 WHERE id = 1"))
+        .await
+        .expect("A update is buffered");
+    let refused = a
+        .simple_query("COMMIT")
+        .await
+        .expect_err("A's commit conflicts with B's");
+    let chain = error_chain(&refused);
+    assert!(chain.contains("40001"), "expected SQLSTATE 40001: {chain}");
+    assert!(
+        chain.contains("txn_conflict"),
+        "expected TXN_CONFLICT: {chain}"
+    );
+    let _ = a.simple_query("ROLLBACK").await;
+
+    let value = simple_ids(
+        a.simple_query(&format!("SELECT bal FROM {table} WHERE id = 1"))
+            .await
+            .expect("read back"),
+    );
+    assert_eq!(value, vec!["12".to_string()], "B's value stays");
+
+    // Disjoint rows from one snapshot both commit.
+    a.simple_query("BEGIN").await.expect("A BEGIN 2");
+    b.simple_query("BEGIN").await.expect("B BEGIN 2");
+    b.simple_query(&format!("UPDATE {table} SET bal = 21 WHERE id = 2"))
+        .await
+        .expect("B update row 2");
+    b.simple_query("COMMIT").await.expect("B COMMIT 2");
+    a.simple_query(&format!("UPDATE {table} SET bal = 13 WHERE id = 1"))
+        .await
+        .expect("A update row 1");
+    a.simple_query("COMMIT")
+        .await
+        .expect("disjoint commit succeeds");
+}
