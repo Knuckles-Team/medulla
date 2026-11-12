@@ -212,3 +212,56 @@ fn foreign_tenant_key_misses() {
     );
     assert_eq!(cache.len(), 2);
 }
+
+#[path = "../../../benches/common/claim.rs"]
+mod claim;
+#[path = "../benches/tiering/replay.rs"]
+mod tiering_replay;
+
+// spec: MEDULLA-DURABLE-KERNEL-R042.3
+#[test]
+fn tiering_receipt_has_per_tier_hit_rate() {
+    let trace = tiering_replay::Trace {
+        blocks: 40,
+        block_bytes: 8 * 1024,
+        lookups: 400,
+        long_context_blocks: 8,
+        long_context_block_bytes: 1024,
+    };
+    let receipt = tiering_replay::replay(&trace);
+    assert_eq!(
+        receipt.hot_hits + receipt.warm_hits + receipt.cold_hits + receipt.misses,
+        receipt.lookups
+    );
+    assert!(
+        receipt.cold_hits > 0,
+        "a 25 percent host budget must page in from cold"
+    );
+    assert_eq!(receipt.digest_mismatches, 0);
+    assert!(receipt.hit_rate() >= tiering_replay::HIT_RATE_BUDGET);
+
+    let json = receipt.to_claim_json("test-release", "tiering");
+    for tier in ["hot", "warm", "cold", "miss"] {
+        let rate = json["tier_hit_rate"][tier]
+            .as_f64()
+            .unwrap_or_else(|| panic!("{tier} rate"));
+        assert!((0.0..=1.0).contains(&rate), "{tier} rate {rate}");
+    }
+    let sum: f64 = ["hot", "warm", "cold", "miss"]
+        .iter()
+        .map(|t| json["tier_hit_rate"][t].as_f64().unwrap())
+        .sum();
+    assert!((sum - 1.0).abs() < 1e-9);
+    assert!(json["configuration"].as_str().unwrap().contains("25%"));
+    assert_eq!(
+        json["passed"],
+        serde_json::json!(receipt.breaches().is_empty())
+    );
+
+    let root = tempfile::tempdir().unwrap();
+    let path = claim::write_receipt(root.path(), "test-release", "tiering", &json).unwrap();
+    assert!(path.ends_with("test-release/tiering.json"));
+    let read: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(read, json);
+    assert!(claim::write_receipt(root.path(), "..", "tiering", &json).is_err());
+}

@@ -69,8 +69,14 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # Only the `durable` redb cold-tier test touches the filesystem.
 tempfile = "3.27"
+serde_json = "1.0"
 
 # Nightly receipt for MEDULLA-DURABLE-KERNEL-R800.6 (never gates a pull request).
 [[bench]]
 name = "tier_policy"
+harness = false
+
+# Nightly receipt for MEDULLA-DURABLE-KERNEL-R042.3 (never gates a pull request).
+[[bench]]
+name = "tiering"
 harness = false

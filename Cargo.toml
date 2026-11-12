@@ -123,6 +123,11 @@ name = "nemesis"
 path = "src/bin/nemesis.rs"
 required-features = ["harness"]
 
+# `bench-claim admit` (MEDULLA-DURABLE-KERNEL-R042.100): benchmark measurement admission.
+[[bin]]
+name = "bench-claim"
+path = "src/bin/bench_claim.rs"
+
 # The offline tools (`restore`, `migrate-shards`, `medulla-engine-rf019-observe`,
 # `lake-fixture-export`, `raft-flake-budget`) are subcommands of `medulla-server`
 # (`src/offline_tools/`); they are not separate executables.
