@@ -313,6 +313,11 @@ pub enum LearningWrite {
     RefreshFreshness {
         request: Box<super::retrieval_refresh::FreshnessRefresh>,
     },
+    /// Record a delegated run's answer, cited rows and per-step rewards
+    /// (MEDULLA-DECISION-ENGINE-R100.102.1).
+    RunOutcome {
+        outcome: Box<super::run_credit::RunOutcome>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -325,7 +330,7 @@ impl LearningWrite {
     /// everything that can change what the engine serves is governance.
     pub fn class(&self) -> LogOpClass {
         match self {
-            Self::RecordOutcome { .. } => LogOpClass::Write,
+            Self::RecordOutcome { .. } | Self::RunOutcome { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }

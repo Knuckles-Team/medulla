@@ -30,6 +30,7 @@ pub mod retrieval_generation;
 pub mod retrieval_plan;
 pub mod retrieval_pointer;
 pub mod retrieval_refresh;
+pub mod run_credit;
 pub mod scorer;
 pub mod tool_subset;
 pub mod topology;

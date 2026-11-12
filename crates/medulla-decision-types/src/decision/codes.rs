@@ -167,7 +167,10 @@ pub const FOLDED: &[RefusalCode] = &[
 
 /// The `REFUSALS` table of every registered family, keyed by its question
 /// kind. A family module joins this list in the change that declares its table.
-pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[];
+pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[(
+    QuestionKind::RetrievalPlan,
+    super::statistical::run_credit::REFUSALS,
+)];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the
 /// decision plane, keyed by module name. A module joins this list in the change

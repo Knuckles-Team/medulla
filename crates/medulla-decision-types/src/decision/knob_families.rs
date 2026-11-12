@@ -16,4 +16,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     profile::KNOBS,
     topology::KNOBS,
     super::ingestion_admission::KNOBS,
+    super::statistical::run_credit::KNOBS,
 ];
