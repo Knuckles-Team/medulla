@@ -15,12 +15,11 @@ reads two artifacts and fails (exit 1) on a regression:
      is the redundant, reported check.
 
   2. **latency** — criterion's per-bench `estimates.json`
-     (`target/criterion/<bench>/new/estimates.json`), the MEDIAN (p50) point estimate in
-     nanoseconds. Must stay <= the committed per-bench ceiling. Ceilings are generous
-     (see thresholds.json) so this is a catastrophic-regression net, not a p50 chase —
-     it
-     never flakes on machine variance. A bench with no estimates (feature not built) is
-     skipped.
+     (default `target-isolated/criterion/<bench>/new/`), the MEDIAN (p50) point
+     estimate in nanoseconds. Must stay <= the committed per-bench ceiling. Ceilings
+     are generous (see thresholds.json) so this is a catastrophic-regression net,
+     not a p50 chase — it never flakes on machine variance. A bench with no
+     estimates (feature not built) is skipped.
 
   3. **p99 latency** — `latency_p99_ns_max` in thresholds.json, keyed by criterion
      benchmark id. The gate reads `target/criterion/<id>/new/sample.json`, takes each
@@ -39,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -51,12 +51,18 @@ def load_json(path: Path):
 def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__)
     repo = Path(__file__).resolve().parent.parent
+    # The committed .cargo/config.toml pins `target-dir = "target-isolated"`
+    # (lane-partitioned resources), so criterion writes under
+    # target-isolated/criterion unless CARGO_TARGET_DIR overrides it.
+    target_dir = os.environ.get("CARGO_TARGET_DIR") or "target-isolated"
     ap.add_argument(
         "--thresholds",
         type=Path,
         default=repo / "crates" / "medulla-plan" / "benches" / "thresholds.json",
     )
-    ap.add_argument("--criterion-dir", type=Path, default=repo / "target" / "criterion")
+    ap.add_argument(
+        "--criterion-dir", type=Path, default=repo / target_dir / "criterion"
+    )
     ap.add_argument(
         "--finance-report",
         type=Path,
