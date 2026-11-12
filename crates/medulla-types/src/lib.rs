@@ -349,3 +349,5 @@ pub mod code_map;
 pub mod process_import;
 // MEDULLA-CQ-ORCH-R702.1: process document records (BPMN 2.0, DMN 1.3).
 pub mod process_exchange;
+// MEDULLA-CQ-ORCH-R705.2: architecture exchange records (ArchiMate Open Exchange Format).
+pub mod archimate_exchange;

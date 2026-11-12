@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 pub mod bpmn_lower;
 pub mod bpmn_read;
 pub mod bpmn_write;
+pub mod dmn_read;
 pub mod workflow_bpmn;
+pub mod xml_tree;
 
 pub use medulla_types::process_exchange::ProcessExchangeError;
 

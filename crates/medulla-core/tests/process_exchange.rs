@@ -219,3 +219,83 @@ fn bpmn_write_then_read_keeps_digest() {
     assert_eq!(back.preserved.len(), doc.preserved.len());
     assert_eq!(back.collaborations, doc.collaborations);
 }
+
+const DMN_FIXTURE: &str = r##"<?xml version="1.0"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:ext="urn:ext" id="defs" name="Limits">
+  <inputData id="amount" name="Amount"/>
+  <decision id="tier" name="Tier">
+    <informationRequirement><requiredInput href="#amount"/></informationRequirement>
+    <informationRequirement><requiredDecision href="#base"/></informationRequirement>
+    <ext:note>kept</ext:note>
+    <decisionTable id="t1" hitPolicy="COLLECT" aggregation="SUM">
+      <input id="i1" label="Amount"><inputExpression typeRef="number"><text>amount &gt; 10</text></inputExpression></input>
+      <output id="o1" name="fee" typeRef="number"/>
+      <rule id="r1"><inputEntry><text>&lt; 100</text></inputEntry><outputEntry><text>1.5</text></outputEntry></rule>
+      <rule id="r2"><inputEntry><text>&gt;= 100</text></inputEntry><outputEntry><text>2</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+  <decision id="base" name="Base"><decisionTable id="t2"><input id="i2"><inputExpression><text>x</text></inputExpression></input><output id="o2" name="y"/></decisionTable></decision>
+  <ext:extension/>
+</definitions>"##;
+
+// spec: MEDULLA-CQ-ORCH-R702.4
+#[test]
+fn dmn_reader_keeps_tables_and_requirements() {
+    use medulla_core::process_exchange::dmn_read::{parse_dmn, DmnRequirementKind};
+    use medulla_core::process_exchange::xml_tree::XmlLimits;
+    let doc = parse_dmn(DMN_FIXTURE.as_bytes(), XmlLimits::default()).unwrap();
+    assert_eq!(doc.id, "defs");
+    assert_eq!(doc.input_data[0].name, "Amount");
+    let tier = &doc.decisions[0];
+    let kinds: Vec<_> = tier
+        .requirements
+        .iter()
+        .map(|r| (r.kind, r.target.as_str()))
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![
+            (DmnRequirementKind::Input, "amount"),
+            (DmnRequirementKind::Decision, "base")
+        ]
+    );
+    let table = tier.table.as_ref().unwrap();
+    assert_eq!(table.hit_policy, "COLLECT");
+    assert_eq!(table.aggregation.as_deref(), Some("SUM"));
+    assert_eq!(table.inputs[0].expression, "amount > 10");
+    assert_eq!(table.outputs[0].expression, "fee");
+    assert_eq!(table.rules[0].input_entries, vec!["< 100"]);
+    assert_eq!(table.rules[1].output_entries, vec!["2"]);
+    // A table without a stated hit policy is UNIQUE.
+    assert_eq!(
+        doc.decisions[1].table.as_ref().unwrap().hit_policy,
+        "UNIQUE"
+    );
+    // Unmodelled elements keep their XML and owner.
+    assert!(doc
+        .preserved
+        .iter()
+        .any(|p| p.owner == "tier" && p.xml.contains("kept")));
+    assert!(doc
+        .preserved
+        .iter()
+        .any(|p| p.owner == "defs" && p.xml.contains("ext:extension")));
+
+    let planted = br#"<!DOCTYPE d [<!ENTITY x "y">]><definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"/>"#;
+    assert_eq!(
+        parse_dmn(planted, XmlLimits::default()),
+        Err(ProcessExchangeError::EntityRefused)
+    );
+    assert!(matches!(
+        parse_dmn(b"<definitions xmlns=\"urn:other\"/>", XmlLimits::default()),
+        Err(ProcessExchangeError::NamespaceUnknown { .. })
+    ));
+    let small = XmlLimits {
+        max_bytes: 32,
+        max_depth: 64,
+    };
+    assert!(matches!(
+        parse_dmn(DMN_FIXTURE.as_bytes(), small),
+        Err(ProcessExchangeError::TooLarge { .. })
+    ));
+}

@@ -17,3 +17,19 @@ kg:ArchimateRelationshipShape a sh:NodeShape ;
             sh:message "An ArchiMate relationship has a relTarget." ;
             sh:path kg:relTarget ] ;
     sh:targetClass kg:ArchimateRelationship .
+
+kg:ArchimateTypeAnnotationShape a sh:NodeShape ;
+    sh:description "A class maps to at most one ArchiMate element type." ;
+    sh:name "ArchiMate Type Annotation Shape" ;
+    sh:property [ sh:maxCount 1 ;
+            sh:message "A class carries at most one archimateType annotation." ;
+            sh:path kg:archimateType ] ;
+    sh:targetSubjectsOf kg:archimateType .
+
+kg:ArchimateRelationshipTypeAnnotationShape a sh:NodeShape ;
+    sh:description "An object property maps to at most one ArchiMate relationship type." ;
+    sh:name "ArchiMate Relationship Type Annotation Shape" ;
+    sh:property [ sh:maxCount 1 ;
+            sh:message "A property carries at most one archimateRelationshipType annotation." ;
+            sh:path kg:archimateRelationshipType ] ;
+    sh:targetSubjectsOf kg:archimateRelationshipType .

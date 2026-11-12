@@ -14,6 +14,8 @@
 // Bounded thread fan-out and start gates for this crate's concurrency tests.
 
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
+/// ArchiMate Open Exchange Format reader, graph mapping and writer (MEDULLA-CQ-ORCH-R705).
+pub mod architecture_exchange;
 /// Graph-derived architecture view (MEDULLA-CQ-ORCH-R010.2).
 pub mod architecture_view;
 #[cfg(feature = "broker")]

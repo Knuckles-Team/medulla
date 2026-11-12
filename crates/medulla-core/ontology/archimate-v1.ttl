@@ -136,6 +136,38 @@ Realization, Assignment, ...).""" .
     rdfs:comment "The element a reified :ArchimateRelationship points to." ;
     rdfs:domain :ArchimateRelationship .
 
+# ── ArchiMate exchange mapping (MEDULLA-CQ-ORCH-R705.1) ────────────────────────
+# The exchange reader, mapper and writer resolve ArchiMate element and
+# relationship types through these annotations, never through a Rust table.
+# A subclass inherits the nearest annotated type; two annotations on one class
+# are refused by archimate-v1.shapes.ttl.
+
+:archimateType a owl:AnnotationProperty ;
+    rdfs:label "ArchiMate element type" ;
+    rdfs:comment "The ArchiMate 3.x element type a class maps to in the Open Exchange Format." .
+
+:archimateRelationshipType a owl:AnnotationProperty ;
+    rdfs:label "ArchiMate relationship type" ;
+    rdfs:comment "The ArchiMate 3.x relationship type an object property maps to in the Open Exchange Format." .
+
+:archimateIdentifier a owl:DatatypeProperty ;
+    rdfs:label "ArchiMate identifier" ;
+    rdfs:comment "The identifier an element, relationship or view carries in an imported Open Exchange document." ;
+    rdfs:range xsd:string .
+
+:ArchimateView a owl:Class ;
+    rdfs:label "ArchiMate View" ;
+    rdfs:comment "A stored ArchiMate diagram imported from an Open Exchange document." .
+
+:BusinessProcess :archimateType "BusinessProcess" .
+:BusinessActor :archimateType "BusinessActor" .
+:ApplicationComponent :archimateType "ApplicationComponent" .
+:BusinessCapability :archimateType "Capability" .
+:Service :archimateType "ApplicationService" .
+
+:realizesProcess :archimateRelationshipType "Realization" .
+:usesTool :archimateRelationshipType "Serving" .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
 <https://knuckles-team.github.io/ontology/core#ApplicationComponent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
@@ -146,3 +178,5 @@ Realization, Assignment, ...).""" .
 <https://knuckles-team.github.io/ontology/core#BusinessProcess> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
 <https://knuckles-team.github.io/ontology/core#BusinessTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
 <https://knuckles-team.github.io/ontology/core#ErpNextIssue> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+
+<https://knuckles-team.github.io/ontology/core#ArchimateView> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
