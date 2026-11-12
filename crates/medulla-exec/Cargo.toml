@@ -41,6 +41,7 @@ medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }
+sha2 = "0.10"
 
 [features]
 test-support = ["query", "medulla-types/test-support", "medulla-compute?/test-support", "medulla-catalog-types/test-support"]

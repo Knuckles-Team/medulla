@@ -346,6 +346,7 @@ fn same_file_identity(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bo
 /// attempt's file. The process-wide lock makes the temporary single-owner, while
 /// a regular stale temporary from a crashed process is removed before reuse.
 /// Symlinked/non-regular authorities fail closed.
+#[allow(dead_code)] // wired by the plan-view boot restore row (follow-up)
 pub(super) fn write_snapshot_atomically_blocking<F>(
     path: PathBuf,
     snapshot: F,
@@ -459,6 +460,7 @@ fn cleanup_snapshot_temporary(temporary: &Path) -> Result<(), String> {
 /// Read one optional bounded regular snapshot. Missing is distinct from an
 /// unavailable, symlinked, oversized, or changing authority, all of which fail
 /// closed without exposing its filesystem path or host error detail.
+#[allow(dead_code)] // wired by the plan-view boot restore row (follow-up)
 pub(super) fn read_snapshot_blocking(path: &Path) -> Result<Option<Vec<u8>>, String> {
     let parent = path
         .parent()

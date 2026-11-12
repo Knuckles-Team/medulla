@@ -1,0 +1,520 @@
+[
+  {
+    "method": "CancelRequest",
+    "request": {
+      "method": "CancelRequest",
+      "params": {
+        "target_req_id": 0
+      }
+    },
+    "result": false,
+    "sha256": "e4c74e50cc0819c9fcda0dafe937d14b85009b653dbef9b5cf951c27f96bcd12"
+  },
+  {
+    "method": "CatalogAssign",
+    "request": {
+      "method": "CatalogAssign",
+      "params": {
+        "graph": "",
+        "node": 0,
+        "shard": 0
+      }
+    },
+    "result": false,
+    "sha256": "0b8197da13a6b11f38174550b87695d7a20c04f584f6d3d83ee89103d9ef8e49"
+  },
+  {
+    "method": "CatalogList",
+    "request": {
+      "method": "CatalogList"
+    },
+    "result": {
+      "placements": []
+    },
+    "sha256": "a60ccab190a96d1ebd48a2d18b96904d74444845586fd77f36b4092ae669a95a"
+  },
+  {
+    "method": "CatalogReassign",
+    "request": {
+      "method": "CatalogReassign",
+      "params": {
+        "graph": "",
+        "shard": 0
+      }
+    },
+    "result": false,
+    "sha256": "745f9d545ef84619ecdca72e86c7d8259f81529fafc1edf15b2844fa22e3e5c3"
+  },
+  {
+    "method": "CatalogRemove",
+    "request": {
+      "method": "CatalogRemove",
+      "params": {
+        "graph": ""
+      }
+    },
+    "result": false,
+    "sha256": "213505282c995cbcd03385d1532df12013a649770a5fcb90a243e68958419479"
+  },
+  {
+    "method": "ClusterMembers",
+    "request": {
+      "method": "ClusterMembers"
+    },
+    "result": {
+      "auth_binding": {
+        "agent_digest": "",
+        "principal_digest": "",
+        "tenant_digest": ""
+      },
+      "cluster_id": "",
+      "groups": [],
+      "leader": {
+        "group_id": 0,
+        "node_id": 0
+      },
+      "leaders": [],
+      "membership_epoch": 0,
+      "placement_epoch": 0,
+      "schema_version": 0,
+      "signature": ""
+    },
+    "sha256": "cf2664d6b57a6c22423071e47c7beb9605aecdd48dc8635cb722ca4d57e4ab95"
+  },
+  {
+    "method": "CreateBranch",
+    "request": {
+      "method": "CreateBranch",
+      "params": {
+        "base_engine_version": 0,
+        "graph": "",
+        "name": "",
+        "tenant": ""
+      }
+    },
+    "result": {
+      "base_version": 0,
+      "created_at": 0,
+      "created_by": "",
+      "deleted": false,
+      "graph": "",
+      "head_commit": "",
+      "name": "",
+      "tenant": ""
+    },
+    "sha256": "7b76924b0ccd84c17411bd0c6b4d971e9003af1ff6054b35a2056538327a8103"
+  },
+  {
+    "method": "CreateGraph",
+    "request": {
+      "method": "CreateGraph",
+      "params": {
+        "graph_name": "",
+        "graph_type": "Agent"
+      }
+    },
+    "result": {
+      "created": ""
+    },
+    "sha256": "0ebea36ab41148f73e5d749f390ca15fc22354255ef606d0a323f6fbb287e6e4"
+  },
+  {
+    "method": "DeleteGraph",
+    "request": {
+      "method": "DeleteGraph",
+      "params": {
+        "graph_name": ""
+      }
+    },
+    "result": {
+      "deleted": ""
+    },
+    "sha256": "0f41e2ee8d116b5e5b669c28fd90618e5187c393ef09af3e2e13dab07d5da3cf"
+  },
+  {
+    "method": "FleetCatalog",
+    "request": {
+      "method": "FleetCatalog",
+      "params": {
+        "op": {
+          "op": "record_discovery",
+          "request": {
+            "connector": "a",
+            "counts": {
+              "prompts": 0,
+              "resources": 0,
+              "skills": 0,
+              "tools": 0
+            },
+            "expected_revision": 0,
+            "outcome": {
+              "status": "reachable"
+            },
+            "scope": {
+              "authority": "tenant_local"
+            },
+            "server_name": ""
+          }
+        }
+      }
+    },
+    "result": {
+      "clear_override": {
+        "disposition": "written",
+        "observed_at_ms": 0,
+        "record_id": "",
+        "revision": 0
+      },
+      "list": {
+        "commons_revision": 0,
+        "kind": "discoveries",
+        "next_cursor": {
+          "after_id": "",
+          "after_name": "",
+          "snapshot_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "observed_at_ms": 0,
+        "rows": [],
+        "schema_version": 0,
+        "snapshot_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "total": 0
+      },
+      "lookup": {
+        "commons_revision": 0,
+        "observed_at_ms": 0,
+        "rows": [],
+        "schema_version": 0
+      },
+      "record_discovery": {
+        "disposition": "written",
+        "observed_at_ms": 0,
+        "record_id": "",
+        "revision": 0
+      },
+      "set_override": {
+        "disposition": "written",
+        "observed_at_ms": 0,
+        "record_id": "",
+        "revision": 0
+      }
+    },
+    "sha256": "a08c58defea3f95c2acaacb8b1d70d4fae0f011a2930043b1b409707460c8f16"
+  },
+  {
+    "method": "Health",
+    "request": {
+      "method": "Health"
+    },
+    "result": {
+      "build_profile": "",
+      "graph_lifecycle": {
+        "all_resident_materializations_valid": false,
+        "catalog_graphs": 0,
+        "complete_graphs": 0,
+        "failed_graphs": 0,
+        "partial_graphs": 0,
+        "resident_graphs": 0
+      },
+      "mem_bytes": 0,
+      "ops": [],
+      "status": "",
+      "uptime_s": 0,
+      "version": ""
+    },
+    "sha256": "dcf5710740846608774cd3ef850bdfe4177c908217aaa9de0ea3cd2ae74f088d"
+  },
+  {
+    "method": "ListGraphs",
+    "request": {
+      "method": "ListGraphs"
+    },
+    "result": [],
+    "sha256": "a68ff3d6b9076442fb0587996795d0ac211a76009b0bb8d89c35ecdb3b2c32c0"
+  },
+  {
+    "method": "ListRegisteredServers",
+    "request": {
+      "method": "ListRegisteredServers",
+      "params": {
+        "request": {
+          "cursor": {
+            "after_name": "",
+            "registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "registry_revision": 0
+          },
+          "limit": 0
+        }
+      }
+    },
+    "result": {
+      "entries": [],
+      "next_cursor": {
+        "after_name": "",
+        "registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registry_revision": 0
+      },
+      "observed_at_ms": 0,
+      "registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "registry_revision": 0,
+      "schema_version": 0,
+      "total_live": 0
+    },
+    "sha256": "b9d6c4813879c14e3f56e7e383e4918ad3b9bce0a275622e09315a074f194b29"
+  },
+  {
+    "method": "Ping",
+    "request": {
+      "method": "Ping"
+    },
+    "result": "",
+    "sha256": "56f823494400ae64d6662b240af18a268e63374159175ed475374b47f21053f2"
+  },
+  {
+    "method": "PlacementAdmin",
+    "request": {
+      "method": "PlacementAdmin",
+      "params": {
+        "op": {
+          "group": 0,
+          "operation": "assign",
+          "tenant": ""
+        }
+      }
+    },
+    "result": {
+      "abort_move": false,
+      "assign": {
+        "epoch": 0
+      },
+      "move": {
+        "epoch": 0,
+        "graphs": [],
+        "range": [
+          0,
+          0
+        ],
+        "target": 0,
+        "tenant": ""
+      }
+    },
+    "sha256": "e2a9c3fa8901a8b9c5eeb279e833b5a1c6aae8b17977a68bd093ef8bcf7d41e6"
+  },
+  {
+    "method": "PlacementRoute",
+    "request": {
+      "method": "PlacementRoute",
+      "params": {
+        "request": {
+          "client_epoch": 0,
+          "partition_ref": "",
+          "schema_version": "1",
+          "tenant_ref": ""
+        }
+      }
+    },
+    "result": {
+      "authoritative": false,
+      "endpoints": [],
+      "epoch": 0,
+      "fencing_token": 0,
+      "group": 0,
+      "leader_ref": "",
+      "partition_ref": "",
+      "placed": false,
+      "route_id": "",
+      "schema_version": "1",
+      "stale": false,
+      "tenant_ref": ""
+    },
+    "sha256": "5f0a6bb24eb6573456d98444bf3a7f54607f7ad37d347417cb0acf9433bf78a8"
+  },
+  {
+    "method": "PlanMatViewDefine",
+    "request": {
+      "method": "PlanMatViewDefine",
+      "params": {
+        "graph": "",
+        "name": "",
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        }
+      }
+    },
+    "result": 0,
+    "sha256": "3a9dd26995850f3d403ccea0011d96d6fc0a25ca4ebe2896d541ab9888b44553"
+  },
+  {
+    "method": "PlanMatViewDrop",
+    "request": {
+      "method": "PlanMatViewDrop",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": false,
+    "sha256": "be53cb9091b92e7dbaee23db3dd0b31223f334efdb2556b08f0b8122a651f497"
+  },
+  {
+    "method": "PlanMatViewGet",
+    "request": {
+      "method": "PlanMatViewGet",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": null,
+    "sha256": "effe0eb40c8271b11ff9484e80f45b211c00564494ce892147d7ad65b4507070"
+  },
+  {
+    "method": "PlanMatViewRefresh",
+    "request": {
+      "method": "PlanMatViewRefresh",
+      "params": {
+        "name": ""
+      }
+    },
+    "result": 0,
+    "sha256": "89ec392de3179ccf5692b3678a4a17a99ddd6e9a900ca850caa3573bc4dd55be"
+  },
+  {
+    "method": "RaftAddLearner",
+    "request": {
+      "method": "RaftAddLearner",
+      "params": {
+        "addr": "",
+        "group": 0,
+        "node_id": 0
+      }
+    },
+    "result": false,
+    "sha256": "7f975f8a74c71272acffcb5a4c7a667e82864740b6b2d8ac50abd0e20e96259c"
+  },
+  {
+    "method": "RaftChangeMembership",
+    "request": {
+      "method": "RaftChangeMembership",
+      "params": {
+        "group": 0,
+        "voters": []
+      }
+    },
+    "result": false,
+    "sha256": "22e11e5db8471759295f93f0b57a9bf09c80c7519a44d475280967bb69dadef8"
+  },
+  {
+    "method": "RebalanceExecute",
+    "request": {
+      "method": "RebalanceExecute",
+      "params": {
+        "max_moves": 0,
+        "tolerance": 0.0
+      }
+    },
+    "result": {
+      "executed": []
+    },
+    "sha256": "656edb5d9c2b696c57b072c8b0ec36e4430f2cb659541f0e4f53ee261e59e190"
+  },
+  {
+    "method": "RebalancePlan",
+    "request": {
+      "method": "RebalancePlan",
+      "params": {
+        "max_moves": 0,
+        "tolerance": 0.0
+      }
+    },
+    "result": {
+      "moves": [],
+      "shards": []
+    },
+    "sha256": "3dda5b5c4ec2bae10468d6b4d587c888c5756da4b1cdd8d00f076ff6948fccac"
+  },
+  {
+    "method": "RegisterForeignSource",
+    "request": {
+      "method": "RegisterForeignSource",
+      "params": {
+        "name": "",
+        "source": {
+          "RemoteEngine": {
+            "context": {
+              "agent_id": "",
+              "audience": "",
+              "delegation": [],
+              "node": "",
+              "policy_version": "",
+              "principal": "",
+              "priority": "",
+              "roles": [],
+              "scopes": [],
+              "tenant": ""
+            },
+            "cypher": "",
+            "endpoint": "",
+            "graph": "",
+            "id_field": "",
+            "secret": "",
+            "uql": ""
+          }
+        }
+      }
+    },
+    "result": "",
+    "sha256": "313b6c3a934fbd069ddc170e3cde3249a8f9ce3585a3996aae9b2b85b8fa8266"
+  },
+  {
+    "method": "RegisterServer",
+    "request": {
+      "method": "RegisterServer",
+      "params": {
+        "desired": "enabled",
+        "name": "",
+        "resources_json": "",
+        "transport": "unspecified",
+        "ttl_secs": 0,
+        "url": ""
+      }
+    },
+    "result": "",
+    "sha256": "7b0e52dd773f4b6b96a827426a9cb4846985f596eccc7237dcef81e7116f14aa"
+  },
+  {
+    "method": "Reshard",
+    "request": {
+      "method": "Reshard",
+      "params": {
+        "graph": "",
+        "to_shard": 0
+      }
+    },
+    "result": {
+      "audit": 0,
+      "delta_edges": 0,
+      "delta_nodes": 0,
+      "edges": 0,
+      "from_shard": 0,
+      "graph": "",
+      "ledger": 0,
+      "no_op": false,
+      "nodes": 0,
+      "semantic": 0,
+      "to_shard": 0
+    },
+    "sha256": "f6f912bd4bde8d9359339a20428ba7a2e44fb7bcbb865e37145c45025072f873"
+  },
+  {
+    "method": "Shutdown",
+    "request": {
+      "method": "Shutdown"
+    },
+    "result": "",
+    "sha256": "98f710b8c1512e2a14f7cd389673445d603417255d4fe4672356b6ee5fc0df78"
+  }
+]

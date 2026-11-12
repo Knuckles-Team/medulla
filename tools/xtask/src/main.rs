@@ -19,6 +19,7 @@ mod mint_lease_call_sites;
 mod orphan_modules;
 mod p2_analytics_reasoning_architecture;
 mod p2_modality_architecture;
+mod registry_test_ownership;
 mod repo_root_parity;
 mod sdist_completeness;
 mod sole_write_envelope;
@@ -141,6 +142,13 @@ const CHECKS: &[Check] = &[
         run: p2_modality_architecture::run,
         standalone: false,
         needs_git: false,
+    },
+    Check {
+        name: registry_test_ownership::NAME,
+        summary: registry_test_ownership::SUMMARY,
+        run: registry_test_ownership::run,
+        standalone: false,
+        needs_git: true,
     },
     Check {
         name: repo_root_parity::NAME,
