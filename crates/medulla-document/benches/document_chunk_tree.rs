@@ -54,6 +54,7 @@ const SAMPLES: usize = 200;
 const WARMUP: usize = 20;
 const TARGET_BYTES: usize = 1024 * 1024;
 
+// spec: MEDULLA-REPO-INGEST-R652.6
 fn markdown() -> String {
     let paragraph = "Retrieval addresses a passage by its offsets. Each window ends at a \
                      paragraph or sentence break, and windows overlap so a fact split across \
