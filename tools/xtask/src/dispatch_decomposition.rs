@@ -1,6 +1,6 @@
 //! Fail closed when the behavior-preserving dispatch module cut drifts.
 //!
-//! The dispatch subsystem is cut over three crates (router, graph, consensus). This gate reads each
+//! The dispatch subsystem is cut over four crates (router, graph, consensus, identity). This gate reads each
 //! compiler-declared dispatch family (nothing is pinned by file list; orphan files fail the walk,
 //! and a `#[path]` escape out of a crate's `src/dispatch` splits the cut and fails) and asserts:
 //! the retired one-arm wrappers stay deleted, every route function is owned by exactly the module
@@ -93,7 +93,7 @@ const REDUNDANT_WRAPPERS: [&str; 60] = [
     "dispatch_viz",
 ];
 
-const ROUTE_OWNERS: [(&str, &str); 13] = [
+const ROUTE_OWNERS: [(&str, &str); 16] = [
     (
         "dispatch_service_control_methods",
         "crates/medulla-server-router/src/dispatch/router/service_control.rs",
@@ -146,9 +146,21 @@ const ROUTE_OWNERS: [(&str, &str); 13] = [
         "dispatch_op_workitem_submission_or_resources",
         "crates/medulla-server-graph/src/dispatch/graph_pipeline/work_governance.rs",
     ),
+    (
+        "dispatch_rbac_elevation",
+        "crates/medulla-server-identity/src/dispatch/elevation.rs",
+    ),
+    (
+        "handle_policy_evolution",
+        "crates/medulla-server-graph/src/dispatch/policy_evolution.rs",
+    ),
+    (
+        "dispatch_telemetry_methods",
+        "crates/medulla-server-router/src/dispatch/router/telemetry.rs",
+    ),
 ];
 
-const ROUTE_CALLERS: [(&str, &str); 13] = [
+const ROUTE_CALLERS: [(&str, &str); 16] = [
     (
         "dispatch_service_control_methods",
         "crates/medulla-server-router/src/dispatch/router.rs",
@@ -201,6 +213,18 @@ const ROUTE_CALLERS: [(&str, &str); 13] = [
         "dispatch_op_workitem_submission_or_resources",
         "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs",
     ),
+    (
+        "dispatch_rbac_elevation",
+        "crates/medulla-server-router/src/dispatch/router/identity_access.rs",
+    ),
+    (
+        "handle_policy_evolution",
+        "crates/medulla-server-router/src/dispatch/router/control_plane.rs",
+    ),
+    (
+        "dispatch_telemetry_methods",
+        "crates/medulla-server-router/src/dispatch/router.rs",
+    ),
 ];
 
 const LEGACY_COALESCER_METHODS: [&str; 5] = [
@@ -211,10 +235,11 @@ const LEGACY_COALESCER_METHODS: [&str; 5] = [
     "CompareAndSetNodeFields",
 ];
 
-const DISPATCH_ROOTS: [&str; 3] = [
+const DISPATCH_ROOTS: [&str; 4] = [
     "crates/medulla-server-router/src/dispatch",
     "crates/medulla-server-graph/src/dispatch",
     "crates/medulla-server-consensus/src/dispatch",
+    "crates/medulla-server-identity/src/dispatch",
 ];
 
 const GRAPH_PIPELINE: &str = "crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs";
@@ -278,7 +303,13 @@ fn part<'a>(parts: &'a Parts, path: &str) -> Result<&'a String, String> {
 
 fn check_route_calls(parts: &Parts) -> Result<(), String> {
     for (function, caller) in ROUTE_CALLERS {
-        let code = code_mask(part(parts, caller)?)?;
+        // A pinned caller that is no longer in the declared families is a stale pin: the
+        // check runs against it and fails with the missing-call verdict instead of the
+        // gate dying on the lookup.
+        let Some(source) = parts.get(caller) else {
+            return Err(format!("{function} call missing from {caller}"));
+        };
+        let code = code_mask(source)?;
         let call =
             Regex::new(&format!(r"\b{}\s*\(", regex::escape(function))).expect("escaped regex");
         if !call.is_match(&code) {
@@ -485,7 +516,68 @@ mod tests {
 
     #[test]
     fn the_gate_passes_on_the_current_tree() {
+        // spec: MEDULLA-CONTRACT-R017
         check(&workspace_root()).unwrap();
+    }
+
+    #[test]
+    fn elevation_route_ownership_drift_fails_closed() {
+        let mut parts = parts();
+        let owner = owner_of("dispatch_rbac_elevation");
+        let text =
+            parts[owner].replacen("fn dispatch_rbac_elevation", "fn removed_rbac_elevation", 1);
+        parts.insert(owner.to_string(), text);
+        // spec: MEDULLA-CONTRACT-R017
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("dispatch_rbac_elevation ownership changed"));
+    }
+
+    #[test]
+    fn policy_evolution_route_ownership_drift_fails_closed() {
+        let mut parts = parts();
+        let owner = owner_of("handle_policy_evolution");
+        let text = parts[owner].replacen(
+            "pub async fn handle_policy_evolution",
+            "pub async fn removed_handle_policy_evolution",
+            1,
+        );
+        parts.insert(owner.to_string(), text);
+        // spec: MEDULLA-CONTRACT-R017
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("handle_policy_evolution ownership changed"));
+    }
+
+    #[test]
+    fn telemetry_route_call_removal_fails_closed() {
+        let mut parts = parts();
+        let target = "crates/medulla-server-router/src/dispatch/router.rs";
+        let call = "Box::pin(dispatch_telemetry_methods(ctx, method))";
+        assert!(parts[target].contains(call));
+        let text = parts[target].replacen(
+            call,
+            "Box::pin(removed_dispatch_telemetry_methods(ctx, method))",
+            1,
+        );
+        parts.insert(target.to_string(), text);
+        // spec: MEDULLA-CONTRACT-R017
+        assert!(check_inventory(&parts)
+            .unwrap_err()
+            .contains("dispatch_telemetry_methods call missing"));
+    }
+
+    #[test]
+    fn a_stale_caller_pin_runs_the_check_instead_of_aborting() {
+        let mut parts = parts();
+        parts.remove("crates/medulla-server-router/src/dispatch/router.rs");
+        // spec: MEDULLA-CONTRACT-R017
+        let err = check_inventory(&parts).unwrap_err();
+        assert!(
+            err.contains(
+                "dispatch_service_control_methods call missing from crates/medulla-server-router/src/dispatch/router.rs"
+            ) && !err.contains("absent from the declared families")
+        );
     }
 
     #[test]

@@ -197,6 +197,36 @@ def test_write_refuses_invalid_module_without_changing_files(codec, codec_repo):
         assert not (root / client / codec.MODULE).exists()
 
 
+# spec: MEDULLA-CONTRACT-R006
+@pytest.mark.spec("MEDULLA-CONTRACT-R006")
+def test_check_compares_two_builds_and_budget(codec, codec_repo, monkeypatch, capsys):
+    root, _ = codec_repo
+    monkeypatch.setattr(codec, "ROOT", root)
+    fresh = WASM + b"\x00\x01q"
+    monkeypatch.setattr(codec, "build", lambda *_args: fresh)
+    assert codec.main(["--check"]) == 0
+    assert "OK:" in capsys.readouterr().out
+    for client in codec.CLIENT_DIRS:
+        assert not (root / client / codec.MODULE).exists()
+    assert not (root / codec.PROVENANCE).exists()
+
+    def drifting(_root, target_dir):
+        return fresh + b"z" if "requalify" in str(target_dir) else fresh
+
+    monkeypatch.setattr(codec, "build", drifting)
+    assert codec.main(["--check"]) == 1
+    assert "two canonical builds differ" in capsys.readouterr().err
+    for client in codec.CLIENT_DIRS:
+        assert not (root / client / codec.MODULE).exists()
+
+    monkeypatch.setattr(codec, "build", lambda *_args: fresh)
+    monkeypatch.setattr(codec, "MAX_BYTES", 4)
+    assert codec.main(["--check"]) == 1
+    assert "over MAX_BYTES" in capsys.readouterr().err
+    for client in codec.CLIENT_DIRS:
+        assert not (root / client / codec.MODULE).exists()
+
+
 @pytest.fixture
 def export_repo(codec, codec_repo, monkeypatch):
     root, _ = codec_repo

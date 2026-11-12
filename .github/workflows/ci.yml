@@ -1624,18 +1624,26 @@ jobs:
         run: |
           set -euo pipefail
           root="$(cd "$RUNNER_WORKSPACE/.." && pwd)/_medulla-cache"
-          mkdir -p "$root/target" "$root/sccache" "$root/pre-commit"
+          # Pull requests (default features) and main (full feature profiles) build
+          # different dependency graphs; separate targets keep each warm instead of
+          # rebuilding the heavy dependencies on every switch.
+          target="$root/target-${{ github.event_name == 'pull_request' && 'pr' || 'main' }}"
+          # The host-shared compiler cache, when the runner mounts one, lets a new or
+          # recreated runner reuse what its neighbours on the host already compiled.
+          sccache_dir="$root/sccache"
+          [ -d "$HOME/sccache-shared" ] && [ -w "$HOME/sccache-shared" ] && sccache_dir="$HOME/sccache-shared"
+          mkdir -p "$target" "$sccache_dir" "$root/pre-commit"
           budget_kb=$((250 * 1024 * 1024))
           used_kb="$(du -sk "$root" | cut -f1)"
           echo "cache root $root: ${used_kb} KiB used (budget ${budget_kb} KiB)"
           if [ "$used_kb" -gt "$budget_kb" ]; then
-            echo "cache root over budget: pruning the cargo target (sccache kept)"
-            rm -rf "$root/target"
-            mkdir -p "$root/target"
+            echo "cache root over budget: pruning the cargo targets (sccache kept)"
+            rm -rf "$root"/target "$root"/target-pr "$root"/target-main
+            mkdir -p "$target"
           fi
           {
-            echo "CARGO_TARGET_DIR=$root/target"
-            echo "SCCACHE_DIR=$root/sccache"
+            echo "CARGO_TARGET_DIR=$target"
+            echo "SCCACHE_DIR=$sccache_dir"
             echo "SCCACHE_CACHE_SIZE=100G"
             echo "SCCACHE_GHA_ENABLED=false"
             echo "PRE_COMMIT_HOME=$root/pre-commit"

@@ -1,0 +1,655 @@
+[
+  {
+    "method": "ApplyChangeEnvelope",
+    "request": {
+      "method": "ApplyChangeEnvelope",
+      "params": {
+        "envelope": {
+          "blobs": [],
+          "content_version": {
+            "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "digest_algorithm": "sha256",
+            "object_id": "object-1",
+            "source_version": {
+              "kind": "sequence",
+              "value": 1
+            }
+          },
+          "envelope_id": "envelope-1",
+          "evidence": [],
+          "features": [],
+          "lineage": [],
+          "mutation": {
+            "batch_id": "batch-1",
+            "created_at_ms": 0,
+            "envelope": {
+              "operation": {
+                "authority": {
+                  "actor": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "audience": "medulla",
+                  "authority_scope": {
+                    "graph_incarnation": null,
+                    "kind": "graph",
+                    "parent_scope_ids": [
+                      "tenant-a"
+                    ],
+                    "scope_id": "graph-a",
+                    "tenant": "tenant-a"
+                  },
+                  "catalog_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+                  "context_digest": "b5fee8ba891008bbfed6dbd09e9313cc2689d3ca4c2e257b7b8b9c2438695126",
+                  "expires_at": 60000000000,
+                  "idempotency_key": "idem-1",
+                  "ingress_surface": "au_rest",
+                  "issued_at": 0,
+                  "nonce": "0101010101010101010101010101010101010101010101010101010101010101",
+                  "operation": "mutation",
+                  "policy_decision_id": "request:1",
+                  "policy_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+                  "policy_epoch": 0,
+                  "policy_revision": "policy-unset",
+                  "protocol_id": "au-medulla.query.v1",
+                  "purpose_kind": "graph_write",
+                  "purpose_resource": "graph-a",
+                  "request_id": "request:1",
+                  "schema_version": "authority-context.v1",
+                  "tenant": "tenant-a",
+                  "trace_id": "request:1"
+                },
+                "canonical_payload_digest": "0ef25632f638e33feb6e40f9dee58d1d6f76341c9e8e5544f3d5cee73459f90e",
+                "method": "AddNode",
+                "method_schema_digest": "0101010101010101010101010101010101010101010101010101010101010101",
+                "method_schema_id": "medulla:method/AddNode",
+                "serving_principal": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "verified_capabilities": []
+              }
+            },
+            "identity": {
+              "identity_digest": [
+                29,
+                5,
+                103,
+                62,
+                67,
+                206,
+                112,
+                77,
+                12,
+                59,
+                243,
+                98,
+                24,
+                9,
+                57,
+                158,
+                20,
+                147,
+                193,
+                25,
+                243,
+                98,
+                15,
+                203,
+                213,
+                93,
+                197,
+                16,
+                156,
+                31,
+                191,
+                217
+              ],
+              "incarnation_id": "incarnation:test:change-envelope",
+              "scope": {
+                "graph": "graph-a",
+                "kind": "graph"
+              },
+              "tenant": "tenant-a"
+            },
+            "operations": [
+              {
+                "domain": "graph_rows",
+                "method": {
+                  "method": "AddNode",
+                  "params": {
+                    "node_id": "n1",
+                    "properties_msgpack": [
+                      129,
+                      165,
+                      118,
+                      97,
+                      108,
+                      117,
+                      101,
+                      1
+                    ]
+                  }
+                },
+                "ordinal": 0,
+                "surface": "graph"
+              }
+            ],
+            "outbox": [],
+            "placement_epoch": 0,
+            "schema_version": 1,
+            "version_expectation": {
+              "graph": 0
+            }
+          },
+          "policies": [
+            {
+              "classification": "internal",
+              "legal_hold": false,
+              "object_id": "object-1",
+              "operation": "upsert",
+              "policy_id": "policy-1",
+              "policy_version": "policy-v1",
+              "retention_policy": "default",
+              "subject_set_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "tenant": "tenant-a"
+            }
+          ],
+          "privacy": {
+            "policy_version": "privacy-v1",
+            "sanitized_payload_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "sanitizer_version": "sanitizer-v1"
+          },
+          "schema_version": 1
+        }
+      }
+    },
+    "result": {
+      "batch_id": "",
+      "content_version": {
+        "digest": "",
+        "digest_algorithm": "",
+        "object_id": "",
+        "previous_digest": "",
+        "source_version": {
+          "kind": "sequence",
+          "value": 0
+        }
+      },
+      "cursor": {
+        "expected_previous": {
+          "kind": "sequence",
+          "value": 0
+        },
+        "partition": "",
+        "position": {
+          "kind": "sequence",
+          "value": 0
+        },
+        "source": ""
+      },
+      "envelope_id": "",
+      "epoch": 0,
+      "fencing_token": 0,
+      "group": 0,
+      "outbox_count": 0,
+      "projection_pending": false,
+      "replayed": false,
+      "replicated": false,
+      "write_conflict": {
+        "conflict_scope": "",
+        "strategy": "refuse",
+        "winner": "existing"
+      }
+    },
+    "sha256": "3abdf529c640d2b5ffde4146b4e3339c014c5407e4e3ca03b4ca9fb7e83e96bc"
+  },
+  {
+    "method": "ApplyChangeEnvelopeDraft",
+    "request": {
+      "method": "ApplyChangeEnvelopeDraft",
+      "params": {
+        "draft": {
+          "blobs": [],
+          "content_version": {
+            "digest": "",
+            "digest_algorithm": "",
+            "object_id": "",
+            "previous_digest": "",
+            "source_version": {
+              "kind": "sequence",
+              "value": 0
+            }
+          },
+          "cursor": {
+            "expected_previous": {
+              "kind": "sequence",
+              "value": 0
+            },
+            "partition": "",
+            "position": {
+              "kind": "sequence",
+              "value": 0
+            },
+            "source": ""
+          },
+          "envelope_id": "",
+          "evidence": [],
+          "features": [],
+          "lineage": [],
+          "mutation": {
+            "batch_id": "",
+            "expected_graph_version": 0,
+            "fencing_token": 0,
+            "operations": [],
+            "outbox": [],
+            "placement_epoch": 0
+          },
+          "policies": [],
+          "privacy": {
+            "policy_version": "",
+            "sanitized_payload_digest": "",
+            "sanitizer_version": ""
+          },
+          "schema_version": 0
+        }
+      }
+    },
+    "result": {
+      "batch_id": "",
+      "content_version": {
+        "digest": "",
+        "digest_algorithm": "",
+        "object_id": "",
+        "previous_digest": "",
+        "source_version": {
+          "kind": "sequence",
+          "value": 0
+        }
+      },
+      "cursor": {
+        "expected_previous": {
+          "kind": "sequence",
+          "value": 0
+        },
+        "partition": "",
+        "position": {
+          "kind": "sequence",
+          "value": 0
+        },
+        "source": ""
+      },
+      "envelope_id": "",
+      "epoch": 0,
+      "fencing_token": 0,
+      "group": 0,
+      "outbox_count": 0,
+      "projection_pending": false,
+      "replayed": false,
+      "replicated": false,
+      "write_conflict": {
+        "conflict_scope": "",
+        "strategy": "refuse",
+        "winner": "existing"
+      }
+    },
+    "sha256": "ce57f5f9b3842cb1bfb6e8cdd6c271136713296932a3bb2dbd68c11223df41a1"
+  },
+  {
+    "method": "ApplyChangeEnvelopeDrafts",
+    "request": {
+      "method": "ApplyChangeEnvelopeDrafts",
+      "params": {
+        "drafts": []
+      }
+    },
+    "result": {
+      "results": []
+    },
+    "sha256": "b60423e1f7641e9acbf62b7131643852a3c7bb90149fb2846f0107b89dc76468"
+  },
+  {
+    "method": "ApplyChangeEnvelopes",
+    "request": {
+      "method": "ApplyChangeEnvelopes",
+      "params": {
+        "envelopes": []
+      }
+    },
+    "result": {
+      "results": []
+    },
+    "sha256": "d21f11eff82d44a26a24e4b7b17d8d5e1d17a292fa83cdab5ef6177f598d7f77"
+  },
+  {
+    "method": "ApplyMultisigMutation",
+    "request": {
+      "method": "ApplyMultisigMutation",
+      "params": {
+        "mutation_type": "",
+        "query": "",
+        "signatures": [],
+        "threshold": 0
+      }
+    },
+    "result": {
+      "created_graphs": 0,
+      "deleted": 0,
+      "inserted": 0,
+      "operations": 0,
+      "updated_graphs": 0
+    },
+    "sha256": "8871a58138d63ed37c71dac08d5d467db6369d5b77c27e395ed85d2e86b3321c"
+  },
+  {
+    "method": "BatchUpdate",
+    "request": {
+      "method": "BatchUpdate",
+      "params": {
+        "operations_msgpack": []
+      }
+    },
+    "result": {
+      "added_edges": 0,
+      "added_embeddings": 0,
+      "added_nodes": 0,
+      "errors": [],
+      "removed_edges": 0,
+      "removed_nodes": 0,
+      "upserted_edges": 0,
+      "upserted_nodes": 0
+    },
+    "sha256": "0cff2060efef60f0364bc0e005fc6fe22e102eaf1f61b1bb4d3cb5dba3daa03c"
+  },
+  {
+    "method": "BeginTxn",
+    "request": {
+      "method": "BeginTxn",
+      "params": {
+        "graph": "",
+        "isolation": ""
+      }
+    },
+    "result": "",
+    "sha256": "045e88d7681ad97660c76223cd2a6c198533285a69c32479e60542c02af5008e"
+  },
+  {
+    "method": "Commit",
+    "request": {
+      "method": "Commit",
+      "params": {
+        "idempotency_key": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "e1ebe53352445ed13e25876aae1368bf00d36d0c8c5863af5e35d969ef88fe6d"
+  },
+  {
+    "method": "MultiGraphBatchUpdate",
+    "request": {
+      "method": "MultiGraphBatchUpdate",
+      "params": {
+        "batches_msgpack": []
+      }
+    },
+    "result": {
+      "errors": {},
+      "results": {}
+    },
+    "sha256": "bad1795ab96e090519c914c97bfb04e6d02589c02d507366d5d902c3a5e19071"
+  },
+  {
+    "method": "MutationOutbox",
+    "request": {
+      "method": "MutationOutbox",
+      "params": {
+        "op": {
+          "consumer": "",
+          "op": "status",
+          "target": {
+            "graph": "",
+            "target": "graph"
+          }
+        }
+      }
+    },
+    "result": {
+      "dead_letters": {
+        "consumer": "",
+        "items": [],
+        "next_after": {
+          "batch_id": "",
+          "created_at_ms": 0,
+          "ordinal": 0,
+          "sequence": 0
+        },
+        "schema_version": 0
+      },
+      "rewind": {
+        "completed": false,
+        "consumer": "",
+        "deleted_deliveries": 0,
+        "schema_version": 0,
+        "to": {
+          "to": "start"
+        }
+      },
+      "status": {
+        "head": {
+          "age_ms": 0,
+          "attempt": 0,
+          "leased": false,
+          "position": {
+            "batch_id": "",
+            "created_at_ms": 0,
+            "ordinal": 0,
+            "sequence": 0
+          }
+        },
+        "schema_version": 0,
+        "status": {
+          "capacity": 0,
+          "consumer": "",
+          "dead_lettered": 0,
+          "delivered": 0,
+          "index_complete": false,
+          "inflight": 0,
+          "inflight_is_lower_bound": false,
+          "lag_rows": 0,
+          "lag_versions": 0,
+          "live": false,
+          "oldest_pending_age_ms": 0,
+          "pending": 0,
+          "pending_is_lower_bound": false,
+          "saturated": false,
+          "topic": ""
+        }
+      }
+    },
+    "sha256": "1b391b0d00db0748d7bf17c8e59b3271d2ed8389f078c60de757a11c516e3f2d"
+  },
+  {
+    "method": "Rollback",
+    "request": {
+      "method": "Rollback",
+      "params": {
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "58bf8ba9c2e58932b37a13ff499bf69f1417514d089bcb9d2c7a4bf0f26e7a30"
+  },
+  {
+    "method": "TxnAddEdge",
+    "request": {
+      "method": "TxnAddEdge",
+      "params": {
+        "graph": "",
+        "properties_msgpack": [],
+        "source_id": "",
+        "target_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "903730436a242f0bf0305dedf299b93eaf2d08c0abe2b81d5851a04b6526dcd3"
+  },
+  {
+    "method": "TxnAddEmbedding",
+    "request": {
+      "method": "TxnAddEmbedding",
+      "params": {
+        "embedding": [],
+        "graph": "",
+        "node_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "4fdd82a2a4e4060dec386cf29a582b0d0617b15f49ecac289a1f726dbd82bbaa"
+  },
+  {
+    "method": "TxnAddMeasurement",
+    "request": {
+      "method": "TxnAddMeasurement",
+      "params": {
+        "graph": "",
+        "points": [],
+        "series": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "165d0f70dc5b5a7933ecc32c7d43e44bf80000bbcdf5380b3d5ac2c2cbb3ca6c"
+  },
+  {
+    "method": "TxnAddNode",
+    "request": {
+      "method": "TxnAddNode",
+      "params": {
+        "graph": "",
+        "node_id": "",
+        "properties_msgpack": [],
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "5d3c94e784379a608684c9d500c6d4138d3cf885cabe0114dabcf81e62ff2dc5"
+  },
+  {
+    "method": "TxnAxiom",
+    "request": {
+      "method": "TxnAxiom",
+      "params": {
+        "graph": "",
+        "turtle": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "4007b6685da9f6e26bec2309afc398aba8f808362d4b4bb790b2acc2ff0e4068"
+  },
+  {
+    "method": "TxnBlobRef",
+    "request": {
+      "method": "TxnBlobRef",
+      "params": {
+        "digest": "",
+        "graph": "",
+        "node_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "5314d98fb46bcdc16406f5e017fd7e0f928ed494ff39255786de7a59a51119ab"
+  },
+  {
+    "method": "TxnCas",
+    "request": {
+      "method": "TxnCas",
+      "params": {
+        "conditions_msgpack": [],
+        "graph": "",
+        "node_id": "",
+        "txn_id": "",
+        "updates_msgpack": []
+      }
+    },
+    "result": false,
+    "sha256": "917e144451e4f78188e1ccc7a0a24b53d3e25d86937f398ad28a2105a444183c"
+  },
+  {
+    "method": "TxnConstruct",
+    "request": {
+      "method": "TxnConstruct",
+      "params": {
+        "graph": "",
+        "sparql": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "8eded9230bf929581f2a38d71534c06f6104aa54f80fd9d9d7439af708f1c7a8"
+  },
+  {
+    "method": "TxnMaterializeBelief",
+    "request": {
+      "method": "TxnMaterializeBelief",
+      "params": {
+        "graph": "",
+        "node_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": {
+      "confidence": 0.0,
+      "node_id": ""
+    },
+    "sha256": "1b794f1b8d27db1a3d3877974518e1895ad829baac874b59f0ecc7166e626cb3"
+  },
+  {
+    "method": "TxnPlanWriteback",
+    "request": {
+      "method": "TxnPlanWriteback",
+      "params": {
+        "anchor_id": "",
+        "graph": "",
+        "plan": {
+          "ops": [],
+          "scope": {
+            "clearance_labels": [],
+            "leaves": [],
+            "tenant": "",
+            "verified": false
+          }
+        },
+        "relationship": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "3093597063727b98a5815e0c48670a24d0574c752c330d7f1fad1d9425279874"
+  },
+  {
+    "method": "TxnRemoveEdge",
+    "request": {
+      "method": "TxnRemoveEdge",
+      "params": {
+        "graph": "",
+        "source_id": "",
+        "target_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "210b4640523a2a7b6c3667511dcff5cb5240316ac35839876cf4f19127d33421"
+  },
+  {
+    "method": "TxnRemoveNode",
+    "request": {
+      "method": "TxnRemoveNode",
+      "params": {
+        "graph": "",
+        "node_id": "",
+        "txn_id": ""
+      }
+    },
+    "result": false,
+    "sha256": "ed12ac437df12570662e21a6da156fb40882d4fabdde925a39430ef58a84b6c3"
+  }
+]
