@@ -595,7 +595,7 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     if let Some(set) = ctx.policies {
         let principal = ctx
             .principal
-            .unwrap_or_else(|| crate::policy_mask::PrincipalRef(""));
+            .unwrap_or(crate::policy_mask::PrincipalRef(""));
         crate::policy_mask::apply_policies(&mut plan, set, &principal);
     }
     let pinned;
@@ -2661,6 +2661,14 @@ fn sql_filter_ids(
     preds: &[Pred],
     restrict_to: Option<&[String]>,
 ) -> Result<Vec<String>, String> {
+    // Filtering over no rows answers empty. With zero property blobs the
+    // schema-on-read `nodes` table infers NO property columns, so a property
+    // predicate would refuse to plan (`Schema error: No field named <prop>`)
+    // instead of producing the vacuous empty result — and SQL's three-valued
+    // logic says a predicate over no rows keeps no rows.
+    if view.node_properties.is_empty() {
+        return Ok(Vec::new());
+    }
     let mut sql = format!("SELECT id FROM nodes WHERE {}", where_clause(preds)?);
     if let Some(ids) = restrict_to {
         if ids.is_empty() {
