@@ -570,6 +570,12 @@ fn control_family_policy(method: &Method) -> Option<MethodPolicy> {
             op.authz_action(),
             TxnParticipation::Atomic,
         )),
+        Method::Loops { op } => Some(native_owner_policy(
+            op.is_mutation(),
+            DurabilityDomain::StatechartRedb,
+            op.authz_action(),
+            TxnParticipation::Atomic,
+        )),
         Method::DecisionLog { op } => {
             Some(decision_job_policy(op.is_mutation(), op.authz_action()))
         }

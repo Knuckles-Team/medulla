@@ -17,6 +17,7 @@ mod coverage_tests;
 pub(crate) mod guardrail;
 pub(crate) mod jobs;
 pub(crate) mod log;
+pub(crate) mod loops;
 #[cfg(feature = "decide")]
 pub(crate) mod shape;
 pub(crate) mod statistical;
@@ -56,13 +57,13 @@ mod stat_log;
 #[cfg(feature = "decide")]
 mod stat_nl;
 #[cfg(feature = "decide")]
-mod stat_writeback;
-#[cfg(feature = "decide")]
 mod stat_pointer;
 #[cfg(feature = "decide")]
 mod stat_replay;
 #[cfg(feature = "decide")]
 mod stat_resolve;
+#[cfg(feature = "decide")]
+mod stat_writeback;
 // MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
 #[cfg(feature = "decide")]
 mod stat_retention;
@@ -120,15 +121,16 @@ mod topology_read;
 mod topology_schema;
 
 pub use assemble::handle_agent_assemble;
-pub use belief_revise::handle_belief_revise;
 #[cfg(feature = "statechart")]
 pub use belief_revise::enqueue_touched;
+pub use belief_revise::handle_belief_revise;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
 pub use guardrail::handle_guardrail_entailment;
 pub use jobs::{handle_decision_eval, handle_decision_fit};
 pub use log::handle_decision_log;
+pub use loops::handle_loops;
 pub use statistical::handle_decide;
 
 /// The caller's read-only SQL relations — the decision record views (EH-066) — when

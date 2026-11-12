@@ -592,6 +592,17 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def loops(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``Loops`` (fenced loop leases, gaps, offers, ledger and ratchet)."""
+        from medulla.generated.coordination import send_loops
+
+        result = await send_loops(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
     async def belief_revise(
         self, request: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:

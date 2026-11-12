@@ -351,6 +351,22 @@ knobs! {
     /// Claim channel prior for process evidence.
     claims_prior_process: u64 = "claims.prior_process", U64(500_000), [0, 1_000_000], "ppm", Tunable;
     /// Claim log-odds floor to enter `supported`.
+    /// Loop lease time to live (MEDULLA-DECISION-ENGINE-R653.2).
+    loops_lease_ttl_s: u64 = "loops.lease_ttl", U64(60), [5, 3_600], "s", Tunable;
+    /// Cap of a derived offer rate (MEDULLA-DECISION-ENGINE-R653.7).
+    loops_offer_rate_cap_ppm: u64 = "loops.offer_rate_cap_ppm", U64(1_000_000), [0, 1_000_000], "ppm", Tunable;
+    /// Open offers at which offer saturation reaches 100% (MEDULLA-DECISION-ENGINE-R653.7).
+    loops_offer_capacity: u64 = "loops.offer_capacity", U64(8), [1, 256], "count", Tunable;
+    /// Longest mined failure subsequence (MEDULLA-DECISION-ENGINE-R653.8).
+    loops_miner_max_len: u64 = "loops.miner_max_len", U64(4), [2, 8], "steps", Tunable;
+    /// Fewest failure sequences a mined pattern needs (MEDULLA-DECISION-ENGINE-R653.8).
+    loops_miner_min_support: u64 = "loops.miner_min_support", U64(3), [2, 1_000], "sequences", Tunable;
+    /// Most patterns one mine keeps (MEDULLA-DECISION-ENGINE-R653.8).
+    loops_miner_max_patterns: u64 = "loops.miner_max_patterns", U64(64), [1, 1_024], "patterns", Tunable;
+    /// Fewest samples a ratchet side needs (MEDULLA-DECISION-ENGINE-R653.8).
+    loops_ratchet_min_samples: u64 = "loops.ratchet_min_samples", U64(3), [1, 1_000], "samples", Tunable;
+    /// Smallest gain a ratchet keeps (MEDULLA-DECISION-ENGINE-R653.8).
+    loops_ratchet_min_gain_micro: i64 = "loops.ratchet_min_gain_micro", I64(0), [-1_000_000, 1_000_000], "micro", Tunable;
     claims_support_min_micro: i64 = "claims.support_min_micro", I64(1_000_000), [0, 6_000_000], "micro-nats", Tunable;
     /// Longest wait for a stable WAL snapshot of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1).
     foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;

@@ -151,13 +151,94 @@ pub struct MinedPattern {
     pub support: u32,
 }
 
+/// One state change of a loop with its actor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LoopTransition {
+    /// The lease epoch current after the change.
+    pub epoch: u64,
+    /// The event that fired.
+    pub event: String,
+    pub from: String,
+    pub to: String,
+    pub at_ms: u64,
+    /// The verified principal that caused it.
+    pub actor: String,
+}
+
+/// The inputs an offer was derived from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OfferEvidence {
+    pub gap_id: String,
+    pub rate_ppm: u32,
+    pub severity_ppm: u32,
+    pub saturation_ppm: u32,
+    pub open_offers: u32,
+    pub capacity: u32,
+}
+
+/// The ratchet comparison with both means and sample counts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RatchetEvidence {
+    pub metric: String,
+    pub change_at_ms: u64,
+    pub before_mean_micro: i64,
+    pub before_samples: u32,
+    pub after_mean_micro: i64,
+    pub after_samples: u32,
+    pub verdict: RatchetVerdict,
+}
+
+/// A loop with all its evidence, as every `Loops` op answers it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LoopView {
+    pub instance: LoopInstance,
+    pub gaps: Vec<Gap>,
+    pub offers: Vec<OfferEvidence>,
+    pub beacons: Vec<StageBeacon>,
+    pub ledger: ImprovementLedger,
+    pub patterns: Vec<MinedPattern>,
+    pub ratchets: Vec<RatchetEvidence>,
+    pub transitions: Vec<LoopTransition>,
+}
+
+impl LoopOp {
+    /// Whether the op changes durable state.
+    pub fn is_mutation(&self) -> bool {
+        !matches!(self, LoopOp::Get { .. })
+    }
+
+    /// The authorization action the op needs.
+    pub fn authz_action(&self) -> &'static str {
+        if self.is_mutation() {
+            "agent:loop-write"
+        } else {
+            "agent:loop-read"
+        }
+    }
+}
+
 /// The `Loops` op body.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum LoopOp {
-    /// Take the loop's lease.
-    Claim { loop_id: String },
+    /// Take the loop's lease. The first claim of an unknown loop creates it
+    /// with `objective_digest` and `priority`; later claims ignore both.
+    Claim {
+        loop_id: String,
+        #[serde(default)]
+        objective_digest: String,
+        #[serde(default)]
+        priority: u32,
+    },
     /// Give the lease back.
     Release { loop_id: String, epoch: u64 },
     /// Report the stage reached.
@@ -279,6 +360,8 @@ mod tests {
         for op in [
             LoopOp::Claim {
                 loop_id: "loop-1".into(),
+                objective_digest: "sha256:00".into(),
+                priority: 5,
             },
             LoopOp::RecordSample {
                 loop_id: "loop-1".into(),

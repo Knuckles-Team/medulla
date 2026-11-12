@@ -62,6 +62,7 @@ pub mod context;
 pub mod guard;
 pub mod instance;
 pub mod kg;
+pub mod loops;
 pub mod model;
 pub mod store;
 pub mod transition;

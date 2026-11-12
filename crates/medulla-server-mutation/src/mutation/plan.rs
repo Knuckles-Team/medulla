@@ -692,6 +692,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "WriteBack",
     "BeliefRevise",
     "Claims",
+    "Loops",
     "DecisionCommit",
     "DecisionEval",
     "DecisionFit",
@@ -747,6 +748,7 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::BeliefRevise { .. } => Some("BeliefRevise"),
         Method::Claims { .. } => Some("Claims"),
+        Method::Loops { .. } => Some("Loops"),
         Method::DecisionCommit { .. } => Some("DecisionCommit"),
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),

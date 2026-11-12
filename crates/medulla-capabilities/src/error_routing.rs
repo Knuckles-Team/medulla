@@ -115,6 +115,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("Decide", &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"]),
     // MEDULLA-DECISION-ENGINE-R652.4: the claim surface's refusal codes.
     ("Claims", &["ARTIFACT_", "CLAIM_", "EVIDENCE_"]),
+    // MEDULLA-DECISION-ENGINE-R653.4: the loop surface's refusal codes.
+    ("Loops", &["LOOP_", "GAP_", "RATCHET_"]),
     // MEDULLA-DECISION-ENGINE-R700.4: the belief surface's refusal codes.
     ("BeliefRevise", &["BELIEF_", "CONTRADICTION_"]),
     ("RbacElevation", &["ELEVATION_"]),
@@ -209,6 +211,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
     ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("BeliefRevise", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
+    ("Loops", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     ("SemanticIndex", &["PROMOTION_BLOCKED"]),

@@ -753,6 +753,7 @@ mod tests {
         ("DecisionEval", "native MutationBatch in agent_library.redb: the terminal evaluation job row and its receipt in one control-owner WTX; local-only authority"),
         ("BeliefRevise", "native MutationBatch in statecharts.redb: one belief-ledger instance transition per graph per control-owner WTX through the statechart store; local-only authority"),
         ("Claims", "native MutationBatch in statecharts.redb: one claim or sealed-artifact instance transition per control-owner WTX through the statechart store; local-only authority"),
+        ("Loops", "native MutationBatch in statecharts.redb: one loop-state or loop-record instance transition per control-owner WTX through the statechart store; local-only authority"),
         ("DecisionLog", "native MutationBatch in agent_library.redb: one verify-replayed statistical record or one outcome evaluation per control-owner WTX; local-only authority"),
         ("MutationOutbox", "owner-local outbox ledger rewind: bounded medulla-transaction transactions with a durable control cursor; local-only authority"),
         ("EdgeIndex", "tenant SQL owner maintenance writes: edge-index registration, generation parts and fenced drop, one WTX each; local-only authority"),

@@ -205,6 +205,16 @@ method_results! {
     ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_types::claims::ResearchArtifact>;
     ClaimsGet(Claims / "get") => Raw<medulla_types::claims::ClaimGetResult>;
+    LoopsClaim(Loops / "claim") => Raw<medulla_types::loops::LoopView>;
+    LoopsRelease(Loops / "release") => Raw<medulla_types::loops::LoopView>;
+    LoopsBeacon(Loops / "beacon") => Raw<medulla_types::loops::LoopView>;
+    LoopsFileGap(Loops / "file_gap") => Raw<medulla_types::loops::LoopView>;
+    LoopsOffer(Loops / "offer") => Raw<medulla_types::loops::LoopView>;
+    LoopsSettle(Loops / "settle") => Raw<medulla_types::loops::LoopView>;
+    LoopsRecordSample(Loops / "record_sample") => Raw<medulla_types::loops::LoopView>;
+    LoopsRatchet(Loops / "ratchet") => Raw<medulla_types::loops::LoopView>;
+    LoopsMine(Loops / "mine") => Raw<medulla_types::loops::LoopView>;
+    LoopsGet(Loops / "get") => Raw<medulla_types::loops::LoopView>;
     WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
 }

@@ -137,3 +137,10 @@ Order: R829.1, R829.2, R829.3.
 - Harness consumption of decisions: `MEDULLA-DECISION-ENGINE-R134.111` provides, `MERISTEM-HARNESS-CYCLE-R001` consumes. Contract: [harness-decision-consumption.md](contracts/harness-decision-consumption.md).
 - Connector path outcomes: `MEDULLA-DECISION-ENGINE-R159.3` provides, `SCION-CONNECTOR-CONTROL-R904` consumes. Contract: [connector-control-feedback.md](contracts/connector-control-feedback.md).
 - Governed write-back proposals: `MEDULLA-DECISION-ENGINE-R615` provides, `SCION-GOVERNED-WRITEBACK-R006` consumes. Contract: [governed-writeback-proposals.md](contracts/governed-writeback-proposals.md).
+
+## Loops and enrichment behaviour (R653.2-R653.8, R614.2)
+
+- Loop kernels are pure functions in `crates/medulla-statechart/src/loops.rs`; the handler
+  `crates/medulla-h-decide/src/decide/loops.rs` is the single writer and holds each loop as a loop-chart
+  instance plus a `loop_record` instance. Decisions: `research.md`, "Improvement loops".
+- Enrichment behaviours are pure functions in `crates/medulla-enrich/src/semantic.rs`.

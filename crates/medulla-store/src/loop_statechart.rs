@@ -303,6 +303,36 @@ pub fn loop_statechart_def() -> StatechartDef {
     }
 }
 
+/// The name of the one-state chart that holds a loop's record.
+pub const LOOP_RECORD_CHART_NAME: &str = "loop_record";
+
+/// The context key the record chart assigns from the `write` event payload.
+pub const LOOP_RECORD_KEY: &str = "record";
+
+/// Build the one-state chart that holds a loop's lease, gaps, offers, beacons,
+/// ledger, patterns and ratchet evidence (MEDULLA-DECISION-ENGINE-R653.3).
+/// The loop's state lives in the instance of [`loop_statechart_def`]; this
+/// chart's `write` self-loop assigns the whole record in one step.
+pub fn loop_record_statechart_def() -> StatechartDef {
+    StatechartDef {
+        name: LOOP_RECORD_CHART_NAME.to_string(),
+        schema_version: 1,
+        states: vec![State::new("recorded")],
+        alphabet: vec!["write".to_string()],
+        transitions: vec![Transition::new("recorded", "write", "recorded")
+            .with_guard(Guard::Always)
+            .with_actions(vec![Action::Assign {
+                key: LOOP_RECORD_KEY.to_string(),
+                value: medulla_statechart::ActionValue::Event {
+                    key: LOOP_RECORD_KEY.to_string(),
+                },
+            }])],
+        initial: "recorded".to_string(),
+        finals: Vec::new(),
+        meta: Default::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -741,5 +771,22 @@ mod tests {
         let out = medulla_statechart::step(&d, &config, &ctx, &EventInput::new("claim")).unwrap();
         assert!(out.fired);
         assert!(out.next.contains("running"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R653.3
+    #[test]
+    fn loop_record_chart_assigns_the_record_in_one_step() {
+        let def = loop_record_statechart_def();
+        assert_eq!(def, loop_record_statechart_def(), "deterministic");
+        assert!(validate(&def).is_ok());
+        let (config, _) = medulla_statechart::initial_configuration(&def).unwrap();
+        let event = EventInput::with_payload("write", serde_json::json!({"record": {"n": 1}}));
+        let out = medulla_statechart::step(&def, &config, &Context::new(), &event).unwrap();
+        assert!(out.fired);
+        assert!(out.next.contains("recorded"));
+        assert_eq!(
+            out.next_context.get("record"),
+            Some(&serde_json::json!({"n": 1}))
+        );
     }
 }

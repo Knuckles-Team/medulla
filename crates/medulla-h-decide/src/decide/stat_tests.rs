@@ -1120,6 +1120,8 @@ mod generation_cycle_tests;
 // MEDULLA-DECISION-ENGINE-R652: research claims, evidence and sealed artifacts.
 #[cfg(feature = "statechart")]
 mod claims_tests;
+#[cfg(feature = "statechart")]
+mod loops_tests;
 
 // MEDULLA-DECISION-ENGINE-R700: belief revision, retraction proposals and
 // tracked contradictions.
