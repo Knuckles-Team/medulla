@@ -12,6 +12,9 @@ impl SemanticIndexServerAdapter {
     /// `validate_at` checks DTO consistency and approvals; these comparisons
     /// bind it to the private verified authority and therefore close the
     /// request-body actor/tenant substitution path.
+    // The query feature is what wires these into the served semantic-index path;
+    // without it they are dead in a dependent's build.
+    #[cfg_attr(not(feature = "query"), allow(dead_code))]
     pub(crate) fn authorize(
         &self,
         request: &SemanticIndexRequest,
@@ -22,6 +25,7 @@ impl SemanticIndexServerAdapter {
     }
 
     /// Bind a public request to the verified carrier before opening any owner.
+    #[cfg_attr(not(feature = "query"), allow(dead_code))]
     pub(crate) fn authorize_request(
         request: &SemanticIndexRequest,
         authority: &CarrierAuthority,
