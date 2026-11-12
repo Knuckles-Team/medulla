@@ -587,6 +587,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CONTRACT-R053.7.2
     #[test]
     fn spec_file_read_by_a_test_selects_its_package() {
         let tree = Tree::new(&[
