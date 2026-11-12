@@ -73,7 +73,7 @@ pub enum DurableBackendKind {
     Jobs,
     /// `medulla-mutation-store`'s `prepare_saga`/`commit_saga` coordinator.
     MutationStoreSaga,
-    /// `agent_utilities.orchestration.durable_execution.DurableExecutionManager` —
+    /// the meristem harness —
     /// cross-language; reached only over the engine RPC boundary DE2 wires, never a
     /// Rust dependency edge.
     PythonDurableRun,
@@ -112,7 +112,7 @@ pub const fn route_work_shape(shape: WorkShape) -> DurableBackendKind {
 
 impl DurableBackendKind {
     /// The concrete `:DurableExecutionUnit` OWL subclass label this backend mirrors
-    /// into (DE1, `agent_utilities/knowledge_graph/ontology_orchestration.ttl`) — the
+    /// into (DE1, the meristem harness) — the
     /// single source of truth for the label string, so [`crate::project::project`] and
     /// any future Python/Rust caller never re-spell it independently.
     #[must_use]
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn unit_label_matches_the_de0_ontology_subclass_names() {
-        // Matches agent_utilities/knowledge_graph/ontology_orchestration.ttl's
+        // Matches the meristem harness's
         // :StatechartInstance / :AnalyticsJob / :SagaCoordination / :DurableRun
         // labels exactly -- a rename on either side without the other is a defect
         // this test is the tripwire for.

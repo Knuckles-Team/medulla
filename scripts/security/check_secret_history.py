@@ -41,7 +41,7 @@ against:
    lockfile diffs) — reported **informationally only**, never blocking. The
    very first run of this sweep (see the original lane-ci-parity-0801 report)
    found 106/110 candidates were the public ed25519 ``signature:`` fields in
-   ``agent_utilities/knowledge_graph/ontology/connector_manifests*`` — a
+   the meristem harness — a
    legitimate public artifact, not a secret. Hard-failing on entropy alone
    would either need a bespoke exemption list (a new noise surface) or would
    make the gate untrustworthy the first time it cries wolf. It stays a

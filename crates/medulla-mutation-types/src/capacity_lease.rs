@@ -1112,7 +1112,7 @@ mod tests {
     /// acquire up to the floor regardless of flood size. This is the
     /// cell-level half of the "flood cannot starve interactive" proof; the
     /// tenant-vs-tenant DRR half lives in the AU scheduler
-    /// (`agent_utilities/orchestration/capacity_leases.py`).
+    /// (the meristem harness).
     #[test]
     fn background_flood_cannot_touch_reserved_floor() {
         let mut ledger = CapacityLedger::new();

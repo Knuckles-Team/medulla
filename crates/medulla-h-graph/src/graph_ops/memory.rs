@@ -305,7 +305,7 @@ pub(super) async fn try_handle_lifecycle_context(
         // ledger. Because `security` (hence `GraphReadAuthority::is_active()`)
         // is compiled into the default `full` build, that made `GetLedger`
         // return `[]` on EVERY request in production, indistinguishable from
-        // "nothing to sync" — and `agent_utilities.workflows.epistemic_sync`'s
+        // "nothing to sync" — and the meristem harness's
         // `flush_ledger_to_backend` (a real production sync path) silently
         // flushed nothing as a result.
         //

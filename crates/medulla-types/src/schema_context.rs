@@ -7,7 +7,7 @@
 //! served query entry point (`serve_schema_context`): a structured,
 //! wire-serializable request/response pair that Graph OS can dispatch the
 //! same way `graph_code action=code_context` dispatches to
-//! `agent_utilities.knowledge_graph.retrieval.code_context`. The AU client
+//! the meristem harness. The AU client
 //! call and the graph-os `graph_schema` intent-tool registration that
 //! invoke this entry point are follow-up child rows (see the PR for their
 //! proposed IDs); this module only has to serve the request once it

@@ -156,7 +156,7 @@ struct Claims {}
 /// module does not model.
 ///
 /// Claim locations mirror agent-utilities' `actor_from_claims`
-/// (`agent_utilities/security/request_identity.py`) so both verification
+/// (the meristem harness) so both verification
 /// boundaries in this ecosystem agree on where subject/tenant/roles/scopes
 /// live in a Keycloak-issued access token.
 #[derive(Debug, Deserialize)]

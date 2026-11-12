@@ -6,7 +6,7 @@
 //!
 //! * **Surface A (`python` feature):** a pyo3 extension module `medulla.numeric`
 //!   with bounded built-in Python sequence conversion and Python detachment for kernels,
-//!   consumed by `agent_utilities.numeric.xp`. It has no Python numeric runtime dependency.
+//!   consumed by the meristem harness. It has no Python numeric runtime dependency.
 //! * **Surface B (rlib, always):** the same pure kernel the engine links for
 //!   in-database analytics (DataFusion UDFs, graph/vector/timeseries ops) — no FFI,
 //!   compute-near-data. `python` is OFF by default so the engine links **no pyo3**

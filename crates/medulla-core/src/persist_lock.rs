@@ -80,9 +80,9 @@ pub fn is_held(persist_dir: &Path) -> Result<bool, String> {
 /// crate: a caller MUST explicitly choose one of these two variants.
 ///
 /// This is the structural fix for the deployed-system defect this hoist exists to
-/// make impossible for a pyengine caller: `agent_utilities/knowledge_graph/core/
-/// graph_compute.py:1914` reads `GRAPH_SERVICE_PERSIST_DIR`, and — today — an unset
-/// value silently falls back to `agent_utilities.core.paths.data_dir()/
+/// make impossible for a pyengine caller: the meristem harness
+/// reads `GRAPH_SERVICE_PERSIST_DIR`, and — today — an unset
+/// value silently falls back to a default `data_dir()/
 /// "graph_snapshots"`, which on the live pod resolves inside an `emptyDir`, not the
 /// PVC, discarding the whole graph on every restart with no error and no warning
 /// (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §1.9, §9.2 Gate A; registered as

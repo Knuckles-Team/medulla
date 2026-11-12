@@ -974,8 +974,8 @@ fn bind_verified_identity(
     // `src/server/oidc.rs:427-434`), so `verified.roles` is already a merged,
     // IdP-shape-agnostic set by the time it reaches here. agent-utilities
     // sends the `kg:read`/`kg:write`/`kg:admin` capability family as OAuth2
-    // *scopes* by architecture (`agent_utilities/knowledge_graph/core/
-    // session.py:95-99,288-290,406-408`), while Keycloak — this deployment's
+    // *scopes* by architecture (the meristem harness session
+    // layer), while Keycloak — this deployment's
     // actual IdP — carries that same family in `realm_access.roles`. Without
     // this, the two independent loops below would never agree with each
     // other's IdP-shape assumption and every `kg:*`-scoped request would fail

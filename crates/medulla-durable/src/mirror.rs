@@ -2,7 +2,7 @@
 //!
 //! Matches, field for field, the `:DurableExecutionUnit` OWL schema reserved in the
 //! sibling `agent-utilities` change this lane makes
-//! (`agent_utilities/knowledge_graph/ontology_orchestration.ttl`): `:backendRef`,
+//! (the meristem harness): `:backendRef`,
 //! `:durableStatus`, `:checkpointRef`, `:definitionVersion`, `:leaseEpoch`,
 //! `:idempotencyKey`. DE0 defines the shape only — no code here reads or writes a
 //! KG node; DE1 is responsible for actually populating and committing this DTO

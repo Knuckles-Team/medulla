@@ -512,7 +512,7 @@ mod tests {
         let attach_pack = Method::GraphSchema {
             op: Box::new(
                 medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
-                    connector: medulla_types::contract::ResourceId::new("agent-utilities").unwrap(),
+                    connector: medulla_types::contract::ResourceId::new("meristem").unwrap(),
                     if_composed_digest: None,
                 },
             ),

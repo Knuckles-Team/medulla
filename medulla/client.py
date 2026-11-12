@@ -2795,7 +2795,7 @@ class LedgerNotPopulatedError(RuntimeError):
 
     Before the fix, the engine's ``GetLedger`` RPC returned a bare ``[]`` for
     BOTH "nothing has mutated" and "the ledger could not be read", so a caller
-    like ``agent_utilities.workflows.epistemic_sync.flush_ledger_to_backend``
+    like the meristem harness
     (a real production sync path) could not tell the two apart and silently
     treated the second as a no-op, flushing nothing. The engine now returns a
     typed ``{"populated": bool, "entries": [...]}`` result; this client raises
@@ -5712,8 +5712,7 @@ class DevelopmentLaneClient:
     ``crates/medulla-capabilities/src/lib.rs``), and does not fall back to a local
     approximation. Capability negotiation is the caller's responsibility via
     :meth:`MedullaClient.supports` (see
-    ``agent_utilities.orchestration.development_lane.
-    EngineNativeDevelopmentLaneTransport``, which this namespace's method
+    the meristem harness's development-lane transport, which this namespace's method
     names/shapes were written against method-for-method: ``reserve``,
     ``renew``, ``observe``, ``finish``, ``cleanup_complete``, ``query``,
     ``status``, ``update_quota``).
@@ -7416,7 +7415,7 @@ class LedgerClient:
         fully durable server-side (in redb). ``watermark`` is the 0-based
         sequence of the OLDEST entry ``entries`` can vouch for; a caller
         that tracks it across reads (e.g. a periodic flush like
-        ``agent_utilities.workflows.epistemic_sync.flush_ledger_to_backend``)
+        the meristem harness)
         can detect it advancing (or resetting after a restart) as PROOF that
         history was silently dropped, and fail loudly instead of treating a
         short/empty read as "nothing new to sync".
@@ -8341,8 +8340,8 @@ class ServerRegistryClient:
     nodes, deliberately NOT graph nodes), a ``:Server`` row here IS a
     first-class KG entity the fleet queries (``MATCH
     (s:Server)-[:PROVIDES]->(r:CallableResource)``), the SAME shape
-    ``agent_utilities.knowledge_graph.core.engine_ingestion.ingest_mcp_server``
-    writes today via Cypher ``MERGE``. Every fleet MCP server self-registers
+    the meristem harness writes today via Cypher ``MERGE``. Every fleet MCP
+    server self-registers
     at startup and re-calls :meth:`register` periodically to renew its lease
     (wired into ``mcp/server_factory.py`` so every fleet server gets it for
     free); the au config-sync ingestion becomes a reconciler that repairs

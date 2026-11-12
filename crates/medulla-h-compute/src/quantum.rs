@@ -68,7 +68,7 @@
 //! Plan's ~10-minutes-per-28-days shared resource this program's addendum calls out)
 //! lives on the agent-utilities side, fail-closed, BEFORE a request with a non-local
 //! `backend_id` override is ever sent over the wire — see that repo's
-//! `agent_utilities/knowledge_graph/quantum/budget.py`. This handler's only quota-
+//! the meristem harness. This handler's only quota-
 //! adjacent behavior is the qubit-count ceilings below, which bound wall-time/memory
 //! for the local simulator, not cost.
 
@@ -397,7 +397,7 @@ fn build_rank_program(candidates: &[QuantumRankCandidate]) -> Result<QuantumProg
         instructions,
         metadata: ProgramMetadata {
             name: Some("q8-quantum-rank".to_string()),
-            source: Some("agent-utilities-q8".to_string()),
+            source: Some("meristem-q8".to_string()),
         },
     })
 }
@@ -528,7 +528,7 @@ fn build_qaoa_program(
         instructions,
         metadata: ProgramMetadata {
             name: Some("q8-optimize-with-qaoa".to_string()),
-            source: Some("agent-utilities-q8".to_string()),
+            source: Some("meristem-q8".to_string()),
         },
     };
     Ok((program, resolved_edges))

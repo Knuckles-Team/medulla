@@ -123,7 +123,7 @@ def _resolve_persist_dir(explicit: str | None) -> str | None:
     (see the module docstring). **Never** falls back to a path nobody
     configured -- an unset setting with no explicit argument raises
     `EmbeddedTransportConfigError` (plan §1.9's "(a) refuse to start" option)
-    rather than silently picking `agent_utilities.core.paths.data_dir()`'s
+    rather than silently picking the meristem harness's
     equivalent the way today's subprocess-autostart path does.
     """
     if explicit == _IN_MEMORY_SENTINEL:

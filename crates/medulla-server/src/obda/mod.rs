@@ -87,5 +87,5 @@
 //! row set its `ObdaSource` hands it, which is the boundary this lane owns; it does not
 //! re-test `sql_catalog_acl`'s own ACL/RLS predicate machinery, which is exercised by
 //! its own test suite. Deleting au's hardcoded `r2rml_mappings` dict
-//! (`agent_utilities/knowledge_graph/core/owl_bridge.py:1455-1479`) is CA-23's job,
+//! (the meristem harness) is CA-23's job,
 //! gated on this lane's `ObdaClient` landing (`file-ownership.yaml` FO-CA-006/008 note).

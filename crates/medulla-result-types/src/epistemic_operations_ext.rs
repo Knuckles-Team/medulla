@@ -1,5 +1,5 @@
 //! Hand-written Epistemic Operations wire DTOs NOT covered by the AU protocol
-//! catalog gate (`agent_utilities/protocols/epistemic_operations/schemas/v1/catalog.json`,
+//! catalog gate (the meristem harness,
 //! enforced by `scripts/check_epistemic_operations_protocol.py`).
 //!
 //! GOC-46 finding (2026-08-16): `WorkItemClaimCapability{MintRequest,VerifyRequest,Result}`

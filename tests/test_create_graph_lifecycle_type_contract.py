@@ -1,7 +1,7 @@
 """U-96/U-98/U-101 end-to-end, against the REAL server binary.
 
-U-96 root cause: `agent_utilities.knowledge_graph.ontology.lifecycle.
-_ensure_ontology_graph` called `tenants.create(graph_name, "Ontology")` --
+U-96 root cause: the meristem harness's `_ensure_ontology_graph` called
+`tenants.create(graph_name, "Ontology")` --
 `"Ontology"` is a semantic content label, not a member of the engine's closed
 `GraphType` wire enum (`crates/medulla-types/src/protocol.rs`: `Agent | Team |
 Global | Commons`). The unsupported value failed to deserialize server-side.

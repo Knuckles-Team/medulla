@@ -149,7 +149,7 @@ through `ChangeEnvelope` and `MutationBatch`.
 
 For an Meristem or Arbora deployment, run the
 [live deployment doctor](https://github.com/Knuckles-Team/meristem/blob/main/docs/guides/self-setup.md#8-check)
-with `agent-utilities-doctor --live`; it checks that the connected engine
+with `meristem-doctor --live`; it checks that the connected engine
 advertises and runs the native optimization capability.
 
 ## Plan and candidate lifecycle

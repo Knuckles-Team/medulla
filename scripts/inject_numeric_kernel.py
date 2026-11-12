@@ -4,7 +4,7 @@
 There is exactly ONE published package — ``medulla`` — and the numeric
 kernel ships INSIDE its wheel as a native ``medulla.numeric`` extension
 (``.abi3.so`` on Unix or ``.pyd`` on Windows), the module the
-``agent_utilities.numeric`` ``xp`` shim probes. There is NO separately published
+the meristem harness ``xp`` shim probes. There is NO separately published
 ``medulla-numeric`` package.
 
 The main ``medulla`` wheel is a maturin ``bindings="bin"`` wheel (it ships

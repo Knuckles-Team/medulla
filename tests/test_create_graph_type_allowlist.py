@@ -3,7 +3,6 @@ against the engine's closed `GraphType` wire enum (`crates/medulla-types/src/
 protocol.rs`: `Agent | Team | Global | Commons`) BEFORE any request is sent.
 
 Before this fix, a semantic content label like `"Ontology"` (the live
-`agent_utilities.knowledge_graph.ontology.lifecycle._ensure_ontology_graph`
 defect) was sent over the wire, failed to deserialize server-side, and the
 decode-failure path answered under a synthetic correlation id `0` that the
 Python client's `_pending` map has no future for -- so the call silently

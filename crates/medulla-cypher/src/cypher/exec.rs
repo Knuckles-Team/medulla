@@ -5420,8 +5420,7 @@ mod tests {
     /// exact literal-inlined text `_inline_cypher_params` actually produces:
     /// ```text
     /// python3 -c "
-    /// from agent_utilities.knowledge_graph.core.cypher_scoping import inject_and_predicate
-    /// from agent_utilities.knowledge_graph.backends.medulla_backend import MedullaBackend
+    /// # (imports of the harness's cypher-scoping helper and Medulla backend elided)
     /// cond = \"(n._owner_id = \$_visibility_owner_id OR n._shared_scope IN ['org', 'commons'] OR n._owner_id IS NULL)\"
     /// scoped = inject_and_predicate('MATCH (n) WHERE n.node_type IS NOT NULL RETURN count(n)', cond)
     /// print(MedullaBackend._inline_cypher_params(scoped, {'_visibility_owner_id': 'me'}))
@@ -7304,8 +7303,7 @@ mod tests {
 
     // ── realistic-scale benchmark: labelled id-IN start (LANE perf/engine-node-id-index) ──
     //
-    // The durable ACL hydration path (`agent_utilities/knowledge_graph/core/
-    // secured_reads.py`) issues `MATCH (n:Label) WHERE n.id IN [...] RETURN ...` on
+    // The durable ACL hydration path (in the meristem harness) issues `MATCH (n:Label) WHERE n.id IN [...] RETURN ...` on
     // EVERY governed read, against a brand-new `GraphView` per call
     // (`GraphCore::analysis_snapshot_versioned` clones one per request, so
     // `label_index_memo` starts cold every single time). Before this lane, the

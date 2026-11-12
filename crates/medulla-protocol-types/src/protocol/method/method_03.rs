@@ -37,8 +37,7 @@ $($variants)*
     // above (deliberately NOT graph nodes, the placement O(N)-scan lesson), a
     // `:Server` node IS a first-class KG entity the fleet queries (`MATCH
     // (s:Server)-[:PROVIDES]->(r:CallableResource)`), the SAME shape
-    // `agent_utilities.knowledge_graph.core.engine_ingestion.ingest_mcp_server`
-    // writes today via `MERGE (s:Server {id: $id}) SET s.name=…, s.url=…,
+    // the meristem harness writes today via `MERGE (s:Server {id: $id}) SET s.name=…, s.url=…,
     // s.timestamp=…` (Cypher, `node_type: "Server"` is the canonical label field
     // medulla-query's CREATE/MERGE path sets — see `crates/medulla-query/src/cypher/exec.rs`
     // `relationship_fixture`). `RegisterServer` self-translates into

@@ -1,7 +1,6 @@
 """Gate A -- config wiring proof (plan §9.2): `EmbeddedTransport` reads the
-SAME `GRAPH_SERVICE_PERSIST_DIR` setting `agent_utilities.knowledge_graph
-.core.graph_compute:1914` reads today, and an unset value never silently
-falls back to an unmounted default path.
+SAME `GRAPH_SERVICE_PERSIST_DIR` setting the meristem harness reads today, and an
+unset value never silently falls back to an unmounted default path.
 
 Exercises `medulla.embedded._resolve_persist_dir` directly -- a pure
 function needing neither the native `medulla.engine` extension nor
@@ -32,8 +31,8 @@ def test_explicit_persist_dir_wins_over_env(monkeypatch: pytest.MonkeyPatch) -> 
 def test_reads_the_graph_compute_setting_name_when_unset_explicitly(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Exact name confirmed against `agent_utilities/knowledge_graph/core/
-    # graph_compute.py:1914`: `persist_dir = setting("GRAPH_SERVICE_PERSIST_DIR")`.
+    # Exact name confirmed against the meristem harness:
+    # `persist_dir = setting("GRAPH_SERVICE_PERSIST_DIR")`.
     monkeypatch.setenv("GRAPH_SERVICE_PERSIST_DIR", "/var/lib/agent-os/engine")
     assert _resolve_persist_dir(None) == "/var/lib/agent-os/engine"
 
@@ -49,9 +48,8 @@ def test_unset_env_and_no_explicit_argument_refuses_to_start(
 def test_unset_env_never_falls_back_to_an_unmounted_default_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The exact hazard plan §1.9 identifies: `agent_utilities.knowledge_
-    graph.core.graph_compute`'s OWN fallback (`data_dir() / "graph_
-    snapshots"`, `graph_compute.py:1915-1921`) resolves inside the pod's
+    """The exact hazard plan §1.9 identifies: the meristem harness's OWN
+    fallback (`data_dir() / "graph_snapshots"`) resolves inside the pod's
     `emptyDir` on the live deployment, not the PVC. `EmbeddedTransport` must
     never silently choose ANY path when unset -- proven by asserting the
     unset case is an exception, not merely that it differs from one

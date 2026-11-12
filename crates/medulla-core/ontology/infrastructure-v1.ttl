@@ -83,17 +83,17 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :HealthAnomaly a owl:Class ;
     rdfs:label "Health Anomaly" ;
-    rdfs:comment "An entity+signal observed drifting off its :HealthBaseline (above-baseline / saturated / a caller-defined systemic kind) — produced by agent_utilities.observability.health.detect_anomaly / correlate." ;
+    rdfs:comment "An entity+signal observed drifting off its :HealthBaseline (above-baseline / saturated / a caller-defined systemic kind) — produced by the meristem harness." ;
     rdfs:subClassOf bfo:0000031 .
 
 :HealthBaseline a owl:Class ;
     rdfs:label "Health Baseline" ;
-    rdfs:comment "An entity+signal's learned fingerprint (p50/p95, idle/load envelope, inertia) computed from its :HealthTrend history by agent_utilities.observability.health.compute_baseline — the reference for anomaly detection." ;
+    rdfs:comment "An entity+signal's learned fingerprint (p50/p95, idle/load envelope, inertia) computed from its :HealthTrend history by the meristem harness — the reference for anomaly detection." ;
     rdfs:subClassOf bfo:0000031 .
 
 :HealthTrend a owl:Class ;
     rdfs:label "Health Trend" ;
-    rdfs:comment "One distilled aggregate-window reading of a named signal on an entity (min/avg/max + avg control level + sample count) — the layer-agnostic generalization of fan-manager's :ThermalTrend, produced by agent_utilities.observability.health.HealthTrendBuffer." ;
+    rdfs:comment "One distilled aggregate-window reading of a named signal on an entity (min/avg/max + avg control level + sample count) — the layer-agnostic generalization of fan-manager's :ThermalTrend, produced by the meristem harness." ;
     rdfs:subClassOf bfo:0000031 .
 
 :Incident a owl:Class ;

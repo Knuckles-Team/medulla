@@ -106,7 +106,7 @@ pub struct MerkleInclusionReport {
 /// returned an empty list even after real mutations had committed). The prior wire
 /// shape was a bare `Vec<String>`, which made "the ledger is genuinely empty" and
 /// "the ledger could not be read for this request's scope" indistinguishable — both
-/// serialized to `[]`, so a caller (e.g. `agent_utilities.workflows.epistemic_sync`'s
+/// serialized to `[]`, so a caller (e.g. the meristem harness's
 /// `flush_ledger_to_backend`, a real production sync path) could not tell "nothing to
 /// sync" from "I silently read nothing". Root cause: the terminal handler
 /// unconditionally reads through the row-level-security PROJECTED core (built by

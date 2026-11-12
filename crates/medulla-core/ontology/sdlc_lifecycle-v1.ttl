@@ -145,7 +145,7 @@ referenced, not redeclared. Per decision #4 the executable-process axis binds
 skill-workflow executor. The REQUIRED shape per lifecycle state (e.g. a merged
 :CodeChange REQUIRES a :PipelineRun) is expressed as SHACL in
 shapes/sdlc_lifecycle.shapes.ttl, consulted in DIFF mode by the enter-anywhere
-orchestrator (agent_utilities.observability.lifecycle_orchestrator).""" ;
+orchestrator (the meristem harness).""" ;
     owl:imports <http://knuckles.team/kg/infrastructure>,
         <http://knuckles.team/kg/orchestration> .
 
@@ -162,7 +162,7 @@ orchestrator (agent_utilities.observability.lifecycle_orchestrator).""" ;
 :LifecycleStep a owl:Class ;
     rdfs:label "Lifecycle Step" ;
     rdfs:comment """One REPORT-ONLY gap-fill transition the enter-anywhere orchestrator emits
-(agent_utilities.observability.lifecycle_orchestrator): a proposed forward/backward transition
+(the meristem harness): a proposed forward/backward transition
 between two lifecycle stages, bound (via :boundCapability) to the fleet capability that WOULD
 execute it, with a stable dedupe signature. Emitting a :LifecycleStep NEVER executes anything —
 an operator drives it via graph_loops/WorkflowRunner when autonomy is turned on.""" ;

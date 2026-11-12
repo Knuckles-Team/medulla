@@ -318,7 +318,7 @@ mod py {
         /// top-level "Durability" doc). Accepting a real path and quietly
         /// running in-memory-only would repeat, at this new call site, the
         /// EXACT bug class already recorded against the wire path
-        /// (`agent_utilities/knowledge_graph/core/graph_compute.py:1914-1921`).
+        /// (the meristem harness).
         #[new]
         #[pyo3(signature = (persist_dir=None, agent_id=None, tenant=None))]
         pub fn new(

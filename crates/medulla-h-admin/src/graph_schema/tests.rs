@@ -12,7 +12,7 @@ fn pack_document(uri: &str, body: Arc<str>) -> PackSchemaDocument {
 #[test]
 fn pack_projection_graph_identity_is_framed_opaque_and_tenant_safe() {
     let graph_os = medulla_types::contract::ResourceId::new("graph-os").unwrap();
-    let utilities = medulla_types::contract::ResourceId::new("agent-utilities").unwrap();
+    let utilities = medulla_types::contract::ResourceId::new("meristem").unwrap();
     let golden = pack_projection_graph_name("tenant-a", &graph_os).unwrap();
     assert_eq!(
         golden,
@@ -354,7 +354,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
 #[test]
 fn internal_pack_projection_withdrawal_retains_record_high_water() {
     let core = GraphCore::new();
-    let connector = medulla_types::contract::ResourceId::new("agent-utilities").unwrap();
+    let connector = medulla_types::contract::ResourceId::new("meristem").unwrap();
     let ontology = Arc::<str>::from(
         "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/> . ex:A a owl:Class .",
     );
@@ -362,11 +362,11 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &core,
         "pack__test",
         &connector,
-        "pack:agent-utilities:1:aaaa",
+        "pack:meristem:1:aaaa",
         PackSourceDocuments {
             shapes: Vec::new(),
             ontologies: vec![pack_document(
-                "ontology://agent-utilities/a.ttl",
+                "ontology://meristem/a.ttl",
                 Arc::clone(&ontology),
             )],
             crosswalks: Vec::new(),
@@ -378,7 +378,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &core,
         "pack__test",
         &connector,
-        "pack:agent-utilities:2:bbbb",
+        "pack:meristem:2:bbbb",
         PackSourceDocuments {
             shapes: Vec::new(),
             ontologies: Vec::new(),
@@ -391,7 +391,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
     let tombstone = core
         .schema_sources()
         .dynamic
-        .get("pack:agent-utilities")
+        .get("pack:meristem")
         .cloned()
         .unwrap();
     assert!(tombstone.shapes_ttl.is_none() && tombstone.ontology_ttl.is_none());
@@ -403,10 +403,10 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         &restarted,
         "pack__test",
         &connector,
-        "pack:agent-utilities:1:cccc",
+        "pack:meristem:1:cccc",
         PackSourceDocuments {
             shapes: Vec::new(),
-            ontologies: vec![pack_document("ontology://agent-utilities/a.ttl", ontology)],
+            ontologies: vec![pack_document("ontology://meristem/a.ttl", ontology)],
             crosswalks: Vec::new()
         },
         None

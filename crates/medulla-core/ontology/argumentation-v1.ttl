@@ -64,8 +64,7 @@ argumentation machinery, not a second store: an :AIFInformationNode IS a
 importing an RA/CA-node also writes the underlying SUPPORTS/ATTACKS edge so
 medulla-epistemic's Dung argumentation (Method::ResolveConflict — grounded/
 preferred/stable semantics) computes acceptability natively, with no
-duplicated solver. See agent_utilities/knowledge_graph/argumentation/aif.py
-and docs/architecture/aif-argumentation.md.""" .
+duplicated solver. See docs/architecture/aif-argumentation.md.""" .
 
 :AIFConflictApplicationNode a owl:Class ;
     rdfs:label "AIF Conflict Application Node (CA)" ;

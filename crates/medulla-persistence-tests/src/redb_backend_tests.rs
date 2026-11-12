@@ -2440,7 +2440,7 @@ async fn audit_verify_dispatch_detects_tamper() {
 /// build, `GetLedger` returned `[]` on EVERY served request, regardless of
 /// how many mutations had actually committed -- indistinguishable from
 /// "nothing to sync" at every real production caller
-/// (`agent_utilities.workflows.epistemic_sync.flush_ledger_to_backend`).
+/// (the meristem harness).
 ///
 /// Commit N real mutations over the SAME served dispatch path this bug
 /// lived on, call `GetLedger`, and assert exactly N entries come back

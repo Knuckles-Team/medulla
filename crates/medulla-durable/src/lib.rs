@@ -43,7 +43,7 @@
 //!   cron/interval/manual triggers.
 //! - `medulla-statechart` — durable keyed state with OCC, routed through the same
 //!   `MutationBatch`/`medulla-mutation-store` gateway `medulla-jobs` uses.
-//! - `agent_utilities.orchestration.durable_execution` — `DurableExecutionManager`/
+//! - the meristem harness — `DurableExecutionManager`/
 //!   `DurableRun`, SQLite-/Postgres-backed named-step checkpointing.
 //!
 //! If a future change to this crate starts implementing any of the above, that
@@ -66,7 +66,7 @@
 //! `medulla-statechart`/`medulla-jobs`/`medulla-mutation-store` is tracked, not silently claimed
 //! done (`agent-utilities` `docs/architecture/durable-execution.md`). The one
 //! backend with a REAL, wired mirror-on-write today is the Python-side
-//! `DurableRun`, via `agent_utilities.knowledge_graph.durable_execution_kg`
+//! `DurableRun`, via the meristem harness
 //! (reached over the engine RPC boundary, not this crate).
 
 // MEDULLA-UNIFIED-DATA-PLANE-R008.1 — typed ChangeEnvelope model + validation/refusal

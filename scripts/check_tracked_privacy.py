@@ -391,7 +391,7 @@ _CREDENTIAL_URI_RE = re.compile(
 )
 # D-CIP-15 / BUG-228: a documented template placeholder (the repo's own
 # convention -- see deploy_wizard.py's ``_warn_production_safety`` and
-# agent_utilities.observability.langfuse_trust's ``_CREDENTIAL_SENTINELS``)
+# the meristem harness's ``_CREDENTIAL_SENTINELS``)
 # is never a live credential, so a URI shaped like one must not be flagged as
 # though it were. This set had drifted out of sync with
 # scripts/check_wheel_privacy.py's own ``_CREDENTIAL_PLACEHOLDER_TOKENS`` --
@@ -1019,16 +1019,6 @@ def _is_runtime_source_path(path: Path) -> bool:
     return bool(path.parts)
 
 
-def _is_bundled_connector_profile(path: Path) -> bool:
-    parts = tuple(part.casefold() for part in path.parts)
-    return parts[:4] == (
-        "agent_utilities",
-        "protocols",
-        "source_connectors",
-        "profiles",
-    ) and path.suffix.casefold() in {".py", ".json", ".yaml", ".yml"}
-
-
 def _is_non_neutral_author_line(folded: str, *, in_project_authors: bool) -> bool:
     """True if this folded, stripped line is a non-neutral author assignment."""
     if re.match(r"authors\s*=", folded):
@@ -1127,12 +1117,6 @@ def _scan_runtime_source_artifact(
 ) -> None:
     relative = path.relative_to(root)
     rel_str = relative.as_posix()
-    if _is_bundled_connector_profile(relative):
-        category = "bundled environment-specific connector profile"
-        # Whole-file finding, not line-anchored: hash the path itself so
-        # it stays stable regardless of the file's own line churn.
-        content_hash = _content_hash(rel_str)
-        _record_violation(violations, ordinals, rel_str, 1, category, content_hash)
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     for number, line in enumerate(lines, 1):
         if number in reviewed_lines:

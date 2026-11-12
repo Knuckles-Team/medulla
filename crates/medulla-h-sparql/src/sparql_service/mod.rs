@@ -53,7 +53,7 @@
 //!   * The qualification test (`tests/e2e_ca12_sparql_fuseki.rs`) — proves a live,
 //!     end-to-end `SERVICE` query against the real Fuseki instance returns real rows for a
 //!     `GRAPH <urn:source:…>`-scoped pattern (au's named-graph partition convention,
-//!     `agent_utilities/knowledge_graph/backends/sparql/source_partition.py`:
+//!     the meristem harness:
 //!     `urn:source:<system>[:<instance>][:<kind>]`), that a non-allowlisted host is refused
 //!     by name (not a silent empty solution), and that an allowlisted-but-unreachable
 //!     endpoint fails/empties the `SERVICE` leg only (SILENT semantics) without breaking the

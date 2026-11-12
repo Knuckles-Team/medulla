@@ -38,7 +38,7 @@
     rdfs:label "DurableRun" ;
     rdfs:comment """CONCEPT:AU-ORCH.runvcs.durable-run-mirror — mirrors one
     agent-utilities `DurableExecutionManager`/`DurableRun` checkpoint sequence
-    (`agent_utilities/orchestration/durable_execution.py`): a SQLite- or Postgres-backed
+    (the meristem harness): a SQLite- or Postgres-backed
     (CONCEPT:AU-OS.state.unified-durable-state-externalization), named-step resumable run keyed by
     `(session_id, node_id)`, with an idempotency key per critical action and
     skip-completed-steps-on-resume via `DurableRun.step()`. :backendRef is the
@@ -523,8 +523,8 @@
     error_class/failing_layer/traceback bundle, keyed by the same correlation id already
     logged and returned to the caller, so the ref stays resolvable past this process's
     lifetime and across replicas (`GraphErrorDetailSink`,
-    `agent_utilities.observability.error_detail_sink`). Never carries the raw exception
-    message — only what `agent_utilities.security.error_surface._record_error_detail`
+    in the meristem harness). Never carries the raw exception
+    message — only what the meristem harness
     already sanitized through the persistence-privacy gate before handing it to the sink.""" ;
     rdfs:seeAlso prov:Entity .
 

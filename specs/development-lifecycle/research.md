@@ -169,7 +169,7 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `prebuild_macos_bins.sh` | xtask (build/release/bench tooling) | .github/workflows/macos-release-probe.yml, scripts/probe_macos_release.py | 921 |
 | `probe_arm64_linker.sh` | xtask (build/release/bench tooling) | .github/workflows/arm64-linker-probe.yml, tests/test_arm64_linker.py | 5949 |
 | `probe_macos_release.py` | xtask (build/release/bench tooling) | .github/workflows/macos-release-probe.yml | 9688 |
-| `promote_engine.sh` | xtask (build/release/bench tooling) | Cargo.toml, docs/deploy/binary_promotion.md, docs/deploy/transition-runbook.md, medulla/skills/medulla-deploy/ | 5172 |
+| `promote_engine.sh` | xtask (build/release/bench tooling) | Cargo.toml, docs/deploy/binary_promotion.md, medulla/skills/medulla-deploy/ | 5172 |
 | `push_gate_evidence.py` | pipelines mode | .config/pre-commit.yaml, architecture/component-registry.yml, docs/architecture/index.md, docs/architecture/pu | 41493 |
 | `python_suite_artifact.sh` | xtask (build/release/bench tooling) | .github/workflows/ci.yml, tests/test_release_python_suite_contract.py | 1398 |
 | `raft_cpu_load.py` | xtask (build/release/bench tooling) | scripts/validate-raft-cluster.sh, tests/test_validate_raft_cluster.py | 8403 |
@@ -193,7 +193,6 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `source_gate_scope.py` | B | none | 4065 |
 | `strip_wheel_executables.py` | xtask (wheel/sdist) | .github/actions/folded-wheel/action.yml, .github/workflows/ci.yml, architecture/component-registry.yml, pyproj | 2404 |
 | `third_party_sources.py` | pipelines mode | .config/third-party-sources.toml | 13620 |
-| `transition_deploy.sh` | xtask (build/release/bench tooling) | docs/deploy/transition-runbook.md | 13410 |
 | `validate-raft-cluster.sh` | xtask (build/release/bench tooling) | crates/medulla-raft-xshard/src/xshard_modality_harness.rs, docs/architecture/m2_raft_status.md, docs/architect | 5644 |
 | `validate_cccc_census.py` | pipelines mode | .config/pre-commit.yaml, docs/quality-gate-terms.md, tests/test_scanner_distribution.py | 12971 |
 | `verify_release_tag.py` | xtask (build/release/bench tooling) | .github/actions/publish-distribution/action.yml, docs/development/pypi-tombstones.md, tests/test_normal_releas | 1614 |

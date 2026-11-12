@@ -885,8 +885,8 @@ mod blob_dispatch_tests {
 // `kg:read`/`kg:write`-scoped, non-bootstrap actor was denied
 // `ACCESS_DENIED: verified request context lacks required scope
 // 'admin:cluster-read'` on EVERY placement-routed request -- before their actual
-// Cypher/traversal read ever ran (`agent_utilities.knowledge_graph.core.
-// placement_catalog.resolve_placement` calls `PlacementRoute` for every
+// Cypher/traversal read ever ran (the meristem harness's
+// placement catalog `resolve_placement` calls `PlacementRoute` for every
 // graph-routed op once route config is present, including a single-endpoint
 // deployment -- see `graph_compute.py`'s `transport_client._au_route_config`/
 // `_au_route_endpoints` assignment, always set, and `_send`'s routing-skip

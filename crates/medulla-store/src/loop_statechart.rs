@@ -1,6 +1,6 @@
 //! The **Loop statechart** (CONCEPT:INT-P2-2, W2.5 control-plane migration).
 //!
-//! `LoopStatus` (the Python `agent_utilities.knowledge_graph.research.loops.LoopStatus`
+//! `LoopStatus` (the Python meristem harness
 //! `StrEnum`, 16 members) has NO durable engine-native home today: the Loop's actual
 //! persisted state is just its backing WorkItem's 8-value `status` plus a free-text
 //! `error_ref` suffix nothing parses back into a real state. This module gives Loop its
