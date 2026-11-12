@@ -2378,3 +2378,64 @@
     :fromState :GenerationCycleMachine_Evaluated ;
     :toState :GenerationCycleMachine_Activated ;
     :firedBy :GenerationCycleMachine_Event_PointerMoved .
+# spec: MEDULLA-DECISION-ENGINE-R036.103
+# spec: MEDULLA-DECISION-ENGINE-R036.104
+# The Reservation machine: the lifecycle of the RBAC read reservation and the Agent Library
+# admission. The Rust edge table RESERVATION_MACHINE is the same table.
+
+:ReservationState a owl:Class ;
+    rdfs:label "Reservation State" ;
+    rdfs:comment "A state of the Reservation machine." ;
+    rdfs:subClassOf :State .
+
+:ReservationTerminalState a owl:Class ;
+    rdfs:label "Reservation Terminal State" ;
+    rdfs:comment "A terminal state of the Reservation machine." ;
+    rdfs:subClassOf :TerminalState, :ReservationState .
+
+:ReservationTransition a owl:Class ;
+    rdfs:label "Reservation Transition" ;
+    rdfs:comment "A transition of the Reservation machine." ;
+    rdfs:subClassOf :Transition .
+
+:ReservationEvent a owl:Class ;
+    rdfs:label "Reservation Event" ;
+    rdfs:comment "An event of the Reservation machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ReservationMachine a :StateMachine ;
+    rdfs:label "Reservation machine" ;
+    :initialState :ReservationMachine_Reserved ;
+    :hasState :ReservationMachine_Reserved, :ReservationMachine_Committed, :ReservationMachine_Aborted .
+
+:ReservationMachine_Reserved a :ReservationState ;
+    rdfs:label "Reservation Reserved" ;
+    :storedForm "reserved" .
+
+:ReservationMachine_Committed a :ReservationTerminalState ;
+    rdfs:label "Reservation Committed" ;
+    :storedForm "committed" .
+
+:ReservationMachine_Aborted a :ReservationTerminalState ;
+    rdfs:label "Reservation Aborted" ;
+    :storedForm "aborted" .
+
+:ReservationMachine_Event_Commit a :ReservationEvent ;
+    rdfs:label "Reservation Commit" .
+
+:ReservationMachine_Event_Abort a :ReservationEvent ;
+    rdfs:label "Reservation Abort" .
+
+:ReservationMachine_R01 a :ReservationTransition ;
+    rdfs:label "Reservation R01" ;
+    :edgeId "R01" ;
+    :fromState :ReservationMachine_Reserved ;
+    :toState :ReservationMachine_Committed ;
+    :firedBy :ReservationMachine_Event_Commit .
+
+:ReservationMachine_R02 a :ReservationTransition ;
+    rdfs:label "Reservation R02" ;
+    :edgeId "R02" ;
+    :fromState :ReservationMachine_Reserved ;
+    :toState :ReservationMachine_Aborted ;
+    :firedBy :ReservationMachine_Event_Abort .

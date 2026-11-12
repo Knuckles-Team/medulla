@@ -109,6 +109,14 @@ pub enum RbacPersistError {
     IncompleteState(&'static str),
     /// The image was derived from a revision that is no longer current.
     StaleRevision { expected: u64, actual: u64 },
+    /// `RBAC_RESERVED`: a durable reservation holds the authorization image.
+    Reserved { txn_id: String },
+    /// `RBAC_REVISION_STALE`: a reservation named a revision that is no longer current.
+    ReservationStale { expected: u64, actual: u64 },
+    /// `RBAC_RESERVATION_UNKNOWN`: the transaction holds no reservation.
+    ReservationUnknown(String),
+    /// The reservation lifecycle machine refused the decision.
+    Machine(medulla_types::transition_refused::TransitionRefused),
 }
 
 impl fmt::Display for RbacPersistError {
@@ -123,6 +131,25 @@ impl fmt::Display for RbacPersistError {
                     "RBAC_STALE_REVISION: expected {expected}, current {actual}"
                 )
             }
+            RbacPersistError::Reserved { txn_id } => {
+                write!(
+                    f,
+                    "RBAC_RESERVED: the authorization image is reserved by '{txn_id}'"
+                )
+            }
+            RbacPersistError::ReservationStale { expected, actual } => {
+                write!(
+                    f,
+                    "RBAC_REVISION_STALE: expected {expected}, current {actual}"
+                )
+            }
+            RbacPersistError::ReservationUnknown(txn_id) => {
+                write!(
+                    f,
+                    "RBAC_RESERVATION_UNKNOWN: '{txn_id}' holds no reservation"
+                )
+            }
+            RbacPersistError::Machine(refused) => write!(f, "{refused}"),
             RbacPersistError::IncompleteState(message) => {
                 write!(f, "rbac persist current-state error: {message}")
             }
@@ -352,6 +379,25 @@ pub trait RbacPolicyStore: Send + Sync {
     /// lease; separate reads are intentionally insufficient.
     fn authority_snapshot(&self) -> Result<RbacAuthoritySnapshot, RbacPersistError>;
 
+    /// Reserve the authorization image for a cross-owner admission. `None` means this
+    /// adapter has no durable reservation (the in-memory store).
+    fn reserve_authority(
+        &self,
+        _expected_revision: u64,
+        _txn_id: &str,
+    ) -> Result<Option<ReservationRecord>, RbacPersistError> {
+        Ok(None)
+    }
+
+    /// Resolve a reservation with the durable coordinator decision.
+    fn release_authority(
+        &self,
+        _txn_id: &str,
+        _decision: Option<medulla_types::reservation_machine::ReservationEvent>,
+    ) -> Result<(), RbacPersistError> {
+        Ok(())
+    }
+
     /// Copy this store's durable image verbatim into a FRESH bundle file at
     /// `destination`, returning the number of rows copied.
     ///
@@ -380,6 +426,10 @@ pub trait RbacPolicyStore: Send + Sync {
 
 mod durable_write;
 mod memory_store;
+mod reservation;
+pub use reservation::{
+    ReservationRecord, RBAC_RESERVATION_UNKNOWN, RBAC_RESERVED, RBAC_REVISION_STALE,
+};
 #[cfg(test)]
 mod revision_tests;
 
@@ -662,6 +712,22 @@ impl RbacPolicyStore for RbacStore {
         RbacStore::authority_snapshot(self)
     }
 
+    fn reserve_authority(
+        &self,
+        expected_revision: u64,
+        txn_id: &str,
+    ) -> Result<Option<ReservationRecord>, RbacPersistError> {
+        RbacStore::reserve(self, expected_revision, txn_id).map(Some)
+    }
+
+    fn release_authority(
+        &self,
+        txn_id: &str,
+        decision: Option<medulla_types::reservation_machine::ReservationEvent>,
+    ) -> Result<(), RbacPersistError> {
+        RbacStore::release(self, txn_id, decision).map(|_| ())
+    }
+
     fn backup_into(&self, destination: &Path) -> Option<Result<u64, String>> {
         Some(RbacStore::backup_into(self, destination))
     }
@@ -856,5 +922,108 @@ mod tests {
             serde_json::to_vec(&a).unwrap(),
             serde_json::to_vec(&b).unwrap()
         );
+    }
+    // spec: MEDULLA-DECISION-ENGINE-R036.103
+    #[test]
+    fn reservation_blocks_writes_and_survives_reopen() {
+        use medulla_types::reservation_machine::{ReservationEvent, ReservationState};
+
+        let dir = tmp_dir("reservation");
+        let store = open_test_store(&dir).unwrap();
+        let revision = store.authority_snapshot().unwrap().revision();
+        let policy = RbacPolicy::new();
+        let none = BTreeMap::new();
+
+        // A stale revision refuses by name and writes nothing.
+        let error = store.reserve(revision + 5, "txn-stale").unwrap_err();
+        assert!(
+            error.to_string().starts_with("RBAC_REVISION_STALE"),
+            "{error}"
+        );
+        assert!(store.reservations().unwrap().is_empty());
+
+        // The reservation carries the revision read and both digests of the snapshot.
+        let held = store.reserve(revision, "txn-1").unwrap();
+        let snapshot_digests = (
+            super::authority_policy_digest(&policy).unwrap(),
+            super::authority_identity_digest(&none).unwrap(),
+        );
+        assert_eq!(held.revision, revision);
+        assert_eq!(held.state, ReservationState::Reserved);
+        assert_eq!(
+            (held.policy_digest.clone(), held.identity_digest.clone()),
+            snapshot_digests
+        );
+        assert_eq!(held.premise(), format!("rbac_revision:{revision}"));
+        // An exact retry returns the held record without a second write.
+        assert_eq!(store.reserve(revision, "txn-1").unwrap(), held);
+
+        // Competing saves and a competing reservation are refused.
+        let current = store.authority_snapshot().unwrap().revision();
+        let error = store
+            .compare_and_save(current, &policy, &none, IdentityBootstrapState::Pending)
+            .unwrap_err();
+        assert!(error.to_string().starts_with("RBAC_RESERVED"), "{error}");
+        let error = store.reserve(current, "txn-2").unwrap_err();
+        assert!(error.to_string().starts_with("RBAC_RESERVED"), "{error}");
+        assert_eq!(store.authority_snapshot().unwrap().revision(), current);
+
+        // A reopen keeps the open reservation, and it still blocks.
+        drop(store);
+        let store = open_test_store(&dir).unwrap();
+        assert_eq!(store.reservations().unwrap(), vec![held.clone()]);
+        let current = store.authority_snapshot().unwrap().revision();
+        assert!(store
+            .compare_and_save(current, &policy, &none, IdentityBootstrapState::Pending)
+            .is_err());
+
+        // A missing decision and an unknown transaction leave it held.
+        let error = store.release("txn-1", None).unwrap_err();
+        assert!(error.to_string().starts_with("RBAC_RESERVED"), "{error}");
+        let error = store
+            .release("txn-unknown", Some(ReservationEvent::Commit))
+            .unwrap_err();
+        assert!(
+            error.to_string().starts_with("RBAC_RESERVATION_UNKNOWN"),
+            "{error}"
+        );
+
+        // The durable decision resolves it; the repeat replays; the opposite is refused.
+        let resolved = store
+            .release("txn-1", Some(ReservationEvent::Commit))
+            .unwrap();
+        assert_eq!(resolved.state, ReservationState::Committed);
+        let version = store.current_version().unwrap();
+        assert_eq!(
+            store
+                .release("txn-1", Some(ReservationEvent::Commit))
+                .unwrap(),
+            resolved
+        );
+        assert_eq!(
+            store.current_version().unwrap(),
+            version,
+            "replay writes nothing"
+        );
+        let error = store
+            .release("txn-1", Some(ReservationEvent::Abort))
+            .unwrap_err();
+        assert!(error.to_string().contains("TRANSITION_REFUSED"), "{error}");
+
+        // Writes pass again, and an aborted reservation also releases the image.
+        let current = store.authority_snapshot().unwrap().revision();
+        store
+            .compare_and_save(current, &policy, &none, IdentityBootstrapState::Pending)
+            .unwrap();
+        let current = store.authority_snapshot().unwrap().revision();
+        store.reserve(current, "txn-3").unwrap();
+        let aborted = store
+            .release("txn-3", Some(ReservationEvent::Abort))
+            .unwrap();
+        assert_eq!(aborted.state, ReservationState::Aborted);
+        let current = store.authority_snapshot().unwrap().revision();
+        store
+            .compare_and_save(current, &policy, &none, IdentityBootstrapState::Pending)
+            .unwrap();
     }
 }

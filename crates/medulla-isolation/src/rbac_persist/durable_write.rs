@@ -131,6 +131,9 @@ fn persist_authority_state(
             let mut table = owner_write
                 .open_table(RBAC_TABLE)
                 .map_err(RbacPersistError::Redb)?;
+            if !initialize {
+                super::reservation::require_no_open_reservation(&table)?;
+            }
             // Initialization requires absence of ALL records in this same write.
             // Ordinary writes must not repair an incomplete image.
             for key in [POLICY_KEY, IDENTITIES_KEY, BOOTSTRAP_KEY] {
@@ -188,7 +191,7 @@ pub(super) fn remove_authority_record(
 /// minted by the storage kernel's single mutation authority and is never
 /// reachable here: the only handle this crate is given is the layout-bounded
 /// [`AdmittedOwnerWrite`], valid between `owner_rows` and `finish_owner`.
-fn commit_authority_mutation<F>(
+pub(super) fn commit_authority_mutation<F>(
     store: &RbacStore,
     expected_revision: u64,
     digest: &str,

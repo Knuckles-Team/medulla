@@ -40,6 +40,9 @@ use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
 
 use medulla_server_api::api::persistence::BundledStoreSource;
 
+pub mod admission;
+#[cfg(all(test, feature = "decide"))]
+mod admission_tests;
 mod batch;
 pub mod context;
 mod history;

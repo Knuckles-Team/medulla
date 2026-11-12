@@ -83,6 +83,34 @@ impl IsolationLayer {
         self.persist.clone()
     }
 
+    /// MEDULLA-DECISION-ENGINE-R036.103: a reservation or its release moves the durable
+    /// revision without changing the policy or the identities. Adopt the new revision only
+    /// when the durable image still equals this layer's, so the next checked save is not
+    /// refused as stale.
+    #[cfg(feature = "security")]
+    pub fn adopt_reservation_revision(&mut self) -> Result<(), String> {
+        let Some(store) = self.persist.clone() else {
+            return Ok(());
+        };
+        let snapshot = store
+            .authority_snapshot()
+            .map_err(|error| error.to_string())?;
+        let identities: std::collections::BTreeMap<String, AgentIdentity> = self
+            .agents
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        let policy = crate::rbac_persist::authority_policy_digest(&self.rbac)
+            .map_err(|error| error.to_string())?;
+        let identity = crate::rbac_persist::authority_identity_digest(&identities)
+            .map_err(|error| error.to_string())?;
+        if snapshot.policy_digest() != policy || snapshot.identity_digest() != identity {
+            return Err("RBAC_REVISION_STALE: the durable image differs from the layer".into());
+        }
+        self.persist_revision = snapshot.revision();
+        Ok(())
+    }
+
     /// Write through the complete RBAC and identity state.
     #[cfg(feature = "security")]
     pub(super) fn persist_state(&mut self) -> Result<(), String> {

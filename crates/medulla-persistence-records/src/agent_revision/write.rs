@@ -151,7 +151,18 @@ pub(crate) fn write_revision_with_rows<'a, L: RevisionLayer>(
     if let Some((result, receipt)) = replayed {
         return finish_replayed(&store.mutations, txn, &operation, &nonce, result, receipt);
     }
-    let (txn, entry) = within_write(txn, |txn| prepare(txn, next_revision, &replay_context))?;
+    let (txn, entry) = within_write(txn, |txn| {
+        // MEDULLA-DECISION-ENGINE-R036.104: an Agent Library admission fences
+        // the components it names until the coordinator decision arrives.
+        if L::SLUG == <crate::agent_component::ComponentLayer as RevisionLayer>::SLUG {
+            crate::agent_library::admission::require_unfenced(
+                txn,
+                &write.context.tenant_id,
+                write.record_id,
+            )?;
+        }
+        prepare(txn, next_revision, &replay_context)
+    })?;
     commit_revision_in_write::<L>(
         store,
         txn,

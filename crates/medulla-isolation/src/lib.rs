@@ -15,7 +15,9 @@ pub mod rbac;
 #[cfg(feature = "security")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rbac_persist;
-#[cfg(all(test, feature = "security"))]
-pub(crate) mod test_scope_grant;
+#[cfg(all(any(test, feature = "test-support"), feature = "security"))]
+#[doc(hidden)]
+#[allow(missing_docs)]
+pub mod test_scope_grant;
 #[cfg(test)]
 pub(crate) mod test_threads;

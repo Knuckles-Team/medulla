@@ -11,6 +11,8 @@
 
 use super::SharedState;
 use medulla_decision_types::decision::DecisionCommitRequest;
+#[cfg(feature = "decide")]
+use medulla_persistence_records::agent_library::admission::AdmissionEvent;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -93,12 +95,36 @@ async fn commit(
         "decision:commit",
         true,
     )?;
+    // MEDULLA-DECISION-ENGINE-R036.103/.104: reserve the RBAC image and the Agent Library
+    // component heads this decision rests on, then resolve both with the commit outcome. A
+    // repeat of a stored record needs no reservation.
+    let replaying = store
+        .current_component(verified.tenant(), &record.record_id)?
+        .is_some();
+    let admitted = if replaying {
+        admission::Admitted::none(verified.tenant())
+    } else {
+        admission::Admitted::reserve(state, &store, verified, &record, &context.policy_revision)
+            .await?
+    };
     let written = super::telemetry::stage(
         super::telemetry::Stage::Commit,
         "assembly",
         verified.tenant(),
         || store.commit_decision_record(context, &record, &expected_catalog_digest),
-    )?;
+    );
+    let written = match written {
+        Ok(written) => {
+            admitted
+                .resolve(state, &store, AdmissionEvent::Commit)
+                .await?;
+            written
+        }
+        Err(error) => {
+            let _ = admitted.resolve(state, &store, AdmissionEvent::Abort).await;
+            return Err(error);
+        }
+    };
     super::assemble::audit_line("decision-commit", &record, verified);
     Ok(medulla_decision_types::decision::DecisionCommitResult {
         schema_version: medulla_decision_types::decision::DECISION_COMMIT_RESULT_SCHEMA_VERSION,
@@ -120,5 +146,7 @@ pub async fn handle_decision_commit(
     Response::err(req_id, "DecisionCommit requires the `decide` feature")
 }
 
+#[cfg(feature = "decide")]
+mod admission;
 #[cfg(all(test, feature = "decide", feature = "redb"))]
 mod tests;

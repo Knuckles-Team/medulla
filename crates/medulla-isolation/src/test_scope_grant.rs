@@ -10,12 +10,12 @@
 
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 
-pub(crate) const TEST_PRINCIPAL: &str =
+pub const TEST_PRINCIPAL: &str =
     "principal:sha256:d70d97fc35a6e2dfbef26a2bca76a96c6dd2c4142ae2a14850deaf61b478bba0";
-pub(crate) const TEST_PROOF: &[u8] = b"medulla-core-test-scope-grant";
+pub const TEST_PROOF: &[u8] = b"medulla-core-test-scope-grant";
 
-pub(crate) struct TestScopeVerifier {
-    pub(crate) layout: OwnerLayout,
+pub struct TestScopeVerifier {
+    pub layout: OwnerLayout,
 }
 
 impl ScopeGrantVerifier for TestScopeVerifier {
@@ -36,4 +36,18 @@ impl ScopeGrantVerifier for TestScopeVerifier {
         }
         Ok(())
     }
+}
+
+/// Open a durable RBAC store under the test composition root.
+pub fn open_rbac_store(
+    dir: impl AsRef<std::path::Path>,
+) -> Result<crate::rbac_persist::RbacStore, crate::rbac_persist::RbacPersistError> {
+    crate::rbac_persist::RbacStore::open(
+        dir,
+        &TestScopeVerifier {
+            layout: OwnerLayout::Rbac,
+        },
+        TEST_PRINCIPAL,
+        TEST_PROOF,
+    )
 }
