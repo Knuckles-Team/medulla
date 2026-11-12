@@ -34,8 +34,6 @@ use medulla_decision_types::{
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 
-use medulla_decision_stats::decision::ladder::LadderResult;
-
 use super::candidates::{read_candidates, ReadCandidates};
 use super::stat_belief::{live_slices, Slices};
 use super::stat_executor::{
@@ -46,7 +44,6 @@ use super::stat_nl::binding;
 use super::stat_support::{
     refusal, require_supported_question_kind, resolve_policy, ResolvedPolicy,
 };
-use super::stat_tool_subset::tool_subset_outcome;
 use super::telemetry;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -162,6 +159,7 @@ fn decide_blocking(
     use telemetry::Stage;
     let family = telemetry::family(request.question.kind);
     let (family, tenant) = (family.as_str(), ctx.tenant_id);
+    let registry = super::family::for_kind(request.question.kind);
     let task_plan = super::stat_task_plan::task_plan(request)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
         read_candidates(
@@ -170,10 +168,11 @@ fn decide_blocking(
             &request.candidates,
             graph_view,
             &principal,
-            request.question.kind,
+            registry,
         )
     })?;
     let (pinned, policy) = telemetry::stage(Stage::Constraints, family, tenant, || {
+        registry.constraints(request)?;
         let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
         let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
         Ok::<_, String>((pinned, policy))
@@ -191,29 +190,12 @@ fn decide_blocking(
         policy.statistical.tenant_public_features,
         &mut candidates.views,
     )?;
-    let specialized = task_plan
-        .as_ref()
-        .map(|plan| Ok(super::stat_task_plan::outcome(plan)))
-        .or_else(|| tool_subset_outcome(request));
+    // The kind's family concludes its specialized answer; the shared
+    // matrix ladder is the fall-through (R001.101).
     let executed = telemetry::stage(Stage::Solve, family, tenant, || {
-        Ok::<_, String>(match specialized {
-            Some(outcome_result) => Executed {
-                matrix: None,
-                ladder: LadderResult {
-                    outcome: outcome_result?,
-                    calibration: None,
-                    explained: None,
-                    audit: None,
-                    logging: Vec::new(),
-                },
-                reading: None,
-                seed: [0u8; 32],
-                harness_contrast: None,
-            },
-            None => match super::stat_harness_contrast::contrast_executed(request, graph_view) {
-                Some(result) => result?,
-                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
-            },
+        Ok::<_, String>(match registry.conclude(ctx, request, graph_view) {
+            Some(result) => result?,
+            None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
         })
     })?;
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
@@ -232,13 +214,14 @@ fn decide_blocking(
                 candidates: &candidates,
                 principal,
                 slices: &slices,
+                registry,
             },
             &executed,
             nl,
             task_plan,
         )
     })?;
-    telemetry::stage(Stage::Conclude, family, tenant, || {
+    let batch = telemetry::stage(Stage::Conclude, family, tenant, || {
         telemetry::decided(&record, candidates.views.len(), started);
         let records = BoundedVec::new(vec![record])
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
@@ -248,6 +231,8 @@ fn decide_blocking(
             records,
         })
     })
+    .map_err(|detail| registry.refusals(detail))?;
+    Ok(batch)
 }
 
 /// Everything sealing reads besides the executed answer.
@@ -259,6 +244,7 @@ struct Sealing<'a> {
     candidates: &'a ReadCandidates,
     principal: String,
     slices: &'a Slices,
+    registry: &'a dyn super::family::DecisionFamily,
 }
 
 fn bounded<T, const N: usize>(values: Vec<T>) -> Result<BoundedVec<T, N>, String> {
@@ -484,6 +470,7 @@ fn seal(
     if let Some(plan) = &task_plan {
         premise_list.extend(super::stat_task_plan::premises(plan));
     }
+    premise_list.extend(sealing.registry.premises(sealing.request));
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
         .pinned
