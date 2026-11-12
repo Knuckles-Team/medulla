@@ -41,3 +41,8 @@ the record's single `answer` field, so new families add a variant and never a
 record field; the task plan moved into it (wire field `task_plan` -> `answer`).
 Per-kind behaviour that a stage needs is a `DecisionFamily` hook
 (`binds_utterance`), never a `QuestionKind` comparison in a stage file.
+
+## Primitive contract source and graph belief slices (R036.100.1, R088.1)
+
+- A primitive contract is read from component attributes, not a new entry field: the entry already carries a closed attribute map, versioning and a definition digest, so the contract is bound by the same digest and a component that declares none stays legal (`primitive: None` skips the checks).
+- A graph belief slice appends `BELIEF AS OF t` to the candidate plan instead of leading with it: over empty input the operator yields every live row, which could add options; appended, it only narrows the candidate rows. A slice with any candidate absent at `t` is an unknown fact, never a smaller option set.

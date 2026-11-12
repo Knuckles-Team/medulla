@@ -210,7 +210,7 @@ pub(super) fn decide_blocking(
         )
     })?;
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
-        live_slices(ctx, request, &pinned, &candidates.views)
+        live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;
     let nl = telemetry::stage(Stage::Rank, family, tenant, || {
         binding(request, &executed.ladder.outcome, &candidates.entries)

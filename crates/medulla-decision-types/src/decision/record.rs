@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
+use super::primitive::PrimitiveContract;
 use super::request::AssemblyRequest;
 use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
@@ -116,6 +117,11 @@ pub struct CandidateFacts {
     pub facts: AgentComponentFacts,
     /// The premises the facts above rest on.
     pub fact_premises: BoundedVec<PremiseRef, 32>,
+    /// The typed primitive contract the component publishes, when its kind is
+    /// a primitive and it declares schema digests
+    /// (MEDULLA-DECISION-ENGINE-R036.100.1). Absent bytes stay unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primitive: Option<PrimitiveContract>,
 }
 
 impl CandidateFacts {
@@ -145,6 +151,8 @@ impl CandidateFacts {
             requires: BoundedVec::new(sorted(&entry.requires)).map_err(bounded)?,
             facts: entry.facts.clone(),
             fact_premises: BoundedVec::new(publisher_premises(entry)).map_err(bounded)?,
+            primitive: PrimitiveContract::from_entry(entry)
+                .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?,
         })
     }
 

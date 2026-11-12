@@ -246,6 +246,7 @@ fn candidate_facts() -> CandidateFacts {
         )]),
         facts: AgentComponentFacts::Opaque,
         fact_premises: bounded(premises()),
+        primitive: None,
     }
 }
 

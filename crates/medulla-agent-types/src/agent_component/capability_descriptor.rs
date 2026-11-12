@@ -20,7 +20,7 @@ pub const CAPABILITY_DESCRIPTOR_VERSION: u16 = 1;
 pub const MAX_CAPABILITY_RELIABILITY: u32 = 10_000;
 
 /// The side-effect class a capability declares.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SideEffectClass {

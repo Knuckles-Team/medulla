@@ -56,24 +56,107 @@ fn check_request(
     Ok(())
 }
 
+/// The graph a graph-sourced decision reads its candidates from.
+#[derive(Clone, Copy)]
+pub(super) struct GraphSource<'a> {
+    #[cfg(feature = "epistemic")]
+    view: &'a medulla_graph_core::graph::GraphView,
+    #[cfg(feature = "epistemic")]
+    plan: &'a medulla_types::wire::Plan,
+    #[cfg(not(feature = "epistemic"))]
+    _marker: std::marker::PhantomData<&'a ()>,
+}
+
+/// The graph source of a request, when it has one: library and declared
+/// sources hold no transaction-time history and recompute on the clock.
+#[cfg(feature = "epistemic")]
+fn graph_source<'a>(
+    request: &'a DecideRequest,
+    view: Option<&'a medulla_graph_core::graph::GraphView>,
+) -> Option<GraphSource<'a>> {
+    match (&request.candidates, view) {
+        (
+            medulla_decision_types::decision::statistical::CandidateSource::Graph { plan, .. },
+            Some(view),
+        ) => Some(GraphSource { view, plan }),
+        _ => None,
+    }
+}
+
+#[cfg(not(feature = "epistemic"))]
+fn graph_source<'a>(
+    _request: &'a DecideRequest,
+    _view: Option<&'a medulla_graph_core::graph::GraphView>,
+) -> Option<GraphSource<'a>> {
+    None
+}
+
+/// The ids a graph candidate plan returns when it ends in `BELIEF AS OF
+/// as_of_ms`, sorted and de-duplicated, over the caller's RLS-filtered view
+/// (MEDULLA-DECISION-ENGINE-R088.1).
+#[cfg(feature = "epistemic")]
+pub(super) fn belief_rows_at(
+    view: &medulla_graph_core::graph::GraphView,
+    plan: &medulla_types::wire::Plan,
+    as_of_ms: u64,
+) -> Result<Vec<String>, String> {
+    let mut plan = plan.clone();
+    // BELIEF AS OF over an empty input is a source of every live row; the
+    // candidate plan's own rows are the only ones a slice may read.
+    plan.ops.push(medulla_types::wire::Op::BeliefAsOf {
+        ts: as_of_ms as f64,
+    });
+    let semantic = medulla_semantic_index::semantic::SemanticStore::new();
+    let rows =
+        medulla_exec::exec::execute(&plan, &medulla_exec::exec::PlanCtx::new(view, &semantic))
+            .map_err(|detail| refusal(StatisticalErrorCode::CandidatePlanRefused, detail))?;
+    let mut ids = rows.ids();
+    ids.sort_unstable();
+    ids.dedup();
+    Ok(ids)
+}
+
 fn slice_inputs(
     request: &DecideRequest,
     pinned: &Pinned,
     views: &[CandidateView],
     as_of_ms: u64,
+    graph: Option<GraphSource<'_>>,
 ) -> Result<BeliefSliceInputs, String> {
+    let (rows_digest, present) = match graph {
+        #[cfg(feature = "epistemic")]
+        Some(source) => {
+            let ids = if views.is_empty() {
+                Vec::new()
+            } else {
+                belief_rows_at(source.view, source.plan, as_of_ms)?
+            };
+            let present = views.iter().all(|v| ids.binary_search(&v.id).is_ok());
+            let digest = medulla_query_types::solve_scalar::digest_text(
+                "eg/decide-belief-slice-rows/v1",
+                &(as_of_ms, &ids),
+            );
+            (Some(digest), present)
+        }
+        _ => (None, true),
+    };
     let features = FeatureInputs {
         params: request.params.as_slice(),
         now_ms: as_of_ms,
     };
-    let values = match feature_matrix(&pinned.schema, views, &features).map_err(|r| r.render())? {
-        MatrixOutcome::Complete(matrix) => matrix.values,
-        MatrixOutcome::UnknownFact { .. } => Vec::new(),
+    let values = if !present {
+        Vec::new() // a candidate row absent at t: UnknownFact for the slice
+    } else {
+        match feature_matrix(&pinned.schema, views, &features).map_err(|r| r.render())? {
+            MatrixOutcome::Complete(matrix) => matrix.values,
+            MatrixOutcome::UnknownFact { .. } => Vec::new(),
+        }
     };
     Ok(BeliefSliceInputs {
         as_of_ms,
         values: BoundedVec::new(values)
             .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
+        rows_digest,
     })
 }
 
@@ -131,6 +214,7 @@ pub(super) fn live_slices(
     request: &DecideRequest,
     pinned: &Pinned,
     views: &[CandidateView],
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<Slices, String> {
     if request.belief_as_of.is_empty() {
         return Ok(Slices::default());
@@ -139,7 +223,7 @@ pub(super) fn live_slices(
     let inputs = request
         .belief_as_of
         .iter()
-        .map(|&t| slice_inputs(request, pinned, views, t))
+        .map(|&t| slice_inputs(request, pinned, views, t, graph_source(request, graph_view)))
         .collect::<Result<Vec<_>, _>>()?;
     let points = points(pinned, &inputs, views.len())?;
     Ok(Slices { inputs, points })

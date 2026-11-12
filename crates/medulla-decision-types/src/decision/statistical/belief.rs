@@ -26,6 +26,12 @@ pub struct BeliefSliceInputs {
     pub as_of_ms: u64,
     #[serde(default)]
     pub values: BoundedVec<i64, 2048>,
+    /// For a graph-sourced decision: the digest of the sorted row ids the
+    /// candidate plan returned under `BELIEF AS OF as_of_ms`
+    /// (MEDULLA-DECISION-ENGINE-R088.1). Library and declared sources hold
+    /// no transaction-time history and leave it absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rows_digest: Option<String>,
 }
 
 /// The head's belief at one slice: a distribution over the candidates on

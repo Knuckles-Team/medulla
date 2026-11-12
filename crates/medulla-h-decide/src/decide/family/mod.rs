@@ -31,6 +31,8 @@ mod route;
 mod schema_mapping;
 mod stage_allocation;
 mod task_plan;
+#[cfg(test)]
+mod template;
 mod template_choice;
 mod thought_search;
 mod tool_subset;
@@ -269,5 +271,24 @@ mod tests {
             let family = for_kind(*kind);
             assert_eq!(family.refusals("detail".to_string()), "detail");
         }
+    }
+
+    /// The family template (`TEMPLATE.md`) embeds `template.rs` verbatim, and
+    /// that file compiles against the live trait and applies its refusal
+    /// table (MEDULLA-DECISION-ENGINE-R001.101.4).
+    #[test]
+    fn template_compiles() {
+        let source = include_str!("template.rs").trim_end();
+        let doc = include_str!("TEMPLATE.md");
+        assert!(
+            doc.contains(&format!("```rust\n{source}\n```")),
+            "TEMPLATE.md must embed template.rs verbatim"
+        );
+        let family = super::template::TemplateFamily;
+        assert_eq!(
+            family.refusals("no candidate left".to_string()),
+            "template_no_candidate"
+        );
+        assert_eq!(family.refusals("other".to_string()), "other");
     }
 }
