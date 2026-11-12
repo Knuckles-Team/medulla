@@ -93,11 +93,13 @@ def test_task_plan_feature_schema_export_is_the_engine_body_and_digest():
     assert ds.decode_body(digest, attributes) == pin["body"]
     assert pin["idempotency_key"] == f"eg:task-plan-feature-schema:{digest}"
     # R134.111.12 grows the body: a task's declared position, a tool step's
-    # call and its binding count. All three abstain when absent.
+    # call and its binding count; R134.111.17 adds the step kind. All abstain
+    # when absent.
     assert pin["body"] == ds.feature_schema_body(
         [
             ds.feature("task_position", ds.number("task_position")),
             ds.feature("task_call", ds.number("task_call")),
             ds.feature("task_call_bindings", ds.number("task_call_bindings")),
+            ds.feature("task_step_kind", ds.number("task_step_kind")),
         ]
     )

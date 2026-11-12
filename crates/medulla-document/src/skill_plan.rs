@@ -178,6 +178,10 @@ fn task_of(step: &ParsedStep<'_>) -> Result<TaskPlanTask, SkillPlanRefusal> {
         call: None,
         aggregation: None,
         assignee: step.capability.map(str::to_string),
+        branch: None,
+        join: None,
+        decision: None,
+        approval: None,
     })
 }
 

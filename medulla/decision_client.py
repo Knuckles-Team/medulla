@@ -150,7 +150,58 @@ def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
             "tool": call["tool"],
             "arguments": call["arguments"],
         }
+    aggregation = task.get("aggregation")
+    if aggregation is not None:
+        body["aggregation"] = {"op": aggregation["op"]}
+        if aggregation.get("reducer_id") is not None:
+            body["aggregation"]["reducer_id"] = aggregation["reducer_id"]
+    if task.get("assignee") is not None:
+        body["assignee"] = task["assignee"]
+    _add_control_steps(body, task)
     return body
+
+
+def _condition_body(condition: Mapping[str, Any]) -> dict[str, Any]:
+    if condition.get("decision_iri") is not None:
+        return {"decision_iri": condition["decision_iri"]}
+    return {
+        "ref": condition["ref"],
+        "op": condition["op"],
+        "value": condition["value"],
+    }
+
+
+def _add_control_steps(body: dict[str, Any], task: Mapping[str, Any]) -> None:
+    """Branch, join, decision and approval steps in Rust declaration order
+    (MEDULLA-DECISION-ENGINE-R134.111.17); an unset step is an absent key."""
+    branch = task.get("branch")
+    if branch is not None:
+        arms = []
+        for arm in branch["arms"]:
+            item: dict[str, Any] = {"target_task_id": arm["target_task_id"]}
+            if arm.get("condition") is not None:
+                item["condition"] = _condition_body(arm["condition"])
+            arms.append(item)
+        body["branch"] = {"kind": branch["kind"], "arms": arms}
+        if branch.get("default_arm") is not None:
+            body["branch"]["default_arm"] = branch["default_arm"]
+        if branch.get("exhaustive"):
+            body["branch"]["exhaustive"] = True
+    join = task.get("join")
+    if join is not None:
+        body["join"] = {"branch_task_id": join["branch_task_id"]}
+    decision = task.get("decision")
+    if decision is not None:
+        body["decision"] = {
+            "decision_iri": decision["decision_iri"],
+            "inputs": list(decision.get("inputs") or []),
+        }
+    approval = task.get("approval")
+    if approval is not None:
+        body["approval"] = {
+            "approver_role": approval["approver_role"],
+            "timeout_s": approval["timeout_s"],
+        }
 
 
 def _task_plan_body(value: Mapping[str, Any]) -> dict[str, Any]:

@@ -20,13 +20,18 @@ use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, QuestionSafety};
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::{
+    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
+};
+use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
 use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{publish_route_schema, request, Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::claims::{ClaimOp, EvidenceChannel};
+use medulla_types::contract::BoundedVec;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
 
@@ -274,6 +279,89 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
     );
 }
 
+/// The maximum bounded plan of MEDULLA-DECISION-ENGINE-R134.111.6: 64 tasks,
+/// eight dependency edges per task and the full 64 KiB of prompt text.
+fn maximum_plan_request(asked: &DecideRequest) -> DecideRequest {
+    let tasks: Vec<TaskPlanTask> = (0..64usize)
+        .map(|i| TaskPlanTask {
+            task_id: format!("t{i:02}"),
+            prompt: "x".repeat(1024),
+            depends_on: BoundedVec::new((0..i).rev().take(8).map(|d| format!("t{d:02}")).collect())
+                .unwrap(),
+            call: None,
+            aggregation: None,
+            assignee: None,
+            branch: None,
+            join: None,
+            decision: None,
+            approval: None,
+        })
+        .collect();
+    let options = tasks
+        .iter()
+        .map(|t| DeclaredOption {
+            option_id: t.task_id.clone(),
+            classification: BoundedVec::default(),
+            numbers: BoundedVec::default(),
+            texts: BoundedVec::default(),
+        })
+        .collect();
+    let mut request = asked.clone();
+    request.question.kind = QuestionKind::TaskPlan;
+    request.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(options).unwrap(),
+    };
+    request.params = BoundedVec::new(vec![TypedParam {
+        name: "task_plan".into(),
+        value: TypedValue::TaskPlan(Box::new(TaskPlanProposal {
+            tasks: BoundedVec::new(tasks).unwrap(),
+            output_task_id: "t63".into(),
+            max_concurrency: 8,
+            max_steps: 64,
+        })),
+    }])
+    .unwrap();
+    request
+}
+
+/// The `decide/task_plan_bounds` group (MEDULLA-DECISION-ENGINE-R134.111.6):
+/// `plan_explicit_tasks` over the maximum plan, through the served path.
+fn bench_task_plan_bounds(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (h, asked) = rt.block_on(fixture(QuestionKind::TaskPlan));
+    let asked = maximum_plan_request(&asked);
+    let response = decide(rt, &h, &asked);
+    assert!(
+        response.error.is_none(),
+        "task_plan_bounds fixture: {response:?}"
+    );
+    let group_name = "decide/task_plan_bounds".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(decide(rt, &h, &asked));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -305,6 +393,7 @@ fn bench_decide(c: &mut Criterion) {
         );
     }
     bench_claims(c, &rt, &mut report);
+    bench_task_plan_bounds(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

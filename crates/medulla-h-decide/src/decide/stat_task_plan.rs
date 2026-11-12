@@ -6,8 +6,9 @@ use medulla_decision_types::{
     decision::statistical::StatisticalOutcome, decision::statistical::TypedValue,
 };
 use medulla_decision_types::{
-    decision::task_plan::plan_explicit_tasks, decision::task_plan::task_bindings,
-    decision::task_plan::TaskPlan, decision::task_plan::TaskPlanTask,
+    decision::task_plan::control_fact, decision::task_plan::plan_explicit_tasks,
+    decision::task_plan::task_bindings, decision::task_plan::TaskPlan,
+    decision::task_plan::TaskPlanTask,
 };
 use medulla_decision_types::{
     decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
@@ -142,6 +143,15 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
         .collect();
     for task in plan.tasks.iter() {
         out.extend(call_premises(task));
+        // A control step is a caller claim too (MEDULLA-DECISION-ENGINE-R134.111.17).
+        out.extend(control_fact(task).map(|fact| PremiseRef {
+            subject: task.task_id.clone(),
+            fact,
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: "params.task_plan.tasks.control".to_string(),
+            },
+        }));
     }
     out.push(PremiseRef {
         subject: plan.policy_revision.clone(),

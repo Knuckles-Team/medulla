@@ -8,6 +8,10 @@ fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
         call: None,
         aggregation: None,
         assignee: None,
+        branch: None,
+        join: None,
+        decision: None,
+        approval: None,
     }
 }
 
@@ -186,6 +190,10 @@ fn maximum_bounded_chain_is_valid() {
             call: None,
             aggregation: None,
             assignee: None,
+            branch: None,
+            join: None,
+            decision: None,
+            approval: None,
         })
         .collect();
     let input = TaskPlanProposal {
@@ -260,7 +268,12 @@ fn the_canonical_task_plan_feature_schema_is_valid_and_stable() {
     let body = task_plan_feature_schema().checked().unwrap();
     assert_eq!(
         body.names(),
-        ["task_position", "task_call", "task_call_bindings"]
+        [
+            "task_position",
+            "task_call",
+            "task_call_bindings",
+            "task_step_kind"
+        ]
     );
     let digest = crate::decision::statistical::body::encode_body(&body)
         .unwrap()
@@ -644,4 +657,312 @@ fn aggregation_off_the_output_task_refuses() {
     let concat = plan_explicit_tasks(&aggregated(AggregationOp::Concat, None)).unwrap();
     assert_ne!(base.plan_digest, reduce.plan_digest);
     assert_ne!(reduce.plan_digest, concat.plan_digest);
+}
+
+fn step(id: &str, deps: &[&str], extra: serde_json::Value) -> serde_json::Value {
+    let mut value = serde_json::json!({
+        "task_id": id,
+        "prompt": format!("Do {id}"),
+        "depends_on": deps,
+    });
+    value
+        .as_object_mut()
+        .unwrap()
+        .extend(extra.as_object().unwrap().clone());
+    value
+}
+
+/// A plan with all four control kinds: a parallel fork and join, a decision, an
+/// exclusive branch with a default arm, and an approval wait on that arm.
+fn control_json() -> serde_json::Value {
+    let none = serde_json::json!({});
+    serde_json::json!({
+        "tasks": [
+            step("start", &[], none.clone()),
+            step("fork", &["start"], serde_json::json!({"branch": {
+                "kind": "parallel",
+                "arms": [{"target_task_id": "x"}, {"target_task_id": "y"}]
+            }})),
+            step("x", &["fork"], none.clone()),
+            step("y", &["fork"], none.clone()),
+            step("merge", &["x", "y"], serde_json::json!({"join": {"branch_task_id": "fork"}})),
+            step("decide", &["merge"], serde_json::json!({"decision": {
+                "decision_iri": "urn:decision:route",
+                "inputs": ["steps.merge.output.score"]
+            }})),
+            step("route", &["decide"], serde_json::json!({"branch": {
+                "kind": "exclusive",
+                "arms": [{"target_task_id": "ok", "condition":
+                    {"ref": "steps.decide.output.verdict", "op": "eq", "value": "approve"}}],
+                "default_arm": "review"
+            }})),
+            step("ok", &["route"], none.clone()),
+            step("review", &["route"], serde_json::json!({"approval": {
+                "approver_role": "reviewer", "timeout_s": 3600
+            }})),
+            step("final", &["ok", "review"], none),
+        ],
+        "output_task_id": "final",
+        "max_concurrency": 4,
+        "max_steps": 12
+    })
+}
+
+fn control_proposal(edit: impl FnOnce(&mut serde_json::Value)) -> TaskPlanProposal {
+    let mut value = control_json();
+    edit(&mut value);
+    serde_json::from_value(value).unwrap()
+}
+
+fn task_mut<'a>(value: &'a mut serde_json::Value, id: &str) -> &'a mut serde_json::Value {
+    value["tasks"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|t| t["task_id"] == id)
+        .unwrap()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.14
+#[test]
+fn control_steps_round_trip_and_refuse_two_kinds() {
+    let plan = plan_explicit_tasks(&control_proposal(|_| {})).unwrap();
+    let value = serde_json::to_value(&plan).unwrap();
+    assert_eq!(
+        serde_json::from_value::<TaskPlan>(value.clone()).unwrap(),
+        plan
+    );
+    let by_id = |id: &str| plan.tasks.iter().find(|t| t.task_id == id).unwrap();
+    assert_eq!(
+        by_id("fork").branch.as_ref().unwrap().kind,
+        BranchKind::Parallel
+    );
+    assert_eq!(by_id("merge").join.as_ref().unwrap().branch_task_id, "fork");
+    assert_eq!(
+        by_id("decide").decision.as_ref().unwrap().decision_iri,
+        "urn:decision:route"
+    );
+    assert_eq!(by_id("review").approval.as_ref().unwrap().timeout_s, 3600);
+    assert!(matches!(
+        by_id("route").branch.as_ref().unwrap().arms.as_slice()[0].condition,
+        Some(BranchCondition::Compare(_))
+    ));
+    // An unset step is an absent key, never null.
+    assert!(value["tasks"][0].get("branch").is_none());
+
+    // A decision-IRI condition is the other condition shape.
+    let decided = control_proposal(|v| {
+        task_mut(v, "route")["branch"]["arms"][0]["condition"] =
+            serde_json::json!({"decision_iri": "urn:decision:approved"});
+    });
+    assert!(plan_explicit_tasks(&decided).is_ok());
+
+    // Unknown fields are rejected on every control type.
+    for (id, key, field) in [
+        ("fork", "branch", "extra"),
+        ("merge", "join", "extra"),
+        ("decide", "decision", "extra"),
+        ("review", "approval", "extra"),
+    ] {
+        let mut v = control_json();
+        task_mut(&mut v, id)[key][field] = serde_json::json!(1);
+        assert!(
+            serde_json::from_value::<TaskPlanProposal>(v).is_err(),
+            "{key}"
+        );
+    }
+
+    // Two kinds on one task refuse STEP_KIND_CONFLICT and name it.
+    for (id, extra) in [
+        (
+            "review",
+            serde_json::json!({"join": {"branch_task_id": "fork"}}),
+        ),
+        (
+            "x",
+            serde_json::json!({"call": {"server": "s", "tool": "t", "arguments": {}},
+                "approval": {"approver_role": "r", "timeout_s": 60}}),
+        ),
+    ] {
+        let err = plan_explicit_tasks(&control_proposal(|v| {
+            task_mut(v, id)
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+        }))
+        .unwrap_err();
+        assert_eq!(err, format!("{STEP_KIND_CONFLICT}: task={id}"));
+    }
+}
+
+fn refused(edit: impl FnOnce(&mut serde_json::Value), code: &str, task: &str) {
+    let err = plan_explicit_tasks(&control_proposal(edit)).unwrap_err();
+    assert_eq!(err, format!("{code}: task={task}"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.15
+#[test]
+fn control_checks_refuse_planted_faults() {
+    // Arm target missing, or not depending on its branch.
+    refused(
+        |v| task_mut(v, "fork")["branch"]["arms"][0]["target_task_id"] = "nope".into(),
+        BRANCH_ARM_UNKNOWN,
+        "fork",
+    );
+    refused(
+        |v| task_mut(v, "x")["depends_on"] = serde_json::json!(["start"]),
+        BRANCH_ARM_UNKNOWN,
+        "fork",
+    );
+    refused(
+        |v| task_mut(v, "route")["branch"]["default_arm"] = "ok".into(),
+        BRANCH_ARM_UNKNOWN,
+        "route",
+    );
+    // An exclusive branch needs a default arm or an exhaustive mark.
+    let mut exhaustive = control_json();
+    {
+        let branch = task_mut(&mut exhaustive, "route")["branch"]
+            .as_object_mut()
+            .unwrap();
+        branch.remove("default_arm");
+        branch.insert("exhaustive".into(), true.into());
+        task_mut(&mut exhaustive, "route")["branch"]["arms"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({"target_task_id": "review"}));
+    }
+    assert!(plan_explicit_tasks(&serde_json::from_value(exhaustive).unwrap()).is_ok());
+    refused(
+        |v| {
+            let branch = task_mut(v, "route")["branch"].as_object_mut().unwrap();
+            branch.remove("default_arm");
+            branch["arms"]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::json!({"target_task_id": "review"}));
+        },
+        BRANCH_NO_DEFAULT,
+        "route",
+    );
+    // A parallel branch needs exactly one join; a join must wait on every arm.
+    refused(
+        |v| {
+            task_mut(v, "merge").as_object_mut().unwrap().remove("join");
+        },
+        BRANCH_JOIN_UNMATCHED,
+        "fork",
+    );
+    refused(
+        |v| task_mut(v, "merge")["join"]["branch_task_id"] = "start".into(),
+        BRANCH_JOIN_UNMATCHED,
+        "fork",
+    );
+    refused(
+        |v| {
+            task_mut(v, "merge")["depends_on"] = serde_json::json!(["x"]);
+            task_mut(v, "final")["depends_on"] = serde_json::json!(["ok", "review", "y"]);
+        },
+        BRANCH_JOIN_UNMATCHED,
+        "merge",
+    );
+    // The approval timeout lies in [60, 2,592,000] seconds.
+    for bad in [0u64, 59, 2_592_001] {
+        refused(
+            |v| task_mut(v, "review")["approval"]["timeout_s"] = bad.into(),
+            APPROVAL_TIMEOUT_OUT_OF_RANGE,
+            "review",
+        );
+    }
+    for good in [60u64, 2_592_000] {
+        let p = control_proposal(|v| task_mut(v, "review")["approval"]["timeout_s"] = good.into());
+        assert!(plan_explicit_tasks(&p).is_ok());
+    }
+    // A condition reads only a direct dependency; `in` takes an array.
+    refused(
+        |v| {
+            task_mut(v, "route")["branch"]["arms"][0]["condition"]["ref"] =
+                "steps.start.output".into()
+        },
+        "binding_not_dependency",
+        "route",
+    );
+    refused(
+        |v| task_mut(v, "route")["branch"]["arms"][0]["condition"]["op"] = "in".into(),
+        CONTROL_STEP_INVALID,
+        "route",
+    );
+    // The plan stays acyclic.
+    let err = plan_explicit_tasks(&control_proposal(|v| {
+        task_mut(v, "start")["depends_on"] = serde_json::json!(["final"]);
+    }))
+    .unwrap_err();
+    assert!(err.starts_with("plan_cycle"), "{err}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.17
+#[test]
+fn control_fields_change_the_digest() {
+    let base = plan_explicit_tasks(&control_proposal(|_| {})).unwrap();
+    assert_eq!(
+        base.plan_digest,
+        plan_plan_digest_again(),
+        "the digest is stable"
+    );
+    let edits: [(&str, fn(&mut serde_json::Value)); 6] = [
+        ("timeout", |v| {
+            task_mut(v, "review")["approval"]["timeout_s"] = 3601.into()
+        }),
+        ("role", |v| {
+            task_mut(v, "review")["approval"]["approver_role"] = "owner".into()
+        }),
+        ("iri", |v| {
+            task_mut(v, "decide")["decision"]["decision_iri"] = "urn:decision:other".into()
+        }),
+        ("default", |v| {
+            let branch = task_mut(v, "route")["branch"].as_object_mut().unwrap();
+            branch.insert("exhaustive".into(), true.into());
+        }),
+        ("input", |v| {
+            task_mut(v, "decide")["decision"]["inputs"]
+                .as_array_mut()
+                .unwrap()
+                .push("steps.merge.output.other".into())
+        }),
+        ("value", |v| {
+            task_mut(v, "route")["branch"]["arms"][0]["condition"]["value"] = "reject".into()
+        }),
+    ];
+    let mut digests = BTreeSet::from([base.plan_digest.clone()]);
+    for (name, edit) in edits {
+        let plan = plan_explicit_tasks(&control_proposal(edit)).unwrap();
+        assert!(
+            digests.insert(plan.plan_digest),
+            "{name} left the digest unchanged"
+        );
+    }
+    // Reference text is canonical: leading zeros in an index do not matter.
+    let a = control_proposal(|v| {
+        task_mut(v, "route")["branch"]["arms"][0]["condition"]["ref"] =
+            "steps.decide.output.items.07".into()
+    });
+    let b = control_proposal(|v| {
+        task_mut(v, "route")["branch"]["arms"][0]["condition"]["ref"] =
+            "steps.decide.output.items.7".into()
+    });
+    assert_eq!(
+        plan_explicit_tasks(&a).unwrap().plan_digest,
+        plan_explicit_tasks(&b).unwrap().plan_digest
+    );
+    // The canonical schema describes the step kind.
+    assert!(task_plan_feature_schema()
+        .names()
+        .iter()
+        .any(|n| n == "task_step_kind"));
+}
+
+fn plan_plan_digest_again() -> String {
+    plan_explicit_tasks(&control_proposal(|_| {}))
+        .unwrap()
+        .plan_digest
 }

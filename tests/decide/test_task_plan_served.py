@@ -302,6 +302,127 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
         client.close()
 
 
+def _control_proposal(*, join: bool = True):
+    """A parallel fork and join, a decision step, an exclusive branch with a
+    default arm and an approval wait."""
+
+    def step(task_id, deps, **extra):
+        return {
+            "task_id": task_id,
+            "prompt": "Do " + task_id,
+            "depends_on": deps,
+            **extra,
+        }
+
+    return {
+        "tasks": [
+            step("start", []),
+            step(
+                "fork",
+                ["start"],
+                branch={
+                    "kind": "parallel",
+                    "arms": [{"target_task_id": "x"}, {"target_task_id": "y"}],
+                },
+            ),
+            step("x", ["fork"]),
+            step("y", ["fork"]),
+            step(
+                "merge",
+                ["x", "y"],
+                **({"join": {"branch_task_id": "fork"}} if join else {}),
+            ),
+            step(
+                "decide",
+                ["merge"],
+                decision={
+                    "decision_iri": "urn:decision:route",
+                    "inputs": ["steps.merge.output.score"],
+                },
+            ),
+            step(
+                "route",
+                ["decide"],
+                branch={
+                    "kind": "exclusive",
+                    "arms": [
+                        {
+                            "target_task_id": "ok",
+                            "condition": {
+                                "ref": "steps.decide.output.verdict",
+                                "op": "eq",
+                                "value": "approve",
+                            },
+                        }
+                    ],
+                    "default_arm": "review",
+                },
+            ),
+            step("ok", ["route"]),
+            step(
+                "review",
+                ["route"],
+                approval={"approver_role": "reviewer", "timeout_s": 3600},
+            ),
+            step("final", ["ok", "review"]),
+        ],
+        "output_task_id": "final",
+        "max_concurrency": 4,
+        "max_steps": 12,
+    }
+
+
+# spec: MEDULLA-DECISION-ENGINE-R134.111.18
+def test_control_steps_served(authenticated_plan_client):
+    client = authenticated_plan_client
+    try:
+        pin = publish(
+            client,
+            "control-schema-" + uuid.uuid4().hex,
+            "feature_schema",
+            schema_body(),
+        )
+        asked = task_plan_request(TEST_TENANT, "control-plan", _control_proposal(), pin)
+        record = client._send("Decide", {"request": asked})["records"][0]
+        plan = record["task_plan"]
+        tasks = {task["task_id"]: task for task in plan["tasks"]}
+        order = [task["task_id"] for task in plan["tasks"]]
+        assert plan["total_tasks"] == 10
+        for task in plan["tasks"]:
+            assert all(
+                order.index(dep) < order.index(task["task_id"])
+                for dep in task["depends_on"]
+            )
+        assert tasks["fork"]["branch"]["kind"] == "parallel"
+        assert tasks["merge"]["join"] == {"branch_task_id": "fork"}
+        assert tasks["decide"]["decision"]["decision_iri"] == "urn:decision:route"
+        assert tasks["route"]["branch"]["default_arm"] == "review"
+        assert tasks["review"]["approval"]["timeout_s"] == 3600
+        assert any(
+            p["subject"] == "review" and p["fact"].startswith("task_plan_approval:")
+            for p in record["premises"]
+        )
+        # The client recomputes the canonical plan digest over every control field.
+        assert (
+            verify_task_plan_receipt(record, asked, expected_principal=TEST_AGENT_ID)
+            == plan
+        )
+        again = client._send("Decide", {"request": asked})["records"][0]
+        assert again["task_plan"]["plan_digest"] == plan["plan_digest"]
+        changed = copy.deepcopy(record)
+        changed["task_plan"]["tasks"][0]["prompt"] = "Invented task"
+        with pytest.raises(ValueError, match="task claims"):
+            verify_task_plan_receipt(changed, asked, expected_principal=TEST_AGENT_ID)
+
+        unjoined = task_plan_request(
+            TEST_TENANT, "control-unjoined", _control_proposal(join=False), pin
+        )
+        with pytest.raises(EngineResponseError, match="BRANCH_JOIN_UNMATCHED"):
+            client._send("Decide", {"request": unjoined})
+    finally:
+        client.close()
+
+
 # spec: MEDULLA-DECISION-ENGINE-R134.111.4
 def test_task_plan_refuses_noncanonical_requests(authenticated_plan_client):
     client = authenticated_plan_client

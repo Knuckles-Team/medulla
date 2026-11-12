@@ -6,5 +6,11 @@
     "peak_mib": 32.0
   },
   "regression_tolerance": 0.10,
+  "group_budgets": {
+    "decide/task_plan_bounds": {
+      "p99_ms": 5.0,
+      "peak_mib": 8.0
+    }
+  },
   "groups": {}
 }

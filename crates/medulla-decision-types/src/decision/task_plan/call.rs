@@ -64,7 +64,7 @@ fn canonical_segment(segment: &str) -> Option<String> {
 }
 
 /// Parse `steps.<task_id>.output[.<path>]` into its task id and canonical text.
-fn parse_reference(text: &str) -> Option<(String, String)> {
+pub(super) fn parse_reference(text: &str) -> Option<(String, String)> {
     let text = text.trim();
     if text.len() > MAX_BINDING_PATH_BYTES {
         return None;
@@ -185,7 +185,7 @@ pub fn task_bindings(task: &TaskPlanTask) -> Vec<TaskPlanBinding> {
         .unwrap_or_default()
 }
 
-fn ancestors(tasks: &BTreeMap<String, TaskPlanTask>, id: &str) -> BTreeSet<String> {
+pub(super) fn ancestors(tasks: &BTreeMap<String, TaskPlanTask>, id: &str) -> BTreeSet<String> {
     let mut seen = BTreeSet::new();
     let mut pending = vec![id.to_string()];
     while let Some(next) = pending.pop() {

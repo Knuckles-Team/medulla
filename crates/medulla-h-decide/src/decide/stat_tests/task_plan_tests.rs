@@ -22,6 +22,10 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
         call: None,
         aggregation: None,
         assignee: None,
+        branch: None,
+        join: None,
+        decision: None,
+        approval: None,
     })
     .collect();
     DecideRequest {
@@ -315,5 +319,163 @@ async fn premises_name_calls_and_bindings() {
     assert_eq!(
         medulla_decision_types::decision::digest::statistical_record_digest(record),
         record.record_digest
+    );
+}
+
+/// A task-plan request over a proposal given as JSON, with the declared
+/// candidates the handler requires (the sorted task ids).
+fn request_with(pin: &ComponentDependency, proposal: serde_json::Value) -> DecideRequest {
+    let proposal: TaskPlanProposal = serde_json::from_value(proposal).unwrap();
+    let mut request = task_request(pin);
+    let mut ids: Vec<String> = proposal.tasks.iter().map(|t| t.task_id.clone()).collect();
+    ids.sort();
+    request.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(
+            ids.into_iter()
+                .map(|option_id| DeclaredOption {
+                    option_id,
+                    classification: BoundedVec::default(),
+                    numbers: BoundedVec::default(),
+                    texts: BoundedVec::default(),
+                })
+                .collect(),
+        )
+        .unwrap(),
+    };
+    request.params = BoundedVec::new(vec![TypedParam {
+        name: "task_plan".into(),
+        value: TypedValue::TaskPlan(Box::new(proposal)),
+    }])
+    .unwrap();
+    request
+}
+
+fn step(id: &str, deps: &[&str], extra: serde_json::Value) -> serde_json::Value {
+    let mut value = serde_json::json!({
+        "task_id": id, "prompt": format!("Do {id}"), "depends_on": deps,
+    });
+    value
+        .as_object_mut()
+        .unwrap()
+        .extend(extra.as_object().unwrap().clone());
+    value
+}
+
+fn control_proposal(join: bool, timeout_s: u64) -> serde_json::Value {
+    let none = serde_json::json!({});
+    let merge = if join {
+        serde_json::json!({"join": {"branch_task_id": "fork"}})
+    } else {
+        none.clone()
+    };
+    serde_json::json!({
+        "tasks": [
+            step("start", &[], none.clone()),
+            step("fork", &["start"], serde_json::json!({"branch": {
+                "kind": "parallel",
+                "arms": [{"target_task_id": "x"}, {"target_task_id": "y"}]}})),
+            step("x", &["fork"], none.clone()),
+            step("y", &["fork"], none.clone()),
+            step("merge", &["x", "y"], merge),
+            step("gate", &["merge"], serde_json::json!({"approval": {
+                "approver_role": "reviewer", "timeout_s": timeout_s}})),
+        ],
+        "output_task_id": "gate",
+        "max_concurrency": 4,
+        "max_steps": 8
+    })
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.16
+#[tokio::test]
+async fn control_refusals_name_the_task() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let ok = decide(&h, request_with(&pin, control_proposal(true, 3600)))
+        .await
+        .unwrap();
+    let plan = ok.records.as_slice()[0].task_plan.as_ref().unwrap();
+    assert!(plan.tasks.iter().any(|t| t.branch.is_some()));
+    assert!(ok.records.as_slice()[0]
+        .premises
+        .iter()
+        .any(|p| p.subject == "gate" && p.fact.starts_with("task_plan_approval:")));
+    assert_invalid(
+        &h,
+        request_with(&pin, control_proposal(false, 3600)),
+        "BRANCH_JOIN_UNMATCHED: task=fork",
+    )
+    .await;
+    assert_invalid(
+        &h,
+        request_with(&pin, control_proposal(true, 59)),
+        "APPROVAL_TIMEOUT_OUT_OF_RANGE: task=gate",
+    )
+    .await;
+    let mut conflict = control_proposal(true, 3600);
+    conflict["tasks"][5]["join"] = serde_json::json!({"branch_task_id": "fork"});
+    assert_invalid(
+        &h,
+        request_with(&pin, conflict),
+        "STEP_KIND_CONFLICT: task=gate",
+    )
+    .await;
+    let mut unknown_arm = control_proposal(true, 3600);
+    unknown_arm["tasks"][1]["branch"]["arms"][1]["target_task_id"] = "ghost".into();
+    assert_invalid(
+        &h,
+        request_with(&pin, unknown_arm),
+        "BRANCH_ARM_UNKNOWN: task=fork",
+    )
+    .await;
+    let mut no_default = control_proposal(true, 3600);
+    no_default["tasks"][1]["branch"]["kind"] = "exclusive".into();
+    assert_invalid(
+        &h,
+        request_with(&pin, no_default),
+        "BRANCH_NO_DEFAULT: task=fork",
+    )
+    .await;
+}
+
+/// The maximum bounded workload of MEDULLA-DECISION-ENGINE-R134.111.6: 64
+/// tasks, the most edges the concurrency bound allows and the full 64 KiB of
+/// prompt text.
+fn maximum_workload() -> serde_json::Value {
+    let tasks: Vec<serde_json::Value> = (0..64)
+        .map(|i| {
+            let deps: Vec<String> = (0..i).rev().take(8).map(|d| format!("t{d:02}")).collect();
+            let refs: Vec<&str> = deps.iter().map(String::as_str).collect();
+            let mut task = step(&format!("t{i:02}"), &refs, serde_json::json!({}));
+            task["prompt"] = "x".repeat(1024).into();
+            task
+        })
+        .collect();
+    serde_json::json!({
+        "tasks": tasks, "output_task_id": "t63", "max_concurrency": 8, "max_steps": 64
+    })
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.6
+#[tokio::test]
+async fn maximum_bounded_plan_is_accepted() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let first = decide(&h, request_with(&pin, maximum_workload()))
+        .await
+        .unwrap();
+    let second = decide(&h, request_with(&pin, maximum_workload()))
+        .await
+        .unwrap();
+    let plan = first.records.as_slice()[0].task_plan.as_ref().unwrap();
+    assert_eq!(plan.total_tasks, 64);
+    assert_eq!(
+        plan.plan_digest,
+        second.records.as_slice()[0]
+            .task_plan
+            .as_ref()
+            .unwrap()
+            .plan_digest,
+        "the digest of the maximum plan is stable"
     );
 }

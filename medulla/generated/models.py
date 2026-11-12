@@ -24220,11 +24220,81 @@ class TaskPlanProposal(BaseModel):
     tasks: BoundedVec_TaskPlanTask_64
 
 
+class TaskPlanBranchKind(str, Enum):
+    EXCLUSIVE = "exclusive"
+    INCLUSIVE = "inclusive"
+    PARALLEL = "parallel"
+
+
+class TaskPlanCompareOp(str, Enum):
+    EQ = "eq"
+    NE = "ne"
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+    IN = "in"
+
+
+class BranchComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: TaskPlanCompareOp
+    ref: str
+    value: Any
+
+
+class BranchDecisionCondition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision_iri: str
+
+
+class BranchArm(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    condition: BranchComparison | BranchDecisionCondition | None = None
+    target_task_id: str
+
+
+class BranchSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    arms: Annotated[list[BranchArm], Field(max_length=32)]
+    default_arm: str | None = None
+    exhaustive: bool = False
+    kind: TaskPlanBranchKind
+
+
+class JoinSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch_task_id: str
+
+
+class DecisionSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision_iri: str
+    inputs: Annotated[list[str], Field(max_length=32)] = Field(default_factory=list)
+
+
+class ApprovalSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver_role: str
+    timeout_s: Annotated[int, Field(ge=0)]
+
+
 class TaskPlanTask(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    approval: ApprovalSpec | None = None
+    branch: BranchSpec | None = None
     call: TaskPlanCall | None = None
+    decision: DecisionSpec | None = None
     depends_on: BoundedVec_string_64 = Field(default_factory=list)
+    join: JoinSpec | None = None
     prompt: str
     task_id: str
 
@@ -32424,6 +32494,15 @@ __all__ = [
     "SyncStamp",
     "SyncState",
     "TaskPlan",
+    "ApprovalSpec",
+    "BranchArm",
+    "BranchComparison",
+    "BranchDecisionCondition",
+    "BranchSpec",
+    "DecisionSpec",
+    "JoinSpec",
+    "TaskPlanBranchKind",
+    "TaskPlanCompareOp",
     "TaskPlanCall",
     "TaskPlanProposal",
     "TaskPlanTask",

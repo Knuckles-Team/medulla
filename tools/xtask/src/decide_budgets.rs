@@ -80,7 +80,11 @@ pub fn check(run: &Value, baseline: &Value) -> Result<Vec<String>, String> {
                 continue;
             };
             let value = number(raw, metric)?;
-            let budget = number(&budgets[metric], &format!("budget {metric}"))?;
+            // A group may carry its own tighter budget (`group_budgets`).
+            let budget = match baseline["group_budgets"][group.as_str()].get(metric) {
+                Some(own) => number(own, &format!("group budget {metric}"))?,
+                None => number(&budgets[metric], &format!("budget {metric}"))?,
+            };
             if value > budget {
                 findings.push(format!(
                     "{group}: {metric} {} exceeds budget {}",
@@ -141,6 +145,17 @@ mod tests {
             breach.len() == 3 && breach.iter().all(|f| f.contains("exceeds budget")),
             "{breach:?}"
         );
+    }
+
+    #[test]
+    fn a_group_budget_overrides_the_default() {
+        let mut baseline = baseline();
+        baseline["group_budgets"] = json!({"decide/tight": {"p99_ms": 5.0}});
+        let found = check(&report(1.0, 6.0, "decide/tight", 1.0), &baseline).unwrap();
+        assert_eq!(found, vec!["decide/tight: p99_ms 6 exceeds budget 5"]);
+        assert!(check(&report(1.0, 6.0, "decide/loose", 1.0), &baseline)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
