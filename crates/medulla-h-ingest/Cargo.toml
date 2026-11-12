@@ -116,3 +116,9 @@ harness = false
 name = "r602_links_served"
 path = "benches/r602_links_served.rs"
 harness = false
+
+[[bench]]
+name = "r600_enrich_served"
+path = "benches/r600_enrich_served.rs"
+harness = false
+required-features = ["test-support"]
