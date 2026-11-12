@@ -40,6 +40,8 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         process_import_max_elements: 100_000,
         process_document_max_bytes: 16 * 1024 * 1024,
         process_document_max_depth: 64,
+        changeset_max_blob_bytes: medulla_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
+        index_max_working_bytes: medulla_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
     }
 }
 

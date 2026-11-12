@@ -239,6 +239,8 @@ fn audit_append_method(request_id: &str, audit_class: &str, op: &str) -> Method 
         status: "reserved".to_string(),
         request_id: request_id.to_string(),
         audit_class: audit_class.to_string(),
+        subject_iri: None,
+        policy_iri: None,
     }
 }
 
@@ -292,6 +294,8 @@ async fn t05c_audit_append_idempotency_conflict_reports_the_declared_code() {
             status: "reserved".to_string(),
             request_id: "req-conflict".to_string(),
             audit_class: "event".to_string(),
+            subject_iri: None,
+            policy_iri: None,
         },
     )
     .await;
@@ -307,6 +311,8 @@ async fn t05c_audit_append_idempotency_conflict_reports_the_declared_code() {
             status: "reserved".to_string(),
             request_id: "req-conflict".to_string(),
             audit_class: "event".to_string(),
+            subject_iri: None,
+            policy_iri: None,
         },
     )
     .await;
