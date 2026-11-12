@@ -822,3 +822,14 @@ fn generation_cycle_machine_matches_edge_table() {
 fn generation_cycle_machine_classes_extend_core() {
     sm::assert_extends_core("GenerationCycle");
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
+#[test]
+fn catalog_probe_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_catalog_types::probe_machine::CATALOG_PROBE_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
+#[test]
+fn catalog_probe_machine_classes_extend_core() {
+    sm::assert_extends_core("CatalogProbe");
+}

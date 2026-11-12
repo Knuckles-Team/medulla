@@ -75,6 +75,8 @@ pub mod catalog_fixtures;
 // (tables/columns) and its ambiguous-table refusal.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod attached_catalog;
+// MEDULLA-UNIFIED-DATA-PLANE-R014.2.3 -- the catalog probe state machine.
+pub mod probe_machine;
 // MEDULLA-UNIFIED-DATA-PLANE-R015.1 — typed SQLite attached-source catalog model:
 // WITHOUT ROWID handling and its WAL-tailing/watermark capture-mode
 // refusal. Pure data; the live read-only attach and real capture are later

@@ -508,6 +508,7 @@ mod tests {
                     nullable: true,
                 })
                 .collect(),
+            constraints: Vec::new(),
         }
     }
 
@@ -521,6 +522,7 @@ mod tests {
                 ),
                 table("public", "customers", &["id", "name", "region"]),
             ],
+            views: Vec::new(),
             version: 1,
         }
     }

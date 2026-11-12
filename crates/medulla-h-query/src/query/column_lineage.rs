@@ -30,8 +30,10 @@ fn catalog_of(tables: Vec<LineageCatalogTable>) -> AttachedCatalogGraph {
                         nullable: true,
                     })
                     .collect(),
+                constraints: Vec::new(),
             })
             .collect(),
+        views: Vec::new(),
         version: 1,
     }
 }

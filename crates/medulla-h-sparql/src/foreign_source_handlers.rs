@@ -50,8 +50,21 @@ pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Res
             {
                 return Ok(Response::err(req_id, error));
             }
-            if let Err(error) = s.foreign_sources().register(&owner, name.clone(), source) {
+            let catalog = s.foreign_sources();
+            if let Err(error) = catalog.register(&owner, name.clone(), source) {
                 return Ok(Response::err(req_id, error));
+            }
+            drop(s);
+            // MEDULLA-UNIFIED-DATA-PLANE-R014.2.3: registration is the synchronous record
+            // write above. A MySQL or MariaDB source is probed by a separate job, whose
+            // outcome is the source's probe state, so nothing here waits for it.
+            #[cfg(feature = "federation-sql")]
+            if catalog.needs_catalog_probe(&owner, &name) {
+                let owner_scope = owner.owner_scope().to_string();
+                let probed = name.clone();
+                tokio::spawn(async move {
+                    let _ = catalog.run_catalog_probe(&owner_scope, &probed).await;
+                });
             }
             Ok(Response::ok(
                 req_id,

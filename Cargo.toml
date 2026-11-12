@@ -1929,6 +1929,7 @@ medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["
 medulla-source-types = { path = "crates/medulla-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
 medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }
+medulla-federation = { path = "crates/medulla-federation", features = ["test-support"] }
 medulla-agent-types = { path = "crates/medulla-agent-types", features = ["test-support"] }
 medulla-result-types = { path = "crates/medulla-result-types" }
 medulla-index-types = { path = "crates/medulla-index-types" }
@@ -2004,6 +2005,13 @@ path = "tests/attached_conformance.rs"
 name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
+
+# MEDULLA-UNIFIED-DATA-PLANE-R014.2.2: live MySQL and MariaDB catalog read and type map against
+# containerised servers; the nightly lane runs it with `--ignored` and the two DSNs set.
+[[test]]
+name = "attached_mysql_served"
+path = "tests/attached_mysql_served.rs"
+required-features = ["federation-sql"]
 
 # Engine parity write workloads W1 to W5 (MEDULLA-ENGINE-PARITY-R005.1): nightly suite.
 [[bench]]

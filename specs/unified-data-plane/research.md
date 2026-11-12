@@ -10,3 +10,6 @@
 
 **Why.** It is the smallest change that makes the row typed without a second row model, keeps Medulla free of any MCP client, and lets the served proof run the same code path a deployment runs.
 
+## Decision: the probe machine lives beside the catalog model, and the catalog is held with the source
+
+**Decision.** `CatalogProbeMachine` sits in `medulla-catalog-types` next to `AttachedCatalogGraph`, so the ontology test needs no heavy dependency and the machine is reachable from the server and the planner without a cycle. The `sqlx` reads sit in `medulla-federation` (`mysql_introspect`), which already links `sqlx`; `medulla-plan::mysql_catalog` holds the type map and the catalog assembly, so no new dependency enters the lock. The allowed scope is a schema list; an empty list reads the connection's own database. The catalog read by the last probe is held beside the source record in the owner-scoped catalog, and a drifted source is refused `SCHEMA_DRIFT` until it is registered again, which takes a new baseline. `foreign.mysql.pool_size` is a registry knob (default 4, bounds 1 to 64).

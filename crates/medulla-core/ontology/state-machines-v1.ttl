@@ -2500,3 +2500,118 @@
     :fromState :FeatureLedgerMachine_Planned ;
     :toState :FeatureLedgerMachine_Closed ;
     :firedBy :FeatureLedgerMachine_Event_Close .
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
+# The catalog probe machine of an attached source. The Rust edge table CATALOG_PROBE_MACHINE is
+# the same table; the ontology test asserts equal edge sets.
+
+:CatalogProbeState a owl:Class ;
+    rdfs:label "Catalog Probe State" ;
+    rdfs:comment "A state of the Catalog Probe machine." ;
+    rdfs:subClassOf :State .
+
+:CatalogProbeTerminalState a owl:Class ;
+    rdfs:label "Catalog Probe Terminal State" ;
+    rdfs:comment "A terminal state of the Catalog Probe machine." ;
+    rdfs:subClassOf :TerminalState, :CatalogProbeState .
+
+:CatalogProbeTransition a owl:Class ;
+    rdfs:label "Catalog Probe Transition" ;
+    rdfs:comment "A transition of the Catalog Probe machine." ;
+    rdfs:subClassOf :Transition .
+
+:CatalogProbeEvent a owl:Class ;
+    rdfs:label "Catalog Probe Event" ;
+    rdfs:comment "A event of the Catalog Probe machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:CatalogProbeGuard a owl:Class ;
+    rdfs:label "Catalog Probe Guard" ;
+    rdfs:comment "A guard of the Catalog Probe machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:CatalogProbeMachine a :StateMachine ;
+    rdfs:label "Catalog Probe machine" ;
+    :initialState :CatalogProbeMachine_Registered ;
+    :hasState :CatalogProbeMachine_Registered, :CatalogProbeMachine_Probing, :CatalogProbeMachine_Baselined, :CatalogProbeMachine_Drifted, :CatalogProbeMachine_ProbeFailed .
+
+:CatalogProbeMachine_Registered a :CatalogProbeState ;
+    rdfs:label "Catalog Probe Registered" ;
+    :storedForm "registered" .
+
+:CatalogProbeMachine_Probing a :CatalogProbeState ;
+    rdfs:label "Catalog Probe Probing" ;
+    :storedForm "probing" .
+
+:CatalogProbeMachine_Baselined a :CatalogProbeState ;
+    rdfs:label "Catalog Probe Baselined" ;
+    :storedForm "baselined" .
+
+:CatalogProbeMachine_Drifted a :CatalogProbeState ;
+    rdfs:label "Catalog Probe Drifted" ;
+    :storedForm "drifted" .
+
+:CatalogProbeMachine_ProbeFailed a :CatalogProbeState ;
+    rdfs:label "Catalog Probe ProbeFailed" ;
+    :storedForm "probe_failed" .
+
+:CatalogProbeMachine_Event_ProbeStarted a :CatalogProbeEvent ;
+    rdfs:label "Catalog Probe ProbeStarted" .
+
+:CatalogProbeMachine_Event_ProbeSucceeded a :CatalogProbeEvent ;
+    rdfs:label "Catalog Probe ProbeSucceeded" .
+
+:CatalogProbeMachine_Event_ProbeErrored a :CatalogProbeEvent ;
+    rdfs:label "Catalog Probe ProbeErrored" .
+
+:CatalogProbeMachine_Event_SchemaChanged a :CatalogProbeEvent ;
+    rdfs:label "Catalog Probe SchemaChanged" .
+
+:CatalogProbeMachine_P01 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P01" ;
+    :edgeId "P01" ;
+    :fromState :CatalogProbeMachine_Registered ;
+    :toState :CatalogProbeMachine_Probing ;
+    :firedBy :CatalogProbeMachine_Event_ProbeStarted .
+
+:CatalogProbeMachine_P02 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P02" ;
+    :edgeId "P02" ;
+    :fromState :CatalogProbeMachine_Probing ;
+    :toState :CatalogProbeMachine_Baselined ;
+    :firedBy :CatalogProbeMachine_Event_ProbeSucceeded .
+
+:CatalogProbeMachine_P03 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P03" ;
+    :edgeId "P03" ;
+    :fromState :CatalogProbeMachine_Probing ;
+    :toState :CatalogProbeMachine_ProbeFailed ;
+    :firedBy :CatalogProbeMachine_Event_ProbeErrored .
+
+:CatalogProbeMachine_P04 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P04" ;
+    :edgeId "P04" ;
+    :fromState :CatalogProbeMachine_Probing ;
+    :toState :CatalogProbeMachine_Drifted ;
+    :firedBy :CatalogProbeMachine_Event_SchemaChanged .
+
+:CatalogProbeMachine_P05 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P05" ;
+    :edgeId "P05" ;
+    :fromState :CatalogProbeMachine_Baselined ;
+    :toState :CatalogProbeMachine_Probing ;
+    :firedBy :CatalogProbeMachine_Event_ProbeStarted .
+
+:CatalogProbeMachine_P06 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P06" ;
+    :edgeId "P06" ;
+    :fromState :CatalogProbeMachine_Drifted ;
+    :toState :CatalogProbeMachine_Probing ;
+    :firedBy :CatalogProbeMachine_Event_ProbeStarted .
+
+:CatalogProbeMachine_P07 a :CatalogProbeTransition ;
+    rdfs:label "Catalog Probe P07" ;
+    :edgeId "P07" ;
+    :fromState :CatalogProbeMachine_ProbeFailed ;
+    :toState :CatalogProbeMachine_Probing ;
+    :firedBy :CatalogProbeMachine_Event_ProbeStarted .

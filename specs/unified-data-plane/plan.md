@@ -285,3 +285,7 @@ none
 - Source ingest of fetched pages and outside quality results: `MEDULLA-UNIFIED-DATA-PLANE-R651.7.3` provides, `SCION-SOURCE-INGEST-R001` consumes. Contract: [scion-source-ingest.md](contracts/scion-source-ingest.md).
 - Gramps pilot corpus and phase exits: `MEDULLA-UNIFIED-DATA-PLANE-R026.2.2` provides, `CONN-GRAMPS-MCP-CONNECTOR-CONTENT-R001` consumes. Contract: [gramps-native-pilot.md](contracts/gramps-native-pilot.md).
 - Cross-application entity links: `MEDULLA-UNIFIED-DATA-PLANE-R030.3` provides, `CONN-IMMICH-API-R001` consumes. Contract: [immich-entity-links.md](contracts/immich-entity-links.md).
+
+## Catalog probe (R014.2.2, R014.2.3)
+
+Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.

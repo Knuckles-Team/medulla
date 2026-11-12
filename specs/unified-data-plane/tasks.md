@@ -22,8 +22,8 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T014 [US2] MEDULLA-UNIFIED-DATA-PLANE-R013 Implement the Postgres attached-source adapter
 - [ ] T015 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.1 Typed MySQL/MariaDB dialect-entry model (producer-first split of R014)
 - [ ] T016 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 MySQL/MariaDB adapter skeleton: typed connection-config → driver-config mapping plus the connect/refusal path
-- [ ] T196 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.3 Async catalog probe job with an explicit state machine
-- [ ] T017 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.2 Live MySQL and MariaDB catalog read and type map
+- [x] T196 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.3 Async catalog probe job with an explicit state machine
+- [x] T017 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.2 Live MySQL and MariaDB catalog read and type map
 - [ ] T018 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.1 Model: `SqliteSourceCatalog` is a typed catalog model with a WITHOUT-ROWID capture-safety refusal
 - [ ] T019 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.1 SQLite live-attach adapter skeleton: typed attach-config → driver-open-config mapping plus the refusal path
 - [ ] T020 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1 Lock-free WAL snapshot reader

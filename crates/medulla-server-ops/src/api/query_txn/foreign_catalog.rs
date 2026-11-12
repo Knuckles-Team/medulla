@@ -56,8 +56,10 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
+use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
 #[cfg(feature = "federation")]
 use medulla_catalog_types::connector_pack::PackSourceKind;
+use medulla_catalog_types::probe_machine::{ProbeRecord, ProbeState};
 use medulla_catalog_types::{
     connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
     connector_pack::PackSourceRegistration,
@@ -83,6 +85,11 @@ struct CatalogKey {
 struct OwnedSpec {
     owner_agent: String,
     spec: ForeignSourceSpec,
+    /// The catalog probe of this source (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3): the one state
+    /// field and the baseline digest. Registering a source starts a fresh record.
+    probe: ProbeRecord,
+    /// The catalog read by the last probe that completed.
+    catalog: Option<AttachedCatalogGraph>,
 }
 
 /// Host-derived identity for one request-scoped foreign-driver binding.
@@ -168,7 +175,15 @@ impl ForeignSourceCatalog {
             name,
         };
         let owner_agent = owner.agent_id().to_string();
-        self.entries.insert(key, OwnedSpec { owner_agent, spec });
+        self.entries.insert(
+            key,
+            OwnedSpec {
+                owner_agent,
+                spec,
+                probe: ProbeRecord::default(),
+                catalog: None,
+            },
+        );
         Ok(())
     }
 
@@ -490,6 +505,131 @@ impl ForeignSourceCatalog {
     /// Whether no owner has registered any source.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    /// The probe state of `owner`'s source `name` (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3).
+    pub fn probe_state(&self, owner: &CarrierAuthority, name: &str) -> Option<ProbeState> {
+        self.entries
+            .get(&CatalogKey {
+                owner_scope: owner.owner_scope().to_string(),
+                name: name.to_string(),
+            })
+            .map(|entry| entry.value().probe.state())
+    }
+
+    /// The catalog the probe of `owner`'s source `name` read. A source whose schema moved off
+    /// its baseline is refused `SCHEMA_DRIFT` (re-registering the source takes a new baseline);
+    /// a failed or not yet finished probe is refused `SOURCE_UNAVAILABLE`.
+    pub fn catalog_read(
+        &self,
+        owner: &CarrierAuthority,
+        name: &str,
+    ) -> Result<AttachedCatalogGraph, String> {
+        let key = CatalogKey {
+            owner_scope: owner.owner_scope().to_string(),
+            name: name.to_string(),
+        };
+        let entry = self
+            .entries
+            .get(&key)
+            .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
+        match (entry.probe.state(), &entry.catalog) {
+            (ProbeState::Baselined, Some(graph)) => Ok(graph.clone()),
+            (ProbeState::Drifted, _) => {
+                Err("SCHEMA_DRIFT: the source schema changed since its baseline".to_string())
+            }
+            (state, _) => Err(format!(
+                "SOURCE_UNAVAILABLE: the catalog probe is {}",
+                medulla_types::transition_refused::MachineState::stored(state)
+            )),
+        }
+    }
+
+    /// The DSN of a MySQL-family source, if `spec` is one.
+    fn mysql_family_dsn(spec: &ForeignSourceSpec) -> Option<&str> {
+        match spec {
+            ForeignSourceSpec::Sql { dsn, .. }
+                if dsn.starts_with("mysql://") || dsn.starts_with("mariadb://") =>
+            {
+                Some(dsn.as_str())
+            }
+            _ => None,
+        }
+    }
+
+    /// Whether `owner`'s source `name` is a MySQL or MariaDB source that needs a catalog probe.
+    pub fn needs_catalog_probe(&self, owner: &CarrierAuthority, name: &str) -> bool {
+        self.spec_for_probe(owner.owner_scope(), name)
+            .is_some_and(|spec| Self::mysql_family_dsn(&spec).is_some())
+    }
+
+    fn spec_for_probe(&self, owner_scope: &str, name: &str) -> Option<ForeignSourceSpec> {
+        self.entries
+            .get(&CatalogKey {
+                owner_scope: owner_scope.to_string(),
+                name: name.to_string(),
+            })
+            .map(|entry| entry.value().spec.clone())
+    }
+
+    /// The probe job of MEDULLA-UNIFIED-DATA-PLANE-R014.2.3: claim the source
+    /// (`ProbeStarted`), read its live catalog (R014.2.2) and record the outcome as the next
+    /// machine event. The first success captures the baseline digest. Registration never waits
+    /// for this job. Returns the state the probe ended in.
+    #[cfg(feature = "federation-sql")]
+    pub async fn run_catalog_probe(
+        &self,
+        owner_scope: &str,
+        name: &str,
+    ) -> Result<ProbeState, String> {
+        let key = CatalogKey {
+            owner_scope: owner_scope.to_string(),
+            name: name.to_string(),
+        };
+        let spec = self
+            .spec_for_probe(owner_scope, name)
+            .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
+        let dsn = Self::mysql_family_dsn(&spec)
+            .ok_or_else(|| "CAPABILITY_UNSUPPORTED: not a MySQL or MariaDB source".to_string())?
+            .to_string();
+        {
+            let mut entry = self
+                .entries
+                .get_mut(&key)
+                .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
+            entry.probe.start().map_err(|refused| {
+                format!(
+                    "{}: {} {} on {}",
+                    medulla_types::transition_refused::TRANSITION_REFUSED,
+                    refused.machine,
+                    refused.event,
+                    refused.from
+                )
+            })?;
+        }
+        let pool_size = medulla_server_api::knob_config::knobs().foreign_mysql_pool_size as u32;
+        let read = medulla_plan::mysql_catalog::read_catalog(&dsn, &[], pool_size).await;
+        let mut entry = self
+            .entries
+            .get_mut(&key)
+            .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
+        let outcome = match read {
+            Ok(read) => {
+                let digest = read.graph.content_hash();
+                entry.catalog = Some(read.graph);
+                entry.probe.finish_read(digest)
+            }
+            Err(_) => entry.probe.finish_error(),
+        };
+        outcome.map_err(|refused| {
+            format!(
+                "{}: {} {} on {}",
+                medulla_types::transition_refused::TRANSITION_REFUSED,
+                refused.machine,
+                refused.event,
+                refused.from
+            )
+        })
     }
 }
 

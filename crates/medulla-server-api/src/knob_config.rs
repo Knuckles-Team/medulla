@@ -375,6 +375,8 @@ knobs! {
     foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;
     /// Watermark poll interval of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2).
     foreign_sqlite_poll_interval_ms: u64 = "foreign.sqlite.poll_interval_ms", U64(5_000), [100, 3_600_000], "ms", Tunable;
+    /// Most connections one catalog read of an attached MySQL or MariaDB source opens (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
+    foreign_mysql_pool_size: u64 = "foreign.mysql.pool_size", U64(4), [1, 64], "connections", Tunable;
     /// Hop bound of the reverse `DEPENDS_ON` walk of an ecosystem finding (MEDULLA-SUPPLY-VOCAB-R009.3).
     ecosystem_max_dependency_depth: u64 = "ecosystem.max_dependency_depth", U64(8), [1, 64], "hops", Tunable;
     /// Largest n-ary link-prediction tuple (MEDULLA-FEDERATED-QUERY-R086.100.1).

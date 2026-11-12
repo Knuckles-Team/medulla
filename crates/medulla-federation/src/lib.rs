@@ -9,6 +9,10 @@
 /// Column lineage derived from SQL on the shared parser (MEDULLA-UNIFIED-DATA-PLANE-R763.2).
 #[cfg(feature = "federation-sql")]
 pub mod column_lineage;
+/// Raw `information_schema` read of a live MySQL or MariaDB server
+/// (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2). The type map and catalog assembly live in `medulla-plan`.
+#[cfg(feature = "federation-sql")]
+pub mod mysql_introspect;
 /// Statement parsing and referenced-table analysis on the shared parser
 /// (MEDULLA-UNIFIED-DATA-PLANE-R763.2, R764.3.1).
 #[cfg(feature = "federation-sql")]
