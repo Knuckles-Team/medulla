@@ -34,6 +34,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-source-types = { path = "../medulla-source-types" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }

@@ -698,6 +698,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::IncidentEvidence { .. }
         | Method::IncidentRelatedClaims { .. }
         | Method::IncidentSetStatus { .. }
+        // MEDULLA-SDLC-R002.3: release and deployment records self-translate
+        // into a request-graph `BatchUpdate`.
+        | Method::RecordRelease { .. }
+        | Method::RecordDeployment { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
         | Method::ActionRegister { .. }
         | Method::ActionSubmit { .. }

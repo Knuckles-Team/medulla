@@ -118,6 +118,15 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             incident_id,
             status,
         } => Some(format!("INCIDENT_SET_STATUS|{incident_id}|{status:?}")),
+        // MEDULLA-SDLC-R002.3: the line names the record, never its digests.
+        Method::RecordRelease { release } => Some(format!(
+            "RECORD_RELEASE|{}|{}",
+            release.repo, release.version
+        )),
+        Method::RecordDeployment { deployment } => Some(format!(
+            "RECORD_DEPLOYMENT|{}|{}",
+            deployment.environment, deployment.workload
+        )),
         _ => record_write_audit_line(method),
     }
 }

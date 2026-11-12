@@ -80,6 +80,9 @@ method_results! {
     IncidentEvidence(IncidentEvidence) => Raw<IncidentRecord>;
     IncidentRelatedClaims(IncidentRelatedClaims) => Raw<Vec<IncidentRelatedClaim>>;
     IncidentSetStatus(IncidentSetStatus) => Raw<IncidentWriteReceipt>;
+    // MEDULLA-SDLC-R002.3: the release and deployment records.
+    RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
+    RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
     LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.

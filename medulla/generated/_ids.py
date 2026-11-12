@@ -521,6 +521,8 @@ METHOD_IDS = frozenset(
         "IncidentRecordAnomaly",
         "IncidentRelatedClaims",
         "IncidentSetStatus",
+        "RecordRelease",
+        "RecordDeployment",
         "LineageIngest",
         "ListMemorySnapshots",
         "LiveArtifactGet",

@@ -191,3 +191,65 @@ fn trace_limits_come_from_knobs() {
     let json = serde_json::to_string(&limits).unwrap();
     assert_eq!(serde_json::from_str::<TraceLimits>(&json).unwrap(), limits);
 }
+
+fn chain(ids: &[&str]) -> Vec<String> {
+    ids.iter().map(|id| id.to_string()).collect()
+}
+
+// spec: MEDULLA-SDLC-R002.3
+#[test]
+fn a_release_contains_the_changesets_after_the_previous_release() {
+    use medulla_source_types::lifecycle::handle_record_release;
+
+    let first = release("1.0.0", &["sha256:aa"]);
+    let mut second = release("1.1.0", &["sha256:bb"]);
+    second.changeset_head = "c5".into();
+    second.published_at = 200;
+    let ids = chain(&["c1", "c2", "c3", "c4", "c5"]);
+    let write = handle_record_release(std::slice::from_ref(&first), &ids, second).unwrap();
+    assert_eq!(write.contains, chain(&["c4", "c5"]));
+    assert!(!write.replayed);
+    assert_eq!(write.seal.len(), 64);
+}
+
+// spec: MEDULLA-SDLC-R002.4
+#[test]
+fn unknown_head_and_taken_version_refuse() {
+    use medulla_source_types::lifecycle::{handle_record_release, REFUSALS};
+
+    let stored = release("1.0.0", &["sha256:aa"]);
+    let ids = chain(&["c1", "c2", "c3"]);
+
+    let mut absent = release("2.0.0", &[]);
+    absent.changeset_head = "zz".into();
+    let refusal = handle_record_release(std::slice::from_ref(&stored), &ids, absent).unwrap_err();
+    assert_eq!(refusal.code(), "RELEASE_HEAD_UNKNOWN");
+
+    let mut taken = stored.clone();
+    taken.git_ref = "refs/tags/other".into();
+    let refusal = handle_record_release(std::slice::from_ref(&stored), &ids, taken).unwrap_err();
+    assert_eq!(refusal.code(), "RELEASE_VERSION_TAKEN");
+
+    for code in [
+        "RELEASE_HEAD_UNKNOWN",
+        "RELEASE_VERSION_TAKEN",
+        "RELEASE_SEALED",
+    ] {
+        assert!(REFUSALS.contains(&code));
+    }
+}
+
+// spec: MEDULLA-SDLC-R002.5
+#[test]
+fn an_identical_release_replays_with_the_same_seal() {
+    use medulla_source_types::lifecycle::{handle_record_release, release_seal};
+
+    let stored = release("1.0.0", &["sha256:aa"]);
+    let ids = chain(&["c1", "c2", "c3"]);
+    let write = handle_record_release(std::slice::from_ref(&stored), &ids, stored.clone()).unwrap();
+    assert!(write.replayed);
+    assert_eq!(write.seal, release_seal(&stored));
+    let mut changed = stored.clone();
+    changed.artifact_digests.push("sha256:cc".into());
+    assert_ne!(release_seal(&changed), write.seal);
+}

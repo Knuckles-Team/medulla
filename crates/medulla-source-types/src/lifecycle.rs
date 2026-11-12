@@ -115,6 +115,14 @@ impl LifecycleKind {
     }
 }
 
+/// The stable refusal codes of the served release and deployment records
+/// (MEDULLA-SDLC-R002.4, R002.5), in the order they are documented.
+pub const REFUSALS: &[&str] = &[
+    "RELEASE_HEAD_UNKNOWN",
+    "RELEASE_VERSION_TAKEN",
+    "RELEASE_SEALED",
+];
+
 /// A typed refusal from the lifecycle records.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum LifecycleRefusal {
@@ -128,6 +136,10 @@ pub enum LifecycleRefusal {
     EndpointUnknown(String),
     #[error("RELEASE_HEAD_UNKNOWN: {0}")]
     ReleaseHeadUnknown(String),
+    #[error("RELEASE_VERSION_TAKEN: {0}")]
+    ReleaseVersionTaken(String),
+    #[error("RELEASE_SEALED: {0}")]
+    ReleaseSealed(String),
 }
 
 impl LifecycleRefusal {
@@ -139,12 +151,15 @@ impl LifecycleRefusal {
             Self::EdgeDerivedOnly(_) => "LIFECYCLE_EDGE_DERIVED_ONLY",
             Self::EndpointUnknown(_) => "LIFECYCLE_ENDPOINT_UNKNOWN",
             Self::ReleaseHeadUnknown(_) => "RELEASE_HEAD_UNKNOWN",
+            Self::ReleaseVersionTaken(_) => "RELEASE_VERSION_TAKEN",
+            Self::ReleaseSealed(_) => "RELEASE_SEALED",
         }
     }
 }
 
 /// A published release of one repository.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Release {
     pub repo: String,
@@ -168,6 +183,7 @@ impl Release {
 
 /// How a deployment ended. `Unattributed` means no release names its image.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentOutcome {
     Succeeded,
@@ -190,7 +206,9 @@ pub struct Deployment {
 }
 
 /// The caller's view of a deployment, before the engine resolves its release.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct DeploymentInput {
     pub environment: String,
     pub workload: String,
@@ -238,6 +256,108 @@ pub fn release_range(
         None => 0,
     };
     Ok(chain[start.min(end + 1)..=end].to_vec())
+}
+
+/// Everything the served `RecordRelease` commits for one release
+/// (MEDULLA-SDLC-R002.3): the sealed release record and the changesets it
+/// contains, oldest first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReleaseWrite {
+    pub release: Release,
+    /// The seal over the release record (see [`release_seal`]).
+    pub seal: String,
+    /// The changeset ids the release contains (`contains.release_range`).
+    pub contains: Vec<String>,
+    /// True when the same record was already stored, so the write replays.
+    pub replayed: bool,
+}
+
+/// The seal of a release record: the SHA-256 of its canonical JSON. A readback
+/// re-derives it, so a stored record that differs from what was written shows.
+pub fn release_seal(release: &Release) -> String {
+    sha256_hex(
+        serde_json::to_string(release)
+            .unwrap_or_default()
+            .as_bytes(),
+    )
+}
+
+/// The graph node id of a release. `@` is refused in node ids by the
+/// persistence privacy policy, so it differs from [`Release::id`], which
+/// deployments carry as their `release_ref`.
+pub fn release_node_id(release: &Release) -> String {
+    format!("release:{}:{}", release.repo, release.version)
+}
+
+/// The graph node id of a deployment: a digest over what makes it distinct.
+pub fn deployment_node_id(deployment: &Deployment) -> String {
+    let key = format!(
+        "{}|{}|{}|{}",
+        deployment.environment, deployment.workload, deployment.image_digest, deployment.started_at
+    );
+    format!("deployment:{}", &sha256_hex(key.as_bytes())[..32])
+}
+
+/// `RecordRelease` (MEDULLA-SDLC-R002.3 to R002.5): decide what one release
+/// writes, or refuse before anything is written.
+///
+/// `existing` is every stored release, `chain` the repository's changeset
+/// chain ending at `release.changeset_head` or absent from it (oldest first).
+/// A head that is not on the chain refuses `RELEASE_HEAD_UNKNOWN`. A stored
+/// release with the same repository and version refuses
+/// `RELEASE_VERSION_TAKEN` unless it is byte-identical, which replays. The
+/// previous release of the repository whose head is on the chain bounds the
+/// range, so the new release contains only the changesets after it.
+pub fn handle_record_release(
+    existing: &[Release],
+    chain: &[String],
+    release: Release,
+) -> Result<ReleaseWrite, LifecycleRefusal> {
+    let mut replayed = false;
+    if let Some(stored) = existing.iter().find(|r| r.id() == release.id()) {
+        if *stored != release {
+            return Err(LifecycleRefusal::ReleaseVersionTaken(release.id()));
+        }
+        replayed = true;
+    }
+    let previous_head = existing
+        .iter()
+        .filter(|r| r.repo == release.repo && r.id() != release.id())
+        .filter(|r| chain.iter().any(|c| *c == r.changeset_head))
+        .max_by_key(|r| r.published_at)
+        .map(|r| r.changeset_head.as_str());
+    let contains = release_range(chain, previous_head, &release.changeset_head)?;
+    Ok(ReleaseWrite {
+        seal: release_seal(&release),
+        release,
+        contains,
+        replayed,
+    })
+}
+
+/// `RecordDeployment` (MEDULLA-SDLC-R002.3): resolve the deployment to its
+/// release by image digest. Reuses [`record_deployment`]; there is no second
+/// digest lookup.
+pub fn handle_record_deployment(releases: &[Release], input: DeploymentInput) -> Deployment {
+    record_deployment(releases, input)
+}
+
+/// What `RecordRelease` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReleaseReceipt {
+    pub release_id: String,
+    pub node_id: String,
+    pub seal: String,
+    pub contains: u64,
+    pub replayed: bool,
+}
+
+/// What `RecordDeployment` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeploymentReceipt {
+    pub deployment_id: String,
+    pub release_ref: Option<String>,
+    pub outcome: DeploymentOutcome,
 }
 
 /// How a defect reached the engine.

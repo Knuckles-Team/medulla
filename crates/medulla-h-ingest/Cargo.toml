@@ -114,6 +114,11 @@ path = "benches/r601_history_served.rs"
 harness = false
 
 [[bench]]
+name = "lifecycle_record_deployment"
+path = "benches/lifecycle_record_deployment.rs"
+harness = false
+
+[[bench]]
 name = "r602_links_served"
 path = "benches/r602_links_served.rs"
 harness = false

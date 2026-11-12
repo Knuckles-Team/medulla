@@ -602,6 +602,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "IncidentRelatedClaims",
         &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
     ),
+    // MEDULLA-SDLC-R002.4/R002.5: the served release record's refusals.
+    (
+        "RecordRelease",
+        &[
+            "RELEASE_HEAD_UNKNOWN",
+            "RELEASE_VERSION_TAKEN",
+            "RELEASE_SEALED",
+        ],
+    ),
     (
         "IncidentSetStatus",
         &[

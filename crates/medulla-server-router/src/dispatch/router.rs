@@ -49,6 +49,7 @@ mod identity_access;
 mod incident;
 mod lifecycle;
 mod resource_cost;
+mod sdlc;
 mod service_control;
 mod source_ingest;
 mod telemetry;
@@ -70,6 +71,7 @@ use data_plane::{
 use graph_lifecycle::dispatch_graph_lifecycle_methods;
 use identity_access::dispatch_identity_and_access_methods;
 use incident::dispatch_incident_methods;
+use sdlc::dispatch_sdlc_methods;
 #[cfg(feature = "security")]
 use lifecycle::apply_rbac_admin;
 pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
@@ -135,6 +137,9 @@ pub(in crate::dispatch) fn method_handler_registry() -> &'static HandlerRegistry
         }));
         registry.register(PlaneHandler::new("incident", |ctx, method| {
             Box::pin(dispatch_incident_methods(ctx, method))
+        }));
+        registry.register(PlaneHandler::new("sdlc", |ctx, method| {
+            Box::pin(dispatch_sdlc_methods(ctx, method))
         }));
         registry.register(PlaneHandler::new("resource_cost", |ctx, method| {
             Box::pin(dispatch_resource_cost_methods(ctx, method))

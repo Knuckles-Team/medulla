@@ -47,12 +47,17 @@ pub struct SealedClass {
     /// Whether a generic write may create a row of this class. Tombstones are
     /// written only by retirement.
     pub generic_create: bool,
+    /// The stable refusal code a refused overwrite names, when the class has one
+    /// beyond the generic `CONFLICT` (a release names `RELEASE_SEALED`).
+    pub overwrite_code: Option<&'static str>,
 }
 
 /// The sealed classes. To seal a class, add it here.
 ///
 /// * `AnalysisSnapshot` — a sealed markets analysis record (finance-v1); its node id
 ///   is derived from its digest and share links verify it by re-sealing.
+/// * `Release` — a recorded software release (MEDULLA-SDLC-R002.5); its node id names
+///   the repository and version, so an overwrite is a changed release.
 /// * [`SEALED_TOMBSTONE_TYPE`] — what retirement leaves behind.
 pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
     SealedClass {
@@ -60,12 +65,22 @@ pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
         digest_property: "analysisDigest",
         sealed_at_property: "sealedAtMs",
         generic_create: true,
+        overwrite_code: None,
+    },
+    // MEDULLA-SDLC-R002.5: a recorded release, sealed under its digest.
+    SealedClass {
+        name: "Release",
+        digest_property: "release_seal",
+        sealed_at_property: "published_at",
+        generic_create: true,
+        overwrite_code: Some("RELEASE_SEALED"),
     },
     SealedClass {
         name: SEALED_TOMBSTONE_TYPE,
         digest_property: "digest",
         sealed_at_property: "retired_at_ms",
         generic_create: false,
+        overwrite_code: None,
     },
 ];
 

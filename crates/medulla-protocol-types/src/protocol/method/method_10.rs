@@ -200,6 +200,20 @@ $($variants)*
     ColumnLineage {
         op: Box<medulla_catalog_types::lineage::ColumnLineageOp>,
     },
+    // ── Software lifecycle records (MEDULLA-SDLC-R002.3) ────────────────────
+    /// Record one published release of a repository: a sealed `Release` node
+    /// and a `contains` edge to each changeset after the repository's previous
+    /// release. Refuses `RELEASE_HEAD_UNKNOWN` (the head is not on the
+    /// repository chain) and `RELEASE_VERSION_TAKEN` (the repository and
+    /// version name a different stored release). Identical replays succeed.
+    RecordRelease {
+        release: medulla_source_types::lifecycle::Release,
+    },
+    /// Record one rollout of an image: a `Deployment` node linked to the release
+    /// whose artifact digests name the image, or `unattributed` with no release.
+    RecordDeployment {
+        deployment: medulla_source_types::lifecycle::DeploymentInput,
+    },
         ]);
     };
 }

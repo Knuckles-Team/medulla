@@ -192,9 +192,13 @@ fn check_overwrite(stored: &[u8], write: &NodeWrite<'_>) -> Result<(), String> {
     if current.is_some() && row_after(stored, current.clone(), write) == current {
         return Ok(());
     }
+    let code = row_class(stored)
+        .and_then(|class| class.overwrite_code)
+        .map(|code| format!("{code}: "))
+        .unwrap_or_default();
     Err(format!(
-        "CONFLICT: sealed record row '{}' is create-only: a generic write may not change or remove \
-         it; retire it through RetireSealedRecord",
+        "CONFLICT: {code}sealed record row '{}' is create-only: a generic write may not change or \
+         remove it; retire it through RetireSealedRecord",
         write.node_id()
     ))
 }

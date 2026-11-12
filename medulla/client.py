@@ -17231,6 +17231,30 @@ class MedullaClient:
     async def health(self) -> dict[str, Any]:
         return (await _gen.cluster.send_health(self)).payload
 
+    async def record_release(self, release: dict[str, Any]) -> dict[str, Any]:
+        """Record one published release (MEDULLA-SDLC-R002.3).
+
+        ``release`` carries ``repo``, ``version``, ``git_ref``,
+        ``changeset_head``, ``artifact_digests`` and ``published_at``. The head
+        must be an indexed commit (``RELEASE_HEAD_UNKNOWN``) and a repository
+        and version name one release (``RELEASE_VERSION_TAKEN``).
+        """
+        result = await self._send("RecordRelease", {"release": release}, None)
+        if not isinstance(result, dict):
+            raise TypeError("RecordRelease returned a non-object result")
+        return result
+
+    async def record_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
+        """Record one rollout of an image (MEDULLA-SDLC-R002.3).
+
+        The deployment links to the release whose artifact digests name its
+        image, or is ``unattributed`` with no release.
+        """
+        result = await self._send("RecordDeployment", {"deployment": deployment}, None)
+        if not isinstance(result, dict):
+            raise TypeError("RecordDeployment returned a non-object result")
+        return result
+
     async def describe_contract(
         self,
         *,

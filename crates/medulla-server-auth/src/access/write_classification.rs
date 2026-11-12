@@ -439,6 +439,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::IncidentRecordAnomaly { .. }
                 | Method::IncidentCorrelate { .. }
                 | Method::IncidentSetStatus { .. }
+                // MEDULLA-SDLC-R002.3: release and deployment records.
+                | Method::RecordRelease { .. }
+                | Method::RecordDeployment { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
                 | Method::ActionRegister { .. }
                 | Method::ActionSubmit { .. }

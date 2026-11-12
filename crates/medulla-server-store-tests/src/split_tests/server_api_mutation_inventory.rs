@@ -59,6 +59,8 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("IncidentRecordAnomaly");
     covered.insert("IncidentCorrelate");
     covered.insert("IncidentSetStatus");
+    covered.insert("RecordRelease");
+    covered.insert("RecordDeployment");
     covered.insert("ActionRegister");
     covered.insert("ActionSubmit");
 

@@ -7507,6 +7507,7 @@ dependencies = [
  "medulla-server-mutation",
  "medulla-server-obs",
  "medulla-server-ops",
+ "medulla-source-types",
  "medulla-storage",
  "medulla-stream",
  "medulla-test-ambient-auth",
