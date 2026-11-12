@@ -186,7 +186,8 @@ mod tests {
                 (*a).into(),
                 (*b).into(),
                 props(serde_json::json!({"weight": w})),
-            );
+            )
+            .unwrap();
         }
         core
     }

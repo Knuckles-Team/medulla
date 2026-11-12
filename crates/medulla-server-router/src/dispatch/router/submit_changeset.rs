@@ -68,7 +68,8 @@ mod served {
         verified: &VerifiedRequestContext,
         fields: SubmitChangesetFields,
     ) -> Response {
-        let request: Arc<_> = Arc::from(fields.request);
+        let request: Arc<medulla_types::source_changeset::SubmitChangesetRequest> =
+            Arc::from(fields.request);
         // The repository is the graph the branch belongs to.
         let reference = medulla_types::branch::BranchRef {
             tenant: verified.tenant().to_string(),

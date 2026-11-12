@@ -101,6 +101,10 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
             call: None,
             aggregation: None,
             assignee: None,
+            branch: None,
+            join: None,
+            decision: None,
+            approval: None,
         })
         .collect();
     DecideRequest {

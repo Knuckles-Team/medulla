@@ -35,7 +35,6 @@ use super::SharedState;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_protocol_types::protocol::Method;
 use medulla_query_types::solve_scalar::digest_text;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_work_types::native_control::{
