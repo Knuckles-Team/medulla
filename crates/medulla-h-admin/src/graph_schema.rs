@@ -18,6 +18,12 @@ mod edits;
 #[cfg(test)]
 mod finance_tests;
 mod ontology_import;
+// Served by MEDULLA-TYPED-PACKS-R804.3; until then only its tests call it.
+#[cfg(feature = "shacl")]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) mod ontology_diff;
+#[cfg(all(test, feature = "shacl"))]
+mod ontology_diff_tests;
 #[cfg(all(test, feature = "shacl"))]
 mod swarm_topology_tests;
 #[cfg(test)]

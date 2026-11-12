@@ -297,7 +297,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T289 [US7] MEDULLA-TYPED-PACKS-R803.6 Hot-path proof
 - [ ] T290 [US7] MEDULLA-TYPED-PACKS-R803.7 Document chunk wiring
 - [ ] T291 [US7] MEDULLA-TYPED-PACKS-R804.1 Model
-- [ ] T292 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
+- [x] T292 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
 - [ ] T293 [US7] MEDULLA-TYPED-PACKS-R804.3 Wiring
 - [ ] T294 [US7] MEDULLA-TYPED-PACKS-R804.4 Refusals
 - [ ] T295 [US7] MEDULLA-TYPED-PACKS-R804.5 Evidence
