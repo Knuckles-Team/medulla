@@ -34,7 +34,7 @@ pub struct CallStored {
 
 impl Parser<'_> {
     /// Parse the whole statement; the cursor is at `CALL`.
-    pub(super) fn call_stored(&mut self) -> Result<CallStored, UqlError> {
+    pub(crate) fn call_stored(&mut self) -> Result<CallStored, UqlError> {
         self.expect_kw("CALL")?;
         self.expect_kw("STORED")?;
         let name = self.name("a stored query name")?;
