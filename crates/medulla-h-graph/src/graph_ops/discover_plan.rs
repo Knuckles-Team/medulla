@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use medulla_graph_core::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// One hit after expansion: its score and the seed-to-hit node ids.
 #[derive(Debug, Clone, PartialEq)]

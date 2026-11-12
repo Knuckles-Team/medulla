@@ -228,14 +228,18 @@ pub fn verify_submission(
 /// The branch chain as `accept` reads it: the head commit id and the
 /// changeset a commit carries (`None` for the branch base pointer).
 pub trait ChainView {
+    /// The id of the branch head commit.
     fn head(&self) -> &str;
+    /// The changeset the commit carries, if any.
     fn changeset_at(&self, commit_id: &str) -> Result<Option<Changeset>, String>;
 }
 
 /// Why `accept` produced no changeset.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AcceptError {
+    /// The submission was refused with a typed refusal.
     Refused(SubmitRefusal),
+    /// The chain store failed.
     Store(String),
 }
 
@@ -247,7 +251,9 @@ impl From<SubmitRefusal> for AcceptError {
 
 /// The server-side facts of one accept: never read from the request.
 pub struct AcceptContext<'a> {
+    /// The verified author principal.
     pub author_principal: &'a str,
+    /// Server time of the accept, epoch milliseconds.
     pub created_at_ms: u64,
 }
 

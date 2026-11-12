@@ -31,7 +31,7 @@ pub(crate) async fn handle_uql(
             ));
         }
         return Ok(match parsed {
-            Ok(call) => super::stored_query::handle_call_stored_statement(ctx, call).await,
+            Ok(call) => Box::pin(super::stored_query::handle_call_stored_statement(ctx, call)).await,
             Err(error) => Response::err(req_id, error.render(&text)),
         });
     }

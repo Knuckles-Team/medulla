@@ -57,7 +57,12 @@ pub enum ReadbackRefusal {
     /// These ids are absent from the caller's view (or none were named).
     Partial(Vec<String>),
     /// The graph has not reached the write's revision.
-    Stale { have: u64, need: u64 },
+    Stale {
+        /// The revision the graph has reached.
+        have: u64,
+        /// The revision the write needs.
+        need: u64,
+    },
     /// These ids differ in content digest or revision.
     Mismatch(Vec<String>),
 }

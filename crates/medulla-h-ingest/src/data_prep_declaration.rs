@@ -127,8 +127,11 @@ pub fn validate_declaration(
 /// What the graph holds for one declaration node.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoredDeclaration {
+    /// The declared capability name.
     pub capability: String,
+    /// Digest of the declared content.
     pub content_digest: String,
+    /// Digest of the policy the declaration carries.
     pub policy_digest: String,
     /// Ids of the field nodes the declaration points at through `declares_field`.
     pub field_targets: BTreeSet<String>,
@@ -143,7 +146,9 @@ pub trait DeclarationView {
 /// A [`DeclarationView`] over a graph core, restricted to the rows `visible`
 /// admits (the caller's row authority).
 pub struct CoreDeclarationView<'a> {
+    /// The graph core the declarations are read from.
     pub core: &'a GraphCore,
+    /// Whether the caller may read a row id.
     pub visible: &'a dyn Fn(&str) -> bool,
 }
 
@@ -182,10 +187,15 @@ impl DeclarationView for CoreDeclarationView<'_> {
 /// What one declaration call decided.
 pub enum Declared {
     /// The digest equals the stored one: nothing is written.
-    Unchanged { content_digest: Digest256 },
+    Unchanged {
+        /// The unchanged content digest.
+        content_digest: Digest256,
+    },
     /// One write-set replaces the declaration and its edges.
     Write {
+        /// The new content digest.
         content_digest: Digest256,
+        /// The write-set that replaces the declaration and its edges.
         write_set: IndexWriteSet,
     },
 }
