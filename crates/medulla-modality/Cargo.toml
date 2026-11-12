@@ -49,3 +49,12 @@ medulla-document = { path = "../medulla-document", features = ["contract", "serv
 medulla-image = { path = "../medulla-image", features = ["contract", "serving", "runtime"] }
 medulla-audio = { path = "../medulla-audio", features = ["contract", "serving", "runtime"] }
 medulla-video = { path = "../medulla-video", features = ["contract", "serving", "runtime"] }
+# MEDULLA-FEDERATED-QUERY-R721.1: one ModalityContract implementation per PlanModality.
+medulla-plan = { path = "../medulla-plan" }
+medulla-graph-core = { path = "../medulla-graph-core", features = ["contract"] }
+medulla-ann = { path = "../medulla-ann", features = ["contract"] }
+medulla-table-store = { path = "../medulla-table-store", features = ["contract"] }
+medulla-rdf = { path = "../medulla-rdf", features = ["contract"] }
+medulla-tsdb = { path = "../medulla-tsdb", features = ["contract"] }
+medulla-kvcache = { path = "../medulla-kvcache", features = ["contract"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["contract"] }

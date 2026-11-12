@@ -58,6 +58,7 @@
 // refusal for an invalid config or an unmet Flight SQL preference. Pure
 // `std` + `medulla-types`, no I/O; issuing the pushed-down query is a later
 // child.
+pub mod modality;
 pub mod warehouse_pushdown;
 // MEDULLA-UNIFIED-DATA-PLANE-R005 — mapping approval-state machine for named R2RML
 // virtual graphs; an unapproved or model-only mapping refuses to be queried.

@@ -31,6 +31,9 @@ pub mod protocol;
 pub mod protocol_fixtures;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod result_contract;
+
+#[cfg(feature = "contract")]
+mod blob_contract;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod storage_wire;
 

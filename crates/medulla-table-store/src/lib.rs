@@ -8,6 +8,9 @@
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod plan_scope;
+
+#[cfg(feature = "contract")]
+mod contract;
 /// Arbitrary user-defined relational tables (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside) — the durable redb
 /// table store + DataFusion materialization. Behind `sql` (needs Arrow/DataFusion/redb).
 #[cfg(feature = "sql")]

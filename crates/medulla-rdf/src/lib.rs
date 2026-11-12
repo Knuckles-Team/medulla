@@ -61,6 +61,10 @@ pub use spargebra;
 #[cfg(feature = "sparql")]
 pub mod sparql;
 
+/// `ModalityContract` for SPARQL bindings (MEDULLA-FEDERATED-QUERY-R721.1).
+#[cfg(feature = "contract")]
+mod contract;
+
 /// SPARQL 1.1 UPDATE executed over the native property-graph write ops (CONCEPT:MEDULLA-KG.query.named-graph-support):
 /// INSERT/DELETE DATA, DELETE/INSERT … WHERE, CLEAR/CREATE/DROP GRAPH, with named-graph
 /// routing through the `GraphStore` trait. Behind `sparql` (needs spargebra's Update).

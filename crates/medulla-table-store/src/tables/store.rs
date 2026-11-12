@@ -581,7 +581,7 @@ pub struct TableStore {
 /// One row from an immutable redb read snapshot. The physical id is an ordering
 /// cursor only; semantic consumers must derive durable identity from the row's
 /// declared primary key rather than persisting this allocation detail.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TableSnapshotRow {
     pub row_id: u64,
     pub cells: Vec<Cell>,

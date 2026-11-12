@@ -72,7 +72,7 @@ pub use service::{RemoteSparql, ServiceBudget, SERVICE_BUDGET_EXCEEDED};
 pub type Solution = HashMap<String, Binding>;
 
 /// A bound value: a graph-node id (`<iri>` / `_:b`) or a literal lexical value.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Binding {
     Node(String),
     Literal(String),
