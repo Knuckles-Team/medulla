@@ -1090,7 +1090,7 @@ mod search_pushdown {
             Ok((page.offset..(page.offset + page.size).min(10))
                 .map(|n| SearchHit {
                     id: format!("d{n}"),
-                    score: 1.0 - n as f32 / 10.0,
+                    score: Some(1.0 - n as f32 / 10.0),
                     attributes: vec![("n".into(), n.to_string())],
                 })
                 .collect())
@@ -1175,5 +1175,111 @@ mod search_pushdown {
             trace[0].source, "mcp:search#00000000",
             "the label, never an endpoint"
         );
+    }
+
+    /// Wraps [`Recording`] with a vector space, scoreless rows and a refusal on request N.
+    struct Faulty {
+        inner: Recording,
+        space: Option<String>,
+        scoreless_from: usize,
+        refuse_request: Option<usize>,
+        kind: ScoreKind,
+    }
+
+    impl SearchRemote for Faulty {
+        fn identity(&self) -> &Identity {
+            self.inner.identity()
+        }
+        fn capability(&self) -> SearchIndexCapability {
+            SearchIndexCapability {
+                score_kind: self.kind,
+                ..self.inner.capability()
+            }
+        }
+        fn vector_space(&self) -> Option<String> {
+            self.space.clone()
+        }
+        fn fetch(&self, request: &RemoteRequest) -> Result<Vec<SearchHit>, String> {
+            let call = self.inner.seen.lock().unwrap().len();
+            if self.refuse_request == Some(call) {
+                self.inner.seen.lock().unwrap().push(request.clone());
+                return Err("upstream refused".into());
+            }
+            let mut hits = self.inner.fetch(request)?;
+            for hit in &mut hits {
+                if hit.attributes[0].1.parse::<usize>().unwrap() >= self.scoreless_from {
+                    hit.score = None;
+                }
+            }
+            Ok(hits)
+        }
+    }
+
+    fn faulty(kind: ScoreKind) -> Faulty {
+        Faulty {
+            inner: Recording::new(100),
+            space: Some("space-a".into()),
+            scoreless_from: usize::MAX,
+            refuse_request: None,
+            kind,
+        }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.4
+    #[test]
+    fn search_refusals() {
+        use crate::federation_opt::{
+            EMBEDDING_SPACE_MISMATCH, REMOTE_SCORE_MISSING, RESULT_INCOMPLETE,
+        };
+        let session = || FederationSession::new(FederationBudget::default());
+        // A query vector from another embedding space refuses before any request.
+        let remote = faulty(ScoreKind::Bm25);
+        let mut vector = wanted(3);
+        vector.vector_space = Some("space-b".into());
+        let err = fetch_top_k(&session(), &remote, &vector, &|_| true).unwrap_err();
+        assert!(err.starts_with(EMBEDDING_SPACE_MISMATCH), "{err}");
+        assert!(remote.inner.seen.lock().unwrap().is_empty());
+        vector.vector_space = Some("space-a".into());
+        assert!(fetch_top_k(&session(), &remote, &vector, &|_| true).is_ok());
+
+        // A k above max_k pages and never truncates silently.
+        let capped = Faulty {
+            inner: Recording::new(2),
+            ..faulty(ScoreKind::Bm25)
+        };
+        let outcome = fetch_top_k(&session(), &capped, &wanted(5), &|_| true).unwrap();
+        assert_eq!(outcome.hits.len(), 5);
+        assert!(capped.inner.seen.lock().unwrap().len() > 1, "paged on");
+
+        // A row without a score refuses under a declared score kind; none is invented.
+        let scoreless = Faulty {
+            scoreless_from: 2,
+            ..faulty(ScoreKind::Cosine)
+        };
+        let outcome = fetch_top_k(&session(), &scoreless, &wanted(10), &|_| true).unwrap();
+        assert_eq!(outcome.hits.len(), 2);
+        assert!(outcome.hits.iter().all(|hit| hit.score.is_some()));
+        assert!(outcome
+            .refused_rows
+            .iter()
+            .all(|r| r.starts_with(REMOTE_SCORE_MISSING)));
+        assert_eq!(outcome.refused_rows.len(), 8);
+        let opaque = Faulty {
+            scoreless_from: 2,
+            ..faulty(ScoreKind::Opaque)
+        };
+        let outcome = fetch_top_k(&session(), &opaque, &wanted(10), &|_| true).unwrap();
+        assert!(outcome.refused_rows.is_empty());
+        assert!(outcome.hits.iter().skip(2).all(|hit| hit.score.is_none()));
+
+        // A refusal after the first request keeps the rows already fetched.
+        let dropping = Faulty {
+            inner: Recording::new(2),
+            refuse_request: Some(1),
+            ..faulty(ScoreKind::Bm25)
+        };
+        let outcome = fetch_top_k(&session(), &dropping, &wanted(6), &|_| true).unwrap();
+        assert_eq!(outcome.hits.len(), 2);
+        assert!(outcome.incomplete.unwrap().starts_with(RESULT_INCOMPLETE));
     }
 }

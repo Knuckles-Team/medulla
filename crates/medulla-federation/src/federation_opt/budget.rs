@@ -11,6 +11,12 @@ pub const REQUIRES_KEYS: &str = "FEDERATION_SOURCE_REQUIRES_KEYS";
 /// Error code of a source whose single request hit its own row cap, so completeness cannot
 /// be proven.
 pub const RESULT_INCOMPLETE: &str = "FEDERATION_RESULT_INCOMPLETE";
+/// Error code of a vector query from another embedding space than the source's
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.4).
+pub const EMBEDDING_SPACE_MISMATCH: &str = "EMBEDDING_SPACE_MISMATCH";
+/// Error code of a remote result row that carries no score under a declared score kind
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.4).
+pub const REMOTE_SCORE_MISSING: &str = "REMOTE_SCORE_MISSING";
 /// Error code of a query with two or more fragments of a source that cannot give them one
 /// snapshot (MEDULLA-UNIFIED-DATA-PLANE-R038.3.4).
 pub const SNAPSHOT_UNAVAILABLE: &str = "SNAPSHOT_UNAVAILABLE";

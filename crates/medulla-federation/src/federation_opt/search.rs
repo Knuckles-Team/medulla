@@ -7,18 +7,20 @@
 
 use sha2::{Digest, Sha256};
 
+use super::budget::{EMBEDDING_SPACE_MISMATCH, REMOTE_SCORE_MISSING, RESULT_INCOMPLETE};
 use super::capability::{PageRequest, RemoteRequest, SearchPush};
 use super::remote::Identity;
 use super::session::FederationSession;
 use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace, SearchReceipt};
-use medulla_types::search_source::SearchIndexCapability;
+use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
 
-/// One result of a pushed search: the document id, the remote score and the attributes the
-/// local residual filter reads.
+/// One result of a pushed search: the document id, the remote score (absent when the source
+/// returned none; the engine never invents one) and the attributes the local residual filter
+/// reads.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SearchHit {
     pub id: String,
-    pub score: f32,
+    pub score: Option<f32>,
     pub attributes: Vec<(String, String)>,
 }
 
@@ -27,6 +29,10 @@ pub struct SearchHit {
 pub trait SearchRemote {
     fn identity(&self) -> &Identity;
     fn capability(&self) -> SearchIndexCapability;
+    /// The embedding space the source's vectors live in; `None` when it has no vector index.
+    fn vector_space(&self) -> Option<String> {
+        None
+    }
     fn fetch(&self, request: &RemoteRequest) -> Result<Vec<SearchHit>, String>;
 }
 
@@ -42,6 +48,11 @@ pub struct Shortfall {
 pub struct SearchOutcome {
     pub hits: Vec<SearchHit>,
     pub shortfall: Option<Shortfall>,
+    /// One `REMOTE_SCORE_MISSING: <id>` per row dropped for lacking a score.
+    pub refused_rows: Vec<String>,
+    /// `FEDERATION_RESULT_INCOMPLETE: ...` when a request after the first was refused; the
+    /// rows already fetched are kept.
+    pub incomplete: Option<String>,
 }
 
 /// The `k` pushed for a request of `requested` results: twice as many, capped at the
@@ -78,6 +89,12 @@ pub fn fetch_top_k(
     residual: &dyn Fn(&SearchHit) -> bool,
 ) -> Result<SearchOutcome, String> {
     let capability = remote.capability();
+    if wanted.vector_space.is_some() && wanted.vector_space != remote.vector_space() {
+        return Err(format!(
+            "{EMBEDDING_SPACE_MISMATCH}: the query vector is not in the embedding space of {}",
+            remote.identity().label
+        ));
+    }
     let push = SearchPush {
         k: pushed_k(wanted.k, capability.max_k),
         ..wanted.clone()
@@ -85,14 +102,36 @@ pub fn fetch_top_k(
     let (want, page) = (wanted.k as usize, push.k as usize);
     let mut kept: Vec<SearchHit> = Vec::new();
     let (mut requests, mut returned) = (0u32, 0usize);
+    let mut refused_rows: Vec<String> = Vec::new();
+    let mut incomplete = None;
+    let scored = capability.score_kind != ScoreKind::Opaque;
     while kept.len() < want && want > 0 {
-        session.with_meter(|meter| meter.charge_request())?;
-        let batch = remote.fetch(&request_for(&push, requests as usize, returned))?;
-        session.with_meter(|meter| meter.charge_rows(batch.len()))?;
+        let step = session
+            .with_meter(|meter| meter.charge_request())
+            .and_then(|()| remote.fetch(&request_for(&push, requests as usize, returned)))
+            .and_then(|batch| {
+                session.with_meter(|meter| meter.charge_rows(batch.len()))?;
+                Ok(batch)
+            });
+        let batch = match step {
+            Ok(batch) => batch,
+            // A refusal after the first request keeps the rows already fetched.
+            Err(refusal) if requests > 0 => {
+                incomplete = Some(format!("{RESULT_INCOMPLETE}: {refusal}"));
+                break;
+            }
+            Err(refusal) => return Err(refusal),
+        };
         requests += 1;
         returned += batch.len();
         let exhausted = batch.len() < page;
-        kept.extend(batch.into_iter().filter(|hit| residual(hit)));
+        for hit in batch {
+            if scored && hit.score.is_none() {
+                refused_rows.push(format!("{REMOTE_SCORE_MISSING}: {}", hit.id));
+            } else if residual(&hit) {
+                kept.push(hit);
+            }
+        }
         if exhausted {
             break;
         }
@@ -112,6 +151,8 @@ pub fn fetch_top_k(
     Ok(SearchOutcome {
         hits: kept,
         shortfall,
+        refused_rows,
+        incomplete,
     })
 }
 
