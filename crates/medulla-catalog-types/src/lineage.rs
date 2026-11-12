@@ -225,6 +225,7 @@ pub struct LineageIngestReceipt {
 }
 
 /// How an output column derives from its input column.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ColumnTransform {
@@ -235,6 +236,7 @@ pub enum ColumnTransform {
 }
 
 /// One column lineage edge, bound to the query that produced it.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ColumnLineageEdge {
@@ -242,6 +244,122 @@ pub struct ColumnLineageEdge {
     pub target_column: String,
     pub transform: ColumnTransform,
     pub query_digest: String,
+}
+
+/// The SQL dialect a lineage statement is written in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum LineageDialect {
+    /// PostgreSQL family.
+    Postgres,
+    /// MySQL and MariaDB.
+    MySql,
+}
+
+/// One column of a caller-supplied catalog table.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LineageCatalogColumn {
+    /// Column name.
+    pub name: String,
+}
+
+/// One table or view of a caller-supplied catalog.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LineageCatalogTable {
+    /// Schema name; empty for an unqualified source.
+    #[serde(default)]
+    pub schema: String,
+    /// Table or view name.
+    pub name: String,
+    /// Columns in declaration order.
+    pub columns: Vec<LineageCatalogColumn>,
+}
+
+/// An output column whose source could not be resolved. Never an edge.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LineageGap {
+    /// The output column (`<target>.<name>`).
+    pub output: String,
+    /// Why no edge exists.
+    pub reason: String,
+}
+
+/// The column edges and gaps derived from one statement.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LineageResult {
+    /// Edges, sorted and distinct.
+    pub edges: Vec<ColumnLineageEdge>,
+    /// Outputs that could not be resolved, sorted and distinct.
+    pub gaps: Vec<LineageGap>,
+}
+
+/// Why a statement yields no lineage.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "kind", content = "detail")]
+pub enum LineageError {
+    /// The statement is larger than `knob lineage.max_sql_bytes`.
+    TooLarge(usize),
+    /// The text is not exactly one parsable statement.
+    Parse(String),
+    /// The statement is not a query.
+    NotAQuery,
+}
+
+impl LineageError {
+    /// The stable refusal code.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::TooLarge(_) => "LINEAGE_SQL_TOO_LARGE",
+            Self::Parse(_) => "LINEAGE_SQL_UNPARSABLE",
+            Self::NotAQuery => "LINEAGE_SQL_NOT_A_QUERY",
+        }
+    }
+}
+
+impl std::fmt::Display for LineageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TooLarge(n) => write!(f, "{}: {n} bytes", self.code()),
+            Self::Parse(m) => write!(f, "{}: {m}", self.code()),
+            Self::NotAQuery => write!(f, "{}", self.code()),
+        }
+    }
+}
+
+impl std::error::Error for LineageError {}
+
+/// `knob lineage.max_sql_bytes`: the largest statement parsed for lineage.
+pub const LINEAGE_MAX_SQL_BYTES_KNOB: &str = "lineage.max_sql_bytes";
+/// Default of `knob lineage.max_sql_bytes`.
+pub const LINEAGE_MAX_SQL_BYTES_DEFAULT: usize = 1_048_576;
+/// Inclusive bounds of `knob lineage.max_sql_bytes`.
+pub const LINEAGE_MAX_SQL_BYTES_RANGE: (usize, usize) = (1_024, 16_777_216);
+
+/// One served `Method::ColumnLineage` operation.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ColumnLineageOp {
+    /// Derive the column edges of one SQL statement against a supplied catalog.
+    DeriveFromSql {
+        /// The statement text.
+        sql: String,
+        /// The statement's dialect.
+        dialect: LineageDialect,
+        /// The target dataset the output columns belong to.
+        target: String,
+        /// The catalog tables and views the statement reads.
+        catalog: Vec<LineageCatalogTable>,
+    },
 }
 
 #[cfg(test)]

@@ -92,6 +92,7 @@ pub struct KernelMetrics {
     pub(super) permits_available: IntGauge,
     pub(super) busy_rejections: IntCounter,
     pub(super) dispatch_deadline_exceeded: IntCounter,
+    pub(super) asset_usage_dropped: IntCounter,
     pub(super) read_reserved_admitted: IntCounter,
     // ── W2.4 engine-native QoS lanes (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal) ──
     // Per-admission-class observability: the first-class "did the noisy-neighbor SLO
@@ -295,6 +296,11 @@ impl KernelMetrics {
              deadline (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal). Non-zero means a \
              served request stalled long enough to strand its admission permits — the \
              failure mode that once left every permit held and shed ALL later traffic",
+        ),
+            asset_usage_dropped: counter(&registry,
+            "medulla_asset_usage_dropped_total",
+            "Asset usage points that could not be recorded after a served query \
+             (MEDULLA-UNIFIED-DATA-PLANE-R764.3.1); the query itself still succeeded",
         ),
             read_reserved_admitted: counter(&registry,
             "medulla_read_reserved_admitted_total",

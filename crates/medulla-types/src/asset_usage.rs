@@ -15,6 +15,35 @@ pub struct AssetUsage {
     pub queries: u64,
 }
 
+/// `knob catalog_usage.period`: the usage bucket width in seconds.
+pub const CATALOG_USAGE_PERIOD_KNOB: &str = "catalog_usage.period";
+/// Default of `knob catalog_usage.period` (seconds).
+pub const CATALOG_USAGE_PERIOD_DEFAULT_S: u64 = 86_400;
+/// Inclusive bounds of `knob catalog_usage.period` (seconds).
+pub const CATALOG_USAGE_PERIOD_RANGE_S: (u64, u64) = (3_600, 2_592_000);
+/// Environment override of `knob catalog_usage.period`.
+pub const ENV_CATALOG_USAGE_PERIOD_S: &str = "MEDULLA_CATALOG_USAGE_PERIOD_S";
+/// The `medulla-tsdb` series counting reads of one asset by one principal.
+pub const ASSET_USAGE_READS_SERIES: &str = "asset_usage.reads";
+/// The `medulla-tsdb` series counting queries that touched one asset by one principal.
+pub const ASSET_USAGE_QUERIES_SERIES: &str = "asset_usage.queries";
+
+/// The effective `knob catalog_usage.period` in seconds: the environment value when it lies
+/// inside the knob's bounds, the default otherwise.
+pub fn catalog_usage_period_s() -> u64 {
+    std::env::var(ENV_CATALOG_USAGE_PERIOD_S)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|n| (CATALOG_USAGE_PERIOD_RANGE_S.0..=CATALOG_USAGE_PERIOD_RANGE_S.1).contains(n))
+        .unwrap_or(CATALOG_USAGE_PERIOD_DEFAULT_S)
+}
+
+/// The tsdb series name for one `(base series, principal, asset)`: the tags of an asset usage
+/// point are tenant (the series key), principal and asset.
+pub fn usage_series_name(base: &str, principal: &str, asset: &str) -> String {
+    format!("{base}|principal={principal}|asset={asset}")
+}
+
 /// The score components of one hit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct HitComponents {

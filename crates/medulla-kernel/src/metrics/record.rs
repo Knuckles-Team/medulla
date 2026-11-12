@@ -64,6 +64,12 @@ impl KernelMetrics {
         self.dispatch_deadline_exceeded.inc();
     }
 
+    /// Count one asset usage point dropped after a served query
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R764.3.1).
+    pub fn asset_usage_dropped(&self) {
+        self.asset_usage_dropped.inc();
+    }
+
     /// Record one request admitted by the QoS gate in priority class `class` (W2.4):
     /// bumps the per-class admit counter and the per-class in-flight gauge (released by
     /// `qos_dispatch_finished`).

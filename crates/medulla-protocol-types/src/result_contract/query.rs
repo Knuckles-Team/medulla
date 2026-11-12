@@ -53,6 +53,8 @@ method_results! {
     // A UQL statement's rows (with named score channels), EXPLAIN report or PROFILE.
     #[cfg(feature = "query")]
     Uql(Uql) => Raw<medulla_types::wire::UqlResult>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R763.2: column edges and gaps of one SQL query.
+    ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     #[cfg(feature = "query")]
     ExplainPlan(ExplainPlan) => Raw<ExplainPlanResult>;
     ExplainProvenance(ExplainProvenance) => Raw<EvidenceBundle>;

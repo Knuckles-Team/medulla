@@ -179,6 +179,12 @@ $($variants)*
     EdgeSearch {
         request: Box<medulla_index_types::managed_index::EdgeSearchRequest>,
     },
+    /// MEDULLA-UNIFIED-DATA-PLANE-R763.2: derive the column edges of one SQL
+    /// query against a supplied catalog on the shared parser. Pure compute:
+    /// no graph row is read and nothing is committed.
+    ColumnLineage {
+        op: Box<medulla_catalog_types::lineage::ColumnLineageOp>,
+    },
         ]);
     };
 }

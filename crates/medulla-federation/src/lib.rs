@@ -6,6 +6,13 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// Column lineage derived from SQL on the shared parser (MEDULLA-UNIFIED-DATA-PLANE-R763.2).
+#[cfg(feature = "federation-sql")]
+pub mod column_lineage;
+/// Statement parsing and referenced-table analysis on the shared parser
+/// (MEDULLA-UNIFIED-DATA-PLANE-R763.2, R764.3.1).
+#[cfg(feature = "federation-sql")]
+pub mod sql_analysis;
 // MEDULLA-UNIFIED-DATA-PLANE-R007 — named pushdown operations and a dialect's
 // declared capability set, refusing an unknown operation name.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

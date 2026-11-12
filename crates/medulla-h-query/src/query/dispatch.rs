@@ -90,6 +90,12 @@ async fn dispatch_query_family(
         Ok(response) => return Ok(response),
         Err(method) => method,
     };
+    // MEDULLA-UNIFIED-DATA-PLANE-R763.2: pure compute over the request's own SQL and catalog.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op)),
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;
@@ -140,6 +146,20 @@ fn is_sql_query_method(method: &Method) -> bool {
 
 #[cfg(feature = "query")]
 async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Response, Method> {
+    // MEDULLA-UNIFIED-DATA-PLANE-R764.3.1: the assets are read off the verified method before it
+    // is consumed; usage is recorded only after the server answered it successfully.
+    let assets = super::asset_usage::query_assets(&method);
+    let result = run_sql_query(ctx, method).await;
+    if let Ok(response) = &result {
+        if super::asset_usage::answered(response) {
+            super::asset_usage::record_query_usage(ctx, assets).await;
+        }
+    }
+    result
+}
+
+#[cfg(feature = "query")]
+async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Response, Method> {
     match method {
         Method::Sql {
             query,

@@ -154,7 +154,13 @@ pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 mod sql_read;
 pub(crate) use sql_read::*;
 #[cfg(feature = "query")]
+mod asset_usage;
+#[cfg(feature = "query")]
+mod column_lineage;
+#[cfg(feature = "query")]
 mod schema_projections;
+#[cfg(feature = "query")]
+pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;
