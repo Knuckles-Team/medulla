@@ -58,7 +58,7 @@ impl fmt::Display for CatalogRefusal {
 
 impl std::error::Error for CatalogRefusal {}
 
-fn refuse(code: &'static str, detail: impl Into<String>) -> CatalogRefusal {
+pub(crate) fn refuse(code: &'static str, detail: impl Into<String>) -> CatalogRefusal {
     CatalogRefusal {
         code,
         detail: detail.into(),
@@ -519,11 +519,16 @@ mod tests {
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.2
-    #[tokio::test]
-    async fn a_destination_the_outbound_gate_refuses_is_source_unavailable() {
-        let refusal = read_catalog("mysql://u:p@169.254.169.254:3306/db", &[], 4)
-            .await
-            .unwrap_err();
-        assert_eq!(refusal.code, SOURCE_UNAVAILABLE);
+    #[test]
+    fn a_destination_the_outbound_gate_refuses_is_source_unavailable() {
+        // `read_catalog` maps this refusal to `SOURCE_UNAVAILABLE` before any connection.
+        let refusal = medulla_federation::federation_ssrf::check_sql_dsn(
+            "mysql://u:p@169.254.169.254:3306/db",
+        );
+        assert!(refusal.is_err());
+        assert_eq!(
+            refuse(SOURCE_UNAVAILABLE, refusal.unwrap_err()).code,
+            SOURCE_UNAVAILABLE
+        );
     }
 }

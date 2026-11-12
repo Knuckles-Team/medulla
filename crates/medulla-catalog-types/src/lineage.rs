@@ -71,6 +71,16 @@ pub struct LineageEvent {
     pub run: EtlRun,
     pub inputs: Vec<DatasetRef>,
     pub outputs: Vec<DatasetRef>,
+    /// The SQL statement that produced `outputs` from `inputs`; column lineage is derived
+    /// from it (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sql_text: Option<String>,
+    /// The dialect of `sql_text`; Postgres when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dialect: Option<LineageDialect>,
+    /// The attached source whose stored catalog resolves the columns of `sql_text`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub catalog_source: Option<String>,
 }
 
 impl LineageEvent {
@@ -82,11 +92,16 @@ impl LineageEvent {
 }
 
 /// Why an event was quarantined.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind", content = "detail")]
 pub enum QuarantineReason {
     MalformedDatasetRef(String),
     NoInputsOrOutputs,
+    /// The statement is not exactly one parsable query (MEDULLA-UNIFIED-DATA-PLANE-R763.4).
+    SqlUnparseable(String),
+    /// The statement is over `knob lineage.max_sql_bytes` (MEDULLA-UNIFIED-DATA-PLANE-R763.4).
+    SqlTooLarge,
 }
 
 impl QuarantineReason {
@@ -94,11 +109,14 @@ impl QuarantineReason {
         match self {
             Self::MalformedDatasetRef(_) => "LINEAGE_DATASET_REF_MALFORMED",
             Self::NoInputsOrOutputs => "LINEAGE_EVENT_EMPTY",
+            Self::SqlUnparseable(_) => "LINEAGE_SQL_UNPARSEABLE",
+            Self::SqlTooLarge => "LINEAGE_SQL_TOO_LARGE",
         }
     }
 }
 
 /// An event that could not map, kept with its original payload digest.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QuarantinedLineageEvent {
     pub event_id: String,
@@ -222,6 +240,16 @@ pub struct LineageIngestReceipt {
     pub replayed: u32,
     /// The envelope id; an identical event set replays the same id.
     pub envelope_id: String,
+    /// Distinct column lineage edges derived from `sql_text` in the committed write-set
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
+    #[serde(default)]
+    pub column_edges: u32,
+    /// Columns of a statement that could not be resolved; never edges.
+    #[serde(default)]
+    pub column_gaps: Vec<LineageGap>,
+    /// The statements kept as quarantine records (MEDULLA-UNIFIED-DATA-PLANE-R763.4).
+    #[serde(default)]
+    pub quarantine: Vec<QuarantinedLineageEvent>,
 }
 
 /// How an output column derives from its input column.
@@ -243,7 +271,10 @@ pub struct ColumnLineageEdge {
     pub source_column: String,
     pub target_column: String,
     pub transform: ColumnTransform,
+    /// SHA-256 of the normalized SQL text, 64 lowercase hex characters.
     pub query_digest: String,
+    /// The parser that derived the edge (MEDULLA-UNIFIED-DATA-PLANE-R763.5).
+    pub parser_version: String,
 }
 
 /// The SQL dialect a lineage statement is written in.
@@ -319,7 +350,7 @@ impl LineageError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::TooLarge(_) => "LINEAGE_SQL_TOO_LARGE",
-            Self::Parse(_) => "LINEAGE_SQL_UNPARSABLE",
+            Self::Parse(_) => "LINEAGE_SQL_UNPARSEABLE",
             Self::NotAQuery => "LINEAGE_SQL_NOT_A_QUERY",
         }
     }
@@ -360,6 +391,61 @@ pub enum ColumnLineageOp {
         /// The catalog tables and views the statement reads.
         catalog: Vec<LineageCatalogTable>,
     },
+    /// Derive the column edges of every stored view of an attached source's catalog.
+    /// Reads the caller's own held catalog; commits nothing.
+    DeriveFromCatalog {
+        /// The attached source name.
+        source: String,
+    },
+    /// The stored column edges reachable from `column` within `max_depth` hops.
+    Impact {
+        /// The column, `<schema>.<table>.<column>`.
+        column: String,
+        /// Which way to walk.
+        direction: ImpactDirection,
+        /// Hop bound; `knob lineage.impact_max_depth` when absent.
+        #[serde(default)]
+        max_depth: Option<u32>,
+    },
+}
+
+/// The direction of an `Impact` walk over stored column edges.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ImpactDirection {
+    /// Columns that read from `column` (what breaks if it changes).
+    Downstream,
+    /// Columns `column` reads from.
+    Upstream,
+}
+
+/// `knob lineage.impact_max_depth`: default, inclusive bounds, hops.
+pub const LINEAGE_IMPACT_MAX_DEPTH_DEFAULT: u32 = 8;
+/// Inclusive bounds of `knob lineage.impact_max_depth`.
+pub const LINEAGE_IMPACT_MAX_DEPTH_RANGE: (u32, u32) = (1, 32);
+/// Default of `knob lineage.impact_max_columns`.
+pub const LINEAGE_IMPACT_MAX_COLUMNS_DEFAULT: usize = 10_000;
+
+/// The node label of one column in the lineage graph.
+pub const COLUMN_LABEL: &str = "Column";
+/// The relationship of a stored column lineage edge (output column to input column).
+pub const COLUMN_DERIVES_FROM: &str = "DERIVES_FROM";
+
+/// The graph id of one column: `col:` plus its qualified name.
+pub fn column_node_id(qualified: &str) -> String {
+    format!("col:{qualified}")
+}
+
+/// A quarantine reason for one statement of a lineage event.
+impl From<&LineageError> for QuarantineReason {
+    fn from(error: &LineageError) -> Self {
+        match error {
+            LineageError::TooLarge(_) => Self::SqlTooLarge,
+            LineageError::Parse(detail) => Self::SqlUnparseable(detail.clone()),
+            LineageError::NotAQuery => Self::SqlUnparseable("not a query".to_string()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -384,6 +470,9 @@ mod tests {
             },
             inputs,
             outputs,
+            sql_text: None,
+            dialect: None,
+            catalog_source: None,
         }
     }
 

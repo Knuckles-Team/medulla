@@ -20,6 +20,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T012 [US1] MEDULLA-UNIFIED-DATA-PLANE-R011.1 Model: `ReadYourWritesWait` is a bounded timeout, refusing a zero (unbounded) declaration; `FreshnessRoute` names exactly the three tiers
 - [ ] T013 [US1] MEDULLA-UNIFIED-DATA-PLANE-R012.1 Typed model for attached-source write-back governance, proved by refusal tests
 - [ ] T014 [US2] MEDULLA-UNIFIED-DATA-PLANE-R013 Implement the Postgres attached-source adapter
+- [ ] T197 [US2] MEDULLA-UNIFIED-DATA-PLANE-R013.1 Live PostgreSQL catalog read with view definitions
 - [ ] T015 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.1 Typed MySQL/MariaDB dialect-entry model (producer-first split of R014)
 - [ ] T016 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 MySQL/MariaDB adapter skeleton: typed connection-config → driver-config mapping plus the connect/refusal path
 - [x] T196 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.3 Async catalog probe job with an explicit state machine

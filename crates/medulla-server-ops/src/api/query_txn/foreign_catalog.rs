@@ -557,10 +557,25 @@ impl ForeignSourceCatalog {
         }
     }
 
-    /// Whether `owner`'s source `name` is a MySQL or MariaDB source that needs a catalog probe.
+    /// The DSN of a PostgreSQL source, if `spec` is one (MEDULLA-UNIFIED-DATA-PLANE-R013.1).
+    fn postgres_dsn(spec: &ForeignSourceSpec) -> Option<&str> {
+        match spec {
+            ForeignSourceSpec::Sql { dsn, .. }
+                if dsn.starts_with("postgres://") || dsn.starts_with("postgresql://") =>
+            {
+                Some(dsn.as_str())
+            }
+            _ => None,
+        }
+    }
+
+    /// Whether `owner`'s source `name` is a MySQL, MariaDB or PostgreSQL source that needs a
+    /// catalog probe.
     pub fn needs_catalog_probe(&self, owner: &CarrierAuthority, name: &str) -> bool {
         self.spec_for_probe(owner.owner_scope(), name)
-            .is_some_and(|spec| Self::mysql_family_dsn(&spec).is_some())
+            .is_some_and(|spec| {
+                Self::mysql_family_dsn(&spec).is_some() || Self::postgres_dsn(&spec).is_some()
+            })
     }
 
     fn spec_for_probe(&self, owner_scope: &str, name: &str) -> Option<ForeignSourceSpec> {
@@ -589,9 +604,15 @@ impl ForeignSourceCatalog {
         let spec = self
             .spec_for_probe(owner_scope, name)
             .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
-        let dsn = Self::mysql_family_dsn(&spec)
-            .ok_or_else(|| "CAPABILITY_UNSUPPORTED: not a MySQL or MariaDB source".to_string())?
-            .to_string();
+        let postgres = Self::postgres_dsn(&spec).map(str::to_string);
+        let dsn = match &postgres {
+            Some(dsn) => dsn.clone(),
+            None => Self::mysql_family_dsn(&spec)
+                .ok_or_else(|| {
+                    "CAPABILITY_UNSUPPORTED: not a MySQL, MariaDB or PostgreSQL source".to_string()
+                })?
+                .to_string(),
+        };
         {
             let mut entry = self
                 .entries
@@ -608,15 +629,21 @@ impl ForeignSourceCatalog {
             })?;
         }
         let pool_size = medulla_server_api::knob_config::knobs().foreign_mysql_pool_size as u32;
-        let read = medulla_plan::mysql_catalog::read_catalog(&dsn, &[], pool_size).await;
+        let read = if postgres.is_some() {
+            medulla_plan::postgres_catalog::read_catalog(&dsn, &[], pool_size).await
+        } else {
+            medulla_plan::mysql_catalog::read_catalog(&dsn, &[], pool_size)
+                .await
+                .map(|read| read.graph)
+        };
         let mut entry = self
             .entries
             .get_mut(&key)
             .ok_or_else(|| format!("federation: unknown foreign source '{name}'"))?;
         let outcome = match read {
-            Ok(read) => {
-                let digest = read.graph.content_hash();
-                entry.catalog = Some(read.graph);
+            Ok(graph) => {
+                let digest = graph.content_hash();
+                entry.catalog = Some(graph);
                 entry.probe.finish_read(digest)
             }
             Err(_) => entry.probe.finish_error(),

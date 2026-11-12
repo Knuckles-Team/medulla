@@ -25,6 +25,25 @@ use medulla_server_api::state::ServerState;
 /// Query handler behaviour reachable from crates below `medulla-h-query`.
 #[async_trait::async_trait]
 pub trait QueryApi: Send + Sync {
+    /// Derive the column edges of one SQL query against `catalog` on the shared parser, naming
+    /// output columns `<target>.<column>` (MEDULLA-UNIFIED-DATA-PLANE-R763.3). The lineage drain
+    /// reaches the parser through this seam; it never calls `medulla-h-query`.
+    #[allow(unused_variables)]
+    fn derive_column_lineage(
+        &self,
+        sql: &str,
+        dialect: medulla_catalog_types::lineage::LineageDialect,
+        catalog: &medulla_catalog_types::attached_catalog::AttachedCatalogGraph,
+        target: &str,
+    ) -> Result<
+        medulla_catalog_types::lineage::LineageResult,
+        medulla_catalog_types::lineage::LineageError,
+    > {
+        Err(medulla_catalog_types::lineage::LineageError::Parse(
+            "ENGINE_UNAVAILABLE: column lineage needs the federation-sql build".to_string(),
+        ))
+    }
+
     /// The semantic owner of an EXISTING binding, for operator reads: unlike opening a
     /// binding it never creates an owner file for a binding that was never admitted.
     #[cfg(feature = "ann-redb")]

@@ -93,7 +93,7 @@ async fn dispatch_query_family(
     // MEDULLA-UNIFIED-DATA-PLANE-R763.2: pure compute over the request's own SQL and catalog.
     #[cfg(feature = "query")]
     let method = match method {
-        Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op)),
+        Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op).await),
         other => other,
     };
     #[cfg(feature = "query")]

@@ -1,6 +1,6 @@
 use medulla_catalog_types::{lineage::ColumnLineageEdge, lineage::ColumnTransform};
 
-// spec: MEDULLA-UNIFIED-DATA-PLANE-R763.1
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R763.1, MEDULLA-UNIFIED-DATA-PLANE-R763.5
 #[test]
 fn column_edge_round_trips() {
     let edge = ColumnLineageEdge {
@@ -8,6 +8,7 @@ fn column_edge_round_trips() {
         target_column: "pg:app.public.daily_revenue.total".to_string(),
         transform: ColumnTransform::Aggregate,
         query_digest: "sha256:0f1e".to_string(),
+        parser_version: "sqlparser-0.62".to_string(),
     };
     let json = serde_json::to_string(&edge).unwrap();
     assert!(json.contains("\"aggregate\""));

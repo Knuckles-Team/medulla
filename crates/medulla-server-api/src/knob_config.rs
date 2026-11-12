@@ -389,6 +389,10 @@ knobs! {
     foreign_sqlite_poll_interval_ms: u64 = "foreign.sqlite.poll_interval_ms", U64(5_000), [100, 3_600_000], "ms", Tunable;
     /// Most connections one catalog read of an attached MySQL or MariaDB source opens (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
     foreign_mysql_pool_size: u64 = "foreign.mysql.pool_size", U64(4), [1, 64], "connections", Tunable;
+    /// Largest hop bound of one column lineage impact walk (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
+    lineage_impact_max_depth: u64 = "lineage.impact_max_depth", U64(8), [1, 32], "hops", Tunable;
+    /// Most columns one column lineage impact walk may reach (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
+    lineage_impact_max_columns: u64 = "lineage.impact_max_columns", U64(10_000), [100, 1_000_000], "columns", Tunable;
     /// Hop bound of the reverse `DEPENDS_ON` walk of an ecosystem finding (MEDULLA-SUPPLY-VOCAB-R009.3).
     ecosystem_max_dependency_depth: u64 = "ecosystem.max_dependency_depth", U64(8), [1, 64], "hops", Tunable;
     /// Largest n-ary link-prediction tuple (MEDULLA-FEDERATED-QUERY-R086.100.1).

@@ -20,6 +20,9 @@ use sqlparser::ast::{
 
 use crate::sql_analysis::parse_one_statement;
 
+/// The parser version stamped on every derived edge (MEDULLA-UNIFIED-DATA-PLANE-R763.5).
+pub const PARSER_VERSION: &str = "sqlparser-0.62";
+
 const AGGREGATES: [&str; 7] = [
     "count",
     "sum",
@@ -414,6 +417,13 @@ fn resolve_query(scope: &Scope<'_>, query: &Query) -> Result<QueryOut, String> {
     resolve_set(&scope, &query.body)
 }
 
+/// The SHA-256 of `sql` with whitespace runs collapsed, 64 lowercase hex characters
+/// (MEDULLA-UNIFIED-DATA-PLANE-R763.5). Re-formatting a statement keeps its digest.
+pub fn query_digest(sql: &str) -> String {
+    let normalized = sql.split_whitespace().collect::<Vec<_>>().join(" ");
+    hex::encode(Sha256::digest(normalized.as_bytes()))
+}
+
 /// Derive the column edges of one SQL query against `catalog`, naming output columns
 /// `<target>.<column>`. A column used only in WHERE, ON, GROUP BY or HAVING gives a
 /// `filter_only` edge to `<target>.*`.
@@ -427,7 +437,7 @@ pub fn derive_column_lineage(
     let Statement::Query(query) = statement else {
         return Err(LineageError::NotAQuery);
     };
-    let digest = hex::encode(Sha256::digest(sql.as_bytes()));
+    let digest = query_digest(sql);
     let scope = Scope {
         catalog,
         ctes: &Ctes::new(),
@@ -485,6 +495,7 @@ pub fn derive_column_lineage(
             target_column,
             transform: transforms[rank as usize],
             query_digest: digest.clone(),
+            parser_version: PARSER_VERSION.to_string(),
         })
         .collect();
     result.gaps = gaps.into_iter().collect();
@@ -572,6 +583,33 @@ mod tests {
         assert!(r.gaps.is_empty(), "{:?}", r.gaps);
         let digest = &r.edges[0].query_digest;
         assert!(r.edges.iter().all(|e| &e.query_digest == digest));
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R763.5
+    #[test]
+    fn edges_carry_a_reproducible_digest_and_the_parser_version() {
+        let a = derive_column_lineage(
+            "SELECT id FROM public.orders",
+            SqlDialect::Postgres,
+            &catalog(),
+            "v",
+        )
+        .unwrap();
+        let b = derive_column_lineage(
+            "SELECT   id\n  FROM public.orders",
+            SqlDialect::Postgres,
+            &catalog(),
+            "v",
+        )
+        .unwrap();
+        assert_eq!(a, b);
+        let edge = &a.edges[0];
+        assert_eq!(edge.parser_version, PARSER_VERSION);
+        assert_eq!(edge.query_digest.len(), 64);
+        assert!(edge
+            .query_digest
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R763.2

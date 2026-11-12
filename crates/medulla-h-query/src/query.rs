@@ -161,6 +161,8 @@ mod asset_usage;
 mod column_lineage;
 #[cfg(feature = "query")]
 mod schema_projections;
+#[cfg(all(feature = "query", feature = "federation-sql"))]
+pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
 pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]

@@ -77,6 +77,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "CdcRead",
     "CommunityDetectEphemeral",
     "CommunityDetection",
+    // `Impact` reads the stored `Column` edges of the core `read_authority.project_core`
+    // projected (MEDULLA-UNIFIED-DATA-PLANE-R763.3); the other two ops read no graph row.
+    "ColumnLineage",
     "ComputeSimilarityEdges",
     "ConnectedComponents",
     "ContextFacts",
@@ -444,8 +447,6 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_AGENT_LIBRARY_TENANT_SNAPSHOT (MEDULLA-DECISION-ENGINE-R126.2.1)
     ("CapabilityCoverage", REASON_AGENT_LIBRARY_TENANT_SNAPSHOT),
     ("GuardrailEntailment", REASON_AGENT_LIBRARY_TENANT_SNAPSHOT),
-    // REASON_PURE_COMPUTE (MEDULLA-UNIFIED-DATA-PLANE-R763.2: SQL text and catalog come from the request)
-    ("ColumnLineage", REASON_PURE_COMPUTE),
     // REASON_SOLVE_PURE_COMPUTE
     ("Solve", REASON_SOLVE_PURE_COMPUTE),
     // REASON_GRAPH_SCHEMA_CONTROL_STATE

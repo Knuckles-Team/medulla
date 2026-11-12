@@ -21,6 +21,20 @@ pub struct QuerySeam;
 ))]
 #[async_trait::async_trait]
 impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
+    #[cfg(feature = "federation-sql")]
+    fn derive_column_lineage(
+        &self,
+        sql: &str,
+        dialect: medulla_catalog_types::lineage::LineageDialect,
+        catalog: &medulla_catalog_types::attached_catalog::AttachedCatalogGraph,
+        target: &str,
+    ) -> Result<
+        medulla_catalog_types::lineage::LineageResult,
+        medulla_catalog_types::lineage::LineageError,
+    > {
+        medulla_h_query::query::derive_lineage(sql, dialect, catalog, target)
+    }
+
     #[cfg(feature = "ann-redb")]
     fn existing_semantic_service(
         &self,

@@ -275,6 +275,9 @@ pub fn to_lineage_event(
         },
         inputs: dataset_refs(event, "inputs"),
         outputs: dataset_refs(event, "outputs"),
+        sql_text: None,
+        dialect: None,
+        catalog_source: None,
     }
 }
 

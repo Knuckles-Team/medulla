@@ -106,13 +106,15 @@ pub mod clickhouse_connection;
 /// Pushdown to a peer engine, end to end (they run `uql::serve::run_statement`, so they sit above federation).
 #[cfg(all(test, feature = "federation"))]
 mod engine_peer_tests;
+/// Live MySQL and MariaDB catalog read and type map (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
+#[cfg(feature = "federation-sql")]
+pub mod mysql_catalog;
+#[cfg(feature = "federation-sql")]
+pub mod postgres_catalog;
 /// Oracle/Db2 attached-source driver config + connect/refusal path
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
-/// Live MySQL and MariaDB catalog read and type map (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
-#[cfg(feature = "federation-sql")]
-pub mod mysql_catalog;
 /// Watermark change capture for an attached SQLite file
 /// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). Pure `std` over the SQLite format reader.
 pub mod sqlite_capture;
