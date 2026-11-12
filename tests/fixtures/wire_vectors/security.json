@@ -1,0 +1,388 @@
+[
+  {
+    "method": "AuditAppend",
+    "request": {
+      "method": "AuditAppend",
+      "params": {
+        "audit_class": "",
+        "op": "",
+        "params_sha256": "",
+        "request_id": "",
+        "status": "",
+        "surface": ""
+      }
+    },
+    "result": {
+      "entry_sha256": "",
+      "graph": "",
+      "outcome_seq": 0,
+      "replayed": false,
+      "reservation_seq": 0,
+      "seq": 0
+    },
+    "sha256": "6d3488b0da9e5419b43d90aaca11de6f6bb81245facec8d375ae1f75f4db25d5"
+  },
+  {
+    "method": "AuditProveInclusion",
+    "request": {
+      "method": "AuditProveInclusion",
+      "params": {
+        "anchor_seq": 0,
+        "node_id": ""
+      }
+    },
+    "result": {
+      "anchor_seq": 0,
+      "anchored_root_sha256": "",
+      "computed_root_sha256": "",
+      "detail": "",
+      "graph": "",
+      "included": false,
+      "node_id": "",
+      "proof": [],
+      "verified": false,
+      "window_size": 0
+    },
+    "sha256": "40c91f3b8a290058470d99f0b3f3849369e524deae1b8b2c190cc120ddda518b"
+  },
+  {
+    "method": "AuditReadEvent",
+    "request": {
+      "method": "AuditReadEvent",
+      "params": {
+        "seq": 0
+      }
+    },
+    "result": {
+      "chain_entries": 0,
+      "chain_verified": false,
+      "entry_sha256": "",
+      "event_line": "",
+      "graph": "",
+      "previous_sha256": "",
+      "seq": 0
+    },
+    "sha256": "5416690c60b980bcc2ca6b127488e3eebb3bc635a6103247c28c40e5b962c57c"
+  },
+  {
+    "method": "AuditVerify",
+    "request": {
+      "method": "AuditVerify"
+    },
+    "result": {
+      "detail": "",
+      "entries": 0,
+      "first_broken_seq": 0,
+      "graph": "",
+      "ok": false
+    },
+    "sha256": "5870f237d8c41833a469a3873fb89006a6aca890a7029ac8dd3b774a66c31ae5"
+  },
+  {
+    "method": "CheckAccess",
+    "request": {
+      "method": "CheckAccess",
+      "params": {
+        "access": "read",
+        "agent_id": ""
+      }
+    },
+    "result": {
+      "access": "read",
+      "agent_id": "",
+      "allowed": false,
+      "graph": ""
+    },
+    "sha256": "147991de00fd2dc249c31e5c7cb84339766625b12957aa90c8864eb3940cfb12"
+  },
+  {
+    "method": "GetDelegationRecord",
+    "request": {
+      "method": "GetDelegationRecord",
+      "params": {
+        "work_item_id": ""
+      }
+    },
+    "result": {
+      "holds_tool_scope": false,
+      "principal_active": false,
+      "record": {
+        "expires_at": 0,
+        "principal": "",
+        "revoked_at": 0,
+        "tenant": "",
+        "tool": ""
+      },
+      "standing": "active"
+    },
+    "sha256": "a87885d3e41715e08ad193e7acb733304b77b55644fd6631086c3bff76cf5c87"
+  },
+  {
+    "method": "GetIdentity",
+    "request": {
+      "method": "GetIdentity",
+      "params": {
+        "agent_id": ""
+      }
+    },
+    "result": {
+      "agent_id": "",
+      "role": "System",
+      "roles": [],
+      "teams": []
+    },
+    "sha256": "be6e718339eeddeb827cf7827d3a51bcdc82e5c7e439bc79794db7f32764c23d"
+  },
+  {
+    "method": "GetLedger",
+    "request": {
+      "method": "GetLedger"
+    },
+    "result": {
+      "entries": [],
+      "populated": false,
+      "watermark": 0
+    },
+    "sha256": "0b856ffc34898ee9344de60f7cdf07ad75de1ca3afc084c319d13dfacc106269"
+  },
+  {
+    "method": "GovernedChange",
+    "request": {
+      "method": "GovernedChange",
+      "params": {
+        "actor": {
+          "agent_id": "",
+          "delegated": false,
+          "parties": [],
+          "scopes": []
+        },
+        "op": {
+          "op": "propose",
+          "request": {
+            "change_id": "",
+            "digest": "",
+            "justification": "",
+            "kind": "",
+            "proposal_ttl_ms": 0,
+            "target": "",
+            "window_ms": 0
+          }
+        }
+      }
+    },
+    "result": {
+      "approve": {
+        "approved_until_ms": 0,
+        "approver": "",
+        "change_id": "",
+        "digest": "",
+        "ended_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "proposal_expires_at_ms": 0,
+        "proposed_at_ms": 0,
+        "proposer": "",
+        "proposer_parties": [],
+        "status": "proposed",
+        "target": "",
+        "window_ms": 0
+      },
+      "get": {
+        "approved_until_ms": 0,
+        "approver": "",
+        "change_id": "",
+        "digest": "",
+        "ended_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "proposal_expires_at_ms": 0,
+        "proposed_at_ms": 0,
+        "proposer": "",
+        "proposer_parties": [],
+        "status": "proposed",
+        "target": "",
+        "window_ms": 0
+      },
+      "list": [],
+      "propose": {
+        "approved_until_ms": 0,
+        "approver": "",
+        "change_id": "",
+        "digest": "",
+        "ended_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "proposal_expires_at_ms": 0,
+        "proposed_at_ms": 0,
+        "proposer": "",
+        "proposer_parties": [],
+        "status": "proposed",
+        "target": "",
+        "window_ms": 0
+      },
+      "revoke": {
+        "approved_until_ms": 0,
+        "approver": "",
+        "change_id": "",
+        "digest": "",
+        "ended_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "proposal_expires_at_ms": 0,
+        "proposed_at_ms": 0,
+        "proposer": "",
+        "proposer_parties": [],
+        "status": "proposed",
+        "target": "",
+        "window_ms": 0
+      }
+    },
+    "sha256": "f90484b74d194a8112b0dd70427e72ca24f1d27df1a3d231e7115bb413c817c2"
+  },
+  {
+    "method": "Identity",
+    "request": {
+      "method": "Identity",
+      "params": {
+        "op": {
+          "family": "config",
+          "op": "get"
+        }
+      }
+    },
+    "result": {
+      "kind": "approval_key",
+      "value": {
+        "expires_at_ms": 0,
+        "key_id": "",
+        "principal_id": "",
+        "public_key_hex": "",
+        "purpose": "signed_approval",
+        "revision": 0,
+        "revoked_at_ms": 0,
+        "tenant": ""
+      }
+    },
+    "sha256": "df45914cb951d2c2d521afeed2f91004496e4e6d0daebe85f113aea346322277"
+  },
+  {
+    "method": "RbacAdmin",
+    "request": {
+      "method": "RbacAdmin",
+      "params": {
+        "op": {
+          "AddRole": {
+            "name": "",
+            "parents": []
+          }
+        }
+      }
+    },
+    "result": {
+      "AddGrant": "",
+      "AddRole": "",
+      "List": {
+        "grants": [],
+        "roles": []
+      },
+      "RemoveGrant": {
+        "removed": false
+      },
+      "RemoveRole": ""
+    },
+    "sha256": "4fde6805455c9701ed14eff530041c408ebfe7f068b96891a5e21d8a2d7f18fb"
+  },
+  {
+    "method": "RbacElevation",
+    "request": {
+      "method": "RbacElevation",
+      "params": {
+        "actor": {
+          "agent_id": "",
+          "delegation": "direct",
+          "parties": [],
+          "standing": "requester"
+        },
+        "op": {
+          "op": "request",
+          "request": {
+            "elevation_id": "",
+            "justification": "",
+            "scopes": [],
+            "span_ms": 0
+          }
+        }
+      }
+    },
+    "result": {
+      "approve": {
+        "approved_at_ms": 0,
+        "approver_parties": [],
+        "elevation_id": "",
+        "ended_at_ms": 0,
+        "grantee": "",
+        "hard_expires_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "request_digest": "",
+        "requested_at_ms": 0,
+        "requester_parties": [],
+        "revision": 0,
+        "scopes": [],
+        "span_ms": 0,
+        "status": "revoked"
+      },
+      "list": [],
+      "request": {
+        "approved_at_ms": 0,
+        "approver_parties": [],
+        "elevation_id": "",
+        "ended_at_ms": 0,
+        "grantee": "",
+        "hard_expires_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "request_digest": "",
+        "requested_at_ms": 0,
+        "requester_parties": [],
+        "revision": 0,
+        "scopes": [],
+        "span_ms": 0,
+        "status": "revoked"
+      },
+      "revoke": {
+        "approved_at_ms": 0,
+        "approver_parties": [],
+        "elevation_id": "",
+        "ended_at_ms": 0,
+        "grantee": "",
+        "hard_expires_at_ms": 0,
+        "justification": "",
+        "kind": "",
+        "request_digest": "",
+        "requested_at_ms": 0,
+        "requester_parties": [],
+        "revision": 0,
+        "scopes": [],
+        "span_ms": 0,
+        "status": "revoked"
+      }
+    },
+    "sha256": "d51eb0279042071ed68740e0a304dc92fce8865a54c880f6424dff2147518789"
+  },
+  {
+    "method": "RegisterIdentity",
+    "request": {
+      "method": "RegisterIdentity",
+      "params": {
+        "agent_id": "",
+        "role": "System",
+        "roles": [],
+        "signature": "",
+        "teams": []
+      }
+    },
+    "result": "",
+    "sha256": "81e55c68920fcb1621abb789e0ca4d1f0a7cac0d06d5dbf623837fb924c43669"
+  }
+]

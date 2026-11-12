@@ -71,6 +71,7 @@ mod tests {
             method: medulla_protocol_types::protocol::Method::Ping,
         }
     }
+    // spec: MEDULLA-IDENTITY-R003.1
     #[test]
     fn anonymous_is_not_verified_and_keys_are_stable() {
         let a =
@@ -119,6 +120,7 @@ mod tests {
             OVERSIZE_REFUSAL
         );
     }
+    // spec: MEDULLA-IDENTITY-R003.1
     #[test]
     fn anonymous_refuses_credentials_claims_and_invalid_metadata() {
         for value in [
@@ -137,5 +139,26 @@ mod tests {
         identity.agent_id = Some("admin".into());
         let refusal = request_authority(&identity).unwrap_err();
         assert!(refusal.starts_with(REFUSAL_PREFIX), "{refusal}");
+    }
+    // spec: MEDULLA-IDENTITY-R003.1
+    #[test]
+    fn anonymous_origin_pins_typed_local_authority_without_credentials() {
+        // No secret and no signed envelope are required: the server-owned
+        // origin fixes the local authority constants.
+        let authority = request_authority(&request("")).unwrap();
+        assert!(!authority.is_authenticated());
+        assert_eq!(authority.principal(), "anonymous");
+        assert_eq!(authority.tenant(), "local");
+        assert_eq!(authority.claims().policy_version, "no-auth");
+        assert!(!authority.idempotency_key().is_empty());
+        // A signed envelope is a credential and caller identity is a claim:
+        // both are refused, not substituted.
+        for token in [
+            "eg2.signed-envelope",
+            "anon1.{\"principal\":\"anonymous\",\"tenant\":\"local\"}",
+        ] {
+            let refusal = request_authority(&request(token)).unwrap_err();
+            assert!(refusal.starts_with(REFUSAL_PREFIX), "{token}: {refusal}");
+        }
     }
 }

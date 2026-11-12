@@ -245,6 +245,17 @@ impl Walk<'_> {
 
     fn string(&self, object: &Map<String, Value>, path: &str) -> Result<Value, SampleBuildError> {
         let min = object.get("minLength").and_then(Value::as_u64).unwrap_or(0) as usize;
+        // A string declared `x-medulla-nonblank` needs at least one character; the
+        // decoder's runtime check is no schema constraint, so the builder states it.
+        let min = if object
+            .get("x-medulla-nonblank")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            min.max(1)
+        } else {
+            min
+        };
         if let Some(max) = object.get("maxLength").and_then(Value::as_u64) {
             if (min as u64) > max {
                 return Err(self.unsatisfiable(path));

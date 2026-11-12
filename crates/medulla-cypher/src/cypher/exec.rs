@@ -91,6 +91,7 @@ pub(crate) mod walk_metrics {
         WARM_LABEL_HITS.with(|c| c.set(c.get().saturating_add(1)));
     }
     #[cfg(not(test))]
+    #[cfg_attr(not(feature = "result-cache"), allow(dead_code))]
     #[inline(always)]
     pub(crate) fn note_warm_label_hit() {}
 
