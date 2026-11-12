@@ -229,7 +229,7 @@ Code shapes: new logic goes into the new files listed above. No function takes m
 
 Obsolete paths to delete: the fixed `unclassified engine refusal` detail at `support_04.rs:161` and `crates/medulla-pyengine/src/errors.rs:172`; the skip-scan comment and `BeforeCursor` steps at `dump.rs:445`, `:494` and `:540` once R873.2 lands; the unbounded `timed_read` in `health_response`.
 
-## Explicit state machines
+### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-OBSERVE-R004` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field and is described in `crates/medulla-core/ontology/state-machines-v1.ttl`.
 
@@ -241,11 +241,11 @@ Organization constitution Article XXXI requires a closed set of states, one tran
 
 ## Cross-repo seams
 
-- `ARBORA-HOST-R008.1007.1` consumes `MEDULLA-OBSERVE-R002.2`: arbora sends its correlation id as `Request.trace_id`. Contract: [contracts/trace-correlation.md](contracts/trace-correlation.md).
+- The child of `ARBORA-HOST-R008.1007` that sends the trace id consumes `MEDULLA-OBSERVE-R002.2`: arbora sends its correlation id as `Request.trace_id`. Contract: [contracts/trace-correlation.md](contracts/trace-correlation.md).
 - The clustering kernel (`MEDULLA-CLUSTER`) consumes `MEDULLA-OBSERVE-R003` for training-run progress. Contract: [contracts/task-registry.md](contracts/task-registry.md).
 
 `ARBORA-OPS-R018` serves `Introspect` and `Profile` as generated operations `eg.<service>.<Method>`. Arbora adds no handler for them.
 
-## Amendments
+### Amendments
 
 none
