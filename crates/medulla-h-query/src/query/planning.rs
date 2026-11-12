@@ -1112,3 +1112,152 @@ mod tensor_served_round_trip_tests {
         );
     }
 }
+
+// MEDULLA-IDENTITY-R610.3 — served-path proof that the ONE read chokepoint
+// `run_unified_off_lock_with` (the funnel of `Method::Uql`, `Method::UnifiedQuery`
+// and `Method::Sql`) injects the tenant predicate: it collects the plan's bound
+// node variables and the verified carrier's tenant (never the query text) and
+// narrows the snapshot to the accessible graph set — the tenant's own graph,
+// its sharing ancestors' graphs, nearest first, and the commons — built from the
+// stored `TenantParent` links. No other caller duplicates the injection.
+#[cfg(all(test, feature = "query"))]
+mod tenant_scope_served_tests {
+    use super::{run_unified_off_lock_with, ServedPlanLegs, UnifiedRead};
+    use crate::query::segment_filter::ReadScope;
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_graph_core::graph::{GraphCore, GraphView};
+    use medulla_identity_types::identity::UnitPrincipal;
+    use medulla_identity_types::tenancy::TenantId;
+    use medulla_server_api::read_scope::{bound_variables, ReadCaller};
+    use medulla_server_api::state::ServerState;
+    use medulla_server_ops::api::query_txn::query_support::execute_rows;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    fn blob(v: serde_json::Value) -> Vec<u8> {
+        rmp_serde::to_vec_named(&v).unwrap()
+    }
+
+    fn state() -> Arc<RwLock<ServerState>> {
+        let isolation = ServerState::test_isolation("tenant-scope-test-agent");
+        Arc::new(RwLock::new(
+            medulla_server::seams_install::new_state_for_test("unit-test-secret", isolation),
+        ))
+    }
+
+    fn caller(principal: &str, tenant: &str) -> ReadCaller {
+        ReadCaller {
+            principal: UnitPrincipal {
+                id: principal.into(),
+                placement: format!("tenant__{tenant}"),
+                tenant: tenant.into(),
+            },
+            tenant: TenantId::new(tenant).ok(),
+        }
+    }
+
+    fn scope(tenant: &str) -> ReadScope {
+        ReadScope {
+            caller: caller("usr:team-user", tenant),
+            graph_name: format!("tenant__{tenant}"),
+            #[cfg(all(feature = "security", feature = "redb"))]
+            persistence: None,
+        }
+    }
+
+    /// The stored graph: `team` -> `corp` as a `TenantParent` link with `corp`
+    /// shared, one node placed in each of `team` and `corp`, one unplaced commons
+    /// node and one node placed in a foreign tenant.
+    fn tenant_graph() -> (Arc<GraphCore>, Arc<GraphView>) {
+        let core = GraphCore::new();
+        core.add_node(
+            "tp-team-corp".into(),
+            blob(serde_json::json!({
+                "node_type": "TenantParent",
+                "tenant": "team",
+                "parent": "corp",
+                "shared": true,
+            })),
+        );
+        core.add_node("own".into(), blob(serde_json::json!({ "_tenant": "team" })));
+        core.add_node(
+            "shared_ancestor".into(),
+            blob(serde_json::json!({ "_tenant": "corp" })),
+        );
+        core.add_node(
+            "common".into(),
+            blob(serde_json::json!({ "title": "a commons document" })),
+        );
+        core.add_node(
+            "foreign".into(),
+            blob(serde_json::json!({ "_tenant": "other" })),
+        );
+        let view = core.analysis_snapshot();
+        (Arc::new(core), Arc::new(view))
+    }
+
+    async fn run(
+        core: &Arc<GraphCore>,
+        snap: Arc<GraphView>,
+        plan: Plan,
+        tenant: &str,
+    ) -> Result<
+        Result<Vec<(String, Option<f32>)>, String>,
+        medulla_protocol_types::protocol::Response,
+    > {
+        run_unified_off_lock_with(
+            &state(),
+            1,
+            core,
+            UnifiedRead {
+                snap,
+                plan,
+                legs: ServedPlanLegs::default(),
+            },
+            &scope(tenant),
+            execute_rows,
+        )
+        .await
+    }
+
+    // spec: MEDULLA-IDENTITY-R610.3
+    #[tokio::test]
+    async fn the_served_read_chokepoint_scopes_the_plan_to_the_tenant_predicate() {
+        let (core, snap) = tenant_graph();
+        let plan = Plan::new(vec![Op::ScanAll {}]);
+        // The executor collects the plan's bound node variables; the predicate
+        // binds the first one.
+        assert_eq!(bound_variables(&plan), vec!["n".to_owned()]);
+        let rows = run(&core, snap, plan, "team")
+            .await
+            .expect("the chokepoint scopes and runs; only a refusal may refuse here")
+            .expect("the scoped read executes");
+        let mut ids: Vec<&str> = rows.iter().map(|(id, _)| id.as_str()).collect();
+        ids.sort();
+        assert_eq!(
+            ids,
+            vec!["common", "own", "shared_ancestor", "tp-team-corp"],
+            "the tenant sees its own graph, the shared ancestor's graph and the \
+             commons, and nothing else — the foreign tenant's node is hidden"
+        );
+    }
+
+    /// A plan with no bound node variable has nothing for the tenant predicate to
+    /// bind to, so the chokepoint refuses before anything runs (the typed
+    /// `QUERY_UNSCOPABLE` code of MEDULLA-IDENTITY-R610.4, bound in
+    /// `medulla-server-api`'s `read_scope` tests).
+    #[tokio::test]
+    async fn the_served_read_chokepoint_refuses_a_plan_without_a_bound_variable() {
+        let (core, snap) = tenant_graph();
+        let plan = Plan::new(vec![Op::Filter { preds: Vec::new() }]);
+        assert!(
+            bound_variables(&plan).is_empty(),
+            "a filter-only plan binds no node variable"
+        );
+        let outcome = run(&core, snap, plan, "team").await;
+        assert!(
+            outcome.is_err(),
+            "the unscopable plan refuses before anything runs"
+        );
+    }
+}
