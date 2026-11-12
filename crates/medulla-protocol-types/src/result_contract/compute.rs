@@ -21,6 +21,7 @@ use medulla_result_types::compute_result::pipeline;
 use medulla_result_types::compute_result::signal_models;
 #[cfg(feature = "datascience")]
 use medulla_types::wire::FittedModel;
+use medulla_types::numeric_kernel;
 use serde::{Deserialize, Serialize};
 
 /// One proposed entity-resolution action returned by `ResolveCandidates`.
@@ -292,4 +293,22 @@ method_results! {
     FinanceSignalModelsBayesFuse(FinanceSignalModels / "bayes_fuse") => Raw<signal_models::BayesFusion>;
     #[cfg(feature = "finance")]
     FinanceSignalModelsInsiderEquilibrium(FinanceSignalModels / "insider_equilibrium") => Raw<signal_models::InsiderAnalysis>;
+    // ── numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5) ──
+    NumericEvaluateRollingZScore(NumericEvaluate / "rolling_z_score") => Raw<Vec<Option<f64>>>;
+    NumericEvaluateEwma(NumericEvaluate / "ewma") => Raw<Vec<Option<f64>>>;
+    NumericEvaluateInformationCoefficient(NumericEvaluate / "information_coefficient") => Float<f64>;
+    NumericEvaluateInformationRatio(NumericEvaluate / "information_ratio") => Float<f64>;
+    NumericEvaluateEffectiveIndependentN(NumericEvaluate / "effective_independent_n") => Float<f64>;
+    NumericEvaluateDieboldMariano(NumericEvaluate / "diebold_mariano") => Raw<numeric_kernel::DieboldMariano>;
+    NumericEvaluateDeflatedSharpe(NumericEvaluate / "deflated_sharpe") => Float<f64>;
+    NumericEvaluatePurgedCpcv(NumericEvaluate / "purged_cpcv") => Raw<Vec<numeric_kernel::CvSplit>>;
+    NumericEvaluateProbabilityOfBacktestOverfit(NumericEvaluate / "probability_of_backtest_overfit") => Float<f64>;
+    NumericEvaluateBrier(NumericEvaluate / "brier") => Float<f64>;
+    NumericEvaluateKalmanLevel(NumericEvaluate / "kalman_level") => Raw<numeric_kernel::KalmanState>;
+    NumericEvaluateKalmanBeta(NumericEvaluate / "kalman_beta") => Raw<numeric_kernel::KalmanState>;
+    NumericEvaluateKalmanVolatility(NumericEvaluate / "kalman_volatility") => Raw<Vec<f64>>;
+    NumericEvaluateOuCalibrate(NumericEvaluate / "ou_calibrate") => Raw<numeric_kernel::OuParams>;
+    NumericEvaluateOuThresholds(NumericEvaluate / "ou_thresholds") => Raw<numeric_kernel::OuThresholds>;
+    NumericEvaluateAdf(NumericEvaluate / "adf") => Raw<numeric_kernel::AdfResult>;
+    NumericEvaluateRegimeHmm(NumericEvaluate / "regime_hmm") => Raw<numeric_kernel::RegimeResult>;
 }

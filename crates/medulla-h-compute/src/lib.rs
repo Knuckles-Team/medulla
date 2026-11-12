@@ -14,6 +14,10 @@ pub mod datascience;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod finance;
 
+/// Served numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5).
+#[cfg(feature = "evaluate")]
+pub mod numeric;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "viz-graph-tiles")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

@@ -46,7 +46,8 @@ medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
 
 [features]
 datascience = ["medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience"]
-finance = ["medulla-finance-quant/analytics", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
+evaluate = ["medulla-numeric/evaluate"]
+finance = ["evaluate", "medulla-finance-quant/analytics", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
 quantum-agent-api = ["dep:medulla-quantum-core", "dep:medulla-quantum-sim", "medulla-server-api/quantum-agent-api", "server"]
 viz-graph-tiles = ["dep:medulla-viz-graph-tiles", "viz-interactive"]
 viz-interactive = ["dep:medulla-viz-kernels", "viz-static-export", "medulla-viz-core?/viz-interactive"]

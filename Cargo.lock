@@ -5180,6 +5180,7 @@ dependencies = [
  "medulla-finance-market",
  "medulla-numeric",
  "medulla-result-types",
+ "medulla-types",
  "nalgebra",
  "ndarray 0.17.2",
  "rand 0.8.8",

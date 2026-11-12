@@ -2,6 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
+// The numeric-kernel result shapes live in `medulla-types` with the served
+// `NumericEvaluate` wire types (MEDULLA-FINANCE-PRIMITIVES-R002.2.5); re-exported
+// so every existing path keeps resolving to the one definition.
+pub use medulla_types::numeric_kernel::{
+    AdfResult, CvSplit, DieboldMariano, KalmanState, OuParams, OuThresholds, RegimeResult,
+};
+
 /// A mean-variance / risk-parity / Black-Litterman portfolio.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -26,26 +33,6 @@ pub struct RiskMetrics {
     pub downside_deviation: f64,
     pub sortino_ratio: f64,
     pub calmar_ratio: f64,
-}
-
-/// A fitted Gaussian HMM regime model.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RegimeResult {
-    /// Most likely state sequence (Viterbi path)
-    pub states: Vec<usize>,
-    /// State means (emission parameters)
-    pub means: Vec<f64>,
-    /// State standard deviations
-    pub stds: Vec<f64>,
-    /// Transition matrix (n_states x n_states)
-    pub transition_matrix: Vec<Vec<f64>>,
-    /// Initial state probabilities
-    pub initial_probs: Vec<f64>,
-    /// Log-likelihood of the final model
-    pub log_likelihood: f64,
-    /// Number of EM iterations until convergence
-    pub n_iterations: usize,
 }
 
 /// Fill result from order matching.
@@ -101,23 +88,6 @@ pub struct SurveillanceRisk {
 pub struct PosteriorCredibleInterval {
     pub lower: f64,
     pub upper: f64,
-}
-
-/// One purged combinatorial cross-validation split.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct CvSplit {
-    pub train: Vec<usize>,
-    pub test: Vec<usize>,
-}
-
-/// Diebold-Mariano test of equal predictive accuracy.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct DieboldMariano {
-    pub statistic: f64,
-    pub p_value: f64,
-    pub a_better: bool,
 }
 
 /// Two-sample distribution-shift verdict (MEDULLA-FINANCE-PRIMITIVES-R900.3).
@@ -221,54 +191,6 @@ pub struct ForensicReport {
     /// Human-readable flags that crossed a threshold.
     pub flags: Vec<String>,
     pub verdict: String, // "INVESTIGATE" | "CLEAN"
-}
-
-/// Filtered states and variances of a scalar Kalman filter.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct KalmanState {
-    pub states: Vec<f64>,
-    pub variances: Vec<f64>,
-}
-
-/// Augmented Dickey-Fuller test result.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct AdfResult {
-    pub statistic: f64,
-    pub used_lag: usize,
-    pub n_obs: usize,
-    /// Finite-sample-interpolated MacKinnon critical values (constant, no trend).
-    pub crit_1pct: f64,
-    pub crit_5pct: f64,
-    pub crit_10pct: f64,
-    /// Approximate p-value (monotone interpolation across the critical points).
-    pub p_value_approx: f64,
-    pub stationary_1pct: bool,
-    pub stationary_5pct: bool,
-    pub stationary_10pct: bool,
-}
-
-/// Calibrated Ornstein-Uhlenbeck parameters.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct OuParams {
-    pub theta: f64,     // mean-reversion rate
-    pub mu: f64,        // long-run mean
-    pub sigma: f64,     // instantaneous volatility
-    pub half_life: f64, // ln(2)/theta
-    pub sigma_eq: f64,  // equilibrium std σ/√(2θ)
-}
-
-/// MFPT-optimal Ornstein-Uhlenbeck entry/exit thresholds.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct OuThresholds {
-    pub entry_long: f64,  // enter long below this (μ − z·σ_eq)
-    pub entry_short: f64, // enter short above this (μ + z·σ_eq)
-    pub exit: f64,        // exit at the mean
-    pub z: f64,           // optimal entry deviation in σ_eq units
-    pub expected_return_per_unit_time: f64,
 }
 
 /// Queue-imbalance skew and per-side fill times.

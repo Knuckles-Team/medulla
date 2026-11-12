@@ -9,6 +9,8 @@
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
 pub mod acl;
+// MEDULLA-FINANCE-PRIMITIVES-R002.2.5 — served numeric kernel evaluation wire types.
+pub mod numeric_kernel;
 // MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
 pub mod agent_bus;
 // MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.

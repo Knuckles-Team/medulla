@@ -68,6 +68,10 @@ decision = ["dep:medulla-types"]
 # `MineAnomaly` `matrix_profile_discord` (medulla-compute `mining`) turn it on. The streaming
 # left profile (`series::stampi`) needs no FFT and is always built.
 motif = ["dep:rustfft"]
+# The served numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5): the registry that
+# maps a `NumericEvaluateOp` to its shared kernel, and the stat-arb and regime kernels it
+# serves. Pulls only `medulla-types`, already in the lockfile.
+evaluate = ["dep:medulla-types"]
 
 [dependencies]
 # The one engine release version (`KERNEL_REVISION` reports it).

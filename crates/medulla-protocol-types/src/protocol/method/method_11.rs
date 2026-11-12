@@ -281,6 +281,15 @@ $($variants)*
         op: Box<medulla_result_types::compute_result::signal_models::FinanceSignalModelsOp>,
     },
 
+    // ── Numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5) ──────
+    /// One shared numeric kernel evaluated over the arrays the request carries:
+    /// rolling z-score, EWMA, skill and breadth, backtest validation, Kalman
+    /// filters, Ornstein-Uhlenbeck, ADF and the regime HMM. Pure compute; no
+    /// store, clock or graph core. See [`medulla_types::numeric_kernel`].
+    NumericEvaluate {
+        op: Box<medulla_types::numeric_kernel::NumericEvaluateOp>,
+    },
+
     // ── Sealed records (EH-558) ─────────────────────────────────────────────
     /// Retire one sealed record: the owning op, and the only way to remove a
     /// sealed record's content. With the record's digest it replaces the row by

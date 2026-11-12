@@ -99,6 +99,13 @@ pub async fn route_gateway_and_stateless_domains(
         Ok(r) => return Ok(r),
         Err(m) => m,
     };
+    // Numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5): pure compute, the
+    // `evaluate` feature is implied by `finance`.
+    #[cfg(feature = "finance")]
+    let method = match medulla_h_compute::numeric::try_handle(req_id, method) {
+        Ok(r) => return Ok(r),
+        Err(m) => m,
+    };
     Err(method)
 }
 

@@ -229,7 +229,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         Method::FinanceMatchOrders { .. }
         | Method::FinanceForensicReport { .. }
         | Method::FinanceMarket { .. }
-        | Method::FinanceSignalModels { .. } => default_mutation_domain(surface),
+        | Method::FinanceSignalModels { .. }
+        | Method::NumericEvaluate { .. } => default_mutation_domain(surface),
         // Wire-unconditional, same reason as `datascience` above: `full` does not
         // list `graphlearn`, but `medulla-capabilities` forces `medulla-types/graphlearn` on
         // regardless.

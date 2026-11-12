@@ -121,6 +121,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("compute:graph-algo", ServiceOnly, "engine"),
     // MEDULLA-IDENTITY-R004.1: user-class reads of blast radius and the cached cluster hierarchy.
     entry("compute:graph-read", User, "engine"),
+    entry("compute:numeric", ServiceOnly, "engine"),
     entry("compute:parse", ServiceOnly, "engine"),
     entry("compute:semantic", ServiceOnly, "engine"),
     entry("compute:solve", ServiceOnly, "engine"),

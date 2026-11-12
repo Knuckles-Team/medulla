@@ -13,7 +13,8 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-compute = { path = "../medulla-compute" }
-medulla-numeric = { path = "../medulla-numeric" }
+medulla-numeric = { path = "../medulla-numeric", features = ["evaluate"] }
+medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 rand = "0.8"
