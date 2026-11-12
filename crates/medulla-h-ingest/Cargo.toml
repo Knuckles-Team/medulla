@@ -21,6 +21,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-document = { path = "../medulla-document" }
 medulla-enrich = { path = "../medulla-enrich" }
 medulla-image = { path = "../medulla-image", optional = true }

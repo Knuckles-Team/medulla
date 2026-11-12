@@ -85,6 +85,46 @@ pub struct EnrichDocumentReceipt {
     pub replayed: bool,
     /// Chunk node ids in document order.
     pub chunk_ids: Vec<String>,
+    /// One admission verdict per chunked span, in span order
+    /// (MEDULLA-DECISION-ENGINE-R079.2).
+    #[serde(default)]
+    pub admissions: Vec<UnitAdmission>,
+    /// How many span texts this call sent to the embedder; a replay
+    /// reports the original count.
+    #[serde(default)]
+    pub embedded_units: u32,
+}
+
+/// What admission decided for one span before any embedding call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AdmissionOutcome {
+    /// The span was embedded.
+    Admitted,
+    /// The span's content class is excluded; no chunk is written.
+    Excluded,
+    /// The span's text is byte-identical to a span already embedded for
+    /// this Document; its vector is reused and no embedding call is made.
+    SkippedExact,
+    /// The normalized text repeats an earlier span of this Document.
+    Duplicate,
+    /// Character entropy is below the floor.
+    LowEntropy,
+    /// The span is shorter or longer than the size bounds.
+    SizeOutOfBounds,
+}
+
+/// The admission verdict of one span.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UnitAdmission {
+    /// The span's chunk ordinal.
+    pub ordinal: u32,
+    /// The span's content class, snake_case.
+    pub class: String,
+    pub outcome: AdmissionOutcome,
 }
 
 #[cfg(test)]

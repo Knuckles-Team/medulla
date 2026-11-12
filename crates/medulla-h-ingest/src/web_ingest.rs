@@ -12,15 +12,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
+use medulla_decision_types::decision::ingestion_admission::{classify_unit, AdmissionKnobs};
 use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
 use medulla_source_types::{
+    source_ingestion::web_document::AdmissionOutcome,
     source_ingestion::web_document::EnrichDocumentReceipt,
     source_ingestion::web_document::EnrichDocumentRequest,
-    source_ingestion::web_document::FetchBackend,
+    source_ingestion::web_document::FetchBackend, source_ingestion::web_document::UnitAdmission,
 };
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
+use super::ingestion_admission::{admit_unit, exact_digest};
 use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
 use medulla_protocol_types::protocol::Method;
 
@@ -136,6 +139,32 @@ pub fn outranking_rung(document_id: &str, records: &[(String, Vec<u8>)]) -> Opti
 pub struct PriorEnrichment {
     pub enrichment_id: String,
     pub chunk_ids: Vec<String>,
+    /// Exact span digest (hex) -> the chunk that holds that span's vector.
+    pub embedded: BTreeMap<String, String>,
+}
+
+fn string_list(value: &Value) -> Vec<String> {
+    value
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The chunk id -> exact span digest map an enrichment record stores.
+fn span_digests(record: &Value) -> BTreeMap<String, String> {
+    record["span_digests"]
+        .as_object()
+        .map(|map| {
+            map.iter()
+                .filter_map(|(chunk, digest)| Some((chunk.clone(), digest.as_str()?.to_string())))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Find the Document's enrichment records among `records` (id, properties).
@@ -164,11 +193,12 @@ pub fn prior_enrichments(
             current = Some(value);
             continue;
         }
-        let count = value["chunk_count"].as_u64().unwrap_or(0) as u32;
         prior.push(PriorEnrichment {
             enrichment_id: id,
-            chunk_ids: (0..count)
-                .map(|i| chunk_id(document_id, old_hex, i))
+            chunk_ids: string_list(&value["chunk_ids"]),
+            embedded: span_digests(&value)
+                .into_iter()
+                .map(|(chunk, digest)| (digest, chunk))
                 .collect(),
         });
     }
@@ -181,7 +211,8 @@ pub fn replay_receipt(
     digest_hex: &str,
     record: &Value,
 ) -> EnrichDocumentReceipt {
-    let count = record["chunk_count"].as_u64().unwrap_or(0) as u32;
+    let chunk_ids = string_list(&record["chunk_ids"]);
+    let count = chunk_ids.len() as u32;
     EnrichDocumentReceipt {
         document_id: document_id.to_string(),
         enrichment_id: enrichment_id(document_id, digest_hex),
@@ -197,9 +228,9 @@ pub fn replay_receipt(
         vector_count: record["vector_count"].as_u64().unwrap_or(0) as u32,
         superseded_chunks: 0,
         replayed: true,
-        chunk_ids: (0..count)
-            .map(|i| chunk_id(document_id, digest_hex, i))
-            .collect(),
+        chunk_ids,
+        admissions: serde_json::from_value(record["admissions"].clone()).unwrap_or_default(),
+        embedded_units: record["embedded_units"].as_u64().unwrap_or(0) as u32,
     }
 }
 
@@ -214,6 +245,12 @@ pub struct EnrichmentPlan<'a> {
     pub embedding_model: Option<String>,
     pub dimensions: usize,
     pub prior: Vec<PriorEnrichment>,
+    /// One verdict per chunked span, in span order (R079.2).
+    pub admissions: Vec<UnitAdmission>,
+    /// Exact span digest (hex) of each kept span, parallel to `spans`.
+    pub digests: Vec<String>,
+    /// How many texts were sent to the embedder.
+    pub embedded_units: u32,
 }
 
 fn encode(value: &Value) -> Result<Vec<u8>, String> {
@@ -300,6 +337,19 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
             "overlap_bytes": plan.config.overlap_bytes,
             "chunk_count": plan.spans.len(),
             "vector_count": plan.vectors.len(),
+            "chunk_ids": plan
+                .spans
+                .iter()
+                .map(|span| chunk_id(plan.document_id, digest_hex, span.ordinal))
+                .collect::<Vec<_>>(),
+            "span_digests": plan
+                .spans
+                .iter()
+                .zip(&plan.digests)
+                .map(|(span, digest)| (chunk_id(plan.document_id, digest_hex, span.ordinal), digest))
+                .collect::<BTreeMap<_, _>>(),
+            "admissions": plan.admissions,
+            "embedded_units": plan.embedded_units,
             (crate::ingestion_rung::PRODUCING_RUNG):
                 crate::ingestion_rung::rung_label(PRODUCING_RUNG),
         }),
@@ -332,8 +382,88 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         superseded_chunks: superseded,
         replayed: false,
         chunk_ids,
+        admissions: plan.admissions,
+        embedded_units: plan.embedded_units,
     };
     Ok((write_set, receipt))
+}
+
+/// The source path or URL a held Document came from, for content-class
+/// classification: its canonical URL, else its URL, else empty.
+pub fn path_hint(document: &HeldDocument) -> String {
+    ["canonical_url", "url"]
+        .iter()
+        .find_map(|key| document.citation.get(*key)?.as_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// One chunked span with its admission verdict and exact digest.
+pub struct DecidedSpan {
+    pub span: ChunkSpan,
+    pub admission: UnitAdmission,
+    pub digest: String,
+}
+
+impl DecidedSpan {
+    /// Whether the span becomes a chunk node.
+    pub fn kept(&self) -> bool {
+        matches!(
+            self.admission.outcome,
+            AdmissionOutcome::Admitted | AdmissionOutcome::SkippedExact
+        )
+    }
+}
+
+/// Decide every span of `document` (MEDULLA-DECISION-ENGINE-R079.2, R079.3):
+/// the document-level class (lockfile, vendored, generated) applies to every
+/// span; a span is also classified on its own text. `known_exact` is the set
+/// of exact digests whose vectors are available for reuse.
+pub fn decide_spans(
+    document: &HeldDocument,
+    spans: Vec<ChunkSpan>,
+    knobs: &AdmissionKnobs,
+    known_exact: &BTreeSet<String>,
+) -> Vec<DecidedSpan> {
+    let hint = path_hint(document);
+    let document_class = classify_unit(&hint, &document.text, knobs);
+    let mut seen = BTreeSet::new();
+    spans
+        .into_iter()
+        .map(|span| {
+            let text = span.text(&document.text);
+            let class = if document_class.admits() {
+                classify_unit(&hint, text, knobs)
+            } else {
+                document_class
+            };
+            let admission = admit_unit(span.ordinal, class, text, known_exact, &mut seen, knobs);
+            DecidedSpan {
+                span,
+                admission,
+                digest: exact_digest(text),
+            }
+        })
+        .collect()
+}
+
+/// The vectors of the kept spans, in order: an admitted span takes the next
+/// freshly embedded vector, a skipped-exact span reuses its prior vector.
+pub fn kept_vectors(
+    decided: &[DecidedSpan],
+    mut embedded: Vec<Vec<f32>>,
+    reusable: &BTreeMap<String, Vec<f32>>,
+) -> Result<Vec<Vec<f32>>, String> {
+    embedded.reverse();
+    let mut out = Vec::new();
+    for unit in decided.iter().filter(|u| u.kept()) {
+        let vector = match unit.admission.outcome {
+            AdmissionOutcome::SkippedExact => reusable.get(&unit.digest).cloned(),
+            _ => embedded.pop(),
+        };
+        out.push(vector.ok_or("ENRICHMENT_VECTOR_MISSING: a kept span has no vector")?);
+    }
+    Ok(out)
 }
 
 /// Chunk a held Document's text under `config`.

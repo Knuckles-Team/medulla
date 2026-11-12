@@ -39,6 +39,7 @@ pub mod numeric;
 pub mod policy;
 pub mod rapid_r015;
 pub mod record;
+pub mod research_voi;
 pub mod replay;
 pub mod reputation;
 pub mod request;

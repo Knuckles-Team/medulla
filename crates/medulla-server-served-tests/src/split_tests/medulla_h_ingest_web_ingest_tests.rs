@@ -45,6 +45,9 @@ fn plan_for<'a>(
         embedding_model: None,
         dimensions: 2,
         prior,
+        admissions: Vec::new(),
+        digests: spans.iter().map(|_| String::new()).collect(),
+        embedded_units: spans.len() as u32,
     }
 }
 
@@ -90,6 +93,7 @@ fn links_chunks_vectors_and_facts() {
     let record = rmp_serde::to_vec_named(&json!({
         "type": ENRICHMENT_TYPE, "document_id": "doc:1",
         "content_digest": held.content_digest(), "chunk_count": spans.len(),
+        "chunk_ids": receipt.chunk_ids,
         "vector_count": spans.len(), "embedder": "hash", "fetch_backend": "archivebox",
     }))
     .unwrap();

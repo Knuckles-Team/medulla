@@ -19,6 +19,8 @@ pub mod blob;
 pub mod ingest_queue;
 /// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
 pub mod ingest_readback;
+/// Per-span embedding admission (MEDULLA-DECISION-ENGINE-R079.2, R079.3).
+pub mod ingestion_admission;
 /// Producing-rung recording and overwrite resistance for ingest producers
 /// (MEDULLA-DECISION-ENGINE-R080.2).
 pub mod ingestion_rung;

@@ -66,18 +66,52 @@ async fn enrich(
         return respond(req_id, receipt);
     }
     let embedder = medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env();
+    // Vectors already held for this Document's earlier spans, by exact span
+    // digest: an identical span reuses its vector instead of re-embedding.
+    let reusable: std::collections::BTreeMap<String, Vec<f32>> = {
+        let store = ctx.core.semantic_store.read();
+        prior
+            .iter()
+            .flat_map(|earlier| earlier.embedded.iter())
+            .filter_map(|(digest, chunk)| Some((digest.clone(), store.get_embedding(chunk)?)))
+            .collect()
+    };
+    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
+        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
+    );
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
         let spans = web::chunks(&document, &config)?;
-        let texts: Vec<&str> = spans.iter().map(|span| span.text(&document.text)).collect();
-        let vectors = embedder.embed(&texts)?;
-        Ok::<_, String>((document, spans, vectors, embedder))
+        let known: std::collections::BTreeSet<String> = reusable.keys().cloned().collect();
+        let decided = web::decide_spans(&document, spans, &knobs, &known);
+        let texts: Vec<&str> = decided
+            .iter()
+            .filter(|unit| {
+                unit.admission.outcome
+                    == medulla_source_types::source_ingestion::web_document::AdmissionOutcome::Admitted
+            })
+            .map(|unit| unit.span.text(&document.text))
+            .collect();
+        let embedded_units = texts.len() as u32;
+        let fresh = if texts.is_empty() {
+            Vec::new()
+        } else {
+            embedder.embed(&texts)?
+        };
+        let vectors = web::kept_vectors(&decided, fresh, &reusable)?;
+        Ok::<_, String>((document, decided, vectors, embedded_units, embedder))
     })
     .await;
-    let (document, spans, vectors, embedder) = match embedded {
+    let (document, decided, vectors, embedded_units, embedder) = match embedded {
         Ok(Ok(parts)) => parts,
         Ok(Err(error)) => return Response::err(req_id, error),
         Err(response) => return response,
     };
+    let admissions = decided.iter().map(|u| u.admission.clone()).collect();
+    let (spans, digests): (Vec<_>, Vec<_>) = decided
+        .into_iter()
+        .filter(web::DecidedSpan::kept)
+        .map(|unit| (unit.span, unit.digest))
+        .unzip();
     let plan = web::EnrichmentPlan {
         document_id: &doc_id,
         document: &document,
@@ -88,6 +122,9 @@ async fn enrich(
         embedding_model: embedder.model.clone(),
         dimensions: embedder.dims,
         prior,
+        admissions,
+        digests,
+        embedded_units,
     };
     match web::lower(plan) {
         Ok((write_set, receipt)) => commit(ctx, write_set, receipt).await,

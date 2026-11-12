@@ -9,4 +9,9 @@ pub mod profile;
 use super::knobs::KnobSpec;
 
 /// The family tables this crate registers.
-pub const REGISTRY: &[&[KnobSpec]] = &[memory::KNOBS, participant::KNOBS, profile::KNOBS];
+pub const REGISTRY: &[&[KnobSpec]] = &[
+    memory::KNOBS,
+    participant::KNOBS,
+    profile::KNOBS,
+    super::ingestion_admission::KNOBS,
+];
