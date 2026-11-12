@@ -521,6 +521,8 @@ closed_error_codes! {
         IngestJobInvalid => "INGEST_JOB_INVALID",
         IngestQueueFull => "INGEST_QUEUE_FULL",
         IngestTenantMismatch => "INGEST_TENANT_MISMATCH",
+        DataPrepDeclarationInvalid => "DATA_PREP_DECLARATION_INVALID",
+        DataPrepDeclarationTooLarge => "DATA_PREP_DECLARATION_TOO_LARGE",
         WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
         MetastoreSpecInvalid => "METASTORE_SPEC_INVALID",
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",

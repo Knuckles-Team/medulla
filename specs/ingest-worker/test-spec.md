@@ -29,9 +29,9 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R001.13` | `crates/medulla-kernel/src/metrics/tests.rs::ingest_metrics_after_success_retry_dead_letter` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R001.14` | `tests/ingest/test_ingest_worker_contract_served.py::test_runner_call_sequence` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.1006` | `crates/medulla-types/src/data_prep_declaration.rs::tests::declaration_round_trips_and_rejects_unknown_fields` | L1 | planned |
-| `MEDULLA-INGEST-WORKER-R001.1007` | `crates/medulla-h-ingest/src/data_prep_declaration.rs::tests::replace_is_atomic_and_equal_digest_is_unchanged` | L2 | planned |
-| `MEDULLA-INGEST-WORKER-R001.1008` | `tests/ingest/test_data_prep_declaration_served.py::test_declare_then_read_through_the_python_client` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R001.1009` | `tests/ingest/test_data_prep_declaration_served.py::test_declare_refusals_change_nothing` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R001.1007` | `crates/medulla-h-ingest/src/data_prep_declaration.rs::tests::replace_is_atomic_and_equal_digest_is_unchanged` | L2 | exists |
+| `MEDULLA-INGEST-WORKER-R001.1008` | `tests/ingest/test_data_prep_declaration_served.py::test_declare_then_read_through_the_python_client` | L4 | exists |
+| `MEDULLA-INGEST-WORKER-R001.1009` | `tests/ingest/test_data_prep_declaration_served.py::test_declare_refusals_change_nothing` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R001.1010` | `tests/ingest/test_data_prep_declaration_served.py::test_report_counts_written_unchanged_refused` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.1011` | `benches/data_prep_declare.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R002.1` | `crates/medulla-types/src/ontology_proposal.rs::tests::proposal_round_trips_and_starts_as_draft` | L1 | exists |

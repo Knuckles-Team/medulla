@@ -10,6 +10,7 @@ use super::request_boundary::preflight::{decode_ast_files, decode_ast_sources, A
 #[cfg(test)]
 use super::request_boundary::screen::decode_screen_observation;
 use crate::dispatch::*;
+mod data_prep;
 mod dispatch_helpers;
 mod document_ops;
 mod ingest_readback;

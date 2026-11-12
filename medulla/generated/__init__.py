@@ -187,6 +187,8 @@ SEND_BY_METHOD = {
     "DeclareExchange": messaging.send_declare_exchange,
     "DeclareQueue": messaging.send_declare_queue,
     "DeferWorkItem": coordination.send_defer_work_item,
+    "DataPrepDeclarationRead": ingestion.send_data_prep_declaration_read,
+    "DataPrepDeclare": ingestion.send_data_prep_declare,
     "DegreeCentrality": compute.send_degree_centrality,
     "DegreeCentralityAll": compute.send_degree_centrality_all,
     "DeleteExchange": messaging.send_delete_exchange,

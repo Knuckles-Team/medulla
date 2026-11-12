@@ -763,6 +763,16 @@ def __getattr__(name: str) -> Any:
 
 
 # Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_data_prep_declare = contract_sender(
+    "DataPrepDeclare", "MethodDataPrepDeclareParams"
+)
+decode_data_prep_declare = contract_decoder("DataPrepDeclare", "DataPrepDeclareReceipt")
+send_data_prep_declaration_read = contract_sender(
+    "DataPrepDeclarationRead", "MethodDataPrepDeclarationReadParams"
+)
+decode_data_prep_declaration_read = contract_decoder(
+    "DataPrepDeclarationRead", "DataPrepDeclarationView"
+)
 send_document_delete = contract_sender("DocumentDelete", "MethodDocumentDeleteParams")
 decode_document_delete = contract_decoder("DocumentDelete", "DocumentDeleteReceipt")
 send_verify_ingest_readback = contract_sender(

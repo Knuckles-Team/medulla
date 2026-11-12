@@ -209,6 +209,10 @@ pub async fn route_native_store_ops(
         Ok(response) => return Ok(response),
         Err(method) => method,
     };
+    let method = match super::data_prep::route_data_prep(ctx, method).await {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
     let method = match route_source_ingestion_or_resources(ctx, method).await {
         Ok(response) => return Ok(response),
         Err(method) => method,

@@ -308,6 +308,7 @@ fn source_ingestion_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::MeetingSummaryCommit { .. } => Some("__meeting_summary_commit"),
         Method::DocumentDelete { .. } => Some("__document_delete"),
         Method::VerifyIngestReadback { .. } => Some("__verify_ingest_readback"),
+        Method::DataPrepDeclare { .. } => Some("__data_prep_declare"),
         Method::LineageIngest { .. } => Some("__lineage_ingest"),
         _ => x9_marker_event_id(method),
     }

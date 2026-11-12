@@ -284,6 +284,9 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
             "VERIFY_INGEST_READBACK|{}",
             request.write_receipt_digest
         )),
+        Method::DataPrepDeclare { request } => {
+            Some(format!("DATA_PREP_DECLARE|{}", request.tenant))
+        }
         Method::DocumentDelete { request } => {
             Some(format!("DOCUMENT_DELETE|{}", request.document_id))
         }

@@ -68,6 +68,9 @@ method_results! {
     MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
     MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
     MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_types::meeting_transcript::MeetingSummaryCommitReceipt>;
+    // MEDULLA-INGEST-WORKER-R001.1007/.1008: what one declaration did, and the stored declaration.
+    DataPrepDeclare(DataPrepDeclare) => Raw<medulla_types::data_prep_declaration::DataPrepDeclareReceipt>;
+    DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_types::data_prep_declaration::DataPrepDeclarationView>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
     DocumentDelete(DocumentDelete) => Raw<medulla_query_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.

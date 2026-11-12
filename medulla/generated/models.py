@@ -13055,6 +13055,20 @@ class MethodDataProductRegister(BaseModel):
     params: MethodDataProductRegisterParams
 
 
+class MethodDataPrepDeclare(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DataPrepDeclare"]
+    params: MethodDataPrepDeclareParams
+
+
+class MethodDataPrepDeclarationRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DataPrepDeclarationRead"]
+    params: MethodDataPrepDeclarationReadParams
+
+
 class MethodDocumentDelete(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13816,6 +13830,8 @@ Method = Annotated[
         MethodContextFacts,
         MethodCreateBranch,
         MethodDataProductRegister,
+        MethodDataPrepDeclarationRead,
+        MethodDataPrepDeclare,
         MethodDocumentDelete,
         MethodFinanceAlertRaise,
         MethodFinanceFactorRecord,
@@ -27742,6 +27758,43 @@ class DelegationState(BaseModel):
     standing: DelegationStanding
 
 
+class DataPrepDeclaration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capability: str
+    field_refs: list[str]
+    policy_digest: Digest256
+
+
+class DataPrepDeclarationReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capability: str
+    tenant: str
+
+
+class DataPrepDeclarationView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: Digest256 | None = None
+    declaration: DataPrepDeclaration | None = None
+
+
+class DataPrepDeclareReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: Digest256
+    unchanged: Annotated[int, Field(ge=0)]
+    written: Annotated[int, Field(ge=0)]
+
+
+class DataPrepDeclareRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    payload: Any
+    tenant: str
+
+
 class DocumentDeleteReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -28185,6 +28238,18 @@ class MethodDataProductRegisterParams(BaseModel):
     contract: DataContract
     product: DataProduct
     tenant: str
+
+
+class MethodDataPrepDeclarationReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: DataPrepDeclarationReadRequest
+
+
+class MethodDataPrepDeclareParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: DataPrepDeclareRequest
 
 
 class MethodDocumentDeleteParams(BaseModel):
@@ -29567,6 +29632,11 @@ __all__ = [
     "CursorPositionTimestampMillis",
     "CvSplit",
     "CypherMode",
+    "DataPrepDeclaration",
+    "DataPrepDeclarationReadRequest",
+    "DataPrepDeclarationView",
+    "DataPrepDeclareReceipt",
+    "DataPrepDeclareRequest",
     "DataContract",
     "DataProduct",
     "DataProductRegistered",
@@ -30804,6 +30874,10 @@ __all__ = [
     "MethodDiscoverParams",
     "MethodDistributedCompute",
     "MethodDistributedComputeParams",
+    "MethodDataPrepDeclarationRead",
+    "MethodDataPrepDeclarationReadParams",
+    "MethodDataPrepDeclare",
+    "MethodDataPrepDeclareParams",
     "MethodDocumentDelete",
     "MethodDocumentDeleteParams",
     "MethodDropContinuousQuery",

@@ -17,13 +17,61 @@ pub const MAX_FIELD_REF_BYTES: usize = 256;
 /// Most bytes a capability name may hold.
 pub const MAX_CAPABILITY_BYTES: usize = 128;
 
+/// Refusal code: a value outside the declaration grammar, or an unknown key.
+pub const DATA_PREP_DECLARATION_INVALID: &str = "DATA_PREP_DECLARATION_INVALID";
+/// Refusal code: more than [`MAX_FIELD_REFS`] field references.
+pub const DATA_PREP_DECLARATION_TOO_LARGE: &str = "DATA_PREP_DECLARATION_TOO_LARGE";
+
 /// One data-prep declaration.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DataPrepDeclaration {
     pub capability: String,
     pub field_refs: BTreeSet<String>,
     pub policy_digest: Digest256,
+}
+
+/// `Method::DataPrepDeclare`: one tenant's declaration payload.
+///
+/// The payload stays untyped on the wire so an unknown key or a value outside
+/// the grammar is refused with `DATA_PREP_DECLARATION_INVALID` by the handler
+/// (R001.1009), not by a generic decode failure.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DataPrepDeclareRequest {
+    pub tenant: String,
+    pub payload: serde_json::Value,
+}
+
+/// What one served declaration did: exactly one of `written` or `unchanged` is 1.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DataPrepDeclareReceipt {
+    /// Content digest of the stored declaration.
+    pub content_digest: Digest256,
+    pub written: u64,
+    pub unchanged: u64,
+}
+
+/// `Method::DataPrepDeclarationRead`: read one tenant's declaration of a capability.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DataPrepDeclarationReadRequest {
+    pub tenant: String,
+    pub capability: String,
+}
+
+/// The stored declaration of a capability, or none.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DataPrepDeclarationView {
+    pub declaration: Option<DataPrepDeclaration>,
+    pub content_digest: Option<Digest256>,
 }
 
 /// Why a declaration is refused.
@@ -33,7 +81,7 @@ pub enum DataPrepDeclarationError {
     InvalidCapability,
     #[error("a declaration carries at most {MAX_FIELD_REFS} field references")]
     TooManyFieldRefs,
-    #[error("a field reference must hold 1 to {MAX_FIELD_REF_BYTES} bytes")]
+    #[error("a field reference must match [A-Za-z0-9_.-]{{1,{MAX_FIELD_REF_BYTES}}}")]
     InvalidFieldRef,
 }
 
@@ -46,15 +94,21 @@ impl DataPrepDeclaration {
         if self.field_refs.len() > MAX_FIELD_REFS {
             return Err(DataPrepDeclarationError::TooManyFieldRefs);
         }
-        if self
-            .field_refs
-            .iter()
-            .any(|field| field.is_empty() || field.len() > MAX_FIELD_REF_BYTES)
-        {
+        if self.field_refs.iter().any(|field| !valid_field_ref(field)) {
             return Err(DataPrepDeclarationError::InvalidFieldRef);
         }
         Ok(())
     }
+}
+
+/// A field reference holds 1 to 256 of `[A-Za-z0-9_.-]`: a value with `:` or
+/// `/` would be an import path or executable and is refused.
+fn valid_field_ref(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= MAX_FIELD_REF_BYTES
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b'-'))
 }
 
 fn valid_capability(value: &str) -> bool {
@@ -120,11 +174,60 @@ mod tests {
             long_ref.validate(),
             Err(DataPrepDeclarationError::InvalidFieldRef)
         );
+        for bad_ref in ["a:b", "a/b", "has space", ""] {
+            let mut path_like = declaration();
+            path_like.field_refs.insert(bad_ref.to_string());
+            assert_eq!(
+                path_like.validate(),
+                Err(DataPrepDeclarationError::InvalidFieldRef)
+            );
+        }
         let mut many = declaration();
         many.field_refs = (0..257).map(|i| format!("f{i}")).collect();
         assert_eq!(
             many.validate(),
             Err(DataPrepDeclarationError::TooManyFieldRefs)
         );
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.1008
+    /// Verifies MEDULLA-INGEST-WORKER-R001.1008: the wire shapes of both methods.
+    #[test]
+    fn method_payloads_round_trip_the_python_vectors() {
+        let policy = Digest256::sha256(b"policy").to_hex();
+        let request = serde_json::json!({
+            "tenant": "tenant:test",
+            "payload": {
+                "capability": "text.normalize-v1",
+                "field_refs": ["a.field", "b.field"],
+                "policy_digest": policy,
+            },
+        });
+        let decoded: DataPrepDeclareRequest =
+            serde_json::from_value(request.clone()).expect("decode request");
+        assert_eq!(serde_json::to_value(&decoded).expect("encode"), request);
+        let inner: DataPrepDeclaration =
+            serde_json::from_value(decoded.payload).expect("decode payload");
+        inner.validate().expect("valid declaration");
+
+        let receipt = serde_json::json!({
+            "content_digest": policy,
+            "written": 1,
+            "unchanged": 0,
+        });
+        let decoded: DataPrepDeclareReceipt =
+            serde_json::from_value(receipt.clone()).expect("decode receipt");
+        assert_eq!(serde_json::to_value(&decoded).expect("encode"), receipt);
+
+        let view = serde_json::json!({ "declaration": null, "content_digest": null });
+        let decoded: DataPrepDeclarationView =
+            serde_json::from_value(view.clone()).expect("decode view");
+        assert_eq!(serde_json::to_value(&decoded).expect("encode"), view);
+
+        let read =
+            serde_json::json!({ "tenant": "tenant:test", "capability": "text.normalize-v1" });
+        let decoded: DataPrepDeclarationReadRequest =
+            serde_json::from_value(read.clone()).expect("decode read");
+        assert_eq!(serde_json::to_value(&decoded).expect("encode"), read);
     }
 }

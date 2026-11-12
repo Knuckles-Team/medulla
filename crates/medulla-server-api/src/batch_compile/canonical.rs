@@ -688,6 +688,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DocumentDelete { .. }
         // MEDULLA-REPO-INGEST-R002.100: lowers to one ChangeEnvelope.
         | Method::VerifyIngestReadback { .. }
+        // MEDULLA-INGEST-WORKER-R001.1007: lowers to one ChangeEnvelope.
+        | Method::DataPrepDeclare { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
         | Method::LineageIngest { .. }
         | Method::SelectWebPages { .. }

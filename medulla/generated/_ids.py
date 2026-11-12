@@ -500,6 +500,8 @@ METHOD_IDS = frozenset(
         "ContextFacts",
         "CreateBranch",
         "CreateMatView",
+        "DataPrepDeclarationRead",
+        "DataPrepDeclare",
         "DataProductRegister",
         "DistributedCompute",
         "DocumentDelete",

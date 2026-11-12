@@ -14,6 +14,9 @@ pub mod asr;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
 
+/// Served data-prep declarations (MEDULLA-INGEST-WORKER-R001.1007).
+pub mod data_prep_declaration;
+
 /// Served ingest queue entry: enqueue maps onto the served task queue with
 /// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
 pub mod ingest_queue;

@@ -437,6 +437,22 @@ $($variants)*
         request: Box<medulla_query_types::document_ops::DocumentDeleteRequest>,
     },
 
+    // ── Data-prep declarations (MEDULLA-INGEST-WORKER-R001.1007/.1008) ──────
+    /// Replace one tenant's declaration of a data-prep capability: the
+    /// declaration node and its `declares_field` edges commit as one
+    /// ChangeEnvelope, an equal content digest writes nothing, and a payload
+    /// outside the grammar refuses `DATA_PREP_DECLARATION_INVALID` or
+    /// `DATA_PREP_DECLARATION_TOO_LARGE` and changes nothing. See
+    /// [`medulla_types::data_prep_declaration`].
+    DataPrepDeclare {
+        request: Box<medulla_types::data_prep_declaration::DataPrepDeclareRequest>,
+    },
+    /// Read one tenant's stored declaration of a data-prep capability
+    /// (absent when none was declared), under the caller's row authority.
+    DataPrepDeclarationRead {
+        request: Box<medulla_types::data_prep_declaration::DataPrepDeclarationReadRequest>,
+    },
+
     // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────
     /// Read one document's head, or the retained `revision`, with its bytes.
     /// Needs `memory:read`. See [`medulla_types::memory_sync`].

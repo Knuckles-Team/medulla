@@ -887,6 +887,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::MeetingTranscriptRevision { .. }
             | Method::DocumentDelete { .. }
             | Method::VerifyIngestReadback { .. }
+            | Method::DataPrepDeclare { .. }
             | Method::LineageIngest { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);

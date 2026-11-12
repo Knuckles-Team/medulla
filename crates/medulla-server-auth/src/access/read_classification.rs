@@ -81,6 +81,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ConnectedComponents",
     "ContextFacts",
     "ReadSpan",
+    // MEDULLA-INGEST-WORKER-R001.1008: the handler reads declaration nodes only
+    // through `CoreDeclarationView`, whose `visible` closure is
+    // `read_authority.node_visible` (graph_pipeline/data_prep.rs).
+    "DataPrepDeclarationRead",
     "DegreeCentrality",
     "DegreeCentralityAll",
     "DiffAgainst",

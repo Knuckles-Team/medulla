@@ -17,11 +17,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T011 [US1] MEDULLA-INGEST-WORKER-R001.13 Ingest job metrics are exported from one registry
 - [ ] T012 [US1] MEDULLA-INGEST-WORKER-R001.14 Runner contract: the engine methods the SDK runner relies on
 - [ ] T013 [US2] MEDULLA-INGEST-WORKER-R001.1006 Model: data-prep declaration
-- [ ] T014 [US2] MEDULLA-INGEST-WORKER-R001.1007 Behavior: data-prep declaration replace
-- [ ] T015 [US2] MEDULLA-INGEST-WORKER-R001.1008 Wiring: data-prep declaration methods
-- [ ] T016 [US2] MEDULLA-INGEST-WORKER-R001.1009 Refusal: data-prep declaration
+- [x] T014 [US2] MEDULLA-INGEST-WORKER-R001.1007 Behavior: data-prep declaration replace
+- [x] T015 [US2] MEDULLA-INGEST-WORKER-R001.1008 Wiring: data-prep declaration methods
+- [x] T016 [US2] MEDULLA-INGEST-WORKER-R001.1009 Refusal: data-prep declaration
 - [ ] T017 [US2] MEDULLA-INGEST-WORKER-R001.1010 Evidence: data-prep declaration report
-- [ ] T018 [US2] MEDULLA-INGEST-WORKER-R001.1011 Hot-path proof: data-prep declaration
+- [x] T018 [US2] MEDULLA-INGEST-WORKER-R001.1011 Hot-path proof: data-prep declaration
 - [ ] T019 [US4] MEDULLA-INGEST-WORKER-R002.1 Model
 - [ ] T020 [US4] MEDULLA-INGEST-WORKER-R002.2 Behavior
 - [ ] T021 [US4] MEDULLA-INGEST-WORKER-R002.3 Wiring: proposals are judged inside SourceIngest admission

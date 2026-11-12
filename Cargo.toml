@@ -2005,6 +2005,12 @@ name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
 
+# Data-prep declaration at writer concurrency (MEDULLA-INGEST-WORKER-R001.1011): nightly budget.
+[[bench]]
+name = "data_prep_declare"
+path = "benches/data_prep_declare.rs"
+harness = false
+
 # Source record governance parsing at batch size (MEDULLA-INGEST-WORKER-R900.6): nightly budget.
 [[bench]]
 name = "ingest_source_governance"

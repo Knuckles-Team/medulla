@@ -257,6 +257,23 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DOCUMENT_NOT_FOUND",
         ],
     ),
+    // MEDULLA-INGEST-WORKER-R001.1009.
+    (
+        "DataPrepDeclare",
+        &[
+            "DATA_PREP_DECLARATION_INVALID",
+            "DATA_PREP_DECLARATION_TOO_LARGE",
+            "INGEST_TENANT_MISMATCH",
+        ],
+    ),
+    // MEDULLA-INGEST-WORKER-R001.1008.
+    (
+        "DataPrepDeclarationRead",
+        &[
+            "DATA_PREP_DECLARATION_INVALID",
+            "INGEST_TENANT_MISMATCH",
+        ],
+    ),
     // MEDULLA-REPO-INGEST-R002.100.
     (
         "VerifyIngestReadback",
