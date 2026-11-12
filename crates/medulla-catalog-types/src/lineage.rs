@@ -254,7 +254,7 @@ pub struct LineageIngestReceipt {
 
 /// How an output column derives from its input column.
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ColumnTransform {
     Identity,
@@ -265,7 +265,7 @@ pub enum ColumnTransform {
 
 /// One column lineage edge, bound to the query that produced it.
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ColumnLineageEdge {
     pub source_column: String,
