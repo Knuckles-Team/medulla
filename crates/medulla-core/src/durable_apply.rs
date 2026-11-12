@@ -367,7 +367,7 @@ fn apply_argument_map(core: &GraphCore, m: &Method) -> bool {
         "map_id": map_id,
         "json": json,
     });
-    let _ = core.add_node(
+    core.add_node(
         map_node.clone(),
         rmp_serde::to_vec_named(&map_props).unwrap_or_default(),
     );
@@ -378,7 +378,7 @@ fn apply_argument_map(core: &GraphCore, m: &Method) -> bool {
             "kind": node.kind,
             "text": node.text,
         });
-        let _ = core.add_node(
+        core.add_node(
             aif_node(&node.node_id),
             rmp_serde::to_vec_named(&props).unwrap_or_default(),
         );
