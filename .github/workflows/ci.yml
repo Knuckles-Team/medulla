@@ -1658,6 +1658,17 @@ jobs:
           fi
           echo "$root/bin" >> "$GITHUB_PATH"
           echo "RUSTC_WRAPPER=$sccache_bin" >> "$GITHUB_ENV"
+          # Build with the runner's whole CPU share (its cgroup quota), not the
+          # workflow default, so a warm runner is not held to a few parallel compiles.
+          if read -r quota period < /sys/fs/cgroup/cpu.max 2>/dev/null && [ "$quota" != max ]; then
+            jobs=$(( quota / period ))
+            # Keep about 3 GiB per parallel compile/link inside the memory limit.
+            if read -r mem < /sys/fs/cgroup/memory.max 2>/dev/null && [ "$mem" != max ]; then
+              mem_jobs=$(( mem / (3 * 1024 * 1024 * 1024) ))
+              [ "$mem_jobs" -lt "$jobs" ] && jobs=$mem_jobs
+            fi
+            [ "$jobs" -ge 1 ] && echo "CARGO_BUILD_JOBS=$jobs" >> "$GITHUB_ENV" && echo "cargo build jobs: $jobs (cgroup CPU quota)"
+          fi
           df -h "$root" | tail -1
       - *medulla-gates-python
       - name: Scope the diff (changed files, docs-only, affected crates)
