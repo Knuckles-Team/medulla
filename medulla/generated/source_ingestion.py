@@ -146,6 +146,7 @@ class SourceIngestionReceipt(BaseModel):
     live_set_digest: Digest256 | None = None
     mappings: BoundedVec_SourceMappingReceipt_5120
     mode: SourceIngestionMode
+    previous_content_digest: Digest256 | None = None
     raw_admissions: BoundedVec_RawAdmissionReceipt_1024
     receipt_digest: Digest256
     receipt_id: str
@@ -154,6 +155,7 @@ class SourceIngestionReceipt(BaseModel):
     relationship_raw_admissions: BoundedVec_RawRelationshipAdmissionReceipt_4096
     relationship_tombstoned_count: Annotated[int, Field(ge=0)]
     relationship_tombstones: BoundedVec_SourceRelationshipTombstoneReceipt_4096
+    stream_object_id: str
     tombstoned_count: Annotated[int, Field(ge=0)]
     tombstones: BoundedVec_SourceTombstoneReceipt_16384
 

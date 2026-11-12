@@ -281,6 +281,7 @@ async fn committed_envelope(
 /// version while claiming the first batch's digest, and the commit refused it
 /// `STALE_CONTENT_VERSION: ... has no prior version`.
 // spec: MEDULLA-REPO-INGEST-R002.102
+// spec: MEDULLA-INGEST-WORKER-R910.3
 #[tokio::test]
 async fn a_second_batch_to_the_same_stream_chains_its_content_version() {
     let (served, _guard) = pack_graph("pack-chain").await;

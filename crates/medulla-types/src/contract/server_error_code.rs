@@ -372,6 +372,7 @@ closed_error_codes! {
         SqliteSnapshotUnstable => "SQLITE_SNAPSHOT_UNSTABLE",
         SqliteWatermarkInvalid => "SQLITE_WATERMARK_INVALID",
         StaleAgentLibraryRevision => "STALE_AGENT_LIBRARY_REVISION",
+        StaleContentVersion => "STALE_CONTENT_VERSION",
         StaleOutboxLease => "STALE_OUTBOX_LEASE",
         StateBudgetExceeded => "STATE_BUDGET_EXCEEDED",
         StaleMappingReference => "STALE_MAPPING_REFERENCE",

@@ -1807,10 +1807,23 @@ fn build_terminal_receipt(
     let tombstones = medulla_types::contract::BoundedVec::new(prepared.tombstones)?;
     let relationship_tombstones =
         medulla_types::contract::BoundedVec::new(prepared.relationship_tombstones)?;
+    let stream_object_id = prepared.envelope.content_version.object_id.clone();
+    let previous_content_digest = prepared
+        .envelope
+        .content_version
+        .previous_digest
+        .as_deref()
+        .map(Digest256::parse)
+        .transpose()?;
     let receipt_digest = Digest256::framed(
-        b"eg/source-ingestion-receipt/v2",
+        b"eg/source-ingestion-receipt/v3",
         &[
             prepared.batch_digest.as_bytes(),
+            stream_object_id.as_bytes(),
+            previous_content_digest
+                .as_ref()
+                .map(|digest| digest.as_bytes().as_slice())
+                .unwrap_or(&[]),
             &receipt_bytes(&prepared.mode)?,
             &receipt_bytes(&mappings)?,
             &receipt_bytes(&raw_admissions)?,
@@ -1861,6 +1874,8 @@ fn build_terminal_receipt(
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         committed_graph_version: prepared.committed_graph_version,
+        stream_object_id,
+        previous_content_digest,
         receipt_digest,
     })
 }
@@ -2441,6 +2456,8 @@ fn policy_with_operation(
 mod tests {
     use super::*;
     use medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding;
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    use medulla_source_types::source_ingestion::SourceIngestionBatch;
     use medulla_source_types::{
         source_ingestion::SourceJson, source_ingestion::SourceRecord,
         source_ingestion::SourceRecordProvenance,
@@ -2833,5 +2850,150 @@ mod tests {
             let decoded = medulla_types::msgpack::decode_property_value(properties).unwrap();
             assert_eq!(decoded["relationship"], expected);
         }
+    }
+    /// A stub durable store that holds the one stream content version.
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    struct StreamVersionStore {
+        stored: std::sync::Mutex<Option<medulla_protocol_types::change_envelope::ContentVersion>>,
+    }
+
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    #[async_trait::async_trait]
+    impl medulla_server_api::api::persistence::PersistenceBackend for StreamVersionStore {
+        async fn read_content_version(
+            &self,
+            _graph_fname: &str,
+            _tenant: &str,
+            object_id: &str,
+        ) -> Result<Option<medulla_protocol_types::change_envelope::ContentVersion>, String>
+        {
+            Ok(self
+                .stored
+                .lock()
+                .unwrap()
+                .clone()
+                .filter(|version| version.object_id == object_id))
+        }
+
+        fn shutdown(&self) {}
+    }
+
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    fn stream_batch(page: u64, server: &str) -> SourceIngestionBatch {
+        let mut batch = medulla_source_types::source_ingestion::fixtures::request()
+            .as_batch()
+            .clone();
+        batch.provider_checkpoint.position =
+            SourceJson::new(serde_json::json!({"page": page})).unwrap();
+        let mut records = batch.records.as_slice().to_vec();
+        records[0].payload = SourceJson::new(serde_json::json!({"id": page})).unwrap();
+        records[0].provenance.server = server.into();
+        batch.records = medulla_types::contract::BoundedVec::new(records).unwrap();
+        batch
+    }
+
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    fn stream_envelope(
+        batch: &SourceIngestionBatch,
+        previous: Option<String>,
+    ) -> (
+        Digest256,
+        medulla_protocol_types::change_envelope::ChangeEnvelope,
+    ) {
+        let batch_digest = SourceIngestionRequest::new(batch.clone())
+            .unwrap()
+            .batch_digest()
+            .unwrap();
+        let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant("agent:ingest", "t");
+        let mutation = medulla_server_api::batch_compile::GraphWriteScope {
+            request_id: 1,
+            graph_name: "g",
+            tenant_scope: "t",
+            verified: &verified,
+            graph_version: 0,
+            placement_epoch: 0,
+            fencing_token: None,
+        }
+        .compile(
+            &batch_id,
+            vec![Method::AddNode {
+                node_id: "n".into(),
+                properties_msgpack: vec![0x80],
+            }],
+        )
+        .unwrap();
+        let envelope = build_envelope(
+            batch,
+            &batch_id,
+            EnvelopeContents {
+                batch_digest,
+                mutation,
+                blobs: BTreeMap::new(),
+                policies: Vec::new(),
+                lineage: Vec::new(),
+                mapping_revision: 1,
+                stream_object_id: source_marker_id("t", batch).unwrap(),
+                previous_stream_digest: previous,
+            },
+        )
+        .unwrap();
+        (batch_digest, envelope)
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R910.1
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    #[test]
+    fn stream_object_id_ignores_batch_and_source_name() {
+        let first = stream_batch(2, "server-a");
+        let second = stream_batch(3, "server-b");
+        let (first_digest, first_envelope) = stream_envelope(&first, None);
+        let (second_digest, second_envelope) = stream_envelope(&second, None);
+        assert_ne!(first_digest, second_digest, "the batches differ");
+        let object_id = &first_envelope.content_version.object_id;
+        assert_eq!(object_id, &second_envelope.content_version.object_id);
+        assert_eq!(object_id, &source_marker_id("t", &first).unwrap());
+        let hex = object_id.strip_prefix("source-live-set:").unwrap();
+        assert_eq!(hex.len(), 64);
+        assert!(hex.bytes().all(|byte| byte.is_ascii_hexdigit()));
+        assert!(!object_id.contains(&first_digest.to_hex()));
+        let mut other_stream = first.clone();
+        other_stream.provider_checkpoint.stream = ResourceId::new("other").unwrap();
+        assert_ne!(object_id, &source_marker_id("t", &other_stream).unwrap());
+        assert_ne!(object_id, &source_marker_id("t2", &first).unwrap());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R910.2
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    #[tokio::test]
+    async fn previous_digest_is_none_then_prior_batch_digest() {
+        let store = StreamVersionStore {
+            stored: std::sync::Mutex::new(None),
+        };
+        let first = stream_batch(2, "server");
+        let marker = source_marker_id("t", &first).unwrap();
+        let (_, probe) = stream_envelope(&first, None);
+        let none = stream_content_digest(&store, "g", &probe.mutation, &marker)
+            .await
+            .unwrap();
+        assert_eq!(none, None, "the first batch of a stream chains from none");
+        let (first_digest, first_envelope) = stream_envelope(&first, none);
+        assert_eq!(first_envelope.content_version.previous_digest, None);
+        *store.stored.lock().unwrap() = Some(first_envelope.content_version.clone());
+
+        let prior = stream_content_digest(&store, "g", &probe.mutation, &marker)
+            .await
+            .unwrap();
+        assert_eq!(prior.as_deref(), Some(first_digest.to_hex().as_str()));
+        let second = stream_batch(3, "server");
+        let (_, second_envelope) = stream_envelope(&second, prior);
+        assert_eq!(
+            second_envelope.content_version.previous_digest.as_deref(),
+            Some(first_digest.to_hex().as_str())
+        );
+        // A resubmitted batch has the same digest and the same envelope id.
+        let (again_digest, again) = stream_envelope(&first, None);
+        assert_eq!(again_digest, first_digest);
+        assert_eq!(again.envelope_id, first_envelope.envelope_id);
     }
 }

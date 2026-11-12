@@ -62,6 +62,7 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
         &[
             "SOURCE_",
             "CONNECTOR_SCHEMA_",
+            "STALE_CONTENT_VERSION",
             "STALE_MAPPING_",
             "UNKNOWN_MAPPING_",
             "UNKNOWN_RELATIONSHIP_",

@@ -459,6 +459,11 @@ pub struct SourceIngestionReceipt {
     pub tombstoned_count: u64,
     pub relationship_tombstoned_count: u64,
     pub committed_graph_version: u64,
+    /// The stream's content-version object id (the live-set marker id): every
+    /// batch to one stream advances this one object.
+    pub stream_object_id: String,
+    /// The batch digest of the prior batch on the stream, `None` for its first.
+    pub previous_content_digest: Option<Digest256>,
     pub receipt_digest: Digest256,
 }
 

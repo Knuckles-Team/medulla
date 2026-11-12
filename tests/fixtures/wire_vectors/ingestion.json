@@ -1073,6 +1073,7 @@
       "live_set_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "mappings": [],
       "mode": "full",
+      "previous_content_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "raw_admissions": [],
       "receipt_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "receipt_id": "",
@@ -1081,10 +1082,11 @@
       "relationship_raw_admissions": [],
       "relationship_tombstoned_count": 0,
       "relationship_tombstones": [],
+      "stream_object_id": "",
       "tombstoned_count": 0,
       "tombstones": []
     },
-    "sha256": "23c9bfb60ed9fd9f474346e2cb447987c8639246d908a504de52f5c8609b6321"
+    "sha256": "d44331593016322a5ed76607a13c920fca33c8ada71eaad6295fbb2d174d2932"
   },
   {
     "method": "SourceIngestStatus",

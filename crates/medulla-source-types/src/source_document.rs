@@ -227,6 +227,8 @@ mod tests {
             tombstoned_count: 0,
             relationship_tombstoned_count: 0,
             committed_graph_version: 9,
+            stream_object_id: "source-live-set:test".into(),
+            previous_content_digest: None,
             receipt_digest: digest(5),
         }
     }

@@ -1921,6 +1921,7 @@ medulla-server-api = { path = "crates/medulla-server-api", features = ["test-sup
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }
 medulla-store-apply = { path = "crates/medulla-store-apply", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
+medulla-source-types = { path = "crates/medulla-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
 medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }
 medulla-agent-types = { path = "crates/medulla-agent-types", features = ["test-support"] }
@@ -2036,6 +2037,11 @@ required-features = ["full"]
 # Execution-kernel latency budget (MEDULLA-FINANCE-PRIMITIVES-R613.6): a 1000-slice
 # schedule solve and a 1_000_000-bar regime fit through the signed dispatch entry,
 # gated by scripts/bench_gate.py.
+[[bench]]
+name = "r910_stream_content_version"
+path = "benches/r910_stream_content_version.rs"
+harness = false
+
 [[bench]]
 name = "r613_finance_primitives"
 path = "benches/r613_finance_primitives.rs"
