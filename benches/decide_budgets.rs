@@ -112,6 +112,9 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ThoughtSearch => "thought_search",
         QuestionKind::ComparativeAnalysisPlan => "comparative_analysis_plan",
         QuestionKind::ContextPackage => "context_package",
+        // Needs a published template and a typed question, so it has its own
+        // bench fixture, not the generic one `FAMILIES` is driven with.
+        QuestionKind::Topology => "topology",
     }
 }
 

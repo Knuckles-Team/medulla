@@ -37,6 +37,7 @@ impl DecisionFamily for ToolSubsetFamily {
                 reading: None,
                 seed: [0u8; 32],
                 harness_contrast: None,
+                topology: None,
             }),
             Err(detail) => Err(detail),
         })

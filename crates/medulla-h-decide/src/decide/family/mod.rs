@@ -36,6 +36,7 @@ mod template;
 mod template_choice;
 mod thought_search;
 mod tool_subset;
+mod topology;
 mod usage_guidance;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -148,6 +149,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         comparative_analysis_plan::ComparativeAnalysisPlanFamily;
     static CONTEXTPACKAGEFAMILY: context_package::ContextPackageFamily =
         context_package::ContextPackageFamily;
+    static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -179,6 +181,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ThoughtSearch => &THOUGHTSEARCHFAMILY,
         QuestionKind::ComparativeAnalysisPlan => &COMPARATIVEANALYSISPLANFAMILY,
         QuestionKind::ContextPackage => &CONTEXTPACKAGEFAMILY,
+        QuestionKind::Topology => &TOPOLOGYFAMILY,
     }
 }
 
@@ -220,6 +223,7 @@ mod tests {
             QuestionKind::ThoughtSearch,
             QuestionKind::ComparativeAnalysisPlan,
             QuestionKind::ContextPackage,
+            QuestionKind::Topology,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -251,7 +255,8 @@ mod tests {
             | QuestionKind::EditConcentration
             | QuestionKind::ThoughtSearch
             | QuestionKind::ComparativeAnalysisPlan
-            | QuestionKind::ContextPackage => true,
+            | QuestionKind::ContextPackage
+            | QuestionKind::Topology => true,
         };
         assert!(exhaustive);
         kinds
@@ -262,7 +267,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            30,
+            31,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

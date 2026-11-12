@@ -13,6 +13,7 @@ mod admissible;
 pub(super) mod admit;
 mod model;
 mod plan;
+pub(super) mod standalone;
 pub(crate) mod tables;
 pub(super) mod validate;
 
@@ -24,6 +25,7 @@ use medulla_agent_types::agent_topology::TopologyPolicy;
 use medulla_agent_types::agent_topology::TopologyRequirements;
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::DecisionInputs;
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_types::contract::BoundedVec;
 
@@ -64,7 +66,24 @@ pub(super) fn pose<'a>(
     let Some(requirements) = inputs.request.requirements.topology.as_ref() else {
         return Posed::Plain;
     };
-    let (Some(template), Some(read)) = (template, inputs.topology.as_ref()) else {
+    pose_for(
+        &inputs.policy,
+        requirements,
+        inputs.topology.as_ref(),
+        template,
+    )
+}
+
+/// Pose `requirements` to `template` under `decision_policy`, reading
+/// `read`. The one posing rule both the assembly and the standalone
+/// `Topology` question (MEDULLA-DECISION-ENGINE-R111.1) go through.
+pub(super) fn pose_for<'a>(
+    decision_policy: &DecisionPolicy,
+    requirements: &'a TopologyRequirements,
+    read: Option<&'a TopologyInputs>,
+    template: Option<&'a TemplateFacts>,
+) -> Posed<'a> {
+    let (Some(template), Some(read)) = (template, read) else {
         return Posed::Refused(infeasible(vec!["topology:template".to_string()]));
     };
     let Some(facts) = template.topology.as_ref() else {
@@ -73,15 +92,15 @@ pub(super) fn pose<'a>(
             template.graph_id
         )]));
     };
-    let policy = inputs
-        .policy
+    let policy = decision_policy
         .topology
         .clone()
         .unwrap_or_else(TopologyPolicy::engine_default);
     // The pinned policy's cap knobs only tighten what the topology policy and
     // the request already allow (MEDULLA-DECISION-ENGINE-R046.750).
-    let knob_caps =
-        medulla_decision_types::decision::knob_families::topology::caps_from_policy(&inputs.policy);
+    let knob_caps = medulla_decision_types::decision::knob_families::topology::caps_from_policy(
+        decision_policy,
+    );
     let caps = policy
         .caps
         .tightened_by(&knob_caps)

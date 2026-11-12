@@ -310,5 +310,6 @@ fn compute(
         reading: None,
         seed: [0u8; 32],
         harness_contrast: Some(decision),
+        topology: None,
     })
 }

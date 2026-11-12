@@ -90,7 +90,13 @@ async fn assemble_for(
         Stage::Entailment,
         FAMILY,
         tenant,
-        super::topology_read::read(state, graph, verified, &request, &templates),
+        super::topology_read::read(
+            state,
+            graph,
+            verified,
+            request.requirements.topology.as_ref(),
+            &templates,
+        ),
     )
     .await?;
     let mut inputs =

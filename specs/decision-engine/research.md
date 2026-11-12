@@ -56,3 +56,20 @@ admission therefore hold the plan to one set of caps. A breach after solving abs
 code, never a plan. The hot-path budget rides the existing `cargo xtask decide-budgets` check through
 `group_budgets`, not a second script; the admit group is `decide/topology_admit` so the served family group of
 R111.1 keeps the name `decide/topology`.
+
+## Standalone topology question (R111.1)
+
+`Decide` of kind `Topology` is the assembly's topology question asked of one template with no agent variables.
+`medulla_compute::assemble::decide_topology` shares the posing rule (`pose_for`), the rows (`Question::extend`), the
+solver and the cap admission with `AgentAssemble`, so the two cannot disagree on a plan. Decisions:
+
+- The question is one typed parameter, `topology`, naming one template. Choosing among templates stays with
+  `AgentAssemble`; a flat choice would otherwise duplicate its enumeration.
+- Schema entailments and capacity headroom are observations of the engine, not caller claims: the server fills
+  `TopologyQuestion::read` before deciding and refuses a caller-supplied value. The filled parameter is part of the
+  sealed inputs, so a replay reads the same facts.
+- The record is a claim, not a proof: the weakest premise is the publisher's topology claim (and the headroom is an
+  observation), exactly as for `AgentAssemble` (`assemble/tests/topology.rs`). The solver certificate is what makes the
+  resolution kind `Optimization`.
+- An unreadable schema or graph is `TOPOLOGY_SCHEMA_UNAVAILABLE`; a template that cannot answer is an abstention
+  with `AbstainReason::Infeasible` or `BudgetExhausted`.

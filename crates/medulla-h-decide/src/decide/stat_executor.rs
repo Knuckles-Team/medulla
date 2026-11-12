@@ -65,6 +65,16 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R803); `None` for every other kind.
     pub(super) harness_contrast:
         Option<medulla_decision_types::decision::harness_contrast::HarnessContrastDecision>,
+    /// The proven plan and premises a `Topology` question sealed
+    /// (MEDULLA-DECISION-ENGINE-R111.1); `None` for every other kind and for
+    /// a topology abstention.
+    pub(super) topology: Option<TopologyExecuted>,
+}
+
+/// A topology plan with the premises it rests on.
+pub(super) struct TopologyExecuted {
+    pub(super) plan: Box<medulla_agent_types::agent_topology::TopologyPlan>,
+    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
 }
 
 /// Read and validate the feature schema and head a decision pins.
@@ -192,6 +202,7 @@ pub(super) fn run_on_matrix(
                 reading: None,
                 seed,
                 harness_contrast: None,
+                topology: None,
             });
         }
         Some(Ok(evaluated)) => Some(evaluated),
@@ -213,6 +224,7 @@ pub(super) fn run_on_matrix(
         reading,
         seed,
         harness_contrast: None,
+                topology: None,
     })
 }
 
@@ -244,6 +256,7 @@ pub(super) fn execute(
                 reading: None,
                 seed: [0u8; 32],
                 harness_contrast: None,
+                topology: None,
             });
         }
     };

@@ -644,3 +644,239 @@ async fn decision_record_views_answer_only_from_visible_rows() {
     assert_eq!(uql_decisions(&h, "decider"), vec![logged.record_id.clone()]);
     assert!(uql_decisions(&h, "stranger").is_empty());
 }
+
+mod topology_question {
+    //! The standalone topology `Decide` question (MEDULLA-DECISION-ENGINE-R111.1).
+
+    use super::*;
+    use medulla_agent_types::agent_fixtures::topology::{
+        facts, requirements, FAN_OUT_JOIN, INDEPENDENT_SUBTASKS,
+    };
+    use medulla_agent_types::agent_topology::{
+        CapacityHeadroom, SchemaAuthority, TopologyAdmission, TopologyInputs, TopologyPlan,
+    };
+    use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    use medulla_decision_types::decision::statistical::topology::{
+        TopologyQuestion, TOPOLOGY_PARAM, TOPOLOGY_SCHEMA_UNAVAILABLE,
+    };
+    use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
+    use medulla_decision_types::decision::{AbstainReason, EvidenceClass, ResolutionKind};
+    use medulla_mutation_types::capacity_lease::CapacityResourceClass;
+    use medulla_persistence_records::agent_graph::tests::publish_topology_template;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+
+    fn read(available: u64) -> TopologyInputs {
+        TopologyInputs {
+            schema_digest: format!("sha256:{}", "ab".repeat(32)),
+            admissions: BoundedVec::new(vec![TopologyAdmission {
+                task_class: INDEPENDENT_SUBTASKS.into(),
+                topology_class: FAN_OUT_JOIN.into(),
+                admit_class: format!("{FAN_OUT_JOIN}Admission"),
+                source_key: "swarm-topology".into(),
+                authority: SchemaAuthority::Admin,
+                axioms: BoundedVec::default(),
+            }])
+            .unwrap(),
+            verify_required_by: BoundedVec::default(),
+            headroom: BoundedVec::new(vec![CapacityHeadroom {
+                cell_id: "cell-llm".into(),
+                class: CapacityResourceClass::LlmGenerator,
+                available,
+                epoch: 1,
+            }])
+            .unwrap(),
+        }
+    }
+
+    fn request(
+        schema: &ComponentDependency,
+        question: TopologyQuestion,
+        tenant: &str,
+    ) -> DecideRequest {
+        let option = DeclaredOption {
+            option_id: question.template.graph_id.clone(),
+            classification: BoundedVec::default(),
+            numbers: BoundedVec::default(),
+            texts: BoundedVec::default(),
+        };
+        DecideRequest {
+            tenant_id: tenant.to_string(),
+            question: StatisticalQuestion {
+                question_id: "swarm.topology".to_string(),
+                kind: QuestionKind::Topology,
+                safety: QuestionSafety::Ordinary,
+            },
+            candidates: CandidateSource::Declared {
+                options: BoundedVec::new(vec![option]).unwrap(),
+            },
+            feature_schema: schema.clone(),
+            head: None,
+            policy: DecisionPolicyRef::Default,
+            params: BoundedVec::new(vec![TypedParam {
+                name: TOPOLOGY_PARAM.to_string(),
+                value: TypedValue::Topology(Box::new(question)),
+            }])
+            .unwrap(),
+            max_records: None,
+            belief_as_of: BoundedVec::default(),
+        }
+    }
+
+    fn decide(h: &Harness, request: &DecideRequest) -> Result<StatisticalDecisionRecord, String> {
+        let ctx = crate::decide::stat_executor::ExecutionContext {
+            store: h.store.as_ref(),
+            tenant_id: TENANT,
+            now_ms: 1_000,
+            server_secret: b"decide-stat-test-secret",
+        };
+        crate::decide::stat_decide::decide_blocking(
+            &ctx,
+            request,
+            None,
+            "decider".to_string(),
+            std::time::Instant::now(),
+        )
+        .map(|batch| batch.records.as_slice()[0].clone())
+    }
+
+    fn plan_of(record: &StatisticalDecisionRecord) -> TopologyPlan {
+        match record.answer.as_ref() {
+            Some(FamilyAnswer::Topology(plan)) => (**plan).clone(),
+            other => panic!("a topology answer, got {other:?}"),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R111.1
+    #[tokio::test]
+    async fn a_standalone_topology_decide_question_returns_a_typed_decision_record() {
+        let h = Harness::new().await;
+        let mut topology = facts();
+        let mut slots = topology.slots.as_slice().to_vec();
+        slots[0].node_id = "research".into();
+        slots[1].node_id = "write".into();
+        topology.slots = BoundedVec::new(slots).unwrap();
+        let template = publish_topology_template(&h.store, TENANT, "swarm-template", topology);
+        // The seeded fixtures own the low nonces; the schema pin takes a fresh one.
+        h.nonce.set(60);
+        let schema_pin = h
+            .publish_test_component(
+                "schema-topology",
+                AgentComponentKind::FeatureSchema,
+                "topology question",
+                Some(&score_schema()),
+                None,
+            )
+            .unwrap();
+        let ask = |requirements, read: Option<TopologyInputs>| TopologyQuestion {
+            graph: "__commons__".into(),
+            template: template.clone(),
+            requirements,
+            read,
+        };
+
+        // Three subtasks on a roomy cell: a proven plan, sealed in the record.
+        let record = decide(
+            &h,
+            &request(&schema_pin, ask(requirements(3), Some(read(8))), TENANT),
+        )
+        .expect("the topology question is answered");
+        let plan = plan_of(&record);
+        let widths: Vec<u8> = plan.slots.iter().map(|slot| slot.width).collect();
+        assert_eq!(widths, vec![1, 3], "the fan-out slot is sized to demand");
+        assert_eq!(record.resolution_kind, ResolutionKind::Optimization);
+        // The weakest premise is the publisher's topology claim, so the record is a claim.
+        assert_eq!(record.evidence_class, EvidenceClass::Claim);
+        let facts_of: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+        for expected in [
+            "topology",
+            "headroom:llm_generator",
+            "topology_cap:max_width=8",
+            "topology_cap:max_depth=2",
+            "topology_cap:max_rounds=4",
+        ] {
+            assert!(facts_of.contains(&expected), "{expected} in {facts_of:?}");
+        }
+        assert!(facts_of.iter().any(|f| f.starts_with("plan_digest:")));
+        assert!(
+            plan.lease.per_cell.iter().any(|cell| cell.amount > 0),
+            "the plan names the lease it would take, and takes none"
+        );
+        let again = decide(
+            &h,
+            &request(&schema_pin, ask(requirements(3), Some(read(8))), TENANT),
+        )
+        .unwrap();
+        assert_eq!(record.record_digest, again.record_digest, "replays exactly");
+
+        // Headroom below demand abstains naming the lease row, never a plan.
+        let starved = decide(
+            &h,
+            &request(&schema_pin, ask(requirements(3), Some(read(1))), TENANT),
+        )
+        .unwrap();
+        assert_eq!(starved.resolution_kind, ResolutionKind::Abstention);
+        assert!(starved.answer.is_none());
+        let StatisticalOutcome::Abstained { reasons } = &starved.outcome else {
+            panic!("an abstention, got {:?}", starved.outcome);
+        };
+        assert!(
+            reasons.iter().any(|reason| matches!(
+                reason,
+                AbstainReason::Infeasible { constraints }
+                    if constraints.iter().any(|label| label.starts_with("lease:cell-llm"))
+            )),
+            "{reasons:?}"
+        );
+
+        // A missing schema digest is refused by its code.
+        let mut unread = read(8);
+        unread.schema_digest = String::new();
+        let refused = decide(
+            &h,
+            &request(&schema_pin, ask(requirements(3), Some(unread)), TENANT),
+        )
+        .unwrap_err();
+        assert!(
+            refused.starts_with(TOPOLOGY_SCHEMA_UNAVAILABLE),
+            "{refused}"
+        );
+
+        // The engine fills the read: a caller-supplied one is refused at the served door,
+        // and a graph that cannot be read is TOPOLOGY_SCHEMA_UNAVAILABLE.
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+        let supplied = request(&schema_pin, ask(requirements(3), Some(read(8))), TENANT);
+        let response =
+            crate::decide::stat_decide::handle_decide(&h.state, 1, &verified, supplied).await;
+        assert!(
+            response
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("filled by the engine")),
+            "{response:?}"
+        );
+        let missing_graph = request(&schema_pin, ask(requirements(3), None), TENANT);
+        let response =
+            crate::decide::stat_decide::handle_decide(&h.state, 2, &verified, missing_graph).await;
+        assert!(
+            response
+                .error
+                .as_deref()
+                .is_some_and(|error| error.starts_with(TOPOLOGY_SCHEMA_UNAVAILABLE)),
+            "{response:?}"
+        );
+
+        // Cross-tenant negative: another tenant's caller is refused before anything is read.
+        let stranger =
+            VerifiedRequestContext::verified_for_test_in_tenant("decider", "tenant-other");
+        let foreign = request(&schema_pin, ask(requirements(3), None), TENANT);
+        let response =
+            crate::decide::stat_decide::handle_decide(&h.state, 3, &stranger, foreign).await;
+        assert!(
+            response
+                .error
+                .as_deref()
+                .is_some_and(|error| error.starts_with("ACCESS_DENIED")),
+            "{response:?}"
+        );
+    }
+}

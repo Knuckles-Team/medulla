@@ -98,6 +98,20 @@ async fn serve(
         let mut guard = state.write().await;
         (guard.ensure_agent_library()?, guard.auth_secret.clone())
     };
+    // A `topology` question reads its schema entailments and capacity headroom
+    // here, where the graph and the capacity cells are reachable, and records
+    // them in its own parameter (MEDULLA-DECISION-ENGINE-R111.1).
+    let request = if request.question.kind == QuestionKind::Topology {
+        telemetry::stage_async(
+            telemetry::Stage::Entailment,
+            &family,
+            verified.tenant(),
+            super::stat_topology::with_read(state, store.as_ref(), verified, request),
+        )
+        .await?
+    } else {
+        request
+    };
     // A `harness_contrast` question declares its candidates but still reads
     // its evidence (held versions, probe runs, stored contrasts) from the
     // graph named by its `graph` param, under the same RLS filter.
@@ -554,6 +568,9 @@ fn seal(
     if let Some(plan) = &task_plan {
         premise_list.extend(super::stat_task_plan::premises(plan));
     }
+    if let Some(topology) = &executed.topology {
+        premise_list.extend(topology.premises.iter().cloned());
+    }
     premise_list.extend(sealing.registry.premises(sealing.request));
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
@@ -573,6 +590,8 @@ fn seal(
         inputs_digest,
         resolution_kind: if task_plan.is_some() {
             ResolutionKind::Constraint
+        } else if executed.topology.is_some() {
+            ResolutionKind::Optimization
         } else {
             resolution(&outcome)
         },
@@ -581,11 +600,19 @@ fn seal(
         premises: BoundedVec::new(premise_list)
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
         outcome,
-        answer: task_plan.map(|plan| {
-            medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
-                Box::new(plan),
-            )
-        }),
+        answer: task_plan
+            .map(|plan| {
+                medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
+                    Box::new(plan),
+                )
+            })
+            .or_else(|| {
+                executed.topology.as_ref().map(|topology| {
+                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::Topology(
+                        topology.plan.clone(),
+                    )
+                })
+            }),
         calibration: executed.ladder.calibration,
         explanation: recorded_explanation(sealing.pinned, executed)?,
         audit: executed.ladder.audit,

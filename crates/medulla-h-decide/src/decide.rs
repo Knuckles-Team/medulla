@@ -83,6 +83,8 @@ mod stat_task_plan;
 #[cfg(feature = "decide")]
 mod stat_tool_subset;
 #[cfg(feature = "decide")]
+mod stat_topology;
+#[cfg(feature = "decide")]
 mod stat_vectors;
 // EH-528: walk-forward replay evaluation (its validation kernels are finance's).
 #[cfg(all(feature = "decide", feature = "finance"))]

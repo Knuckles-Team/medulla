@@ -32,6 +32,7 @@ pub mod retrieval_pointer;
 pub mod retrieval_refresh;
 pub mod scorer;
 pub mod tool_subset;
+pub mod topology;
 pub mod writeback;
 
 use serde::{Deserialize, Serialize};
@@ -149,6 +150,10 @@ pub enum QuestionKind {
     /// A context package under token, money and latency ceilings
     /// (MEDULLA-DECISION-ENGINE-R137.7). See `decision::context_package`.
     ContextPackage,
+    /// The swarm topology of one published graph template, asked on its own
+    /// (MEDULLA-DECISION-ENGINE-R111.1). Evaluate-only: it takes no capacity lease.
+    /// See `statistical::topology`.
+    Topology,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -217,6 +222,8 @@ pub enum TypedValue {
     TaskPlan(Box<super::task_plan::TaskPlanProposal>),
     /// A context-package request (MEDULLA-DECISION-ENGINE-R137.7).
     ContextPackages(Box<super::context_package::ContextPackageRequest>),
+    /// A standalone topology question (MEDULLA-DECISION-ENGINE-R111.1).
+    Topology(Box<topology::TopologyQuestion>),
 }
 
 /// One named parameter of a question.

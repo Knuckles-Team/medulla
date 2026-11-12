@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use medulla_agent_types::agent_topology::TopologyInputs;
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_agent_types::agent_topology::TopologyRequirements;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_types::contract::BoundedVec;
 
@@ -45,10 +45,10 @@ pub(super) async fn read(
     state: &SharedState,
     graph: &str,
     verified: &VerifiedRequestContext,
-    request: &AssemblyRequest,
+    asked: Option<&TopologyRequirements>,
     templates: &[TemplateFacts],
 ) -> Result<Option<TopologyInputs>, String> {
-    let Some(asked) = request.requirements.topology.as_ref() else {
+    let Some(asked) = asked else {
         return Ok(None);
     };
     let core = graph_core(state, graph, verified).await?;

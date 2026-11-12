@@ -738,3 +738,37 @@ fn a_graph_pinning_a_component_under_the_wrong_kind_is_refused() {
         .expect_err("a pin whose kind does not match the record must be refused");
     assert!(error.contains("but it is a model_profile"), "got: {error}");
 }
+
+/// Publish the fixture shape (research, write, done) as a template carrying
+/// `topology`, and name it the way a `Decide` topology question does
+/// (MEDULLA-DECISION-ENGINE-R111.1).
+pub fn publish_topology_template(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    graph_id: &str,
+    topology: medulla_agent_types::agent_topology::TopologyFacts,
+) -> medulla_agent_types::delegation::AgentGraphEntryRef {
+    let mut graph = draft(store, tenant_id, graph_id);
+    graph.topology = Some(topology);
+    let (actor_scope, purpose_id, policy_digest) = (
+        graph.actor_scope.clone(),
+        graph.purpose_id.clone(),
+        graph.policy_digest.clone(),
+    );
+    try_publish(store, "key-topology-template", 100, 0, graph).expect("the template publishes");
+    let entry = store
+        .graph_revisions(tenant_id, graph_id)
+        .expect("revisions read")
+        .pop()
+        .expect("one revision");
+    medulla_agent_types::delegation::AgentGraphEntryRef {
+        tenant_id: tenant_id.to_string(),
+        graph_id: graph_id.to_string(),
+        entry_revision: entry.entry_revision,
+        definition_digest: entry.definition_digest,
+        actor_scope,
+        purpose_id,
+        policy_digest,
+        composed_work_ceiling: entry.composed_work_ceiling,
+    }
+}

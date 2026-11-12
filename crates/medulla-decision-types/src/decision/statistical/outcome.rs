@@ -141,6 +141,8 @@ pub struct AuditDraw {
 pub enum FamilyAnswer {
     /// The evaluate-only explicit task DAG of the `task_plan` family.
     TaskPlan(Box<crate::decision::task_plan::TaskPlan>),
+    /// The proven swarm topology of the `topology` family (MEDULLA-DECISION-ENGINE-R111.1).
+    Topology(Box<medulla_agent_types::agent_topology::TopologyPlan>),
 }
 
 impl FamilyAnswer {
@@ -148,6 +150,15 @@ impl FamilyAnswer {
     pub fn task_plan(&self) -> Option<&crate::decision::task_plan::TaskPlan> {
         match self {
             Self::TaskPlan(plan) => Some(plan),
+            Self::Topology(_) => None,
+        }
+    }
+
+    /// The topology plan this answer carries.
+    pub fn topology_plan(&self) -> Option<&medulla_agent_types::agent_topology::TopologyPlan> {
+        match self {
+            Self::Topology(plan) => Some(plan),
+            Self::TaskPlan(_) => None,
         }
     }
 }
