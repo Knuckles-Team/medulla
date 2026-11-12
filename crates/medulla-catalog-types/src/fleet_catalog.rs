@@ -24,7 +24,7 @@ pub mod request;
 pub mod row;
 pub mod vocabulary;
 
-pub use rendered::RenderedSkillPackage;
+pub use rendered::{RenderedSkillPackage, RENDERED_SKILL_PACKAGE_SCHEMA_VERSION};
 pub use request::{
     DiscoveryCounts, FleetCatalogCursor, FleetCatalogListRequest, FleetCatalogLookupRequest,
     FleetDiscoveryRecordRequest, FleetOverrideClearRequest, FleetOverrideSetRequest,
