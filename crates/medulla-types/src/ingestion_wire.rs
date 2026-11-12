@@ -336,4 +336,8 @@ pub struct DiscoverHit {
     pub node_type: String,
     /// Combined keyword + semantic score.
     pub score: f32,
+    /// Seed-to-hit node ids when the hit was reached by neighbour expansion
+    /// (MEDULLA-FEDERATED-QUERY-R090.8); empty for a fused seed hit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<String>,
 }

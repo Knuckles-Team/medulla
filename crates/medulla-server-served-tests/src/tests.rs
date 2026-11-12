@@ -3299,6 +3299,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 query_embedding: vec![1.0, 0.0, 0.0],
                 k: 3,
                 quality_policy_ref: None,
+                hops: 0,
             },
         ),
     )
@@ -3330,6 +3331,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 query_embedding: vec![],
                 k: 5,
                 quality_policy_ref: None,
+                hops: 0,
             },
         ),
     )

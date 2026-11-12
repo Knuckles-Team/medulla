@@ -374,6 +374,7 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 query_embedding: vec![0.0, 1.0],
                 k: 2,
                 quality_policy_ref: None,
+                hops: 0,
             },
         ),
     ))
@@ -397,6 +398,7 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 query_embedding: vec![0.0, 1.0],
                 k: 2,
                 quality_policy_ref: None,
+                hops: 0,
             },
         ),
     ))

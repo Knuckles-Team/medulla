@@ -90,6 +90,7 @@ fn discover(
     keywords: &[String],
     query_embedding: &[f32],
     k: usize,
+    hops: u32,
     req_id: u64,
 ) -> Response {
     // De-duplicate + lowercase the keyword set (order-independent).
@@ -153,16 +154,24 @@ fn discover(
     });
     ranked.truncate(k);
 
-    let results: Vec<medulla_types::ingestion_wire::DiscoverHit> = ranked
+    // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
+    let planned = super::discover_plan::plan_discover(core, ranked, hops, k);
+
+    let results: Vec<medulla_types::ingestion_wire::DiscoverHit> = planned
         .into_iter()
-        .map(|(id, score)| {
-            let (name, description, node_type) = node_text(core, &id);
+        .map(|hit| {
+            let (name, description, node_type) = node_text(core, &hit.id);
             medulla_types::ingestion_wire::DiscoverHit {
-                id,
+                path: if hit.path.len() > 1 {
+                    hit.path
+                } else {
+                    Vec::new()
+                },
+                id: hit.id,
                 name,
                 description,
                 node_type,
-                score,
+                score: hit.score,
             }
         })
         .collect();
@@ -247,11 +256,13 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             query_embedding,
             k,
             quality_policy_ref,
+            hops,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(ctx.state, tenant, served, query_embedding).await,
             k,
             quality_policy_ref,
+            hops,
         },
         other => other,
     }
@@ -297,8 +308,9 @@ pub(super) async fn try_handle_semantic_compute(
             keywords,
             query_embedding,
             k,
+            hops,
             ..
-        } => discover(core, &keywords, &query_embedding, k, req_id),
+        } => discover(core, &keywords, &query_embedding, k, hops, req_id),
         // CONCEPT:MEDULLA-KG.compute.l2-normalize-batch-vectors — kernel-backed in-engine batch L2-normalize (compute-near-data).
         // The `numeric` feature links the pure medulla-numeric kernel (faer/ndarray, no Python-extension FFI);
         // a no-numeric build (e.g. `pi`) has no medulla-numeric, so the op reports it's absent.

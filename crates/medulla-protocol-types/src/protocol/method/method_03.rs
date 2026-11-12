@@ -377,6 +377,11 @@ $($variants)*
         /// served by the later R089 children.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         quality_policy_ref: Option<String>,
+        /// Neighbour-expansion depth (MEDULLA-FEDERATED-QUERY-R090.8): `0`
+        /// returns the fused hits only; `n > 0` adds a breadth-first walk of
+        /// `n` hops from the top-`k` hits.
+        #[serde(default)]
+        hops: u32,
     },
 
     /// CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free lexical classification gate: which
