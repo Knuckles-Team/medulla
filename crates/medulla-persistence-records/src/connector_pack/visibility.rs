@@ -36,6 +36,14 @@ pub(crate) fn pack_connector(component_id: &str) -> Option<&str> {
 /// encoded head row. A component no pack owns is always visible; a pack
 /// component with no head is not (only the import path writes `mcp:` ids, so
 /// it can only be a row that predates its head).
+///
+/// A head that no longer decodes (written under a retired row shape) is also
+/// not visible: the pack cannot be shown as usable until a fresh import
+/// replaces the head (MEDULLA-TYPED-PACKS-R041.2). Visibility is a question
+/// about ONE pack's components, so one connector's undecodable head must not
+/// fail a component search or a pin over every other component; the
+/// connector's own `Status` read still refuses with the typed
+/// `PACK_RECORD_UNDECODABLE` code, which is where an operator learns of it.
 pub(crate) fn pack_component_visible(
     component_id: &str,
     head: impl FnOnce(&str) -> Result<Option<Vec<u8>>, String>,
@@ -46,8 +54,11 @@ pub(crate) fn pack_component_visible(
     let Some(bytes) = head(connector)? else {
         return Ok(false);
     };
-    let row: ConnectorPackHeadRow =
-        super::undecodable::decode_stored(&bytes, "connector pack head")?;
+    let Ok(row) =
+        super::undecodable::decode_stored::<ConnectorPackHeadRow>(&bytes, "connector pack head")
+    else {
+        return Ok(false);
+    };
     Ok(row.head.visible_record_id.as_deref() == Some(row.head.record_id.as_str()))
 }
 
@@ -66,5 +77,20 @@ pub mod tests {
     fn a_native_component_is_always_visible_and_a_headless_pack_one_is_not() {
         assert!(pack_component_visible("prompt:native", |_| unreachable!()).unwrap());
         assert!(!pack_component_visible("mcp:demo/tool/a", |_| Ok(None)).unwrap());
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R041.1
+    #[test]
+    fn a_pack_component_with_an_undecodable_head_is_not_visible_and_does_not_fail() {
+        let foreign = rmp_serde::to_vec_named(&std::collections::BTreeMap::from([(
+            "retired_shape_field",
+            1u8,
+        )]))
+        .unwrap();
+        let visible =
+            pack_component_visible("mcp:demo/tool/a", |_| Ok(Some(foreign.clone()))).unwrap();
+        assert!(!visible);
+        // A native component is unaffected and never consults the head.
+        assert!(pack_component_visible("prompt:native", |_| unreachable!()).unwrap());
     }
 }
