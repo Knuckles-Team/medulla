@@ -1,12 +1,64 @@
 package epgthin
 
 import (
+	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+// spec: MEDULLA-CONTRACT-R004
+// TestMethodBodyVectors replays every committed vector through the embedded
+// engine codec: the exact request frame a connector sends, decoded and
+// re-encoded by medulla_method_codec.wasm, must byte-match the Rust body.
+func TestMethodBodyVectors(t *testing.T) {
+	data, err := os.ReadFile("../../tests/fixtures/method_body_vectors.json")
+	if err != nil {
+		t.Fatalf("read the method-body vectors: %v", err)
+	}
+	var file struct {
+		Codec   string `json:"codec"`
+		Vectors []struct {
+			Name  string `json:"name"`
+			Frame string `json:"frame"`
+			Body  string `json:"body"`
+		} `json:"vectors"`
+	}
+	if err := json.Unmarshal(data, &file); err != nil {
+		t.Fatalf("parse the method-body vectors: %v", err)
+	}
+	if file.Codec != methodBodyCodec {
+		t.Fatalf("vector file names codec %q, want %q", file.Codec, methodBodyCodec)
+	}
+	if len(file.Vectors) == 0 {
+		t.Fatal("the method-body vector file is empty")
+	}
+	codec, err := instantiateMethodCodec(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, vector := range file.Vectors {
+		frame, err := hex.DecodeString(vector.Frame)
+		if err != nil {
+			t.Fatalf("vector %s: bad frame hex: %v", vector.Name, err)
+		}
+		body, err := hex.DecodeString(vector.Body)
+		if err != nil {
+			t.Fatalf("vector %s: bad body hex: %v", vector.Name, err)
+		}
+		got, err := codec.canonicalBody(frame)
+		if err != nil {
+			t.Fatalf("vector %s: %v", vector.Name, err)
+		}
+		if !bytes.Equal(got, body) {
+			t.Fatalf("vector %s: signed body %x, want %x", vector.Name, got, body)
+		}
+	}
+}
 
 func testContext() *RequestContextClaims {
 	return &RequestContextClaims{

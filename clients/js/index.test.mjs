@@ -339,3 +339,26 @@ test("invalid compact Raw results preserve decoder errors after correlation remo
   assert.throws(() => connection._onData(responseFrame({ id: 1, result: Uint8Array.of(0xc1) })));
   assert.equal(connection._pending.has(1), false);
 });
+
+// spec: MEDULLA-CONTRACT-R004
+// Every committed vector must sign to the engine's own canonical body: the
+// codec the engine runs (medulla_method_codec.wasm) is the only signer.
+test("method body vectors", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { canonicalMethodBody } = await import("./codec.mjs");
+  const file = JSON.parse(
+    readFileSync(
+      new URL("../../tests/fixtures/method_body_vectors.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.equal(file.codec, "eg/method-body/v1");
+  assert.ok(file.vectors.length > 0, "the method-body vector file is empty");
+  for (const vector of file.vectors) {
+    assert.deepEqual(
+      Buffer.from(canonicalMethodBody(vector.method, vector.params)),
+      Buffer.from(vector.body, "hex"),
+      `vector ${vector.name} signs to a different body than the Rust codec`,
+    );
+  }
+});
