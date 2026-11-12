@@ -20,6 +20,10 @@ use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_topology::{
+    LeasePlan, SlotPlan, StopRule, TopologyPlan, TopologyPolicy,
+};
+use medulla_compute::assemble::admit_topology;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
@@ -27,6 +31,7 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
 use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{publish_route_schema, request, Harness, TENANT};
+use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -362,6 +367,66 @@ fn bench_task_plan_bounds(
     );
 }
 
+/// The widest bounded plan: six slots whose widths total 64 agents, at the
+/// round cap, with every slot declaring tokens.
+fn widest_plan() -> TopologyPlan {
+    let widths = [16u8, 16, 16, 8, 4, 4];
+    let slots = widths
+        .iter()
+        .enumerate()
+        .map(|(index, width)| SlotPlan {
+            node_id: format!("slot{index}"),
+            width: *width,
+            rounds: 8,
+            tokens: Some(1_000),
+        })
+        .collect();
+    TopologyPlan {
+        class_iri: "bench:widest".to_string(),
+        slots: BoundedVec::new(slots).unwrap(),
+        stop: StopRule::MaxRounds { n: 8 },
+        lease: LeasePlan {
+            per_cell: BoundedVec::default(),
+            priority: LeasePriority::Orchestration,
+        },
+        allowances: BoundedVec::default(),
+        makespan_ms: None,
+    }
+}
+
+/// The `decide/topology_admit` group (MEDULLA-DECISION-ENGINE-R046.751):
+/// `admit_topology` alone over the widest bounded plan, the 64-agent plan
+/// held to the engine caps. Its budget is `group_budgets` in
+/// `benches/baselines/decide.json`: p50 at most 0.2 ms, p99 at most 0.8 ms.
+fn bench_topology_admit(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
+    let plan = widest_plan();
+    let caps = TopologyPolicy::engine_default().caps;
+    let admit = || black_box(admit_topology(black_box(&plan), 1, black_box(&caps)));
+    assert!(admit().is_ok(), "topology bench fixture must be admitted");
+    let group_name = "decide/topology_admit".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("decide_topology_admit", |b| b.iter(admit));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES * 10)
+        .map(|_| {
+            let start = Instant::now();
+            admit();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -394,6 +459,7 @@ fn bench_decide(c: &mut Criterion) {
     }
     bench_claims(c, &rt, &mut report);
     bench_task_plan_bounds(c, &rt, &mut report);
+    bench_topology_admit(c, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

@@ -188,6 +188,10 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "lifecycle",
             medulla_source_types::lifecycle::REFUSALS.to_vec(),
         ),
+        (
+            "topology_enforcement",
+            medulla_agent_types::agent_topology::enforcement::REFUSALS.to_vec(),
+        ),
     ]
 }
 

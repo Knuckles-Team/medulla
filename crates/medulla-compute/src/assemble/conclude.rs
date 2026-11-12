@@ -18,6 +18,7 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
+use super::admit_topology;
 use super::eliminate::Screened;
 use super::model::Building;
 use super::search::{search, Answer, SolveContext};
@@ -253,8 +254,32 @@ fn solved(
     premises.extend(uniqueness.premises.iter().cloned());
     let topology = question.map(|question| {
         let offset = context.built.vars.len();
-        Box::new(question.plan(&context.built.shape, &answer.selected, offset))
+        let plan = question.plan(&context.built.shape, &answer.selected, offset);
+        (plan, question.facts.depth, question.caps)
     });
+    let topology = match topology {
+        None => None,
+        Some((plan, depth, caps)) => match admit_topology(&plan, depth, &caps) {
+            Ok(record) => {
+                premises.extend(topology::admit::premises(
+                    &record,
+                    &context.inputs.policy_digest,
+                ));
+                Some(Box::new(plan))
+            }
+            // The plan breached a cap: the record names the refusal code, not a plan.
+            Err(refusal) => {
+                let label = refusal.code().as_str().to_string();
+                return abstained(
+                    required,
+                    eliminated,
+                    vec![AbstainReason::Infeasible {
+                        constraints: BoundedVec::new(vec![label]).expect("one label fits"),
+                    }],
+                );
+            }
+        },
+    };
     let edge_classes = derivations
         .iter()
         .flat_map(|d| d.chain.iter().map(|edge| edge.class));

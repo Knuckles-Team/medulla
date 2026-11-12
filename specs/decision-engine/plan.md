@@ -144,3 +144,10 @@ Order: R829.1, R829.2, R829.3.
   `crates/medulla-h-decide/src/decide/loops.rs` is the single writer and holds each loop as a loop-chart
   instance plus a `loop_record` instance. Decisions: `research.md`, "Improvement loops".
 - Enrichment behaviours are pure functions in `crates/medulla-enrich/src/semantic.rs`.
+
+## Topology admission (R046.750, R046.751)
+
+`assemble::topology::admit::admit_topology(plan, depth, caps)` runs in `conclude::solved` on the sealed plan, adds
+`topology_cap:<name>=<value>` and `plan_digest:<digest>` premises, and abstains with the refusal code on a breach.
+Caps = topology policy caps, tightened by the pinned cap knobs, tightened by the request. Bench group
+`decide/topology_admit` with a `group_budgets` entry (p50 0.2 ms, p99 0.8 ms).

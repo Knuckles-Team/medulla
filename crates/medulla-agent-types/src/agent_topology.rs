@@ -16,6 +16,7 @@
 //! caps (`POLICY_LOOSENING` otherwise), exactly like the solver budget.
 
 pub mod capacity_commit;
+pub mod enforcement;
 pub mod plan;
 
 use serde::{Deserialize, Serialize};
@@ -25,6 +26,7 @@ use medulla_mutation_types::{
 };
 use medulla_types::contract::BoundedVec;
 
+pub use enforcement::{EnforcementRecord, TopologyRefusal};
 pub use plan::{
     CapacityHeadroom, CellLease, LeasePlan, SchemaAuthority, SlotPlan, SubagentAllowance,
     SubagentFallback, TopologyAdmission, TopologyPlan,

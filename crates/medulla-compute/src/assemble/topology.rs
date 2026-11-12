@@ -10,6 +10,7 @@
 //! the winner's plan is read back from the certificate's selection.
 
 mod admissible;
+pub(super) mod admit;
 mod model;
 mod plan;
 pub(crate) mod tables;
@@ -77,7 +78,14 @@ pub(super) fn pose<'a>(
         .topology
         .clone()
         .unwrap_or_else(TopologyPolicy::engine_default);
-    let caps = policy.caps.tightened_by(&requirements.caps);
+    // The pinned policy's cap knobs only tighten what the topology policy and
+    // the request already allow (MEDULLA-DECISION-ENGINE-R046.750).
+    let knob_caps =
+        medulla_decision_types::decision::knob_families::topology::caps_from_policy(&inputs.policy);
+    let caps = policy
+        .caps
+        .tightened_by(&knob_caps)
+        .tightened_by(&requirements.caps);
     let question = Question {
         requirements,
         read,

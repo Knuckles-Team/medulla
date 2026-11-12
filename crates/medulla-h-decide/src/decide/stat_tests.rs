@@ -1061,6 +1061,9 @@ mod harness_contrast_tests;
 
 mod knob_tests;
 
+#[cfg(feature = "redb")]
+mod topology_tests;
+
 #[cfg(feature = "query")]
 mod retrieval_tests;
 

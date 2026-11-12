@@ -46,3 +46,13 @@ Per-kind behaviour that a stage needs is a `DecisionFamily` hook
 
 - A primitive contract is read from component attributes, not a new entry field: the entry already carries a closed attribute map, versioning and a definition digest, so the contract is bound by the same digest and a component that declares none stays legal (`primitive: None` skips the checks).
 - A graph belief slice appends `BELIEF AS OF t` to the candidate plan instead of leading with it: over empty input the operator yields every live row, which could add options; appended, it only narrows the candidate rows. A slice with any candidate absent at `t` is an unknown fact, never a smaller option set.
+
+## Topology admission (R046.750, R046.751)
+
+The plan carries no depth, so `admit_topology` takes the template's depth beside the plan. The cap knobs
+(`topology.max_width`, `topology.max_depth`, `topology.max_rounds`) live in the decision knob registry
+(`knob_families/topology.rs`) and only tighten the topology policy's and the request's caps; the solver and the
+admission therefore hold the plan to one set of caps. A breach after solving abstains the record with the refusal
+code, never a plan. The hot-path budget rides the existing `cargo xtask decide-budgets` check through
+`group_budgets`, not a second script; the admit group is `decide/topology_admit` so the served family group of
+R111.1 keeps the name `decide/topology`.

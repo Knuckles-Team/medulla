@@ -24,9 +24,13 @@ use medulla_decision_types::decision::TemplateFacts;
 use medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
 use medulla_mutation_types::capacity_lease::CapacityResourceClass;
 
+use super::super::admit_topology;
 use super::super::{assemble, inputs as build_inputs, replay_check, AssembleError, Assembly};
 use super::fixture::*;
 use super::template::{reference, template};
+use medulla_agent_types::agent_topology::enforcement::plan_digest;
+use medulla_agent_types::agent_topology::TopologyCaps;
+use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 
 fn fan(topology: TopologyFacts) -> TemplateFacts {
     let mut fan = template("fan", &["lead", "worker"]);
@@ -296,6 +300,100 @@ fn the_brute_force_oracle_agrees_with_every_plan() {
             "case {subtasks}/{per_agent}/{available}/{deadline:?}"
         );
     }
+}
+
+fn caps(width: u8, depth: u8, rounds: u8, tokens: Option<u64>) -> TopologyCaps {
+    TopologyCaps {
+        max_width: width,
+        max_depth: depth,
+        max_rounds: rounds,
+        max_tokens: tokens,
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R046.750
+#[test]
+fn admit_records_the_caps_it_held_the_plan_to() {
+    let assembly = decide(requirements(4), read(10, admitted()));
+    let plan = plan(&assembly);
+    let total: u64 = plan.slots.iter().filter_map(|slot| slot.tokens).sum();
+    assert!(total > 0);
+    let record = admit_topology(plan, 1, &caps(4, 1, 1, Some(total))).expect("exactly at the caps");
+    assert_eq!(
+        (record.width_cap, record.depth_cap, record.rounds_cap),
+        (4, 1, 1)
+    );
+    assert_eq!(record.tokens_cap, Some(total));
+    assert_eq!(record.plan_digest, plan_digest(plan));
+    assert_eq!(record.cap_facts().len(), 4);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R046.750
+#[test]
+fn admit_refuses_one_over_each_cap_with_its_code() {
+    let assembly = decide(requirements(4), read(10, admitted()));
+    let plan = plan(&assembly);
+    let wide = admit_topology(plan, 1, &caps(3, 8, 8, None)).expect_err("width 4 over 3");
+    assert_eq!(wide.code().as_str(), "TOPOLOGY_WIDTH_EXCEEDS_CAP");
+    let deep = admit_topology(plan, 2, &caps(16, 1, 8, None)).expect_err("depth 2 over 1");
+    assert_eq!(deep.code().as_str(), "TOPOLOGY_DEPTH_EXCEEDS_CAP");
+    let mut rounded = plan.clone();
+    let mut slots = rounded.slots.as_slice().to_vec();
+    slots[1].rounds = 3;
+    rounded.slots = bounded(slots);
+    let rounds = admit_topology(&rounded, 1, &caps(16, 8, 2, None)).expect_err("rounds 3 over 2");
+    assert_eq!(rounds.code().as_str(), "TOPOLOGY_ROUNDS_EXCEEDS_CAP");
+    let total: u64 = plan.slots.iter().filter_map(|slot| slot.tokens).sum();
+    let tokens = admit_topology(plan, 1, &caps(16, 8, 8, Some(total - 1))).expect_err("tokens");
+    assert_eq!(tokens.code().as_str(), "TOPOLOGY_TOKENS_EXCEEDS_CAP");
+    assert!(tokens
+        .to_string()
+        .starts_with("TOPOLOGY_TOKENS_EXCEEDS_CAP"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R046.750
+#[test]
+fn admit_is_a_pure_function_of_plan_and_caps() {
+    let assembly = decide(requirements(2), read(10, admitted()));
+    let plan = plan(&assembly);
+    let c = caps(16, 8, 8, None);
+    assert_eq!(admit_topology(plan, 1, &c), admit_topology(plan, 1, &c));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R046.750
+#[test]
+fn admit_premises_name_each_cap_and_the_plan_digest() {
+    let assembly = decide(requirements(4), read(10, admitted()));
+    let facts: Vec<&str> = assembly
+        .record
+        .premises
+        .iter()
+        .map(|premise| premise.fact.as_str())
+        .collect();
+    for expected in [
+        "topology_cap:max_width=16",
+        "topology_cap:max_depth=8",
+        "topology_cap:max_rounds=8",
+    ] {
+        assert!(facts.contains(&expected), "{expected} in {facts:?}");
+    }
+    let digest = plan_digest(plan(&assembly));
+    assert!(facts.contains(&format!("plan_digest:{digest}").as_str()));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R046.750
+#[test]
+fn a_pinned_width_knob_tightens_the_caps_the_plan_is_held_to() {
+    let mut policy = DecisionPolicy::engine_default();
+    policy
+        .knobs
+        .insert(KnobName::new("topology.max_width"), KnobValue::Integer(2));
+    let assembly =
+        decide_with(facts(), requirements(4), read(10, admitted()), policy).expect("decides");
+    assert!(
+        assembly.record.topology_plan().is_none(),
+        "a width-4 demand cannot fit a width cap of 2"
+    );
 }
 
 #[path = "topology_oracle.rs"]

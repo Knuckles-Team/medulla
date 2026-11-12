@@ -70,8 +70,8 @@ mod tests {
             assert_eq!(spec.safety, KnobSafety::Tunable, "{}", spec.name);
             assert!(names.insert(spec.name), "{} repeats", spec.name);
         }
-        assert_eq!(names.len(), 12);
-        for prefix in ["memory.", "participant.", "profile."] {
+        assert_eq!(names.len(), 15);
+        for prefix in ["memory.", "participant.", "profile.", "topology."] {
             assert!(names.iter().any(|n| n.starts_with(prefix)));
         }
     }

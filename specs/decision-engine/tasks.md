@@ -686,8 +686,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T679 [US6] MEDULLA-DECISION-ENGINE-R035.750.1 Route pipeline and fast path
 - [ ] T680 [US6] MEDULLA-DECISION-ENGINE-R035.750.2 Team reuse route stage
 - [ ] T681 [US6] MEDULLA-DECISION-ENGINE-R035.751 Hot-path proof for the route pipeline
-- [ ] T682 [US6] MEDULLA-DECISION-ENGINE-R046.750 Elastic topology admission against sandbox caps
-- [ ] T683 [US6] MEDULLA-DECISION-ENGINE-R046.751 Topology admission hot path
+- [x] T682 [US6] MEDULLA-DECISION-ENGINE-R046.750 Elastic topology admission against sandbox caps
+- [x] T683 [US6] MEDULLA-DECISION-ENGINE-R046.751 Topology admission hot path
 - [ ] T684 [US7] MEDULLA-DECISION-ENGINE-R134.751 Hot-path proof: tool relevance at the catalog cap
 - [ ] T685 [US8] MEDULLA-DECISION-ENGINE-R650.1 Model
 - [ ] T686 [US8] MEDULLA-DECISION-ENGINE-R650.2.1 Persist descriptors and derive reliability
