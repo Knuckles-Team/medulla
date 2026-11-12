@@ -109,3 +109,59 @@ async fn an_undecodable_stored_pack_refuses_typed_and_a_reimport_replaces_it() {
         Some(receipt.pack_digest)
     );
 }
+
+// spec: MEDULLA-TYPED-PACKS-R041.1
+#[tokio::test]
+async fn an_undecodable_head_hides_its_pack_and_never_fails_the_component_search() {
+    use medulla_agent_types::agent_component::{
+        AgentComponentKind, AgentComponentOp, AgentComponentSearchPage, AgentComponentSearchRequest,
+    };
+    use medulla_protocol_types::protocol::Method;
+
+    let served = Served::new();
+    bind(&served, CONNECTOR, ADMIN).await;
+    imported(
+        &served,
+        &build_pack(CONNECTOR, &[tool(CONNECTOR, "a", "Tool a.")]),
+        None,
+    )
+    .await;
+    let search = |key: &'static str| {
+        let served = &served;
+        async move {
+            served
+                .call(
+                    key,
+                    Method::AgentComponent {
+                        op: AgentComponentOp::Search {
+                            request: AgentComponentSearchRequest {
+                                tenant_id: TENANT.to_string(),
+                                task: None,
+                                capabilities: Vec::new(),
+                                kinds: vec![AgentComponentKind::Tool],
+                                read_only: false,
+                                limit: None,
+                                cursor: None,
+                            },
+                        },
+                    },
+                )
+                .await
+        }
+    };
+    let before: AgentComponentSearchPage = ok("Search", search("search-before").await);
+    assert_eq!(before.entries.len(), 1, "the imported tool is listed");
+
+    plant(&served, "plant-head-search", 203, None).await;
+
+    // The search answers (it used to refuse with a code the method does not
+    // declare, which surfaced as an unclassified INTERNAL), and the pack whose
+    // head cannot be read is dark until a re-import replaces it.
+    let after: AgentComponentSearchPage = ok("Search", search("search-after").await);
+    assert!(after.entries.is_empty(), "{:?}", after.entries);
+    // The connector's own status read still names the typed refusal.
+    assert_eq!(
+        refused("status", status(&served, "status-after-search").await),
+        "PACK_RECORD_UNDECODABLE"
+    );
+}
