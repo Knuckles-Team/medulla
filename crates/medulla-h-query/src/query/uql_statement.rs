@@ -22,6 +22,12 @@ pub(crate) async fn handle_uql(
     foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
+    // MEDULLA-ORCH-VOCAB-R010.1: a named harness metric statement.
+    if !prepare && foreign_execution.is_none() {
+        if let Some(query) = medulla_types::harness_metrics::harness_query(&text) {
+            return Ok(super::harness_metrics::handle_harness_metric(ctx, query));
+        }
+    }
     if prepare && foreign_execution.is_some() {
         return Ok(Response::err(
             req_id,

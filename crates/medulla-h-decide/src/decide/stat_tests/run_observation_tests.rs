@@ -66,10 +66,10 @@ fn window_ingest_and_refusals() {
     let trace = serde_json::json!({"node_type": "RunTrace", "run_revision": 2});
     commit(
         &core,
-        &direct_add_node(&add("trace-1", &trace), &core, 1).unwrap(),
+        &direct_add_node(&add("trace-1", &trace), &core, 1, None).unwrap(),
     );
 
-    let admitted = direct_add_node(&add("window-1", &window(2, 0)), &core, 5).unwrap();
+    let admitted = direct_add_node(&add("window-1", &window(2, 0)), &core, 5, None).unwrap();
     let Method::AddNode {
         properties_msgpack, ..
     } = &admitted
@@ -81,7 +81,7 @@ fn window_ingest_and_refusals() {
     assert_eq!(stored["error_rate"]["state"], "unknown");
     commit(&core, &admitted);
 
-    let replay = direct_add_node(&add("window-1", &window(2, 0)), &core, 9).unwrap();
+    let replay = direct_add_node(&add("window-1", &window(2, 0)), &core, 9, None).unwrap();
     let Method::AddNode {
         properties_msgpack: replayed,
         ..
@@ -102,6 +102,7 @@ fn window_ingest_and_refusals() {
         }),
         &core,
         9,
+        None,
     )
     .unwrap_err();
     assert!(
@@ -110,7 +111,7 @@ fn window_ingest_and_refusals() {
     );
     assert!(!core.has_node("window-2"), "a refusal writes nothing");
 
-    let conflict = direct_add_node(&add("window-1", &window(2, 4)), &core, 9).unwrap_err();
+    let conflict = direct_add_node(&add("window-1", &window(2, 4)), &core, 9, None).unwrap_err();
     assert!(
         conflict.starts_with("WINDOW_CONTENT_CONFLICT"),
         "{conflict}"

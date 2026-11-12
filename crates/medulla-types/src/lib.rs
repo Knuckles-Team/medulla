@@ -34,6 +34,8 @@ pub mod belief_revision;
 pub mod claims;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
+// MEDULLA-ORCH-VOCAB-R010.1 — the closed harness metric statement table.
+pub mod harness_metrics;
 // MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
 pub mod loops;
 // MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.

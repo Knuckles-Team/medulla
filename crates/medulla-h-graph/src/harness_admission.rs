@@ -784,6 +784,29 @@ fn validate_step_records(props: &Props) -> Result<(), String> {
         .map_err(|(code, detail)| refuse_code(code, detail))
 }
 
+/// MEDULLA-ORCH-VOCAB-R013.5 — every stored step of an admitted `RunTrace`
+/// carries `recordedBy`, the verified principal of the request. A client-sent
+/// `recordedBy` is overwritten: the actor is never a client field.
+fn stamp_step_actor(props: &Props, principal: &str) -> Option<Props> {
+    if node_type(props) != Some("RunTrace") {
+        return None;
+    }
+    let steps = props.get("steps")?.as_array()?;
+    let stamped: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|step| {
+            let mut step = step.clone();
+            if let Some(object) = step.as_object_mut() {
+                object.insert("recordedBy".into(), serde_json::json!(principal));
+            }
+            step
+        })
+        .collect();
+    let mut out = props.clone();
+    out.insert("steps".into(), serde_json::Value::Array(stamped));
+    Some(out)
+}
+
 /// Engine-owned keys stripped before a run-trace vocabulary record decodes.
 const ENGINE_KEYS: [&str; 4] = ["node_type", "tx_from", "error_rate", "run_trace_ref"];
 
@@ -991,7 +1014,12 @@ fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Ve
 /// back stamped with the transaction time and (when the writer left the
 /// pointer absent) linked to the current record; an idempotent replay comes
 /// back as the stored blob, byte-exact.
-pub fn direct_add_node(method: &Method, core: &GraphCore, tx_now: u64) -> Result<Method, String> {
+pub fn direct_add_node(
+    method: &Method,
+    core: &GraphCore,
+    tx_now: u64,
+    principal: Option<&str>,
+) -> Result<Method, String> {
     let Method::AddNode {
         node_id,
         properties_msgpack,
@@ -1006,6 +1034,16 @@ pub fn direct_add_node(method: &Method, core: &GraphCore, tx_now: u64) -> Result
         pending: &empty,
     };
     let Some(admission) = harness_add_node_admission(&view, node_id, &props, true)? else {
+        // R013.5: a valid trace is not a harness record, but its steps are
+        // stamped with the writing principal before they are stored.
+        if let Some(stamped) = stamp_step_actor(&props, principal.unwrap_or("anonymous")) {
+            let blob = rmp_serde::to_vec_named(&serde_json::Value::Object(stamped))
+                .map_err(|error| format!("HarnessRecordMalformed: cannot encode steps: {error}"))?;
+            return Ok(Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: blob,
+            });
+        }
         return Ok(method.clone());
     };
     match admission {

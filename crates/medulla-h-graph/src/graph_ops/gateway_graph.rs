@@ -656,7 +656,8 @@ mod tests {
     fn add_run_trace_checks_step_digests() {
         let core = GraphCore::new();
         let valid = trace_write(vec![step(0, &hex('b')), step(1, &hex('d'))]);
-        let admitted = crate::harness_admission::direct_add_node(&valid, &core, 7).unwrap();
+        let admitted =
+            crate::harness_admission::direct_add_node(&valid, &core, 7, Some("alice")).unwrap();
         let (
             Method::AddNode {
                 properties_msgpack: admitted,
@@ -670,14 +671,32 @@ mod tests {
         else {
             panic!("AddNode came back");
         };
-        assert_eq!(admitted, sent, "a valid trace passes through in order");
+        // R013.5: the steps pass through in order, each stamped with the writer.
+        let strip = |blob: &[u8]| {
+            let mut props = medulla_types::msgpack::decode_property_object(blob).unwrap();
+            let steps = props["steps"].as_array_mut().unwrap();
+            let actors: Vec<_> = steps
+                .iter_mut()
+                .map(|step| step.as_object_mut().unwrap().remove("recordedBy"))
+                .collect();
+            (props, actors)
+        };
+        let ((admitted_props, actors), (sent_props, _)) = (strip(&admitted), strip(&sent));
+        assert_eq!(
+            admitted_props, sent_props,
+            "a valid trace passes through in order"
+        );
+        assert!(actors
+            .iter()
+            .all(|a| a.as_ref().and_then(|v| v.as_str()) == Some("alice")));
 
         let bad_digest = trace_write(vec![step(0, "not-a-digest")]);
-        let refusal = crate::harness_admission::direct_add_node(&bad_digest, &core, 7).unwrap_err();
+        let refusal =
+            crate::harness_admission::direct_add_node(&bad_digest, &core, 7, None).unwrap_err();
         assert!(refusal.starts_with("STEP_DIGEST_INVALID"), "{refusal}");
 
         let gap = trace_write(vec![step(0, &hex('b')), step(2, &hex('b'))]);
-        let refusal = crate::harness_admission::direct_add_node(&gap, &core, 7).unwrap_err();
+        let refusal = crate::harness_admission::direct_add_node(&gap, &core, 7, None).unwrap_err();
         assert!(refusal.starts_with("STEP_ORDER_INVALID"), "{refusal}");
         assert!(!core.has_node("trace-steps"));
     }

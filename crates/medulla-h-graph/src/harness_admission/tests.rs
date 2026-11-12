@@ -46,7 +46,7 @@ fn add_node(node_id: String, props: &serde_json::Map<String, serde_json::Value>)
 
 /// The property blob the direct AddNode admission commits for `method`.
 fn admitted_blob(method: &Method, core: &GraphCore, tx_now: u64) -> Vec<u8> {
-    let admitted = direct_add_node(method, core, tx_now).unwrap();
+    let admitted = direct_add_node(method, core, tx_now, None).unwrap();
     let Method::AddNode {
         properties_msgpack, ..
     } = admitted
@@ -105,7 +105,7 @@ fn harness_component_write_stamps_and_links() {
         v2_id.clone(),
         &harness_version_props(component, "system_prompt", "blob:v2", 20, 0.95),
     );
-    let error = direct_add_node(&mutated, &core, 4000).unwrap_err();
+    let error = direct_add_node(&mutated, &core, 4000, None).unwrap_err();
     assert!(
         error.starts_with("HarnessVersionImmutable:"),
         "got: {error}"
@@ -117,7 +117,7 @@ fn harness_component_write_stamps_and_links() {
     let mut stale = harness_version_props(component, "system_prompt", "blob:v3", 30, 0.9);
     stale.insert("supersedes_id".into(), serde_json::json!(v1_id));
     let stale_write = add_node(v3_id, &stale);
-    let error = direct_add_node(&stale_write, &core, 5000).unwrap_err();
+    let error = direct_add_node(&stale_write, &core, 5000, None).unwrap_err();
     assert!(
         error.starts_with("HarnessSupersessionStale:"),
         "got: {error}"
@@ -134,7 +134,7 @@ fn harness_component_write_stamps_and_links() {
     else {
         panic!("AddNode was composed")
     };
-    let passed = direct_add_node(&plain_write, &core, 6000).unwrap();
+    let passed = direct_add_node(&plain_write, &core, 6000, None).unwrap();
     let Method::AddNode {
         node_id,
         properties_msgpack,
@@ -159,7 +159,7 @@ fn invalid_trace_is_refused_and_not_stored() {
     valid.insert("peakContextTokens".into(), serde_json::json!(10));
     valid.insert("contextBudgetTokens".into(), serde_json::json!(20));
     valid.insert("costUsd".into(), serde_json::json!("0.042"));
-    let passed = direct_add_node(&add_node("trace-ok".into(), &valid), &core, 7).unwrap();
+    let passed = direct_add_node(&add_node("trace-ok".into(), &valid), &core, 7, None).unwrap();
     assert!(matches!(passed, Method::AddNode { .. }));
 
     let cases = [
@@ -178,7 +178,8 @@ fn invalid_trace_is_refused_and_not_stored() {
     for (key, value, shape) in cases {
         let mut props = valid.clone();
         props.insert(key.into(), value);
-        let err = direct_add_node(&add_node("trace-bad".into(), &props), &core, 7).unwrap_err();
+        let err =
+            direct_add_node(&add_node("trace-bad".into(), &props), &core, 7, None).unwrap_err();
         assert!(err.starts_with("RUN_TRACE_SHAPE_INVALID"), "{err}");
         assert!(err.contains(shape), "{err} names {shape}");
         assert!(!core.has_node("trace-bad"));

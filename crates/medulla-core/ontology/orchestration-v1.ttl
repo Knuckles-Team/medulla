@@ -759,6 +759,18 @@
     rdfs:domain :RunTrace ;
     rdfs:range xsd:decimal .
 
+# MEDULLA-ORCH-VOCAB-R013.5: each stored step of a trace carries its order and
+# the verified principal that wrote it; steps stay properties of the trace node.
+:stepIndex a owl:DatatypeProperty ;
+    rdfs:label "stepIndex" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:recordedBy a owl:DatatypeProperty ;
+    rdfs:label "recordedBy" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
 # MEDULLA-ORCH-VOCAB-R001 through R006: task steps, agent kinds, library membership,
 # per-step bindings and hand-off. Step order reuses the core :precedes.
 

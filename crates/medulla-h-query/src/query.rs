@@ -210,6 +210,8 @@ mod argument_map;
 #[cfg(feature = "query")]
 mod live_artifact;
 #[cfg(feature = "query")]
+mod harness_metrics;
+#[cfg(feature = "query")]
 mod uql_statement;
 
 #[cfg(test)]

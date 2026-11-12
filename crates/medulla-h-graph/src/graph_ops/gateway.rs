@@ -128,6 +128,7 @@ pub async fn try_handle_gateway(
         &method,
         core,
         medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        caller,
     ) {
         Ok(admitted) => admitted,
         Err(error) => return Ok(Response::err(req_id, error)),
