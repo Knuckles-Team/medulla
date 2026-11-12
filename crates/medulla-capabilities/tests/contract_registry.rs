@@ -216,6 +216,7 @@ fn parity_gaps(variants: &[String], ids: &[String]) -> (Vec<String>, Vec<String>
 #[test]
 fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
     // spec: MEDULLA-CONTRACT-R044
+    // spec: MEDULLA-TYPED-PACKS-R067
     let variants = wire_method_variants();
     let ids = descriptor_ids();
     assert!(

@@ -1,3 +1,4 @@
+// spec: MEDULLA-REPO-INGEST-R602.6
 //! MEDULLA-REPO-INGEST-R602.6 — hot-path proof of the service-link hook.
 //!
 //! `Method::IndexRepository` → `run_after_commit` → `link_pass` over 50,000

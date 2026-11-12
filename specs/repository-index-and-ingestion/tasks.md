@@ -42,7 +42,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T036 [US2] MEDULLA-REPO-INGEST-R602.3 Wiring
 - [ ] T037 [US2] MEDULLA-REPO-INGEST-R602.4 Refusal
 - [ ] T038 [US2] MEDULLA-REPO-INGEST-R602.5 Evidence
-- [ ] T039 [US2] MEDULLA-REPO-INGEST-R602.6 Hot-path proof
+- [x] T039 [US2] MEDULLA-REPO-INGEST-R602.6 Hot-path proof
 - [ ] T040 [US2] MEDULLA-REPO-INGEST-R603.1 Model
 - [ ] T041 [US2] MEDULLA-REPO-INGEST-R603.2 Behavior
 - [ ] T042 [US2] MEDULLA-REPO-INGEST-R603.3 Wiring

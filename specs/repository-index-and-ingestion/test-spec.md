@@ -56,7 +56,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 | `MEDULLA-REPO-INGEST-R602.3` | `tests/test_repository_enrich_served.py::test_link_pass_runs_after_features` (planned) | L3 | The named test passes. |
 | `MEDULLA-REPO-INGEST-R602.4` | `crates/medulla-enrich/src/links.rs::a_tie_between_two_services_writes_no_link` | L1 | Test submits the invalid input and asserts the code and zero partial writes. |
 | `MEDULLA-REPO-INGEST-R602.5` | `crates/medulla-enrich/src/links.rs::the_run_report_counts_links_and_ties` | L1 | Test reads the trace or metrics after one success and one refusal. |
-| `MEDULLA-REPO-INGEST-R602.6` | `crates/medulla-h-ingest/benches/r602_links_served.rs::links_served` (planned) | L5 | Test: nightly bench group `repo_index/links` (L5). |
+| `MEDULLA-REPO-INGEST-R602.6` | `crates/medulla-h-ingest/benches/r602_links_served.rs::links_served` | L5 | Test: nightly bench group `repo_index/links` (L5). |
 | `MEDULLA-REPO-INGEST-R603.1` | `crates/medulla-enrich/src/fingerprint.rs::fingerprint_types_round_trip_and_invalid_identifiers_are_refused` | L1 | Unit test round-trips each type and rejects an invalid identifier. |
 | `MEDULLA-REPO-INGEST-R603.2` | `crates/medulla-enrich/src/fingerprint.rs::levels_blast_radius_and_code_map_follow_the_rules` | L1 | Unit tests cover each rule with positive and boundary cases. |
 | `MEDULLA-REPO-INGEST-R603.3` | `tests/test_repository_enrich_served.py::test_cosmetic_change_skips_enrichment` (planned) | L3 | It asserts one skipped file and zero parser calls for it. |

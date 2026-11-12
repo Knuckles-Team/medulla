@@ -107,7 +107,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T099 [US2] MEDULLA-TYPED-PACKS-R066.1 SHACL shapes validate the measured model facts
 - [ ] T100 [US2] MEDULLA-TYPED-PACKS-R066.2 The task class carries a shell-centric fact
 - [ ] T101 [US2] MEDULLA-TYPED-PACKS-R066.3 The shell-centric fact is inherited by task subclasses
-- [ ] T102 [US2] MEDULLA-TYPED-PACKS-R067 A new library method lands with its descriptor and client model
+- [x] T102 [US2] MEDULLA-TYPED-PACKS-R067 A new library method lands with its descriptor and client model
 - [ ] T103 [US2] MEDULLA-TYPED-PACKS-R068 Contract regeneration packages the complete generated set
 - [ ] T104 [US2] MEDULLA-TYPED-PACKS-R070 A committed fixture matches the type that produces it
 - [ ] T105 [US3] MEDULLA-TYPED-PACKS-R071.1.1 Crosswalk model
