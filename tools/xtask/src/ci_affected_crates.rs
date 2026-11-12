@@ -4,9 +4,10 @@
 //! The metadata is `cargo metadata --format-version 1 --no-deps`; the changed paths (stdin, one per
 //! line) are repository-relative.
 //!
-//! Pull request mode (the default) keeps a pull request to what it changed: clippy and nextest
-//! run on the packages that own a changed file, and the packages that depend on one of those
-//! directly (normal, dev or build edge) are compile-checked only, marked `{checkonly}`. A change
+//! Pull request mode (the default) keeps a pull request to what it changed, with each package's
+//! default features: clippy and nextest run on the packages that own a changed file, and the
+//! packages that depend on one of those directly (normal, dev or build edge) are compile-checked
+//! only, marked `{checkonly}`; the root facade is left to main. A change
 //! to a workspace-wide input (`Cargo.lock`, the root manifest, the toolchain or `.cargo/`) is one
 //! compile check of the whole workspace. The deeper checks run on main and nightly.
 //!
@@ -85,9 +86,14 @@ pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
                 if list {
                     owned.into_iter().chain(dependents).collect()
                 } else {
-                    let mut runs = commands(&packages, &owned);
+                    let root_pkg = owner("Cargo.toml", &packages);
+                    let dependents: Vec<String> = dependents
+                        .into_iter()
+                        .filter(|d| Some(d) != root_pkg.as_ref())
+                        .collect();
+                    let mut runs = pr_commands(&owned);
                     runs.extend(
-                        commands(&packages, &dependents)
+                        pr_commands(&dependents)
                             .into_iter()
                             .map(|run| format!("{run} {{checkonly}}")),
                     );
@@ -328,6 +334,39 @@ pub fn pyo3_features(packages: &[&str]) -> String {
         .join(",")
 }
 
+/// Pull request runs: each package with its default features, in as few invocations as
+/// possible, so clippy, nextest and the dependents' check share one compiled graph. The full
+/// feature profiles of [`commands`] run on main and nightly. The root facade is left out of a
+/// pull request's dependents (it depends on nearly everything); it is checked when its own
+/// sources change and on every push to main.
+pub fn pr_commands(selected: &[String]) -> Vec<String> {
+    let selected: Vec<&str> = selected
+        .iter()
+        .map(String::as_str)
+        .filter(|n| !OWN_JOB_PACKAGES.contains(n))
+        .collect();
+    let flags = |names: &[&str]| {
+        names
+            .iter()
+            .map(|n| format!("-p {n}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let parallel: Vec<&str> = selected
+        .iter()
+        .copied()
+        .filter(|n| !SERIAL_PACKAGES.contains(n))
+        .collect();
+    let mut runs = Vec::new();
+    if !parallel.is_empty() {
+        runs.push(format!("{{tool}} {}", flags(&parallel)));
+    }
+    for name in selected.iter().filter(|n| SERIAL_PACKAGES.contains(n)) {
+        runs.push(format!("{{tool}} -p {name} {{serial}}"));
+    }
+    runs
+}
+
 pub fn commands(packages: &Packages, selected: &[String]) -> Vec<String> {
     let selected: Vec<&str> = selected
         .iter()
@@ -477,6 +516,22 @@ mod tests {
         let transitive = sel(r, &["crates/medulla-types/src/lib.rs"]);
         assert!(dependents.iter().all(|d| transitive.contains(d)));
         assert_eq!(WORKSPACE_CHECK, "{tool} --workspace {checkonly}");
+    }
+
+    #[test]
+    fn pull_request_runs_use_default_features_in_one_invocation() {
+        let selected: Vec<String> = ["medulla-types", "medulla-storage", "medulla-tts-piper"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            pr_commands(&selected),
+            [
+                "{tool} -p medulla-types".to_string(),
+                "{tool} -p medulla-storage {serial}".to_string(),
+            ]
+        );
+        assert!(pr_commands(&[]).is_empty());
     }
 
     #[test]

@@ -30,6 +30,7 @@ pub(crate) struct TelemetryWriter {
     pub(crate) tenant: String,
 }
 
+#[allow(dead_code)] // foreign-owner helper wired by the snapshot restore row (follow-up)
 fn foreign(claimed: &str) -> String {
     format!("ACCESS_DENIED: telemetry names tenant '{claimed}', not the writer's")
 }
