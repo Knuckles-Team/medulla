@@ -19,6 +19,7 @@ mod backend;
 mod backend;
 
 pub use backend::SemanticStore;
+#[cfg(feature = "ann")]
 pub use backend::{build_off_lock, BuildHooks, BuildOutcome};
 pub use medulla_numeric::cluster::{CancelToken, Progress, ProgressSink};
 
