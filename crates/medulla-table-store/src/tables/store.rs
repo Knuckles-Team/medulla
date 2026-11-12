@@ -64,6 +64,7 @@ pub mod dev_scope_grant;
 mod edge_durable;
 mod outbox;
 mod row_insert;
+mod sequence;
 mod source_batch;
 
 use ann_durable::{drop_ann_index_in, drop_ann_indexes_for_column_in, put_ann_index_in};
@@ -576,6 +577,9 @@ pub struct TableStore {
     /// generation of every registered `hnsw`/`ivfflat` index. Clones share it,
     /// exactly as they share `authority`, so one opened file has one owner.
     ann: Arc<super::ann_authority::UserAnnAuthority>,
+    /// Reserved-but-unissued sequence values, per sequence name (R013.1). A
+    /// crash drops them; issuing resumes from the persisted high mark.
+    sequence_blocks: Arc<sequence::SequenceBlocks>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -677,6 +681,7 @@ impl TableStore {
             index_scope: Arc::new(tenant_scope.clone()),
             scope: Arc::from(tenant_scope),
             ann: Arc::default(),
+            sequence_blocks: Arc::default(),
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -1975,6 +1980,34 @@ impl TableStore {
             offset,
             limit,
         )
+    }
+
+    /// The rows a named index covers, in index order. For a partial index these
+    /// are exactly the rows where its predicate held when they were written; a
+    /// planner uses them only for a query that implies the predicate
+    /// (MEDULLA-ENGINE-PARITY-R010.1). `None` means no current index of that name.
+    pub fn secondary_index_covered_rows(
+        &self,
+        table: &str,
+        index_name: &str,
+    ) -> Result<Option<Vec<Vec<Cell>>>, String> {
+        let rtx = self.authority.read()?;
+        let Some(schema) = get_schema_read(&rtx, table)? else {
+            return Err(format!("table `{table}` does not exist"));
+        };
+        let Some(spec) = list_secondary_indexes_in(&rtx, self.index_scope(), Some(table))?
+            .into_iter()
+            .find(|spec| spec.name == index_name)
+        else {
+            return Ok(None);
+        };
+        if validate_secondary_spec(&spec, &schema).is_err() {
+            return Ok(None);
+        }
+        let Some(rowids) = secondary_index_candidate_rowids_in(&rtx, &spec)? else {
+            return Ok(None);
+        };
+        secondary_index_materialize_rows_in(&rtx, table, schema.columns().len(), &rowids)
     }
 
     // ── Timescale-compatible hypertable catalog ──────────────────────────────
@@ -3693,8 +3726,18 @@ fn create_secondary_index_in(
         return Ok(true);
     };
     let mut entries = wtx.open_table(SECONDARY_INDEX_ENTRIES)?;
+    let mut seen_keys = HashSet::new();
     for (rowid, cells) in row_items {
+        if !spec.covers_row(&schema, &cells) {
+            continue;
+        }
         let entry = secondary_entry_key(spec, &schema, &cells, rowid)?;
+        if spec.unique && !spec.key_has_null(&schema, &cells) {
+            let value_prefix = secondary_value_prefix(&entry);
+            if !seen_keys.insert(value_prefix) {
+                return Err(unique_index_violation(spec));
+            }
+        }
         entries.insert(entry.as_str(), &[][..]).map_err(map_err)?;
     }
     Ok(true)
@@ -3834,6 +3877,22 @@ fn drop_secondary_indexes_for_table_in(
     Ok(specs.len())
 }
 
+/// An entry key without its trailing fixed-width row id: the part two rows with
+/// equal index keys share (the trailing `\0{rowid}` separator stays in).
+fn secondary_value_prefix(entry_key: &str) -> String {
+    match entry_key.rfind('\0') {
+        Some(at) => entry_key[..=at].to_string(),
+        None => entry_key.to_string(),
+    }
+}
+
+fn unique_index_violation(spec: &SecondaryIndexSpec) -> String {
+    format!(
+        "UNIQUE_VIOLATION: duplicate key value violates unique index `{}`",
+        spec.name
+    )
+}
+
 fn maintain_secondary_row_in(
     wtx: &SqlWrite<'_>,
     tenant_scope: &str,
@@ -3855,12 +3914,25 @@ fn maintain_secondary_row_in(
         if validate_secondary_spec(&spec, schema).is_err() {
             continue;
         }
-        if let Some(old) = old {
+        if let Some(old) = old.filter(|cells| spec.covers_row(schema, cells)) {
             let key = secondary_entry_key(&spec, schema, old, rowid)?;
             entries.remove(key.as_str()).map_err(map_err)?;
         }
-        if let Some(new) = new {
+        if let Some(new) = new.filter(|cells| spec.covers_row(schema, cells)) {
             let key = secondary_entry_key(&spec, schema, new, rowid)?;
+            if spec.unique && !spec.key_has_null(schema, new) {
+                let value_prefix = secondary_value_prefix(&key);
+                let high = format!("{value_prefix}\u{10ffff}");
+                for item in entries
+                    .range(value_prefix.as_str()..high.as_str())
+                    .map_err(map_err)?
+                {
+                    let (existing, _) = item.map_err(map_err)?;
+                    if rowid_from_entry_key(existing.value()) != Some(rowid) {
+                        return Err(unique_index_violation(&spec));
+                    }
+                }
+            }
             entries.insert(key.as_str(), &[][..]).map_err(map_err)?;
         }
     }
@@ -3878,8 +3950,7 @@ fn secondary_index_rows_in(
     };
     let specs = list_secondary_indexes_in(rtx, tenant_scope, Some(table))?;
     let Some(spec) = specs.into_iter().find(|spec| {
-        spec.columns.first().map(|column| column.name.as_str()) == Some(lookup.column())
-            && validate_secondary_spec(spec, &schema).is_ok()
+        spec.serves_plain_lookup(lookup.column()) && validate_secondary_spec(spec, &schema).is_ok()
     }) else {
         return Ok(None);
     };
@@ -3942,7 +4013,8 @@ fn secondary_index_ordered_rows_in(
     else {
         return Ok(None);
     };
-    if validate_secondary_spec(&spec, &schema).is_err() {
+    // A partial index omits rows; an ordered read over it would silently drop them.
+    if spec.predicate.is_some() || validate_secondary_spec(&spec, &schema).is_err() {
         return Ok(None);
     }
     let Some(mut rowids) = secondary_index_candidate_rowids_in(rtx, &spec)? else {

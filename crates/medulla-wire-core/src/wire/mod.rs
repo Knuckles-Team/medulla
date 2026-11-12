@@ -130,6 +130,8 @@ use medulla_server_api::state::ServerState;
 
 mod seam;
 pub use seam::WireSeam;
+pub mod sqlstate;
+mod copy_out;
 
 // ── wire-neutral currency ────────────────────────────────────────────────────
 
@@ -190,6 +192,16 @@ pub enum WireOutcome {
         /// The number of target columns.
         num_columns: usize,
     },
+    /// `COPY … TO STDOUT` — the rows, already encoded one `CopyData` payload each
+    /// (a header line first when requested). `format_code` is 0 (text and csv).
+    CopyOut {
+        /// The copy wire format code (0 text/csv).
+        format_code: i8,
+        /// The number of columns.
+        num_columns: usize,
+        /// One encoded line per payload.
+        lines: Vec<Vec<u8>>,
+    },
 }
 
 impl WireOutcome {
@@ -231,12 +243,14 @@ pub trait WireProtocol: Send + Sync {
 
 // ── errors ───────────────────────────────────────────────────────────────────
 
-/// Map an internal engine error string to a wire user error (SQLSTATE 58000 —
-/// system error) — keeps clients reporting a clean message instead of a drop.
+/// Map an internal engine error string to a wire user error. A typed `<CODE>: `
+/// prefix selects its SQLSTATE from the one table in [`sqlstate`]; anything else is
+/// SQLSTATE 58000 (system error) — keeps clients reporting a clean message instead of a drop.
 pub fn user_err(msg: impl Into<String>) -> WireError {
+    let message = msg.into();
     WireError {
-        code: "58000".to_owned(),
-        message: msg.into(),
+        code: sqlstate::sqlstate_of_message(&message).to_owned(),
+        message,
     }
 }
 
@@ -2262,6 +2276,9 @@ impl WireSession {
             // `COPY … FROM STDIN` (CONCEPT:MEDULLA-KG.query.register-each-user-table): switch into copy-in mode; the
             // streamed rows are ingested by the wire's copy-done hook.
             StatementKind::CopyIn(plan) => self.start_copy(plan).await,
+            // `COPY … TO STDOUT` (MEDULLA-ENGINE-PARITY-R006.1): a plain SELECT through
+            // the authorized read path, encoded as copy lines.
+            StatementKind::CopyOut(plan) => self.run_copy_out(graph, plan).await,
             // SQL/PGQ, plus the transaction-control kinds handled before dispatch.
             StatementKind::Begin
             | StatementKind::Commit
@@ -3065,6 +3082,27 @@ impl WireSession {
         Ok(WireOutcome::CopyIn {
             format_code: fmt_code,
             num_columns: ncols,
+        })
+    }
+
+    /// `COPY <table> [(cols)] TO STDOUT` (MEDULLA-ENGINE-PARITY-R006.1). The rows
+    /// come from `SELECT <cols> FROM <table>` through [`Self::run_read`], so the
+    /// caller's ACL and masking apply exactly as they do to a plain `SELECT`.
+    async fn run_copy_out(&self, graph: &str, plan: CopyPlan) -> WireResult<WireOutcome> {
+        let quote = |name: &str| format!("\"{}\"", name.replace('\"', "\"\""));
+        let projection = if plan.columns.is_empty() {
+            "*".to_string()
+        } else {
+            plan.columns.iter().map(|c| quote(c)).collect::<Vec<_>>().join(", ")
+        };
+        let select = format!("SELECT {projection} FROM {}", quote(&plan.table));
+        let result = self.run_read(graph, select).await?;
+        let names: Vec<&str> = result.columns.iter().map(|c| c.name.as_str()).collect();
+        let lines = copy_out::encode(&plan, &names, &result.rows);
+        Ok(WireOutcome::CopyOut {
+            format_code: 0,
+            num_columns: names.len(),
+            lines,
         })
     }
 

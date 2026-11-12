@@ -15,10 +15,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::schema::{Cell, ColumnType, TableSchema};
+use crate::schema::{Cell, CheckExpr, ColumnType, TableSchema};
 
 /// Version of the durable secondary-index definition and key encoding.
-pub const SECONDARY_INDEX_SCHEMA_VERSION: u16 = 1;
+pub const SECONDARY_INDEX_SCHEMA_VERSION: u16 = 2;
+
+/// Refusal code for an index expression outside the closed [`IndexExpr`] set.
+pub const INDEX_EXPR_NONDETERMINISTIC: &str = "INDEX_EXPR_NONDETERMINISTIC";
 /// Keep index construction and lookup bounded even when a caller supplies a
 /// pathological DDL request.
 pub const MAX_SECONDARY_INDEX_COLUMNS: usize = 4;
@@ -43,11 +46,68 @@ pub enum SecondaryIndexOrder {
     Desc,
 }
 
+/// The closed set of deterministic one-column expressions an index key may use
+/// (MEDULLA-ENGINE-PARITY-R010.1). Anything outside it (`now`, `random`,
+/// `nextval`, ...) is refused with `INDEX_EXPR_NONDETERMINISTIC`, because an
+/// entry computed from a non-repeatable value could never be found again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum IndexExpr {
+    Lower,
+    Upper,
+    Abs,
+    Length,
+}
+
+impl IndexExpr {
+    /// Resolve a SQL function name. Names outside the closed set are refused.
+    pub fn parse(function: &str) -> Result<Self, String> {
+        match function.to_ascii_lowercase().as_str() {
+            "lower" => Ok(Self::Lower),
+            "upper" => Ok(Self::Upper),
+            "abs" => Ok(Self::Abs),
+            "length" => Ok(Self::Length),
+            other => Err(format!(
+                "{INDEX_EXPR_NONDETERMINISTIC}: function `{other}` is not an allowed index expression (lower, upper, abs, length)"
+            )),
+        }
+    }
+
+    /// The column type this expression produces from a column of type `input`,
+    /// or `None` when the expression does not apply to that type.
+    pub fn output_type(self, input: ColumnType) -> Option<ColumnType> {
+        match (self, input) {
+            (Self::Lower | Self::Upper, ColumnType::Text) => Some(ColumnType::Text),
+            (Self::Abs, ColumnType::Int | ColumnType::BigInt) => Some(input),
+            (Self::Abs, ColumnType::Float | ColumnType::Double) => Some(input),
+            (Self::Length, ColumnType::Text | ColumnType::Bytes) => Some(ColumnType::BigInt),
+            _ => None,
+        }
+    }
+
+    /// Apply the expression to one cell. NULL stays NULL.
+    pub fn apply(self, cell: &Cell) -> Cell {
+        match (self, cell) {
+            (_, Cell::Null) => Cell::Null,
+            (Self::Lower, Cell::Text(v)) => Cell::Text(v.to_lowercase()),
+            (Self::Upper, Cell::Text(v)) => Cell::Text(v.to_uppercase()),
+            (Self::Abs, Cell::Int(v)) => Cell::Int(v.saturating_abs()),
+            (Self::Abs, Cell::Float(v)) => Cell::Float(v.abs()),
+            (Self::Length, Cell::Text(v)) => Cell::Int(v.chars().count() as i64),
+            (Self::Length, Cell::Bytes(v)) => Cell::Int(v.len() as i64),
+            (_, other) => other.clone(),
+        }
+    }
+}
+
 /// One column in a secondary-index definition.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SecondaryIndexColumn {
     pub name: String,
     pub order: SecondaryIndexOrder,
+    /// Optional deterministic expression over this column; the key stores the
+    /// expression's result instead of the raw value.
+    #[serde(default)]
+    pub expr: Option<IndexExpr>,
 }
 
 impl SecondaryIndexColumn {
@@ -55,6 +115,31 @@ impl SecondaryIndexColumn {
         Self {
             name: name.into(),
             order: SecondaryIndexOrder::Asc,
+            expr: None,
+        }
+    }
+
+    /// An ascending key over `expr(name)`.
+    pub fn expression(name: impl Into<String>, expr: IndexExpr) -> Self {
+        Self {
+            expr: Some(expr),
+            ..Self::ascending(name)
+        }
+    }
+
+    /// The type of the stored key component.
+    fn key_type(&self, schema: &TableSchema) -> Option<ColumnType> {
+        let ty = schema.column(&self.name)?.ty;
+        match self.expr {
+            Some(expr) => expr.output_type(ty),
+            None => Some(ty),
+        }
+    }
+
+    fn key_cell(&self, cell: &Cell) -> Cell {
+        match self.expr {
+            Some(expr) => expr.apply(cell),
+            None => cell.clone(),
         }
     }
 }
@@ -74,6 +159,14 @@ pub struct SecondaryIndexSpec {
     pub columns: Vec<SecondaryIndexColumn>,
     pub schema_version: u16,
     pub schema_digest: String,
+    /// Partial index: an entry exists only for rows where this holds
+    /// (MEDULLA-ENGINE-PARITY-R010.1). `None` indexes every row.
+    #[serde(default)]
+    pub predicate: Option<CheckExpr>,
+    /// Unique among the rows the index covers: a second covered row with an equal
+    /// non-NULL key is refused with `UNIQUE_VIOLATION`.
+    #[serde(default)]
+    pub unique: bool,
 }
 
 impl SecondaryIndexSpec {
@@ -95,9 +188,81 @@ impl SecondaryIndexSpec {
             columns,
             schema_version: SECONDARY_INDEX_SCHEMA_VERSION,
             schema_digest: schema.schema_digest()?,
+            predicate: None,
+            unique: false,
         };
         validate_spec(&spec, schema)?;
         Ok(spec)
+    }
+
+    /// The same definition restricted to rows where `predicate` holds.
+    pub fn with_predicate(
+        mut self,
+        predicate: CheckExpr,
+        schema: &TableSchema,
+    ) -> Result<Self, String> {
+        self.predicate = Some(predicate);
+        validate_spec(&self, schema)?;
+        Ok(self)
+    }
+
+    /// The same definition made unique among its covered rows.
+    pub fn into_unique(mut self) -> Self {
+        self.unique = true;
+        self
+    }
+
+    /// Whether a plain first-column lookup on `column` may be answered by this
+    /// index: it must cover every row and key the raw column value.
+    pub fn serves_plain_lookup(&self, column: &str) -> bool {
+        self.predicate.is_none()
+            && self
+                .columns
+                .first()
+                .is_some_and(|first| first.name == column && first.expr.is_none())
+    }
+
+    /// Does this index keep an entry for `cells`? A row outside the predicate has
+    /// none. A predicate that cannot be evaluated leaves the row uncovered.
+    pub fn covers_row(&self, schema: &TableSchema, cells: &[Cell]) -> bool {
+        let Some(predicate) = &self.predicate else {
+            return true;
+        };
+        let mut map = serde_json::Map::with_capacity(schema.columns().len());
+        for (ci, col) in schema.columns().iter().enumerate() {
+            let cell = cells.get(ci).cloned().unwrap_or(Cell::Null);
+            map.insert(col.name.clone(), cell.to_typed_json(col.ty));
+        }
+        // `Cmp` against NULL passes a CHECK; an index predicate must be strict,
+        // so a NULL operand never covers the row.
+        predicate_columns(predicate)
+            .iter()
+            .all(|name| map.get(name).is_some_and(|v| !v.is_null()))
+            && predicate.holds(&map)
+    }
+
+    /// Whether the key of `cells` has a NULL component (exempt from uniqueness).
+    pub fn key_has_null(&self, schema: &TableSchema, cells: &[Cell]) -> bool {
+        self.columns.iter().any(|indexed| {
+            schema
+                .column_index(&indexed.name)
+                .and_then(|i| cells.get(i))
+                .is_none_or(|cell| matches!(cell, Cell::Null))
+        })
+    }
+}
+
+/// Every column name a predicate reads.
+fn predicate_columns(expr: &CheckExpr) -> Vec<String> {
+    match expr {
+        CheckExpr::Cmp { column, .. } | CheckExpr::In { column, .. } => vec![column.clone()],
+        CheckExpr::IsNull { .. } => Vec::new(),
+        CheckExpr::ColCmp { left, right, .. } => vec![left.clone(), right.clone()],
+        CheckExpr::And(a, b) | CheckExpr::Or(a, b) => {
+            let mut out = predicate_columns(a);
+            out.extend(predicate_columns(b));
+            out
+        }
     }
 }
 
@@ -210,6 +375,25 @@ fn validate_spec_columns(spec: &SecondaryIndexSpec, schema: &TableSchema) -> Res
                 spec.name, indexed.name
             ));
         }
+        if indexed.key_type(schema).is_none() {
+            return Err(format!(
+                "{INDEX_EXPR_NONDETERMINISTIC}: expression does not apply to column `{}` of secondary index `{}`",
+                indexed.name, spec.name
+            ));
+        }
+    }
+    if let Some(predicate) = &spec.predicate {
+        predicate
+            .validate_limits(0)
+            .map_err(|error| format!("secondary index `{}` predicate: {error}", spec.name))?;
+        let mut referenced = Vec::new();
+        predicate.referenced_columns(&mut referenced);
+        if let Some(unknown) = referenced.iter().find(|name| schema.column(name).is_none()) {
+            return Err(format!(
+                "secondary index `{}` predicate references unknown column `{unknown}`",
+                spec.name
+            ));
+        }
     }
     Ok(())
 }
@@ -264,7 +448,10 @@ pub fn row_key(
             .column_index(&indexed.name)
             .ok_or_else(|| format!("indexed column `{}` is absent", indexed.name))?;
         let cell = cells.get(index).unwrap_or(&Cell::Null);
-        encode_cell(&mut out, cell, schema.column(&indexed.name).unwrap().ty)?;
+        let ty = indexed
+            .key_type(schema)
+            .ok_or_else(|| format!("indexed column `{}` has no key type", indexed.name))?;
+        encode_cell(&mut out, &indexed.key_cell(cell), ty)?;
     }
     if out.len() > MAX_SECONDARY_INDEX_KEY_BYTES {
         return Err(format!(
@@ -299,7 +486,7 @@ pub fn entry_range(
     lookup: &SecondaryIndexLookup,
 ) -> Result<Option<(String, String)>, String> {
     validate_spec(spec, schema)?;
-    if spec.columns.first().map(|c| c.name.as_str()) != Some(lookup.column()) {
+    if !spec.serves_plain_lookup(lookup.column()) {
         return Ok(None);
     }
     let ty = schema

@@ -110,3 +110,11 @@ none
 
 - Wire login grant and revoke: `MEDULLA-ENGINE-PARITY-R007.4` provides, `ARBORA-OPS-R858.1` consumes. Contract: [arbora-wire-logins.md](contracts/arbora-wire-logins.md).
 - Engine capability report: `MEDULLA-ENGINE-PARITY-R020.2` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-engine-capabilities.md](contracts/arbora-engine-capabilities.md).
+
+## Decisions (see research.md)
+
+- Sequences are persisted in the existing `__sql_seq__` allocator table under NUL-prefixed keys; no new owner table.
+- One SQLSTATE table in `crates/medulla-wire-core/src/wire/sqlstate.rs`; both `user_err` functions read it.
+- `COPY ... TO STDOUT` is a plain read through the authorized read path.
+- Partial and expression indexes are used only by a planner that proves the predicate (R010.2).
+- `R005.1` depends on `R002.2` (its conflict-heavy workload); `R001.3` lands with `R005.1`.

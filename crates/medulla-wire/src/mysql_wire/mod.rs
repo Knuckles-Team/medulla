@@ -238,10 +238,10 @@ fn encode_outcome(outcome: WireOutcome, status: u16) -> Vec<Vec<u8>> {
         WireOutcome::TxnStart | WireOutcome::TxnEnd { .. } => {
             vec![build_ok(0, 0, status, "")]
         }
-        WireOutcome::CopyIn { .. } => vec![build_err(
+        WireOutcome::CopyIn { .. } | WireOutcome::CopyOut { .. } => vec![build_err(
             1148,
             "42000",
-            "COPY FROM STDIN is not supported over the MySQL wire (use INSERT)",
+            "COPY is not supported over the MySQL wire (use INSERT / SELECT)",
         )],
     }
 }

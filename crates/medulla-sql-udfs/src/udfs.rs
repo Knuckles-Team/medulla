@@ -1646,3 +1646,127 @@ mod crypto_ipaddr_tests {
         );
     }
 }
+
+/// One SQL session's view of the named sequences (MEDULLA-ENGINE-PARITY-R013.1).
+/// `nextval` and `setval` go to the durable source; `currval` is local to the
+/// session and reads the last value this session's `nextval` issued.
+pub struct SequenceSession {
+    source: Arc<dyn medulla_tables::sequence::SequenceSource>,
+    last: std::sync::Mutex<std::collections::HashMap<String, i64>>,
+}
+
+impl SequenceSession {
+    /// A fresh session over `source`.
+    pub fn new(source: Arc<dyn medulla_tables::sequence::SequenceSource>) -> Arc<Self> {
+        Arc::new(Self {
+            source,
+            last: std::sync::Mutex::new(std::collections::HashMap::new()),
+        })
+    }
+
+    fn next(&self, name: &str) -> Result<i64, String> {
+        let value = self.source.sequence_next(name)?;
+        self.last
+            .lock()
+            .map_err(|_| "sequence session lock poisoned".to_string())?
+            .insert(name.to_string(), value);
+        Ok(value)
+    }
+
+    fn current(&self, name: &str) -> Result<i64, String> {
+        self.last
+            .lock()
+            .map_err(|_| "sequence session lock poisoned".to_string())?
+            .get(name)
+            .copied()
+            .ok_or_else(|| {
+                format!(
+                    "{}: currval of sequence `{name}` is not yet defined in this session",
+                    medulla_tables::sequence::SEQUENCE_UNKNOWN
+                )
+            })
+    }
+
+    fn set(&self, name: &str, value: i64) -> Result<i64, String> {
+        let value = self.source.sequence_set(name, value)?;
+        self.last
+            .lock()
+            .map_err(|_| "sequence session lock poisoned".to_string())?
+            .insert(name.to_string(), value);
+        Ok(value)
+    }
+
+    /// `nextval(name)`, `currval(name)` and `setval(name, value)`, all `Int64`.
+    pub fn udfs(self: &Arc<Self>) -> Vec<ScalarUDF> {
+        let next = Arc::clone(self);
+        let current = Arc::clone(self);
+        let set = Arc::clone(self);
+        vec![
+            sequence_udf("nextval", vec![DataType::Utf8], move |args| {
+                next.next(&args.name()?)
+            }),
+            sequence_udf("currval", vec![DataType::Utf8], move |args| {
+                current.current(&args.name()?)
+            }),
+            sequence_udf(
+                "setval",
+                vec![DataType::Utf8, DataType::Int64],
+                move |args| set.set(&args.name()?, args.int()?),
+            ),
+        ]
+    }
+}
+
+/// One row of arguments to a sequence function.
+struct SequenceArgs<'a> {
+    names: &'a StringArray,
+    ints: Option<&'a Int64Array>,
+    row: usize,
+}
+
+impl SequenceArgs<'_> {
+    fn name(&self) -> Result<String, String> {
+        if self.names.is_null(self.row) {
+            return Err("sequence name must not be NULL".to_string());
+        }
+        Ok(self.names.value(self.row).to_string())
+    }
+
+    fn int(&self) -> Result<i64, String> {
+        match self.ints {
+            Some(ints) if !ints.is_null(self.row) => Ok(ints.value(self.row)),
+            _ => Err("setval value must not be NULL".to_string()),
+        }
+    }
+}
+
+fn sequence_udf(
+    name: &str,
+    args: Vec<DataType>,
+    each: impl Fn(&SequenceArgs<'_>) -> Result<i64, String> + Send + Sync + 'static,
+) -> ScalarUDF {
+    let label = name.to_string();
+    let fun = Arc::new(move |inputs: &[ColumnarValue]| {
+        let arrays = ColumnarValue::values_to_arrays(inputs)?;
+        let exec = |message: String| datafusion::error::DataFusionError::Execution(message);
+        let names = arrays[0]
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .ok_or_else(|| exec(format!("{label}: first argument must be Utf8")))?;
+        let ints = arrays
+            .get(1)
+            .map(|a| {
+                a.as_any()
+                    .downcast_ref::<Int64Array>()
+                    .ok_or_else(|| exec(format!("{label}: second argument must be Int64")))
+            })
+            .transpose()?;
+        let mut out = Vec::with_capacity(names.len());
+        for row in 0..names.len() {
+            let value = each(&SequenceArgs { names, ints, row }).map_err(exec)?;
+            out.push(Some(value));
+        }
+        Ok(ColumnarValue::Array(Arc::new(Int64Array::from(out)) as ArrayRef))
+    });
+    create_udf(name, args, DataType::Int64, Volatility::Volatile, fun)
+}

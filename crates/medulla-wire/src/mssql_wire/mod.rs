@@ -199,7 +199,7 @@ async fn run_batch(session: &WireSession, sql: &str) -> Vec<u8> {
             encode_done(status, 0, rows.unwrap_or(0) as u64)
         }
         Ok(WireOutcome::TxnStart) | Ok(WireOutcome::TxnEnd { .. }) => encode_done(DONE_FINAL, 0, 0),
-        Ok(WireOutcome::CopyIn { .. }) => {
+        Ok(WireOutcome::CopyIn { .. }) | Ok(WireOutcome::CopyOut { .. }) => {
             let e = WireError {
                 code: "0A000".to_owned(),
                 message: "COPY / bulk-load is not supported over the TDS wire".to_owned(),

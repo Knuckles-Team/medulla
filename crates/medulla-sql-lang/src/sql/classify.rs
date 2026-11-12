@@ -174,6 +174,11 @@ pub enum StatementKind {
     /// `COPY <table> [(cols…)] FROM STDIN [WITH (FORMAT …)]` — bulk ingest; the shim
     /// switches the connection into copy-in mode and streams rows into the user table.
     CopyIn(CopyPlan),
+    /// `COPY <table> [(cols…)] TO STDOUT [WITH (FORMAT text|csv)]`
+    /// (MEDULLA-ENGINE-PARITY-R006.1) — stream a table's rows to the client. The
+    /// engine reads them through the same authorized read path as a plain
+    /// `SELECT`, so ACL and masking apply identically.
+    CopyOut(CopyPlan),
 
     // ── extensions (CONCEPT:MEDULLA-KG.query.create-drop-extension-over) ────────────────────────────────────────────
     /// `CREATE EXTENSION [IF NOT EXISTS] name [WITH SCHEMA …]` — record `name` in the
@@ -271,6 +276,7 @@ impl StatementKind {
             Self::Commit => "commit",
             Self::Rollback => "rollback",
             Self::CopyIn(_) => "copy_in",
+            Self::CopyOut(_) => "copy_out",
             Self::CreateExtension { .. } => "create_extension",
             Self::DropExtension { .. } => "drop_extension",
             Self::CreateAnnIndex(_) => "create_ann_index",
@@ -797,8 +803,9 @@ fn is_copy_from_stdin(sql: &str) -> bool {
 }
 
 /// Decode `COPY <table> [(cols…)] FROM STDIN [WITH (FORMAT csv|binary|text), …]`
-/// (CONCEPT:MEDULLA-KG.query.register-each-user-table). Only `FROM STDIN` into a user table is accepted; `COPY TO`,
-/// `COPY (query)`, and `COPY … FROM 'file'`/`PROGRAM` are rejected (no server-side
+/// (CONCEPT:MEDULLA-KG.query.register-each-user-table) and `COPY <table> [(cols…)] TO STDOUT`
+/// (MEDULLA-ENGINE-PARITY-R006.1). Only STDIN/STDOUT with a user table is accepted;
+/// `COPY (query)` and `COPY … 'file'`/`PROGRAM` are rejected (no server-side
 /// filesystem access over the wire).
 fn classify_copy(
     source: &CopySource,
@@ -806,27 +813,44 @@ fn classify_copy(
     target: &CopyTarget,
     options: &[CopyOption],
 ) -> Result<StatementKind, String> {
-    if to {
-        return Err("COPY TO is not supported (only COPY … FROM STDIN)".to_string());
+    let target_ok = if to {
+        matches!(target, CopyTarget::Stdout)
+    } else {
+        matches!(target, CopyTarget::Stdin)
+    };
+    if !target_ok {
+        return Err(if to {
+            "COPY TO supports only STDOUT (no file/program target)".to_string()
+        } else {
+            "COPY supports only FROM STDIN (no file/program source)".to_string()
+        });
     }
-    if !matches!(target, CopyTarget::Stdin) {
-        return Err("COPY supports only FROM STDIN (no file/program source)".to_string());
-    }
-    let (table, columns) = resolve_copy_source(source)?;
+    let (table, columns) = resolve_copy_source(source, to)?;
     let (format, delimiter, header) = parse_copy_options(options)?;
-    Ok(StatementKind::CopyIn(CopyPlan {
+    if to && format == CopyFormat::Binary {
+        return Err(
+            "FEATURE_NOT_SUPPORTED: binary COPY TO STDOUT is not supported (use FORMAT text or csv)"
+                .to_string(),
+        );
+    }
+    let plan = CopyPlan {
         table,
         columns,
         format,
         delimiter,
         header,
-    }))
+    };
+    Ok(if to {
+        StatementKind::CopyOut(plan)
+    } else {
+        StatementKind::CopyIn(plan)
+    })
 }
 
 /// [`classify_copy`]'s source resolution: only a plain table target is accepted
 /// (never the reserved graph table, never a `COPY (query)`), returning its leaf
 /// name and explicit column list.
-fn resolve_copy_source(source: &CopySource) -> Result<(String, Vec<String>), String> {
+fn resolve_copy_source(source: &CopySource, to: bool) -> Result<(String, Vec<String>), String> {
     match source {
         CopySource::Table {
             table_name,
@@ -837,6 +861,9 @@ fn resolve_copy_source(source: &CopySource) -> Result<(String, Vec<String>), Str
                 return Err(format!("COPY cannot target the reserved table `{leaf}`"));
             }
             Ok((leaf, columns.iter().map(|c| c.value.clone()).collect()))
+        }
+        CopySource::Query(_) if to => {
+            Err("COPY (query) TO is not supported; use COPY <table> TO STDOUT".to_string())
         }
         CopySource::Query(_) => {
             Err("COPY (query) FROM is not valid; use COPY <table> FROM STDIN".to_string())
@@ -4327,7 +4354,29 @@ mod tests {
     #[test]
     fn copy_to_and_reserved_rejected() {
         assert!(classify("COPY nodes FROM STDIN").is_err());
-        assert!(classify("COPY prices TO STDOUT").is_err());
+        assert!(classify("COPY nodes TO STDOUT").is_err());
+        assert!(classify("COPY prices TO '/tmp/out.csv'").is_err());
+        assert!(classify("COPY (SELECT 1) TO STDOUT").is_err());
+        let error = classify("COPY prices TO STDOUT WITH (FORMAT binary)").unwrap_err();
+        assert!(error.starts_with("FEATURE_NOT_SUPPORTED"), "{error}");
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R006.1
+    #[test]
+    fn copy_to_stdout_classifies() {
+        let StatementKind::CopyOut(plan) =
+            classify("COPY prices (symbol, px) TO STDOUT WITH (FORMAT csv, HEADER)").unwrap()
+        else {
+            panic!("expected CopyOut");
+        };
+        assert_eq!(plan.table, "prices");
+        assert_eq!(plan.columns, vec!["symbol".to_string(), "px".to_string()]);
+        assert_eq!(plan.format, CopyFormat::Csv);
+        assert!(plan.header);
+        let StatementKind::CopyOut(text) = classify("COPY prices TO STDOUT").unwrap() else {
+            panic!("expected CopyOut");
+        };
+        assert_eq!(text.format, CopyFormat::Text);
     }
 
     #[test]

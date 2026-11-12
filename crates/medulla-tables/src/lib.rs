@@ -15,3 +15,5 @@ pub mod migration;
 #[cfg(feature = "sql")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod schema;
+#[cfg(feature = "sql")]
+pub mod sequence;

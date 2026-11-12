@@ -536,7 +536,7 @@ impl CheckExpr {
 
     /// Every column name this expression references, for [`TableSchema::validate`]'s
     /// "the constraint references real columns" fail-closed check.
-    fn referenced_columns<'a>(&'a self, out: &mut Vec<&'a str>) {
+    pub fn referenced_columns<'a>(&'a self, out: &mut Vec<&'a str>) {
         match self {
             CheckExpr::Cmp { column, .. }
             | CheckExpr::In { column, .. }

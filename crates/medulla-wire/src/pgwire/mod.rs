@@ -547,10 +547,11 @@ async fn client_requested_tls(socket: &tokio::net::TcpStream) -> std::io::Result
 /// Map an internal error string to a pgwire user error (SQLSTATE 58000 — system
 /// error) for the Postgres-SPECIFIC surfaces of this adapter (COPY framing, etc.).
 fn user_err(msg: impl Into<String>) -> PgWireError {
+    let message = msg.into();
     PgWireError::UserError(Box::new(ErrorInfo::new(
         "ERROR".to_owned(),
-        "58000".to_owned(),
-        msg.into(),
+        medulla_wire_core::wire::sqlstate::sqlstate_of_message(&message).to_owned(),
+        message,
     )))
 }
 
@@ -596,6 +597,19 @@ fn outcome_to_response(outcome: WireOutcome, format: Option<&Format>) -> Respons
             format_code,
             num_columns,
             futures::stream::empty(),
+        )),
+        // `COPY … TO STDOUT`: CopyOutResponse, one CopyData per row, CopyDone, then
+        // the `COPY n` completion tag, all framed by the pgwire server API.
+        WireOutcome::CopyOut {
+            format_code,
+            num_columns,
+            lines,
+        } => Response::CopyOut(pgwire::api::results::CopyResponse::new(
+            format_code,
+            num_columns,
+            futures::stream::iter(lines.into_iter().map(|line| {
+                Ok(pgwire::messages::copy::CopyData::new(line.into()))
+            })),
         )),
     }
 }

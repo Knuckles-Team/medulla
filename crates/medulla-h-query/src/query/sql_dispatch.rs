@@ -545,7 +545,7 @@ fn classify_sql_catalog_terminal(
     use medulla_sql_lang::sql::classify::StatementKind as K;
     match kind {
         K::Begin | K::Commit | K::Rollback => SqlCatalogTerminalClass::TransactionControl,
-        K::CopyIn(_) => SqlCatalogTerminalClass::CopyIn,
+        K::CopyIn(_) | K::CopyOut(_) => SqlCatalogTerminalClass::CopyIn,
         K::Read
         | K::PropertyGraphDdlRequiresCatalogAdmission(_)
         | K::PropertyGraphPrivilegeRequiresCatalogAdmission(_)
@@ -610,7 +610,7 @@ async fn exec_classified_sql_catalog_terminal(
         ),
         SqlCatalogTerminalClass::CopyIn => Response::err(
             req_id,
-            "INVALID_ARGUMENT: SQL error: COPY … FROM STDIN is a streaming pgwire operation, not available over Method::Sql"
+            "INVALID_ARGUMENT: SQL error: COPY … FROM STDIN / TO STDOUT is a streaming pgwire operation, not available over Method::Sql"
                 .to_string(),
         ),
         SqlCatalogTerminalClass::PropertyGraph => {
