@@ -53,7 +53,7 @@ pub struct ServerArgs {
     pub tcp_tls_cert: Option<String>,
 
     /// PEM private key for native TCP TLS.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_KEY")]
+    #[arg(long, env = "GRAPH_SERVICE_TLS_KEY", hide_env_values = true)]
     pub tcp_tls_key: Option<String>,
 
     /// Optional PEM CA bundle for required client-certificate authentication.
@@ -65,7 +65,12 @@ pub struct ServerArgs {
     pub auth_mode: String,
 
     /// HMAC-SHA256 shared secret for authentication.
-    #[arg(long, env = "GRAPH_SERVICE_AUTH_SECRET", default_value = "")]
+    #[arg(
+        long,
+        env = "GRAPH_SERVICE_AUTH_SECRET",
+        default_value = "",
+        hide_env_values = true
+    )]
     pub auth_secret: String,
 
     /// Directory for the authoritative durable store.
@@ -1160,6 +1165,28 @@ mod anonymous_store_tests {
             assert_eq!(anonymous_env_conflicts(name, "value"), conflicts, "{name}");
             assert_eq!(anonymous_env_conflicts(name, " "), conflicts, "{name}");
             assert!(!anonymous_env_conflicts(name, ""), "{name}");
+        }
+    }
+
+    /// `--help` must never print the value of a secret-bearing environment variable.
+    #[test]
+    fn help_never_shows_secret_environment_values() {
+        use clap::CommandFactory;
+        #[derive(clap::Parser)]
+        struct HelpCli {
+            #[command(flatten)]
+            args: ServerArgs,
+        }
+        let command = HelpCli::command();
+        for id in ["auth_secret", "tcp_tls_key"] {
+            let arg = command
+                .get_arguments()
+                .find(|arg| arg.get_id() == id)
+                .unwrap_or_else(|| panic!("server argument {id} exists"));
+            assert!(
+                arg.is_hide_env_values_set(),
+                "{id} must hide its environment value in --help"
+            );
         }
     }
 
