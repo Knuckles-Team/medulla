@@ -82,6 +82,36 @@ async fn searchable_ids(served: &Served) -> Vec<String> {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R052
+// A store written before the import topic was renamed still holds the old
+// consumer subscribed to the retired topic. The worker must project on the
+// current topic regardless; before the consumer identity changed, every sweep
+// failed with "outbox consumer is already subscribed to another topic".
+// spec: MEDULLA-TYPED-PACKS-R006
+#[tokio::test]
+async fn a_store_holding_the_retired_topic_subscription_still_projects() {
+    let served = Served::new();
+    bind(&served, CONNECTOR, ADMIN).await;
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    store
+        .outbox_subscribe(
+            TENANT,
+            "connector-pack-projection",
+            "eg.connector-pack.import.v1",
+        )
+        .unwrap();
+    imported(
+        &served,
+        &build_pack(CONNECTOR, &[tool(CONNECTOR, "a", "Tool a.")]),
+        None,
+    )
+    .await;
+    let subscribed = AtomicBool::new(false);
+    assert!(
+        sweep(&served.state, &subscribed).await.unwrap(),
+        "the import row is consumed despite the retired subscription"
+    );
+}
+
 // The projection consumer is not a pack-specific stand-in: it is driven
 // through the general Agent Library MutationOutbox (status/rewind) that
 // MEDULLA-TYPED-PACKS-R054/R055 already land on main, so this capability was

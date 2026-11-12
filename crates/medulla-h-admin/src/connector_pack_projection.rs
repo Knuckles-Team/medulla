@@ -64,7 +64,19 @@ pub mod worker {
     const BLOCKING_TASK: &str = "connector pack projection";
 
     /// The worker's one durable consumer name on every tenant's outbox.
-    pub const CONSUMER: &str = "connector-pack-projection";
+    ///
+    /// A durable subscription binds a consumer to ONE topic for good: moving
+    /// it would move the consumer's whole ordered stream while its cursor
+    /// still names positions in the old one, so the outbox refuses it. The
+    /// import topic was renamed with the engine (`eg.connector-pack.import.v1`
+    /// became `medulla.connector-pack.import.v1`); a store written before the
+    /// rename still holds the previous consumer, subscribed to the retired
+    /// topic, under the name `connector-pack-projection`. Reusing that name
+    /// made every sweep fail on the refused subscription, so no import was
+    /// ever projected and the catalog stayed dark. The consumer on the current
+    /// topic is therefore a distinct identity; the retired one is never read
+    /// again and its history is not replayed.
+    pub const CONSUMER: &str = "connector-pack-projection-v2";
     /// Rows one sweep claims.
     const CLAIM_LIMIT: u32 = 16;
     /// How long a claimed row stays leased: a projection reads bodies and
