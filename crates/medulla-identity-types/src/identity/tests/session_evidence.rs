@@ -283,6 +283,7 @@ fn renewal_preserves_original_scope_ceiling_and_refuses_legacy_evidence() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.6.1
+// spec: MEDULLA-IDENTITY-R712
 #[test]
 fn credential_observation_preserves_state_and_existing_refusals() {
     let mut store = opened();
@@ -314,6 +315,7 @@ fn credential_observation_preserves_state_and_existing_refusals() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.6.1
+// spec: MEDULLA-IDENTITY-R712
 #[test]
 fn omitted_refresh_preserves_legacy_touch_and_authority() {
     let request: SessionTouch =

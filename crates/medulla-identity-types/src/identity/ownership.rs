@@ -146,6 +146,7 @@ mod tests {
         assert_eq!(&serde_json::from_str::<T>(&json).unwrap(), value);
     }
 
+    // spec: MEDULLA-IDENTITY-R700.1
     #[test]
     fn ownership_types_round_trip() {
         let writers = (0..MAX_OWNERSHIP_WRITERS)
