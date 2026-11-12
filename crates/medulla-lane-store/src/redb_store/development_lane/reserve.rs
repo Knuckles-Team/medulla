@@ -26,6 +26,7 @@ use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldE
 use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::DurableCrypto;
 
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 fn reserve_policy_refusal(
     policy: &DurableLanePolicy,
     global_policy: &DurableLanePolicy,
@@ -54,6 +55,7 @@ fn reserve_policy_refusal(
 
 /// Load the tenant and graph-global policies and prove they agree with each
 /// other and with the request's intent.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn reserve_policy_gate(
     policies: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
     graph: &str,
@@ -87,6 +89,7 @@ pub fn reserve_policy_gate(
 /// The derived hold identity is either already present -- an exact replay or
 /// an input conflict -- or already claimed for this WorkItem attempt.  `None`
 /// means the reserve may proceed to allocate.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn reserve_identity_gate(
     graph: &str,
     request: &DevelopmentLaneReserveRequest,
@@ -120,6 +123,7 @@ pub fn reserve_identity_gate(
 
 /// Does the linked resource reservation carry a different state/lease/fence
 /// tuple than this reserve request?
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn resource_fence_mismatch(
     resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     request: &DevelopmentLaneReserveRequest,
@@ -136,6 +140,7 @@ pub fn resource_fence_mismatch(
 }
 
 /// Does the reservation target the exact host placement the intent asks for?
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn resource_target_matches(
     resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     intent: &DevelopmentLaneIntent,
@@ -156,6 +161,7 @@ pub fn resource_target_matches(
 
 /// Does the reservation describe a different placement or content than the
 /// intent plus the host the proven WorkItem carries?
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn resource_placement_mismatch(
     resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     intent: &DevelopmentLaneIntent,
@@ -170,6 +176,7 @@ pub fn resource_placement_mismatch(
 
 /// The whole reservation cross-check.  Every mismatch is one `WrongFence`
 /// decision, so the two halves may be evaluated in either order.
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn resource_reservation_mismatch(
     resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     request: &DevelopmentLaneReserveRequest,
@@ -183,6 +190,7 @@ pub fn resource_reservation_mismatch(
 /// refuses it; `None` means the caller may commit, and the returned scope
 /// counters are the ones the commit charges against.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn reserve_admission_gate(
     graph: &str,
     hold: &DevelopmentLaneHold,
@@ -229,6 +237,7 @@ pub fn reserve_admission_gate(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_reserve(
     graph: &str,
     request: &DevelopmentLaneReserveRequest,

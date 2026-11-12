@@ -20,6 +20,7 @@ use medulla_store::redb_store::DurableCrypto;
 /// The renew tail: prove the lifecycle WorkItem and observation freshness,
 /// then extend the live hold in place.  `row` is the already-gated hold.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn renew_live_hold(
     graph: &str,
     request: &DevelopmentLaneRenewRequest,
@@ -101,6 +102,7 @@ pub fn renew_live_hold(
 /// observation, and charge only the checked positive delta.  `row` is the
 /// already-gated hold.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn observe_live_hold(
     graph: &str,
     request: &DevelopmentLaneObserveRequest,
@@ -203,6 +205,7 @@ pub fn observe_live_hold(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_renew(
     graph: &str,
     request: &DevelopmentLaneRenewRequest,
@@ -297,6 +300,7 @@ pub fn apply_renew(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(any(test, feature = "server")), allow(dead_code))]
 pub fn apply_observe(
     graph: &str,
     request: &DevelopmentLaneObserveRequest,
