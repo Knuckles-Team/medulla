@@ -5,9 +5,10 @@
 //! abstain with their registered codes and write nothing.
 
 use super::*;
+use medulla_catalog_types::consumer_contract::{ConsumerContractSchema, ContractField};
 use medulla_decision_types::decision::skill_upgrade_request::{
-    ConsumerContractSchema, ContractField, SkillUpgradeReceipt, SkillUpgradeRequest,
-    UpgradeSubjectKind, SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION, SKILL_UPGRADE_DIGEST_MISMATCH,
+    SkillUpgradeReceipt, SkillUpgradeRequest, UpgradeSubjectKind,
+    SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION, SKILL_UPGRADE_DIGEST_MISMATCH,
     SKILL_UPGRADE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;

@@ -30,6 +30,9 @@ pub mod metadata_acceleration;
 // implementing each proven feature is a later child.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pg_compat_feature;
+// MEDULLA-DECISION-ENGINE-R167.1/.2 — the consumer-declared contract of a skill, tool or
+// prompt and its additive-only comparison, shared by the decision family and skill admission.
+pub mod consumer_contract;
 // MEDULLA-UNIFIED-DATA-PLANE-R028.1 — typed Postgres-equivalence differential
 // deviation baseline, refusing a baseline update that drops a deviation
 // without an explicit resolution record (no self-updating baseline). Pure
@@ -55,6 +58,8 @@ pub mod pgrx_spike_review;
 // real schedule is a later child.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pitr_schedule;
+// MEDULLA-TYPED-PACKS-R100.101 — the pure skill admission rule over consumer contracts.
+pub mod skill_admission;
 // RF-ADR-009 — connector MCP pack import: index, entries, framed digests, ops,
 // results and the durable import record. Pure serde; the importer and its
 // validation rules live in the server.

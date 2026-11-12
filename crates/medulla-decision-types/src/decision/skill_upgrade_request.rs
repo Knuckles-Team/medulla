@@ -5,7 +5,8 @@
 //! carries both contracts as typed field lists; their digests are what the
 //! sealed receipt records. Nothing here reads a clock or a store.
 
-use medulla_types::contract::{BoundedVec, Digest256, OpaqueId};
+use medulla_catalog_types::consumer_contract::ConsumerContractSchema;
+use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 
@@ -54,11 +55,6 @@ impl SkillUpgradeReceipt {
 
 /// Current wire schema version of [`SkillUpgradeRequest`].
 pub const SKILL_UPGRADE_SCHEMA_VERSION: u16 = 1;
-/// Most fields one consumer contract may declare.
-pub const MAX_CONTRACT_FIELDS: usize = 256;
-/// Domain of a consumer contract digest.
-pub const CONSUMER_CONTRACT_DIGEST_DOMAIN: &[u8] = b"eg/consumer-contract/v1";
-
 /// The kind of definition being upgraded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -67,65 +63,6 @@ pub enum UpgradeSubjectKind {
     Skill,
     Tool,
     Prompt,
-}
-
-/// One field a consumer relies on.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct ContractField {
-    pub name: String,
-    pub type_name: String,
-    pub required: bool,
-}
-
-/// The fields a consumer relies on, sorted by name.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct ConsumerContractSchema {
-    pub fields: BoundedVec<ContractField, MAX_CONTRACT_FIELDS>,
-}
-
-impl ConsumerContractSchema {
-    /// Sort the fields by name and refuse an empty or duplicated name.
-    pub fn new(mut fields: Vec<ContractField>) -> Result<Self, String> {
-        fields.sort_by(|a, b| a.name.cmp(&b.name));
-        let schema = Self {
-            fields: BoundedVec::new(fields)?,
-        };
-        schema.validate()?;
-        Ok(schema)
-    }
-
-    /// Fields are named, typed, unique and sorted by name.
-    pub fn validate(&self) -> Result<(), String> {
-        let fields = self.fields.as_slice();
-        if fields
-            .iter()
-            .any(|f| f.name.trim().is_empty() || f.type_name.trim().is_empty())
-        {
-            return Err("every contract field has a name and a type".into());
-        }
-        if fields.windows(2).any(|pair| pair[0].name >= pair[1].name) {
-            return Err("contract fields are sorted by name and unique".into());
-        }
-        Ok(())
-    }
-
-    /// SHA-256 over the canonical bytes: for each field in order its name, type
-    /// name and `required` flag as framed fields.
-    pub fn digest(&self) -> Result<Digest256, String> {
-        self.validate()?;
-        let flags: Vec<[u8; 1]> = self.fields.iter().map(|f| [u8::from(f.required)]).collect();
-        let mut framed: Vec<&[u8]> = Vec::with_capacity(self.fields.len() * 3);
-        for (field, flag) in self.fields.iter().zip(&flags) {
-            framed.push(field.name.as_bytes());
-            framed.push(field.type_name.as_bytes());
-            framed.push(flag);
-        }
-        Digest256::framed(CONSUMER_CONTRACT_DIGEST_DOMAIN, &framed)
-    }
 }
 
 /// One compatibility question.
@@ -163,6 +100,7 @@ impl SkillUpgradeRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_catalog_types::consumer_contract::ContractField;
 
     fn field(name: &str, type_name: &str, required: bool) -> ContractField {
         ContractField {

@@ -9,7 +9,7 @@
 //! it writes nothing, and the caller commits through `DecisionCommit`. Every
 //! check runs before any store call, so a refusal writes nothing.
 
-use medulla_decision_outcome_types::decision::skill_upgrade::compare_contracts;
+use medulla_catalog_types::consumer_contract::compare_contracts;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::skill_upgrade_request::{
