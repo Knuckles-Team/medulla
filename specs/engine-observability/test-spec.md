@@ -16,7 +16,7 @@ Governing spec: [spec.md](spec.md).
 | T-010 | FR-010 | Served (L3) | Call `Introspect build`; read the startup log. | Version, git SHA, build-id and features appear in both. |  |
 | T-011 | FR-011 | Served (L3) | `Profile Stacks` for 2 s against a pinned worker. | Folded stacks carry the build-id, offsets and the spinning function's frames. |  |
 | T-012 | FR-012 | Served (L3) | Inject a stalled task and a spinning loop. | Introspection, watchdog and readiness each name the culprit and its location within 10 s. |  |
-| T-013 | FR-013 | Script (L1) | Build a release-server binary, split symbols, run `scripts/symbolize.sh`. | The offset resolves to the function; the build-id of binary and artifact match. |  |
+| T-013 | FR-013 | Script (L1) | Build a release-server binary, split symbols, run the planned script `scripts/symbolize.sh`. | The offset resolves to the function; the build-id of binary and artifact match. |  |
 | T-014 | FR-014 | Docs (L1) | Parse the guide. | Every code, knob and section matches the source. |  |
 
 ## Row bindings
