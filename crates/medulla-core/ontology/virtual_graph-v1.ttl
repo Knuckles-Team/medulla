@@ -177,6 +177,48 @@ vg:PredicateFieldPair a owl:Class ;
 vg:SourceAuthority a owl:Class ;
     rdfs:comment "One declared statement that a connected source is authoritative for one ontology class: its source (vg:authoritativeSource), its class (vg:authorityFor) and its rank (vg:authorityRank, lower wins). Source choice is data in the graph, not query text (MEDULLA-CQ-XSRC-R001)." .
 
+# --- Sync role vocabulary (MEDULLA-SRC-AUTH-R012.1) ---------------------------------
+
+vg:recordRole a owl:DatatypeProperty ;
+    rdfs:comment "The record role of one SourceAuthority: system_of_record (the native graph) or federated_secondary (a connected source kept in step with it). The set is closed." ;
+    rdfs:domain vg:SourceAuthority ;
+    rdfs:range xsd:string .
+vg:syncDirection a owl:DatatypeProperty ;
+    rdfs:comment "Which way one federated-secondary SourceAuthority syncs: inbound (source to graph), outbound (graph to source, as proposals) or both. The set is closed." ;
+    rdfs:domain vg:SourceAuthority ;
+    rdfs:range xsd:string .
+vg:conflictRule a owl:DatatypeProperty ;
+    rdfs:comment "What happens when both sides changed a record: system_of_record_wins (the graph value is proposed outbound) or hold_for_review (nothing is proposed). The set is closed." ;
+    rdfs:domain vg:SourceAuthority ;
+    rdfs:range xsd:string .
+vg:syncConnection a owl:ObjectProperty ;
+    rdfs:comment "The SourceConnection one SyncState record was synced with." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range vg:SourceConnection .
+vg:syncClass a owl:ObjectProperty ;
+    rdfs:comment "The ontology class one SyncState record belongs to." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range owl:Class .
+vg:syncRecordKey a owl:DatatypeProperty ;
+    rdfs:comment "The source-side record key one SyncState tracks." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range xsd:string .
+vg:baseDigest a owl:DatatypeProperty ;
+    rdfs:comment "The digest of the record as of the last sync, the base of the three-way reconcile." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range xsd:string .
+vg:sourceRevision a owl:DatatypeProperty ;
+    rdfs:comment "The source's own revision marker for the record as of the last sync." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range xsd:string .
+vg:syncedAtMs a owl:DatatypeProperty ;
+    rdfs:comment "When the record was last synced, in milliseconds since the epoch." ;
+    rdfs:domain vg:SyncState ;
+    rdfs:range xsd:nonNegativeInteger .
+
+vg:SyncState a owl:Class ;
+    rdfs:comment "The sync state of one record of one class synced with one connection: the base digest the next reconcile compares against. Sync state is graph data and rides the same mutation batch as the inbound changes (MEDULLA-SRC-AUTH-R012.4)." .
+
 # --- Triple-store graphs (MEDULLA-CQ-CONN-R077) ------------------------------
 
 :NamedGraph a owl:Class ;
@@ -201,3 +243,4 @@ vg:SourceAuthority a owl:Class ;
 <https://knuckles-team.github.io/ontology/virtual-graph#SourceAuthority> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/virtual-graph#SourceConnection> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
 <https://knuckles-team.github.io/ontology/virtual-graph#VirtualMapping> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/virtual-graph#SyncState> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

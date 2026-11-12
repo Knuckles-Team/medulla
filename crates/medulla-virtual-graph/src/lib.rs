@@ -25,6 +25,7 @@ pub mod obda;
 /// R073 mapping-type lane this builds toward.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_selection;
+pub mod source_sync;
 /// MEDULLA-CQ-XSRC-R006.5 — Medulla's side of the served supply-chain impact
 /// method: plans the question's ontology classes through
 /// [`source_selection::select_sources`] and assembles the typed
