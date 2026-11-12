@@ -268,3 +268,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R872 Semantic index upgrade phase is an explicit state machine
 - [ ] T260 MEDULLA-DURABLE-KERNEL-R872.1 Upgrade phase transition function
 - [ ] T261 MEDULLA-DURABLE-KERNEL-R872.2 Describe the semantic index upgrade machine in the ontology
+- [ ] T262 MEDULLA-DURABLE-KERNEL-R873 Lazy paging proves forward progress
+- [ ] T263 MEDULLA-DURABLE-KERNEL-R873.1 A progress guard in `page_in_remaining`. Files: `crates/medulla-persistence/src/cold_offload.rs`. Test: `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed`.
+- [ ] T264 MEDULLA-DURABLE-KERNEL-R873.2 Paging resumes by seek, not by skip. Files: `crates/medulla-store-apply/src/redb_store/dump.rs`. Test: `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length`.

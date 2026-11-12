@@ -160,3 +160,7 @@ A direct native operation must use its own entry point; forcing it through the p
 Record revision, feature profile, entry point, command, exit result, artifact digest, and observed effect for each execution claim.
 Keep unexecuted cases explicit.
 | MEDULLA-CONTRACT-R059 | `tests/test_client_derives_from_catalog.py::test_every_catalog_method_is_callable_and_no_wrapper_is_tracked` (planned) | The Python client is a thin layer over the served catalog. |
+| MEDULLA-CONTRACT-R060 | `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes` (planned) | Release binaries ship split symbols and one-command symbolization. |
+| MEDULLA-CONTRACT-R060.1 | `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes` (planned) | Debug info splits from the shipped binary and the build-id stays in both. |
+| MEDULLA-CONTRACT-R060.2 | `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id` (planned) | Each release uploads a symbol artifact per platform, named by build-id. |
+| MEDULLA-CONTRACT-R060.3 | `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact` (planned) | One command symbolizes a stack. |

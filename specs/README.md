@@ -61,6 +61,7 @@ Medulla is one engine with one server executable. Every spec belongs to one subs
 | Finance | `MEDULLA-FINANCE-PRIMITIVES` | Market data primitives, kernels, backtests, risk and signals | Finance numeric kernels, series operators in UQL |
 | Graph-native development | `MEDULLA-SDLC`, `MEDULLA-SCM`, `MEDULLA-REPO-INGEST`, `MEDULLA-BRANCH-MERGE` | The ecosystem's code, specs, changes, gates and releases as graph records | `SubmitChangeset`, `ReadTree`, `SourceIngest`, `UnifiedQuery`, served through arbora MCP |
 | Competency | `MEDULLA-CQ-CONN`, `MEDULLA-CQ-XSRC`, `MEDULLA-CQ-ORCH` | The questions the ontology must answer | The served query path only |
+| Observability | `MEDULLA-OBSERVE` | The task registry, runtime introspection, runtime state machines, progress proofs, readiness, the startup report, trace correlation and profiling | Request dispatch, `Health`, `Introspect`, `Profile`, boot maintenance |
 | Contract | `MEDULLA-CONTRACT` | The public engine contract, gates and release proof | The server executable and client |
 
 ## Cross-spec rules
@@ -140,3 +141,4 @@ bootstrap skill, together with the [SDD full lifecycle](https://github.com/Knuck
 - [`MEDULLA-MEDIA-VOCAB`](media-and-personal-vocabulary/spec.md) — media and personal-content vocabulary and per-connector virtual-graph mappings.
 - [`MEDULLA-SUPPLY-VOCAB`](supply-chain-vocabulary/spec.md) — supply-chain, commercial and host-limit vocabulary for the cross-source competency
 - [`MEDULLA-INCREMENTAL-VIEWS`](incremental-views/spec.md) — incremental view maintenance for plan views, SQL views and the ontology closure.
+- [`MEDULLA-OBSERVE`](engine-observability/spec.md) — engine observability: task registry, runtime introspection, explicit runtime state machines, progress proofs, readiness, trace correlation and profiling.
