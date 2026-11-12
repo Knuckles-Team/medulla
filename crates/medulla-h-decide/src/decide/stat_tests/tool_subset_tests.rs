@@ -131,6 +131,7 @@ async fn tool_subset_question_refuses_when_the_budget_cannot_cover_every_capabil
 }
 
 #[tokio::test]
+// spec: MEDULLA-TYPED-PACKS-R045.6
 async fn missing_schema_tokens_abstains() {
     let h = Harness::new().await;
     let (schema_pin, _digest) = publish_route_schema(&h);

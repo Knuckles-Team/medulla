@@ -31,7 +31,7 @@ fn write(monitor: &mut DriftMonitor, token: &str) {
 
 /// Verifies MEDULLA-DECISION-ENGINE-R174.8.2: Behavior: shift and vocabulary monitors.
 // spec: MEDULLA-DECISION-ENGINE-R174.8.1
-// spec: MEDULLA-DECISION-ENGINE-R174.8.2
+// spec: MEDULLA-DECISION-ENGINE-R174.8.2, MEDULLA-DECISION-ENGINE-R174.8.6
 #[test]
 fn vocabulary_drift_refreshes_changed_shards() {
     let thresholds = DriftThresholds::from_policy(&DecisionPolicy::engine_default());

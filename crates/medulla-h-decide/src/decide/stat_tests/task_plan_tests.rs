@@ -257,7 +257,7 @@ fn with_call(request: &mut DecideRequest, reference: &str) {
     request.params = BoundedVec::new(params).unwrap();
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R134.111.12
+// spec: MEDULLA-DECISION-ENGINE-R134.111.12, MEDULLA-DECISION-ENGINE-R134.111.13
 #[tokio::test]
 async fn decide_routes_task_plan_with_calls() {
     let h = Harness::new().await;
