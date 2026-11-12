@@ -15,12 +15,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::contract::ServerErrorCode;
+use crate::refusal_code::RefusalCode;
 
 /// The wire code of every refused state-machine transition.
 pub const TRANSITION_REFUSED: &str = "TRANSITION_REFUSED";
 
 /// Every refusal code this module emits.
-pub const REFUSALS: &[&str] = &[TRANSITION_REFUSED];
+pub const REFUSALS: &[RefusalCode] = &[RefusalCode::new(TRANSITION_REFUSED)];
 
 /// Why a machine refused an event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -328,7 +329,7 @@ mod tests {
         let wire = serde_json::to_string(&refused).unwrap();
         let back: TransitionRefused = serde_json::from_str(&wire).unwrap();
         assert_eq!(back, refused);
-        assert_eq!(REFUSALS, &[TRANSITION_REFUSED]);
+        assert_eq!(REFUSALS, &[RefusalCode::new(TRANSITION_REFUSED)]);
         assert_eq!(refused.code().as_str(), TRANSITION_REFUSED);
         // A record carrying another code is not a transition refusal.
         let foreign = wire.replace(TRANSITION_REFUSED, "SOMETHING_ELSE");

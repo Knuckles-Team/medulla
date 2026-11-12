@@ -235,7 +235,7 @@ fn unknown_head_and_taken_version_refuse() {
         "RELEASE_VERSION_TAKEN",
         "RELEASE_SEALED",
     ] {
-        assert!(REFUSALS.contains(&code));
+        assert!(REFUSALS.iter().any(|c| c.as_str() == code));
     }
 }
 

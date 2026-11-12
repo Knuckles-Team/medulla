@@ -90,7 +90,7 @@ fn records_round_trip() {
     round_trip(&receipt);
     rejects_unknown_field(&receipt);
 
-    let codes: Vec<&str> = REFUSALS.iter().map(|(code, _)| *code).collect();
+    let codes: Vec<&str> = REFUSALS.iter().map(|(code, _)| code.as_str()).collect();
     let mut sorted = codes.clone();
     sorted.sort_unstable();
     sorted.dedup();

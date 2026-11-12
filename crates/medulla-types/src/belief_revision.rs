@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::claims::EvidenceChannel;
 use crate::evidence_class::EvidenceClass;
+use crate::refusal_code::RefusalCode;
 
 /// One piece of evidence behind a revision.
 ///
@@ -66,17 +67,17 @@ pub struct RetractionProposal {
 /// The refusal codes of the belief surface (MEDULLA-DECISION-ENGINE-R700.4,
 /// R700.7), `(code, meaning)`, sorted by code. Each is a registered
 /// [`crate::contract::ServerErrorCode`].
-pub const REFUSALS: &[(&str, &str)] = &[
+pub const REFUSALS: &[(RefusalCode, &str)] = &[
     (
-        "BELIEF_CLAIM_NOT_FOUND",
+        RefusalCode::new("BELIEF_CLAIM_NOT_FOUND"),
         "a revised claim does not exist for the tenant",
     ),
     (
-        "BELIEF_PREMISE_MISSING",
+        RefusalCode::new("BELIEF_PREMISE_MISSING"),
         "an evidence reference names a premise node that is absent",
     ),
     (
-        "CONTRADICTION_STATUS_ORDER",
+        RefusalCode::new("CONTRADICTION_STATUS_ORDER"),
         "a contradiction status move is not the next step of open, proposed, resolved",
     ),
 ];

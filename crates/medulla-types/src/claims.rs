@@ -12,32 +12,36 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::contract::ServerErrorCode;
+use crate::refusal_code::RefusalCode;
 
 /// Largest evidence weight, in parts per million.
 pub const WEIGHT_PPM_MAX: u32 = 1_000_000;
 
 /// The refusal codes of the claim surface (MEDULLA-DECISION-ENGINE-R652.4),
 /// `(code, meaning)`, sorted by code. Each is a registered [`ServerErrorCode`].
-pub const REFUSALS: &[(&str, &str)] = &[
+pub const REFUSALS: &[(RefusalCode, &str)] = &[
     (
-        "ARTIFACT_SEAL_VIOLATION",
+        RefusalCode::new("ARTIFACT_SEAL_VIOLATION"),
         "an unsealed artifact is presented as sealed, or its digest does not match on read",
     ),
     (
-        "CLAIM_GUARD_NOT_MET",
+        RefusalCode::new("CLAIM_GUARD_NOT_MET"),
         "the log-odds guard of the requested transition fails",
     ),
     (
-        "CLAIM_ILLEGAL_TRANSITION",
+        RefusalCode::new("CLAIM_ILLEGAL_TRANSITION"),
         "the requested edge is outside the lifecycle table",
     ),
     (
-        "CLAIM_NOT_FOUND",
+        RefusalCode::new("CLAIM_NOT_FOUND"),
         "no claim or artifact with this id exists for the tenant",
     ),
-    ("EVIDENCE_NO_CHANNEL", "the evidence names no channel"),
     (
-        "EVIDENCE_WEIGHT_OUT_OF_RANGE",
+        RefusalCode::new("EVIDENCE_NO_CHANNEL"),
+        "the evidence names no channel",
+    ),
+    (
+        RefusalCode::new("EVIDENCE_WEIGHT_OUT_OF_RANGE"),
         "the evidence weight is above 1000000 ppm",
     ),
 ];
@@ -408,9 +412,11 @@ mod tests {
     fn refusal_codes_are_registered_server_error_codes() {
         let mut previous = "";
         for (code, _) in REFUSALS {
-            assert!(*code > previous, "REFUSALS is sorted by code");
-            previous = code;
-            assert!(ServerErrorCode::ALL.iter().any(|c| c.as_str() == *code));
+            assert!(code.as_str() > previous, "REFUSALS is sorted by code");
+            previous = code.as_str();
+            assert!(ServerErrorCode::ALL
+                .iter()
+                .any(|c| c.as_str() == code.as_str()));
         }
     }
 }

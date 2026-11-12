@@ -7,6 +7,7 @@
 //! enum, so an unknown value is refused at decode.
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -117,10 +118,10 @@ impl LifecycleKind {
 
 /// The stable refusal codes of the served release and deployment records
 /// (MEDULLA-SDLC-R002.4, R002.5), in the order they are documented.
-pub const REFUSALS: &[&str] = &[
-    "RELEASE_HEAD_UNKNOWN",
-    "RELEASE_VERSION_TAKEN",
-    "RELEASE_SEALED",
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("RELEASE_HEAD_UNKNOWN"),
+    RefusalCode::new("RELEASE_VERSION_TAKEN"),
+    RefusalCode::new("RELEASE_SEALED"),
 ];
 
 /// A typed refusal from the lifecycle records.

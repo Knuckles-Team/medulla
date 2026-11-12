@@ -169,6 +169,28 @@ pub const FOLDED: &[RefusalCode] = &[
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[];
 
+/// The `REFUSALS` table of every module that declares one in a crate below the
+/// decision plane, keyed by module name. A module joins this list in the change
+/// that declares its table; the uniqueness test collects it with every family
+/// table (MEDULLA-DECISION-ENGINE-R010.100.1).
+pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
+    use medulla_types::{
+        belief_revision, claims, context_facts, meeting_transcript, transition_refused,
+    };
+    let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
+    vec![
+        ("belief_revision", codes(belief_revision::REFUSALS)),
+        ("claims", codes(claims::REFUSALS)),
+        ("context_facts", context_facts::REFUSALS.to_vec()),
+        ("meeting_transcript", codes(meeting_transcript::REFUSALS)),
+        ("transition_refused", transition_refused::REFUSALS.to_vec()),
+        (
+            "lifecycle",
+            medulla_source_types::lifecycle::REFUSALS.to_vec(),
+        ),
+    ]
+}
+
 /// Resolve a wire string to its registered code, shared codes first. The
 /// assembly and commit surface's closed `DecisionErrorCode` set is registered
 /// too: an assembly refusal folds under `RefusalOrigin::ASSEMBLE` with its own
@@ -180,6 +202,7 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
         .copied()
+        .chain(module_tables().into_iter().flat_map(|(_, table)| table))
         .find(|registered| registered.as_str() == code)
         .or_else(|| decision_error_code(code))
 }

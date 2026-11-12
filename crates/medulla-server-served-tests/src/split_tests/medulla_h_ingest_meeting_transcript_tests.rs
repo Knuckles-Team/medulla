@@ -518,7 +518,7 @@ async fn properties_of(
 async fn transcript_finalize_context_commit_round_trip() {
     let codes: Vec<&str> = medulla_types::meeting_transcript::REFUSALS
         .iter()
-        .map(|(code, _)| *code)
+        .map(|(code, _)| code.as_str())
         .collect();
     assert!(
         !codes.contains(&"TENANT_DENIED"),

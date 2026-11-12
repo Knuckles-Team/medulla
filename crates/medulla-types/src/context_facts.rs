@@ -11,6 +11,7 @@ use sha2::{Digest as _, Sha256};
 
 use crate::contract::ServerErrorCode;
 use crate::evidence_class::EvidenceClass;
+use crate::refusal_code::RefusalCode;
 
 /// Schema version carried by every `ContextFacts` type.
 pub const CONTEXT_FACTS_SCHEMA_VERSION: u32 = 1;
@@ -19,10 +20,10 @@ pub const CONTEXT_FACTS_SCHEMA_VERSION: u32 = 1;
 pub const MAX_CONTEXT_FACT_NODES: usize = 512;
 
 /// Every refusal code of the `context_facts` family.
-pub const REFUSALS: &[&str] = &[
-    "CONTEXT_FACTS_BUDGET_ZERO",
-    "CONTEXT_FACTS_TOO_MANY_NODES",
-    "FACT_PROVENANCE_MISSING",
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("CONTEXT_FACTS_BUDGET_ZERO"),
+    RefusalCode::new("CONTEXT_FACTS_TOO_MANY_NODES"),
+    RefusalCode::new("FACT_PROVENANCE_MISSING"),
 ];
 
 fn schema_version() -> u32 {
@@ -308,7 +309,7 @@ mod tests {
             ServerErrorCode::ContextFactsTooManyNodes,
             ServerErrorCode::FactProvenanceMissing,
         ] {
-            assert!(REFUSALS.contains(&code.as_str()));
+            assert!(REFUSALS.iter().any(|c| c.as_str() == code.as_str()));
         }
     }
 }

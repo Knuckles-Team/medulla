@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::contract::Digest256;
+use crate::refusal_code::RefusalCode;
 
 /// Fixed ceiling of `MeetingSummaryLimitPolicy::max_spans`.
 pub const MAX_SUMMARY_SPANS: u32 = 128;
@@ -20,42 +21,45 @@ pub const MAX_SUMMARY_TOKENS: u32 = 8_192;
 /// (MEDULLA-MEDIA-VOCAB-R001.101.6), `(code, meaning)`, sorted by code. A
 /// cross-tenant request refuses with `ACCESS_DENIED` from the shared tenant
 /// check of the route, so no tenant code belongs to this table.
-pub const REFUSALS: &[(&str, &str)] = &[
+pub const REFUSALS: &[(RefusalCode, &str)] = &[
     (
-        "CITATION_OUTSIDE_TEXT",
+        RefusalCode::new("CITATION_OUTSIDE_TEXT"),
         "a summary citation lies outside every span of its context",
     ),
     (
-        "RECEIPT_MISMATCH",
+        RefusalCode::new("RECEIPT_MISMATCH"),
         "the summary receipt does not match the stored context admission or its digest",
     ),
     (
-        "RECEIPT_UNKNOWN",
+        RefusalCode::new("RECEIPT_UNKNOWN"),
         "no stored summary context matches the receipt input context digest",
     ),
     (
-        "SUMMARY_ADMISSION_MISSING",
+        RefusalCode::new("SUMMARY_ADMISSION_MISSING"),
         "the summary context request carries no admission reference",
     ),
     (
-        "SUMMARY_LIMIT_EXCEEDED",
+        RefusalCode::new("SUMMARY_LIMIT_EXCEEDED"),
         "a summary limit is above its fixed ceiling",
     ),
-    ("SUMMARY_LIMIT_INVALID", "a summary limit is zero"),
     (
-        "TRANSCRIPT_BASE_CONFLICT",
+        RefusalCode::new("SUMMARY_LIMIT_INVALID"),
+        "a summary limit is zero",
+    ),
+    (
+        RefusalCode::new("TRANSCRIPT_BASE_CONFLICT"),
         "the revision base does not match the current transcript revision",
     ),
     (
-        "TRANSCRIPT_EVENT_CONFLICT",
+        RefusalCode::new("TRANSCRIPT_EVENT_CONFLICT"),
         "the event reuses or lowers a sequence with a different digest",
     ),
     (
-        "TRANSCRIPT_NOT_FINAL",
+        RefusalCode::new("TRANSCRIPT_NOT_FINAL"),
         "the transcript revision is not finalized",
     ),
     (
-        "TRANSCRIPT_STALE",
+        RefusalCode::new("TRANSCRIPT_STALE"),
         "the transcript digest is not the current finalized digest",
     ),
 ];

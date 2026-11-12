@@ -16,6 +16,7 @@ pub mod branch;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
 pub mod reservation_machine;
+pub mod refusal_code;
 pub mod transition_refused;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
 pub mod attached_source_governance;

@@ -55,6 +55,7 @@ pub enum AbstainReason {
     /// A refusal from one family's registered table, or a shared request code.
     Family {
         family: crate::decision::statistical::QuestionKind,
+        #[serde(deserialize_with = "deserialize_registered")]
         code: RefusalCode,
         detail: String,
     },
@@ -63,6 +64,7 @@ pub enum AbstainReason {
     /// `PolicyEvolution`, `DecisionCommit`), folded from its typed refusal enum.
     Surface {
         surface: RefusalSurface,
+        #[serde(deserialize_with = "deserialize_registered")]
         code: RefusalCode,
         detail: String,
     },
@@ -104,53 +106,15 @@ pub trait DecisionRefusal {
     fn detail(&self) -> String;
 }
 
-/// A stable refusal code: one entry of a family `REFUSALS` table or of the
-/// shared request codes in `crate::decision::codes`. On the wire it is the code
-/// string; deserializing accepts only a registered code.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RefusalCode(&'static str);
+pub use medulla_types::refusal_code::RefusalCode;
 
-impl RefusalCode {
-    /// Declare a code. Only tables and the fixed variants call this.
-    pub const fn new(code: &'static str) -> Self {
-        Self(code)
-    }
-
-    /// The stable wire string.
-    pub const fn as_str(self) -> &'static str {
-        self.0
-    }
-}
-
-impl Serialize for RefusalCode {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for RefusalCode {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let text = String::deserialize(deserializer)?;
-        crate::decision::codes::resolve(&text)
-            .ok_or_else(|| serde::de::Error::custom(format!("unregistered refusal code `{text}`")))
-    }
-}
-
-/// Hand-written: the wire form is the code string, not the private field.
-#[cfg(feature = "contract-schema")]
-impl schemars::JsonSchema for RefusalCode {
-    fn schema_name() -> std::borrow::Cow<'static, str> {
-        std::borrow::Cow::Borrowed("RefusalCode")
-    }
-
-    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
-        schemars::Schema::try_from(serde_json::json!({
-            "type": "string",
-            "description": "A registered decision refusal code",
-            "pattern": "^[A-Z][A-Z0-9_]*$",
-        }))
-        .expect("a JSON object is a valid schema")
-    }
+/// Decode a wire string into a registered code; any other string is refused.
+pub(crate) fn deserialize_registered<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<RefusalCode, D::Error> {
+    let text = String::deserialize(deserializer)?;
+    crate::decision::codes::resolve(&text)
+        .ok_or_else(|| serde::de::Error::custom(format!("unregistered refusal code `{text}`")))
 }
 
 /// The code of every fixed `AbstainReason` variant, in declaration order.
@@ -258,6 +222,15 @@ mod tests {
         all.extend(codes::SHARED.iter().map(|code| code.as_str()));
         all.extend(codes::FOLDED.iter().map(|code| code.as_str()));
         for (_, table) in codes::FAMILY_TABLES {
+            all.extend(table.iter().map(|code| code.as_str()));
+        }
+        all.extend(
+            crate::decision::usage::REFUSALS
+                .iter()
+                .chain(crate::decision::reputation::REFUSALS.iter())
+                .map(|code| code.as_str()),
+        );
+        for (_, table) in codes::module_tables() {
             all.extend(table.iter().map(|code| code.as_str()));
         }
         let mut sorted = all.clone();
