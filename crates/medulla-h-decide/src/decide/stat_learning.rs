@@ -10,6 +10,7 @@
 
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitRequest;
+use medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
@@ -23,13 +24,21 @@ use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, Generations,
 };
+use super::stat_generation_cycle::{job_id, run_cycle, ConfiguredEmbedder, CycleRun, Reembedder};
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
+use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
+use medulla_protocol_types::protocol::Method;
+use medulla_query_types::solve_scalar::digest_text;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
+use medulla_work_types::native_control::{
+    CapacityAcquireRequest, CapacityDemand, NativeControlSchemaVersion,
+};
 
 /// What a learning write resolved before its blocking store work.
 pub(super) struct LearningInputs {
@@ -37,7 +46,18 @@ pub(super) struct LearningInputs {
     served_tenant: String,
     /// The graphs the write probes, in the order it names them.
     graphs: Vec<GraphVectors>,
+    /// What a generation cycle runs with; `None` for every other write.
+    cycle: Option<CycleSupport>,
 }
+
+/// The background lease and embedder of one generation-cycle submission.
+struct CycleSupport {
+    lease_id: String,
+    embedder: Box<dyn Reembedder>,
+}
+
+/// Seconds a cycle's capacity lease lives without a renewing submission.
+const CYCLE_LEASE_TTL_MS: u64 = 300_000;
 
 /// One dispatch: the log context and the resolved inputs.
 struct Serving<'a> {
@@ -67,6 +87,28 @@ impl Serving<'_> {
             self.tenant(),
         )?;
         Ok(LearningRecorded::Fitted(Box::new(fitted)))
+    }
+
+    fn cycle(&self, request: &GenerationCycleRequest) -> Result<LearningRecorded, String> {
+        let support = self
+            .inputs
+            .cycle
+            .as_ref()
+            .ok_or("a generation cycle was not prepared")?;
+        let gens = Generations {
+            active: self.graph(0)?,
+            shadow: self.graph(1)?,
+        };
+        let run = CycleRun {
+            ctx: self.ctx,
+            reader: self.reader,
+            gens: &gens,
+            embedder: support.embedder.as_ref(),
+            tenant: self.tenant(),
+            lease_id: Some(&support.lease_id),
+            batch_nodes: medulla_server_api::knob_config::knobs().generation_batch_nodes as usize,
+        };
+        run_cycle(&run, request)
     }
 
     fn evaluate(&self, request: &GenerationEvalRequest) -> Result<LearningRecorded, String> {
@@ -133,8 +175,55 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         LearningWrite::EvaluateGeneration { request } => {
             vec![request.active_graph.as_str(), request.shadow_graph.as_str()]
         }
+        LearningWrite::RunGenerationCycle { request } => vec![
+            request.evaluation.active_graph.as_str(),
+            request.evaluation.shadow_graph.as_str(),
+        ],
         LearningWrite::RecordOutcome { .. } | LearningWrite::MovePointer { .. } => Vec::new(),
     }
+}
+
+/// Request the background capacity lease a cycle holds, before its first
+/// batch. The request is idempotent per job, so a resumed cycle gets the same
+/// lease; it expires with its ttl once the cycle stops submitting.
+async fn acquire_cycle_lease(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    tenant: &str,
+    request: &GenerationCycleRequest,
+) -> Result<String, String> {
+    let persistence = state.read().await.persistence.clone().ok_or_else(|| {
+        "CAPACITY_UNAVAILABLE: a generation cycle needs the durable capacity ledger".to_string()
+    })?;
+    let eval = &request.evaluation;
+    let id = job_id(&eval.logical, &request.model_ref.revision);
+    let lease_id = format!("lease:{id}");
+    let acquire = CapacityAcquireRequest {
+        schema_version: NativeControlSchemaVersion::V1,
+        tenant_ref: tenant.to_string(),
+        work_item_id: id.clone(),
+        owner_digest: digest_text("eg/generation-cycle-owner/v1", &verified.agent_id()),
+        idempotency_key: id,
+        priority: LeasePriority::BackgroundIngestion,
+        demands: vec![CapacityDemand {
+            cell_id: request.capacity_cell.clone(),
+            resource_class: CapacityResourceClass::LlmEmbedding,
+            amount: 1,
+        }],
+        lease_id: Some(lease_id.clone()),
+        ttl_ms: CYCLE_LEASE_TTL_MS,
+        now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        cost_budget_micros: None,
+        token_budget: None,
+    };
+    persistence
+        .commit_capacity_lease(
+            &medulla_kernel::persist::sanitize(&eval.logical),
+            Method::AcquireCapacity { request: acquire },
+        )
+        .await
+        .map_err(|error| format!("CAPACITY_UNAVAILABLE: {error}"))?;
+    Ok(lease_id)
 }
 
 /// Resolve the inputs of a learning write; `None` for every other log op.
@@ -153,9 +242,19 @@ pub(super) async fn prepare(
     for graph in graphs_of(write) {
         graphs.push(graph_vectors(state, verified.agent_id(), graph).await?);
     }
+    let cycle = match write {
+        LearningWrite::RunGenerationCycle { request } => Some(CycleSupport {
+            lease_id: acquire_cycle_lease(state, verified, &served_tenant, request).await?,
+            embedder: Box::new(ConfiguredEmbedder(
+                medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env(),
+            )),
+        }),
+        _ => None,
+    };
     Ok(Some(LearningInputs {
         served_tenant,
         graphs,
+        cycle,
     }))
 }
 
@@ -178,6 +277,7 @@ pub(super) fn dispatch(
         ))),
         LearningWrite::FitAdapter { request } => s.fit(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
+        LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

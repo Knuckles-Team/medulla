@@ -1110,6 +1110,8 @@ mod run_observation_tests;
 
 // MEDULLA-DECISION-ENGINE-R174.8: drift monitors select the shards a refresh covers.
 mod drift_refresh_tests;
+#[cfg(all(feature = "query", feature = "ann"))]
+mod generation_cycle_tests;
 
 // MEDULLA-DECISION-ENGINE-R652: research claims, evidence and sealed artifacts.
 #[cfg(feature = "statechart")]

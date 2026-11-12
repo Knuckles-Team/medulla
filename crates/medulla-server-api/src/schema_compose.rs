@@ -898,7 +898,9 @@ ex:parent a owl:AsymmetricProperty .
         // vocabulary (placement.ttl) joins the core corpus (MEDULLA-PLACEMENT-R001.5).
         // +91 (MEDULLA-IDENTITY-R023.8): the typed principal metadata vocabulary
         // (identity_metadata.ttl) joins the core corpus.
-        assert_eq!(composed.ontology.len(), 20_930);
+        // +76 (MEDULLA-DECISION-ENGINE-R174.1): the GenerationCycle machine (five states, four
+        // events, four edges) in state-machines-v1.ttl.
+        assert_eq!(composed.ontology.len(), 21_006);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

@@ -809,3 +809,16 @@ fn capacity_lease_machine_matches_edge_table() {
 fn capacity_lease_machine_classes_extend_core() {
     sm::assert_extends_core("CapacityLease");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R174.1
+#[test]
+fn generation_cycle_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_decision_types::decision::statistical::retrieval_generation::GENERATION_CYCLE_MACHINE,
+    );
+}
+// spec: MEDULLA-DECISION-ENGINE-R174.1
+#[test]
+fn generation_cycle_machine_classes_extend_core() {
+    sm::assert_extends_core("GenerationCycle");
+}

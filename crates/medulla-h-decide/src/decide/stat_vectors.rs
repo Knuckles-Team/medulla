@@ -73,6 +73,42 @@ impl GraphVectors {
         ids.filter_map(|id| self.vector(&id)).collect()
     }
 
+    /// The ids of every node the caller may see, in byte order.
+    pub(super) fn node_ids(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self
+            .core
+            .node_ids()
+            .into_iter()
+            .filter(|id| self.visible(id))
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    /// The text a node is embedded from: its `text`, else its `name`, else its id.
+    pub(super) fn node_text(&self, id: &str) -> String {
+        let props: Option<serde_json::Value> = self
+            .core
+            .get_node_properties(id)
+            .and_then(|blob| rmp_serde::from_slice(&blob).ok());
+        ["text", "name"]
+            .iter()
+            .find_map(|key| props.as_ref()?.get(key)?.as_str().map(str::to_string))
+            .unwrap_or_else(|| id.to_string())
+    }
+
+    /// Store `vector` as the embedding of a visible node.
+    pub(super) fn store_embedding(&self, id: &str, vector: Vec<f32>) -> Result<(), String> {
+        if !self.visible(id) {
+            return Err(format!("node {id} is not visible to the caller"));
+        }
+        self.core
+            .semantic_store
+            .write()
+            .add_embedding(id.to_string(), vector)
+            .map_err(|error| error.to_string())
+    }
+
     /// The top `k` VISIBLE rows for `query`; empty for a query of another width.
     pub(super) fn probe(&self, query: &[f32], k: usize) -> Vec<(String, f32)> {
         if query.len() != self.dimensions() {

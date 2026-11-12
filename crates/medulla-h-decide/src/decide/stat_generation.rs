@@ -230,6 +230,23 @@ pub(super) fn evaluate_generation(
     Ok(evaluated)
 }
 
+/// The stored evaluation receipt with this digest.
+pub(super) fn stored_evaluation(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    receipt_digest: &str,
+) -> Result<GenerationEvaluated, String> {
+    let bytes = store
+        .decision_artifact(tenant, &receipt_key(receipt_digest))?
+        .ok_or_else(|| {
+            refusal(
+                StatisticalErrorCode::EvaluationReceiptMismatch,
+                "no generation receipt with that digest",
+            )
+        })?;
+    decode_artifact(&bytes, "generation receipt")
+}
+
 /// The move this receipt already made is the active one: re-activating it is a replay
 /// (answered by the pointer as it stands), not a move against a stale baseline.
 fn is_replay(pointer: &PointerState, shadow_graph: &str, receipt_digest: &str) -> bool {

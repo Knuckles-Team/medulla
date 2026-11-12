@@ -98,3 +98,329 @@ pub struct GenerationEvaluated {
     pub receipt_digest: String,
     pub receipt: GenerationReceipt,
 }
+
+// ---------------------------------------------------------------------------
+// The generation cycle (MEDULLA-DECISION-ENGINE-R174): publish a model,
+// re-embed the shadow graph in checkpointed batches, evaluate, activate.
+// ---------------------------------------------------------------------------
+
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
+
+/// Format identity of a generation cycle and its job record.
+pub const GENERATION_CYCLE_SCHEMA_VERSION: u16 = 1;
+
+/// The embedding model a cycle publishes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ModelRef {
+    pub id: String,
+    pub revision: String,
+    pub dimension: u32,
+}
+
+/// The closed states of `GenerationCycleMachine`; the stored text is the
+/// snake_case name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GenerationCycleState {
+    Published,
+    Reembedding,
+    Evaluated,
+    Activated,
+    Rejected,
+}
+
+impl MachineState for GenerationCycleState {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Published => "published",
+            Self::Reembedding => "reembedding",
+            Self::Evaluated => "evaluated",
+            Self::Activated => "activated",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+/// The closed events of `GenerationCycleMachine`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GenerationCycleEvent {
+    /// The first re-embedding batch starts.
+    ReembedBegun,
+    /// Every node is re-embedded and the receipt passed.
+    EvaluationPassed,
+    /// Every node is re-embedded and the receipt did not pass.
+    EvaluationFailed,
+    /// The generation pointer moved to the shadow graph.
+    PointerMoved,
+}
+
+impl MachineEvent for GenerationCycleEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::ReembedBegun => "ReembedBegun",
+            Self::EvaluationPassed => "EvaluationPassed",
+            Self::EvaluationFailed => "EvaluationFailed",
+            Self::PointerMoved => "PointerMoved",
+        }
+    }
+}
+
+/// `GenerationCycleMachine`: the closed edge table. Every other pair of state
+/// and event is refused with `TRANSITION_REFUSED`.
+pub static GENERATION_CYCLE_MACHINE: MachineDef<
+    GenerationCycleState,
+    GenerationCycleEvent,
+    &'static str,
+> = MachineDef {
+    name: "GenerationCycleMachine",
+    states: &[
+        GenerationCycleState::Published,
+        GenerationCycleState::Reembedding,
+        GenerationCycleState::Evaluated,
+        GenerationCycleState::Activated,
+        GenerationCycleState::Rejected,
+    ],
+    initial: GenerationCycleState::Published,
+    terminals: &[
+        GenerationCycleState::Activated,
+        GenerationCycleState::Rejected,
+    ],
+    events: &[
+        GenerationCycleEvent::ReembedBegun,
+        GenerationCycleEvent::EvaluationPassed,
+        GenerationCycleEvent::EvaluationFailed,
+        GenerationCycleEvent::PointerMoved,
+    ],
+    guards: &[],
+    edges: &[
+        Edge {
+            id: "G01",
+            from: GenerationCycleState::Published,
+            event: GenerationCycleEvent::ReembedBegun,
+            guard: None,
+            to: GenerationCycleState::Reembedding,
+        },
+        Edge {
+            id: "G02",
+            from: GenerationCycleState::Reembedding,
+            event: GenerationCycleEvent::EvaluationPassed,
+            guard: None,
+            to: GenerationCycleState::Evaluated,
+        },
+        Edge {
+            id: "G03",
+            from: GenerationCycleState::Reembedding,
+            event: GenerationCycleEvent::EvaluationFailed,
+            guard: None,
+            to: GenerationCycleState::Rejected,
+        },
+        Edge {
+            id: "G04",
+            from: GenerationCycleState::Evaluated,
+            event: GenerationCycleEvent::PointerMoved,
+            guard: None,
+            to: GenerationCycleState::Activated,
+        },
+    ],
+};
+
+impl GenerationCycleState {
+    /// Whether no event leaves this state.
+    pub fn is_terminal(self) -> bool {
+        GENERATION_CYCLE_MACHINE.is_terminal(self)
+    }
+}
+
+/// One re-embedding cycle of a logical graph under a new model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationCycle {
+    pub logical_graph: String,
+    pub model_ref: ModelRef,
+    /// The one persisted state field; only [`GenerationCycle::apply`] writes it.
+    state: GenerationCycleState,
+    pub shadow_graph: String,
+    /// The digest of the evaluation receipt, once the cycle has one.
+    #[serde(default)]
+    pub receipt_digest: Option<String>,
+    pub schema_version: u16,
+}
+
+impl GenerationCycle {
+    /// A newly published cycle, in `published`.
+    pub fn publish(
+        logical_graph: &str,
+        model_ref: ModelRef,
+        shadow_graph: &str,
+    ) -> Result<Self, String> {
+        let named = !logical_graph.is_empty()
+            && !shadow_graph.is_empty()
+            && logical_graph != shadow_graph
+            && !model_ref.id.is_empty()
+            && !model_ref.revision.is_empty()
+            && model_ref.dimension > 0;
+        if !named {
+            return Err(
+                "a generation cycle names a logical graph, a distinct shadow graph \
+                        and a model with an id, a revision and a dimension"
+                    .to_string(),
+            );
+        }
+        Ok(Self {
+            logical_graph: logical_graph.to_string(),
+            model_ref,
+            state: GENERATION_CYCLE_MACHINE.initial,
+            shadow_graph: shadow_graph.to_string(),
+            receipt_digest: None,
+            schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
+        })
+    }
+
+    /// The current state.
+    pub fn state(&self) -> GenerationCycleState {
+        self.state
+    }
+
+    /// The one transition function: fire `event` and, when given, pin the
+    /// evaluation receipt digest. An illegal event is refused and changes nothing.
+    pub fn apply(
+        &mut self,
+        event: GenerationCycleEvent,
+        receipt_digest: Option<String>,
+    ) -> Result<(), TransitionRefused> {
+        let edge = transition(&GENERATION_CYCLE_MACHINE, self.state, event, |_| true)?;
+        self.state = edge.to;
+        if receipt_digest.is_some() {
+            self.receipt_digest = receipt_digest;
+        }
+        Ok(())
+    }
+}
+
+/// Run one generation cycle: the model, the evaluation it must pass and the
+/// capacity it may spend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationCycleRequest {
+    pub model_ref: ModelRef,
+    /// Names the logical graph, the active and shadow generations and the
+    /// judged runs the receipt replays.
+    pub evaluation: GenerationEvalRequest,
+    /// The capacity cell the background lease is drawn from.
+    pub capacity_cell: String,
+    /// Most batches this submission may run (`None` runs to the end); a
+    /// cycle that stops here resumes from its checkpoint on the next submit.
+    #[serde(default)]
+    pub max_batches: Option<u32>,
+}
+
+/// What one cycle recorded when it activated.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationCycleReceipt {
+    pub schema_version: u16,
+    pub model_ref: ModelRef,
+    /// Nodes re-embedded into the shadow graph.
+    pub reembedded_nodes: u64,
+    /// The comparison metrics and their digest.
+    pub evaluation: GenerationEvaluated,
+    /// The generation the logical graph resolved to before the move.
+    pub pointer_before: Option<String>,
+    /// The generation it resolves to after the move.
+    pub pointer_after: Option<String>,
+}
+
+/// The job record of one cycle, keyed by logical graph and model revision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationCycleJob {
+    pub schema_version: u16,
+    pub job_id: String,
+    pub request_digest: String,
+    pub cycle: GenerationCycle,
+    /// The background capacity lease the job requested before its first batch.
+    #[serde(default)]
+    pub lease_id: Option<String>,
+    /// Index of the next node to re-embed (the checkpoint).
+    pub next_node: u64,
+    pub reembedded_nodes: u64,
+    pub batches: u64,
+    #[serde(default)]
+    pub receipt: Option<GenerationCycleReceipt>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn model() -> ModelRef {
+        ModelRef {
+            id: "m".into(),
+            revision: "2".into(),
+            dimension: 8,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.1
+    #[test]
+    fn cycle_round_trips() {
+        let cycle = GenerationCycle::publish("kg", model(), "kg-2").unwrap();
+        let json = serde_json::to_string(&cycle).unwrap();
+        assert!(json.contains("\"state\":\"published\""));
+        let back: GenerationCycle = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, cycle);
+        let unknown = json.replace("published", "paused");
+        assert!(serde_json::from_str::<GenerationCycle>(&unknown).is_err());
+        assert!(GenerationCycle::publish("kg", model(), "kg").is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.1
+    #[test]
+    fn every_legal_transition_moves_and_every_other_is_refused() {
+        use GenerationCycleEvent as E;
+        use GenerationCycleState as S;
+        let legal = [
+            (S::Published, E::ReembedBegun, S::Reembedding),
+            (S::Reembedding, E::EvaluationPassed, S::Evaluated),
+            (S::Reembedding, E::EvaluationFailed, S::Rejected),
+            (S::Evaluated, E::PointerMoved, S::Activated),
+        ];
+        let events = [
+            E::ReembedBegun,
+            E::EvaluationPassed,
+            E::EvaluationFailed,
+            E::PointerMoved,
+        ];
+        for state in GENERATION_CYCLE_MACHINE.states {
+            for event in events {
+                let mut cycle = GenerationCycle::publish("kg", model(), "kg-2").unwrap();
+                cycle.state = *state;
+                let result = cycle.apply(event, None);
+                match legal
+                    .iter()
+                    .find(|(from, on, _)| from == state && *on == event)
+                {
+                    Some((_, _, to)) => {
+                        result.unwrap();
+                        assert_eq!(cycle.state(), *to);
+                    }
+                    None => {
+                        let refused = result.unwrap_err();
+                        assert_eq!(refused.machine, "GenerationCycleMachine");
+                        assert_eq!(refused.from, state.stored());
+                        assert_eq!(cycle.state(), *state, "a refused event changes nothing");
+                    }
+                }
+            }
+        }
+    }
+}

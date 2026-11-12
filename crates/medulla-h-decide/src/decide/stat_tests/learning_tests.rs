@@ -65,7 +65,7 @@ async fn embedded_graph(h: &Harness) -> Arc<medulla_graph_core::graph::GraphCore
 }
 
 /// The digest of the test model's space at `revision`.
-fn space_of(revision: &str, dims: usize) -> String {
+pub(super) fn space_of(revision: &str, dims: usize) -> String {
     medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
         "m", revision, "sha256:w", "sha256:p", dims, false,
     )
@@ -74,7 +74,7 @@ fn space_of(revision: &str, dims: usize) -> String {
 }
 
 /// A graph whose store declares model revision `revision` and embeds `rows`.
-async fn graph_with(
+pub(super) async fn graph_with(
     h: &Harness,
     name: &str,
     revision: &str,
@@ -108,7 +108,7 @@ async fn graph_with(
     core
 }
 
-fn q16(values: &[f64]) -> BoundedVec<i32, 4096> {
+pub(super) fn q16(values: &[f64]) -> BoundedVec<i32, 4096> {
     BoundedVec::new(
         values
             .iter()
@@ -280,13 +280,13 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     ));
 }
 
-fn axis(dims: usize, index: usize, scale: f32) -> Vec<f32> {
+pub(super) fn axis(dims: usize, index: usize, scale: f32) -> Vec<f32> {
     let mut v = vec![0.0; dims];
     v[index] = scale;
     v
 }
 
-fn plus(mut left: Vec<f32>, right: &[f32]) -> Vec<f32> {
+pub(super) fn plus(mut left: Vec<f32>, right: &[f32]) -> Vec<f32> {
     left.iter_mut().zip(right).for_each(|(l, r)| *l += r);
     left
 }

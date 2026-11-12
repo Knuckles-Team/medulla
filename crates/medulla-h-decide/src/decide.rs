@@ -42,6 +42,8 @@ mod stat_evaluator;
 mod stat_executor;
 #[cfg(feature = "decide")]
 mod stat_generation;
+#[cfg(feature = "decide")]
+mod stat_generation_cycle;
 // MEDULLA-DECISION-ENGINE-R803: the contrastive harness composition decision.
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;

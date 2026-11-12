@@ -1651,7 +1651,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::cycle_round_trips` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.1` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide/src/decide/stat_generation_cycle.rs::tests::resume_activates_once` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::resume_activates_once` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.3` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::submit_creates_a_job_and_holds_a_lease` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.4` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::refusal_codes` | (planned) |

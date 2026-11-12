@@ -47,6 +47,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `pattern.shadow_ratio_min` | f64 | 2.0 | [1.5, 4.0] | ratio | Tunable | `MEDULLA_PATTERN_SHADOW_RATIO_MIN` |
 | `pattern.wick_max` | f64 | 0.1 | [0.0, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_WICK_MAX` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
+| `generation.batch_nodes` | u64 | 256 | [16, 4096] | nodes | Tunable | `MEDULLA_GENERATION_BATCH_NODES` |
 
 ## Wire shape
 

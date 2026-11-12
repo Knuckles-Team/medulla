@@ -299,6 +299,11 @@ pub enum LearningWrite {
     FitAdapter { request: Box<AdapterFitRequest> },
     /// Dual-serve judged runs against a shadow generation and receipt it.
     EvaluateGeneration { request: Box<GenerationEvalRequest> },
+    /// Run one re-embedding cycle: re-embed the shadow generation in
+    /// checkpointed batches, evaluate it and activate it on a passing receipt.
+    RunGenerationCycle {
+        request: Box<super::retrieval_generation::GenerationCycleRequest>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -314,6 +319,7 @@ impl LearningWrite {
             Self::RecordOutcome { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::EvaluateGeneration { .. }
+            | Self::RunGenerationCycle { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }
@@ -327,6 +333,7 @@ pub enum LearningRecorded {
     Outcome(Box<StoredRetrievalOutcome>),
     Fitted(Box<AdapterFitted>),
     Generation(Box<GenerationEvaluated>),
+    Cycle(Box<super::retrieval_generation::GenerationCycleJob>),
     Pointer(Box<PointerState>),
 }
 

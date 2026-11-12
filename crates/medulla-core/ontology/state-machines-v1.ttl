@@ -2284,3 +2284,97 @@
     :toState :PartitionMoveMachine_Active ;
     :guardedBy :PartitionMoveMachine_Guard_SourceOwnsAtOriginalEpoch ;
     :firedBy :PartitionMoveMachine_Event_AbortMove .
+
+# spec: MEDULLA-DECISION-ENGINE-R174.1
+# The GenerationCycle machine. The Rust edge table GENERATION_CYCLE_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:GenerationCycleState a owl:Class ;
+    rdfs:label "GenerationCycle State" ;
+    rdfs:comment "A state of the GenerationCycle machine." ;
+    rdfs:subClassOf :State .
+
+:GenerationCycleTerminalState a owl:Class ;
+    rdfs:label "GenerationCycle Terminal State" ;
+    rdfs:comment "A terminal state of the GenerationCycle machine." ;
+    rdfs:subClassOf :TerminalState, :GenerationCycleState .
+
+:GenerationCycleTransition a owl:Class ;
+    rdfs:label "GenerationCycle Transition" ;
+    rdfs:comment "A transition of the GenerationCycle machine." ;
+    rdfs:subClassOf :Transition .
+
+:GenerationCycleEvent a owl:Class ;
+    rdfs:label "GenerationCycle Event" ;
+    rdfs:comment "A event of the GenerationCycle machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GenerationCycleGuard a owl:Class ;
+    rdfs:label "GenerationCycle Guard" ;
+    rdfs:comment "A guard of the GenerationCycle machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GenerationCycleMachine a :StateMachine ;
+    rdfs:label "GenerationCycle machine" ;
+    :initialState :GenerationCycleMachine_Published ;
+    :hasState :GenerationCycleMachine_Published, :GenerationCycleMachine_Reembedding, :GenerationCycleMachine_Evaluated, :GenerationCycleMachine_Activated, :GenerationCycleMachine_Rejected .
+
+:GenerationCycleMachine_Published a :GenerationCycleState ;
+    rdfs:label "GenerationCycle Published" ;
+    :storedForm "published" .
+
+:GenerationCycleMachine_Reembedding a :GenerationCycleState ;
+    rdfs:label "GenerationCycle Reembedding" ;
+    :storedForm "reembedding" .
+
+:GenerationCycleMachine_Evaluated a :GenerationCycleState ;
+    rdfs:label "GenerationCycle Evaluated" ;
+    :storedForm "evaluated" .
+
+:GenerationCycleMachine_Activated a :GenerationCycleTerminalState ;
+    rdfs:label "GenerationCycle Activated" ;
+    :storedForm "activated" .
+
+:GenerationCycleMachine_Rejected a :GenerationCycleTerminalState ;
+    rdfs:label "GenerationCycle Rejected" ;
+    :storedForm "rejected" .
+
+:GenerationCycleMachine_Event_ReembedBegun a :GenerationCycleEvent ;
+    rdfs:label "GenerationCycle ReembedBegun" .
+
+:GenerationCycleMachine_Event_EvaluationPassed a :GenerationCycleEvent ;
+    rdfs:label "GenerationCycle EvaluationPassed" .
+
+:GenerationCycleMachine_Event_EvaluationFailed a :GenerationCycleEvent ;
+    rdfs:label "GenerationCycle EvaluationFailed" .
+
+:GenerationCycleMachine_Event_PointerMoved a :GenerationCycleEvent ;
+    rdfs:label "GenerationCycle PointerMoved" .
+
+:GenerationCycleMachine_G01 a :GenerationCycleTransition ;
+    rdfs:label "GenerationCycle G01" ;
+    :edgeId "G01" ;
+    :fromState :GenerationCycleMachine_Published ;
+    :toState :GenerationCycleMachine_Reembedding ;
+    :firedBy :GenerationCycleMachine_Event_ReembedBegun .
+
+:GenerationCycleMachine_G02 a :GenerationCycleTransition ;
+    rdfs:label "GenerationCycle G02" ;
+    :edgeId "G02" ;
+    :fromState :GenerationCycleMachine_Reembedding ;
+    :toState :GenerationCycleMachine_Evaluated ;
+    :firedBy :GenerationCycleMachine_Event_EvaluationPassed .
+
+:GenerationCycleMachine_G03 a :GenerationCycleTransition ;
+    rdfs:label "GenerationCycle G03" ;
+    :edgeId "G03" ;
+    :fromState :GenerationCycleMachine_Reembedding ;
+    :toState :GenerationCycleMachine_Rejected ;
+    :firedBy :GenerationCycleMachine_Event_EvaluationFailed .
+
+:GenerationCycleMachine_G04 a :GenerationCycleTransition ;
+    rdfs:label "GenerationCycle G04" ;
+    :edgeId "G04" ;
+    :fromState :GenerationCycleMachine_Evaluated ;
+    :toState :GenerationCycleMachine_Activated ;
+    :firedBy :GenerationCycleMachine_Event_PointerMoved .
