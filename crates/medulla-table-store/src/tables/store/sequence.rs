@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use medulla_tables::sequence::{Sequence, SequenceSource, SEQUENCE_REWIND, SEQUENCE_UNKNOWN};
+use redb::ReadableTable;
 
 use super::{map_err, SqlWrite, TableStore, SEQ};
 
