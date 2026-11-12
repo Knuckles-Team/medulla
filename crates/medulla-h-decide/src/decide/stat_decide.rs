@@ -343,6 +343,30 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
         .collect()
 }
 
+/// One DEFINITION premise per knob this decision read, `knob:<name>=<value>`,
+/// bound to the digest of the policy that supplied the value
+/// (MEDULLA-DECISION-ENGINE-R179.5). The decision reads the drift thresholds
+/// of the belief slices it consulted through `DriftThresholds::from_policy`.
+fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
+    medulla_decision_stats::decision::drift::KNOBS
+        .iter()
+        .map(|spec| {
+            premise(
+                "policy",
+                &format!(
+                    "knob:{}={}",
+                    spec.name,
+                    sealing.policy.policy.knob(spec).render()
+                ),
+                PremiseClass::Definition,
+                PremiseProvenance::Policy {
+                    policy_digest: sealing.policy.digest.clone(),
+                },
+            )
+        })
+        .collect()
+}
+
 fn premises(sealing: &Sealing, nl: Option<&NlBinding>) -> Vec<PremiseRef> {
     let schema = &sealing.request.feature_schema;
     let mut out = vec![
@@ -380,6 +404,7 @@ fn premises(sealing: &Sealing, nl: Option<&NlBinding>) -> Vec<PremiseRef> {
             },
         ));
     }
+    out.extend(knob_premises(sealing));
     out.extend(derived_premises(sealing));
     out.extend(declared_premises(sealing.request));
     if let Some(NlBinding {

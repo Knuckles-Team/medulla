@@ -30,6 +30,7 @@ pub mod harness_contrast;
 pub mod indexless_retrieval;
 pub mod ingestion_admission;
 pub mod jobs;
+pub mod knob_families;
 pub mod knobs;
 pub mod lifecycle;
 pub mod numeric;

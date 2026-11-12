@@ -109,3 +109,82 @@ fn knob_revision_refusals() {
     assert_eq!(KnobRefusalCode::KnobNotTunable.code(), "KNOB_NOT_TUNABLE");
     assert_eq!(KnobRefusalCode::KnobUnknown.code(), "KNOB_UNKNOWN");
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R179.8: Participant memory knobs.
+// spec: MEDULLA-DECISION-ENGINE-R179.8
+#[test]
+fn participant_knobs_are_registered_and_tunable() {
+    use medulla_decision_types::decision::knobs::REGISTRY;
+    let revision = |name: &str, value: KnobValue| BTreeMap::from([(KnobName::new(name), value)]);
+    for (name, inside, outside) in [
+        ("memory.derive_batch_turns", 16, 65),
+        ("participant.card_token_budget", 800, 63),
+        ("participant.ask_max_claims", 50, 101),
+        ("profile.document_set_max_members", 100, 9),
+    ] {
+        assert_eq!(
+            check_revision(REGISTRY, &revision(name, KnobValue::Integer(inside))),
+            Ok(()),
+            "{name}"
+        );
+        assert_eq!(
+            check_revision(REGISTRY, &revision(name, KnobValue::Integer(outside))),
+            Err((KnobName::new(name), KnobRefusalCode::KnobOutOfBounds)),
+            "{name}"
+        );
+    }
+    // A Fixed knob in a registry beside the participant tables stays frozen.
+    let mut frozen = REGISTRY.to_vec();
+    frozen.push(FAMILY);
+    assert_eq!(
+        check_revision(&frozen, &revision("probe.floor", KnobValue::Integer(64))),
+        Err((
+            KnobName::new("probe.floor"),
+            KnobRefusalCode::KnobNotTunable
+        ))
+    );
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R179.5: Knob premises.
+// spec: MEDULLA-DECISION-ENGINE-R179.5
+#[tokio::test]
+async fn record_lists_every_knob_read() {
+    use medulla_decision_stats::decision::drift::KNOBS as DRIFT;
+    let h = Harness::new().await;
+    let schema_pin = h
+        .publish_test_component(
+            "schema-knobs",
+            AgentComponentKind::FeatureSchema,
+            "knob features",
+            Some(&schema()),
+            None,
+        )
+        .unwrap();
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        KnobName::new("drift.shift_threshold"),
+        KnobValue::DecimalMicros(400_000),
+    );
+    let pin = h.publish_policy("policy-knob-premises", &policy);
+    let batch = decide(
+        &h,
+        request(
+            &schema_pin,
+            None,
+            DecisionPolicyRef::Pinned { component: pin },
+            QuestionSafety::Ordinary,
+        ),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let facts: Vec<&str> = record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("knob:"))
+        .map(|p| p.fact.as_str())
+        .collect();
+    assert_eq!(facts.len(), DRIFT.len(), "one premise per knob read");
+    assert!(facts.contains(&"knob:drift.shift_threshold=0.400000"));
+    assert!(facts.contains(&"knob:drift.vocabulary_growth_points=5"));
+}

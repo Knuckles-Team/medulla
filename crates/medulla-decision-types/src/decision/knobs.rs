@@ -126,6 +126,10 @@ impl std::fmt::Display for KnobRefusalCode {
     }
 }
 
+/// The family tables of this crate's knob registry (R179.8); a higher crate
+/// adds its own tables when it checks a revision.
+pub const REGISTRY: &[&[KnobSpec]] = super::knob_families::REGISTRY;
+
 /// The spec named `name` among the family tables of `registry`.
 pub fn find_spec<'a>(registry: &[&'a [KnobSpec]], name: &KnobName) -> Option<&'a KnobSpec> {
     registry
