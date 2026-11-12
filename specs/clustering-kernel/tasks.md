@@ -79,4 +79,4 @@ The spec itself lands first as PR 1.
 
 ## Bindings
 
-- [ ] T056 [US5] MEDULLA-CLUSTER-R004.3 T-OBSERVE-BIND: when `specs/engine-observability/` lands, name its background-task registry provider row by ID in R004.3 and in contracts/progress-sink.md, then replace the log sink in `activate_one` with the registry adapter. Never edit the other spec.
+- [ ] T056 [US5] MEDULLA-CLUSTER-R004.3 Consumer: progress reaches the background-task registry. Provider row `MEDULLA-OBSERVE-R003` is bound in the row; replace the log sink in `activate_one` with the registry adapter when the registry crate lands.

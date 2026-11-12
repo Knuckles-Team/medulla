@@ -64,17 +64,17 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-CLUSTER-R008.6` | Spectral partitions (MEDULLA-FEDERATED-QUERY-R607.2) | `crates/medulla-graph-algos/src/graph_algos/spectral.rs::tests::planted_partition_is_recovered_and_ids_are_stable` |
 | `MEDULLA-CLUSTER-R008.7` | Mixture-model seeding | `crates/medulla-mining/src/mining/cluster.rs::tests::gmm_is_deterministic_for_a_seed` |
 | `MEDULLA-CLUSTER-R008.8` | Sweep for leftovers | `crates/medulla-numeric/tests/cluster_kernel.rs::kernel_is_the_only_trainer` (planned) |
-| `MEDULLA-CLUSTER-R009` | Online centroid refresh with drift-triggered retrain (rollup) | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::shifted_ingest_triggers_one_background_retrain` (planned) |
+| `MEDULLA-CLUSTER-R009` | Online centroid refresh with drift-triggered retrain (rollup) | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::shifted_ingest_triggers_one_background_rebuild` (planned) |
 | `MEDULLA-CLUSTER-R009.1` | Centroid tracker | `crates/medulla-numeric/tests/cluster_kernel.rs::tracker_follows_shifted_distribution` (planned) |
 | `MEDULLA-CLUSTER-R009.2` | Drift ratio | `crates/medulla-numeric/tests/cluster_kernel.rs::drift_ratio_crosses_threshold_only_after_warmup` (planned) |
 | `MEDULLA-CLUSTER-R009.3` | Wiring: ingest feeds the tracker | `crates/medulla-semantic-index/src/semantic_store_ann.rs::tests::insert_after_shift_sets_stale_flag` (planned) |
-| `MEDULLA-CLUSTER-R009.4` | Background retrain, warm start, swap | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::shifted_ingest_triggers_one_background_retrain` (planned) |
+| `MEDULLA-CLUSTER-R009.4` | Background retrain, warm start, swap | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::shifted_ingest_triggers_one_background_rebuild` (planned) |
 | `MEDULLA-CLUSTER-R010` | Benchmark against the current full-batch method (rollup) | `crates/medulla-ann/tests/ivfpq_kernel.rs::recall_matches_exact_mode_within_budget` (planned) |
 | `MEDULLA-CLUSTER-R010.1` | Bench harness | `crates/medulla-ann/tests/ivfpq_kernel.rs::bench_harness_modes_parse` (planned) |
 | `MEDULLA-CLUSTER-R010.2` | Acceptance thresholds | `crates/medulla-ann/tests/ivfpq_kernel.rs::recall_matches_exact_mode_within_budget` (planned) |
-| `MEDULLA-CLUSTER-R011` | A build never stalls the engine (rollup) | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::build_held_midway_does_not_block_writers_or_queries` (planned) |
-| `MEDULLA-CLUSTER-R011.1` | Build off the store locks | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::build_held_midway_does_not_block_writers_or_queries` (planned) |
-| `MEDULLA-CLUSTER-R011.2` | Writer latency bound | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::writer_waits_at_most_50ms_during_build` (planned) |
+| `MEDULLA-CLUSTER-R011` | A build never stalls the engine (rollup) | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::build_held_midway_does_not_block_writers_or_queries` (planned) |
+| `MEDULLA-CLUSTER-R011.1` | Build off the store locks | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::build_held_midway_does_not_block_writers_or_queries` (planned) |
+| `MEDULLA-CLUSTER-R011.2` | Writer latency bound | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::build_held_midway_does_not_block_writers_or_queries` (planned) |
 | `MEDULLA-CLUSTER-R011.3` | Bounded compute pool | `crates/medulla-numeric/tests/cluster_kernel.rs::fit_uses_its_own_pool_not_the_global_one` (planned) |
-| `MEDULLA-CLUSTER-R011.4` | Shutdown cancels the build | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::shutdown_cancels_running_build` (planned) |
+| `MEDULLA-CLUSTER-R011.4` | Shutdown cancels the build | `crates/medulla-semantic-index/tests/ann_build_off_lock.rs::shutdown_cancels_running_build` (planned) |
 | `MEDULLA-CLUSTER-R011.5` | Readiness does not wait for the build | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::ready_before_index_build_finishes` (planned) |

@@ -2,12 +2,12 @@
 
 Governing spec: [spec.md](../spec.md).
 
-Provider: medulla MEDULLA-OBSERVE-R001
+Provider: medulla MEDULLA-OBSERVE-R003
 Consumer: medulla MEDULLA-CLUSTER-R004.3
 
 ## Provider
 
-Repository: medulla. The provider row ID `MEDULLA-OBSERVE-R001` is a placeholder for the registry rollup of the spec; the real row ID is bound by task `T-OBSERVE-BIND`. Spec: `specs/engine-observability/`, prefix `MEDULLA-OBSERVE`. This spec does not edit it. The task `T-OBSERVE-BIND` in [tasks.md](../tasks.md) records the provider row ID when the spec lands.
+Repository: medulla. The provider row is `MEDULLA-OBSERVE-R003` (task registry); the registry contract is `specs/engine-observability/contracts/task-registry.md`. A training run registers `train:<run id>` with owner `clustering` and reports `Counter(step)`.
 
 ## Consumer
 
