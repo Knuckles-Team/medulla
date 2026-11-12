@@ -5,6 +5,7 @@
 **Decision.** Medulla owns the embedding set built in source-ingest `prepare` (`MEDULLA-DECISION-ENGINE-R079.6`) and builds it now; the connector column-profile row is filed in the connector SDK repository.
 
 
+
 ## Improvement loops (R653)
 
 - **One loop is two instances.** The loop state is an instance of the existing loop chart. The lease, gaps,
