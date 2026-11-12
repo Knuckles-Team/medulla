@@ -193,7 +193,7 @@ impl DurableBackendRef for PythonDurableRunBackend {
     const KIND: DurableBackendKind = DurableBackendKind::PythonDurableRun;
 
     fn backend_id() -> &'static str {
-        "agent_utilities.orchestration.durable_execution.DurableExecutionManager"
+        "meristem.orchestration.durable_execution.DurableExecutionManager"
     }
 }
 
@@ -281,7 +281,7 @@ mod tests {
         );
         assert_eq!(
             PythonDurableRunBackend::backend_id(),
-            "agent_utilities.orchestration.durable_execution.DurableExecutionManager"
+            "meristem.orchestration.durable_execution.DurableExecutionManager"
         );
     }
 
