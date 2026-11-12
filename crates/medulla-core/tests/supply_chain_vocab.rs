@@ -832,7 +832,7 @@ const VM_LEANIX: &str = "http://knuckles.team/test/vm-leanix#";
 
 const VIRTUAL_SHAPES: &str = include_str!("../ontology/virtual_graph-v1.shapes.ttl");
 
-// spec: MEDULLA-SUPPLY-VOCAB-R005.1
+// spec: MEDULLA-SUPPLY-VOCAB-R005.1, MEDULLA-CQ-XSRC-R002.7
 #[test]
 fn erpnext_supplier_mapping_fixture_passes_the_virtual_shapes() {
     let fixture = include_str!("fixtures/vm_erpnext_supplier.ttl");
@@ -1236,7 +1236,7 @@ fn twenty_company_maps_to_customer_rank_two_without_a_contract_mapping() {
 
 const VM_CONTAINER_MANAGER: &str = "http://knuckles.team/test/vm-container-manager#";
 
-// spec: MEDULLA-SUPPLY-VOCAB-R006.3
+// spec: MEDULLA-SUPPLY-VOCAB-R006.3, MEDULLA-CQ-XSRC-R003.5
 #[test]
 fn container_manager_workload_and_image_map_deployed_as_and_uses_image() {
     let fixture = include_str!("fixtures/vm_container_manager.ttl");
@@ -1325,7 +1325,7 @@ fn container_manager_workload_and_image_map_deployed_as_and_uses_image() {
 
 const VM_UPTIME: &str = "http://knuckles.team/test/vm-uptime#";
 
-// spec: MEDULLA-SUPPLY-VOCAB-R006.4
+// spec: MEDULLA-SUPPLY-VOCAB-R006.4, MEDULLA-CQ-XSRC-R003.4
 #[test]
 fn uptime_monitor_resolves_to_service_by_url_host_key() {
     let fixture = include_str!("fixtures/vm_uptime.ttl");

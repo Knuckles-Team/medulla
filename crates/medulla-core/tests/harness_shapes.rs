@@ -133,6 +133,7 @@ fn model_fact_shapes_reject_unknown_stopping_behaviour() {
     );
 }
 
+// spec: MEDULLA-TYPED-PACKS-R048.1
 #[test]
 fn model_fact_shapes_reject_non_positive_context_window() {
     let result = report(

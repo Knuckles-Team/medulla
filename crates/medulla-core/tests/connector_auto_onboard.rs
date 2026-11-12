@@ -51,6 +51,7 @@ fn parent_classes() -> BTreeSet<String> {
         .collect()
 }
 
+// spec: MEDULLA-CQ-CONN-R085.1
 #[test]
 fn fixture_parses_and_is_linked_to_the_parent() {
     let fixture = include_str!("fixtures/connector_auto_onboard/connector_pack.ttl");

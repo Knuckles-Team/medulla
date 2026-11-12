@@ -345,6 +345,7 @@ mod tests {
         assert!(codes(&sized).is_empty());
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R048.1
     #[test]
     fn context_window_zero_is_refused_by_the_pack_validator() {
         let model = |window: u64, output: u64| PackAnnotations {
