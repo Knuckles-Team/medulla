@@ -90,6 +90,9 @@ async fn fitted(h: &Harness) -> Fitted {
         source: DatasetSource::Inline {
             dataset: Box::new(data.clone()),
         },
+        penalty: None,
+        features: Default::default(),
+        parent_head: None,
     };
     let op = DecisionFitOp::Submit {
         request: Box::new(fit),

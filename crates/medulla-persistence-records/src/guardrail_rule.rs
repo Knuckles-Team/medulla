@@ -10,7 +10,7 @@
 //! (MEDULLA-DECISION-ENGINE-R127) to reason over. It adds no served query.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_agent_types::agent_guardrail::GuardrailRule;
+use medulla_agent_types::agent_guardrail::{GuardrailRule, RuleInvariant};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 
 use super::agent_component::ComponentLayer;
@@ -26,13 +26,34 @@ impl AgentLibraryStore {
     /// rule id, read from one snapshot. Retired and withdrawn rules are not
     /// in force and are left out.
     pub fn published_guardrail_rules(&self, tenant_id: &str) -> Result<Vec<GuardrailRule>, String> {
+        self.published_of_kind(tenant_id, AgentComponentKind::GuardrailRule, |entry| {
+            GuardrailRule::from_attributes(&entry.component_id, &entry.attributes)
+        })
+    }
+
+    /// Every current, published `RuleInvariant` of `tenant_id`, in component
+    /// (invariant IRI) order, read from one snapshot
+    /// (MEDULLA-DECISION-ENGINE-R129.1). Another tenant's invariants are never
+    /// read.
+    pub fn published_rule_invariants(&self, tenant_id: &str) -> Result<Vec<RuleInvariant>, String> {
+        self.published_of_kind(tenant_id, AgentComponentKind::RuleInvariant, |entry| {
+            RuleInvariant::from_attributes(&entry.component_id, &entry.attributes)
+        })
+    }
+
+    fn published_of_kind<T>(
+        &self,
+        tenant_id: &str,
+        kind: AgentComponentKind,
+        decode: impl Fn(&medulla_agent_types::agent_component::AgentComponentEntry) -> Result<T, String>,
+    ) -> Result<Vec<T>, String> {
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::AGENT_COMPONENT_HEADS)?;
         let revisions = read.open_owner_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
         let range = heads
             .range((tenant_id, "")..)
             .map_err(|error| error.to_string())?;
-        let mut rules = Vec::new();
+        let mut found = Vec::new();
         for (scanned, row) in range.enumerate() {
             let (key, head) = row.map_err(|error| error.to_string())?;
             let (row_tenant, component_id) = key.value();
@@ -50,17 +71,12 @@ impl AgentLibraryStore {
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "agent component head points to a missing revision".to_string())?;
             let entry = decode_revision::<ComponentLayer>(stored.value())?;
-            if entry.kind != AgentComponentKind::GuardrailRule
-                || entry.lifecycle != AgentLibraryLifecycle::Published
-            {
+            if entry.kind != kind || entry.lifecycle != AgentLibraryLifecycle::Published {
                 continue;
             }
-            rules.push(GuardrailRule::from_attributes(
-                &entry.component_id,
-                &entry.attributes,
-            )?);
+            found.push(decode(&entry)?);
         }
-        Ok(rules)
+        Ok(found)
     }
 }
 

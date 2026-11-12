@@ -23,6 +23,7 @@ use super::super::record::EvidenceClass;
 use super::dataset::OutcomeFidelity;
 use super::StatisticalDecisionRecord;
 use crate::decision::request::DecisionPolicyRef;
+use medulla_agent_types::agent_guardrail::{GuardrailRule, RulePromotionVerdict};
 use medulla_types::contract::BoundedVec;
 
 /// Format identity of a decision-log body.
@@ -399,6 +400,27 @@ pub enum DecisionLogOp {
         tenant_id: String,
         write: super::retrieval::LearningWrite,
     },
+    /// Promote a guardrail rule backed by stored abstention resolutions
+    /// (MEDULLA-DECISION-ENGINE-R129.1): the rule is checked against the
+    /// tenant's published invariants, then published as a `GuardrailRule`.
+    PromoteRule {
+        tenant_id: String,
+        rule: GuardrailRule,
+        resolution_ids: BoundedVec<String, 64>,
+    },
+}
+
+/// The result of a `PromoteRule` op.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RulePromotionResult {
+    pub rule_id: String,
+    pub verdict: RulePromotionVerdict,
+    /// Whether the rule is now an active, published `GuardrailRule`.
+    pub published: bool,
+    /// The published component's content digest when `published`.
+    pub definition_digest: Option<String>,
 }
 
 /// The authorization class of a decision-log operation: which action it
@@ -438,6 +460,7 @@ impl DecisionLogOp {
             Self::Compact { .. } => LogOpClass::Admin,
             Self::Get { .. } | Self::Aggregate { .. } | Self::Verify { .. } => LogOpClass::Read,
             Self::Learn { write, .. } => write.class(),
+            Self::PromoteRule { .. } => LogOpClass::Govern,
         }
     }
 
@@ -460,7 +483,8 @@ impl DecisionLogOp {
             | Self::Compact { tenant_id, .. }
             | Self::Verify { tenant_id, .. }
             | Self::Resolve { tenant_id, .. }
-            | Self::Learn { tenant_id, .. } => tenant_id,
+            | Self::Learn { tenant_id, .. }
+            | Self::PromoteRule { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

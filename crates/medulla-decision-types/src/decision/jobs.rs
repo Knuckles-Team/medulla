@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::importance_penalty::{ImportanceFeatures, PenaltyObjective};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
 use super::replay::{EvalMode, EvaluationRun};
@@ -67,6 +68,16 @@ pub struct DecisionFitRequest {
     /// Where the labelled items come from. A full-label regime's
     /// `gold_set_digest` must equal the inline dataset's digest.
     pub source: DatasetSource,
+    /// The importance penalty pulling weighted coordinates toward the parent
+    /// head (R151.1); absent means an unpenalised fit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub penalty: Option<PenaltyObjective>,
+    /// Caller-supplied importance per feature.
+    #[serde(default, skip_serializing_if = "ImportanceFeatures::is_empty")]
+    pub features: ImportanceFeatures,
+    /// The published head the penalty anchors to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_head: Option<ComponentDependency>,
 }
 
 impl DecisionFitRequest {
@@ -105,6 +116,9 @@ impl DecisionFitRequest {
             window,
             optimiser,
             source,
+            penalty: None,
+            features: ImportanceFeatures::default(),
+            parent_head: None,
         })
     }
 }

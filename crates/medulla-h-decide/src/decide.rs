@@ -58,8 +58,11 @@ mod stat_pointer;
 mod stat_replay;
 #[cfg(feature = "decide")]
 mod stat_resolve;
+// MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
 #[cfg(feature = "decide")]
 mod stat_retention;
+#[cfg(feature = "decide")]
+mod stat_rule_promotion;
 #[cfg(feature = "decide")]
 mod stat_slate;
 // EH-523: the per-component split of a slate's outcome on the outcome aggregate.

@@ -224,6 +224,7 @@ class AgentComponentKind(str, Enum):
     RUBRIC = "rubric"
     NL_TEMPLATE = "nl_template"
     GUARDRAIL_RULE = "guardrail_rule"
+    RULE_INVARIANT = "rule_invariant"
 
 
 class AgentGraphEdge(BaseModel):

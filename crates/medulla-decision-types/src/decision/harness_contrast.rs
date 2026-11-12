@@ -901,6 +901,7 @@ mod tests {
         };
         let inputs = StatisticalInputs {
             harness_evaluation: None,
+            context_digest: None,
             feature_schema: medulla_agent_types::agent_component::ComponentDependency {
                 component_id: "schema:contrast".into(),
                 kind: medulla_agent_types::agent_component::AgentComponentKind::FeatureSchema,

@@ -127,6 +127,73 @@ pub(super) fn visible_entries(
         .collect()
 }
 
+/// One earlier decision that shares the current decision's context.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct MatchedTrajectory {
+    pub(super) record_id: String,
+    /// The option that record executed.
+    pub(super) option_id: String,
+}
+
+/// The digest two decisions share exactly when they ask the same question
+/// with the same typed parameters (MEDULLA-DECISION-ENGINE-R020.1.1).
+pub(super) fn context_digest_of(
+    question_id: &str,
+    params: &[medulla_decision_types::decision::statistical::TypedParam],
+) -> String {
+    let mut sorted: Vec<_> = params.iter().collect();
+    sorted.sort_by(|a, b| a.name.cmp(&b.name));
+    medulla_query_types::solve_scalar::digest_text("eg/decision-context", &(question_id, sorted))
+}
+
+/// How far back, and how many, matched records may be.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct MatchWindow {
+    pub(super) now_ms: u64,
+    pub(super) window_ms: u64,
+    pub(super) max_matched: usize,
+}
+
+/// Executed, committed records of the reader's own tenant AND principal whose
+/// sealed `context_digest` equals `context_digest`, inside `window`, newest
+/// first up to `max_matched` and returned in record id order. Another
+/// principal's or tenant's entries are never read.
+pub(super) fn matched_trajectories(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    context_digest: &str,
+    window: MatchWindow,
+) -> Result<Vec<MatchedTrajectory>, String> {
+    let earliest = window.now_ms.saturating_sub(window.window_ms);
+    let mut matched: Vec<(u64, MatchedTrajectory)> = visible_entries(store, reader)?
+        .into_iter()
+        .filter(|entry| {
+            let record = &entry.record;
+            record.caller_principal == reader.principal
+                && record.inputs.context_digest.as_deref() == Some(context_digest)
+                && (earliest..=window.now_ms).contains(&record.created_at_ms)
+        })
+        .filter_map(|entry| {
+            let option_id = executed_option(&entry.record.outcome)?.to_string();
+            Some((
+                entry.record.created_at_ms,
+                MatchedTrajectory {
+                    record_id: entry.record.record_id.clone(),
+                    option_id,
+                },
+            ))
+        })
+        .collect();
+    matched.sort_by(|a, b| {
+        b.0.cmp(&a.0)
+            .then_with(|| a.1.record_id.cmp(&b.1.record_id))
+    });
+    matched.truncate(window.max_matched);
+    let mut out: Vec<MatchedTrajectory> = matched.into_iter().map(|(_, m)| m).collect();
+    out.sort_by(|a, b| a.record_id.cmp(&b.record_id));
+    Ok(out)
+}
+
 pub(super) fn visible_entry(
     store: &AgentLibraryStore,
     reader: &LogReader,
@@ -490,6 +557,18 @@ fn dispatch(
         DecisionLogOp::Resolve { resolution, .. } => {
             ResultPayload::of::<DecisionLogResolve>(resolve(ctx, reader, resolution)?)
         }
+        DecisionLogOp::PromoteRule {
+            rule,
+            resolution_ids,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogPromoteRule,
+        >(super::stat_rule_promotion::promote(
+            ctx,
+            reader,
+            rule,
+            &resolution_ids,
+        )?),
         DecisionLogOp::Learn { write, .. } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogLearn,

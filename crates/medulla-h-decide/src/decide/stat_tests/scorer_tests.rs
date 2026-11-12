@@ -22,6 +22,9 @@ pub(super) fn scorer_fit(fixture: &RouteFixture, data: &LabelledDataset) -> Deci
             source: DatasetSource::Inline {
                 dataset: Box::new(data.clone()),
             },
+            penalty: None,
+            features: Default::default(),
+            parent_head: None,
         }),
     }
 }

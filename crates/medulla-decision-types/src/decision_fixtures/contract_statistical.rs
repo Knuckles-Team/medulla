@@ -196,6 +196,9 @@ pub fn fit_ops() -> Vec<(&'static str, DecisionFitOp)> {
                     source: DatasetSource::Inline {
                         dataset: Box::new(dataset()),
                     },
+                    penalty: None,
+                    features: Default::default(),
+                    parent_head: None,
                     optimiser: OptimiserSpec {
                         max_iterations: 500,
                         tolerance: QuantisedValue {

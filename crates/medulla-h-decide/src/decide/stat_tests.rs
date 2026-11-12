@@ -245,6 +245,9 @@ async fn inline_human_labels_cannot_publish_threshold(
                     source: DatasetSource::Inline {
                         dataset: Box::new(training),
                     },
+                    penalty: None,
+                    features: Default::default(),
+                    parent_head: None,
                 }),
             },
         )
@@ -420,6 +423,9 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         source: DatasetSource::Inline {
             dataset: Box::new(data.clone()),
         },
+        penalty: None,
+        features: Default::default(),
+        parent_head: None,
     };
     let fit_op = || DecisionFitOp::Submit {
         request: Box::new(fit_request.clone()),
@@ -1079,6 +1085,15 @@ mod connector_toolchoice_tests;
 mod connector_writeback_tests;
 
 mod scorer_tests;
+
+// MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.
+mod importance_penalty_tests;
+
+// MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
+mod rule_promotion_tests;
+
+// MEDULLA-DECISION-ENGINE-R020.1.1: context digest and matched history.
+mod exploration_pool_tests;
 // EH-528: replay evaluation (its validation kernels are finance's).
 #[cfg(feature = "finance")]
 mod replay_tests;

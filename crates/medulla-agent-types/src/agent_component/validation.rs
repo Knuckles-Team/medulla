@@ -23,6 +23,12 @@ fn validate_draft_kind_body(draft: &AgentComponentDraft) -> Result<(), String> {
             &draft.attributes,
         )?;
     }
+    if draft.kind == AgentComponentKind::RuleInvariant {
+        crate::agent_guardrail::RuleInvariant::from_attributes(
+            &draft.component_id,
+            &draft.attributes,
+        )?;
+    }
     Ok(())
 }
 

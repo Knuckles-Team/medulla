@@ -187,6 +187,11 @@ pub enum AgentComponentKind {
     /// and are refused at publish when missing or malformed, so every stored
     /// rule decodes into a [`crate::decision::guardrail::GuardrailRule`].
     GuardrailRule,
+    /// A stored invariant a promoted guardrail rule may not contradict
+    /// (MEDULLA-DECISION-ENGINE-R129.1). The component id is the invariant
+    /// IRI; `forbidden_rule_id` and `on_class` travel as attributes and are
+    /// refused at publish when missing or malformed.
+    RuleInvariant,
 }
 
 impl AgentComponentKind {
@@ -213,6 +218,7 @@ impl AgentComponentKind {
             Self::Rubric => "rubric",
             Self::NlTemplate => "nl_template",
             Self::GuardrailRule => "guardrail_rule",
+            Self::RuleInvariant => "rule_invariant",
         }
     }
 
@@ -243,7 +249,8 @@ impl AgentComponentKind {
             | Self::Shapes
             | Self::A2aAgentCard
             | Self::DecisionRecord
-            | Self::GuardrailRule => "agent:component-write",
+            | Self::GuardrailRule
+            | Self::RuleInvariant => "agent:component-write",
         }
     }
 }
@@ -1621,7 +1628,7 @@ mod tests {
         ];
         /// The committed publish descriptors: every component kind and the
         /// authorization action publishing it needs.
-        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 21] = [
+        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 22] = [
             (AgentComponentKind::ModelProfile, "agent:component-write"),
             (AgentComponentKind::SystemPrompt, "agent:component-write"),
             (AgentComponentKind::Tool, "agent:component-write"),
@@ -1638,6 +1645,7 @@ mod tests {
             (AgentComponentKind::A2aAgentCard, "agent:component-write"),
             (AgentComponentKind::DecisionRecord, "agent:component-write"),
             (AgentComponentKind::GuardrailRule, "agent:component-write"),
+            (AgentComponentKind::RuleInvariant, "agent:component-write"),
             (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
             (AgentComponentKind::DecisionHead, "admin:decision-head"),
             (AgentComponentKind::FeatureSchema, "admin:decision-catalog"),

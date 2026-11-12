@@ -313,6 +313,12 @@ pub struct StatisticalInputs {
     /// question kind is `HarnessContrast` (MEDULLA-DECISION-ENGINE-R803).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub harness_contrast: Option<super::harness_contrast::HarnessContrastDecision>,
+    /// Digest of the question id and the name-sorted typed parameters
+    /// (MEDULLA-DECISION-ENGINE-R020.1.1): two decisions share a context
+    /// exactly when this text is equal. Omitted when no context was sealed, so
+    /// older record bytes are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_digest: Option<String>,
     pub feature_schema: ComponentDependency,
     #[serde(default)]
     pub head: Option<ComponentDependency>,

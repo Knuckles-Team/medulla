@@ -3691,6 +3691,23 @@ class DecisionLogOpResolve(BaseModel):
     tenant_id: str
 
 
+class GuardrailRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    applies_to_class: str
+    rule_id: str
+    source_generation: str
+
+
+class DecisionLogOpPromoteRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["promote_rule"]
+    resolution_ids: Annotated[list[str], Field(max_length=64)]
+    rule: GuardrailRule
+    tenant_id: str
+
+
 class DecisionLogOpLearn(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -3707,7 +3724,8 @@ DecisionLogOp = Annotated[
     | DecisionLogOpCompact
     | DecisionLogOpVerify
     | DecisionLogOpResolve
-    | DecisionLogOpLearn,
+    | DecisionLogOpLearn
+    | DecisionLogOpPromoteRule,
     Field(discriminator="op"),
 ]
 
@@ -24008,6 +24026,7 @@ class StatisticalInputs(BaseModel):
 
     belief_slices: BoundedVec_BeliefSliceInputs_8 | None = None
     classification_rules: str | None = None
+    context_digest: str | None = None
     exploration: ExplorationRecord | None = None
     feature_matrix: FeatureMatrixRef
     feature_schema: ComponentDependency
@@ -29498,6 +29517,7 @@ __all__ = [
     "DecisionLogOpEvaluate",
     "DecisionLogOpGet",
     "DecisionLogOpLearn",
+    "DecisionLogOpPromoteRule",
     "DecisionLogOpResolve",
     "DecisionLogOpVerify",
     "DecisionLogVerification",
@@ -30043,6 +30063,7 @@ __all__ = [
     "GroupUpsert",
     "GrpoResult",
     "GspanMiningResult",
+    "GuardrailRule",
     "GuardrailEntailmentRequest",
     "GuardrailEntailmentResult",
     "HarnessConfigAnswer",

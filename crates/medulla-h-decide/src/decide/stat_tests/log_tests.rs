@@ -39,6 +39,9 @@ pub(super) async fn fit_from_the_engine_log(
         source: DatasetSource::Logged {
             question_id: record.question.question_id.clone(),
         },
+        penalty: None,
+        features: Default::default(),
+        parent_head: None,
     };
     let op = DecisionFitOp::Submit {
         request: Box::new(request),

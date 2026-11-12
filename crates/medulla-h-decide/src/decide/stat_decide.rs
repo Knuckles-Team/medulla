@@ -183,6 +183,15 @@ fn decide_blocking(
         roles: Vec::new(),
         retention: super::stat_retention::Retention::none(),
     };
+    let context_digest = super::stat_log::context_digest_of(
+        &request.question.question_id,
+        request.params.as_slice(),
+    );
+    let matched = matched_history(ctx, &reader, &policy, &context_digest)?;
+    tracing::debug!(
+        matched = matched.len(),
+        "decision context matched prior records"
+    );
     fill_outcome_rates(
         ctx.store,
         &reader,
@@ -215,6 +224,7 @@ fn decide_blocking(
                 principal,
                 slices: &slices,
                 registry,
+                context_digest,
             },
             &executed,
             nl,
@@ -245,6 +255,37 @@ struct Sealing<'a> {
     principal: String,
     slices: &'a Slices,
     registry: &'a dyn super::family::DecisionFamily,
+    context_digest: String,
+}
+
+/// The same-principal records that share this decision's context, within the
+/// policy's `exploration.*` knobs (MEDULLA-DECISION-ENGINE-R020.1.1).
+fn matched_history(
+    ctx: &ExecutionContext,
+    reader: &LogReader,
+    policy: &ResolvedPolicy,
+    context_digest: &str,
+) -> Result<Vec<super::stat_log::MatchedTrajectory>, String> {
+    use medulla_decision_stats::decision::exploration::KNOBS;
+    use medulla_decision_types::decision::knobs::KnobValue;
+    let (KnobValue::DurationMs(window_ms), KnobValue::Integer(max_matched)) =
+        (policy.policy.knob(&KNOBS[0]), policy.policy.knob(&KNOBS[1]))
+    else {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "exploration knobs have the wrong value type",
+        ));
+    };
+    super::stat_log::matched_trajectories(
+        ctx.store,
+        reader,
+        context_digest,
+        super::stat_log::MatchWindow {
+            now_ms: ctx.now_ms,
+            window_ms,
+            max_matched: usize::try_from(max_matched).unwrap_or(0),
+        },
+    )
 }
 
 fn bounded<T, const N: usize>(values: Vec<T>) -> Result<BoundedVec<T, N>, String> {
@@ -371,6 +412,14 @@ fn premises(sealing: &Sealing, nl: Option<&NlBinding>) -> Vec<PremiseRef> {
     let schema = &sealing.request.feature_schema;
     let mut out = vec![
         premise(
+            &sealing.context_digest,
+            "context_digest",
+            PremiseClass::Definition,
+            PremiseProvenance::Request {
+                field: "params".to_string(),
+            },
+        ),
+        premise(
             &schema.component_id,
             "feature_schema",
             PremiseClass::Definition,
@@ -471,6 +520,7 @@ fn seal(
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
         harness_evaluation: None,
+        context_digest: Some(sealing.context_digest.clone()),
         harness_contrast: executed.harness_contrast.clone(),
         feature_schema: sealing.request.feature_schema.clone(),
         head: sealing.request.head.clone(),

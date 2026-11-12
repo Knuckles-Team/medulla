@@ -18,7 +18,32 @@ use medulla_decision_types::{
     decision::UnitRationalWire,
 };
 
+use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+
 use super::quant::exact_wire;
+
+const DAY_MS: u64 = 86_400_000;
+
+/// The knobs of the context-matched exploitation pool
+/// (MEDULLA-DECISION-ENGINE-R020.1.1).
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "exploration.match_window",
+        unit: "ms",
+        default: KnobValue::DurationMs(30 * DAY_MS),
+        min: KnobValue::DurationMs(DAY_MS),
+        max: KnobValue::DurationMs(365 * DAY_MS),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "exploration.max_matched",
+        unit: "records",
+        default: KnobValue::Integer(256),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(4096),
+        safety: KnobSafety::Tunable,
+    },
+];
 use super::refusal::{Refusal, RefusalResult};
 
 /// Whether this decision may explore, and how much.
