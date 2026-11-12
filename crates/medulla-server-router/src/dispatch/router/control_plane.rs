@@ -580,6 +580,7 @@ async fn dispatch_compute_and_media_methods_arm_0(
                         &carrier,
                         verified_context.attempt_nonce(),
                         verified_context.allows_analytics_worker(),
+                        verified_context,
                         op,
                     )
                     .await

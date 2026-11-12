@@ -15,6 +15,9 @@ pub const TICK_REPLAYED_AFTER_ACK: &str = "TICK_REPLAYED_AFTER_ACK";
 pub const LEADER_FENCE_EXPIRED: &str = "LEADER_FENCE_EXPIRED";
 pub const SLICE_SUM_OVER_BUDGET: &str = "SLICE_SUM_OVER_BUDGET";
 pub const INVALID_SCHEDULE: &str = "INVALID_SCHEDULE";
+pub const SCHEDULE_NOT_OWNER: &str = "SCHEDULE_NOT_OWNER";
+pub const SCHEDULE_NOT_FOUND: &str = "SCHEDULE_NOT_FOUND";
+pub const SCHEDULE_EXISTS: &str = "SCHEDULE_EXISTS";
 
 const MINUTE_MS: u64 = 60_000;
 
@@ -26,7 +29,7 @@ pub struct ScheduleError {
 }
 
 impl ScheduleError {
-    fn new(code: &'static str, detail: impl Into<String>) -> Self {
+    pub fn new(code: &'static str, detail: impl Into<String>) -> Self {
         Self {
             code,
             detail: detail.into(),
@@ -283,6 +286,55 @@ impl ReleaseChannel {
     }
 }
 
+/// Longest schedule name or task kind, in characters.
+pub const MAX_SCHEDULE_TEXT: usize = 128;
+
+/// One owned schedule: the body of a `Schedule` node in the tenant graph
+/// (MEDULLA-PLACEMENT-R751.754). The owner is the principal that created it;
+/// only the owner may update or delete it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleRecord {
+    pub name: String,
+    pub owner: String,
+    pub tenant: String,
+    pub spec: ScheduleSpec,
+    pub task_kind: String,
+}
+
+impl ScheduleRecord {
+    /// The graph node id of a tenant's schedule.
+    pub fn node_id(tenant: &str, name: &str) -> String {
+        format!("schedule:{tenant}:{name}")
+    }
+
+    /// Refuse a blank or over-long name or task kind and an invalid spec.
+    pub fn validate(&self) -> Result<(), ScheduleError> {
+        for (label, text) in [("name", &self.name), ("task kind", &self.task_kind)] {
+            let length = text.chars().count();
+            if text.trim().is_empty() || length > MAX_SCHEDULE_TEXT {
+                return Err(ScheduleError::new(
+                    INVALID_SCHEDULE,
+                    format!("schedule {label} must be 1 to {MAX_SCHEDULE_TEXT} characters"),
+                ));
+            }
+        }
+        self.spec.validate()
+    }
+
+    /// Only the owner may change or remove the schedule.
+    pub fn authorize_write(&self, principal: &str) -> Result<(), ScheduleError> {
+        if self.owner == principal {
+            Ok(())
+        } else {
+            Err(ScheduleError::new(
+                SCHEDULE_NOT_OWNER,
+                format!("schedule {:?} is owned by another principal", self.name),
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -415,6 +467,44 @@ mod tests {
             .unwrap_err()
             .code,
             INVALID_SCHEDULE
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R751.754
+    #[test]
+    fn schedule_record_is_owner_scoped_and_validates_cron() {
+        let record = ScheduleRecord {
+            name: "nightly".into(),
+            owner: "alice".into(),
+            tenant: "t1".into(),
+            spec: ScheduleSpec::Cron {
+                minute: "0".into(),
+                hour: "*/6".into(),
+            },
+            task_kind: "sweep".into(),
+        };
+        assert!(record.validate().is_ok());
+        assert!(record.authorize_write("alice").is_ok());
+        assert_eq!(
+            record.authorize_write("mallory").unwrap_err().code,
+            SCHEDULE_NOT_OWNER
+        );
+        let bad_cron = ScheduleRecord {
+            spec: ScheduleSpec::Cron {
+                minute: "61".into(),
+                hour: "*".into(),
+            },
+            ..record.clone()
+        };
+        assert_eq!(bad_cron.validate().unwrap_err().code, INVALID_SCHEDULE);
+        let blank = ScheduleRecord {
+            name: " ".into(),
+            ..record
+        };
+        assert_eq!(blank.validate().unwrap_err().code, INVALID_SCHEDULE);
+        assert_eq!(
+            ScheduleRecord::node_id("t1", "nightly"),
+            "schedule:t1:nightly"
         );
     }
 }

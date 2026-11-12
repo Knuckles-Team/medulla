@@ -90,6 +90,28 @@ pub enum JobOp {
         worker_instance: String,
         lease_epoch: u64,
     },
+    /// Create an owned schedule in the tenant graph `graph`
+    /// (MEDULLA-PLACEMENT-R751.754). `spec` is a `ScheduleSpec`, validated
+    /// by the handler; an invalid one is refused with `INVALID_SCHEDULE`.
+    ScheduleCreate {
+        graph: String,
+        name: String,
+        spec: serde_json::Value,
+        task_kind: String,
+    },
+    /// Read one schedule of the caller's tenant.
+    ScheduleGet { graph: String, name: String },
+    /// Replace a schedule's spec and task kind. Owner only.
+    ScheduleUpdate {
+        graph: String,
+        name: String,
+        spec: serde_json::Value,
+        task_kind: String,
+    },
+    /// Remove a schedule. Owner only.
+    ScheduleDelete { graph: String, name: String },
+    /// List the schedules of the caller's tenant.
+    ScheduleList { graph: String },
 }
 
 fn default_lease_ms() -> u64 {

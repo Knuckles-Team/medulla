@@ -169,3 +169,31 @@ pub struct WorkerJobClaim {
     pub job: ClaimedAnalyticsJob,
     pub lease: JobWorkerLease,
 }
+
+/// One owned schedule as served (MEDULLA-PLACEMENT-R751.754).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleView {
+    pub name: String,
+    pub owner: String,
+    pub tenant: String,
+    pub spec: serde_json::Value,
+    pub task_kind: String,
+}
+
+/// The schedules of one tenant, ordered by name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleViewList {
+    pub schedules: Vec<ScheduleView>,
+}
+
+/// The name of a schedule that was removed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleRemoved {
+    pub name: String,
+}

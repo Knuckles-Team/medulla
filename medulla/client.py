@@ -14861,6 +14861,87 @@ class JobsClient:
             )
         ).payload
 
+    async def schedule_create(
+        self, graph: str, name: str, spec: dict[str, Any], task_kind: str
+    ) -> dict[str, Any]:
+        """Create an owned schedule (invalid specs are refused)."""
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {
+                    "op": {
+                        "ScheduleCreate": {
+                            "graph": graph,
+                            "name": name,
+                            "spec": spec,
+                            "task_kind": task_kind,
+                        }
+                    }
+                },
+            )
+        ).payload
+
+    async def schedule_get(self, graph: str, name: str) -> dict[str, Any]:
+        """Read one schedule of the caller's tenant."""
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {
+                    "op": {
+                        "ScheduleGet": {
+                            "graph": graph,
+                            "name": name,
+                        }
+                    }
+                },
+            )
+        ).payload
+
+    async def schedule_update(
+        self, graph: str, name: str, spec: dict[str, Any], task_kind: str
+    ) -> dict[str, Any]:
+        """Replace a schedule's spec and task kind; owner only."""
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {
+                    "op": {
+                        "ScheduleUpdate": {
+                            "graph": graph,
+                            "name": name,
+                            "spec": spec,
+                            "task_kind": task_kind,
+                        }
+                    }
+                },
+            )
+        ).payload
+
+    async def schedule_delete(self, graph: str, name: str) -> dict[str, Any]:
+        """Remove a schedule; owner only."""
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {
+                    "op": {
+                        "ScheduleDelete": {
+                            "graph": graph,
+                            "name": name,
+                        }
+                    }
+                },
+            )
+        ).payload
+
+    async def schedule_list(self, graph: str) -> dict[str, Any]:
+        """List the schedules of the caller's tenant."""
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {"op": {"ScheduleList": {}}},
+            )
+        ).payload
+
 
 class KnowledgeStreamClient:
     """Current native Arrow result stream for every served query family.

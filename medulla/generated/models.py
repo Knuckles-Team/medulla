@@ -8397,6 +8397,74 @@ class JobOpResumeBody(BaseModel):
     job_id: str
 
 
+class JobOpScheduleCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleCreate: JobOpScheduleCreateBody
+
+
+class JobOpScheduleCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+    spec: Any
+    task_kind: str
+
+
+class JobOpScheduleDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleDelete: JobOpScheduleDeleteBody
+
+
+class JobOpScheduleDeleteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+
+
+class JobOpScheduleGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleGet: JobOpScheduleGetBody
+
+
+class JobOpScheduleGetBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+
+
+class JobOpScheduleList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleList: JobOpScheduleListBody
+
+
+class JobOpScheduleListBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+
+
+class JobOpScheduleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleUpdate: JobOpScheduleUpdateBody
+
+
+class JobOpScheduleUpdateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+    spec: Any
+    task_kind: str
+
+
 class JobOpStatus(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -26416,6 +26484,11 @@ JobOp = (
     | JobOpWorkerPublish
     | JobOpWorkerFail
     | JobOpWorkerCancel
+    | JobOpScheduleCreate
+    | JobOpScheduleDelete
+    | JobOpScheduleGet
+    | JobOpScheduleList
+    | JobOpScheduleUpdate
 )
 
 
@@ -30179,6 +30252,16 @@ __all__ = [
     "JobOpStatus",
     "JobOpStatusBody",
     "JobOpSubmit",
+    "JobOpScheduleCreate",
+    "JobOpScheduleCreateBody",
+    "JobOpScheduleDelete",
+    "JobOpScheduleDeleteBody",
+    "JobOpScheduleGet",
+    "JobOpScheduleGetBody",
+    "JobOpScheduleList",
+    "JobOpScheduleListBody",
+    "JobOpScheduleUpdate",
+    "JobOpScheduleUpdateBody",
     "JobOpWorkerCancel",
     "JobOpWorkerCancelBody",
     "JobOpWorkerCheckpoint",

@@ -162,6 +162,16 @@ method_results! {
     JobWorkerFail(AnalyticsJob / "WorkerFail") => Json<AnalyticsJobRecord>;
     #[cfg(feature = "jobs")]
     JobWorkerCancel(AnalyticsJob / "WorkerCancel") => Json<AnalyticsJobRecord>;
+    #[cfg(feature = "jobs")]
+    JobScheduleCreate(AnalyticsJob / "ScheduleCreate") => Json<ScheduleView>;
+    #[cfg(feature = "jobs")]
+    JobScheduleGet(AnalyticsJob / "ScheduleGet") => Json<ScheduleView>;
+    #[cfg(feature = "jobs")]
+    JobScheduleUpdate(AnalyticsJob / "ScheduleUpdate") => Json<ScheduleView>;
+    #[cfg(feature = "jobs")]
+    JobScheduleDelete(AnalyticsJob / "ScheduleDelete") => Json<ScheduleRemoved>;
+    #[cfg(feature = "jobs")]
+    JobScheduleList(AnalyticsJob / "ScheduleList") => Json<ScheduleViewList>;
     #[cfg(feature = "statechart")]
     StatechartDefine(Statechart / "Define") => Json<StatechartDefinitionId>;
     #[cfg(feature = "statechart")]

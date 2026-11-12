@@ -62,6 +62,7 @@ use medulla_program::ProgramRevisionIdentity;
 
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
@@ -101,6 +102,7 @@ mod prelude_std;
 mod program_validation;
 mod publication;
 mod results_association;
+mod schedules;
 #[cfg(feature = "program-optimization")]
 mod results_program;
 mod submit;
@@ -190,6 +192,7 @@ pub async fn handle(
     authority: &CarrierAuthority,
     attempt_nonce: Option<Nonce>,
     verified_worker_context: bool,
+    verified_context: &VerifiedRequestContext,
     op: JobOp,
 ) -> Response {
     let caller = Some(authority.actor_scope());
@@ -198,6 +201,12 @@ pub async fn handle(
         Err(response) => return response,
     };
 
+    let schedule_call = || schedules::ScheduleCall {
+        state,
+        req_id,
+        authority,
+        verified_context,
+    };
     let response = match op {
         JobOp::Submit(spec) => {
             handle_submit_op(state, &store, req_id, authority, attempt_nonce, spec).await
@@ -307,6 +316,25 @@ pub async fn handle(
             &job_id,
             lease_epoch,
         ),
+        JobOp::ScheduleCreate {
+            graph,
+            name,
+            spec,
+            task_kind,
+        } => schedules::create(schedule_call(), graph, name, spec, task_kind).await,
+        JobOp::ScheduleGet { graph, name } => {
+            schedules::get(schedule_call(), graph, name).await
+        }
+        JobOp::ScheduleUpdate {
+            graph,
+            name,
+            spec,
+            task_kind,
+        } => schedules::update(schedule_call(), graph, name, spec, task_kind).await,
+        JobOp::ScheduleDelete { graph, name } => {
+            schedules::delete(schedule_call(), graph, name).await
+        }
+        JobOp::ScheduleList { graph } => schedules::list(schedule_call(), graph).await,
         JobOp::WorkerFail {
             job_id,
             worker_instance,

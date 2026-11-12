@@ -191,7 +191,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CLAIM_PACED",
             "CONFLICT",
             "INVALID_CONFIGURATION",
+            "INVALID_SCHEDULE",
             "PRIORITY_OUT_OF_RANGE",
+            "SCHEDULE_EXISTS",
+            "SCHEDULE_NOT_FOUND",
+            "SCHEDULE_NOT_OWNER",
         ],
     ),
     // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
