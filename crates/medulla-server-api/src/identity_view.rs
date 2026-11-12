@@ -56,3 +56,11 @@ pub fn publish(persist_dir: Option<&str>, store: &IdentityStore) {
 pub fn published(persist_dir: &Path) -> Option<Arc<IdentityStore>> {
     views().read().ok()?.get(persist_dir).cloned()
 }
+
+/// True when any published engine identity store manages `principal_id`.
+pub fn any_manages(principal_id: &str) -> bool {
+    views()
+        .read()
+        .map(|views| views.values().any(|store| store.manages(principal_id)))
+        .unwrap_or(false)
+}

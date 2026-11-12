@@ -1,0 +1,26 @@
+# Typed principal metadata shapes (MEDULLA-IDENTITY-R023.8).
+#
+# The bounds of the three typed records. Core source `core:identity_metadata@1`.
+
+@prefix idm: <http://knuckles.team/kg/identity_metadata#> .
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+idm:PreferenceShape a sh:NodeShape ;
+    sh:targetClass idm:Preference ;
+    sh:property [ sh:path idm:key ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 64 ] ;
+    sh:property [ sh:path idm:value ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 1024 ] ;
+    sh:property [ sh:path idm:share ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "private" "placement" "tenant" ) ] .
+
+idm:ClientMetadataShape a sh:NodeShape ;
+    sh:targetClass idm:ClientMetadata ;
+    sh:property [ sh:path idm:client_id ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 128 ] ;
+    sh:property [ sh:path idm:kind ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "cli" "web" "mobile" "service" ) ] ;
+    sh:property [ sh:path idm:version ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 64 ] .
+
+idm:InteractionNetworkShape a sh:NodeShape ;
+    sh:targetClass idm:InteractionNetwork ;
+    sh:property [ sh:path idm:subject ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path idm:peer ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path idm:relation ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "collaborates" "delegates" "follows" ) ] ;
+    sh:property [ sh:path idm:weight_milli ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ; sh:maxInclusive 1000 ] .

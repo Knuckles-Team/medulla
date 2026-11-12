@@ -142,6 +142,16 @@ pub fn compile_methods_with_outbox(
     methods: Vec<Method>,
     additional_outbox: Vec<MutationOutboxIntent>,
 ) -> Result<MutationBatch, String> {
+    // MEDULLA-IDENTITY-R023.9: typed principal metadata is admitted, owner-stamped and
+    // refused here, before any operation is compiled or committed.
+    let methods = crate::mutation_batch::identity_metadata::admit_all(
+        methods,
+        &crate::mutation_batch::identity_metadata::MetadataCaller {
+            principal: ctx.principal,
+            tenant: ctx.tenant,
+        },
+    )
+    .map_err(|refusal| refusal.to_string())?;
     let (methods, mut terminal_outbox) = lower_terminal_outcome_extensions(ctx.batch_id, methods)?;
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.1: an alert's outbox fact is built here, from
     // the very method that commits its event node, so both share one batch.

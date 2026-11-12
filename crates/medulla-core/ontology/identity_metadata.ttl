@@ -1,0 +1,102 @@
+# Typed principal metadata vocabulary (MEDULLA-IDENTITY-R023.8).
+#
+# An EG core schema source (`core:identity_metadata@1`): the three typed
+# metadata records a principal owns -- a preference, a client description and a
+# peer interaction -- persisted as versioned graph nodes. Every record is
+# written through the mutation gateway; files are never read by the engine.
+# Each class extends the core class kg:DomainEntity. An interaction edge
+# `subject -[relation]-> peer` is a close match of foaf:knows.
+
+@prefix idm:  <http://knuckles.team/kg/identity_metadata#> .
+@prefix kg:   <http://knuckles.team/kg#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+<http://knuckles.team/kg/identity_metadata> a owl:Ontology ;
+    rdfs:label "Identity metadata" ;
+    rdfs:comment "Typed principal metadata: preferences, client metadata and interaction networks." .
+
+# --- Classes ----------------------------------------------------------------
+
+idm:Preference a owl:Class ;
+    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:comment "One principal-owned preference (key, value) shared at an explicit scope." .
+idm:ClientMetadata a owl:Class ;
+    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:comment "One client of a principal: its id, kind, version and capabilities." .
+idm:InteractionNetwork a owl:Class ;
+    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:comment "One weighted relation from a subject principal to a peer principal." .
+
+# --- Record facts -----------------------------------------------------------
+
+idm:key a owl:DatatypeProperty ;
+    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:comment "Preference key, at most 64 characters." .
+idm:value a owl:DatatypeProperty ;
+    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:comment "Preference value, at most 1,024 characters." .
+idm:share a owl:DatatypeProperty ;
+    rdfs:domain idm:Preference ; rdfs:range xsd:string ;
+    rdfs:comment "Share scope: private, placement or tenant." .
+idm:client_id a owl:DatatypeProperty ;
+    rdfs:domain idm:ClientMetadata ; rdfs:range xsd:string ;
+    rdfs:comment "Client id, at most 128 characters." .
+idm:kind a owl:DatatypeProperty ;
+    rdfs:domain idm:ClientMetadata ; rdfs:range xsd:string ;
+    rdfs:comment "Client kind: cli, web, mobile or service." .
+idm:version a owl:DatatypeProperty ;
+    rdfs:domain idm:ClientMetadata ; rdfs:range xsd:string ;
+    rdfs:comment "Client version, at most 64 characters." .
+idm:capabilities a owl:DatatypeProperty ;
+    rdfs:domain idm:ClientMetadata ; rdfs:range xsd:string ;
+    rdfs:comment "Client capabilities, at most 32 entries." .
+idm:subject a owl:DatatypeProperty ;
+    rdfs:domain idm:InteractionNetwork ; rdfs:range xsd:string ;
+    rdfs:comment "Canonical principal id the relation starts from." .
+idm:peer a owl:DatatypeProperty ;
+    rdfs:domain idm:InteractionNetwork ; rdfs:range xsd:string ;
+    rdfs:comment "Canonical principal id the relation points to." .
+idm:relation a owl:DatatypeProperty ;
+    rdfs:domain idm:InteractionNetwork ; rdfs:range xsd:string ;
+    rdfs:comment "Relation: collaborates, delegates or follows." .
+idm:weight_milli a owl:DatatypeProperty ;
+    rdfs:domain idm:InteractionNetwork ; rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "Relation weight in thousandths, 0 to 1,000." .
+
+# --- Versioning and provenance (every record) -------------------------------
+
+idm:schema_version a owl:DatatypeProperty ; rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "Schema version of the record body." .
+idm:revision a owl:DatatypeProperty ; rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "Revision number of this node; a change writes a new revision." .
+idm:supersedes a owl:ObjectProperty ;
+    rdfs:comment "Links a revision to the revision it replaces." .
+idm:source_digest a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "SHA-256 of the imported source, 64 lowercase hex characters." .
+idm:mapping_version a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Version of the client mapping that produced the record." .
+idm:actor a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Verified principal that wrote the record." .
+idm:schema_digest a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Digest of the identity_metadata schema the record was admitted under." .
+idm:parent_revision a owl:DatatypeProperty ; rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "Revision this one was derived from; zero for a first revision." .
+
+# --- Interaction edges ------------------------------------------------------
+
+idm:collaborates a owl:ObjectProperty ;
+    skos:closeMatch foaf:knows ;
+    rdfs:domain idm:InteractionNetwork ;
+    rdfs:comment "Typed edge subject -[collaborates]-> peer." .
+idm:delegates a owl:ObjectProperty ;
+    skos:closeMatch foaf:knows ;
+    rdfs:domain idm:InteractionNetwork ;
+    rdfs:comment "Typed edge subject -[delegates]-> peer." .
+idm:follows a owl:ObjectProperty ;
+    skos:closeMatch foaf:knows ;
+    rdfs:domain idm:InteractionNetwork ;
+    rdfs:comment "Typed edge subject -[follows]-> peer." .

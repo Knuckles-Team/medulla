@@ -686,6 +686,24 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     ) {
         codes.extend(["AUDIT_UNAVAILABLE", "QUERY_UNSCOPABLE"]);
     }
+    // MEDULLA-IDENTITY-R023.10: typed principal metadata admission runs in the
+    // mutation compiler, so every node-writing route can refuse an invalid record.
+    if matches!(
+        id,
+        "AddNode"
+            | "CreateNodeIfAbsent"
+            | "TxnAddNode"
+            | "ApplyMutation"
+            | "Sql"
+            | "CypherQuery"
+            | "AddTriples"
+    ) {
+        codes.extend([
+            "METADATA_UNTYPED",
+            "METADATA_PRINCIPAL_UNKNOWN",
+            "METADATA_SCHEMA_INVALID",
+        ]);
+    }
     // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
     // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path.
     if id == "GetNodeProperties" {

@@ -1266,6 +1266,18 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: Some(include_str!("../../../medulla-core/ontology/placement.ttl")),
         },
+        // MEDULLA-IDENTITY-R023.8: the typed principal metadata vocabulary and its
+        // bounds, one core source (ontology plus its shapes companion).
+        CoreSpec {
+            module: "identity_metadata",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/identity_metadata.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/identity_metadata.ttl"
+            )),
+        },
         CoreSpec {
             module: "finance",
             version: 1,
@@ -1482,7 +1494,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 63);
+        assert_eq!(sources.core.len(), 64);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1953,6 +1965,12 @@ mod tests {
             (
                 "placement",
                 "5ffe8274813ab3d15d0b18aa74fc9f57d91d5b63dae7f769c88157ab36bd875c",
+            ),
+            // MEDULLA-IDENTITY-R023.8: the typed principal metadata module joins the
+            // catalog; the pin follows the ontology.
+            (
+                "identity_metadata",
+                "89c11478257f9f8dd7255901c56c8c108164cc246dca3724800c1e5804e19fe9",
             ),
             // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
             // records; semantic acceptance/refusal fixtures live in

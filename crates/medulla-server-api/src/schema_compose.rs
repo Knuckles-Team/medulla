@@ -896,7 +896,9 @@ ex:parent a owl:AsymmetricProperty .
         // corpus triples, so the raw file deltas (86 + 6 + 156) exceed the delta.
         // +22 (measured composed delta, 20_817 -> 20_839): the placement target
         // vocabulary (placement.ttl) joins the core corpus (MEDULLA-PLACEMENT-R001.5).
-        assert_eq!(composed.ontology.len(), 20_839);
+        // +91 (MEDULLA-IDENTITY-R023.8): the typed principal metadata vocabulary
+        // (identity_metadata.ttl) joins the core corpus.
+        assert_eq!(composed.ontology.len(), 20_930);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -935,7 +937,8 @@ ex:parent a owl:AsymmetricProperty .
         // +2: the commercial and newly registered supply-chain module headers.
         // +1: the connector-pack ingest vocabulary header (R101.1).
         // +1: the placement target vocabulary module header (MEDULLA-PLACEMENT-R001.5).
-        assert_eq!(ontology_subjects.len(), 47);
+        // +1: the identity metadata module header (MEDULLA-IDENTITY-R023.8).
+        assert_eq!(ontology_subjects.len(), 48);
         // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
         // `owl:imports <.../core>`; +6: the service-operations module's five
         // imports and its catalog entry; +5: the metadata-catalog module's four
@@ -998,7 +1001,9 @@ ex:parent a owl:AsymmetricProperty .
         // +22: the placement target vocabulary (MEDULLA-PLACEMENT-R001.5); of its
         // 22 triples, the 3 module-header metadata triples are not semantic axioms,
         // so +19 here.
-        assert_eq!(semantic_axioms, 20_605);
+        // +88: the identity metadata vocabulary (MEDULLA-IDENTITY-R023.8); of its
+        // 91 triples the 3 module-header metadata triples are not semantic axioms.
+        assert_eq!(semantic_axioms, 20_693);
 
         let count_type = |object: &str| {
             composed
@@ -1086,7 +1091,9 @@ ex:parent a owl:AsymmetricProperty .
             // class edges (39cfe696f, 816b4b7d8, ef517a72c); the raw file additions
             // (+17 and +11) deduplicate against existing corpus edges.
             // +1: placement:Target's kg:DomainEntity edge (MEDULLA-PLACEMENT-R001.5).
-            1064
+            // +3: the three identity metadata classes' kg:DomainEntity edges
+            // (MEDULLA-IDENTITY-R023.8).
+            1067
         );
     }
 

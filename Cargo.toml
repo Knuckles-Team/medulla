@@ -1999,6 +1999,12 @@ name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
 
+# Typed principal metadata admission (MEDULLA-IDENTITY-R023.12): nightly p95 budget.
+[[bench]]
+name = "identity_metadata_admit"
+path = "benches/identity_metadata_admit.rs"
+harness = false
+
 [[bench]]
 name = "write_coalescer_bench"
 path = "benches/write_coalescer_bench.rs"

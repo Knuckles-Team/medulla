@@ -58,6 +58,9 @@ pub mod knob_config;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_apply;
 
+/// Admission steps that run before a write set is compiled (MEDULLA-IDENTITY-R023.9).
+pub mod mutation_batch;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "oidc")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

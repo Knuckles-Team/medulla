@@ -153,6 +153,39 @@ pub fn scan_units(view: &GraphView, caller: &ReadCaller) -> UnitScan {
     UnitScan { visible, hidden }
 }
 
+/// The typed principal metadata labels (MEDULLA-IDENTITY-R023.8).
+const METADATA_LABELS: [&str; 3] = ["Preference", "ClientMetadata", "InteractionNetwork"];
+
+/// Metadata node ids the caller may not read: a record is its owner's, except a
+/// `Preference` shared at `tenant` or `placement` scope, which reaches readers in
+/// the owner's tenant (every reader of the graph for `placement`).
+fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
+    let mut hidden = BTreeSet::new();
+    for label in METADATA_LABELS {
+        for (id, map) in nodes_with(view, label.as_bytes()) {
+            if !is_label(&map, label) {
+                continue;
+            }
+            let owner = text(&map, "owner").unwrap_or_default();
+            if owner == caller.principal.id {
+                continue;
+            }
+            let shared = label == "Preference"
+                && match text(&map, "share") {
+                    Some("placement") => true,
+                    Some("tenant") => {
+                        text(&map, OWNER_TENANT_KEY).unwrap_or_default() == caller.principal.tenant
+                    }
+                    _ => false,
+                };
+            if !shared {
+                hidden.insert(id.clone());
+            }
+        }
+    }
+    hidden
+}
+
 /// The node variables a plan binds: each row source, in plan order.
 #[cfg(feature = "query")]
 pub fn bound_variables(plan: &medulla_types::wire::Plan) -> Vec<String> {
@@ -240,6 +273,7 @@ pub fn scope_view(
     let scan = scan_units(&view, caller);
     let hidden_units = scan.hidden.len();
     hidden.extend(scan.hidden);
+    hidden.extend(hidden_metadata(&view, caller));
     let mut unit_ids = scan.visible;
     unit_ids.truncate(MAX_AUDITED_UNIT_IDS);
     if hidden.is_empty() {
