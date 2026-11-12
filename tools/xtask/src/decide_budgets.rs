@@ -127,6 +127,7 @@ mod tests {
         json!({"groups": {group: {"p50_ms": p50, "p99_ms": p99, "peak_mib": peak}}})
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R178.2
     #[test]
     fn a_planted_regression_fails() {
         let baseline = baseline();
