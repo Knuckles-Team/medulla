@@ -483,3 +483,10 @@ cargo_deny_version = "0.20.2"
 [tool.pipelines_hooks.ste]
 paths = ["README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CHANGELOG.md", "docs", "specs"]
 exempt = ["vendor/*"]
+
+# Constitution Article XXXI: every lifecycle/status type under these paths is an explicit state machine with a
+# closed transition table and tests for each legal and illegal transition (shared state-machine-shape hook).
+[tool.pipelines_hooks.state_machine]
+paths = ["crates", "medulla", "tools"]
+languages = ["rust", "python"]
+mode = "blocking"
