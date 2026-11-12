@@ -80,7 +80,7 @@ fn aml(amount_minor: i64, threshold_minor: i64) -> Method {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-// spec: MEDULLA-FINANCE-PRIMITIVES-R901.3
+// spec: MEDULLA-FINANCE-PRIMITIVES-R901.3, MEDULLA-FINANCE-PRIMITIVES-R901.6
 async fn banking_methods_run_their_kernels() {
     let structuring = body(&call(aml(8_500, 10_000)).await);
     assert_eq!(structuring["alert"]["kind"], "structuring");
