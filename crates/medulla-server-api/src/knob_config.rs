@@ -367,6 +367,7 @@ knobs! {
     loops_ratchet_min_samples: u64 = "loops.ratchet_min_samples", U64(3), [1, 1_000], "samples", Tunable;
     /// Smallest gain a ratchet keeps (MEDULLA-DECISION-ENGINE-R653.8).
     loops_ratchet_min_gain_micro: i64 = "loops.ratchet_min_gain_micro", I64(0), [-1_000_000, 1_000_000], "micro", Tunable;
+    /// Smallest evidence support, in micro-nats, a claim needs to count as supported (MEDULLA-DECISION-ENGINE-R652.2).
     claims_support_min_micro: i64 = "claims.support_min_micro", I64(1_000_000), [0, 6_000_000], "micro-nats", Tunable;
     /// Longest wait for a stable WAL snapshot of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1).
     foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;
