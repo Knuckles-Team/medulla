@@ -91,6 +91,8 @@ impl ReadScope {
             status: "ok".to_owned(),
             request_id: format!("read-{req_id}-{nanos}"),
             audit_class: "event".to_owned(),
+            subject_iri: None,
+            policy_iri: None,
         };
         let graph = medulla_kernel::persist::sanitize(&self.graph_name);
         medulla_server_api::read_audit::ReadAuditSink::global().enqueue(Box::pin(async move {

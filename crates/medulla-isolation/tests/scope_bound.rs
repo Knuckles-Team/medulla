@@ -70,6 +70,7 @@ fn missing_policy_node_is_empty_bound() {
     ));
 }
 
+// spec: MEDULLA-IDENTITY-R008.5
 #[test]
 fn excess_plan_is_refused_and_audited() {
     let core = query_only_core();
@@ -86,9 +87,18 @@ fn excess_plan_is_refused_and_audited() {
     let message = refusal.to_string();
     assert!(message.starts_with(SCOPE_EXCEEDS_POLICY));
     assert!(message.contains(ERASE) && message.contains(&run_scope_policy_iri(PRINCIPAL)));
-    // The audit event the served path writes before the refusal returns: one
-    // entry of class `scope_exceeds_policy` naming both IRIs.
+    // The audit event the served path writes before the refusal returns is
+    // one entry: class `scope_exceeds_policy`, the tenant, the subject tool
+    // IRI and the bound's policy IRI - the same two IRIs the refusal names -
+    // and no second entry of the class.
     let audit = medulla_isolation::isolation::scope_refusal_audit_line(&refusal, "tenant-a");
+    assert_eq!(
+        audit,
+        format!(
+            "scope_exceeds_policy|tenant=tenant-a|tool={ERASE}|policy={}",
+            run_scope_policy_iri(PRINCIPAL)
+        )
+    );
     assert_eq!(audit.matches("scope_exceeds_policy").count(), 1);
     assert!(audit.contains(ERASE) && audit.contains(&run_scope_policy_iri(PRINCIPAL)));
 }

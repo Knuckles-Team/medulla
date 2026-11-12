@@ -330,6 +330,8 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
             status: "reserved".to_string(),
             request_id: "request-1".to_string(),
             audit_class: "event".to_string(),
+            subject_iri: None,
+            policy_iri: None,
         },
         NativeMutationDomain::GraphState,
     );

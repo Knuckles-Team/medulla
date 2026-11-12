@@ -62,6 +62,8 @@ fn effect_audit_event(entry: &EffectAudit<'_>) -> medulla_store::redb_store::Ope
         status: "ok".to_string(),
         request_id: request_id(result),
         audit_class: "event".to_string(),
+        subject_iri: None,
+        policy_iri: None,
     }
 }
 

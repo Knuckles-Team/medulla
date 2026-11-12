@@ -13808,8 +13808,10 @@ class MethodAuditAppendParams(BaseModel):
     audit_class: str | None = None
     op: str
     params_sha256: str
+    policy_iri: str | None = None
     request_id: str
     status: str
+    subject_iri: str | None = None
     surface: str
 
 

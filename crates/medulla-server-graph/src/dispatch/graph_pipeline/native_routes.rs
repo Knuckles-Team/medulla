@@ -751,6 +751,8 @@ async fn route_graph_audit_and_modality(
             status,
             request_id,
             audit_class,
+            subject_iri,
+            policy_iri,
         } => {
             let authority = match medulla_server_api::carrier::CarrierAuthority::from_verified(
                 ctx.verified_context,
@@ -767,6 +769,8 @@ async fn route_graph_audit_and_modality(
                 status,
                 request_id,
                 audit_class,
+                subject_iri,
+                policy_iri,
             };
             return Ok(dispatch_op_audit_append(
                 ctx.req_id,
