@@ -364,6 +364,18 @@ $($variants)*
     ContextFacts {
         request: medulla_types::context_facts::ContextFactsRequest,
     },
+    // ── Source spans (MEDULLA-DECISION-ENGINE-R153) ──
+    /// A bounded line range of one ingested text source, located through the
+    /// table of contents `SourceIngest` stored for the document revision.
+    /// `line_start` and `line_end` are 1-based and inclusive. Every answer names
+    /// the table digest and the source digest. Reads only, through the caller's
+    /// graph view. See [`medulla_types::source_toc`].
+    ReadSpan {
+        document_id: String,
+        revision: u64,
+        line_start: u64,
+        line_end: u64,
+    },
     // ── Agent bus roster (MEDULLA-DURABLE-KERNEL-R095.1002) ────────────────
     /// Register (replace) one session's participant row on the request
     /// graph's bus. `participant.last_seen_ms` is the request clock. The engine

@@ -80,6 +80,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ComputeSimilarityEdges",
     "ConnectedComponents",
     "ContextFacts",
+    "ReadSpan",
     "DegreeCentrality",
     "DegreeCentralityAll",
     "DiffAgainst",

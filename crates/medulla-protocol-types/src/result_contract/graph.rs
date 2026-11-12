@@ -23,6 +23,8 @@ method_results! {
     SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
     SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
+    // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
+    ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;

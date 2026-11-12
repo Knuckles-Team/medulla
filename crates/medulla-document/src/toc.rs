@@ -119,6 +119,7 @@ pub fn build_toc(document_id: &str, revision: u64, source: &[u8], stride: u64) -
         total_lines,
         entries,
         line_index,
+        line_index_stride: stride,
         schema_version: SOURCE_TOC_SCHEMA_VERSION,
     }
 }
@@ -155,6 +156,67 @@ pub fn locate_span(
     let start = offset;
     advance_to(line_end + 1, &mut offset, &mut line);
     Some((start as u64, offset as u64))
+}
+
+/// Where a source text and its table are stored, content-addressed. `put`
+/// returns the SHA-256 hex digest of the stored bytes.
+pub trait TocSink {
+    /// Store `bytes` and return their SHA-256 hex digest.
+    fn put(&mut self, bytes: &[u8]) -> Result<String, String>;
+}
+
+/// The result of staging one text source: its table and the digests of the two
+/// stored blobs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StagedToc {
+    /// The table that was stored.
+    pub toc: SourceToc,
+    /// SHA-256 hex digest of the stored table (its JSON bytes).
+    pub toc_digest: String,
+    /// SHA-256 hex digest of the stored source text.
+    pub source_digest: String,
+}
+
+impl StagedToc {
+    /// The node properties that bind a document node to its stored table, text
+    /// and revision.
+    pub fn node_properties(&self) -> [(&'static str, serde_json::Value); 3] {
+        use medulla_types::source_toc::{
+            SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY, TOC_DIGEST_PROPERTY,
+        };
+        [
+            (TOC_DIGEST_PROPERTY, self.toc_digest.clone().into()),
+            (SOURCE_DIGEST_PROPERTY, self.source_digest.clone().into()),
+            (SOURCE_REVISION_PROPERTY, self.toc.revision.into()),
+        ]
+    }
+}
+
+/// Build the table of one text source revision and store the source text and
+/// the table (MEDULLA-DECISION-ENGINE-R153.3). The text is stored first so the
+/// table's `source_digest` names a blob that exists.
+pub fn build_and_store_toc(
+    sink: &mut dyn TocSink,
+    document_id: &str,
+    revision: u64,
+    source: &[u8],
+    stride: u64,
+) -> Result<StagedToc, String> {
+    let toc = build_toc(document_id, revision, source, stride);
+    let source_digest = sink.put(source)?;
+    if source_digest != toc.source_digest {
+        return Err(format!(
+            "source text digest {source_digest} differs from the table digest {}",
+            toc.source_digest
+        ));
+    }
+    let bytes = serde_json::to_vec(&toc).map_err(|e| format!("toc encoding failed: {e}"))?;
+    let toc_digest = sink.put(&bytes)?;
+    Ok(StagedToc {
+        toc,
+        toc_digest,
+        source_digest,
+    })
 }
 
 #[cfg(test)]

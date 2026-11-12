@@ -441,6 +441,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "FACT_PROVENANCE_MISSING",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R153.4: a span the stored table cannot serve.
+    (
+        "ReadSpan",
+        &[
+            "DOCUMENT_NOT_FOUND",
+            "SPAN_INVERTED",
+            "SPAN_OUT_OF_BOUNDS",
+            "SPAN_TOO_LARGE",
+            "TOC_MISSING",
+        ],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
     (
         "FinanceRecordPut",

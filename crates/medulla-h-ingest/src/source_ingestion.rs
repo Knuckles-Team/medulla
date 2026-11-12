@@ -1033,6 +1033,12 @@ fn admit_records(
             .blobs
             .entry(item.raw_digest_hex)
             .or_insert(item.blob);
+        for toc_blob in item.toc_blobs {
+            admitted
+                .blobs
+                .entry(toc_blob.digest.clone())
+                .or_insert(toc_blob);
+        }
         admitted.methods.push(item.method);
         admitted.lineage.push(item.lineage);
         admitted.policies.push(item.policy);
@@ -1485,6 +1491,9 @@ struct AdmittedRecord {
     raw_digest_hex: String,
     raw_digest: Digest256,
     blob: medulla_protocol_types::change_envelope::BlobReference,
+    /// The stored source text and table of contents of a text source
+    /// (MEDULLA-DECISION-ENGINE-R153.3); empty for any other record.
+    toc_blobs: Vec<medulla_protocol_types::change_envelope::BlobReference>,
     method: Method,
     lineage: medulla_protocol_types::change_envelope::LineageRecord,
     policy: medulla_protocol_types::change_envelope::PolicyRecord,
@@ -1514,7 +1523,7 @@ fn admit_record(
         .entities
         .get(&record.mapping_reference)
         .ok_or_else(|| "UNKNOWN_MAPPING_REFERENCE: record mapping was not resolved".to_string())?;
-    let properties = mapped_properties(
+    let mut properties = mapped_properties(
         record,
         &mapping.schema_mapping.ontology_class,
         &mapping.schema_mapping.fields,
@@ -1523,6 +1532,7 @@ fn admit_record(
         &raw_digest_hex,
         batch.strict_schema,
     )?;
+    let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
     let method = Method::AddNode {
         node_id: node_id.clone(),
         properties_msgpack: rmp_serde::to_vec_named(&properties)
@@ -1551,10 +1561,77 @@ fn admit_record(
             raw.len(),
             "application/vnd.medulla.source-record+msgpack",
         ),
+        toc_blobs,
         method,
         lineage,
         policy,
     })
+}
+
+/// Content-addressed store for the text and table blobs of one text source.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct TocBlobSink<'a, 'ctx> {
+    ctx: &'a PrepareContext<'ctx>,
+    authority: &'a CarrierAuthority,
+    blob: &'a Arc<medulla_server_blob::blob::BlobCursors>,
+    refs: Vec<medulla_protocol_types::change_envelope::BlobReference>,
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
+impl medulla_document::toc::TocSink for TocBlobSink<'_, '_> {
+    fn put(&mut self, bytes: &[u8]) -> Result<String, String> {
+        let digest = admit_raw(self.ctx, self.authority, self.blob, bytes)?;
+        // The text is stored first, the table second (`build_and_store_toc`).
+        let media_type = if self.refs.is_empty() {
+            "text/plain; charset=utf-8"
+        } else {
+            "application/vnd.medulla.source-toc+json"
+        };
+        self.refs
+            .push(raw_blob_reference(&digest, bytes.len(), media_type));
+        Ok(digest)
+    }
+}
+
+/// MEDULLA-DECISION-ENGINE-R153.3: a record whose payload carries a string
+/// `source_text` is a text source. Its text and its line-numbered table of
+/// contents are admitted as content-addressed blobs, and the document node
+/// names them (`toc_digest`, `source_digest`) and the revision they belong to
+/// (the graph version this batch commits). Any other record is untouched.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn stage_source_toc(
+    ctx: &PrepareContext<'_>,
+    authority: &CarrierAuthority,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
+    record: &medulla_source_types::source_ingestion::SourceRecord,
+    document_id: &str,
+    properties: &mut serde_json::Map<String, serde_json::Value>,
+) -> Result<Vec<medulla_protocol_types::change_envelope::BlobReference>, String> {
+    let payload = record.payload.value()?;
+    let Some(text) = payload
+        .as_object()
+        .and_then(|fields| fields.get(medulla_types::source_toc::SOURCE_TEXT_FIELD))
+        .and_then(|value| value.as_str())
+    else {
+        return Ok(Vec::new());
+    };
+    let mut sink = TocBlobSink {
+        ctx,
+        authority,
+        blob,
+        refs: Vec::new(),
+    };
+    let staged = medulla_document::toc::build_and_store_toc(
+        &mut sink,
+        document_id,
+        ctx.graph_version.saturating_add(1),
+        text.as_bytes(),
+        medulla_server_api::knob_config::knobs().toc_line_index_stride,
+    )?;
+    for (key, value) in staged.node_properties() {
+        properties.insert(key.into(), value);
+    }
+    Ok(sink.refs)
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]

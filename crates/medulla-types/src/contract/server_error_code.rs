@@ -115,6 +115,11 @@ closed_error_codes! {
         DocumentDeleteUnavailable => "DOCUMENT_DELETE_UNAVAILABLE",
         DocumentHasReferences => "DOCUMENT_HAS_REFERENCES",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
+        // MEDULLA-DECISION-ENGINE-R153.4: the ReadSpan refusals.
+        SpanInverted => "SPAN_INVERTED",
+        SpanOutOfBounds => "SPAN_OUT_OF_BOUNDS",
+        SpanTooLarge => "SPAN_TOO_LARGE",
+        TocMissing => "TOC_MISSING",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
         EditChainBroken => "EDIT_CHAIN_BROKEN",

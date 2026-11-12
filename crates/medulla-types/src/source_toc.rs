@@ -49,6 +49,8 @@ pub enum SourceTocError {
         /// The offending section.
         section_id: String,
     },
+    /// The checkpoint stride is zero.
+    ZeroStride,
     /// The schema version is not the current one.
     SchemaVersion(u32),
 }
@@ -65,6 +67,7 @@ impl std::fmt::Display for SourceTocError {
             Self::LinesOutOfRange { section_id } => {
                 write!(f, "toc entry {section_id}: lines outside 1..=total_lines")
             }
+            Self::ZeroStride => write!(f, "toc line_index_stride must be at least 1"),
             Self::SchemaVersion(v) => write!(f, "unsupported toc schema version {v}"),
         }
     }
@@ -88,6 +91,9 @@ pub struct SourceToc {
     pub entries: Vec<TocEntry>,
     /// Byte offset of lines 1, 1 + stride, 1 + 2 * stride, ...
     pub line_index: Vec<u64>,
+    /// Lines between two `line_index` checkpoints, as built. Stored so a read
+    /// stays correct after the `toc.line_index_stride` knob changes.
+    pub line_index_stride: u64,
     /// Wire schema version.
     pub schema_version: u32,
 }
@@ -97,6 +103,9 @@ impl SourceToc {
     pub fn validate(&self) -> Result<(), SourceTocError> {
         if self.schema_version != SOURCE_TOC_SCHEMA_VERSION {
             return Err(SourceTocError::SchemaVersion(self.schema_version));
+        }
+        if self.line_index_stride == 0 {
+            return Err(SourceTocError::ZeroStride);
         }
         for entry in &self.entries {
             if entry.line_end < entry.line_start {
@@ -126,6 +135,43 @@ impl SourceToc {
     }
 }
 
+/// Node property naming the stored table of contents blob (SHA-256 hex).
+pub const TOC_DIGEST_PROPERTY: &str = "toc_digest";
+/// Node property naming the stored source text blob (SHA-256 hex).
+pub const SOURCE_DIGEST_PROPERTY: &str = "source_digest";
+/// Node property holding the revision the stored table and text belong to.
+pub const SOURCE_REVISION_PROPERTY: &str = "source_revision";
+/// Record payload field that carries the text of a text source.
+pub const SOURCE_TEXT_FIELD: &str = "source_text";
+
+/// The answer of one `ReadSpan` (MEDULLA-DECISION-ENGINE-R153.3, R153.5).
+///
+/// Names the digests of the table and of the source it was built from, so a
+/// caller can bind the span to both. Lines are 1-based and inclusive; the byte
+/// range is zero-based with an exclusive end.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReadSpanResult {
+    /// Document the span was read from.
+    pub document_id: String,
+    /// Source revision the table and text belong to.
+    pub revision: u64,
+    /// SHA-256 hex digest of the stored table of contents.
+    pub toc_digest: String,
+    /// SHA-256 hex digest of the stored source text.
+    pub source_digest: String,
+    /// First served line, 1-based.
+    pub line_start: u64,
+    /// Last served line, 1-based, inclusive.
+    pub line_end: u64,
+    /// First served byte, zero-based.
+    pub byte_start: u64,
+    /// End of the served bytes, zero-based, exclusive.
+    pub byte_end: u64,
+    /// The served text.
+    pub text: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,6 +192,7 @@ mod tests {
                 byte_end: 120,
             }],
             line_index: vec![0],
+            line_index_stride: 64,
             schema_version: SOURCE_TOC_SCHEMA_VERSION,
         }
     }

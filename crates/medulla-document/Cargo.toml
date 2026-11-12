@@ -17,6 +17,7 @@ medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
+serde_json = "1.0"
 # ModalityContract retrofit (CONCEPT:MEDULLA-P1-3, mirroring medulla-image/medulla-audio/medulla-video's
 # CONCEPT:E4). Optional, only under `contract` (default OFF) — a default
 # build links none of it and `DocumentData` carries no new required trait. See

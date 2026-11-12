@@ -591,6 +591,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceFactorRank { .. }
         | Method::WalletKeyTrustGet { .. }
         | Method::ContextFacts { .. }
+        | Method::ReadSpan { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }

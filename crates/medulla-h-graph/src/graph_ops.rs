@@ -52,6 +52,9 @@ mod memory;
 mod memory_cursor;
 pub mod memory_snapshot;
 mod nodes;
+mod read_span;
+#[cfg(test)]
+mod read_span_tests;
 pub mod retention_cleanup;
 mod schema_boundary;
 mod semantic;

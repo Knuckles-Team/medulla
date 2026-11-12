@@ -6917,6 +6917,37 @@ class GraphOperationsClient:
             await _gen.graph.send_context_facts(self._client, {"request": request})
         ).payload
 
+    async def read_span(
+        self,
+        document_id: str,
+        revision: int,
+        line_start: int,
+        line_end: int,
+    ) -> dict[str, Any]:
+        """Read a bounded line range of one ingested text source
+        (MEDULLA-DECISION-ENGINE-R153).
+
+        Lines are 1-based and inclusive. Returns ``{document_id, revision,
+        toc_digest, source_digest, line_start, line_end, byte_start, byte_end,
+        text}``; the two digests bind the span to the stored table of contents
+        and to the source it was built from. A document the caller cannot see is
+        refused ``DOCUMENT_NOT_FOUND``, a revision without a table
+        ``TOC_MISSING``, and a bad range ``SPAN_INVERTED``, ``SPAN_OUT_OF_BOUNDS``
+        or ``SPAN_TOO_LARGE``.
+        """
+        params = {
+            "document_id": document_id,
+            "revision": revision,
+            "line_start": line_start,
+            "line_end": line_end,
+        }
+        result = await self._client._send(
+            "ReadSpan", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ReadSpan must answer with an object")
+        return result
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.
