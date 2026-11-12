@@ -56,6 +56,7 @@ pub struct FeatureImportance {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 struct FeatureImportanceFields {
     #[serde(default = "schema_version")]
     schema_version: u32,

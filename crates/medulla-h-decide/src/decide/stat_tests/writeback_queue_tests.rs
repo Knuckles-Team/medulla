@@ -18,7 +18,7 @@ async fn writeback(h: &Harness, op: WritebackOp) -> Result<WritebackOutcome, Str
             "writer",
             DecisionLogOp::Writeback {
                 tenant_id: TENANT.to_string(),
-                op,
+                computation: op,
             },
         )
         .await,
@@ -87,7 +87,7 @@ async fn served_preflight_queues_high_tier_and_refuses_conflicts() {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("writer", TENANT);
     let foreign = DecisionLogOp::Writeback {
         tenant_id: "tenant-other".to_string(),
-        op: WritebackOp::Propose {
+        computation: WritebackOp::Propose {
             inventory: vec![],
             enabled_systems: vec![],
             findings: vec![],

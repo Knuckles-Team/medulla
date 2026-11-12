@@ -412,7 +412,7 @@ pub enum DecisionLogOp {
     /// (MEDULLA-DECISION-ENGINE-R615.2). Computes only; nothing is stored.
     Writeback {
         tenant_id: String,
-        op: super::writeback::WritebackOp,
+        computation: super::writeback::WritebackOp,
     },
 }
 

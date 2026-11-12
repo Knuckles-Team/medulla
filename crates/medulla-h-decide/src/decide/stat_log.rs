@@ -574,10 +574,10 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogLearn,
             >(super::stat_learning::dispatch(ctx, reader, write, inputs)?)
         }
-        DecisionLogOp::Writeback { tenant_id, op } => {
+        DecisionLogOp::Writeback { tenant_id, computation } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogWriteback,
-            >(super::stat_writeback::serve(&tenant_id, op)?)
+            >(super::stat_writeback::serve(&tenant_id, computation)?)
         }
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
