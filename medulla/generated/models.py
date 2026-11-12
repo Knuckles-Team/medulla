@@ -24120,6 +24120,7 @@ class StatechartOpSendEventBody(BaseModel):
 class StatisticalDecisionRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    answer: FamilyAnswer | None = None
     audit: AuditDraw | None = None
     belief: BoundedVec_BeliefPoint_8 | None = None
     calibration: CalibrationStatement | None = None
@@ -24140,7 +24141,6 @@ class StatisticalDecisionRecord(BaseModel):
     resolution_kind: ResolutionKind
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     synthetic_evidence: bool
-    task_plan: TaskPlan | None = None
     tenant_id: str
     trace_fidelity: TraceFidelity
 
@@ -24412,6 +24412,16 @@ class TaskPlan(BaseModel):
     policy_revision: str
     tasks: BoundedVec_TaskPlanTask_64
     total_tasks: Annotated[int, Field(ge=0, le=65535)]
+
+
+class FamilyAnswerTaskPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["task_plan"]
+    value: TaskPlan
+
+
+FamilyAnswer = Annotated[FamilyAnswerTaskPlan, Field(discriminator="type")]
 
 
 class TaskPlanCall(BaseModel):

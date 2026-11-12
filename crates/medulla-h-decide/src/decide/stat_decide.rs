@@ -581,7 +581,11 @@ fn seal(
         premises: BoundedVec::new(premise_list)
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
         outcome,
-        task_plan,
+        answer: task_plan.map(|plan| {
+            medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
+                Box::new(plan),
+            )
+        }),
         calibration: executed.ladder.calibration,
         explanation: recorded_explanation(sealing.pinned, executed)?,
         audit: executed.ladder.audit,

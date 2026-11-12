@@ -33,3 +33,11 @@
 - A card node id derives from the subject and the prompt digest, so replacement is a plain write to the same id.
 - Classification refuses a vector whose dimension differs from a centroid (`VECTOR_DIMENSION_MISMATCH`)
   rather than comparing a prefix.
+
+## Family answers and utterance binding (R001.101.3, R001.101.5)
+
+Decision: a family's typed answer is one closed `FamilyAnswer` enum carried as
+the record's single `answer` field, so new families add a variant and never a
+record field; the task plan moved into it (wire field `task_plan` -> `answer`).
+Per-kind behaviour that a stage needs is a `DecisionFamily` hook
+(`binds_utterance`), never a `QuestionKind` comparison in a stage file.

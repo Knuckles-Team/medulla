@@ -75,7 +75,7 @@ async fn decide_routes_task_plan() {
     let (pin, _) = publish_route_schema(&h);
     let batch = decide(&h, task_request(&pin)).await.unwrap();
     let record = &batch.records.as_slice()[0];
-    let plan = record.task_plan.as_ref().unwrap();
+    let plan = record.task_plan().unwrap();
     assert_eq!(
         plan.tasks
             .iter()
@@ -103,7 +103,12 @@ async fn decide_routes_task_plan() {
         record.record_digest
     );
     let mut altered = record.clone();
-    altered.task_plan.as_mut().unwrap().max_concurrency = 3;
+    let Some(medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(plan)) =
+        altered.answer.as_mut()
+    else {
+        panic!("a task plan answer");
+    };
+    plan.max_concurrency = 3;
     assert_ne!(
         medulla_decision_types::decision::digest::statistical_record_digest(&altered),
         record.record_digest
@@ -236,7 +241,7 @@ async fn canonical_task_plan_schema_publishes_once_and_routes() {
         definition_digest: first,
     };
     let batch = decide(&h, task_request(&pin)).await.unwrap();
-    assert!(batch.records.as_slice()[0].task_plan.is_some());
+    assert!(batch.records.as_slice()[0].task_plan().is_some());
 }
 
 fn with_call(request: &mut DecideRequest, reference: &str) {
@@ -266,7 +271,7 @@ async fn decide_routes_task_plan_with_calls() {
     with_call(&mut request, "steps.c.output.summary");
     let batch = decide(&h, request).await.unwrap();
     let record = &batch.records.as_slice()[0];
-    let plan = record.task_plan.as_ref().unwrap();
+    let plan = record.task_plan().unwrap();
     let join = plan.tasks.iter().find(|t| t.task_id == "join").unwrap();
     let call = join.call.as_ref().unwrap();
     assert_eq!(
@@ -394,7 +399,7 @@ async fn control_refusals_name_the_task() {
     let ok = decide(&h, request_with(&pin, control_proposal(true, 3600)))
         .await
         .unwrap();
-    let plan = ok.records.as_slice()[0].task_plan.as_ref().unwrap();
+    let plan = ok.records.as_slice()[0].task_plan().unwrap();
     assert!(plan.tasks.iter().any(|t| t.branch.is_some()));
     assert!(ok.records.as_slice()[0]
         .premises
@@ -467,13 +472,12 @@ async fn maximum_bounded_plan_is_accepted() {
     let second = decide(&h, request_with(&pin, maximum_workload()))
         .await
         .unwrap();
-    let plan = first.records.as_slice()[0].task_plan.as_ref().unwrap();
+    let plan = first.records.as_slice()[0].task_plan().unwrap();
     assert_eq!(plan.total_tasks, 64);
     assert_eq!(
         plan.plan_digest,
         second.records.as_slice()[0]
-            .task_plan
-            .as_ref()
+            .task_plan()
             .unwrap()
             .plan_digest,
         "the digest of the maximum plan is stable"

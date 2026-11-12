@@ -172,7 +172,7 @@ async fn decide_dispatches_every_kind_through_its_family() {
     let batch = decide(&h, task_request(&pin)).await.unwrap();
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.question.kind, QuestionKind::TaskPlan);
-    assert!(record.task_plan.is_some());
+    assert!(record.answer.as_ref().and_then(|a| a.task_plan()).is_some());
     assert_eq!(
         record.resolution_kind,
         medulla_decision_types::decision::ResolutionKind::Constraint
@@ -195,5 +195,37 @@ async fn decide_dispatches_every_kind_through_its_family() {
     assert_eq!(
         response.error.as_deref(),
         Some("UNSUPPORTED_INGESTION_LANE")
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R001.101.3
+#[tokio::test]
+async fn assemble_and_decide_text_use_the_registry() {
+    use super::super::family::for_kind;
+    // The utterance binding is a family hook, not a private per-kind branch:
+    // exactly the template-choice family binds.
+    for kind in MATRIX_KINDS.iter().copied() {
+        assert_eq!(
+            for_kind(kind).binds_utterance(),
+            kind == QuestionKind::TemplateChoice,
+            "{kind:?}"
+        );
+    }
+    // A template-choice decide still reaches its family and seals the kind.
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let bound = decide(
+        &h,
+        declared_request(
+            QuestionKind::TemplateChoice,
+            &pin,
+            Some("Summarize the result"),
+        ),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        bound.records.as_slice()[0].question.kind,
+        QuestionKind::TemplateChoice
     );
 }

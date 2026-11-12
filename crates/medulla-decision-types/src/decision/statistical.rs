@@ -28,11 +28,11 @@ pub mod retrieval_adapter;
 pub mod retrieval_drift;
 pub mod retrieval_generation;
 pub mod retrieval_plan;
-pub mod retrieval_refresh;
 pub mod retrieval_pointer;
+pub mod retrieval_refresh;
 pub mod scorer;
-pub mod writeback;
 pub mod tool_subset;
+pub mod writeback;
 
 use serde::{Deserialize, Serialize};
 
@@ -363,9 +363,10 @@ pub struct StatisticalDecisionRecord {
     pub trace_fidelity: TraceFidelity,
     pub premises: BoundedVec<PremiseRef, 1024>,
     pub outcome: StatisticalOutcome,
-    /// Evaluate-only explicit task DAG. Absent on every other question kind.
+    /// The one typed answer the question's family concluded, when it has
+    /// one (the evaluate-only task DAG of `task_plan`). Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub task_plan: Option<super::task_plan::TaskPlan>,
+    pub answer: Option<outcome::FamilyAnswer>,
     #[serde(default)]
     pub calibration: Option<CalibrationStatement>,
     /// Per-feature logit contributions of the chosen or top option; exact for
@@ -393,6 +394,13 @@ pub struct StatisticalDecisionRecord {
 }
 
 impl StatisticalDecisionRecord {
+    /// The explicit task plan the `task_plan` family answered, if any.
+    pub fn task_plan(&self) -> Option<&super::task_plan::TaskPlan> {
+        self.answer
+            .as_ref()
+            .and_then(outcome::FamilyAnswer::task_plan)
+    }
+
     /// The validating constructor; see [`super::DecisionRecord::checked`].
     pub fn checked(self) -> Result<Self, DecisionErrorCode> {
         if self.schema_version != super::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION {
@@ -441,5 +449,58 @@ mod question_kind_declared_tests {
     fn schema_mapping_is_declared() {
         assert_eq!(QuestionKind::SchemaMapping, QuestionKind::SchemaMapping);
         assert_ne!(QuestionKind::SchemaMapping, QuestionKind::Route);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::outcome::FamilyAnswer;
+    use super::*;
+    use crate::decision::task_plan::{plan_explicit_tasks, TaskPlanProposal, TaskPlanTask};
+
+    fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
+        TaskPlanTask {
+            task_id: id.into(),
+            prompt: format!("Analyze {id} with cited evidence"),
+            depends_on: BoundedVec::new(deps.iter().map(|s| s.to_string()).collect()).unwrap(),
+            call: None,
+            aggregation: None,
+            assignee: None,
+            branch: None,
+            join: None,
+            decision: None,
+            approval: None,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R001.101.5
+    #[test]
+    fn family_body_and_answer_round_trip() {
+        let proposal = TaskPlanProposal {
+            tasks: BoundedVec::new(vec![task("a", &[]), task("b", &["a"])]).unwrap(),
+            output_task_id: "b".into(),
+            max_concurrency: 1,
+            max_steps: 2,
+        };
+        // The request body is one `TypedValue` variant.
+        let body = TypedValue::TaskPlan(Box::new(proposal.clone()));
+        let json = serde_json::to_value(&body).unwrap();
+        assert_eq!(json["type"], "task_plan");
+        assert_eq!(serde_json::from_value::<TypedValue>(json).unwrap(), body);
+        // The answer is one `FamilyAnswer` variant, tagged the same way.
+        let plan = plan_explicit_tasks(&proposal).unwrap();
+        let answer = FamilyAnswer::TaskPlan(Box::new(plan.clone()));
+        let json = serde_json::to_value(&answer).unwrap();
+        assert_eq!(json["type"], "task_plan");
+        assert_eq!(
+            serde_json::from_value::<FamilyAnswer>(json).unwrap(),
+            answer
+        );
+        assert_eq!(answer.task_plan(), Some(&plan));
+        // An unknown variant is refused, not defaulted.
+        assert!(serde_json::from_value::<FamilyAnswer>(
+            serde_json::json!({"type": "invented", "value": {}})
+        )
+        .is_err());
     }
 }

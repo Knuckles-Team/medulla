@@ -14,9 +14,8 @@ use medulla_decision_types::{
     decision::statistical::nl::NlTemplateBody,
 };
 use medulla_decision_types::{
-    decision::statistical::DecideRequest, decision::statistical::QuestionKind,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
-    decision::statistical::TypedValue,
+    decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
+    decision::statistical::StatisticalOutcome, decision::statistical::TypedValue,
 };
 use medulla_types::contract::BoundedVec;
 
@@ -103,7 +102,7 @@ pub(super) fn binding(
     outcome: &StatisticalOutcome,
     entries: &[AgentComponentEntry],
 ) -> Result<Option<NlBinding>, String> {
-    if request.question.kind != QuestionKind::TemplateChoice {
+    if !super::family::for_kind(request.question.kind).binds_utterance() {
         return Ok(None);
     }
     let utterance = text_param(request, UTTERANCE_PARAM).ok_or_else(|| {

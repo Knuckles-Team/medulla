@@ -77,6 +77,13 @@ pub trait DecisionFamily {
         Vec::new()
     }
 
+    /// Whether the kind routes a natural-language utterance to a template and
+    /// binds it (`stat_nl::binding`); only `template_choice` does
+    /// (MEDULLA-DECISION-ENGINE-R001.101.3).
+    fn binds_utterance(&self) -> bool {
+        false
+    }
+
     /// Conclude stage: the kind's refusal mapping.
     fn refusals(&self, detail: String) -> String {
         detail

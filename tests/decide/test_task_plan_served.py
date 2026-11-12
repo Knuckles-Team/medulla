@@ -248,7 +248,7 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
         )
         asked = task_plan_request(TEST_TENANT, "fixture-task-plan", _proposal(), pin)
         record = client._send("Decide", {"request": asked})["records"][0]
-        plan = record["task_plan"]
+        plan = record["answer"]["value"]
         assert [task["task_id"] for task in plan["tasks"]] == ["a", "b", "c", "join"]
         assert plan["tasks"][2]["depends_on"] == ["b"]
         assert plan["max_concurrency"] == 2
@@ -291,7 +291,7 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
                     changed, asked, expected_principal=TEST_AGENT_ID
                 )
         changed = copy.deepcopy(record)
-        changed["task_plan"]["tasks"][0]["prompt"] = "Invented task"
+        changed["answer"]["value"]["tasks"][0]["prompt"] = "Invented task"
         with pytest.raises(ValueError, match="task claims"):
             verify_task_plan_receipt(changed, asked, expected_principal=TEST_AGENT_ID)
         invalid = copy.deepcopy(asked)
@@ -384,7 +384,7 @@ def test_control_steps_served(authenticated_plan_client):
         )
         asked = task_plan_request(TEST_TENANT, "control-plan", _control_proposal(), pin)
         record = client._send("Decide", {"request": asked})["records"][0]
-        plan = record["task_plan"]
+        plan = record["answer"]["value"]
         tasks = {task["task_id"]: task for task in plan["tasks"]}
         order = [task["task_id"] for task in plan["tasks"]]
         assert plan["total_tasks"] == 10
@@ -408,9 +408,9 @@ def test_control_steps_served(authenticated_plan_client):
             == plan
         )
         again = client._send("Decide", {"request": asked})["records"][0]
-        assert again["task_plan"]["plan_digest"] == plan["plan_digest"]
+        assert again["answer"]["value"]["plan_digest"] == plan["plan_digest"]
         changed = copy.deepcopy(record)
-        changed["task_plan"]["tasks"][0]["prompt"] = "Invented task"
+        changed["answer"]["value"]["tasks"][0]["prompt"] = "Invented task"
         with pytest.raises(ValueError, match="task claims"):
             verify_task_plan_receipt(changed, asked, expected_principal=TEST_AGENT_ID)
 

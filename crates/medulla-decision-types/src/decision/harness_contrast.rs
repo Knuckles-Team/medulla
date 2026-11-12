@@ -1066,7 +1066,7 @@ mod tests {
             trace_fidelity: TraceFidelity::FullStep,
             premises: BoundedVec::new(Vec::<PremiseRef>::new()).unwrap(),
             outcome,
-            task_plan: None,
+            answer: None,
             calibration: None,
             explanation: None,
             audit: None,

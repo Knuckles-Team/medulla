@@ -130,3 +130,24 @@ pub struct AuditDraw {
     pub inclusion_probability: UnitRationalWire,
     pub sampled: bool,
 }
+
+/// The one typed answer a question family concludes beyond the shared
+/// outcome (MEDULLA-DECISION-ENGINE-R001.101.5). A family adds one variant
+/// here; the record carries it as `StatisticalDecisionRecord.answer`, never
+/// as a per-family `Option` field.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum FamilyAnswer {
+    /// The evaluate-only explicit task DAG of the `task_plan` family.
+    TaskPlan(Box<crate::decision::task_plan::TaskPlan>),
+}
+
+impl FamilyAnswer {
+    /// The task plan this answer carries.
+    pub fn task_plan(&self) -> Option<&crate::decision::task_plan::TaskPlan> {
+        match self {
+            Self::TaskPlan(plan) => Some(plan),
+        }
+    }
+}

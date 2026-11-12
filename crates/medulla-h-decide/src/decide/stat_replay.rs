@@ -88,7 +88,7 @@ fn same_answer(record: &StatisticalDecisionRecord, replayed: &Executed, derived:
 
 fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), String> {
     require_supported_question_kind(record.question.kind)?;
-    if record.task_plan.is_some()
+    if record.answer.is_some()
         || record.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan
     {
         return Err(refusal(

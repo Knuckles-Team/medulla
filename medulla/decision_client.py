@@ -353,7 +353,8 @@ def verify_task_plan_receipt(
     # Return the plan exactly as the engine serves it: a ``None`` task call is
     # an absent key (``skip_serializing_if``), not ``null``, and the caller
     # round-trips this body into ``PublishCurrentPlan`` unchanged.
-    served_plan = decoded.task_plan
+    answer = decoded.answer
+    served_plan = answer.value if answer is not None else None
     _require_task_plan(served_plan is not None, "missing plan")
     # _require_task_plan already raised for an absent plan; this branch only
     # narrows the type for the checker.
