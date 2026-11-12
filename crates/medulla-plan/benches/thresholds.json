@@ -10,7 +10,8 @@
     "selective_filter_rank": 400000000,
     "cold_reopen_read": 500000000,
     "warm_read": 50000000,
-    "live_artifact_refresh": 5000000
+    "live_artifact_refresh": 5000000,
+    "policy_mask_4col_1m/masked": 3000000000
   },
   "finance_r613": {
     "_comment": "MEDULLA-FINANCE-PRIMITIVES-R613.6: p99 budgets in ms for the r613_finance_primitives report (target/finance-r613-report.json). baseline_p99_ms is the stored run a later run may exceed by at most regression_tolerance; null until the pinned bench lane records one.",

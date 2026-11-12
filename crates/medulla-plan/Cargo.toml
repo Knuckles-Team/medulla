@@ -531,6 +531,15 @@ path = "benches/incremental_delta.rs"
 harness = false
 required-features = ["query"]
 
+# ── Tag-based masking hot-path proof (MEDULLA-FEDERATED-QUERY-R706.6) ───────────────────
+# 4 masked columns over 1,000,000 rows through `execute`; overhead budget 8 percent,
+# nightly fails above 10 percent. Nightly only; never gates a pull request.
+[[bench]]
+name = "policy_mask"
+path = "benches/policy_mask.rs"
+harness = false
+required-features = ["query"]
+
 # ── Integration test targets, explicitly gated (D-EGTC-10 / w5-medulla-ci-truly-green) ──
 # Every file under `tests/` names `query`-gated (or narrower) public API
 # (`execute`/`PlanCtx`/`PlanDag`/`Circuit`/`federation::ForeignSourceRegistry`/
