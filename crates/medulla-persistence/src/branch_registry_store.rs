@@ -143,6 +143,35 @@ pub struct BranchCommitInput {
     pub created_at_ms: u64,
 }
 
+/// Row key of the payload a commit carries (a source changeset,
+/// MEDULLA-SCM-R002): `payload:` cannot collide with `commit:` or `batch:`.
+fn payload_row_key(branch: &BranchRef, commit_id: &str) -> String {
+    format!("payload:{}:{commit_id}", branch.registry_key())
+}
+
+/// What a commit builder returns: the commit facts plus the payload that
+/// commits atomically with the head advance.
+#[derive(Debug, Clone)]
+pub struct CommitPlan {
+    pub engine_version: u64,
+    pub manifest_digest: String,
+    pub actor: String,
+    pub created_at_ms: u64,
+    pub payload: Option<Vec<u8>>,
+}
+
+/// Reads the payload of an earlier commit inside the append transaction.
+pub type PayloadReader<'a> = &'a dyn Fn(&str) -> Result<Option<Vec<u8>>, String>;
+
+/// Why an append wrote nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AppendError {
+    /// The branch refused or the store failed.
+    Branch(BranchCreateError),
+    /// The commit builder refused; the text is the ready refusal message.
+    Rejected(String),
+}
+
 /// The commit a branch write produced and whether it already existed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppendedCommit {
@@ -236,9 +265,55 @@ impl BranchRegistry {
         caller_tenant: &str,
         input: &BranchCommitInput,
     ) -> Result<AppendedCommit, BranchCreateError> {
+        let plan = CommitPlan {
+            engine_version: input.engine_version,
+            manifest_digest: input.manifest_digest.clone(),
+            actor: input.actor.clone(),
+            created_at_ms: input.created_at_ms,
+            payload: None,
+        };
+        match self.append_with(branch, caller_tenant, &input.batch_id, |_, _| Ok(plan)) {
+            Ok(done) => Ok(done),
+            Err(AppendError::Branch(error)) => Err(error),
+            Err(AppendError::Rejected(text)) => Err(BranchCreateError::Store(text)),
+        }
+    }
+
+    /// The payload of one commit (MEDULLA-SCM-R002), if it carries one.
+    pub fn commit_payload(
+        &self,
+        branch: &BranchRef,
+        commit_id: &str,
+    ) -> Result<Option<Vec<u8>>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let found = table
+            .get(payload_row_key(branch, commit_id).as_str())
+            .map_err(|error| error.to_string())?
+            .map(|value| value.value().to_vec());
+        Ok(found)
+    }
+
+    /// Append one commit whose facts and payload come from `build`, which sees
+    /// the current head and a reader of earlier payloads INSIDE the write
+    /// transaction, so the head it extends cannot move before the append. The
+    /// commit row, the payload row, the batch index row and the head advance
+    /// are one registry transaction. A builder refusal writes nothing.
+    pub fn append_with<F>(
+        &self,
+        branch: &BranchRef,
+        caller_tenant: &str,
+        batch_id: &str,
+        build: F,
+    ) -> Result<AppendedCommit, AppendError>
+    where
+        F: FnOnce(&str, PayloadReader<'_>) -> Result<CommitPlan, String>,
+    {
         let key = branch.registry_key();
         let mut refused: Option<BranchMutationRefusal> = None;
+        let mut rejected: Option<String> = None;
         let mut appended: Option<AppendedCommit> = None;
+        let mut build = Some(build);
         let outcome = self.durable.maintain("branch_commit", |owner| {
             let mut table = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
             let existing = table
@@ -254,7 +329,7 @@ impl BranchRegistry {
                 refused = Some(refusal.clone());
                 return Err(refusal.code().as_str().to_string());
             }
-            let batch_key = batch_row_key(branch, &input.batch_id);
+            let batch_key = batch_row_key(branch, batch_id);
             let prior = table
                 .get(batch_key.as_str())
                 .map_err(|error| error.to_string())?
@@ -273,19 +348,32 @@ impl BranchRegistry {
                 });
                 return Ok(());
             }
+            let Some(build) = build.take() else {
+                return Err("branch commit builder already consumed".to_string());
+            };
+            let plan = {
+                let reader = |commit_id: &str| -> Result<Option<Vec<u8>>, String> {
+                    table
+                        .get(payload_row_key(branch, commit_id).as_str())
+                        .map_err(|error| error.to_string())
+                        .map(|found| found.map(|value| value.value().to_vec()))
+                };
+                match build(&row.head_commit, &reader) {
+                    Ok(plan) => plan,
+                    Err(text) => {
+                        rejected = Some(text.clone());
+                        return Err(text);
+                    }
+                }
+            };
             let commit = BranchCommit::single_parent_commit(
-                branch_commit_id(
-                    branch,
-                    &row.head_commit,
-                    &input.batch_id,
-                    &input.manifest_digest,
-                ),
+                branch_commit_id(branch, &row.head_commit, batch_id, &plan.manifest_digest),
                 branch.name.clone(),
                 row.head_commit.clone(),
-                input.engine_version,
-                input.manifest_digest.clone(),
-                input.actor.clone(),
-                input.created_at_ms,
+                plan.engine_version,
+                plan.manifest_digest.clone(),
+                plan.actor.clone(),
+                plan.created_at_ms,
             );
             let commit_bytes =
                 rmp_serde::to_vec_named(&commit).map_err(|error| error.to_string())?;
@@ -295,6 +383,14 @@ impl BranchRegistry {
                     commit_bytes.as_slice(),
                 )
                 .map_err(|error| error.to_string())?;
+            if let Some(payload) = &plan.payload {
+                table
+                    .insert(
+                        payload_row_key(branch, &commit.id).as_str(),
+                        payload.as_slice(),
+                    )
+                    .map_err(|error| error.to_string())?;
+            }
             table
                 .insert(batch_key.as_str(), commit.id.as_bytes())
                 .map_err(|error| error.to_string())?;
@@ -309,13 +405,18 @@ impl BranchRegistry {
             });
             Ok(())
         });
-        match (outcome, refused, appended) {
-            (Ok(()), _, Some(done)) => Ok(done),
-            (_, Some(refusal), _) => Err(BranchCreateError::Refused(refusal.code())),
-            (Ok(()), None, None) => Err(BranchCreateError::Store(
+        match (outcome, refused, rejected, appended) {
+            (Ok(()), _, _, Some(done)) => Ok(done),
+            (_, Some(refusal), _, _) => Err(AppendError::Branch(BranchCreateError::Refused(
+                refusal.code(),
+            ))),
+            (_, None, Some(text), _) => Err(AppendError::Rejected(text)),
+            (Ok(()), None, None, None) => Err(AppendError::Branch(BranchCreateError::Store(
                 "branch commit was not applied".to_string(),
-            )),
-            (Err(error), None, _) => Err(BranchCreateError::Store(error)),
+            ))),
+            (Err(error), None, None, _) => {
+                Err(AppendError::Branch(BranchCreateError::Store(error)))
+            }
         }
     }
 }

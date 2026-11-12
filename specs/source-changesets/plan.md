@@ -162,7 +162,7 @@ none
 
 ## Production caller chain
 
-- `Method::SubmitChangeset` (new) → `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs` (beside the `SourceIngest` arms at line 399) → `crates/medulla-h-ingest/src/source_changeset.rs::accept` → `stream_blob_put` (`crates/medulla-server-blob/src/blob/stream.rs:35`), `medulla_transaction::occ::disjoint` (`crates/medulla-transaction/src/occ.rs:79`), the branch commit path, then `reindex_changeset` and the history indexes.
+- `Method::SubmitChangeset` → `crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs` → `submit_changeset.rs::handle_submit_changeset` → `crates/medulla-h-ingest/src/source_changeset.rs::verify_submission` and `::accept` → `stream_blob_put` (`crates/medulla-server-blob/src/blob/stream.rs:35`), `medulla_transaction::occ::disjoint` (`crates/medulla-transaction/src/occ.rs:79`), the branch commit path, then `reindex_changeset` and the history indexes.
 - `Method::ReadTree` and the history methods → the same route file → `source_tree.rs::read_tree` and `source_history.rs` → `crates/medulla-compute/src/source_tree.rs::tree_at` and `source_history.rs`.
 - `Method::SubmitSymbolEdit` → the same route file → `source_symbol_edit.rs::handle_submit_symbol_edit` → `project_symbol_edit` (`crates/medulla-compute/src/source_symbol_edit.rs:145`) → `verify_roundtrip` → `accept`.
 - Obsolete path to delete: the planned `gate_verdicts` field of `Changeset`.

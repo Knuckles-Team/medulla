@@ -11,7 +11,8 @@ pub mod merge;
 use std::sync::Arc;
 
 use medulla_persistence::branch_registry_store::{
-    shared_branch_registry, AppendedCommit, BranchCommitInput, BranchCreateError, BranchRegistry,
+    shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
+    BranchRegistry, CommitPlan, PayloadReader,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -221,6 +222,38 @@ impl BranchTarget {
         tokio::task::spawn_blocking(move || registry.append_commit(&reference, &tenant, &input))
             .await
             .map_err(|error| BranchCreateError::Store(error.to_string()))?
+    }
+
+    /// The payload a commit carries (a source changeset, MEDULLA-SCM-R002).
+    pub async fn payload(&self, commit_id: &str) -> Result<Option<Vec<u8>>, String> {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        let commit_id = commit_id.to_string();
+        tokio::task::spawn_blocking(move || registry.commit_payload(&reference, &commit_id))
+            .await
+            .map_err(|error| error.to_string())?
+    }
+
+    /// Append a commit built inside the registry write transaction from the
+    /// head it extends, with its payload (MEDULLA-SCM-R002).
+    pub async fn append_with<F>(
+        &self,
+        tenant: &str,
+        batch_id: &str,
+        build: F,
+    ) -> Result<AppendedCommit, AppendError>
+    where
+        F: FnOnce(&str, PayloadReader<'_>) -> Result<CommitPlan, String> + Send + 'static,
+    {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        let tenant = tenant.to_string();
+        let batch_id = batch_id.to_string();
+        tokio::task::spawn_blocking(move || {
+            registry.append_with(&reference, &tenant, &batch_id, build)
+        })
+        .await
+        .map_err(|error| AppendError::Branch(BranchCreateError::Store(error.to_string())))?
     }
 
     /// The served receipt of an appended (or replayed) commit.

@@ -77,6 +77,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R002: one source changeset on a branch.
+        Method::SubmitChangeset { request } => {
+            dispatch_boxed(super::submit_changeset::handle_submit_changeset(
+                state,
+                req,
+                verified_context,
+                super::submit_changeset::SubmitChangesetFields { request },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

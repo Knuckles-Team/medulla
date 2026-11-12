@@ -415,6 +415,21 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_WRITE_INVALID",
         ],
     ),
+    // MEDULLA-SCM-R002: the changeset refusals, all before the chain changes.
+    (
+        "SubmitChangeset",
+        &[
+            "BLOB_DIGEST_MISMATCH",
+            "BLOB_NOT_FOUND",
+            "BLOB_TOO_LARGE",
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "CHANGESET_EMPTY",
+            "CHANGESET_INVALID",
+            "CHANGESET_PARENT_NOT_ON_BRANCH",
+        ],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

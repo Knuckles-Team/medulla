@@ -136,6 +136,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "CreateBranch",
     // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
     "BranchWrite",
+    // MEDULLA-SCM-R002: one source changeset and its commit.
+    "SubmitChangeset",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
@@ -153,6 +155,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "CreateBranch",
     // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
     "BranchWrite",
+    // MEDULLA-SCM-R002: one source changeset and its commit.
+    "SubmitChangeset",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",

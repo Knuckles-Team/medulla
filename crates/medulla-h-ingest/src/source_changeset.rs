@@ -33,7 +33,10 @@ use std::io::Write;
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
 use medulla_server_blob::blob::stream::stream_blob_get;
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
-use medulla_types::source_changeset::{ChangesetRefusal, SubmittedBlobRef};
+use medulla_types::source_changeset::{
+    ChangedPath, Changeset, ChangesetRefusal, PathOp, SubmitChangesetRequest, SubmitRefusal,
+    SubmittedBlobRef, Trailers,
+};
 use sha2::{Digest, Sha256};
 
 /// A `Write` that re-derives chunk digests from the bytes `stream_blob_get`
@@ -201,6 +204,163 @@ pub fn path_set_disjoint(submitted: &[String], since_base: &[Vec<String>]) -> bo
             .collect(),
     };
     medulla_transaction::occ::disjoint(&path_set_footprint(submitted), &since)
+}
+
+/// Stage one of `SubmitChangeset` (MEDULLA-SCM-R002): the request bounds and
+/// pairings, then every blob ref against the CAS. Reads no chain and writes
+/// nothing, so a refusal leaves the chain unchanged and the slow blob
+/// verification stays outside the registry write transaction.
+pub fn verify_submission(
+    store: &dyn ChunkStore,
+    request: &SubmitChangesetRequest,
+    changeset_max_blob_bytes: u64,
+) -> Result<(), SubmitRefusal> {
+    request.validate()?;
+    let refs: Vec<SubmittedBlobRef> = request
+        .paths
+        .iter()
+        .filter_map(|entry| entry.blob.clone())
+        .collect();
+    accept_blobs(store, &refs, changeset_max_blob_bytes)
+        .map_err(|refusal| SubmitRefusal::new(refusal, "a submitted blob ref failed verification"))
+}
+
+/// The branch chain as `accept` reads it: the head commit id and the
+/// changeset a commit carries (`None` for the branch base pointer).
+pub trait ChainView {
+    fn head(&self) -> &str;
+    fn changeset_at(&self, commit_id: &str) -> Result<Option<Changeset>, String>;
+}
+
+/// Why `accept` produced no changeset.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AcceptError {
+    Refused(SubmitRefusal),
+    Store(String),
+}
+
+impl From<SubmitRefusal> for AcceptError {
+    fn from(refusal: SubmitRefusal) -> Self {
+        Self::Refused(refusal)
+    }
+}
+
+/// The server-side facts of one accept: never read from the request.
+pub struct AcceptContext<'a> {
+    pub author_principal: &'a str,
+    pub created_at_ms: u64,
+}
+
+/// Stage two of `SubmitChangeset` (MEDULLA-SCM-R002): extend the changeset
+/// chain. Walks the chain from the head, checks the writer's base, fills
+/// `old_blob` of every path from the first parent, and seals the record.
+///
+/// A base behind the head lands only when the submission shares no path with
+/// the changesets after it (`path_set_disjoint`, MEDULLA-SCM-R003.1); an
+/// overlap refuses, because the engine never rebases silently.
+pub fn accept(
+    chain: &dyn ChainView,
+    request: &SubmitChangesetRequest,
+    ctx: &AcceptContext<'_>,
+) -> Result<Changeset, AcceptError> {
+    let head = chain.head().to_string();
+    // Newest first: (commit id, changeset) down to the base pointer.
+    let mut walked: Vec<(String, Changeset)> = Vec::new();
+    let mut cursor = head.clone();
+    while let Some(found) = chain.changeset_at(&cursor).map_err(AcceptError::Store)? {
+        let next = found.parents.first().cloned().unwrap_or_default();
+        walked.push((cursor, found));
+        cursor = next;
+    }
+    let not_on_branch = |detail: &str| {
+        AcceptError::Refused(SubmitRefusal::new(
+            ChangesetRefusal::ChangesetParentNotOnBranch,
+            detail,
+        ))
+    };
+    let behind = match &request.base_head {
+        None if walked.is_empty() => 0,
+        None => {
+            return Err(not_on_branch(
+                "base_head is absent but the branch has changesets",
+            ))
+        }
+        Some(base) => walked
+            .iter()
+            .position(|(id, _)| id == base)
+            .ok_or_else(|| not_on_branch("base_head is not a changeset of the branch"))?,
+    };
+    let mut touched: Vec<String> = Vec::new();
+    for entry in &request.paths {
+        touched.push(entry.path.clone());
+        touched.extend(entry.renamed_from.clone());
+    }
+    if behind > 0 {
+        let since: Vec<Vec<String>> = walked[..behind]
+            .iter()
+            .map(|(_, c)| c.changed_paths.iter().map(|p| p.path.clone()).collect())
+            .collect();
+        if !path_set_disjoint(&touched, &since) {
+            return Err(not_on_branch(
+                "base_head is behind the head and the path sets overlap",
+            ));
+        }
+    }
+    // The blob a path holds at the head: the newest entry naming it.
+    let blob_at_head = |path: &str| -> Option<String> {
+        walked
+            .iter()
+            .find_map(|(_, c)| c.changed_paths.iter().find(|p| p.path == path))
+            .and_then(|p| p.new_blob.clone())
+    };
+    let mut changed_paths = Vec::with_capacity(request.paths.len());
+    for entry in &request.paths {
+        let new_blob = entry.blob.as_ref().map(|b| b.digest.clone());
+        match (&entry.op, &entry.renamed_from) {
+            (PathOp::Rename, Some(from)) => {
+                // A rename is a Rename at the new path and a Delete at the old.
+                let old = blob_at_head(from);
+                changed_paths.push(ChangedPath {
+                    path: entry.path.clone(),
+                    op: PathOp::Rename,
+                    old_blob: old.clone(),
+                    new_blob,
+                    mode: entry.mode,
+                });
+                changed_paths.push(ChangedPath {
+                    path: from.clone(),
+                    op: PathOp::Delete,
+                    old_blob: old,
+                    new_blob: None,
+                    mode: entry.mode,
+                });
+            }
+            _ => changed_paths.push(ChangedPath {
+                path: entry.path.clone(),
+                op: entry.op,
+                old_blob: blob_at_head(&entry.path),
+                new_blob,
+                mode: entry.mode,
+            }),
+        }
+    }
+    let trailers = request
+        .trailers
+        .clone()
+        .unwrap_or_else(|| Trailers::parse(&request.message));
+    Ok(Changeset {
+        id: String::new(),
+        repo: request.repo.clone(),
+        parents: vec![head],
+        author_principal: ctx.author_principal.to_string(),
+        message: request.message.clone(),
+        changed_paths,
+        created_at: ctx.created_at_ms,
+        trailers,
+        agent_identity: None,
+        run_trace_id: request.run_trace_id.clone(),
+    }
+    .sealed())
 }
 
 #[cfg(test)]
@@ -425,5 +585,196 @@ mod tests {
             );
             assert_eq!(path_set_disjoint(&submitted, &[since]), expected);
         }
+    }
+
+    struct MemChain {
+        head: String,
+        commits: Vec<(String, Changeset)>,
+    }
+
+    impl ChainView for MemChain {
+        fn head(&self) -> &str {
+            &self.head
+        }
+        fn changeset_at(&self, commit_id: &str) -> Result<Option<Changeset>, String> {
+            Ok(self
+                .commits
+                .iter()
+                .find(|(id, _)| id == commit_id)
+                .map(|(_, c)| c.clone()))
+        }
+    }
+
+    fn hex_id(c: char) -> String {
+        c.to_string().repeat(64)
+    }
+
+    fn submitted(
+        path: &str,
+        op: PathOp,
+        blob: Option<&str>,
+    ) -> medulla_types::source_changeset::SubmittedPath {
+        medulla_types::source_changeset::SubmittedPath {
+            path: path.into(),
+            op,
+            blob: blob.map(|d| SubmittedBlobRef {
+                digest: d.into(),
+                size: 1,
+            }),
+            mode: 0o100644,
+            renamed_from: None,
+        }
+    }
+
+    fn request(
+        base: Option<String>,
+        paths: Vec<medulla_types::source_changeset::SubmittedPath>,
+    ) -> SubmitChangesetRequest {
+        SubmitChangesetRequest {
+            repo: "r".into(),
+            branch: "b".into(),
+            base_head: base,
+            message: "m\n\nSpec: MEDULLA-SCM-R002".into(),
+            paths,
+            trailers: None,
+            run_trace_id: None,
+        }
+    }
+
+    const CTX: AcceptContext<'static> = AcceptContext {
+        author_principal: "p",
+        created_at_ms: 9,
+    };
+
+    // spec: MEDULLA-SCM-R002
+    #[test]
+    fn accept_stores_only_changed_paths_and_fills_old_blobs_from_the_parent() {
+        let empty = MemChain {
+            head: "base".into(),
+            commits: vec![],
+        };
+        let first = accept(
+            &empty,
+            &request(
+                None,
+                vec![
+                    submitted("a.rs", PathOp::Add, Some("d1")),
+                    submitted("b.rs", PathOp::Add, Some("d2")),
+                    submitted("c.rs", PathOp::Add, Some("d3")),
+                ],
+            ),
+            &CTX,
+        )
+        .unwrap();
+        assert_eq!(first.parents, vec!["base".to_string()]);
+        assert_eq!(first.id, first.canonical_id());
+        assert_eq!(first.trailers.spec_ids, ["MEDULLA-SCM-R002"]);
+        let chain = MemChain {
+            head: hex_id('1'),
+            commits: vec![(hex_id('1'), first)],
+        };
+        let second = accept(
+            &chain,
+            &request(
+                Some(hex_id('1')),
+                vec![
+                    submitted("a.rs", PathOp::Modify, Some("d4")),
+                    submitted("c.rs", PathOp::Delete, None),
+                ],
+            ),
+            &CTX,
+        )
+        .unwrap();
+        // Two path entries of three files, with old blobs from the first parent.
+        assert_eq!(second.changed_paths.len(), 2);
+        assert_eq!(second.changed_paths[0].old_blob.as_deref(), Some("d1"));
+        assert_eq!(second.changed_paths[0].new_blob.as_deref(), Some("d4"));
+        assert_eq!(second.changed_paths[1].old_blob.as_deref(), Some("d3"));
+        assert_eq!(second.changed_paths[1].new_blob, None);
+        assert_eq!(second.parents, vec![hex_id('1')]);
+        assert_eq!(second.id, second.canonical_id());
+    }
+
+    // spec: MEDULLA-SCM-R002
+    #[test]
+    fn accept_refuses_a_base_off_the_branch_and_an_overlapping_stale_base() {
+        let first = accept(
+            &MemChain {
+                head: "base".into(),
+                commits: vec![],
+            },
+            &request(None, vec![submitted("a.rs", PathOp::Add, Some("d1"))]),
+            &CTX,
+        )
+        .unwrap();
+        let mut second = first.clone();
+        second.parents = vec![hex_id('1')];
+        second.changed_paths = vec![ChangedPath {
+            path: "z.rs".into(),
+            op: PathOp::Add,
+            old_blob: None,
+            new_blob: Some("d9".into()),
+            mode: 0o100644,
+        }];
+        let chain = MemChain {
+            head: hex_id('2'),
+            commits: vec![(hex_id('1'), first), (hex_id('2'), second)],
+        };
+        let refused = |base: Option<String>, path: &str| match accept(
+            &chain,
+            &request(base, vec![submitted(path, PathOp::Add, Some("d5"))]),
+            &CTX,
+        ) {
+            Err(AcceptError::Refused(r)) => r.refusal,
+            other => panic!("expected a refusal, got {other:?}"),
+        };
+        let off = ChangesetRefusal::ChangesetParentNotOnBranch;
+        assert_eq!(refused(Some(hex_id('9')), "n.rs"), off);
+        assert_eq!(refused(None, "n.rs"), off);
+        // Behind the head but disjoint: lands. Overlapping: refused.
+        assert!(accept(
+            &chain,
+            &request(
+                Some(hex_id('1')),
+                vec![submitted("n.rs", PathOp::Add, Some("d5"))]
+            ),
+            &CTX
+        )
+        .is_ok());
+        assert_eq!(refused(Some(hex_id('1')), "z.rs"), off);
+    }
+
+    // spec: MEDULLA-SCM-R002
+    #[test]
+    fn verify_submission_refuses_empty_invalid_and_missing_blobs() {
+        let store = RedbChunkStore::open_temp().unwrap();
+        let limit = DEFAULT_CHANGESET_MAX_BLOB_BYTES;
+        let code = |request: &SubmitChangesetRequest| {
+            verify_submission(&store, request, limit)
+                .unwrap_err()
+                .refusal
+                .code()
+        };
+        assert_eq!(code(&request(None, vec![])), "CHANGESET_EMPTY");
+        let delete_with_blob = submitted("a.rs", PathOp::Delete, Some("d"));
+        assert_eq!(
+            code(&request(None, vec![delete_with_blob])),
+            "CHANGESET_INVALID"
+        );
+        let dup = vec![
+            submitted("a.rs", PathOp::Add, Some("d")),
+            submitted("a.rs", PathOp::Add, Some("d")),
+        ];
+        assert_eq!(code(&request(None, dup)), "CHANGESET_INVALID");
+        let traversal = submitted("../a.rs", PathOp::Add, Some("d"));
+        assert_eq!(code(&request(None, vec![traversal])), "CHANGESET_INVALID");
+        let unknown = submitted("a.rs", PathOp::Add, Some(&"f".repeat(64)));
+        assert_eq!(code(&request(None, vec![unknown])), "BLOB_NOT_FOUND");
+        let data = upload(&store, b"hello");
+        let known = medulla_types::source_changeset::SubmittedPath {
+            blob: Some(data),
+            ..submitted("a.rs", PathOp::Add, None)
+        };
+        assert!(verify_submission(&store, &request(None, vec![known]), limit).is_ok());
     }
 }

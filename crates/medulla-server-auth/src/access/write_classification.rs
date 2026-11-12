@@ -464,6 +464,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::CreateBranch { .. }
                 // MEDULLA-BRANCH-MERGE-R002: a branch-scoped mutation.
                 | Method::BranchWrite { .. }
+                // MEDULLA-SCM-R002: a source changeset on a branch.
+                | Method::SubmitChangeset { .. }
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }

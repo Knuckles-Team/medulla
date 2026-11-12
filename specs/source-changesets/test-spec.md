@@ -73,7 +73,10 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | Row | Proving test | Level | State |
 |---|---|---|---|
 | `MEDULLA-SCM-R001` | `tests/test_scm_blob.py::test_blob_stored_once_and_read_by_digest` | L3 | planned |
-| `MEDULLA-SCM-R002` | `tests/test_scm_changeset.py::test_changeset_stores_only_changed_paths` | L3 | planned |
+| `MEDULLA-SCM-R002` | `tests/test_scm_changeset.py::test_changeset_stores_only_changed_paths` | L3 | existing |
+| `MEDULLA-SCM-R002` | `crates/medulla-h-ingest/src/source_changeset.rs::tests::accept_stores_only_changed_paths_and_fills_old_blobs_from_the_parent` | L2 | existing |
+| `MEDULLA-SCM-R002` | `crates/medulla-h-ingest/src/source_changeset.rs::tests::accept_refuses_a_base_off_the_branch_and_an_overlapping_stale_base` | L2 | existing |
+| `MEDULLA-SCM-R002` | `crates/medulla-h-ingest/src/source_changeset.rs::tests::verify_submission_refuses_empty_invalid_and_missing_blobs` | L2 | existing |
 | `MEDULLA-SCM-R002.1` | `crates/medulla-types/src/source_changeset.rs::tests::trailers_parse_and_render_round_trip` | L2 | existing |
 | `MEDULLA-SCM-R002.1` | `tests/test_scm_changeset.py::test_trailers_round_trip_through_git` | L3 | planned |
 | `MEDULLA-SCM-R003` | `tests/test_scm_accept.py::test_disjoint_writers_land_and_overlap_rebases_or_conflicts` | L3 | planned |

@@ -48,6 +48,13 @@ pub enum ChangesetRefusal {
     BlobTooLarge,
     /// The digest is unknown to the blob store, or unreadable.
     BlobNotFound,
+    /// A submission with no paths (MEDULLA-SCM-R002).
+    ChangesetEmpty,
+    /// A bound or pairing of the request is broken (MEDULLA-SCM-R002).
+    ChangesetInvalid,
+    /// The writer's base is not a changeset of the branch, or it is behind the
+    /// head with overlapping paths (MEDULLA-SCM-R002).
+    ChangesetParentNotOnBranch,
 }
 
 impl ChangesetRefusal {
@@ -57,6 +64,9 @@ impl ChangesetRefusal {
             Self::BlobDigestMismatch => "BLOB_DIGEST_MISMATCH",
             Self::BlobTooLarge => "BLOB_TOO_LARGE",
             Self::BlobNotFound => "BLOB_NOT_FOUND",
+            Self::ChangesetEmpty => "CHANGESET_EMPTY",
+            Self::ChangesetInvalid => "CHANGESET_INVALID",
+            Self::ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
         }
     }
 }
@@ -145,6 +155,191 @@ pub struct Changeset {
     pub changed_paths: Vec<ChangedPath>,
     pub created_at: u64,
     pub trailers: Trailers,
+    /// The agent that authored the change (MEDULLA-SCM-R012); `None` for a human.
+    pub agent_identity: Option<String>,
+    /// The run that produced the change (MEDULLA-SCM-R012).
+    pub run_trace_id: Option<String>,
+}
+
+impl Changeset {
+    /// The id of a changeset: the SHA-256 of the canonical named MessagePack
+    /// of every other field, so the id commits to the whole record.
+    pub fn canonical_id(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let body = (
+            &self.repo,
+            &self.parents,
+            &self.author_principal,
+            &self.message,
+            &self.changed_paths,
+            self.created_at,
+            &self.trailers,
+            &self.agent_identity,
+            &self.run_trace_id,
+        );
+        let bytes = rmp_serde::to_vec_named(&body).unwrap_or_default();
+        hex::encode(Sha256::digest(bytes))
+    }
+
+    /// Fill `id` from the record content.
+    pub fn sealed(mut self) -> Self {
+        self.id = self.canonical_id();
+        self
+    }
+}
+
+/// One path of a submission (MEDULLA-SCM-R002). `blob` is `None` exactly when
+/// `op` is `Delete`; `renamed_from` is `Some` exactly when `op` is `Rename`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubmittedPath {
+    pub path: String,
+    pub op: PathOp,
+    pub blob: Option<SubmittedBlobRef>,
+    pub mode: u32,
+    pub renamed_from: Option<String>,
+}
+
+/// The closed request of `Method::SubmitChangeset` (MEDULLA-SCM-R002).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubmitChangesetRequest {
+    pub repo: String,
+    pub branch: String,
+    pub base_head: Option<String>,
+    pub message: String,
+    pub paths: Vec<SubmittedPath>,
+    #[serde(default)]
+    pub trailers: Option<Trailers>,
+    #[serde(default)]
+    pub run_trace_id: Option<String>,
+}
+
+/// The served receipt of an accepted (or replayed) changeset.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SubmitChangesetReceipt {
+    pub changeset: Changeset,
+    /// The branch head after the append: the id of the carrying branch commit.
+    pub branch_head: String,
+    pub replayed: bool,
+}
+
+/// A request refused with the stable code and a detail naming the field.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SubmitRefusal {
+    pub refusal: ChangesetRefusal,
+    pub detail: String,
+}
+
+impl SubmitRefusal {
+    pub fn new(refusal: ChangesetRefusal, detail: impl Into<String>) -> Self {
+        Self {
+            refusal,
+            detail: detail.into(),
+        }
+    }
+
+    /// The wire message: `CODE: detail`.
+    pub fn message(&self) -> String {
+        format!("{}: {}", self.refusal.code(), self.detail)
+    }
+}
+
+const NAME_SET: fn(char) -> bool =
+    |c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '/' | '-');
+const FILE_MODES: [u32; 3] = [0o100644, 0o100755, 0o120000];
+
+fn invalid(detail: impl Into<String>) -> SubmitRefusal {
+    SubmitRefusal::new(ChangesetRefusal::ChangesetInvalid, detail)
+}
+
+fn valid_name(value: &str, max: usize) -> bool {
+    !value.is_empty()
+        && value.chars().count() <= max
+        && value.chars().all(NAME_SET)
+        && !value.split('/').any(|segment| segment == "..")
+}
+
+fn valid_path(path: &str) -> bool {
+    !path.is_empty()
+        && path.len() <= 4096
+        && !path.contains('\0')
+        && !path
+            .split('/')
+            .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+}
+
+impl SubmitChangesetRequest {
+    /// Check every bound and pairing of the request; the first failure names
+    /// its field. No store is read.
+    pub fn validate(&self) -> Result<(), SubmitRefusal> {
+        if self.paths.is_empty() {
+            return Err(SubmitRefusal::new(
+                ChangesetRefusal::ChangesetEmpty,
+                "the submission has no paths",
+            ));
+        }
+        if !valid_name(&self.repo, 128) {
+            return Err(invalid("repo"));
+        }
+        if !valid_name(&self.branch, 255) {
+            return Err(invalid("branch"));
+        }
+        if let Some(base) = &self.base_head {
+            let hex64 = base.len() == 64
+                && base
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+            if !hex64 {
+                return Err(invalid("base_head"));
+            }
+        }
+        if self.message.is_empty() || self.message.len() > 65536 {
+            return Err(invalid("message"));
+        }
+        if self.paths.len() > 10000 {
+            return Err(invalid("paths"));
+        }
+        if let Some(run) = &self.run_trace_id {
+            if run.is_empty() || run.chars().count() > 128 {
+                return Err(invalid("run_trace_id"));
+            }
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for entry in &self.paths {
+            if !valid_path(&entry.path) {
+                return Err(invalid(format!("paths.path {}", entry.path)));
+            }
+            if !seen.insert(entry.path.as_str()) {
+                return Err(invalid(format!("paths.path repeated {}", entry.path)));
+            }
+            if (entry.op == PathOp::Delete) != entry.blob.is_none() {
+                return Err(invalid(format!("paths.blob pairing for {}", entry.path)));
+            }
+            if (entry.op == PathOp::Rename) != entry.renamed_from.is_some() {
+                return Err(invalid(format!(
+                    "paths.renamed_from pairing for {}",
+                    entry.path
+                )));
+            }
+            if let Some(from) = &entry.renamed_from {
+                if !valid_path(from) {
+                    return Err(invalid(format!("paths.renamed_from {from}")));
+                }
+            }
+            if !FILE_MODES.contains(&entry.mode) {
+                return Err(invalid(format!("paths.mode for {}", entry.path)));
+            }
+        }
+        for entry in &self.paths {
+            if let Some(from) = &entry.renamed_from {
+                if !seen.insert(from.as_str()) {
+                    return Err(invalid(format!("paths.renamed_from repeated {from}")));
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

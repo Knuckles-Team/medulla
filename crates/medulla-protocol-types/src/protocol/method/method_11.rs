@@ -343,6 +343,18 @@ $($variants)*
         mutation: Box<Method>,
     },
 
+    /// Submit one source changeset to a branch (MEDULLA-SCM-R002). File bytes
+    /// were uploaded first through `BlobBegin`/`BlobChunkPut`/`BlobCommit`; the
+    /// request names them by digest. The changeset is the payload of the
+    /// branch commit that carries it, appended with the head advance in one
+    /// registry transaction. Refusals: `CHANGESET_EMPTY`, `CHANGESET_INVALID`,
+    /// `CHANGESET_PARENT_NOT_ON_BRANCH`, `BLOB_NOT_FOUND` (and
+    /// `BLOB_TOO_LARGE`, `BLOB_DIGEST_MISMATCH`), plus the branch refusals of
+    /// `BranchWrite`; every refusal leaves the chain unchanged.
+    SubmitChangeset {
+        request: Box<medulla_types::source_changeset::SubmitChangesetRequest>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as
