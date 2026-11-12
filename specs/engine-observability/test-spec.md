@@ -26,12 +26,12 @@ Each row names its proving test. A test marked planned does not exist yet; its r
 | Requirement | Name | Proving test |
 |---|---|---|
 | `MEDULLA-OBSERVE-R001` | Refusals keep their type from handler to client (rollup) | `crates/medulla-server-served-tests/src/split_tests/observability.rs::typed_refusals_reach_the_client_end_to_end` (planned) |
-| `MEDULLA-OBSERVE-R001.1` | The code `PARTIAL_MATERIALIZATION` is declared and carries typed detail | `crates/medulla-server-served-tests/src/split_tests/observability.rs::partial_materialization_reaches_client_typed` (planned) |
-| `MEDULLA-OBSERVE-R001.2` | An uncoded refusal becomes a correlated `INTERNAL` with a cause reference | `crates/medulla-observe/tests/refusal_cause.rs::uncoded_refusal_logs_cause_and_returns_reference` (planned) |
+| `MEDULLA-OBSERVE-R001.1` | The code `PARTIAL_MATERIALIZATION` is declared and carries typed detail | `crates/medulla-protocol-types/src/protocol/tests.rs::partial_materialization_keeps_its_code_and_json_detail` |
+| `MEDULLA-OBSERVE-R001.2` | An uncoded refusal becomes a correlated `INTERNAL` with a cause reference | `crates/medulla-protocol-types/src/protocol/tests.rs::uncoded_refusal_carries_a_cause_reference_and_counts` |
 | `MEDULLA-OBSERVE-R001.3` | A served test fails when a refusal collapses | `crates/medulla-server-served-tests/src/split_tests/observability.rs::collapsed_refusal_fails_the_harness` (planned) |
 | `MEDULLA-OBSERVE-R001.4` | The Python client surfaces code, detail and cause reference | `tests/test_engine_refusal_mapping.py::test_partial_materialization_and_cause_ref_reach_the_exception` (planned) |
 | `MEDULLA-OBSERVE-R002` | Logs carry module targets and the caller's trace id (rollup) | `crates/medulla-server-served-tests/src/split_tests/observability.rs::one_trace_id_follows_a_request_into_its_spawned_task` (planned) |
-| `MEDULLA-OBSERVE-R002.1` | Every log line shows its module target | `crates/medulla-kernel/src/otel.rs::log_filter_tests::module_filter_matches_the_logging_module_line` (planned) |
+| `MEDULLA-OBSERVE-R002.1` | Every log line shows its module target | `crates/medulla-kernel/src/otel.rs::log_filter_tests::module_filter_matches_the_logging_module_line` |
 | `MEDULLA-OBSERVE-R002.2` | The transport reads the caller's trace context | `crates/medulla-observe/tests/trace_context.rs::traceparent_parses_and_malformed_is_dropped` (planned) |
 | `MEDULLA-OBSERVE-R002.3` | A request span carries the ids on every line | `crates/medulla-server-served-tests/src/split_tests/observability.rs::engine_log_line_inside_request_shows_ids` (planned) |
 | `MEDULLA-OBSERVE-R002.4` | Spawned tasks inherit the trace context | `crates/medulla-server-served-tests/src/split_tests/observability.rs::one_trace_id_follows_a_request_into_its_spawned_task` (planned) |

@@ -23,6 +23,8 @@ closed_error_codes! {
         ScheduleNotOwner => "SCHEDULE_NOT_OWNER",
         ArchiveDigestMismatch => "ARCHIVE_DIGEST_MISMATCH",
         ArchiveMissing => "ARCHIVE_MISSING",
+        /// A read met a graph whose durable material is only partly in memory (MEDULLA-OBSERVE-R001.1).
+        PartialMaterialization => "PARTIAL_MATERIALIZATION",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
         AstInputInvalid => "AST_INPUT_INVALID",
         AstInputLimit => "AST_INPUT_LIMIT",

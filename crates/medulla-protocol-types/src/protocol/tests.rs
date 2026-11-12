@@ -391,9 +391,14 @@ fn test_response_ok() {
 fn test_response_err() {
     let resp = Response::err(2, "node not found: private storage key");
     assert_eq!(resp.error.as_deref(), Some("INTERNAL"));
+    let detail = resp.error_detail.as_deref().unwrap();
+    assert!(detail.starts_with("unclassified engine refusal (cause-"));
     assert_eq!(
-        resp.error_detail.as_deref(),
-        Some("unclassified engine refusal")
+        detail,
+        format!(
+            "unclassified engine refusal ({})",
+            CauseRef::of("node not found: private storage key")
+        )
     );
     let json = serde_json::to_string(&resp).unwrap();
     assert!(!json.contains("private storage key"));
@@ -446,10 +451,11 @@ fn declared_response_error_separates_code_and_detail() {
     ] {
         let unknown = Response::err(4, text);
         assert_eq!(unknown.error.as_deref(), Some("INTERNAL"));
-        assert_eq!(
-            unknown.error_detail.as_deref(),
-            Some("unclassified engine refusal")
-        );
+        assert!(unknown
+            .error_detail
+            .as_deref()
+            .unwrap()
+            .starts_with("unclassified engine refusal (cause-"));
         assert!(!serde_json::to_string(&unknown).unwrap().contains(text));
     }
     let code_only = Response::err(5, "ACCESS_DENIED");
@@ -737,4 +743,49 @@ fn governed_evidence_locus_wire_rejects_unsafe_identity_and_coordinates() {
         "derivation_ref": "eg:derivation:0000000000000004"
     });
     assert!(serde_json::from_value::<EvidenceLocusWire>(invalid_range).is_err());
+}
+
+// spec: MEDULLA-OBSERVE-R001.1
+#[test]
+fn partial_materialization_keeps_its_code_and_json_detail() {
+    let detail = serde_json::json!({
+        "phase": "partial",
+        "source_snapshot_version": 7,
+        "completeness_cursor": { "node_offset": 40, "edge_offset": 0 },
+        "retryable": true,
+    });
+    let before = UNCLASSIFIED_REFUSALS.load(std::sync::atomic::Ordering::Relaxed);
+    let resp = Response::err(
+        9,
+        format!(
+            "{}: {detail}",
+            medulla_types::contract::ServerErrorCode::PartialMaterialization
+        ),
+    );
+    assert_eq!(resp.error.as_deref(), Some("PARTIAL_MATERIALIZATION"));
+    let parsed: serde_json::Value = serde_json::from_str(resp.error_detail.as_deref().unwrap())
+        .expect("the detail stays machine-readable JSON");
+    assert_eq!(parsed["phase"], "partial");
+    assert_eq!(parsed["completeness_cursor"]["node_offset"], 40);
+    assert_eq!(parsed["retryable"], true);
+    // A typed refusal never counts as a collapse.
+    assert!(UNCLASSIFIED_REFUSALS.load(std::sync::atomic::Ordering::Relaxed) >= before);
+}
+
+// spec: MEDULLA-OBSERVE-R001.2
+#[test]
+fn uncoded_refusal_carries_a_cause_reference_and_counts() {
+    let text = "graph shard 3 lock poisoned: internal cursor 17";
+    let before = UNCLASSIFIED_REFUSALS.load(std::sync::atomic::Ordering::Relaxed);
+    let resp = Response::err(10, text);
+    assert_eq!(resp.error.as_deref(), Some("INTERNAL"));
+    let detail = resp.error_detail.as_deref().unwrap();
+    let cause = CauseRef::of(text).to_string();
+    assert_eq!(detail, format!("{UNCLASSIFIED_DETAIL} ({cause})"));
+    assert_eq!(cause.len(), "cause-".len() + 8);
+    assert!(!serde_json::to_string(&resp).unwrap().contains("cursor 17"));
+    assert!(UNCLASSIFIED_REFUSALS.load(std::sync::atomic::Ordering::Relaxed) > before);
+    // The reference is stable for a text and differs between texts.
+    assert_eq!(CauseRef::of(text), CauseRef::of(text));
+    assert_ne!(CauseRef::of(text), CauseRef::of("another refusal"));
 }

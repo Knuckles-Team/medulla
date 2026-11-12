@@ -330,19 +330,23 @@ pub fn check_materialization_valid(
                 medulla_core::registry::MaterializationPhase::Complete => "complete",
                 medulla_core::registry::MaterializationPhase::Failed => "failed",
             };
+            let detail = serde_json::json!({
+                "phase": phase,
+                "source_snapshot_version": manifest.source_snapshot_version,
+                "completeness_cursor": manifest.completeness_cursor.as_ref().map(|cursor| serde_json::json!({
+                    "node_offset": cursor.node_offset,
+                    "edge_offset": cursor.edge_offset,
+                })),
+                "retryable": manifest.phase != medulla_core::registry::MaterializationPhase::Failed,
+            });
+            // The declared code leads the text so the wire keeps it
+            // (MEDULLA-OBSERVE-R001.1); the detail stays machine-readable JSON.
             return Err(Response::err(
                 req_id,
-                serde_json::json!({
-                    "code": "PARTIAL_MATERIALIZATION",
-                    "phase": phase,
-                    "source_snapshot_version": manifest.source_snapshot_version,
-                    "completeness_cursor": manifest.completeness_cursor.as_ref().map(|cursor| serde_json::json!({
-                        "node_offset": cursor.node_offset,
-                        "edge_offset": cursor.edge_offset,
-                    })),
-                    "retryable": manifest.phase != medulla_core::registry::MaterializationPhase::Failed,
-                })
-                .to_string(),
+                format!(
+                    "{}: {detail}",
+                    medulla_types::contract::ServerErrorCode::PartialMaterialization
+                ),
             ));
         }
     }
