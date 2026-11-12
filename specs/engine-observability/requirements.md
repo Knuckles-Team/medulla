@@ -4,7 +4,7 @@ Governing spec: [spec.md](spec.md).
 
 Each row is one requirement. A child row `.n` is one five-minute unit of work. A row names the file it touches, its caller chain, its Shape sentence, its budgets and the test that proves it as `path::name`. The generator sets each row's state.
 
-Terms used in every row. The *registry* is `TaskRegistry` in `crates/medulla-observe/src/registry/tasks.rs`. A *task* is one registered background job. A *cursor* is the bounded position a task reports with each progress call. A *blocker* is the reason one graph is not Ready. A *cause reference* is the `cause-<8 hex>` text that ties a wire `INTERNAL` to one WARN log line. Every new refusal code is a variant of `ServerErrorCode` in `crates/medulla-types/src/contract/server_error_code.rs`. Every knob is a row of `KNOB_TABLE` and of [data-model.md](data-model.md).
+Terms used in every row. The *registry* is `TaskRegistry` in the planned file `crates/medulla-observe/src/registry/tasks.rs`. A *task* is one registered background job. A *cursor* is the bounded position a task reports with each progress call. A *blocker* is the reason one graph is not Ready. A *cause reference* is the `cause-<8 hex>` text that ties a wire `INTERNAL` to one WARN log line. Every new refusal code is a variant of `ServerErrorCode` in `crates/medulla-types/src/contract/server_error_code.rs`. Every knob is a row of `KNOB_TABLE` and of [data-model.md](data-model.md).
 
 | ID | Requirement | Acceptance |
 |---|---|---|

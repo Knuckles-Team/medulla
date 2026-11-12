@@ -163,6 +163,18 @@ MEDULLA-CONTRACT-R060 splits debug info from each release-server binary, keeps t
 
 Fault injection behind feature `chaos` stalls a task, spins a loop and freezes a paging cursor. One served test asserts that `Introspect`, the watchdog log and `Health` name the culprit within 10 s (R012).
 
+### Untangled design
+
+One line per answer.
+
+- Owner. Medulla. The new crate `medulla-observe` owns the registries and machines; handler crates only call it.
+- Cohesion. All runtime-state types sit in one crate, so a consumer names one dependency.
+- Dependency direction. `medulla-observe` depends on `medulla-types` only. The kernel, persistence and server crates depend on it. It imports no handler.
+- Interface depth. Three calls cover a job: `spawn`, `progress` and `finish`. The introspection is one method with a closed section enum.
+- Special cases. None. Every background job takes the same path; the closed inventory lists them.
+- State. Each machine stores one state field and changes it only through `apply`.
+- Environment. The sampler needs a Unix signal; other platforms refuse `PROFILE_UNAVAILABLE`. Stable tokio metrics only.
+
 ### Failure modes
 
 - Registry full: the job runs, the drop counts, the job is not listed.
