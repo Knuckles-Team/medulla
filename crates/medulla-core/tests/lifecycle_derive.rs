@@ -29,6 +29,8 @@ fn changeset(id: &str, paths: &[&str], trailers: Trailers) -> Changeset {
             .collect(),
         created_at: 1,
         trailers,
+        agent_identity: None,
+        run_trace_id: None,
     }
 }
 

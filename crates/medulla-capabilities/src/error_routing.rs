@@ -785,7 +785,7 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     }
     // MEDULLA-FEDERATED-QUERY-R058.4.1: `max_steps` outside 1 to 4.
     if id == "NlQuery" {
-        codes.push("NL_STEPS_INVALID");
+        codes.insert("NL_STEPS_INVALID");
     }
     // MEDULLA-FEDERATED-QUERY-R058.4.4: the bounded-planning refusals.
     if matches!(id, "NlQuery" | "NlQueryPlan") {

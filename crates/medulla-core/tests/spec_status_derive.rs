@@ -19,6 +19,8 @@ fn cs(id: &str, spec: &[&str], withdraw: &[&str]) -> Changeset {
             withdraw: withdraw.iter().map(|s| s.to_string()).collect(),
             ..Trailers::default()
         },
+        agent_identity: None,
+        run_trace_id: None,
     }
 }
 

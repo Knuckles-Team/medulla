@@ -179,5 +179,7 @@ pub fn project_symbol_edit(
         changed_paths,
         created_at,
         trailers: Trailers::default(),
+        agent_identity: None,
+        run_trace_id: None,
     })
 }

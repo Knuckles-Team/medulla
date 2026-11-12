@@ -39,7 +39,9 @@ impl ConflictRule {
 /// One side of a record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
+    /// The graph side.
     Graph,
+    /// The external source side.
     Source,
 }
 
@@ -54,7 +56,12 @@ pub enum SyncAction {
     ProposeOutbound,
     /// Both changed. `kept` is the side whose value stands (and is proposed
     /// outbound when it is the graph); `held` are the sides held back.
-    Conflict { kept: Option<Side>, held: Vec<Side> },
+    Conflict {
+        /// The side whose value stands, if one was chosen.
+        kept: Option<Side>,
+        /// The sides held back.
+        held: Vec<Side>,
+    },
 }
 
 impl SyncAction {
@@ -72,7 +79,9 @@ impl SyncAction {
 /// state are both expressed this way so they ride one batch.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SyncMutation {
+    /// The id of the node to upsert.
     pub node_id: String,
+    /// The property map to write on that node.
     pub properties: Map<String, Value>,
 }
 

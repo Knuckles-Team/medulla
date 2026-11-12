@@ -13,12 +13,15 @@ const NODE_DOMAIN: &str = "eg/source-sync-state/v1";
 /// What one record's sync decided, with the digests the state keeps.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SyncOutcome {
+    /// The key of the record that was synced.
     pub record_key: String,
+    /// The decision taken for that record.
     pub action: SyncAction,
     /// The base digest before this sync (`None` for a record never synced).
     pub base_digest: Option<String>,
     /// The source digest read in this sync (`None` when absent there).
     pub source_digest: Option<String>,
+    /// The source revision read in this sync (`None` when absent there).
     pub source_revision: Option<String>,
 }
 

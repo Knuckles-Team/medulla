@@ -111,7 +111,7 @@ pub struct ForegroundActivity {
 }
 
 /// Plain inputs of one selection.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WindowContext {
     pub now_ms: i64,
     pub activity: ForegroundActivity,

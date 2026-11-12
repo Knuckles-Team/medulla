@@ -437,7 +437,7 @@ pub enum RefAction {
 /// comparisons, `IN (...)`, `IS [NOT] NULL`, and a comparison between two columns of
 /// the SAME row. Evaluated against a full row map (`column name -> JSON value`), not
 /// just one column's value, so it can express cross-column invariants.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CheckExpr {
     /// `col OP literal`.
     Cmp {
