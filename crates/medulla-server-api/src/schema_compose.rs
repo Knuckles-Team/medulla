@@ -311,11 +311,13 @@ pub fn scope_blank_nodes(triple: Triple, scope: &str) -> Result<Triple, String> 
         NamedOrBlankNode::BlankNode(node) => NamedOrBlankNode::BlankNode(scoped(node, scope)?),
     };
     let object = match triple.object {
-        Term::NamedNode(node) => Term::NamedNode(node),
         Term::BlankNode(node) => Term::BlankNode(scoped(node, scope)?),
-        Term::Literal(literal) => Term::Literal(literal),
+        // `Term::Triple` exists only under oxrdf's `rdf-12` feature, which cross-crate
+        // `--all-features` builds can unify on without our `sparql-star`; the
+        // pass-through arm keeps this match exhaustive in every combination.
         #[cfg(feature = "sparql-star")]
         Term::Triple(triple) => Term::Triple(Box::new(scope_blank_nodes(*triple, scope)?)),
+        other => other,
     };
     Ok(Triple::new(subject, triple.predicate, object))
 }
