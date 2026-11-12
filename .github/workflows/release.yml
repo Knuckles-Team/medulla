@@ -546,13 +546,13 @@ jobs:
           export SOURCE_DATE_EPOCH
           # Pinned time and rewritten layer timestamps make the image a function
           # of its inputs (MEDULLA-CONTRACT-R053.14).
-          docker buildx build --file docker/Dockerfile --target runtime \
+          docker buildx build --provenance=false --file docker/Dockerfile --target runtime \
             --platform "$PLATFORM" --build-arg "EGS_VERSION=${version}" \
             --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
             --metadata-file "$RUNNER_TEMP/meta.json" \
             --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true,rewrite-timestamp=true" .
           # Reproduction build from empty cache; computed by digest, never pushed.
-          docker buildx build --no-cache --file docker/Dockerfile --target runtime \
+          docker buildx build --provenance=false --no-cache --file docker/Dockerfile --target runtime \
             --platform "$PLATFORM" --build-arg "EGS_VERSION=${version}" \
             --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
             --metadata-file "$RUNNER_TEMP/meta-reproduction.json" \

@@ -5,11 +5,18 @@
 # carries at medulla/_bin/medulla-server. The final stage is a slim base carrying
 # only the binary.
 #
+# The image is a fixed point of its inputs (MEDULLA-CONTRACT-R053.14): both bases
+# are pinned by digest, and every file this build creates or rewrites is stamped
+# with SOURCE_DATE_EPOCH, so two builds of one tag give identical layers.
+#
 #   docker build -f docker/Dockerfile -t <registry>/medulla-server:<tag> .
 
 FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85ab0f263ef12f492d8476aa3a2e4e1e333f7d67fbdd923d00a506a516a /uv /bin/uv
 ARG EGS_VERSION=3.3.3
+# Epoch that stamps every file this build creates; the release workflow pins it to
+# the tagged commit time, and a standalone build still gets a fixed value.
+ARG SOURCE_DATE_EPOCH=0
 COPY docker/wheels/ /wheels/
 RUN set -eu; \
     case "${EGS_VERSION}" in ''|*[!0-9.]*) echo 'EGS_VERSION must be numeric' >&2; exit 2 ;; esac; \
@@ -23,21 +30,38 @@ RUN set -eu; \
     server=$(find /opt/venv -path '*/site-packages/medulla/_bin/medulla-server' -type f); \
     test -n "${server}" && test -x "${server}"; \
     "${server}" --version; \
-    cp "${server}" /medulla-server
+    cp "${server}" /medulla-server; \
+    # Fixed point (MEDULLA-CONTRACT-R053.14): stamp the epoch onto everything this
+    # stage created or rewrote so build-time mtimes never reach a layer.
+    touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" / /opt /root /medulla-server; \
+    for d in /opt/venv /root/.cache /wheels; do \
+      if [ -d "$d" ]; then \
+        find "$d" -depth -exec touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" {} +; \
+      fi; \
+    done
 
-FROM debian:bookworm-slim AS runtime
+# Pinned by digest so the runtime base cannot move between the primary and
+# reproduction builds (floating tags make the image a moving target).
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS runtime
 LABEL org.opencontainers.image.title="medulla-server" \
       org.opencontainers.image.description="Native Medulla server executable" \
       org.opencontainers.image.source="https://github.com/Knuckles-Team/medulla"
 ENV GRAPH_SERVICE_PERSIST_DIR=/var/lib/medulla/data \
     GRAPH_SERVICE_TCP_ADDR=127.0.0.1:9100 \
     GRAPH_SERVICE_METRICS_ADDR=127.0.0.1:9101
-RUN groupadd --system --gid 10001 epistemic \
+ARG SOURCE_DATE_EPOCH=0
+RUN set -eu; \
+    groupadd --system --gid 10001 epistemic \
     && useradd --system --uid 10001 --gid epistemic \
         --home-dir /var/lib/medulla --shell /usr/sbin/nologin epistemic \
     && mkdir -p /var/lib/medulla/data \
-    && chown -R epistemic:epistemic /var/lib/medulla
+    && chown -R epistemic:epistemic /var/lib/medulla \
+    && for p in /etc/passwd /etc/group /etc/shadow /etc/subuid /etc/subgid; do \
+         if [ -e "$p" ]; then touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" "$p"; fi; \
+       done \
+    && touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" /var/lib /var/lib/medulla /var/lib/medulla/data
 COPY --from=builder /medulla-server /usr/local/bin/medulla-server
+RUN touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" /usr/local/bin /usr/local/bin/medulla-server
 VOLUME ["/var/lib/medulla/data"]
 EXPOSE 9100 9101
 # The runtime has no interpreter: probe the TCP port with bash.
