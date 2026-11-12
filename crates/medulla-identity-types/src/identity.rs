@@ -33,6 +33,7 @@ mod audit;
 mod config;
 mod delegation;
 mod denials;
+mod metadata;
 mod model;
 mod ops;
 mod ownership;
@@ -67,6 +68,12 @@ pub use delegation::{
     DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
 };
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
+pub use metadata::{
+    ClientKind, ClientMetadata, InteractionNetwork, InteractionRelation, InvalidMetadata,
+    Preference, PrincipalRef, TypedMetadata, MAX_CLIENT_CAPABILITIES, MAX_CLIENT_ID_CHARS,
+    MAX_CLIENT_VERSION_CHARS, MAX_PREFERENCE_KEY_CHARS, MAX_PREFERENCE_VALUE_CHARS,
+    MAX_WEIGHT_MILLI, METADATA_SCHEMA_VERSION,
+};
 pub use model::{
     ApiKeyRecord, ExternalIdentity, OneTimeToken, PasswordCredential, SessionRecord, TokenPurpose,
     TotpRecord, UserKind, UserRecord, UserStatus, UserStatusEvent, WebauthnRecord,
