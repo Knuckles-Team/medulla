@@ -52,6 +52,9 @@ closed_error_codes! {
         /// A declared enrichment-schedule candidate names a negative
         /// `enrichment.cost_q32` (MEDULLA-DECISION-ENGINE-R031).
         UnsupportedEnrichmentCost => "UNSUPPORTED_ENRICHMENT_COST",
+        /// A run outcome cites a row that none of its referenced decisions
+        /// returned (MEDULLA-DECISION-ENGINE-R100.102.4).
+        CitationNotRetrieved => "CITATION_NOT_RETRIEVED",
     }
 }
 

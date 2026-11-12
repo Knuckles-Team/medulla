@@ -92,6 +92,8 @@ mod stat_walk_forward;
 // EH-394/395: retrieval outcomes on the decision log.
 #[cfg(feature = "decide")]
 mod stat_retrieval;
+#[cfg(feature = "decide")]
+mod stat_run_credit;
 // EH-394..398: the retrieval-learning relations of the decision views.
 #[cfg(all(feature = "decide", feature = "query"))]
 mod stat_retrieval_views;

@@ -151,3 +151,11 @@ Order: R829.1, R829.2, R829.3.
 `topology_cap:<name>=<value>` and `plan_digest:<digest>` premises, and abstains with the refusal code on a breach.
 Caps = topology policy caps, tightened by the pinned cap knobs, tightened by the request. Bench group
 `decide/topology_admit` with a `group_budgets` entry (p50 0.2 ms, p99 0.8 ms).
+
+## Run credit (R100.102)
+
+`stat_learning::dispatch` routes `LearningWrite::RunOutcome` to `stat_run_credit::record_run`, which reads the
+referenced decisions' stored retrieval outcomes, runs the pure kernel `medulla_decision_stats::decision::run_credit::credit_steps`
+and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revision
+(`run_credit/baseline/<sha256 of capability>/<inverted revision>`) in one batch. Knobs `run_credit.max_steps` and
+`run_credit.baseline_weight` come from the default decision policy.

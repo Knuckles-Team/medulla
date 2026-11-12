@@ -66,7 +66,10 @@ impl Scope<'_> {
     }
 }
 
-fn check_joinable(entry: Option<DecisionLogEntry>, reader: &LogReader) -> Result<(), String> {
+pub(super) fn check_joinable(
+    entry: Option<DecisionLogEntry>,
+    reader: &LogReader,
+) -> Result<(), String> {
     let entry = entry.ok_or_else(|| invalid("no committed record with that id is visible"))?;
     if entry.record.question.kind != QuestionKind::RetrievalPlan {
         return Err(invalid("an outcome joins a retrieval-plan record only"));
@@ -82,6 +85,18 @@ fn check_joinable(entry: Option<DecisionLogEntry>, reader: &LogReader) -> Result
         );
     }
     Ok(())
+}
+
+/// The stored outcome of retrieval-plan record `record_id`, if one was recorded.
+pub(super) fn stored_outcome(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    record_id: &str,
+) -> Result<Option<StoredRetrievalOutcome>, String> {
+    store
+        .decision_artifact(tenant_id, &format!("{OUTCOME_PREFIX}{record_id}"))?
+        .map(|bytes| decode_artifact(&bytes, "retrieval outcome"))
+        .transpose()
 }
 
 /// Join one outcome to its committed, executed retrieval-plan record.

@@ -12,7 +12,6 @@ use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
-use medulla_decision_types::decision::statistical::run_credit;
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
     decision::statistical::retrieval::LearningWrite,
@@ -29,6 +28,7 @@ use super::stat_generation_cycle::{job_id, run_cycle, ConfiguredEmbedder, CycleR
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
+use super::stat_run_credit::record_run;
 use super::stat_support::invalid_parameter as invalid;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
@@ -292,14 +292,9 @@ pub(super) fn dispatch(
                 "freshness refresh is not served until MEDULLA-DECISION-ENGINE-R174.9.3",
             ))
         }
-        LearningWrite::RunOutcome { outcome } => {
-            outcome
-                .check(run_credit::DEFAULT_RUN_MAX_STEPS)
-                .map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.detail))?;
-            Err(invalid(
-                "run credit is not served until MEDULLA-DECISION-ENGINE-R100.102.3",
-            ))
-        }
+        LearningWrite::RunOutcome { outcome } => Ok(LearningRecorded::Run(Box::new(record_run(
+            ctx, reader, *outcome,
+        )?))),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

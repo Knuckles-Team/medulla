@@ -73,3 +73,21 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
   resolution kind `Optimization`.
 - An unreadable schema or graph is `TOPOLOGY_SCHEMA_UNAVAILABLE`; a template that cannot answer is an abstention
   with `AbstainReason::Infeasible` or `BudgetExhausted`.
+
+## Run credit (R100.102)
+
+`DecisionLog` `Learn` with a `RunOutcome` credits a delegated run. Decisions:
+
+- Cited rows count as positives and uncited returned rows as hard negatives only when the run succeeded. A failed
+  run's citations are not evidence of relevance (the same rule as the retrieval verdict: nothing is learned from a
+  run that was not a success), but its steps are still credited, because the reward is the caller's own judgement of
+  each step.
+- A step's `baseline_revision` is the revision of the baseline its advantage was measured against, read before the
+  update; a capability with no stored baseline reads revision 0.
+- Baseline revisions are stored with an inverted revision (`u32::MAX - revision`) in the key, so the head is one page
+  read however many revisions exist. The receipt and every revision commit in one atomic batch; a writer that lost a
+  concurrent revision retries once against the new head.
+- The receipt carries `outcome_digest` so a replay compares content without a second row, and its evidence premises.
+- Feedback events for the document-boost store (federated-query R705.3) are derived from the stored run receipts by
+  that store, not appended by `record_run`: the run write stays one atomic batch inside the decision artifact store
+  and the decision-engine handler takes no dependency on the retrieval crate.

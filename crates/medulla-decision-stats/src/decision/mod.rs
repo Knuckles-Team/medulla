@@ -48,6 +48,7 @@ pub mod rapid_r083;
 pub mod refusal;
 pub mod replay;
 pub mod retrieval;
+pub mod run_credit;
 pub mod scorer;
 mod targets;
 pub mod thought_search;

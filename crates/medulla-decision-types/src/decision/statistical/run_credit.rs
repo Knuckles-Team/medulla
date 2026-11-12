@@ -39,15 +39,31 @@ pub const REFUSALS: &[RefusalCode] = &[
     RUN_STEPS_TOO_MANY,
 ];
 
-/// The `run_credit.*` knobs this model reads.
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "run_credit.max_steps",
-    unit: "steps",
-    default: KnobValue::Integer(DEFAULT_RUN_MAX_STEPS as i64),
-    min: KnobValue::Integer(16),
-    max: KnobValue::Integer(MAX_RUN_STEPS_TYPE as i64),
-    safety: KnobSafety::Tunable,
-}];
+/// The `run_credit.*` knobs this model reads: `max_steps` then `baseline_weight`.
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "run_credit.max_steps",
+        unit: "steps",
+        default: KnobValue::Integer(DEFAULT_RUN_MAX_STEPS as i64),
+        min: KnobValue::Integer(16),
+        max: KnobValue::Integer(MAX_RUN_STEPS_TYPE as i64),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "run_credit.baseline_weight",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(100_000),
+        min: KnobValue::DecimalMicros(10_000),
+        max: KnobValue::DecimalMicros(500_000),
+        safety: KnobSafety::Tunable,
+    },
+];
+
+/// The baseline weight in Q16 (`round(micros * 65536 / 1e6)`), the integer the
+/// credit kernel receives.
+pub fn baseline_weight_q16(micros: i64) -> i64 {
+    (micros * 65_536 + 500_000) / 1_000_000
+}
 
 /// Why a run outcome was refused: a registered code and a detail naming it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,6 +107,39 @@ pub struct RunOutcome {
     pub success: bool,
     #[serde(default)]
     pub steps: BoundedVec<StepRecord, MAX_RUN_STEPS_TYPE>,
+}
+
+/// The credit one step earned: its advantage over the capability baseline read
+/// before the update, and the revision of that baseline.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StepCredit {
+    pub step_idx: u32,
+    pub advantage_q16: i32,
+    /// The revision of the baseline the advantage was measured against
+    /// (0 when the capability had none).
+    pub baseline_revision: u32,
+}
+
+/// What `record_run` stored for one run (MEDULLA-DECISION-ENGINE-R100.102.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RunCreditReceipt {
+    pub run_id: String,
+    pub decision_ids: BoundedVec<String, MAX_RUN_DECISIONS>,
+    /// SHA-256 of the recorded outcome: a replay compares it.
+    pub outcome_digest: String,
+    pub positive_count: u32,
+    pub negative_count: u32,
+    #[serde(default)]
+    pub steps: BoundedVec<StepCredit, MAX_RUN_STEPS_TYPE>,
+    /// The evidence premises: `run:<run_id>`, `run:positives=<n>`,
+    /// `run:negatives=<n>` and `knob:run_credit.baseline_weight=<value>`.
+    pub premises: BoundedVec<String, 4>,
+    /// SHA-256 of the receipt with this field empty: 64 lowercase hex.
+    pub receipt_digest: String,
 }
 
 /// Whether `text` is a SHA-256 digest: 64 lowercase hex characters.
@@ -227,6 +276,12 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R100.102.1
     #[test]
     fn refusals_and_knob_are_registered() {
+        assert_eq!(baseline_weight_q16(100_000), 6_554);
+        assert_eq!(baseline_weight_q16(500_000), 32_768);
+        let weight = &KNOBS[1];
+        assert!(weight.admits(&weight.default));
+        assert!(!weight.admits(&KnobValue::DecimalMicros(9_999)));
+        assert!(!weight.admits(&KnobValue::DecimalMicros(500_001)));
         for code in REFUSALS {
             assert_eq!(codes::resolve(code.as_str()), Some(*code));
         }

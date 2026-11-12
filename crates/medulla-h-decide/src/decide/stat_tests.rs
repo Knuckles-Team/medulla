@@ -1074,6 +1074,9 @@ mod retrieval_plan_tests;
 mod learning_tests;
 
 #[cfg(feature = "query")]
+mod run_credit_tests;
+
+#[cfg(feature = "query")]
 mod evaluator_tests;
 // EH-523: the served per-component slate split.
 mod attribution_tests;
