@@ -41,6 +41,8 @@ const SHARED_ENGINE_ERRORS: &[&str] = &[
     "OPERATION_REDIRECTED",
 ];
 const SHARED_SERVER_ERRORS: &[&str] = &[
+    // Any graph read can meet a partly materialized graph (MEDULLA-OBSERVE-R001.1).
+    "PARTIAL_MATERIALIZATION",
     "AUTHENTICATION_REQUIRED",
     "BUSY",
     "CANCELLED",

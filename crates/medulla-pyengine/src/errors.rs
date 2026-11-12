@@ -34,13 +34,13 @@
 //! passes through `medulla_protocol_types::protocol::Response::err`, which keeps a
 //! `"CODE: detail"` prefix (or a bare code) only when `CODE` is one of the
 //! engine's *declared* refusal codes, and otherwise folds the whole thing
-//! into `INTERNAL` with a fixed `"unclassified engine refusal"` detail —
-//! discarding the original text rather than exposing an unregistered token,
+//! into `INTERNAL` with an `"unclassified engine refusal (cause-XXXXXXXX)"` detail —
+//! the original text stays in the server log under that cause reference rather than exposing an unregistered token,
 //! or something that merely looks like `RESULT_TOO_LARGE`, as if it were a
 //! real declared code. `_raise_send_error` in `client.py` then reads that
 //! already-normalized `error`/`error_detail` pair straight off the wire, so
 //! an uncoded refusal from the server is never a plain `RuntimeError` there
-//! — it is `EngineResponseError("INTERNAL", "unclassified engine refusal")`.
+//! — it is `EngineResponseError("INTERNAL", "unclassified engine refusal (cause-XXXXXXXX)")`.
 //! `map_engine_error` below calls that SAME `Response::err` (via
 //! `classify_engine_refusal`) rather than re-implementing its decision, so
 //! the embedded path cannot drift from it: an uncoded message, an
@@ -162,15 +162,24 @@ mod tests {
     //! exception type/code/detail parity across both transports is
     //! `tests/parity/test_parity_errors.py`.
     use super::classify_engine_refusal;
+    use medulla_protocol_types::protocol::CauseRef;
+
+    /// The wire pair an uncoded refusal `text` classifies to.
+    fn unclassified(text: &str) -> (String, Option<String>) {
+        (
+            "INTERNAL".to_string(),
+            Some(format!(
+                "unclassified engine refusal ({})",
+                CauseRef::of(text)
+            )),
+        )
+    }
 
     #[test]
     fn an_uncoded_message_normalizes_to_internal_unclassified() {
         assert_eq!(
             classify_engine_refusal("graph 'missing' not found".to_string()),
-            (
-                "INTERNAL".to_string(),
-                Some("unclassified engine refusal".to_string())
-            ),
+            unclassified("graph 'missing' not found"),
         );
     }
 
@@ -178,10 +187,7 @@ mod tests {
     fn an_unregistered_uppercase_token_is_not_treated_as_a_declared_code() {
         assert_eq!(
             classify_engine_refusal("NOT_A_REAL_CODE: boom".to_string()),
-            (
-                "INTERNAL".to_string(),
-                Some("unclassified engine refusal".to_string())
-            ),
+            unclassified("NOT_A_REAL_CODE: boom"),
         );
     }
 
@@ -189,10 +195,7 @@ mod tests {
     fn a_result_too_large_lookalike_is_not_the_real_refusal() {
         assert_eq!(
             classify_engine_refusal("RESULT_TOO_LARGEISH: not real".to_string()),
-            (
-                "INTERNAL".to_string(),
-                Some("unclassified engine refusal".to_string())
-            ),
+            unclassified("RESULT_TOO_LARGEISH: not real"),
         );
     }
 

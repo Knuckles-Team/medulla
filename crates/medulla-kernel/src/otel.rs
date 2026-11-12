@@ -39,17 +39,24 @@ pub fn init_tracing() -> Result<(), String> {
     init_fmt_only()
 }
 
-/// The engine's fmt subscriber (no target). Used whenever OTLP export is off
+/// The engine's fmt subscriber (module target shown, MEDULLA-OBSERVE-R002.1). Used whenever OTLP export is off
 /// (feature absent, endpoint unset, or exporter init failed). The level is INFO
 /// unless `RUST_LOG` names `target=level` directives, so an operator can read
 /// debug-level diagnostics (for example the text behind an unclassified refusal).
+fn fmt_layer<S>() -> tracing_subscriber::fmt::Layer<S>
+where
+    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    tracing_subscriber::fmt::layer().with_target(true)
+}
+
 fn init_fmt_only() -> Result<(), String> {
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
 
     tracing_subscriber::registry()
         .with(log_filter())
-        .with(tracing_subscriber::fmt::layer().with_target(false))
+        .with(fmt_layer())
         .try_init()
         .map_err(|error| format!("tracing subscriber initialization failed: {error}"))
 }
@@ -104,7 +111,7 @@ fn init_with_otel(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     opentelemetry::global::set_tracer_provider(provider);
 
     let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-    let fmt_layer = tracing_subscriber::fmt::layer().with_target(false);
+    let fmt_layer = fmt_layer();
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::filter::LevelFilter::INFO)
@@ -116,8 +123,10 @@ fn init_with_otel(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod log_filter_tests {
-    use super::parse_log_filter;
+    use super::{fmt_layer, parse_log_filter};
+    use std::sync::{Arc, Mutex};
     use tracing::Level;
+    use tracing_subscriber::layer::SubscriberExt;
 
     #[test]
     fn rust_log_directives_raise_one_target_and_default_to_info() {
@@ -127,5 +136,42 @@ mod log_filter_tests {
         let raised = parse_log_filter(Some("info,medulla_types::response=debug"));
         assert!(raised.would_enable("medulla_types::response", &Level::DEBUG));
         assert!(!raised.would_enable("other", &Level::DEBUG));
+    }
+
+    #[derive(Clone, Default)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+
+    impl std::io::Write for Capture {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Capture {
+        type Writer = Capture;
+        fn make_writer(&'a self) -> Capture {
+            self.clone()
+        }
+    }
+
+    // spec: MEDULLA-OBSERVE-R002.1
+    #[test]
+    fn module_filter_matches_the_logging_module_line() {
+        let capture = Capture::default();
+        let subscriber = tracing_subscriber::registry()
+            .with(parse_log_filter(Some("info,medulla::request=debug")))
+            .with(fmt_layer().with_writer(capture.clone()).with_ansi(false));
+        tracing::subscriber::with_default(subscriber, || {
+            tracing::debug!(target: "medulla::request", "matched line");
+            tracing::debug!(target: "medulla::other", "filtered line");
+        });
+        let text = String::from_utf8(capture.0.lock().unwrap().clone()).unwrap();
+        assert!(text.contains("medulla::request"), "{text}");
+        assert!(text.contains("matched line"), "{text}");
+        assert!(!text.contains("filtered line"), "{text}");
     }
 }

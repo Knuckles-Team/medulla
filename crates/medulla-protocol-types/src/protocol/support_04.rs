@@ -122,6 +122,38 @@ pub struct Response {
     pub error_detail: Option<String>,
 }
 
+/// The fixed head of the detail that an uncoded refusal carries on the wire.
+pub const UNCLASSIFIED_DETAIL: &str = "unclassified engine refusal";
+
+/// Count of uncoded refusals this process reported as `INTERNAL`. The served-test
+/// harness reads it to fail a test that collapsed a typed refusal
+/// (MEDULLA-OBSERVE-R001.3).
+pub static UNCLASSIFIED_REFUSALS: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
+
+/// A short, stable reference that ties a wire `INTERNAL` to the one WARN log
+/// line holding the full refusal text (MEDULLA-OBSERVE-R001.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CauseRef(u32);
+
+impl CauseRef {
+    /// The reference of `text`: the low 32 bits of its FNV-1a hash.
+    pub fn of(text: &str) -> Self {
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for byte in text.bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        Self((hash ^ (hash >> 32)) as u32)
+    }
+}
+
+impl std::fmt::Display for CauseRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "cause-{:08x}", self.0)
+    }
+}
+
 impl Response {
     /// Create a successful response.
     pub fn ok(id: u64, result: impl IntoResponsePayload) -> Self {
@@ -145,12 +177,15 @@ impl Response {
             }
             _ if crate::error_registry::declared_error_code(&text) => (text, None),
             _ => {
-                // The wire never carries uncoded text (it may name request values);
-                // keep it diagnosable for operators at debug level instead of
-                // dropping it silently (spec: MEDULLA-DURABLE-KERNEL-R043.8).
-                tracing::debug!(
-                    target: "medulla_types::response",
+                // The wire never carries uncoded text (it may name request values).
+                // The full text stays in the operator log, tied to the wire answer
+                // by a cause reference (MEDULLA-OBSERVE-R001.2).
+                let cause = CauseRef::of(&text);
+                UNCLASSIFIED_REFUSALS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                tracing::warn!(
+                    target: "medulla::refusal",
                     request_id = id,
+                    cause_ref = %cause,
                     refusal = %text,
                     "unclassified engine refusal reported as INTERNAL"
                 );
@@ -158,7 +193,7 @@ impl Response {
                     medulla_types::contract::ServerErrorCode::Internal
                         .as_str()
                         .to_string(),
-                    Some("unclassified engine refusal".to_string()),
+                    Some(format!("{UNCLASSIFIED_DETAIL} ({cause})")),
                 )
             }
         };
