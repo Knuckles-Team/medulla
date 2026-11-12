@@ -280,7 +280,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T274 [US4] MEDULLA-DECISION-ENGINE-R100.101.3 Grounded evaluation wiring, scorer isolation and evidence
 - [ ] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
 - [ ] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
-- [ ] T277 [US1] MEDULLA-DECISION-ENGINE-R001.101.1 DecisionFamily trait and registry
+- [x] T277 [US1] MEDULLA-DECISION-ENGINE-R001.101.1 DecisionFamily trait and registry
 - [ ] T278 [US1] MEDULLA-DECISION-ENGINE-R001.101.2 Route decide_blocking through the registry
 - [ ] T279 [US1] MEDULLA-DECISION-ENGINE-R001.101.3 Route AgentAssemble and DecideText through the registry
 - [ ] T280 [US1] MEDULLA-DECISION-ENGINE-R001.101.4 Family template for new roots
