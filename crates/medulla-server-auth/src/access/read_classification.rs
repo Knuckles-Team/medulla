@@ -605,6 +605,9 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_VIZ_CARRIER_SCOPED
     ("Viz", REASON_VIZ_CARRIER_SCOPED),
     // REASON_TENANT_KEY_SCOPED_SERIES
+    // MEDULLA-UNIFIED-DATA-PLANE-R764.8: reads only the usage series of the caller's own
+    // tenant and graph key; no graph row.
+    ("CatalogUsage", REASON_TENANT_KEY_SCOPED_SERIES),
     ("TsAsofJoin", REASON_TENANT_KEY_SCOPED_SERIES),
     ("TsGapFill", REASON_TENANT_KEY_SCOPED_SERIES),
     ("TsListSeries", REASON_TENANT_KEY_SCOPED_SERIES),

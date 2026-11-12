@@ -36,6 +36,25 @@ pub(super) async fn execute_claim(
                 min_confidence,
                 algorithm,
             } => (transactions, min_support, min_confidence, algorithm),
+            JobKind::SourceQueryLogIngest {
+                source,
+                owner_scope,
+                tenant_scope,
+            } => {
+                return execute_query_log_claim(
+                    state,
+                    store,
+                    &claim.job,
+                    &worker_ref,
+                    epoch,
+                    QueryLogTarget {
+                        source,
+                        owner_scope,
+                        tenant_scope,
+                    },
+                )
+                .await;
+            }
             #[cfg(feature = "program-optimization")]
             JobKind::ProgramOptimize { request_msgpack } => {
                 return execute_program_claim(

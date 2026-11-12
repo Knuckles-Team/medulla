@@ -70,6 +70,12 @@ impl KernelMetrics {
         self.asset_usage_dropped.inc();
     }
 
+    /// Count `count` source query log statements that did not parse
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R764.7).
+    pub fn query_log_unparsed(&self, count: u64) {
+        self.query_log_unparsed.inc_by(count);
+    }
+
     /// Record one request admitted by the QoS gate in priority class `class` (W2.4):
     /// bumps the per-class admit counter and the per-class in-flight gauge (released by
     /// `qos_dispatch_finished`).

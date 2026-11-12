@@ -25,7 +25,7 @@ fn mapped_transactions(raw: Vec<Vec<String>>) -> Vec<Vec<String>> {
             .expect("31 distinct fixture labels, including repetitions, must be accepted");
     match kind {
         JobKind::MineAssociate { transactions, .. } => transactions,
-        JobKind::ProgramOptimize { .. } => panic!("expected association job"),
+        _ => panic!("expected association job"),
     }
 }
 

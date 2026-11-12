@@ -17,6 +17,9 @@ pub mod mysql_introspect;
 pub mod pg_introspect;
 /// Statement parsing and referenced-table analysis on the shared parser
 /// (MEDULLA-UNIFIED-DATA-PLANE-R763.2, R764.3.1).
+/// Query logs of attached SQL sources (MEDULLA-UNIFIED-DATA-PLANE-R764.7).
+#[cfg(feature = "federation-sql")]
+pub mod source_query_log;
 #[cfg(feature = "federation-sql")]
 pub mod sql_analysis;
 // MEDULLA-UNIFIED-DATA-PLANE-R007 — named pushdown operations and a dialect's

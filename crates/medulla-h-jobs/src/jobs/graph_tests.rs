@@ -205,7 +205,7 @@ mod mine_associate_submission_tests {
                             31
                         );
                     }
-                    JobKind::ProgramOptimize { .. } => panic!("expected association job"),
+                    _ => panic!("expected association job"),
                 }
             } else {
                 let response = outcome.expect_err("one item above the cap must be refused");
@@ -237,7 +237,7 @@ mod mine_associate_submission_tests {
                 assert!(transactions[0][0].starts_with("eg:analytics_item:"));
                 assert_ne!(transactions[0][0], "raw-label");
             }
-            JobKind::ProgramOptimize { .. } => panic!("expected association job"),
+            _ => panic!("expected association job"),
         }
     }
 }

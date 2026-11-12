@@ -363,6 +363,33 @@ pub(super) fn submit_job_mine_associate(
     ))
 }
 
+/// The `JobKind::SourceQueryLogIngest` arm of [`handle_submit`]'s kind-governance match: the
+/// client names the source; the owner and tenant scopes are the verified caller's, replacing
+/// anything the request carried.
+pub(super) fn submit_job_source_query_log(
+    authority: &CarrierAuthority,
+    req_id: u64,
+    source: String,
+) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    if source.trim().is_empty() || source.len() > 256 {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: the source name must be 1 to 256 characters",
+        ));
+    }
+    let params = serde_json::json!({ "source": source });
+    Ok((
+        JobKind::SourceQueryLogIngest {
+            source,
+            owner_scope: authority.owner_scope().to_string(),
+            tenant_scope: authority.tenant_scope().to_string(),
+        },
+        "usage.query_log".to_string(),
+        "source_query_log".to_string(),
+        params,
+    ))
+}
+
 /// The `JobKind::ProgramOptimize` arm of [`handle_submit`]'s kind-governance
 /// match: bounded-decode the request, rebind its policy to the verified
 /// caller, re-encode it, and ensure the native capability is required.

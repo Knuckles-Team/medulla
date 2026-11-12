@@ -44,6 +44,100 @@ pub fn usage_series_name(base: &str, principal: &str, asset: &str) -> String {
     format!("{base}|principal={principal}|asset={asset}")
 }
 
+/// The `medulla-tsdb` series counting joins of one asset with another by one principal.
+pub const ASSET_USAGE_JOIN_SERIES: &str = "asset_usage.join";
+/// The `medulla-tsdb` series counting filters on one column of an asset by one principal.
+pub const ASSET_USAGE_FILTER_SERIES: &str = "asset_usage.filter";
+
+/// An integer knob of the catalog usage family: name, default, inclusive bounds, environment
+/// override. `value` reads the environment and falls back to the default outside the bounds.
+#[derive(Clone, Copy, Debug)]
+pub struct UsageKnob {
+    pub name: &'static str,
+    pub default: u64,
+    pub range: (u64, u64),
+    pub env: &'static str,
+}
+
+impl UsageKnob {
+    /// The effective value of the knob.
+    pub fn value(&self) -> u64 {
+        std::env::var(self.env)
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u64>().ok())
+            .filter(|n| (self.range.0..=self.range.1).contains(n))
+            .unwrap_or(self.default)
+    }
+}
+
+/// `knob catalog_usage.log_batch`: statements read from a source query log per run.
+pub const CATALOG_USAGE_LOG_BATCH: UsageKnob = UsageKnob {
+    name: "catalog_usage.log_batch",
+    default: 1000,
+    range: (10, 100_000),
+    env: "MEDULLA_CATALOG_USAGE_LOG_BATCH",
+};
+/// `knob catalog_usage.log_interval`: seconds between source query log runs.
+pub const CATALOG_USAGE_LOG_INTERVAL: UsageKnob = UsageKnob {
+    name: "catalog_usage.log_interval",
+    default: 3600,
+    range: (60, 86_400),
+    env: "MEDULLA_CATALOG_USAGE_LOG_INTERVAL_S",
+};
+/// `knob catalog_usage.top_n`: entries in each `CatalogUsage` answer when the request names none.
+pub const CATALOG_USAGE_TOP_N: UsageKnob = UsageKnob {
+    name: "catalog_usage.top_n",
+    default: 5,
+    range: (1, 50),
+    env: "MEDULLA_CATALOG_USAGE_TOP_N",
+};
+/// `knob catalog_usage.suggestion_min_count`: uses a join or filter needs to be suggested.
+pub const CATALOG_USAGE_SUGGESTION_MIN_COUNT: UsageKnob = UsageKnob {
+    name: "catalog_usage.suggestion_min_count",
+    default: 3,
+    range: (1, 1000),
+    env: "MEDULLA_CATALOG_USAGE_SUGGESTION_MIN_COUNT",
+};
+
+/// Scope that lets a caller see which principals use an asset.
+pub const CATALOG_USAGE_PRINCIPALS_SCOPE: &str = "catalog:usage:principals";
+
+/// The tsdb series name of one join: the tags are principal, asset and the joined asset.
+pub fn usage_join_series_name(principal: &str, asset: &str, with: &str) -> String {
+    format!("{ASSET_USAGE_JOIN_SERIES}|principal={principal}|asset={asset}|with={with}")
+}
+
+/// The tsdb series name of one filter: the tags are principal, asset and the filtered column.
+pub fn usage_filter_series_name(principal: &str, asset: &str, column: &str) -> String {
+    format!("{ASSET_USAGE_FILTER_SERIES}|principal={principal}|asset={asset}|column={column}")
+}
+
+/// One principal that reads an asset, most reads first. `principal` is null for a caller
+/// without scope `catalog:usage:principals`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FrequentUser {
+    pub principal: Option<String>,
+    pub reads: u64,
+}
+
+/// One suggested join or filter of an asset.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UsageSuggestion {
+    /// `join` or `filter`.
+    pub kind: String,
+    /// The joined asset for a join, the column for a filter.
+    pub target: String,
+    pub count: u64,
+}
+
+/// The answer of `Method::CatalogUsage`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CatalogUsageAnswer {
+    pub asset: String,
+    pub frequent_users: Vec<FrequentUser>,
+    pub suggestions: Vec<UsageSuggestion>,
+}
+
 /// The score components of one hit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct HitComponents {

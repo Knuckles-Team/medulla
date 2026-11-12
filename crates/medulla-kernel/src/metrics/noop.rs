@@ -12,6 +12,7 @@ impl KernelMetrics {
     pub fn read_reserved_admitted(&self) {}
     pub fn dispatch_deadline_exceeded(&self) {}
     pub fn asset_usage_dropped(&self) {}
+    pub fn query_log_unparsed(&self, _count: u64) {}
     pub fn qos_admitted(&self, _class: &str) {}
     pub fn qos_shed(&self, _class: &str, _reason: &str) {}
     pub fn write_conflict(&self, _strategy: &str, _winner: &str) {}

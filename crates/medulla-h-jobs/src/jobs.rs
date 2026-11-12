@@ -83,6 +83,7 @@ mod association_hash_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
+mod executor_query_log;
 // The `DatasetProfile` claim arm (MEDULLA-UNIFIED-DATA-PLANE-R761.3) is its caller.
 #[cfg_attr(not(test), allow(dead_code))]
 mod executor_profile;
@@ -131,6 +132,7 @@ use core::{
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
+use executor_query_log::*;
 #[cfg(feature = "program-optimization")]
 use executor_program::*;
 use helpers::*;
@@ -496,6 +498,8 @@ fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
         // `jobs` always compiles the variant in; built or refused, it reads
         // no rows.
         JobKind::ProgramOptimize { .. } => false,
+        // The log is read from the attached source by the worker, never from graph rows.
+        JobKind::SourceQueryLogIngest { .. } => false,
     }
 }
 
@@ -667,6 +671,9 @@ pub fn govern_job_kind(
             min_confidence,
             algorithm,
         ),
+        JobKind::SourceQueryLogIngest { source, .. } => {
+            submit_job_source_query_log(authority, req_id, source)
+        }
         #[cfg(feature = "program-optimization")]
         JobKind::ProgramOptimize { request_msgpack } => submit_job_program_optimize(
             authority,

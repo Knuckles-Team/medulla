@@ -207,6 +207,15 @@ $($variants)*
     ColumnLineage {
         op: Box<medulla_catalog_types::lineage::ColumnLineageOp>,
     },
+    /// MEDULLA-UNIFIED-DATA-PLANE-R764.8: the frequent users of one asset and the joins and
+    /// filters common on it, from usage the engine recorded itself. Read only. Refuses
+    /// `CATALOG_ASSET_NOT_FOUND` (also for an asset the caller cannot read) and
+    /// `CATALOG_LIMIT_INVALID`.
+    CatalogUsage {
+        asset: String,
+        #[serde(default)]
+        top_n: Option<u32>,
+    },
     // ── Software lifecycle records (MEDULLA-SDLC-R002.3) ────────────────────
     /// Record one published release of a repository: a sealed `Release` node
     /// and a `contains` edge to each changeset after the repository's previous

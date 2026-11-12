@@ -62,6 +62,12 @@ const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
          is read from `core`",
     ),
     (
+        "SourceQueryLogIngest",
+        "names one registered source; the worker reads that source's own query \
+         log and writes time-series usage points -- no node/edge property is \
+         read from `core`",
+    ),
+    (
         "ProgramOptimize",
         "submits an opaque OptimizationRequest; the actual optimization work \
          is claimed and executed later by a REMOTE worker under its OWN \
@@ -84,7 +90,7 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
     // Every kind this build actually ships must be classified -- an
     // undocumented variant is the hard failure, mirroring
     // `medulla_server::access::read_rls_coverage_tests`'s UNDOCUMENTED gate.
-    let shipped: &[&str] = &["MineAssociate", "ProgramOptimize"];
+    let shipped: &[&str] = &["MineAssociate", "ProgramOptimize", "SourceQueryLogIngest"];
     let undocumented: Vec<&str> = shipped
         .iter()
         .copied()
@@ -113,6 +119,15 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
          NON_ROW_SCOPED_JOB_KINDS entry (or move it to a routed bucket) and \
          verify handle_submit actually projects the row through \
          GraphReadAuthority before this assertion changes"
+    );
+    assert!(
+        !reads_graph_rows_server_side(&JobKind::SourceQueryLogIngest {
+            source: "orders-db".to_string(),
+            owner_scope: String::new(),
+            tenant_scope: String::new(),
+        }),
+        "SourceQueryLogIngest flipped to graph-row-reading -- see the MineAssociate \
+         assertion above for what must happen before this test may change"
     );
     assert!(
         !reads_graph_rows_server_side(&JobKind::ProgramOptimize {

@@ -545,6 +545,15 @@ impl ForeignSourceCatalog {
         }
     }
 
+    /// The DSN of `owner_scope`'s SQL source `name`, for the source query log reader
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R764.7). Other source kinds have none.
+    pub fn sql_source_dsn(&self, owner_scope: &str, name: &str) -> Option<String> {
+        match self.spec_for_probe(owner_scope, name)? {
+            ForeignSourceSpec::Sql { dsn, .. } => Some(dsn),
+            _ => None,
+        }
+    }
+
     /// The DSN of a MySQL-family source, if `spec` is one.
     fn mysql_family_dsn(spec: &ForeignSourceSpec) -> Option<&str> {
         match spec {

@@ -230,6 +230,17 @@ pub enum JobKind {
         #[serde(default = "default_algorithm")]
         algorithm: String,
     },
+    /// Read the query log of one attached SQL source and record the asset usage it shows
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R764.7). The client names only the source; the verified
+    /// owner and tenant scopes are stamped by the server at submit and a client value is
+    /// replaced.
+    SourceQueryLogIngest {
+        source: String,
+        #[serde(default)]
+        owner_scope: String,
+        #[serde(default)]
+        tenant_scope: String,
+    },
     /// Governed graph-native program compilation. The nested MessagePack is a
     /// versioned `medulla_program::OptimizationRequest`; `medulla-types` remains the bottom
     /// of the crate DAG and the server decodes/rebinds it at the verified boundary.

@@ -289,3 +289,11 @@ none
 ## Catalog probe (R014.2.2, R014.2.3)
 
 Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.
+
+### Usage from source query logs and the usage answer (R764.7, R764.8)
+
+`SourceQueryLogIngest` is an analytics job kind. Its claim runs `run_query_log_ingest`
+(`medulla-server-ops`), which reads the source log through `SourceQueryLog`, tallies reads, joins
+and filters on the shared parser and appends `asset_usage.*` points. `Method::CatalogUsage` is a
+read-only query-family method answered by `handle_usage` from those series; see research.md for
+the cursor, scope-stamping and refusal decisions.

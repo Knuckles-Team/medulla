@@ -67,6 +67,8 @@ method_results! {
     CorpusRetrieve(CorpusRetrieve) => Raw<medulla_types::corpus_retrieval::CorpusResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
+    CatalogUsage(CatalogUsage) => Raw<medulla_types::asset_usage::CatalogUsageAnswer>;
     #[cfg(feature = "query")]
     ExplainPlan(ExplainPlan) => Raw<ExplainPlanResult>;
     ExplainProvenance(ExplainProvenance) => Raw<EvidenceBundle>;

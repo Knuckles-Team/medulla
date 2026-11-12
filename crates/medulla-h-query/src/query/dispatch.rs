@@ -94,6 +94,10 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     let method = match method {
         Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op).await),
+        // MEDULLA-UNIFIED-DATA-PLANE-R764.8: reads the usage series of the caller's own scope.
+        Method::CatalogUsage { asset, top_n } => {
+            return Ok(super::catalog_search::handle_usage(hctx, asset, top_n).await)
+        }
         other => other,
     };
     // MEDULLA-FEDERATED-QUERY-R650.3: one bundle compile over the caller's projected core.

@@ -158,6 +158,8 @@ pub(crate) use sql_read::*;
 #[cfg(feature = "query")]
 mod asset_usage;
 #[cfg(feature = "query")]
+mod catalog_search;
+#[cfg(feature = "query")]
 mod column_lineage;
 #[cfg(feature = "query")]
 mod context_compile;
