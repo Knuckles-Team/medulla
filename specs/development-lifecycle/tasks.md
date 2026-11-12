@@ -71,7 +71,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T064 [US2] MEDULLA-SDLC-R014.2 Incremental ingest by file digest.
 - [ ] T065 [US2] MEDULLA-SDLC-R014.3 Records link to code items and commits.
 - [ ] T066 [US2] MEDULLA-SDLC-R014.4 Contracts form the seam graph.
-- [ ] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
+- [x] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
 - [ ] T068 [US2] MEDULLA-SDLC-R014.6 Competency questions over the artifact graph.
 - [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plans are first-class records.
 - [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
@@ -131,7 +131,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T128 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
 - [ ] T129 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
 - [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items. Size: M, 2 PRs, 6 hours.
-- [ ] T131 [US1] MEDULLA-SDLC-R014.10 Row-level spec vocabulary in the SDD ontology.
+- [x] T131 [US1] MEDULLA-SDLC-R014.10 Row-level spec vocabulary in the SDD ontology.
 - [ ] T132 [US1] MEDULLA-SDLC-R014.11 SHACL shapes mirror the spec-standard row checks.
 - [ ] T133 [US1] MEDULLA-SDLC-R014.12 Ingest every repository's specs and `Spec:` history.
 - [ ] T134 [US1] MEDULLA-SDLC-R014.13 Spec intelligence report: overlap clusters and shape discrepancies.

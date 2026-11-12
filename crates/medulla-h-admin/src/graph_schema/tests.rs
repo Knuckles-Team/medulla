@@ -54,7 +54,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             _ => None,
         })
         .collect();
-    // The listing reports the exact immutable catalog of 63 core sources (the state-machine vocabulary and its shapes included).
+    // The listing reports the exact immutable catalog of 64 core sources (the state-machine vocabulary and its shapes included).
     // Ten sources own both document kinds; every other source owns exactly
     // one document kind. `core:sdd@1` gained its shapes document with the
     // SDLC lifecycle kinds/edges/shapes model (ef517a72c), and the placement
@@ -63,7 +63,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 63);
+    assert_eq!(core_ids.len(), 64);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -78,7 +78,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.ontology_sha256.is_some())
             .count(),
-        49
+        50
     );
     assert_eq!(
         initial

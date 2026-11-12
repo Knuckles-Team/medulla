@@ -1,0 +1,101 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sddspec: <http://knuckles.team/kg/sdd-spec#> .
+@prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# Spec-driven development pack (MEDULLA-SDLC-R014.5). Every class extends a
+# class that already rolls up to the core foundation; this document does not
+# import the core document. A class without a core parent is refused with
+# PACK_CLASS_UNROOTED (`refuse_unrooted_pack_classes`).
+
+<http://knuckles.team/kg/sdd-spec> a owl:Ontology ;
+    rdfs:label "Spec-driven development pack" ;
+    rdfs:comment "Classes and properties of the spec artifact graph: specs, rows, plan sections, tasks, contracts, checklist items, principles, goals, proposals, phases, release bundles and project modes." .
+
+sddspec:Spec a owl:Class ;
+    rdfs:label "Spec" ;
+    rdfs:comment "One feature spec directory: its requirements, plan, test spec and tasks." ;
+    rdfs:subClassOf :Specification .
+
+sddspec:Requirement a owl:Class ;
+    rdfs:label "Spec requirement" ;
+    rdfs:comment "One row of a spec requirements table." ;
+    rdfs:subClassOf :Requirement .
+
+sddspec:PlanSection a owl:Class ;
+    rdfs:label "Plan section" ;
+    rdfs:comment "One heading-delimited section of a plan." ;
+    rdfs:subClassOf :Specification .
+
+sddspec:Task a owl:Class ;
+    rdfs:label "Spec task" ;
+    rdfs:comment "One task line of a tasks file: T-id, parallel flag, story, row reference and ticked state." ;
+    rdfs:subClassOf bfo:0000031 .
+
+sddspec:Contract a owl:Class ;
+    rdfs:label "Seam contract" ;
+    rdfs:comment "One hand-written cross-repository contract file: provider, consumer, wire shape, refusal codes." ;
+    rdfs:subClassOf :Specification .
+
+sddspec:ChecklistItem a owl:Class ;
+    rdfs:label "Checklist item" ;
+    rdfs:comment "One line of a spec checklist." ;
+    rdfs:subClassOf :Specification .
+
+sddspec:ConstitutionPrinciple a owl:Class ;
+    rdfs:label "Constitution principle" ;
+    rdfs:comment "One article of a repository constitution." ;
+    rdfs:subClassOf :Principle .
+
+sddspec:Goal a owl:Class ;
+    rdfs:label "Spec goal" ;
+    rdfs:comment "A goal that rows and bundles target." ;
+    rdfs:subClassOf :Goal .
+
+sddspec:Proposal a owl:Class ;
+    rdfs:label "Spec proposal" ;
+    rdfs:comment "A proposed change before it becomes rows." ;
+    rdfs:subClassOf :Specification .
+
+sddspec:Phase a owl:Class ;
+    rdfs:label "Spec phase" ;
+    rdfs:comment "A delivery phase that rows serve." ;
+    rdfs:subClassOf :Phase .
+
+sddspec:ReleaseBundle a owl:Class ;
+    rdfs:label "Release bundle" ;
+    rdfs:comment "A set of rows that ship together." ;
+    rdfs:subClassOf bfo:0000031 .
+
+sddspec:ProjectMode a owl:Class ;
+    rdfs:label "Project mode" ;
+    rdfs:comment "The delivery mode a project runs in." ;
+    rdfs:subClassOf bfo:0000031 .
+
+sddspec:dependsOn a owl:ObjectProperty ;
+    rdfs:label "depends on" ;
+    rdfs:comment "Links a spec record to a record it needs first." ;
+    rdfs:domain :Specification ;
+    rdfs:range :Specification .
+
+sddspec:crossesSeam a owl:ObjectProperty ;
+    rdfs:label "crosses seam" ;
+    rdfs:comment "Links a spec record to the Contract that owns the seam it touches." ;
+    rdfs:range sddspec:Contract .
+
+sddspec:servesPhase a owl:ObjectProperty ;
+    rdfs:label "serves phase" ;
+    rdfs:range sddspec:Phase .
+
+sddspec:governedBy a owl:ObjectProperty ;
+    rdfs:label "governed by" ;
+    rdfs:range sddspec:ConstitutionPrinciple .
+
+sddspec:inBundle a owl:ObjectProperty ;
+    rdfs:label "in bundle" ;
+    rdfs:range sddspec:ReleaseBundle .
+
+sddspec:targetsGoal a owl:ObjectProperty ;
+    rdfs:label "targets goal" ;
+    rdfs:range sddspec:Goal .

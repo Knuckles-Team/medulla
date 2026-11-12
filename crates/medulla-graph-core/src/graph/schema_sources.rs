@@ -1169,6 +1169,16 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: Some(include_str!("../../../medulla-core/ontology/sdd-v1.ttl")),
         },
+        // MEDULLA-SDLC-R014.5: the spec-driven development pack. Every class
+        // extends a core class; the document imports nothing.
+        CoreSpec {
+            module: "sdd_spec",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/sdd-spec-v1.ttl"
+            )),
+        },
         CoreSpec {
             module: "sdlc_lifecycle",
             version: 1,
@@ -1494,7 +1504,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 64);
+        assert_eq!(sources.core.len(), 65);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1919,6 +1929,10 @@ mod tests {
             (
                 "retrieval",
                 "309b0997e30f6f88ac04e7d0c042484baa602bd20d50cb8b755ef1d45d165c17",
+            ),
+            (
+                "sdd_spec",
+                "79e01851871a9c5090073cc5c48a69ccc650533a0e305bcafb5ae5c315c3c138",
             ),
             (
                 "sdlc_lifecycle",
