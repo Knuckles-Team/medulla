@@ -1,0 +1,18 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Two workstreams: the caller's (alice) with two harness sessions, and bob's.
+:wsAlice a :Workstream ; :principal "alice" ; :tenant "t1" ;
+    :workspace_digest "sha256:aaaa" ; :opened_at_ms 1000 ; :last_active_ms 9000 .
+:wsBob a :Workstream ; :principal "bob" ; :tenant "t1" ;
+    :workspace_digest "sha256:bbbb" ; :opened_at_ms 1500 ; :last_active_ms 2500 .
+
+# The attachedTo edge properties (harness, attach time) are held on the session
+# node in this fixture graph; the checkpoint turn is the last checkpoint written.
+:sessLater a :ClientSession ; :principal "alice" ; :tenant "t1" ; :session_id "s-later" ;
+    :attachedTo :wsAlice ; :harness "codex" ; :attached_at_ms 5000 .
+:sessFirst a :ClientSession ; :principal "alice" ; :tenant "t1" ; :session_id "s-first" ;
+    :attachedTo :wsAlice ; :harness "claude-code" ; :attached_at_ms 1000 ;
+    :last_checkpoint_turn 7 .
+:sessBob a :ClientSession ; :principal "bob" ; :tenant "t1" ; :session_id "s-bob" ;
+    :attachedTo :wsBob ; :harness "claude-code" ; :attached_at_ms 1500 .

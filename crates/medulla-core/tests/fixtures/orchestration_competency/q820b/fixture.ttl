@@ -1,0 +1,22 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# Two content packages with versions.
+:pkgDoor a :ContentPackage ; rdfs:label "door-skills" ; owl:versionInfo "1.2.0" .
+:pkgOps a :ContentPackage ; rdfs:label "ops-skills" ; owl:versionInfo "0.9.1" .
+
+# The two door skills always reach every caller.
+:doorSearch a :Skill ; rdfs:label "door-search" ; dc:isPartOf :pkgDoor ; :doorSkill true .
+:doorAct a :Skill ; rdfs:label "door-act" ; dc:isPartOf :pkgDoor ; :doorSkill true .
+# An ordinary skill and an agent from the second package.
+:opsReview a :Skill ; rdfs:label "ops-review" ; dc:isPartOf :pkgOps .
+:opsAgent a :Agent ; rdfs:label "ops-agent" ; dc:isPartOf :pkgOps .
+# A restricted skill the caller may not read.
+:opsSecrets a :Skill ; rdfs:label "ops-secrets" ; dc:isPartOf :pkgOps ; :requiresRole :roleAdmin .
+
+:roleAdmin a :IdentityRole .
+:roleDev a :IdentityRole .
+:alice a :IdentityUser ; :hasRole :roleDev .
+:root a :IdentityUser ; :hasRole :roleAdmin .

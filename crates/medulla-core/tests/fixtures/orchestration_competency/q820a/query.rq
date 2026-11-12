@@ -1,0 +1,7 @@
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+SELECT ?session ?harness ?attached ?turn WHERE {
+  ?session a :ClientSession ; :attachedTo ?workstream ; :harness ?harness ; :attached_at_ms ?attached .
+  OPTIONAL { ?session :last_checkpoint_turn ?turn }
+  FILTER (?workstream = ?WORKSTREAM)
+}
+ORDER BY ?attached

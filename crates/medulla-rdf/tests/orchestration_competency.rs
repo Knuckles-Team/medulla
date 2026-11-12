@@ -552,3 +552,129 @@ fn q7_fixture_returns_expected_rows() {
 fn q7_answers_with_provenance() {
     assert_answers_with_provenance(7);
 }
+
+// ---- Q820a / Q820b: coding harness competency questions ----------------------
+
+const IDENTITY: &str = include_str!("../../medulla-core/ontology/identity-v1.ttl");
+
+const Q820A_FIXTURE: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820a/fixture.ttl");
+const Q820A_QUERY: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820a/query.rq");
+const Q820A_EXPECTED: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820a/expected.tsv");
+const Q820B_FIXTURE: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820b/fixture.ttl");
+const Q820B_QUERY: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820b/query.rq");
+const Q820B_EXPECTED: &str =
+    include_str!("../../medulla-core/tests/fixtures/orchestration_competency/q820b/expected.tsv");
+
+/// The workstream question answers only for its owner; anything else is the
+/// typed abstention, never an empty success.
+#[derive(Debug, PartialEq, Eq)]
+enum Abstention {
+    WorkstreamNotCallers,
+}
+
+fn harness_view(fixture: &str) -> GraphView {
+    let core = GraphCore::new();
+    let mut iris = IriStore::default();
+    load_triples(&core, &mut iris, "schema", parse_all(SCHEMA)).unwrap();
+    load_triples(&core, &mut iris, "identity", parse_all(&[IDENTITY])).unwrap();
+    load_triples(&core, &mut iris, "fixture", parse_turtle(fixture).unwrap()).unwrap();
+    core.analysis_snapshot()
+}
+
+/// A result cell as text: a literal's lexical form, an IRI's local name, `-` when unbound.
+fn cell_text(cell: &Option<String>) -> String {
+    let Some(value) = cell else {
+        return "-".to_string();
+    };
+    if let Some(rest) = value.strip_prefix('"') {
+        return rest.split('"').next().unwrap_or_default().to_string();
+    }
+    value
+        .trim_matches(|c| c == '<' || c == '>')
+        .rsplit(['#', '/', ':'])
+        .next()
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn select_rows(view: &GraphView, query: &str) -> Vec<Vec<String>> {
+    let QueryOutcome::Solutions(table) = outcome(view, query) else {
+        panic!("expected solutions");
+    };
+    table
+        .to_rows()
+        .1
+        .iter()
+        .map(|row| row.iter().map(cell_text).collect())
+        .collect()
+}
+
+/// The sessions attached to `workstream` for `caller`, in attach-time order.
+fn workstream_sessions(
+    view: &GraphView,
+    workstream: &str,
+    caller: &str,
+) -> Result<Vec<Vec<String>>, Abstention> {
+    if !ask(
+        view,
+        &format!(":{workstream} a :Workstream ; :principal \"{caller}\""),
+    ) {
+        return Err(Abstention::WorkstreamNotCallers);
+    }
+    let query = Q820A_QUERY.replace("?WORKSTREAM", &format!(":{workstream}"));
+    let mut rows = select_rows(view, &query);
+    rows.sort_by_key(|row| row[2].parse::<u64>().unwrap());
+    Ok(rows)
+}
+
+fn expected_tsv(text: &str) -> Vec<Vec<String>> {
+    text.lines()
+        .map(|line| line.split('\t').map(str::to_string).collect())
+        .collect()
+}
+
+// spec: MEDULLA-CQ-ORCH-R820.1
+#[test]
+fn q820_workstream_sessions_answer() {
+    let view = harness_view(Q820A_FIXTURE);
+    declared(&view, ":attachedTo", "owl:ObjectProperty");
+    declared(&view, ":last_checkpoint_turn", "owl:DatatypeProperty");
+    let rows = workstream_sessions(&view, "wsAlice", "alice").unwrap();
+    assert_eq!(rows, expected_tsv(Q820A_EXPECTED));
+    // Another principal's workstream is the typed abstention, not an empty answer.
+    assert_eq!(
+        workstream_sessions(&view, "wsBob", "alice"),
+        Err(Abstention::WorkstreamNotCallers)
+    );
+    assert_eq!(
+        workstream_sessions(&view, "wsMissing", "alice"),
+        Err(Abstention::WorkstreamNotCallers)
+    );
+}
+
+fn harness_capabilities(view: &GraphView, caller: &str) -> Vec<Vec<String>> {
+    let query = Q820B_QUERY.replace("?CALLER", &format!(":{caller}"));
+    let mut rows = select_rows(view, &query);
+    rows.sort();
+    rows
+}
+
+// spec: MEDULLA-CQ-ORCH-R820.2
+#[test]
+fn q820_harness_capabilities_answer() {
+    let view = harness_view(Q820B_FIXTURE);
+    let rows = harness_capabilities(&view, "alice");
+    assert_eq!(rows, expected_tsv(Q820B_EXPECTED));
+    let names: Vec<&str> = rows.iter().map(|row| row[0].as_str()).collect();
+    // The door skills always appear; the restricted skill never does.
+    assert!(names.contains(&"doorSearch") && names.contains(&"doorAct"));
+    assert!(!names.contains(&"opsSecrets"));
+    // A caller holding the required role does read it.
+    let admin = harness_capabilities(&view, "root");
+    assert!(admin.iter().any(|row| row[0] == "opsSecrets"));
+}

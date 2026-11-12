@@ -1,0 +1,11 @@
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX dc: <http://purl.org/dc/terms/>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?capability ?kind ?package ?version WHERE {
+  ?capability a ?kind ; dc:isPartOf ?pkg .
+  FILTER (?kind IN (:Skill, :Agent))
+  ?pkg rdfs:label ?package ; owl:versionInfo ?version .
+  FILTER (EXISTS { ?capability :doorSkill true }
+    || NOT EXISTS { ?capability :requiresRole ?role . FILTER NOT EXISTS { ?CALLER :hasRole ?role } })
+}

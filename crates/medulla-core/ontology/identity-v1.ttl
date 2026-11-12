@@ -178,6 +178,12 @@
     rdfs:comment "Detach time of the session; unbound while attached (an attachedTo edge property)." ;
     rdfs:range xsd:long .
 
+:last_checkpoint_turn a owl:DatatypeProperty ;
+    rdfs:label "last checkpoint turn" ;
+    rdfs:comment "The conversation turn of the latest checkpoint the session wrote for the next session to resume from; unbound before the first checkpoint (MEDULLA-CQ-ORCH-R820.1)." ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:long .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/core#IdentityGroup> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
