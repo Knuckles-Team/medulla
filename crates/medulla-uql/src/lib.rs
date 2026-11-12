@@ -57,6 +57,7 @@ pub mod print;
 /// Running a parsed statement: rows with score channels, EXPLAIN, PROFILE (UQL-07/08/09).
 pub use diag::render_caret;
 pub use diag::{UqlCode, UqlError, UqlWarnCode, UqlWarning, ALL_CODES};
+pub use parser::call_stored::{CallArg, CallStored};
 #[cfg(feature = "query")]
 pub use parser::program::to_plan_dag;
 pub use parser::program::{Annotations, Body, DagNode, Mode, Statement, UQL_VERSION};
@@ -70,6 +71,27 @@ pub type Params = BTreeMap<String, UqlParam>;
 pub fn parse_statement(src: &str, params: &Params) -> Result<Statement, UqlError> {
     let tokens = lexer::lex(src)?;
     parser::Parser::new(src, &tokens, params).statement()
+}
+
+/// Parse a `CALL STORED name[@version](arg = literal, …)` statement (the stored-query call).
+/// `None` when the text is not a `CALL STORED` statement at all, so any other text goes on to
+/// [`parse_statement`]; `Some(Err(..))` when it starts as one and is malformed.
+pub fn parse_call_stored(src: &str) -> Option<Result<CallStored, UqlError>> {
+    let tokens = match lexer::lex(src) {
+        Ok(tokens) => tokens,
+        Err(_) => return None,
+    };
+    let word = |index: usize, kw: &str| {
+        matches!(
+            tokens.get(index).map(|t| &t.kind),
+            Some(lexer::Tok::Ident(s)) if s.eq_ignore_ascii_case(kw)
+        )
+    };
+    if !(word(0, "CALL") && word(1, "STORED")) {
+        return None;
+    }
+    let params = Params::new();
+    Some(parser::Parser::new(src, &tokens, &params).call_stored())
 }
 
 /// Parse a plain pipeline with typed parameters into the [`Plan`] `UnifiedQuery` runs.

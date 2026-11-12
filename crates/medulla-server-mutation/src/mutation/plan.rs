@@ -194,6 +194,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // the staged graph, like the query-surface writes above.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
     // dispatch site because parsing and graph projection require `state`.
@@ -495,6 +497,8 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
         Method::CypherQuery { .. } => Some("CypherQuery"),
         Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
         Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
+        Method::StoredQueryPut { .. } => Some("StoredQueryPut"),
+        Method::StoredQueryCall { .. } => Some("StoredQueryCall"),
         Method::ArgumentMapPut { .. } => Some("ArgumentMapPut"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),

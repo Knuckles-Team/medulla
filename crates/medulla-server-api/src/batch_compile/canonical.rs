@@ -629,6 +629,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::LiveArtifactPut { .. }
         | Method::LiveArtifactGet { .. }
         | Method::LiveArtifactRefresh { .. }
+        // MEDULLA-FEDERATED-QUERY-R708.3: stored-query records through the staged query gateway.
+        | Method::StoredQueryPut { .. }
+        | Method::StoredQueryCall { .. }
         // MEDULLA-FEDERATED-QUERY-R700.3: argument map write; the reads are query-family.
         | Method::ArgumentMapPut { .. }
         | Method::ArgumentMapGet { .. }

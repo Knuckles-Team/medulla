@@ -151,9 +151,9 @@ mod dispatch;
 pub use dispatch::try_handle;
 #[cfg(feature = "knowledge-batch")]
 pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
-mod sql_read;
 #[cfg(feature = "query")]
 mod code_map;
+mod sql_read;
 pub(crate) use sql_read::*;
 #[cfg(feature = "query")]
 mod asset_usage;
@@ -216,9 +216,11 @@ pub(crate) use sql_catalog::*;
 #[cfg(feature = "query")]
 mod argument_map;
 #[cfg(feature = "query")]
+mod harness_metrics;
+#[cfg(feature = "query")]
 mod live_artifact;
 #[cfg(feature = "query")]
-mod harness_metrics;
+mod stored_query;
 #[cfg(feature = "query")]
 mod uql_statement;
 

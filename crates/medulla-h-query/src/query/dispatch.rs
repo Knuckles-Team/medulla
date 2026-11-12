@@ -141,6 +141,8 @@ fn is_sql_query_method(method: &Method) -> bool {
             | Method::UnifiedQuery { .. }
             | Method::Uql { .. }
             | Method::SchemaProjections { .. }
+            | Method::StoredQueryPut { .. }
+            | Method::StoredQueryCall { .. }
     )
 }
 
@@ -184,6 +186,10 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
         // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
         Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
+        // MEDULLA-FEDERATED-QUERY-R708.3: stored, versioned queries.
+        other @ (Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }) => {
+            super::stored_query::dispatch_stored_query(ctx, other).await
+        }
         other => Err(other),
     }
 }

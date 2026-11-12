@@ -57,6 +57,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
 const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("ArgumentMap", &["AIF_"]),
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
+    // MEDULLA-FEDERATED-QUERY-R708.4.
+    ("StoredQuery", &["STORED_QUERY_"]),
     (
         "Source",
         &[

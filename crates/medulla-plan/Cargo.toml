@@ -522,6 +522,14 @@ name = "live_artifact_refresh"
 path = "benches/live_artifact_refresh.rs"
 harness = false
 
+# ── Stored-query read bench (MEDULLA-FEDERATED-QUERY-R708.6) ──────────────────────────
+# One 10,000-row materialized read; the key `stored_query` in `thresholds.json` caps p99
+# at 3 ms. Nightly only.
+[[bench]]
+name = "stored_query"
+path = "benches/stored_query.rs"
+harness = false
+
 # ── Incremental view maintenance delta cost (MEDULLA-INCREMENTAL-VIEWS-R001.10) ──────────
 # 1,000-row deltas against a 1,000,000-row `Scan |> Filter` circuit; asserts p99 <= 20 ms
 # and <= 64 bytes of circuit state per member row. Nightly (L6) only.

@@ -122,8 +122,13 @@ use Role::*;
 pub const PRODUCTIONS: &[Production] = &[
     // ── statements ──
     p("statement", Aux, &[], None,
-      "[ \"UQL\" int \";\" ] [ \"EXPLAIN\" | \"PROFILE\" ] [ federation_budget ] { binding } pipeline [ annotations ]",
+      "[ \"UQL\" int \";\" ] [ \"EXPLAIN\" | \"PROFILE\" ] [ federation_budget ] { binding } pipeline [ annotations ] | call_stored",
       "Statement { mode, federation_budget, body, annotations }", ""),
+    p("call_stored", Aux, &["CALL"], None,
+      "\"CALL\" \"STORED\" name [ \"@\" int ] \"(\" [ call_arg { \",\" call_arg } ] \")\"",
+      "StoredQueryCall { name, version, args } (a stored-query call, not a pipeline)", ""),
+    p("call_arg", Aux, &[], None, "name \"=\" ( string | number | \"TRUE\" | \"FALSE\" )",
+      "a typed argument bound to one stored-query parameter", ""),
     p("federation_budget", Aux, &["FEDERATION"], Some(Federation),
       "\"FEDERATION\" \"BUDGET\" \"(\" dimension \"=\" int { \",\" dimension \"=\" int } \")\"",
       "per-query remote cap, narrowed against the server budget; dimensions: REQUESTS, ROWS, BIND_KEYS, WALL_MS", ""),

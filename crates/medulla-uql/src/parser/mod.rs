@@ -47,6 +47,7 @@ macro_rules! gated {
 
 mod attribute;
 mod basic;
+pub(super) mod call_stored;
 mod cursor;
 mod lists;
 mod literal;

@@ -22,6 +22,19 @@ pub(crate) async fn handle_uql(
     foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
+    // MEDULLA-FEDERATED-QUERY-R708.3: `CALL STORED name(args)` is the stored-query call.
+    if let Some(parsed) = medulla_uql::parse_call_stored(&text) {
+        if prepare || foreign_execution.is_some() {
+            return Ok(Response::err(
+                req_id,
+                "INVALID_ARGUMENT: CALL STORED carries neither prepare nor a foreign-read execution",
+            ));
+        }
+        return Ok(match parsed {
+            Ok(call) => super::stored_query::handle_call_stored_statement(ctx, call).await,
+            Err(error) => Response::err(req_id, error.render(&text)),
+        });
+    }
     // MEDULLA-ORCH-VOCAB-R010.1: a named harness metric statement.
     if !prepare && foreign_execution.is_none() {
         if let Some(query) = medulla_types::harness_metrics::harness_query(&text) {

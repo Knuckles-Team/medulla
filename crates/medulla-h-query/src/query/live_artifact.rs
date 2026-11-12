@@ -326,7 +326,7 @@ async fn run_uql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, String>
     }
 }
 
-fn row_json(columns: &[String], row: UqlRow) -> Value {
+pub(super) fn row_json(columns: &[String], row: UqlRow) -> Value {
     let mut object = Map::new();
     object.insert("id".into(), Value::String(row.id));
     object.insert("score".into(), json!(row.score));
@@ -370,7 +370,9 @@ async fn run_sparql(_ctx: &QueryHandlerCtx<'_>, _text: &str) -> Result<Value, St
 }
 
 /// Decode the body of a handler response, or its refusal as text.
-fn response_body<T: serde::de::DeserializeOwned>(response: Response) -> Result<T, String> {
+pub(super) fn response_body<T: serde::de::DeserializeOwned>(
+    response: Response,
+) -> Result<T, String> {
     if let Some(error) = response.error {
         return Err(match response.error_detail {
             Some(detail) => format!("{error}: {detail}"),

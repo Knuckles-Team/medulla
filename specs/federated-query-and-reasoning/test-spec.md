@@ -452,11 +452,11 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/test_sparql_update_served.py::test_update_receipt_reads_back` |
 | `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-rdf --bench sparql_update` |
 | `MEDULLA-FEDERATED-QUERY-R708` | See each child. |
-| `MEDULLA-FEDERATED-QUERY-R708.1` | `crates/medulla-plan/tests/stored_query.rs::stored_query_round_trips` |
+| `MEDULLA-FEDERATED-QUERY-R708.1` | `crates/medulla-source-types/src/stored_query.rs::tests::stored_query_round_trips` |
 | `MEDULLA-FEDERATED-QUERY-R708.2` | `crates/medulla-plan/tests/stored_query.rs::on_change_refreshes` |
-| `MEDULLA-FEDERATED-QUERY-R708.3` | `tests/test_stored_query_served.py::test_put_then_call` |
-| `MEDULLA-FEDERATED-QUERY-R708.4` | `tests/test_stored_query_served.py::test_stored_query_refusals` |
-| `MEDULLA-FEDERATED-QUERY-R708.5` | `tests/test_stored_query_served.py::test_staleness_reported` |
+| `MEDULLA-FEDERATED-QUERY-R708.3` | `tests/federated/test_stored_query_served.py::test_put_then_call` |
+| `MEDULLA-FEDERATED-QUERY-R708.4` | `tests/federated/test_stored_query_served.py::test_stored_query_refusals` |
+| `MEDULLA-FEDERATED-QUERY-R708.5` | `tests/federated/test_stored_query_served.py::test_staleness_reported` |
 | `MEDULLA-FEDERATED-QUERY-R708.6` | `cargo bench -p medulla-plan --bench stored_query` |
 | `MEDULLA-FEDERATED-QUERY-R709` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R709.1` | `crates/medulla-rdf/tests/geosparql.rs::functions_registered` |
@@ -471,7 +471,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 
 | Row | Proving test |
 |---|---|
-| `MEDULLA-FEDERATED-QUERY-R708.7` | `tests/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
+| `MEDULLA-FEDERATED-QUERY-R708.7` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
 
 ## Agent-memory substrate claims
 | Case | Requirement | Proving test |

@@ -579,6 +579,20 @@ $($variants)*
     },
 
 
+    // ── Stored, versioned queries (MEDULLA-FEDERATED-QUERY-R708.3) ────────────────────────────
+    /// Publish one immutable version of a stored query. Durable write; the record is a node of
+    /// label `StoredQuery`. The author is the verified principal, never a request field.
+    StoredQueryPut {
+        query: medulla_source_types::stored_query::StoredQuery,
+    },
+    /// Call a stored query: bind `args` as typed values, run the given version (the highest
+    /// published one when `version` is absent) and return the rows with their freshness.
+    StoredQueryCall {
+        name: String,
+        version: Option<u32>,
+        args: std::collections::BTreeMap<String, serde_json::Value>,
+    },
+
     // ── Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview) ───────
     // GENERALIZES the algo-only matview above: a matview is a NAMED, DURABLE `wire::Plan`
     // (the same cross-modal AST `UnifiedQuery` carries) over ONE `graph`. Defining it

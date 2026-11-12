@@ -29,6 +29,7 @@
     "access_check_256": 1000000,
     "feedback_boost_256": 200000,
     "knowledge_scope_50": 2000000,
-    "live_artifact_refresh": 30000000
+    "live_artifact_refresh": 30000000,
+    "stored_query": 3000000
   }
 }

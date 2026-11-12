@@ -518,7 +518,13 @@ pub(super) async fn commit_conditional_commit_staged(
 pub fn is_query_gateway_method(m: &Method) -> bool {
     matches!(
         method_variant_name(m),
-        "Sql" | "CypherQuery" | "GraphQl" | "LiveArtifactPut" | "LiveArtifactRefresh"
+        "Sql"
+            | "CypherQuery"
+            | "GraphQl"
+            | "LiveArtifactPut"
+            | "LiveArtifactRefresh"
+            | "StoredQueryPut"
+            | "StoredQueryCall"
     )
 }
 

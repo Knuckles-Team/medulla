@@ -158,6 +158,13 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             id,
             expected_version,
         } => Some(format!("LIVE_ARTIFACT_REFRESH|{id}|{expected_version}")),
+        Method::StoredQueryPut { query } => {
+            Some(format!("STORED_QUERY_PUT|{}|{}", query.name, query.version))
+        }
+        Method::StoredQueryCall { name, version, .. } => Some(format!(
+            "STORED_QUERY_CALL|{name}|{}",
+            version.map_or_else(|| "latest".to_string(), |v| v.to_string())
+        )),
         Method::DataProductRegister { product, .. } => {
             Some(format!("DATA_PRODUCT_REGISTER|{}", product.id))
         }

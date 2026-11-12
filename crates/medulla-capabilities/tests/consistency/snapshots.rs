@@ -142,6 +142,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
     "DataProductRegister",
     "AccessRequestOpen",
@@ -161,6 +163,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
     "DataProductRegister",
     "AccessRequestOpen",
@@ -425,6 +429,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // native commit point as `Sql`, `CypherQuery` and `GraphQl`.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.
@@ -624,6 +630,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // staged graph, the same audited commit point as `Sql`.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     // MEDULLA-TYPED-PACKS-R805.1: the rbac.redb policy store's hash-chained
     // audit trail records the write, like `RbacElevation`.
     "DataProductRegister",
@@ -687,6 +695,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceFactorRecord",
     "LiveArtifactPut",
     "LiveArtifactRefresh",
+    "StoredQueryPut",
+    "StoredQueryCall",
     "DataProductRegister",
     "AccessRequestOpen",
     "AccessRequestDecide",

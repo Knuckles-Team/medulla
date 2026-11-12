@@ -39,6 +39,9 @@ method_results! {
     LiveArtifactPut(LiveArtifactPut) => Json<medulla_source_types::live_artifact::LiveArtifact>;
     LiveArtifactGet(LiveArtifactGet) => Json<medulla_source_types::live_artifact::LiveArtifactView>;
     LiveArtifactRefresh(LiveArtifactRefresh) => Json<medulla_source_types::live_artifact::RefreshEntry>;
+    // MEDULLA-FEDERATED-QUERY-R708.3: the published record, and one call's rows with their freshness.
+    StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
+    StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::PreferredExtensions>;

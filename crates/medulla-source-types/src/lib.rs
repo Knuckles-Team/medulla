@@ -42,3 +42,6 @@ pub mod source_ingestion;
 // MEDULLA-FEDERATED-QUERY-R701 — live artifacts re-derived from a query source.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod live_artifact;
+// MEDULLA-FEDERATED-QUERY-R708 — stored, versioned queries and their materialized results.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod stored_query;

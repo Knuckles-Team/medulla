@@ -92,6 +92,3 @@ pub mod runtime;
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sql_text;
-/// Stored, versioned queries (MEDULLA-FEDERATED-QUERY-R708).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod stored_query;

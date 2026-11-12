@@ -47,7 +47,9 @@ regenerate it in place with `cargo run -q -p medulla-plan --example uql_grammar 
 
 <!-- BEGIN GENERATED: uql-grammar -->
 ```text
-statement          = [ "UQL" int ";" ] [ "EXPLAIN" | "PROFILE" ] [ federation_budget ] { binding } pipeline [ annotations ] ;
+statement          = [ "UQL" int ";" ] [ "EXPLAIN" | "PROFILE" ] [ federation_budget ] { binding } pipeline [ annotations ] | call_stored ;
+call_stored        = "CALL" "STORED" name [ "@" int ] "(" [ call_arg { "," call_arg } ] ")" ;
+call_arg           = name "=" ( string | number | "TRUE" | "FALSE" ) ;
 federation_budget  = "FEDERATION" "BUDGET" "(" dimension "=" int { "," dimension "=" int } ")" ;   (* feature `federation` *)
 annotations        = "WITH" annotation { "," annotation } ;
 annotation         = "PROOF" | "KNOWLEDGE" [ "(" name { "," name } ")" ] ;

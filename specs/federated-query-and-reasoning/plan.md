@@ -938,8 +938,12 @@ prefilter beside the R078 tenant predicates. R705 adds its boost after score cal
 
 R706 adds tag-based masking and row filters as one plan rewrite for every query language. R707
 adds SPARQL 1.1 Update and Graph Store semantics; arbora serves the protocol endpoint. R708
-adds named stored queries with materialized results. R709 adds the GeoSPARQL function set over
-`crates/medulla-geo`.
+adds named stored queries with materialized results: the model and the pure reuse-or-recompute
+decision live in `crates/medulla-source-types/src/stored_query.rs`, the served handlers in
+`crates/medulla-h-query/src/query/stored_query.rs` (reached through the SQL query family of
+`dispatch.rs`), and `CALL STORED` is parsed by `crates/medulla-uql/src/parser/call_stored.rs`.
+`StoredQueryCall` is a gateway-routed write because a recompute rewrites the materialized result.
+R709 adds the GeoSPARQL function set over `crates/medulla-geo`.
 
 ### One plan and one RowSet algebra (R720, R721)
 
