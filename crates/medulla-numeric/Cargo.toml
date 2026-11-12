@@ -83,6 +83,8 @@ nalgebra = { version = "0.35", default-features = false, features = ["std"] }
 rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
+# The kernel runs its own bounded pool (cluster); no float reduction goes through rayon.
+rayon = "1.12"
 # Ubiquitous elsewhere in the workspace; a normal (always-on) dep here too, so
 # `KMeansResult`'s non-ndarray fields (`labels`/`inertia`/`n_iter`) can derive
 # serde unconditionally and only the ndarray-backed `centroids` field needs the
@@ -166,3 +168,7 @@ required-features = ["decision"]
 name = "harness_contrast"
 harness = false
 required-features = ["decision"]
+
+[[bench]]
+name = "cluster_kernel"
+harness = false
