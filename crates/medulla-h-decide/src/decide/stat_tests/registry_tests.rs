@@ -143,6 +143,7 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R001.101
+// spec: MEDULLA-DECISION-ENGINE-R001.101.2
 #[tokio::test]
 async fn decide_dispatches_every_kind_through_its_family() {
     let h = Harness::new().await;
