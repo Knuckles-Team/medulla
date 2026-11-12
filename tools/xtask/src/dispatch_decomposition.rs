@@ -20,6 +20,16 @@ pub const NAME: &str = "dispatch-decomposition";
 pub const SUMMARY: &str =
     "the dispatch module cut, route ownership and route order have not drifted";
 
+/// Function-count pin: the number of one-arm dispatch wrappers the cut retired.
+///
+/// All 60 wrappers below were inlined into their routes when the dispatch
+/// families were cut across the router, graph and consensus crates. The
+/// inventory lists every retired name, and `check_inventory` fails if the
+/// list ever stops naming exactly this many distinct wrappers — so the pin
+/// and the inventory are updated together in one change, and a retired
+/// wrapper that reappears anywhere in the tree fails the gate.
+const WRAPPER_COUNT: usize = 60;
+
 const REDUNDANT_WRAPPERS: [&str; 60] = [
     "authorize_and_route_knowledge_stream",
     "authorize_and_route_served_modality",
@@ -313,7 +323,7 @@ fn check_inventory(parts: &Parts) -> Result<(), String> {
     let joined = code_mask(&parts.values().cloned().collect::<Vec<_>>().join("\n"))?;
     let names = function_names(&joined)?;
     let distinct: std::collections::BTreeSet<_> = REDUNDANT_WRAPPERS.iter().collect();
-    if distinct.len() != 60 {
+    if distinct.len() != WRAPPER_COUNT {
         return Err("wrapper deletion inventory is not exhaustive".into());
     }
     if REDUNDANT_WRAPPERS
@@ -577,7 +587,7 @@ mod tests {
                 .iter()
                 .collect::<std::collections::BTreeSet<_>>()
                 .len(),
-            60
+            WRAPPER_COUNT
         );
     }
 
@@ -604,6 +614,7 @@ mod tests {
             1,
         );
         parts.insert(target.to_string(), text);
+        // spec: MEDULLA-CONTRACT-R007
         assert!(check_inventory(&parts)
             .unwrap_err()
             .contains("dispatch_service_control_methods call missing"));

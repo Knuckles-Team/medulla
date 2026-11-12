@@ -1787,7 +1787,7 @@ jobs:
           SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-          WHOLE_REPO_HOOKS: vulture check-bumpversion epistemic-operations-protocol no-version-suffixes universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
+          WHOLE_REPO_HOOKS: vulture check-bumpversion epistemic-operations-protocol no-version-suffixes universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence dispatch-decomposition
         run: |
           set -euo pipefail
           for hook in $WHOLE_REPO_HOOKS; do
