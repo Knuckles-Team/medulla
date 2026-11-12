@@ -789,3 +789,47 @@ fn uncoded_refusal_carries_a_cause_reference_and_counts() {
     assert_eq!(CauseRef::of(text), CauseRef::of(text));
     assert_ne!(CauseRef::of(text), CauseRef::of("another refusal"));
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.1
+#[test]
+fn nl_query_dialect_and_max_steps_round_trip_on_the_wire() {
+    use medulla_query_types::nl_query::NlDialect;
+    for dialect in [
+        NlDialect::Auto,
+        NlDialect::Uql,
+        NlDialect::Sql,
+        NlDialect::Sparql,
+        NlDialect::Cypher,
+    ] {
+        let method = Method::NlQuery {
+            text: "how many".into(),
+            graph: "g".into(),
+            history: Vec::new(),
+            dialect,
+            max_steps: Some(4),
+        };
+        let bytes = rmp_serde::to_vec_named(&method).unwrap();
+        let back: Method = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(rmp_serde::to_vec_named(&back).unwrap(), bytes);
+        let json = serde_json::to_value(&method).unwrap();
+        assert_eq!(json["params"]["max_steps"], 4);
+        let back: Method = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            back,
+            Method::NlQuery { dialect: d, max_steps: Some(4), .. } if d == dialect
+        ));
+    }
+    // A request without the new fields still decodes to auto and the default.
+    let legacy: Method = serde_json::from_value(
+        serde_json::json!({"method": "NlQuery", "params": {"text": "t", "graph": "g"}}),
+    )
+    .unwrap();
+    assert!(matches!(
+        legacy,
+        Method::NlQuery {
+            dialect: NlDialect::Auto,
+            max_steps: None,
+            ..
+        }
+    ));
+}

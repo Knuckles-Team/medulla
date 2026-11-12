@@ -399,3 +399,18 @@ def test_nl_query_reaches_handler(live_client) -> None:
     with pytest.raises(RuntimeError) as ei:
         c.query.nl_query("count all nodes")
     assert "planner" in str(ei.value).lower() or "nl" in str(ei.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_nl_query_carries_dialect_and_max_steps() -> None:
+    """MEDULLA-FEDERATED-QUERY-R058.4.1: dialect and max_steps ride the wire."""
+    fake = _FakeClient()
+    q = QueryClient(fake)
+    await q.nl_query("x", graph="g", dialect="sql", max_steps=4)
+    by = {m: p for m, p, _g in fake.sent}
+    assert by["NlQuery"] == {
+        "text": "x",
+        "graph": "g",
+        "dialect": "sql",
+        "max_steps": 4,
+    }

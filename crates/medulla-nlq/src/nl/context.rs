@@ -18,6 +18,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_types::contract::Digest256;
+use serde::{Deserialize, Serialize};
+
 use medulla_graph_core::graph::GraphView;
 use medulla_types::wire::{Op, Plan, Pred};
 
@@ -28,9 +31,60 @@ pub const MAX_LABELS: usize = 60;
 /// Properties listed per label in the schema hint (MEDULLA-FEDERATED-QUERY-R058.4.2).
 pub const MAX_PROPERTIES_PER_LABEL: usize = 16;
 /// Default and maximum planner steps of one request (MEDULLA-FEDERATED-QUERY-R058.4.1).
-pub const DEFAULT_MAX_STEPS: usize = 2;
+pub const DEFAULT_MAX_STEPS: usize = 3;
 /// Upper bound on `max_steps`.
 pub const MAX_STEPS: usize = 4;
+/// Lower bound on `max_steps`.
+pub const MIN_STEPS: usize = 1;
+/// Catalog tables kept in the context (MEDULLA-FEDERATED-QUERY-R058.4.1).
+pub const MAX_TABLES: usize = 60;
+/// Columns kept per catalog table (MEDULLA-FEDERATED-QUERY-R058.4.1).
+pub const MAX_COLUMNS_PER_TABLE: usize = 64;
+
+/// A request asked for a `max_steps` outside `1..=4` (MEDULLA-FEDERATED-QUERY-R058.4.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepsInvalid {
+    /// The refused value.
+    pub requested: u32,
+}
+
+impl StepsInvalid {
+    /// The registered refusal code.
+    pub fn code(&self) -> &'static str {
+        "NL_STEPS_INVALID"
+    }
+}
+
+impl std::fmt::Display for StepsInvalid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "max_steps {} is outside {MIN_STEPS}..={MAX_STEPS}",
+            self.requested
+        )
+    }
+}
+
+impl std::error::Error for StepsInvalid {}
+
+/// The planner step budget of a request: absent means [`DEFAULT_MAX_STEPS`],
+/// present must lie in `1..=4` (MEDULLA-FEDERATED-QUERY-R058.4.1).
+pub fn resolve_max_steps(requested: Option<u32>) -> Result<usize, StepsInvalid> {
+    match requested {
+        None => Ok(DEFAULT_MAX_STEPS),
+        Some(n) if (MIN_STEPS as u32..=MAX_STEPS as u32).contains(&n) => Ok(n as usize),
+        Some(requested) => Err(StepsInvalid { requested }),
+    }
+}
+
+/// One SQL catalog table visible to the caller.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NlTable {
+    /// Table name.
+    pub name: String,
+    /// Column names, at most [`MAX_COLUMNS_PER_TABLE`].
+    pub columns: Vec<String>,
+}
 
 /// One ontology property, reduced to what grounding needs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,7 +98,7 @@ pub struct OntologyProperty {
 }
 
 /// What the graph stores under one label.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LabelSchema {
     /// Nodes seen with this label in the snapshot.
     pub nodes: usize,
@@ -55,9 +109,16 @@ pub struct LabelSchema {
 }
 
 /// The labels, properties and relationships one graph snapshot holds.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SchemaContext {
     labels: BTreeMap<String, LabelSchema>,
+    /// SQL catalog tables visible to the caller (MEDULLA-FEDERATED-QUERY-R058.4.1).
+    tables: Vec<NlTable>,
+    /// RDF properties of the composed ontology (MEDULLA-FEDERATED-QUERY-R058.4.1).
+    properties: BTreeSet<String>,
+    /// SHA-256 (64 lowercase hex) of the canonical bytes of labels, tables and
+    /// properties; empty until [`SchemaContext::seal`] runs.
+    digest: String,
     relationships: BTreeSet<String>,
     unlabelled: LabelSchema,
     edge_schemas: BTreeMap<String, LabelSchema>,
@@ -65,6 +126,24 @@ pub struct SchemaContext {
     /// Federation sources the owner-scoped served registry authorizes. An
     /// absent catalog refuses foreign stages rather than inventing authority.
     foreign_sources: Option<BTreeSet<String>>,
+}
+
+impl Default for SchemaContext {
+    fn default() -> Self {
+        let mut context = Self {
+            labels: BTreeMap::new(),
+            tables: Vec::new(),
+            properties: BTreeSet::new(),
+            digest: String::new(),
+            relationships: BTreeSet::new(),
+            unlabelled: LabelSchema::default(),
+            edge_schemas: BTreeMap::new(),
+            untyped_edges: LabelSchema::default(),
+            foreign_sources: None,
+        };
+        context.seal();
+        context
+    }
 }
 
 /// A name in a candidate plan that the graph does not have.
@@ -164,7 +243,7 @@ pub struct Grounded {
 
 /// One planner step: the text it produced and what happened to it
 /// (MEDULLA-FEDERATED-QUERY-R058.4.1). `dialect` is always `uql` today.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NlPlanStep {
     pub dialect: String,
     pub query_text: String,
@@ -242,11 +321,68 @@ impl SchemaContext {
                 }
             }
         }
+        context.seal();
         context
+    }
+
+    /// The digest of the canonical bytes of the label names, the tables and the
+    /// properties (MEDULLA-FEDERATED-QUERY-R058.4.1): SHA-256 as 64 lowercase hex.
+    pub fn compute_digest(&self) -> String {
+        let labels: Vec<&String> = self.labels.keys().collect();
+        let bytes = serde_json::to_vec(&(labels, &self.tables, &self.properties))
+            .expect("strings and vectors always serialize");
+        Digest256::sha256(&bytes).to_hex()
+    }
+
+    /// Store the current digest; construction and every bulk mutator call it.
+    pub fn seal(&mut self) {
+        self.digest = self.compute_digest();
+    }
+
+    /// The stored digest.
+    pub fn digest(&self) -> &str {
+        &self.digest
+    }
+
+    /// Refuse a deserialized context whose stored digest is not its content's.
+    pub fn validate(&self) -> Result<(), String> {
+        let expected = self.compute_digest();
+        if self.digest == expected {
+            Ok(())
+        } else {
+            Err(format!(
+                "schema context digest `{}` does not match its content `{expected}`",
+                self.digest
+            ))
+        }
+    }
+
+    /// Set the caller-visible SQL catalog tables, sorted by name and capped at
+    /// [`MAX_TABLES`] tables of [`MAX_COLUMNS_PER_TABLE`] columns each.
+    pub fn set_tables(&mut self, mut tables: Vec<NlTable>) {
+        tables.sort_by(|a, b| a.name.cmp(&b.name));
+        tables.dedup_by(|a, b| a.name == b.name);
+        tables.truncate(MAX_TABLES);
+        for table in &mut tables {
+            table.columns.truncate(MAX_COLUMNS_PER_TABLE);
+        }
+        self.tables = tables;
+        self.seal();
+    }
+
+    /// The catalog tables.
+    pub fn tables(&self) -> &[NlTable] {
+        &self.tables
+    }
+
+    /// The ontology properties.
+    pub fn properties(&self) -> &BTreeSet<String> {
+        &self.properties
     }
 
     /// Record one node's labels and property keys.
     pub fn observe_node(&mut self, props: &serde_json::Map<String, serde_json::Value>) {
+        self.digest.clear();
         let labels = node_labels(props);
         if labels.is_empty() {
             self.unlabelled.nodes += 1;
@@ -272,6 +408,9 @@ impl SchemaContext {
     /// label in its domain (any label when it declares none) when the key
     /// normalizes to the property's local name or its `rdfs:label`.
     pub fn link_ontology(&mut self, properties: &[OntologyProperty]) {
+        self.properties
+            .extend(properties.iter().map(|p| p.name.clone()));
+        self.seal();
         for property in properties {
             let names: BTreeSet<String> = std::iter::once(norm(&property.name))
                 .chain(property.label.as_deref().map(norm))

@@ -393,6 +393,8 @@ fn build_local_method(
             text: query.to_string(),
             graph: graph.to_string(),
             history: Vec::new(),
+            dialect: Default::default(),
+            max_steps: None,
         },
     }
 }

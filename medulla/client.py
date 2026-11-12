@@ -12375,7 +12375,11 @@ class QueryClient:
         )
 
     async def nl_query(
-        self, text: str, graph: str | None = None
+        self,
+        text: str,
+        graph: str | None = None,
+        dialect: str | None = None,
+        max_steps: int | None = None,
     ) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-KG.ingest.broker-streams-namespaces — Natural-language →
         executable query → rows (MEDULLA-078/MEDULLA-080).
@@ -12391,14 +12395,21 @@ class QueryClient:
         the deployment must also configure a planner, otherwise this call returns a
         clear
         error (never a panic). ``graph`` defaults to the connection's graph.
+        ``dialect`` is ``auto`` (default), ``uql``, ``sql``, ``sparql`` or ``cypher``;
+        ``max_steps`` is the planner step budget, 1 to 4 (default 3; outside that range
+        the engine refuses ``NL_STEPS_INVALID``)
+        (MEDULLA-FEDERATED-QUERY-R058.4.1).
 
         Returns the query's result rows (a ``Raw`` payload the transport already
         double-unpacks) — a list of row dicts, exactly as the produced UQL yields."""
         target_graph = graph or self._client._graph_name
+        params: dict[str, Any] = {"text": text, "graph": target_graph}
+        if dialect is not None:
+            params["dialect"] = dialect
+        if max_steps is not None:
+            params["max_steps"] = max_steps
         result = (
-            await _gen.query.send_nl_query(
-                self._client, {"text": text, "graph": target_graph}, graph=target_graph
-            )
+            await _gen.query.send_nl_query(self._client, params, graph=target_graph)
         ).payload
         return result or []
 

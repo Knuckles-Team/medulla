@@ -740,6 +740,10 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
             "METADATA_SCHEMA_INVALID",
         ]);
     }
+    // MEDULLA-FEDERATED-QUERY-R058.4.1: `max_steps` outside 1 to 4.
+    if id == "NlQuery" {
+        codes.push("NL_STEPS_INVALID");
+    }
     // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
     // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path.
     if id == "GetNodeProperties" {

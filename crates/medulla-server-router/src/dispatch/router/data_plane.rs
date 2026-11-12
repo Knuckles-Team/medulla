@@ -788,6 +788,8 @@ pub async fn dispatch_method_scoped_graph_methods(
             text,
             graph,
             history,
+            dialect,
+            max_steps,
         } => {
             let target = nl_target_graph(&graph, &req.graph);
             dispatch_nl_method(
@@ -797,6 +799,8 @@ pub async fn dispatch_method_scoped_graph_methods(
                     text,
                     graph,
                     history,
+                    dialect,
+                    max_steps,
                 },
             )
             .await

@@ -302,6 +302,8 @@ async fn handle_nl(
             text,
             graph,
             history: Vec::new(),
+            dialect: Default::default(),
+            max_steps: None,
         },
     };
     let resp =

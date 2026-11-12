@@ -16307,7 +16307,9 @@ class MethodNlQueryExplainParams(BaseModel):
 class MethodNlQueryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    dialect: Literal["auto", "uql", "sql", "sparql", "cypher"] | None = None
     graph: str | None = None
+    max_steps: int | None = Field(default=None, ge=0, le=4294967295)
     text: str
 
 

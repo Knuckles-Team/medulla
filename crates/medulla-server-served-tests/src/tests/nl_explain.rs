@@ -20,6 +20,8 @@ fn nl(text: &str) -> Method {
         text: text.into(),
         graph: "__commons__".into(),
         history: Vec::new(),
+        dialect: Default::default(),
+        max_steps: None,
     }
 }
 

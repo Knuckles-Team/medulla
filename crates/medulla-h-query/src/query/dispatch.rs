@@ -370,7 +370,9 @@ async fn dispatch_external_query_method(
             text,
             graph,
             history,
-        } => handle_nl_query(ctx, text, graph, history).await,
+            dialect,
+            max_steps,
+        } => handle_nl_query(ctx, text, graph, history, dialect, max_steps).await,
         #[cfg(feature = "nl-query")]
         Method::NlQueryExplain {
             text,

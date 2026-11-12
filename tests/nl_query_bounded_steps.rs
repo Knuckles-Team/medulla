@@ -11,7 +11,8 @@ mod test_support;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_query_types::nl_query::{NlQueryPlanResult, NlTurn};
+use medulla_query_types::nl_query::{NlDialect, NlQueryPlanResult, NlTurn};
+use medulla_types::wire::UqlResult;
 
 const SECRET: &str = "nl-query-bounded-steps-secret";
 const GRAPH: &str = "__commons__";
@@ -29,6 +30,15 @@ impl medulla_nlq::nl::NlPlanner for ScriptedPlanner {
             );
             assert_eq!(nl, "show two of them");
             return Ok("MATCH (:Doc) |> LIMIT 2".to_string());
+        }
+        // A first answer that does not parse; the corrected one only after the
+        // engine sent the typed refusal back (MEDULLA-FEDERATED-QUERY-R058.4.1).
+        if nl == "two documents, corrected" {
+            return Ok(if schema_hint.contains("A previous answer was refused") {
+                "MATCH (:Doc) |> LIMIT 2".to_string()
+            } else {
+                "MATCH (:Doc".to_string()
+            });
         }
         Ok(nl.to_string())
     }
@@ -94,4 +104,98 @@ async fn follow_up_is_rewritten_and_disclosed() {
     let error = format!("{:?} {:?}", refused.error, refused.error_detail);
     assert!(error.contains("INVALID_ARGUMENT"), "{error}");
     assert!(error.contains("max_history_turns"), "{error}");
+}
+
+async fn nl_with_steps(
+    state: &test_support::SharedState,
+    id: u64,
+    text: &str,
+    max_steps: Option<u32>,
+) -> Response {
+    let method = Method::NlQuery {
+        text: text.into(),
+        graph: GRAPH.into(),
+        history: Vec::new(),
+        dialect: NlDialect::Auto,
+        max_steps,
+    };
+    test_support::dispatch(state, test_support::request(SECRET, id, GRAPH, method)).await
+}
+
+fn refusal(resp: &Response) -> String {
+    format!("{:?} {:?}", resp.error, resp.error_detail)
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.1
+#[tokio::test]
+async fn second_step_corrects_parse_error() {
+    medulla_h_query::nl::set_nl_planner(Arc::new(ScriptedPlanner));
+    let state = state();
+    for (i, node) in ["d1", "d2", "d3"].iter().enumerate() {
+        let added = test_support::dispatch(
+            &state,
+            test_support::commons_request(
+                SECRET,
+                10 + i as u64,
+                Method::AddNode {
+                    node_id: (*node).to_string(),
+                    properties_msgpack: test_support::json_bytes(
+                        serde_json::json!({"type": "Doc", "year": 2000 + i}),
+                    ),
+                },
+            ),
+        )
+        .await;
+        assert!(added.error.is_none(), "{:?}", added.error);
+    }
+
+    // The default budget (3) lets the second step correct the parse error; the
+    // rows equal a direct `Uql` call of the corrected text.
+    let corrected = nl_with_steps(&state, 20, "two documents, corrected", None).await;
+    let nl_rows: Vec<(String, Option<f32>)> = match &corrected.result {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
+        other => panic!("expected Raw rows, got {other:?} / {:?}", corrected.error),
+    };
+    let direct = test_support::dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            21,
+            Method::Uql {
+                text: "MATCH (:Doc) |> LIMIT 2".into(),
+                params: Default::default(),
+                prepare: false,
+                foreign_execution: None,
+            },
+        ),
+    )
+    .await;
+    let UqlResult::Rows { rows, .. } = (match direct.result {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice::<UqlResult>(&bytes).unwrap(),
+        other => panic!("expected Raw UQL result, got {other:?}"),
+    }) else {
+        panic!("expected rows");
+    };
+    assert_eq!(nl_rows.len(), 2);
+    assert_eq!(
+        nl_rows.iter().map(|r| r.0.clone()).collect::<Vec<_>>(),
+        rows.iter().map(|r| r.id.clone()).collect::<Vec<_>>()
+    );
+
+    // Two steps are enough, one is not: the budget is the request's `max_steps`.
+    let two = nl_with_steps(&state, 22, "two documents, corrected", Some(2)).await;
+    assert!(two.error.is_none(), "{}", refusal(&two));
+    let one = nl_with_steps(&state, 23, "two documents, corrected", Some(1)).await;
+    let text = refusal(&one);
+    assert!(text.contains("INVALID_ARGUMENT"), "{text}");
+    assert!(text.contains("step 1"), "{text}");
+    assert!(one.result.is_none(), "an exhausted budget returns no rows");
+
+    // Outside 1..=4 the request is refused before any planning.
+    for (id, bad) in [(24u64, 0u32), (25, 5)] {
+        let refused = nl_with_steps(&state, id, "two documents, corrected", Some(bad)).await;
+        let text = refusal(&refused);
+        assert!(text.contains("NL_STEPS_INVALID"), "{text}");
+        assert!(refused.result.is_none());
+    }
 }

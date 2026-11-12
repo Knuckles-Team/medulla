@@ -394,6 +394,8 @@ async fn nl_query_foreign_leg_is_owner_scoped() {
         text: text.into(),
         graph: "__commons__".into(),
         history: Vec::new(),
+        dialect: Default::default(),
+        max_steps: None,
     };
     let a = dispatch_as(
         &local,

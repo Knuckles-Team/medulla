@@ -1195,3 +1195,85 @@ fn a_native_record_source_cannot_retain_the_previous_graph_label_scope() {
         Err(SchemaViolation::UnknownProperty { .. })
     ));
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.1
+#[test]
+fn context_round_trips() {
+    let mut context = servicenow_context(&servicenow_view());
+    context.set_tables(vec![
+        NlTable {
+            name: "zeta".into(),
+            columns: vec!["id".into(), "name".into()],
+        },
+        NlTable {
+            name: "alpha".into(),
+            columns: (0..70).map(|i| format!("c{i}")).collect(),
+        },
+    ]);
+    let json = serde_json::to_string(&context).unwrap();
+    let back: SchemaContext = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, context, "every field survives the round trip");
+    back.validate().unwrap();
+    assert_eq!(back.digest().len(), 64);
+    assert!(back
+        .digest()
+        .chars()
+        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+    assert_eq!(
+        back.tables()
+            .iter()
+            .map(|t| t.name.as_str())
+            .collect::<Vec<_>>(),
+        ["alpha", "zeta"],
+        "tables sort by name"
+    );
+    assert_eq!(back.tables()[0].columns.len(), MAX_COLUMNS_PER_TABLE);
+    assert!(
+        !back.properties().is_empty(),
+        "ontology properties recorded"
+    );
+
+    // The digest covers the three lists: changing a table changes it, and a
+    // tampered stored digest is refused.
+    let mut changed = context.clone();
+    changed.set_tables(vec![]);
+    assert_ne!(changed.digest(), context.digest());
+    let tampered = json.replace(context.digest(), &"0".repeat(64));
+    let tampered: SchemaContext = serde_json::from_str(&tampered).unwrap();
+    assert!(tampered.validate().is_err());
+
+    // Table cap.
+    let mut many = SchemaContext::default();
+    many.set_tables(
+        (0..100)
+            .map(|i| NlTable {
+                name: format!("t{i:03}"),
+                columns: vec![],
+            })
+            .collect(),
+    );
+    assert_eq!(many.tables().len(), MAX_TABLES);
+
+    // The step record round-trips too.
+    let step = NlPlanStep {
+        dialect: "uql".into(),
+        query_text: "MATCH (:Doc)".into(),
+        outcome: "accepted".into(),
+    };
+    let back: NlPlanStep = serde_json::from_str(&serde_json::to_string(&step).unwrap()).unwrap();
+    assert_eq!(back, step);
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.1
+#[test]
+fn max_steps_is_one_to_four_default_three() {
+    assert_eq!(resolve_max_steps(None), Ok(3));
+    for n in 1..=4u32 {
+        assert_eq!(resolve_max_steps(Some(n)), Ok(n as usize));
+    }
+    for n in [0u32, 5, 100] {
+        let refused = resolve_max_steps(Some(n)).unwrap_err();
+        assert_eq!(refused.code(), "NL_STEPS_INVALID");
+        assert!(refused.to_string().contains(&n.to_string()));
+    }
+}

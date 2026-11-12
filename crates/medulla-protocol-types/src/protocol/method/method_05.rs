@@ -420,6 +420,13 @@ $($variants)*
         /// history rewrites a follow-up `text` to a standalone question before planning.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         history: Vec<medulla_query_types::nl_query::NlTurn>,
+        /// The query language to plan (MEDULLA-FEDERATED-QUERY-R058.4.1); `auto` by default.
+        #[serde(default, skip_serializing_if = "medulla_query_types::nl_query::NlDialect::is_auto")]
+        dialect: medulla_query_types::nl_query::NlDialect,
+        /// Planner steps, 1 to 4 (MEDULLA-FEDERATED-QUERY-R058.4.1); absent means 3.
+        /// Out of range is refused `NL_STEPS_INVALID`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_steps: Option<u32>,
     },
     /// `NlQuery` that also discloses the generated query (MEDULLA-FEDERATED-QUERY-R058.2.2.1):
     /// the SAME request, planner, budget, parse, authority and rows as `NlQuery`, answered

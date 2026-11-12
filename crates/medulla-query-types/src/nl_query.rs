@@ -27,6 +27,43 @@ pub struct NlTurn {
     pub answer_summary: Option<String>,
 }
 
+/// The query language an `NlQuery` request asks the planner to produce
+/// (MEDULLA-FEDERATED-QUERY-R058.4.1). `Auto` lets the engine choose by schema match.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum NlDialect {
+    /// Choose among the dialects that have an NL planner.
+    #[default]
+    Auto,
+    /// Unified query language.
+    Uql,
+    /// SQL over the catalog visible to the caller.
+    Sql,
+    /// SPARQL over the composed ontology.
+    Sparql,
+    /// Cypher.
+    Cypher,
+}
+
+impl NlDialect {
+    /// The wire spelling.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Uql => "uql",
+            Self::Sql => "sql",
+            Self::Sparql => "sparql",
+            Self::Cypher => "cypher",
+        }
+    }
+
+    /// True for the default, so the wire omits it.
+    pub fn is_auto(&self) -> bool {
+        matches!(self, Self::Auto)
+    }
+}
+
 /// Check `history` against the turn bounds and `max_turns`
 /// (MEDULLA-FEDERATED-QUERY-R058.8). The error names the offending field.
 pub fn validate_nl_history(history: &[NlTurn], max_turns: usize) -> Result<(), String> {
