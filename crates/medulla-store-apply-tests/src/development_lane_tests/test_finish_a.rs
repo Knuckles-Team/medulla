@@ -1,5 +1,6 @@
 use super::*;
 
+// spec: MEDULLA-PLACEMENT-R780.2
 #[test]
 fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
     let fixture = NativeLaneFixture::new(policy());
