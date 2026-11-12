@@ -63,7 +63,7 @@ fn build_view() -> (Arc<GraphView>, ReadCaller) {
             "share_scope": scope,
         });
         core.add_node(
-            format!("ku-{index:06}").into(),
+            format!("ku-{index:06}"),
             rmp_serde::to_vec_named(&props).expect("encode unit"),
         );
     }
