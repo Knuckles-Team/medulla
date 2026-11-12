@@ -1059,12 +1059,13 @@ pub fn bind_scope<D: OwnerDomain>(
 /// redb default; anything else is a JSON [`StorageBackendSpec`]. Refusals are
 /// typed and name their reason; `object_store` is `Unsupported` until the
 /// object-store open path lands (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
+/// An unknown variant refuses as `STORAGE_BACKEND_UNKNOWN` (MEDULLA-ENGINE-PARITY-R019.1).
 pub fn admit_backend_setting(setting: Option<&str>) -> Result<(), String> {
     use medulla_storage::StorageBackendSpec;
     let spec = match setting.map(str::trim) {
         None | Some("") | Some("local") => StorageBackendSpec::default(),
         Some(json) => serde_json::from_str::<StorageBackendSpec>(json)
-            .map_err(|e| format!("storage_backend_unknown_variant: {e}"))?,
+            .map_err(|e| format!("STORAGE_BACKEND_UNKNOWN: {e}"))?,
     };
     spec.admit()
         .map_err(|r| format!("storage_backend_refused: {r:?}"))
@@ -1648,7 +1649,7 @@ mod backend_setting_tests {
         assert!(admit_backend_setting(None).is_ok());
         assert!(admit_backend_setting(Some("local")).is_ok());
         let unknown = admit_backend_setting(Some(r#"{"variant":"tape"}"#)).unwrap_err();
-        assert!(unknown.starts_with("storage_backend_unknown_variant"));
+        assert!(unknown.starts_with("STORAGE_BACKEND_UNKNOWN"));
         let unbound = admit_backend_setting(Some(r#"{"variant":"object_store"}"#)).unwrap_err();
         assert!(unbound.contains("MissingSecretRef"), "{unbound}");
     }

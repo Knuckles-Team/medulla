@@ -207,6 +207,82 @@ pub enum StatementKind {
     DropFunction(DropFunctionPlan),
 }
 
+impl StatementKind {
+    /// The exhaustive list of form names, one per variant, matching the
+    /// entries `PgCompatibilityMatrix` holds for statements.
+    pub const FORM_NAMES: &'static [&'static str] = &[
+        "read",
+        "insert_nodes",
+        "insert_nodes_select",
+        "update_nodes",
+        "update_nodes_join",
+        "delete_nodes",
+        "delete_nodes_join",
+        "create_table",
+        "drop_table",
+        "alter_table",
+        "create_view",
+        "drop_view",
+        "insert_table",
+        "insert_select",
+        "update_table",
+        "delete_table",
+        "property_graph_ddl",
+        "property_graph_privilege",
+        "graph_table_read",
+        "begin",
+        "commit",
+        "rollback",
+        "copy_in",
+        "create_extension",
+        "drop_extension",
+        "create_ann_index",
+        "drop_ann_index",
+        "create_hypertable",
+        "create_continuous_aggregate",
+        "create_function",
+        "drop_function",
+    ];
+
+    /// The matrix form name of this statement (MEDULLA-ENGINE-PARITY-R009.1).
+    /// The match is exhaustive, so a new variant cannot compile without a name.
+    pub fn form_name(&self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::InsertNodes(_) => "insert_nodes",
+            Self::InsertNodesSelect(_) => "insert_nodes_select",
+            Self::UpdateNodes(_) => "update_nodes",
+            Self::UpdateNodesJoin(_) => "update_nodes_join",
+            Self::DeleteNodes(_) => "delete_nodes",
+            Self::DeleteNodesJoin(_) => "delete_nodes_join",
+            Self::CreateTable(_) => "create_table",
+            Self::DropTable(_) => "drop_table",
+            Self::AlterTable(_) => "alter_table",
+            Self::CreateView(_) => "create_view",
+            Self::DropView(_) => "drop_view",
+            Self::InsertTable(_) => "insert_table",
+            Self::InsertSelect(_) => "insert_select",
+            Self::UpdateTable(_) => "update_table",
+            Self::DeleteTable(_) => "delete_table",
+            Self::PropertyGraphDdlRequiresCatalogAdmission(_) => "property_graph_ddl",
+            Self::PropertyGraphPrivilegeRequiresCatalogAdmission(_) => "property_graph_privilege",
+            Self::GraphTableReadRequiresCatalogAdmission(_) => "graph_table_read",
+            Self::Begin => "begin",
+            Self::Commit => "commit",
+            Self::Rollback => "rollback",
+            Self::CopyIn(_) => "copy_in",
+            Self::CreateExtension { .. } => "create_extension",
+            Self::DropExtension { .. } => "drop_extension",
+            Self::CreateAnnIndex(_) => "create_ann_index",
+            Self::DropAnnIndex { .. } => "drop_ann_index",
+            Self::CreateHypertable(_) => "create_hypertable",
+            Self::CreateContinuousAggregate(_) => "create_continuous_aggregate",
+            Self::CreateFunction(_) => "create_function",
+            Self::DropFunction(_) => "drop_function",
+        }
+    }
+}
+
 /// A decoded `COPY <table> [(cols…)] FROM STDIN` (CONCEPT:MEDULLA-KG.query.register-each-user-table). `columns` empty ⇒
 /// all columns in schema order. `format` selects the row decoder applied to the
 /// streamed `CopyData` bytes.
