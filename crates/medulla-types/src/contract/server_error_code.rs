@@ -105,11 +105,6 @@ closed_error_codes! {
         MemsyncVersionMalformed => "MEMSYNC_VERSION_MALFORMED",
         DelegationUnknown => "DELEGATION_UNKNOWN",
         // MEDULLA-UNIFIED-DATA-PLANE-R651.4: the DocumentDelete refusals.
-        // MEDULLA-REPO-INGEST-R002.100: the VerifyIngestReadback refusals.
-        ReadbackDenied => "READBACK_DENIED",
-        ReadbackMismatch => "READBACK_MISMATCH",
-        ReadbackPartial => "READBACK_PARTIAL",
-        ReadbackStale => "READBACK_STALE",
         CascadeTooLarge => "CASCADE_TOO_LARGE",
         DocumentDeleteUnavailable => "DOCUMENT_DELETE_UNAVAILABLE",
         DocumentHasReferences => "DOCUMENT_HAS_REFERENCES",
