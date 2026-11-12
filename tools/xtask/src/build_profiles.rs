@@ -133,6 +133,7 @@ mod tests {
 
     #[test]
     fn profiles_match_the_standard_holds_for_this_repository() {
+        // spec: MEDULLA-CONTRACT-R056.14
         let findings = profiles_match_the_standard(&crate::workspace_root()).unwrap();
         assert!(findings.is_empty(), "{findings:#?}");
     }

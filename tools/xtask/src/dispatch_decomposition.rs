@@ -604,6 +604,7 @@ mod tests {
 
     #[test]
     fn route_call_removal_fails_closed() {
+        // spec: MEDULLA-CONTRACT-R007
         let mut parts = parts();
         let target = "crates/medulla-server-router/src/dispatch/router.rs";
         let call = "Box::pin(dispatch_service_control_methods(ctx, method))";

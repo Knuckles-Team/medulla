@@ -110,3 +110,159 @@ fn served_descriptors_cover_all_fields() {
         .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
     assert_eq!(served["catalog_digest"], digest);
 }
+
+// ── MEDULLA-CONTRACT-R044: structural Method-variant discovery ─────────────
+
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+
+/// Variant names declared by one `method_<N>.rs` chunk. A chunk is a
+/// `macro_rules!` whose body hands the variant list to the next macro inside
+/// `( ... [ ... ] )`, so variants are the capitalised identifiers that begin a
+/// line at bracket depth four. Comments and string literals are blanked first so
+/// their braces and capitals never count.
+fn chunk_file_variants(text: &str) -> Vec<String> {
+    let no_comments: String = text
+        .lines()
+        .map(|line| line.find("//").map_or(line, |at| &line[..at]))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut blanked = String::with_capacity(no_comments.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for ch in no_comments.chars() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+                blanked.push('"');
+            } else if ch == '\n' {
+                blanked.push('\n');
+            }
+        } else {
+            if ch == '"' {
+                in_string = true;
+            }
+            blanked.push(ch);
+        }
+    }
+    let mut depth: i32 = 0;
+    let mut found = Vec::new();
+    for line in blanked.lines() {
+        let trimmed = line.trim();
+        let name: String = trimmed
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect();
+        let rest = trimmed[name.len()..].trim_start();
+        let capitalised = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+        if depth == 4 && capitalised && (rest.is_empty() || rest.starts_with(['{', '(', ','])) {
+            found.push(name);
+        }
+        for ch in line.chars() {
+            match ch {
+                '(' | '[' | '{' => depth += 1,
+                ')' | ']' | '}' => depth -= 1,
+                _ => {}
+            }
+        }
+    }
+    found
+}
+
+/// Every `Method` variant, read from the chunk files on disk rather than from a
+/// literal enum block.
+fn wire_method_variants() -> Vec<String> {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../medulla-protocol-types/src/protocol/method");
+    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .expect("the method chunk directory is readable")
+        .map(|entry| entry.expect("directory entry").path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with("method_") && n.ends_with(".rs"))
+        })
+        .collect();
+    files.sort();
+    assert!(!files.is_empty(), "no method chunk files under {dir:?}");
+    files
+        .iter()
+        .flat_map(|path| {
+            chunk_file_variants(&std::fs::read_to_string(path).expect("chunk file is readable"))
+        })
+        .collect()
+}
+
+fn descriptor_ids() -> Vec<String> {
+    method_policy_entries()
+        .map(|(name, _, _)| name.to_string())
+        .collect()
+}
+
+/// `(variants without a descriptor, descriptors without a variant)`.
+fn parity_gaps(variants: &[String], ids: &[String]) -> (Vec<String>, Vec<String>) {
+    let v: BTreeSet<&String> = variants.iter().collect();
+    let d: BTreeSet<&String> = ids.iter().collect();
+    (
+        v.difference(&d).map(|s| (*s).clone()).collect(),
+        d.difference(&v).map(|s| (*s).clone()).collect(),
+    )
+}
+
+#[test]
+fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
+    // spec: MEDULLA-CONTRACT-R044
+    let variants = wire_method_variants();
+    let ids = descriptor_ids();
+    assert!(
+        variants.len() > 100,
+        "variant discovery found too few variants"
+    );
+    let unique: BTreeSet<&String> = variants.iter().collect();
+    assert_eq!(
+        unique.len(),
+        variants.len(),
+        "a Method variant is declared twice"
+    );
+    let unique_ids: BTreeSet<&String> = ids.iter().collect();
+    assert_eq!(
+        unique_ids.len(),
+        ids.len(),
+        "a descriptor id is registered twice"
+    );
+    let (without_descriptor, without_variant) = parity_gaps(&variants, &ids);
+    assert!(
+        without_descriptor.is_empty(),
+        "variants without a descriptor: {without_descriptor:?}"
+    );
+    assert!(
+        without_variant.is_empty(),
+        "descriptors without a variant: {without_variant:?}"
+    );
+}
+
+#[test]
+fn variant_descriptor_parity_fails_in_both_directions() {
+    // spec: MEDULLA-CONTRACT-R044
+    let chunk = "macro_rules! __eg_method_chunk_9 {\n    () => {\n        __eg_method_chunk_10!(@acc [\n    /// doc { with braces\n    AddNode {\n        node_id: String,\n    },\n    BrandNewVariant { x: u8 },\n    ])\n    };\n}\n";
+    let discovered = chunk_file_variants(chunk);
+    assert_eq!(discovered, vec!["AddNode", "BrandNewVariant"]);
+
+    let ids = vec!["AddNode".to_string()];
+    let (no_descriptor, no_variant) = parity_gaps(&discovered, &ids);
+    assert_eq!(no_descriptor, vec!["BrandNewVariant"]);
+    assert!(no_variant.is_empty());
+
+    let ids = vec![
+        "AddNode".to_string(),
+        "BrandNewVariant".to_string(),
+        "GhostDescriptor".to_string(),
+    ];
+    let (no_descriptor, no_variant) = parity_gaps(&discovered, &ids);
+    assert!(no_descriptor.is_empty());
+    assert_eq!(no_variant, vec!["GhostDescriptor"]);
+}
