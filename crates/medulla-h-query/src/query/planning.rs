@@ -1256,7 +1256,7 @@ mod tenant_scope_served_tests {
         );
         let outcome = run(&core, snap, plan, "team").await;
         assert!(
-            matches!(outcome, Err(_)),
+            outcome.is_err(),
             "the unscopable plan refuses before anything runs"
         );
     }
