@@ -57,6 +57,26 @@ pub async fn dispatch_graph_lifecycle_methods(
             )
             .await
         }
+        // MEDULLA-BRANCH-MERGE-R002: one mutation on a branch, then one commit.
+        Method::BranchWrite {
+            tenant,
+            graph,
+            branch,
+            mutation,
+        } => {
+            dispatch_boxed(super::branch_write::handle_branch_write(
+                state,
+                req,
+                verified_context,
+                super::branch_write::BranchWriteFields {
+                    tenant,
+                    graph,
+                    branch,
+                    mutation: *mutation,
+                },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

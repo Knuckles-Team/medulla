@@ -405,6 +405,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_TENANT_DENIED",
         ],
     ),
+    // MEDULLA-BRANCH-MERGE-R002: the branch-scoped write refusals, all before any graph change.
+    (
+        "BranchWrite",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "BRANCH_WRITE_INVALID",
+        ],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

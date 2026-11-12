@@ -907,6 +907,7 @@ mod tests {
         ("CreateGraph", "native lifecycle MutationBatch commits graph identity before registry publication"),
         ("DeleteGraph", "native lifecycle MutationBatch commits purge before registry eviction"),
         ("MultiGraphBatchUpdate", "cluster placement fanout emits one typed graph command per child; standalone mode uses a durable parent saga"),
+        ("BranchWrite", "MEDULLA-BRANCH-MERGE-R002: the inner mutation commits through the ordinary graph path on the branch target graph; the BranchCommit and head advance commit in branch_registry.redb"),
         ("CreateBranch", "MEDULLA-BRANCH-MERGE-R001: one branch registry row in branch_registry.redb through its own admitted native mutation in the graph-lifecycle router; copies no graph data"),
         ("ApplyChangeEnvelope", "governed envelope coordinator commits typed graph/object/provenance rows, cursor, version, and outbox through one native MutationBatch"),
         ("ApplyChangeEnvelopes", "batch envelope coordinator groups envelopes by graph and commits each graph's page as one coalesced native MutationBatch transaction; fans out per graph like MultiGraphBatchUpdate"),

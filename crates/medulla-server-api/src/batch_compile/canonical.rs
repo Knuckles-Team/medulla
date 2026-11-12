@@ -55,7 +55,7 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
     Some(match method {
         Method::CreateGraph { .. } | Method::DeleteGraph { .. } => DurabilityDomain::Lifecycle,
         // MEDULLA-BRANCH-MERGE-R001: one row in the branch registry owner file.
-        Method::CreateBranch { .. } => DurabilityDomain::ControlPlane,
+        Method::CreateBranch { .. } | Method::BranchWrite { .. } => DurabilityDomain::ControlPlane,
         Method::MultiGraphBatchUpdate { .. } => DurabilityDomain::MultiGraph,
         Method::Commit { .. } => DurabilityDomain::CrossModal,
         // Wire-unconditional, same reason as the `datascience`/`finance`/etc.
@@ -780,6 +780,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // domain value that could silently drift out of sync with it.
         Method::CreateGraph { .. }
         | Method::CreateBranch { .. }
+        | Method::BranchWrite { .. }
         | Method::DeleteGraph { .. }
         | Method::MultiGraphBatchUpdate { .. }
         | Method::Commit { .. }

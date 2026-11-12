@@ -7,7 +7,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 - `tests/test_branch_create.py::test_branch_create_and_refusals` (planned, L4). Branch creation round-trips the
   identity. Each refusal (empty name, duplicate, reserved namespace, foreign tenant, unresolvable
   base) returns a typed error. Each leaves no registry entry. *(MEDULLA-BRANCH-MERGE-R001)*
-- `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (planned, L4). A write on a branch
+- `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (L4). A write on a branch
   shows on that branch. It stays invisible on main and on sibling branches. It is idempotent
   under a tenant-scoped branch idempotency key. *(MEDULLA-BRANCH-MERGE-R002)*
 - `crates/medulla-types/src/branch.rs::tests::branch_commit_appends_one_parent_and_round_trips` (L2). A plain
@@ -72,7 +72,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 Each row's acceptance test binds its ID where the test lands. The lines below record the planned homes. The spec-trailers gate resolves the spec PR's trailer.
 
 - `# spec: MEDULLA-BRANCH-MERGE-R001` — `tests/test_branch_create.py::test_branch_create_and_refusals` (planned, L4)
-- `# spec: MEDULLA-BRANCH-MERGE-R002` — `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R002` — `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R003` — `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned, L4)

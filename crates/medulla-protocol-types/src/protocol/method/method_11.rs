@@ -328,6 +328,21 @@ $($variants)*
         base_engine_version: Option<u64>,
     },
 
+    /// Apply one mutation to a branch (MEDULLA-BRANCH-MERGE-R002). The mutation
+    /// commits to the branch's own target graph, so `main` and sibling branches
+    /// never see it, then one `BranchCommit` is appended to the branch's single
+    /// commit chain and the head advances in the same registry transaction.
+    /// `tenant` must be the verified request tenant (`BRANCH_TENANT_DENIED`).
+    /// `BRANCH_UNKNOWN` and `BRANCH_DELETED` refuse before any graph change, as
+    /// does a `mutation` that is not a graph mutation (`BRANCH_WRITE_INVALID`).
+    /// A replay under the same idempotency key returns the original receipt.
+    BranchWrite {
+        tenant: String,
+        graph: String,
+        branch: String,
+        mutation: Box<Method>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as

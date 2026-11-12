@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-OPS-R006
 
 ## Wire shape
 
-Arbora forwards `CreateBranch`, `BranchMerge`, `BranchDiff` and `BranchReadAt` to the engine with the verified principal and tenant. Each method carries `tenant` and `graph`. Medulla checks `tenant` against the verified tenant and never reads a principal from the request body. A mutation names its branch in `MutationBatch.branch`; the default is `main`.
+Arbora forwards `CreateBranch`, `BranchWrite`, `BranchMerge`, `BranchDiff` and `BranchReadAt` to the engine with the verified principal and tenant. Each method carries `tenant` and `graph`. Medulla checks `tenant` against the verified tenant and never reads a principal from the request body. A branch-scoped mutation is sent as `BranchWrite { tenant, graph, branch, mutation }`; a mutation that names no branch is a plain write to `main`.
 
 ## Refusal codes
 

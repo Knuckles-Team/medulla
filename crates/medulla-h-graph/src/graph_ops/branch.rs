@@ -11,12 +11,15 @@ pub mod merge;
 use std::sync::Arc;
 
 use medulla_persistence::branch_registry_store::{
-    shared_branch_registry, BranchCreateError, BranchRegistry,
+    shared_branch_registry, AppendedCommit, BranchCommitInput, BranchCreateError, BranchRegistry,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_types::branch::{validate_branch_name, Branch};
+use medulla_types::branch::{
+    branch_target_graph, validate_branch_name, Branch, BranchMutationRefusal, BranchRef,
+    BranchWriteReceipt, RESERVED_BRANCH_NAME,
+};
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
@@ -131,6 +134,155 @@ pub async fn handle_create_branch(
     respond(req_id, commit(registry, branch).await)
 }
 
+/// Where one branch-scoped mutation commits (MEDULLA-BRANCH-MERGE-R002).
+///
+/// Built only by [`resolve_target`], which refuses before any graph change.
+#[derive(Debug, Clone)]
+pub struct BranchTarget {
+    pub reference: BranchRef,
+    /// The graph the branch's writes live in; never the base graph.
+    pub target_graph: String,
+    registry: Arc<BranchRegistry>,
+}
+
+/// Why a branch-scoped write could not resolve its target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BranchTargetError {
+    /// A typed refusal decided before any graph change.
+    Refused(BranchMutationRefusal),
+    /// The registry itself failed.
+    Store(String),
+}
+
+/// Map `(tenant, graph, branch)` to the commit target before the mutation
+/// compiles (MEDULLA-BRANCH-MERGE-R002). The request tenant must be the
+/// verified tenant; the trunk `main` is not a branch row and is refused as
+/// `BRANCH_UNKNOWN` (a trunk write names no branch); an unknown, deleted or
+/// foreign-tenant branch refuses with its typed code.
+pub async fn resolve_target(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    reference: BranchRef,
+) -> Result<BranchTarget, BranchTargetError> {
+    if reference.tenant != verified.tenant() {
+        return Err(BranchTargetError::Refused(
+            BranchMutationRefusal::BranchTenantDenied,
+        ));
+    }
+    if reference.name == RESERVED_BRANCH_NAME {
+        return Err(BranchTargetError::Refused(
+            BranchMutationRefusal::BranchUnknown,
+        ));
+    }
+    let registry = {
+        let s = state.read().await;
+        shared_branch_registry(&s).map_err(BranchTargetError::Store)?
+    };
+    let lookup = {
+        let registry = Arc::clone(&registry);
+        let reference = reference.clone();
+        let tenant = verified.tenant().to_string();
+        tokio::task::spawn_blocking(move || registry.resolve_live(&reference, &tenant))
+            .await
+            .map_err(|error| BranchTargetError::Store(error.to_string()))?
+            .map_err(BranchTargetError::Store)?
+    };
+    lookup.map_err(BranchTargetError::Refused)?;
+    Ok(BranchTarget {
+        target_graph: branch_target_graph(&reference),
+        reference,
+        registry,
+    })
+}
+
+impl BranchTarget {
+    /// The commit a prior attempt with `batch_id` already appended.
+    pub async fn replayed(
+        &self,
+        batch_id: &str,
+    ) -> Result<Option<medulla_types::branch::BranchCommit>, String> {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        let batch_id = batch_id.to_string();
+        tokio::task::spawn_blocking(move || registry.commit_for_batch(&reference, &batch_id))
+            .await
+            .map_err(|error| error.to_string())?
+    }
+
+    /// Append the commit and advance the head in one registry transaction.
+    pub async fn append(
+        &self,
+        tenant: &str,
+        input: BranchCommitInput,
+    ) -> Result<AppendedCommit, BranchCreateError> {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        let tenant = tenant.to_string();
+        tokio::task::spawn_blocking(move || registry.append_commit(&reference, &tenant, &input))
+            .await
+            .map_err(|error| BranchCreateError::Store(error.to_string()))?
+    }
+
+    /// The served receipt of an appended (or replayed) commit.
+    pub fn receipt(&self, appended: AppendedCommit) -> BranchWriteReceipt {
+        BranchWriteReceipt {
+            branch_head: appended.commit.id.clone(),
+            commit: appended.commit,
+            target_graph: self.target_graph.clone(),
+            replayed: appended.replayed,
+        }
+    }
+}
+
+/// The refusal response of a failed target resolution.
+pub fn target_error_response(req_id: u64, error: BranchTargetError) -> Response {
+    match error {
+        BranchTargetError::Refused(refusal) => Response::err(
+            req_id,
+            format!("{}: branch write refused", refusal.code().as_str()),
+        ),
+        BranchTargetError::Store(detail) => Response::err(req_id, detail),
+    }
+}
+
+/// The refusal response of a failed commit append.
+pub fn append_error_response(req_id: u64, error: BranchCreateError) -> Response {
+    match error {
+        BranchCreateError::Refused(code) => {
+            Response::err(req_id, format!("{}: branch write refused", code.as_str()))
+        }
+        BranchCreateError::Store(detail) => Response::err(req_id, detail),
+    }
+}
+
+/// A closed refusal for a `mutation` that is not one graph mutation.
+pub fn invalid_write(req_id: u64, detail: &str) -> Response {
+    Response::err(
+        req_id,
+        format!("{}: {detail}", ServerErrorCode::BranchWriteInvalid.as_str()),
+    )
+}
+
+/// The payload of a served branch receipt.
+pub fn receipt_response(req_id: u64, receipt: BranchWriteReceipt) -> Response {
+    match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BranchWrite>(
+        receipt,
+    ) {
+        Ok(payload) => Response::ok(req_id, payload),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// The digest recorded as the commit manifest: SHA-256 of the mutation's
+/// canonical named MessagePack.
+pub fn mutation_manifest_digest(
+    mutation: &medulla_protocol_types::protocol::Method,
+) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    let bytes = rmp_serde::to_vec_named(mutation).map_err(|error| error.to_string())?;
+    Ok(hex::encode(Sha256::digest(bytes)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +302,40 @@ mod tests {
         for (head, requested, expected) in cases {
             assert_eq!(&resolve_base(*head, *requested), expected);
         }
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn branch_batch_ids_are_scoped_by_tenant_graph_and_branch() {
+        use medulla_server_api::batch_compile::branch_batch_id;
+        let base = branch_batch_id("t", "g", "a", Some("p"), "k");
+        assert_eq!(base, branch_batch_id("t", "g", "a", Some("p"), "k"));
+        assert_ne!(base, branch_batch_id("t2", "g", "a", Some("p"), "k"));
+        assert_ne!(base, branch_batch_id("t", "g", "b", Some("p"), "k"));
+        assert_ne!(base, branch_batch_id("t", "g", "a", Some("p"), "k2"));
+        assert_ne!(
+            branch_batch_id("t", "g", "ab", Some("p"), "k"),
+            branch_batch_id("t", "ga", "b", Some("p"), "k")
+        );
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn manifest_digest_binds_the_mutation() {
+        use medulla_protocol_types::protocol::Method;
+        let a = Method::HasNode {
+            node_id: "a".into(),
+        };
+        let b = Method::HasNode {
+            node_id: "b".into(),
+        };
+        assert_eq!(
+            mutation_manifest_digest(&a).unwrap(),
+            mutation_manifest_digest(&a).unwrap()
+        );
+        assert_ne!(
+            mutation_manifest_digest(&a).unwrap(),
+            mutation_manifest_digest(&b).unwrap()
+        );
     }
 }

@@ -132,6 +132,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
     "CreateBranch",
+    // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
+    "BranchWrite",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",
@@ -147,6 +149,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "UnbindQueue",
     // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
     "CreateBranch",
+    // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
+    "BranchWrite",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
     "LiveArtifactPut",
     "LiveArtifactRefresh",

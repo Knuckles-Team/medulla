@@ -38,6 +38,7 @@ use medulla_server_graph::{
 };
 use std::sync::OnceLock;
 
+mod branch_write;
 mod channels;
 mod control_plane;
 mod data_plane;

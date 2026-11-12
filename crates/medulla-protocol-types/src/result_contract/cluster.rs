@@ -17,6 +17,7 @@ method_results! {
     CreateGraph(CreateGraph) => Json<GraphCreated>;
     DeleteGraph(DeleteGraph) => Json<GraphDeleted>;
     CreateBranch(CreateBranch) => Json<medulla_types::branch::Branch>;
+    BranchWrite(BranchWrite) => Json<medulla_types::branch::BranchWriteReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;
     CatalogAssign(CatalogAssign) => Bool<bool>;

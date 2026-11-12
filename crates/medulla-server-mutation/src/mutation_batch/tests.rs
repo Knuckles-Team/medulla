@@ -429,6 +429,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     // MEDULLA-BRANCH-MERGE-R001: the branch registry row is a control-plane
     // record (branch_registry.redb), not graph data.
     ("CreateBranch", "ControlPlane"),
+    ("BranchWrite", "ControlPlane"),
     ("MultiGraphBatchUpdate", "MultiGraph"),
     ("Commit", "CrossModal"),
     ("BlobBegin", "BlobStore"),

@@ -714,6 +714,9 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // The branch registry row commits through the process-local
     // `branch_registry.redb` owner (MEDULLA-BRANCH-MERGE-R001).
     "CreateBranch",
+    // The branch commit chain commits through the same process-local owner
+    // (MEDULLA-BRANCH-MERGE-R002).
+    "BranchWrite",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -777,6 +780,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
 fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::CreateBranch { .. } => Some("CreateBranch"),
+        Method::BranchWrite { .. } => Some("BranchWrite"),
         _ => None,
     }
 }

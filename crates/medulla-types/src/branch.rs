@@ -111,6 +111,66 @@ pub enum BranchMutationRefusal {
     BranchTenantDenied,
 }
 
+impl BranchMutationRefusal {
+    /// The wire code of this refusal.
+    pub fn code(&self) -> ServerErrorCode {
+        match self {
+            Self::BranchUnknown => ServerErrorCode::BranchUnknown,
+            Self::BranchDeleted => ServerErrorCode::BranchDeleted,
+            Self::BranchTenantDenied => ServerErrorCode::BranchTenantDenied,
+        }
+    }
+}
+
+/// The receipt of one served branch-scoped mutation (MEDULLA-BRANCH-MERGE-R002).
+///
+/// `branch_head` is the id of the appended commit, equal to `commit.id`. A
+/// replay under the same idempotency key returns the original receipt with
+/// `replayed` set.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct BranchWriteReceipt {
+    pub branch_head: String,
+    pub commit: BranchCommit,
+    /// The graph the branch's own writes live in; `main` is another graph.
+    pub target_graph: String,
+    pub replayed: bool,
+}
+
+/// The graph a branch's writes commit to (MEDULLA-BRANCH-MERGE-R002).
+///
+/// A pure function of the branch identity: the base graph name plus a short
+/// digest of the length-prefixed registry key, so no two branches share a
+/// target and none can collide with `main` (which is the base graph itself).
+pub fn branch_target_graph(branch: &BranchRef) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = hex::encode(Sha256::digest(branch.registry_key().as_bytes()));
+    format!("{}~branch~{}", branch.graph, &digest[..16])
+}
+
+/// The id of one branch commit: the SHA-256 of the branch key, the prior head,
+/// the batch id and the manifest digest, each length-prefixed.
+pub fn branch_commit_id(
+    branch: &BranchRef,
+    parent: &str,
+    batch_id: &str,
+    manifest_digest: &str,
+) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for part in [
+        branch.registry_key().as_str(),
+        parent,
+        batch_id,
+        manifest_digest,
+    ] {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part.as_bytes());
+    }
+    hex::encode(hasher.finalize())
+}
+
 impl BranchCommit {
     /// A plain branch commit carries exactly ONE parent, the prior head. Merge
     /// commits gain their second parent at publication (R007), by replacing the
@@ -308,6 +368,53 @@ mod tests {
             );
         }
         assert_eq!(RESERVED_BRANCH_NAME, "main");
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn branch_target_is_distinct_per_branch_and_never_main() {
+        let branch = |name: &str| BranchRef {
+            tenant: "t".into(),
+            graph: "g".into(),
+            name: name.into(),
+        };
+        let a = branch_target_graph(&branch("a"));
+        let b = branch_target_graph(&branch("b"));
+        assert_ne!(a, b);
+        assert_ne!(a, "g");
+        assert!(a.starts_with("g~branch~"));
+        assert_eq!(a, branch_target_graph(&branch("a")));
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn commit_id_binds_every_part_and_refusals_map_to_codes() {
+        let branch = BranchRef {
+            tenant: "t".into(),
+            graph: "g".into(),
+            name: "a".into(),
+        };
+        let base = branch_commit_id(&branch, "p", "batch", "m");
+        assert_eq!(base.len(), 64);
+        assert_ne!(base, branch_commit_id(&branch, "q", "batch", "m"));
+        assert_ne!(base, branch_commit_id(&branch, "p", "other", "m"));
+        assert_ne!(base, branch_commit_id(&branch, "p", "batch", "n"));
+        assert_ne!(
+            branch_commit_id(&branch, "ab", "c", "m"),
+            branch_commit_id(&branch, "a", "bc", "m")
+        );
+        assert_eq!(
+            BranchMutationRefusal::BranchUnknown.code().as_str(),
+            "BRANCH_UNKNOWN"
+        );
+        assert_eq!(
+            BranchMutationRefusal::BranchDeleted.code().as_str(),
+            "BRANCH_DELETED"
+        );
+        assert_eq!(
+            BranchMutationRefusal::BranchTenantDenied.code().as_str(),
+            "BRANCH_TENANT_DENIED"
+        );
     }
 
     // spec: MEDULLA-BRANCH-MERGE-R003

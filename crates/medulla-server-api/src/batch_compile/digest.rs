@@ -78,6 +78,27 @@ pub fn lifecycle_batch_id(
     )
 }
 
+/// Batch id of one branch-scoped write (MEDULLA-BRANCH-MERGE-R002): the
+/// `lifecycle_batch_id` family keyed by `(tenant, graph, branch, principal,
+/// idempotency_key)`, so two branches or two tenants sharing a key never replay
+/// each other's commit. The branch joins the graph in the hashed scope with a
+/// NUL separator, which neither a graph nor a branch name can contain.
+pub fn branch_batch_id(
+    tenant_scope: &str,
+    graph: &str,
+    branch: &str,
+    principal: Option<&str>,
+    idempotency_key: &str,
+) -> String {
+    opaque_idempotency_key_for_context(
+        "lifecycle-branch-write",
+        tenant_scope,
+        &format!("{graph}\u{0}{branch}"),
+        principal,
+        idempotency_key,
+    )
+}
+
 fn graph_identity_hasher(namespace: &str, graph: &str) -> sha2::Sha256 {
     use sha2::{Digest, Sha256};
     let mut digest = Sha256::new();

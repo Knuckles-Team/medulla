@@ -87,7 +87,7 @@ none
 
 - `Method::CreateBranch`, `Method::BranchMerge`, `Method::BranchDiff` and `Method::BranchReadAt` arms in `dispatch_graph_lifecycle_methods` (`crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs:7`, chained at `router.rs:145`) to the handlers in `crates/medulla-h-graph/src/graph_ops/branch.rs`.
 - `handle_branch_merge` to `merge_entities` (`branch/merge.rs`), `resolve` (`branch/conflict.rs`) and `publish_merge` (`branch/publish.rs`) to `commit_mutation_batch_crossmodal` (`crates/medulla-server-api/src/api/persistence.rs:314`).
-- A branch-scoped mutation to `compile_methods` (`crates/medulla-server-api/src/batch_compile/compile.rs`) and `commit_internal_graph_methods_with_nonce` (`crates/medulla-server-mutation/src/mutation_batch/commit/internal.rs:128`).
+- `Method::BranchWrite` in `dispatch_graph_lifecycle_methods` to `handle_branch_write` (`crates/medulla-server-router/src/dispatch/router/branch_write.rs`), which resolves the target with `resolve_target`, commits the mutation to the branch target graph through `dispatch_graph_op`, then appends the commit with `BranchRegistry::append_commit`.
 - Obsolete paths to delete: none; every path above is new.
 
 ## Cross-repo seams

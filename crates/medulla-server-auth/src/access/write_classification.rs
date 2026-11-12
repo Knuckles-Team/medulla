@@ -459,6 +459,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DecisionCommit { .. }
                 // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
                 | Method::CreateBranch { .. }
+                // MEDULLA-BRANCH-MERGE-R002: a branch-scoped mutation.
+                | Method::BranchWrite { .. }
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }
