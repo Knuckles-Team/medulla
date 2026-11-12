@@ -5,7 +5,7 @@ use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";

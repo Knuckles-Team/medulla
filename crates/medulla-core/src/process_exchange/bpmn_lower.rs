@@ -14,7 +14,7 @@ use medulla_types::process_import::{
 use super::{BpmnDocument, BpmnNode};
 
 /// The core namespace of the BPMN classes and the two annotations.
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = medulla_types::ontology_iri!("core#");
 
 /// The BPMN class vocabulary (MEDULLA-ORCH-VOCAB-R014.2, R014.9).
 const BPMN_VOCABULARY: &str = include_str!("../../ontology/bpmn-v1.ttl");

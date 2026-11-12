@@ -5,15 +5,15 @@
 # get is deliberately absent — content is not a graph property). All mappings
 # are virtual: metadata is read at query time, nothing is copied (decision 4).
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/objectstore/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/objectstore/> .
 
 ex:store a dp:DataStore ;
     dp:storeFamily "object" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/objectstore/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/objectstore/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:f6c709a5cb4315357322a41b2c61d097f1204b0abc5edb2730d894d3228b7886" ;
     vg:discoveredEntity "buckets" ;

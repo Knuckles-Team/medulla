@@ -8,9 +8,9 @@
 #
 # The key sets are fixture-local data (ex: namespace): no new core vocabulary.
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/blocking-keys#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/blocking-keys#> .
 
 # --- The plan.md table ------------------------------------------------------
 

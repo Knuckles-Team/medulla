@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -103,7 +103,7 @@ that governs its design and operation.""" .
     rdfs:comment """Transitive: if ADR-C supersedes ADR-B supersedes ADR-A,
 then ADR-C supersedes ADR-A. Enables full decision lineage queries.""" .
 
-<http://knuckles.team/kg/enterprise> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/enterprise> a owl:Ontology ;
     rdfs:label "Enterprise Architecture Governance Ontology" ;
     rdfs:comment """Enterprise-level governance, architecture decision records, and
 ArchiMate 3.2 metamodel alignment for centralized SPARQL federation.
@@ -194,12 +194,12 @@ ArchiMate: Strategy → CourseOfAction.""" ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
-<http://knuckles.team/kg#ApplicationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ArchiMateElement> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ArchitectureDecisionRecord> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusinessLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#EAFactSheet> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#MotivationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ProcessModel> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#StrategyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TechnologyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ApplicationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ArchiMateElement> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ArchitectureDecisionRecord> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusinessLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#EAFactSheet> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#MotivationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ProcessModel> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#StrategyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TechnologyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .

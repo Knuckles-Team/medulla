@@ -6,16 +6,16 @@
 # the viaOperation records that fallback. All mappings are virtual: rows stay
 # in the source and only catalog metadata is held (decision 4).
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/sql/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/sql/> .
 
 ex:store a dp:Database ;
     dp:storeFamily "relational" ;
     dp:sqlDialect "postgresql" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/sql/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/sql/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:16f5216c9eb1024252d092b6aa4aafd663e1c9585b9279361000ff1fc7e8a52a" ;
     vg:discoveredEntity "tables" ;

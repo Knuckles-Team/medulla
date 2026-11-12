@@ -7,9 +7,9 @@
 # service-to-version edge. Later engine lanes (authority rows, virtual
 # mappings, impact queries) consume this fixture as their ABox seed.
 
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex: <http://knuckles.team/test/supply-chain#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 
 ex:checkoutService a infra:Service ;
     :deployedAs ex:checkoutWorkload .

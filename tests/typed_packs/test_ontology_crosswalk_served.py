@@ -28,7 +28,7 @@ from ontology_pack_support import (
 
 from medulla.generated import reasoning
 
-CORE = "http://knuckles.team/kg#"
+CORE = "https://knuckles-team.github.io/ontology/core#"
 GOLDEN = [
     (f"{CORE}Document", "http://schema.org/DigitalDocument", "skos_close_match"),
     (f"{CORE}Event", "http://schema.org/Event", "skos_close_match"),
@@ -176,7 +176,7 @@ def test_crosswalk_refusals_leave_state_unchanged() -> None:
                         "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
                         "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
                         "<http://example.test/pack#Local> a owl:Class ;\n"
-                        "    rdfs:subClassOf <http://knuckles.team/kg#Person> .\n",
+                        "    rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Person> .\n",
                     ),
                     crosswalk_entry(
                         connector,

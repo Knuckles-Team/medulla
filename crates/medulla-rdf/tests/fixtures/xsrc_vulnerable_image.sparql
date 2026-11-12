@@ -2,8 +2,8 @@
 # Classes only (MEDULLA-CQ-XSRC-R008.1.1): the deployed-image filter reuses the
 # existing :deployedAs/:usesImage/:containsComponent terms, and no source,
 # endpoint or connector is named here.
-PREFIX : <http://knuckles.team/kg#>
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 
 SELECT ?service ?image ?workload ?version ?vulnerability WHERE {
   ?image a infra:ContainerImage .

@@ -12,18 +12,18 @@ use medulla_types::contract::ResourceId;
 use super::{bind, build_pack, head_of, imported, tool, Content, Served, ADMIN, TENANT};
 use crate::connector_pack_projection::worker::sweep;
 
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
+const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
 
 type Pack = (ConnectorPackIndex, Vec<u8>);
 
 /// The ontology of a pack whose `tools` all operate on one domain class.
 fn surface_ontology(connector: &str, tools: &[&str]) -> Content {
     let mut body = String::from(
-        "@prefix cp: <http://knuckles.team/kg/connector-pack#> .\n\
+        "@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .\n\
          @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
          @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
          <https://example.org/Order> a owl:Class ;\n\
-         rdfs:subClassOf <http://knuckles.team/kg#Agreement> .\n",
+         rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Agreement> .\n",
     );
     for name in tools {
         body.push_str(&format!(

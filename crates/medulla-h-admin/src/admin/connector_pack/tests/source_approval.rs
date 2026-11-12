@@ -50,7 +50,7 @@ fn source_contract(connector: &str, body: String) -> Content {
     }
 }
 
-const CONTRACT: &str = r#"@prefix ac: <https://knuckles-team.github.io/agent-connector-sdk/access#> .
+const CONTRACT: &str = r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
 <urn:supplier-contract> a ac:AccessContract ; ac:classIri <urn:Supplier> ;
  ac:sourceId "suppliers" ; ac:accessKind "mcp_tool" ; ac:operation "list_suppliers" ;
  ac:entity "Supplier" ; ac:keyField "id" ."#;
@@ -268,7 +268,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
             source_contract(
                 connector,
                 format!(
-                    r#"@prefix ac: <https://knuckles-team.github.io/agent-connector-sdk/access#> .
+                    r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
 <data://{connector}/suppliers#access> a ac:AccessContract ;
  ac:classIri "urn:Supplier" ; ac:sourceId "{connector}/suppliers" ;
  ac:entity "suppliers" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ;
@@ -759,7 +759,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
     let _env = served.with_graph_persistence().await;
     bind(&served, connector, ADMIN).await;
     let contract = format!(
-        r#"@prefix ac: <https://knuckles-team.github.io/agent-connector-sdk/access#> .
+        r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
 <data://{connector}/first#access> a ac:AccessContract ; ac:classIri "urn:Item" ; ac:sourceId "{connector}/first" ; ac:entity "first" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ; ac:operation "list_first" ; ac:pagination "none" .
 <data://{connector}/second#access> a ac:AccessContract ; ac:classIri "urn:Item" ; ac:sourceId "{connector}/second" ; ac:entity "second" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ; ac:operation "list_second" ; ac:pagination "none" ."#
     );

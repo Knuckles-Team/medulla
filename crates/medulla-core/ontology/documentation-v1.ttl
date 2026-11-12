@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -85,7 +85,7 @@
 
 :validUntil a owl:DatatypeProperty .
 
-<http://knuckles.team/kg/documentation> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/documentation> a owl:Ontology ;
     rdfs:label "Governed documentation projection ontology" ;
     rdfs:comment "Metadata-only Markdown projection with source revision, digest, provenance, lifecycle and temporal state." .
 
@@ -146,6 +146,6 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:Artifact through rdfs:subClassOf.
-<http://knuckles.team/kg#ArchiveResult> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
-<http://knuckles.team/kg#DocumentationEvidence> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
-<http://knuckles.team/kg#DocumentationRevision> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
+<https://knuckles-team.github.io/ontology/core#ArchiveResult> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Artifact> .
+<https://knuckles-team.github.io/ontology/core#DocumentationEvidence> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Artifact> .
+<https://knuckles-team.github.io/ontology/core#DocumentationRevision> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Artifact> .

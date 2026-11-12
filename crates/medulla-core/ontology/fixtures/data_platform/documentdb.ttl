@@ -7,15 +7,15 @@
 # virtual: documents stay in the source, only the inferred shape is held
 # (decision 4).
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/documentdb/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/documentdb/> .
 
 ex:store a dp:DataStore ;
     dp:storeFamily "document" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/documentdb/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/documentdb/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:c6a010547910e6e64a6f22ed81fe835dbd9c7fd87552f249be8420509b7f36c2" ;
     vg:discoveredEntity "collections" ;

@@ -39,6 +39,7 @@ pub mod loops;
 // MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.
 pub mod task_queue;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
+pub mod ontology_base;
 pub mod ontology_proposal;
 // MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
 pub mod knowledge_atom;

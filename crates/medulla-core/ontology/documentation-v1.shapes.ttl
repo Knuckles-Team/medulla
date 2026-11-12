@@ -1,4 +1,4 @@
-@prefix kg: <http://knuckles.team/kg#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 # Documentation ABox shapes: the records the archivebox connector writes under

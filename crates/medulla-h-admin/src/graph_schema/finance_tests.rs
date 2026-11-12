@@ -24,7 +24,7 @@ const WIRED_MODULES: &[&str] = &[
 ];
 
 const FIXTURE: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/markets#> .
 
 ex:btc :venueSymbol "BTC" .
@@ -141,7 +141,7 @@ fn listing_signal_and_flip_wiring_entails_their_types() {
 fn a_trend_flip_is_never_an_instrument() {
     let mut triples = wired_with_fixture(WIRED_MODULES, FIXTURE);
     triples.extend(parse_scoped(
-        "@prefix : <http://knuckles.team/kg#> . <http://example.org/markets#flip2> a :FinancialInstrument .",
+        "@prefix : <https://knuckles-team.github.io/ontology/core#> . <http://example.org/markets#flip2> a :FinancialInstrument .",
         "clash",
     ));
     let dl = medulla_reasoner::tableau::parse_dl_ontology(&triples);
@@ -187,7 +187,7 @@ fn a_backtest_result_may_specialise_the_outcome_evaluation_record() {
     let sources = GraphSchemaSources::default();
     let mut triples: Vec<Triple> = validate_and_compose(&sources).unwrap().ontology.to_vec();
     triples.extend(parse_scoped(
-        "@prefix : <http://knuckles.team/kg#> .\n\
+        "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
          @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
          :BacktestResult rdfs:subClassOf :OutcomeEvaluation .",
         "pack",
@@ -241,7 +241,7 @@ fn finance_shapes_are_their_own_document() {
 mod shapes {
     use super::FINANCE_SHAPES;
 
-    const PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> .\n\
+    const PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
         @prefix ex: <http://example.org/markets#> .\n\
         @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n";
 

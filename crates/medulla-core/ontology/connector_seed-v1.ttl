@@ -4,11 +4,11 @@
 # needed to establish a connector instance.  Bulk records remain at the
 # connector source and are not represented by this vocabulary.
 
-@prefix seed: <http://knuckles.team/kg/connector-seed#> .
+@prefix seed: <https://knuckles-team.github.io/ontology/connector-seed#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-<http://knuckles.team/kg/connector-seed> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/connector-seed> a owl:Ontology ;
     rdfs:label "Connector seed graph" ;
     rdfs:comment "Identity, catalog and reference/index facts established when a connector pack is imported." .
 
@@ -28,5 +28,5 @@ seed:fromSeed a owl:ObjectProperty ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg/connector-seed#SeedRevision> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg/connector-seed#SeedSubject> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-seed#SeedRevision> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/connector-seed#SeedSubject> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

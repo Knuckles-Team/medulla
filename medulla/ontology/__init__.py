@@ -13,6 +13,8 @@ from collections.abc import Iterator
 from importlib import resources
 from pathlib import Path
 
+#: The one organization ontology base (mirrors the engine constant in the types crate).
+ONTOLOGY_BASE = "https://knuckles-team.github.io/ontology/"
 CATALOG_NAME = "catalog-v1.ttl"
 SHAPES_SUFFIX = ".shapes.ttl"
 _IMPORT = re.compile(r"<([^<>\s]+)>")

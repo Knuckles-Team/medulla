@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
@@ -62,9 +62,9 @@
     rdfs:domain :Function ;
     rdfs:range xsd:boolean .
 
-<http://knuckles.team/kg/system> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/system> a owl:Ontology ;
     rdfs:label "Agent Intelligence Graph — System Module" ;
-    rdfs:comment "System domain extension (interface link constraints, system-level types). Imported by the canonical <http://knuckles.team/kg> ontology; resolved to ontology_system.ttl by the local loader convention." .
+    rdfs:comment "System domain extension (interface link constraints, system-level types). Imported by the canonical <https://knuckles-team.github.io/ontology/core> ontology; resolved to ontology_system.ttl by the local loader convention." .
 
 :FunctionInvocation a owl:Class ;
     rdfs:label "Function Invocation" ;
@@ -194,5 +194,5 @@ runtime. CONCEPT:KG-2.41.""" ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#Chunk> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#Marking> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#Chunk> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#Marking> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

@@ -4,8 +4,8 @@
 # abstention; coversService is BLOCKED (R005.9), so no covered-service edge
 # is recorded.
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:contract-001 a kg:CustomerContract ;
     kg:contractCustomer ex:cust-001 .

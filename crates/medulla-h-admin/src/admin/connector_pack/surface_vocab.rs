@@ -7,9 +7,9 @@
 //! projection writes.
 
 /// The connector-pack vocabulary namespace.
-pub(super) const CP: &str = "http://knuckles.team/kg/connector-pack#";
+pub(super) const CP: &str = medulla_types::ontology_iri!("connector-pack#");
 /// The connector node namespace the contract mapping also uses.
-pub(super) const CONNECTOR_BASE: &str = "http://knuckles.team/kg/connector-pack/connector/";
+pub(super) const CONNECTOR_BASE: &str = medulla_types::ontology_iri!("connector-pack/connector/");
 /// `rdf:type`.
 pub(super) const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 

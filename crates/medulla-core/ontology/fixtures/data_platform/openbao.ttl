@@ -8,14 +8,14 @@
 # operations are still BLOCKED on openbao-mcp (R009.3). Both mappings are
 # virtual.
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/openbao/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/openbao/> .
 
 ex:store a dp:SecretEngine .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/openbao/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/openbao/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:eba700aa1409636f6ea8ea4af01234f3805009566d60a6b15392880b03fd2260" ;
     vg:discoveredEntity "mounts" ;

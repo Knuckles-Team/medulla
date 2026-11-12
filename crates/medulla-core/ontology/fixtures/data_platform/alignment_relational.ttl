@@ -4,12 +4,12 @@
 # drift silently: classes `rdfs:subClassOf` (the package term is the emitted
 # shape, the dp: term is the engine-side vocabulary), properties
 # `owl:equivalentProperty`. Package terms live in the shared
-# `http://knuckles.team/kg#` namespace.
+# `https://knuckles-team.github.io/ontology/core#` namespace.
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 
 # --- sql (sql-mcp, database.ttl) ---
 

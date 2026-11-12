@@ -9,8 +9,8 @@
 # (pulselink_response.json, same directory); vg:contentDigest is sha256 over its bytes.
 # `pulse_fetch` and `pulse_list` (article body or listing) add no entity beyond the search result.
 
-@prefix :    <http://knuckles.team/kg#> .
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f:   <urn:eg-media-vocab:pulselink/> .
 

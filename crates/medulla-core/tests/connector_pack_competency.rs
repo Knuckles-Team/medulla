@@ -12,7 +12,7 @@ use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
 const RDFS_RANGE: &str = "http://www.w3.org/2000/01/rdf-schema#range";
@@ -123,13 +123,13 @@ fn finance_method_terms_and_shape() {
 
     // A complete algorithm conforms; dropping either applicability axis
     // violates the shape.
-    let complete = "@prefix : <http://knuckles.team/kg#> .
+    let complete = "@prefix : <https://knuckles-team.github.io/ontology/core#> .
         :method a :FinanceAlgorithm ; :appliesToAnalysis :riskAnalysis ; :appliesToInstrumentType :Position .
         :riskAnalysis a :AnalysisType .";
     let report = medulla_shacl::validate_turtle(shapes, complete).expect("validation runs");
     assert!(report.conforms, "a complete algorithm conforms: {report:?}");
 
-    let missing_analysis = "@prefix : <http://knuckles.team/kg#> .
+    let missing_analysis = "@prefix : <https://knuckles-team.github.io/ontology/core#> .
         :method a :FinanceAlgorithm ; :appliesToInstrumentType :Position .";
     let report = medulla_shacl::validate_turtle(shapes, missing_analysis).expect("validation runs");
     assert!(
@@ -137,7 +137,7 @@ fn finance_method_terms_and_shape() {
         "an algorithm naming no analysis type violates the shape: {report:?}"
     );
 
-    let missing_instrument = "@prefix : <http://knuckles.team/kg#> .
+    let missing_instrument = "@prefix : <https://knuckles-team.github.io/ontology/core#> .
         :method a :FinanceAlgorithm ; :appliesToAnalysis :riskAnalysis .";
     let report =
         medulla_shacl::validate_turtle(shapes, missing_instrument).expect("validation runs");

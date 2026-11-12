@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -42,7 +42,7 @@
     rdfs:comment "Links a discoverable resource (MCPServer/A2AAgentCard/Skill) to the ResourceRegistry it was discovered in." ;
     rdfs:range :ResourceRegistry .
 
-<http://knuckles.team/kg/a2a> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/a2a> a owl:Ontology ;
     rdfs:label "A2A Agent-Card Ontology" ;
     rdfs:comment """Extensions describing externally-defined Agent-to-Agent (A2A)
     agents and the skills they expose, so the Knowledge Graph can discover and

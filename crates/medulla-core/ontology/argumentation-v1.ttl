@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -50,7 +50,7 @@
     rdfs:domain :AIFScheme ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/argumentation> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/argumentation> a owl:Ontology ;
     rdfs:label "AIF Argumentation Ontology" ;
     rdfs:comment """Argument Interchange Format (AIF) core ontology — I-nodes (information/
 claims) and S-nodes (scheme application: RA = rule-of-inference, CA = conflict,
@@ -141,4 +141,4 @@ duplicated solver. See docs/architecture/aif-argumentation.md.""" .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:Concept through rdfs:subClassOf.
-<http://knuckles.team/kg#AIFNode> rdfs:subClassOf <http://knuckles.team/kg#Concept> .
+<https://knuckles-team.github.io/ontology/core#AIFNode> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Concept> .

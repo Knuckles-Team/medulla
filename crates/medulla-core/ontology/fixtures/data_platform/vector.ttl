@@ -8,15 +8,15 @@
 # collection's distance metric today. Virtual: no vectors are ever copied
 # (decision 4).
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/vector/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/vector/> .
 
 ex:store a dp:DataStore ;
     dp:storeFamily "vector" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/vector/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/vector/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:2724278b4092d567552e0dbb08434fed31fc4c35d35988043b7356e358b8ebfb" ;
     vg:discoveredEntity "collections" ;

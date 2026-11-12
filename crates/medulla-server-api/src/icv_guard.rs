@@ -285,7 +285,7 @@ ex:PersonShape a sh:NodeShape ;
         let add = vec![triple(
             "http://example.org/tool",
             "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-            "http://knuckles.team/kg#Tool",
+            "https://knuckles-team.github.io/ontology/core#Tool",
         )];
         let error = check(&core, "graph", &add).unwrap_err();
         assert!(error.details.to_string().contains("witness"));

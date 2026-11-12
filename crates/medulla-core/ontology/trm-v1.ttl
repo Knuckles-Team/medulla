@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -274,7 +274,7 @@
     rdfs:domain :Assessment ;
     rdfs:range :Recommendation .
 
-<http://knuckles.team/kg/trm> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/trm> a owl:Ontology ;
     rdfs:label "Technology Reference Model + Risk Ontology" ;
     rdfs:comment """Vendor-neutral Technology Reference Model: a TechnologyProduct/
     Standard portfolio, deployed AssetInstances, and the TechnologyRisk findings
@@ -352,14 +352,14 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
-<http://knuckles.team/kg#Assessment> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ComparisonCriterion> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Cost> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#License> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#PeerGroup> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Recommendation> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TRMRequest> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TechnologyProduct> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TechnologyRisk> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TechnologyStandard> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TotalCostOfOwnership> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Assessment> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ComparisonCriterion> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Cost> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#License> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#PeerGroup> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Recommendation> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TRMRequest> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TechnologyProduct> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TechnologyRisk> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TechnologyStandard> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TotalCostOfOwnership> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .

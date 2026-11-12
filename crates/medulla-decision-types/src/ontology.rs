@@ -17,7 +17,7 @@ use crate::decision::{DecisionEvalOp, DecisionFitOp};
 use serde_json::Value;
 
 /// Namespace every generated IRI lives in (the core ontology namespace).
-pub const DECISION_NAMESPACE: &str = "http://knuckles.team/kg#";
+pub const DECISION_NAMESPACE: &str = medulla_types::ontology_iri!("core#");
 
 /// Core class every contract class extends (MEDULLA-TYPED-PACKS-R071.2): the
 /// contract records are information content, the foundation's BFO generically

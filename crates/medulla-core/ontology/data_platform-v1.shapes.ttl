@@ -7,7 +7,7 @@
 # property that is not on the allowed metadata list -- a value, data, token,
 # password, rules or ciphertext -- is itself the violation.
 
-@prefix dp:   <http://knuckles.team/kg/data-platform#> .
+@prefix dp:   <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -206,4 +206,4 @@ dp:StoreMappingShape a sh:NodeShape ;
     sh:message "A store mapping names the operation its reads route through, and that operation may never read a secret value." .
 
 dp:DataPlatformPrefixes a owl:Ontology ;
-    sh:declare [ sh:prefix "dp" ; sh:namespace "http://knuckles.team/kg/data-platform#"^^xsd:anyURI ] .
+    sh:declare [ sh:prefix "dp" ; sh:namespace "https://knuckles-team.github.io/ontology/data-platform#"^^xsd:anyURI ] .

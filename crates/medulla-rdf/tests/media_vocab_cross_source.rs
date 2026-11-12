@@ -24,7 +24,7 @@ const CONTENT: &str = include_str!("../../medulla-core/ontology/content-v1.ttl")
 const ASOF: &str = "2026-01-15T00:00:00Z";
 
 const FIXTURE_PREFIXES: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -32,7 +32,7 @@ const FIXTURE_PREFIXES: &str = r#"
 "#;
 
 const QUERY_PREFIXES: &str = r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 "#;

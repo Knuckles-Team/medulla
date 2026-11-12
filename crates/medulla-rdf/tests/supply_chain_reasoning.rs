@@ -10,8 +10,8 @@ use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::Triple;
 use medulla_reasoner::{owl::saturate_object_properties, owl::Reasoner};
 
-const KG: &str = "http://knuckles.team/kg#";
-const EX: &str = "http://knuckles.team/test/supply-chain#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
+const EX: &str = "https://knuckles-team.github.io/ontology/test/supply-chain#";
 
 fn documents() -> Vec<Triple> {
     parse_all(&[
@@ -46,8 +46,8 @@ fn container_image_entails_software_component_under_the_native_reasoner() {
         classification.unsatisfiable
     );
     assert!(classification.entails_subclass(
-        "<http://knuckles.team/kg/infrastructure#ContainerImage>",
-        "<http://knuckles.team/kg#SoftwareComponent>"
+        "<https://knuckles-team.github.io/ontology/infrastructure#ContainerImage>",
+        "<https://knuckles-team.github.io/ontology/core#SoftwareComponent>"
     ));
 }
 
@@ -66,8 +66,8 @@ fn supplies_service_infers_supplier_to_service_from_the_software_path() {
     triples.extend(
         parse_turtle(
             r#"
-            @prefix : <http://knuckles.team/kg#> .
-            @prefix ex: <http://knuckles.team/test/supply-chain#> .
+            @prefix : <https://knuckles-team.github.io/ontology/core#> .
+            @prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 
             ex:openssl111k :supplyChainVersionOf ex:openssl .
             "#,
@@ -132,9 +132,9 @@ fn container_or_pod_runs_on_path_infers_no_supplier_service_edge() {
     triples.extend(
         parse_turtle(
             r#"
-            @prefix : <http://knuckles.team/kg#> .
-            @prefix infra: <http://knuckles.team/kg/infrastructure#> .
-            @prefix ex: <http://knuckles.team/test/supply-chain#> .
+            @prefix : <https://knuckles-team.github.io/ontology/core#> .
+            @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+            @prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 
             ex:acmeSupplier a :Supplier ;
                 :suppliesItem ex:psuItem .
@@ -162,7 +162,7 @@ fn container_or_pod_runs_on_path_infers_no_supplier_service_edge() {
             "a container-only or pod-only path must not derive {predicate}"
         );
     }
-    let service_type = "<http://knuckles.team/kg/infrastructure#Service>";
+    let service_type = "<https://knuckles-team.github.io/ontology/infrastructure#Service>";
     assert!(
         !entailed.iter().any(|fact| fact.object == service_type),
         "no endpoint is retyped as a Service"
@@ -204,8 +204,8 @@ fn module_version_edges_retain_the_shared_version_query_predicate() {
     triples.extend(
         parse_turtle(
             r#"
-            @prefix : <http://knuckles.team/kg#> .
-            @prefix ex: <http://knuckles.team/test/version-ownership#> .
+            @prefix : <https://knuckles-team.github.io/ontology/core#> .
+            @prefix ex: <https://knuckles-team.github.io/ontology/test/version-ownership#> .
 
             ex:datasetVersion a :DatasetVersion ;
                 :dataplatformVersionOf ex:dataset .
@@ -224,13 +224,13 @@ fn module_version_edges_retain_the_shared_version_query_predicate() {
     let generic = format!("<{KG}versionOf>");
     for (subject, object, local) in [
         (
-            "<http://knuckles.team/test/version-ownership#datasetVersion>",
-            "<http://knuckles.team/test/version-ownership#dataset>",
+            "<https://knuckles-team.github.io/ontology/test/version-ownership#datasetVersion>",
+            "<https://knuckles-team.github.io/ontology/test/version-ownership#dataset>",
             format!("<{KG}dataplatformVersionOf>"),
         ),
         (
-            "<http://knuckles.team/test/version-ownership#componentVersion>",
-            "<http://knuckles.team/test/version-ownership#component>",
+            "<https://knuckles-team.github.io/ontology/test/version-ownership#componentVersion>",
+            "<https://knuckles-team.github.io/ontology/test/version-ownership#component>",
             format!("<{KG}supplyChainVersionOf>"),
         ),
     ] {
@@ -249,9 +249,9 @@ fn module_version_edges_retain_the_shared_version_query_predicate() {
         assert_eq!(shared.rule, "RL-subPropertyOf");
     }
     assert!(entailed.iter().any(|fact| {
-        fact.subject == "<http://knuckles.team/test/version-ownership#legacyVersion>"
+        fact.subject == "<https://knuckles-team.github.io/ontology/test/version-ownership#legacyVersion>"
             && fact.predicate == generic
-            && fact.object == "<http://knuckles.team/test/version-ownership#legacyComponent>"
+            && fact.object == "<https://knuckles-team.github.io/ontology/test/version-ownership#legacyComponent>"
             && fact.asserted
     }));
 }

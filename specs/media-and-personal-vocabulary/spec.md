@@ -101,7 +101,7 @@ A user sends an image or a voice note and later recalls it by its caption or tra
 
 ## Assumptions
 
-- The `mv:` and `cv:` prefixes are documentation prefixes for sections of the shared `http://knuckles.team/kg#` namespace; every IRI stays in `:`.
+- The `mv:` and `cv:` prefixes are documentation prefixes for sections of the shared `https://knuckles-team.github.io/ontology/core#` namespace; every IRI stays in `:`.
 - The vision producer of media tags is held by its owner; no row names it.
 - Citation edges wait for the scion-sdk contract that serves cited-paper ids and target identity normalization.
 - `content-v1.ttl` and the media and content shapes are loaded by tests today; registering them as core sources is an open owner item.

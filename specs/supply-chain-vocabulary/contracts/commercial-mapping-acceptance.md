@@ -5,7 +5,7 @@ Consumer: medulla MEDULLA-CQ-CONN-R083
 
 ## Wire shape
 
-The commercial module is registered once in the core schema sources with its shapes companion. The connector competency rows map ERPNext, Salesforce and Twenty records onto `kg:Customer`, `kg:CustomerContract` and `kg:Opportunity` and rely on the shared namespace `http://knuckles.team/kg#`.
+The commercial module is registered once in the core schema sources with its shapes companion. The connector competency rows map ERPNext, Salesforce and Twenty records onto `kg:Customer`, `kg:CustomerContract` and `kg:Opportunity` and rely on the shared namespace `https://knuckles-team.github.io/ontology/core#`.
 
 ## Refusal codes
 

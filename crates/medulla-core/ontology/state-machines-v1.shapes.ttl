@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -33,7 +33,7 @@
     sh:sparql [
         sh:message "A transition leaves a terminal state." ;
         sh:select """
-            PREFIX : <http://knuckles.team/kg#>
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             SELECT $this WHERE {
                 $this :fromState ?state .
@@ -45,7 +45,7 @@
     sh:sparql [
         sh:message "The two states of a transition do not belong to one machine." ;
         sh:select """
-            PREFIX : <http://knuckles.team/kg#>
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
             SELECT $this WHERE {
                 $this :fromState ?from ; :toState ?to .
                 OPTIONAL { ?machine :hasState ?from . ?machine :hasState ?to . }
@@ -76,7 +76,7 @@
     sh:sparql [
         sh:message "Two states of one machine share a :storedForm." ;
         sh:select """
-            PREFIX : <http://knuckles.team/kg#>
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
             SELECT $this WHERE {
                 ?machine :hasState $this , ?other .
                 $this :storedForm ?text .
@@ -96,7 +96,7 @@
     sh:sparql [
         sh:message "A record's current state belongs to no machine." ;
         sh:select """
-            PREFIX : <http://knuckles.team/kg#>
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
             SELECT $this WHERE {
                 $this :currentState ?state .
                 OPTIONAL { ?machine :hasState ?state . }

@@ -9,10 +9,10 @@
 # child lines, so the lines are a child fetch: the purchaseOrderAccess
 # contract declares the per-order `get_document` operation (Decision D2).
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-erpnext#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-erpnext#> .
 
 # Same connection as vm_erpnext_supplier.ttl: both contracts were discovered
 # from one erpnext MCP endpoint. The endpoint reference bnode carries only

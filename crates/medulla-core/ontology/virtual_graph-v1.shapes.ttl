@@ -8,7 +8,7 @@
 # carry, so any other property -- a credential, a password, a token -- is itself
 # the violation.
 
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -279,4 +279,4 @@ vg:SourceAuthorityShape a sh:NodeShape ;
     ] .
 
 vg:VirtualGraphPrefixes a owl:Ontology ;
-    sh:declare [ sh:prefix "vg" ; sh:namespace "http://knuckles.team/kg/virtual-graph#"^^xsd:anyURI ] .
+    sh:declare [ sh:prefix "vg" ; sh:namespace "https://knuckles-team.github.io/ontology/virtual-graph#"^^xsd:anyURI ] .

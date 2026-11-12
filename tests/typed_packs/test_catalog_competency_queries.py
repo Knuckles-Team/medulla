@@ -19,8 +19,8 @@ from conftest import request_context
 
 from medulla.client import SyncMedullaClient
 
-CATALOG = "http://knuckles.team/kg/catalog#"
-CONNECTOR_PACK = "http://knuckles.team/kg/connector-pack#"
+CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
+CONNECTOR_PACK = "https://knuckles-team.github.io/ontology/connector-pack#"
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 SKOS = "http://www.w3.org/2004/02/skos/core#"

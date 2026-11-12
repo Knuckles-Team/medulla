@@ -9,8 +9,8 @@
 # (mattermost_response.json, same directory); vg:contentDigest is sha256 over its bytes.
 # Teams and users reuse the shared :Team and :Person and add no row; files, reactions, webhooks and admin groups are out of scope.
 
-@prefix :    <http://knuckles.team/kg#> .
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f:   <urn:eg-media-vocab:mattermost/> .
 

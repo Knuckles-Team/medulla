@@ -11,8 +11,8 @@ use medulla_types::contract::ResourceId;
 
 use super::{bind, build_pack, import, ok, tool, Content, Served, ADMIN, TENANT};
 
-const PREFIXES: &str = "@prefix cp: <http://knuckles.team/kg/connector-pack#> .\n\
-    @prefix kg: <http://knuckles.team/kg#> .\n\
+const PREFIXES: &str = "@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .\n\
+    @prefix kg: <https://knuckles-team.github.io/ontology/core#> .\n\
     @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
     @prefix ex: <https://example.org/> .\n";
@@ -111,7 +111,7 @@ async fn surface_refusals_leave_state_unchanged() {
         ),
         (
             "r102-foreign-node",
-            "<http://knuckles.team/kg/connector-pack/connector/other-tenant-connector> \
+            "<https://knuckles-team.github.io/ontology/connector-pack/connector/other-tenant-connector> \
              cp:providesFeature ex:Feature .\n",
             PackViolationCode::ImporterMismatch,
         ),

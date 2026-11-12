@@ -1,11 +1,11 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/commercial> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/commercial> a owl:Ontology ;
     rdfs:label "Commercial" ;
     rdfs:comment "Customer, contract and opportunity vocabulary: the commercial side of the supply chain. Reuses the ERPNext IRIs in the shared kg namespace; source mappings supply the relationships." .
 

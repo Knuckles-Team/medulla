@@ -13,9 +13,9 @@ use medulla_rdf::pack::{declared_classes_and_ontologies, ontology_orphan_classes
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDFS_SUBCLASS: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
-const CAT: &str = "http://knuckles.team/kg/catalog#";
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
-const KG: &str = "http://knuckles.team/kg#";
+const CAT: &str = "https://knuckles-team.github.io/ontology/catalog#";
+const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const SCHEMA: &str = "https://schema.org/";
 
 fn has_iri(triples: &[Triple], subject: &str, predicate: &str, object: &str) -> bool {
@@ -64,12 +64,12 @@ fn fixture_parses_and_is_linked_to_the_parent() {
         "fixture ontology has orphan classes: {orphans:?}"
     );
 
-    let connector = "http://knuckles.team/test/connector-auto-onboard#connector";
-    let connector_class = "http://knuckles.team/test/connector-auto-onboard#ConnectorIncident";
+    let connector = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#connector";
+    let connector_class = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#ConnectorIncident";
     let parent_class = format!("{KG}WorkItem");
-    let instance = "http://knuckles.team/test/connector-auto-onboard#incident-1";
-    let source = "http://knuckles.team/test/connector-auto-onboard#incidents";
-    let operation = "http://knuckles.team/test/connector-auto-onboard#search-incidents";
+    let instance = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incident-1";
+    let source = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incidents";
+    let operation = "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#search-incidents";
 
     assert!(parents.contains(&parent_class));
     assert!(has_iri(
@@ -101,7 +101,7 @@ fn fixture_parses_and_is_linked_to_the_parent() {
         &triples,
         source,
         &format!("{CAT}hasField"),
-        "http://knuckles.team/test/connector-auto-onboard#incident-id"
+        "https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incident-id"
     ));
     assert!(has_iri(
         &triples,
@@ -124,19 +124,19 @@ fn fixture_parses_and_is_linked_to_the_parent() {
 
     assert_eq!(
         typed_subjects(&triples, &format!("{CAT}PromptAsset")),
-        ["http://knuckles.team/test/connector-auto-onboard#system-prompt"]
+        ["https://knuckles-team.github.io/ontology/test/connector-auto-onboard#system-prompt"]
             .into_iter()
             .collect()
     );
     assert_eq!(
         typed_subjects(&triples, &format!("{CAT}SkillAsset")),
-        ["http://knuckles.team/test/connector-auto-onboard#incident-skill"]
+        ["https://knuckles-team.github.io/ontology/test/connector-auto-onboard#incident-skill"]
             .into_iter()
             .collect()
     );
     assert_eq!(
         typed_subjects(&triples, &format!("{CAT}ToolAsset")),
-        ["http://knuckles.team/test/connector-auto-onboard#search-incidents"]
+        ["https://knuckles-team.github.io/ontology/test/connector-auto-onboard#search-incidents"]
             .into_iter()
             .collect()
     );

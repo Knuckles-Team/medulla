@@ -5,7 +5,7 @@
 # violation, not a plausible metric (precedent: finance-v1.shapes.ttl).
 # Further infrastructure shapes land beside these, never replacing them.
 
-@prefix :    <http://knuckles.team/kg/infrastructure#> .
+@prefix :    <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .

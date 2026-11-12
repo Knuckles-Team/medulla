@@ -65,14 +65,14 @@ fn caddy_routes_to_upstream_and_serves_hostnames_answer() {
     // ontology declarations land; this source-only body makes the dependency
     // and the required adversarial rows executable once the native test runs.
     let fixture = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix au: <https://agent-utilities.dev/ontology#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:caddy:fixture/> .
 
-f:backend-api a au:PlatformService .
-f:backend-other a au:PlatformService .
+f:backend-api a infra:PlatformService .
+f:backend-other a infra:PlatformService .
 
 # The target upstream has two hostnames in one route/site block.
 f:route-api a infra:ProxyRoute ;
@@ -112,7 +112,7 @@ f:route-admin a infra:ProxyRoute ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX f: <urn:eg-cq-conn:caddy:fixture/>
 SELECT ?route ?hostname ?upstream ?source ?record ?asof WHERE {

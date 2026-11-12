@@ -4,7 +4,7 @@ use medulla_shacl::{validate_turtle, ValidationReport};
 
 fn task_report(facts: &str) -> ValidationReport {
     let data = format!(
-        "@prefix swarm: <http://knuckles.team/kg/swarm#> .\n\
+        "@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .\n\
          @prefix ex: <http://example.org/> .\n{facts}"
     );
     validate_turtle(
@@ -39,7 +39,7 @@ fn shell_centric_must_be_boolean() {
             result
                 .constraint_component
                 .ends_with("DatatypeConstraintComponent")
-                && result.path.as_deref() == Some("<http://knuckles.team/kg/swarm#shellCentric>")
+                && result.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/swarm#shellCentric>")
         }));
     }
 }

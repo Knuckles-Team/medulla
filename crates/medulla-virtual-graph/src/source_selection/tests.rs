@@ -809,7 +809,7 @@ fn a_question_over_an_unconnected_source_abstains_naming_it() {
 #[test]
 fn connected_sources_need_an_approved_mapping() {
     let document = r#"
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix k: <urn:t:> .
 k:a a vg:SourceConnection ; dc:identifier "a" .

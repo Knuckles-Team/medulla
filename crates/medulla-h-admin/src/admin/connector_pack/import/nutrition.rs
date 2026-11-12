@@ -7,7 +7,7 @@
 use medulla_catalog_types::domain_pack::chemical_entity_for_nutrient;
 use medulla_rdf::oxrdf::{NamedNodeRef, Term};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = medulla_types::ontology_iri!("core#");
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 /// The violations of the `:NutrientAmount` individuals of one Turtle document.
@@ -62,7 +62,7 @@ pub(super) fn nutrient_amount_violations(text: &str) -> Vec<String> {
 mod tests {
     use super::*;
 
-    const PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> .\n\
+    const PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
         @prefix obo: <http://purl.obolibrary.org/obo/> .\n";
 
     fn amount(id: &str, nutrient: &str) -> String {

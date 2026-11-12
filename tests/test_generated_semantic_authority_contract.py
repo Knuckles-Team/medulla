@@ -85,7 +85,7 @@ def test_owl_reason_property_proof_is_fully_typed() -> None:
             {
                 "ontology": "",
                 "target_class": "",
-                "class_base": "http://knuckles.team/kg#",
+                "class_base": "https://knuckles-team.github.io/ontology/core#",
                 "min_confidence": 0.0,
             },
             "tenant",
@@ -136,8 +136,8 @@ def test_explain_and_materialization_results_are_typed() -> None:
             client,
             {
                 "ontology": "",
-                "sub": "http://knuckles.team/kg#Child",
-                "sup": "http://knuckles.team/kg#Parent",
+                "sub": "https://knuckles-team.github.io/ontology/core#Child",
+                "sup": "https://knuckles-team.github.io/ontology/core#Parent",
             },
             "tenant",
         )

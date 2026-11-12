@@ -542,7 +542,7 @@ fn reject_pack_or_ingestion_approval_claim(
 /// across a property-list continuation). A comment never starts inside an IRI,
 /// so only a `#` at line start or after whitespace terminates a line.
 fn document_claims_virtual_graph_approval(document: &str) -> bool {
-    const APPROVED: &str = "http://knuckles.team/kg/virtual-graph#approved";
+    const APPROVED: &str = medulla_types::ontology_iri!("virtual-graph#approved");
     let lines: Vec<&str> = document.lines().collect();
     let mut needles: Vec<String> = vec![format!("<{APPROVED}>")];
     for (label, iri) in prefix_bindings(&lines) {
@@ -1749,210 +1749,210 @@ mod tests {
         let expected = [
             (
                 "a2a",
-                "3206052c6dbff90471ba7d8bdac1541b29c2580be77802880b95f8c73deb8f72",
+                "aab7e8c5b2d166b59c8385110e48413c8c33eed1c651149efab6fa378e464a3d",
             ),
             (
                 "action",
-                "eb539c1652be9fa0bc9c60881221e081a17c6afb9c3cdb9d21cd73521819c98a",
+                "43ba871c307002c6a73e064cd11beee3ad7aa4abf0e7def1f86b081f159d0419",
             ),
             (
                 "archimate",
-                "a0e75bdb8086f2e0d35b3f3e432ce8839fa02d6251522ecd0319500d57e3d697",
+                "ad44f0623b4c10cfbc274edfe51dfb1bbd446c6f8eaea4a76a6545d8b74f54af",
             ),
             (
                 "capability",
-                "0bef554581e3c54e61a374e0428bd8923be382601e66312b881df0d307aa37b8",
+                "1ea2bda0a6da13f5fdf8c409894e874f9ff8bad33bfcfa3ca00311393a159b50",
             ),
             (
                 "argumentation",
-                "3802cfc9bff937f93a638bf2ca1b0fcd9a6b4432b3a02be12d404e22d1582cd0",
+                "39a17baa75f4ea6957fdee9cc9f83bcdfaa67f1e6f1020a4a589d25c8193c0f2",
             ),
             (
                 "calendar",
-                "67047ac0aa2a3bd0b41de948c729e5b0da579fb093c09e4f5492925da5d5b008",
+                "c1fb0d0db7e73345b10259bfcdabc4d28ff82465e53c403c276e3122c89d8264",
             ),
             (
                 "catalog",
-                "25bb360d41fea58b0ec3b3fc277aaaf42fa8ff5b17a66787ba81b7236e361912",
+                "7bc1822191355438760e4ef6b2ce236c38472711c9a55785420e8eb46f2a9e84",
             ),
             (
                 "company",
-                "e68b101468aa5e90b959cadf63482576db212aae64cbe51c84d28a3c17e85ca7",
+                "ce4b69dc216ce81c0fafc545a6ef9c05311c4c96d72b2d93af765293abc247d4",
             ),
             (
                 "company_infra",
-                "f5c16236b1d96b4ad01a61b9176250fe9f58045d3a9d4d9ed25284f137b5ec34",
+                "a743d603cb3904882a4c7b7cdd1f31c9033e5e14e33e5f052c2c140868eb6457",
             ),
             (
                 "connector-pack",
-                "a13628fbb9b18d4f6f92c33282515ff598c1ccd417d1cdd9dbd9c9adf3067a63",
+                "78200cda4130a8683e135f72ebf2d023517a6543855eaf001c6e996c72951ceb",
             ),
             (
                 "concepts",
-                "6713cdc3435cd0f4f76991b37667583f522d4610ba0aa6191aab052c81feb8b3",
+                "2acdd5c6e747d72f344664b57274b8a37b27a0a0e2c8b6e5d9565a62f7cfc8a0",
             ),
             (
                 "foundation",
-                "a79cc120e3d5ef46bb4b80d9912851b457486382cf886cc763c73494bc7ad92a",
+                "53a5129685d4783f9cd26d0811cb3cfaae4fa6f887bcf2a5235f200952be1618",
             ),
             (
                 "foundation-shapes",
-                "405805a8b246426bffcaacc5e3caf1b54d6e1340a281379ca7a5678c87f69cfe",
+                "ea25f85890441f7a30692f2a29fbbd147920446569b296bf0df714fe9796ea9a",
             ),
             (
                 "documentation",
-                "f61c25413211d5cc92523c548d2d50a8d26a8a5473cb59de5bf7ab16e20155b1",
+                "9b569a81a7fbe6cc021348438a463e2955ddcf73a454e217743c9639b2ac3523",
             ),
             (
                 "energy_geopolitics",
-                "bc3d0a535e8c5d21e50e82126c7d83244d445fb178d1dab0a995599f95c258a9",
+                "7295a661a2ae8ed406148ab71616379d33dabed13c6dd5bbc818d657f5d080c7",
             ),
             (
                 "enterprise",
-                "d70aabcd24c0d8b3149933a2a8c686d29323ed72bce79e571ecc8787bd919c17",
+                "481dfc20ceb7f25ec86cbf7abfc8c3e88b9de7c257b4026e6ed4ac48d87a3af2",
             ),
             (
                 "enterprise-shapes",
-                "df333980776e43addf5473dc9e875fd465b491e5a1e424bddf42f4eb22d9910d",
+                "5aac2c859334d1b31e8a4fd34e84493cc83b21fa51abc72700770afe25a5c40a",
             ),
             (
                 "governance-shapes",
-                "8195ee0454e851d182b14c9d30e1bcfa2638b44719964cd51e08d75cdc13b12d",
+                "b345bec6efc2938ec82465349ae15736c7b9c5efe6cb198919d83f5f7178deab",
             ),
             (
                 "government",
-                "6fc9f53374146e50161e5fe2aa83a5902b5c9e86fe03be69f089ddd6d39de310",
+                "533004f14c356a04ee5a43a64f56ea5b4e4f2f0540f3ed5e380ab3ebefc5703c",
             ),
             (
                 "government-shapes",
-                "cf6514787314e925a4afb5e9019e9a45d40af8f1393ca5005375ffa4559fed0a",
+                "b99e9ef4ff684ea5ea42100bb00cb0036fc315485a37938c65c3273d917f9f34",
             ),
             (
                 "harness",
-                "e11026fc84868a7f8a18b344bb8af0600022c9c6c75f9ef43fb7f02553d34c6a",
+                "902d250ed94d5956c43127f59fc088fcf620c51492dbe152e447e53ea6714810",
             ),
             (
                 "hr",
-                "bce983d484bd2d1681cacc16d6c13c9ffa229c474e0e85340f0398baf848bf6f",
+                "7bd72f0b5053a0e4f085108f74171084763fe19a2028a232406f801d1c2d03f0",
             ),
             (
                 "identity",
-                "475e321e4af6c441942a7b02e79ad78abd1a76da619e3806a77044f388fd01e3",
+                "10a59460d20080a78bf9b145db9148a9ddb4fad91507e75920953dba64863fe7",
             ),
             (
                 "identity-shapes",
-                "753ea0407a1f691351684761e2f500e3d3df3e611e5a8c249befc740350efdf8",
+                "e1713d09df43bfb9bb5f841388fcd544415bf10d365e4b1fc874f4cadf0ab346",
             ),
             (
                 "infrastructure",
-                "43aa6d86e29488f412eb804b8e353eca23f67e4bf5cfdc749aeeb68fc98efc4b",
+                "08e0765f1cff3b2fa134e460a8770623aed9b8adb310a66c800dbfd130fcc713",
             ),
             (
                 "medical",
-                "512fe88b3d8a190be089a674869a193e25ca09c591cb7cd307139e7039e75554",
+                "81e6964d89cbdc7669f29f852ef1fc64c3bc96092ca706c1005a13cc4031b6d2",
             ),
             (
                 "native_source_connector",
-                "48a1e90706248bde126d4c3d2d2f34c136cca5797a00612c6a13c994358efda2",
+                "9ab1e8346efb65705c6e73ee04b7f180b1d9434f64964ee4701f82ce11536944",
             ),
             (
                 "orchestration",
-                "2e40ac70f6483732ac1caedbd2bc41aaf961fdf2951222a46f2a11b960e62fc6",
+                "29f630b677a2cd9bc8c76cd16b29f192b165d644e1c58ba23aa79cc7941817c8",
             ),
             (
                 "orchestration-shapes",
-                "c7462c9fe1037ef33283e59766645931956cb90f66aad23e2bb4c894015a119f",
+                "26c674a9bdcaf89bd88becf0cb53bfbc91ed621e9c2b2f4bad43f9df14c4a3ab",
             ),
             // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and shapes.
             (
                 "state_machines",
-                "d1e853728f9f2603ecc3e65cc5d0e61a211bf5c6e60f7f87ef73616450cae3df",
+                "41a9f8621872f117ce23339b6b1a428aaad30b4f19fd1e41f0fd4f28a144f028",
             ),
             (
                 "state_machines-shapes",
-                "33d359241e989cab677206d9292b1cda3031637844d5f53d57aaad4b09b2da63",
+                "3e02da1f4dc166034129e13a3dcffb3695e551b2496eb86f095818267b5712cc",
             ),
             (
                 "personal",
-                "465c65532104da388ed28bf1d3d4d6b399f57b581962ec4c72ea782b730dec25",
+                "76376c1fe0dc941232951aefb5c9a745bb61169ba3d1a60cb037103e235adebf",
             ),
             (
                 "process_intelligence",
-                "52a426363a7d0a7d50ed8e84237be6196c96c9eb383cf7128bf0d637b33c8694",
+                "d8727f3bbd28ee8c8079b4108608d10ecc3a4386125450fb7028c8a9ee38a793",
             ),
             (
                 "sdd",
-                "59a092b0199b1924b45ac8ebc29e1ed3a0622db9c6a590f6fc8e7cb95a35c65c",
+                "0672a0fd093c48022a4c5dd1981c3a6178633ec9b9410858273fb9bf47a66795",
             ),
             (
                 "service_operations",
-                "3bf4054b73e1a47ff17d28f9f2b8f662cefafd05e5feac911ec5fcf28312147d",
+                "f68d57da4314fc5b03b52ac75818631bedf62c20ddde31ab25844e881d82c1ec",
             ),
             (
                 "dataplatform",
-                "bf130bc753323c5430a6b604f93fd03a87ae6d98b7563ca0c4b9f54b442bac26",
+                "1140c5a8e9257295dbfa2da05329deeaf3a002686f1d6922b73dad144ddbdec2",
             ),
             (
                 "data-platform",
-                "0cbf52870a519d293be4267b8a9d9b26fc97a378fa6e4f20f30980db6c9cdae9",
+                "3f88273dac9f47341224776e43773373e010fd3fcb62c2a09439ebdd7fcb29b7",
             ),
             (
                 "it4it_delivery",
-                "7f919c5765dc4e80aac74455b3ce1dd029b89a4d47ad08b038e024b89cb0c395",
+                "4c8534d899f7d07f93cf7eec6d42fb0ae79242624efe209646110576f8836756",
             ),
             (
                 "media",
-                "3c7a75b5b97534fb7d13f060c5f049dd3bd9f7398740a99699682fb2365889dc",
+                "2cdcf57a14a3a8823cbb241d1707ed1c14cf58b9f4583849779a8b60a61dda84",
             ),
             (
                 "retrieval",
-                "56662368e017e720d1808fbfd1478a2203155c5fe034c423868aebbcc0da82f4",
+                "309b0997e30f6f88ac04e7d0c042484baa602bd20d50cb8b755ef1d45d165c17",
             ),
             (
                 "sdlc_lifecycle",
-                "17ee3ad6857ae44628eb8699c0ea93c7195d40e1b48351ee60d0d340d969644f",
+                "b6b207e3c50609622731e711efb32fd4d29ad96157c98996c24d34225f56acbd",
             ),
             (
                 "software",
-                "be96d5d3c1dc265ec3e9647d6d5aa5948cd226196d08cd6e5918ca904ba0fe4d",
+                "f4e3497c818d2673b722baa95d2dcbf07e9443aaa71b959b3437712ddf96ab22",
             ),
             (
                 "system",
-                "77fd37067abaff0c7cc52cfcdd0de5fcec73c6de1c9fad453e311fdf313e2720",
+                "41ff66e257d1cd1cf7abab28cd4ab601c912b15c5b30b136204ec1b04874087d",
             ),
             (
                 "trm",
-                "4e4e00f56b86e279e150880f163ceac222c30663390c9fbc8bcb1545eb44e169",
+                "952e1ce1f22353b93bbc135a86e18a650e1eab76ad42067dc5dbfcdb50bf4692",
             ),
             (
                 "life",
-                "4da55226e90f23254343fd91dc59433e4361baed5ce84ffb29c5b544e48a44dd",
+                "d6380a04e0291b2883f908c09584828b0b2f0ad95ada6cdaf3e71674656648db",
             ),
             (
                 "environment",
-                "0617000bebceac047fc2dd836d1a2efc681d7632f83479cd46098c3d84f72a53",
+                "d2207c87d6c2d6de59dd82f4d0ec3ed5c5be78470426b138000df05504c7db76",
             ),
             (
                 "nutrition",
-                "21692c19900abfaf614d62f1c848dc84cfab6b792a4258cfbed4f7064170a87b",
+                "a42d133f53e48fa715794e019a42b6a85676bba3022d00a3e3ee0d812dcff735",
             ),
             (
                 "world-model-shapes",
-                "f2be16c304237069bc97b91afc01ac90c846a3f466b7d7ace89ed3e210acdb8d",
+                "1e16bbd846b81d6da576974678c1cf98df91a52b5dfa81fe419201947908bbca",
             ),
             (
                 "swarm-topology",
-                "6a537da068d767d250805becbd376d4ea82b8f80f2cd6e259e900e6a50051adb",
+                "8d975a3e12ed6bae9e509c703e1dff2d279983d8e51b4365ce50419a20d6d22b",
             ),
             (
                 "swarm-topology-shapes",
-                "1072f280c5761d749574f913967ab1fbdef04681795e43db961c8b5e9c3a4413",
+                "c09df577635071d5dae0594a0b67864740e47ae1e80ab372af82b4043d1471b0",
             ),
             // MEDULLA-PLACEMENT-R001.5: the placement module (ontology plus its
             // shapes companion) joins the catalog; the pin follows the ontology.
             (
                 "placement",
-                "1e94bfd8f3c33e6e050ec55e1f090c94b86372d15b25d6df807156563ac772ec",
+                "5ffe8274813ab3d15d0b18aa74fc9f57d91d5b63dae7f769c88157ab36bd875c",
             ),
             // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
             // records; semantic acceptance/refusal fixtures live in
@@ -1960,50 +1960,50 @@ mod tests {
             // R004.2.3-R004.2.6 added the portfolio-group, strategy and leverage records.
             (
                 "finance",
-                "0de289f4dfc0ae34d33ba95c905fad6b0d9e56f88fe7bbafcb3bc799c65c9781",
+                "7fa703648bd099f16dd09bc453832f23403431c3ae69feaff5f04e6940cd8103",
             ),
             // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
             (
                 "documentation-shapes",
-                "ff2a265a10d6331770bcf2155a5f8e3c74e15522de4bf570e867ee95b6310cb2",
+                "6c2657035352626f8b30ec2601a1e0e9dd61adcb0d6462f807e909f454feb42d",
             ),
             (
                 "finance-shapes",
-                "47575c365cadc8e77936450e7e851803158526363366b0e63f306d4ef4c18eaa",
+                "d794a71b8bc4b1f38205adb6350a35b3f88abe6d495ef3ef4f7f27c97cbf9785",
             ),
             (
                 "worldview",
-                "ff0bc0c9407d2e400ae56b3aa185a6bcc6e41980496c664ebd037c247bf1206a",
+                "beb2ed7245284061c0fef87ad1319fa544b026702c1699a981e6886124f617c4",
             ),
             (
                 "metadata_catalog",
-                "63847a25c0a66b121048f881be89b64bb487af02d306ed84a32b26e0e9a31b99",
+                "27bc4fb179675f61467c6ce40722cd65ecc978818b14e8ef35911115411ffa96",
             ),
             (
                 "metadata_catalog-shapes",
-                "6d31d420165aac4ebc401348fda95a9e43e94bdc6b26018c8b607f2ae0e18bb8",
+                "23c496142443f746b80c511a74b0a6eb0500a3a7e2c7cc7e9ee27a1f5b57a81e",
             ),
             (
                 "temporal-shapes",
-                "9bb13dd655059b6757b33621446f960bd6992bcb5aea31d5a85f4483c86bba59",
+                "be2241b3492781f0f64fa90e6b306eca922f4a2fb1ef0c34032ca7c6310cb93c",
             ),
             (
                 "virtual-graph",
-                "a6b6917d16902e3e3f5d7a58ad2bdb50e342ea10837bbb49ee9161eef976e3bc",
+                "a7f0f413b02a84f97b9373bf3c8933df38f78a6f8c43dfa785714cead6ccb70c",
             ),
             (
                 "virtual-graph-shapes",
-                "57bf2d274d3be29000b236f466bf65960455652fc0d022c7f2ece3dc180b8340",
+                "76f1c3999d30eb3f201f2642c2262e694ddf9f735c1935b3d5b0d9d3c5fa4f75",
             ),
             // MEDULLA-SUPPLY-VOCAB-R003.13: the commercial module (ontology plus its
             // shapes companion) joins the catalog; the pin follows the ontology.
             (
                 "commercial",
-                "9ff80088ba38249ee5421ae50ad263ac9fb06f8f441c1152652b5f56a79ec321",
+                "e6115455b5d2e509deade8b189cebcb772ca3505f0f4d40967bd4d625f07c805",
             ),
             (
                 "supply_chain",
-                "d7b82d00c2d5ba05b188af74169b1ebd9b6283a580d8cb49427fb9c51b3ea1a8",
+                "bc37a15dd2ad4b1d351725943f5a267590981f8bea4e4316bc907ec27874b33e",
             ),
             // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack module (ontology
             // plus its surface shapes companion) joins the catalog; the pin
@@ -2038,7 +2038,7 @@ mod tests {
                 .as_deref()
                 .or(source.shapes_ttl.as_deref())
                 .unwrap();
-            assert!(document.contains("http://knuckles.team/kg"));
+            assert!(document.contains("https://knuckles-team.github.io/ontology/core"));
             assert!(!document.contains("@prefix eg:"));
         }
     }
@@ -2047,14 +2047,14 @@ mod tests {
     #[test]
     fn pack_or_ingestion_attach_refuses_virtual_graph_approval_claims() {
         let approved_mapping = concat!(
-            "@prefix vg: <http://knuckles.team/kg/virtual-graph#> .\n",
+            "@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .\n",
             "@prefix m: <http://example.org/mapping#> .\n",
             "m:incidentMapping a vg:Mapping ;\n",
             "    vg:mappedClass m:Incident ;\n",
             "    vg:approved true .\n"
         );
         let approved_authority = concat!(
-            "@prefix vg: <http://knuckles.team/kg/virtual-graph#> .\n",
+            "@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .\n",
             "@prefix a: <http://example.org/authority#> .\n",
             "a:incidentAuthority a vg:SourceAuthority ;\n",
             "    vg:authorityFor a:Incident ;\n",
@@ -2063,7 +2063,7 @@ mod tests {
         let iri_claim = concat!(
             "@prefix m: <http://example.org/mapping#> .\n",
             "m:iriMapping a m:Thing ;\n",
-            "    <http://knuckles.team/kg/virtual-graph#approved> true .\n"
+            "    <https://knuckles-team.github.io/ontology/virtual-graph#approved> true .\n"
         );
         let pack = |record_id: &str, document: String| {
             GraphSchemaSource::new(

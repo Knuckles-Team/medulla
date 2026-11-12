@@ -6,10 +6,10 @@
 # the service-to-capability link: its connector-side `supports` relation
 # projects onto the shared kg:supportsCapability (Decision D1).
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-leanix#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-leanix#> .
 
 ex:leanixConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

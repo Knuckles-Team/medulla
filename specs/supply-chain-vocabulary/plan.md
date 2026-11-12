@@ -64,7 +64,7 @@ question "how does the supply chain affect our services?"
 
 ### Vocabulary
 
-Prefixes: `kg:` = `http://knuckles.team/kg#`; `infra:` = `http://knuckles.team/kg/infrastructure#`. All new classes are `owl:Class` with `rdfs:label` and a BFO parent consistent with neighbours.
+Prefixes: `kg:` = `https://knuckles-team.github.io/ontology/core#`; `infra:` = `https://knuckles-team.github.io/ontology/infrastructure#`. All new classes are `owl:Class` with `rdfs:label` and a BFO parent consistent with neighbours.
 
 #### Physical and commercial supply chain — new file `supply_chain-v1.ttl` (prefix `:` = `kg:`)
 
@@ -213,8 +213,8 @@ Tool `erpnext_agent_resource` (`erpnext_agent/mcp/mcp_resource.py:16`), actions 
 Question: "Which services are exposed by a vulnerable component supplied by a vendor we also buy hardware from?"
 
 ```sparql
-PREFIX kg: <http://knuckles.team/kg#>
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 SELECT ?service ?supplier ?comp ?ver ?cve ?sev WHERE {
   ?service a infra:Service ; kg:usesComponent ?cv .
   ?cv kg:versionOf ?comp ; kg:versionString ?ver .

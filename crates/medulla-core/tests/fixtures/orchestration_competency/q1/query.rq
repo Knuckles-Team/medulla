@@ -1,4 +1,4 @@
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?step ?next ?source WHERE {
   :TaskXYZ :hasStep ?step . ?step dc:source ?source .

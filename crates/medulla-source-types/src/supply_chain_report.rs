@@ -367,21 +367,21 @@ mod tests {
         let report = assemble_supply_chain_report(
             &[
                 row(
-                    "http://knuckles.team/xsrc#service-a",
-                    "http://knuckles.team/xsrc#supplier-acme",
-                    "http://knuckles.team/xsrc#version-1.18.0",
+                    "https://knuckles-team.github.io/ontology/source-record#service-a",
+                    "https://knuckles-team.github.io/ontology/source-record#supplier-acme",
+                    "https://knuckles-team.github.io/ontology/source-record#version-1.18.0",
                     "dockerhub-mcp",
                 ),
                 row(
-                    "http://knuckles.team/xsrc#service-a",
-                    "http://knuckles.team/xsrc#supplier-acme",
-                    "http://knuckles.team/xsrc#version-1.1.1k",
+                    "https://knuckles-team.github.io/ontology/source-record#service-a",
+                    "https://knuckles-team.github.io/ontology/source-record#supplier-acme",
+                    "https://knuckles-team.github.io/ontology/source-record#version-1.1.1k",
                     "erpnext-mcp",
                 ),
             ],
             &[SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
+                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -389,7 +389,7 @@ mod tests {
                 age_seconds: None,
             }],
             &[ReportAbstention::Uncovered {
-                class: "http://knuckles.team/kg#SupplyChainItem".to_string(),
+                class: "https://knuckles-team.github.io/ontology/core#SupplyChainItem".to_string(),
             }],
         )
         .unwrap();
@@ -406,9 +406,9 @@ mod tests {
     #[test]
     fn an_item_without_a_source_is_refused() {
         let rows = vec![row(
-            "http://knuckles.team/xsrc#service-a",
-            "http://knuckles.team/xsrc#supplier-acme",
-            "http://knuckles.team/xsrc#version-1.18.0",
+            "https://knuckles-team.github.io/ontology/source-record#service-a",
+            "https://knuckles-team.github.io/ontology/source-record#supplier-acme",
+            "https://knuckles-team.github.io/ontology/source-record#version-1.18.0",
             "",
         )];
         assert_eq!(
@@ -432,28 +432,28 @@ mod tests {
     fn assembly_is_byte_for_byte_deterministic_over_recorded_rows() {
         let rows = vec![
             row(
-                "http://knuckles.team/xsrc#service-b",
-                "http://knuckles.team/xsrc#supplier-globex",
-                "http://knuckles.team/xsrc#version-2.4.1",
+                "https://knuckles-team.github.io/ontology/source-record#service-b",
+                "https://knuckles-team.github.io/ontology/source-record#supplier-globex",
+                "https://knuckles-team.github.io/ontology/source-record#version-2.4.1",
                 "dockerhub-mcp",
             ),
             row(
-                "http://knuckles.team/xsrc#service-a",
-                "http://knuckles.team/xsrc#supplier-acme",
-                "http://knuckles.team/xsrc#version-1.1.1k",
+                "https://knuckles-team.github.io/ontology/source-record#service-a",
+                "https://knuckles-team.github.io/ontology/source-record#supplier-acme",
+                "https://knuckles-team.github.io/ontology/source-record#version-1.1.1k",
                 "erpnext-mcp",
             ),
             row(
-                "http://knuckles.team/xsrc#service-a",
-                "http://knuckles.team/xsrc#supplier-acme",
-                "http://knuckles.team/xsrc#version-1.18.0",
+                "https://knuckles-team.github.io/ontology/source-record#service-a",
+                "https://knuckles-team.github.io/ontology/source-record#supplier-acme",
+                "https://knuckles-team.github.io/ontology/source-record#version-1.18.0",
                 "gitlab-mcp",
             ),
         ];
         let premises = vec![
             SourcePremise {
                 source: "erpnext-mcp".to_string(),
-                class_served: "http://knuckles.team/kg#Supplier".to_string(),
+                class_served: "https://knuckles-team.github.io/ontology/core#Supplier".to_string(),
                 row: "xsaa:supplier-erpnext".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -462,7 +462,7 @@ mod tests {
             },
             SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
+                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -472,7 +472,7 @@ mod tests {
             // A duplicate premise must not duplicate the source.
             SourcePremise {
                 source: "dockerhub-mcp".to_string(),
-                class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
+                class_served: "https://knuckles-team.github.io/ontology/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
                 mode: AuditSourceMode::Live,
@@ -483,16 +483,16 @@ mod tests {
         let abstentions = vec![
             ReportAbstention::Unconnected {
                 source: "erpnext-mcp".to_string(),
-                class: "http://knuckles.team/kg#SupplyChainItem".to_string(),
+                class: "https://knuckles-team.github.io/ontology/core#SupplyChainItem".to_string(),
             },
             ReportAbstention::Disconnected {
-                class: "http://knuckles.team/kg#Legacy".to_string(),
+                class: "https://knuckles-team.github.io/ontology/core#Legacy".to_string(),
             },
         ];
         // The expected encoding, byte for byte: impacts sorted by service,
         // items sorted within, sources deduplicated and sorted, abstentions
         // sorted by kind.
-        let expected = r#"{"service_impacts":[{"service":"http://knuckles.team/xsrc#service-a","items":[{"supplier":"http://knuckles.team/xsrc#supplier-acme","component_version":"http://knuckles.team/xsrc#version-1.1.1k","impact_kind":"runtime_chain","source":"erpnext-mcp"},{"supplier":"http://knuckles.team/xsrc#supplier-acme","component_version":"http://knuckles.team/xsrc#version-1.18.0","impact_kind":"runtime_chain","source":"gitlab-mcp"}]},{"service":"http://knuckles.team/xsrc#service-b","items":[{"supplier":"http://knuckles.team/xsrc#supplier-globex","component_version":"http://knuckles.team/xsrc#version-2.4.1","impact_kind":"runtime_chain","source":"dockerhub-mcp"}]}],"sources_used":[{"source":"dockerhub-mcp","class_served":"http://knuckles.team/kg/infrastructure#ContainerImage","authority_premise":"xsaa:container-image-dockerhub (rank 1)","mode":"live"},{"source":"erpnext-mcp","class_served":"http://knuckles.team/kg#Supplier","authority_premise":"xsaa:supplier-erpnext (rank 1)","mode":"live"}],"abstentions":[{"kind":"unconnected","source":"erpnext-mcp","class":"http://knuckles.team/kg#SupplyChainItem"},{"kind":"disconnected","class":"http://knuckles.team/kg#Legacy"}]}"#;
+        let expected = r#"{"service_impacts":[{"service":"https://knuckles-team.github.io/ontology/source-record#service-a","items":[{"supplier":"https://knuckles-team.github.io/ontology/source-record#supplier-acme","component_version":"https://knuckles-team.github.io/ontology/source-record#version-1.1.1k","impact_kind":"runtime_chain","source":"erpnext-mcp"},{"supplier":"https://knuckles-team.github.io/ontology/source-record#supplier-acme","component_version":"https://knuckles-team.github.io/ontology/source-record#version-1.18.0","impact_kind":"runtime_chain","source":"gitlab-mcp"}]},{"service":"https://knuckles-team.github.io/ontology/source-record#service-b","items":[{"supplier":"https://knuckles-team.github.io/ontology/source-record#supplier-globex","component_version":"https://knuckles-team.github.io/ontology/source-record#version-2.4.1","impact_kind":"runtime_chain","source":"dockerhub-mcp"}]}],"sources_used":[{"source":"dockerhub-mcp","class_served":"https://knuckles-team.github.io/ontology/infrastructure#ContainerImage","authority_premise":"xsaa:container-image-dockerhub (rank 1)","mode":"live"},{"source":"erpnext-mcp","class_served":"https://knuckles-team.github.io/ontology/core#Supplier","authority_premise":"xsaa:supplier-erpnext (rank 1)","mode":"live"}],"abstentions":[{"kind":"unconnected","source":"erpnext-mcp","class":"https://knuckles-team.github.io/ontology/core#SupplyChainItem"},{"kind":"disconnected","class":"https://knuckles-team.github.io/ontology/core#Legacy"}]}"#;
         let report = assemble_supply_chain_report(&rows, &premises, &abstentions).unwrap();
         assert_eq!(serde_json::to_string(&report).unwrap(), expected);
         // The assembly is a pure function: the same inputs yield the same bytes.
@@ -509,7 +509,7 @@ mod tests {
     fn freshness_modes() {
         let premise = |mode, watermark: Option<&str>, age_seconds| SourcePremise {
             source: "gitlab-mcp".to_string(),
-            class_served: "http://knuckles.team/kg#Vulnerability".to_string(),
+            class_served: "https://knuckles-team.github.io/ontology/core#Vulnerability".to_string(),
             row: "xsaa:vulnerability-gitlab".to_string(),
             rank: 1,
             mode,

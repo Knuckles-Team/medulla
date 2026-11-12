@@ -1,6 +1,6 @@
 # MEDULLA-DATAPLAT-VOCAB — Data model
 
-This spec adds one ontology module, `core:data-platform@1`, and its shapes. Prefix `dp:` is `http://knuckles.team/kg/data-platform#`. Terms live in `crates/medulla-core/ontology/data_platform-v1.ttl`; shapes live in `crates/medulla-core/ontology/data_platform-v1.shapes.ttl`.
+This spec adds one ontology module, `core:data-platform@1`, and its shapes. Prefix `dp:` is `https://knuckles-team.github.io/ontology/data-platform#`. Terms live in `crates/medulla-core/ontology/data_platform-v1.ttl`; shapes live in `crates/medulla-core/ontology/data_platform-v1.shapes.ttl`.
 
 ## Entities
 

@@ -9,13 +9,13 @@ use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
 const SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const SHACL_TARGET_CLASS: &str = "http://www.w3.org/ns/shacl#targetClass";
-const PLACEMENT: &str = "http://knuckles.team/kg/placement#";
-const EX: &str = "http://knuckles.team/test/placement#";
+const PLACEMENT: &str = "https://knuckles-team.github.io/ontology/placement#";
+const EX: &str = "https://knuckles-team.github.io/ontology/test/placement#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 
 fn triple(subject: &str, predicate: &str, object: &str) -> Triple {

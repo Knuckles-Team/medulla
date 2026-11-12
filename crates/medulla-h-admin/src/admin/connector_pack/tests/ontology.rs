@@ -30,7 +30,7 @@ fn disjoint_classes(individual_in_both: bool) -> String {
     // Both classes join the parent catalog (MEDULLA-TYPED-PACKS-R105.1), so
     // only the ABox decides the outcome.
     const SUB: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
-    const ROOT: &str = "http://knuckles.team/kg#DomainEntity";
+    const ROOT: &str = "https://knuckles-team.github.io/ontology/core#DomainEntity";
     let mut body = format!(
         "<https://example.org/A> a <{OWL}Class> ; <{SUB}> <{ROOT}> .\n\
          <https://example.org/B> a <{OWL}Class> ; <{SUB}> <{ROOT}> .\n\
@@ -135,7 +135,7 @@ fn parent_linked(orphan: bool) -> String {
     const SUB: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
     let mut body = format!(
         "<https://example.org/conn#Contract> a <{OWL}Class> ;\n\
-         <{SUB}> <http://knuckles.team/kg#Agreement> .\n\
+         <{SUB}> <https://knuckles-team.github.io/ontology/core#Agreement> .\n\
          <https://example.org/conn#Lease> a <{OWL}Class> ;\n\
          <{SUB}> <https://example.org/conn#Contract> .\n"
     );
@@ -189,7 +189,7 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
     let connector = "held-source";
     let served = Served::new();
     bind(&served, connector, ADMIN).await;
-    let body = r#"@prefix ac: <https://knuckles-team.github.io/agent-connector-sdk/access#> .
+    let body = r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
 <urn:supplier-contract> a ac:AccessContract ; ac:classIri <urn:Supplier> ;
  ac:sourceId "suppliers" ; ac:accessKind "mcp_tool" ; ac:operation "list_suppliers" ;
  ac:entity "Supplier" ; ac:keyField "id" ."#;

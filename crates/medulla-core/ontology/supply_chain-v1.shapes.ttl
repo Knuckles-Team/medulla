@@ -6,8 +6,8 @@
 # one aggregate-free SPARQL constraint expresses the `affectsComponent`
 # or `hasVulnerability`-inverse link in the OPTIONAL/FILTER(!BOUND) form.
 
-@prefix kg:   <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix kg:   <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
@@ -83,4 +83,4 @@ kg:UsesComponentObjectShape a sh:NodeShape ;
     sh:message "A usesComponent object is a ComponentVersion." .
 
 kg:SupplyChainShapesPrefixes a owl:Ontology ;
-    sh:declare [ sh:prefix "kg" ; sh:namespace "http://knuckles.team/kg#"^^xsd:anyURI ] .
+    sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .

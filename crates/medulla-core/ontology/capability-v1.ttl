@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -213,7 +213,7 @@ for each other.  Symmetric — if A is swappable with B, then B is
 swappable with A.  Can be inferred by the reasoner from shared
 `providesCapability` targets.""" .
 
-<http://knuckles.team/kg/capability> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/capability> a owl:Ontology ;
     rdfs:label "Service Capability Abstraction Ontology" ;
     rdfs:comment """Defines abstract service capability classes and the Capability/Tool
 separation pattern.  Business rules and dependency assertions are made against
@@ -445,8 +445,8 @@ or more subclasses.  Business requirements reference capability classes via
 # or, for the defined classes a capability can fall under, kg:ServiceCapability (a redundant
 # capability is a capability) and BFO entity (a secure task may be a capability or a task; an
 # independent-continuant root would make every encrypted-only capability unsatisfiable).
-<http://knuckles.team/kg#AuthenticatedTool> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#HighAvailabilityService> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#RedundantCapability> rdfs:subClassOf <http://knuckles.team/kg#ServiceCapability> .
-<http://knuckles.team/kg#SecureTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#WarmSnapshot> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#AuthenticatedTool> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#HighAvailabilityService> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#RedundantCapability> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#ServiceCapability> .
+<https://knuckles-team.github.io/ontology/core#SecureTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#WarmSnapshot> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

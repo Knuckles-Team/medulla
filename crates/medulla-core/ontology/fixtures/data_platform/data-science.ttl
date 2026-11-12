@@ -13,15 +13,15 @@
 # rides on its links (trainedOn, producedModel, evaluatedOn, baselineRun),
 # so each binding projects its fields onto those links.
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/data-science/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/data-science/> .
 
 ex:store a dp:DataStore ;
     dp:storeFamily "ml" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/data-science/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/data-science/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:cc90a22072144a17268fd12be30de273271f744ebcb099eef25bdf16a298fc24" ;
     vg:discoveredEntity "datasets" ;

@@ -121,7 +121,7 @@ const OWL_DIFFERENT_FROM: &str = "http://www.w3.org/2002/07/owl#differentFrom";
 /// `ex:Heart eg:confidence "0.8"` attaches `0.8` to the axiom(s) whose SUBJECT is
 /// `ex:Heart` (e.g. `Heart ⊑ …`). Absent ⇒ `1.0` (a hard axiom). This is the epistemic
 /// engine's native "uncertain axiom" hook — the EL/RL closure then PROPAGATES it.
-const MEDULLA_CONFIDENCE: &str = "http://medulla/owl#confidence";
+const MEDULLA_CONFIDENCE: &str = medulla_types::ontology_iri!("reasoning#confidence");
 
 /// `<iri>` canonical form (matches the node-id convention of [`crate::mapping`]).
 /// `pub(crate)` so the [`crate::tableau`] OWL-DL reasoner (CONCEPT:MEDULLA-KG.ontology.concept-2) reuses the
@@ -3429,8 +3429,8 @@ ex:c ex:contains ex:e .
         let classification =
             Reasoner::from_triples(&tbox_triples_from_view(&core.analysis_snapshot())).classify();
         assert!(classification.entails_subclass(
-            "<http://knuckles.team/kg#CollaborationCapability>",
-            "<http://knuckles.team/kg#ServiceCapability>"
+            "<https://knuckles-team.github.io/ontology/core#CollaborationCapability>",
+            "<https://knuckles-team.github.io/ontology/core#ServiceCapability>"
         ));
     }
 
@@ -3460,7 +3460,7 @@ ex:c ex:contains ex:e .
         assert!(
             facts.iter().any(|fact| {
                 fact.subject == iri("urn:test:a")
-                    && fact.predicate == iri("http://knuckles.team/kg#partOf")
+                    && fact.predicate == iri("https://knuckles-team.github.io/ontology/core#partOf")
                     && fact.object == iri("urn:test:c")
                     && fact.rule == "RL-propertyChain"
             }),
@@ -3846,7 +3846,7 @@ ex:Mammal rdfs:subClassOf ex:Animal .
         let ttl = r#"
 @prefix ex:  <http://example.org/> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:Dog    rdfs:subClassOf ex:Mammal .
 ex:Dog    eg:confidence "0.9" .
 ex:Mammal rdfs:subClassOf ex:Animal .
@@ -3884,7 +3884,7 @@ ex:Mammal eg:confidence "0.9" .
         let ttl = r#"
 @prefix ex:  <http://example.org/> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:Dog    rdfs:subClassOf ex:Mammal .
 ex:Dog    eg:confidence "0.9" .
 ex:Mammal rdfs:subClassOf ex:Animal .
@@ -3910,7 +3910,7 @@ ex:Mammal eg:confidence "0.2" .
 @prefix ex:  <http://example.org/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:Heart      rdfs:subClassOf [ a owl:Restriction ;
                                 owl:onProperty ex:partOf ;
                                 owl:someValuesFrom ex:Body ] .
@@ -3951,7 +3951,7 @@ ex:HumanHeart eg:confidence "0.9" .
         let ttl = r#"
 @prefix ex:  <http://example.org/> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:X rdfs:subClassOf ex:A .
 ex:X rdfs:subClassOf ex:B .
 ex:A rdfs:subClassOf ex:Goal .
@@ -3982,7 +3982,7 @@ ex:B eg:confidence "0.9" .
         let ttl = r#"
 @prefix ex:  <http://example.org/> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:Mammal rdfs:subClassOf ex:Animal .
 ex:Mammal eg:confidence "0.9" .
 "#;
@@ -4072,7 +4072,7 @@ ex:Mammal eg:confidence "0.9" .
 @prefix ex:  <http://example.org/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
-@prefix eg:  <http://medulla/owl#> .
+@prefix eg:  <https://knuckles-team.github.io/ontology/reasoning#> .
 ex:Paper rdfs:subClassOf [ a owl:Restriction ; owl:onProperty ex:about ; owl:someValuesFrom ex:Topic ] .
 ex:Paper eg:confidence "0.9" .
 [ a owl:Restriction ; owl:onProperty ex:about ; owl:someValuesFrom ex:Topic ] rdfs:subClassOf ex:ScholarlyWork .
@@ -4317,11 +4317,11 @@ ex:Impossible rdfs:subClassOf ex:A, ex:C .
     #[test]
     fn native_relationship_projection_matches_the_retired_au_contract() {
         assert_eq!(
-            native_relationship_label("<http://knuckles.team/kg#dependsOn>"),
+            native_relationship_label("<https://knuckles-team.github.io/ontology/core#dependsOn>"),
             "DEPENDS_ON"
         );
         assert_eq!(
-            native_relationship_label("http://knuckles.team/kg#PART_OF"),
+            native_relationship_label("https://knuckles-team.github.io/ontology/core#PART_OF"),
             "PART_OF"
         );
         assert_eq!(

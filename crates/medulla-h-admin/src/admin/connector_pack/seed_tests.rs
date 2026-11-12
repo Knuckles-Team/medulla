@@ -12,7 +12,7 @@ use super::seed::{
     canonical_digest, prepare_seed_import, SeedImportOutcome, MAX_SEED_BYTES, MAX_SEED_TRIPLES,
 };
 
-const SEED_NS: &str = "http://knuckles.team/kg/connector-seed#";
+const SEED_NS: &str = "https://knuckles-team.github.io/ontology/connector-seed#";
 
 fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])

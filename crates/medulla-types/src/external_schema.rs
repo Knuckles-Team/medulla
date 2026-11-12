@@ -219,7 +219,7 @@ mod tests {
             source_revision: "ext-2026-01".to_string(),
             external_iri: format!("{EX}Patient"),
             external_kind: ExternalTermKind::Class,
-            platform_iri: "http://knuckles.team/kg#Person".to_string(),
+            platform_iri: "https://knuckles-team.github.io/ontology/core#Person".to_string(),
             platform_kind: ExternalTermKind::Class,
             mapping_revision: "map-1".to_string(),
         }
@@ -239,7 +239,7 @@ mod tests {
                     external_iri: format!("{EX}Patient"),
                     kind: ExternalTermKind::Class,
                     result: ExternalTermResult::Mapped {
-                        platform_iri: "http://knuckles.team/kg#Person".to_string(),
+                        platform_iri: "https://knuckles-team.github.io/ontology/core#Person".to_string(),
                         provenance_digest: Digest256::sha256(b"provenance"),
                     },
                 },

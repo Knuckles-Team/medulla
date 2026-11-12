@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -122,7 +122,7 @@
     rdfs:domain :CompanySoftware ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/company_infra> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/company_infra> a owl:Ontology ;
     rdfs:label "Company Infrastructure Ontology" ;
     rdfs:comment """Maps company software to infrastructure for autonomous
 deployment. Links software functions to deployment targets, MCP servers,
@@ -132,7 +132,7 @@ The trading classes (strategies, signals, debates, exchange backends,
 orders, positions and risk snapshots) live in the finance module.
 
 CONCEPT:ECO-4.13 — Company Infrastructure Orchestration""" ;
-    owl:imports <http://knuckles.team/kg/company> .
+    owl:imports <https://knuckles-team.github.io/ontology/company> .
 
 :deployedOn a owl:ObjectProperty ;
     rdfs:label "deployed on" ;

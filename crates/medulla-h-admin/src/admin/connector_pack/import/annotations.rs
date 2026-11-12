@@ -256,7 +256,7 @@ mod tests {
         };
         let parent = check_annotations(
             PackEntryKind::Ontology,
-            &requiring("ontology-import:http://knuckles.team/kg"),
+            &requiring("ontology-import:https://knuckles-team.github.io/ontology/core"),
         );
         assert!(parent.violations.is_empty() && parent.warnings.is_empty());
         let remote = check_annotations(

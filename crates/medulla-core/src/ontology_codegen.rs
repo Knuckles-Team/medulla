@@ -79,7 +79,7 @@ impl VocabularyModule {
     /// input always produces the equal, byte-identical output.
     pub fn to_turtle(&self) -> String {
         let mut out = String::new();
-        out.push_str("@prefix : <http://knuckles.team/kg#> .\n");
+        out.push_str(concat!("@prefix : <", medulla_types::ontology_iri!("core#"), "> .\n"));
         out.push_str("@prefix owl: <http://www.w3.org/2002/07/owl#> .\n");
         out.push_str("@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n");
         out.push_str("@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n");
@@ -118,7 +118,7 @@ impl VocabularyModule {
         }
 
         out.push_str(&format!(
-            "<http://knuckles.team/kg/{}> a owl:Ontology ;\n",
+            concat!("<", medulla_types::ontology_base!(), "{}> a owl:Ontology ;\n"),
             self.module_id
         ));
         out.push_str(&format!("    rdfs:label \"{}\" ;\n", self.ontology_label));
@@ -131,7 +131,7 @@ impl VocabularyModule {
 }
 
 /// The IRI of the core foundation document.
-pub const CORE_DOCUMENT_IRI: &str = "http://knuckles.team/kg/core";
+pub const CORE_DOCUMENT_IRI: &str = medulla_types::ontology_iri!("core");
 
 /// Whether `turtle` declares `owl:imports` of the core document. A text scan of
 /// each `owl:imports` object list (IRIs between `<` and `>`, separated by
@@ -248,8 +248,8 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R071.2
     #[test]
     fn a_module_importing_core_is_refused_with_the_registered_code() {
-        let importing = "<http://knuckles.team/kg/x> a owl:Ontology ;\n    owl:imports <http://knuckles.team/kg/a>, <http://knuckles.team/kg/core> .\n";
-        let clean = "<http://knuckles.team/kg/x> a owl:Ontology ;\n    owl:imports <http://knuckles.team/kg/a> .\n";
+        let importing = "<https://knuckles-team.github.io/ontology/x> a owl:Ontology ;\n    owl:imports <https://knuckles-team.github.io/ontology/a>, <https://knuckles-team.github.io/ontology/core> .\n";
+        let clean = "<https://knuckles-team.github.io/ontology/x> a owl:Ontology ;\n    owl:imports <https://knuckles-team.github.io/ontology/a> .\n";
         assert!(imports_core_document(importing));
         assert!(!imports_core_document(clean));
         let refusal = refuse_modules_importing_core([("x", importing)]).unwrap_err();

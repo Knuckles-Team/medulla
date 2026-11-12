@@ -4,15 +4,15 @@
 # -> contract kind), written as `vg:VirtualMapping` rows over the `vg:`
 # vocabulary in virtual_graph-v1.ttl and shaped by virtual_graph-v1.shapes.ttl.
 # `mv:` is a documentation prefix for this section of the shared
-# `http://knuckles.team/kg#` namespace; every ontology IRI stays in `:`.
+# `https://knuckles-team.github.io/ontology/core#` namespace; every ontology IRI stays in `:`.
 #
 # The metadata contract is the discovery of the recorded response
 # (arr_response.json, same directory): the discoveredEntity / discoveredField /
 # discoveredOperation values below are exactly the names that response uses,
 # and vg:contentDigest is sha256 over its bytes.
 
-@prefix :    <http://knuckles.team/kg#> .
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f:   <urn:eg-media-vocab:arr/> .
 

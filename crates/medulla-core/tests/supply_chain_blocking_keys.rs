@@ -4,9 +4,9 @@
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 
-const KG: &str = "http://knuckles.team/kg#";
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
-const EX: &str = "http://knuckles.team/test/supply-chain#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
+const EX: &str = "https://knuckles-team.github.io/ontology/test/supply-chain#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R007.1

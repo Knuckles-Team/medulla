@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -13,7 +13,7 @@
 # as swarm_topology-v1.shapes.ttl).
 
 :temporalPrefixes
-    sh:declare [ sh:prefix "kg" ; sh:namespace "http://knuckles.team/kg#"^^xsd:anyURI ] .
+    sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .
 
 # A validity interval must be well-formed: end must not precede start.
 :ValidityIntervalShape a sh:NodeShape ;

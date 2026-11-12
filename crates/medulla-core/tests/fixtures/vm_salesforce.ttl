@@ -7,10 +7,10 @@
 # (row MEDULLA-SUPPLY-VOCAB-R005.7, agent-packages), so the mapping is approved
 # against the discovered SOQL contract, not a declared class.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-salesforce#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-salesforce#> .
 
 ex:salesforceConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

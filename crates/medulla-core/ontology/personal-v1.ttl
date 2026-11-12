@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -158,7 +158,7 @@ that created it. Enables provenance: voice → text → task → calendar.""" ;
     rdfs:domain :Transcript ;
     rdfs:range xsd:float .
 
-<http://knuckles.team/kg/personal> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/personal> a owl:Ontology ;
     rdfs:label "Personal Productivity Ontology" ;
     rdfs:comment """Personal productivity domain ontology bridging Nextcloud
 (calendar, tasks, files), audio transcription, and personal time

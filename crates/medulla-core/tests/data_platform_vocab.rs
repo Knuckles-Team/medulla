@@ -9,8 +9,8 @@ use medulla_shacl::validate_turtle;
 
 const SHAPES: &str = include_str!("../ontology/data_platform-v1.shapes.ttl");
 
-const DP: &str = "http://knuckles.team/kg/data-platform#";
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const DP: &str = "https://knuckles-team.github.io/ontology/data-platform#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
@@ -167,7 +167,7 @@ fn core_source_registered() {
     let triples = parse_turtle(ontology).expect("the registered ontology parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/data-platform",
+        "https://knuckles-team.github.io/ontology/data-platform",
         &format!("{RDF}type"),
         &format!("{OWL}Ontology")
     ));
@@ -190,7 +190,7 @@ fn core_source_registered() {
         .get("core:catalog@1")
         .and_then(|source| source.ontology_ttl.as_deref())
         .expect("the aggregate catalog carries an ontology");
-    assert!(catalog.contains("<http://knuckles.team/kg/data-platform>"));
+    assert!(catalog.contains("<https://knuckles-team.github.io/ontology/data-platform>"));
 }
 
 fn assert_typed(triples: &[Triple], local: &str, kind: &str) {
@@ -351,7 +351,7 @@ fn ml_terms_present() {
         &triples,
         &format!("{DP}Dataset"),
         &format!("{RDFS}subClassOf"),
-        "http://knuckles.team/kg#Dataset"
+        "https://knuckles-team.github.io/ontology/core#Dataset"
     ));
     assert_typed(&triples, "Model", "Class");
     assert!(
@@ -359,7 +359,7 @@ fn ml_terms_present() {
             &triples,
             &format!("{DP}Model"),
             &format!("{OWL}equivalentClass"),
-            "http://knuckles.team/kg#Model"
+            "https://knuckles-team.github.io/ontology/core#Model"
         ),
         "dp:Model must not be equivalent to the narrower core Model"
     );
@@ -754,8 +754,8 @@ const VG_SHAPES: &str = include_str!("../ontology/virtual_graph-v1.shapes.ttl");
 fn store_mapping_document(via_operation: &str) -> String {
     format!(
         r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:contract a vg:MetadataContract ;
@@ -841,7 +841,7 @@ fn assert_via_operations(triples: &[Triple], operations: &[&str]) {
 fn document_field_shape_rejects_ratio_2() {
     // A presenceRatio of 2 is outside [0,1] and must be refused.
     let bad_ratio = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:field a dp:DocumentField ;
@@ -859,7 +859,7 @@ ex:field a dp:DocumentField ;
 
     // A DocumentFieldType member (including mixed) with a ratio inside [0,1] conforms.
     let good = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:field a dp:DocumentField ;
@@ -877,7 +877,7 @@ ex:field a dp:DocumentField ;
 
     // A fieldType outside the DocumentFieldType list is refused on its own.
     let bad_type = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:field a dp:DocumentField ;
@@ -900,7 +900,7 @@ fn vector_dimension_zero_rejected() {
     // A zero-embedding-space (dimensions 0) is refused: dimensions is a
     // positive integer.
     let zero_dimensions = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:collection a dp:VectorCollection ;
@@ -920,7 +920,7 @@ ex:space a dp:EmbeddingSpace ;
 
     // A collection without any embedding space is refused too.
     let no_space = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:collection a dp:VectorCollection ;
@@ -936,7 +936,7 @@ ex:collection a dp:VectorCollection ;
 
     // A collection with exactly one positive-dimensional embedding space conforms.
     let good = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:collection a dp:VectorCollection ;
@@ -961,7 +961,7 @@ ex:space a dp:EmbeddingSpace ;
 fn negative_lag_rejected() {
     // A negative lag is refused: lag is an integer >= 0.
     let negative = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex: <http://example.org/data-platform/> .
 
@@ -979,7 +979,7 @@ ex:lag a dp:PartitionLag ;
 
     // A lag without its observation time is refused too.
     let no_asof = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:lag a dp:PartitionLag ;
@@ -995,7 +995,7 @@ ex:lag a dp:PartitionLag ;
 
     // A zero lag with an observation time conforms (boundary of [0, +inf)).
     let good = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex: <http://example.org/data-platform/> .
 
@@ -1049,7 +1049,7 @@ fn grants_capability_closed_list() {
     // One policy granting read on path A and deny on path B: the permissions
     // stay scoped to their policy/path pair and conform.
     let scoped_grants = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:engine a dp:SecretEngine .
@@ -1087,7 +1087,7 @@ ex:grantB a dp:PolicyPathGrant ;
 
     // A capability outside the closed list is refused.
     let bad_capability = r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:engine a dp:SecretEngine .
@@ -1187,8 +1187,8 @@ fn materialised_without_reason_rejected() {
     fn mapping_with_mode(mode: &str, reason: Option<&str>) -> String {
         format!(
             r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:contract a vg:MetadataContract ;
@@ -1259,8 +1259,8 @@ fn mcp_operation_requires_via_operation() {
     fn mapping_with_kind(kind: &str, via_operation: Option<&str>) -> String {
         format!(
             r#"
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:contract a vg:MetadataContract ;
@@ -1385,7 +1385,7 @@ fn assert_alignment_resolves(document: &str) -> usize {
     let sub_class_of = NamedNode::new(format!("{RDFS}subClassOf")).unwrap();
     let equivalent_property = NamedNode::new(format!("{OWL}equivalentProperty")).unwrap();
     let rdf_type = NamedNode::new(format!("{RDF}type")).unwrap();
-    let kg_namespace = "http://knuckles.team/kg#";
+    let kg_namespace = "https://knuckles-team.github.io/ontology/core#";
 
     let mut rows = 0;
     for triple in triples.iter().filter(|t| {
@@ -1556,25 +1556,25 @@ fn alignment_relational_resolves() {
     let triples = parse_turtle(document).expect("the alignment table parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#DatabaseTable",
+        "https://knuckles-team.github.io/ontology/core#DatabaseTable",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}Table")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#isPrimaryKey",
+        "https://knuckles-team.github.io/ontology/core#isPrimaryKey",
         &format!("{OWL}equivalentProperty"),
         &format!("{DP}isPrimaryKey")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#Collection",
+        "https://knuckles-team.github.io/ontology/core#Collection",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}Collection")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#documentCount",
+        "https://knuckles-team.github.io/ontology/core#documentCount",
         &format!("{OWL}equivalentProperty"),
         &format!("{DP}documentCount")
     ));
@@ -1592,25 +1592,25 @@ fn alignment_object_vector_resolves() {
     let triples = parse_turtle(document).expect("the alignment table parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#Object",
+        "https://knuckles-team.github.io/ontology/core#Object",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}StoredObject")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#byteSize",
+        "https://knuckles-team.github.io/ontology/core#byteSize",
         &format!("{OWL}equivalentProperty"),
         &format!("{DP}byteSize")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#VectorCollection",
+        "https://knuckles-team.github.io/ontology/core#VectorCollection",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}VectorCollection")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#dimensions",
+        "https://knuckles-team.github.io/ontology/core#dimensions",
         &format!("{OWL}equivalentProperty"),
         &format!("{DP}dimensions")
     ));
@@ -1628,25 +1628,25 @@ fn alignment_ops_ml_resolves() {
     let triples = parse_turtle(document).expect("the alignment table parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#ConsumerGroup",
+        "https://knuckles-team.github.io/ontology/core#ConsumerGroup",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}ConsumerGroup")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#BehaviorInsight",
+        "https://knuckles-team.github.io/ontology/core#BehaviorInsight",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}BehaviorMetric")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#TrainingRun",
+        "https://knuckles-team.github.io/ontology/core#TrainingRun",
         &format!("{RDFS}subClassOf"),
         &format!("{DP}TrainingRun")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg#trainedOn",
+        "https://knuckles-team.github.io/ontology/core#trainedOn",
         &format!("{OWL}equivalentProperty"),
         &format!("{DP}trainedOn")
     ));

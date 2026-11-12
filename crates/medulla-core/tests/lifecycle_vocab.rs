@@ -12,7 +12,7 @@ use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_shacl::validate_turtle;
 use medulla_source_types::lifecycle::LifecycleEdgeKind;
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
 const OWL_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#ObjectProperty";
@@ -95,7 +95,7 @@ fn node_shapes(shapes: &[Triple]) -> Vec<String> {
 fn edge_fixture(edge: &str, domain: &str, range: &str) -> String {
     format!(
         r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/lifecycle/{edge}/> .
 
 ex:subject a :{domain} ;
@@ -203,7 +203,7 @@ fn edge_set_is_closed_and_shaped() {
 
     // A foreign range is refused: the shapes are not vacuous.
     let wrong_range = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/lifecycle/wrong-range/> .
 
 ex:changeset a :Changeset ;

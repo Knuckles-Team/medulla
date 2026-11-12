@@ -5,29 +5,29 @@
   "mappings": [
     {
       "name": "person",
-      "source_class_iri": "http://knuckles.team/kg#Person",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Person",
       "target_class_iri": "http://schema.org/Person",
       "relation": "skos_exact_match",
       "target_category": "continuant"
     },
     {
       "name": "event",
-      "source_class_iri": "http://knuckles.team/kg#Event",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Event",
       "target_class_iri": "http://schema.org/Event",
       "relation": "skos_close_match",
       "target_category": "process"
     },
     {
       "name": "document",
-      "source_class_iri": "http://knuckles.team/kg#Document",
+      "source_class_iri": "https://knuckles-team.github.io/ontology/core#Document",
       "target_class_iri": "http://schema.org/DigitalDocument",
       "relation": "skos_close_match",
       "target_category": "continuant"
     }
   ],
   "paths": [
-    {"name": "person", "path": "Person", "class_iri": "http://knuckles.team/kg#Person"},
-    {"name": "event", "path": "Event", "class_iri": "http://knuckles.team/kg#Event"},
-    {"name": "document", "path": "Document", "class_iri": "http://knuckles.team/kg#Document"}
+    {"name": "person", "path": "Person", "class_iri": "https://knuckles-team.github.io/ontology/core#Person"},
+    {"name": "event", "path": "Event", "class_iri": "https://knuckles-team.github.io/ontology/core#Event"},
+    {"name": "document", "path": "Document", "class_iri": "https://knuckles-team.github.io/ontology/core#Document"}
   ]
 }

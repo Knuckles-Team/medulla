@@ -28,7 +28,7 @@ const BORNE_BY_ORGANISM: &str = "<http://example.org/world#BorneByOrganism>";
 const IN_WEATHER_SYSTEM: &str = "<http://example.org/world#InWeatherSystem>";
 const BFO_PROCESS: &str = "<http://purl.obolibrary.org/obo/BFO_0000015>";
 const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
-const LIFE_IRI: &str = "http://knuckles.team/kg/life";
+const LIFE_IRI: &str = "https://knuckles-team.github.io/ontology/life";
 /// The three world-model modules with the imports each declares (life, for the
 /// modules that use organisms and taxa; core is a root, never an import).
 const WORLD_MODEL_MODULES: &[(&str, &str, &[&str])] = &[
@@ -64,7 +64,7 @@ const WIRED_MODULES: &[&str] = &[
 const CORPUS_ABOX_STEPS: u64 = 1_000_000;
 
 const FIXTURE: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/world#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
@@ -229,7 +229,7 @@ fn a_weather_event_occurs_in_a_weather_system_and_its_region() {
 fn a_taxon_is_never_an_organism() {
     let mut triples = fixture_triples();
     triples.extend(parse_scoped(
-        "@prefix : <http://knuckles.team/kg#> . <http://example.org/world#vulpes> a :Organism .",
+        "@prefix : <https://knuckles-team.github.io/ontology/core#> . <http://example.org/world#vulpes> a :Organism .",
         "clash",
     ));
     let dl = medulla_reasoner::tableau::parse_dl_ontology(&triples);
@@ -237,7 +237,7 @@ fn a_taxon_is_never_an_organism() {
 
     let mut triples = fixture_triples();
     triples.extend(parse_scoped(
-        "@prefix : <http://knuckles.team/kg#> . \
+        "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
          @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . \
          <http://example.org/world#TaxonOrganism> rdfs:subClassOf :Taxon, :Organism .",
         "clash",
@@ -319,7 +319,7 @@ fn no_core_class_specialises_a_reference_term_kind() {
 }
 
 const PROCESS_COMPOSITION: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/world#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -332,7 +332,7 @@ ex:Stage rdfs:subClassOf bfo:0000015,
 ex:ParticipatingProcess rdfs:subClassOf bfo:0000015,
     [ a owl:Restriction ; owl:onProperty :participatedIn ; owl:someValuesFrom :Event ] .
 "#;
-const PROCESS_AS_PARTICIPANT: &str = "@prefix : <http://knuckles.team/kg#> . \
+const PROCESS_AS_PARTICIPANT: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
      <http://example.org/world#threshing> :participatedIn <http://example.org/world#harvest> .";
 
 /// The foundation plus `documents`, each scoped apart.

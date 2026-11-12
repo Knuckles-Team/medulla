@@ -7,7 +7,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
@@ -25,7 +25,7 @@
     rdfs:domain :IdentityUser ;
     rdfs:range :IdentityGroup .
 
-<http://knuckles.team/kg/identity> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/identity> a owl:Ontology ;
     rdfs:label "Identity & Access Ontology" ;
     rdfs:comment "Users/groups/roles/app-assignments for cross-tool access governance (CONCEPT:KG-2.9)." .
 
@@ -180,5 +180,5 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#IdentityGroup> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#IdentityRole> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#IdentityGroup> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#IdentityRole> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

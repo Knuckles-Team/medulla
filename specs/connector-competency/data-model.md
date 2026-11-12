@@ -47,4 +47,4 @@ Every term a competency row reads is either reused from an open vocabulary (W3C,
 | `calorieTarget` | R066.2 | mint in nutrition-v1.ttl on `:MealPlanEntry`; no equivalent |
 | `usesImage` (container-to-image link) | R013.1 | mint in infrastructure-v1.ttl, `:Container` to `:ContainerImage`; no equivalent |
 | `dp:metricValue` | R014.1 | mint in data_platform-v1.ttl on `dp:EvaluationResult` (`xsd:decimal`); no equivalent |
-| `:Fan` (fan term) | R020.1 | mint class in infrastructure-v1.ttl extending `au:HardwareNode`; no equivalent |
+| `:Fan` (fan term) | R020.1 | mint class in infrastructure-v1.ttl extending `kg:HardwareNode`; no equivalent |

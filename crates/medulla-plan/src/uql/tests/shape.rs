@@ -113,7 +113,7 @@ fn projected_taxon_shape_checks_native_fields_and_typed_relationships() {
     let shapes = include_str!("../../../../medulla-core/ontology/world_model-v1.shapes.ttl")
         .replace('\'', "''");
     let query = format!(
-        r#"MATCH (:Taxon) |> VALIDATE SHAPE <http://knuckles.team/kg#TaxonShape> USING '{shapes}' PROJECT 'http://knuckles.team/kg#' KEEP VIOLATING"#
+        r#"MATCH (:Taxon) |> VALIDATE SHAPE <https://knuckles-team.github.io/ontology/core#TaxonShape> USING '{shapes}' PROJECT 'https://knuckles-team.github.io/ontology/core#' KEEP VIOLATING"#
     );
     assert_eq!(ids_of(&query, &ctx), vec!["source:bad".to_string()]);
 

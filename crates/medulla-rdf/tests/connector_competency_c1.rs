@@ -86,8 +86,8 @@ fn egeria_confidential_glossary_terms_answer() {
     // module (the assigned module's own GlossaryTerm producer rows,
     // R074.2-R074.3, have not landed). Frozen as-of: 2026-01-03T00:00:00Z.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
-@prefix cat: <http://knuckles.team/kg/catalog#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix cat: <https://knuckles-team.github.io/ontology/catalog#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -138,8 +138,8 @@ f:asset-orphan a cat:Asset ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
-PREFIX cat: <http://knuckles.team/kg/catalog#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX cat: <https://knuckles-team.github.io/ontology/catalog#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX f: <urn:eg-cq-conn:egeria:fixture/>
 SELECT ?term ?asset ?classification ?source ?record ?asof WHERE {
@@ -188,7 +188,7 @@ fn archivebox_uncaptured_freshrss_pages_answer() {
     // mechanism, so an absent archivebox capture simply lets the page
     // answer. Frozen as-of: 2026-01-03T00:00:00Z.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -241,7 +241,7 @@ f:capture-solo a :WebCapture ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?page ?feed ?source ?record ?asof WHERE {
   ?page a :WebResource, :FeedItem ;

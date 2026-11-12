@@ -9,10 +9,10 @@
 # kg:ComponentVersion, the advisory/alert rows onto kg:Vulnerability with
 # kg:affectsComponent to the affected package.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-gitlab-github#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-gitlab-github#> .
 
 ex:gitlabConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

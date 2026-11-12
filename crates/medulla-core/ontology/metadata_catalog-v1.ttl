@@ -1,6 +1,6 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix cat: <http://knuckles.team/kg/catalog#> .
-@prefix cp: <http://knuckles.team/kg/connector-pack#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix cat: <https://knuckles-team.github.io/ontology/catalog#> .
+@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
@@ -13,11 +13,11 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/metadata_catalog> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/metadata_catalog> a owl:Ontology ;
     rdfs:label "Metadata Catalog Ontology" ;
     rdfs:comment "The metadata catalog EG keeps for every connected source: catalogued assets (connector tools, prompts, skills, data resources and fields), owners and stewards, lineage, the business glossary and the Agent Library with system-prompt candidacy (MEDULLA-TYPED-PACKS-R106.1, MEDULLA-DECISION-ENGINE-R814.1.1). Aligned to W3C DCAT for the catalog, PROV-O for lineage and attribution, ORG for roles and units, SKOS for the glossary and schema.org Action for tool operations. Every class rolls up to an EG core class." ;
     dcterms:source "W3C DCAT 3, PROV-O, ORG, SKOS; schema.org Action" ;
-    owl:imports <http://knuckles.team/kg/capability>, <http://knuckles.team/kg/orchestration>, <http://knuckles.team/kg/service_operations> .
+    owl:imports <https://knuckles-team.github.io/ontology/capability>, <https://knuckles-team.github.io/ontology/orchestration>, <https://knuckles-team.github.io/ontology/service_operations> .
 
 # -- Catalog and assets (DCAT) -----------------------------------------------------------
 

@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -83,7 +83,7 @@
     rdfs:domain :ClinicalTrial ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/medical> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/medical> a owl:Ontology ;
     rdfs:label "Medical & Healthcare Ontology" ;
     rdfs:comment """Healthcare domain ontology. Provides BFO-aligned classes for
 clinical concepts, patient management, and research trials.

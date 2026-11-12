@@ -6,7 +6,7 @@ const SHAPES: &str = include_str!("../ontology/harness-v1.shapes.ttl");
 
 fn report(facts: &str) -> medulla_shacl::ValidationReport {
     let data = format!(
-        r#"@prefix eg: <http://knuckles.team/kg#> .
+        r#"@prefix eg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/model-harness/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -64,7 +64,7 @@ fn model_fact_shapes_reject_missing_required_facts() {
             !result.conforms,
             "a ModelProfile missing required {missing_fact} must fail"
         );
-        let expected_path = format!("<http://knuckles.team/kg#{missing_fact}>");
+        let expected_path = format!("<https://knuckles-team.github.io/ontology/core#{missing_fact}>");
         assert!(
             result
                 .results
@@ -93,7 +93,7 @@ fn model_fact_shapes_reject_missing_run() {
             .message
             .as_deref()
             .is_some_and(|message| message.contains("evaluationRun"))
-            || violation.path.as_deref() == Some("<http://knuckles.team/kg#evaluationRun>")
+            || violation.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/core#evaluationRun>")
     }));
 }
 

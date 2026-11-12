@@ -9,11 +9,11 @@
 # edge projects onto the shared kg:affectsService, whose domain is the union
 # of :Incident and :Change.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-servicenow#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-servicenow#> .
 
 ex:serviceNowConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

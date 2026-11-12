@@ -11,7 +11,7 @@ const DOCUMENT: &str = include_str!("../../medulla-core/ontology/supply_chain-v1
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 
 /// The named classes a `subject predicate` value stands for: the named objects
@@ -312,7 +312,7 @@ fn uses_image_shares_the_container_manager_iri_and_deployed_as_declared() {
     // in the shared kg namespace, not a per-module redefinition.
     assert_eq!(
         format!("{KG}usesImage"),
-        format!("http://knuckles.team/kg#usesImage")
+        format!("https://knuckles-team.github.io/ontology/core#usesImage")
     );
     let subject = format!("{KG}usesImage");
     assert!(has_iri(

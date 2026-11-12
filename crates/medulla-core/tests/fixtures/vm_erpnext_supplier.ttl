@@ -7,10 +7,10 @@
 # kg:Supplier class, keyed by `name`, with the label read from
 # `supplier_name`.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-erpnext#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-erpnext#> .
 
 ex:erpnextConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

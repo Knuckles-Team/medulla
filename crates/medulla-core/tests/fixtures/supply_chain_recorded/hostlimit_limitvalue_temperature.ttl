@@ -3,8 +3,8 @@
 # ceiling (Decision D6). Projected by the approved mapping
 # (vm_host_limits.ttl).
 
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:limit-001 a infra:HostLimit ;
     infra:limitKind "temperature" ;

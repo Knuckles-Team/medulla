@@ -66,8 +66,8 @@ async def test_validate_committed_sends_typed_triples_without_shapes() -> None:
     rdf = RdfClient(fake)
     triples = [
         {
-            "subject": "http://knuckles.team/kg#a",
-            "predicate": "http://knuckles.team/kg#name",
+            "subject": "https://knuckles-team.github.io/ontology/core#a",
+            "predicate": "https://knuckles-team.github.io/ontology/core#name",
             "object": {"kind": "literal", "lexical": "a"},
         }
     ]
@@ -78,7 +78,7 @@ async def test_validate_committed_sends_typed_triples_without_shapes() -> None:
     [(method, params)] = fake.sent
     assert method == "ShaclValidate"
     assert "shapes" not in (params or {})
-    assert (params or {})["data_triples"][0]["subject"] == "http://knuckles.team/kg#a"
+    assert (params or {})["data_triples"][0]["subject"] == "https://knuckles-team.github.io/ontology/core#a"
 
 
 @pytest.mark.asyncio

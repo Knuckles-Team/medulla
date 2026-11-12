@@ -7,8 +7,8 @@
 # each class (dockerhub, container-manager, uptime, erpnext) is decided by
 # the authority rows at serve time, never in the query text.
 
-PREFIX kg: <http://knuckles.team/kg#>
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 SELECT ?service ?supplier ?comp ?ver ?cve ?sev WHERE {
   ?service a infra:Service ; kg:usesComponent ?cv .
   ?cv kg:versionOf ?comp ; kg:versionString ?ver .

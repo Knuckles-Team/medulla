@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn individuals_are_projected_and_schema_terms_are_not() {
-        let body = "@prefix : <http://knuckles.team/kg#> .\n\
+        let body = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
             @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
             :Extra a owl:Class .\n\
             :amount_a a :NutrientAmount ; :nutrientId \"1003\" .\n";
@@ -216,15 +216,15 @@ mod tests {
         assert_eq!(triples.len(), 2, "{triples:?}");
         assert!(triples
             .iter()
-            .all(|t| t.subject.to_string() == "<http://knuckles.team/kg#amount_a>"));
+            .all(|t| t.subject.to_string() == "<https://knuckles-team.github.io/ontology/core#amount_a>"));
     }
 
     fn individuals(ids: &[&str]) -> String {
         let mut document = String::new();
         for id in ids {
             document.push_str(&format!(
-                "<http://knuckles.team/kg#{id}> <{RDF_TYPE}> <http://knuckles.team/kg#NutrientAmount> .\n\
-                 <http://knuckles.team/kg#{id}> <http://knuckles.team/kg#nutrientId> \"1003\" .\n"
+                "<https://knuckles-team.github.io/ontology/core#{id}> <{RDF_TYPE}> <https://knuckles-team.github.io/ontology/core#NutrientAmount> .\n\
+                 <https://knuckles-team.github.io/ontology/core#{id}> <https://knuckles-team.github.io/ontology/core#nutrientId> \"1003\" .\n"
             ));
         }
         document
@@ -250,7 +250,7 @@ mod tests {
         write_surface(&core, "pack", Some(&individuals(&["amount_a"]))).unwrap();
         assert_eq!(
             subjects_of(&core),
-            vec!["<http://knuckles.team/kg#amount_a>".to_string()],
+            vec!["<https://knuckles-team.github.io/ontology/core#amount_a>".to_string()],
             "amount_b was dropped from the newer head"
         );
         write_surface(&core, "pack", None).unwrap();

@@ -1,15 +1,15 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-<http://knuckles.team/kg/it4it_delivery> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/it4it_delivery> a owl:Ontology ;
     rdfs:label "IT4IT Delivery Ontology" ;
     rdfs:comment "IT4IT value-stream data objects not covered by the service-operations core: Strategy to Portfolio and Requirement to Deploy (portfolio backlog item, backlog, build, build package, deployment, environment), Request to Fulfil (service catalog entry, subscription, service request) and Detect to Correct (alert, known error, service-level target, monitor, heartbeat, status page, dashboard, panel, configuration item collection). Release, Job, Runner, Problem and Incident are reused, not redeclared (MEDULLA-TYPED-PACKS-R105.6)." ;
     dcterms:source "Open Group IT4IT Reference Architecture, value-stream data objects" ;
-    owl:imports <http://knuckles.team/kg/sdlc_lifecycle>, <http://knuckles.team/kg/software>, <http://knuckles.team/kg/service_operations>, <http://knuckles.team/kg/orchestration>, <http://knuckles.team/kg/sdd> .
+    owl:imports <https://knuckles-team.github.io/ontology/sdlc_lifecycle>, <https://knuckles-team.github.io/ontology/software>, <https://knuckles-team.github.io/ontology/service_operations>, <https://knuckles-team.github.io/ontology/orchestration>, <https://knuckles-team.github.io/ontology/sdd> .
 
 :PortfolioBacklogItem a owl:Class ;
     rdfs:label "Portfolio Backlog Item" ;

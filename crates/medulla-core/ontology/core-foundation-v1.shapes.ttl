@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 # Core-foundation ABox shapes (MEDULLA-CQ-CONN-R074.x): an agreement must name its

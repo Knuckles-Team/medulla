@@ -278,7 +278,7 @@ creates and registers its companion. Shape children therefore have a home.
 Question (home-assistant, single-source): "Which sensors reported a value outside their normal range in the last 24 hours?"
 
 ```sparql
-PREFIX : <http://knuckles.team/kg/infrastructure#>
+PREFIX : <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 SELECT ?entity ?signal ?observed ?p95 WHERE {
   VALUES ?cutoff { "2026-01-02T00:00:00Z"^^xsd:dateTime }

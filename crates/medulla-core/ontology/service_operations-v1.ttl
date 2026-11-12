@@ -1,6 +1,6 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix swarm: <http://knuckles.team/kg/swarm#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
@@ -8,11 +8,11 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/service_operations> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/service_operations> a owl:Ontology ;
     rdfs:label "Service Operations Ontology" ;
     rdfs:comment "IT service operations core aligned to the Open Group IT4IT data objects (Detect to Correct, Request to Fulfil, Service Model): incident, problem, change, configuration item, business service, assignment group, ticket hierarchy, technology standard and phase, plus the edges the cross-source competency questions walk (MEDULLA-TYPED-PACKS-R105.4, R105.5). It also aligns the self-contained swarm-topology and virtual-graph modules to the core classes." ;
     dcterms:source "Open Group IT4IT Reference Architecture, data objects" ;
-    owl:imports <http://knuckles.team/kg/infrastructure>, <http://knuckles.team/kg/sdlc_lifecycle>, <http://knuckles.team/kg/trm>, <http://knuckles.team/kg/orchestration> .
+    owl:imports <https://knuckles-team.github.io/ontology/infrastructure>, <https://knuckles-team.github.io/ontology/sdlc_lifecycle>, <https://knuckles-team.github.io/ontology/trm>, <https://knuckles-team.github.io/ontology/orchestration> .
 
 # -- Ticket hierarchy (IT4IT D2C records and tracker issues) ---------------------------
 
@@ -156,4 +156,4 @@ vg:MetadataContract rdfs:subClassOf :Document .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:Policy through rdfs:subClassOf.
-<http://knuckles.team/kg#TRMStandard> rdfs:subClassOf <http://knuckles.team/kg#Policy> .
+<https://knuckles-team.github.io/ontology/core#TRMStandard> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Policy> .

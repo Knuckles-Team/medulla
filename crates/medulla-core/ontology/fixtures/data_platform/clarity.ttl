@@ -7,15 +7,15 @@
 # AccelerationPolicy — no session replays (decision 4). Rage- and
 # dead-click naming by URL is still BLOCKED on clarity-api (R009.4).
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/clarity/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/clarity/> .
 
 ex:store a dp:AnalyticsSite ;
     dp:storeFamily "analytics" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/clarity/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/clarity/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:a472f963354813d0babbdabd5fbe3ca2ae504103e1feeb846d72bbb4b49eb3de" ;
     vg:discoveredEntity "metrics" ;

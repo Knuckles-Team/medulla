@@ -4,7 +4,7 @@
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -251,7 +251,7 @@ escalation chain traversal.""" .
     rdfs:domain :WorkersCompensation ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/hr> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/hr> a owl:Ontology ;
     rdfs:label "Human Capital & Workforce Ontology" ;
     rdfs:comment """HR/Workforce Management domain ontology.
 Provides BFO-aligned classes for employee lifecycle, organizational

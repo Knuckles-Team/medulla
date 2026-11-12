@@ -12,7 +12,7 @@ use oxrdf::{Term, Triple};
 
 use super::{AuthorityOrigin, AuthorityRow, CoverageFixture, Materialisation, SourceRole};
 
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const VG: &str = medulla_types::ontology_iri!("virtual-graph#");
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDFS_LABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
 const RDFS_SUBCLASS: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";

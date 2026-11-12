@@ -9,7 +9,7 @@ const MEDIA_SHAPES: &str = include_str!("../../medulla-core/ontology/media-v1.sh
 const CONTENT_SHAPES: &str = include_str!("../../medulla-core/ontology/content-v1.shapes.ttl");
 
 const PREFIXES: &str =
-    "@prefix : <http://knuckles.team/kg#> . @prefix dc: <http://purl.org/dc/terms/> . ";
+    "@prefix : <https://knuckles-team.github.io/ontology/core#> . @prefix dc: <http://purl.org/dc/terms/> . ";
 
 fn conforms(shapes: &str, data: &str) -> bool {
     validate_turtle(shapes, &format!("{PREFIXES}{data}"))

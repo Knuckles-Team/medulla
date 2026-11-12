@@ -15,9 +15,9 @@ use medulla_mutation_types::{
 use medulla_types::contract::BoundedVec;
 
 /// The fan-out/join class IRI the fixtures use.
-pub const FAN_OUT_JOIN: &str = "http://knuckles.team/kg/swarm#FanOutJoin";
+pub const FAN_OUT_JOIN: &str = medulla_types::ontology_iri!("swarm#FanOutJoin");
 /// The independent-subtasks task class IRI the fixtures use.
-pub const INDEPENDENT_SUBTASKS: &str = "http://knuckles.team/kg/swarm#IndependentSubtasks";
+pub const INDEPENDENT_SUBTASKS: &str = medulla_types::ontology_iri!("swarm#IndependentSubtasks");
 
 /// One slot on template node `node_id` with `role`, widths `min..=max`, one
 /// round, a declared p95 and one generator slot per agent.

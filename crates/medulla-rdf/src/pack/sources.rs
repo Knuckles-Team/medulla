@@ -8,7 +8,7 @@ use medulla_catalog_types::{
 use medulla_types::contract::ResourceId;
 use std::collections::BTreeMap;
 
-const AC: &str = "https://knuckles-team.github.io/agent-connector-sdk/access#";
+const AC: &str = medulla_types::ontology_iri!("access#");
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 /// Extract source claims only from the digest-verified ontology body the import reads.

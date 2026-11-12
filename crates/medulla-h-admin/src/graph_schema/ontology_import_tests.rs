@@ -170,7 +170,7 @@ fn ontology_import_refusals_leave_schema_unchanged() {
     assert!(error.starts_with("TENANT_DENIED"), "{error}");
 
     let core_redeclaration = "@prefix owl: <http://www.w3.org/2002/07/owl#> . \
-         <http://knuckles.team/kg#Agent> a owl:ObjectProperty .\n";
+         <https://knuckles-team.github.io/ontology/core#Agent> a owl:ObjectProperty .\n";
     let error = import_ontology(
         &core,
         "g",

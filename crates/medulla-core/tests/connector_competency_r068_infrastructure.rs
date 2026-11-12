@@ -14,7 +14,7 @@ use medulla_rdf::oxrdf::{NamedNode, Triple};
 
 // The infrastructure module's default namespace (its `:` prefix): the spec
 // rows' `:term` names expand here, not in the shared `kg#` namespace.
-const KG: &str = "http://knuckles.team/kg/infrastructure#";
+const KG: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
@@ -59,12 +59,12 @@ fn infrastructure_shapes() -> &'static str {
 }
 
 /// Shared kernel term namespace (`kg:` in the infrastructure module).
-const CORE: &str = "http://knuckles.team/kg#";
+const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
 
 /// A valid fixture conforms to the SHACL companion; a violating fixture
 /// fails it on `path`.
 fn assert_shape(valid: &str, violating: &str, path: &str) {
-    let prefixes = "@prefix : <http://knuckles.team/kg/infrastructure#> .\n@prefix ex: <http://example.org/cq-conn/> .\n";
+    let prefixes = "@prefix : <https://knuckles-team.github.io/ontology/infrastructure#> .\n@prefix ex: <http://example.org/cq-conn/> .\n";
     let report =
         medulla_shacl::validate_turtle(infrastructure_shapes(), &format!("{prefixes}{valid}"))
             .expect("valid fixture parses and validates");
@@ -135,7 +135,7 @@ mod ontology_audit_infrastructure_v1 {
         // The non-negative bound lives in the SHACL companion: a valid fixture
         // conforms, a violating fixture fails the shape.
         let valid = r#"
-@prefix : <http://knuckles.team/kg/infrastructure#> .
+@prefix : <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:img-1 a :ContainerImage ;
     :pullCount 1200 .
@@ -149,7 +149,7 @@ ex:img-1 a :ContainerImage ;
         );
 
         let violating = r#"
-@prefix : <http://knuckles.team/kg/infrastructure#> .
+@prefix : <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:img-2 a :ContainerImage ;
     :pullCount -1 .

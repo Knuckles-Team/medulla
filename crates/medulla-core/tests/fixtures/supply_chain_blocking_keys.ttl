@@ -6,9 +6,9 @@
 # Fellegi-Sunter, proposals inactive until approved). A digest key is exact;
 # a name-only key is always a proposal, never auto-approved.
 
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex: <http://knuckles.team/test/supply-chain#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 

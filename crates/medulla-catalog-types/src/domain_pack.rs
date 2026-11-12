@@ -526,7 +526,7 @@ mod tests {
     fn crosswalk_fixture() -> VocabularyCrosswalk {
         sealed(VocabularyCrosswalk {
             schema_version: VOCABULARY_CROSSWALK_SCHEMA_VERSION,
-            source_class_iri: "http://knuckles.team/kg#Person".to_string(),
+            source_class_iri: "https://knuckles-team.github.io/ontology/core#Person".to_string(),
             target_class_iri: "http://schema.org/Person".to_string(),
             relation: VocabularyCrosswalkRelation::SeeAlso,
             source_revision: "core-crosswalk-fixture-v1".to_string(),

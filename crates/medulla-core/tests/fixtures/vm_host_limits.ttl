@@ -11,9 +11,9 @@
 # thresholds of host_limit_thresholds.ttl -- no source exposes a capacity
 # limit, so the limit side is ontology-side data.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/vm-host-limits#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-host-limits#> .
 
 ex:fanManagerConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

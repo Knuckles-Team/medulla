@@ -1,6 +1,7 @@
-//! One-shot data migration of the retired OWL namespace (medulla rename,
-//! 2026-10-30): every stored IRI under `http://epistemic-graph/owl#` is
-//! rewritten to [`OWL_NAMESPACE`].
+//! One-shot data migration of every retired ontology namespace (medulla rename,
+//! 2026-10-30; single organization ontology base, 2026-11-12): every stored IRI
+//! under a retired namespace in [`NAMESPACE_REWRITES`] is rewritten to its
+//! replacement under the one ontology base.
 //!
 //! Stored node ids, edge endpoints and every MessagePack string inside node and
 //! edge properties are rewritten. The pass runs after the listeners bind, as
@@ -8,10 +9,11 @@
 //! gateway as the fixed service principal [`MIGRATION_ACTOR`]: every rewrite is
 //! durable, ledgered and replicated like any caller's write, with no storage
 //! bypass. It is idempotent: a graph holding no retired IRI plans no writes, so
-//! after the first successful pass every later start is a read-only scan.
+//! after the first successful pass every later start is a read-only scan. The
+//! pass report names every retired namespace it found and rewrote.
 //!
 //! medulla-rename-codemod: keep-old-names (this module must name the retired
-//! namespace; the rename codemod skips files carrying this marker).
+//! namespaces; the rename codemod skips files carrying this marker).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -22,25 +24,146 @@ use medulla_protocol_types::protocol::Method;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
-/// The namespace stores written before the rename carry.
-pub const RETIRED_OWL_NAMESPACE: &str = "http://epistemic-graph/owl#";
-/// The engine's OWL namespace.
-pub const OWL_NAMESPACE: &str = "http://medulla/owl#";
 /// The fixed service principal the migration writes as.
 #[cfg(feature = "security")]
 pub(crate) const MIGRATION_ACTOR: &str = "service:namespace-migration";
 const MIGRATION_SERVICE: &str = "namespace-migration";
 
+/// Every retired namespace and the IRI that replaces its prefix, most specific
+/// first; the first matching entry wins. An old IRI ending in `#` or `/` is a
+/// prefix (the rest of the IRI is kept); any other old IRI is a whole IRI and
+/// matches only when no name character follows it. The replacements derive from
+/// the one ontology base. The 14 governed-concept paths that existed under both
+/// legacy product tokens merge into one concept each, so both token paths map to
+/// the same prefix.
+pub const NAMESPACE_REWRITES: &[(&str, &str)] = &[
+    // The legacy `au:` alias: two names live in core, everything else in infrastructure.
+    ("http://agent-utilities.dev/ontology#HardwareNode", medulla_types::ontology_iri!("core#HardwareNode")),
+    ("http://agent-utilities.dev/ontology#Agent", medulla_types::ontology_iri!("core#Agent")),
+    ("http://agent-utilities.dev/ontology#WorldModel", medulla_types::ontology_iri!("core#WorldModel")),
+    ("https://agent-utilities.dev/ontology#HardwareNode", medulla_types::ontology_iri!("core#HardwareNode")),
+    ("https://agent-utilities.dev/ontology#Agent", medulla_types::ontology_iri!("core#Agent")),
+    ("https://agent-utilities.dev/ontology#WorldModel", medulla_types::ontology_iri!("core#WorldModel")),
+    ("http://agent-utilities.dev/ontology#", medulla_types::ontology_iri!("infrastructure#")),
+    ("https://agent-utilities.dev/ontology#", medulla_types::ontology_iri!("infrastructure#")),
+    ("http://agent-utilities.dev/ontology", medulla_types::ontology_iri!("infrastructure")),
+    ("https://agent-utilities.dev/ontology", medulla_types::ontology_iri!("infrastructure")),
+    // The engine's runtime assertion vocabulary (both retired spellings).
+    ("http://medulla/owl#", medulla_types::ontology_iri!("reasoning#")),
+    ("http://epistemic-graph/owl#", medulla_types::ontology_iri!("reasoning#")),
+    // Governed concepts, schemes and pillars.
+    ("http://knuckles.team/kg/concept/AU/", medulla_types::ontology_iri!("concept#")),
+    ("http://knuckles.team/kg/concept/EG/", medulla_types::ontology_iri!("concept#")),
+    ("http://knuckles.team/kg/scheme/AU", medulla_types::ontology_iri!("concept-scheme#governed-concepts")),
+    ("http://knuckles.team/kg/scheme/EG", medulla_types::ontology_iri!("concept-scheme#governed-concepts")),
+    ("http://knuckles.team/kg/pillar/", medulla_types::ontology_iri!("pillar#")),
+    // Modules renamed for their domain or moved under the connector prefix.
+    ("http://knuckles.team/kg/arbora#", medulla_types::ontology_iri!("admission#")),
+    ("http://knuckles.team/kg/bellwether-mcp/shape#", medulla_types::ontology_iri!("connector/bellwether-shapes#")),
+    ("http://knuckles.team/kg/artcraft/workflows#", medulla_types::ontology_iri!("connector/artcraft-workflows#")),
+    ("http://knuckles.team/kg/artcraft/", medulla_types::ontology_iri!("connector/")),
+    ("http://knuckles.team/kg/arr", medulla_types::ontology_iri!("connector/arr")),
+    ("http://knuckles.team/kg/arr#", medulla_types::ontology_iri!("connector/arr#")),
+    ("http://knuckles.team/kg/qbittorrent", medulla_types::ontology_iri!("connector/qbittorrent")),
+    ("http://knuckles.team/kg/qbittorrent#", medulla_types::ontology_iri!("connector/qbittorrent#")),
+    ("http://knuckles.team/kg/erpnext", medulla_types::ontology_iri!("connector/erpnext")),
+    ("http://knuckles.team/kg/erpnext#", medulla_types::ontology_iri!("connector/erpnext#")),
+    ("http://knuckles.team/kg/emerald-finance", medulla_types::ontology_iri!("connector/emerald-finance")),
+    ("http://knuckles.team/kg/emerald-finance#", medulla_types::ontology_iri!("connector/emerald-finance#")),
+    ("https://knuckles-team.github.io/agent-connector-sdk/access#", medulla_types::ontology_iri!("access#")),
+    ("https://knuckles-team.github.io/scion-sdk/access#", medulla_types::ontology_iri!("access#")),
+    ("https://knuckles-team.github.io/scion-sdk/lifecycle", medulla_types::ontology_iri!("connector-lifecycle")),
+    ("https://knuckles-team.github.io/scion-sdk/lifecycle#", medulla_types::ontology_iri!("connector-lifecycle#")),
+    ("https://knuckles-team.github.io/scion-sdk/breaker#", medulla_types::ontology_iri!("circuit-breaker#")),
+    ("https://knuckles-team.github.io/scion-sdk/stream", medulla_types::ontology_iri!("stream-transport")),
+    ("https://knuckles-team.github.io/scion-sdk/stream#", medulla_types::ontology_iri!("stream-transport#")),
+    ("https://knuckles-team.github.io/scion-sdk/contract", medulla_types::ontology_iri!("surface-contract")),
+    ("https://knuckles-team.github.io/scion-sdk/contract#", medulla_types::ontology_iri!("surface-contract#")),
+    ("http://knuckles.team/xsrc#", medulla_types::ontology_iri!("source-record#")),
+    ("http://knuckles.team/xsrc/", medulla_types::ontology_iri!("source-record/")),
+    ("http://knuckles.team/test/", medulla_types::ontology_iri!("test/")),
+    ("https://example.invalid/ontology/", medulla_types::ontology_iri!("connector/")),
+    // The shared core vocabulary, its document, and every other `kg/<module>`.
+    ("http://knuckles.team/kg#", medulla_types::ontology_iri!("core#")),
+    ("http://knuckles.team/kg", medulla_types::ontology_iri!("core")),
+    ("http://knuckles.team/kg/", medulla_types::ontology_base!()),
+];
+
+/// Host fragments every entry of [`NAMESPACE_REWRITES`] contains; a quick filter.
+const RETIRED_MARKERS: [&str; 7] = [
+    "knuckles.team/",
+    "medulla/owl#",
+    "epistemic-graph/owl#",
+    "agent-utilities.dev/ontology",
+    "example.invalid/ontology/",
+    "knuckles-team.github.io/agent-connector-sdk/",
+    "knuckles-team.github.io/scion-sdk/",
+];
+
+fn name_char(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'#' | b'/')
+}
+
+/// The first rewrite entry matching the start of `tail`, with the byte length of
+/// the old text it covers.
+fn matching_rewrite(tail: &str) -> Option<(usize, &'static str, &'static str)> {
+    NAMESPACE_REWRITES.iter().find_map(|(old, new)| {
+        let rest = tail.strip_prefix(old)?;
+        let prefix = old.ends_with(['#', '/']);
+        let whole = prefix || !rest.as_bytes().first().copied().is_some_and(name_char);
+        whole.then_some((old.len(), *old, *new))
+    })
+}
+
+fn rewrite_traced(text: &str, mut seen: Option<&mut BTreeSet<&'static str>>) -> Option<String> {
+    if !RETIRED_MARKERS.iter().any(|marker| text.contains(marker)) {
+        return None;
+    }
+    let mut out = String::with_capacity(text.len() + 32);
+    let mut rest = text;
+    let mut changed = false;
+    while let Some(at) = rest.find("http") {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at..];
+        match matching_rewrite(tail) {
+            Some((len, old, new)) => {
+                out.push_str(new);
+                rest = &tail[len..];
+                changed = true;
+                if let Some(seen) = seen.as_deref_mut() {
+                    seen.insert(old);
+                }
+            }
+            None => {
+                out.push_str("http");
+                rest = &tail[4..];
+            }
+        }
+    }
+    out.push_str(rest);
+    changed.then_some(out)
+}
+
 /// `text` with every retired-namespace occurrence rewritten, or `None` when it
 /// holds none.
 pub fn rewrite_text(text: &str) -> Option<String> {
-    text.contains(RETIRED_OWL_NAMESPACE)
-        .then(|| text.replace(RETIRED_OWL_NAMESPACE, OWL_NAMESPACE))
+    rewrite_traced(text, None)
 }
 
 fn holds_retired(bytes: &[u8]) -> bool {
-    let needle = RETIRED_OWL_NAMESPACE.as_bytes();
-    bytes.windows(needle.len()).any(|window| window == needle)
+    RETIRED_MARKERS
+        .iter()
+        .any(|marker| bytes.windows(marker.len()).any(|window| window == marker.as_bytes()))
+}
+
+/// Every retired namespace (as spelled in [`NAMESPACE_REWRITES`]) that `bytes`
+/// still holds.
+fn namespaces_in(bytes: &[u8], seen: &mut BTreeSet<&'static str>) {
+    if !holds_retired(bytes) {
+        return;
+    }
+    let text = String::from_utf8_lossy(bytes);
+    let _ = rewrite_traced(&text, Some(seen));
 }
 
 /// A MessagePack document with every string value (map keys included)
@@ -265,13 +388,14 @@ pub(crate) fn spawn(state: Arc<RwLock<ServerState>>) {
                 graphs = report.graphs,
                 writes = report.writes,
                 refusals = report.refusals.len(),
-                "post-bind maintenance: OWL namespace migration finished in {:.3}s \
-                 ({RETIRED_OWL_NAMESPACE} -> {OWL_NAMESPACE})",
+                namespaces = ?report.namespaces,
+                "post-bind maintenance: ontology namespace migration finished in {:.3}s \
+                 (retired namespaces rewritten onto the one ontology base)",
                 started.elapsed().as_secs_f64()
             );
         }
         for refusal in &report.refusals {
-            tracing::warn!(%refusal, "OWL namespace migration refused");
+            tracing::warn!(%refusal, "ontology namespace migration refused");
         }
     });
 }
@@ -282,6 +406,9 @@ pub(crate) struct MigrationReport {
     pub graphs: usize,
     pub writes: usize,
     pub refusals: Vec<String>,
+    /// Every retired namespace found stored and rewritten, in the spelling of
+    /// [`NAMESPACE_REWRITES`].
+    pub namespaces: BTreeSet<&'static str>,
 }
 
 pub(crate) async fn run(state: &Arc<RwLock<ServerState>>) -> MigrationReport {
@@ -314,6 +441,17 @@ async fn migrate_graph(
     };
     let (nodes, edges) = (core.get_nodes(), core.get_edges());
     let writes = plan_graph(&nodes, &edges)?;
+    if !writes.is_empty() {
+        for (id, properties) in &nodes {
+            namespaces_in(id.as_bytes(), &mut report.namespaces);
+            namespaces_in(properties, &mut report.namespaces);
+        }
+        for (source, target, properties) in &edges {
+            namespaces_in(source.as_bytes(), &mut report.namespaces);
+            namespaces_in(target.as_bytes(), &mut report.namespaces);
+            namespaces_in(properties, &mut report.namespaces);
+        }
+    }
     for method in writes {
         submit(state, graph, method).await?;
         report.writes += 1;
@@ -402,11 +540,11 @@ mod tests {
         });
         let rewritten = rewrite_msgpack(&props(&value)).unwrap().expect("changed");
         let text = serde_json::to_string(&decode(&rewritten)).unwrap();
-        assert!(!text.contains(RETIRED_OWL_NAMESPACE));
+        assert!(!text.contains("epistemic-graph/owl#"));
         let expected = serde_json::from_str::<serde_json::Value>(
             &serde_json::to_string(&value)
                 .unwrap()
-                .replace(RETIRED_OWL_NAMESPACE, OWL_NAMESPACE),
+                .replace("http://epistemic-graph/owl#", medulla_types::ontology_iri!("reasoning#")),
         )
         .unwrap();
         assert_eq!(decode(&rewritten), expected);
@@ -426,7 +564,7 @@ mod tests {
     #[test]
     fn plan_renames_nodes_and_rewires_their_edges() {
         let old = "http://epistemic-graph/owl#Agent".to_string();
-        let new = "http://medulla/owl#Agent".to_string();
+        let new = medulla_types::ontology_iri!("reasoning#Agent").to_string();
         let nodes = vec![
             (old.clone(), props(&serde_json::json!({"label": "Agent"}))),
             (
@@ -488,9 +626,71 @@ mod tests {
     #[test]
     fn migrated_graph_plans_nothing() {
         let nodes = vec![(
-            "http://medulla/owl#Agent".to_string(),
+            medulla_types::ontology_iri!("reasoning#Agent").to_string(),
             props(&serde_json::json!({"t": "x"})),
         )];
         assert!(plan_graph(&nodes, &[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn every_retired_namespace_maps_under_the_one_base() {
+        let base = medulla_types::ontology_base::ONTOLOGY_BASE;
+        for (old, new) in NAMESPACE_REWRITES {
+            assert!(new.starts_with(base), "{old} -> {new}");
+            assert!(!old.starts_with(base), "{old} is already under the base");
+            let sample = if old.ends_with(['#', '/']) { format!("{old}X") } else { (*old).to_string() };
+            let rewritten = rewrite_text(&sample).unwrap_or_else(|| panic!("{old} not rewritten"));
+            assert!(rewritten.starts_with(base), "{old} -> {rewritten}");
+            assert_eq!(rewrite_text(&rewritten), None, "{old} is not idempotent");
+        }
+    }
+
+    #[test]
+    fn rewrites_follow_the_published_map() {
+        let cases = [
+            ("http://knuckles.team/kg#Person", "core#Person"),
+            ("http://knuckles.team/kg", "core"),
+            ("http://knuckles.team/kg/infrastructure#Host", "infrastructure#Host"),
+            ("http://knuckles.team/kg/commercial", "commercial"),
+            ("http://knuckles.team/kg/arbora#CredentialLease", "admission#CredentialLease"),
+            ("http://knuckles.team/kg/artcraft/cadcraft#Part", "connector/cadcraft#Part"),
+            ("http://knuckles.team/kg/concept/AU/KG/memory", "concept#KG/memory"),
+            ("http://knuckles.team/kg/concept/EG/KG/memory", "concept#KG/memory"),
+            ("http://knuckles.team/kg/scheme/AU", "concept-scheme#governed-concepts"),
+            ("http://knuckles.team/kg/scheme/EG", "concept-scheme#governed-concepts"),
+            ("http://knuckles.team/kg/pillar/ORCH", "pillar#ORCH"),
+            ("http://knuckles.team/xsrc#supplier-acme", "source-record#supplier-acme"),
+            ("http://knuckles.team/test/recorded#a", "test/recorded#a"),
+            ("http://medulla/owl#confidence", "reasoning#confidence"),
+            ("http://epistemic-graph/owl#confidence", "reasoning#confidence"),
+            ("http://agent-utilities.dev/ontology#HardwareNode", "core#HardwareNode"),
+            ("https://agent-utilities.dev/ontology#PlatformService", "infrastructure#PlatformService"),
+            ("https://knuckles-team.github.io/scion-sdk/breaker#Open", "circuit-breaker#Open"),
+            ("https://knuckles-team.github.io/agent-connector-sdk/access#AccessContract", "access#AccessContract"),
+        ];
+        for (old, new) in cases {
+            assert_eq!(
+                rewrite_text(old).as_deref(),
+                Some(format!("{}{new}", medulla_types::ontology_base::ONTOLOGY_BASE).as_str()),
+                "{old}"
+            );
+        }
+        // A look-alike host is not a retired namespace.
+        assert_eq!(rewrite_text("http://knuckles.team/kgx"), None);
+        // Text around a retired IRI is kept.
+        assert_eq!(
+            rewrite_text("a <http://knuckles.team/kg#A> b").as_deref(),
+            Some(format!("a <{}core#A> b", medulla_types::ontology_base::ONTOLOGY_BASE).as_str())
+        );
+    }
+
+    #[test]
+    fn the_report_names_each_retired_namespace_it_rewrote() {
+        let mut seen = BTreeSet::new();
+        namespaces_in(b"http://medulla/owl#a http://knuckles.team/kg#b", &mut seen);
+        assert_eq!(
+            seen.into_iter().collect::<Vec<_>>(),
+            ["http://knuckles.team/kg#", "http://medulla/owl#"]
+        );
     }
 }

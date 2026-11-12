@@ -4,7 +4,7 @@
 # placement facts; a target missing any fact, or carrying a second value for
 # one, is refused at validation. Core source `core:placement@1`.
 
-@prefix placement: <http://knuckles.team/kg/placement#> .
+@prefix placement: <https://knuckles-team.github.io/ontology/placement#> .
 @prefix sh:        <http://www.w3.org/ns/shacl#> .
 @prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
 

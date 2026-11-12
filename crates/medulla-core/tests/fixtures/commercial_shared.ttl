@@ -5,8 +5,8 @@
 # specialist of trm :Vendor) and the Customer IRI shared with ERPNext. These
 # instances stay valid against the commercial module's declarations.
 
-@prefix : <http://knuckles.team/kg#> .
-@prefix ex: <http://knuckles.team/test/commercial#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/commercial#> .
 
 ex:acmeSupplier a :Supplier .
 

@@ -5,15 +5,14 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg/infrastructure#> .
-@prefix au: <https://agent-utilities.dev/ontology#> .
+@prefix : <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
-@prefix kg: <http://knuckles.team/kg#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/infrastructure> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/infrastructure> a owl:Ontology ;
     rdfs:label "Agent-Utilities Infrastructure Ontology" ;
     rdfs:comment """
         Vendor-neutral infrastructure topology ontology covering compute,
@@ -25,7 +24,7 @@
 :BladeServer a owl:Class ;
     rdfs:label "Blade Server" ;
     rdfs:comment "A blade compute node housed in a chassis." ;
-    rdfs:subClassOf au:HardwareNode .
+    rdfs:subClassOf kg:HardwareNode .
 
 :Chassis a owl:Class ;
     rdfs:label "Chassis" ;
@@ -143,7 +142,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :attachedStorage a owl:ObjectProperty ;
     rdfs:label "attached storage" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :StorageArray .
 
 :avg a owl:DatatypeProperty ;
@@ -170,7 +169,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :buildsImageFor a owl:ObjectProperty ;
     rdfs:label "builds image for" ;
     rdfs:domain :ContainerRegistry ;
-    rdfs:range au:PlatformService .
+    rdfs:range :PlatformService .
 
 :capacityTb a owl:DatatypeProperty ;
     rdfs:label "storage capacity (TB)" ;
@@ -184,7 +183,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :connectedToFabric a owl:ObjectProperty ;
     rdfs:label "connected to fabric" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :FabricSwitch .
 
 :connects a owl:ObjectProperty ;
@@ -194,7 +193,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :connectsVia a owl:ObjectProperty ;
     rdfs:label "connects via" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :VPNTunnel .
 
 :cooledBy a owl:ObjectProperty ;
@@ -217,7 +216,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :deployedOn a owl:ObjectProperty ;
     rdfs:label "deployed on" ;
     rdfs:comment "Links a platform service to its container stack." ;
-    rdfs:domain au:PlatformService ;
+    rdfs:domain :PlatformService ;
     rdfs:range :ContainerStack .
 
 :deploymentProfile a owl:DatatypeProperty ;
@@ -264,12 +263,12 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :hasAccelerator a owl:ObjectProperty ;
     rdfs:label "has accelerator" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :GPUAccelerator .
 
 :hasInterface a owl:ObjectProperty ;
     rdfs:label "has interface" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :NetworkInterface .
 
 :hasPhase a owl:ObjectProperty ;
@@ -338,11 +337,11 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :monitors a owl:ObjectProperty ;
     rdfs:label "monitors" ;
     rdfs:domain :ObservabilityStack ;
-    rdfs:range au:PlatformService .
+    rdfs:range :PlatformService .
 
 :mountedIn a owl:ObjectProperty ;
     rdfs:label "mounted in" ;
-    rdfs:domain au:HardwareNode ;
+    rdfs:domain kg:HardwareNode ;
     rdfs:range :Rack .
 
 :observed a owl:DatatypeProperty ;
@@ -396,12 +395,12 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :resolvesDNSFor a owl:ObjectProperty ;
     rdfs:label "resolves DNS for" ;
     rdfs:domain :DNSRewrite ;
-    rdfs:range au:PlatformService .
+    rdfs:range :PlatformService .
 
 :routesTo a owl:ObjectProperty ;
     rdfs:label "routes to" ;
     rdfs:domain :ProxyRoute ;
-    rdfs:range au:PlatformService .
+    rdfs:range :PlatformService .
 
 :scheduledBy a owl:ObjectProperty ;
     rdfs:label "scheduled by" ;
@@ -412,7 +411,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :runsOn a owl:ObjectProperty ;
     rdfs:label "runs on" ;
     rdfs:comment "Links a container or service to its host hardware." ;
-    rdfs:range au:HardwareNode .
+    rdfs:range kg:HardwareNode .
 
 :runtime a owl:DatatypeProperty ;
     rdfs:label "container runtime" ;
@@ -429,7 +428,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
     rdfs:label "serves endpoint" ;
     rdfs:comment "Links an MCPServerDeployment to the PlatformService it exposes." ;
     rdfs:domain :MCPServerDeployment ;
-    rdfs:range au:PlatformService .
+    rdfs:range :PlatformService .
 
 :serviceCount a owl:DatatypeProperty ;
     rdfs:label "service count" ;
@@ -576,7 +575,7 @@ BFO:GenericallyDependentContinuant.""" ;
     rdfs:label "Host" ;
     rdfs:comment """A reachable host in the tunnel-manager inventory (an addressable compute
 node, possibly reached through a :Tunnel). CONCEPT:KG-2.158.""" ;
-    rdfs:subClassOf au:HardwareNode .
+    rdfs:subClassOf kg:HardwareNode .
 
 :HostLimit a owl:Class ;
     rdfs:label "Host Limit" ;
@@ -603,7 +602,7 @@ class exists (a stored breach would go stale between fetches).""" ;
 :Node a owl:Class ;
     rdfs:label "Orchestration Node" ;
     rdfs:comment "A cluster/orchestrator member (Kubernetes Node, Swarm node) — the orchestration-layer counterpart of a :Host, linked to it via :isHost." ;
-    rdfs:subClassOf au:HardwareNode .
+    rdfs:subClassOf kg:HardwareNode .
 
 :Pod a owl:Class ;
     rdfs:label "Pod" ;
@@ -675,8 +674,8 @@ network endpoint URL.""" ;
 
 :Service a owl:Class ;
     rdfs:label "Service" ;
-    rdfs:comment "A monitored network service exposing one or more :Endpoint (specializes the existing au:PlatformService for the service-health layer; producers: lgtm-mcp, uptime-kuma-agent)." ;
-    rdfs:subClassOf au:PlatformService .
+    rdfs:comment "A monitored network service exposing one or more :Endpoint (specializes the existing :PlatformService for the service-health layer; producers: lgtm-mcp, uptime-kuma-agent)." ;
+    rdfs:subClassOf :PlatformService .
 
 :Rack a owl:Class ;
     rdfs:label "Rack" ;
@@ -894,9 +893,9 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:System through rdfs:subClassOf.
-<http://knuckles.team/kg/infrastructure#BladeServer> rdfs:subClassOf <http://knuckles.team/kg#System> .
-<http://knuckles.team/kg/infrastructure#Host> rdfs:subClassOf <http://knuckles.team/kg#System> .
-<http://knuckles.team/kg/infrastructure#K8sService> rdfs:subClassOf <http://knuckles.team/kg#System> .
-<http://knuckles.team/kg/infrastructure#Node> rdfs:subClassOf <http://knuckles.team/kg#System> .
-<http://knuckles.team/kg/infrastructure#Service> rdfs:subClassOf <http://knuckles.team/kg#System> .
-<http://knuckles.team/kg/infrastructure#SwarmService> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#BladeServer> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#Host> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#K8sService> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#Node> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#Service> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
+<https://knuckles-team.github.io/ontology/infrastructure#SwarmService> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .

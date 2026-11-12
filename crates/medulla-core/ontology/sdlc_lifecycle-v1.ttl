@@ -5,9 +5,9 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -124,7 +124,7 @@
     rdfs:comment "A :Deployment is validated by post-deploy health evidence — a :Validation synthesized from :HealthTrend/:HealthAnomaly over the deploy window (design §1.2)." ;
     rdfs:range :Validation .
 
-<http://knuckles.team/kg/sdlc_lifecycle> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/sdlc_lifecycle> a owl:Ontology ;
     rdfs:label "Agent-Utilities SDLC Lifecycle Ontology" ;
     rdfs:comment """The cross-cutting predicates + supertypes that unify the per-package
 lifecycle nodes — already ingested independently by the connector fleet (:Incident from
@@ -146,8 +146,8 @@ skill-workflow executor. The REQUIRED shape per lifecycle state (e.g. a merged
 :CodeChange REQUIRES a :PipelineRun) is expressed as SHACL in
 shapes/sdlc_lifecycle.shapes.ttl, consulted in DIFF mode by the enter-anywhere
 orchestrator (the meristem harness).""" ;
-    owl:imports <http://knuckles.team/kg/infrastructure>,
-        <http://knuckles.team/kg/orchestration> .
+    owl:imports <https://knuckles-team.github.io/ontology/infrastructure>,
+        <https://knuckles-team.github.io/ontology/orchestration> .
 
 :WorkflowDefinition a owl:Class ;
     rdfs:label "Workflow Definition" ;

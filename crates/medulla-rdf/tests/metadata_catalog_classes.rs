@@ -11,9 +11,9 @@ use medulla_reasoner::owl::Reasoner;
 
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
-const CAT: &str = "http://knuckles.team/kg/catalog#";
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
-const METADATA_CATALOG: &str = "http://knuckles.team/kg/metadata_catalog";
+const CAT: &str = "https://knuckles-team.github.io/ontology/catalog#";
+const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
+const METADATA_CATALOG: &str = "https://knuckles-team.github.io/ontology/metadata_catalog";
 const DCAT: &str = "http://www.w3.org/ns/dcat#";
 const PROV: &str = "http://www.w3.org/ns/prov#";
 const ORG: &str = "http://www.w3.org/ns/org#";
@@ -55,12 +55,12 @@ fn catalog_ontology_declares_root_and_cross_domain_imports() {
         &triples,
         METADATA_CATALOG,
         &format!("{OWL}imports"),
-        "http://knuckles.team/kg/core"
+        "https://knuckles-team.github.io/ontology/core"
     ));
     for imported in [
-        "http://knuckles.team/kg/capability",
-        "http://knuckles.team/kg/orchestration",
-        "http://knuckles.team/kg/service_operations",
+        "https://knuckles-team.github.io/ontology/capability",
+        "https://knuckles-team.github.io/ontology/orchestration",
+        "https://knuckles-team.github.io/ontology/service_operations",
     ] {
         assert!(has_iri(
             &triples,
@@ -218,9 +218,9 @@ fn owner_steward_and_lineage_properties_specialise_prov() {
     }
 }
 
-const PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> . \
-     @prefix cat: <http://knuckles.team/kg/catalog#> . \
-     @prefix cp: <http://knuckles.team/kg/connector-pack#> . \
+const PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
+     @prefix cat: <https://knuckles-team.github.io/ontology/catalog#> . \
+     @prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> . \
      @prefix skos: <http://www.w3.org/2004/02/skos/core#> . ";
 
 fn conforms(data: &str) -> bool {

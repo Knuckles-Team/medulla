@@ -8,7 +8,7 @@
 # feature. The contract shapes (MEDULLA-TYPED-PACKS-R101.2) land beside these,
 # never replacing them.
 
-@prefix cp:  <http://knuckles.team/kg/connector-pack#> .
+@prefix cp:  <https://knuckles-team.github.io/ontology/connector-pack#> .
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .

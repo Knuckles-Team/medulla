@@ -264,7 +264,7 @@ mod graph_schema_restart_tests {
                     None,
                     Some(std::sync::Arc::from(
                         "@prefix owl: <http://www.w3.org/2002/07/owl#> . \
-                         @prefix eg: <http://knuckles.team/kg#> . \
+                         @prefix eg: <https://knuckles-team.github.io/ontology/core#> . \
                          eg:Tool a owl:ObjectProperty .",
                     )),
                     0,

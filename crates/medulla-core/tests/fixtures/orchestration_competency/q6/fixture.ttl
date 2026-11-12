@@ -1,5 +1,5 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix swarm: <http://knuckles.team/kg/swarm#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 

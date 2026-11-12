@@ -2,14 +2,14 @@
 
 use super::*;
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 /// A compiled connector-manifest ontology fixture and its independently
 /// computed canonical digest (89 triples).
 const ARR_MANIFEST: &str =
     include_str!("../../../../tests/fixtures/ontology_inspect/arr_connector_manifest.ttl");
 const ARR_PINNED_DIGEST: &str = "8b921c452bb35f134b2d8dad809afcb49ec7abd16d78f5ee79e704ae5acb7c75";
 
-const VOCABULARY: &str = "@prefix : <http://knuckles.team/kg#> .\n\
+const VOCABULARY: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
     @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
     @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\
@@ -40,7 +40,7 @@ fn a_compiled_connector_manifest_keeps_its_pinned_canonical_digest() {
     assert_eq!(view.triple_count, 89);
     assert_eq!(view.schema_digests.len(), 1);
     assert_eq!(view.composed_digest, None);
-    assert_eq!(view.ontologies, ["http://knuckles.team/kg/arr"]);
+    assert_eq!(view.ontologies, ["https://knuckles-team.github.io/ontology/connector/arr"]);
     let album = view
         .classes
         .iter()
@@ -99,7 +99,7 @@ fn the_canonical_digest_ignores_serialization_and_tracks_content() {
 #[test]
 fn a_document_with_blank_nodes_has_no_canonical_digest() {
     let shapes = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\
-                  @prefix : <http://knuckles.team/kg#> .\n\
+                  @prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
                   :S a sh:NodeShape ; sh:targetClass :Agent ; sh:property [ sh:path :name ] .\n";
     let view = inline(&[shapes]).unwrap();
     assert_eq!(view.canonical_digest, None);
@@ -114,7 +114,7 @@ fn the_composed_schema_reads_the_live_core_catalog() {
     assert!(all.triple_count > 0);
     assert!(
         all.ontologies
-            .contains(&"http://knuckles.team/kg".to_string()),
+            .contains(&"https://knuckles-team.github.io/ontology/core".to_string()),
         "{:?}",
         all.ontologies
     );

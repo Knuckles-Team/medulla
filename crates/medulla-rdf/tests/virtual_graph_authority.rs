@@ -8,7 +8,7 @@ use common::has_iri;
 use medulla_rdf::mapping::parse_turtle;
 
 const DOCUMENT: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.ttl");
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";

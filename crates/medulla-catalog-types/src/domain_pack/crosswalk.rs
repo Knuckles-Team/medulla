@@ -218,7 +218,7 @@ mod tests {
     use super::*;
     use crate::domain_pack::{ApprovedTargetDeclaration, VOCABULARY_CROSSWALK_SCHEMA_VERSION};
 
-    const CORE: &str = "http://knuckles.team/kg#";
+    const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
     const SCHEMA: &str = "http://schema.org/";
     const REV: &str = "core-crosswalk-fixture-v1";
 
@@ -309,17 +309,17 @@ mod tests {
             tuples,
             vec![
                 (
-                    "http://knuckles.team/kg#Person",
+                    "https://knuckles-team.github.io/ontology/core#Person",
                     "http://schema.org/Person",
                     VocabularyCrosswalkRelation::SeeAlso
                 ),
                 (
-                    "http://knuckles.team/kg#Event",
+                    "https://knuckles-team.github.io/ontology/core#Event",
                     "http://schema.org/Event",
                     VocabularyCrosswalkRelation::SeeAlso
                 ),
                 (
-                    "http://knuckles.team/kg#Document",
+                    "https://knuckles-team.github.io/ontology/core#Document",
                     "http://schema.org/CreativeWork",
                     VocabularyCrosswalkRelation::SeeAlso
                 ),

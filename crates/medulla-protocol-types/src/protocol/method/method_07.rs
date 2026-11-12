@@ -127,10 +127,10 @@ $($variants)*
     /// (CONCEPT:MEDULLA-KG.ontology.lpg-rdf-projection-vocabulary). Both default to empty ⇒ the IDENTITY projection (node-type
     /// and property keys emitted verbatim, no `rdf:type` synthesis), which preserves
     /// the prior behavior for every existing caller. A caller (e.g. agent-utilities)
-    /// that sets `base_iri = "http://agent-utilities.dev/ontology#"` +
+    /// that sets `base_iri = "https://knuckles-team.github.io/ontology/core#"` +
     /// `type_convention = "camel"` makes the engine project the LIVE property graph
     /// into that vocabulary — `<node> rdf:type <base + CamelCase(type)>` and
-    /// `<node> <base + prop> <v>` — so a by-class query (`?s a au:Agent`) resolves
+    /// `<node> <base + prop> <v>` — so a by-class query (`?s a kg:Agent`) resolves
     /// natively. The engine itself hardcodes NO ontology URL; the vocabulary is the
     /// caller's.
     #[cfg(feature = "sparql")]

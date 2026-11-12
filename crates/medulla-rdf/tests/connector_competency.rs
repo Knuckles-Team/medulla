@@ -50,7 +50,7 @@ fn connected_pairs(view: &GraphView) -> Vec<(String, String)> {
     let (vars, rows) = select(
         view,
         r#"
-PREFIX vg: <http://knuckles.team/kg/virtual-graph#>
+PREFIX vg: <https://knuckles-team.github.io/ontology/virtual-graph#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?name ?class WHERE {
   ?conn a vg:SourceConnection ; dc:identifier ?name .
@@ -91,7 +91,7 @@ fn unconnected_sources(connected: &[(String, String)], required: &[&str]) -> Vec
         .collect()
 }
 
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 
 /// Execute a SELECT and return `(columns, rows)` with every cell as its lexical form.
 fn select(view: &GraphView, query: &str) -> (Vec<String>, Vec<Vec<String>>) {
@@ -128,7 +128,7 @@ fn local(cell: &str) -> &str {
 }
 
 const FAN_DUTY_FIXTURE: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:fan-manager:fixture/> .
@@ -192,7 +192,7 @@ f:baseline-host3 a infra:HealthBaseline ;
 "#;
 
 const FAN_DUTY_QUERY: &str = r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?host ?fanDuty ?temp ?p95 ?source ?record ?asof WHERE {
   ?host a infra:Host .
@@ -261,7 +261,7 @@ fn home_assistant_out_of_range_sensors_answer() {
     // infrastructure-v1.ttl), the worked example of plan.md. Frozen as-of:
     // 2026-01-03T00:00:00Z, so the last-24-hours window starts 2026-01-02T00:00:00Z.
     let fixture = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:home-assistant:fixture/> .
@@ -308,7 +308,7 @@ f:sensor-idle a infra:Entity .
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?entity ?signal ?observed ?p95 ?source ?record ?asof WHERE {
   ?entity a infra:Entity .
@@ -353,7 +353,7 @@ fn microsoft_overlapping_meetings_answer() {
     // calendar-v1.ttl; Person from the imported core module). Frozen as-of:
     // 2026-01-02T00:00:00Z, so "tomorrow" is 2026-01-03.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:microsoft:fixture/> .
@@ -415,7 +415,7 @@ f:meeting-past-b a :CalendarEvent ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 SELECT ?m1 ?m2 ?attendee WHERE {
   ?m1 a :CalendarEvent ; :scheduledStart ?s1 ; :scheduledEnd ?e1 ; :attendedBy ?attendee .
   ?m2 a :CalendarEvent ; :scheduledStart ?s2 ; :scheduledEnd ?e2 ; :attendedBy ?attendee .
@@ -453,7 +453,7 @@ SELECT ?m1 ?m2 ?attendee WHERE {
 }
 
 const FAN_CROSS_FIXTURE: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:fan-manager-cross:fixture/> .
@@ -512,7 +512,7 @@ f:alert-host-5 a infra:HealthAnomaly ; infra:affectsEntity f:host-5 ; infra:sign
 // lgtm-sourced `:HealthAnomaly` on the host; the window is the fan trend's
 // `observedAt` .. `observedAt + windowS`, both pinned to one day.
 const FAN_CROSS_QUERY: &str = r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?host ?fanMax ?alertTemp ?hostSource ?hostRecord ?fanSource ?fanRecord ?alertSource ?alertRecord ?asof WHERE {
   ?host a infra:Host ; dc:source ?hostSource ; dc:identifier ?hostRecord .
@@ -632,8 +632,8 @@ fn fan_manager_acceptance_through_declared_contracts() {
 }
 
 const CONTAINER_RESTART_FIXTURE: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:container-manager:fixture/> .
@@ -685,8 +685,8 @@ fn container_manager_repeated_restarts_answer() {
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?entity ?restarts ?image ?imageRef ?source ?record ?asof WHERE {
   VALUES ?kind { infra:Container infra:Workload }
@@ -733,7 +733,7 @@ SELECT ?entity ?restarts ?image ?imageRef ?source ?record ?asof WHERE {
 }
 
 const UPTIME_DOWN_FIXTURE: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:uptime:fixture/> .
@@ -773,7 +773,7 @@ f:slow-slow a infra:HealthAnomaly ; infra:affectsEntity f:svc-slow ; infra:signa
 // `:HealthAnomaly` of signal `downtime_s` on the `:Service`: `observedAt` is
 // when the monitor went down and `observed` the seconds it stayed down.
 const UPTIME_DOWN_QUERY: &str = r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?service ?downSeconds ?source ?record ?asof WHERE {
   ?service a infra:Service .
@@ -822,7 +822,7 @@ fn uptime_services_down_in_window_answer() {
 }
 
 const UPTIME_CROSS_FIXTURE: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:uptime-cross:fixture/> .
@@ -869,7 +869,7 @@ f:route-error-mail a infra:HealthAnomaly ; infra:affectsEntity f:route-mail ; in
 // The concurrent signal falls in `[down start, down start + downtime_s]` on
 // one day, on the service itself (Grafana) or on a route to it (Caddy).
 const UPTIME_CROSS_QUERY: &str = r#"
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?service ?evidence ?source ?record ?downSource ?downRecord ?asof WHERE {
   ?service a infra:Service .
@@ -1011,7 +1011,7 @@ fn okta_assignment_through_group_answers() {
     // IdentityUser, IdentityGroup, memberOfGroup, assignedApp). Frozen as-of:
     // 2026-01-03T00:00:00Z.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -1052,7 +1052,7 @@ f:carol a :IdentityUser ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?user ?group ?app ?source ?record ?asof WHERE {
   ?user a :IdentityUser ; :memberOfGroup ?group .
@@ -1096,7 +1096,7 @@ fn microsoft_attendees_without_idp_or_mattermost_answer() {
     // "upcoming" is 2026-01-05 or later (day-granular window: the ordering
     // comparator parses operands as f64, so the window uses DAY() accessors).
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:microsoft:fixture/> .
@@ -1159,7 +1159,7 @@ f:meeting-sync a :CalendarEvent ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?attendee ?meeting ?source ?record ?asof WHERE {
   ?meeting a :CalendarEvent ;
@@ -1224,7 +1224,7 @@ fn atlassian_blocked_unassigned_issues_answer() {
     // are the canonical :blockedBy/:assignedTo/:ticketStatus terms. Frozen
     // as-of: 2026-01-03T00:00:00Z.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix f: <urn:eg-cq-conn:atlassian:fixture/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -1294,7 +1294,7 @@ f:issue-eng-104 a :JiraIssue, :Ticket ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX f: <urn:eg-cq-conn:atlassian:fixture/>
 SELECT ?issue ?project ?blockedBy ?source ?record ?asof WHERE {

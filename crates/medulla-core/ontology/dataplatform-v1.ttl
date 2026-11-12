@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
@@ -6,11 +6,11 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/dataplatform> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/dataplatform> a owl:Ontology ;
     rdfs:label "Data Platform and Machine Learning Ontology" ;
     rdfs:comment "Data platform and machine-learning concepts aligned to the W3C Data Catalog Vocabulary (catalog, dataset, distribution, data service), PROV-O (entity, activity, derivation) and the ML-Schema community vocabulary (experiment, run, model evaluation, hyperparameter setting, implementation). Reuses Dataset, Model, Metric, Artifact and Collection from the core (MEDULLA-TYPED-PACKS-R105.7)." ;
     dcterms:source "W3C DCAT; W3C PROV-O; W3C ML-Schema" ;
-    owl:imports <http://knuckles.team/kg/orchestration>, <http://knuckles.team/kg/service_operations> .
+    owl:imports <https://knuckles-team.github.io/ontology/orchestration>, <https://knuckles-team.github.io/ontology/service_operations> .
 
 :DataCatalog a owl:Class ;
     rdfs:label "Data Catalog" ;

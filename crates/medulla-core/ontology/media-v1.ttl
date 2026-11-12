@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix oa: <http://www.w3.org/ns/oa#> .
@@ -7,11 +7,11 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/media> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/media> a owl:Ontology ;
     rdfs:label "Media and Content Ontology" ;
     rdfs:comment "Media and content concepts aligned to schema.org media types (MediaObject, VideoObject, AudioObject, ImageObject, Book, Audiobook, MusicAlbum, TVSeries, TVSeason, Episode, Playlist, BroadcastChannel, BroadcastEvent), the W3C Ontology for Media Resources and EBUCore, IFLA LRM for work and collection structure, and ActivityStreams 2.0 for audience. Reuses CreativeWork, Collection, Rendition, Category, Policy and WorkItem from the core (MEDULLA-TYPED-PACKS-R105.8)." ;
     dcterms:source "schema.org media types; W3C Ontology for Media Resources; EBUCore; IFLA LRM; W3C ActivityStreams 2.0" ;
-    owl:imports <http://knuckles.team/kg/service_operations> .
+    owl:imports <https://knuckles-team.github.io/ontology/service_operations> .
 
 :MediaItem a owl:Class ;
     rdfs:label "Media Item" ;
@@ -1270,9 +1270,9 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#GamePlatform> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#GrabEvent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#LibraryItem> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#MediaIndexer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#PlaybackSession> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ViewerSample> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#GamePlatform> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#GrabEvent> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#LibraryItem> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#MediaIndexer> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#PlaybackSession> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#ViewerSample> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

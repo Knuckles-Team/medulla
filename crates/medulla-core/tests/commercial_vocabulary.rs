@@ -10,7 +10,7 @@ use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
@@ -64,7 +64,7 @@ fn commercial_module_loads() {
     let triples = parse_turtle(&ontology).expect("the commercial ontology parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/commercial",
+        "https://knuckles-team.github.io/ontology/commercial",
         RDF_TYPE,
         &format!("{OWL}Ontology")
     ));
@@ -78,7 +78,7 @@ fn commercial_module_loads() {
         .as_deref()
         .expect("the catalog carries its aggregate document");
     assert!(
-        catalog_document.contains("<http://knuckles.team/kg/commercial>"),
+        catalog_document.contains("<https://knuckles-team.github.io/ontology/commercial>"),
         "the catalog lists the commercial import"
     );
     // A missing registration is refused.
@@ -186,13 +186,13 @@ fn commercial_shared_namespace() {
         .expect("the shared fixture parses");
     assert!(has_iri(
         &fixture,
-        "http://knuckles.team/test/commercial#acmeSupplier",
+        "https://knuckles-team.github.io/ontology/test/commercial#acmeSupplier",
         RDF_TYPE,
         &format!("{KG}Supplier")
     ));
     assert!(has_iri(
         &fixture,
-        "http://knuckles.team/test/commercial#acmeCustomer",
+        "https://knuckles-team.github.io/ontology/test/commercial#acmeCustomer",
         RDF_TYPE,
         &format!("{KG}Customer")
     ));
@@ -224,7 +224,7 @@ fn commercial_close_date_declared() {
     ));
 }
 
-const EX: &str = "http://knuckles.team/test/commercial#";
+const EX: &str = "https://knuckles-team.github.io/ontology/test/commercial#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R003.17
 #[test]
@@ -315,7 +315,7 @@ fn supply_chain_module_loads_through_default_catalog() {
     let triples = parse_turtle(ontology).expect("the supply-chain ontology parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/supply_chain",
+        "https://knuckles-team.github.io/ontology/supply_chain",
         RDF_TYPE,
         &format!("{OWL}Ontology")
     ));
@@ -351,5 +351,5 @@ fn supply_chain_module_loads_through_default_catalog() {
         .get("core:catalog@1")
         .and_then(|source| source.ontology_ttl.as_deref())
         .expect("the aggregate catalog carries an ontology document");
-    assert!(catalog.contains("<http://knuckles.team/kg/supply_chain>"));
+    assert!(catalog.contains("<https://knuckles-team.github.io/ontology/supply_chain>"));
 }

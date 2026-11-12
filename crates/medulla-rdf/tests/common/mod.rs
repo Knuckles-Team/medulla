@@ -5,7 +5,7 @@
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
-pub const KG: &str = "http://knuckles.team/kg#";
+pub const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 pub const BFO: &str = "http://purl.obolibrary.org/obo/BFO_";
 pub const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
 
@@ -34,7 +34,7 @@ pub fn has_iri(triples: &[Triple], subject: &str, predicate: &str, object: &str)
 #[cfg(feature = "sparql")]
 pub fn connection_fixture(connections: &[(&str, &[&str])]) -> String {
     let mut ttl = String::from(
-        "@prefix vg: <http://knuckles.team/kg/virtual-graph#> .\n\
+        "@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .\n\
          @prefix dc: <http://purl.org/dc/terms/> .\n\
          @prefix k: <urn:eg-cq-conn:contract/> .\n",
     );

@@ -22,9 +22,9 @@ use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_types::contract::BoundedVec;
 
 /// The engine's admissibility role.
-pub(crate) const ADMITS_TOPOLOGY: &str = "http://medulla/owl#admitsTopology";
+pub(crate) const ADMITS_TOPOLOGY: &str = medulla_types::ontology_iri!("reasoning#admitsTopology");
 /// The engine's "needs an independent check" task class.
-pub(crate) const NEEDS_INDEPENDENT_CHECK: &str = "http://medulla/owl#NeedsIndependentCheck";
+pub(crate) const NEEDS_INDEPENDENT_CHECK: &str = medulla_types::ontology_iri!("reasoning#NeedsIndependentCheck");
 
 /// What the schema entailed for one topology question.
 pub(super) struct Entailed {
@@ -176,7 +176,7 @@ mod tests {
     const TBOX: &str =
         include_str!("../../../../crates/medulla-core/ontology/swarm_topology-v1.ttl");
 
-    const S: &str = "http://knuckles.team/kg/swarm#";
+    const S: &str = "https://knuckles-team.github.io/ontology/swarm#";
 
     fn reach(classification: &medulla_reasoner::owl::Classification) -> Reach<'_> {
         Reach {
@@ -221,7 +221,7 @@ mod tests {
         let before = entail(&core, &tasks, &classes).expect("entails");
         assert!(before.admissions.is_empty());
 
-        let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . @prefix ex: <http://example/> . @prefix swarm: <http://knuckles.team/kg/swarm#> . ex:Spare a owl:Class ; rdfs:subClassOf swarm:FanOutJoin .";
+        let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . @prefix ex: <http://example/> . @prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> . ex:Spare a owl:Class ; rdfs:subClassOf swarm:FanOutJoin .";
         let mut sources = (*core.schema_sources()).clone();
         let source = medulla_graph_core::graph::GraphSchemaSource::new(
             medulla_graph_core::graph::SchemaSourceOrigin::Admin {

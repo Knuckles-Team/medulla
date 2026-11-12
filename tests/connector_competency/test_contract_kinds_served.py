@@ -54,7 +54,7 @@ from medulla.generated.connector_pack import (
     PackProducer,
 )
 
-ACCESS_PREFIX = "https://knuckles-team.github.io/agent-connector-sdk/access#"
+ACCESS_PREFIX = "https://knuckles-team.github.io/ontology/access#"
 OPERATION = "list_items"
 SOURCE_ID = "items"
 ENTITY = "items"

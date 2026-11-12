@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -97,7 +97,7 @@
     rdfs:domain :RiskScenario ;
     rdfs:range :Service .
 
-<http://knuckles.team/kg/government> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/government> a owl:Ontology ;
     rdfs:label "Government & Public Sector Ontology" ;
     rdfs:comment "Government domain ontology aligned to NIST 800-53, FedRAMP, and NIEM." .
 

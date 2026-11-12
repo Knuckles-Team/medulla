@@ -122,7 +122,7 @@ const SH: &str = "http://www.w3.org/ns/shacl#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 /// Namespace of every compiled shape and of link names that are not IRIs.
-pub const OBJECT_MODEL_NS: &str = "http://knuckles.team/kg/object-model#";
+pub const OBJECT_MODEL_NS: &str = medulla_types::ontology_iri!("object-model#");
 
 /// The property IRI a link name stands for: an IRI stays, a bare name is
 /// minted under [`OBJECT_MODEL_NS`].

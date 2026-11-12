@@ -7,7 +7,7 @@ use common::{has_iri, parse_all};
 use medulla_rdf::oxrdf::Triple;
 use medulla_reasoner::owl::Reasoner;
 
-const SWARM: &str = "http://knuckles.team/kg/swarm#";
+const SWARM: &str = "https://knuckles-team.github.io/ontology/swarm#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#ObjectProperty";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
@@ -29,7 +29,7 @@ fn slot_feeds_edge_resolves_and_reasoner_stays_consistent() {
     assert!(has_iri(&triples, &feeds, &format!("{RDFS}range"), &slot));
 
     triples.extend(parse_all(&[
-        "@prefix swarm: <http://knuckles.team/kg/swarm#> .\n\
+        "@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .\n\
              swarm:source a swarm:Slot ; swarm:feeds swarm:target .\n\
              swarm:target a swarm:Slot .",
     ]));

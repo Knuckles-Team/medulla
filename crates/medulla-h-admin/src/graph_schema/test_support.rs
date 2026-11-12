@@ -8,7 +8,7 @@ use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_server_api::schema_compose::scope_blank_nodes;
 use medulla_server_api::schema_compose::validate_and_compose;
 
-pub(super) const KG: &str = "http://knuckles.team/kg#";
+pub(super) const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 pub(super) const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 pub(super) const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
 pub(super) const OWL_IMPORTS: &str = "http://www.w3.org/2002/07/owl#imports";

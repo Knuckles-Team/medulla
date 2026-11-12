@@ -26,7 +26,7 @@ from ontology_pack_support import (
 )
 
 PREFIXES = (
-    "@prefix : <http://knuckles.team/kg#> .\n"
+    "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n"
     "@prefix obo: <http://purl.obolibrary.org/obo/> .\n"
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
 )
@@ -77,7 +77,7 @@ def test_food_pack_import_answers_composition_query() -> None:
             deadline = time.monotonic() + 180
             while True:
                 rows = await client.rdf.sparql(
-                    "PREFIX : <http://knuckles.team/kg#> "
+                    "PREFIX : <https://knuckles-team.github.io/ontology/core#> "
                     "SELECT ?id WHERE { ?amount a :NutrientAmount ; :nutrientId ?id }"
                 )
                 if any(row.get("id") == "1003" for row in rows):

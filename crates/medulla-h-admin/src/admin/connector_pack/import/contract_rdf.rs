@@ -13,7 +13,7 @@ use serde_json::Value;
 
 use crate::admin::connector_pack::surface_vocab::{CONNECTOR_BASE, CP, RDF_TYPE};
 
-const CONTRACT_BASE: &str = "http://knuckles.team/kg/connector-pack/contract/";
+const CONTRACT_BASE: &str = medulla_types::ontology_iri!("connector-pack/contract/");
 
 /// Percent-encode one IRI path segment (RFC 3986 unreserved characters stay).
 pub(super) fn segment(value: &str) -> String {
@@ -85,7 +85,7 @@ impl Builder {
 
 /// Map one connector declaration onto the contract graph.
 ///
-/// Subject IRIs are `http://knuckles.team/kg/connector-pack/contract/<connector>`
+/// Subject IRIs are `https://knuckles-team.github.io/ontology/connector-pack/contract/<connector>`
 /// for the contract with `/<object>`, `/<object>/key`,
 /// `/<object>/field/<source_field>`, `/cursor`, `/access` and `/provenance`
 /// suffixes, each segment percent-encoded.
@@ -207,9 +207,9 @@ mod tests {
     fn declaration() -> Value {
         serde_json::json!({
             "schema_mappings": {"ticket": {
-                "ontology_class": "http://knuckles.team/kg#Ticket",
+                "ontology_class": "https://knuckles-team.github.io/ontology/core#Ticket",
                 "key_fields": ["id"],
-                "fields": {"title": "http://knuckles.team/kg#title"}
+                "fields": {"title": "https://knuckles-team.github.io/ontology/core#title"}
             }},
             "contract": {
                 "version": "1", "digest": "sha256:abc", "privacy_class": "internal",

@@ -10,7 +10,7 @@ const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.
 /// own contract and mapping. `row` is appended verbatim as the authority facts.
 fn report(row: &str) -> ValidationReport {
     let data = format!(
-        "@prefix vg: <http://knuckles.team/kg/virtual-graph#> .\n\
+        "@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .\n\
          @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\
          @prefix ex: <http://example.org/> .\n\
          ex:cmdb a vg:SourceConnection ; vg:sourceKind \"sql\" ; vg:endpointRef ex:ep1 ;\n\

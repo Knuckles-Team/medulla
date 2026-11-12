@@ -32,12 +32,12 @@ const SCHEMA: &[&str] = &[
 ];
 const SHAPES: &str = include_str!("../../medulla-core/ontology/orchestration-v1.shapes.ttl");
 const SWARM_SHAPES: &str = include_str!("../../medulla-core/ontology/swarm_topology-v1.shapes.ttl");
-const PREFIXES: &str = "PREFIX : <http://knuckles.team/kg#> \
-    PREFIX swarm: <http://knuckles.team/kg/swarm#> \
+const PREFIXES: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#> \
+    PREFIX swarm: <https://knuckles-team.github.io/ontology/swarm#> \
     PREFIX owl: <http://www.w3.org/2002/07/owl#> \
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> ";
-const TURTLE_PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> . \
-    @prefix swarm: <http://knuckles.team/kg/swarm#> . \
+const TURTLE_PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
+    @prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> . \
     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . \n";
 
 struct Question {

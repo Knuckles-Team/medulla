@@ -7,7 +7,7 @@ The pipelines gate row `PIPE-GATES-R014.7` requires every connector to declare t
 
 ## Wire shape
 
-A pack's `contracts.ttl` holds `sc:DataLocation` individuals (`sc:` = `https://knuckles-team.github.io/scion-sdk/contract#`). Each has `sc:holdsClass` (one or more class IRIs), `sc:instance`, optional `sc:store`, `sc:readTool`, optional `sc:routeParam` and optional `sc:federationKey`.
+A pack's `contracts.ttl` holds `sc:DataLocation` individuals (`sc:` = `https://knuckles-team.github.io/ontology/surface-contract#`). Each has `sc:holdsClass` (one or more class IRIs), `sc:instance`, optional `sc:store`, `sc:readTool`, optional `sc:routeParam` and optional `sc:federationKey`.
 
 ## Refusal codes
 

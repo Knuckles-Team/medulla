@@ -33,8 +33,11 @@ const HEAD_KEY: &str = "finance_head";
 const FINANCE_SHAPES: &str = include_str!("../../../medulla-core/ontology/finance-v1.shapes.ttl");
 
 #[cfg(all(feature = "finance", feature = "shacl"))]
-const TURTLE_PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> .\n\
-     @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n";
+const TURTLE_PREFIXES: &str = concat!(
+    "@prefix : <",
+    medulla_types::ontology_iri!("core#"),
+    "> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+);
 
 /// A finance refusal is its closed `ServerErrorCode` wire code, then the detail.
 #[cfg(all(feature = "finance", feature = "shacl"))]

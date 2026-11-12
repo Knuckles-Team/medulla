@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
@@ -72,7 +72,7 @@ hand-wired.""" ;
     rdfs:domain :OntologyAction ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/action> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/action> a owl:Ontology ;
     rdfs:label "Ontology Action System" ;
     rdfs:comment """CONCEPT:KG-2.25 — Ontology Action System.
 
@@ -87,7 +87,7 @@ Reuses the Capability Abstraction Layer (CONCEPT:KG-2.7): an OntologyAction
 `providesCapability` that same capability is inferred (via the
 `mayBeInvokedBy` property chain) to be eligible to invoke the action — the
 "for free" reasoned-eligibility payoff of the OWL substrate.""" ;
-    owl:imports <http://knuckles.team/kg/capability> .
+    owl:imports <https://knuckles-team.github.io/ontology/capability> .
 
 :ActionParameter a owl:Class ;
     rdfs:label "Action Parameter" ;

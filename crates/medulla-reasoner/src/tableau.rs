@@ -149,7 +149,7 @@ const STRUCTURAL_PREDICATES: &[&str] = &[
     OWL_DIFFERENT_FROM,
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#first",
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",
-    "http://medulla/owl#confidence",
+    medulla_types::ontology_iri!("reasoning#confidence"),
 ];
 const OWL_INVERSE_OF: &str = "http://www.w3.org/2002/07/owl#inverseOf";
 

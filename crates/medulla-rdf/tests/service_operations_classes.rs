@@ -211,13 +211,13 @@ fn self_contained_modules_align_to_the_core() {
     let sub = format!("{RDFS}subClassOf");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/swarm#TopologyTemplate",
+        "https://knuckles-team.github.io/ontology/swarm#TopologyTemplate",
         &sub,
         &kg("Template")
     ));
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/virtual-graph#MetadataContract",
+        "https://knuckles-team.github.io/ontology/virtual-graph#MetadataContract",
         &sub,
         &kg("Document")
     ));

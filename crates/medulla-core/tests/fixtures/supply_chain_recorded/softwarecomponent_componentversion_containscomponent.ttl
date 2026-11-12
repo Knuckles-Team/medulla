@@ -3,9 +3,9 @@
 # rank 1; gitlab `gitlab_vulnerabilities` action `dependencies` is rank 2.
 # Projected by the approved mappings (vm_dockerhub.ttl).
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:image-001 a infra:ContainerImage ;
     kg:containsComponent ex:openssl-301 .

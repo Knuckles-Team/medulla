@@ -11,7 +11,7 @@ use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDF_FIRST: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first";
 const RDF_REST: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
@@ -237,13 +237,13 @@ mod ontology_audit_orchestration_v1 {
         // The registered shape allows a recorded zero and any positive cost,
         // and rejects a negative one.
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> . :trace a :RunTrace ; :tokenCost 0.0 ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :trace a :RunTrace ; :tokenCost 0.0 ."
         ));
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> . :trace a :RunTrace ; :tokenCost 12.5 ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :trace a :RunTrace ; :tokenCost 12.5 ."
         ));
         assert!(!conforms(
-            "@prefix : <http://knuckles.team/kg#> . :trace a :RunTrace ; :tokenCost -1 ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :trace a :RunTrace ; :tokenCost -1 ."
         ));
     }
 
@@ -600,7 +600,7 @@ mod ontology_audit_archimate_v1 {
             );
         }
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:rel-1 a :ArchimateRelationship ;
     :relationshipType "Serving" ;
@@ -881,12 +881,12 @@ mod ontology_audit_government_v1 {
         ));
         // The registered shape requires the due date on every assessment.
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> .\n\
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
              @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\
              :assessment a :PrivacyAssessment ; :assessmentDueDate \"2026-11-01\"^^xsd:date ."
         ));
         assert!(!conforms(
-            "@prefix : <http://knuckles.team/kg#> . :assessment a :PrivacyAssessment ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :assessment a :PrivacyAssessment ."
         ));
     }
 
@@ -1021,10 +1021,10 @@ mod ontology_audit_core_foundation_v1 {
         ));
         // The registered shape requires a counterparty on every agreement.
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> . :agreement a :Agreement ; :counterparty :party ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :agreement a :Agreement ; :counterparty :party ."
         ));
         assert!(!conforms(
-            "@prefix : <http://knuckles.team/kg#> . :agreement a :Agreement ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :agreement a :Agreement ."
         ));
     }
 
@@ -1110,14 +1110,14 @@ mod ontology_audit_documentation_v1 {
             &format!("{KG}Document")
         ));
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:snap-1 a :WebSnapshot ;
     :sourceRef "https://example.org/page" .
 "#;
         assert!(conforms(valid), "a snapshot with its URL conforms");
         let violating = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:snap-1 a :WebSnapshot .
 "#;
@@ -1138,7 +1138,7 @@ ex:snap-1 a :WebSnapshot .
             OWL_CLASS
         ));
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:res-1 a :ArchiveResult ;
     :extractorName "singlefile" ;
@@ -1221,7 +1221,7 @@ ex:res-1 a :ArchiveResult ;
             &format!("{XSD}string")
         ));
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:res-1 a :ArchiveResult ;
     :extractorName "singlefile" ;
@@ -1541,10 +1541,10 @@ mod ontology_audit_identity_v1 {
             &format!("{XSD}string")
         ));
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"ACTIVE\" ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :u a :IdentityUser ; :accountStatus \"ACTIVE\" ."
         ));
         assert!(!conforms(
-            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"LOCKED\" ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :u a :IdentityUser ; :accountStatus \"LOCKED\" ."
         ));
     }
 }
@@ -1629,10 +1629,10 @@ mod ontology_audit_enterprise_v1 {
             &format!("{XSD}string")
         ));
         assert!(conforms(
-            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"phaseOut\" ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :f a :EAFactSheet ; :lifecyclePhase \"phaseOut\" ."
         ));
         assert!(!conforms(
-            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"retired\" ."
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :f a :EAFactSheet ; :lifecyclePhase \"retired\" ."
         ));
     }
 

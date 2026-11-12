@@ -78,7 +78,7 @@ Owners: vocabulary files and shapes: Medulla (`crates/medulla-core/ontology/`). 
 
 ### Vocabulary
 
-Two new files, namespace `http://knuckles.team/kg#`, prefixes `mv:` (media) and `cv:` (content channels) denote the section of the shared namespace. All IRIs stay in `:` as the other ontology files do, so `mv:`/`cv:` below are documentation prefixes.
+Two new files, namespace `https://knuckles-team.github.io/ontology/core#`, prefixes `mv:` (media) and `cv:` (content channels) denote the section of the shared namespace. All IRIs stay in `:` as the other ontology files do, so `mv:`/`cv:` below are documentation prefixes.
 
 #### media-v1.ttl
 

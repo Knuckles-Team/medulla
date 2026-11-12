@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
@@ -8,7 +8,7 @@
 # :canonicalGateKind from here; no class name is mapped in code. A complex
 # gateway carries no :dagNodeKind and is refused as unmapped.
 
-<http://knuckles.team/kg/bpmn-v1> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/bpmn-v1> a owl:Ontology ;
     rdfs:label "BPMN 2.0 element classes" .
 
 :BpmnTask a owl:Class ;

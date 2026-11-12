@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -41,7 +41,7 @@ anchor alongside Camunda business processes. CONCEPT:KG-2.9.""" ;
 :Incident rdfs:subClassOf :ApplicationEvent ;
     owl:equivalentClass :ErpNextIssue .
 
-<http://knuckles.team/kg/archimate> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/archimate> a owl:Ontology ;
     rdfs:label "Vendor-Neutral ArchiMate Crosswalk" ;
     rdfs:comment """The canonical crosswalk keystone: one ArchiMate-aligned anchor per
 business idea, with each vendor's native class related to it via rdfs:subClassOf /
@@ -55,7 +55,7 @@ context (:Incident/:Change from ServiceNow, :ErpNextIssue from ERPNext); it only
 relates them to the canonical anchors declared here.
 CONCEPT:KG-2.9 (Enterprise OS — vendor-neutral crosswalk). See
 docs/architecture/vendor_neutral_enterprise_ontology.md §1.""" ;
-    owl:imports <http://knuckles.team/kg/enterprise> .
+    owl:imports <https://knuckles-team.github.io/ontology/enterprise> .
 
 :ErpNextIssue a owl:Class ;
     rdfs:label "ERPNext Issue" ;
@@ -138,11 +138,11 @@ Realization, Assignment, ...).""" .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
-<http://knuckles.team/kg#ApplicationComponent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ApplicationEvent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ArchimateRelationship> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusinessActor> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusinessCapability> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusinessProcess> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusinessTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ErpNextIssue> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ApplicationComponent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ApplicationEvent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ArchimateRelationship> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusinessActor> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusinessCapability> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusinessProcess> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusinessTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ErpNextIssue> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .

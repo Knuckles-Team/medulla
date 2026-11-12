@@ -8,11 +8,11 @@
 # template's RDF projection is validated by `ShaclValidate` against the
 # composed schema (no caller shapes).
 
-@prefix swarm: <http://knuckles.team/kg/swarm#> .
+@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .
 @prefix sh:    <http://www.w3.org/ns/shacl#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
 @prefix owl:   <http://www.w3.org/2002/07/owl#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 
 # Task-class declarations and task instances share the same optional fact.
 swarm:ShellCentricShape a sh:NodeShape ;
@@ -198,4 +198,4 @@ swarm:LeaseFactShape a sh:NodeShape ;
     sh:property [ sh:path swarm:amount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
 
 swarm:SwarmPrefixes a owl:Ontology ;
-    sh:declare [ sh:prefix "swarm" ; sh:namespace "http://knuckles.team/kg/swarm#"^^xsd:anyURI ] .
+    sh:declare [ sh:prefix "swarm" ; sh:namespace "https://knuckles-team.github.io/ontology/swarm#"^^xsd:anyURI ] .

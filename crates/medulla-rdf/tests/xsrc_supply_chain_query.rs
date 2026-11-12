@@ -19,9 +19,9 @@ use medulla_virtual_graph::{
     source_selection::CoverageResult, source_selection::Premise,
 };
 
-const KG: &str = "http://knuckles.team/kg#";
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 const SEED: &str =
     include_str!("../../medulla-core/tests/fixtures/cross_source_authority_seed.ttl");
 

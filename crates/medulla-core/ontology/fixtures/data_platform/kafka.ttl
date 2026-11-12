@@ -7,15 +7,15 @@
 # the R038 AccelerationPolicy (metadata only, no records; decision 4).
 # Records themselves are never mapped.
 
-@prefix dp: <http://knuckles.team/kg/data-platform#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
-@prefix ex: <http://knuckles.team/kg/fixtures/data-platform/kafka/> .
+@prefix dp: <https://knuckles-team.github.io/ontology/data-platform#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/data-platform/kafka/> .
 
 ex:store a dp:DataStore ;
     dp:storeFamily "stream" .
 
 ex:contract a vg:MetadataContract ;
-    vg:contractSource <http://knuckles.team/kg/fixtures/data-platform/kafka/connection> ;
+    vg:contractSource <https://knuckles-team.github.io/ontology/fixtures/data-platform/kafka/connection> ;
     vg:schemaVersion "1" ;
     vg:contentDigest "sha256:2574bc63850d02cd8a19cd7b4f4ffe1a2c924782a01cad1563a7147b55c4b953" ;
     vg:discoveredEntity "topics" ;

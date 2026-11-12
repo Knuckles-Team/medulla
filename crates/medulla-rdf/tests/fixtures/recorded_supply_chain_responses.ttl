@@ -1,8 +1,8 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix ex: <http://knuckles.team/xsrc/recorded#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/source-record/recorded#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # Recorded connector responses for the supply-chain impact question

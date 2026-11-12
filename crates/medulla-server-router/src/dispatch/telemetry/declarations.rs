@@ -38,7 +38,7 @@ pub const RESOLUTION_KEYS_PROPERTY: &str = "resolution_keys";
 pub const DECLARED_HEALTH_PROPERTY: &str = "declared_health";
 /// The Pod → Workload relation (`infrastructure:scheduledBy`).
 pub const SCHEDULED_BY: &str = "scheduledBy";
-const SCHEDULED_BY_IRI: &str = "http://knuckles.team/kg/infrastructure#scheduledBy";
+const SCHEDULED_BY_IRI: &str = medulla_types::ontology_iri!("infrastructure#scheduledBy");
 
 /// The most individuals of one node type a derivation reads.
 const MAX_INDIVIDUALS_PER_TYPE: usize = 100_000;

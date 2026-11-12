@@ -3,9 +3,9 @@
 # are rank 2. Projected by the approved mappings (vm_salesforce.ttl,
 # vm_twenty.ttl).
 
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:cust-001 a kg:Customer ;
     rdfs:label "Acme Corp" .

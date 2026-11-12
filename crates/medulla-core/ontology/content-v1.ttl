@@ -1,14 +1,14 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bibo: <http://purl.org/ontology/bibo/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/content> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/content> a owl:Ontology ;
     rdfs:label "Content Channel Ontology" ;
     rdfs:comment "Content-channel concepts: feeds and articles, research papers, search queries and results, social posts and channels, email campaigns and mailing lists, and message channels with chat. Reuses CreativeWork, Document, Message, Person, Team and the search terms from the core and retrieval modules (MEDULLA-MEDIA-VOCAB-R002)." ;
-    owl:imports <http://knuckles.team/kg/retrieval> .
+    owl:imports <https://knuckles-team.github.io/ontology/retrieval> .
 
 # --- content vocab lane A ---
 # The `cv:` names in the spec rows are documentation prefixes for this module's
@@ -109,4 +109,4 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#FeedSubscription> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/core#FeedSubscription> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

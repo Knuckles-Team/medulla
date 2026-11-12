@@ -170,7 +170,7 @@ def test_duplicate_or_conflicting_paths_refuse_without_iri_changes() -> None:
             # A path naming a class the pinned vocabulary does not have.
             codes = await _refuse(
                 client,
-                [("a", _record("Ghost", "http://knuckles.team/kg#Ghost", revision))],
+                [("a", _record("Ghost", "https://knuckles-team.github.io/ontology/core#Ghost", revision))],
             )
             assert "CONCEPT_PATH_IRI_CONFLICT" in codes
 

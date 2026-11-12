@@ -9,8 +9,8 @@
 # (listmonk_response.json, same directory); vg:contentDigest is sha256 over its bytes.
 # Templates, transactional send, media and imports are effect or out of scope.
 
-@prefix :    <http://knuckles.team/kg#> .
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f:   <urn:eg-media-vocab:listmonk/> .
 

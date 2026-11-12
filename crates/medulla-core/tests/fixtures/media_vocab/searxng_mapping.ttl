@@ -8,8 +8,8 @@
 # The metadata contract is the discovery of the recorded response
 # (searxng_response.json, same directory); vg:contentDigest is sha256 over its bytes.
 
-@prefix :    <http://knuckles.team/kg#> .
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f:   <urn:eg-media-vocab:searxng/> .
 

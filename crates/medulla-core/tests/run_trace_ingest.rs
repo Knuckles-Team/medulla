@@ -30,7 +30,7 @@ fn turtle(trace: &Value) -> String {
             .unwrap_or_else(|| panic!("{key} is text"))
     };
     let mut out = String::from(
-        "@prefix : <http://knuckles.team/kg#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+        "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
     );
     out.push_str(&format!(
         ":{} a :RunTrace ;\n  :status \"{}\" ;\n  :terminationReason \"{}\" ;\n",

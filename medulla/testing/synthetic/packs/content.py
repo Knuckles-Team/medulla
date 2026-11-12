@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from ....ontology import ONTOLOGY_BASE as CORE_ONTOLOGY_BASE
 from .. import vocabulary as vocab
 from .._digest import canonical_json
 from .._rng import SeededStream
@@ -15,7 +16,7 @@ JSON = "application/json"
 TURTLE = "text/turtle"
 MARKDOWN = "text/markdown"
 ONTOLOGY_BASE = "https://synthetic.example/ontology"
-_CORE_ROOT = "http://knuckles.team/kg#DomainEntity"
+_CORE_ROOT = f"{CORE_ONTOLOGY_BASE}core#DomainEntity"
 
 _PREFIXES = (
     "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"

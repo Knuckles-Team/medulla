@@ -7,7 +7,7 @@ The same resource feeds `MEDULLA-CQ-ORCH-R012.2`; its prompt fields are `SCION-C
 
 ## Wire shape
 
-Each connector serves `ontology://<connector>/contracts.ttl` (text/turtle), captured into its pack. Namespace `sc:` = `https://knuckles-team.github.io/scion-sdk/contract#`. Individuals use `urn:scion:<connector>:<kind>:<name>` and core types `:Task`, `:Tool`, `:Prompt`, `:Skill`. A `sc:ToolUseContract` has `sc:forTask` and core `:hasStep` to `sc:ToolStep` nodes. A step has `sc:stepOrder`, `sc:callsTool`, `sc:param`, `sc:resultField` and `sc:refusal` to a `sc:Refusal` with `sc:refusalCode` and `sc:refusalWhen`; steps chain with core `:precedes`. Prompts, skills and tools carry `sc:servesTask`; prompts and skills carry `sc:usesTool`. Every `sc:` class is a subclass of a core class.
+Each connector serves `ontology://<connector>/contracts.ttl` (text/turtle), captured into its pack. Namespace `sc:` = `https://knuckles-team.github.io/ontology/surface-contract#`. Individuals use `urn:scion:<connector>:<kind>:<name>` and core types `:Task`, `:Tool`, `:Prompt`, `:Skill`. A `sc:ToolUseContract` has `sc:forTask` and core `:hasStep` to `sc:ToolStep` nodes. A step has `sc:stepOrder`, `sc:callsTool`, `sc:param`, `sc:resultField` and `sc:refusal` to a `sc:Refusal` with `sc:refusalCode` and `sc:refusalWhen`; steps chain with core `:precedes`. Prompts, skills and tools carry `sc:servesTask`; prompts and skills carry `sc:usesTool`. Every `sc:` class is a subclass of a core class.
 
 ## Refusal codes
 

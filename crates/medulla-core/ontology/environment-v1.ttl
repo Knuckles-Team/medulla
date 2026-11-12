@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix obo: <http://purl.obolibrary.org/obo/> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
@@ -18,10 +18,10 @@
 # :termCurie, :quantityValue, :unitCode, observation properties, the RO-aligned
 # relations) lives in core-foundation; this module only uses it.
 
-<http://knuckles.team/kg/environment> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/environment> a owl:Ontology ;
     rdfs:label "World Model — Environment" ;
     rdfs:comment "Environmental systems, habitats, ecosystems, weather and climate systems and weather observations; BFO-placed, mapped to ENVO, SOSA and Wikidata, wired to the geopolitical Region/Country and WeatherEvent." ;
-    owl:imports <http://knuckles.team/kg/life> .
+    owl:imports <https://knuckles-team.github.io/ontology/life> .
 
 # ── Environmental systems, habitats, weather and climate ──────────────────────────
 

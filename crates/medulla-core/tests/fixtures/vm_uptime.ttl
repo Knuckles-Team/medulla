@@ -8,10 +8,10 @@
 # mapping keys the infra:Service projection on the monitor's `url` field.
 # The heartbeat stat is the service's health signal.
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-uptime#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-uptime#> .
 
 ex:uptimeConnection a vg:SourceConnection ;
     vg:sourceKind "mcp" ;

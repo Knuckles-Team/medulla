@@ -78,7 +78,7 @@ fn keycloak_user_clients_and_roles_answer() {
     // with :Application from the shared service-operations core). Frozen as-of:
     // 2026-01-03T00:00:00Z.
     let fixture = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:keycloak:fixture/> .
@@ -111,7 +111,7 @@ f:role-viewer a :IdentityRole .
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX : <http://knuckles.team/kg#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 PREFIX f: <urn:eg-cq-conn:keycloak:fixture/>
 SELECT ?client ?role ?source ?record ?asof WHERE {

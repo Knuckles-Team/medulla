@@ -4,8 +4,8 @@
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
@@ -124,9 +124,9 @@ const SHACL: &str = "http://www.w3.org/ns/shacl#";
 const SUPPLY_SHAPES: &str = include_str!("../ontology/supply_chain-v1.shapes.ttl");
 
 const SUPPLY_SHAPE_DATA_PREFIX: &str = r#"
-@prefix kg:   <http://knuckles.team/kg#> .
+@prefix kg:   <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:   <http://knuckles.team/test/supply-chain#> .
+@prefix ex:   <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 "#;
 
 fn shape_violation_path(report: &medulla_shacl::ValidationReport, predicate: &str) -> bool {
@@ -176,7 +176,7 @@ fn component_version_vulnerability_and_uses_component_shapes() {
     // A well-formed version, vulnerability and service link are accepted.
     let valid = format!(
         "{SUPPLY_SHAPE_DATA_PREFIX}
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 
 ex:openssl111k a kg:ComponentVersion ;
     kg:supplyChainVersionOf ex:openssl ;
@@ -239,7 +239,7 @@ ex:openssl111k a kg:ComponentVersion ."
     // A usesComponent from a non-service subject is refused.
     let non_service = format!(
         "{SUPPLY_SHAPE_DATA_PREFIX}
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 
 ex:checkoutWorkload a infra:Workload ;
     kg:usesComponent ex:openssl111k .
@@ -445,10 +445,10 @@ fn commercial_shapes() -> std::sync::Arc<str> {
 }
 
 const COMMERCE_DATA_PREFIX: &str = r#"
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
-@prefix ex:    <http://knuckles.team/test/commercial#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/commercial#> .
 "#;
 
 // spec: MEDULLA-SUPPLY-VOCAB-R003.5
@@ -704,8 +704,8 @@ fn contact_of_declared_with_no_contact_class() {
 const INFRA_SHAPES: &str = include_str!("../ontology/infrastructure-v1.shapes.ttl");
 
 const INFRA_DATA_PREFIX: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/host-limit#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/host-limit#> .
 "#;
 
 // spec: MEDULLA-SUPPLY-VOCAB-R004.2
@@ -825,10 +825,10 @@ fn declared_capacity_thresholds_pass_the_host_limit_shape() {
     );
 }
 
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 
-const VM_ERPNEXT: &str = "http://knuckles.team/test/vm-erpnext#";
-const VM_LEANIX: &str = "http://knuckles.team/test/vm-leanix#";
+const VM_ERPNEXT: &str = "https://knuckles-team.github.io/ontology/test/vm-erpnext#";
+const VM_LEANIX: &str = "https://knuckles-team.github.io/ontology/test/vm-leanix#";
 
 const VIRTUAL_SHAPES: &str = include_str!("../ontology/virtual_graph-v1.shapes.ttl");
 
@@ -1041,7 +1041,7 @@ fn leanix_provider_maps_to_supplier_rank_two_with_supports_capability() {
     );
 }
 
-const VM_SERVICE_NOW: &str = "http://knuckles.team/test/vm-servicenow#";
+const VM_SERVICE_NOW: &str = "https://knuckles-team.github.io/ontology/test/vm-servicenow#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R005.5
 #[test]
@@ -1111,7 +1111,7 @@ fn servicenow_incident_change_ci_maps_to_affects_service() {
     );
 }
 
-const VM_SALESFORCE: &str = "http://knuckles.team/test/vm-salesforce#";
+const VM_SALESFORCE: &str = "https://knuckles-team.github.io/ontology/test/vm-salesforce#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R005.6
 #[test]
@@ -1180,7 +1180,7 @@ fn salesforce_account_and_contract_map_via_soql() {
     );
 }
 
-const VM_TWENTY: &str = "http://knuckles.team/test/vm-twenty#";
+const VM_TWENTY: &str = "https://knuckles-team.github.io/ontology/test/vm-twenty#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R005.8
 #[test]
@@ -1234,7 +1234,7 @@ fn twenty_company_maps_to_customer_rank_two_without_a_contract_mapping() {
     );
 }
 
-const VM_CONTAINER_MANAGER: &str = "http://knuckles.team/test/vm-container-manager#";
+const VM_CONTAINER_MANAGER: &str = "https://knuckles-team.github.io/ontology/test/vm-container-manager#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.3, MEDULLA-CQ-XSRC-R003.5
 #[test]
@@ -1323,7 +1323,7 @@ fn container_manager_workload_and_image_map_deployed_as_and_uses_image() {
     }
 }
 
-const VM_UPTIME: &str = "http://knuckles.team/test/vm-uptime#";
+const VM_UPTIME: &str = "https://knuckles-team.github.io/ontology/test/vm-uptime#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.4, MEDULLA-CQ-XSRC-R003.4
 #[test]
@@ -1387,7 +1387,7 @@ fn uptime_monitor_resolves_to_service_by_url_host_key() {
     }
 }
 
-const VM_DOCKERHUB: &str = "http://knuckles.team/test/vm-dockerhub#";
+const VM_DOCKERHUB: &str = "https://knuckles-team.github.io/ontology/test/vm-dockerhub#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.5
 #[test]
@@ -1482,7 +1482,7 @@ fn dockerhub_image_sbom_and_cves_map_components_and_vulnerabilities() {
     }
 }
 
-const VM_HOST_LIMITS: &str = "http://knuckles.team/test/vm-host-limits#";
+const VM_HOST_LIMITS: &str = "https://knuckles-team.github.io/ontology/test/vm-host-limits#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.7
 #[test]
@@ -1576,7 +1576,7 @@ fn fan_manager_and_systems_manager_assemble_host_limit_rows() {
     );
 }
 
-const BLOCKING: &str = "http://knuckles.team/test/blocking-keys#";
+const BLOCKING: &str = "https://knuckles-team.github.io/ontology/test/blocking-keys#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R007.2
 #[test]
@@ -1910,7 +1910,7 @@ fn every_d4_concept_is_covered_or_carries_a_typed_abstention() {
     );
 }
 
-const VM_GITLAB_GITHUB: &str = "http://knuckles.team/test/vm-gitlab-github#";
+const VM_GITLAB_GITHUB: &str = "https://knuckles-team.github.io/ontology/test/vm-gitlab-github#";
 
 // spec: MEDULLA-SUPPLY-VOCAB-R006.6
 #[test]
@@ -2073,9 +2073,9 @@ ex:acmeCustomer a kg:Customer ;
 }
 
 const HOST_PAIR_PREFIX: &str = r#"
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
-@prefix ex:    <http://knuckles.team/test/host-pair#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/host-pair#> .
 "#;
 
 fn refuses_with_message(shapes: &str, data: &str, message: &str) {

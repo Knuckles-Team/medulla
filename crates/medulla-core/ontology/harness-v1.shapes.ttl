@@ -4,7 +4,7 @@
 # MeasuredFact values.  Their RDF projection keeps each measured value in a
 # node so the value and the evaluation that produced it cannot be separated.
 
-@prefix :   <http://knuckles.team/kg#> .
+@prefix :   <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

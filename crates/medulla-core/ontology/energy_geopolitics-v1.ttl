@@ -4,7 +4,7 @@
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix ns1: <http://purl.org/dc/elements/1.1/> .
@@ -124,7 +124,7 @@
 :transportsVia a owl:ObjectProperty ;
     rdfs:label "transports via" .
 
-<http://knuckles.team/kg/energy_geopolitics> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/energy_geopolitics> a owl:Ontology ;
     rdfs:label "Energy & Geopolitics Domain Extension" ;
     ns1:creator "Agent OS Knowledge Graph Automation" ;
     ns1:date "2026-05-19"^^xsd:date ;
@@ -132,7 +132,7 @@
     ns1:title "Energy & Geopolitics Domain Extension" ;
     dc:license <https://opensource.org/licenses/MIT> ;
     rdfs:comment "Domain extension for energy supply chains, geopolitics, and associated risk analysis." ;
-    prov:wasGeneratedBy <http://knuckles.team/agents/ontology-builder> .
+    prov:wasGeneratedBy <https://knuckles-team.github.io/ontology/core#ontology-builder> .
 
 :InfrastructureEntity a owl:Class ;
     rdfs:label "Infrastructure Entity" ;

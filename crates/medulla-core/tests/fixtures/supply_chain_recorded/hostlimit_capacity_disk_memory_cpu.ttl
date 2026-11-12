@@ -4,8 +4,8 @@
 # limitValue side is the declared threshold of R004.3 (host_limit_
 # thresholds.ttl). Projected by the approved mapping (vm_host_limits.ttl).
 
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:disk-001 a infra:HostLimit ;
     infra:limitKind "disk" ;

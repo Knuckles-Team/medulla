@@ -1,8 +1,8 @@
 # Worked example: "deploy a container with container-manager".
 # One task, four ordered steps, one pipeline template, and one Agent Library
 # holding an agent template, an agent and an A2A card.
-@prefix : <http://knuckles.team/kg#> .
-@prefix swarm: <http://knuckles.team/kg/swarm#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 :DeployContainerTask a swarm:SequentialDependency ; :hasStep :s1, :s2, :s3, :s4 .

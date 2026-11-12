@@ -182,9 +182,9 @@ For R071.1.2 and R071.1.6, compare these literal tuples after served import and 
 
 | Source class IRI | Target class IRI | Declared relation |
 |---|---|---|
-| `http://knuckles.team/kg#Person` | `http://schema.org/Person` | `SeeAlso` |
-| `http://knuckles.team/kg#Event` | `http://schema.org/Event` | `SeeAlso` |
-| `http://knuckles.team/kg#Document` | `http://schema.org/DigitalDocument` | `SeeAlso` |
+| `https://knuckles-team.github.io/ontology/core#Person` | `http://schema.org/Person` | `SeeAlso` |
+| `https://knuckles-team.github.io/ontology/core#Event` | `http://schema.org/Event` | `SeeAlso` |
+| `https://knuckles-team.github.io/ontology/core#Document` | `http://schema.org/DigitalDocument` | `SeeAlso` |
 
 The fixture pins source revision `core-crosswalk-fixture-v1` and target revision `schemaorg-crosswalk-fixture-v1`, with their document digests. These are fixture labels, not claimed upstream releases. The report must return both labels and digests unchanged. Medulla Document includes digital and physical documents. Its reference does not license `SkosExactMatch`, `owl:sameAs` or a new equivalence axiom. Existing core axioms remain unchanged.
 

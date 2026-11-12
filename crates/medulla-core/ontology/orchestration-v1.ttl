@@ -6,7 +6,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -495,9 +495,9 @@
 
 :usesTool a owl:ObjectProperty .
 
-<http://knuckles.team/kg/orchestration> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/orchestration> a owl:Ontology ;
     rdfs:label "Agent Intelligence Graph — Orchestration Module" ;
-    rdfs:comment "Orchestration domain extension (skill proposals, workflow/process distillation). Imported by the canonical <http://knuckles.team/kg> ontology; resolved to ontology_orchestration.ttl by the local loader convention." .
+    rdfs:comment "Orchestration domain extension (skill proposals, workflow/process distillation). Imported by the canonical <https://knuckles-team.github.io/ontology/core> ontology; resolved to ontology_orchestration.ttl by the local loader convention." .
 
 :AgentMessage a owl:Class ;
     rdfs:label "AgentMessage" ;
@@ -923,38 +923,38 @@
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
-<http://knuckles.team/kg#AgentKind> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#AgentLibrary> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#AgentMessage> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#AnalyticsJob> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusAgent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusMessage> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusSubscription> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#BusTopicCursor> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ContextBlob> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#DurableExecutionUnit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#DurableRun> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#DurableUnit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ErrorDetail> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#EvaluationRun> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#FsSnapshot> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Loop> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#MeasuredModelFact> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Model> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#ModelProfile> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#RetainedRunProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#RunCommit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#RunCut> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#RunEvent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#RunTrace> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#SagaCoordination> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Schedule> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Session> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#SkillProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#SkillWorkflowProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#StatechartInstance> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#TaskClass> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
-<http://knuckles.team/kg#Workflow> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#AgentKind> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#AgentLibrary> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#AgentMessage> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#AnalyticsJob> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusAgent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusMessage> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusSubscription> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#BusTopicCursor> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ContextBlob> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#DurableExecutionUnit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#DurableRun> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#DurableUnit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ErrorDetail> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#EvaluationRun> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#FsSnapshot> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Loop> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#MeasuredModelFact> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Model> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#ModelProfile> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#RetainedRunProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#RunCommit> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#RunCut> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#RunEvent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#RunTrace> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#SagaCoordination> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Schedule> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Session> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#SkillProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#SkillWorkflowProposal> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#StatechartInstance> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#TaskClass> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<https://knuckles-team.github.io/ontology/core#Workflow> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
 
 # MEDULLA-ORCH-VOCAB-R014.9: what a source class's nodes become in the
 # canonical workflow. Values: start, end, human, agent, decision, branch,

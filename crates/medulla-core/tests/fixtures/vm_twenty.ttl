@@ -7,10 +7,10 @@
 # no CustomerContract mapping is declared: a contract query against twenty
 # yields only the typed abstention (Decision D4).
 
-@prefix vg:    <http://knuckles.team/kg/virtual-graph#> .
-@prefix kg:    <http://knuckles.team/kg#> .
+@prefix vg:    <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ex:    <http://knuckles.team/test/vm-twenty#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/vm-twenty#> .
 
 ex:twentyConnection a vg:SourceConnection ;
     vg:sourceKind "graphql" ;

@@ -98,7 +98,7 @@ fn the_recorded_responses_answer_the_impact_question_with_provenance() {
     let versions = select(
         &view,
         r#"
-        PREFIX : <http://knuckles.team/kg#>
+        PREFIX : <https://knuckles-team.github.io/ontology/core#>
         PREFIX dc: <http://purl.org/dc/terms/>
         SELECT ?component ?source ?identifier ?date WHERE {
           ?version :supplyChainVersionOf ?component ;
@@ -163,17 +163,17 @@ fn the_recorded_responses_answer_the_impact_question_with_provenance() {
         ("Vulnerability", "github-vulnerabilities", "github-mcp", 2),
     ] {
         let class_iri = if class == "Service" {
-            "http://knuckles.team/kg/infrastructure#Service".to_string()
+            "https://knuckles-team.github.io/ontology/infrastructure#Service".to_string()
         } else {
-            format!("http://knuckles.team/kg#{class}")
+            format!("https://knuckles-team.github.io/ontology/core#{class}")
         };
         fixture = fixture.with_authority(&class_iri, mapping, source, 1, rank);
     }
     let roots = vec![
-        "http://knuckles.team/kg/infrastructure#Service".to_string(),
-        "http://knuckles.team/kg#SoftwareComponent".to_string(),
-        "http://knuckles.team/kg#Supplier".to_string(),
-        "http://knuckles.team/kg#Vulnerability".to_string(),
+        "https://knuckles-team.github.io/ontology/infrastructure#Service".to_string(),
+        "https://knuckles-team.github.io/ontology/core#SoftwareComponent".to_string(),
+        "https://knuckles-team.github.io/ontology/core#Supplier".to_string(),
+        "https://knuckles-team.github.io/ontology/core#Vulnerability".to_string(),
     ];
 
     let report = supply_chain_impact(&fixture, &roots, 1, &impact_rows)

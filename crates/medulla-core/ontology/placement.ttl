@@ -5,13 +5,13 @@
 # declares. The placement decision reads these nodes; it never re-derives the
 # facts. A tenant may extend this vocabulary under its own GraphSchema key.
 
-@prefix placement: <http://knuckles.team/kg/placement#> .
-@prefix kg:        <http://knuckles.team/kg#> .
+@prefix placement: <https://knuckles-team.github.io/ontology/placement#> .
+@prefix kg:        <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl:       <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/placement> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/placement> a owl:Ontology ;
     rdfs:label "Placement" ;
     rdfs:comment "Deployment targets and the placement facts each target declares." .
 

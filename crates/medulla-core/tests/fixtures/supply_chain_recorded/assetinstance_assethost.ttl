@@ -2,9 +2,9 @@
 # `get_cmdb_instances` is rank 1; systems-manager `HardwareNode` is rank 2.
 # Projected by the approved mapping (vm_servicenow.ttl).
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:ci-001 a kg:AssetInstance ;
     infra:assetHost ex:host-001 .

@@ -5,7 +5,7 @@ use medulla_shacl::validate_turtle;
 
 const SHAPES: &str = include_str!("../../medulla-core/ontology/connector_pack-v1.shapes.ttl");
 
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
+const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
 
 fn tool(component_id: Option<&str>, domain_link: Option<&str>) -> String {
     let mut parts = vec!["a cp:Tool".to_string()];
@@ -16,9 +16,9 @@ fn tool(component_id: Option<&str>, domain_link: Option<&str>) -> String {
         parts.push(link.to_string());
     }
     format!(
-        r#"@prefix cp: <http://knuckles.team/kg/connector-pack#> .
-@prefix kg: <http://knuckles.team/kg#> .
-@prefix ex: <http://knuckles.team/test/connector-pack#> .
+        r#"@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/connector-pack#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ex:checkoutTool {} .
@@ -31,8 +31,8 @@ ex:checkout a kg:Service .
 
 fn feature(realized_by: Option<&str>) -> String {
     format!(
-        r#"@prefix cp: <http://knuckles.team/kg/connector-pack#> .
-@prefix ex: <http://knuckles.team/test/connector-pack#> .
+        r#"@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/connector-pack#> .
 
 ex:billingFeature a cp:Feature{} .
 "#,
@@ -124,12 +124,12 @@ fn surface_shapes_accept_valid_and_refuse_invalid() {
     );
 }
 
-const CONTRACT: &str = r#"@prefix cp: <http://knuckles.team/kg/connector-pack#> .
-@prefix c: <http://knuckles.team/kg/connector-pack/contract/acme/> .
-@prefix kg: <http://knuckles.team/kg#> .
+const CONTRACT: &str = r#"@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix c: <https://knuckles-team.github.io/ontology/connector-pack/contract/acme/> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 
-<http://knuckles.team/kg/connector-pack/contract/acme> a cp:IngestContract ;
-    cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme> ;
+<https://knuckles-team.github.io/ontology/connector-pack/contract/acme> a cp:IngestContract ;
+    cp:contractOf <https://knuckles-team.github.io/ontology/connector-pack/connector/acme> ;
     cp:contractVersion "1" ;
     cp:contractDigest "sha256:abc" ;
     cp:privacyClass "internal" ;
@@ -148,7 +148,7 @@ c:ticket%2Fkey a cp:KeyRule ; cp:keyField "id" .
 
 c:ticket%2Ffield%2Ftitle a cp:FieldMapping ;
     cp:sourceField "title" ;
-    cp:mapsPredicate "http://knuckles.team/kg#title" .
+    cp:mapsPredicate "https://knuckles-team.github.io/ontology/core#title" .
 
 c:cursor a cp:CursorPolicy ; cp:cursorKind "timestamp" .
 
@@ -190,8 +190,8 @@ fn each_contract_shape_accepts_valid_and_refuses_invalid() {
     );
     refused(
         &CONTRACT.replace(
-            "cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme>",
-            "cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme>, <http://knuckles.team/kg/connector-pack/connector/other>",
+            "cp:contractOf <https://knuckles-team.github.io/ontology/connector-pack/connector/acme>",
+            "cp:contractOf <https://knuckles-team.github.io/ontology/connector-pack/connector/acme>, <https://knuckles-team.github.io/ontology/connector-pack/connector/other>",
         ),
         "a contract naming two connectors",
     );
@@ -247,7 +247,7 @@ fn each_contract_shape_accepts_valid_and_refuses_invalid() {
     );
     refused(
         &CONTRACT.replace(
-            "    cp:mapsPredicate \"http://knuckles.team/kg#title\" .",
+            "    cp:mapsPredicate \"https://knuckles-team.github.io/ontology/core#title\" .",
             "    cp:sourceField \"title\" .",
         ),
         "a field mapping without a predicate",

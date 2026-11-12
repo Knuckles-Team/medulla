@@ -2,7 +2,7 @@
 //! (MEDULLA-MEDIA-VOCAB-R001 to R013, rows .1 to .4 each).
 //!
 //! `mv:` and `cv:` are documentation prefixes for sections of the shared
-//! `http://knuckles.team/kg#` namespace (specs/media-and-personal-vocabulary/
+//! `https://knuckles-team.github.io/ontology/core#` namespace (specs/media-and-personal-vocabulary/
 //! plan.md, "Vocabulary"), so every assertion below uses the shared `:` IRIs.
 //! The tests load the owning ontology documents with the native parser and
 //! assert the declared classes, properties and domain/range contracts; they
@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Term, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
@@ -629,7 +629,7 @@ fn identity_keys_preserve_distinct_records_and_provenance() {
     // Fixture: equal URLs and provider IDs across source records keep distinct
     // records and their provenance; no sameAs is minted by a key match.
     const FIXTURE: &str = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix f: <urn:eg-media-vocab:identity/> .
@@ -1086,7 +1086,7 @@ fn content_properties_present() {
 // returns the typed abstention naming the missing operation (.3).
 // ---------------------------------------------------------------------------
 
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
 const DC: &str = "http://purl.org/dc/terms/";
 /// Frozen as-of for the question windows (the connector-competency convention).
 const ASOF: &str = "2026-01-15T00:00:00Z";
@@ -4401,7 +4401,7 @@ fn media_tag_terms_and_shape() {
     }
     assert_domain_range(&media, "tagConfidence", "MediaTag", "xsd:decimal");
 
-    let prefixes = "@prefix : <http://knuckles.team/kg#> . \
+    let prefixes = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
                     @prefix xsd: <http://www.w3.org/2001/XMLSchema#> . ";
     let digest = "a".repeat(64);
     let full = format!(

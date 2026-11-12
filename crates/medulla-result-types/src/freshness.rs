@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 
 /// The class-annotation predicate (RDF lowering stores a literal-valued triple as a node property
 /// keyed by the predicate IRI).
-pub const VOLATILITY_CLASS_IRI: &str = "http://medulla/owl#volatilityClass";
+pub const VOLATILITY_CLASS_IRI: &str = medulla_types::ontology_iri!("reasoning#volatilityClass");
 /// The optional per-class staleness bound, in whole seconds.
-pub const MAX_STALENESS_IRI: &str = "http://medulla/owl#maxStaleness";
+pub const MAX_STALENESS_IRI: &str = medulla_types::ontology_iri!("reasoning#maxStaleness");
 /// The compact property keys a property-graph writer (no RDF lowering) uses for the same pair.
 pub const VOLATILITY_CLASS_KEY: &str = "eg:volatilityClass";
 pub const MAX_STALENESS_KEY: &str = "eg:maxStaleness";

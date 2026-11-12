@@ -4,8 +4,8 @@
 # kg:suppliesItem edge is derived from these two recorded edges (Decision D5):
 # the order's `supplier` field and its `items` lines.
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:po-001 a kg:PurchaseOrder ;
     kg:suppliedBy ex:sup-001 ;

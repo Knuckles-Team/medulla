@@ -334,9 +334,9 @@ fn graph_named_form_requires_explicit_named_member() {
 // ── CONCEPT:MEDULLA-KG.ontology.lpg-rdf-projection-vocabulary — LPG→RDF projection vocabulary ────────────────────────
 
 /// The AU namespace + CamelCase projection — exactly what agent-utilities passes.
-const AU_NS: &str = "http://agent-utilities.dev/ontology#";
-fn au_proj() -> Projection {
-    Projection::from_wire(AU_NS, "camel")
+const KG_NS: &str = "https://knuckles-team.github.io/ontology/core#";
+fn kg_proj() -> Projection {
+    Projection::from_wire(KG_NS, "camel")
 }
 
 /// A NATIVE property-graph view (the `add_node`/`add_edge` shape AU writes, NOT the
@@ -364,17 +364,17 @@ fn native_view() -> GraphView {
     core.analysis_snapshot()
 }
 
-/// `?s rdf:type au:Agent` resolves natively over the LPG — the original failure.
-/// `agent`→`au:Agent` (CamelCase), so only alice matches; `world_model`→
-/// `au:WorldModel`, so bob matches that class instead.
+/// `?s rdf:type kg:Agent` resolves natively over the LPG — the original failure.
+/// `agent`→`kg:Agent` (CamelCase), so only alice matches; `world_model`→
+/// `kg:WorldModel`, so bob matches that class instead.
 #[test]
 fn projection_rdf_type_by_class() {
     let view = native_view();
-    let proj = au_proj();
+    let proj = kg_proj();
     let res = select_projected(
         &view,
-        "PREFIX au: <http://agent-utilities.dev/ontology#>\
-             SELECT ?s WHERE { ?s a au:Agent }",
+        "PREFIX kg: <https://knuckles-team.github.io/ontology/core#>\
+             SELECT ?s WHERE { ?s a kg:Agent }",
         &proj,
     )
     .unwrap();
@@ -385,15 +385,15 @@ fn projection_rdf_type_by_class() {
         .collect();
     assert_eq!(
         subs,
-        vec![format!("<{AU_NS}alice>")],
-        "only the agent-typed node is an au:Agent; got {subs:?}"
+        vec![format!("<{KG_NS}alice>")],
+        "only the agent-typed node is an kg:Agent; got {subs:?}"
     );
 
-    // The multi-word type CamelCases: bob is an au:WorldModel.
+    // The multi-word type CamelCases: bob is an kg:WorldModel.
     let res2 = select_projected(
         &view,
-        "PREFIX au: <http://agent-utilities.dev/ontology#>\
-             SELECT ?s WHERE { ?s a au:WorldModel }",
+        "PREFIX kg: <https://knuckles-team.github.io/ontology/core#>\
+             SELECT ?s WHERE { ?s a kg:WorldModel }",
         &proj,
     )
     .unwrap();
@@ -402,19 +402,19 @@ fn projection_rdf_type_by_class() {
         .iter()
         .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
         .collect();
-    assert_eq!(subs2, vec![format!("<{AU_NS}bob>")], "got {subs2:?}");
+    assert_eq!(subs2, vec![format!("<{KG_NS}bob>")], "got {subs2:?}");
 }
 
-/// A by-property literal query projects the property key under `au:` and matches the
+/// A by-property literal query projects the property key under `kg:` and matches the
 /// native scalar value.
 #[test]
 fn projection_by_property_literal() {
     let view = native_view();
     let res = select_projected(
         &view,
-        "PREFIX au: <http://agent-utilities.dev/ontology#>\
-             SELECT ?s WHERE { ?s au:name \"Alice\" }",
-        &au_proj(),
+        "PREFIX kg: <https://knuckles-team.github.io/ontology/core#>\
+             SELECT ?s WHERE { ?s kg:name \"Alice\" }",
+        &kg_proj(),
     )
     .unwrap();
     let subs: Vec<String> = res
@@ -422,18 +422,18 @@ fn projection_by_property_literal() {
         .iter()
         .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
         .collect();
-    assert_eq!(subs, vec![format!("<{AU_NS}alice>")], "got {subs:?}");
+    assert_eq!(subs, vec![format!("<{KG_NS}alice>")], "got {subs:?}");
 }
 
-/// The typed edge projects to `au:knows` between `au:`-namespaced node IRIs.
+/// The typed edge projects to `kg:knows` between `kg:`-namespaced node IRIs.
 #[test]
 fn projection_edge() {
     let view = native_view();
     let res = select_projected(
         &view,
-        "PREFIX au: <http://agent-utilities.dev/ontology#>\
-             SELECT ?o WHERE { au:alice au:knows ?o }",
-        &au_proj(),
+        "PREFIX kg: <https://knuckles-team.github.io/ontology/core#>\
+             SELECT ?o WHERE { kg:alice kg:knows ?o }",
+        &kg_proj(),
     )
     .unwrap();
     let objs: Vec<String> = res
@@ -441,17 +441,17 @@ fn projection_edge() {
         .iter()
         .filter_map(|s| s.get("o").map(|b| b.as_str().to_string()))
         .collect();
-    assert_eq!(objs, vec![format!("<{AU_NS}bob>")], "got {objs:?}");
+    assert_eq!(objs, vec![format!("<{KG_NS}bob>")], "got {objs:?}");
 }
 
 /// The full `?s ?p ?o` projection emits EXACTLY the AU-vocabulary triples that AU's
 /// rdflib `_build_rdf_graph` materializes from the same LPG: a CamelCased `rdf:type`
-/// per node under `au:`, each scalar property under `au:`, and the typed edge under
-/// `au:` between `au:` node IRIs. This is the engine==rdflib vocabulary contract.
+/// per node under `kg:`, each scalar property under `kg:`, and the typed edge under
+/// `kg:` between `kg:` node IRIs. This is the engine==rdflib vocabulary contract.
 #[test]
 fn projection_full_triple_set_matches_au_convention() {
     let view = native_view();
-    let res = select_projected(&view, "SELECT ?s ?p ?o WHERE { ?s ?p ?o }", &au_proj()).unwrap();
+    let res = select_projected(&view, "SELECT ?s ?p ?o WHERE { ?s ?p ?o }", &kg_proj()).unwrap();
     let triples: std::collections::HashSet<(String, String, String)> = res
         .solutions
         .iter()
@@ -466,29 +466,29 @@ fn projection_full_triple_set_matches_au_convention() {
     let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string();
     let expected: std::collections::HashSet<(String, String, String)> = [
         (
-            format!("<{AU_NS}alice>"),
+            format!("<{KG_NS}alice>"),
             rdf_type.clone(),
-            format!("<{AU_NS}Agent>"),
+            format!("<{KG_NS}Agent>"),
         ),
         (
-            format!("<{AU_NS}bob>"),
+            format!("<{KG_NS}bob>"),
             rdf_type,
-            format!("<{AU_NS}WorldModel>"),
+            format!("<{KG_NS}WorldModel>"),
         ),
         (
-            format!("<{AU_NS}alice>"),
-            format!("{AU_NS}name"),
+            format!("<{KG_NS}alice>"),
+            format!("{KG_NS}name"),
             "Alice".into(),
         ),
         (
-            format!("<{AU_NS}bob>"),
-            format!("{AU_NS}name"),
+            format!("<{KG_NS}bob>"),
+            format!("{KG_NS}name"),
             "Bob".into(),
         ),
         (
-            format!("<{AU_NS}alice>"),
-            format!("{AU_NS}knows"),
-            format!("<{AU_NS}bob>"),
+            format!("<{KG_NS}alice>"),
+            format!("{KG_NS}knows"),
+            format!("<{KG_NS}bob>"),
         ),
     ]
     .into_iter()

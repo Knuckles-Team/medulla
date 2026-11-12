@@ -148,9 +148,9 @@ mod tests {
             "ContainerImage".to_string(),
         ];
         let rows = vec![ImpactRow {
-            service: "http://knuckles.team/xsrc#checkout".to_string(),
-            supplier: "http://knuckles.team/xsrc#supplier-acme".to_string(),
-            component_version: "http://knuckles.team/xsrc#version-1.18.0".to_string(),
+            service: "https://knuckles-team.github.io/ontology/source-record#checkout".to_string(),
+            supplier: "https://knuckles-team.github.io/ontology/source-record#supplier-acme".to_string(),
+            component_version: "https://knuckles-team.github.io/ontology/source-record#version-1.18.0".to_string(),
             vulnerability: Some("CVE-2021-23017".to_string()),
             impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: "gitlab-mcp".to_string(),

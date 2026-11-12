@@ -20,7 +20,7 @@ use medulla_types::contract::ServerErrorCode;
 const MAPPING_CLASSES: &[&str] = &[
     "VirtualMapping",
     "vg:VirtualMapping",
-    "http://knuckles.team/kg/virtual-graph#VirtualMapping",
+    medulla_types::ontology_iri!("virtual-graph#VirtualMapping"),
 ];
 
 fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> String {

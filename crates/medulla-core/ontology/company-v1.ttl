@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -381,7 +381,7 @@ than hire a fresh template.""" ;
 
 :usesTool a owl:ObjectProperty .
 
-<http://knuckles.team/kg/company> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/company> a owl:Ontology ;
     rdfs:label "Company Operations Ontology" ;
     rdfs:comment """Company lifecycle and operations ontology for AI-first
 autonomous companies. Covers company formation, strategic goals, KPIs,
@@ -391,7 +391,7 @@ CONCEPT:KG-2.12 — Company Operations Domain
 
 Imports HR, Legal, Banking, and Enterprise ontologies for full
 cross-domain reasoning about company operations.""" ;
-    owl:imports <http://knuckles.team/kg/banking>, <http://knuckles.team/kg/enterprise>, <http://knuckles.team/kg/hr>, <http://knuckles.team/kg/legal> .
+    owl:imports <https://knuckles-team.github.io/ontology/banking>, <https://knuckles-team.github.io/ontology/enterprise>, <https://knuckles-team.github.io/ontology/hr>, <https://knuckles-team.github.io/ontology/legal> .
 
 :AgentActAsBrandConsultant a :AgentRole ;
     rdfs:label "Act As Brand Consultant" ;
@@ -1510,4 +1510,4 @@ and entity type. BFO:IndependentContinuant.""" ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:Role through rdfs:subClassOf.
-<http://knuckles.team/kg#AgentRole> rdfs:subClassOf <http://knuckles.team/kg#Role> .
+<https://knuckles-team.github.io/ontology/core#AgentRole> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Role> .

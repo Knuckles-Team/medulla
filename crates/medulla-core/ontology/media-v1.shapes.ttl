@@ -4,7 +4,7 @@
 # convention, DECIDE §4.8): the absence check uses the
 # `OPTIONAL ... FILTER(!BOUND(...))` form, never NOT EXISTS or an aggregate.
 
-@prefix :    <http://knuckles.team/kg#> .
+@prefix :    <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix dc:  <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -76,5 +76,5 @@
     ] .
 
 :MediaVocabShapePrefixes a owl:Ontology ;
-    sh:declare [ sh:prefix "kg" ; sh:namespace "http://knuckles.team/kg#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "dc" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

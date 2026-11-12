@@ -13217,9 +13217,10 @@ class RdfClient:
         the IDENTITY projection (node-type
         and property keys emitted verbatim, no ``rdf:type`` synthesis), preserving the
         prior behavior. A caller that passes ``base_iri`` (e.g. meristem's
-        ``http://agent-utilities.dev/ontology#``) + ``type_convention="camel"`` makes
-        the engine project the live property graph into that vocabulary, so a by-class
-        query (``?s a au:Agent``) resolves natively — the engine, not rdflib, answers.
+        ``https://knuckles-team.github.io/ontology/core#``) +
+        ``type_convention="camel"`` makes the engine project the live property
+        graph into that vocabulary, so a by-class query (``?s a kg:Agent``) resolves
+        natively — the engine, not rdflib, answers.
 
         The engine's ``SparqlResult`` is validated against its contract model
         (:meth:`sparql_result`) before each row is zipped to its vars.

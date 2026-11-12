@@ -14,7 +14,7 @@ use medulla_work_types::work_item_machine::{
     WorkItemEvent, WorkItemStatus, WORK_ITEM_EDGES, WORK_ITEM_MACHINE, WORK_ITEM_STATES,
 };
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const SUBCLASS: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
@@ -182,7 +182,7 @@ fn state_machine_properties_resolve() {
     }
 }
 
-const PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> . \
+const PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ";
 
 /// A minimal well-formed machine: A to B on Go, B terminal.
@@ -336,7 +336,7 @@ fn every_pack_machine_extends_core() {
     assert!(machines >= 1, "the WorkItem machine is found");
 }
 
-const PACK: &str = "@prefix : <http://knuckles.team/kg#> . \
+const PACK: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . \
      :LampState rdfs:subClassOf :State . :LampTransition rdfs:subClassOf :Transition . \
      :LampEvent rdfs:subClassOf :TransitionEvent . \
@@ -354,7 +354,7 @@ fn pack_machine_with_owl_imports_is_refused() {
     let core = Doc::of(&[FOUNDATION, MACHINES]);
     assert_eq!(pack_machine_conformance(PACK, &core), Ok(1));
     let imports =
-        format!("{PACK} <http://example.org/lamp> <{OWL_IMPORTS}> <http://knuckles.team/kg> .");
+        format!("{PACK} <http://example.org/lamp> <{OWL_IMPORTS}> <https://knuckles-team.github.io/ontology/core> .");
     assert!(pack_machine_conformance(&imports, &core)
         .unwrap_err()
         .contains("owl:imports"));

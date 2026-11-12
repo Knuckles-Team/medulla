@@ -22,9 +22,9 @@ use serde::{Deserialize, Serialize};
 use super::signal::TelemetrySignal;
 
 /// The core ontology namespace (`kg:`).
-pub const KG_NAMESPACE: &str = "http://knuckles.team/kg#";
+pub const KG_NAMESPACE: &str = medulla_types::ontology_iri!("core#");
 /// The infrastructure module namespace.
-pub const INFRASTRUCTURE_NAMESPACE: &str = "http://knuckles.team/kg/infrastructure#";
+pub const INFRASTRUCTURE_NAMESPACE: &str = medulla_types::ontology_iri!("infrastructure#");
 
 /// The ontology classes telemetry binds to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

@@ -582,7 +582,7 @@ ex:Shape a sh:NodeShape ; sh:property [ sh:path ex:value ] .
         let mut sources = GraphSchemaSources::default();
         let ontology = r#"
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix eg: <http://knuckles.team/kg#> .
+@prefix eg: <https://knuckles-team.github.io/ontology/core#> .
 eg:Tool a owl:ObjectProperty .
 "#;
         sources
@@ -669,9 +669,9 @@ ex:Shape a sh:NodeShape ; sh:targetClass ex:Thing ;
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 <https://example.org/connector> a owl:Ontology ;
-    owl:imports <http://knuckles.team/kg> .
+    owl:imports <https://knuckles-team.github.io/ontology/core> .
 <https://example.org/connector#Ticket> a owl:Class ;
-    rdfs:subClassOf <http://knuckles.team/kg#Event> .
+    rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Event> .
 "#;
         let source = GraphSchemaSource::new(
             SchemaSourceOrigin::Pack {
@@ -691,7 +691,7 @@ ex:Shape a sh:NodeShape ; sh:targetClass ex:Thing ;
         assert!(composed.ontology.iter().any(|triple| {
             triple.predicate.as_str() == OWL_IMPORTS
                 && matches!(&triple.subject, NamedOrBlankNode::NamedNode(node) if node.as_str() == "https://example.org/connector")
-                && matches!(&triple.object, Term::NamedNode(node) if node.as_str() == "http://knuckles.team/kg")
+                && matches!(&triple.object, Term::NamedNode(node) if node.as_str() == "https://knuckles-team.github.io/ontology/core")
         }));
         assert!(composed.ontology.iter().any(|triple| {
             triple.predicate.as_str() == RDF_TYPE
@@ -722,13 +722,13 @@ ex:parent a owl:AsymmetricProperty .
     // spec: MEDULLA-SUPPLY-VOCAB-R001.1.2
     #[test]
     fn default_catalog_composes_supply_chain_vocabulary() {
-        const SUPPLY_ONTOLOGY: &str = "http://knuckles.team/kg/supply_chain";
-        const SUPPLIER: &str = "http://knuckles.team/kg#Supplier";
-        const USES_COMPONENT: &str = "http://knuckles.team/kg#usesComponent";
+        const SUPPLY_ONTOLOGY: &str = "https://knuckles-team.github.io/ontology/supply_chain";
+        const SUPPLIER: &str = "https://knuckles-team.github.io/ontology/core#Supplier";
+        const USES_COMPONENT: &str = "https://knuckles-team.github.io/ontology/core#usesComponent";
         const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
         const OWL_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#ObjectProperty";
         const OWL_PROPERTY_CHAIN: &str = "http://www.w3.org/2002/07/owl#propertyChainAxiom";
-        const CATALOG: &str = "http://knuckles.team/kg";
+        const CATALOG: &str = "https://knuckles-team.github.io/ontology/core";
 
         let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
         let has_type = |subject: &str, object: &str| {
@@ -790,11 +790,11 @@ ex:parent a owl:AsymmetricProperty .
         // and 4 for the pack object-model `:ValueType` term (MEDULLA-TYPED-PACKS-R650.1).
         assert_eq!(triples.len(), 1_138);
         for required in [
-            "http://knuckles.team/kg#Concept",
-            "http://knuckles.team/kg#Evidence",
-            "http://knuckles.team/kg#Tool",
-            "http://knuckles.team/kg#derivedFrom",
-            "http://knuckles.team/kg#validFrom",
+            "https://knuckles-team.github.io/ontology/core#Concept",
+            "https://knuckles-team.github.io/ontology/core#Evidence",
+            "https://knuckles-team.github.io/ontology/core#Tool",
+            "https://knuckles-team.github.io/ontology/core#derivedFrom",
+            "https://knuckles-team.github.io/ontology/core#validFrom",
         ] {
             assert!(triples.iter().any(|triple| {
                 triple.subject.to_string().contains(required)
@@ -802,7 +802,7 @@ ex:parent a owl:AsymmetricProperty .
             }));
         }
         assert!(!foundation.contains("owl:imports"));
-        assert!(foundation.contains("<http://knuckles.team/kg/core> a owl:Ontology"));
+        assert!(foundation.contains("<https://knuckles-team.github.io/ontology/core> a owl:Ontology"));
     }
 
     #[test]
@@ -1119,7 +1119,7 @@ ex:parent a owl:AsymmetricProperty .
         // Operator ruling 2026-09-22: a skill is a capacity its bearer can realize — a
         // BFO disposition (a specifically dependent continuant), not an independent
         // continuant and not an information artifact.
-        let skill = &classification.subsumers["<http://knuckles.team/kg#Skill>"];
+        let skill = &classification.subsumers["<https://knuckles-team.github.io/ontology/core#Skill>"];
         let bfo = |id: &str| format!("<http://purl.obolibrary.org/obo/BFO_{id}>");
         assert!(
             skill.contains(&bfo("0000016")),

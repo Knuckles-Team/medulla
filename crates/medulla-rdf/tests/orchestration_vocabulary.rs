@@ -5,7 +5,7 @@ use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 use medulla_reasoner::owl::Reasoner;
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const ENTITY: &str = "http://purl.obolibrary.org/obo/BFO_0000001";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
 
@@ -47,7 +47,7 @@ fn task_step_resolves_and_precedes_accepts_it() {
     }
     triples.extend(
         parse_turtle(
-            "@prefix : <http://knuckles.team/kg#> .
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> .
          :first a :TaskStep ; :precedes :second . :second a :TaskStep .",
         )
         .unwrap(),
@@ -283,14 +283,14 @@ mod vocabulary {
     const FIXTURE: &str = include_str!(
         "../../medulla-core/tests/fixtures/orchestration_vocabulary/deploy_container.ttl"
     );
-    const SWARM_NS: &str = "http://knuckles.team/kg/swarm#";
-    const PREFIXES: &str = "PREFIX : <http://knuckles.team/kg#> \
-        PREFIX swarm: <http://knuckles.team/kg/swarm#> \
+    const SWARM_NS: &str = "https://knuckles-team.github.io/ontology/swarm#";
+    const PREFIXES: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#> \
+        PREFIX swarm: <https://knuckles-team.github.io/ontology/swarm#> \
         PREFIX owl: <http://www.w3.org/2002/07/owl#> \
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> ";
-    const TURTLE_PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> . \
-        @prefix swarm: <http://knuckles.team/kg/swarm#> . \
+    const TURTLE_PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
+        @prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> . \
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . \n";
 
     fn schema() -> Vec<Triple> {
@@ -523,7 +523,7 @@ mod vocabulary {
                 .collect()
         };
         let swarm = imports(SWARM);
-        assert!(swarm.contains(&"<http://knuckles.team/kg/orchestration>".to_string()));
+        assert!(swarm.contains(&"<https://knuckles-team.github.io/ontology/orchestration>".to_string()));
         // The import closure has no cycle: orchestration imports nothing back.
         assert!(imports(ORCHESTRATION).is_empty());
         medulla_graph_core::graph::GraphSchemaSources::default()

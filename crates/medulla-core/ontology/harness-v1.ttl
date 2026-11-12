@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -258,7 +258,7 @@
     rdfs:domain :HarnessVariant ;
     rdfs:range xsd:string .
 
-<http://knuckles.team/kg/harness> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/harness> a owl:Ontology ;
     rdfs:label "Developer Harness and AI Optimization Patterns Ontology" ;
     rdfs:comment """Ontology extension mapping the Claude Code best practices,
 developer harness extension points, plugins, hooks, symbol engines,
@@ -325,20 +325,20 @@ Aligned to ArchiMate 3.2 layers.""" .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:Framework through rdfs:subClassOf.
-<http://knuckles.team/kg#AgentManagerDRI> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#ContextFile> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#GovernanceWorkingGroup> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#Harness> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessDimension> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessEdit> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessExtensionPoint> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessHook> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessPathology> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#HarnessVariant> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#Hook> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#LSPServer> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#OptimizationPattern> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#Plugin> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#Processor> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#ReconstructionTrajectory> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
-<http://knuckles.team/kg#SubagentConfig> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<https://knuckles-team.github.io/ontology/core#AgentManagerDRI> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#ContextFile> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#GovernanceWorkingGroup> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#Harness> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessDimension> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessEdit> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessExtensionPoint> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessHook> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessPathology> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#HarnessVariant> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#Hook> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#LSPServer> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#OptimizationPattern> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#Plugin> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#Processor> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#ReconstructionTrajectory> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .
+<https://knuckles-team.github.io/ontology/core#SubagentConfig> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Framework> .

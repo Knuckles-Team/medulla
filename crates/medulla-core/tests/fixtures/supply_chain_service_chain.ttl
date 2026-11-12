@@ -8,9 +8,9 @@
 # supplier-to-service edge. A container-only or pod-only runsOn path
 # (separate fixture, inlined in the test) must derive nothing.
 
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex: <http://knuckles.team/test/supply-chain#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 
 ex:acmeSupplier a :Supplier .
 

@@ -3,9 +3,9 @@
 # 1; portainer `Image`/`Container` are rank 2. Projected by the approved
 # mappings (vm_container_manager.ttl).
 
-@prefix kg:    <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix ex:    <http://knuckles.team/test/recorded#> .
+@prefix kg:    <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:    <https://knuckles-team.github.io/ontology/test/recorded#> .
 
 ex:deploy-001 a infra:Workload ;
     kg:usesImage ex:image-001 .

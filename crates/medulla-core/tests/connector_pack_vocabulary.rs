@@ -8,9 +8,9 @@ use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
-const VG: &str = "http://knuckles.team/kg/virtual-graph#";
-const KG: &str = "http://knuckles.team/kg#";
+const CP: &str = "https://knuckles-team.github.io/ontology/connector-pack#";
+const VG: &str = "https://knuckles-team.github.io/ontology/virtual-graph#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
@@ -65,16 +65,16 @@ fn contract_terms_resolve_with_domain_and_range() {
     let triples = parse_turtle(&ontology).expect("the connector-pack ontology parses");
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/connector-pack",
+        "https://knuckles-team.github.io/ontology/connector-pack",
         RDF_TYPE,
         &format!("{OWL}Ontology")
     ));
     // It imports the virtual-graph vocabulary the contract terms specialise.
     assert!(has_iri(
         &triples,
-        "http://knuckles.team/kg/connector-pack",
+        "https://knuckles-team.github.io/ontology/connector-pack",
         OWL_IMPORTS,
-        "http://knuckles.team/kg/virtual-graph"
+        "https://knuckles-team.github.io/ontology/virtual-graph"
     ));
     // The regenerated aggregate catalog lists the module.
     let catalog = sources
@@ -86,7 +86,7 @@ fn contract_terms_resolve_with_domain_and_range() {
         .as_deref()
         .expect("the catalog carries its aggregate document");
     assert!(
-        catalog_document.contains("<http://knuckles.team/kg/connector-pack>"),
+        catalog_document.contains("<https://knuckles-team.github.io/ontology/connector-pack>"),
         "the catalog lists the connector-pack import"
     );
     // The contract classes are declared, and the three that specialise

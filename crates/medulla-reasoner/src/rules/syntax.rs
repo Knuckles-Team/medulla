@@ -51,7 +51,7 @@ pub(super) fn is_schema_pred(p: &str) -> bool {
         "http://www.w3.org/2002/07/owl#hasValue",
         "http://www.w3.org/1999/02/22-rdf-syntax-ns#first",
         "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",
-        "http://medulla/owl#confidence",
+        medulla_types::ontology_iri!("reasoning#confidence"),
     ];
     SCHEMA.contains(&p)
 }

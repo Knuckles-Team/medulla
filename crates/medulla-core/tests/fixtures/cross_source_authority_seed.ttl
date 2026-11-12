@@ -1,9 +1,9 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix infra: <http://knuckles.team/kg/infrastructure#> .
-@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix xsaa: <http://knuckles.team/xsrc/seed-authority#> .
+@prefix xsaa: <https://knuckles-team.github.io/ontology/source-record/seed-authority#> .
 
 # Seed authority rows for the cross-source competency questions
 # (specs/cross-source-competency/plan.md "Concepts and sources" table). One

@@ -225,7 +225,7 @@ _HARNESS_SHAPES = (
     / "harness-v1.shapes.ttl"
 ).read_text(encoding="utf-8")
 
-_MODEL_PREFIXES = """@prefix eg: <http://knuckles.team/kg#> .
+_MODEL_PREFIXES = """@prefix eg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/model-harness/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 """
@@ -263,7 +263,7 @@ def test_shapes_reject_missing_run() -> None:
             refused = await rdf.validate_shacl(_HARNESS_SHAPES, missing_run)
             assert not refused["conforms"], refused
             assert any(
-                result.get("path") == "<http://knuckles.team/kg#evaluationRun>"
+                result.get("path") == "<https://knuckles-team.github.io/ontology/core#evaluationRun>"
                 or "evaluationRun" in (result.get("message") or "")
                 for result in refused["results"]
             ), refused

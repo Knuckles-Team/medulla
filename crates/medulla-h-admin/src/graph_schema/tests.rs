@@ -197,7 +197,7 @@ fn assert_attach_is_inconsistent(name: &str, turtle: &str) {
 #[test]
 fn attach_refuses_an_individual_in_two_disjoint_core_classes() {
     let bfo = "@prefix bfo: <http://purl.obolibrary.org/obo/BFO_> . \
-        @prefix kg: <http://knuckles.team/kg#> . @prefix ex: <http://example/> . ";
+        @prefix kg: <https://knuckles-team.github.io/ontology/core#> . @prefix ex: <http://example/> . ";
     for (name, individual) in [
         ("taxon", "ex:vulpes a bfo:0000031, bfo:0000004 ."),
         ("agent", "ex:ada a kg:Person, kg:Event ."),
@@ -214,7 +214,7 @@ fn attach_refuses_an_individual_in_two_disjoint_core_classes() {
 #[test]
 fn attach_refuses_a_process_at_a_continuant_only_end_of_an_edge() {
     let prefixes = "@prefix bfo: <http://purl.obolibrary.org/obo/BFO_> . \
-        @prefix kg: <http://knuckles.team/kg#> . @prefix ex: <http://example/> . ";
+        @prefix kg: <https://knuckles-team.github.io/ontology/core#> . @prefix ex: <http://example/> . ";
     for (name, data) in [
         (
             "domain",

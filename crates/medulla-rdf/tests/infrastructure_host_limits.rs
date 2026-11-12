@@ -9,7 +9,7 @@ use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 
 const DOCUMENT: &str = include_str!("../../medulla-core/ontology/infrastructure-v1.ttl");
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";

@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix fibo-fi: <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/> .
 @prefix fibo-mkt: <https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/Markets/> .
@@ -17,7 +17,7 @@
 # the time-series store, never graph nodes: a :BarSeries names the store series. Every
 # signal-derived record is informational only and never authorises an order.
 
-<http://knuckles.team/kg/finance> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/finance> a owl:Ontology ;
     rdfs:label "Finance — Markets and Trend Signals" ;
     rdfs:comment "Financial instruments, trading venues and listings; OHLCV bar series held in the time-series store; versioned indicator specifications, the per-series signal state and the trend-flip records it emits; macro-policy events and backtest-run provenance records; trading strategies, signals, debates, exchange backends, order audit records, positions and risk snapshots. Informational only: no class here authorises an order." .
 

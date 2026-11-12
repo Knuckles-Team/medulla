@@ -66,7 +66,7 @@ fn camunda_open_incident_stopped_activity_carries_provenance() {
     // land; this source-only body makes the dependency and adversarial rows
     // executable once the native test runs.
     let fixture = r#"
-@prefix proc: <http://knuckles.team/kg#> .
+@prefix proc: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:camunda:fixture/> .
@@ -115,7 +115,7 @@ f:incident-running a proc:ApplicationEvent ;
     let (vars, rows) = select(
         &view,
         r#"
-PREFIX proc: <http://knuckles.team/kg#>
+PREFIX proc: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?instance ?activity ?incident ?status ?source ?record ?asof WHERE {
   ?instance a proc:ProcessInstance ;

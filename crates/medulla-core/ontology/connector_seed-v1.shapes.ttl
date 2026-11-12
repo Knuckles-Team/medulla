@@ -1,6 +1,6 @@
 # Connector seed shapes (MEDULLA-TYPED-PACKS-R104.1).
 
-@prefix seed: <http://knuckles.team/kg/connector-seed#> .
+@prefix seed: <https://knuckles-team.github.io/ontology/connector-seed#> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 
 seed:SeedSubjectShape a sh:NodeShape ;

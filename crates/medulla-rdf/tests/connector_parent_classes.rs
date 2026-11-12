@@ -8,7 +8,7 @@ use common::{has_iri, parse_all, BFO, KG, RDFS};
 use medulla_rdf::oxrdf::{NamedNode, Term, Triple};
 use medulla_reasoner::owl::Reasoner;
 
-const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL_CLASS: &str = "http://www.w3.org/2002/07/owl#Class";
 const OWL_EQUIVALENT_CLASS: &str = "http://www.w3.org/2002/07/owl#equivalentClass";

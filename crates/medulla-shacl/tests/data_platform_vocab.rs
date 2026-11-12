@@ -6,7 +6,7 @@ const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.
 
 fn source_connection(source_kind: &str) -> String {
     format!(
-        r#"@prefix vg: <http://knuckles.team/kg/virtual-graph#> .
+        r#"@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix ex: <http://example.org/data-platform/> .
 
 ex:connection a vg:SourceConnection ;
@@ -32,6 +32,6 @@ fn document_source_kind_accepted() {
         "ftp must remain outside the closed vocabulary"
     );
     assert!(ftp.results.iter().any(|result| {
-        result.path.as_deref() == Some("<http://knuckles.team/kg/virtual-graph#sourceKind>")
+        result.path.as_deref() == Some("<https://knuckles-team.github.io/ontology/virtual-graph#sourceKind>")
     }));
 }

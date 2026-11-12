@@ -14,7 +14,7 @@ const SWARM_SHAPES: &str = "core:swarm-topology-shapes@1";
 /// A fan-out/join template: lead (parent) → fanout → worker (child, 1..4) → join.
 fn projection(fan_nodes: &str, worker_widths: (u8, u8), stop: &str, resource: &str) -> String {
     format!(
-        "@prefix swarm: <http://knuckles.team/kg/swarm#> .\n\
+        "@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .\n\
          <urn:t> a swarm:TopologyTemplate ; swarm:class swarm:FanOutJoin{fan_nodes} ;\n\
            swarm:hasSlot <urn:lead>, <urn:worker> ; swarm:hasStopRule <urn:stop> .\n\
          <urn:lead> a swarm:Slot ; swarm:nodeId \"lead\" ; swarm:role swarm:Parent ;\n\
@@ -100,7 +100,7 @@ fn each_planted_template_defect_is_flagged() {
 fn plain_projection(class: &str, slots: &[(&str, &str)], stop: &str) -> String {
     let slot_iris: Vec<String> = (0..slots.len()).map(|i| format!("<urn:s{i}>")).collect();
     let mut data = format!(
-        "@prefix swarm: <http://knuckles.team/kg/swarm#> .\n\
+        "@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .\n\
          <urn:t> a swarm:TopologyTemplate ; swarm:class swarm:{class} ;\n\
            swarm:hasSlot {} ; swarm:hasStopRule <urn:stop> .\n",
         slot_iris.join(", ")

@@ -61,7 +61,7 @@ The rules below bind every row.
 
 ### Existing system and reuse
 
-`virtual_graph-v1.ttl` defines the attachment layer (`vg:SourceConnection`, `vg:EndpointRef`, `vg:MetadataContract`, `vg:VirtualMapping`, `vg:PredicateFieldPair`); `vg:sourceKind` is a closed list that includes `document`. Each connector package ships a package-local ontology in the shared `http://knuckles.team/kg#` namespace and a `mappings/source.yaml`; these describe what the package emits and overlap each other (`:collectionName`, `:ownedBy`, `:metricName`). The competency rows of `specs/connector-competency` for clarity, data-science, documentdb, kafka, objectstore, openbao, sql and vector read the `dp:` terms.
+`virtual_graph-v1.ttl` defines the attachment layer (`vg:SourceConnection`, `vg:EndpointRef`, `vg:MetadataContract`, `vg:VirtualMapping`, `vg:PredicateFieldPair`); `vg:sourceKind` is a closed list that includes `document`. Each connector package ships a package-local ontology in the shared `https://knuckles-team.github.io/ontology/core#` namespace and a `mappings/source.yaml`; these describe what the package emits and overlap each other (`:collectionName`, `:ownedBy`, `:metricName`). The competency rows of `specs/connector-competency` for clarity, data-science, documentdb, kafka, objectstore, openbao, sql and vector read the `dp:` terms.
 
 ### Architecture
 
@@ -87,7 +87,7 @@ Dependency direction: `data_platform-v1` imports `virtual_graph-v1`; nothing in 
 
 ### Vocabulary
 
-Prefix `dp:` = `http://knuckles.team/kg/data-platform#`. All classes/properties live in `data_platform-v1.ttl` unless stated. "Domain/Range" given where not obvious.
+Prefix `dp:` = `https://knuckles-team.github.io/ontology/data-platform#`. All classes/properties live in `data_platform-v1.ttl` unless stated. "Domain/Range" given where not obvious.
 
 **Shared (6):** `dp:DataStore` (class; one per attached store, `dp:viaConnection` -> `vg:SourceConnection`); `dp:storeFamily` (string; closed: `relational document object vector stream secret analytics ml`); `dp:inStore` (dp container -> `dp:DataStore`); `dp:asOf` (xsd:dateTime, observation time of a measured property); `dp:viaConnection`; `dp:StoreMapping` (subclass of `vg:VirtualMapping`).
 

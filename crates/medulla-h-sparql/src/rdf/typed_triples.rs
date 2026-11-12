@@ -98,18 +98,18 @@ mod tests {
     fn typed_triples_are_the_same_graph_as_their_turtle() {
         let typed = [
             triple(
-                "http://knuckles.team/kg#wf",
+                "https://knuckles-team.github.io/ontology/core#wf",
                 "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-                iri("http://knuckles.team/kg#WorkflowDefinition"),
+                iri("https://knuckles-team.github.io/ontology/core#WorkflowDefinition"),
             ),
             triple(
-                "http://knuckles.team/kg#wf",
-                "http://knuckles.team/kg#name",
+                "https://knuckles-team.github.io/ontology/core#wf",
+                "https://knuckles-team.github.io/ontology/core#name",
                 text("deploy"),
             ),
             triple(
-                "http://knuckles.team/kg#wf",
-                "http://knuckles.team/kg#step_count",
+                "https://knuckles-team.github.io/ontology/core#wf",
+                "https://knuckles-team.github.io/ontology/core#step_count",
                 RdfObject::Literal {
                     lexical: "2".to_string(),
                     datatype: Some("http://www.w3.org/2001/XMLSchema#integer".to_string()),
@@ -117,7 +117,7 @@ mod tests {
                 },
             ),
             triple(
-                "http://knuckles.team/kg#wf",
+                "https://knuckles-team.github.io/ontology/core#wf",
                 "http://www.w3.org/2000/01/rdf-schema#label",
                 RdfObject::Literal {
                     lexical: "Bereitstellen".to_string(),
@@ -126,7 +126,7 @@ mod tests {
                 },
             ),
         ];
-        let turtle = "@prefix kg: <http://knuckles.team/kg#> .\n\
+        let turtle = "@prefix kg: <https://knuckles-team.github.io/ontology/core#> .\n\
                       kg:wf a kg:WorkflowDefinition ; kg:name \"deploy\" ; kg:step_count 2 ;\n\
                       <http://www.w3.org/2000/01/rdf-schema#label> \"Bereitstellen\"@de .\n";
         let from_typed = graph_from_typed_triples(&typed).unwrap();
@@ -138,11 +138,11 @@ mod tests {
     fn a_malformed_triple_refuses_the_request_by_index() {
         let typed = [
             triple(
-                "http://knuckles.team/kg#a",
-                "http://knuckles.team/kg#p",
+                "https://knuckles-team.github.io/ontology/core#a",
+                "https://knuckles-team.github.io/ontology/core#p",
                 text("ok"),
             ),
-            triple("not an iri", "http://knuckles.team/kg#p", text("x")),
+            triple("not an iri", "https://knuckles-team.github.io/ontology/core#p", text("x")),
         ];
         let error = graph_from_typed_triples(&typed).unwrap_err();
         assert!(
@@ -156,8 +156,8 @@ mod tests {
             language: Some("en".to_string()),
         };
         let error = graph_from_typed_triples(&[triple(
-            "http://knuckles.team/kg#a",
-            "http://knuckles.team/kg#p",
+            "https://knuckles-team.github.io/ontology/core#a",
+            "https://knuckles-team.github.io/ontology/core#p",
             both,
         )])
         .unwrap_err();

@@ -1,6 +1,6 @@
-@prefix vg:  <http://knuckles.team/kg/virtual-graph#> .
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix kg:  <http://knuckles.team/kg#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex:  <urn:eg:fixture:incident:> .
 
 # MEDULLA-SRC-AUTH-R009.1: ServiceNow is rank 1 and PagerDuty rank 2 for :Incident.

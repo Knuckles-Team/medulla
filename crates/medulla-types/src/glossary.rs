@@ -20,7 +20,7 @@ pub const SKOS_IN_SCHEME: &str = "http://www.w3.org/2004/02/skos/core#inScheme";
 /// `dct:isReplacedBy`, carried by a deprecated term.
 pub const DCT_IS_REPLACED_BY: &str = "http://purl.org/dc/terms/isReplacedBy";
 /// The class every term node carries.
-pub const CAT_GLOSSARY_TERM: &str = "http://knuckles.team/kg/catalog#GlossaryTerm";
+pub const CAT_GLOSSARY_TERM: &str = crate::ontology_iri!("catalog#GlossaryTerm");
 
 /// Where a glossary term is in its review lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

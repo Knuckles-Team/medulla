@@ -1,6 +1,6 @@
 @prefix fibo-fi: <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix bibo: <http://purl.org/ontology/bibo/> .
 @prefix obo: <http://purl.obolibrary.org/obo/> .
@@ -20,9 +20,9 @@
 # Migrated from agent-utilities ontology.ttl
 # SHA-256 f29b3608d6270aeb41790204042701c45b9e174bf07d8ab5f4369878a527f427.
 # The axiom body is byte-identical; only ontology identity/import authority moved.
-<http://knuckles.team/kg/core> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/core> a owl:Ontology ;
     rdfs:label "Medulla Core Foundation" ;
-    rdfs:comment "Rust-owned foundation migrated from the former agent-utilities root ontology; domain-module imports are owned by the generated http://knuckles.team/kg catalog." .
+    rdfs:comment "Rust-owned foundation migrated from the former agent-utilities root ontology; domain-module imports are owned by the generated https://knuckles-team.github.io/ontology/core catalog." .
 
 :Agreement a owl:Class ;
     rdfs:label "Agreement" ;

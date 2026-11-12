@@ -5,7 +5,7 @@ use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 use medulla_reasoner::owl::Reasoner;
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
 
 fn documents() -> Vec<Triple> {
@@ -49,7 +49,7 @@ fn task_step_handoff_resolves_and_reasoner_accepts_it() {
     )));
     triples.extend(
         parse_turtle(
-            "@prefix : <http://knuckles.team/kg#> .
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> .
          :source a :TaskStep ; :handsOffTo :target . :target a :TaskStep .",
         )
         .unwrap(),

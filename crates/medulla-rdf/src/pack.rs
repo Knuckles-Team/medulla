@@ -83,7 +83,7 @@ pub fn validate_ontology_imports(
 }
 
 /// The parent catalog every connector vocabulary joins (MEDULLA-TYPED-PACKS-R105).
-pub const PARENT_CATALOG_IRI: &str = "http://knuckles.team/kg";
+pub const PARENT_CATALOG_IRI: &str = medulla_types::ontology_iri!("core");
 
 const RDF_TYPE_IRI: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL_CLASS_IRI: &str = "http://www.w3.org/2002/07/owl#Class";
@@ -91,12 +91,12 @@ const RDFS_CLASS_IRI: &str = "http://www.w3.org/2000/01/rdf-schema#Class";
 const RDFS_SUBCLASS_OF_IRI: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const OWL_ONTOLOGY_IRI: &str = "http://www.w3.org/2002/07/owl#Ontology";
 
-/// Is `iri` the parent catalog or one of its ontology modules?
+/// Is `iri` the parent catalog or one of its ontology modules? Every module of the
+/// organization base is one path segment under it.
 pub fn is_parent_ontology_iri(iri: &str) -> bool {
     iri == PARENT_CATALOG_IRI
         || iri
-            .strip_prefix(PARENT_CATALOG_IRI)
-            .and_then(|rest| rest.strip_prefix('/'))
+            .strip_prefix(medulla_types::ontology_base!())
             .is_some_and(|module| !module.is_empty() && !module.contains(['#', '/']))
 }
 

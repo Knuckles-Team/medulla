@@ -13,7 +13,7 @@ use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
-const KG: &str = "http://knuckles.team/kg#";
+const KG: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
@@ -184,7 +184,7 @@ mod ontology_audit_sdlc_lifecycle_v1 {
         // The closed vocabulary lives in the SHACL companion: a valid fixture
         // conforms, a violating fixture fails the shape.
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:pr-1 a :CodeChangeProposal ;
     :proposalState "merged" .
@@ -302,7 +302,7 @@ ex:pr-1 a :CodeChangeProposal ;
         // The closed vocabulary lives in the SHACL companion: a valid fixture
         // conforms, a violating fixture fails the shape.
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:wt-1 a :Worktree ;
     :worktreeState "stale" .
@@ -552,7 +552,7 @@ ex:wt-1 a :Worktree ;
         // The closed vocabulary lives in the registered SHACL companion: a
         // valid fixture conforms, a violating fixture fails the shape.
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:rec-1 a :IterationCycle ;
     :cycleState "active" .
@@ -603,7 +603,7 @@ ex:rec-1 a :IterationCycle ;
         // The closed vocabulary lives in the registered SHACL companion: a
         // valid fixture conforms, a violating fixture fails the shape.
         let valid = r#"
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <http://example.org/cq-conn/> .
 ex:rec-1 a :PipelineRun ;
     :pipelineStatus "running" .

@@ -19,8 +19,8 @@ fn declarations_round_trip_and_reject_zero_max_card() {
 
     let link: LinkType = serde_json::from_value(serde_json::json!({
         "name": "owns",
-        "from_class": "http://knuckles.team/kg#Person",
-        "to_class": "http://knuckles.team/kg#Asset",
+        "from_class": "https://knuckles-team.github.io/ontology/core#Person",
+        "to_class": "https://knuckles-team.github.io/ontology/core#Asset",
         "min_card": 1,
         "max_card": 3
     }))

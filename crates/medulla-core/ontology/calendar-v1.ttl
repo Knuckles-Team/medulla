@@ -5,7 +5,7 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -27,7 +27,7 @@
     rdfs:label "scheduled start" ;
     rdfs:range xsd:dateTime .
 
-<http://knuckles.team/kg/calendar> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/calendar> a owl:Ontology ;
     rdfs:label "Calendar / Scheduling Ontology" ;
     rdfs:comment "Calendar events as KG entities (CONCEPT:KG-2.9)." .
 

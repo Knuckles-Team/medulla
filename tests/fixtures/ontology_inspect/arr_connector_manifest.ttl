@@ -2,15 +2,15 @@
 # in the same shape an external manifest compiler emits with rdflib. Its pinned
 # canonical digest below lets `OntologyInspect`'s own canonical-digest computation
 # be checked against an independently computed reference value.
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/arr> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/connector/arr> a owl:Ontology ;
     rdfs:label "arr Ontology (generated)" ;
     rdfs:comment "OWL mirror of the arr connector manifest — every resource, relation, and field. CONCEPT:AU-KG.ontology.connector-manifest-compiler." ;
-    owl:imports <http://knuckles.team/kg> .
+    owl:imports <https://knuckles-team.github.io/ontology/core> .
 
 
 :Album a owl:Class ;

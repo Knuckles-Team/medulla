@@ -15,7 +15,7 @@ use medulla_virtual_graph::source_selection::{
 
 const TEMPLATE: &str = include_str!("fixtures/source_authority_incident.ttl");
 const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.shapes.ttl");
-const INCIDENT: &str = "http://knuckles.team/kg#Incident";
+const INCIDENT: &str = "https://knuckles-team.github.io/ontology/core#Incident";
 const SNOW_ROW: &str = "urn:eg:fixture:incident:incident-servicenow";
 const PD_ROW: &str = "urn:eg:fixture:incident:incident-pagerduty";
 

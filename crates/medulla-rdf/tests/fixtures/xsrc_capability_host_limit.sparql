@@ -3,8 +3,8 @@
 # the host, never hard-coded, and no source, endpoint or connector is named
 # here. The service-to-capability link is :supportsCapability (plan.md
 # decision D6).
-PREFIX : <http://knuckles.team/kg#>
-PREFIX infra: <http://knuckles.team/kg/infrastructure#>
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
 
 SELECT ?capability ?service ?workload ?host ?reading ?limit WHERE {
   ?capability a :BusinessCapability .
