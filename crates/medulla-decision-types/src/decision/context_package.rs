@@ -21,6 +21,8 @@ closed_error_codes! {
         /// A duplicate id, repeated resolution, malformed range, malformed
         /// digest or overflowing sum.
         InvalidMeasurement => "CONTEXT_PACKAGE_INVALID_MEASUREMENT",
+        /// A ceiling was supplied without the rate that converts it to tokens.
+        MissingFact => "CONTEXT_PACKAGE_MISSING_FACT",
     }
 }
 

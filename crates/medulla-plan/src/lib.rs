@@ -70,6 +70,8 @@ pub mod freshness_router;
 // expansion, hub ranking) and symptom diagnosis kernels.
 #[cfg(feature = "query")]
 pub mod code_context;
+// MEDULLA-FEDERATED-QUERY-R650.1: context bundle model and certified compile.
+pub mod context_bundle;
 // MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.
 pub mod corpus_retrieval;
 // MEDULLA-FEDERATED-QUERY-R702.2: search-task synthesis — the multi-hop clue

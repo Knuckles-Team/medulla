@@ -13,6 +13,7 @@
 //! certificates and digests.
 
 pub mod certificate;
+pub mod context_package;
 pub mod model;
 pub mod scalar;
 mod search;

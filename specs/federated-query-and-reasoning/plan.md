@@ -1221,3 +1221,11 @@ Order: R733, then R734 and R735 in parallel.
 - `SCION-SOURCE-INGEST-R004.7` executes approved source queries through the registered SDK adapter. Provider row: `MEDULLA-FEDERATED-QUERY-R085`. Contract: [contracts/approved-source-query.md](contracts/approved-source-query.md).
 - `SCION-CONNECTOR-CONTROL-R069` supplies transports and contract terms for operation-bound sources. Provider row: `MEDULLA-FEDERATED-QUERY-R073`. Contract: [contracts/connector-source-transport.md](contracts/connector-source-transport.md).
 - `MERISTEM-HARNESS-CYCLE-R079` applies each retrieval verdict and runs the next round. Provider row: `MEDULLA-FEDERATED-QUERY-R081`. Contract: [contracts/retrieval-verdict-consumer.md](contracts/retrieval-verdict-consumer.md).
+
+## Context bundle compile decisions (R650.1, R650.2, R652.2, DECISION-ENGINE R137.8)
+
+- One selection kernel: `select` in `medulla-decision-policy` is the only knapsack; `compile` and the package decision family both call it. A solver result that is not a verified optimum is refused, so a greedy fallback never qualifies.
+- A candidate is one resolution of one hit. Its value is the fused value times its token share of the widest resolution, so a smaller resolution is a real trade-off rather than a free choice.
+- Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
+- `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
+- Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.

@@ -63,3 +63,11 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - **Versions.** Every put publishes one immutable version (`stored_query:<name>:<version>`); a head node (`stored_query_head:<name>`) holds the first author and the highest version. Only the first author publishes later versions of a name (`ACCESS_DENIED` otherwise). A call without a version reads the head. An unknown name or version refuses `STORED_QUERY_NOT_FOUND`.
 - **UQL form.** `CALL STORED name@version(arg = literal, ...)` is a statement of its own, not a pipeline stage: `medulla_uql::parse_call_stored` recognises it before `parse_statement`, and `handle_uql` hands it to the same `handle_stored_call` as the method. Arguments are string, number or boolean literals, never text spliced into a query.
 - **Retrieval chain.** `MEDULLA-FEDERATED-QUERY-R653.8` needs `expand_hops` below `medulla-plan`: it moves from `crates/medulla-h-graph/src/graph_ops/discover_plan.rs` to `crates/medulla-graph-core/src/hop_expand.rs` (both crates depend on graph-core), and its R090.8 unit test moves with it. Its L4 test needs the served `CorpusRetrieve` method of R653.3. `MEDULLA-FEDERATED-QUERY-R650.6` and `MEDULLA-FEDERATED-QUERY-R703.5` need the served `ContextCompile` method and `context_compile.rs`.
+
+## Context bundle compile decisions (R650.1, R650.2, R652.2, DECISION-ENGINE R137.8)
+
+- One selection kernel: `select` in `medulla-decision-policy` is the only knapsack; `compile` and the package decision family both call it. A solver result that is not a verified optimum is refused, so a greedy fallback never qualifies.
+- A candidate is one resolution of one hit. Its value is the fused value times its token share of the widest resolution, so a smaller resolution is a real trade-off rather than a free choice.
+- Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
+- `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
+- Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.

@@ -207,6 +207,18 @@ knobs! {
     discover_hop_fanout: u64 = "discover.hop_fanout", U64(32), [1, 256], "nodes", Tunable;
     /// Discover neighbour expansion: score decay per hop.
     discover_hop_decay: f64 = "discover.hop_decay", F64(0.5), [0.1, 0.9], "ratio", Tunable;
+    /// Context bundle: reciprocal-rank-fusion damping constant.
+    context_rrf_k: u64 = "context.rrf_k", U64(60), [1, 1000], "rank", Tunable;
+    /// Context bundle: fewest items kept by the gap cut.
+    context_min_items: u64 = "context.min_items", U64(3), [1, 64], "items", Tunable;
+    /// Context bundle: solver node budget for the certified selection.
+    context_solver_node_budget: u64 = "context.solver_node_budget", U64(100_000), [1000, 5_000_000], "nodes", Tunable;
+    /// Context bundle: proof edges kept per item.
+    context_proof_edges_per_item: u64 = "context.proof_edges_per_item", U64(3), [0, 16], "edges", Tunable;
+    /// Context bundle: least value per token a chosen span must carry.
+    context_value_floor_micro_per_token: u64 = "context.value_floor_micro_per_token", U64(0), [0, 1_000_000], "micro-units", Tunable;
+    /// Retrieval: how many candidates the reranker scores.
+    retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

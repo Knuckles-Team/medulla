@@ -1102,8 +1102,14 @@ fn pred_property(pred: &mut Pred) -> Option<&mut String> {
 }
 
 fn question_tokens(question: &str) -> BTreeSet<String> {
-    question
-        .split(|c: char| !c.is_ascii_alphanumeric())
+    question_terms(question).into_iter().collect()
+}
+
+/// The lower-cased alphanumeric terms of `text` in order, repeats kept, words
+/// of one or two characters dropped. [`question_tokens`] is its set form and
+/// the BM25 scorer of `medulla_plan::rerank` counts term frequency from it.
+pub fn question_terms(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|t| t.len() > 2)
         .map(str::to_ascii_lowercase)
         .collect()

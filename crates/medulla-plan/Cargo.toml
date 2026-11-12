@@ -28,7 +28,7 @@ cost-opt = ["query"]
 # variants in medulla-types. It IMPLIES `query` because the new ops live inside the
 # `query`-gated `Op` enum and the text executor branch sits beside the DataFusion
 # FILTER leg. A default/Pi build sets neither feature → no medulla-text/Tantivy linked.
-text = ["medulla-exec/text", "query", "dep:medulla-text", "medulla-text/tantivy", "medulla-types/text", "medulla-uql/text", "medulla-nlq/text", "medulla-federation/text"]
+text = ["medulla-exec/text", "query", "medulla-text/tantivy", "medulla-types/text", "medulla-uql/text", "medulla-nlq/text", "medulla-federation/text"]
 # OWL/SPARQL SOURCE ops (CONCEPT:KG-2.220): `Reason` (OWL-inferred class members) +
 # `SparqlBgp` (SPARQL-selected ids) as RowSet sources, so ONE UnifiedQuery plan can do
 # OWL/SPARQL candidate-set → graph Traverse / vector Rank / SQL Filter / Limit. Pulls
@@ -240,6 +240,8 @@ medulla-durable = { path = "../medulla-durable" }
 medulla-sqlite-format = { path = "../medulla-sqlite-format" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-nlq = { path = "../medulla-nlq" }
+# The one package solver, shared with served Decide (MEDULLA-DECISION-ENGINE-R137.8).
+medulla-decision-policy = { path = "../medulla-decision-policy", features = ["solve"] }
 medulla-federation = { path = "../medulla-federation" }
 medulla-retrieval = { path = "../medulla-retrieval" }
 medulla-exec = { path = "../medulla-exec" }
@@ -294,10 +296,10 @@ tracing = { version = "0.1", optional = true }
 # Optional + only referenced under #[cfg(feature = "wasm-udf")]; a default/Pi build
 # links no wasmtime/cranelift.
 medulla-wasm = { path = "../medulla-wasm", optional = true }
-# The lexical BM25 index + RRF fusion (feature `text`, CONCEPT:KG-2.215). Optional +
-# only referenced under #[cfg(feature = "text")], so a default/Pi build links no
-# medulla-text and therefore no Tantivy/zstd-sys (verified by `cargo tree`).
-medulla-text = { path = "../medulla-text", optional = true }
+# RRF fusion for context bundles (always linked: medulla-text without its `tantivy`
+# feature is serde only). The Tantivy BM25 index stays behind feature `text`, so a
+# default/Pi build still links no Tantivy/zstd-sys.
+medulla-text = { path = "../medulla-text" }
 # The native OWL 2 EL⁺ reasoner + SPARQL evaluator backing the `Reason`/`SparqlBgp`
 # SOURCE ops (feature `owl`, CONCEPT:KG-2.220). Optional + only referenced under
 # #[cfg(feature = "owl")]; pure-Rust (oxrdf/oxttl/spargebra), so it adds NO native dep
