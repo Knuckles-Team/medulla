@@ -247,3 +247,67 @@ fn a_batch_over_the_byte_ceiling_is_refused_and_a_halved_resend_succeeds() {
     let halved = byte_heavy_result(100, &big_value);
     lower(&halved).expect("the halved resend commits under the write-byte ceiling");
 }
+
+// spec: MEDULLA-REPO-INGEST-R006.5
+#[test]
+fn one_parse_per_unique_blob_across_branches() {
+    use medulla_types::contract::BoundedVec;
+    use medulla_types::ingestion_wire::IndexRepositoryScope;
+    use medulla_types::test_support::repository_index::{file_version, live_ref};
+    use sha2::{Digest, Sha256};
+
+    let digest = |body: &str| format!("sha256:{}", hex::encode(Sha256::digest(body.as_bytes())));
+    let util = "def shared():\n    return 1\n";
+    let app_main = "from pkg.util import shared\n\ndef run():\n    return shared()\n";
+    let app_feature = "from pkg.util import shared\n\ndef run():\n    return shared() + 1\n";
+    // Three branches: `util` is one blob on all three, `app_main` is shared by
+    // two, `app_feature` belongs to one.
+    let scope = IndexRepositoryScope {
+        repository_id: "forge/team/project".to_string(),
+        refs: BoundedVec::new(vec![
+            live_ref("main", 'a'),
+            live_ref("feature", 'b'),
+            live_ref("release", 'c'),
+        ])
+        .expect("refs"),
+        file_versions: BoundedVec::new(vec![
+            file_version("main", "pkg/util.py", digest(util)),
+            file_version("main", "pkg/app.py", digest(app_main)),
+            file_version("feature", "pkg/util.py", digest(util)),
+            file_version("feature", "pkg/app.py", digest(app_feature)),
+            file_version("release", "pkg/util.py", digest(util)),
+            file_version("release", "pkg/app.py", digest(app_main)),
+        ])
+        .expect("versions"),
+        tombstones: BoundedVec::default(),
+        commits: BoundedVec::default(),
+    };
+    // The caller ships each unique blob once.
+    let files = vec![
+        ("pkg/util.py".to_string(), util.as_bytes().to_vec()),
+        ("pkg/app.py".to_string(), app_main.as_bytes().to_vec()),
+        ("pkg/app.py".to_string(), app_feature.as_bytes().to_vec()),
+    ];
+    let result = medulla_compute::parser::branch_index::index_branches(files, &scope)
+        .expect("branch-aware batch");
+
+    let count = |kind: &str| result.nodes.iter().filter(|n| n.node_type == kind).count();
+    assert_eq!(result.files_parsed, 3, "one parse per unique blob");
+    assert_eq!(count("Blob"), 3);
+    assert_eq!(count("FileVersion"), 6, "a path/blob pair per branch");
+    assert_eq!(count("Branch"), 3);
+    let named = |name: &str| {
+        result
+            .nodes
+            .iter()
+            .filter(|n| n.node_type == "SYMBOL")
+            .filter(|n| n.properties.get("name").map(String::as_str) == Some(name))
+            .count()
+    };
+    assert_eq!(
+        named("shared"),
+        1,
+        "a blob on three branches yields one symbol"
+    );
+    assert_eq!(named("run"), 2, "two distinct app blobs, not three");
+}
