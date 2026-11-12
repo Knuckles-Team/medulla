@@ -23,7 +23,7 @@ fn documents() -> Vec<Triple> {
     ])
 }
 
-// spec: MEDULLA-CQ-XSRC-R002.1
+// spec: MEDULLA-CQ-XSRC-R002.1 / MEDULLA-SUPPLY-VOCAB-R001.1.2
 #[test]
 fn supplier_entails_vendor_under_the_native_reasoner() {
     let triples = documents();

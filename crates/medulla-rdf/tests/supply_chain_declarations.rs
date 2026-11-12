@@ -123,7 +123,7 @@ fn shared_file_does_not_redeclare_existing_supplied_by_property() {
         .any(|triple| triple.subject == existing.clone().into()));
 }
 
-// spec: MEDULLA-CQ-XSRC-R002.1
+// spec: MEDULLA-CQ-XSRC-R002.1 / MEDULLA-SUPPLY-VOCAB-R001.1.1
 #[test]
 fn supplier_and_item_terms_are_listed() {
     let triples = parse_turtle(DOCUMENT).unwrap();

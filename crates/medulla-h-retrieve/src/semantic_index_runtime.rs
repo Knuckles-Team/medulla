@@ -110,6 +110,7 @@ use medulla_server_auth::{
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 /// The declared refusal text for a semantic index storage error. It never carries backend text.
+#[cfg(feature = "query")]
 pub(crate) fn semantic_failure_message(
     error: &medulla_ann_codes::semantic_ann_codes::SemanticCodeError,
 ) -> &'static str {
