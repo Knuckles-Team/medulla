@@ -219,6 +219,18 @@ pub struct PlanCtx<'a> {
     /// behind `geo`, so a non-geo build's `PlanCtx` is unchanged.
     #[cfg(feature = "geo")]
     pub spatial: Option<&'a dyn SpatialSource>,
+    /// MEDULLA-FEDERATED-QUERY-R706.3 — the tag-based column-mask + row-filter policy
+    /// set the caller's tenant carries (loaded per tenant,
+    /// MEDULLA-FEDERATED-QUERY-R706.7). `None` (the default) binds no tag policy:
+    /// [`execute`] runs the plan byte-for-byte as lowered, so a default ctx is
+    /// the old one.
+    pub policies: Option<&'a crate::policy_mask::PolicySet>,
+    /// MEDULLA-FEDERATED-QUERY-R706.3 — the verified principal the query runs as,
+    /// matched against `MaskPolicy::principals_exempt`. `None` (the default) exempts
+    /// no one: the served path binds it from the verified caller, and an unbound
+    /// principal (the empty id) matches no exemption entry, so a bound policy set
+    /// without a bound principal masks everything (fail closed, never a wildcard).
+    pub principal: Option<crate::policy_mask::PrincipalRef<'a>>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -387,6 +399,8 @@ impl<'a> PlanCtx<'a> {
             belief_policy: None,
             #[cfg(feature = "geo")]
             spatial: None,
+            policies: None,
+            principal: None,
         }
     }
 
@@ -406,6 +420,24 @@ impl<'a> PlanCtx<'a> {
     /// series-work bounds.
     pub fn with_budget(mut self, budget: crate::budget::Budget) -> Self {
         self.budget = budget;
+        self
+    }
+
+    /// Bind the caller's tenant tag-based column-mask + row-filter policy set
+    /// (MEDULLA-FEDERATED-QUERY-R706.3, loaded per tenant by
+    /// MEDULLA-FEDERATED-QUERY-R706.7). Without this call the plan runs
+    /// byte-for-byte as lowered — the rewrite is a no-op.
+    pub fn with_policies(mut self, policies: &'a crate::policy_mask::PolicySet) -> Self {
+        self.policies = Some(policies);
+        self
+    }
+
+    /// Bind the verified principal the query runs as
+    /// (MEDULLA-FEDERATED-QUERY-R706.3), matched against
+    /// `MaskPolicy::principals_exempt`. Without this call nothing is exempt —
+    /// a bound policy set masks everything (fail closed).
+    pub fn with_principal(mut self, principal: &'a str) -> Self {
+        self.principal = Some(crate::policy_mask::PrincipalRef(principal));
         self
     }
 
@@ -555,6 +587,17 @@ impl<'a> PlanCtx<'a> {
 ///     contract), or Lane B's rayon-morsel `ParallelDriver` when the opt-in `par-runtime`
 ///     feature is built and the environment asks for it.
 pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
+    // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking + row filters: the
+    // ONE rewrite, at the top of execute, BEFORE pushdown — the pushed plan carries
+    // the masked projection. No bound policy set ⇒ the plan runs byte-for-byte as
+    // lowered (the default ctx is unchanged); the rewrite is pure and writes nothing.
+    let mut plan = plan.clone();
+    if let Some(set) = ctx.policies {
+        let principal = ctx
+            .principal
+            .unwrap_or(crate::policy_mask::PrincipalRef(""));
+        crate::policy_mask::apply_policies(&mut plan, set, &principal);
+    }
     let pinned;
     let ctx = match AsOfPin::of_ops(plan.ops.iter()) {
         Some(pin) if ctx.as_of_pin.is_none() => {
@@ -563,7 +606,7 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
         }
         _ => ctx,
     };
-    let optimized = plan_optimize(plan.clone(), ctx);
+    let optimized = plan_optimize(plan, ctx);
     #[cfg(feature = "federation")]
     if let Some(foreign) = ctx.federation {
         foreign.prepare(ctx, &optimized.ops);
@@ -2618,6 +2661,14 @@ fn sql_filter_ids(
     preds: &[Pred],
     restrict_to: Option<&[String]>,
 ) -> Result<Vec<String>, String> {
+    // Filtering over no rows answers empty. With zero property blobs the
+    // schema-on-read `nodes` table infers NO property columns, so a property
+    // predicate would refuse to plan (`Schema error: No field named <prop>`)
+    // instead of producing the vacuous empty result — and SQL's three-valued
+    // logic says a predicate over no rows keeps no rows.
+    if view.node_properties.is_empty() {
+        return Ok(Vec::new());
+    }
     let mut sql = format!("SELECT id FROM nodes WHERE {}", where_clause(preds)?);
     if let Some(ids) = restrict_to {
         if ids.is_empty() {
