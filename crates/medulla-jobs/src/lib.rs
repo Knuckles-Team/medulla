@@ -58,6 +58,7 @@
 //! transitions and any caught-up replica can take over after leader failure.
 
 pub mod claim;
+pub mod downtime;
 pub mod intent;
 pub mod model;
 pub mod result;

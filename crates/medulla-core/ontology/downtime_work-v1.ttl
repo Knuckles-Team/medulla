@@ -1,0 +1,53 @@
+# Downtime work vocabulary (MEDULLA-DURABLE-KERNEL-R101.1).
+#
+# A downtime job type names a registered job intent, a priority, a resource
+# budget and preconditions. The scheduler runs the types that fit an idle or
+# declared window.
+
+@prefix dw:   <http://knuckles.team/kg/downtime-work#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<http://knuckles.team/kg/downtime-work> a owl:Ontology ;
+    rdfs:label "Downtime work" ;
+    rdfs:comment "Job types the engine runs while it is idle or inside a declared window." .
+
+dw:JobType a owl:Class ;
+    rdfs:label "Downtime job type" ;
+    rdfs:comment "A background job type with a priority, a budget and preconditions." .
+
+dw:Window a owl:Class ;
+    rdfs:label "Downtime window" ;
+    rdfs:comment "An idle or declared span of time during which downtime job types may run." .
+
+dw:Budget a owl:Class ;
+    rdfs:label "Downtime budget" ;
+    rdfs:comment "The CPU and memory a downtime job type may use in one window." .
+
+dw:Precondition a owl:Class ;
+    rdfs:label "Downtime precondition" ;
+    rdfs:comment "A boolean query that must hold before a job type runs." .
+
+dw:priority a owl:DatatypeProperty ;
+    rdfs:label "priority" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "A higher priority runs first." .
+
+dw:hasBudget a owl:ObjectProperty ;
+    rdfs:label "has budget" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range dw:Budget .
+
+dw:hasPrecondition a owl:ObjectProperty ;
+    rdfs:label "has precondition" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range dw:Precondition .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/downtime-work#JobType> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/downtime-work#Window> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/downtime-work#Budget> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/downtime-work#Precondition> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

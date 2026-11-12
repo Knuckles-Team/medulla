@@ -1,0 +1,13 @@
+# Downtime work shapes (MEDULLA-DURABLE-KERNEL-R101.1).
+
+@prefix dw: <http://knuckles.team/kg/downtime-work#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+dw:JobTypeShape a sh:NodeShape ;
+    sh:targetClass dw:JobType ;
+    sh:property [
+        sh:path dw:hasBudget ;
+        sh:minCount 1 ;
+        sh:class dw:Budget ;
+        sh:message "A downtime job type must have a budget."
+    ] .
