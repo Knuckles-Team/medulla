@@ -53,6 +53,8 @@ mod stat_log;
 #[cfg(feature = "decide")]
 mod stat_nl;
 #[cfg(feature = "decide")]
+mod stat_writeback;
+#[cfg(feature = "decide")]
 mod stat_pointer;
 #[cfg(feature = "decide")]
 mod stat_replay;

@@ -10,6 +10,7 @@
 
 use medulla_types::contract::{ResourceId, TenantId};
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The stable code of a refused write-back identifier.
 pub const INVALID_WRITEBACK_IDENTIFIER: &str = "INVALID_WRITEBACK_IDENTIFIER";
@@ -19,6 +20,8 @@ pub const INVALID_WRITEBACK_AS_OF: &str = "INVALID_WRITEBACK_AS_OF";
 pub const WRITEBACK_DUPLICATE_EXTERNAL_ID: &str = "WRITEBACK_DUPLICATE_EXTERNAL_ID";
 /// The stable code of a queue holding another tenant's proposal.
 pub const WRITEBACK_TENANT_MISMATCH: &str = "WRITEBACK_TENANT_MISMATCH";
+/// The stable code of a proposal whose sources disagree on its value.
+pub const WRITEBACK_SOURCE_CONFLICT: &str = "WRITEBACK_SOURCE_CONFLICT";
 
 /// A refused write-back model value, with its stable code.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,14 +69,7 @@ fn as_of(as_of_ms: i64) -> Result<(), WritebackError> {
     Ok(())
 }
 
-/// The risk tier a write-back proposal is triaged into.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RiskTier {
-    Low,
-    Medium,
-    High,
-}
+pub use medulla_decision_types::decision::statistical::writeback::RiskTier;
 
 /// One high-stakes write-back proposal, stamped with the as-of instant it
 /// derives from.
@@ -84,6 +80,8 @@ pub struct WritebackProposal {
     pub tenant: TenantId,
     /// The external id the proposal deduplicates by.
     pub external_id: ResourceId,
+    /// The system of record the proposal reaches.
+    pub system_of_record: ResourceId,
     pub risk_tier: RiskTier,
     /// Milliseconds since the Unix epoch: the instant the proposal derives from.
     pub as_of_ms: i64,
@@ -94,17 +92,20 @@ impl WritebackProposal {
         id: impl Into<String>,
         tenant: impl Into<String>,
         external_id: impl Into<String>,
+        system_of_record: impl Into<String>,
         risk_tier: RiskTier,
         as_of_ms: i64,
     ) -> Result<Self, WritebackError> {
         let id = resource_id(id, "id")?;
         let tenant = tenant_id(tenant, "tenant")?;
         let external_id = resource_id(external_id, "external_id")?;
+        let system_of_record = resource_id(system_of_record, "system_of_record")?;
         as_of(as_of_ms)?;
         Ok(Self {
             id,
             tenant,
             external_id,
+            system_of_record,
             risk_tier,
             as_of_ms,
         })
@@ -133,8 +134,7 @@ impl ProposalQueue {
     ) -> Result<Self, WritebackError> {
         let id = resource_id(id, "id")?;
         let tenant = tenant_id(tenant, "tenant")?;
-        let mut external: std::collections::BTreeSet<&ResourceId> =
-            std::collections::BTreeSet::new();
+        let mut external: BTreeSet<(&ResourceId, &ResourceId)> = BTreeSet::new();
         for proposal in &proposals {
             if proposal.tenant != tenant {
                 return Err(WritebackError::new(
@@ -147,12 +147,13 @@ impl ProposalQueue {
                     ),
                 ));
             }
-            if !external.insert(&proposal.external_id) {
+            if !external.insert((&proposal.system_of_record, &proposal.external_id)) {
                 return Err(WritebackError::new(
                     WRITEBACK_DUPLICATE_EXTERNAL_ID,
                     format!(
-                        "external id {} is queued more than once",
-                        proposal.external_id.as_str()
+                        "external id {} for system {} is queued more than once",
+                        proposal.external_id.as_str(),
+                        proposal.system_of_record.as_str()
                     ),
                 ));
             }
@@ -214,6 +215,8 @@ pub struct FindingTicket {
     pub external_id: ResourceId,
     /// The risk finding the ticket derives from.
     pub finding_id: ResourceId,
+    /// The ticketing system of record the ticket reaches.
+    pub system_of_record: ResourceId,
     pub risk_tier: RiskTier,
     /// Milliseconds since the Unix epoch: the instant the ticket derives from.
     pub as_of_ms: i64,
@@ -225,6 +228,7 @@ impl FindingTicket {
         tenant: impl Into<String>,
         external_id: impl Into<String>,
         finding_id: impl Into<String>,
+        system_of_record: impl Into<String>,
         risk_tier: RiskTier,
         as_of_ms: i64,
     ) -> Result<Self, WritebackError> {
@@ -232,16 +236,140 @@ impl FindingTicket {
         let tenant = tenant_id(tenant, "tenant")?;
         let external_id = resource_id(external_id, "external_id")?;
         let finding_id = resource_id(finding_id, "finding_id")?;
+        let system_of_record = resource_id(system_of_record, "system_of_record")?;
         as_of(as_of_ms)?;
         Ok(Self {
             id,
             tenant,
             external_id,
             finding_id,
+            system_of_record,
             risk_tier,
             as_of_ms,
         })
     }
+}
+
+/// What the preflight decided for one proposal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Preflight {
+    /// Two or more sources disagree: refused with [`WRITEBACK_SOURCE_CONFLICT`].
+    Refuse(WritebackError),
+    /// The tier is at or above `writeback.queue_min_tier`: wait for approval.
+    Queue,
+    /// Every other proposal proceeds.
+    Proceed,
+}
+
+/// Preflight one proposal. `source_values` maps each source id to a value
+/// digest for the proposal's external id; two or more distinct digests refuse.
+/// `queue_min_tier` is the `writeback.queue_min_tier` knob (0 low, 1 medium,
+/// 2 high).
+pub fn preflight(
+    proposal: &WritebackProposal,
+    source_values: &BTreeMap<String, String>,
+    queue_min_tier: u64,
+) -> Preflight {
+    let distinct: BTreeSet<&String> = source_values.values().collect();
+    if distinct.len() >= 2 {
+        return Preflight::Refuse(WritebackError::new(
+            WRITEBACK_SOURCE_CONFLICT,
+            format!(
+                "{} sources hold {} different values for external id {}",
+                source_values.len(),
+                distinct.len(),
+                proposal.external_id.as_str()
+            ),
+        ));
+    }
+    if proposal.risk_tier.ordinal() >= queue_min_tier {
+        Preflight::Queue
+    } else {
+        Preflight::Proceed
+    }
+}
+
+/// One reconciled inventory item: the systems of record that already hold it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InventoryItem {
+    pub tenant: TenantId,
+    pub external_id: ResourceId,
+    pub present_in: BTreeSet<ResourceId>,
+    pub as_of_ms: i64,
+}
+
+/// One risk finding to raise a ticket for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RiskFinding {
+    pub tenant: TenantId,
+    pub finding_id: ResourceId,
+    pub external_id: ResourceId,
+    pub system_of_record: ResourceId,
+    pub risk_tier: RiskTier,
+    pub as_of_ms: i64,
+}
+
+/// One `InventoryCreation` per reconciled item per enabled system that lacks
+/// its external id, copying the item's as-of instant, sorted by
+/// `(system_of_record, external_id)`.
+pub fn creation_proposals(
+    inventory: &[InventoryItem],
+    enabled_systems: &[ResourceId],
+) -> Result<Vec<InventoryCreation>, WritebackError> {
+    let mut out: BTreeMap<(ResourceId, ResourceId), InventoryCreation> = BTreeMap::new();
+    for item in inventory {
+        for system in enabled_systems {
+            if item.present_in.contains(system) {
+                continue;
+            }
+            let key = (system.clone(), item.external_id.clone());
+            if out.contains_key(&key) {
+                continue;
+            }
+            let creation = InventoryCreation::new(
+                format!("inv:{}:{}", system.as_str(), item.external_id.as_str()),
+                item.tenant.as_str(),
+                item.external_id.as_str(),
+                system.as_str(),
+                item.as_of_ms,
+            )?;
+            out.insert(key, creation);
+        }
+    }
+    Ok(out.into_values().collect())
+}
+
+/// One `FindingTicket` per risk finding, with the finding's tier and as-of
+/// instant. Findings that name one `(system_of_record, external_id)` collapse
+/// to the highest tier, then the lowest finding id. Sorted by
+/// `(system_of_record, external_id)`.
+pub fn ticket_proposals(findings: &[RiskFinding]) -> Result<Vec<FindingTicket>, WritebackError> {
+    let mut chosen: BTreeMap<(&ResourceId, &ResourceId), &RiskFinding> = BTreeMap::new();
+    for finding in findings {
+        let key = (&finding.system_of_record, &finding.external_id);
+        match chosen.get(&key) {
+            Some(held)
+                if (held.risk_tier, std::cmp::Reverse(&held.finding_id))
+                    >= (finding.risk_tier, std::cmp::Reverse(&finding.finding_id)) => {}
+            _ => {
+                chosen.insert(key, finding);
+            }
+        }
+    }
+    chosen
+        .into_values()
+        .map(|f| {
+            FindingTicket::new(
+                format!("ticket:{}", f.finding_id.as_str()),
+                f.tenant.as_str(),
+                f.external_id.as_str(),
+                f.finding_id.as_str(),
+                f.system_of_record.as_str(),
+                f.risk_tier,
+                f.as_of_ms,
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -253,6 +381,7 @@ mod tests {
             "wp:1",
             tenant,
             external_id,
+            "sor:ledger",
             RiskTier::High,
             1_700_000_000_000,
         )
@@ -277,6 +406,7 @@ mod tests {
             "tenant-a",
             "ext:2",
             "finding:1",
+            "sor:tickets",
             RiskTier::Medium,
             1_700_000_000_001,
         )
@@ -298,7 +428,7 @@ mod tests {
     fn writeback_types_reject_invalid_identifiers() {
         for bad in ["", "has space", "é"] {
             assert_eq!(
-                WritebackProposal::new(bad, "tenant-a", "ext:1", RiskTier::High, 1)
+                WritebackProposal::new(bad, "tenant-a", "ext:1", "sor:ledger", RiskTier::High, 1)
                     .unwrap_err()
                     .code,
                 INVALID_WRITEBACK_IDENTIFIER,
@@ -306,19 +436,33 @@ mod tests {
             );
         }
         assert_eq!(
-            WritebackProposal::new("wp:1", "bad tenant", "ext:1", RiskTier::High, 1)
-                .unwrap_err()
-                .code,
+            WritebackProposal::new(
+                "wp:1",
+                "bad tenant",
+                "ext:1",
+                "sor:ledger",
+                RiskTier::High,
+                1
+            )
+            .unwrap_err()
+            .code,
             INVALID_WRITEBACK_IDENTIFIER
         );
         assert_eq!(
-            WritebackProposal::new("wp:1", "tenant-a", "bad external", RiskTier::High, 1)
-                .unwrap_err()
-                .code,
+            WritebackProposal::new(
+                "wp:1",
+                "tenant-a",
+                "bad external",
+                "sor:ledger",
+                RiskTier::High,
+                1
+            )
+            .unwrap_err()
+            .code,
             INVALID_WRITEBACK_IDENTIFIER
         );
         assert_eq!(
-            WritebackProposal::new("wp:1", "tenant-a", "ext:1", RiskTier::High, 0)
+            WritebackProposal::new("wp:1", "tenant-a", "ext:1", "sor:ledger", RiskTier::High, 0)
                 .unwrap_err()
                 .code,
             INVALID_WRITEBACK_AS_OF
@@ -333,12 +477,115 @@ mod tests {
         );
         assert_eq!(duplicate.unwrap_err().code, WRITEBACK_DUPLICATE_EXTERNAL_ID);
         assert!(serde_json::from_str::<WritebackProposal>(
-            r#"{"id":"wp:1","tenant":"tenant-a","external_id":"ext:1","risk_tier":"high","as_of_ms":1,"extra":true}"#
+            r#"{"id":"wp:1","tenant":"tenant-a","external_id":"ext:1","system_of_record":"sor:ledger","risk_tier":"high","as_of_ms":1,"extra":true}"#
         )
         .is_err());
         assert!(serde_json::from_str::<FindingTicket>(
-            r#"{"id":"t","tenant":"tenant-a","external_id":"ext","finding_id":"f","risk_tier":"urgent","as_of_ms":1}"#
+            r#"{"id":"t","tenant":"tenant-a","external_id":"ext","finding_id":"f","system_of_record":"s","risk_tier":"urgent","as_of_ms":1}"#
         )
         .is_err());
+    }
+
+    fn rid(value: &str) -> ResourceId {
+        ResourceId::new(value).unwrap()
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R615.2.1
+    #[test]
+    fn preflight_refuses_conflicts_and_queues_high_tier() {
+        let high = proposal("ext:1", "tenant-a");
+        let low =
+            WritebackProposal::new("wp:2", "tenant-a", "ext:2", "sor:ledger", RiskTier::Low, 1)
+                .unwrap();
+        let agree: BTreeMap<String, String> = [("a", "d1"), ("b", "d1")]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        let conflict: BTreeMap<String, String> = [("a", "d1"), ("b", "d2")]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        assert_eq!(preflight(&high, &agree, 2), Preflight::Queue);
+        assert_eq!(preflight(&low, &agree, 2), Preflight::Proceed);
+        assert_eq!(preflight(&low, &BTreeMap::new(), 0), Preflight::Queue);
+        let Preflight::Refuse(error) = preflight(&high, &conflict, 2) else {
+            panic!("a source conflict refuses")
+        };
+        assert_eq!(error.code, WRITEBACK_SOURCE_CONFLICT);
+        // A conflict refuses even a proposal that would proceed.
+        assert!(matches!(
+            preflight(&low, &conflict, 2),
+            Preflight::Refuse(_)
+        ));
+        // The queue keys duplicates on (system_of_record, external_id).
+        let other_system =
+            WritebackProposal::new("wp:3", "tenant-a", "ext:1", "sor:crm", RiskTier::High, 1)
+                .unwrap();
+        assert!(ProposalQueue::new("q", "tenant-a", vec![high.clone(), other_system]).is_ok());
+        assert_eq!(
+            ProposalQueue::new("q", "tenant-a", vec![high.clone(), high])
+                .unwrap_err()
+                .code,
+            WRITEBACK_DUPLICATE_EXTERNAL_ID
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R615.2.2
+    #[test]
+    fn inventory_and_findings_become_deduplicated_proposals() {
+        let item = |external: &str, present: &[&str], as_of: i64| InventoryItem {
+            tenant: TenantId::new("tenant-a").unwrap(),
+            external_id: rid(external),
+            present_in: present.iter().map(|s| rid(s)).collect(),
+            as_of_ms: as_of,
+        };
+        let inventory = vec![
+            item("ext:b", &["sor:ledger"], 20),
+            item("ext:a", &[], 10),
+            item("ext:a", &[], 11),
+        ];
+        let systems = vec![rid("sor:ledger"), rid("sor:crm")];
+        let creations = creation_proposals(&inventory, &systems).unwrap();
+        let keys: Vec<(&str, &str, i64)> = creations
+            .iter()
+            .map(|c| {
+                (
+                    c.system_of_record.as_str(),
+                    c.external_id.as_str(),
+                    c.as_of_ms,
+                )
+            })
+            .collect();
+        assert_eq!(
+            keys,
+            vec![
+                ("sor:crm", "ext:a", 10),
+                ("sor:crm", "ext:b", 20),
+                ("sor:ledger", "ext:a", 10),
+            ]
+        );
+        let finding = |id: &str, external: &str, tier: RiskTier, as_of: i64| RiskFinding {
+            tenant: TenantId::new("tenant-a").unwrap(),
+            finding_id: rid(id),
+            external_id: rid(external),
+            system_of_record: rid("sor:tickets"),
+            risk_tier: tier,
+            as_of_ms: as_of,
+        };
+        let tickets = ticket_proposals(&[
+            finding("f:2", "ext:z", RiskTier::Low, 5),
+            finding("f:1", "ext:z", RiskTier::High, 6),
+            finding("f:3", "ext:a", RiskTier::Medium, 7),
+        ])
+        .unwrap();
+        let rows: Vec<(&str, RiskTier, i64)> = tickets
+            .iter()
+            .map(|t| (t.external_id.as_str(), t.risk_tier, t.as_of_ms))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![("ext:a", RiskTier::Medium, 7), ("ext:z", RiskTier::High, 6)]
+        );
+        assert!(creation_proposals(&[item("bad id", &[], 1)], &systems).is_err());
     }
 }

@@ -231,6 +231,8 @@ knobs! {
     toc_line_index_stride: u64 = "toc.line_index_stride", U64(64), [16, 1_024], "lines", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
+    /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.
+    writeback_queue_min_tier: u64 = "writeback.queue_min_tier", U64(2), [0, 2], "tier", Fixed;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.

@@ -1084,6 +1084,8 @@ mod connector_toolchoice_tests;
 
 mod connector_writeback_tests;
 
+mod writeback_queue_tests;
+
 mod scorer_tests;
 
 // MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.

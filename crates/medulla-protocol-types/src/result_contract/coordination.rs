@@ -198,6 +198,7 @@ method_results! {
     DecisionLogResolve(DecisionLog / "resolve") => Raw<StoredResolution>;
     DecisionLogLearn(DecisionLog / "learn") => Raw<LearningRecorded>;
     DecisionLogPromoteRule(DecisionLog / "promote_rule") => Raw<medulla_decision_types::decision::statistical::log::RulePromotionResult>;
+    DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackOutcome>;
     ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_types::claims::ClaimRecord>;
