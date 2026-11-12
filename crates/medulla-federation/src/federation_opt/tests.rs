@@ -977,7 +977,7 @@ fn mcp_remote(port: Option<Arc<FakePort>>) -> super::mcp::McpRemote {
     };
     super::mcp::McpRemote::new(
         ("objects-mcp", "list_objects"),
-        true,
+        (true, None),
         port.map(|p| p as Arc<dyn super::mcp::ConnectorRowSource>),
         Identity::of_spec(&spec, None),
     )
@@ -1281,5 +1281,134 @@ mod search_pushdown {
         let outcome = fetch_top_k(&session(), &dropping, &wanted(6), &|_| true).unwrap();
         assert_eq!(outcome.hits.len(), 2);
         assert!(outcome.incomplete.unwrap().starts_with(RESULT_INCOMPLETE));
+    }
+}
+
+// ── the search remote joins the shared fusion (MEDULLA-UNIFIED-DATA-PLANE-R038.5.3) ──
+
+#[cfg(feature = "text")]
+mod search_fusion {
+    use super::*;
+    use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
+    use medulla_types::wire::ForeignOperationCapabilities;
+
+    /// A search-index tool that records its calls and answers three scored documents.
+    struct IndexPort {
+        seen: Mutex<Vec<super::super::mcp::ConnectorRowRequest>>,
+    }
+
+    impl super::super::mcp::ConnectorRowSource for IndexPort {
+        fn declared_arguments(&self, _server: &str, _tool: &str) -> Option<Vec<String>> {
+            Some(vec!["query".into(), "k".into(), "offset".into()])
+        }
+        fn rows(
+            &self,
+            request: &super::super::mcp::ConnectorRowRequest,
+        ) -> Result<super::super::mcp::ConnectorRows, String> {
+            self.seen.lock().unwrap().push(request.clone());
+            let offset = request.arguments["offset"].as_u64().unwrap() as usize;
+            let all = [("r-b", 2.0_f32), ("r-a", 2.0), ("d4", 1.0)];
+            Ok(super::super::mcp::ConnectorRows {
+                source_label: request.source_label.clone(),
+                rows: RowSet::from_scored(
+                    all.iter().skip(offset).map(|(id, s)| (id.to_string(), *s)),
+                ),
+                truncated: false,
+                missing_source: None,
+            })
+        }
+    }
+
+    fn search_spec() -> ForeignSourceSpec {
+        ForeignSourceSpec::Mcp {
+            server: "search-mcp".into(),
+            tool: "web_search".into(),
+            capabilities: ForeignOperationCapabilities {
+                key_filter_pushdown: false,
+                search: Some(SearchIndexCapability {
+                    full_text: true,
+                    vector: false,
+                    filters: false,
+                    max_k: 50,
+                    score_kind: ScoreKind::Bm25,
+                }),
+            },
+        }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.3
+    #[test]
+    fn served_search_reaches_fusion() {
+        let port = Arc::new(IndexPort {
+            seen: Mutex::new(Vec::new()),
+        });
+        super::super::mcp::register_connector_row_source(port.clone());
+        let fx = medulla_exec::fixture::build();
+        let session = FederationSession::new(FederationBudget::default());
+        let remote_branch = vec![Op::ForeignScan {
+            source: Box::new(search_spec()),
+            join: false,
+        }];
+        let plan = Plan::new(vec![Op::FuseRrf {
+            branches: vec![
+                vec![Op::Rank {
+                    query: medulla_exec::fixture::query_vec(),
+                }],
+                vec![Op::RankText {
+                    query: "needle".into(),
+                }],
+                remote_branch,
+            ],
+            k: 0.0,
+        }]);
+        let federated = crate::federation_opt::FederatedExec::with_session(&session);
+        session.prepare(&plan.ops);
+        let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
+        let fused = execute(&plan, &ctx).unwrap();
+        let fused_ids = fused.ids();
+        for id in ["r-a", "r-b"] {
+            assert!(
+                fused_ids.contains(&id.to_string()),
+                "{id} fused: {fused_ids:?}"
+            );
+        }
+        let seen = port.seen.lock().unwrap();
+        assert_eq!(
+            seen[0].arguments["query"], "needle",
+            "the RankText query is pushed"
+        );
+        assert_eq!(seen[0].server, "search-mcp");
+        let trace = session.trace();
+        let receipt = trace[0].search.clone().expect("a search receipt");
+        assert_eq!(receipt.score_kind, ScoreKind::Bm25);
+        drop(seen);
+
+        // The remote branch alone ranks by its `remote` channel; ties break by id.
+        let alone = execute_federated(
+            &fx,
+            &session,
+            Plan::new(vec![Op::ForeignScan {
+                source: Box::new(search_spec()),
+                join: false,
+            }]),
+        );
+        assert!(alone.unwrap_err().contains("UNSUPPORTED_SEARCH_ARGUMENT"));
+        let branch = Op::ForeignScan {
+            source: Box::new(search_spec()),
+            join: false,
+        };
+        let session = FederationSession::new(FederationBudget::default());
+        let scan_plan = Plan::new(vec![Op::FuseRrf {
+            branches: vec![
+                vec![Op::RankText {
+                    query: "needle".into(),
+                }],
+                vec![branch],
+            ],
+            k: 0.0,
+        }]);
+        session.prepare(&scan_plan.ops);
+        let rows = execute_federated(&fx, &session, scan_plan).unwrap();
+        assert_eq!(rows.ids(), ["r-a", "r-b", "d4"], "score desc, ties by id");
     }
 }

@@ -28,6 +28,8 @@ struct SessionState {
     meter: BudgetMeter,
     trace: Vec<FragmentTrace>,
     hints: Vec<Hint>,
+    /// The text of the `RankText` branch each search-source `ForeignScan` is fused with.
+    search_texts: Vec<(Op, String)>,
     cache_scope: Option<Arc<FragmentCacheScope>>,
     /// How many foreign fragments of each source spec the prepared plan holds.
     source_counts: Vec<(ForeignSourceSpec, usize)>,
@@ -53,6 +55,7 @@ impl FederationSession {
                 meter: BudgetMeter::new(budget),
                 trace: Vec::new(),
                 hints: Vec::new(),
+                search_texts: Vec::new(),
                 cache_scope: None,
                 source_counts: Vec::new(),
                 snapshots: HashMap::new(),
@@ -145,7 +148,10 @@ impl FederationSession {
         collect_hints(ops, &mut hints);
         let mut counts = Vec::new();
         count_sources(ops, &mut counts);
+        let mut texts = Vec::new();
+        collect_search_texts(ops, &mut texts);
         let mut state = self.lock();
+        state.search_texts = texts;
         state.hints = hints;
         state.source_counts = counts;
     }
@@ -157,6 +163,16 @@ impl FederationSession {
             .iter()
             .find(|h| &h.op == op)
             .and_then(|h| h.limit)
+    }
+
+    /// The full-text query pushed into the search source `op`: the `RankText` query of the
+    /// `FuseRrf` that holds `op` as a branch (MEDULLA-UNIFIED-DATA-PLANE-R038.5.3).
+    pub(crate) fn search_text(&self, op: &Op) -> Option<String> {
+        self.lock()
+            .search_texts
+            .iter()
+            .find(|(known, _)| known == op)
+            .map(|(_, text)| text.clone())
     }
 
     /// Run `f` against the budget meter.
@@ -228,5 +244,27 @@ fn record_occurrence(hints: &mut Vec<Hint>, op: &Op, limit: Option<usize>) {
             op: op.clone(),
             limit,
         }),
+    }
+}
+
+/// Pair every `ForeignScan` branch of a `FuseRrf` with the `RankText` query of a sibling branch.
+fn collect_search_texts(ops: &[Op], out: &mut Vec<(Op, String)>) {
+    for op in ops {
+        let branches = nested_branches(op);
+        for branch in branches {
+            collect_search_texts(branch, out);
+        }
+        let text = branches.iter().flatten().find_map(|inner| match inner {
+            #[cfg(feature = "text")]
+            Op::RankText { query } => Some(query.clone()),
+            _ => None,
+        });
+        let Some(text) = text else { continue };
+        for scan in branches.iter().flatten() {
+            if matches!(scan, Op::ForeignScan { .. }) && !out.iter().any(|(known, _)| known == scan)
+            {
+                out.push((scan.clone(), text.clone()));
+            }
+        }
     }
 }

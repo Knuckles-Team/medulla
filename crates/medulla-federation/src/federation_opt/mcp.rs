@@ -16,6 +16,8 @@ use serde_json::{json, Value};
 use super::budget::RESULT_INCOMPLETE;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities, SourceRate};
 use super::remote::{Identity, RemoteFetch};
+use super::search::{SearchHit, SearchRemote};
+use medulla_types::search_source::SearchIndexCapability;
 
 /// Keys per request when the registration declares key-filter pushdown.
 const MAX_MCP_KEYS: usize = 100;
@@ -84,6 +86,7 @@ pub(crate) struct McpRemote {
     server: String,
     tool: String,
     key_pushdown: bool,
+    search: Option<SearchIndexCapability>,
     port: Option<SharedPort>,
     identity: Identity,
 }
@@ -91,7 +94,7 @@ pub(crate) struct McpRemote {
 impl McpRemote {
     pub(crate) fn new(
         (server, tool): (&str, &str),
-        key_pushdown: bool,
+        (key_pushdown, search): (bool, Option<SearchIndexCapability>),
         port: Option<SharedPort>,
         identity: Identity,
     ) -> Self {
@@ -99,6 +102,7 @@ impl McpRemote {
             server: server.to_string(),
             tool: tool.to_string(),
             key_pushdown,
+            search,
             port,
             identity,
         }
@@ -178,18 +182,32 @@ impl RemoteFetch for McpRemote {
     }
 
     fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
+        self.call(Self::arguments(request), request.keys.clone())
+    }
+
+    fn fit_keys(&self, keys: &[String]) -> usize {
+        keys.len().min(MAX_MCP_KEYS)
+    }
+}
+
+impl McpRemote {
+    /// One governed tool call with `arguments`, checked against the declared schema first.
+    fn call(
+        &self,
+        arguments: BTreeMap<String, Value>,
+        pushed_filter: Vec<String>,
+    ) -> Result<RowSet, String> {
         let port = self
             .port
             .as_deref()
             .ok_or_else(|| self.unreachable("no connector port is registered"))?;
-        let arguments = Self::arguments(request);
         self.check_schema(port, &arguments)?;
         let call = ConnectorRowRequest {
             source_label: self.identity.label.clone(),
             server: self.server.clone(),
             tool: self.tool.clone(),
             arguments,
-            pushed_filter: request.keys.clone(),
+            pushed_filter,
             budget: ConnectorBudget {
                 max_rows: CALL_MAX_ROWS,
                 timeout_ms: CALL_TIMEOUT_MS,
@@ -199,7 +217,51 @@ impl RemoteFetch for McpRemote {
         self.check_reply(reply)
     }
 
-    fn fit_keys(&self, keys: &[String]) -> usize {
-        keys.len().min(MAX_MCP_KEYS)
+    /// The tool arguments a pushed search implies: `query`, `k`, `offset` and one argument
+    /// per structured filter. An argument the tool does not declare refuses before the call.
+    fn search_arguments(request: &RemoteRequest) -> Result<BTreeMap<String, Value>, String> {
+        let push = request
+            .search
+            .as_ref()
+            .ok_or_else(|| "a search request carries a pushed search".to_string())?;
+        let mut arguments = BTreeMap::new();
+        if let Some(text) = &push.text {
+            arguments.insert("query".to_string(), json!(text));
+        }
+        arguments.insert("k".to_string(), json!(push.k));
+        arguments.insert(
+            "offset".to_string(),
+            json!(request.page.map_or(0, |page| page.offset)),
+        );
+        for (name, value) in &push.filters {
+            arguments.insert(name.clone(), json!(value));
+        }
+        Ok(arguments)
+    }
+}
+
+/// A search-index tool answers a pushed search: the rows it returns are the hits, scored by
+/// the index (MEDULLA-UNIFIED-DATA-PLANE-R038.5.3).
+impl SearchRemote for McpRemote {
+    fn identity(&self) -> &Identity {
+        &self.identity
+    }
+
+    fn capability(&self) -> SearchIndexCapability {
+        self.search
+            .expect("a SearchRemote is built only for a declared search capability")
+    }
+
+    fn fetch(&self, request: &RemoteRequest) -> Result<Vec<SearchHit>, String> {
+        let rows = self.call(Self::search_arguments(request)?, Vec::new())?;
+        Ok(rows
+            .rows()
+            .iter()
+            .map(|row| SearchHit {
+                id: row.id.clone(),
+                score: row.score,
+                attributes: Vec::new(),
+            })
+            .collect())
     }
 }

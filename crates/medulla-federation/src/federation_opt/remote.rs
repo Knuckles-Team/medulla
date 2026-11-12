@@ -142,6 +142,32 @@ pub(crate) fn resolve<'a>(
     }
 }
 
+/// Resolve `spec` (or the spec a registered name holds) to a search-index source when its
+/// capability declares `search` (MEDULLA-UNIFIED-DATA-PLANE-R038.5.3). A search source answers
+/// a pushed search, not a row fetch, so it is not a [`RemoteFetch`]; `None` for every other spec.
+pub(crate) fn resolve_search<'a>(
+    spec: &'a ForeignSourceSpec,
+    registry: Option<&'a ForeignSourceRegistry>,
+) -> Option<Box<dyn super::search::SearchRemote + 'a>> {
+    let (spec, name) = match spec {
+        ForeignSourceSpec::Named { name } => (registry?.spec(name)?, Some(name.as_str())),
+        other => (other, None),
+    };
+    match spec {
+        ForeignSourceSpec::Mcp {
+            server,
+            tool,
+            capabilities,
+        } if capabilities.search.is_some() => Some(Box::new(super::mcp::McpRemote::new(
+            (server, tool),
+            (capabilities.key_filter_pushdown, capabilities.search),
+            super::mcp::registered_port(),
+            Identity::of_spec(spec, name),
+        ))),
+        _ => None,
+    }
+}
+
 /// Resolve a registered name: its spec when it was registered as one (pushdown-capable),
 /// else the registered source itself (fetch-only).
 pub(crate) fn resolve_named<'a>(
@@ -201,7 +227,7 @@ fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn 
             capabilities,
         } => Box::new(super::mcp::McpRemote::new(
             (server, tool),
-            capabilities.key_filter_pushdown,
+            (capabilities.key_filter_pushdown, capabilities.search),
             super::mcp::registered_port(),
             identity,
         )),

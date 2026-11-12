@@ -5,9 +5,18 @@
 //! than `k` rows survive and the index has more, the planner pages on; it stops at `k` or at
 //! the shortfall the index leaves, which the outcome reports as data.
 
+use std::collections::BTreeMap;
+
+use medulla_exec::algebra::Op;
+use medulla_exec::rowset::RowSet;
+use medulla_types::contract::ServerErrorCode;
 use sha2::{Digest, Sha256};
 
 use super::budget::{EMBEDDING_SPACE_MISMATCH, REMOTE_SCORE_MISSING, RESULT_INCOMPLETE};
+
+/// The score channel the remote relevance score lands in.
+pub const REMOTE_CHANNEL: &str = "remote";
+
 use super::capability::{PageRequest, RemoteRequest, SearchPush};
 use super::remote::Identity;
 use super::session::FederationSession;
@@ -172,4 +181,63 @@ fn record(
     trace.rows_kept = kept;
     trace.search = Some(receipt);
     session.record(trace);
+}
+
+/// The result rows kept when the caller states no limit.
+const DEFAULT_SEARCH_K: u32 = 10;
+
+/// `Op::ForeignScan` over a search-index source (MEDULLA-UNIFIED-DATA-PLANE-R038.5.3): push the
+/// `RankText` query of the enclosing `FuseRrf` and the plan's limit, page until `k` rows
+/// survive the local residual, and return the hits ranked by their `remote` score (ties break
+/// by id). The rows are an ordinary branch of the shared fusion. As a join (`join` with a
+/// non-empty `input`) the residual keeps only hits already in `input`.
+pub(crate) fn search_scan(
+    op: &Op,
+    input: &RowSet,
+    join: bool,
+    remote: &dyn SearchRemote,
+    session: &FederationSession,
+) -> Result<RowSet, String> {
+    let capability = remote.capability();
+    let text = session.search_text(op).filter(|_| capability.full_text);
+    let Some(text) = text else {
+        return Err(format!(
+            "{}: {}: a search source needs a full-text query; fuse it with a RANK TEXT branch",
+            ServerErrorCode::UnsupportedSearchArgument.as_str(),
+            remote.identity().label,
+        ));
+    };
+    let wanted = SearchPush {
+        text: Some(text),
+        k: session
+            .limit_hint(op)
+            .and_then(|k| u32::try_from(k).ok())
+            .unwrap_or_else(|| DEFAULT_SEARCH_K.min(capability.max_k)),
+        ..SearchPush::default()
+    };
+    let joined = join && !input.is_empty();
+    let keep = input.id_set();
+    let outcome = fetch_top_k(session, remote, &wanted, &|hit| {
+        !joined || keep.contains(hit.id.as_str())
+    })?;
+    let mut hits = outcome.hits;
+    // Scored hits first by descending score; a hit the source left unscored (an opaque
+    // score kind) follows in the source's own order, ties by id.
+    hits.sort_by(|a, b| match (a.score, b.score) {
+        (Some(x), Some(y)) => y.total_cmp(&x).then_with(|| a.id.cmp(&b.id)),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    });
+    let channels = hits
+        .iter()
+        .filter_map(|hit| {
+            let score = f64::from(hit.score?);
+            Some((
+                hit.id.clone(),
+                BTreeMap::from([(REMOTE_CHANNEL.to_string(), score)]),
+            ))
+        })
+        .collect();
+    Ok(RowSet::from_rows(hits.into_iter().map(|hit| (hit.id, hit.score))).with_values(channels))
 }
