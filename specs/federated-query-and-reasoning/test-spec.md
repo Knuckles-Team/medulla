@@ -1083,7 +1083,6 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R727` | `tests/query/test_nl_answer_atoms_served.py::test_answer_cites_atom_provenance` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R728` | `crates/medulla-plan/src/uql/tests/roundtrip.rs::every_op_and_pred_kind_round_trips` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |

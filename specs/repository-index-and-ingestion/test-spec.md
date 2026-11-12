@@ -50,7 +50,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 | `MEDULLA-REPO-INGEST-R601.3` | `tests/test_repository_enrich_served.py::test_second_hydration_skips_stored_commits` (planned) | L3 | The named test passes. |
 | `MEDULLA-REPO-INGEST-R601.4` | `crates/medulla-enrich/src/history.rs::a_history_above_the_bound_is_truncated_at_a_commit_boundary` | L1 | Test submits the invalid input and asserts the code and zero partial writes. |
 | `MEDULLA-REPO-INGEST-R601.5` | `crates/medulla-enrich/src/history.rs::the_run_report_counts_added_skipped_and_coupling` | L1 | Test reads the trace or metrics after one success and one refusal. |
-| `MEDULLA-REPO-INGEST-R601.6` | `crates/medulla-h-ingest/benches/r601_history_served.rs::history_served` (planned) | L5 | Test: nightly bench group `repo_index/history` (L5). |
+| `MEDULLA-REPO-INGEST-R601.6` | `crates/medulla-h-ingest/benches/r601_history_served.rs::history_served` | L5 | Test: nightly bench group `repo_index/history` (L5). |
 | `MEDULLA-REPO-INGEST-R602.1` | `crates/medulla-enrich/src/links.rs::link_types_round_trip_and_invalid_identifiers_are_refused` | L1 | Unit test round-trips each type and rejects an invalid identifier. |
 | `MEDULLA-REPO-INGEST-R602.2` | `crates/medulla-enrich/src/links.rs::resources_and_routes_link_to_the_longest_owner_and_features_resolve_above_the_floor` | L1 | Unit tests cover each rule with positive and boundary cases. |
 | `MEDULLA-REPO-INGEST-R602.3` | `tests/test_repository_enrich_served.py::test_link_pass_runs_after_features` (planned) | L3 | The named test passes. |

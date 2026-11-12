@@ -1,3 +1,4 @@
+// spec: MEDULLA-REPO-INGEST-R601.6
 //! MEDULLA-REPO-INGEST-R601.6 — hot-path proof of the history hook.
 //!
 //! `Method::IndexRepository` → `run_after_commit` → `ingest_history` over

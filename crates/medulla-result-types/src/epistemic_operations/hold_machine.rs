@@ -284,4 +284,46 @@ mod tests {
             assert_eq!(wire, format!("\"{}\"", state.stored()));
         }
     }
+
+    // spec: MEDULLA-PLACEMENT-R780.1
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let dir = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-lane-store/src/redb_store/development_lane"
+        );
+        let mut scanned = 0;
+        for entry in std::fs::read_dir(dir).expect("lane store source directory") {
+            let path = entry.expect("directory entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            scanned += 1;
+            let source = std::fs::read_to_string(&path).expect("writer source");
+            let lines: Vec<&str> = source.lines().map(str::trim).collect();
+            for (n, line) in lines.iter().enumerate() {
+                if line.starts_with("//") {
+                    continue;
+                }
+                if line.contains(".state = ") && line.contains("hold") {
+                    let window = lines[n..lines.len().min(n + 4)].join(" ");
+                    assert!(
+                        window.contains(".apply(HoldEvent::"),
+                        "{}:{}: hold state written outside HoldState::apply",
+                        path.display(),
+                        n + 1
+                    );
+                }
+                if let Some(rest) = line.strip_prefix("state: DevelopmentLaneHoldState::") {
+                    assert!(
+                        rest.starts_with("Absent"),
+                        "{}:{}: hold record built in a state other than Absent",
+                        path.display(),
+                        n + 1
+                    );
+                }
+            }
+        }
+        assert!(scanned > 5, "the lane store writers were not scanned");
+    }
 }

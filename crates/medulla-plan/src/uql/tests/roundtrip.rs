@@ -32,6 +32,7 @@ fn round_trip(plan: &Plan) -> Result<(), String> {
 /// Every `OpKind` and `PredKind` variant the one `kinds!` macro generates prints,
 /// parses and canonicalizes, against the empty builder-only allowlist
 /// (MEDULLA-FEDERATED-QUERY-R728).
+// spec: MEDULLA-FEDERATED-QUERY-R728
 #[test]
 fn every_op_and_pred_kind_round_trips() {
     assert!(
@@ -208,6 +209,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
 
     /// Verifies MEDULLA-FEDERATED-QUERY-R728: 512 print, parse and compare cases.
+    // spec: MEDULLA-FEDERATED-QUERY-R728
     #[test]
     fn roundtrip_property_512_cases(ops in prop::collection::vec(op(), 1..6)) {
         let plan = Plan::new(ops);
