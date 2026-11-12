@@ -12,6 +12,7 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix catn: <https://knuckles-team.github.io/ontology/catalog#> .
 
 <https://knuckles-team.github.io/ontology/metadata_catalog> a owl:Ontology ;
     rdfs:label "Metadata Catalog Ontology" ;
@@ -22,6 +23,7 @@
 # -- Catalog and assets (DCAT) -----------------------------------------------------------
 
 cat:Catalog a owl:Class ;
+    catn:openMetadataType "Glossary" ;
     rdfs:label "Metadata Catalog" ;
     rdfs:comment "The catalog of one graph: every catalogued asset is cat:inCatalog of it." ;
     rdfs:subClassOf cat:Asset, dcat:Catalog .
@@ -32,6 +34,7 @@ cat:Asset a owl:Class ;
     rdfs:subClassOf bfo:0000031, dcat:Resource .
 
 cat:DataResource a owl:Class ;
+    catn:openMetadataType "DataSet" ;
     rdfs:label "Data Resource" ;
     rdfs:comment "A connector data resource or ingest source (for example servicenow-mcp/incidents) that records of one ontology class come from." ;
     rdfs:subClassOf cat:Asset, :Dataset, dcat:Dataset .
@@ -201,6 +204,7 @@ cat:lineageTo a owl:ObjectProperty ;
     owl:inverseOf :derivedFrom .
 
 cat:LineageEdge a owl:Class ;
+    catn:openMetadataType "DataFlow" ;
     rdfs:label "Lineage Edge" ;
     rdfs:comment "A qualified lineage hop from cat:from to cat:to with its hop type. A prov:Derivation." ;
     rdfs:subClassOf bfo:0000031, prov:Derivation .
@@ -239,6 +243,7 @@ cat:Glossary a owl:Class ;
     rdfs:subClassOf bfo:0000031, skos:ConceptScheme .
 
 cat:GlossaryTerm a owl:Class ;
+    catn:openMetadataType "GlossaryTerm" ;
     rdfs:label "Glossary Term" ;
     rdfs:comment "A business term (skos:prefLabel, skos:altLabel, skos:definition) that names an ontology class and the assets that serve it." ;
     rdfs:subClassOf :Concept, skos:Concept .
@@ -253,3 +258,21 @@ cat:definesClass a owl:ObjectProperty ;
     rdfs:comment "Links a glossary term to an asset that serves the class the term names (MEDULLA-TYPED-PACKS-R801.2)." ;
     rdfs:domain cat:GlossaryTerm ;
     rdfs:range cat:Asset .
+
+# -- Open metadata type mapping (MEDULLA-TYPED-PACKS-R110.1) -------------------------------
+
+catn:openMetadataType a owl:AnnotationProperty ;
+    rdfs:label "open metadata type" ;
+    rdfs:comment "Names the open metadata type a catalog class stands for, so the ontology drives the type mapping of the open-metadata sync. An open metadata type name with no class carrying this annotation is unmapped." .
+
+cat:ConfidentialityClassification a owl:Class ;
+    rdfs:label "Confidentiality Classification" ;
+    rdfs:comment "A confidentiality marking attached to a catalogued asset." ;
+    rdfs:subClassOf :DataClassification ;
+    catn:openMetadataType "Confidentiality" .
+
+cat:CriticalityClassification a owl:Class ;
+    rdfs:label "Criticality Classification" ;
+    rdfs:comment "A business criticality marking attached to a catalogued asset." ;
+    rdfs:subClassOf :DataClassification ;
+    catn:openMetadataType "Criticality" .

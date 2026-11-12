@@ -26,6 +26,7 @@ from medulla.generated.connector_pack import (
 )
 
 
+# spec: MEDULLA-TYPED-PACKS-R094.1
 def test_stable_content_returns_body() -> None:
     """A generated-client content read must return the verified pack body.
 

@@ -11,6 +11,9 @@
 // change-stream capture are later children.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod document_source_catalog;
+// MEDULLA-TYPED-PACKS-R110.2 — open metadata record model: instance header,
+// classifications and relationships. Pure serde.
+pub mod open_metadata;
 // MEDULLA-UNIFIED-DATA-PLANE-R702 and R763.1 — dataset and column lineage.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lineage;
