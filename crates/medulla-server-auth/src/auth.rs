@@ -3582,6 +3582,7 @@ mod tests {
                 tenant: tenant.map(str::to_string),
                 roles: HashSet::new(),
                 scopes: scopes.iter().map(|s| s.to_string()).collect(),
+                kind: None,
             }
         }
 

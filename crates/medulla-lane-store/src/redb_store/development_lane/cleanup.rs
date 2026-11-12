@@ -28,6 +28,7 @@ use medulla_store::redb_store::DurableCrypto;
 /// Load the bounded tenant/global policy snapshot.  The sorted pressure index
 /// supplies exact maxima for the non-tenant scope families; policy CAS never
 /// scans those families or the hold index.
+#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
 pub fn policy_scope_rows(
     counters: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
     graph: &str,
@@ -92,6 +93,7 @@ pub fn policy_scope_rows(
     )
 }
 
+#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
 pub fn policy_counter_snapshot(
     counters: &ScopedOwnerTableMut<(&str, &str), &[u8]>,
     graph: &str,
@@ -174,6 +176,7 @@ pub fn policy_counter_snapshot(
 
 /// Is any field the cleanup-complete request must carry missing, or is its
 /// cleanup WorkItem the same node as the lifecycle one?
+#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
 pub fn cleanup_request_incomplete(request: &DevelopmentLaneCleanupCompleteRequest) -> bool {
     request.tenant_ref.is_empty()
         || request.work_item_id.is_empty()
@@ -188,6 +191,7 @@ pub fn cleanup_request_incomplete(request: &DevelopmentLaneCleanupCompleteReques
 /// Prove both WorkItem authorities a cleanup needs: the current lifecycle
 /// terminal fence with its typed intent, and the distinct cleanup WorkItem
 /// with its typed correlation.  `Some(decision)` refuses the request.
+#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
 pub fn cleanup_work_item_decision(
     graph: &str,
     request: &DevelopmentLaneCleanupCompleteRequest,
@@ -256,6 +260,7 @@ pub fn cleanup_work_item_decision(
 }
 
 /// Does the tombstone already record exactly this cleanup?
+#[allow(dead_code)] // wired by the development-lane served cleanup route (follow-up row)
 pub fn cleanup_replay_matches(
     row: &DurableLaneHold,
     request: &DevelopmentLaneCleanupCompleteRequest,
