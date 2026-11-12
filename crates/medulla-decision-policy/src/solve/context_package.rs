@@ -17,7 +17,7 @@ use medulla_decision_types::decision::context_package::{
 use medulla_types::contract::BoundedVec;
 
 use super::{
-    model::spec::{
+    model::{
         Coefficient, ConstraintBody, ConstraintSpec, ObjectiveLevelSpec, ObjectiveTerm, Relation,
         Term, VarId,
     },
