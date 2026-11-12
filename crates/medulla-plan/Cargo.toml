@@ -442,6 +442,8 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 # its off-by-default `dev-scope-grant` feature; naming it here turns it on for the
 # TEST build only, so medulla-plan's own build still links no development authority.
 medulla-tsdb = { path = "../medulla-tsdb", features = ["dev-scope-grant"] }
+# `mysql_catalog` tests drive the async catalog read with `#[tokio::test]`.
+tokio = { version = "1.53", features = ["rt", "macros"] }
 # The query-surface INTEGRATION test harness (`tests/*.rs`, CONCEPT:MEDULLA-400..405) is an
 # EXTERNAL crate against medulla-plan's public API, so it must name the fixture/currency
 # crates directly (integration tests see only the crate-under-test + its dev-deps, NOT

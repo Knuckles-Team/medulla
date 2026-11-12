@@ -19,6 +19,7 @@ use medulla_storage::{AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS, DECISION
 pub use medulla_types::reservation_machine::{
     ReservationEvent as AdmissionEvent, ReservationState as AdmissionState, RESERVATION_MACHINE,
 };
+use redb::ReadableTable;
 use serde::{Deserialize, Serialize};
 
 use super::AgentLibraryStore;
