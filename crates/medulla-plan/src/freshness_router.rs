@@ -1,6 +1,6 @@
 //! MEDULLA-UNIFIED-DATA-PLANE-R011 — routing queries by freshness across native, live, and
-//! accelerated paths (Decision 4 of `docs/architecture/unified_data_plane_adr.md`: a bounded
-//! wait for read-your-writes, never a silent stale result). This is the `.1` typed-model slice:
+//! accelerated paths (row `MEDULLA-UNIFIED-DATA-PLANE-R011`: a bounded wait for
+//! read-your-writes, never a silent stale result). This is the `.1` typed-model slice:
 //! the named route, and a bounded wait that refuses an unbounded (zero-timeout) declaration.
 //! Wiring the real router and EXPLAIN output is a later child.
 
