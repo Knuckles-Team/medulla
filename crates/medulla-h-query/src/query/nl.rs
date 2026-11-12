@@ -71,11 +71,12 @@ pub(crate) fn handle_nl_query_plan(
         .ok_or_else(|| {
             Response::err(
                 req_id,
-                "ENGINE_UNAVAILABLE: NlQuery: no NL planner configured — set an OpenAI-compatible \
-                     endpoint in the Arbora config.json (or \
-                     MEDULLA_NL_ENDPOINT), or inject one via \
-                     medulla_server::set_nl_planner"
-                    .to_string(),
+                format!(
+                    "{}: NlQuery: no NL planner configured — set an OpenAI-compatible endpoint \
+                     in the Arbora config.json (or MEDULLA_NL_ENDPOINT), or inject one via \
+                     medulla_server::set_nl_planner",
+                    medulla_nlq::nl::NL_PLANNER_UNCONFIGURED
+                ),
             )
         })?;
     let (text, rewritten) = nl_follow_up(planner.as_ref(), text, history, req_id)?;
@@ -216,10 +217,18 @@ pub(crate) fn nl_refusal(error: &medulla_nlq::nl::NlQueryError) -> String {
             medulla_types::contract::EngineErrorCode::UqlBudgetExceeded.as_str()
         ),
         E::RewriteFailed(_) => format!("ENGINE_UNAVAILABLE: NlQuery: {error}"),
-        E::Ungrounded { steps } => format!(
-            "INVALID_ARGUMENT: NlQuery produced invalid UQL: {}",
+        E::StepsExhausted { steps } => format!(
+            "{}: NlQuery produced invalid UQL: {}",
+            medulla_nlq::nl::NL_QUERY_STEPS_EXHAUSTED,
             ungrounded_detail(steps)
         ),
+        E::PlannerUnconfigured => format!("{}: {error}", medulla_nlq::nl::NL_PLANNER_UNCONFIGURED),
+        E::MutationRefused { query } => {
+            format!(
+                "{}: {error}: `{query}`",
+                medulla_nlq::nl::NL_MUTATION_REFUSED
+            )
+        }
         other => format!("INVALID_ARGUMENT: NlQuery: {other}"),
     }
 }

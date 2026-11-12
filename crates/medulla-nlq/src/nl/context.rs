@@ -1146,7 +1146,7 @@ fn hint_fields(schema: &LabelSchema, tokens: &BTreeSet<String>) -> Vec<String> {
 /// plan, enforce the budget, parse with the caller grammar and ground against
 /// `context`. A parse error or schema violation goes back to the planner as a
 /// typed message; after `max_steps` failed steps the request is refused with
-/// [`NlQueryError::Ungrounded`] carrying every step. An over-budget answer is
+/// [`NlQueryError::StepsExhausted`] carrying every step. An over-budget answer is
 /// refused at once, as before.
 pub fn plan_grounded(
     planner: &dyn NlPlanner,
@@ -1171,10 +1171,27 @@ pub fn plan_grounded(
                     repairs: grounded.repairs,
                 });
             }
-            Err(outcome) => steps.push(step(&text, &outcome)),
+            Err(outcome) => {
+                if is_mutation_shaped(&text) {
+                    return Err(NlQueryError::MutationRefused { query: text });
+                }
+                steps.push(step(&text, &outcome));
+            }
         }
     }
-    Err(NlQueryError::Ungrounded { steps })
+    Err(NlQueryError::StepsExhausted { steps })
+}
+
+/// Whether a candidate that did not parse is shaped as a write: a write keyword
+/// as a whole word. UQL has no write statements, so these never parse, and the
+/// refusal names the cause instead of asking the planner for a correction.
+fn is_mutation_shaped(text: &str) -> bool {
+    const WRITE_WORDS: [&str; 10] = [
+        "CREATE", "DELETE", "SET", "DROP", "INSERT", "UPDATE", "MERGE", "REMOVE", "ALTER",
+        "TRUNCATE",
+    ];
+    text.split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+        .any(|word| WRITE_WORDS.iter().any(|w| word.eq_ignore_ascii_case(w)))
 }
 
 /// Parse and ground one candidate; the disclosed UQL is the planner's text

@@ -269,10 +269,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-INGEST-WORKER-R001.1008.
     (
         "DataPrepDeclarationRead",
-        &[
-            "DATA_PREP_DECLARATION_INVALID",
-            "INGEST_TENANT_MISMATCH",
-        ],
+        &["DATA_PREP_DECLARATION_INVALID", "INGEST_TENANT_MISMATCH"],
     ),
     // MEDULLA-REPO-INGEST-R002.100.
     (
@@ -789,6 +786,14 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     // MEDULLA-FEDERATED-QUERY-R058.4.1: `max_steps` outside 1 to 4.
     if id == "NlQuery" {
         codes.push("NL_STEPS_INVALID");
+    }
+    // MEDULLA-FEDERATED-QUERY-R058.4.4: the bounded-planning refusals.
+    if matches!(id, "NlQuery" | "NlQueryPlan") {
+        codes.extend([
+            "NL_QUERY_STEPS_EXHAUSTED",
+            "NL_PLANNER_UNCONFIGURED",
+            "NL_MUTATION_REFUSED",
+        ]);
     }
     // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
     // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path.

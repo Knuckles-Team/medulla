@@ -187,7 +187,7 @@ async fn second_step_corrects_parse_error() {
     assert!(two.error.is_none(), "{}", refusal(&two));
     let one = nl_with_steps(&state, 23, "two documents, corrected", Some(1)).await;
     let text = refusal(&one);
-    assert!(text.contains("INVALID_ARGUMENT"), "{text}");
+    assert!(text.contains("NL_QUERY_STEPS_EXHAUSTED"), "{text}");
     assert!(text.contains("step 1"), "{text}");
     assert!(one.result.is_none(), "an exhausted budget returns no rows");
 
@@ -197,5 +197,45 @@ async fn second_step_corrects_parse_error() {
         let text = refusal(&refused);
         assert!(text.contains("NL_STEPS_INVALID"), "{text}");
         assert!(refused.result.is_none());
+    }
+}
+
+/// Answers the question text as the UQL, so each case chooses its candidate.
+struct EchoPlanner;
+
+impl medulla_nlq::nl::NlPlanner for EchoPlanner {
+    fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
+        Ok(nl.to_string())
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.4
+// Each case runs in its own process (nextest), so this test owns the planner slot:
+// the unconfigured case runs first, then one planner is injected for the others.
+#[tokio::test]
+async fn refusals_return_code_and_no_rows() {
+    let state = state();
+
+    let unconfigured = nl_with_steps(&state, 30, "MATCH (:Doc) |> LIMIT 1", None).await;
+    let text = refusal(&unconfigured);
+    assert!(text.contains("NL_PLANNER_UNCONFIGURED"), "{text}");
+    assert!(unconfigured.result.is_none(), "{text}");
+
+    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
+
+    // Every step refused and the budget spent: the code and every step's text.
+    let exhausted = nl_with_steps(&state, 31, "MATCH (:Doc", Some(2)).await;
+    let text = refusal(&exhausted);
+    assert!(text.contains("NL_QUERY_STEPS_EXHAUSTED"), "{text}");
+    assert!(text.contains("step 1") && text.contains("step 2"), "{text}");
+    assert!(exhausted.result.is_none(), "{text}");
+
+    // A mutation-shaped candidate is refused at once, before the budget runs out.
+    for candidate in ["CREATE (:Doc)", "MATCH (:Doc) |> SET year = 1900"] {
+        let refused = nl_with_steps(&state, 32, candidate, Some(4)).await;
+        let text = refusal(&refused);
+        assert!(text.contains("NL_MUTATION_REFUSED"), "{text}");
+        assert!(!text.contains("step 2"), "{text}");
+        assert!(refused.result.is_none(), "{text}");
     }
 }

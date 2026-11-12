@@ -123,12 +123,21 @@ pub enum NlQueryError {
         /// The caret-annotated parse error.
         message: String,
     },
-    /// Every planner step named something the parser or the graph schema refused
-    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.1). `steps` holds each step's text and typed
-    /// outcome; nothing was executed.
-    Ungrounded {
+    /// The step budget ran out with every planner step refused by the parser or the
+    /// graph schema (MEDULLA-FEDERATED-QUERY-R058.4.4, R058.4.7.1). `steps` holds each
+    /// step's text and typed outcome; nothing was executed.
+    StepsExhausted {
         /// Every refused step, in order.
         steps: Vec<context::NlPlanStep>,
+    },
+    /// No planner is configured, so nothing could be planned
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.4).
+    PlannerUnconfigured,
+    /// A planner candidate is shaped as a mutation; natural language never writes
+    /// (MEDULLA-FEDERATED-QUERY-R058, R058.4.4). Refused at once, with no further step.
+    MutationRefused {
+        /// The refused candidate text.
+        query: String,
     },
     /// The produced UQL parsed but failed during execution.
     Execution {
@@ -151,7 +160,7 @@ impl std::fmt::Display for NlQueryError {
                 "nl-query: planner output refused: {actual} chars exceeds budget of {limit}"
             ),
             Self::ParseFailed { message, .. } => write!(f, "nl-query: {message}"),
-            Self::Ungrounded { steps } => {
+            Self::StepsExhausted { steps } => {
                 let last = steps.last().map_or("no step ran", |s| s.outcome.as_str());
                 write!(
                     f,
@@ -159,11 +168,35 @@ impl std::fmt::Display for NlQueryError {
                     steps.len()
                 )
             }
+            Self::PlannerUnconfigured => write!(f, "nl-query: no NL planner is configured"),
+            Self::MutationRefused { .. } => {
+                write!(f, "nl-query: a mutation-shaped candidate is refused")
+            }
             Self::Execution { message, .. } => write!(f, "nl-query: execution failed: {message}"),
             Self::RewriteFailed(msg) => write!(f, "nl-query: follow-up rewrite failed: {msg}"),
         }
     }
 }
+
+impl NlQueryError {
+    /// The registered refusal code of the bounded-planning refusals
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.4); `None` for the other variants.
+    pub fn code(&self) -> Option<&'static str> {
+        match self {
+            Self::StepsExhausted { .. } => Some(NL_QUERY_STEPS_EXHAUSTED),
+            Self::PlannerUnconfigured => Some(NL_PLANNER_UNCONFIGURED),
+            Self::MutationRefused { .. } => Some(NL_MUTATION_REFUSED),
+            _ => None,
+        }
+    }
+}
+
+/// Every planner step was refused and the step budget is spent.
+pub const NL_QUERY_STEPS_EXHAUSTED: &str = "NL_QUERY_STEPS_EXHAUSTED";
+/// No NL planner is configured.
+pub const NL_PLANNER_UNCONFIGURED: &str = "NL_PLANNER_UNCONFIGURED";
+/// A planner candidate is shaped as a mutation.
+pub const NL_MUTATION_REFUSED: &str = "NL_MUTATION_REFUSED";
 
 impl std::error::Error for NlQueryError {}
 

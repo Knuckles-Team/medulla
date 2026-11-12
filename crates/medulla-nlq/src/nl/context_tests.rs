@@ -417,7 +417,7 @@ fn run_case(case: &Case, view: &GraphView, context: &SchemaContext) {
                 );
             }
         }
-        (Expect::Refused(code), Err(NlQueryError::Ungrounded { steps })) => {
+        (Expect::Refused(code), Err(NlQueryError::StepsExhausted { steps })) => {
             let last = steps.last().expect("a refused request has steps");
             assert!(
                 last.outcome.starts_with(code),
@@ -628,7 +628,7 @@ fn an_empty_graph_refuses_every_labelled_match() {
     );
     let planner = ScriptedPlanner::new(&["MATCH (:Incident)"]);
     let err = plan_grounded(&planner, "x", &context, NlQueryBudget::default(), 2).unwrap_err();
-    assert!(matches!(err, NlQueryError::Ungrounded { ref steps } if steps.len() == 2));
+    assert!(matches!(err, NlQueryError::StepsExhausted { ref steps } if steps.len() == 2));
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.1
