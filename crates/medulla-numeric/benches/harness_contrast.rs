@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::ContrastCandidate,
-    decision::harness_contrast::ContrastEvidence,
+    decision::harness_contrast::ContrastEvidence, decision::harness_contrast::ContrastKnobs,
 };
 use medulla_work_types::{
     orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
@@ -99,6 +99,7 @@ fn main() {
     let version_refs: Vec<String> = (0..8)
         .map(|i| format!("harness-component:prompt:digest-{i:016x}"))
         .collect();
+    let knobs = ContrastKnobs::defaults();
     let mut micros = Vec::with_capacity(SAMPLES);
     let mut adopted = String::new();
     for _ in 0..SAMPLES {
@@ -119,6 +120,7 @@ fn main() {
             BASELINE,
             &candidates,
             &evidence,
+            &knobs,
         ))
         .unwrap();
         micros.push(started.elapsed().as_micros());

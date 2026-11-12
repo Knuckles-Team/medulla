@@ -20,6 +20,7 @@ impl DecisionFamily for TaskPlanFamily {
         &self,
         _ctx: &ExecutionContext,
         request: &DecideRequest,
+        _policy: &medulla_decision_types::decision::DecisionPolicy,
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         match crate::decide::stat_task_plan::task_plan(request) {

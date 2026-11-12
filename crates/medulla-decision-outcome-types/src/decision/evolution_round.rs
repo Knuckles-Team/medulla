@@ -66,6 +66,12 @@ pub struct StageAllocation {
     pub stage: String,
     pub model_ref: String,
     pub impact: i64,
+    /// The most harness candidates the stage probes
+    /// (`harness_evolution.max_candidates`, MEDULLA-DECISION-ENGINE-R179.7).
+    pub candidate_slots: u32,
+    /// The fewest harness candidates the stage probes
+    /// (`harness_evolution.min_candidates`).
+    pub candidate_slots_min: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -160,11 +166,16 @@ impl AllocationRefusal {
 /// (highest strength, then lower cost, then lower `model_ref`) while the
 /// upgrade count stays below `max_stronger_stages` and total cost within
 /// `max_cost`. A stage without impact stays on the base model with impact 0.
+/// Every stage carries the candidate slot bounds of the `harness_evolution`
+/// knobs (R179.7).
 pub fn allocate_stage_models(
     stages: &[StageInput],
     models: &[ModelOption],
     budget: &RunBudget,
+    knobs: &medulla_decision_types::decision::harness_contrast::ContrastKnobs,
 ) -> Result<Vec<StageAllocation>, AllocationRefusal> {
+    let candidate_slots = u32::try_from(knobs.max_candidates).unwrap_or(u32::MAX);
+    let candidate_slots_min = u32::try_from(knobs.min_candidates).unwrap_or(u32::MAX);
     let adequate = || models.iter().filter(|m| m.adequate);
     let no_model = AllocationRefusal::NoAdequateModel {
         models: models.len(),
@@ -196,6 +207,8 @@ pub fn allocate_stage_models(
             stage: s.stage.clone(),
             model_ref: base.model_ref.clone(),
             impact: s.impact.unwrap_or(0),
+            candidate_slots,
+            candidate_slots_min,
         })
         .collect();
     let mut order: Vec<usize> = (0..stages.len())

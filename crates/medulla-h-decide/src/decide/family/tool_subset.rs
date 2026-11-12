@@ -20,6 +20,7 @@ impl DecisionFamily for ToolSubsetFamily {
         &self,
         _ctx: &ExecutionContext,
         request: &DecideRequest,
+        _policy: &medulla_decision_types::decision::DecisionPolicy,
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         let result = crate::decide::stat_tool_subset::tool_subset_outcome(request)?;

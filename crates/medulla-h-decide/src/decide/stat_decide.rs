@@ -149,7 +149,7 @@ async fn serve(
     .map_err(|error| format!("Decide task failed: {error}"))?
 }
 
-fn decide_blocking(
+pub(super) fn decide_blocking(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
@@ -202,10 +202,12 @@ fn decide_blocking(
     // The kind's family concludes its specialized answer; the shared
     // matrix ladder is the fall-through (R001.101).
     let executed = telemetry::stage(Stage::Solve, family, tenant, || {
-        Ok::<_, String>(match registry.conclude(ctx, request, graph_view) {
-            Some(result) => result?,
-            None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
-        })
+        Ok::<_, String>(
+            match registry.conclude(ctx, request, &policy.policy, graph_view) {
+                Some(result) => result?,
+                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
+            },
+        )
     })?;
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views)
@@ -389,8 +391,15 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
 /// (MEDULLA-DECISION-ENGINE-R179.5). The decision reads the drift thresholds
 /// of the belief slices it consulted through `DriftThresholds::from_policy`.
 fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
+    let contrast: &[medulla_decision_types::decision::knobs::KnobSpec] =
+        if sealing.request.question.kind == QuestionKind::HarnessContrast {
+            medulla_decision_types::decision::harness_contrast::KNOBS
+        } else {
+            &[]
+        };
     medulla_decision_stats::decision::drift::KNOBS
         .iter()
+        .chain(contrast)
         .map(|spec| {
             premise(
                 "policy",

@@ -20,10 +20,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::statistical::{
     FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,
 };
-use crate::decision::QuantScaleTag;
+use crate::decision::{DecisionPolicy, QuantScaleTag};
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::{
@@ -42,6 +43,89 @@ pub const CONTRAST_FEATURE_NAMES: &[&str] = &[
     "retry_delta",
     "tool_selection_delta",
 ];
+
+/// The knobs of the `harness_evolution` family (MEDULLA-DECISION-ENGINE-R179.7).
+/// The candidate bounds are `Fixed`: a knob-set revision never moves them.
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "harness_evolution.min_candidates",
+        unit: "candidates",
+        default: KnobValue::Integer(2),
+        min: KnobValue::Integer(2),
+        max: KnobValue::Integer(8),
+        safety: KnobSafety::Fixed,
+    },
+    KnobSpec {
+        name: "harness_evolution.max_candidates",
+        unit: "candidates",
+        default: KnobValue::Integer(8),
+        min: KnobValue::Integer(2),
+        max: KnobValue::Integer(8),
+        safety: KnobSafety::Fixed,
+    },
+    KnobSpec {
+        name: "harness_evolution.min_eval_delta",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(0),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(500_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "harness_evolution.cost_tie_epsilon",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(20_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(200_000),
+        safety: KnobSafety::Tunable,
+    },
+];
+
+/// A fraction in millionths as a Q32 value (the contrast delta scale).
+fn micros_to_q32(micros: i64) -> i64 {
+    i64::try_from((i128::from(micros) << 32) / 1_000_000).unwrap_or(i64::MAX)
+}
+
+/// The knob values one contrast decision reads (R179.7), resolved from the
+/// pinned policy through [`DecisionPolicy::knob`] (R179.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ContrastKnobs {
+    /// The fewest candidates a contrast decides over.
+    pub min_candidates: usize,
+    /// The most candidates a contrast decides over.
+    pub max_candidates: usize,
+    /// A candidate is adopted only when its `eval_score_delta` exceeds this
+    /// (Q32).
+    pub min_eval_delta: i64,
+    /// Candidates within this of the best `eval_score_delta` (Q32) tie, and
+    /// the lowest `cost_delta` among them wins.
+    pub cost_tie_epsilon: i64,
+}
+
+impl ContrastKnobs {
+    /// Read the four knobs from `policy`.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let count = |spec: &KnobSpec, fallback: usize| match policy.knob(spec) {
+            KnobValue::Integer(v) => usize::try_from(v).unwrap_or(fallback),
+            _ => fallback,
+        };
+        let fraction = |spec: &KnobSpec| match policy.knob(spec) {
+            KnobValue::DecimalMicros(v) => micros_to_q32(v),
+            _ => 0,
+        };
+        Self {
+            min_candidates: count(&KNOBS[0], MIN_CONTRAST_CANDIDATES),
+            max_candidates: count(&KNOBS[1], MAX_CONTRAST_CANDIDATES),
+            min_eval_delta: fraction(&KNOBS[2]),
+            cost_tie_epsilon: fraction(&KNOBS[3]),
+        }
+    }
+
+    /// The knobs of the engine default policy.
+    pub fn defaults() -> Self {
+        Self::from_policy(&DecisionPolicy::engine_default())
+    }
+}
 
 closed_error_codes! {
     /// Every refusal one contrast decision can report (R803.4).
@@ -105,15 +189,15 @@ impl HarnessContrastDecision {
     /// exclusive and complete, the aligned fields agree in length, and the
     /// recorded outcome of the decision is the one its stored inputs
     /// actually produce.
-    pub fn check(&self) -> Result<(), String> {
+    pub fn check(&self, knobs: &ContrastKnobs) -> Result<(), String> {
         let n = self.candidate_version_refs.len();
-        if (MIN_CONTRAST_CANDIDATES..=MAX_CONTRAST_CANDIDATES).contains(&n)
+        if (knobs.min_candidates..=knobs.max_candidates).contains(&n)
             && self.probe_trace_ids.len() == n
             && self.deltas.len() == n
         {
         } else {
             return Err(
-                "the decision's candidate, trace and delta rows must align within 2 to 8"
+                "the decision's candidate, trace and delta rows must align within the candidate bounds"
                     .to_string(),
             );
         }
@@ -128,7 +212,10 @@ impl HarnessContrastDecision {
             (None, Some(_)) => {}
         }
         if self.abstain_reason == Some(HarnessContrastAbstainReason::NoImprovement)
-            && self.deltas.iter().any(|delta| delta.eval_score_delta > 0)
+            && self
+                .deltas
+                .iter()
+                .any(|delta| delta.eval_score_delta > knobs.min_eval_delta)
         {
             return Err(
                 "the recorded abstention is no_improvement but a positive delta is stored"
@@ -242,11 +329,12 @@ pub fn decide_contrast(
     baseline_trace_id: &str,
     candidates: &[ContrastCandidate<'_>],
     evidence: &ContrastEvidence<'_>,
+    knobs: &ContrastKnobs,
 ) -> Result<HarnessContrastDecision, HarnessContrastRefusal> {
-    if candidates.len() < MIN_CONTRAST_CANDIDATES {
+    if candidates.len() < knobs.min_candidates {
         return Err(HarnessContrastRefusal::MinCandidates);
     }
-    if candidates.len() > MAX_CONTRAST_CANDIDATES {
+    if candidates.len() > knobs.max_candidates {
         return Err(HarnessContrastRefusal::TooManyCandidates);
     }
     for candidate in candidates {
@@ -276,6 +364,7 @@ pub fn decide_contrast(
                 .map(|c| c.deltas.clone())
                 .collect::<Vec<_>>()
                 .as_slice(),
+            knobs,
         ) {
             Some(index) => (Some(candidates[index].version_ref.to_string()), None),
             None => (None, Some(HarnessContrastAbstainReason::NoImprovement)),
@@ -350,27 +439,25 @@ fn verify_candidate(
     Ok(())
 }
 
-/// The index of the candidate to adopt (R803.2): the highest positive
-/// `eval_score_delta`, the lower `cost_delta` as the tie-break, the earlier
-/// declaration the last resort. `None` when no candidate improves.
-pub fn adoption_index(deltas: &[HarnessContrast]) -> Option<usize> {
-    let mut best: Option<(i64, i64, usize)> = None;
-    for (index, delta) in deltas.iter().enumerate() {
-        if delta.eval_score_delta <= 0 {
-            continue;
-        }
-        let better = match best {
-            None => true,
-            Some((eval, cost, _)) => {
-                delta.eval_score_delta > eval
-                    || (delta.eval_score_delta == eval && delta.cost_delta < cost)
-            }
-        };
-        if better {
-            best = Some((delta.eval_score_delta, delta.cost_delta, index));
-        }
-    }
-    best.map(|(_, _, index)| index)
+/// The index of the candidate to adopt (R803.2, R179.7): only candidates
+/// whose `eval_score_delta` exceeds `min_eval_delta` qualify. Among them,
+/// those within `cost_tie_epsilon` of the best `eval_score_delta` tie, and the
+/// lowest `cost_delta` wins, then the higher eval, then the earlier
+/// declaration. `None` when no candidate qualifies.
+pub fn adoption_index(deltas: &[HarnessContrast], knobs: &ContrastKnobs) -> Option<usize> {
+    let best = deltas
+        .iter()
+        .map(|delta| delta.eval_score_delta)
+        .filter(|eval| *eval > knobs.min_eval_delta)
+        .max()?;
+    let floor = best.saturating_sub(knobs.cost_tie_epsilon);
+    deltas
+        .iter()
+        .enumerate()
+        .filter(|(_, delta)| delta.eval_score_delta > knobs.min_eval_delta)
+        .filter(|(_, delta)| delta.eval_score_delta >= floor)
+        .min_by_key(|(index, delta)| (delta.cost_delta, -delta.eval_score_delta, *index))
+        .map(|(index, _)| index)
 }
 
 /// The supersession citation of one adoption (R803.5, R802.4): the node id
@@ -415,7 +502,10 @@ pub fn matrix_values(decision: &HarnessContrastDecision) -> Vec<i64> {
 /// evidence (held versions, probe runs, stored contrasts) was read at
 /// decide time and is not replayable; the replay verifies the core and the
 /// digest, the same trust model as the generic replay over a stored matrix.
-pub fn replay_record(record: &StatisticalDecisionRecord) -> Result<(), String> {
+pub fn replay_record(
+    record: &StatisticalDecisionRecord,
+    knobs: &ContrastKnobs,
+) -> Result<(), String> {
     if record.question.kind != QuestionKind::HarnessContrast {
         return Err("the record's question kind is not harness_contrast".to_string());
     }
@@ -423,7 +513,7 @@ pub fn replay_record(record: &StatisticalDecisionRecord) -> Result<(), String> {
         return Err("the record carries no harness contrast decision".to_string());
     };
     decision
-        .check()
+        .check(knobs)
         .map_err(|detail| format!("the stored decision is malformed: {detail}"))?;
     if !matches!(
         record.inputs.feature_matrix,
@@ -462,12 +552,12 @@ pub fn replay_record(record: &StatisticalDecisionRecord) -> Result<(), String> {
                 .iter()
                 .position(|id| id == ref_)
                 .expect("check() verified the adopted candidate was presented");
-            if adoption_index(decision.deltas.as_slice()) != Some(index) {
+            if adoption_index(decision.deltas.as_slice(), knobs) != Some(index) {
                 return Err("the stored deltas do not adopt the recorded candidate".to_string());
             }
         }
         (None, Some(HarnessContrastAbstainReason::NoImprovement))
-            if adoption_index(decision.deltas.as_slice()).is_some() =>
+            if adoption_index(decision.deltas.as_slice(), knobs).is_some() =>
         {
             return Err(
                 "the recorded abstention is no_improvement but the stored deltas improve"
@@ -609,6 +699,7 @@ mod tests {
             "trace:baseline",
             candidates,
             evidence,
+            &ContrastKnobs::defaults(),
         )
     }
 
@@ -658,10 +749,10 @@ mod tests {
             "no_improvement"
         );
         // The decision invariant is checked on the round trip.
-        assert!(decision.check().is_ok());
+        assert!(decision.check(&ContrastKnobs::defaults()).is_ok());
         let mut broken = decision.clone();
         broken.adopted_version_ref = Some("harness-component:prompt:z".into());
-        assert!(broken.check().is_err());
+        assert!(broken.check(&ContrastKnobs::defaults()).is_err());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R803.2
@@ -751,10 +842,19 @@ mod tests {
         );
         // The exposed core agrees with the decision.
         assert_eq!(
-            adoption_index(&[improving.clone(), neutral.clone()]),
+            adoption_index(
+                &[improving.clone(), neutral.clone()],
+                &ContrastKnobs::defaults()
+            ),
             Some(0)
         );
-        assert_eq!(adoption_index(&[neutral.clone(), worse.clone()]), None);
+        assert_eq!(
+            adoption_index(
+                &[neutral.clone(), worse.clone()],
+                &ContrastKnobs::defaults()
+            ),
+            None
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R803.4
@@ -1011,9 +1111,9 @@ mod tests {
         let second = record_for(&decision);
         assert_eq!(first.record_id, second.record_id);
         assert_eq!(first.record_digest, second.record_digest);
-        assert!(replay_record(&first).is_ok());
+        assert!(replay_record(&first, &ContrastKnobs::defaults()).is_ok());
         // A stored value that drifts from the pinned delta fails the replay.
-        assert!(replay_record(&drifted(&first, 0, 1)).is_err());
+        assert!(replay_record(&drifted(&first, 0, 1), &ContrastKnobs::defaults()).is_err());
         // The no_improvement abstention replays only while no positive eval
         // exists.
         let neutral_a = contrast("trace:baseline", "trace:a", 0, 0, 0, 0);
@@ -1038,14 +1138,13 @@ mod tests {
             Some(HarnessContrastAbstainReason::NoImprovement)
         );
         let abstained = record_for(&nothing);
-        assert!(replay_record(&abstained).is_ok());
+        assert!(replay_record(&abstained, &ContrastKnobs::defaults()).is_ok());
         // A positive eval smuggled into the stored matrix breaks the
         // recorded no_improvement abstention.
-        assert!(replay_record(&drifted(
-            &abstained,
-            CONTRAST_FEATURE_NAMES.len() + 1,
-            1 << 32
-        ))
+        assert!(replay_record(
+            &drifted(&abstained, CONTRAST_FEATURE_NAMES.len() + 1, 1 << 32),
+            &ContrastKnobs::defaults()
+        )
         .is_err());
         // The supersession citation resolves to the current adoption of the
         // same agent and task class, and only to it.
@@ -1072,5 +1171,52 @@ mod tests {
             None
         );
         assert_eq!(supersession_citation(None, "agent:one", "deploy"), None);
+    }
+    /// Verifies MEDULLA-DECISION-ENGINE-R179.7: Harness evolution knobs.
+    // spec: MEDULLA-DECISION-ENGINE-R179.7
+    #[test]
+    fn harness_evolution_knobs_gate_adoption_and_break_cost_ties() {
+        for spec in KNOBS {
+            assert!(spec.admits(&spec.default), "{} default", spec.name);
+        }
+        let defaults = ContrastKnobs::defaults();
+        assert_eq!((defaults.min_candidates, defaults.max_candidates), (2, 8));
+        assert_eq!(defaults.min_eval_delta, 0);
+        assert_eq!(defaults.cost_tie_epsilon, micros_to_q32(20_000));
+        let delta = |eval: i64, cost: i64| contrast("trace:baseline", "trace:a", 0, 0, eval, cost);
+        // 0.10 and 0.11 are within the default 0.02 epsilon: the cheaper wins.
+        let tenth = micros_to_q32(100_000);
+        let eleven = micros_to_q32(110_000);
+        let pair = [delta(eleven, 5 << 32), delta(tenth, 1 << 32)];
+        assert_eq!(adoption_index(&pair, &defaults), Some(1));
+        let strict = ContrastKnobs {
+            cost_tie_epsilon: 0,
+            ..defaults
+        };
+        assert_eq!(adoption_index(&pair, &strict), Some(0));
+        // A minimum eval delta above the best candidate adopts nothing.
+        let high = ContrastKnobs {
+            min_eval_delta: micros_to_q32(150_000),
+            ..defaults
+        };
+        assert_eq!(adoption_index(&pair, &high), None);
+        // The knob values come from the pinned policy.
+        let mut policy = DecisionPolicy::engine_default();
+        policy.knobs.insert(
+            crate::decision::knobs::KnobName::new("harness_evolution.min_eval_delta"),
+            KnobValue::DecimalMicros(150_000),
+        );
+        assert_eq!(ContrastKnobs::from_policy(&policy), high);
+        // The candidate bounds are Fixed: a revision cannot move them.
+        let revision = BTreeMap::from([(
+            crate::decision::knobs::KnobName::new("harness_evolution.max_candidates"),
+            KnobValue::Integer(4),
+        )]);
+        assert_eq!(
+            crate::decision::knobs::check_revision(&[KNOBS], &revision)
+                .unwrap_err()
+                .1,
+            crate::decision::knobs::KnobRefusalCode::KnobNotTunable
+        );
     }
 }

@@ -1057,6 +1057,8 @@ mod scope_bound_tests;
 
 mod consumer_tests;
 
+mod harness_contrast_tests;
+
 mod knob_tests;
 
 #[cfg(feature = "query")]

@@ -38,7 +38,7 @@ mod usage_guidance;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
-use medulla_decision_types::decision::PremiseRef;
+use medulla_decision_types::decision::{DecisionPolicy, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 
 use super::stat_executor::{Executed, ExecutionContext};
@@ -66,6 +66,7 @@ pub trait DecisionFamily {
         &self,
         _ctx: &ExecutionContext,
         _request: &DecideRequest,
+        _policy: &DecisionPolicy,
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         None

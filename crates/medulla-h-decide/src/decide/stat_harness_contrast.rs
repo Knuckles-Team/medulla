@@ -21,10 +21,8 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
     decision::harness_contrast::ContrastCandidate, decision::harness_contrast::ContrastEvidence,
-    decision::harness_contrast::HarnessContrastRefusal,
+    decision::harness_contrast::ContrastKnobs, decision::harness_contrast::HarnessContrastRefusal,
     decision::harness_contrast::CONTRAST_FEATURE_NAMES,
-    decision::harness_contrast::MAX_CONTRAST_CANDIDATES,
-    decision::harness_contrast::MIN_CONTRAST_CANDIDATES,
 };
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::DecideRequest,
@@ -124,9 +122,11 @@ pub(super) async fn contrast_evidence_view(
 /// seal in place of the ordinary scored ladder.
 pub(super) fn contrast_executed(
     request: &DecideRequest,
+    policy: &medulla_decision_types::decision::DecisionPolicy,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Option<Result<Executed, String>> {
-    (request.question.kind == QuestionKind::HarnessContrast).then(|| compute(request, graph_view))
+    (request.question.kind == QuestionKind::HarnessContrast)
+        .then(|| compute(request, &ContrastKnobs::from_policy(policy), graph_view))
 }
 
 /// The stored probe run behind one trace id, when the view holds a
@@ -153,14 +153,21 @@ fn refusal_text(
     kind: HarnessContrastRefusal,
     options: &[DeclaredOption],
     held: &BTreeSet<String>,
+    knobs: &ContrastKnobs,
 ) -> String {
     use HarnessContrastRefusal as K;
     let detail = match kind {
         K::MinCandidates => {
-            format!("a contrast decides over at least {MIN_CONTRAST_CANDIDATES} candidate versions")
+            format!(
+                "a contrast decides over at least {} candidate versions",
+                knobs.min_candidates
+            )
         }
         K::TooManyCandidates => {
-            format!("a contrast decides over at most {MAX_CONTRAST_CANDIDATES} candidate versions")
+            format!(
+                "a contrast decides over at most {} candidate versions",
+                knobs.max_candidates
+            )
         }
         K::VersionUnknown => {
             let missing = options
@@ -187,6 +194,7 @@ fn refusal_text(
 /// Read the evidence out of the view and run the kernel.
 fn compute(
     request: &DecideRequest,
+    knobs: &ContrastKnobs,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<Executed, String> {
     let view = graph_view.ok_or_else(|| {
@@ -201,9 +209,10 @@ fn compute(
             "a harness_contrast question declares its own candidates",
         ));
     };
-    if options.len() < MIN_CONTRAST_CANDIDATES || options.len() > MAX_CONTRAST_CANDIDATES {
+    if options.len() < knobs.min_candidates || options.len() > knobs.max_candidates {
         return Err(invalid_parameter(format!(
-            "a contrast decides over {MIN_CONTRAST_CANDIDATES} to {MAX_CONTRAST_CANDIDATES} declared candidates"
+            "a contrast decides over {} to {} declared candidates",
+            knobs.min_candidates, knobs.max_candidates
         )));
     }
     let mut declared: Vec<DeclaredCandidate> = Vec::with_capacity(options.len());
@@ -266,8 +275,9 @@ fn compute(
         baseline_trace_id,
         &candidates,
         &evidence,
+        knobs,
     )
-    .map_err(|kind| refusal_text(kind, options.as_slice(), &held_versions))?;
+    .map_err(|kind| refusal_text(kind, options.as_slice(), &held_versions, knobs))?;
     let outcome = match &decision.adopted_version_ref {
         Some(ref_) => StatisticalOutcome::Explored {
             option_id: ref_.clone(),

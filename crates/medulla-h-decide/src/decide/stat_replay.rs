@@ -13,7 +13,8 @@ use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_types::decision::digest::statistical_record_digest;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::{
-    decision::harness_contrast::replay_record, decision::harness_contrast::CONTRAST_FEATURE_NAMES,
+    decision::harness_contrast::replay_record, decision::harness_contrast::ContrastKnobs,
+    decision::harness_contrast::CONTRAST_FEATURE_NAMES,
 };
 use medulla_decision_types::{
     decision::statistical::keyed::seed_commitment, decision::statistical::keyed::seed_text,
@@ -126,7 +127,7 @@ fn replay_harness_contrast(
     record: &StatisticalDecisionRecord,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = &record.inputs;
-    let (pinned, _policy) = pinned_and_policy(ctx, record)?;
+    let (pinned, policy) = pinned_and_policy(ctx, record)?;
     let mut names = pinned.schema.names();
     names.sort();
     let expected: Vec<&str> = CONTRAST_FEATURE_NAMES.to_vec();
@@ -138,7 +139,8 @@ fn replay_harness_contrast(
     if inputs.head.is_some() {
         return Err(mismatch("a contrast decision pins no head"));
     }
-    replay_record(record).map_err(|detail| mismatch(&detail))?;
+    replay_record(record, &ContrastKnobs::from_policy(&policy.policy))
+        .map_err(|detail| mismatch(&detail))?;
     let mut logged = record.clone();
     logged.record_digest = statistical_record_digest(&logged);
     Ok(logged)

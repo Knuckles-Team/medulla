@@ -52,6 +52,8 @@ fn round_types_round_trip() {
         stage: "propose".into(),
         model_ref: "model:large@3".into(),
         impact: 12,
+        candidate_slots: 8,
+        candidate_slots_min: 2,
     };
     let budget = RunBudget {
         max_cost: 5_000,
@@ -128,6 +130,7 @@ fn stage(id: &str, impact: Option<i64>) -> StageInput {
 
 #[test]
 fn stronger_models_go_to_high_impact_stages() {
+    let knobs = medulla_decision_types::decision::harness_contrast::ContrastKnobs::defaults();
     let models = vec![
         model("base", 1, 1, true),
         model("strong", 5, 9, true),
@@ -144,16 +147,17 @@ fn stronger_models_go_to_high_impact_stages() {
         max_cost: 8,
         max_stronger_stages: 3,
     };
-    let got = allocate_stage_models(&stages, &models, &one).unwrap();
+    let got = allocate_stage_models(&stages, &models, &one, &knobs).unwrap();
     let refs: Vec<&str> = got.iter().map(|a| a.model_ref.as_str()).collect();
     assert_eq!(refs, ["base", "strong", "base", "base"]);
     assert_eq!(got[2].impact, 0);
+    assert_eq!((got[0].candidate_slots, got[0].candidate_slots_min), (8, 2));
     // The stronger-stage cap binds before cost.
     let capped = RunBudget {
         max_cost: 100,
         max_stronger_stages: 2,
     };
-    let got = allocate_stage_models(&stages, &models, &capped).unwrap();
+    let got = allocate_stage_models(&stages, &models, &capped, &knobs).unwrap();
     let refs: Vec<&str> = got.iter().map(|a| a.model_ref.as_str()).collect();
     assert_eq!(refs, ["base", "strong", "base", "strong"]);
     // Refusals.
@@ -161,13 +165,14 @@ fn stronger_models_go_to_high_impact_stages() {
         max_cost: 3,
         max_stronger_stages: 1,
     };
-    let refused = allocate_stage_models(&stages, &models, &poor).unwrap_err();
+    let refused = allocate_stage_models(&stages, &models, &poor, &knobs).unwrap_err();
     assert_eq!(
         refused,
         AllocationRefusal::BudgetBelowMinimum { shortfall: 1 }
     );
     assert_eq!(refused.code(), "ALLOCATION_BUDGET_BELOW_MINIMUM");
-    let none = allocate_stage_models(&stages, &[model("x", 1, 1, false)], &one).unwrap_err();
+    let none =
+        allocate_stage_models(&stages, &[model("x", 1, 1, false)], &one, &knobs).unwrap_err();
     assert_eq!(none, AllocationRefusal::NoAdequateModel { models: 1 });
     assert_eq!(none.code(), "ALLOCATION_NO_ADEQUATE_MODEL");
 }
