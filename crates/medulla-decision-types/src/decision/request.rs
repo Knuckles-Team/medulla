@@ -20,16 +20,10 @@ use medulla_agent_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-/// Which policy decides this request.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "policy", rename_all = "snake_case", deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum DecisionPolicyRef {
-    /// The engine default policy.
-    Default,
-    /// A published `DecisionPolicy` component, pinned by revision digest.
-    Pinned { component: ComponentDependency },
-}
+/// Which policy decides this request: re-exported from the agent-component
+/// vocabulary it wraps, so the `decision::DecisionPolicyRef` path is kept
+/// (MEDULLA-SDLC-R006.7).
+pub use medulla_agent_types::agent_component::DecisionPolicyRef;
 
 /// How a free-text task was mapped onto native task IRIs, and by what.
 ///

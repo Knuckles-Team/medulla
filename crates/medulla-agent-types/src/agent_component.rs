@@ -280,6 +280,18 @@ pub struct ComponentDependency {
     pub definition_digest: String,
 }
 
+/// Which policy decides a request that names one: the engine default, or a
+/// published `DecisionPolicy` component pinned by revision digest.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "policy", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DecisionPolicyRef {
+    /// The engine default policy.
+    Default,
+    /// A published `DecisionPolicy` component, pinned by revision digest.
+    Pinned { component: ComponentDependency },
+}
+
 /// Where a component was ingested FROM.
 ///
 /// Source packages and MCP servers remain the origin of skills, tools, prompts

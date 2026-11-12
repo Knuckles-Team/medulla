@@ -6,6 +6,7 @@
 //! vocabulary they and the served methods share. Every closed set is a serde
 //! enum, so an unknown value is refused at decode.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -119,7 +120,7 @@ impl LifecycleKind {
 pub enum LifecycleRefusal {
     #[error("LIFECYCLE_KIND_UNKNOWN: {0}")]
     KindUnknown(String),
-    #[error("LIFECYCLE_TRACE_DEPTH: depth {0} is outside 1..=8")]
+    #[error("LIFECYCLE_TRACE_DEPTH: depth {0} is below 1")]
     TraceDepth(u8),
     #[error("LIFECYCLE_EDGE_DERIVED_ONLY: {0}")]
     EdgeDerivedOnly(&'static str),
@@ -359,18 +360,26 @@ pub struct TaskStatusAnswer {
     pub tasks: Vec<TaskRowState>,
 }
 
-/// Deepest walk a lifecycle trace accepts.
-pub const TRACE_MAX_DEPTH: u8 = 8;
-/// Records one trace may visit before it reports `truncated`.
-pub const TRACE_NODE_BUDGET: usize = 10_000;
+/// The result-size limits of one trace, resolved from the lifecycle knobs
+/// (MEDULLA-SDLC-R006.7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TraceLimits {
+    pub max_depth: u8,
+    pub node_budget: usize,
+}
 
-/// A request for the records reachable from one anchor.
+/// A request for the records reachable from one anchor. `depth` is checked
+/// only against its lower bound at decode; its ceiling is the
+/// `lifecycle.trace_max_depth` knob, verified by the served handler, and
+/// `policy` names the policy whose knobs bound the answer
+/// (MEDULLA-SDLC-R006.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "LifecycleTraceRequestWire")]
 pub struct LifecycleTraceRequest {
     pub anchor: String,
     pub depth: u8,
     pub kinds: Vec<LifecycleKind>,
+    pub policy: DecisionPolicyRef,
 }
 
 #[derive(Deserialize)]
@@ -380,30 +389,41 @@ struct LifecycleTraceRequestWire {
     depth: u8,
     #[serde(default)]
     kinds: Vec<LifecycleKind>,
+    #[serde(default = "default_policy_ref")]
+    policy: DecisionPolicyRef,
+}
+
+fn default_policy_ref() -> DecisionPolicyRef {
+    DecisionPolicyRef::Default
 }
 
 impl TryFrom<LifecycleTraceRequestWire> for LifecycleTraceRequest {
     type Error = LifecycleRefusal;
 
     fn try_from(wire: LifecycleTraceRequestWire) -> Result<Self, Self::Error> {
-        Self::new(wire.anchor, wire.depth, wire.kinds)
+        let mut request = Self::new(wire.anchor, wire.depth, wire.kinds)?;
+        request.policy = wire.policy;
+        Ok(request)
     }
 }
 
 impl LifecycleTraceRequest {
-    /// Build a request; a depth outside `1..=8` refuses.
+    /// Build a request; a depth below 1 refuses. The depth ceiling is the
+    /// `lifecycle.trace_max_depth` knob, checked by the served handler, not at
+    /// decode (MEDULLA-SDLC-R006.7).
     pub fn new(
         anchor: String,
         depth: u8,
         kinds: Vec<LifecycleKind>,
     ) -> Result<Self, LifecycleRefusal> {
-        if !(1..=TRACE_MAX_DEPTH).contains(&depth) {
+        if depth < 1 {
             return Err(LifecycleRefusal::TraceDepth(depth));
         }
         Ok(Self {
             anchor,
             depth,
             kinds,
+            policy: DecisionPolicyRef::Default,
         })
     }
 }

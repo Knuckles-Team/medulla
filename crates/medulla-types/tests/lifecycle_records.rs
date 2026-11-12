@@ -1,11 +1,16 @@
-//! Lifecycle record models (MEDULLA-SDLC-R002.1, R002.2, R003.1, R005.1, R006.1).
+//! Lifecycle record models (MEDULLA-SDLC-R002.1, R002.2, R003.1, R005.1,
+//! R006.1, R006.7).
 
+use medulla_decision_types::decision::knobs::{KnobSafety, KnobValue};
+use medulla_decision_types::decision::lifecycle::KNOBS;
+use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_source_types::{
     lifecycle::record_deployment, lifecycle::release_range, lifecycle::Defect,
     lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Deployment,
     lifecycle::DeploymentInput, lifecycle::DeploymentOutcome, lifecycle::LifecycleKind,
     lifecycle::LifecycleTraceRequest, lifecycle::Release, lifecycle::Severity,
     lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer, lifecycle::Symptom,
+    lifecycle::TraceLimits,
 };
 
 fn release(version: &str, digests: &[&str]) -> Release {
@@ -128,16 +133,16 @@ fn status_answer_round_trips() {
 #[test]
 fn trace_request_bounds() {
     assert!(LifecycleTraceRequest::new("r".into(), 1, vec![]).is_ok());
-    assert!(LifecycleTraceRequest::new("r".into(), 8, vec![LifecycleKind::Defect]).is_ok());
-    for depth in [0, 9] {
-        assert_eq!(
-            LifecycleTraceRequest::new("r".into(), depth, vec![])
-                .unwrap_err()
-                .code(),
-            "LIFECYCLE_TRACE_DEPTH"
-        );
-    }
-    assert!(serde_json::from_str::<LifecycleTraceRequest>(r#"{"anchor":"r","depth":9}"#).is_err());
+    // The ceiling is the lifecycle.trace_max_depth knob, verified by the
+    // served handler; decode verifies only the lower bound (MEDULLA-SDLC-R006.7).
+    assert!(LifecycleTraceRequest::new("r".into(), 16, vec![LifecycleKind::Defect]).is_ok());
+    assert_eq!(
+        LifecycleTraceRequest::new("r".into(), 0, vec![])
+            .unwrap_err()
+            .code(),
+        "LIFECYCLE_TRACE_DEPTH"
+    );
+    assert!(serde_json::from_str::<LifecycleTraceRequest>(r#"{"anchor":"r","depth":0}"#).is_err());
     let ok: LifecycleTraceRequest =
         serde_json::from_str(r#"{"anchor":"r","depth":3,"kinds":["test_case"]}"#).unwrap();
     assert_eq!(ok.kinds, [LifecycleKind::TestCase]);
@@ -145,4 +150,44 @@ fn trace_request_bounds() {
         LifecycleKind::parse("widget").unwrap_err().code(),
         "LIFECYCLE_KIND_UNKNOWN"
     );
+}
+
+// spec: MEDULLA-SDLC-R006.7
+#[test]
+fn trace_limits_come_from_knobs() {
+    let depth = KNOBS
+        .iter()
+        .find(|spec| spec.name == "lifecycle.trace_max_depth")
+        .expect("lifecycle.trace_max_depth knob declared");
+    assert_eq!(depth.unit, "levels");
+    assert_eq!(depth.default, KnobValue::Integer(8));
+    assert_eq!(depth.min, KnobValue::Integer(1));
+    assert_eq!(depth.max, KnobValue::Integer(16));
+    assert_eq!(depth.safety, KnobSafety::Tunable);
+
+    let budget = KNOBS
+        .iter()
+        .find(|spec| spec.name == "lifecycle.trace_node_budget")
+        .expect("lifecycle.trace_node_budget knob declared");
+    assert_eq!(budget.unit, "records");
+    assert_eq!(budget.default, KnobValue::Integer(10_000));
+    assert_eq!(budget.min, KnobValue::Integer(100));
+    assert_eq!(budget.max, KnobValue::Integer(100_000));
+    assert_eq!(budget.safety, KnobSafety::Tunable);
+
+    // Decode defaults the policy ref and keeps only the depth lower bound; the
+    // knob range is the ceiling the served handler verifies.
+    let request: LifecycleTraceRequest =
+        serde_json::from_str(r#"{"anchor":"r","depth":3}"#).unwrap();
+    assert_eq!(request.policy, DecisionPolicyRef::Default);
+    assert!(KNOBS[0].admits(&KnobValue::Integer(3)));
+    assert!(!KNOBS[0].admits(&KnobValue::Integer(17)));
+
+    // The walk takes the resolved limits as a value, not a constant.
+    let limits = TraceLimits {
+        max_depth: 8,
+        node_budget: 10_000,
+    };
+    let json = serde_json::to_string(&limits).unwrap();
+    assert_eq!(serde_json::from_str::<TraceLimits>(&json).unwrap(), limits);
 }

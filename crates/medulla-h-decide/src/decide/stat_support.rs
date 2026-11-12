@@ -15,16 +15,10 @@ use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::digest::policy_digest;
-use medulla_decision_types::decision::policy::policy_from_attributes;
 use medulla_decision_types::decision::statistical::body::decode_body;
+use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef, StatisticalPolicy};
 use medulla_decision_types::{
     decision::statistical::QuestionKind, decision::statistical::StatisticalErrorCode,
-};
-use medulla_decision_types::{
-    decision::DecisionPolicy, decision::DecisionPolicyRef, decision::QuantScaleTag,
-    decision::QuantisedValue, decision::StatisticalPolicy, decision::TraceFidelityLevel,
-    decision::UnitRationalWire,
 };
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -156,31 +150,10 @@ pub(super) fn pinned_body<T: DeserializeOwned>(
     Ok((body, entry.content_digest))
 }
 
-fn rational(numerator: u64, denominator: u64) -> UnitRationalWire {
-    UnitRationalWire::new(numerator, denominator).expect("default levels are unit rationals")
-}
-
-/// The engine's default statistical levels: alpha 1/10, epsilon 1/20, delta
-/// 1/20, `n_min` 100 per class, k-anonymity 10, minimum ESS 50, tool-call
-/// fidelity, and the ruled 5% audit sample of acted decisions.
+/// The engine's default statistical levels, defined by the decision-policy
+/// seam; the statistical handlers read the levels through this name.
 pub(super) fn default_statistical_policy() -> StatisticalPolicy {
-    StatisticalPolicy {
-        alpha: rational(1, 10),
-        epsilon: rational(1, 20),
-        delta: rational(1, 20),
-        n_min: 100,
-        min_support: 10,
-        min_ess: QuantisedValue {
-            scale: QuantScaleTag::Q32,
-            value: 50 << 32,
-        },
-        min_outcome_fidelity: TraceFidelityLevel::ToolCalls,
-        tenant_public_features: false,
-        audit_sample: rational(1, 20),
-        approved_commit_principals: medulla_types::contract::BoundedVec::default(),
-        compact_after_ms: None,
-        drop_blob_after_ms: None,
-    }
+    medulla_decision_policy::policy::default_statistical_policy()
 }
 
 /// A resolved policy: the body, its digest and its statistical half.
@@ -190,32 +163,36 @@ pub(super) struct ResolvedPolicy {
     pub(super) statistical: StatisticalPolicy,
 }
 
-/// Resolve `reference` for `tenant_id`.
+/// One read handle over the agent library, for the decision-policy seam.
+struct PolicyLibraryHandle<'a>(&'a AgentLibraryStore);
+
+impl<'a> medulla_decision_policy::policy::PolicyLibrary for PolicyLibraryHandle<'a> {
+    /// The retained revisions of `component_id` in `tenant_id`, newest first.
+    fn policy_revisions(
+        &self,
+        tenant_id: &str,
+        component_id: &str,
+    ) -> Result<Vec<AgentComponentEntry>, String> {
+        self.0
+            .component_revisions(tenant_id, component_id)
+            .map_err(|error| error.to_string())
+    }
+}
+
+/// Resolve `reference` for `tenant_id` through the decision-policy seam.
 pub(super) fn resolve_policy(
     store: &AgentLibraryStore,
     tenant_id: &str,
     reference: &DecisionPolicyRef,
 ) -> Result<ResolvedPolicy, String> {
-    let policy = match reference {
-        DecisionPolicyRef::Default => DecisionPolicy::engine_default(),
-        DecisionPolicyRef::Pinned { component } => {
-            let entry = pinned_entry(
-                store,
-                tenant_id,
-                component,
-                AgentComponentKind::DecisionPolicy,
-            )?;
-            policy_from_attributes(&entry.attributes, &entry.content_digest)
-                .map_err(|code| format!("{code}: pinned decision policy"))?
-        }
-    };
-    let statistical = policy
-        .statistical
-        .clone()
-        .unwrap_or_else(default_statistical_policy);
+    let resolved = medulla_decision_policy::policy::resolve_policy(
+        &PolicyLibraryHandle(store),
+        tenant_id,
+        reference,
+    )?;
     Ok(ResolvedPolicy {
-        digest: policy_digest(&policy),
-        policy,
-        statistical,
+        policy: resolved.policy,
+        digest: resolved.digest,
+        statistical: resolved.statistical,
     })
 }

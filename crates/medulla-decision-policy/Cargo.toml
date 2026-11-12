@@ -17,6 +17,7 @@ medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 tracing = "0.1"
 medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 
 [features]
 solve = []
