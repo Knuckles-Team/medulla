@@ -9,3 +9,7 @@ Unknown: the production deployment template and fleet-tool components do not exi
 ## Capacity adjustment ownership (decision engine)
 
 Unknown: who owns the typed capacity adjustment proposal and verdict. Status: DECIDED. The question, verdict and the nine refusal codes live in `MEDULLA-DECISION-ENGINE-R824` under `MEDULLA-DECISION-ENGINE-R112`; model concurrency, circuit breaking and GPU group budgets live in `MEDULLA-DECISION-ENGINE-R825`. Arbora generates the AIMD proposal and actuates. This spec keeps one rule: the evaluator reuses the placement headroom premise and adds no second controller.
+
+## Decision: Leader lease is a tenant-graph record
+
+**Decision.** The leader lease is a tenant-graph lease record updated by compare-and-set on its revision (`MEDULLA-PLACEMENT-R751.761`), modelled as an explicit state machine Free, Held, Expired. Schedules are tenant-graph records. The task-kind to job-spec mapping is a closed table beside the schedule kinds (`MEDULLA-PLACEMENT-R751.762`).

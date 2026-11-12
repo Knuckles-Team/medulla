@@ -1097,3 +1097,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.3` | `crates/medulla-plan/tests/evidence_forest.rs::selection_is_a_forest_within_budget_and_drops_redundant_and_conflicting` (planned) (L2). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.4` | `tests/query/test_evidence_forest_served.py::test_round_with_budget_returns_forest_rows` (planned) (L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.5` | `tests/query/test_evidence_forest_served.py::test_forest_fits_budget_and_keeps_supported_evidence` (planned) (L4). |
+
+- **MEDULLA-FEDERATED-QUERY-R737:** `crates/medulla-exec/tests/rowset_columns.rs::group_and_projection_share_one_typed_row_shape` (planned). Proves the row at its entry point; no receipt is asserted.
+- **MEDULLA-FEDERATED-QUERY-R720.8:** `crates/medulla-h-query/tests/explain_plan_dag.rs::explain_reports_nodes_and_root_count` (planned). Proves the row at its entry point; no receipt is asserted.
+- **MEDULLA-FEDERATED-QUERY-R720.9:** `crates/medulla-uql/tests/union_and_window.rs::union_and_valid_as_of_window_compile_into_one_plan` (planned). Proves the row at its entry point; no receipt is asserted.

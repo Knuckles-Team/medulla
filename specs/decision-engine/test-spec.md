@@ -1275,6 +1275,7 @@ Each test below is planned: its path is the post-split location and its name is 
 
 Entries for rows whose named test is not yet in the tree.
 
+- **MEDULLA-DECISION-ENGINE-R079.6:** `crates/medulla-h-ingest/tests/embedding_set.rs::prepare_builds_the_embedding_set_from_admitted_columns` (planned). Proves the row at its entry point; no receipt is asserted.
 - `MEDULLA-DECISION-ENGINE-R079.4`: planned L3 `tests/source_ingest_sql_columns_served.rs::sql_column_kinds_and_cardinality_control_embedding` drives `SourceIngest` with one column per kind and asserts each exclusion reason and the 100-sample free-text floor.
 - `MEDULLA-DECISION-ENGINE-R081`: planned L1 `crates/medulla-graph-algos/src/algorithms/community.rs::tests::resolver_confidence_weights_bind_a_community` compares assignments across two confidence levels.
 - `MEDULLA-DECISION-ENGINE-R085.1`: planned L1 `crates/medulla-decision-stats/src/decision/legal_option_filter.rs::tests::an_option_failing_the_predicate_is_excluded` plus the admissible pass-through case.

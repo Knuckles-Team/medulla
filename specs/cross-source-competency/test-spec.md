@@ -74,3 +74,6 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | Serve the supply-chain impact report as a Medulla method | `MEDULLA-CQ-XSRC-R011` | `tests/federated/test_supply_chain_impact_served.py::test_method_returns_typed_report` (planned) |
 | Cross-connector join with a provenance record per fact | `MEDULLA-CQ-XSRC-R012.1` | `tests/federated/test_cross_connector_served.py::test_join_across_two_virtual_graphs_carries_provenance` (planned) |
 | An unreadable source is excluded and named in coverage | `MEDULLA-CQ-XSRC-R012.2` | `tests/federated/test_cross_connector_served.py::test_unreadable_source_is_excluded_and_named_in_coverage` (planned) |
+
+- **MEDULLA-CQ-XSRC-R005.6:** `crates/medulla-federation/tests/fragment_trace.rs::trace_carries_authority_rank_generation_and_pushed_fields` (planned). Proves the row at its entry point; no receipt is asserted.
+- **MEDULLA-CQ-XSRC-R009.6:** `crates/medulla-uql/tests/evidence_for_rows.rs::evidence_for_runs_once_per_input_row` (planned). Proves the row at its entry point; no receipt is asserted.

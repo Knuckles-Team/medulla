@@ -104,6 +104,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T098 [US5] MEDULLA-DECISION-ENGINE-R079.1 Typed content-class taxonomy and pure admission gate (producer slice of R079)
 - [ ] T099 [US5] MEDULLA-DECISION-ENGINE-R079.2 Content-class gate and exact-digest skip at enrichment
 - [ ] T100 [US5] MEDULLA-DECISION-ENGINE-R079.3 Duplicate, entropy and size admission at enrichment
+- [ ] T919 [US5] MEDULLA-DECISION-ENGINE-R079.6 Embedding set in SourceIngest prepare
 - [ ] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
 - [ ] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
 - [ ] T103 [US5] MEDULLA-DECISION-ENGINE-R080.1 Typed provenance-rung model and overwrite-protection rule

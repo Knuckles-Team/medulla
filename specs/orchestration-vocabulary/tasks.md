@@ -127,6 +127,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T122 [US6] MEDULLA-ORCH-VOCAB-R012.7.3 Activation: invariant guard, review and atomic publish
 - [ ] T123 [US6] MEDULLA-ORCH-VOCAB-R012.7.4 Evidence: decisions record the active policy revision
 - [ ] T124 [US4] MEDULLA-ORCH-VOCAB-R013.7.1 Model: walkthrough manifest
+- [ ] T177 [US4] MEDULLA-ORCH-VOCAB-R013.7.4 Repository-index and blob reader seams
 - [ ] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
 - [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
 - [ ] T127 [US7] MEDULLA-ORCH-VOCAB-R616.2.1 Export and import a team as OWL
@@ -145,6 +146,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T140 [P] [US8] MEDULLA-ORCH-VOCAB-R802.6 Hot-path proof
 - [ ] T141 [US5] MEDULLA-ORCH-VOCAB-R803 Serve the five run trace queries as one method
 - [ ] T142 [P] [US5] MEDULLA-ORCH-VOCAB-R804 Tenant telemetry snapshot read method
+- [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 Committed-turn receipt feeds the session timing writer
 - [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
 - [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
 - [ ] T145 [P] [US5] MEDULLA-ORCH-VOCAB-R807 Indexed agent-session query method
@@ -166,6 +168,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T161 [US9] MEDULLA-ORCH-VOCAB-R811.2 Add the core state-machine properties
 - [ ] T162 [US9] MEDULLA-ORCH-VOCAB-R811.3 Add state-machine shapes
 - [ ] T163 [US9] MEDULLA-ORCH-VOCAB-R811.4 Add the typed transition refusal
+- [ ] T176 [US9] MEDULLA-ORCH-VOCAB-R811.9 Served error mapper returns TransitionRefused fields
 - [ ] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
 - [ ] T171 [US9] MEDULLA-ORCH-VOCAB-R811.6 Pack extension rule and conformance
 - [ ] T172 [US9] MEDULLA-ORCH-VOCAB-R811.7 Competency question: what can happen next to X

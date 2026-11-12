@@ -46,3 +46,7 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - A second retrieval store for forests. The candidates are graph facts in the one engine.
 
 **Values.** Two hops, a 2000-candidate cap and the penalty weights are starting defaults. The nightly benchmark group `retrieval/evidence_forest` replaces them with measured values. The target is at least 20 percent fewer tokens than top-k at equal recall, p99 150 ms and 128 MiB.
+
+## Decision: One result shape for GROUP and projections
+
+**Decision.** RowSet gains a typed tabular channel (named variables plus typed values per row) used by GROUP and every projection (`MEDULLA-FEDERATED-QUERY-R737`). Id and score stay as ordinary columns. A parallel group-result type would give every consumer two shapes to read.

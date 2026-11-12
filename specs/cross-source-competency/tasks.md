@@ -23,6 +23,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T017 [US1] MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only
 - [ ] T018 [US1] MEDULLA-CQ-XSRC-R005.3 The plan is derived, not authored: planned sources equal the declared authorities
 - [ ] T019 [US1] MEDULLA-CQ-XSRC-R005.4 An unconnected authoritative source yields a typed abstention, not a silent fallback
+- [ ] T047 [US1] MEDULLA-CQ-XSRC-R005.6 Fragment trace carries authority detail
 - [ ] T020 [US1] MEDULLA-CQ-XSRC-R005.5 Row: `EXPLAIN` shows the authority premise for each planned source
 - [ ] T021 [US1] MEDULLA-CQ-XSRC-R006.1 Add the typed `SupplyChainImpactReport` model
 - [ ] T022 [US1] MEDULLA-CQ-XSRC-R006.2 Report carries freshness per source
@@ -43,6 +44,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T037 [US3] MEDULLA-CQ-XSRC-R008.3.4 Acceptance: open incidents and changes listed with the service and contract
 - [ ] T038 [US3] MEDULLA-CQ-XSRC-R008.4 Serve the three generalization questions as Method::CrossSourceQuestion
 - [ ] T039 [US5] MEDULLA-CQ-XSRC-R009.1 Query fixture: claims that touch the report
+- [ ] T048 [US5] MEDULLA-CQ-XSRC-R009.6 Per-input-row EVIDENCE FOR
 - [ ] T040 [US5] MEDULLA-CQ-XSRC-R009.2 Evidence clustering
 - [ ] T041 [US5] MEDULLA-CQ-XSRC-R009.3 Contradiction decay analysis
 - [ ] T042 [US5] MEDULLA-CQ-XSRC-R009.4 Served acceptance through arbora

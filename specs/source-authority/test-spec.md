@@ -41,6 +41,7 @@ Negative cases that must exist: an origin-approved rank-1 declaration with a con
 
 Each entry below is planned. The test file or function does not exist in the tree yet; the row that binds it adds it at the stated path.
 
+- **MEDULLA-SRC-AUTH-R003.6:** `tests/source_authority/test_governed_ledger_harness.py::test_harness_attaches_a_contract_and_reads_authority_rows` (planned). Proves the row at its entry point; no receipt is asserted.
 - `MEDULLA-SRC-AUTH-R003.3`: `crates/medulla-h-admin/src/graph_schema/approved/tests.rs::authority_candidate_needs_matching_action_and_digest` (planned, L2) and `tests/federated/test_source_authority_approval_served.py::test_authority_attach_needs_distinct_approver` (planned, L3).
 - `MEDULLA-SRC-AUTH-R004.6`: `crates/medulla-server-served-tests/src/tests/foreign_tenancy.rs::connected_sources_exclude_another_owners_source` (planned, L2) and `tests/federated/test_source_coverage_served.py::test_other_principals_source_is_unconnected` (planned, L3).
 - `MEDULLA-SRC-AUTH-R004.6.1`: `tests/federated/test_source_coverage_served.py::test_rank_one_wins_and_alternates_listed` (planned, L3).

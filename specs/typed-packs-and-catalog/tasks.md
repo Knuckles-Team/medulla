@@ -243,6 +243,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
 - [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
 - [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
+- [ ] T319 [US5] MEDULLA-TYPED-PACKS-R650.7 Turtle to ObjectModel extractor
 - [ ] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
 - [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
 - [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior

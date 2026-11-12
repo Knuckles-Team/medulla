@@ -148,3 +148,5 @@ One row per leaf requirement. A planned test names the exact path that the row a
 Advance inventory before indexing completes. Both changed and unchanged symbol queries and old cursors must refuse. Reindex; read current span/revision for the changed symbol and stable ID/new generation/current revision for the unchanged symbol. Test rename, deletion, incomplete manifest and raced publication.
 
 Test same-content renames with unchanged grammar suffix and parser/identity scheme: retain symbol IDs while updating file-version and membership. Change the grammar suffix and require reparse; allow changed symbol IDs. Also reparse after parser/identity scheme changes. Independently read current spans, revisions and generation in each case.
+
+- **MEDULLA-REPO-INGEST-R002.1.6:** `crates/medulla-h-ingest/tests/admit_kind.rs::skill_document_is_admitted_and_other_kinds_stay_refused` (planned). Proves the row at its entry point; no receipt is asserted.

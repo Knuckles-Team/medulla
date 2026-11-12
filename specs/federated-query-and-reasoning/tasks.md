@@ -140,6 +140,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 NL planner routes catalog questions to CatalogSearch
 - [ ] T133 [P] [US1] MEDULLA-FEDERATED-QUERY-R720.1 Epistemic row fields
 - [ ] T134 [US1] MEDULLA-FEDERATED-QUERY-R720.2 Confidence, belief and decay stages
+- [ ] T432 [US1] MEDULLA-FEDERATED-QUERY-R720.8 EXPLAIN reports the plan DAG and root count
+- [ ] T433 [US1] MEDULLA-FEDERATED-QUERY-R720.9 UQL union stage and valid-as-of window
 - [ ] T135 [US1] MEDULLA-FEDERATED-QUERY-R720.3 Embedding-similarity clustering stage
 - [ ] T136 [US1] MEDULLA-FEDERATED-QUERY-R720.4 Wiring of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
 - [ ] T137 [US1] MEDULLA-FEDERATED-QUERY-R720.5 Refusal of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
@@ -437,6 +439,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T416 [US5] MEDULLA-FEDERATED-QUERY-R708.8 Share scope of Named stored queries and materialized results
 - [ ] T417 [US5] MEDULLA-FEDERATED-QUERY-R708.9 Lint against trust flags
 - [ ] T418 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.100 The bench gate checks p99 ceilings
+- [ ] T431 [US4] MEDULLA-FEDERATED-QUERY-R737 Typed tabular channel on RowSet
 - [ ] T422 [US4] MEDULLA-FEDERATED-QUERY-R733 UQL aggregates rows by key: the GROUP stage. Size: M, 2 PRs, 6 hours.
 - [ ] T423 [US4] MEDULLA-FEDERATED-QUERY-R734 UQL orders and pages rows: the ORDER and SKIP stages. Size: M, 1 PR, 5 hours.
 - [ ] T424 [US4] MEDULLA-FEDERATED-QUERY-R735 UQL reads edges as rows: the EDGES source. Size: M, 1 PR, 5 hours.

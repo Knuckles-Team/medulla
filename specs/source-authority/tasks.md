@@ -18,6 +18,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T012 [US1] MEDULLA-SRC-AUTH-R002.6 Shape: equal-rank claims by different sources on one (class, facet, scope) are refused inside one graph
 - [ ] T013 [US2] MEDULLA-SRC-AUTH-R003.1 Declare kind `governed.source-authority` with approver scope `governance:approve-source-authority` in `GOVE...
 - [ ] T014 [US2] MEDULLA-SRC-AUTH-R003.2 Attach refuses `vg:approved true` inside a `Pack` or `Ingestion` origin schema source
+- [ ] T066 [US2] MEDULLA-SRC-AUTH-R003.6 Governed-ledger served harness
 - [ ] T015 [US2] MEDULLA-SRC-AUTH-R003.3 AttachApproved accepts an authority candidate bound to its digest
 - [ ] T016 [US2] MEDULLA-SRC-AUTH-R003.4 Planner derives effectiveness from origin, not from the flag
 - [ ] T017 [US2] MEDULLA-SRC-AUTH-R003.5 Proposed rows are listed, never selected

@@ -13,6 +13,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T007 [US1] MEDULLA-CONTRACT-R002.2 Served Decide authorized-tenant path and pack-import journey
 - [ ] T008 [US1] MEDULLA-CONTRACT-R002.3 Installed-wheel / no-source-tree-import check for the Decide and pack-import client surface
 - [ ] T009 [US4] MEDULLA-CONTRACT-R003 Privacy scan covers relocated graph-backends documentation
+- [ ] T116 [US2] MEDULLA-CONTRACT-R061 Method-body vector emitter
 - [ ] T010 [US2] MEDULLA-CONTRACT-R004 Go and JavaScript clients sign bodies through the shared codec
 - [ ] T011 [US1] MEDULLA-CONTRACT-R005 One generated model per wire shape, with typed SPARQL decode
 - [ ] T012 [US2] MEDULLA-CONTRACT-R006.1 Fresh canonical codec export with provenance

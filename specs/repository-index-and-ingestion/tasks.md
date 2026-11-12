@@ -15,6 +15,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T009 [US1] MEDULLA-REPO-INGEST-R011 Ingestion community detection uses pure Leiden
 - [ ] T010 [US3] MEDULLA-REPO-INGEST-R002.1.1 Model
 - [ ] T011 [US3] MEDULLA-REPO-INGEST-R002.1.2 Behavior
+- [ ] T089 [US3] MEDULLA-REPO-INGEST-R002.1.6 Non-Records SourceIngest admission
 - [ ] T012 [US3] MEDULLA-REPO-INGEST-R002.1.3 Wiring
 - [ ] T013 [US3] MEDULLA-REPO-INGEST-R002.1.4 Refusal
 - [ ] T014 [US3] MEDULLA-REPO-INGEST-R002.1.5 Evidence
