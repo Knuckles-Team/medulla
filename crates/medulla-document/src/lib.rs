@@ -37,6 +37,8 @@ mod header;
 mod html;
 /// Deterministic heading- and paragraph-aware chunking (MEDULLA-REPO-INGEST-R652).
 pub mod processing;
+/// Versioned table of the languages with a shipped parser AND resolver (R006.4).
+pub mod semantic_support;
 /// Skill-document step compiler (MEDULLA-REPO-INGEST-R002.1.2).
 pub mod skill_plan;
 /// Source table of contents build and bounded span location (MEDULLA-DECISION-ENGINE-R153.2).
