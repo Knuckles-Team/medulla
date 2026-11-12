@@ -26,6 +26,27 @@ pub(super) fn snapshot_changed(
         && prior != page.source_snapshot_version
 }
 
+/// Whether `page` repeats the position the manifest already recorded without
+/// carrying a single row: the source returned nothing new yet still claims more
+/// remains, and its resume token is the one it was given. Applying it would
+/// leave the image exactly as it was and ask for the same page again.
+pub(super) fn made_no_progress(
+    manifest_ref: &Arc<RwLock<MaterializationManifest>>,
+    page: &MaterialPage,
+) -> bool {
+    if !page.nodes.is_empty() || !page.edges.is_empty() {
+        return false;
+    }
+    let Some(next) = page.next_cursor.as_ref() else {
+        return false;
+    };
+    manifest_ref
+        .read()
+        .ok()
+        .and_then(|manifest| manifest.completeness_cursor.clone())
+        .is_some_and(|recorded| &recorded == next)
+}
+
 /// Fold one applied page into the manifest. The graph stays PARTIAL and invalid even on
 /// the last page: exhausting the source cursor is not availability, because maintained
 /// indexes must first rebuild against this exact resident image.

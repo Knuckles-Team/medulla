@@ -1204,6 +1204,17 @@ impl GraphRegistry {
             }
             return None;
         }
+        if made_no_progress(manifest_ref, &page) {
+            // An empty page whose resume position equals the one already
+            // recorded would be fetched again forever, each round holding the
+            // graph's lifecycle lane. Fail the partial image instead: it is
+            // never advertised as complete, and the next access restarts from
+            // page zero.
+            if let Ok(mut manifest) = manifest_ref.write() {
+                manifest.fail(true);
+            }
+            return None;
+        }
         apply_material_page(&handle.core, &page);
         let next_cursor = page.next_cursor.clone();
         advance_partial_manifest(manifest_ref, &page, next_cursor.clone());
@@ -1379,7 +1390,7 @@ mod material;
 mod reserved;
 use material::{
     advance_partial_manifest, apply_material_page, finish_materialization, load_material,
-    snapshot_changed,
+    made_no_progress, snapshot_changed,
 };
 pub use reserved::{
     validate_graph_name, FOREIGN_SOURCE_RESOURCE_PREFIX, RESERVED_RBAC_RESOURCE_PREFIXES,
@@ -1835,6 +1846,59 @@ mod tests {
 
         // A genuinely unknown name never opens.
         assert!(!reg.open_lazy("no-such-graph"));
+    }
+
+    /// A source that keeps returning an empty page with the resume position it
+    /// was given must not be paged forever: the image fails (never advertised
+    /// complete) and the paging loop ends.
+    struct StuckMaterializer;
+
+    impl GraphMaterializer for StuckMaterializer {
+        fn materialize(&self, _graph_name: &str) -> Option<GraphMaterial> {
+            None
+        }
+
+        fn materialize_page(
+            &self,
+            _graph_name: &str,
+            _cursor: Option<MaterializeCursor>,
+            _page_size: usize,
+        ) -> Option<MaterialPage> {
+            Some(MaterialPage {
+                nodes: Vec::new(),
+                edges: Vec::new(),
+                next_cursor: Some(MaterializeCursor {
+                    node_offset: 5,
+                    edge_offset: 0,
+                    node_after: Some("n4".to_string()),
+                    edge_after: None,
+                }),
+                source_snapshot_version: Some(3),
+                ..MaterialPage::default()
+            })
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R036
+    #[test]
+    fn a_page_that_repeats_its_resume_position_fails_the_image_instead_of_looping() {
+        let mut reg = GraphRegistry::new();
+        let name = "tenant:stuck";
+        reg.register_catalog_only(name, GraphType::Agent, None);
+        reg.set_materializer(Arc::new(StuckMaterializer));
+
+        let outcome = reg.open_lazy_paged(name, 3);
+        let mut cursor = outcome.cursor.expect("the source claims more remains");
+        let mut rounds = 0;
+        while let Some(next) = reg.page_in(name, cursor, 3) {
+            cursor = next;
+            rounds += 1;
+            assert!(rounds < 5, "paging must stop: the cursor never advances");
+        }
+        let manifest = reg.materialization_manifest(name).expect("manifest");
+        assert_eq!(manifest.phase, MaterializationPhase::Failed);
+        assert!(!manifest.valid);
+        assert!(manifest.completeness_cursor.is_none());
     }
 
     /// `open_lazy_paged` (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, DIST-P2-5) materializes a graph
