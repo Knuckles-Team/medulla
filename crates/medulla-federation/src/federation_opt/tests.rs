@@ -1540,7 +1540,7 @@ mod web_metasearch {
         ("https://c.example/3", "Three", "duckduckgo"),
     ];
 
-    fn remote(
+    fn web_remote(
         port: &Arc<WebPort>,
         registry: &ForeignSourceRegistry,
     ) -> crate::federation_opt::web::WebRemote {
@@ -1558,7 +1558,7 @@ mod web_metasearch {
     fn web_search_pushdown_and_ttl() {
         let port = WebPort::new(&THREE);
         let registry = registry();
-        let remote = remote(&port, &registry);
+        let remote = web_remote(&port, &registry);
         let session = session("owner-a", 2_000);
         let mut query = WebQuery::new("needle");
         query.categories = vec!["news".into()];
@@ -1638,7 +1638,7 @@ mod web_metasearch {
     fn web_search_refusals() {
         let port = WebPort::new(&THREE);
         let registry = registry();
-        let remote = remote(&port, &registry);
+        let remote = web_remote(&port, &registry);
         let session = session("owner-refuse", 2_000);
         let t0 = 5_000_000;
         // An argument outside the declared capability refuses before any call.
@@ -1673,14 +1673,14 @@ mod web_metasearch {
             ("https://a/4", "4", "e"),
             ("https://a/5", "5", "e"),
         ]);
-        let cut = web_scan_at(&query, &remote(&many, &registry), &session, t0 + 9_000_000).unwrap();
+        let cut = web_scan_at(&query, &web_remote(&many, &registry), &session, t0 + 9_000_000).unwrap();
         assert_eq!(cut.len(), 3);
         assert!(session.trace().last().unwrap().truncated);
         // A result with no URL is refused.
         let blank = WebPort::new(&[("", "t", "e")]);
         let refused = web_scan_at(
             &WebQuery::new("blank"),
-            &remote(&blank, &registry),
+            &web_remote(&blank, &registry),
             &session,
             t0 + 9_100_000,
         )
@@ -1693,7 +1693,7 @@ mod web_metasearch {
     fn web_result_provenance() {
         let port = WebPort::new(&THREE);
         let registry = registry();
-        let remote = remote(&port, &registry);
+        let remote = web_remote(&port, &registry);
         let session = session("owner-prov", 60_000);
         let query = WebQuery::new("needle");
         let t0 = 7_000_000;
@@ -1726,7 +1726,7 @@ mod web_metasearch {
     fn web_candidates_carry_query_provenance() {
         let port = WebPort::new(&THREE);
         let registry = registry();
-        let remote = remote(&port, &registry);
+        let remote = web_remote(&port, &registry);
         let session = session("owner-cand", 60_000);
         let query = WebQuery::new("needle");
         let rows = web_scan_at(&query, &remote, &session, 9_000_000).unwrap();

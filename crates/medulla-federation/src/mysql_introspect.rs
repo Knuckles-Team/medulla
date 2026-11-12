@@ -16,38 +16,56 @@ const READ_TIMEOUT: Duration = Duration::from_secs(60);
 /// One COLUMNS row.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IsColumn {
+    /// The schema (database) name.
     pub schema: String,
+    /// The table name.
     pub table: String,
+    /// The column, or view, name.
     pub name: String,
+    /// The bare data type name.
     pub data_type: String,
+    /// The full column type text, with length and flags.
     pub column_type: String,
+    /// Whether the column accepts NULL.
     pub nullable: bool,
 }
 
 /// One KEY_COLUMN_USAGE row.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IsKeyColumn {
+    /// The schema (database) name.
     pub schema: String,
+    /// The table name.
     pub table: String,
+    /// The constraint name.
     pub constraint: String,
+    /// The column name.
     pub column: String,
+    /// The referenced (schema, table, column), for a foreign key.
     pub referenced: Option<(String, String, String)>,
 }
 
 /// One STATISTICS row of a non-unique index.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IsIndexColumn {
+    /// The schema (database) name.
     pub schema: String,
+    /// The table name.
     pub table: String,
+    /// The index name.
     pub index: String,
+    /// The column name.
     pub column: String,
 }
 
 /// One VIEWS row.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IsView {
+    /// The schema (database) name.
     pub schema: String,
+    /// The view name.
     pub name: String,
+    /// The view definition text.
     pub definition: String,
 }
 
@@ -59,9 +77,13 @@ pub struct InformationSchema {
     pub version: String,
     /// `(schema, name)` of every base table.
     pub tables: Vec<(String, String)>,
+    /// Every COLUMNS row.
     pub columns: Vec<IsColumn>,
+    /// Every KEY_COLUMN_USAGE row.
     pub keys: Vec<IsKeyColumn>,
+    /// Every non-unique index column.
     pub indexes: Vec<IsIndexColumn>,
+    /// Every view.
     pub views: Vec<IsView>,
     /// `(schema, table, check clause)`; read on MariaDB only.
     pub checks: Vec<(String, String, String)>,
