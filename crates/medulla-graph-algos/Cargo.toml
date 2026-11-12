@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-compute = { path = "../medulla-compute" }
+medulla-numeric = { path = "../medulla-numeric" }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-core = { path = "../medulla-core" }

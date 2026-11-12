@@ -53,8 +53,11 @@ fn handle_primitives(req_id: u64, method: Method) -> Result<Response, Method> {
             )
         }
         Method::DsKMeans { data, k, max_iter } => {
-            let result = medulla_compute::datascience::primitives::kmeans(&data, k, max_iter);
-            Response::ok(req_id, ResultPayload::of::<results::DsKMeans>(result))
+            match medulla_compute::datascience::primitives::kmeans(&data, k, max_iter) {
+                Ok(result) => Response::ok(req_id, ResultPayload::of::<results::DsKMeans>(result)),
+                // The typed refusal renders as `CLUSTERING_<REASON>: <text>` (MEDULLA-CLUSTER-R001.3).
+                Err(refusal) => Response::err(req_id, refusal.to_string()),
+            }
         }
         Method::DsPca { data, n_components } => {
             let result = medulla_compute::datascience::primitives::pca(&data, n_components);

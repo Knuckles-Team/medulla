@@ -230,7 +230,10 @@ pub(super) fn probe_ivfpq(scale: usize, seed: u64) -> Result<Observation, ProbeE
         dim,
         nlist: 16.min(training_len),
         m: 2,
-        kmeans_iters: 2,
+        cluster: medulla_ann::ClusterConfig {
+            max_steps: 2,
+            ..Default::default()
+        },
         opq_iters: 0,
         seed,
     };

@@ -99,7 +99,7 @@ mod tests {
             dim,
             nlist: 48,
             m: 8,
-            kmeans_iters: 12,
+            cluster: Default::default(),
             opq_iters: 4,
             seed: 1,
         };

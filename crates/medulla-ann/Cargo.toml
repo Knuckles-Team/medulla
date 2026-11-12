@@ -36,10 +36,10 @@ cudarc = { version = "0.17", optional = true, default-features = false, features
 medulla-modality = { path = "../medulla-modality", optional = true }
 # Embedding-set drift detection (`src/drift.rs`, CONCEPT:MEDULLA-KG.sharding.semantic-embedding-store-backed depth):
 # reuses the shared numeric kernel's `percentile` for PSI bin edges. Optional,
-# only under `drift` (default OFF) — medulla-numeric's own default build is BLAS/
+# now a normal dependency (the clustering kernel lives there) — medulla-numeric's own default build is BLAS/
 # LAPACK-free (ndarray + nalgebra, no statrs/pyo3), but a Pi/default `medulla-ann` build
 # still links none of it unless this is opted in.
-medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-numeric = { path = "../medulla-numeric" }
 # `drift.rs` passes an `ArrayView1<f64>` into `medulla_numeric::reductions::percentile`
 # (its public signature), so it needs `ndarray` directly. Version-pinned to match
 # medulla-numeric's own `ndarray = "0.17"` so the `ArrayView1` types unify to one crate
@@ -50,13 +50,13 @@ ndarray = { version = "0.17", optional = true }
 default = []
 # Embedding-set drift detection (population-stability-index over the norm /
 # per-dimension value distributions). OFF by default — see `src/drift.rs`.
-drift = ["dep:medulla-numeric", "dep:ndarray"]
+drift = ["dep:ndarray"]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 # flat::FlatIndex` + the `modality_conformance_tests!` battery. OFF by default,
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p medulla-ann
 # --features contract` runs the suite.
-contract = ["dep:medulla-modality", "medulla-numeric?/contract"]
+contract = ["dep:medulla-modality", "medulla-numeric/contract"]
 # GPU distance DISPATCH SEAM (CONCEPT:MEDULLA-326): compiles the `DistanceBackend` trait +
 # backend selection. The pure-Rust CPU backend is ALWAYS the compiled-in fallback; this
 # marker just opts a build into the seam (and is implied by `gpu-cuda`). No accelerator

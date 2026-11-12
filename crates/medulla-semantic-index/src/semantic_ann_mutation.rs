@@ -52,6 +52,7 @@ impl SemanticStore {
     ) -> Result<(), EmbeddingDimensionError> {
         self.validate_embedding(&embedding)?;
         self.arena.insert(node_id.clone(), &embedding)?;
+        self.note_build_write(&[node_id.as_str()]);
         self.generation.bump();
         let live_len = self.arena.len();
         self.maintain_incremental_index(&node_id, &embedding, live_len);
@@ -74,9 +75,11 @@ impl SemanticStore {
 
     /// Incrementally remove `node_id`'s embedding and tombstone its ANN row.
     pub fn remove_embedding(&mut self, node_id: &str) -> bool {
+        let moved = self.arena.ids.last().cloned();
         if !self.arena.remove(node_id) {
             return false;
         }
+        self.note_build_write(&[node_id, moved.as_deref().unwrap_or(node_id)]);
         self.generation.bump();
         let live_len = self.arena.len();
         if let Some(ann) = self.index.write().as_mut() {

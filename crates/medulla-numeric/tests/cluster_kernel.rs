@@ -553,3 +553,46 @@ fn kernel_has_no_ffi_and_no_target_cpu_flags() {
         assert!(!manifest.contains(banned), "manifest names {banned}");
     }
 }
+
+// spec: MEDULLA-CLUSTER-R001.4
+#[test]
+fn kernel_is_the_only_trainer() {
+    let root = repo_root();
+    let mut files = Vec::new();
+    rust_files(&root.join("crates"), &mut files);
+    rust_files(&root.join("src"), &mut files);
+    let kernel = root.join("crates/medulla-numeric/src/cluster");
+    let mut scanned = 0;
+    let mut findings = Vec::new();
+    for f in files {
+        let norm = f.components().collect::<std::path::PathBuf>();
+        let this_file = norm.ends_with("medulla-numeric/tests/cluster_kernel.rs");
+        if norm.starts_with(&kernel) || this_file || norm.to_string_lossy().contains("/target") {
+            continue;
+        }
+        let Ok(src) = std::fs::read_to_string(&f) else {
+            continue;
+        };
+        scanned += 1;
+        for banned in [
+            "fn lloyd_step",
+            "fn update_centroids",
+            "fn kmeans_plus_plus",
+            "fn kmeanspp_init",
+            "fn worst_fit_point",
+            "fn assign_labels",
+            "fn nearest_centroid",
+            "fn batch_assign_dispatch",
+        ] {
+            if src.contains(banned) {
+                findings.push(format!("{}: {banned}", f.display()));
+            }
+        }
+        // A function named `kmeans` outside the kernel may only delegate to it.
+        if src.contains("fn kmeans(") && !src.contains("cluster::") {
+            findings.push(format!("{}: fn kmeans without a kernel call", f.display()));
+        }
+    }
+    assert!(scanned > 500, "scan universe too small: {scanned} files");
+    assert!(findings.is_empty(), "second trainer found: {findings:#?}");
+}

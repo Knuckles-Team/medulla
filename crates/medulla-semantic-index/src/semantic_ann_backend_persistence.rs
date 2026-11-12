@@ -58,6 +58,8 @@ impl AnnIndex {
             row_to_id,
             id_to_row,
             dim,
+            tracker: None,
+            drift_threshold: 0.0,
         })
     }
 }

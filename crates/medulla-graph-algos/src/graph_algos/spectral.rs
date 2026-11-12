@@ -11,13 +11,13 @@
 #![allow(clippy::needless_range_loop)] // dense numeric kernels index several arrays at once
 
 use super::{stoer_wagner, AdjacencyGraph, MincutPartition};
+use medulla_numeric::cluster::{fit_simple, ClusterConfig, Rows};
 use std::hash::Hash;
 
 /// Lanczos steps used by [`spectral_partition`].
 pub const LANCZOS_ITERATIONS: usize = 100;
 /// Smallest graph a topology analytic accepts.
 pub const TOPOLOGY_MIN_NODES: usize = 3;
-const KMEANS_MAX_ITERATIONS: usize = 100;
 const EPS: f64 = 1e-10;
 
 /// Kernel refusals shared by the topology analytics.
@@ -150,7 +150,7 @@ where
             row.iter_mut().for_each(|x| *x /= norm);
         }
     }
-    let assignment = kmeans(&embedding, k.min(n), &mut rng);
+    let assignment = cluster_embedding(&embedding, k.min(n), seed)?;
     let mut groups: Vec<Vec<usize>> = vec![Vec::new(); k.min(n)];
     for (i, &c) in assignment.iter().enumerate() {
         groups[c].push(i);
@@ -166,6 +166,25 @@ where
         modularity,
         iterations: basis.len() as u32,
     })
+}
+
+/// Cluster the row-normalized embedding with the shared clustering kernel
+/// (MEDULLA-CLUSTER-R008.6). The seed fixes the run; ties go to the lowest cell.
+fn cluster_embedding(
+    embedding: &[Vec<f64>],
+    k: usize,
+    seed: u64,
+) -> Result<Vec<usize>, TopologyKernelError> {
+    let dim = embedding.first().map_or(0, Vec::len);
+    let flat: Vec<f32> = embedding.iter().flatten().map(|&x| x as f32).collect();
+    let cfg = ClusterConfig {
+        seed,
+        at_most_k: true,
+        ..ClusterConfig::default()
+    };
+    let out = fit_simple(Rows::new(&flat, embedding.len(), dim), k, &cfg)
+        .map_err(|_| TopologyKernelError::InvalidParam("embedding"))?;
+    Ok(out.labels.into_iter().map(|l| l as usize).collect())
 }
 
 fn dot(a: &[f64], b: &[f64]) -> f64 {
@@ -291,75 +310,6 @@ fn jacobi_eigen(mut a: Vec<Vec<f64>>) -> (Vec<f64>, Vec<Vec<f64>>) {
     ((0..r).map(|i| a[i][i]).collect(), v)
 }
 
-fn sq_dist(a: &[f64], b: &[f64]) -> f64 {
-    a.iter().zip(b).map(|(x, y)| (x - y) * (x - y)).sum()
-}
-
-/// Seeded k-means with k-means++ initialization; ties go to the lowest centroid.
-fn kmeans(points: &[Vec<f64>], k: usize, rng: &mut SeededRng) -> Vec<usize> {
-    let n = points.len();
-    let mut centroids: Vec<Vec<f64>> = vec![points[(rng.next_u64() % n as u64) as usize].clone()];
-    let mut nearest: Vec<f64> = points.iter().map(|p| sq_dist(p, &centroids[0])).collect();
-    while centroids.len() < k {
-        let total: f64 = nearest.iter().sum();
-        let pick = if total <= EPS {
-            centroids.len() % n
-        } else {
-            let mut target = rng.next_f64() * total;
-            let mut chosen = n - 1;
-            for (i, &d) in nearest.iter().enumerate() {
-                if target < d {
-                    chosen = i;
-                    break;
-                }
-                target -= d;
-            }
-            chosen
-        };
-        centroids.push(points[pick].clone());
-        let c = centroids.last().unwrap();
-        for (i, p) in points.iter().enumerate() {
-            nearest[i] = nearest[i].min(sq_dist(p, c));
-        }
-    }
-    let mut assignment = vec![0usize; n];
-    for _ in 0..KMEANS_MAX_ITERATIONS {
-        let mut changed = false;
-        for (i, p) in points.iter().enumerate() {
-            let best = (0..k)
-                .min_by(|&a, &b| {
-                    sq_dist(p, &centroids[a])
-                        .total_cmp(&sq_dist(p, &centroids[b]))
-                        .then(a.cmp(&b))
-                })
-                .unwrap_or(0);
-            if assignment[i] != best {
-                assignment[i] = best;
-                changed = true;
-            }
-        }
-        let dims = points[0].len();
-        let mut sums = vec![vec![0.0; dims]; k];
-        let mut counts = vec![0usize; k];
-        for (i, p) in points.iter().enumerate() {
-            counts[assignment[i]] += 1;
-            sums[assignment[i]]
-                .iter_mut()
-                .zip(p)
-                .for_each(|(s, x)| *s += x);
-        }
-        for c in 0..k {
-            if counts[c] > 0 {
-                centroids[c] = sums[c].iter().map(|s| s / counts[c] as f64).collect();
-            }
-        }
-        if !changed {
-            break;
-        }
-    }
-    assignment
-}
-
 /// Newman modularity of `groups` over an undirected weighted adjacency.
 pub(crate) fn modularity(adjacency: &[Vec<(usize, f64)>], groups: &[Vec<usize>], n: usize) -> f64 {
     let mut community = vec![0usize; n];
@@ -408,6 +358,7 @@ mod tests {
 
     /// Verifies MEDULLA-FEDERATED-QUERY-R607.2: Behavior: partitions
     // spec: MEDULLA-FEDERATED-QUERY-R607.2
+    // spec: MEDULLA-CLUSTER-R008.6
     #[test]
     fn planted_partition_is_recovered_and_ids_are_stable() {
         let g = planted();

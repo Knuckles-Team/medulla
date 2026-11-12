@@ -16,7 +16,7 @@
 //!      semiring join `{(x,z) | (x,y)∈A, (y,z)∈B}`. It is factored behind a trait with an
 //!      always-compiled [`CpuBackend`] (hash-join) and a feature-gated
 //!      `cuda::CudaBackend` (a two-pass CSR join kernel), mirroring
-//!      `medulla-ann::kmeans_gpu`'s `AssignBackend` seam EXACTLY — CPU-only builds link no
+//!      the clustering kernel's `AssignBackend` seam (`medulla_numeric::cluster`) EXACTLY — CPU-only builds link no
 //!      accelerator, and any device/compile/launch failure degrades that call to CPU.
 //!
 //! Correctness anchors (see `tests`): [`infer_semi_naive`] derives the SAME set of facts

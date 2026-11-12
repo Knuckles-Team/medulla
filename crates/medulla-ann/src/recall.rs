@@ -259,7 +259,7 @@ mod tests {
             dim,
             nlist: 32,
             m: dim / 4,
-            kmeans_iters: 15,
+            cluster: Default::default(),
             opq_iters: 4,
             seed: 7,
         };
@@ -309,7 +309,7 @@ mod tests {
             dim,
             nlist: 64,
             m: dim / 4,
-            kmeans_iters: 12,
+            cluster: Default::default(),
             opq_iters: 3,
             seed: 7,
         };

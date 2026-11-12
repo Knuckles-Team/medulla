@@ -20,7 +20,7 @@ test-support = ["medulla-types/test-support", "medulla-protocol-types/test-suppo
 # Decide layer's conformal kernels, so finance links medulla-numeric (always-built
 # conformal/risk modules; no `decision` feature needed), and turns trend flips
 # into CEP events for medulla-stream's NFA (its runtime-free batch core; no tokio).
-finance = ["dep:nalgebra", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "dep:medulla-numeric", "medulla-numeric/analytics", "dep:medulla-stream"]
+finance = ["dep:nalgebra", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-numeric/analytics", "dep:medulla-stream"]
 datascience = ["dep:rand_chacha", "medulla-types/datascience", "medulla-result-types/datascience", "medulla-protocol-types/datascience"]
 # Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining): pure-Rust,
 # dependency-light frequent-itemset + association-rule mining. It turns on the
@@ -29,7 +29,7 @@ datascience = ["dep:rand_chacha", "medulla-types/datascience", "medulla-result-t
 # significance uses and -- with `medulla-numeric/motif` (EH-529, ANALYTICS-HARVEST AH-09)
 # -- for `MineAnomaly`'s `Algorithm::MatrixProfileDiscord` alone, which reuses the
 # medulla-numeric matrix-profile kernel rather than a second implementation.
-mining = ["medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "dep:medulla-geo", "dep:medulla-numeric", "medulla-numeric/motif"]
+mining = ["medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "dep:medulla-geo", "medulla-numeric/motif"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor):
 # a pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph whose
 # learned per-feature edge functions ARE queryable KG artifacts. Reuses the
@@ -50,7 +50,7 @@ solve = ["medulla-decision-policy/solve"]
 decide = ["solve", "mining"]
 # The statistical half of the Decide layer: heads, calibration and the
 # off-policy estimators, which are medulla-numeric kernels.
-decide-stats = ["decide", "dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision"]
+decide-stats = ["decide", "medulla-numeric/decision", "medulla-decision-stats/decision"]
 # GPU transitive-closure DISPATCH SEAM (CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu):
 # compiles the `ClosureBackend` trait + backend selection in `reasoning_closure`. The
 # pure-Rust CPU hash-join is ALWAYS the compiled-in fallback; this marker just opts a
@@ -70,7 +70,7 @@ gpu-cuda = ["gpu", "dep:cudarc"]
 # `resolve_candidates` live in the always-on `algorithms` module and `Symbol` lives in
 # the always-on `ast` module, so `contract` needs no other feature implied.
 # `cargo test -p medulla-compute --features contract` runs the suite.
-contract = ["dep:medulla-modality", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract", "medulla-numeric?/contract", "medulla-stream?/contract"]
+contract = ["dep:medulla-modality", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract", "medulla-numeric/contract", "medulla-stream?/contract"]
 ast = [
     "dep:tree-sitter",
     "dep:tree-sitter-python",
@@ -129,7 +129,7 @@ medulla-geo = { path = "../medulla-geo", default-features = false, optional = tr
 # The exact numeric kernels the statistical decision surface is built on
 # (calibration, conformal prediction, off-policy estimators). Optional so a
 # build without `decide-stats` links none of it.
-medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-numeric = { path = "../medulla-numeric" }
 # The CEP engine trend-flip events run through (finance::market::events).
 medulla-stream = { path = "../medulla-stream", optional = true }
 serde = { version = "1.0", features = ["derive", "rc"] }

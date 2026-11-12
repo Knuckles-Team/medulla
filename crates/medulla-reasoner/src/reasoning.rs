@@ -14,7 +14,7 @@
 // relations and derived SEMI-NAIVELY (each round works the per-round delta, not a full
 // re-scan), and Rule 5 (transitive closure) — the one sparse-matrix-shaped rule — runs
 // through a `ClosureBackend` seam with an always-compiled CPU hash-join and a
-// feature-gated (`gpu-cuda`) CUDA kernel, mirroring `medulla-ann::kmeans_gpu`. This module owns
+// feature-gated (`gpu-cuda`) CUDA kernel, mirroring the clustering kernel's `AssignBackend` in `medulla-numeric`. This module owns
 // fact extraction from `GraphCore` and the write-back of derived facts; the inference is
 // delegated. (Supersedes the earlier string-keyed naive fixpoint that lived here.)
 

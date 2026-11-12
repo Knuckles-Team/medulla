@@ -4,8 +4,12 @@
 //! given scale, measures brute-force vs ADC-only vs ADC+refine recall@10, query
 //! latency, and the index footprint. Run:
 //!
-//!   cargo bench -p medulla-ann --bench recall -- 100000 128 1024 32 32 200
-//!   #                                        N      dim  nlist m nprobe queries
+//!   cargo bench -p medulla-ann --bench recall -- 100000 128 1024 32 32 200 emeans
+//!   #                                        N      dim  nlist m nprobe queries mode
+//!
+//! `mode` is `emeans` (default) or `exact`: the two modes of the shared clustering
+//! kernel (MEDULLA-CLUSTER-R010.1). The run prints `build_s`, `inertia` (mean squared
+//! distance of the training sample to its coarse centroid), `peak_rss_mb` and recall@10.
 //!
 //! Scales to 1M; defaults are CI-sane.
 
@@ -81,6 +85,11 @@ fn main() {
     let m: usize = a.get(4).and_then(|s| s.parse().ok()).unwrap_or(dim / 4);
     let nprobe: usize = a.get(5).and_then(|s| s.parse().ok()).unwrap_or(32);
     let nq: usize = a.get(6).and_then(|s| s.parse().ok()).unwrap_or(200);
+    let mode = a.get(7).map_or("emeans", String::as_str);
+    assert!(
+        matches!(mode, "emeans" | "exact"),
+        "mode must be emeans or exact"
+    );
 
     println!(
         "medulla-ann recall bench: N={n} dim={dim} nlist={nlist} m={m} nprobe={nprobe} q={nq}"
@@ -91,7 +100,10 @@ fn main() {
         dim,
         nlist,
         m,
-        kmeans_iters: 25,
+        cluster: medulla_ann::ClusterConfig {
+            exact: mode == "exact",
+            ..Default::default()
+        },
         opq_iters: 8,
         seed: 7,
     };
@@ -99,7 +111,25 @@ fn main() {
     println!("training on {} sample vectors...", sample.len());
     let t = Instant::now();
     let mut idx = IvfPq::train(&params, &sample);
-    println!("  trained in {:.1}s", t.elapsed().as_secs_f64());
+    let build_s = t.elapsed().as_secs_f64();
+    println!("  trained in {build_s:.1}s");
+    println!("build_s={build_s:.3} mode={mode}");
+    let nlist_built = idx.coarse_centroids.len() / dim;
+    let inertia = sample
+        .iter()
+        .map(|v| {
+            let rv = rotate(&idx.rotation, v);
+            let (_, d) = medulla_numeric::cluster::nearest_with_dist(
+                &rv,
+                &idx.coarse_centroids,
+                dim,
+                nlist_built,
+            );
+            f64::from(d)
+        })
+        .sum::<f64>()
+        / sample.len() as f64;
+    println!("inertia={inertia:.6}");
 
     let t = Instant::now();
     let items: Vec<(u64, Vec<f32>)> = data
@@ -162,6 +192,28 @@ fn main() {
         "ADC+refine recall@10  : {:.4}   {:.2} ms/query",
         refined.0, refined.1
     );
+    println!("recall_at_10={:.4} peak_rss_mb={}", refined.0, peak_rss_mb());
+}
+
+/// Apply the row-major OPQ rotation `r` (`dim*dim`) to `v`.
+fn rotate(r: &[f32], v: &[f32]) -> Vec<f32> {
+    let n = v.len();
+    (0..n)
+        .map(|i| r[i * n..(i + 1) * n].iter().zip(v).map(|(a, b)| a * b).sum())
+        .collect()
+}
+
+/// Peak resident set of this process in MiB (Linux `VmHWM`; 0 elsewhere).
+fn peak_rss_mb() -> u64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("VmHWM:"))
+                .and_then(|l| l.split_whitespace().nth(1))
+                .and_then(|kb| kb.parse::<u64>().ok())
+        })
+        .map_or(0, |kb| kb / 1024)
 }
 
 fn idx_ref(i: &IvfPq) -> &IvfPq {

@@ -15,7 +15,9 @@
 //! indexes. The image's durable leg is an admitted `Native(SemanticIndex)`
 //! mutation (`compute::semantic_ann_codes`), never a directory this crate writes.
 
-use medulla_ann::{IvfPq, IvfPqParams, SearchParams};
+use crate::semantic::BuildHooks;
+use medulla_ann::{IvfPq, IvfPqParams, SearchParams, TrainHooks};
+use medulla_numeric::cluster::{CentroidTracker, ClusterRefusal};
 use std::collections::HashMap;
 
 /// Train + switch to the IVF-PQ index once the store holds at least this many
@@ -23,14 +25,14 @@ use std::collections::HashMap;
 pub const ANN_BUILD_THRESHOLD: usize = 4096;
 const MAX_MAINTAINED_DIMENSION: usize =
     medulla_index_types::embedding::MAX_MAINTAINED_ANN_DIMENSIONS;
-const MAX_INDEX_ROWS: usize = 5_000_000;
+pub(crate) const MAX_INDEX_ROWS: usize = 5_000_000;
 const ID_MAP_MAGIC: &[u8] = b"EGIDS\x01\0";
 const MAX_ID_MAP_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_IDS: usize = 5_000_000;
 const MAX_NODE_ID_BYTES: usize = 4_096;
 
 /// Target IVF cells ≈ √N, clamped to a sane range for small/medium stores.
-fn nlist_for(n: usize) -> usize {
+pub(crate) fn nlist_for(n: usize) -> usize {
     ((n as f64).sqrt() as usize).clamp(16, 65_536)
 }
 
@@ -50,7 +52,7 @@ fn m_for(dim: usize) -> usize {
 }
 
 /// L2-normalise (returns the input unchanged if it is all-zero).
-fn normalize(v: &[f32]) -> Vec<f32> {
+pub(crate) fn normalize(v: &[f32]) -> Vec<f32> {
     let norm = v.iter().map(|x| x * x).sum::<f32>().sqrt();
     if norm == 0.0 {
         return v.to_vec();
@@ -66,9 +68,93 @@ pub struct AnnIndex {
     /// node id → its CURRENT live row id (latest insert wins).
     id_to_row: HashMap<String, u64>,
     dim: usize,
+    /// Follows the codebook as rows arrive (MEDULLA-CLUSTER-R009); `None` for an
+    /// index reopened from a durable image, whose training spread is unknown.
+    tracker: Option<CentroidTracker>,
+    /// Drift ratio at which the index counts as stale.
+    drift_threshold: f64,
 }
 
 impl AnnIndex {
+    /// Train the codebooks on `sample` with the kernel (cancellable, progress-reporting).
+    pub(crate) fn train_codebooks(
+        sample: &[Vec<f32>],
+        dim: usize,
+        n: usize,
+        hooks: &BuildHooks,
+    ) -> Result<IvfPq, ClusterRefusal> {
+        let mut params = training_params(dim, n);
+        params.cluster = hooks.cluster.clone();
+        IvfPq::train_with(
+            &params,
+            sample,
+            &TrainHooks {
+                cancel: &hooks.cancel,
+                sink: hooks.sink.as_ref(),
+            },
+        )
+    }
+
+    /// Encode `rows` (id, normalized vector) into a trained index. Duplicate ids keep
+    /// their last vector. Returns `None` when a row is not admissible.
+    pub(crate) fn from_trained(
+        mut index: IvfPq,
+        sample: &[Vec<f32>],
+        rows: Vec<(String, Vec<f32>)>,
+        dim: usize,
+        hooks: &BuildHooks,
+    ) -> Option<Self> {
+        let mut last: HashMap<&str, usize> = HashMap::with_capacity(rows.len());
+        for (i, (id, _)) in rows.iter().enumerate() {
+            last.insert(id.as_str(), i);
+        }
+        let mut row_to_id = Vec::with_capacity(last.len());
+        let mut id_to_row = HashMap::with_capacity(last.len());
+        let mut items = Vec::with_capacity(last.len());
+        for (i, (id, v)) in rows.iter().enumerate() {
+            if last.get(id.as_str()) != Some(&i) {
+                continue;
+            }
+            if v.len() != dim || id.len() > MAX_NODE_ID_BYTES || v.iter().any(|x| !x.is_finite()) {
+                return None;
+            }
+            let row = row_to_id.len() as u64;
+            id_to_row.insert(id.clone(), row);
+            row_to_id.push(id.clone());
+            items.push((row, v.clone()));
+        }
+        medulla_numeric::cluster::run_in_pool(hooks.cluster.resolved_threads(), || {
+            index.add(&items)
+        });
+        let spread = mean_coarse_distance(&index, sample);
+        let tracker = CentroidTracker::new(
+            index.coarse_centroids.clone(),
+            dim,
+            spread,
+            hooks.cluster.online_window,
+        );
+        Some(Self {
+            index,
+            row_to_id,
+            id_to_row,
+            dim,
+            tracker: Some(tracker),
+            drift_threshold: hooks.cluster.refresh_drift_ratio,
+        })
+    }
+
+    /// Whether ingest has drifted past `cluster.refresh_drift_ratio` since the build.
+    pub fn is_stale(&self) -> bool {
+        self.tracker
+            .as_ref()
+            .is_some_and(|t| t.is_stale(self.drift_threshold))
+    }
+
+    /// Ratio of the ingest spread to the training spread, once warmed up.
+    pub fn drift_ratio(&self) -> Option<f64> {
+        self.tracker.as_ref().and_then(CentroidTracker::drift_ratio)
+    }
+
     /// Train on a sample of the embeddings and encode them all. CONCEPT:MEDULLA-KG.storage.arena-row-append — the
     /// store now holds embeddings in ONE contiguous row-major `data` buffer (`dim`
     /// floats per row) with a parallel `ids` table, so the index builds by streaming
@@ -77,18 +163,15 @@ impl AnnIndex {
     pub fn build(ids: &[String], data: &[f32], dim: usize) -> Option<Self> {
         validate_build_inputs(ids, data, dim)?;
         let n = ids.len();
+        let hooks = BuildHooks::default();
         let sample = training_sample(data, dim, n);
-        let params = training_params(dim, n);
-        let mut index = IvfPq::train(&params, &sample);
-        let rows = indexed_rows(data, ids, dim);
-        index.add(&rows.items);
-
-        Some(Self {
-            index,
-            row_to_id: rows.row_to_id,
-            id_to_row: rows.id_to_row,
-            dim,
-        })
+        let trained = Self::train_codebooks(&sample, dim, n, &hooks).ok()?;
+        let rows = data
+            .chunks_exact(dim)
+            .zip(ids)
+            .map(|(v, id)| (id.clone(), normalize(v)))
+            .collect();
+        Self::from_trained(trained, &sample, rows, dim, &hooks)
     }
 
     /// Incrementally insert/overwrite one embedding. An overwrite tombstones the
@@ -108,6 +191,9 @@ impl AnnIndex {
         }
         let row = self.index.len() as u64;
         let v = normalize(embedding);
+        if let Some(tracker) = self.tracker.as_mut() {
+            tracker.observe(&self.index.rotate_to_index_space(&v));
+        }
         self.index.add(&[(row, v)]);
         self.row_to_id.push(node_id.to_string());
         self.id_to_row.insert(node_id.to_string(), row);
@@ -249,43 +335,36 @@ fn training_sample(data: &[f32], dim: usize, n: usize) -> Vec<Vec<f32>> {
         .collect()
 }
 
+/// Mean squared distance of `sample` to its nearest coarse centroid.
+fn mean_coarse_distance(index: &IvfPq, sample: &[Vec<f32>]) -> f64 {
+    if sample.is_empty() {
+        return 0.0;
+    }
+    let k = index.coarse_centroids.len() / index.dim.max(1);
+    let total: f64 = sample
+        .iter()
+        .map(|v| {
+            let rv = index.rotate_to_index_space(v);
+            let (_, d) = medulla_numeric::cluster::nearest_with_dist(
+                &rv,
+                &index.coarse_centroids,
+                index.dim,
+                k,
+            );
+            f64::from(d)
+        })
+        .sum();
+    total / sample.len() as f64
+}
+
 fn training_params(dim: usize, n: usize) -> IvfPqParams {
     IvfPqParams {
         dim,
         nlist: nlist_for(n),
         m: m_for(dim),
-        kmeans_iters: 25,
+        cluster: Default::default(),
         opq_iters: 8,
         seed: 42,
-    }
-}
-
-/// The row numbering of one build: the two directions of the row/id mapping plus
-/// the normalized vectors keyed by the row they were assigned. All three are
-/// derived from the same single pass and are only ever produced together.
-struct IndexedRows {
-    row_to_id: Vec<String>,
-    id_to_row: HashMap<String, u64>,
-    items: Vec<(u64, Vec<f32>)>,
-}
-
-fn indexed_rows(data: &[f32], ids: &[String], dim: usize) -> IndexedRows {
-    let mut row_to_id = Vec::with_capacity(ids.len());
-    let mut id_to_row = HashMap::with_capacity(ids.len());
-    let items = data
-        .chunks_exact(dim)
-        .zip(ids.iter())
-        .enumerate()
-        .map(|(row, (vector, id))| {
-            id_to_row.insert(id.clone(), row as u64);
-            row_to_id.push(id.clone());
-            (row as u64, normalize(vector))
-        })
-        .collect();
-    IndexedRows {
-        row_to_id,
-        id_to_row,
-        items,
     }
 }
 

@@ -19,6 +19,8 @@ mod backend;
 mod backend;
 
 pub use backend::SemanticStore;
+pub use backend::{build_off_lock, BuildHooks, BuildOutcome};
+pub use medulla_numeric::cluster::{CancelToken, Progress, ProgressSink};
 
 /// The content stamp of one [`SemanticStore`] (CONCEPT:MEDULLA-KG.coordination.dependency-scoped-cache-invalidation,
 /// EH-393 — the `EmbeddingGeneration` dependency dimension). Every constructor, content mutation

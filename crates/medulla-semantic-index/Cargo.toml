@@ -14,6 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 medulla-ann = { path = "../medulla-ann" }
+medulla-numeric = { path = "../medulla-numeric" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 rmp-serde = "1.3"
@@ -26,4 +27,6 @@ medulla-index-types = { path = "../medulla-index-types" }
 ann = ["dep:rayon"]
 
 [dev-dependencies]
+rand = "0.8"
+rand_chacha = "0.3"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

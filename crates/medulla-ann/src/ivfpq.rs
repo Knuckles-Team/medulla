@@ -19,10 +19,11 @@
 //!      accurately. The SQ8 tier costs `dim` bytes/vec (≈ the codes again), kept as
 //!      a separate mmappable buffer so it can live on disk.
 
-use crate::kmeans::{kmeans, nearest_centroid, sq_dist};
 use crate::linalg::{identity, orthogonal_polar, rotate, transpose};
-use rand::SeedableRng;
-use rand_chacha::ChaCha8Rng;
+use medulla_numeric::cluster::{
+    self, nearest as nearest_centroid, sq_dist, CancelToken, ClusterConfig, ClusterRefusal,
+    FitArgs, NoProgress, ProgressSink, Rows,
+};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -52,8 +53,10 @@ pub struct IvfPqParams {
     pub nlist: usize,
     /// Number of PQ subquantizers (`dim` must be divisible by `m`).
     pub m: usize,
-    /// Lloyd iterations for the coarse + PQ k-means.
-    pub kmeans_iters: usize,
+    /// Clustering-kernel settings for the coarse and PQ codebooks. The seed below
+    /// replaces `cluster.seed`. Not persisted: a runtime choice of the trainer.
+    #[serde(skip)]
+    pub cluster: ClusterConfig,
     /// OPQ outer iterations (rotation ↔ PQ-retrain alternations). 0 ⇒ identity
     /// rotation (plain IVF-PQ, no OPQ).
     pub opq_iters: usize,
@@ -67,7 +70,7 @@ impl Default for IvfPqParams {
             dim: 768,
             nlist: 1024,
             m: 96,
-            kmeans_iters: 25,
+            cluster: ClusterConfig::default(),
             opq_iters: 8,
             seed: 42,
         }
@@ -141,6 +144,31 @@ impl IvfPq {
         fields(n_training = training.len(), nlist = params.nlist, m = params.m)
     )]
     pub fn train(params: &IvfPqParams, training: &[Vec<f32>]) -> Self {
+        Self::train_with(params, training, &TrainHooks::default())
+            .unwrap_or_else(|refusal| panic!("index training refused: {refusal}"))
+    }
+
+    /// [`IvfPq::train`] with cancellation and progress. A cancelled run returns
+    /// `CLUSTERING_CANCELLED` and no index.
+    pub fn train_with(
+        params: &IvfPqParams,
+        training: &[Vec<f32>],
+        hooks: &TrainHooks<'_>,
+    ) -> Result<Self, ClusterRefusal> {
+        // The whole build, including the rotation and residual maps, runs on the
+        // kernel's bounded pool and never on the global one (MEDULLA-CLUSTER-R011.3).
+        cluster::run_in_pool(params.cluster.resolved_threads(), || {
+            Self::train_inner(params, training, hooks)
+        })
+    }
+
+    fn train_inner(
+        params: &IvfPqParams,
+        training: &[Vec<f32>],
+        hooks: &TrainHooks<'_>,
+    ) -> Result<Self, ClusterRefusal> {
+        #[cfg(feature = "gpu-cuda")]
+        crate::cuda_assign::register_cuda_backend();
         let dim = params.dim;
         assert!(
             params.m > 0 && dim.is_multiple_of(params.m),
@@ -148,7 +176,6 @@ impl IvfPq {
         );
         assert!(!training.is_empty(), "training set must be non-empty");
         let dsub = dim / params.m;
-        let mut rng = ChaCha8Rng::seed_from_u64(params.seed);
 
         // ---- OPQ: alternate (rotate data → train PQ → update rotation). The
         // coarse quantizer is trained ONCE on the rotated data after R converges;
@@ -166,14 +193,7 @@ impl IvfPq {
             // Train PQ subspace codebooks directly on the rotated vectors (OPQ
             // optimises the joint rotation+quantizer; the coarse residual is folded
             // in once R is fixed, below).
-            pq_centroids = train_pq(
-                &rotated,
-                dim,
-                params.m,
-                dsub,
-                params.kmeans_iters,
-                params.seed,
-            );
+            pq_centroids = train_pq(&rotated, dim, params.m, dsub, params, hooks)?;
 
             // On the last OPQ iteration we keep R fixed; otherwise update it.
             if params.opq_iters == 0 || it + 1 == params.opq_iters.max(1) {
@@ -184,22 +204,8 @@ impl IvfPq {
             // the orthogonal matrix best mapping originals → reconstructions:
             //   R = polar(  Σ x_i · x̂_iᵀ )  where x̂ is the PQ reconstruction.
             // Accumulate M = Σ recon · originalᵀ (rotated-space recon vs raw input).
-            let m_acc = training
-                .par_iter()
-                .zip(rotated.par_iter())
-                .map(|(orig, rot)| {
-                    let recon = pq_reconstruct(rot, &pq_centroids, params.m, dsub);
-                    outer_product(&recon, orig, dim)
-                })
-                .reduce(
-                    || vec![0.0f64; dim * dim],
-                    |mut a, b| {
-                        for i in 0..a.len() {
-                            a[i] += b[i];
-                        }
-                        a
-                    },
-                );
+            let m_acc =
+                opq_cross_covariance(training, &rotated, &pq_centroids, params.m, dsub, dim);
             let m_f32: Vec<f32> = m_acc.iter().map(|&x| x as f32).collect();
             // R = U Vᵀ from SVD(M); apply as the new rotation (Rᵀ maps raw→rotated).
             rotation = transpose(&orthogonal_polar(&m_f32, dim), dim);
@@ -210,32 +216,26 @@ impl IvfPq {
             .par_iter()
             .map(|v| rotate(&rotation, v, dim))
             .collect();
-        let coarse_centroids = kmeans(&rotated, dim, params.nlist, params.kmeans_iters, &mut rng);
+        let coarse_centroids = train_coarse(&rotated, dim, params, hooks)?;
+        let nlist = coarse_centroids.len() / dim;
 
         // ---- Re-train PQ on the rotated RESIDUALS (vector − its coarse centroid),
         // which is what `add` encodes — the final production codebooks.
         let residuals: Vec<Vec<f32>> = rotated
             .par_iter()
             .map(|rv| {
-                let c = nearest_centroid(rv, &coarse_centroids, dim, params.nlist);
+                let c = nearest_centroid(rv, &coarse_centroids, dim, nlist);
                 let base = c * dim;
                 (0..dim)
                     .map(|d| rv[d] - coarse_centroids[base + d])
                     .collect()
             })
             .collect();
-        let pq_centroids = train_pq(
-            &residuals,
-            dim,
-            params.m,
-            dsub,
-            params.kmeans_iters,
-            params.seed,
-        );
+        let pq_centroids = train_pq(&residuals, dim, params.m, dsub, params, hooks)?;
 
-        IvfPq {
+        Ok(IvfPq {
             dim,
-            nlist: params.nlist,
+            nlist,
             m: params.m,
             dsub,
             rotation,
@@ -248,8 +248,13 @@ impl IvfPq {
             ids: Vec::new(),
             list_of: Vec::new(),
             deleted: Vec::new(),
-            postings: vec![Vec::new(); params.nlist],
-        }
+            postings: vec![Vec::new(); nlist],
+        })
+    }
+
+    /// The image of `v` in the rotated space the coarse centroids live in.
+    pub fn rotate_to_index_space(&self, v: &[f32]) -> Vec<f32> {
+        rotate(&self.rotation, v, self.dim)
     }
 
     /// Encode + append a batch of `(id, vector)`. Append-only IVF-list insert — no
@@ -564,34 +569,115 @@ pub fn merge_topk_stable(shards: &[Vec<SearchResult>], k: usize) -> Vec<SearchRe
     out
 }
 
-/// Train `m` PQ subspace codebooks (each 256 entries of `dsub`) over `vectors`.
+/// `M = sum_i recon_i * orig_i^T` accumulated in row order. Output rows are computed
+/// in parallel and each sums its inputs sequentially, so the bits do not depend on
+/// the thread count.
+fn opq_cross_covariance(
+    training: &[Vec<f32>],
+    rotated: &[Vec<f32>],
+    pq: &[f32],
+    m: usize,
+    dsub: usize,
+    dim: usize,
+) -> Vec<f64> {
+    let recons: Vec<Vec<f32>> = rotated
+        .par_iter()
+        .map(|rot| pq_reconstruct(rot, pq, m, dsub))
+        .collect();
+    let mut acc = vec![0.0f64; dim * dim];
+    acc.par_chunks_mut(dim).enumerate().for_each(|(i, row)| {
+        for (rec, orig) in recons.iter().zip(training) {
+            let coef = f64::from(rec[i]);
+            for (slot, &o) in row.iter_mut().zip(orig) {
+                *slot += coef * f64::from(o);
+            }
+        }
+    });
+    acc
+}
+
+/// Contiguous row-major copy of `vectors` (or of one column range of each row).
+fn flatten(vectors: &[Vec<f32>], cols: std::ops::Range<usize>) -> Vec<f32> {
+    let mut out = Vec::with_capacity(vectors.len() * cols.len());
+    for v in vectors {
+        out.extend_from_slice(&v[cols.clone()]);
+    }
+    out
+}
+
+/// Cancellation and progress of one training call.
+pub struct TrainHooks<'a> {
+    pub cancel: &'a CancelToken,
+    pub sink: &'a dyn ProgressSink,
+}
+
+impl Default for TrainHooks<'_> {
+    fn default() -> Self {
+        static NEVER: std::sync::OnceLock<CancelToken> = std::sync::OnceLock::new();
+        TrainHooks {
+            cancel: NEVER.get_or_init(CancelToken::new),
+            sink: &NoProgress,
+        }
+    }
+}
+
+/// Train the coarse quantizer on the kernel. Cells beyond the distinct rows are
+/// dropped, so the returned codebook may hold fewer than `nlist` cells.
+fn train_coarse(
+    rotated: &[Vec<f32>],
+    dim: usize,
+    params: &IvfPqParams,
+    hooks: &TrainHooks<'_>,
+) -> Result<Vec<f32>, ClusterRefusal> {
+    let flat = flatten(rotated, 0..dim);
+    let cfg = ClusterConfig {
+        seed: params.seed,
+        at_most_k: true,
+        labels: false,
+        ..params.cluster.clone()
+    };
+    cluster::fit(FitArgs {
+        rows: Rows::new(&flat, rotated.len(), dim),
+        k: params.nlist,
+        cfg: &cfg,
+        sink: hooks.sink,
+        cancel: hooks.cancel,
+    })
+    .map(|out| out.centroids)
+}
+
+/// Train `m` PQ subspace codebooks (each 256 entries of `dsub`) over `vectors`,
+/// one subspace after another; each fit runs on the kernel's pool.
 fn train_pq(
     vectors: &[Vec<f32>],
     dim: usize,
     m: usize,
     dsub: usize,
-    iters: usize,
-    seed: u64,
-) -> Vec<f32> {
+    params: &IvfPqParams,
+    hooks: &TrainHooks<'_>,
+) -> Result<Vec<f32>, ClusterRefusal> {
     let mut out = vec![0.0f32; m * PQ_KSUB * dsub];
-    let books: Vec<Vec<f32>> = (0..m)
-        .into_par_iter()
-        .map(|sq| {
-            let sub: Vec<Vec<f32>> = vectors
-                .iter()
-                .map(|v| v[sq * dsub..(sq + 1) * dsub].to_vec())
-                .collect();
-            let mut srng =
-                ChaCha8Rng::seed_from_u64(seed ^ (0x9E3779B9u64.wrapping_mul(sq as u64 + 1)));
-            kmeans(&sub, dsub, PQ_KSUB, iters, &mut srng)
-        })
-        .collect();
-    for (sq, book) in books.into_iter().enumerate() {
+    for sq in 0..m {
+        let sub = flatten(vectors, sq * dsub..(sq + 1) * dsub);
+        let cfg = ClusterConfig {
+            seed: params.seed ^ (0x9E3779B9u64.wrapping_mul(sq as u64 + 1)),
+            at_most_k: true,
+            labels: false,
+            ..params.cluster.clone()
+        };
+        let book = cluster::fit(FitArgs {
+            rows: Rows::new(&sub, vectors.len(), dsub),
+            k: PQ_KSUB,
+            cfg: &cfg,
+            sink: hooks.sink,
+            cancel: hooks.cancel,
+        })?
+        .centroids;
         let base = sq * PQ_KSUB * dsub;
         out[base..base + book.len()].copy_from_slice(&book);
     }
     let _ = dim;
-    out
+    Ok(out)
 }
 
 /// Reconstruct a vector from its nearest PQ codewords (per subspace).
@@ -618,22 +704,6 @@ fn pq_reconstruct(v: &[f32], pq: &[f32], m: usize, dsub: usize) -> Vec<f32> {
         out[sq * dsub..(sq + 1) * dsub].copy_from_slice(&pq[cb..cb + dsub]);
     }
     out
-}
-
-/// `Σ a · bᵀ` accumulated in f64 (row-major `dim*dim`), for the OPQ R update.
-fn outer_product(a: &[f32], b: &[f32], dim: usize) -> Vec<f64> {
-    let mut m = vec![0.0f64; dim * dim];
-    for i in 0..dim {
-        let ai = a[i] as f64;
-        if ai == 0.0 {
-            continue;
-        }
-        let row = &mut m[i * dim..(i + 1) * dim];
-        for j in 0..dim {
-            row[j] += ai * b[j] as f64;
-        }
-    }
-    m
 }
 
 /// SQ8-encode a vector: per-row min/scale, each dim → u8. Returns `(codes,min,scale)`.

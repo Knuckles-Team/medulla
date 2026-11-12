@@ -38,6 +38,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_semantic_index::semantic::{build_off_lock, BuildHooks, BuildOutcome};
 use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_server_api::state::ServerState;
 
@@ -67,37 +68,115 @@ const SEMANTIC_INDEX_TENANT: &str = "semantic-index";
 /// Blocking and possibly multi-minute — every caller runs it on a blocking
 /// thread, never on the request path or the async runtime.
 pub fn activate_one(name: &str, core: &GraphCore, persist_dir: Option<&str>) -> bool {
-    let store = core.semantic_store.read();
-    if store.len() < ANN_BUILD_THRESHOLD || store.is_ready() || store.is_warming() {
-        // Brute force is exact and fast below the threshold, and an index that
-        // is ready or already being built needs no second trigger.
-        return false;
-    }
     #[cfg(not(feature = "ann-redb"))]
     let _ = persist_dir;
-    // 1. Reopen the live durable generation first — no rebuild.
-    #[cfg(feature = "ann-redb")]
-    if adopt_live_generation(name, &store, persist_dir) {
-        return true;
+    let rebuild = {
+        let store = core.semantic_store.read();
+        let stale = store.ann_stale();
+        if store.len() < ANN_BUILD_THRESHOLD
+            || store.is_warming()
+            || store.is_rebuilding()
+            || (store.is_ready() && !stale)
+        {
+            // Brute force is exact and fast below the threshold, and an index that
+            // is ready (and not drifted) or already being built needs no second trigger.
+            return false;
+        }
+        // 1. Reopen the live durable generation first — no rebuild. A drifted index
+        //    skips this: the stored generation is the one that drifted.
+        #[cfg(feature = "ann-redb")]
+        if !stale && adopt_live_generation(name, &store, persist_dir) {
+            return true;
+        }
+        store.is_ready()
+    };
+    // 2. Build off the store locks (MEDULLA-CLUSTER-R011.1). The build copies bounded
+    //    blocks under short read holds, trains on the kernel's own pool, and installs
+    //    under one short hold. A racing trigger backs off at the build's claim.
+    let token = builds::register(name);
+    let hooks = BuildHooks {
+        cancel: token,
+        sink: Arc::new(builds::LogSink {
+            graph: name.to_string(),
+        }),
+        ..BuildHooks::default()
+    };
+    let outcome = build_off_lock(&core.semantic_store, name, rebuild, &hooks);
+    builds::unregister(name);
+    match outcome {
+        BuildOutcome::Built => {}
+        BuildOutcome::Skipped => return false,
+        BuildOutcome::Cancelled => {
+            tracing::info!(
+                "semantic ANN build cancelled for graph '{name}' (CLUSTERING_CANCELLED)"
+            );
+            return false;
+        }
+        BuildOutcome::Failed(why) => {
+            tracing::warn!("semantic ANN build failed for graph '{name}': {why}");
+            return false;
+        }
     }
-    // 2. Build off the query path. The expensive path, de-duplicated against a
-    // racing trigger by `SemanticStore::ensure_index`'s `STATE_WARMING` claim,
-    // so at most one of any concurrent callers for this graph pays for it.
-    let started = std::time::Instant::now();
-    store.warm(name);
-    if !store.is_ready() {
-        return false;
-    }
-    tracing::info!(
-        "semantic ANN index warmed for graph '{}' ({} vectors) in {:.1}s",
-        name,
-        store.len(),
-        started.elapsed().as_secs_f64()
-    );
     // 3. Activate it durably so a future restart reopens it without rebuilding.
     #[cfg(feature = "ann-redb")]
-    activate_generation(name, &store, persist_dir);
+    activate_generation(name, &core.semantic_store.read(), persist_dir);
     true
+}
+
+/// Cancellation tokens and progress of the running builds (MEDULLA-CLUSTER-R011.4).
+mod builds {
+    use medulla_semantic_index::semantic::{CancelToken, Progress, ProgressSink};
+    use std::sync::Mutex;
+
+    static RUNNING: Mutex<Vec<(String, CancelToken)>> = Mutex::new(Vec::new());
+
+    pub(super) fn register(name: &str) -> CancelToken {
+        let token = CancelToken::new();
+        if let Ok(mut running) = RUNNING.lock() {
+            running.push((name.to_string(), token.clone()));
+        }
+        token
+    }
+
+    pub(super) fn unregister(name: &str) {
+        if let Ok(mut running) = RUNNING.lock() {
+            running.retain(|(n, _)| n != name);
+        }
+    }
+
+    /// Cancel every running build. Returns how many tokens fired.
+    pub(super) fn cancel_all() -> usize {
+        let Ok(running) = RUNNING.lock() else {
+            return 0;
+        };
+        running.iter().for_each(|(_, t)| t.cancel());
+        running.len()
+    }
+
+    /// Progress goes to the log until the background-task registry of
+    /// `MEDULLA-OBSERVE` exists (task T-OBSERVE-BIND).
+    pub(super) struct LogSink {
+        pub graph: String,
+    }
+
+    impl ProgressSink for LogSink {
+        fn report(&self, p: &Progress) {
+            tracing::info!(
+                graph = %self.graph,
+                state = p.state,
+                step = p.step,
+                max_steps = p.max_steps,
+                shift = p.shift,
+                elapsed_ms = p.elapsed_ms,
+                "semantic ANN training progress"
+            );
+        }
+    }
+}
+
+/// Cancel every running index build, so shutdown does not wait for training.
+pub fn cancel_all_builds() -> usize {
+    builds::cancel_all()
 }
 
 /// Reopen the binding's live generation and make it serving. `false` when there
@@ -271,8 +350,10 @@ pub async fn sweep_resident_graphs(state: &Arc<RwLock<ServerState>>) -> usize {
             .into_iter()
             .filter_map(|entry| {
                 let store = entry.core.semantic_store.read();
-                let needs_warm =
-                    store.len() >= ANN_BUILD_THRESHOLD && !store.is_ready() && !store.is_warming();
+                let needs_warm = store.len() >= ANN_BUILD_THRESHOLD
+                    && !store.is_warming()
+                    && !store.is_rebuilding()
+                    && (!store.is_ready() || store.ann_stale());
                 needs_warm.then(|| (entry.name.clone(), entry.core.clone()))
             })
             .collect();

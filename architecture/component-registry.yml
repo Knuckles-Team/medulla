@@ -1577,7 +1577,7 @@ components:
       - "medulla-numeric"
       - "medulla-ann"
     owned_source_roots:
-      - "crates/medulla-numeric/src/cluster.rs"
+      - "crates/medulla-numeric/src/cluster"
       - "crates/medulla-numeric/src/complex.rs"
       - "crates/medulla-numeric/src/contract.rs"
       - "crates/medulla-numeric/src/elementwise.rs"
@@ -1598,8 +1598,7 @@ components:
       - "crates/medulla-ann/src/hnsw.rs"
       - "crates/medulla-ann/src/ivfpq"
       - "crates/medulla-ann/src/ivfpq.rs"
-      - "crates/medulla-ann/src/kmeans.rs"
-      - "crates/medulla-ann/src/kmeans_gpu.rs"
+      - "crates/medulla-ann/src/cuda_assign.rs"
       - "crates/medulla-ann/src/linalg"
       - "crates/medulla-ann/src/linalg.rs"
       - "crates/medulla-ann/crates/medulla-kernel/src/persist.rs"

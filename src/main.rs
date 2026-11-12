@@ -505,6 +505,11 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     };
     server_startup::serve_transports(transports, &state, &shutdown).await?;
 
+    // Stop any index build still training so shutdown does not wait for it
+    // (MEDULLA-CLUSTER-R011.4).
+    #[cfg(feature = "ann")]
+    medulla_server_graph::semantic_activation::cancel_all_builds();
+
     // Close the Agent Library so it writes its clean-shutdown marker and the next
     // boot skips its O(rows) recovery scan (BUG-009).
     #[cfg(feature = "redb")]

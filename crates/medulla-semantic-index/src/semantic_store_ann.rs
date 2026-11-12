@@ -63,6 +63,9 @@ const STATE_READY: u8 = 1;
 // "nothing built yet" apart from "somebody is already building" and back off
 // instead of blocking on the index write lock for the whole build.
 const STATE_WARMING: u8 = 2;
+/// A rebuild runs beside a serving index: queries keep using the old index until the swap
+/// (MEDULLA-CLUSTER-R009.4).
+const STATE_REBUILDING: u8 = 3;
 
 /// CONCEPT:MEDULLA-KG.storage.arena-row-append — the contiguous row-major embedding arena.
 ///
@@ -232,6 +235,9 @@ pub struct SemanticStore {
     /// CONCEPT:MEDULLA-KG.storage.semantic-index-directory — `STATE_COLD`/`STATE_READY`. `Ready` ⟺ `index` is `Some` and
     /// reflects the current embeddings. Read on every search to decide ANN-vs-brute.
     state: AtomicU8,
+    /// Ids that writers touched since the running build took its snapshot; `None`
+    /// when no build runs (MEDULLA-CLUSTER-R011.1).
+    build_journal: parking_lot::Mutex<Option<std::collections::HashSet<String>>>,
     /// Content stamp (EH-393): restamped on every vector / space change and on every ANN
     /// generation adoption (the active generation changes what a probe returns).
     pub(super) generation: crate::semantic::GenerationStamp,
@@ -241,6 +247,7 @@ pub struct SemanticStore {
     builds: std::sync::atomic::AtomicUsize,
 }
 
+mod semantic_ann_build;
 mod semantic_ann_index;
 mod semantic_ann_lifecycle;
 mod semantic_ann_mutation;
@@ -250,6 +257,7 @@ mod semantic_ann_shape;
 
 use crate::semantic_ann::AnnIndexImage;
 use semantic_ann_persistence::PersistedIndexManifest as IndexManifest;
+pub use semantic_ann_build::{build_off_lock, BuildHooks, BuildOutcome};
 pub use semantic_ann_persistence::SemanticGenerationImage;
 
 impl Clone for SemanticStore {
@@ -364,11 +372,11 @@ fn invalid_index_manifest(error: impl std::fmt::Display) -> std::io::Error {
 }
 
 /// SIMD-friendly dot product (CONCEPT:MEDULLA-KG.compute.lane-chunked-dot-product): the
-/// shared 8-lane `medulla_ann::kmeans::lane_reduce` kernel, so a 1024-dim dot product is
+/// shared 8-lane `medulla_numeric::cluster::lane_reduce` kernel, so a 1024-dim dot product is
 /// ~128 packed multiply-adds (under `-C target-cpu=x86-64-v3`, see
 /// `.cargo/config.toml`) instead of 1024 scalar ones.
 fn dot_product(a: &[f32], b: &[f32]) -> f32 {
-    medulla_ann::kmeans::lane_reduce(a, b, |x, y| x * y)
+    medulla_numeric::cluster::lane_reduce(a, b, |x, y| x * y)
 }
 
 /// CONCEPT:MEDULLA-KG.compute.cached-row-norm — L2 norm via the SIMD dot kernel (cached per row at insert).
@@ -1082,6 +1090,7 @@ mod tests {
             index: RwLock::new(None),
             built_len: RwLock::new(0),
             state: AtomicU8::new(STATE_COLD),
+            build_journal: parking_lot::Mutex::new(None),
             generation: store.generation.carry(),
             builds: std::sync::atomic::AtomicUsize::new(0),
         };

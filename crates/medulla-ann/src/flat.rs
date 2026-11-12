@@ -22,7 +22,7 @@
 //! ANN results are directly comparable and mergeable.
 
 use crate::ivfpq::SearchResult;
-use crate::kmeans::sq_dist;
+use medulla_numeric::cluster::sq_dist;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
@@ -31,7 +31,7 @@ use std::sync::OnceLock;
 ///
 /// All three are normalised to a "smaller = nearer" scalar so they sort ascending
 /// like every other distance in the crate:
-///   * [`Metric::L2`] — squared Euclidean distance (matches `kmeans::sq_dist`, the
+///   * [`Metric::L2`] — squared Euclidean distance (matches `medulla_numeric::cluster::sq_dist`, the
 ///     metric the IVF-PQ tier itself minimises, so it is the right ground truth for
 ///     ANN recall).
 ///   * [`Metric::Cosine`] — cosine *distance* `1 − cos(a,b)` in `[0, 2]`; a zero

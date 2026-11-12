@@ -18,58 +18,17 @@ impl SemanticStore {
     /// (a sibling submodule of the shared `backend` parent) to guarantee a fresh
     /// index is resident before it is persisted.
     pub(super) fn ensure_index(&self, label: &str) {
-        if self.arena.dim > MAX_MAINTAINED_DIMENSION {
+        if self.arena.dim > MAX_MAINTAINED_DIMENSION || self.index_ready() {
             return;
         }
-        if self.index_ready() {
-            return;
-        }
-        if !self.claim_warm() {
-            return;
-        }
-        self.build_index(label);
+        // `begin_build` claims the build from `STATE_COLD`: a caller that checked
+        // `index_ready` before another caller's build finished cannot claim a
+        // `STATE_READY` store, so exactly one concurrent warm builds.
+        self.build_in_place(label);
     }
 
     fn index_ready(&self) -> bool {
         let idx = self.index.read();
         idx.is_some() && *self.built_len.read() == self.arena.len()
-    }
-
-    /// Claim the build only from `STATE_COLD`. A caller that checked
-    /// `index_ready` before another caller's build finished must not claim a
-    /// `STATE_READY` store and rebuild it: exactly one concurrent warm builds.
-    fn claim_warm(&self) -> bool {
-        self.state
-            .compare_exchange(
-                STATE_COLD,
-                STATE_WARMING,
-                Ordering::AcqRel,
-                Ordering::Acquire,
-            )
-            .is_ok()
-    }
-
-    fn build_index(&self, label: &str) {
-        let mut idx = self.index.write();
-        let n = self.arena.len();
-        let span = tracing::info_span!("ann_index_build", graph = label, n_vectors = n);
-        let _guard = span.enter();
-        let start = std::time::Instant::now();
-        *idx = AnnIndex::build(&self.arena.ids, &self.arena.data, self.arena.dim);
-        #[cfg(test)]
-        self.builds.fetch_add(1, Ordering::Relaxed);
-        let built = idx.is_some();
-        *self.built_len.write() = if built { n } else { 0 };
-        self.state.store(
-            if built { STATE_READY } else { STATE_COLD },
-            Ordering::Release,
-        );
-        tracing::info!(
-            graph = label,
-            n_vectors = n,
-            build_ms = start.elapsed().as_millis() as u64,
-            ready = built,
-            "semantic ANN index build complete"
-        );
     }
 }

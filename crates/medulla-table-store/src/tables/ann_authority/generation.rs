@@ -31,8 +31,6 @@ const BUILD_SEED: u64 = 0x00E6_0019;
 /// HNSW fan-out (`M`) and construction beam.
 const HNSW_M: usize = 16;
 const HNSW_EF_CONSTRUCTION: usize = 200;
-/// Lloyd iterations for the IVF coarse + PQ k-means.
-const IVF_KMEANS_ITERS: usize = 15;
 /// k-means trains on at most this many vectors (an even stride of the rows).
 const IVF_TRAINING_ROWS: usize = 65_536;
 /// Cells probed exhaustively while the index has at most this many.
@@ -257,7 +255,7 @@ fn build_ivf(space: IvfSpace, dim: usize, rows: &[(u64, Vec<f32>)]) -> AnnGraph 
         nlist,
         // One subquantizer divides every width; the probe re-scores exactly.
         m: 1,
-        kmeans_iters: IVF_KMEANS_ITERS,
+        cluster: Default::default(),
         opq_iters: 0,
         seed: BUILD_SEED,
     };

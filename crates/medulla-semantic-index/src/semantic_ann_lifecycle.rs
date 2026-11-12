@@ -28,6 +28,7 @@ impl SemanticStore {
             index: RwLock::new(None),
             built_len: RwLock::new(0),
             state: AtomicU8::new(STATE_COLD),
+            build_journal: parking_lot::Mutex::new(None),
             generation,
             #[cfg(test)]
             builds: std::sync::atomic::AtomicUsize::new(0),

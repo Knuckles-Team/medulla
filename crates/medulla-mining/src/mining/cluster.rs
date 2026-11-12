@@ -20,7 +20,8 @@
 // (`src/server/handlers/mining.rs`) supplies the rows (explicit or node embeddings)
 // and does the KG write-back.
 
-use super::math::{argmax, log_gaussian_diag, sq_dist, SplitMix64};
+use super::math::{argmax, log_gaussian_diag, sq_dist};
+use medulla_numeric::cluster::{seed_indices, ClusterConfig, Rows};
 
 /// A point in feature space (one matrix row).
 pub type Point = Vec<f64>;
@@ -281,7 +282,7 @@ pub fn gmm(points: &[Point], k: usize, max_iter: usize, seed: u64) -> (Vec<i64>,
     const VAR_FLOOR: f64 = 1e-6;
 
     // Init means via k-means++; covariances to global variance; weights uniform.
-    let mut means = kmeanspp_init(points, k, seed);
+    let mut means = seed_means(points, k, seed);
     let global_var = feature_variance(points, dim);
     let mut vars = vec![global_var.clone(); k];
     let mut weights = vec![1.0 / k as f64; k];
@@ -575,46 +576,17 @@ fn group(points: &[Point], labels: Vec<i64>, resp: Option<Vec<Vec<f64>>>) -> Clu
     }
 }
 
-/// Seeded k-means++ center initialization (used by GMM). Deterministic per `seed`.
-fn kmeanspp_init(points: &[Point], k: usize, seed: u64) -> Vec<Point> {
-    let n = points.len();
-    let mut rng = SplitMix64::new(seed);
-    let mut centers: Vec<Point> = Vec::with_capacity(k);
-    centers.push(points[(rng.next_u64() as usize) % n].clone());
-    while centers.len() < k {
-        // Weighted by squared distance to the nearest chosen center.
-        let d2: Vec<f64> = points
-            .iter()
-            .map(|x| {
-                centers
-                    .iter()
-                    .map(|c| sq_dist(x, c))
-                    .fold(f64::INFINITY, f64::min)
-            })
-            .collect();
-        let total: f64 = d2.iter().sum();
-        if total <= 0.0 {
-            // All remaining points coincide with a center — pad by index.
-            for p in points.iter() {
-                if centers.len() >= k {
-                    break;
-                }
-                centers.push(p.clone());
-            }
-            break;
-        }
-        let mut target = rng.next_f64() * total;
-        let mut chosen = n - 1;
-        for (i, &w) in d2.iter().enumerate() {
-            target -= w;
-            if target <= 0.0 {
-                chosen = i;
-                break;
-            }
-        }
-        centers.push(points[chosen].clone());
+/// Seed the mixture means with the shared clustering kernel (MEDULLA-CLUSTER-R008.7).
+/// Deterministic per `seed`; the seeds are rows of `points`, kept at full precision.
+fn seed_means(points: &[Point], k: usize, seed: u64) -> Vec<Point> {
+    let dim = points[0].len();
+    let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+    let rows = Rows::new(&flat, points.len(), dim);
+    match seed_indices(rows, k, seed, &ClusterConfig::default()) {
+        Ok(idx) => idx.into_iter().map(|i| points[i as usize].clone()).collect(),
+        // A refusal (k above the rows) falls back to the first `k` rows.
+        Err(_) => points.iter().take(k).cloned().collect(),
     }
-    centers
 }
 
 fn euclidean(a: &[f64], b: &[f64]) -> f64 {
@@ -756,6 +728,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-CLUSTER-R008.7
     #[test]
     fn gmm_is_deterministic_for_a_seed() {
         let pts = two_blobs();

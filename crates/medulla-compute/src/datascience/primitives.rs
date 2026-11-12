@@ -6,6 +6,7 @@
 
 pub use medulla_result_types::compute_result::datascience::RegressionResult;
 
+use medulla_numeric::cluster::{fit_simple, ClusterConfig, ClusterRefusal, Rows};
 pub use medulla_result_types::compute_result::datascience::KMeansResult;
 
 pub use medulla_result_types::compute_result::datascience::PCAResult;
@@ -88,103 +89,36 @@ pub fn linear_regression(x: &[Vec<f64>], y: &[f64]) -> RegressionResult {
 
 // ── K-Means Clustering ───────────────────────────────────────────────
 
-fn squared_distance(left: &[f64], right: &[f64]) -> f64 {
-    left.iter()
-        .zip(right.iter())
-        .map(|(a, b)| (a - b).powi(2))
-        .sum()
-}
-
-fn nearest_centroid(row: &[f64], centroids: &[Vec<f64>]) -> usize {
-    let mut best_dist = f64::INFINITY;
-    let mut best_label = 0;
-    for (c_idx, centroid) in centroids.iter().enumerate() {
-        let dist = squared_distance(row, centroid);
-        if dist < best_dist {
-            best_dist = dist;
-            best_label = c_idx;
-        }
-    }
-    best_label
-}
-
-fn assign_labels(data: &[Vec<f64>], centroids: &[Vec<f64>], labels: &mut [usize]) -> bool {
-    let mut changed = false;
-    for (row, label) in data.iter().zip(labels.iter_mut()) {
-        let best_label = nearest_centroid(row, centroids);
-        if *label != best_label {
-            *label = best_label;
-            changed = true;
-        }
-    }
-    changed
-}
-
-fn update_centroids(data: &[Vec<f64>], labels: &[usize], k: usize, dim: usize) -> Vec<Vec<f64>> {
-    let mut centroids = vec![vec![0.0; dim]; k];
-    let mut counts = vec![0usize; k];
-    for i in 0..data.len() {
-        let label = labels[i];
-        counts[label] += 1;
-        for d in 0..dim {
-            centroids[label][d] += data[i][d];
-        }
-    }
-    for c in 0..k {
-        if counts[c] > 0 {
-            for d in 0..dim {
-                centroids[c][d] /= counts[c] as f64;
-            }
-        }
-    }
-    centroids
-}
-
-fn cluster_inertia(data: &[Vec<f64>], labels: &[usize], centroids: &[Vec<f64>]) -> f64 {
-    let mut inertia = 0.0;
-    for i in 0..data.len() {
-        inertia += squared_distance(&data[i], &centroids[labels[i]]);
-    }
-    inertia
-}
-
-/// K-means clustering using Lloyd's algorithm.
-pub fn kmeans(data: &[Vec<f64>], k: usize, max_iter: usize) -> KMeansResult {
+/// K-means clustering on the shared clustering kernel (MEDULLA-CLUSTER-R008.4).
+/// `max_iter` is the step budget. Refuses `k = 0`, empty or ragged data, `k` above the
+/// row count and non-finite values with a typed code instead of returning empty labels.
+pub fn kmeans(
+    data: &[Vec<f64>],
+    k: usize,
+    max_iter: usize,
+) -> Result<KMeansResult, ClusterRefusal> {
     let n = data.len();
-    let dim = if n > 0 { data[0].len() } else { 0 };
-
-    if n == 0 || k == 0 || dim == 0 {
-        return KMeansResult {
-            labels: vec![],
-            centroids: vec![],
-            inertia: 0.0,
-            n_iterations: 0,
-        };
+    let dim = data.first().map_or(0, Vec::len);
+    if data.iter().any(|row| row.len() != dim) {
+        return Err(ClusterRefusal::ShapeInvalid("rows have unequal width"));
     }
-
-    let k = k.min(n);
-
-    // Initialize centroids using first k points (k-means++ would be better, but simpler for now)
-    let mut centroids: Vec<Vec<f64>> = data[..k].to_vec();
-    let mut labels = vec![0usize; n];
-    let mut n_iter = 0;
-
-    for iter in 0..max_iter {
-        n_iter = iter + 1;
-        if !assign_labels(data, &centroids, &mut labels) {
-            break;
-        }
-        centroids = update_centroids(data, &labels, k, dim);
-    }
-
-    let inertia = cluster_inertia(data, &labels, &centroids);
-
-    KMeansResult {
-        labels,
+    let flat: Vec<f32> = data.iter().flatten().map(|&v| v as f32).collect();
+    let cfg = ClusterConfig {
+        max_steps: u32::try_from(max_iter.max(1)).unwrap_or(u32::MAX),
+        ..ClusterConfig::default()
+    };
+    let out = fit_simple(Rows::new(&flat, n, dim), k, &cfg)?;
+    let centroids = out
+        .centroids
+        .chunks(dim)
+        .map(|c| c.iter().map(|&v| f64::from(v)).collect())
+        .collect();
+    Ok(KMeansResult {
+        labels: out.labels.iter().map(|&l| l as usize).collect(),
         centroids,
-        inertia,
-        n_iterations: n_iter,
-    }
+        inertia: out.inertia,
+        n_iterations: out.steps as usize,
+    })
 }
 
 // ── PCA (Power Iteration Method) ─────────────────────────────────────
@@ -544,6 +478,7 @@ mod tests {
         assert!(result.r_squared > 0.99);
     }
 
+    // spec: MEDULLA-CLUSTER-R008.4
     #[test]
     fn test_kmeans() {
         let data = vec![
@@ -554,7 +489,7 @@ mod tests {
             vec![5.1, 5.1],
             vec![4.9, 4.9],
         ];
-        let result = kmeans(&data, 2, 100);
+        let result = kmeans(&data, 2, 100).unwrap();
         assert_eq!(result.labels.len(), 6);
         // First three should be same cluster, last three another
         assert_eq!(result.labels[0], result.labels[1]);

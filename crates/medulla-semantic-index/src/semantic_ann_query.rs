@@ -168,7 +168,10 @@ impl SemanticStore {
         n_results: usize,
         allow: &impl Fn(&str) -> bool,
     ) -> Option<Vec<(String, f32)>> {
-        if self.state.load(Ordering::Acquire) != STATE_READY {
+        if !matches!(
+            self.state.load(Ordering::Acquire),
+            STATE_READY | STATE_REBUILDING
+        ) {
             return None;
         }
         let guard = self.index.try_read()?;

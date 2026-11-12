@@ -30,10 +30,9 @@ pub mod distance;
 pub mod flat;
 pub mod hnsw;
 pub mod ivfpq;
-pub mod kmeans;
-/// GPU-accelerable batch-assignment backend for the k-means build hot loop
-/// (CONCEPT:MEDULLA-KG.compute.gpu-distance-seam / MEDULLA-327). See module docs.
-pub mod kmeans_gpu;
+/// CUDA backend of the clustering kernel's assignment step (MEDULLA-CLUSTER-R008.3).
+#[cfg(feature = "gpu-cuda")]
+pub mod cuda_assign;
 pub mod linalg;
 pub mod persist;
 pub mod recall;
@@ -69,11 +68,11 @@ pub use hnsw::compact::{
 };
 pub use hnsw::HnswIndex;
 pub use ivfpq::{
-    merge_topk, merge_topk_stable, IvfPq, IvfPqParams, SearchParams, SearchResult, PQ_KSUB,
+    merge_topk, merge_topk_stable, IvfPq, IvfPqParams, SearchParams, SearchResult, TrainHooks,
+    PQ_KSUB,
 };
-pub use kmeans_gpu::{
-    active_backend_name as kmeans_active_backend_name, batch_assign_dispatch, AssignBackend,
-};
+/// The clustering-kernel settings carried by [`IvfPqParams`].
+pub use medulla_numeric::cluster::ClusterConfig;
 pub use persist::compact;
 pub use recall::{
     average_precision, evaluate_recall, mean_average_precision, precision_at_k, recall_at_k,
@@ -111,7 +110,7 @@ mod tests {
         let mut scored: Vec<(u64, f32)> = data
             .par_iter()
             .enumerate()
-            .map(|(i, v)| (i as u64, kmeans::sq_dist(q, v)))
+            .map(|(i, v)| (i as u64, medulla_numeric::cluster::sq_dist(q, v)))
             .collect();
         scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         scored.truncate(k);
@@ -123,7 +122,7 @@ mod tests {
             dim,
             nlist,
             m: dim / 4, // dsub = 4
-            kmeans_iters: 20,
+            cluster: Default::default(),
             opq_iters: 6,
             seed: 7,
         };
@@ -150,7 +149,7 @@ mod tests {
                 .map(|i| (i as f32 * 0.029 + 2.0).cos() * 3.0)
                 .collect();
             let s = scalar_sq_dist(&a, &b);
-            let v = kmeans::sq_dist(&a, &b);
+            let v = medulla_numeric::cluster::sq_dist(&a, &b);
             assert!(
                 (s - v).abs() <= 1e-3 * (1.0 + s.abs()),
                 "len={len}: simd {v} vs scalar {s}"
@@ -312,7 +311,7 @@ mod tests {
             .collect();
         let mut truth: Vec<(u64, f32)> = allowed_data
             .iter()
-            .map(|(id, v)| (*id, kmeans::sq_dist(q, v)))
+            .map(|(id, v)| (*id, medulla_numeric::cluster::sq_dist(q, v)))
             .collect();
         truth.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         let truth_top: HashSet<u64> = truth.iter().take(10).map(|(id, _)| *id).collect();
@@ -344,7 +343,7 @@ mod tests {
             dim,
             nlist: 512,
             m: dim / 4, // dsub = 4, m = 32
-            kmeans_iters: 15,
+            cluster: Default::default(),
             opq_iters: 5,
             seed: 7,
         };

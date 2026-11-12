@@ -177,7 +177,7 @@ pub(crate) fn ann_topk_rows(
                 dim,
                 nlist,
                 m: 1,
-                kmeans_iters: 15,
+                cluster: Default::default(),
                 opq_iters: 0,
                 seed: ANN_SEED,
             };
