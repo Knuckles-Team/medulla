@@ -134,6 +134,7 @@ mod tests {
         )
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R174.8.1
     #[test]
     fn refresh_plan_round_trips() {
         let full = plan(4_096).unwrap();

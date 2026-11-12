@@ -683,6 +683,7 @@ mod tests {
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R128.13.1
+    // spec: MEDULLA-DECISION-ENGINE-R128.13.1.1
     #[test]
     fn absent_harness_evidence_preserves_legacy_bytes_and_digest() {
         let (wire, inputs) = legacy_inputs();
@@ -695,6 +696,7 @@ mod tests {
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R128.13.1
+    // spec: MEDULLA-DECISION-ENGINE-R128.13.1.1
     #[test]
     fn harness_evidence_roundtrips_and_changes_input_digest() {
         use medulla_agent_types::{
