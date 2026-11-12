@@ -100,6 +100,13 @@ $($variants)*
     Claims {
         op: Box<medulla_types::claims::ClaimOp>,
     },
+    /// Belief revision: revise the confidence of claims whose evidence changed,
+    /// track contradictions and propose retractions. The `BeliefRevise`
+    /// handler is the single writer of belief revisions, friction findings and
+    /// contradiction records.
+    BeliefRevise {
+        request: Box<medulla_types::belief_revision::BeliefReviseRequest>,
+    },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {

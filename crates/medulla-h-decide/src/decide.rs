@@ -8,6 +8,7 @@
 pub type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
 
 pub(crate) mod assemble;
+pub(crate) mod belief_revise;
 pub(crate) mod claims;
 pub(crate) mod commit;
 pub(crate) mod coverage;
@@ -117,6 +118,9 @@ mod topology_read;
 mod topology_schema;
 
 pub use assemble::handle_agent_assemble;
+pub use belief_revise::handle_belief_revise;
+#[cfg(feature = "statechart")]
+pub use belief_revise::enqueue_touched;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;

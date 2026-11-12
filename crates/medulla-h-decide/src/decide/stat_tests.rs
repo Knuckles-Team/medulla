@@ -1114,3 +1114,8 @@ mod drift_refresh_tests;
 // MEDULLA-DECISION-ENGINE-R652: research claims, evidence and sealed artifacts.
 #[cfg(feature = "statechart")]
 mod claims_tests;
+
+// MEDULLA-DECISION-ENGINE-R700: belief revision, retraction proposals and
+// tracked contradictions.
+#[cfg(feature = "statechart")]
+mod belief_revision_tests;

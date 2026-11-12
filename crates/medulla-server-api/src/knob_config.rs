@@ -316,6 +316,12 @@ knobs! {
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
     acceleration_max_copy_rows: u64 = "acceleration.max_copy_rows", U64(1_000_000), [1, 100_000_000], "rows", Tunable;
+    /// Belief revision per-weight cap (MEDULLA-DECISION-ENGINE-R700.2).
+    belief_weight_cap_micro: u64 = "belief.weight_cap_micro", U64(6_000_000), [1_000_000, 12_000_000], "micro-nats", Tunable;
+    /// Token-Jaccard floor for two claims to be compared as opposed (MEDULLA-DECISION-ENGINE-R700.2).
+    belief_opposition_similarity_min: u64 = "belief.opposition_similarity_min", U64(800_000), [500_000, 1_000_000], "ppm", Tunable;
+    /// Posterior below which a revision proposes a retraction (MEDULLA-DECISION-ENGINE-R700.4).
+    belief_retraction_threshold_micro: i64 = "belief.retraction_threshold_micro", I64(-1_386_294), [-6_000_000, 0], "micro-nats", Tunable;
     /// Claim evidence weight cap (MEDULLA-DECISION-ENGINE-R652.2).
     claims_weight_cap_ppm: u64 = "claims.weight_cap_ppm", U64(6_000_000), [1_000_000, 12_000_000], "ppm", Tunable;
     /// Claim log-odds floor to enter `accepted`.

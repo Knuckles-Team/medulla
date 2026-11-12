@@ -17,6 +17,51 @@ pub struct MutationOutboxIntent {
     pub headers: BTreeMap<String, String>,
 }
 
+/// Header of an outbox intent that names the claims its batch touched
+/// (MEDULLA-DECISION-ENGINE-R700.3). The value joins the claim ids with the
+/// unit separator `U+001F`.
+pub const TOUCHED_CLAIMS_HEADER: &str = "medulla.touched_claims";
+
+const TOUCHED_CLAIMS_SEPARATOR: char = '\u{1f}';
+
+impl MutationOutboxIntent {
+    /// This intent, naming `claims` as the claims its batch touched. Empty ids
+    /// and duplicates are dropped; the order is sorted, so equal sets give equal
+    /// headers.
+    pub fn with_touched_claims(mut self, claims: &[String]) -> Self {
+        let named: std::collections::BTreeSet<&str> = claims
+            .iter()
+            .map(String::as_str)
+            .filter(|claim| !claim.is_empty())
+            .collect();
+        if named.is_empty() {
+            self.headers.remove(TOUCHED_CLAIMS_HEADER);
+        } else {
+            let joined = named
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(&TOUCHED_CLAIMS_SEPARATOR.to_string());
+            self.headers
+                .insert(TOUCHED_CLAIMS_HEADER.to_string(), joined);
+        }
+        self
+    }
+
+    /// The claims this intent's batch touched, sorted.
+    pub fn touched_claims(&self) -> Vec<String> {
+        self.headers
+            .get(TOUCHED_CLAIMS_HEADER)
+            .map(|joined| {
+                joined
+                    .split(TOUCHED_CLAIMS_SEPARATOR)
+                    .filter(|claim| !claim.is_empty())
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+}
+
 /// Exact authoritative version transition committed with a durable record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -103,6 +148,11 @@ pub struct MutationProjectionCursor {
 }
 
 impl MutationOutboxRecord {
+    /// The claims the committed batch touched (MEDULLA-DECISION-ENGINE-R700.3).
+    pub fn touched_claims(&self) -> Vec<String> {
+        self.intent.touched_claims()
+    }
+
     pub fn validate_identity(&self) -> Result<(), String> {
         self.identity.validate_digest()
     }

@@ -706,6 +706,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionEval { .. }
         | Method::DecisionLog { .. }
         | Method::Claims { .. }
+        | Method::BeliefRevise { .. }
         | Method::GraphSchema { .. }
         // MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the replicated put applies as
         // the one gateway `AddNode`/`BatchUpdate` graph write.

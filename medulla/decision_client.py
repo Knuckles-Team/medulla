@@ -458,6 +458,29 @@ def record_outcome_op(
     return learn_op(tenant_id, "record_outcome", outcome=outcome)
 
 
+def belief_revise_request(
+    graph: str,
+    claim_ids: Sequence[str],
+    *,
+    texts: Mapping[str, str] | None = None,
+    premises: Sequence[Mapping[str, Any]] = (),
+    advance: Sequence[Mapping[str, str]] = (),
+) -> dict[str, Any]:
+    """Build a ``BeliefRevise`` request: the claims whose evidence changed.
+
+    ``texts`` maps a claim id to its text (default: the id), ``premises`` cite
+    existing claims as evidence, and ``advance`` moves tracked contradictions to
+    their next status (``{"contradiction_id": ..., "to": "proposed"}``).
+    """
+    return {
+        "graph": graph,
+        "claim_ids": list(claim_ids),
+        "texts": dict(texts or {}),
+        "premises": [dict(premise) for premise in premises],
+        "advance": [dict(step) for step in advance],
+    }
+
+
 def claim_propose_op(claim_id: str) -> dict[str, Any]:
     """Create a claim in ``proposed``."""
     return {"op": "propose", "claim_id": claim_id}
@@ -569,6 +592,20 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def belief_revise(
+        self, request: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``BeliefRevise`` (belief revision over claims with new evidence)."""
+        from medulla.generated.coordination import send_belief_revise
+
+        result = await send_belief_revise(
+            self.client,
+            {"request": dict(request)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",
@@ -576,6 +613,7 @@ __all__ = [
     "DecisionClient",
     "DeclaredOption",
     "aggregate_op",
+    "belief_revise_request",
     "claim_advance_op",
     "claim_compile_op",
     "claim_evidence_op",

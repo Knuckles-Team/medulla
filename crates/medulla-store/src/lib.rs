@@ -59,6 +59,9 @@ macro_rules! work_item_resource_writes {
 pub type MeasurementBatch = (String, usize, u64, Vec<String>, Vec<(i64, Vec<f64>)>);
 
 #[cfg(feature = "statechart")]
+pub mod belief_statechart;
+
+#[cfg(feature = "statechart")]
 pub mod claim_statechart;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).

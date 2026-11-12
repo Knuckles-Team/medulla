@@ -558,6 +558,12 @@ fn control_family_policy(method: &Method) -> Option<MethodPolicy> {
         Method::DecisionEval { op } => {
             Some(decision_job_policy(op.is_mutation(), "admin:decision-eval"))
         }
+        Method::BeliefRevise { .. } => Some(native_owner_policy(
+            true,
+            DurabilityDomain::StatechartRedb,
+            "agent:belief-write",
+            TxnParticipation::Atomic,
+        )),
         Method::Claims { op } => Some(native_owner_policy(
             op.is_mutation(),
             DurabilityDomain::StatechartRedb,

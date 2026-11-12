@@ -77,16 +77,19 @@ pub(super) mod served {
     const KEY_DOMAIN: &str = "medulla-claims/v1";
 
     /// The `"CODE: detail"` text of one refusal.
-    fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> String {
+    pub(in crate::decide) fn refuse(
+        code: ServerErrorCode,
+        detail: impl std::fmt::Display,
+    ) -> String {
         format!("{}: {detail}", code.as_str())
     }
 
-    fn invalid(detail: &str) -> String {
+    pub(in crate::decide) fn invalid(detail: &str) -> String {
         format!("PARAMETER_INVALID: {detail}")
     }
 
     /// The opaque request key an instance is created under.
-    fn request_key(kind: &str, tenant: &str, id: &str) -> String {
+    pub(in crate::decide) fn request_key(kind: &str, tenant: &str, id: &str) -> String {
         let mut hasher = Sha256::new();
         for part in [KEY_DOMAIN, kind, tenant, id] {
             hasher.update((part.len() as u64).to_be_bytes());
@@ -100,7 +103,7 @@ pub(super) mod served {
     }
 
     /// The claim knobs loaded at startup.
-    fn claim_knobs() -> ClaimKnobs {
+    pub(in crate::decide) fn claim_knobs() -> ClaimKnobs {
         let knobs = medulla_server_api::knob_config::knobs();
         ClaimKnobs {
             weight_cap_ppm: knob_u32(knobs.claims_weight_cap_ppm),
@@ -116,7 +119,10 @@ pub(super) mod served {
         }
     }
 
-    fn field<T: DeserializeOwned + Default>(context: &Context, key: &str) -> Result<T, String> {
+    pub(in crate::decide) fn field<T: DeserializeOwned + Default>(
+        context: &Context,
+        key: &str,
+    ) -> Result<T, String> {
         match context.get(key) {
             None | Some(serde_json::Value::Null) => Ok(T::default()),
             Some(value) => serde_json::from_value(value.clone())
@@ -244,7 +250,7 @@ pub(super) mod served {
             }
         }
 
-        fn now_ms() -> u64 {
+        pub(in crate::decide) fn now_ms() -> u64 {
             medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
         }
 
@@ -517,6 +523,17 @@ pub(super) mod served {
                 }),
             )?;
             Ok(artifact.clone())
+        }
+
+        /// One claim of this tenant, or `None` when it does not exist
+        /// (MEDULLA-DECISION-ENGINE-R700.3 reads claims through here).
+        pub(in crate::decide) fn claim_record(
+            &self,
+            claim_id: &str,
+        ) -> Result<Option<ClaimRecord>, String> {
+            self.find("claim", claim_id)?
+                .map(|instance| record_of(&instance))
+                .transpose()
         }
 
         fn get(
