@@ -69,6 +69,8 @@ pub struct NativeRungEvidence {
 /// caller's persist path is one.
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Clone)]
+// Clone is derived so a delta can rebind reused artifacts without reparsing.
 pub struct ExtractedNode {
     pub node_id: String,
     pub node_type: String,
@@ -78,6 +80,8 @@ pub struct ExtractedNode {
 /// An extracted graph edge.
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Clone)]
+// Clone is derived so a delta can rebind reused artifacts without reparsing.
 pub struct ExtractedEdge {
     pub source: String,
     pub target: String,
@@ -99,7 +103,7 @@ pub struct ParseResult {
 /// of the `IndexRepository` RPC. Unlike `ParseFiles` (one raw `ParseResult` per
 /// file), this is a SINGLE merged graph whose `calls`/`inherits`/`realizes`/
 /// `depends_on` edges point at real node ids.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct IndexResult {
     /// Every SYMBOL node across all files — ONE row per declaration site, never
@@ -225,6 +229,48 @@ pub struct IndexFileVersion {
     pub ref_name: String,
     pub path: String,
     pub blob_digest: String,
+}
+
+/// Upper bound on the delta entries of one bounded incremental index job.
+pub const MAX_INDEX_DELTA_PATHS: usize = 262_144;
+
+/// One added or modified path of a bounded incremental index delta
+/// (MEDULLA-REPO-INGEST-R006.4): its parse artifacts arrive fresh with the
+/// delta and bind to `path`.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexDeltaChange {
+    pub path: String,
+    pub blob_digest: String,
+}
+
+/// One renamed path: the artifact under `from` rebinds to the target
+/// generation under `to` and reuses its parse artifact.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexDeltaRename {
+    pub from: String,
+    pub to: String,
+}
+
+/// The bounded incremental index delta of one `IndexRepository` job
+/// (MEDULLA-REPO-INGEST-R006.4). `base_revision` names the base the target
+/// generation chains from; a mismatch refuses with `INDEX_BASE_MISMATCH`
+/// before any write. Paths in `added`, `modified`, `deleted` and `renamed`
+/// are disjoint; every other path reuses its parse artifacts unchanged.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexDelta {
+    pub base_revision: String,
+    pub target_revision: String,
+    #[serde(default)]
+    pub added: BoundedVec<IndexDeltaChange, MAX_INDEX_DELTA_PATHS>,
+    #[serde(default)]
+    pub modified: BoundedVec<IndexDeltaChange, MAX_INDEX_DELTA_PATHS>,
+    #[serde(default)]
+    pub deleted: BoundedVec<String, MAX_INDEX_DELTA_PATHS>,
+    #[serde(default)]
+    pub renamed: BoundedVec<IndexDeltaRename, MAX_INDEX_DELTA_PATHS>,
 }
 
 /// `path` (bound to `prior_blob_digest`) left `ref_name` since the preceding
