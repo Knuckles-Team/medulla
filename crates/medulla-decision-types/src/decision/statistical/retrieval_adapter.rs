@@ -38,6 +38,52 @@ pub struct AdapterDirection {
     pub unit_q30: BoundedVec<i32, MAX_QUERY_DIMENSIONS>,
 }
 
+/// What an adapter is fitted for. Closed: an unknown scope is refused by the
+/// wire decoder (MEDULLA-DECISION-ENGINE-R174.7.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "scope", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AdapterScope {
+    /// Every query against the graph.
+    Graph,
+    /// Queries over one corpus.
+    Corpus { corpus_iri: String },
+    /// Queries made for one capability.
+    Capability { capability_iri: String },
+}
+
+impl AdapterScope {
+    /// The stable key fragment of a scope, used in pointer keys.
+    pub fn key(&self) -> String {
+        match self {
+            Self::Graph => "graph".to_string(),
+            Self::Corpus { corpus_iri } => format!("corpus:{corpus_iri}"),
+            Self::Capability { capability_iri } => format!("capability:{capability_iri}"),
+        }
+    }
+}
+
+/// Which side of retrieval an adapter transforms.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AdapterSide {
+    /// The query vector, at read.
+    Query,
+    /// The stored vectors, at read, with no embedding endpoint call.
+    Index,
+}
+
+/// Which recorded outcomes train an adapter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum OutcomeSource {
+    RetrievalOutcome,
+    RunOutcome,
+    CapabilityOutcome,
+}
+
 /// The body of a fitted query adapter.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -51,6 +97,10 @@ pub struct QueryAdapterBody {
     /// Digest of the admitted training items, in order.
     pub training_digest: String,
     pub n_training: u64,
+    /// Refit counter within one scope; the first fit is revision 1.
+    pub revision: u32,
+    /// Digest of the adapter this one was refitted from.
+    pub parent_digest: Option<String>,
 }
 
 fn dot_q60(left: &[i32], right: &[i32]) -> i128 {
@@ -130,6 +180,12 @@ pub struct AdapterFitRequest {
     pub holdout_per_mille: u16,
     /// Fewest held-out items a passing receipt needs.
     pub min_eval_items: u32,
+    /// What the adapter is fitted for.
+    pub scope: AdapterScope,
+    /// Which side of retrieval it transforms.
+    pub side: AdapterSide,
+    /// Which recorded outcomes train it; at least one.
+    pub sources: Vec<OutcomeSource>,
 }
 
 /// The promotion receipt of one fitted adapter: a paired sign test of the
@@ -188,6 +244,42 @@ mod tests {
             directions: BoundedVec::new(directions).unwrap(),
             training_digest: "sha256:t".to_string(),
             n_training: 1,
+            revision: 1,
+            parent_digest: None,
+        }
+    }
+
+    fn fit_request_json(scope: &str, side: &str, source: &str) -> String {
+        format!(
+            r#"{{"graph":"g","space_digest":"s","window":{{"from_ms":0,"to_ms":1}},"rank":2,
+            "max_gain_q16":100,"holdout_per_mille":200,"min_eval_items":5,
+            "scope":{scope},"side":"{side}","sources":["{source}"]}}"#
+        )
+    }
+
+    #[test]
+    fn scoped_fit_request_round_trips() {
+        for scope in [
+            r#"{"scope":"graph"}"#,
+            r#"{"scope":"corpus","corpus_iri":"urn:c"}"#,
+            r#"{"scope":"capability","capability_iri":"urn:k"}"#,
+        ] {
+            let json = fit_request_json(scope, "query", "retrieval_outcome");
+            let request: AdapterFitRequest = serde_json::from_str(&json).unwrap();
+            let again = serde_json::to_string(&request).unwrap();
+            let back: AdapterFitRequest = serde_json::from_str(&again).unwrap();
+            assert_eq!(back, request);
+        }
+        let index = fit_request_json(r#"{"scope":"graph"}"#, "index", "capability_outcome");
+        let request: AdapterFitRequest = serde_json::from_str(&index).unwrap();
+        assert_eq!(request.side, AdapterSide::Index);
+        assert_eq!(request.sources, vec![OutcomeSource::CapabilityOutcome]);
+        for bad in [
+            fit_request_json(r#"{"scope":"planet"}"#, "query", "retrieval_outcome"),
+            fit_request_json(r#"{"scope":"graph"}"#, "middle", "retrieval_outcome"),
+            fit_request_json(r#"{"scope":"graph"}"#, "query", "rumour"),
+        ] {
+            assert!(serde_json::from_str::<AdapterFitRequest>(&bad).is_err());
         }
     }
 

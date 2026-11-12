@@ -17,6 +17,7 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::retrieval_adapter::AdapterFitRequest,
     decision::statistical::retrieval_adapter::AdapterFitted,
+    decision::statistical::retrieval_adapter::{AdapterScope, AdapterSide, OutcomeSource},
 };
 use medulla_decision_types::{
     decision::statistical::retrieval_generation::GenerationEvalItem,
@@ -145,6 +146,9 @@ fn fit_request(space: &str) -> AdapterFitRequest {
         max_gain_q16: 1 << 15,
         holdout_per_mille: 300,
         min_eval_items: 5,
+        scope: AdapterScope::Graph,
+        side: AdapterSide::Query,
+        sources: vec![OutcomeSource::RetrievalOutcome],
     }
 }
 

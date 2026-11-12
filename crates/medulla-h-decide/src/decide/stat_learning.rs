@@ -19,7 +19,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval::PointerRef,
 };
 
-use super::stat_adapter::{adapter_pointer, fit_adapter, qualified};
+use super::stat_adapter::{adapter_pointer, fit_adapter, qualified, scoped_adapter_pointer};
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, Generations,
@@ -28,6 +28,7 @@ use super::stat_generation_cycle::{job_id, run_cycle, ConfiguredEmbedder, CycleR
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
+use super::stat_support::invalid_parameter as invalid;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
@@ -133,6 +134,9 @@ impl Serving<'_> {
             PointerRef::Adapter { graph } => {
                 qualified(store, self.tenant(), graph, target, receipt)
             }
+            PointerRef::ScopedAdapter { graph, .. } => {
+                qualified(store, self.tenant(), graph, target, receipt)
+            }
             PointerRef::Generation { logical } => {
                 qualified_generation(store, self.tenant(), (logical, target), receipt)
             }
@@ -146,6 +150,7 @@ impl Serving<'_> {
     ) -> Result<LearningRecorded, String> {
         let key = match pointer {
             PointerRef::Adapter { graph } => adapter_pointer(graph),
+            PointerRef::ScopedAdapter { graph, scope } => scoped_adapter_pointer(graph, scope),
             PointerRef::Generation { logical } => generation_pointer(logical),
         };
         let at = PointerMove {
@@ -179,6 +184,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
             request.evaluation.active_graph.as_str(),
             request.evaluation.shadow_graph.as_str(),
         ],
+        LearningWrite::RefreshFreshness { request } => vec![request.logical_graph.as_str()],
         LearningWrite::RecordOutcome { .. } | LearningWrite::MovePointer { .. } => Vec::new(),
     }
 }
@@ -278,6 +284,12 @@ pub(super) fn dispatch(
         LearningWrite::FitAdapter { request } => s.fit(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
+        LearningWrite::RefreshFreshness { request } => {
+            request.check().map_err(|detail| invalid(&detail))?;
+            Err(invalid(
+                "freshness refresh is not served until MEDULLA-DECISION-ENGINE-R174.9.3",
+            ))
+        }
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

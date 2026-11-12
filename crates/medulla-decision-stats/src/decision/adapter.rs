@@ -320,6 +320,8 @@ pub fn to_body(
         directions: BoundedVec::new(directions)?,
         training_digest: training.0,
         n_training: training.1,
+        revision: 1,
+        parent_digest: None,
     };
     body.check()?;
     Ok(body)

@@ -263,6 +263,11 @@ pub struct ProvenPath {
 pub enum PointerRef {
     /// The query adapter a graph serves (EH-396).
     Adapter { graph: String },
+    /// The adapter one scope of a graph serves (MEDULLA-DECISION-ENGINE-R174.7.1).
+    ScopedAdapter {
+        graph: String,
+        scope: super::retrieval_adapter::AdapterScope,
+    },
     /// The embedding generation a logical graph resolves to (EH-397).
     Generation { logical: String },
 }
@@ -304,6 +309,10 @@ pub enum LearningWrite {
     RunGenerationCycle {
         request: Box<super::retrieval_generation::GenerationCycleRequest>,
     },
+    /// Refresh a logical graph from a search source.
+    RefreshFreshness {
+        request: Box<super::retrieval_refresh::FreshnessRefresh>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -320,6 +329,7 @@ impl LearningWrite {
             Self::FitAdapter { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
+            | Self::RefreshFreshness { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }

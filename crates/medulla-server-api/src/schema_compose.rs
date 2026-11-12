@@ -900,7 +900,9 @@ ex:parent a owl:AsymmetricProperty .
         // (identity_metadata.ttl) joins the core corpus.
         // +76 (MEDULLA-DECISION-ENGINE-R174.1): the GenerationCycle machine (five states, four
         // events, four edges) in state-machines-v1.ttl.
-        assert_eq!(composed.ontology.len(), 21_006);
+        // +48 (MEDULLA-DECISION-ENGINE-R707.1): the FeatureLedger machine (three states, two
+        // events, two edges) in state-machines-v1.ttl.
+        assert_eq!(composed.ontology.len(), 21_054);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

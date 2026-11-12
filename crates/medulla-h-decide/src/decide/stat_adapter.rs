@@ -29,6 +29,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::MAX_ADAPTER_GAIN_Q16,
     decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
+    decision::statistical::retrieval_adapter::{AdapterScope, AdapterSide, OutcomeSource},
 };
 use medulla_query_types::solve_scalar::digest_text;
 
@@ -54,6 +55,14 @@ fn check_fit_request(request: &AdapterFitRequest) -> Result<(), String> {
         return Err(invalid(
             "an adapter fit needs rank 1..=8, 0 < max gain <= 1/2, a 100..=500 per-mille \
              holdout and at least one evaluation item",
+        ));
+    }
+    let fitted_today = request.scope == AdapterScope::Graph
+        && request.side == AdapterSide::Query
+        && request.sources == [OutcomeSource::RetrievalOutcome];
+    if !fitted_today {
+        return Err(invalid(
+            "only a graph-scope query adapter trained on retrieval outcomes can be fit",
         ));
     }
     Ok(())
@@ -186,6 +195,15 @@ pub(super) fn fit_adapter(
 /// The pointer key of a graph's adapter.
 pub(super) fn adapter_pointer(graph: &str) -> String {
     format!("adapter:{graph}")
+}
+
+/// The pointer key of one scope of a graph's adapter. The graph scope is the
+/// graph's own pointer.
+pub(super) fn scoped_adapter_pointer(graph: &str, scope: &AdapterScope) -> String {
+    match scope {
+        AdapterScope::Graph => adapter_pointer(graph),
+        other => format!("adapter:{graph}:{}", other.key()),
+    }
 }
 
 /// A fitted adapter whose passing receipt is the named one, fitted on `graph`.

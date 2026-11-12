@@ -28,6 +28,7 @@ pub mod retrieval_adapter;
 pub mod retrieval_drift;
 pub mod retrieval_generation;
 pub mod retrieval_plan;
+pub mod retrieval_refresh;
 pub mod retrieval_pointer;
 pub mod scorer;
 pub mod writeback;

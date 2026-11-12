@@ -26,6 +26,7 @@ pub mod comparative_analysis;
 pub mod context_package;
 pub mod digest;
 pub mod errors;
+pub mod feature_match;
 pub mod harness_contrast;
 pub mod importance_penalty;
 pub mod indexless_retrieval;

@@ -2439,3 +2439,64 @@
     :fromState :ReservationMachine_Reserved ;
     :toState :ReservationMachine_Aborted ;
     :firedBy :ReservationMachine_Event_Abort .
+
+# spec: MEDULLA-DECISION-ENGINE-R707.1
+# The FeatureLedger machine: the status of one feature ledger entry. The Rust edge table
+# FEATURE_LEDGER_MACHINE is the same table.
+
+:FeatureLedgerState a owl:Class ;
+    rdfs:label "FeatureLedger State" ;
+    rdfs:comment "A state of the FeatureLedger machine." ;
+    rdfs:subClassOf :State .
+
+:FeatureLedgerTerminalState a owl:Class ;
+    rdfs:label "FeatureLedger Terminal State" ;
+    rdfs:comment "A terminal state of the FeatureLedger machine." ;
+    rdfs:subClassOf :TerminalState, :FeatureLedgerState .
+
+:FeatureLedgerTransition a owl:Class ;
+    rdfs:label "FeatureLedger Transition" ;
+    rdfs:comment "A transition of the FeatureLedger machine." ;
+    rdfs:subClassOf :Transition .
+
+:FeatureLedgerEvent a owl:Class ;
+    rdfs:label "FeatureLedger Event" ;
+    rdfs:comment "An event of the FeatureLedger machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:FeatureLedgerMachine a :StateMachine ;
+    rdfs:label "FeatureLedger machine" ;
+    :initialState :FeatureLedgerMachine_Open ;
+    :hasState :FeatureLedgerMachine_Open, :FeatureLedgerMachine_Planned, :FeatureLedgerMachine_Closed .
+
+:FeatureLedgerMachine_Open a :FeatureLedgerState ;
+    rdfs:label "FeatureLedger Open" ;
+    :storedForm "open" .
+
+:FeatureLedgerMachine_Planned a :FeatureLedgerState ;
+    rdfs:label "FeatureLedger Planned" ;
+    :storedForm "planned" .
+
+:FeatureLedgerMachine_Closed a :FeatureLedgerTerminalState ;
+    rdfs:label "FeatureLedger Closed" ;
+    :storedForm "closed" .
+
+:FeatureLedgerMachine_Event_Plan a :FeatureLedgerEvent ;
+    rdfs:label "FeatureLedger Plan" .
+
+:FeatureLedgerMachine_Event_Close a :FeatureLedgerEvent ;
+    rdfs:label "FeatureLedger Close" .
+
+:FeatureLedgerMachine_F01 a :FeatureLedgerTransition ;
+    rdfs:label "FeatureLedger F01" ;
+    :edgeId "F01" ;
+    :fromState :FeatureLedgerMachine_Open ;
+    :toState :FeatureLedgerMachine_Planned ;
+    :firedBy :FeatureLedgerMachine_Event_Plan .
+
+:FeatureLedgerMachine_F02 a :FeatureLedgerTransition ;
+    rdfs:label "FeatureLedger F02" ;
+    :edgeId "F02" ;
+    :fromState :FeatureLedgerMachine_Planned ;
+    :toState :FeatureLedgerMachine_Closed ;
+    :firedBy :FeatureLedgerMachine_Event_Close .
