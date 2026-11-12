@@ -182,7 +182,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T174 [US4] MEDULLA-TYPED-PACKS-R102.4 Surface projection wiring and consumers
 - [ ] T175 [US4] MEDULLA-TYPED-PACKS-R102.5 Surface refusals
 - [ ] T176 [US4] MEDULLA-TYPED-PACKS-R102.6 Surface evidence
-- [ ] T177 [US4] MEDULLA-TYPED-PACKS-R102.7 Surface hot-path proof
+- [x] T177 [US4] MEDULLA-TYPED-PACKS-R102.7 Surface hot-path proof
 - [ ] T178 [US4] MEDULLA-TYPED-PACKS-R103.1 Model
 - [ ] T179 [US4] MEDULLA-TYPED-PACKS-R103.2 Runtime ontology import behaviour
 - [ ] T180 [US4] MEDULLA-TYPED-PACKS-R103.3 Runtime ontology import wiring

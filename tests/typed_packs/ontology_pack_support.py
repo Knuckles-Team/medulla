@@ -38,6 +38,7 @@ from medulla.generated import reasoning
 from medulla.generated.connector_pack import (
     PackAnnotations,
     PackEntryKind,
+    PackHeadRef,
     PackProducer,
 )
 
@@ -170,9 +171,15 @@ async def core_revision(client: MedullaClient) -> str:
 
 
 async def import_entries(
-    client: MedullaClient, connector: str, entries: list[ConnectorPackEntryContent]
+    client: MedullaClient,
+    connector: str,
+    entries: list[ConnectorPackEntryContent],
+    expected_head: PackHeadRef | None = None,
 ) -> dict[str, Any]:
-    """Import one pack and return the decoded ``ConnectorPack.Import`` result."""
+    """Import one pack and return the decoded ``ConnectorPack.Import`` result.
+
+    ``expected_head`` is the head a reimport replaces; ``None`` is a first import.
+    """
     await _bind(client, connector, IMPORTER)
     server = ConnectorPackEntryContent(
         kind=PackEntryKind.MCP_SERVER,
@@ -194,7 +201,7 @@ async def import_entries(
         producer=PackProducer(name="ontology-pack-test", version="1"),
         catalog=_catalog(),
     )
-    key = connector_pack_import_key(connector, index.pack_digest, None)
+    key = connector_pack_import_key(connector, index.pack_digest, expected_head)
     request = client._build_send_request(
         "ConnectorPack",
         {
@@ -203,7 +210,11 @@ async def import_entries(
                 "request": {
                     "context": _context(key),
                     "index": index.model_dump(mode="json"),
-                    "expected_head": None,
+                    "expected_head": (
+                        None
+                        if expected_head is None
+                        else expected_head.model_dump(mode="json")
+                    ),
                     "allow_mass_withdrawal": False,
                 },
             }
