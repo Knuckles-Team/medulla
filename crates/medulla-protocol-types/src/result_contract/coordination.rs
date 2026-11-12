@@ -94,6 +94,7 @@ method_results! {
     GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>>;
     GetSessionUsage(GetSessionUsage) => Raw<medulla_work_types::run_usage::SessionUsage>;
     GetShardWriterWidth(GetShardWriterWidth) => Raw<medulla_work_types::worker_registry::ShardWriterWidth>;
+    AdmitWorkerTask(AdmitWorkerTask) => Raw<medulla_work_types::worker_registry::WorkerAdmission>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_work_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
     // MEDULLA-DURABLE-KERNEL-R820.3 uncertain-effect protocol. Reads are
