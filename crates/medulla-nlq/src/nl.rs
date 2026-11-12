@@ -36,6 +36,7 @@ use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
 
 pub mod context;
+pub mod ground_sources;
 
 /// The NL→query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input): turn a natural-language request plus a
 /// `schema_hint` (labels / grammar the model should target) into an executable query

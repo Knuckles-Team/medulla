@@ -107,6 +107,27 @@ pub fn composed_ontology_properties(
         .collect()
 }
 
+/// The composed GraphSchema's class and property IRIs and their namespaces, the
+/// vocabulary NL grounding checks embedded SPARQL and ontology IRIs against
+/// (MEDULLA-FEDERATED-QUERY-R058.4.7.2.5). The same composed documents
+/// `OntologyInspect` serves. `None` when the graph has no readable composed
+/// schema, so a schema-less graph is not checked against nothing.
+#[cfg(feature = "nl-query")]
+pub fn composed_vocabulary(
+    sources: &GraphSchemaSources,
+) -> Option<medulla_nlq::nl::ground_sources::RdfVocabulary> {
+    let inspected = composed_documents(sources, &[]).ok()?;
+    let view = inspection_of(inspected);
+    let terms = view
+        .classes
+        .into_iter()
+        .map(|class| class.iri)
+        .chain(view.object_properties.into_iter().map(|p| p.iri))
+        .chain(view.datatype_properties.into_iter().map(|p| p.iri));
+    let vocabulary = medulla_nlq::nl::ground_sources::RdfVocabulary::from_terms(terms);
+    (!vocabulary.terms.is_empty()).then_some(vocabulary)
+}
+
 #[cfg(feature = "nl-query")]
 fn iri_local_name(iri: &str) -> &str {
     iri.rsplit(['#', '/']).next().unwrap_or(iri)

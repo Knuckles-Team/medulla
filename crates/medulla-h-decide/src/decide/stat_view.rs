@@ -286,3 +286,16 @@ impl medulla_exec::exec::DecisionSource for DecisionViews {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod decision_column_tests {
+    // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.1
+    #[test]
+    fn the_grounding_column_list_is_the_relation_the_log_serves() {
+        let served: Vec<&str> = super::DECISION_COLUMNS.iter().map(|c| c.0).collect();
+        assert_eq!(
+            served,
+            medulla_decision_types::decision::DECISION_LOG_COLUMNS
+        );
+    }
+}

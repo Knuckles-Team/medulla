@@ -55,6 +55,20 @@ impl UdfCatalog {
         self.modules.get(&catalog_key(caller.owner_scope(), id))
     }
 
+    /// The ids `caller` registered, sorted. Another owner's ids never appear
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2.4).
+    pub fn ids_for(&self, caller: &CarrierAuthority) -> Vec<String> {
+        let prefix = format!("{}\0", caller.owner_scope());
+        let mut ids: Vec<String> = self
+            .modules
+            .ids()
+            .into_iter()
+            .filter_map(|key| key.strip_prefix(&prefix).map(str::to_string))
+            .collect();
+        ids.sort();
+        ids
+    }
+
     /// Run `caller`'s own UDF `id` over `input`. Another owner's id is "not
     /// registered", byte-identical to a typo.
     pub fn run(
@@ -91,6 +105,21 @@ mod tests {
                     (i64.or (i64.shl (i64.const 2048) (i64.const 32)) (i64.const 1))))"#
         ))
         .expect("valid wat")
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.4
+    #[test]
+    fn ids_for_lists_only_the_callers_own_ids() {
+        let (a, b) = (carrier("agent-a"), carrier("agent-b"));
+        let catalog = UdfCatalog::default();
+        catalog
+            .register(&a, "f", &constant_udf(1), UdfLimits::default())
+            .unwrap();
+        catalog
+            .register(&b, "g", &constant_udf(2), UdfLimits::default())
+            .unwrap();
+        assert_eq!(catalog.ids_for(&a), vec!["f".to_string()]);
+        assert_eq!(catalog.ids_for(&b), vec!["g".to_string()]);
     }
 
     #[test]

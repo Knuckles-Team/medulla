@@ -1195,6 +1195,33 @@ impl SeriesStore {
         list_series_in_rtx(&read)
     }
 
+    /// The series one `(tenant, graph)` scope holds, each with the value channels a
+    /// plan can read from it: `v0..` for its fields plus its declared field names
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2.2). Another scope's series never appear.
+    pub fn scoped_catalog(
+        &self,
+        tenant: &str,
+        graph: &str,
+    ) -> Result<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>> {
+        let mut catalog = std::collections::BTreeMap::new();
+        for id in self.list_series()? {
+            let Some(key) = SeriesKey::decode(&id) else {
+                continue;
+            };
+            if key.tenant != tenant || key.graph != graph {
+                continue;
+            }
+            let Some(meta) = self.meta(&id)? else {
+                continue;
+            };
+            let mut channels: std::collections::BTreeSet<String> =
+                (0..meta.n_fields).map(|i| format!("v{i}")).collect();
+            channels.extend(meta.field_names.iter().cloned());
+            catalog.insert(key.series, channels);
+        }
+        Ok(catalog)
+    }
+
     /// Retention: drop every point of `series_id` older than `cutoff`. Returns the
     /// number of WHOLE buckets removed. Two cases (CONCEPT:MEDULLA-KG.temporal.bucket-cutoff-trim):
     ///  * a bucket whose entire span ends at-or-before `cutoff` is range-deleted whole

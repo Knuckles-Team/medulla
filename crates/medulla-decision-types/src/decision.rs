@@ -114,3 +114,23 @@ pub use statistical::{
     ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
     StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
+
+/// The columns of the `decisions` relation a caller's decision log exposes, in order
+/// (MEDULLA-FEDERATED-QUERY-R058.4.7.2.1). `medulla-h-decide` builds the relation from its
+/// own column table and a unit test there pins the two lists equal, so natural-language
+/// grounding of `DECISIONS WHERE <column>` reads the schema the log actually serves.
+pub const DECISION_LOG_COLUMNS: &[&str] = &[
+    "record_id",
+    "question_id",
+    "question_kind",
+    "safety",
+    "source",
+    "outcome",
+    "option_id",
+    "resolution_kind",
+    "evidence_class",
+    "policy_digest",
+    "committed_by",
+    "created_at_ms",
+    "committed_at_ms",
+];

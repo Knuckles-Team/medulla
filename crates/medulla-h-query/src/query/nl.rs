@@ -62,6 +62,7 @@ pub(crate) fn handle_nl_query_plan(
     view: &medulla_graph_core::graph::GraphView,
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
+    catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
     history: &[medulla_query_types::nl_query::NlTurn],
     max_steps: usize,
 ) -> Result<(String, medulla_exec::algebra::Plan, Option<String>), Response> {
@@ -79,7 +80,7 @@ pub(crate) fn handle_nl_query_plan(
         })?;
     let (text, rewritten) = nl_follow_up(planner.as_ref(), text, history, req_id)?;
     let text = text.as_str();
-    let context = nl_schema_context(view, foreign_sources);
+    let context = nl_schema_context(view, foreign_sources, catalogs);
     // MEDULLA-FEDERATED-QUERY-R058.2.1: the SAME typed budget refuses an over-budget
     // answer before it reaches the parser, inside every correction step.
     let candidate = medulla_nlq::nl::context::plan_grounded(
@@ -121,12 +122,18 @@ pub(crate) fn nl_follow_up(
 pub(crate) fn nl_schema_context(
     view: &medulla_graph_core::graph::GraphView,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
+    #[cfg_attr(not(all(feature = "rdf", feature = "shacl")), allow(unused_mut))]
+    mut catalogs: medulla_nlq::nl::ground_sources::SourceCatalogs,
 ) -> medulla_nlq::nl::context::SchemaContext {
     let mut context = medulla_nlq::nl::context::SchemaContext::from_view(view);
     #[cfg(all(feature = "rdf", feature = "shacl"))]
-    context.link_ontology(&medulla_h_sparql::rdf::composed_ontology_properties(
-        &view.schema_sources,
-    ));
+    {
+        context.link_ontology(&medulla_h_sparql::rdf::composed_ontology_properties(
+            &view.schema_sources,
+        ));
+        catalogs.rdf = medulla_h_sparql::rdf::composed_vocabulary(&view.schema_sources);
+    }
+    context.declare_source_catalogs(catalogs);
     if let Some(sources) = foreign_sources {
         context.declare_foreign_sources(sources.clone());
     }
@@ -148,6 +155,50 @@ async fn nl_foreign_sources(
         .foreign_sources()
         .registry_for(carrier, &state.isolation);
     Some(registry.registry().names().into_iter().collect())
+}
+
+/// The caller-authorized catalogs of the source-native identifier families
+/// (MEDULLA-FEDERATED-QUERY-R058.4.7.2): the decision-log columns, the series of the
+/// caller's own tenant and graph scope, the UDFs the caller registered, and an
+/// empty CEP base the snapshot's event attributes join in `SchemaContext`. A family
+/// whose verified owner scope is missing stays unbound, as `nl_foreign_sources`
+/// does, and the execution path refuses it with its own access error. The RDF
+/// vocabulary is bound in [`nl_schema_context`] from the view's composed schema.
+#[cfg(feature = "nl-query")]
+async fn nl_source_catalogs(
+    ctx: &QueryHandlerCtx<'_>,
+) -> medulla_nlq::nl::ground_sources::SourceCatalogs {
+    #[cfg_attr(not(any(feature = "tsdb", feature = "wasm-udf")), allow(unused_mut))]
+    let mut catalogs = medulla_nlq::nl::ground_sources::SourceCatalogs {
+        decision_columns: Some(medulla_nlq::nl::ground_sources::decision_log_columns()),
+        cep_attributes: Some(std::collections::BTreeSet::new()),
+        ..Default::default()
+    };
+    let carrier = ctx.read_authority.and_then(GraphReadAuthority::carrier);
+    #[cfg(any(feature = "tsdb", feature = "wasm-udf"))]
+    if let Some(carrier) = carrier {
+        let state = ctx.state.read().await;
+        #[cfg(feature = "tsdb")]
+        {
+            let catalog = match state.tsdb_store.as_ref() {
+                Some(store) => store
+                    .scoped_catalog(
+                        carrier.tenant_scope(),
+                        &carrier.namespace("timeseries-graph", ctx.graph_name),
+                    )
+                    .unwrap_or_default(),
+                None => Default::default(),
+            };
+            catalogs.series = Some(catalog);
+        }
+        #[cfg(feature = "wasm-udf")]
+        {
+            catalogs.udfs = Some(state.udf_registry.ids_for(carrier).into_iter().collect());
+        }
+    }
+    #[cfg(not(any(feature = "tsdb", feature = "wasm-udf")))]
+    let _ = carrier;
+    catalogs
 }
 
 /// The served refusal for a planner answer that was never executed.
@@ -365,11 +416,13 @@ async fn run_nl_query(
     let foreign_sources = nl_foreign_sources(ctx.state, ctx.read_authority).await;
     #[cfg(not(feature = "federation"))]
     let foreign_sources = None;
+    let catalogs = nl_source_catalogs(ctx).await;
     let (uql, plan, rewritten) = handle_nl_query_plan(
         &text,
         &snap,
         req_id,
         foreign_sources.as_ref(),
+        catalogs,
         &history,
         max_steps,
     )?;

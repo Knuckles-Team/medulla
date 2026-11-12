@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::wire::{Op, Plan, Pred};
 
+use super::ground_sources::{self, IdentifierFamily, SourceCatalogs};
 use super::{enforce_budget, NlPlanner, NlQueryBudget, NlQueryError};
 
 /// Labels kept in the schema hint (MEDULLA-FEDERATED-QUERY-R058.4.2).
@@ -126,6 +127,13 @@ pub struct SchemaContext {
     /// Federation sources the owner-scoped served registry authorizes. An
     /// absent catalog refuses foreign stages rather than inventing authority.
     foreign_sources: Option<BTreeSet<String>>,
+    /// Caller-authorized catalogs of the source-native identifier families
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2).
+    #[serde(default)]
+    sources: SourceCatalogs,
+    /// Attribute keys of event nodes (a numeric `ts` and an `attrs` object) in the snapshot.
+    #[serde(default)]
+    event_attributes: BTreeSet<String>,
 }
 
 impl Default for SchemaContext {
@@ -140,6 +148,8 @@ impl Default for SchemaContext {
             edge_schemas: BTreeMap::new(),
             untyped_edges: LabelSchema::default(),
             foreign_sources: None,
+            sources: SourceCatalogs::default(),
+            event_attributes: BTreeSet::new(),
         };
         context.seal();
         context
@@ -166,6 +176,14 @@ pub enum SchemaViolation {
     UnknownSource { source: String, known: Vec<String> },
     /// An inline foreign adapter has no owner-scoped registry identity to ground.
     UnboundForeignSource,
+    /// A source-native identifier (decision-record column, series, CEP attribute,
+    /// UDF id, RDF IRI) the caller's catalog for that family does not hold
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2).
+    UnknownIdentifier {
+        family: IdentifierFamily,
+        identifier: String,
+        known: Vec<String>,
+    },
 }
 
 impl SchemaViolation {
@@ -177,6 +195,7 @@ impl SchemaViolation {
             Self::UnknownRelationship { .. } => "NL_SCHEMA_UNKNOWN_RELATIONSHIP",
             Self::UnknownSource { .. } => "NL_SCHEMA_UNKNOWN_SOURCE",
             Self::UnboundForeignSource => "NL_SCHEMA_UNBOUND_FOREIGN_SOURCE",
+            Self::UnknownIdentifier { .. } => "NL_IDENTIFIER_UNKNOWN",
         }
     }
 }
@@ -210,6 +229,17 @@ impl std::fmt::Display for SchemaViolation {
             ),
             Self::UnboundForeignSource => write!(f,
                 "{code}: foreign stage has no owner-scoped schema identity; bind the source registry and name a registered source"),
+            Self::UnknownIdentifier {
+                family,
+                identifier,
+                known,
+            } => write!(
+                f,
+                "{code}{{family: {}}}: `{identifier}` is not in the caller's {} catalog (known: {})",
+                family.as_str(),
+                family.as_str(),
+                list(known)
+            ),
             Self::UnknownSource { source, known } => write!(
                 f,
                 "{code}: foreign source `{source}` is not registered (sources: {})",
@@ -383,6 +413,11 @@ impl SchemaContext {
     /// Record one node's labels and property keys.
     pub fn observe_node(&mut self, props: &serde_json::Map<String, serde_json::Value>) {
         self.digest.clear();
+        if props.get("ts").is_some_and(serde_json::Value::is_u64) {
+            if let Some(serde_json::Value::Object(attrs)) = props.get("attrs") {
+                self.event_attributes.extend(attrs.keys().cloned());
+            }
+        }
         let labels = node_labels(props);
         if labels.is_empty() {
             self.unlabelled.nodes += 1;
@@ -427,6 +462,16 @@ impl SchemaContext {
     /// Declare the federation sources the caller may name in `FOREIGN`.
     pub fn declare_foreign_sources(&mut self, sources: BTreeSet<String>) {
         self.foreign_sources = Some(sources);
+    }
+
+    /// Bind the caller-authorized catalogs of the source-native identifier families
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2). A family left `None` stays unchecked. The
+    /// CEP catalog is the snapshot's event attributes joined with any names given.
+    pub fn declare_source_catalogs(&mut self, mut catalogs: SourceCatalogs) {
+        if let Some(cep) = catalogs.cep_attributes.as_mut() {
+            cep.extend(self.event_attributes.iter().cloned());
+        }
+        self.sources = catalogs;
     }
 
     /// True when the snapshot holds no labelled node.
@@ -508,6 +553,7 @@ impl SchemaContext {
     /// spelling variants to the stored names (MEDULLA-FEDERATED-QUERY-R058.4.7.1).
     pub fn ground(&self, plan: &Plan) -> Result<Grounded, SchemaViolation> {
         let mut repairs = Vec::new();
+        self.ground_source_native(&plan.ops)?;
         let (ops, _) = self.ground_ops(&plan.ops, Scope::AnyLocal, &mut repairs)?;
         Ok(Grounded {
             plan: Plan::new(ops),
@@ -642,6 +688,65 @@ impl SchemaContext {
             | Op::ExplainBelief { .. } => Ok((op.clone(), Scope::AnyLocal)),
             _ => Ok((op.clone(), scope)),
         }
+    }
+
+    /// Check every source-native identifier of `ops` against its family's catalog
+    /// (MEDULLA-FEDERATED-QUERY-R058.4.7.2): one arm per family, each calling the
+    /// grounding function of [`ground_sources`]. Nothing is rewritten.
+    fn ground_source_native(&self, ops: &[Op]) -> Result<(), SchemaViolation> {
+        let derived = derived_channels(ops);
+        self.ground_source_ops(ops, &derived)
+    }
+
+    fn ground_source_ops(
+        &self,
+        ops: &[Op],
+        derived: &BTreeSet<String>,
+    ) -> Result<(), SchemaViolation> {
+        let _ = derived;
+        for op in ops {
+            match op {
+                Op::DecisionScan { preds } => {
+                    let mut columns = Vec::new();
+                    for pred in preds {
+                        pred_columns(pred, &mut columns);
+                    }
+                    ground_sources::ground_decision_records(&self.sources, &columns)?;
+                }
+                #[cfg(feature = "timeseries")]
+                Op::TsScan { series, .. } => {
+                    ground_sources::ground_timeseries(&self.sources, series)?;
+                }
+                #[cfg(feature = "timeseries")]
+                Op::Events { channels } => {
+                    ground_sources::ground_series_channels(&self.sources, channels, derived)?;
+                }
+                #[cfg(feature = "stream")]
+                Op::Cep { pattern } => {
+                    let attributes = cep_attributes(pattern);
+                    ground_sources::ground_cep(&self.sources, &attributes, derived)?;
+                }
+                #[cfg(feature = "wasm-udf")]
+                Op::Udf { id } => ground_sources::ground_udf(&self.sources, id)?,
+                #[cfg(feature = "owl")]
+                Op::SparqlBgp { query, .. } => ground_sources::ground_rdf(&self.sources, query)?,
+                #[cfg(feature = "owl")]
+                Op::Reason {
+                    target_class,
+                    ontology,
+                } if ontology.is_empty() => {
+                    ground_sources::ground_rdf_class(&self.sources, target_class)?;
+                }
+                #[cfg(feature = "text")]
+                Op::FuseRrf { branches, .. } => {
+                    for branch in branches {
+                        self.ground_source_ops(branch, derived)?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     fn check_foreign_source(&self, name: &str) -> Result<(), SchemaViolation> {
@@ -837,6 +942,78 @@ impl SchemaContext {
                 .collect(),
         }
     }
+}
+
+/// The columns a decision-log predicate reads.
+fn pred_columns(pred: &Pred, out: &mut Vec<String>) {
+    match pred {
+        Pred::And { preds } | Pred::Or { preds } => {
+            preds.iter().for_each(|p| pred_columns(p, out));
+        }
+        Pred::Not { pred } => pred_columns(pred, out),
+        Pred::JsonPath { path, .. } => {
+            if let Some(medulla_graph_core::jsonpath::Segment::Key(key)) =
+                medulla_graph_core::jsonpath::parse_path(path)
+                    .as_deref()
+                    .and_then(|p| p.first())
+            {
+                out.push(key.to_string());
+            }
+        }
+        other => {
+            let mut leaf = other.clone();
+            if let Some(prop) = pred_property(&mut leaf) {
+                out.push(prop.clone());
+            }
+        }
+    }
+}
+
+/// The value channels a plan's `DERIVE ... AS name` stages define.
+fn derived_channels(ops: &[Op]) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    for op in ops {
+        match op {
+            #[cfg(feature = "timeseries")]
+            Op::Derive { columns } => names.extend(columns.iter().map(|c| c.name.clone())),
+            #[cfg(feature = "text")]
+            Op::FuseRrf { branches, .. } => {
+                for branch in branches {
+                    names.extend(derived_channels(branch));
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+/// Every attribute name a CEP pattern's matchers read.
+#[cfg(feature = "stream")]
+fn cep_attributes(spec: &medulla_types::wire::CepPatternSpec) -> Vec<String> {
+    use medulla_types::wire::{CepAttrPredSpec, CepMatcherSpec, CepNodeSpec};
+    fn matcher(m: &CepMatcherSpec, out: &mut Vec<String>) {
+        for pred in &m.preds {
+            let (CepAttrPredSpec::Eq { field, .. }
+            | CepAttrPredSpec::Gt { field, .. }
+            | CepAttrPredSpec::Lt { field, .. }
+            | CepAttrPredSpec::Exists { field }) = pred;
+            out.push(field.clone());
+        }
+    }
+    fn node(n: &CepNodeSpec, out: &mut Vec<String>) {
+        match n {
+            CepNodeSpec::Sequence(matchers) => matchers.iter().for_each(|m| matcher(m, out)),
+            CepNodeSpec::Within { pattern, .. } => node(pattern, out),
+            CepNodeSpec::Absence { a, b, .. } => {
+                matcher(a, out);
+                matcher(b, out);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    node(&spec.pattern, &mut out);
+    out
 }
 
 /// The labels a node carries, under the same keys the engine's label scan reads.

@@ -1277,3 +1277,121 @@ fn max_steps_is_one_to_four_default_three() {
         assert!(refused.to_string().contains(&n.to_string()));
     }
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.1
+#[test]
+fn decision_record_columns_are_grounded_and_an_unbound_catalog_is_not_checked() {
+    use crate::nl::ground_sources::SourceCatalogs;
+    let mut context = SchemaContext::from_view(&servicenow_view());
+    let plan = |column: &str| {
+        Plan::new(vec![Op::DecisionScan {
+            preds: vec![Pred::Eq {
+                prop: column.into(),
+                value: "acted".into(),
+            }],
+        }])
+    };
+    assert!(context.ground(&plan("invented")).is_ok(), "unbound");
+    context.declare_source_catalogs(SourceCatalogs {
+        decision_columns: Some(
+            medulla_decision_types::decision::DECISION_LOG_COLUMNS
+                .iter()
+                .map(|c| c.to_string())
+                .collect(),
+        ),
+        ..Default::default()
+    });
+    assert!(context.ground(&plan("outcome")).is_ok());
+    let violation = context.ground(&plan("invented")).unwrap_err();
+    assert_eq!(violation.code(), "NL_IDENTIFIER_UNKNOWN");
+    assert!(violation.to_string().contains("family: decision_record"));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.2
+#[cfg(feature = "timeseries")]
+#[test]
+fn series_names_and_channels_are_grounded_against_the_series_catalog() {
+    use crate::nl::ground_sources::SourceCatalogs;
+    let mut context = SchemaContext::from_view(&servicenow_view());
+    context.declare_source_catalogs(SourceCatalogs {
+        series: Some(
+            [(
+                "cpu".to_string(),
+                ["v0".to_string(), "value".to_string()]
+                    .into_iter()
+                    .collect(),
+            )]
+            .into_iter()
+            .collect(),
+        ),
+        ..Default::default()
+    });
+    let scan = |series: &str| Op::TsScan {
+        series: vec![series.into()],
+        from: 0.0,
+        to: 1.0,
+    };
+    let events = |channel: &str| Op::Events {
+        channels: vec![channel.into()],
+    };
+    assert!(context
+        .ground(&Plan::new(vec![scan("cpu"), events("v0")]))
+        .is_ok());
+    let bad_series = context.ground(&Plan::new(vec![scan("gpu")])).unwrap_err();
+    assert!(bad_series.to_string().contains("family: timeseries"));
+    let bad_channel = context
+        .ground(&Plan::new(vec![scan("cpu"), events("v9")]))
+        .unwrap_err();
+    assert_eq!(bad_channel.code(), "NL_IDENTIFIER_UNKNOWN");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.4
+#[cfg(feature = "wasm-udf")]
+#[test]
+fn udf_ids_are_grounded_against_the_registered_catalog() {
+    use crate::nl::ground_sources::SourceCatalogs;
+    let mut context = SchemaContext::from_view(&servicenow_view());
+    context.declare_source_catalogs(SourceCatalogs {
+        udfs: Some(BTreeSet::from(["score-v2".to_string()])),
+        ..Default::default()
+    });
+    let udf = |id: &str| Plan::new(vec![Op::Udf { id: id.into() }]);
+    assert!(context.ground(&udf("score-v2")).is_ok());
+    let violation = context.ground(&udf("other")).unwrap_err();
+    assert!(violation.to_string().contains("family: udf"));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.7.2.3
+#[cfg(feature = "stream")]
+#[test]
+fn cep_attributes_are_grounded_against_event_attributes() {
+    use crate::nl::ground_sources::SourceCatalogs;
+    use medulla_types::wire::{
+        CepAttrPredSpec, CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec,
+    };
+    let mut context = SchemaContext::from_view(&servicenow_view());
+    let mut event = serde_json::Map::new();
+    event.insert("ts".into(), json!(5));
+    event.insert("attrs".into(), json!({"temp": 3}));
+    context.observe_node(&event);
+    context.declare_source_catalogs(SourceCatalogs {
+        cep_attributes: Some(BTreeSet::new()),
+        ..Default::default()
+    });
+    let cep = |field: &str| {
+        Plan::new(vec![Op::Cep {
+            pattern: CepPatternSpec {
+                pattern: CepNodeSpec::Sequence(vec![CepMatcherSpec {
+                    key: None,
+                    preds: vec![CepAttrPredSpec::Exists {
+                        field: field.into(),
+                    }],
+                }]),
+                window: CepWindowSpec::Sliding { size: 10 },
+            },
+        }])
+    };
+    assert!(context.ground(&cep("temp")).is_ok());
+    let violation = context.ground(&cep("invented")).unwrap_err();
+    assert!(violation.to_string().contains("family: cep"));
+}
