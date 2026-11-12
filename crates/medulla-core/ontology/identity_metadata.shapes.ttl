@@ -2,7 +2,7 @@
 #
 # The bounds of the three typed records. Core source `core:identity_metadata@1`.
 
-@prefix idm: <http://knuckles.team/kg/identity_metadata#> .
+@prefix idm: <https://knuckles-team.github.io/ontology/identity-metadata#> .
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

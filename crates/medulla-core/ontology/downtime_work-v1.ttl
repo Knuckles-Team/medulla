@@ -4,12 +4,12 @@
 # budget and preconditions. The scheduler runs the types that fit an idle or
 # declared window.
 
-@prefix dw:   <http://knuckles.team/kg/downtime-work#> .
+@prefix dw:   <https://knuckles-team.github.io/ontology/downtime-work#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-<http://knuckles.team/kg/downtime-work> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/downtime-work> a owl:Ontology ;
     rdfs:label "Downtime work" ;
     rdfs:comment "Job types the engine runs while it is idle or inside a declared window." .
 
@@ -47,7 +47,7 @@ dw:hasPrecondition a owl:ObjectProperty ;
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg/downtime-work#JobType> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg/downtime-work#Window> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg/downtime-work#Budget> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg/downtime-work#Precondition> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#JobType> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#Window> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#Budget> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .
+<https://knuckles-team.github.io/ontology/downtime-work#Precondition> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#DomainEntity> .

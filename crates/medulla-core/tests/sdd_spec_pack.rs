@@ -9,7 +9,7 @@ use medulla_graph_core::graph::GraphSchemaSources;
 use sdd_pack_support::{declared_and_parents, hierarchy, registered};
 
 const PACK: &str = "core:sdd_spec@1";
-const PACK_NS: &str = "http://knuckles.team/kg/sdd-spec#";
+const PACK_NS: &str = "https://knuckles-team.github.io/ontology/sdd-spec#";
 const CLASSES: [&str; 12] = [
     "Spec",
     "Requirement",

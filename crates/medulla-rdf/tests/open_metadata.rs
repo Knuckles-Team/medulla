@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 const OPEN_METADATA_TYPE: &str =
     "https://knuckles-team.github.io/ontology/catalog#openMetadataType";
-const CAT: &str = "http://knuckles.team/kg/catalog#";
+const CAT: &str = "https://knuckles-team.github.io/ontology/catalog#";
 
 fn documents() -> Vec<Triple> {
     parse_all(&[include_str!(

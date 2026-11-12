@@ -7,15 +7,15 @@
 # Each class extends the core class kg:DomainEntity. An interaction edge
 # `subject -[relation]-> peer` is a close match of foaf:knows.
 
-@prefix idm:  <http://knuckles.team/kg/identity_metadata#> .
-@prefix kg:   <http://knuckles.team/kg#> .
+@prefix idm:  <https://knuckles-team.github.io/ontology/identity-metadata#> .
+@prefix kg:   <https://knuckles-team.github.io/ontology/core#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
-<http://knuckles.team/kg/identity_metadata> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/identity-metadata> a owl:Ontology ;
     rdfs:label "Identity metadata" ;
     rdfs:comment "Typed principal metadata: preferences, client metadata and interaction networks." .
 

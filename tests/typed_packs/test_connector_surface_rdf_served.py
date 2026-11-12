@@ -23,7 +23,7 @@ from medulla.generated.connector_pack import (
     PackHeadRef,
 )
 
-CP = "http://knuckles.team/kg/connector-pack#"
+CP = "https://knuckles-team.github.io/ontology/connector-pack#"
 
 
 def _tool(connector: str, name: str) -> ConnectorPackEntryContent:
@@ -44,7 +44,7 @@ def _surface(connector: str, order: str, tools: list[str]) -> ConnectorPackEntry
         "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
         "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
         f"<{order}> a owl:Class ;\n"
-        " rdfs:subClassOf <http://knuckles.team/kg#Agreement> .\n"
+        " rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Agreement> .\n"
     )
     for name in tools:
         turtle += f"<tool://{connector}/{name}> cp:operatesOn <{order}> .\n"

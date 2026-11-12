@@ -1,6 +1,6 @@
 # Downtime work shapes (MEDULLA-DURABLE-KERNEL-R101.1).
 
-@prefix dw: <http://knuckles.team/kg/downtime-work#> .
+@prefix dw: <https://knuckles-team.github.io/ontology/downtime-work#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 dw:JobTypeShape a sh:NodeShape ;

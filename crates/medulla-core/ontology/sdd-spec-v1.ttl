@@ -1,5 +1,5 @@
-@prefix : <http://knuckles.team/kg#> .
-@prefix sddspec: <http://knuckles.team/kg/sdd-spec#> .
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix sddspec: <https://knuckles-team.github.io/ontology/sdd-spec#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -9,7 +9,7 @@
 # import the core document. A class without a core parent is refused with
 # PACK_CLASS_UNROOTED (`refuse_unrooted_pack_classes`).
 
-<http://knuckles.team/kg/sdd-spec> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/sdd-spec> a owl:Ontology ;
     rdfs:label "Spec-driven development pack" ;
     rdfs:comment "Classes and properties of the spec artifact graph: specs, rows, plan sections, tasks, contracts, checklist items, principles, goals, proposals, phases, release bundles and project modes." .
 
