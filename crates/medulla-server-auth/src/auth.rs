@@ -494,6 +494,7 @@ fn legacy_query_body(method: &Method) -> Option<Vec<u8>> {
             plan,
             foreign_execution: None,
             foreign_executions,
+            code_map: None,
         } if foreign_executions.is_empty() => LegacyQuery::UnifiedQuery { plan },
         _ => return None,
     };
@@ -2082,6 +2083,7 @@ mod tests {
                 plan: medulla_exec::algebra::Plan::new(vec![]),
                 foreign_execution: None,
                 foreign_executions: Default::default(),
+                code_map: None,
             },
         ];
         let old_client_bodies = [

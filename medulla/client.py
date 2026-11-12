@@ -11894,6 +11894,46 @@ class QueryClient:
         rows = result or []
         return [{"id": id_, "score": score} for id_, score in rows]
 
+    async def code_map(
+        self,
+        repo: str,
+        source_revision: str,
+        *,
+        behavior_text: str | None = None,
+        symbol: str | None = None,
+        relations: list[str] | None = None,
+        page_limit: int = 100,
+        cursor: str | None = None,
+    ) -> Any:
+        """Read one page of the revision-bound code map of an indexed repository
+        (MEDULLA-REPO-INGEST-R006.3).
+
+        The engine authorizes the caller first, then compares ``source_revision``
+        with the repository's current revision on every page: an unknown or old
+        revision, or a cursor minted for an older map generation, refuses with
+        ``CODE_MAP_STALE`` until the repository is reindexed. ``relations`` is any
+        of ``"Contains"``, ``"Calls"``, ``"DependsOn"`` (empty means all).
+        Returns the typed ``CodeMapResult``: ``entries`` (files and symbols),
+        ``edges``, ``incomplete`` (relations the index could not resolve) and
+        ``next_cursor`` (pass back as ``cursor`` for the next page)."""
+        from .generated.models import CodeMapResult
+
+        code_map: dict[str, Any] = {
+            "repo": repo,
+            "source_revision": source_revision,
+            "relations": relations or [],
+            "page_limit": page_limit,
+        }
+        if behavior_text is not None:
+            code_map["behavior_text"] = behavior_text
+        if symbol is not None:
+            code_map["symbol"] = symbol
+        if cursor is not None:
+            code_map["cursor"] = cursor
+        body: dict[str, Any] = {"plan": {"ops": []}, "code_map": code_map}
+        result = (await _gen.query.send_unified_query(self._client, body)).payload
+        return CodeMapResult.model_validate(result)
+
     async def uql(
         self,
         text: str,

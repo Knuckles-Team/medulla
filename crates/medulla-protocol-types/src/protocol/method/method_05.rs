@@ -101,6 +101,11 @@ $($variants)*
         /// The single and multi-source forms are mutually exclusive.
         #[serde(default, skip_serializing_if = "medulla_types::contract::BoundedVec::is_empty")]
         foreign_executions: medulla_types::contract::BoundedVec<medulla_catalog_types::foreign_read::ForeignReadExecutionRef, 16>,
+        /// MEDULLA-REPO-INGEST-R006.3: serve a revision-bound code map of an
+        /// indexed repository instead of running `plan` (which must then be
+        /// empty). The answer is a `CodeMapResult`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        code_map: Option<Box<medulla_types::code_map::CodeMapQuery>>,
     },
 
 

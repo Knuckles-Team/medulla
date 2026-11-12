@@ -344,6 +344,7 @@ pub mod ingest_capabilities;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
 pub mod ingest_readback;
 pub mod ingest_throughput;
+pub mod code_map;
 // MEDULLA-CQ-ORCH-R701.1: canonical workflow records of every process source.
 pub mod process_import;
 // MEDULLA-CQ-ORCH-R702.1: process document records (BPMN 2.0, DMN 1.3).

@@ -485,6 +485,8 @@ closed_error_codes! {
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
         LayerCycle => "LAYER_CYCLE",
         InvalidCommitDigest => "INVALID_COMMIT_DIGEST",
+        CodeMapStale => "CODE_MAP_STALE",
+        CodeMapInvalid => "CODE_MAP_INVALID",
         RuleVersionUnsupported => "RULE_VERSION_UNSUPPORTED",
         AdmittedRequestDigestMismatch => "ADMITTED_REQUEST_DIGEST_MISMATCH",
         AdmittedRequestTooLarge => "ADMITTED_REQUEST_TOO_LARGE",

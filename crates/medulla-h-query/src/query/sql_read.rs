@@ -16,7 +16,7 @@ struct SqlReadScope<'a> {
 }
 
 #[cfg(feature = "query")]
-fn required_sql_authority(
+pub(crate) fn required_sql_authority(
     req_id: u64,
     read_authority: Option<&GraphReadAuthority>,
 ) -> Result<

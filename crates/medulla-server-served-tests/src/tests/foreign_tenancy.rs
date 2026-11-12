@@ -69,6 +69,7 @@ fn named_scan_plan() -> Method {
         foreign_execution: None,
 
         foreign_executions: Default::default(),
+        code_map: None,
     }
 }
 

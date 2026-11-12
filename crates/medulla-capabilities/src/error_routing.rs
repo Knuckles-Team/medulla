@@ -152,7 +152,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // names an unsupported coordinate reference.
     ("Sparql", &["GEO_CRS_UNSUPPORTED", "GEO_LITERAL_INVALID"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.3: a source that cannot give one snapshot.
-    ("UnifiedQuery", &["SNAPSHOT_UNAVAILABLE"]),
+    (
+        "UnifiedQuery",
+        &["SNAPSHOT_UNAVAILABLE", "CODE_MAP_STALE", "CODE_MAP_INVALID"],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
     ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.

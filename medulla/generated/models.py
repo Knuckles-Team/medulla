@@ -2613,6 +2613,64 @@ class ClaimAuthor(str, Enum):
     PERSON = "person"
 
 
+class CodeRelation(str, Enum):
+    CONTAINS = "Contains"
+    CALLS = "Calls"
+    DEPENDS_ON = "DependsOn"
+
+
+class CodeMapQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    repo: str
+    source_revision: str
+    behavior_text: str | None = None
+    symbol: str | None = None
+    relations: list[CodeRelation] = Field(default_factory=list)
+    page_limit: Annotated[int, Field(ge=1, le=1000)]
+    cursor: str | None = None
+
+
+class CodeMapEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    kind: str
+    name: str
+    path: str
+    line: Annotated[int, Field(ge=0)]
+    end_line: Annotated[int, Field(ge=0)]
+
+
+class CodeMapEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    source: str
+    target: str
+    relation: CodeRelation
+
+
+class CodeMapIncomplete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    source: str
+    relation: CodeRelation
+    name: str
+
+
+class CodeMapResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    map_generation: Annotated[int, Field(ge=0)]
+    inventory_digest: str
+    query_digest: str
+    auth_scope_digest: str
+    entries: list[CodeMapEntry]
+    edges: list[CodeMapEdge]
+    incomplete: list[CodeMapIncomplete]
+    next_cursor: str | None = None
+
+
 class ClaimSource(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17245,6 +17303,7 @@ class MethodUnbindQueueParams(BaseModel):
 class MethodUnifiedQueryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    code_map: CodeMapQuery | None = None
     foreign_execution: ForeignReadExecutionRef | None = None
     foreign_executions: BoundedVec_ForeignReadExecutionRef_16 | None = None
     plan: Plan
@@ -29340,6 +29399,12 @@ __all__ = [
     "CheckpointContent",
     "CheckpointMemoryRef",
     "ClaimAuthor",
+    "CodeMapEdge",
+    "CodeMapEntry",
+    "CodeMapIncomplete",
+    "CodeMapQuery",
+    "CodeMapResult",
+    "CodeRelation",
     "ClaimGetResult",
     "ClaimNextResult",
     "ClaimNextResultValue",
