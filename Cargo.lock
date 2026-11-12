@@ -5967,6 +5967,7 @@ dependencies = [
  "medulla-types",
  "redb",
  "serde",
+ "serde_json",
  "tempfile",
  "zstd",
 ]
