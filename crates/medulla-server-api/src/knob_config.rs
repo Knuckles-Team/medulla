@@ -322,6 +322,8 @@ knobs! {
     eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
     /// Longest replay lag at which a declared replica may serve a snapshot read.
     federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
+    /// Longest a web metasearch result is served from the cache (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
+    federation_web_cache_ttl_s: u64 = "federation.web_cache_ttl_s", U64(900), [0, 86_400], "s", Tunable;
     /// Longest a federated source statement may run.
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).

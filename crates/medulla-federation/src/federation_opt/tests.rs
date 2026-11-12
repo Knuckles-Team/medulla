@@ -1339,6 +1339,9 @@ mod search_fusion {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.3
     #[test]
     fn served_search_reaches_fusion() {
+        let _held = super::super::tests::PORT_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let port = Arc::new(IndexPort {
             seen: Mutex::new(Vec::new()),
         });
@@ -1410,5 +1413,340 @@ mod search_fusion {
         session.prepare(&scan_plan.ops);
         let rows = execute_federated(&fx, &session, scan_plan).unwrap();
         assert_eq!(rows.ids(), ["r-a", "r-b", "d4"], "score desc, ties by id");
+    }
+}
+
+/// Tests that replace the process-wide connector port take this lock.
+pub(super) static PORT_LOCK: Mutex<()> = Mutex::new(());
+
+// ── web metasearch sources (MEDULLA-UNIFIED-DATA-PLANE-R038.7) ─────────────────────────
+
+mod web_metasearch {
+    use super::*;
+    use crate::federation::ForeignSourceRegistry;
+    use crate::federation_opt::web::{resolve_web, resolve_web_with, web_scan_at, WebQuery};
+    use crate::federation_opt::{web_candidates, FragmentCacheScope, SourceWatermark};
+    use medulla_exec::rowset::{TextChannels, ValueChannels};
+    use medulla_types::web_source::WebSearchCapability;
+    use std::collections::{BTreeMap, HashMap};
+    use std::sync::atomic::AtomicBool;
+
+    /// A web search tool that counts calls and answers `results` as (url, title, engine).
+    struct WebPort {
+        calls: Mutex<Vec<super::super::mcp::ConnectorRowRequest>>,
+        results: Vec<(String, String, String)>,
+        down: AtomicBool,
+    }
+
+    impl WebPort {
+        fn new(results: &[(&str, &str, &str)]) -> Arc<Self> {
+            Arc::new(Self {
+                calls: Mutex::new(Vec::new()),
+                results: results
+                    .iter()
+                    .map(|(u, t, e)| (u.to_string(), t.to_string(), e.to_string()))
+                    .collect(),
+                down: AtomicBool::new(false),
+            })
+        }
+        fn count(&self) -> usize {
+            self.calls.lock().unwrap().len()
+        }
+    }
+
+    impl super::super::mcp::ConnectorRowSource for WebPort {
+        fn declared_arguments(&self, _server: &str, _tool: &str) -> Option<Vec<String>> {
+            Some(
+                ["query", "categories", "engines", "language", "pageno"]
+                    .map(String::from)
+                    .to_vec(),
+            )
+        }
+        fn web_capability(&self, _server: &str, _tool: &str) -> Option<WebSearchCapability> {
+            Some(WebSearchCapability {
+                categories: vec!["general".into(), "news".into()],
+                engines: vec!["duckduckgo".into()],
+                languages: vec!["en".into()],
+                max_results: 3,
+            })
+        }
+        fn rows(
+            &self,
+            request: &super::super::mcp::ConnectorRowRequest,
+        ) -> Result<super::super::mcp::ConnectorRows, String> {
+            self.calls.lock().unwrap().push(request.clone());
+            if self.down.load(Ordering::SeqCst) {
+                return Err("connection refused".into());
+            }
+            let (mut values, mut texts) = (ValueChannels::new(), TextChannels::new());
+            for (rank, (url, title, engine)) in self.results.iter().enumerate() {
+                values.insert(
+                    url.clone(),
+                    BTreeMap::from([("rank".to_string(), (rank + 1) as f64)]),
+                );
+                texts.insert(
+                    url.clone(),
+                    BTreeMap::from([
+                        ("title".to_string(), title.clone()),
+                        ("snippet".to_string(), format!("about {title}")),
+                        ("engine".to_string(), engine.clone()),
+                    ]),
+                );
+            }
+            Ok(super::super::mcp::ConnectorRows {
+                source_label: request.source_label.clone(),
+                rows: RowSet::from_ids(self.results.iter().map(|r| r.0.clone()))
+                    .with_values(values)
+                    .with_texts(texts),
+                truncated: false,
+                missing_source: None,
+            })
+        }
+    }
+
+    fn spec() -> ForeignSourceSpec {
+        ForeignSourceSpec::Mcp {
+            server: "web-mcp".into(),
+            tool: "web_search".into(),
+            capabilities: medulla_types::wire::ForeignOperationCapabilities::default(),
+        }
+    }
+
+    fn registry() -> ForeignSourceRegistry {
+        let mut registry = ForeignSourceRegistry::new();
+        registry.register_spec("web", spec());
+        registry
+    }
+
+    fn session(owner: &str, ttl_ms: u64) -> FederationSession {
+        let session = FederationSession::new(FederationBudget::default());
+        session.set_cache_scope(Some(Arc::new(FragmentCacheScope::new(
+            owner.into(),
+            HashMap::from([(
+                "web".into(),
+                SourceWatermark {
+                    watermark: "web".into(),
+                    valid_through_ms: u64::MAX,
+                    entry_ttl_ms: Some(ttl_ms),
+                },
+            )]),
+        ))));
+        session
+    }
+
+    const THREE: [(&str, &str, &str); 3] = [
+        ("https://a.example/1", "One", "duckduckgo"),
+        ("https://b.example/2", "Two", "duckduckgo"),
+        ("https://c.example/3", "Three", "duckduckgo"),
+    ];
+
+    fn remote(
+        port: &Arc<WebPort>,
+        registry: &ForeignSourceRegistry,
+    ) -> crate::federation_opt::web::WebRemote {
+        let spec = ForeignSourceSpec::Named { name: "web".into() };
+        resolve_web_with(
+            &spec,
+            Some(registry),
+            Some(port.clone() as Arc<dyn super::super::mcp::ConnectorRowSource>),
+        )
+        .expect("a tool with a web capability resolves to a web source")
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.2
+    #[test]
+    fn web_search_pushdown_and_ttl() {
+        let port = WebPort::new(&THREE);
+        let registry = registry();
+        let remote = remote(&port, &registry);
+        let session = session("owner-a", 2_000);
+        let mut query = WebQuery::new("needle");
+        query.categories = vec!["news".into()];
+        query.language = Some("en".into());
+        let t0 = 1_000_000;
+        let first = web_scan_at(&query, &remote, &session, t0).unwrap();
+        assert_eq!(first.len(), 3);
+        // The query text, categories, language and page are pushed as tool arguments.
+        let sent = port.calls.lock().unwrap()[0].arguments.clone();
+        assert_eq!(sent["query"], "needle");
+        assert_eq!(sent["categories"], "news");
+        assert_eq!(sent["language"], "en");
+        assert_eq!(sent["pageno"], 1);
+        // Inside the TTL: no second connector call.
+        web_scan_at(&query, &remote, &session, t0 + 1_500).unwrap();
+        assert_eq!(
+            port.count(),
+            1,
+            "a repeat inside the TTL is served from the cache"
+        );
+        // A different argument digest is a different entry.
+        web_scan_at(&WebQuery::new("other"), &remote, &session, t0 + 1_600).unwrap();
+        assert_eq!(port.count(), 2);
+        // After the TTL: a second call.
+        web_scan_at(&query, &remote, &session, t0 + 2_501).unwrap();
+        assert_eq!(port.count(), 3, "an expired entry is fetched again");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.3
+    #[test]
+    fn served_web_search_reaches_cache() {
+        let _held = PORT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let port = WebPort::new(&THREE);
+        super::super::mcp::register_connector_row_source(port.clone());
+        let registry = registry();
+        let fx = medulla_exec::fixture::build();
+        let plan = Plan::new(vec![Op::FuseRrf {
+            branches: vec![
+                vec![Op::RankText {
+                    query: "needle".into(),
+                }],
+                vec![Op::ForeignScan {
+                    source: Box::new(ForeignSourceSpec::Named { name: "web".into() }),
+                    join: false,
+                }],
+            ],
+            k: 0.0,
+        }]);
+        let run = |owner: &str, session: &FederationSession| {
+            let federated =
+                crate::federation_opt::FederatedExec::new(Some(&registry), Some(session));
+            session.prepare(&plan.ops);
+            let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
+            execute(&plan, &ctx).unwrap_or_else(|e| panic!("{owner}: {e}"))
+        };
+        let a = session("owner-a-served", 60_000);
+        let fused = run("a", &a);
+        for (url, _, _) in THREE {
+            assert!(fused.ids().contains(&url.to_string()), "{url} fused");
+        }
+        assert_eq!(port.count(), 1);
+        // The same owner repeating the pattern is served from the shared cache.
+        run("a again", &session("owner-a-served", 60_000));
+        assert_eq!(
+            port.count(),
+            1,
+            "the repeat reaches the cache, not the connector"
+        );
+        // Another owner never shares an entry.
+        run("b", &session("owner-b-served", 60_000));
+        assert_eq!(port.count(), 2, "the owner salt keeps tenants apart");
+        assert!(resolve_web(&spec(), None).is_some());
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.4
+    #[test]
+    fn web_search_refusals() {
+        let port = WebPort::new(&THREE);
+        let registry = registry();
+        let remote = remote(&port, &registry);
+        let session = session("owner-refuse", 2_000);
+        let t0 = 5_000_000;
+        // An argument outside the declared capability refuses before any call.
+        let mut bad = WebQuery::new("needle");
+        bad.categories = vec!["sports".into()];
+        let refused = web_scan_at(&bad, &remote, &session, t0).unwrap_err();
+        assert!(
+            refused.starts_with("UNSUPPORTED_SEARCH_ARGUMENT"),
+            "{refused}"
+        );
+        assert_eq!(port.count(), 0);
+        // An expired entry never serves a read: with the connector down the read refuses.
+        let query = WebQuery::new("needle");
+        web_scan_at(&query, &remote, &session, t0).unwrap();
+        port.down.store(true, Ordering::SeqCst);
+        let unreachable = web_scan_at(&query, &remote, &session, t0 + 2_001).unwrap_err();
+        assert!(
+            unreachable.starts_with("SOURCE_UNREACHABLE"),
+            "{unreachable}"
+        );
+        assert!(
+            unreachable.contains("mcp:web#"),
+            "names the source: {unreachable}"
+        );
+        // Inside the TTL the stored entry still serves although the connector is down.
+        web_scan_at(&query, &remote, &session, t0 + 1).unwrap();
+        // Results above `max_results` are cut and the trace says so.
+        let many = WebPort::new(&[
+            ("https://a/1", "1", "e"),
+            ("https://a/2", "2", "e"),
+            ("https://a/3", "3", "e"),
+            ("https://a/4", "4", "e"),
+            ("https://a/5", "5", "e"),
+        ]);
+        let cut = web_scan_at(&query, &remote(&many, &registry), &session, t0 + 9_000_000).unwrap();
+        assert_eq!(cut.len(), 3);
+        assert!(session.trace().last().unwrap().truncated);
+        // A result with no URL is refused.
+        let blank = WebPort::new(&[("", "t", "e")]);
+        let refused = web_scan_at(
+            &WebQuery::new("blank"),
+            &remote(&blank, &registry),
+            &session,
+            t0 + 9_100_000,
+        )
+        .unwrap_err();
+        assert!(refused.contains("WEB_RESULT_URL_MISSING"), "{refused}");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.5
+    #[test]
+    fn web_result_provenance() {
+        let port = WebPort::new(&THREE);
+        let registry = registry();
+        let remote = remote(&port, &registry);
+        let session = session("owner-prov", 60_000);
+        let query = WebQuery::new("needle");
+        let t0 = 7_000_000;
+        let fresh = web_scan_at(&query, &remote, &session, t0).unwrap();
+        let digest = query.digest();
+        assert_eq!(digest.len(), 64);
+        let id = "https://b.example/2";
+        assert_eq!(fresh.text(id, "engine"), Some("duckduckgo"));
+        assert_eq!(fresh.text(id, "argument_digest"), Some(digest.as_str()));
+        assert!(fresh.text(id, "connector").unwrap().starts_with("mcp:web#"));
+        assert_eq!(fresh.value(id, "rank"), Some(2.0));
+        assert_eq!(fresh.value(id, "retrieved_at"), Some((t0 / 1000) as f64));
+        assert_eq!(fresh.value(id, "from_cache"), Some(0.0));
+        let cached = web_scan_at(&query, &remote, &session, t0 + 30_000).unwrap();
+        assert_eq!(
+            cached.value(id, "from_cache"),
+            Some(1.0),
+            "a cached row says so"
+        );
+        assert_eq!(
+            cached.value(id, "retrieved_at"),
+            Some((t0 / 1000) as f64),
+            "a cached row keeps its original retrieval time"
+        );
+        assert_eq!(cached.ids(), fresh.ids(), "rank order");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.7
+    #[test]
+    fn web_candidates_carry_query_provenance() {
+        let port = WebPort::new(&THREE);
+        let registry = registry();
+        let remote = remote(&port, &registry);
+        let session = session("owner-cand", 60_000);
+        let query = WebQuery::new("needle");
+        let rows = web_scan_at(&query, &remote, &session, 9_000_000).unwrap();
+        let set = web_candidates(&rows).unwrap();
+        assert_eq!(set.query_text, "needle");
+        assert_eq!(set.query_digest, query.digest());
+        assert_eq!(set.candidates.len(), 3);
+        assert_eq!(set.candidates[0].url, "https://a.example/1");
+        assert_eq!(set.candidates[0].rank, 1);
+        assert_eq!(set.candidates[2].engine, "duckduckgo");
+        assert_eq!(set.retrieved_at, 9_000);
+        // The candidates are values: nothing in the executor's graph view holds a result row.
+        let fx = medulla_exec::fixture::build();
+        let scanned = execute(
+            &Plan::new(vec![Op::Scan {
+                label: "Doc".into(),
+            }]),
+            &PlanCtx::new(&fx.view, &fx.semantic),
+        )
+        .unwrap();
+        assert!(scanned.ids().iter().all(|id| !id.starts_with("https://")));
     }
 }

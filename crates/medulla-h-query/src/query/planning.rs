@@ -678,11 +678,16 @@ impl ServedPlanLegs {
     fn with_watermarks(mut self, core: &GraphCore, plan: &medulla_exec::algebra::Plan) -> Self {
         self.watermarks = ForeignWatermarks::for_ops(core, &plan.ops);
         #[cfg(feature = "federation")]
-        if let (Some(foreign), Some(sources)) = (
-            self.foreign.as_mut(),
-            ForeignWatermarks::fragment_sources(core, &plan.ops),
-        ) {
-            foreign.install_fragment_cache(sources);
+        if let Some(foreign) = self.foreign.as_mut() {
+            let ttl_s = medulla_server_api::knob_config::knobs().federation_web_cache_ttl_s;
+            let web_ttl_ms = |name: &str| {
+                let spec = foreign.registry().spec(name)?;
+                medulla_federation::federation_opt::web_entry_ttl_ms(spec, ttl_s)
+            };
+            if let Some(sources) = ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms)
+            {
+                foreign.install_fragment_cache(sources);
+            }
         }
         self
     }

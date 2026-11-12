@@ -9,13 +9,17 @@ here, at collection time.
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import subprocess
+import threading
 import time
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
@@ -28,14 +32,20 @@ def _free_port() -> int:
 
 PG_PORT = _free_port()
 PG_PASSWORD = "federation-test"
+GATEWAY_PORT = _free_port()
 os.environ["MEDULLA_FEDERATION_ALLOW"] = ",".join(
     part
     for part in (
         os.environ.get("MEDULLA_FEDERATION_ALLOW", ""),
         f"127.0.0.1:{PG_PORT}",
+        f"127.0.0.1:{GATEWAY_PORT}",
     )
     if part
 )
+# The served engine reaches connector tools through the fleet gateway; the tests stand a
+# loopback gateway on this port. The web cache TTL is two seconds so a test crosses it.
+os.environ["MEDULLA_CONNECTOR_GATEWAY_URL"] = f"http://127.0.0.1:{GATEWAY_PORT}/gateway"
+os.environ["MEDULLA_FEDERATION_WEB_CACHE_TTL_S"] = "2"
 
 
 @dataclass(frozen=True)
@@ -120,3 +130,70 @@ def pg_source() -> Iterator[PgSource]:
         )
     finally:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+
+
+WEB_SERVER = "web-stub-mcp"
+WEB_TOOL = "web_search"
+RECORDED = json.loads(
+    (Path(__file__).parent / "web_search_recorded.json").read_text(encoding="utf-8")
+)
+
+
+@dataclass
+class WebGateway:
+    """A loopback fleet gateway: replays a recorded `web_search` reply, counts calls."""
+
+    calls: list[dict] = field(default_factory=list)
+
+    @property
+    def row_calls(self) -> int:
+        return len(self.calls)
+
+
+@pytest.fixture(scope="session")
+def web_gateway() -> Iterator[WebGateway]:
+    gateway = WebGateway()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            body = json.loads(
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            )
+            known = body.get("server") == WEB_SERVER and body.get("tool") == WEB_TOOL
+            op = body["op"]
+            if op == "declared_arguments":
+                reply = {
+                    "arguments": (
+                        ["query", "categories", "engines", "language", "pageno"]
+                        if known
+                        else None
+                    )
+                }
+            elif op == "web_capability":
+                reply = {"capability": RECORDED["capability"] if known else None}
+            else:
+                request = body["request"]
+                gateway.calls.append(request)
+                reply = {
+                    "source_label": request["source_label"],
+                    "rows": RECORDED["rows"],
+                    "truncated": False,
+                    "missing_source": None,
+                }
+            payload = json.dumps(reply).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", GATEWAY_PORT), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield gateway
+    finally:
+        server.shutdown()

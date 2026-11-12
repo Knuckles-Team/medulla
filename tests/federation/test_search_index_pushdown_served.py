@@ -67,14 +67,14 @@ def _fused_plan(source: dict[str, object]) -> list[dict[str, object]]:
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.5.3")
 def test_remote_branch_fuses_with_local(clean_graph):
-    # The served FUSE reaches the search remote through the whole caller chain. This
-    # server binds no connector row port (the host registers it), so the remote
-    # branch refuses with SOURCE_UNREACHABLE naming the search source, never by
-    # silently returning the local branch alone; the fused rows are proven at L2.
+    # The served FUSE reaches the search remote through the whole caller chain. The
+    # gateway of this suite does not serve the search tool, so the remote branch
+    # refuses with SOURCE_UNREACHABLE naming the search source, never by silently
+    # returning the local branch alone; the fused rows are proven at L2.
     with pytest.raises(EngineResponseError) as refused:
         clean_graph.query.unified(_fused_plan(mcp_source(**VALID)))
     assert "SOURCE_UNREACHABLE" in str(refused.value)
-    assert "no connector port is registered" in str(refused.value)
+    assert "mcp#" in str(refused.value)
 
     # A search source needs the query text of a RankText branch to push.
     lone = [

@@ -44,6 +44,14 @@ pub(crate) fn foreign_scan(
             super::search::search_scan(op, &input, join, search.as_ref(), session)
         });
     }
+    if let Some(web) = super::enabled()
+        .then(|| super::web::resolve_web(source, registry))
+        .flatten()
+    {
+        return with_session(session, |session| {
+            super::web::web_scan(op, &input, join, &web, session)
+        });
+    }
     let remote = super::enabled()
         .then(|| super::remote::resolve(source, registry))
         .flatten();
@@ -625,6 +633,7 @@ mod cache_tests {
                     SourceWatermark {
                         watermark: watermark.into(),
                         valid_through_ms: expiry,
+                        entry_ttl_ms: None,
                     },
                 )]),
             ))

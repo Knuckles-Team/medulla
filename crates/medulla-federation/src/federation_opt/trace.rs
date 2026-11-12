@@ -70,6 +70,9 @@ pub struct FragmentTrace {
     /// The index request this fragment pushed, when it was a pushed search
     /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.5).
     pub search: Option<SearchReceipt>,
+    /// The source returned more rows than its declared `max_results` and the engine cut the
+    /// rest (MEDULLA-UNIFIED-DATA-PLANE-R038.7.4).
+    pub truncated: bool,
 }
 
 /// The receipt of one pushed search. The fragment's `source` label names the source; the
@@ -102,6 +105,7 @@ impl FragmentTrace {
             read_at_ms: 0,
             consistency: Consistency::Snapshot,
             search: None,
+            truncated: false,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,

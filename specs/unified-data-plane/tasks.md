@@ -112,6 +112,8 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T103 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.5 Evidence: each row carries connector, argument digest, engine, rank and retrieval time
 - [ ] T104 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.6 Hot-path proof: one connector call inside the TTL
 - [ ] T105 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.7 Candidate handoff: web results are fetch candidates, not stored records
+- [ ] T105a [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.8 Text columns: a `RowSet` carries typed text columns beside its value channels
+- [ ] T105b [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.9 Gateway provider: the engine reaches connector tools through the fleet gateway
 - [ ] T106 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.3 Every catalog route passes the carrier gate
 - [ ] T107 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.4 Partition spec and per-partition field summaries in emitted Iceberg metadata
 - [ ] T108 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.5 End-to-end external read through the authenticated catalog

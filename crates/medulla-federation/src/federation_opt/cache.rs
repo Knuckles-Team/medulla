@@ -19,6 +19,10 @@ const MAX_ROWS_PER_ENTRY: usize = 4096;
 pub struct SourceWatermark {
     pub watermark: String,
     pub valid_through_ms: u64,
+    /// The longest a cached entry of this source serves, in milliseconds. `Some` for a source
+    /// with no checkpoint (a web metasearch source, MEDULLA-UNIFIED-DATA-PLANE-R038.7.2);
+    /// `None` for a checkpointed source, whose entries live until the checkpoint advances.
+    pub entry_ttl_ms: Option<u64>,
 }
 
 /// The verified registry owner and its named source checkpoints. The salt changes
@@ -39,6 +43,10 @@ impl FragmentCacheScope {
 
     fn key(&self, name: &str, fingerprint: &Fingerprint, request: &RemoteRequest) -> Option<Key> {
         let source = self.sources.get(name)?;
+        if source.entry_ttl_ms.is_some() {
+            // A TTL source is read only through `get_or_fetch_web`.
+            return None;
+        }
         if now_ms() > source.valid_through_ms {
             return None;
         }
@@ -116,8 +124,76 @@ impl FragmentCacheScope {
             Entry {
                 rows: rows.clone(),
                 valid_through_ms,
+                stored_at_ms: now_ms(),
             },
         );
+    }
+}
+
+impl FragmentCacheScope {
+    /// The entry TTL of a named web source, when the registry supplied one.
+    pub(super) fn web_ttl_ms(&self, name: &str) -> Option<u64> {
+        self.sources.get(name)?.entry_ttl_ms
+    }
+
+    /// The rows of one web query by its argument digest (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
+    /// An entry serves while `now_ms - stored_at_ms <= entry_ttl_ms`; an expired entry is
+    /// removed and never serves. A miss runs `fetch` once and stores its rows. Returns the rows,
+    /// the millisecond they were stored and whether they came from the cache. The key holds the
+    /// owner salt, the source name, the source fingerprint and the digest, so two owners never
+    /// share an entry.
+    pub(super) fn get_or_fetch_web(
+        &self,
+        (name, fingerprint, digest): (&str, &Fingerprint, &str),
+        now_ms: u64,
+        fetch: impl FnOnce() -> Result<RowSet, String>,
+    ) -> Result<(RowSet, u64, bool), String> {
+        let Some(ttl) = self.web_ttl_ms(name) else {
+            return fetch().map(|rows| (rows, now_ms, false));
+        };
+        let mut digest_key = Sha256::new();
+        for part in [
+            self.owner_salt.as_bytes(),
+            name.as_bytes(),
+            fingerprint.as_slice(),
+            digest.as_bytes(),
+        ] {
+            digest_key.update((part.len() as u64).to_be_bytes());
+            digest_key.update(part);
+        }
+        let key = Key(digest_key.finalize().into());
+        if let Ok(mut cache) = store().lock() {
+            if let Some(entry) = cache.entries.get(&key) {
+                if now_ms.saturating_sub(entry.stored_at_ms) <= ttl {
+                    return Ok((entry.rows.clone(), entry.stored_at_ms, true));
+                }
+                cache.entries.remove(&key);
+                cache.order.retain(|ordered| ordered != &key);
+            }
+        }
+        let rows = fetch()?;
+        if rows.len() <= MAX_ROWS_PER_ENTRY {
+            if let Ok(mut cache) = store().lock() {
+                if !cache.entries.contains_key(&key) {
+                    while cache.entries.len() >= MAX_ENTRIES {
+                        let Some(oldest) = cache.order.pop_front() else {
+                            break;
+                        };
+                        cache.entries.remove(&oldest);
+                    }
+                    cache.order.push_back(key);
+                }
+                cache.entries.insert(
+                    key,
+                    Entry {
+                        rows: rows.clone(),
+                        valid_through_ms: u64::MAX,
+                        stored_at_ms: now_ms,
+                    },
+                );
+            }
+        }
+        Ok((rows, now_ms, false))
     }
 }
 
@@ -127,6 +203,7 @@ struct Key([u8; 32]);
 struct Entry {
     rows: RowSet,
     valid_through_ms: u64,
+    stored_at_ms: u64,
 }
 
 #[derive(Default)]
@@ -160,6 +237,7 @@ mod tests {
                 SourceWatermark {
                     watermark: mark.into(),
                     valid_through_ms: expires,
+                    entry_ttl_ms: None,
                 },
             )]),
         )

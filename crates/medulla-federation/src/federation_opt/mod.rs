@@ -25,6 +25,7 @@ mod cache;
 pub mod capability;
 mod columns;
 pub mod engine;
+pub mod gateway;
 mod http;
 mod limiter;
 pub mod mcp;
@@ -40,6 +41,7 @@ mod sql;
 mod stats;
 mod strategy;
 mod trace;
+pub mod web;
 
 #[cfg(test)]
 mod bounds_tests;
@@ -76,6 +78,7 @@ pub use trace::{
     render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
     SearchReceipt,
 };
+pub use web::{web_candidates, web_entry_ttl_ms, WebQuery};
 
 mod federated;
 pub use federated::FederatedExec;

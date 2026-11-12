@@ -218,9 +218,11 @@ Budgets: one snapshot per source per query and a 5000 ms replica lag bound. The 
 
 ### Web metasearch sources (R038.7)
 
-A web metasearch connector answers a pattern over web results at query time. The connector tools take query text, categories, engines, a time range and a language. The engine maps each result to `cv:SearchResult` with URL, title, snippet, engine, rank and retrieval time.
+A web metasearch connector answers a pattern over web results at query time. The connector tools take query text, categories, engines, a language and a page. The engine maps each result to `cv:SearchResult` with URL, title, snippet, engine, rank and retrieval time.
 
-Call path: served SPARQL or UQL -> planner -> `foreign_scan` (`run.rs:26`) -> `FragmentCacheScope` lookup (`cache.rs:27`) -> MCP operation of `MEDULLA-FEDERATED-QUERY-R073` -> typed rows.
+Call path: served SPARQL or UQL -> planner -> `foreign_scan` (`run.rs:26`) -> `resolve_web` -> `web_scan` (`web.rs`) -> `FragmentCacheScope::get_or_fetch_web` (`cache.rs`) -> MCP operation of `MEDULLA-FEDERATED-QUERY-R073` through the connector port (`MEDULLA-UNIFIED-DATA-PLANE-R038.7.9`) -> typed rows with text columns (`MEDULLA-UNIFIED-DATA-PLANE-R038.7.8`).
+
+The web rows keep the URL as the row id, the text columns in `TextChannels` and the numeric columns (`rank`, `retrieved_at`, `from_cache`, `truncated`) in the value channels. A source is a web source when the bound tool's port declares a web capability; the cache entry TTL comes from `federation.web_cache_ttl_s` through `SourceWatermark.entry_ttl_ms`, supplied by `fragment_sources` for each web source.
 
 Selection: a harness that asks Arbora to search the web receives the search tools through `MEDULLA-DECISION-ENGINE-R176` and `ARBORA-FLEET-R037`. Online refresh of embeddings over these results belongs to the adaptive-embeddings rows. They reference `MEDULLA-UNIFIED-DATA-PLANE-R038.7`.
 

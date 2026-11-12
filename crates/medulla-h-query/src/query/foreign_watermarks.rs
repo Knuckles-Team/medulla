@@ -50,6 +50,7 @@ impl ForeignWatermarks {
     pub(crate) fn fragment_sources(
         core: &GraphCore,
         ops: &[medulla_exec::algebra::Op],
+        web_ttl_ms: &dyn Fn(&str) -> Option<u64>,
     ) -> Option<HashMap<String, medulla_federation::federation_opt::SourceWatermark>> {
         let mut sources = BTreeSet::new();
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) || sources.is_empty() {
@@ -59,6 +60,18 @@ impl ForeignWatermarks {
         sources
             .into_iter()
             .map(|name| {
+                // A web metasearch source has no connector checkpoint: its entries live for the
+                // TTL, keyed by argument digest (MEDULLA-UNIFIED-DATA-PLANE-R038.7.3).
+                if let Some(ttl) = web_ttl_ms(&name) {
+                    return Some((
+                        name,
+                        medulla_federation::federation_opt::SourceWatermark {
+                            watermark: "web".into(),
+                            valid_through_ms: u64::MAX,
+                            entry_ttl_ms: Some(ttl),
+                        },
+                    ));
+                }
                 let status = medulla_core::freshness::foreign_source_freshness(core, &name, now_ms);
                 let watermark = status.watermark.filter(|_| !status.stale)?;
                 // An unbounded EH-400 watermark is still fresh, but keep resident
@@ -72,6 +85,7 @@ impl ForeignWatermarks {
                     medulla_federation::federation_opt::SourceWatermark {
                         watermark,
                         valid_through_ms: now_ms.saturating_add(remaining),
+                        entry_ttl_ms: None,
                     },
                 ))
             })
@@ -166,7 +180,7 @@ mod tests {
         assert_eq!(decided, ForeignWatermarks::Unfresh);
         assert!(!decided.cacheable());
         #[cfg(feature = "federation")]
-        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")]).is_none());
+        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None).is_none());
     }
 
     #[test]
@@ -178,7 +192,7 @@ mod tests {
         assert!(first.cacheable());
         #[cfg(feature = "federation")]
         assert_eq!(
-            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")])
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None)
                 .unwrap()
                 .get("crm")
                 .unwrap()
@@ -200,7 +214,7 @@ mod tests {
         watermark(&core, "crm", "lsn-1", 1);
         assert!(!ForeignWatermarks::for_ops(&core, &[foreign("crm")]).cacheable());
         #[cfg(feature = "federation")]
-        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")]).is_none());
+        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None).is_none());
     }
 
     #[test]

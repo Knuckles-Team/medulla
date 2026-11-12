@@ -41,6 +41,42 @@ pub struct WebResult {
     pub retrieved_at: i64,
 }
 
+/// The fetch candidates one web query produced (MEDULLA-UNIFIED-DATA-PLANE-R038.7.7). The engine
+/// stores none of them; the fetch selection of `MEDULLA-DECISION-ENGINE-R802` reads the set and the
+/// consumer ingest path chooses which pages to fetch.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WebCandidateSet {
+    /// The query text the results answer.
+    pub query_text: String,
+    /// SHA-256 of the pushed arguments, 64 lowercase hex characters.
+    pub query_digest: String,
+    /// The candidates in rank order; every one has a URL.
+    pub candidates: Vec<WebResult>,
+    /// Unix seconds of the newest retrieval among the candidates (0 when there are none).
+    pub retrieved_at: i64,
+}
+
+impl WebCandidateSet {
+    /// Build a set from `results`, refusing the whole set when any result has no URL.
+    pub fn from_results(
+        query_text: String,
+        query_digest: String,
+        results: Vec<WebResult>,
+    ) -> Result<Self, WebResultRefusal> {
+        for result in &results {
+            result.validate()?;
+        }
+        let retrieved_at = results.iter().map(|r| r.retrieved_at).max().unwrap_or(0);
+        Ok(Self {
+            query_text,
+            query_digest,
+            candidates: results,
+            retrieved_at,
+        })
+    }
+}
+
 /// A refused web result.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WebResultRefusal {

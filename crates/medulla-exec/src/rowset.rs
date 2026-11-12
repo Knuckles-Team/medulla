@@ -30,6 +30,10 @@ use std::collections::{BTreeMap, HashSet};
 /// Row id → channel name → exact value.
 pub type ValueChannels = BTreeMap<String, BTreeMap<String, f64>>;
 
+/// Row id → column name → text value (the text columns of a typed source row, such as a web
+/// result's title and engine; MEDULLA-UNIFIED-DATA-PLANE-R038.7.5).
+pub type TextChannels = BTreeMap<String, BTreeMap<String, String>>;
+
 /// The row id of point `ts_ns` of `series` (EH-521): `series@ts`. Per-series ids keep two
 /// series' points at one timestamp distinct (a bare-ts id let the first series win).
 pub fn series_row_id(series: &str, ts_ns: i64) -> String {
@@ -99,6 +103,7 @@ impl Row {
 pub struct RowSet {
     rows: Vec<Row>,
     values: ValueChannels,
+    texts: TextChannels,
 }
 
 impl RowSet {
@@ -121,7 +126,29 @@ impl RowSet {
         Self {
             rows,
             values: ValueChannels::new(),
+            texts: TextChannels::new(),
         }
+    }
+
+    /// Attach text columns (row id → name → value). Columns of ids not in the set are dropped.
+    pub fn with_texts(mut self, mut texts: TextChannels) -> Self {
+        let ids = self.id_set();
+        texts.retain(|id, _| ids.contains(id.as_str()));
+        self.texts = texts;
+        self
+    }
+
+    /// Row `id`'s text under column `name`.
+    pub fn text(&self, id: &str, name: &str) -> Option<&str> {
+        self.texts
+            .get(id)
+            .and_then(|m| m.get(name))
+            .map(String::as_str)
+    }
+
+    /// The whole text-column table.
+    pub fn texts(&self) -> &TextChannels {
+        &self.texts
     }
 
     /// Attach exact value channels (row id → name → value). Channels of ids not in the
@@ -217,7 +244,9 @@ impl RowSet {
             .filter(|r| keep.contains(r.id.as_str()))
             .cloned()
             .collect();
-        RowSet::of_rows(rows).with_values(self.values.clone())
+        RowSet::of_rows(rows)
+            .with_values(self.values.clone())
+            .with_texts(self.texts.clone())
     }
 
     /// Truncate to the top-k (LIMIT). Order-respecting: after a RANK this is top-k by
@@ -225,7 +254,8 @@ impl RowSet {
     pub fn limit(mut self, k: usize) -> RowSet {
         self.rows.truncate(k);
         let values = std::mem::take(&mut self.values);
-        self.with_values(values)
+        let texts = std::mem::take(&mut self.texts);
+        self.with_values(values).with_texts(texts)
     }
 }
 
@@ -267,6 +297,41 @@ mod tests {
             (x.confidence, x.valid_time_ms, x.tx_time_ms),
             (None, None, None)
         );
+    }
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R038.7.8: text columns follow their rows through intersect and
+    /// limit, and a column of an id outside the set is dropped.
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.8
+    #[test]
+    fn text_columns_survive_limit_and_intersect() {
+        let texts: TextChannels = [
+            ("a", "title", "A"),
+            ("b", "title", "B"),
+            ("z", "title", "Z"),
+        ]
+        .into_iter()
+        .map(|(id, name, value)| {
+            (
+                id.to_string(),
+                BTreeMap::from([(name.to_string(), value.to_string())]),
+            )
+        })
+        .collect();
+        let rows = RowSet::from_ids(["a".into(), "b".into()]).with_texts(texts);
+        assert_eq!(rows.text("a", "title"), Some("A"));
+        assert_eq!(
+            rows.text("z", "title"),
+            None,
+            "a column of an absent row is dropped"
+        );
+        let keep: HashSet<&str> = ["b"].into_iter().collect();
+        assert_eq!(
+            rows.intersect_keep_order(&keep).text("b", "title"),
+            Some("B")
+        );
+        let top = rows.limit(1);
+        assert_eq!(top.text("a", "title"), Some("A"));
+        assert_eq!(top.text("b", "title"), None);
     }
 
     #[test]

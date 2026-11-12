@@ -18,6 +18,7 @@ use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilit
 use super::remote::{Identity, RemoteFetch};
 use super::search::{SearchHit, SearchRemote};
 use medulla_types::search_source::SearchIndexCapability;
+use medulla_types::web_source::WebSearchCapability;
 
 /// Keys per request when the registration declares key-filter pushdown.
 const MAX_MCP_KEYS: usize = 100;
@@ -59,9 +60,16 @@ pub trait ConnectorRowSource: Send + Sync {
     fn declared_arguments(&self, server: &str, tool: &str) -> Option<Vec<String>>;
     /// Run the call; `Err` is any failure, timeout or non-row-list result.
     fn rows(&self, request: &ConnectorRowRequest) -> Result<ConnectorRows, String>;
+    /// The web metasearch capability the tool's declared schema carries, or `None` when the tool
+    /// is not a web metasearch tool (MEDULLA-UNIFIED-DATA-PLANE-R038.7.1). A web tool answers
+    /// with one row per result: the id is the URL, the text columns `title`, `snippet` and
+    /// `engine`, and the value columns `rank` and `retrieved_at` (Unix seconds).
+    fn web_capability(&self, _server: &str, _tool: &str) -> Option<WebSearchCapability> {
+        None
+    }
 }
 
-type SharedPort = Arc<dyn ConnectorRowSource>;
+pub(crate) type SharedPort = Arc<dyn ConnectorRowSource>;
 
 static PORT: RwLock<Option<SharedPort>> = RwLock::new(None);
 
@@ -72,9 +80,13 @@ pub fn register_connector_row_source(port: SharedPort) {
     }
 }
 
-/// The registered port, if the host bound one.
+/// The registered port: the one the host bound, else the HTTP gateway named by
+/// `MEDULLA_CONNECTOR_GATEWAY_URL` (see [`super::gateway`]), else none.
 pub(crate) fn registered_port() -> Option<SharedPort> {
-    PORT.read().ok().and_then(|slot| slot.clone())
+    PORT.read()
+        .ok()
+        .and_then(|slot| slot.clone())
+        .or_else(super::gateway::from_env)
 }
 
 fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> String {
@@ -108,7 +120,26 @@ impl McpRemote {
         }
     }
 
-    fn unreachable(&self, why: &str) -> String {
+    pub(super) fn label(&self) -> &str {
+        &self.identity.label
+    }
+
+    pub(super) fn fingerprint(&self) -> super::stats::Fingerprint {
+        self.identity.fingerprint
+    }
+
+    pub(super) fn cache_name(&self) -> Option<&str> {
+        self.identity.cache_name.as_deref()
+    }
+
+    /// The web capability of the bound tool, when it is a web metasearch tool.
+    pub(super) fn web_capability(&self) -> Option<WebSearchCapability> {
+        self.port
+            .as_deref()?
+            .web_capability(&self.server, &self.tool)
+    }
+
+    pub(super) fn unreachable(&self, why: &str) -> String {
         refuse(
             ServerErrorCode::SourceUnreachable,
             format!("{}: {why}", self.identity.label),
@@ -192,7 +223,7 @@ impl RemoteFetch for McpRemote {
 
 impl McpRemote {
     /// One governed tool call with `arguments`, checked against the declared schema first.
-    fn call(
+    pub(super) fn call(
         &self,
         arguments: BTreeMap<String, Value>,
         pushed_filter: Vec<String>,

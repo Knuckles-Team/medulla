@@ -1,0 +1,25 @@
+{
+  "capability": {
+    "categories": ["general", "news"],
+    "engines": ["duckduckgo"],
+    "languages": ["en"],
+    "max_results": 20
+  },
+  "rows": [
+    {
+      "id": "https://example.org/needle-guide",
+      "values": {"rank": 1},
+      "texts": {"title": "Needle guide", "snippet": "How to find a needle.", "engine": "duckduckgo"}
+    },
+    {
+      "id": "https://example.org/haystack",
+      "values": {"rank": 2},
+      "texts": {"title": "Haystack", "snippet": "Where needles hide.", "engine": "duckduckgo"}
+    },
+    {
+      "id": "https://example.net/sewing",
+      "values": {"rank": 3},
+      "texts": {"title": "Sewing", "snippet": "Needles for sewing.", "engine": "duckduckgo"}
+    }
+  ]
+}
