@@ -765,6 +765,12 @@ def __getattr__(name: str) -> Any:
 # Contract rows sent through the shared runtime sender (mirror the Rust serde types).
 send_document_delete = contract_sender("DocumentDelete", "MethodDocumentDeleteParams")
 decode_document_delete = contract_decoder("DocumentDelete", "DocumentDeleteReceipt")
+send_verify_ingest_readback = contract_sender(
+    "VerifyIngestReadback", "MethodVerifyIngestReadbackParams"
+)
+decode_verify_ingest_readback = contract_decoder(
+    "VerifyIngestReadback", "ReadbackReceipt"
+)
 send_get_telemetry_snapshot = contract_sender(
     "GetTelemetrySnapshot", "MethodGetTelemetrySnapshotParams"
 )

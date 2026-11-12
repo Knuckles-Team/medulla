@@ -247,6 +247,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DOCUMENT_NOT_FOUND",
         ],
     ),
+    // MEDULLA-REPO-INGEST-R002.100.
+    (
+        "VerifyIngestReadback",
+        &[
+            "READBACK_DENIED",
+            "READBACK_MISMATCH",
+            "READBACK_PARTIAL",
+            "READBACK_STALE",
+        ],
+    ),
     // MEDULLA-SUPPLY-VOCAB-R009.3: ecosystem package risk propagation.
     (
         "MineRiskPropagation",

@@ -141,6 +141,14 @@ $($variants)*
         corpus: medulla_types::contract::ResourceId,
         window_end_ms: u64,
     },
+    /// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
+    /// Reads the receipt's result ids under the caller principal, compares id,
+    /// content digest and revision, and commits one `:ReadbackReceipt` node when
+    /// every id matches. Refuses `READBACK_DENIED`, `READBACK_PARTIAL`,
+    /// `READBACK_STALE` or `READBACK_MISMATCH` and then changes nothing.
+    VerifyIngestReadback {
+        request: Box<medulla_types::ingest_readback::VerifyIngestReadbackRequest>,
+    },
     /// EG-owned D18 source change sets and append-only write-back receipts.
     /// The engine records governed observations; it never calls a vendor API.
     WriteBack {

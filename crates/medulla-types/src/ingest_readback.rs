@@ -8,17 +8,51 @@ use serde::{Deserialize, Serialize};
 
 use crate::contract::Digest256;
 
+/// What the writer's receipt promised for one result id.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadbackExpectation {
+    pub id: String,
+    pub content_digest: Digest256,
+    pub revision: u64,
+}
+
+/// `Method::VerifyIngestReadback` request: the write receipt's digest and
+/// result ids, and the graph revision the write committed at.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct VerifyIngestReadbackRequest {
+    pub write_receipt_digest: Digest256,
+    pub expected_graph_revision: u64,
+    pub results: Vec<ReadbackExpectation>,
+}
+
+/// Refusal code: a result id exists but the caller may not read it.
+pub const READBACK_DENIED: &str = "READBACK_DENIED";
+/// Refusal code: a result id is absent from the caller's view.
+pub const READBACK_PARTIAL: &str = "READBACK_PARTIAL";
+/// Refusal code: the graph has not reached the write's revision.
+pub const READBACK_STALE: &str = "READBACK_STALE";
+/// Refusal code: a result id's content digest or revision differs.
+pub const READBACK_MISMATCH: &str = "READBACK_MISMATCH";
+
 /// Outcome of one readback.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ReadbackVerdict {
     Matched,
     Mismatched,
 }
 
-/// The `:ReadbackReceipt` node payload.
+/// The `:ReadbackReceipt` node payload. `grant_revision` is the graph revision
+/// at which the caller's read authority was evaluated; `graph_revision` is the
+/// revision after the reads.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ReadbackReceipt {
     pub write_receipt_digest: Digest256,
     pub principal: String,

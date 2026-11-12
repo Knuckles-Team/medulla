@@ -9713,6 +9713,13 @@ class MethodMintWorkItemClaimCapability(BaseModel):
     params: MethodMintWorkItemClaimCapabilityParams
 
 
+class MethodVerifyIngestReadback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["VerifyIngestReadback"]
+    params: MethodVerifyIngestReadbackParams
+
+
 class MethodVerifyWorkItemClaimCapability(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13284,6 +13291,7 @@ Method = Annotated[
         MethodKgDelegate,
         MethodSubmitWorkItems,
         MethodMintWorkItemClaimCapability,
+        MethodVerifyIngestReadback,
         MethodVerifyWorkItemClaimCapability,
         MethodRenewWorkItemLease,
         MethodCommitWorkItemResult,
@@ -17291,6 +17299,12 @@ class MethodUqlParams(BaseModel):
     text: str
 
 
+class MethodVerifyIngestReadbackParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: VerifyIngestReadbackRequest
+
+
 class MethodVerifyWorkItemClaimCapabilityParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -19947,6 +19961,39 @@ class RdfTriple(BaseModel):
     object: RdfObject
     predicate: str
     subject: str
+
+
+class ReadbackExpectation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: Digest256
+    id: str
+    revision: Annotated[int, Field(ge=0)]
+
+
+class ReadbackReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grant_revision: Annotated[int, Field(ge=0)]
+    graph_revision: Annotated[int, Field(ge=0)]
+    matched_ids: list[str]
+    mismatched_ids: list[str]
+    principal: str
+    verdict: ReadbackVerdict
+    write_receipt_digest: Digest256
+
+
+class ReadbackVerdict(str, Enum):
+    MATCHED = "matched"
+    MISMATCHED = "mismatched"
+
+
+class VerifyIngestReadbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expected_graph_revision: Annotated[int, Field(ge=0)]
+    results: list[ReadbackExpectation]
+    write_receipt_digest: Digest256
 
 
 class RebalanceExecution(BaseModel):
@@ -31496,6 +31543,8 @@ __all__ = [
     "MethodUpdateResourceHostParams",
     "MethodUql",
     "MethodUqlParams",
+    "MethodVerifyIngestReadback",
+    "MethodVerifyIngestReadbackParams",
     "MethodVerifyWorkItemClaimCapability",
     "MethodVerifyWorkItemClaimCapabilityParams",
     "MethodVf2SubgraphMatch",
@@ -31993,6 +32042,9 @@ __all__ = [
     "RdfObjectIri",
     "RdfObjectLiteral",
     "RdfTriple",
+    "ReadbackExpectation",
+    "ReadbackReceipt",
+    "ReadbackVerdict",
     "RebalanceExecution",
     "RebalanceMove",
     "RebalancePlanReport",
@@ -32748,6 +32800,7 @@ __all__ = [
     "UserView",
     "UtcOffsetSpan",
     "ValidationInputs",
+    "VerifyIngestReadbackRequest",
     "VarId",
     "VectorSource",
     "VersionExpectation",

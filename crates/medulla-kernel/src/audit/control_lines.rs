@@ -271,6 +271,10 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
             "MEETING_SUMMARY_COMMIT|{}|{}",
             request.meeting_id, request.summary_id
         )),
+        Method::VerifyIngestReadback { request } => Some(format!(
+            "VERIFY_INGEST_READBACK|{}",
+            request.write_receipt_digest
+        )),
         Method::DocumentDelete { request } => {
             Some(format!("DOCUMENT_DELETE|{}", request.document_id))
         }

@@ -192,6 +192,7 @@ METHOD_IDS = frozenset(
         "SubmitWorkItem",
         "SubmitWorkItems",
         "MintWorkItemClaimCapability",
+        "VerifyIngestReadback",
         "VerifyWorkItemClaimCapability",
         "RenewWorkItemLease",
         "CommitWorkItemResult",

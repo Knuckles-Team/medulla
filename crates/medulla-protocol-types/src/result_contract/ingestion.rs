@@ -60,6 +60,8 @@ method_results! {
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-REPO-INGEST-R006.1: the daily paper target over :StageReceipt nodes.
     IngestThroughputWindow(MeasureIngestThroughput) => Raw<medulla_types::ingest_throughput::ThroughputWindow>;
+    // MEDULLA-REPO-INGEST-R002.100: the independent readback receipt.
+    VerifyIngestReadback(VerifyIngestReadback) => Raw<medulla_types::ingest_readback::ReadbackReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
     // MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5: meeting transcript surface.

@@ -17,6 +17,8 @@ pub mod blob;
 /// Served ingest queue entry: enqueue maps onto the served task queue with
 /// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
 pub mod ingest_queue;
+/// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
+pub mod ingest_readback;
 /// Producing-rung recording and overwrite resistance for ingest producers
 /// (MEDULLA-DECISION-ENGINE-R080.2).
 pub mod ingestion_rung;

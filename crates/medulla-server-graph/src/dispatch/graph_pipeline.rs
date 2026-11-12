@@ -12,6 +12,7 @@ use super::request_boundary::screen::decode_screen_observation;
 use crate::dispatch::*;
 mod dispatch_helpers;
 mod document_ops;
+mod ingest_readback;
 #[cfg(any(
     feature = "query",
     feature = "cypher",

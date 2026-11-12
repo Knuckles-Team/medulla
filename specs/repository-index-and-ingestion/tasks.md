@@ -22,7 +22,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T016 [US2] MEDULLA-REPO-INGEST-R006.2 Apply importance resistance in the deferred re-embed worker
 - [ ] T017 [US1] MEDULLA-REPO-INGEST-R006.3 Serve revision-bound structured code maps
 - [ ] T018 [US1] MEDULLA-REPO-INGEST-R006.4 Bound incremental indexing and declare semantic-type support
-- [ ] T019 [US3] MEDULLA-REPO-INGEST-R002.100 Require independent readback before ingestion success
+- [x] T019 [US3] MEDULLA-REPO-INGEST-R002.100 Require independent readback before ingestion success
 - [ ] T020 [US3] MEDULLA-REPO-INGEST-R002.101 Bind graph-loaded workflow execution to hydration readback
 - [ ] T021 [US3] MEDULLA-REPO-INGEST-R002.102 Successive batches to one stream chain one content version
 - [ ] T022 [US2] MEDULLA-REPO-INGEST-R600.1 Model

@@ -608,6 +608,7 @@ SEND_BY_METHOD = {
     "UpdateDevelopmentLaneQuota": coordination.send_update_development_lane_quota,
     "UpdateResourceHost": coordination.send_update_resource_host,
     "Uql": query.send_uql,
+    "VerifyIngestReadback": ingestion.send_verify_ingest_readback,
     "VerifyWorkItemClaimCapability": (
         coordination.send_verify_work_item_claim_capability
     ),
