@@ -59,6 +59,38 @@ fn default_enrich_timeout_ms() -> u64 {
     DEFAULT_ENRICH_TIMEOUT_MS
 }
 
+/// Default working-memory bound of one bounded incremental index job
+/// (`ingest.index_max_working_bytes`, unit bytes;
+/// MEDULLA-REPO-INGEST-R006.4): exactly one gibibyte.
+pub const DEFAULT_INDEX_MAX_WORKING_BYTES: u64 = 1_073_741_824;
+/// Inclusive bounds of `index_max_working_bytes`.
+pub const INDEX_MAX_WORKING_BYTES_BOUNDS: (u64, u64) = (67_108_864, 68_719_476_736);
+/// Environment key overriding `index_max_working_bytes` at startup.
+pub const ENV_INDEX_MAX_WORKING_BYTES: &str = "MEDULLA_INDEX_MAX_WORKING_BYTES";
+
+fn default_index_max_working_bytes() -> u64 {
+    DEFAULT_INDEX_MAX_WORKING_BYTES
+}
+
+/// The startup value of `index_max_working_bytes`
+/// (`ingest.index_max_working_bytes`): the default, or the
+/// `MEDULLA_INDEX_MAX_WORKING_BYTES` override; out of range refuses startup.
+pub fn index_max_working_bytes_from(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<u64, InvalidSchedulerConfig> {
+    let value = match lookup(ENV_INDEX_MAX_WORKING_BYTES) {
+        Some(raw) => raw
+            .trim()
+            .parse()
+            .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(ENV_INDEX_MAX_WORKING_BYTES))?,
+        None => DEFAULT_INDEX_MAX_WORKING_BYTES,
+    };
+    if !(INDEX_MAX_WORKING_BYTES_BOUNDS.0..=INDEX_MAX_WORKING_BYTES_BOUNDS.1).contains(&value) {
+        return Err(InvalidSchedulerConfig::IndexMaxWorkingBytesOutOfRange);
+    }
+    Ok(value)
+}
+
 fn default_changeset_max_blob_bytes() -> u64 {
     DEFAULT_CHANGESET_MAX_BLOB_BYTES
 }
@@ -239,6 +271,10 @@ pub struct SchedulerConfig {
     /// Bound of one repository enrichment run, in milliseconds.
     #[serde(default = "default_enrich_timeout_ms")]
     pub enrich_timeout_ms: u64,
+    /// Working-memory bound of one bounded incremental index job, in bytes
+    /// (`ingest.index_max_working_bytes`).
+    #[serde(default = "default_index_max_working_bytes")]
+    pub index_max_working_bytes: u64,
     /// Most commits one history run applies.
     #[serde(default = "default_history_max_commits")]
     pub history_max_commits: u64,
@@ -278,6 +314,7 @@ pub enum InvalidSchedulerConfig {
     HydrationScopeCapOutOfRange,
     HydrationSplitTargetOutOfRange,
     EnrichTimeoutOutOfRange,
+    IndexMaxWorkingBytesOutOfRange,
     ChangesetMaxBlobBytesOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
@@ -325,6 +362,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 "scheduler enrich_timeout_ms must be within [{}, {}]",
                 ENRICH_TIMEOUT_MS_BOUNDS.0, ENRICH_TIMEOUT_MS_BOUNDS.1
             ),
+            Self::IndexMaxWorkingBytesOutOfRange => write!(
+                f,
+                "scheduler index_max_working_bytes must be within [{}, {}]",
+                INDEX_MAX_WORKING_BYTES_BOUNDS.0, INDEX_MAX_WORKING_BYTES_BOUNDS.1
+            ),
             Self::ChangesetMaxBlobBytesOutOfRange => write!(
                 f,
                 "scheduler changeset_max_blob_bytes must be within [{}, {}]",
@@ -358,6 +400,11 @@ impl SchedulerConfig {
             .contains(&self.hydration_split_target_files)
         {
             return Err(InvalidSchedulerConfig::HydrationSplitTargetOutOfRange);
+        }
+        if !(INDEX_MAX_WORKING_BYTES_BOUNDS.0..=INDEX_MAX_WORKING_BYTES_BOUNDS.1)
+            .contains(&self.index_max_working_bytes)
+        {
+            return Err(InvalidSchedulerConfig::IndexMaxWorkingBytesOutOfRange);
         }
         if !ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE.contains(&self.architecture_view_max_containers)
         {
