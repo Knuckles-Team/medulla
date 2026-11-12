@@ -244,6 +244,14 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::ValidateRepair { .. } => {
             approved::handle_validate(ctx, plan, method, op).await
         }
+        GraphSchemaOp::DiffOntology { .. } => {
+            // Read-only: R804.2 serves the diff; until then the op is refused
+            // and never commits.
+            medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, |_| {
+                Err("DIFF_ONTOLOGY_UNAVAILABLE: the ontology diff is not served yet".to_string())
+            })
+            .await
+        }
         GraphSchemaOp::ImportOntology { .. }
         | GraphSchemaOp::WithdrawOntology { .. }
         | GraphSchemaOp::RevertEdit { .. } => {
@@ -617,6 +625,7 @@ fn apply(
         | GraphSchemaOp::ValidateRepair { .. }
         | GraphSchemaOp::ImportOntology { .. }
         | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::DiffOntology { .. }
         | GraphSchemaOp::RevertEdit { .. } => {
             unreachable!(
                 "attach-pack, validate-repair and runtime ontologies have their own routes"

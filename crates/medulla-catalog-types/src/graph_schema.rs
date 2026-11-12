@@ -43,6 +43,17 @@ pub const MAX_SCHEMA_SOURCE_ID_BYTES: usize = 128;
 pub const RESERVED_SCHEMA_SOURCE_PREFIXES: &[&str] =
     &["core:", "pack:", "ingest:", "approved:", "ontology:"];
 
+/// The other side of an ontology diff (MEDULLA-TYPED-PACKS-R804.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DiffTarget {
+    /// A stored revision of the same ontology.
+    Revision(u64),
+    /// A candidate ontology document that has not been imported.
+    Candidate { turtle: String },
+}
+
 /// Attach, replace or detach one keyed schema source.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -87,6 +98,15 @@ pub enum GraphSchemaOp {
         connector: ResourceId,
         ontology_iri: String,
         expected_revision: u64,
+    },
+    /// Read-only: diff the connector's ontology at `from_revision` against
+    /// `to` and report what the change would break
+    /// (MEDULLA-TYPED-PACKS-R804.1). Writes nothing.
+    DiffOntology {
+        connector: ResourceId,
+        ontology_iri: String,
+        from_revision: u64,
+        to: DiffTarget,
     },
     /// Append the inversions of every edit of `subject_iri`, newest first
     /// (MEDULLA-TYPED-PACKS-R651.3). The edit chain records the revert; it
@@ -143,6 +163,7 @@ impl GraphSchemaOp {
             Self::ImportOntology { .. } => "import_ontology",
             Self::WithdrawOntology { .. } => "withdraw_ontology",
             Self::RevertEdit { .. } => "revert_edit",
+            Self::DiffOntology { .. } => "diff_ontology",
             Self::Detach { .. } => "detach",
             Self::AttachApproved { .. } => "attach_approved",
             Self::ValidateRepair { .. } => "validate_repair",
@@ -160,9 +181,9 @@ impl GraphSchemaOp {
             // The exact source key is available from [`ontology_source_key`].
             // This borrowed token preserves the existing audit-line API until
             // the runtime operation gets its dedicated result/wiring surface.
-            Self::ImportOntology { connector, .. } | Self::WithdrawOntology { connector, .. } => {
-                connector.as_str()
-            }
+            Self::ImportOntology { connector, .. }
+            | Self::WithdrawOntology { connector, .. }
+            | Self::DiffOntology { connector, .. } => connector.as_str(),
             Self::RevertEdit { subject_iri } => subject_iri,
         }
     }
@@ -187,6 +208,7 @@ impl GraphSchemaOp {
             } => if_composed_digest.as_deref(),
             Self::ImportOntology { .. }
             | Self::WithdrawOntology { .. }
+            | Self::DiffOntology { .. }
             | Self::RevertEdit { .. } => None,
         }
     }
@@ -239,6 +261,18 @@ fn validate_operation_payload(operation: &GraphSchemaOp) -> Result<(), String> {
             ontology_iri,
             ..
         } => validate_ontology_identity(connector, ontology_iri),
+        GraphSchemaOp::DiffOntology {
+            connector,
+            ontology_iri,
+            to,
+            ..
+        } => {
+            validate_ontology_identity(connector, ontology_iri)?;
+            match to {
+                DiffTarget::Revision(_) => Ok(()),
+                DiffTarget::Candidate { turtle } => validate_document("turtle", Some(turtle)),
+            }
+        }
         GraphSchemaOp::RevertEdit { subject_iri } => validate_source_key_shape(subject_iri),
         GraphSchemaOp::Detach { source_id, .. } => validate_source_id(source_id),
         GraphSchemaOp::AttachApproved {
@@ -409,6 +443,10 @@ pub struct OntologyRevisionEntry {
     pub importer: String,
     /// Acceptance time, unix milliseconds.
     pub at: u64,
+    /// What this revision broke when it was accepted, if it was measured
+    /// (MEDULLA-TYPED-PACKS-R804.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub change_impact: Option<medulla_types::ontology_diff::ChangeImpact>,
 }
 
 /// One attached source, without its documents.

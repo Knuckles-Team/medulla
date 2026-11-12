@@ -64,5 +64,6 @@ pub mod process_import;
 /// Quality rule compilation, scoring and failure tracking (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
 pub mod quality;
 pub mod registry;
+pub mod stewardship;
 /// MEDULLA-INCREMENTAL-VIEWS-R005.1 — the process-global view status board.
 pub mod view_status;

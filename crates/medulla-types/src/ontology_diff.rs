@@ -25,3 +25,15 @@ pub struct ChangeImpact {
     pub mappings_broken: u64,
     pub queries_broken: u64,
 }
+
+/// The ids behind each [`ChangeImpact`] count, each list sorted
+/// (MEDULLA-TYPED-PACKS-R804.1).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ImpactItems {
+    pub instances: Vec<String>,
+    pub shapes: Vec<String>,
+    pub mappings: Vec<String>,
+    pub queries: Vec<String>,
+}
