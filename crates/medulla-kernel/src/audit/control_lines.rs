@@ -178,8 +178,8 @@ fn identity_audit_line(method: &Method) -> Option<String> {
     }
 }
 
-fn rbac_admin_audit_line(op: &crate::acl::RbacAdminOp) -> Option<String> {
-    use crate::acl::RbacAdminOp;
+fn rbac_admin_audit_line(op: &medulla_types::acl::RbacAdminOp) -> Option<String> {
+    use medulla_types::acl::RbacAdminOp;
     match op {
         RbacAdminOp::AddRole(role) => Some(format!("RBAC_ADMIN|add_role|{}", role.name)),
         RbacAdminOp::RemoveRole(name) => Some(format!("RBAC_ADMIN|remove_role|{name}")),
