@@ -54,14 +54,16 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             _ => None,
         })
         .collect();
-    // The listing reports the exact immutable catalog of 62 core sources (the state-machine vocabulary and its shapes included).
-    // Eight sources own both document kinds; every other source owns exactly
-    // one document kind.
+    // The listing reports the exact immutable catalog of 63 core sources (the state-machine vocabulary and its shapes included).
+    // Ten sources own both document kinds; every other source owns exactly
+    // one document kind. `core:sdd@1` gained its shapes document with the
+    // SDLC lifecycle kinds/edges/shapes model (ef517a72c), and the placement
+    // target vocabulary joined as a both-kinds source with MEDULLA-PLACEMENT-R001.5.
     let catalog = core.schema_sources();
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 62);
+    assert_eq!(core_ids.len(), 63);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -76,7 +78,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.ontology_sha256.is_some())
             .count(),
-        48
+        49
     );
     assert_eq!(
         initial
@@ -84,7 +86,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        22
+        24
     );
     for source in &initial.core_sources {
         let expected = if matches!(
@@ -96,6 +98,8 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
                 | "core:decision@1"
                 | "core:harness@1"
                 | "core:infrastructure@1"
+                | "core:placement@1"
+                | "core:sdd@1"
                 | "core:sdlc_lifecycle@1"
         ) {
             (true, true)

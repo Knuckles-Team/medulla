@@ -3820,6 +3820,7 @@ components:
       - "tests/adopt_workitem_metadata_cas_lifecycle.rs"
       - "tests/test_adr_unified_data_plane.py"
       - "tests/advanced_crossmodal_roundtrip.rs"
+      - "tests/offline_restore_pitr_cli.rs"
       - "tests/audit_line_formatting.rs"
       - "tests/bolt_roundtrip.rs"
       - "tests/common"

@@ -158,7 +158,7 @@ async fn backup_restore_roundtrip_preserves_everything() {
     assert_eq!(manifest.graph_scopes(), graphs.len() as u64);
 
     // ── restore into a FRESH dir at the same K ──
-    let rr = restore_bundle(&bundle, &restored, 3).expect("restore");
+    let rr = restore_bundle(&bundle, &restored, 3, None).expect("restore");
     assert_eq!(rr.restored_shards, 3);
     assert_eq!(rr.restored_counts.len(), 3);
     assert_eq!(graph_scopes(&rr.restored_counts), graphs.len() as u64);
@@ -221,7 +221,7 @@ async fn restore_can_reshard() {
     // Restore at K=4 (re-shard on restore). A scope cannot be created or
     // destroyed by re-routing it, so the graph-scope census is invariant across
     // the K change and `restore_bundle` refuses a restore that loses one.
-    let rr = restore_bundle(&bundle, &restored, 4).expect("restore reshard");
+    let rr = restore_bundle(&bundle, &restored, 4, None).expect("restore reshard");
     assert_eq!(rr.restored_shards, 4);
     assert_eq!(rr.restored_counts.len(), 4);
     assert_eq!(graph_scopes(&rr.restored_counts), graphs.len() as u64);
@@ -330,7 +330,7 @@ async fn backup_restore_carries_non_shard_durable_stores() {
         "the manifest must state that blob bytes are not captured"
     );
 
-    let restore = restore_bundle(&bundle, &restored, 1).expect("restore");
+    let restore = restore_bundle(&bundle, &restored, 1, None).expect("restore");
     for expected in ["rbac.redb", "kv.redb", "node_info.redb"] {
         assert!(
             restore.restored_stores.contains(&expected.to_string()),
@@ -418,7 +418,7 @@ async fn backup_restore_carries_the_branch_registry() {
         .excluded_stores
         .contains_key("branch_registry.redb"));
 
-    let restore = restore_bundle(&bundle, &restored, 1).expect("restore");
+    let restore = restore_bundle(&bundle, &restored, 1, None).expect("restore");
     assert!(restore
         .restored_stores
         .contains(&"branch_registry.redb".to_string()));
@@ -716,7 +716,7 @@ async fn the_declared_census_is_what_a_backup_copies() {
     // ── restore into a FRESH dir, which also validates the bundle's manifest ──
     // Deliberately AFTER the bundle census above: the restore's MEDULLA-030 graft
     // consumes the bundle (see that block's comment).
-    restore_bundle(&bundle, &restored, 1).expect("restore");
+    restore_bundle(&bundle, &restored, 1, None).expect("restore");
 
     // (3) the tables WD5-BUG-04 named, still present after backup AND restore.
     let restored_shard0 = restored.join(shard_filename(0));

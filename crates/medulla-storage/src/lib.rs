@@ -109,6 +109,9 @@ pub use recovery::adopt::{
     inspect_staged_mutation_store, open_recovery, ClassifiedRecoveryStore, RecoveryExpectation,
     ValidatedPlainRecoveryStore, ValidatedRecoveryStore, ValidatedStagedMutationStore,
 };
+pub use recovery::archive::{
+    parse_replay_target, replay_to, ArchiveBounds, ArchiveRefusal, ReplayTarget,
+};
 pub use recovery::authority::rebind_copied_store;
 pub use recovery::backup::{backup_recovery_store, recovery_store_fingerprint};
 pub use recovery::evidence::{

@@ -433,6 +433,8 @@ pub fn synthesize(
 
 #[cfg(test)]
 mod tests {
+    use medulla_work_types::search_task::EvidenceNode;
+
     use super::*;
     use medulla_work_types::search_task::EvidenceNode;
 
