@@ -233,6 +233,10 @@ knobs! {
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// TOC line-index stride.
     toc_line_index_stride: u64 = "toc.line_index_stride", U64(64), [16, 1_024], "lines", Tunable;
+    /// A source record without retention is refused (MEDULLA-INGEST-WORKER-R900.2).
+    ingest_retention_required: bool = "ingest.retention_required", Bool(false), [false, true], "flag", Tunable;
+    /// Age after which a record's synced access counts as stale (MEDULLA-INGEST-WORKER-R902.2).
+    ingest_acl_stale_after_s: u64 = "ingest.acl_stale_after_s", U64(3_600), [60, 604_800], "s", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.

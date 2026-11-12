@@ -104,6 +104,20 @@ impl TryFrom<RecordGovernanceWire> for RecordGovernance {
     }
 }
 
+/// Per-batch count of governed, refused and marked records
+/// (MEDULLA-INGEST-WORKER-R900.5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GovernanceReport {
+    /// Records that carried a `_governance` member.
+    pub governed: u64,
+    /// Records refused by the governance rules; a refused record writes nothing.
+    pub refused: u64,
+    /// Governed records that carry at least one marking.
+    pub marked: u64,
+}
+
 /// The access of one held record as last synced from its source.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

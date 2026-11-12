@@ -13,6 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use medulla_types::{
     contract::BoundedVec, contract::BoundedWriter, contract::Digest256, contract::RecordBytes,
     contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES, contract::MAX_RECORD_BYTES,
+    source_governance::GovernanceReport,
 };
 
 pub mod batch_kind;
@@ -458,6 +459,9 @@ pub struct SourceIngestionReceipt {
     pub relationship_count: u64,
     pub tombstoned_count: u64,
     pub relationship_tombstoned_count: u64,
+    /// Governed, refused and marked record counts of this batch
+    /// (MEDULLA-INGEST-WORKER-R900.5).
+    pub governance: GovernanceReport,
     pub committed_graph_version: u64,
     /// The stream's content-version object id (the live-set marker id): every
     /// batch to one stream advances this one object.

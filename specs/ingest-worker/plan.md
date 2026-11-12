@@ -114,3 +114,7 @@ none
 - Source batch kinds from connectors: `MEDULLA-INGEST-WORKER-R902.3.1` provides, `SCION-SOURCE-INGEST-R805.1` consumes. Contract: [scion-source-batch-kinds.md](contracts/scion-source-batch-kinds.md).
 - Data-prep declaration: `MEDULLA-INGEST-WORKER-R001.1008` provides, `ARBORA-FLEET-R058` consumes. Contract: [arbora-data-prep-declaration.md](contracts/arbora-data-prep-declaration.md).
 - Document and transcript batches: `MEDULLA-INGEST-WORKER-R003.8` provides, `SCION-SOURCE-INGEST-R010` consumes. Contract: [scion-document-transcript-ingest.md](contracts/scion-document-transcript-ingest.md).
+
+## Decisions: governance admission
+
+Governance refusal is per record and writes nothing; the receipt carries `GovernanceReport{governed, refused, marked}`. Retention policy is the engine knob `ingest.retention_required`. The governance bench calls `admit_record_governance`. Rationale is in [research.md](research.md).

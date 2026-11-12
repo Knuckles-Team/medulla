@@ -2005,6 +2005,12 @@ name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
 
+# Source record governance parsing at batch size (MEDULLA-INGEST-WORKER-R900.6): nightly budget.
+[[bench]]
+name = "ingest_source_governance"
+path = "benches/ingest_source_governance.rs"
+harness = false
+
 # Typed principal metadata admission (MEDULLA-IDENTITY-R023.12): nightly p95 budget.
 [[bench]]
 name = "identity_metadata_admit"

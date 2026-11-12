@@ -97,10 +97,10 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R702.5` | `tests/ingest/test_lsh_dedup_served.py::test_link_stores_similarity_estimate` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R702.6` | `tests/ingest/test_lsh_dedup_served.py::test_near_duplicates_link_and_distinct_pass` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R900.1` | `crates/medulla-types/src/source_governance.rs::tests::record_governance_round_trips_and_rejects_invalid_shapes` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R900.2` | `crates/medulla-h-ingest/src/source_ingestion/governance.rs::tests::public_restricted_marked_and_hold_records` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R900.2` | `crates/medulla-h-ingest/src/source_ingestion/governance.rs::tests::public_restricted_marked_and_hold_records` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R900.3` | `tests/ingest/test_source_governance_served.py::test_policy_and_access_exist_with_the_node` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R900.4` | `crates/medulla-types/tests/ingest_rules.rs::conflicting_or_retention_less_governance_is_refused` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R900.5` | `tests/ingest/test_source_governance_served.py::test_receipt_counts_governed_refused_marked` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R900.5` | `tests/ingest/test_source_governance_served.py::test_receipt_counts_governed_refused_marked` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R900.6` | `benches/ingest_source_governance.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R901.1` | `crates/medulla-types/src/source_governance.rs::tests::source_row_version_round_trips_and_rejects_empty_table` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R901.2` | `crates/medulla-h-ingest/src/source_ingestion/row_version.rs::tests::first_newer_and_replayed_versions` | L2 | planned |
@@ -109,7 +109,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R901.5` | `tests/ingest/test_row_version_served.py::test_receipt_counts_stored_superseded_refused` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R901.6` | `benches/ingest_row_version.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R902.1` | `crates/medulla-types/tests/source_governance.rs::access_snapshot_round_trips` | L4 | exists |
-| `MEDULLA-INGEST-WORKER-R902.2` | `crates/medulla-h-ingest/src/source_ingestion/permissions.rs::tests::access_batch_leaves_content_unchanged` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R902.2` | `crates/medulla-h-ingest/src/source_ingestion/permissions.rs::tests::access_batch_leaves_content_unchanged` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R902.3.1` | `crates/medulla-source-types/src/source_ingestion/tests.rs::batch_kind_requires_matching_extension` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R902.4` | `crates/medulla-types/tests/ingest_rules.rs::unknown_records_and_oversized_groups_are_refused` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R902.5` | `tests/ingest/test_source_permission_sync_served.py::test_stale_restricted_record_fails_closed` | L4 | planned |

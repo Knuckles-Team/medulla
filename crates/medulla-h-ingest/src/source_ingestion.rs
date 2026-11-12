@@ -37,6 +37,9 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
+pub mod governance;
+pub mod permissions;
+
 pub struct PrepareContext<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
     pub request_id: u64,
@@ -66,6 +69,7 @@ pub struct PreparedSourceIngestion {
     relationship_count: u64,
     tombstoned_count: u64,
     relationship_tombstoned_count: u64,
+    governance: medulla_types::source_governance::GovernanceReport,
     committed_graph_version: u64,
 }
 
@@ -264,6 +268,7 @@ pub async fn prepare(
         &reconciliation,
         &admitted.raw_admissions,
         &admitted.relationship_raw_admissions,
+        admitted.governance,
     )?);
     admitted.policies.push(policy(
         &batch_id,
@@ -307,13 +312,14 @@ pub async fn prepare(
         accepted_checkpoint: batch.provider_checkpoint.clone(),
         live_set_digest: reconciliation.live_set_digest,
         relationship_live_set_digest: reconciliation.relationship_live_set_digest,
-        affected_count: (batch.records.len()
+        affected_count: (batch.records.len() - admitted.governance.refused as usize
             + batch.relationships.len()
             + admitted.tombstone_count
             + reconciliation.relationship_tombstones.len()) as u64,
         relationship_count: batch.relationships.len() as u64,
         tombstoned_count: admitted.tombstone_count as u64,
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
+        governance: admitted.governance,
         committed_graph_version: ctx.graph_version.saturating_add(1),
     })
 }
@@ -365,6 +371,7 @@ struct AdmittedRecords {
     lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
     policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
     tombstone_count: usize,
+    governance: medulla_types::source_governance::GovernanceReport,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -1007,10 +1014,11 @@ fn admit_records(
         lineage: Vec::with_capacity(batch.records.len()),
         policies: Vec::with_capacity(batch.records.len() + 1),
         tombstone_count: 0,
+        governance: Default::default(),
     };
     let mut batch_raw_digests = BTreeSet::new();
     for record in &batch.records {
-        let item = admit_record(
+        let Some(item) = admit_record(
             ctx,
             batch,
             record,
@@ -1018,7 +1026,12 @@ fn admit_records(
             blob,
             resolved,
             policy_subject,
-        )?;
+            &mut admitted.governance,
+        )?
+        else {
+            // Governance refused this record: it writes nothing.
+            continue;
+        };
         let deduplicated = !batch_raw_digests.insert(item.raw_digest_hex.clone());
         admitted.raw_admissions.push(RawAdmissionReceipt {
             stream: record.stream.clone(),
@@ -1508,7 +1521,24 @@ fn admit_record(
     blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
-) -> Result<AdmittedRecord, String> {
+    report: &mut medulla_types::source_governance::GovernanceReport,
+) -> Result<Option<AdmittedRecord>, String> {
+    // Governance parses before anything is written or the node is built
+    // (MEDULLA-INGEST-WORKER-R900.2): a refused record leaves no state.
+    let governance = {
+        let payload = record.payload.value()?;
+        let outcome = payload.as_object().map_or(Ok(None), |fields| {
+            governance::admit_record_governance(
+                fields,
+                medulla_server_api::knob_config::knobs().ingest_retention_required,
+            )
+        });
+        governance::count_governance(report, &outcome);
+        match outcome {
+            Ok(admitted) => admitted,
+            Err(_) => return Ok(None),
+        }
+    };
     let raw = rmp_serde::to_vec_named(record)
         .map_err(|error| format!("raw source record encoding failed: {error}"))?;
     let raw_digest_hex = admit_raw(ctx, authority, blob, &raw)?;
@@ -1533,6 +1563,11 @@ fn admit_record(
         batch.strict_schema,
     )?;
     let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
+    if let Some(governance) = &governance {
+        for (key, value) in &governance.properties {
+            properties.insert((*key).into(), value.clone());
+        }
+    }
     let method = Method::AddNode {
         node_id: node_id.clone(),
         properties_msgpack: rmp_serde::to_vec_named(&properties)
@@ -1547,13 +1582,19 @@ fn admit_record(
         transform_version: mapping.body_sha256.to_hex(),
         parent_content_digests: Vec::new(),
     };
-    let policy = policy(
+    let mut policy = policy(
         &node_id,
         ctx.tenant_scope,
         policy_subject,
         mapping.entry_revision,
     );
-    Ok(AdmittedRecord {
+    if let Some(governance) = governance {
+        policy.classification = governance.classification.into();
+        policy.retention_policy = governance.retention_policy;
+        policy.legal_hold = governance.legal_hold;
+        policy.subject_set_digest = governance.subject_set_digest;
+    }
+    Ok(Some(AdmittedRecord {
         raw_digest_hex: raw_digest_hex.clone(),
         raw_digest,
         blob: raw_blob_reference(
@@ -1565,7 +1606,7 @@ fn admit_record(
         method,
         lineage,
         policy,
-    })
+    }))
 }
 
 /// Content-addressed store for the text and table blobs of one text source.
@@ -1687,6 +1728,7 @@ fn receipt_method(
     reconciliation: &ReconciliationPlan,
     raw_admissions: &[RawAdmissionReceipt],
     relationship_raw_admissions: &[RawRelationshipAdmissionReceipt],
+    governance: medulla_types::source_governance::GovernanceReport,
 ) -> Result<Method, String> {
     let properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -1702,11 +1744,12 @@ fn receipt_method(
         "relationship_live_set_digest": reconciliation.relationship_live_set_digest,
         "withdrawals": reconciliation.tombstones,
         "relationship_tombstones": relationship_tombstone_receipts(&reconciliation.relationship_tombstones),
-        "record_count": batch.records.len(),
+        "governance": governance,
+        "record_count": batch.records.len() - governance.refused as usize,
         "relationship_count": batch.relationships.len(),
         "tombstoned_count": reconciliation.tombstones.len(),
         "relationship_tombstoned_count": reconciliation.relationship_tombstones.len(),
-        "affected_count": batch.records.len() + batch.relationships.len() + reconciliation.tombstones.len() + reconciliation.relationship_tombstones.len(),
+        "affected_count": batch.records.len() - governance.refused as usize + batch.relationships.len() + reconciliation.tombstones.len() + reconciliation.relationship_tombstones.len(),
     });
     Ok(Method::AddNode {
         node_id: batch_id.into(),
@@ -1893,7 +1936,7 @@ fn build_terminal_receipt(
         .map(Digest256::parse)
         .transpose()?;
     let receipt_digest = Digest256::framed(
-        b"eg/source-ingestion-receipt/v3",
+        b"eg/source-ingestion-receipt/v4",
         &[
             prepared.batch_digest.as_bytes(),
             stream_object_id.as_bytes(),
@@ -1907,6 +1950,7 @@ fn build_terminal_receipt(
             &receipt_bytes(&relationship_raw_admissions)?,
             &receipt_bytes(&tombstones)?,
             &receipt_bytes(&relationship_tombstones)?,
+            &receipt_bytes(&prepared.governance)?,
             accepted_checkpoint_digest.as_bytes(),
             prepared
                 .accepted_checkpoint
@@ -1950,6 +1994,7 @@ fn build_terminal_receipt(
         relationship_count: prepared.relationship_count,
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
+        governance: prepared.governance,
         committed_graph_version: prepared.committed_graph_version,
         stream_object_id,
         previous_content_digest,
@@ -2023,8 +2068,23 @@ fn prepared_replay(
             &receipt,
             "relationship_tombstoned_count",
         )?,
+        governance: replay_governance(&receipt)?,
         committed_graph_version,
     })
+}
+
+/// Receipts committed before governance counting carry no `governance` member.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn replay_governance(
+    receipt: &serde_json::Value,
+) -> Result<medulla_types::source_governance::GovernanceReport, String> {
+    receipt
+        .get("governance")
+        .cloned()
+        .map(serde_json::from_value)
+        .transpose()
+        .map(Option::unwrap_or_default)
+        .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: governance: {error}"))
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2310,7 +2370,12 @@ fn validate_strict_source_fields(
         return Ok(());
     }
     let mut allowed: BTreeSet<_> = fields.keys().map(String::as_str).collect();
-    allowed.extend(["id", "node_type", "externalToolId"]);
+    allowed.extend([
+        "id",
+        "node_type",
+        "externalToolId",
+        governance::GOVERNANCE_MEMBER,
+    ]);
     match source.keys().find(|key| !allowed.contains(key.as_str())) {
         Some(unknown) => Err(format!(
             "SOURCE_SCHEMA_FIELD_UNKNOWN: strict mapping does not select {unknown}"
@@ -2878,6 +2943,7 @@ mod tests {
             lineage: Vec::new(),
             policies: Vec::new(),
             tombstone_count: 0,
+            governance: Default::default(),
         };
         admit_relationships(
             RelationshipAdmissionContext {

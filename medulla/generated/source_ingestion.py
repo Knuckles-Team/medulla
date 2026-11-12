@@ -133,6 +133,14 @@ class SourceIngestionMode(str, Enum):
     RECONCILE = "reconcile"
 
 
+class GovernanceReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    governed: Annotated[int, Field(ge=0)]
+    marked: Annotated[int, Field(ge=0)]
+    refused: Annotated[int, Field(ge=0)]
+
+
 class SourceIngestionReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -143,6 +151,7 @@ class SourceIngestionReceipt(BaseModel):
     committed_graph_version: Annotated[int, Field(ge=0)]
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
+    governance: GovernanceReport
     live_set_digest: Digest256 | None = None
     mappings: BoundedVec_SourceMappingReceipt_5120
     mode: SourceIngestionMode
@@ -418,6 +427,7 @@ SourceIngestStatus.model_rebuild()
 
 SourceIngestionBatch.model_rebuild()
 
+GovernanceReport.model_rebuild()
 SourceIngestionReceipt.model_rebuild()
 
 SourceMappingReceipt.model_rebuild()
@@ -455,6 +465,7 @@ __all__ = [
     "SourceIngestionBatch",
     "SourceIngestionDisposition",
     "SourceIngestionMode",
+    "GovernanceReport",
     "SourceIngestionReceipt",
     "SourceIngestionRequest",
     "SourceJson",

@@ -1,0 +1,9 @@
+# MEDULLA-INGEST-WORKER research
+
+## Decisions
+
+- **Governance refusal is per record (R900.2, R900.4, R900.5).** A record whose `_governance` member is invalid, conflicts, or lacks required retention is skipped and counted in `GovernanceReport.refused`. The rest of the batch commits. A refused record writes nothing: governance parses before the raw blob is admitted or the node is built. `affected_count` counts admitted records. `governed` includes refused records because they carry the member.
+- **Retention policy is one engine knob (R900.2).** `ingest.retention_required` is a scalar Tunable knob. The knob table has no list type, and a second per-tenant configuration mechanism would split one rule across two places. A tenant that needs the rule runs on an engine that sets it.
+- **The governance bench measures the governance step (R900.6).** `admit_records` needs a live blob store and mapping resolution, which would measure those rather than governance parsing. The bench calls `admit_record_governance`, the pure step `admit_record` runs first.
+- **Access sync owns the read roles, not the markings (R902.2).** A snapshot carries principals and groups, so the update sets `source_access_public` and `source_access_read_roles`; groups appear as `group:<id>` and the read gate expands them. Markings come from governance and feed the replacement subject digest unchanged. `admit_access` and `admit_groups` are pure and return methods and per-item refusals; the `prepare` wiring is R902.3.
+- **A new served method is its own chain (R001.1008).** `DataPrepDeclare` and `DataPrepDeclarationRead` need the method variants, scope, result contract, write classification, capability descriptor, canonical batch compile arm and generated client in one change, after `declare_data_prep` (R001.1007) exists.

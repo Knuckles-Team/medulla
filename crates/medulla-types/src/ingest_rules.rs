@@ -30,6 +30,8 @@ pub enum IngestRefusal {
     },
     #[error("SOURCE_RETENTION_MISSING: retention is required by policy")]
     RetentionMissing,
+    #[error("SOURCE_GOVERNANCE_INVALID: {0}")]
+    GovernanceInvalid(String),
     #[error("ROW_VERSION_INVALID: {0}")]
     RowVersionInvalid(String),
     #[error("SOURCE_RECORD_UNKNOWN: {0}")]
