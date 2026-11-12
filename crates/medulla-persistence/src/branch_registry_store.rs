@@ -136,10 +136,15 @@ fn batch_row_key(branch: &BranchRef, batch_id: &str) -> String {
 /// The facts of one branch-scoped mutation that become a commit.
 #[derive(Debug, Clone)]
 pub struct BranchCommitInput {
+    /// The client batch id; a replay of it returns the original commit.
     pub batch_id: String,
+    /// The engine version that produced the commit.
     pub engine_version: u64,
+    /// Digest of the manifest the commit applies.
     pub manifest_digest: String,
+    /// The principal that made the change.
     pub actor: String,
+    /// Commit time, epoch milliseconds.
     pub created_at_ms: u64,
 }
 
@@ -153,10 +158,15 @@ fn payload_row_key(branch: &BranchRef, commit_id: &str) -> String {
 /// commits atomically with the head advance.
 #[derive(Debug, Clone)]
 pub struct CommitPlan {
+    /// The engine version that produced the commit.
     pub engine_version: u64,
+    /// Digest of the manifest the commit applies.
     pub manifest_digest: String,
+    /// The principal that made the change.
     pub actor: String,
+    /// Commit time, epoch milliseconds.
     pub created_at_ms: u64,
+    /// The payload committed atomically with the head advance, if any.
     pub payload: Option<Vec<u8>>,
 }
 
@@ -175,7 +185,9 @@ pub enum AppendError {
 /// The commit a branch write produced and whether it already existed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppendedCommit {
+    /// The commit the write produced.
     pub commit: BranchCommit,
+    /// Whether the commit already existed (an idempotent replay).
     pub replayed: bool,
 }
 
