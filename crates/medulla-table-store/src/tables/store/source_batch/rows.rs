@@ -108,7 +108,7 @@ fn require_type(column: &Column, allowed: &[ColumnType]) -> Result<(), String> {
 fn lower_null(column: &Column) -> Result<Cell, String> {
     if !column.nullable {
         return Err(format!(
-            "SQL source NULL violates NOT NULL column `{}`",
+            "NOT_NULL_VIOLATION: SQL source NULL violates NOT NULL column `{}`",
             column.name
         ));
     }

@@ -2069,6 +2069,7 @@ fn decode_foreign_key(
             "FOREIGN KEY REFERENCES `{ref_table}` must name at least one column"
         ));
     }
+    let (deferrable, initially_deferred) = decode_fk_characteristics(fk.characteristics.as_ref())?;
     Ok(TableConstraint::ForeignKey {
         name,
         columns: columns.to_vec(),
@@ -2080,7 +2081,35 @@ fn decode_foreign_key(
             .collect(),
         on_delete: decode_referential_action(fk.on_delete)?,
         on_update: decode_referential_action(fk.on_update)?,
+        deferrable,
+        initially_deferred,
     })
+}
+
+/// `[NOT] DEFERRABLE` and `INITIALLY DEFERRED|IMMEDIATE` on a foreign key
+/// (MEDULLA-ENGINE-PARITY-R011.1). `INITIALLY DEFERRED` alone implies
+/// `DEFERRABLE`, as in PostgreSQL; `NOT DEFERRABLE INITIALLY DEFERRED` and
+/// `NOT ENFORCED` are refused.
+fn decode_fk_characteristics(
+    characteristics: Option<&datafusion::sql::sqlparser::ast::ConstraintCharacteristics>,
+) -> Result<(bool, bool), String> {
+    let Some(c) = characteristics else {
+        return Ok((false, false));
+    };
+    if c.enforced == Some(false) {
+        return Err("FOREIGN KEY NOT ENFORCED is not supported".to_string());
+    }
+    let initially_deferred = matches!(
+        c.initially,
+        Some(datafusion::sql::sqlparser::ast::DeferrableInitial::Deferred)
+    );
+    if initially_deferred && c.deferrable == Some(false) {
+        return Err("FOREIGN KEY NOT DEFERRABLE cannot be INITIALLY DEFERRED".to_string());
+    }
+    Ok((
+        c.deferrable.unwrap_or(false) || initially_deferred,
+        initially_deferred,
+    ))
 }
 
 /// `ON DELETE`/`ON UPDATE` action (CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001). Default (unspecified) is

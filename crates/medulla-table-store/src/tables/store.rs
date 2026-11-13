@@ -1534,7 +1534,9 @@ impl TableStore {
         rows: &[Vec<Value>],
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("insert-rows", table, |wtx| {
-            insert_in(wtx, self.index_scope(), table, col_order, rows)
+            let inserted = insert_in(wtx, self.index_scope(), table, col_order, rows)?;
+            check_deferred_fks_for_tables_in(wtx, &[table])?;
+            Ok(inserted)
         })
     }
 
@@ -1549,7 +1551,10 @@ impl TableStore {
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority
             .maintain("insert-rows-on-conflict", table, |wtx| {
-                insert_on_conflict_in(wtx, self.index_scope(), table, col_order, rows, action)
+                let written =
+                    insert_on_conflict_in(wtx, self.index_scope(), table, col_order, rows, action)?;
+                check_deferred_fks_for_tables_in(wtx, &[table])?;
+                Ok(written)
             })
     }
 
@@ -1572,7 +1577,9 @@ impl TableStore {
         selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("update-rows", table, |wtx| {
-            update_in(wtx, self.index_scope(), table, set, selector)
+            let updated = update_in(wtx, self.index_scope(), table, set, selector)?;
+            check_deferred_fks_for_tables_in(wtx, &[table])?;
+            Ok(updated)
         })
     }
 
@@ -1593,7 +1600,9 @@ impl TableStore {
         selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("delete-rows", table, |wtx| {
-            delete_in(wtx, self.index_scope(), table, selector)
+            let removed = delete_in(wtx, self.index_scope(), table, selector)?;
+            check_deferred_fks_for_tables_in(wtx, &[table])?;
+            Ok(removed)
         })
     }
 
@@ -2067,6 +2076,7 @@ impl TableStore {
                 for op in &txn.ops {
                     affected = affected.saturating_add(apply_txn_op(wtx, self.index_scope(), op)?);
                 }
+                check_deferred_fks_in(wtx, &txn.ops)?;
                 Ok(affected)
             })
     }
@@ -2474,6 +2484,7 @@ fn apply_mutation_txn_ops_with_crashpoints(
     for op in &txn.ops {
         affected = affected.saturating_add(apply_txn_op_tracked(wtx, index_scope, op, accum)?);
     }
+    check_deferred_fks_in(wtx, &txn.ops)?;
 
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
         return Err("injected crash after SQL mutation rows".to_string());
@@ -4429,7 +4440,7 @@ fn eval_table_checks(
             if !expr.holds(row) {
                 let name = TableSchema::constraint_display_name(table, c);
                 return Err(format!(
-                    "new row for table `{table}` violates check constraint `{name}`"
+                    "CHECK_VIOLATION: new row for table `{table}` violates check constraint `{name}`"
                 ));
             }
         }
@@ -4496,8 +4507,12 @@ fn validate_fk_out_for_row_in(
     wtx: &SqlWrite<'_>,
     schema: &TableSchema,
     cells: &[Cell],
+    skip_deferred: bool,
 ) -> Result<(), String> {
     for c in schema.constraints() {
+        if skip_deferred && c.is_deferred_foreign_key() {
+            continue;
+        }
         let TableConstraint::ForeignKey {
             columns,
             ref_table,
@@ -4535,7 +4550,7 @@ fn validate_fk_out_for_row_in(
         if !row_exists_with_key_in(wtx, ref_table, &ref_schema, ref_columns, &key)? {
             let name = TableSchema::constraint_display_name(&schema.name, c);
             return Err(format!(
-                "insert or update on table `{}` violates foreign key constraint `{name}`",
+                "FOREIGN_KEY_VIOLATION: insert or update on table `{}` violates foreign key constraint `{name}`",
                 schema.name
             ));
         }
@@ -4560,7 +4575,7 @@ fn validate_row_constraints_in(
     if !checks.is_empty() {
         eval_table_checks(&schema.name, &checks, &row_map(schema, cells))?;
     }
-    validate_fk_out_for_row_in(wtx, schema, cells)
+    validate_fk_out_for_row_in(wtx, schema, cells, true)
 }
 
 fn validate_column_checks_in(schema: &TableSchema, cells: &[Cell]) -> Result<(), String> {
@@ -4573,7 +4588,7 @@ fn validate_column_checks_in(schema: &TableSchema, cells: &[Cell]) -> Result<(),
                 .to_typed_json(column.ty);
             if !check.holds(&value) {
                 return Err(format!(
-                    "new row violates CHECK constraint on column `{}`",
+                    "CHECK_VIOLATION: new row violates CHECK constraint on column `{}`",
                     column.name
                 ));
             }
@@ -4938,11 +4953,14 @@ fn enforce_fk_constraint_on_child_in(
         return Ok(());
     }
     match plan.action {
+        // A deferred key leaves a NO ACTION reference dangling for now; the
+        // end-of-transaction pass refuses it if it is still unresolved.
+        RefAction::NoAction if constraint.is_deferred_foreign_key() => Ok(()),
         RefAction::NoAction | RefAction::Restrict => {
             let cname = TableSchema::constraint_display_name(child_table, constraint);
             let table = parent.table;
             Err(format!(
-                "update or delete on table `{table}` violates foreign key constraint `{cname}` on table `{child_table}`"
+                "FOREIGN_KEY_VIOLATION: update or delete on table `{table}` violates foreign key constraint `{cname}` on table `{child_table}`"
             ))
         }
         RefAction::Cascade => cascade_fk_matches_in(
@@ -5077,6 +5095,51 @@ fn validate_table_checks_over_existing_in(
     Ok(())
 }
 
+/// The end-of-transaction pass for deferred foreign keys
+/// (MEDULLA-ENGINE-PARITY-R011.1). Runs after the last op of a transaction and
+/// before the commit point. A table is checked when the transaction wrote it or
+/// wrote a table one of its deferred keys references; every row of such a table
+/// is held to each of its deferred keys, so every reference left unresolved by
+/// the transaction is found once. A refusal aborts the transaction.
+fn check_deferred_fks_in(wtx: &SqlWrite<'_>, ops: &[TxnOp]) -> Result<(), String> {
+    let mut touched: Vec<&str> = Vec::new();
+    for op in ops {
+        match op {
+            TxnOp::Insert { table, .. }
+            | TxnOp::Update { table, .. }
+            | TxnOp::Delete { table, .. } => touched.push(table.as_str()),
+            _ => {}
+        }
+    }
+    check_deferred_fks_for_tables_in(wtx, &touched)
+}
+
+/// [`check_deferred_fks_in`] for a statement that wrote `touched` tables (the
+/// one-shot DML paths are single-statement transactions).
+fn check_deferred_fks_for_tables_in(wtx: &SqlWrite<'_>, touched: &[&str]) -> Result<(), String> {
+    let touched: HashSet<&str> = touched.iter().copied().collect();
+    if touched.is_empty() {
+        return Ok(());
+    }
+    for table in list_tables_in(wtx)? {
+        let Some(schema) = get_schema_in(wtx, &table)? else {
+            continue;
+        };
+        for constraint in schema.constraints() {
+            let TableConstraint::ForeignKey { ref_table, .. } = constraint else {
+                continue;
+            };
+            if !constraint.is_deferred_foreign_key() {
+                continue;
+            }
+            if touched.contains(table.as_str()) || touched.contains(ref_table.as_str()) {
+                validate_existing_fk_children_in(wtx, &table, &schema, constraint)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Every EXISTING row of `table` must already satisfy the outgoing FOREIGN KEY
 /// `constraint` (CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001, `ADD CONSTRAINT`) — mirrors Postgres's
 /// refusal to add a FK the current data already violates.
@@ -5106,7 +5169,7 @@ fn validate_existing_fk_children_in(
     drop(rows_t);
     let scoped = schema.clone().with_constraints(vec![constraint.clone()]);
     for cells in &rows {
-        validate_fk_out_for_row_in(wtx, &scoped, cells)?;
+        validate_fk_out_for_row_in(wtx, &scoped, cells, false)?;
     }
     Ok(())
 }
@@ -6195,7 +6258,7 @@ fn build_insert_cells(
     for (val, &idx) in row.iter().zip(targets.iter()) {
         validate_mutation_value(val)?;
         let col = &schema.columns()[idx];
-        cells[idx] = Cell::coerce(val, col.ty, col.nullable)?;
+        cells[idx] = coerce_named(&col.name, val, col.ty, col.nullable)?;
         supplied[idx] = true;
     }
     fill_omitted_insert_cells(schema, &mut cells, &supplied, rowid)?;
@@ -6223,7 +6286,7 @@ fn fill_omitted_insert_cells(
             cells[ci] = Cell::coerce(def, col.ty, col.nullable)?;
         } else if !col.nullable {
             return Err(format!(
-                "column `{}` is NOT NULL and was not supplied",
+                "NOT_NULL_VIOLATION: column `{}` is NOT NULL and was not supplied",
                 col.name
             ));
         }
@@ -6548,7 +6611,7 @@ fn detect_unique_conflict(
             continue;
         };
         let col = &schema.columns()[uci];
-        let supplied = Cell::coerce(&row[pos], col.ty, col.nullable)?;
+        let supplied = coerce_named(&col.name, &row[pos], col.ty, col.nullable)?;
         if let Some(key) = unique_cell_key(&supplied, col.ty) {
             if let Some(&rowid) = state.unique_rows[slot].get(&key) {
                 return Ok(Some(rowid));
@@ -6577,7 +6640,7 @@ fn detect_composite_conflict(
                 break;
             };
             let col = &schema.columns()[column];
-            let value = Cell::coerce(&row[pos], col.ty, col.nullable)?;
+            let value = coerce_named(&col.name, &row[pos], col.ty, col.nullable)?;
             let Some(key) = unique_cell_key(&value, col.ty) else {
                 complete = false;
                 break;
@@ -6624,7 +6687,7 @@ fn apply_do_update_assignments(
             .column_index(col)
             .ok_or_else(|| format!("column `{col}` does not exist in table `{table}`"))?;
         let c = &schema.columns()[idx];
-        cells[idx] = Cell::coerce(val, c.ty, c.nullable)?;
+        cells[idx] = coerce_named(&c.name, val, c.ty, c.nullable)?;
     }
     Ok(())
 }
@@ -6637,7 +6700,7 @@ fn validate_do_update_check_constraints(
         if let Some(check) = &col.check {
             if !check.holds(&cells[ci].to_typed_json(col.ty)) {
                 return Err(format!(
-                    "updated row violates CHECK constraint on column `{}`",
+                    "CHECK_VIOLATION: updated row violates CHECK constraint on column `{}`",
                     col.name
                 ));
             }
@@ -6869,6 +6932,24 @@ fn row_map(schema: &TableSchema, cells: &[Cell]) -> serde_json::Map<String, Valu
     map
 }
 
+/// [`Cell::coerce`] that names the column in a `NOT_NULL_VIOLATION`.
+fn coerce_named(
+    column: &str,
+    value: &Value,
+    ty: ColumnType,
+    nullable: bool,
+) -> Result<Cell, String> {
+    Cell::coerce(value, ty, nullable).map_err(|error| {
+        if error.starts_with("NOT_NULL_VIOLATION: ") {
+            format!(
+                "NOT_NULL_VIOLATION: null value in column `{column}` violates not-null constraint"
+            )
+        } else {
+            error
+        }
+    })
+}
+
 /// Resolve an UPDATE's `SET` map into `(column index, coerced cell)` pairs,
 /// validating each supplied value against the column's declared type/nullability.
 fn resolve_update_assignments(
@@ -6883,7 +6964,7 @@ fn resolve_update_assignments(
             .column_index(col)
             .ok_or_else(|| format!("column `{col}` does not exist in table `{table}`"))?;
         let c = &schema.columns()[idx];
-        assigns.push((idx, Cell::coerce(val, c.ty, c.nullable)?));
+        assigns.push((idx, coerce_named(&c.name, val, c.ty, c.nullable)?));
     }
     Ok(assigns)
 }
@@ -6896,7 +6977,7 @@ fn validate_updated_row_checks(schema: &TableSchema, cells: &[Cell]) -> Result<(
         };
         if !check.holds(&cells[ci].to_typed_json(col.ty)) {
             return Err(format!(
-                "updated row violates CHECK constraint on column `{}`",
+                "CHECK_VIOLATION: updated row violates CHECK constraint on column `{}`",
                 col.name
             ));
         }
@@ -7142,7 +7223,7 @@ fn check_row_uniqueness(
         };
         if !seen[slot].insert(key) {
             return Err(format!(
-                "duplicate key value violates unique constraint on {label}"
+                "UNIQUE_VIOLATION: duplicate key value violates unique constraint on {label}"
             ));
         }
     }

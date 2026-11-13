@@ -632,6 +632,14 @@ pub enum TableConstraint {
         ref_columns: Vec<String>,
         on_delete: RefAction,
         on_update: RefAction,
+        /// `DEFERRABLE` (MEDULLA-ENGINE-PARITY-R011.1). A deferrable key may check at
+        /// the end of the transaction.
+        #[serde(default, skip_serializing_if = "is_false")]
+        deferrable: bool,
+        /// `INITIALLY DEFERRED`: the key checks once, after the last op of the
+        /// transaction, instead of per statement. Requires `deferrable`.
+        #[serde(default, skip_serializing_if = "is_false")]
+        initially_deferred: bool,
     },
     /// A general `CHECK (<expr>)`.
     Check {
@@ -640,7 +648,23 @@ pub enum TableConstraint {
     },
 }
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 impl TableConstraint {
+    /// Whether this is a foreign key that checks at the end of the transaction.
+    pub fn is_deferred_foreign_key(&self) -> bool {
+        matches!(
+            self,
+            TableConstraint::ForeignKey {
+                deferrable: true,
+                initially_deferred: true,
+                ..
+            }
+        )
+    }
+
     pub fn name(&self) -> Option<&str> {
         match self {
             TableConstraint::PrimaryKey { name, .. }
@@ -898,8 +922,16 @@ impl TableSchema {
                     columns,
                     ref_table,
                     ref_columns,
+                    deferrable,
+                    initially_deferred,
                     ..
                 } => {
+                    if *initially_deferred && !*deferrable {
+                        return Err(format!(
+                            "table `{}`: INITIALLY DEFERRED requires a DEFERRABLE foreign key",
+                            self.name
+                        ));
+                    }
                     self.validate_foreign_key_constraint(columns, ref_table, ref_columns)?;
                 }
                 TableConstraint::Check { expr, .. } => {
@@ -1383,6 +1415,8 @@ mod table_schema_tests {
             ref_columns: vec!["id".into()],
             on_delete: RefAction::NoAction,
             on_update: RefAction::NoAction,
+            deferrable: false,
+            initially_deferred: false,
         };
         assert_eq!(TableSchema::constraint_display_name("t", &fk), "t_a_fkey");
     }
@@ -1728,7 +1762,7 @@ impl Cell {
             return if nullable {
                 Ok(Cell::Null)
             } else {
-                Err("NULL value in a NOT NULL column".to_string())
+                Err("NOT_NULL_VIOLATION: NULL value in a NOT NULL column".to_string())
             };
         }
         match ty {

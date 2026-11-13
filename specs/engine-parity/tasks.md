@@ -32,7 +32,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T026 [US3] MEDULLA-ENGINE-PARITY-R010.1 Partial and expression indexes on user tables: model and behavior
 - [ ] T027 [US3] MEDULLA-ENGINE-PARITY-R010.2 Partial and expression indexes on user tables: wiring and refusal
 - [ ] T028 [P] [US3] MEDULLA-ENGINE-PARITY-R010.3 Partial and expression indexes on user tables: hot-path proof
-- [ ] T029 [US3] MEDULLA-ENGINE-PARITY-R011.1 Constraints: unique, foreign key, check and not null: model and behavior
+- [x] T029 [US3] MEDULLA-ENGINE-PARITY-R011.1 Constraints: unique, foreign key, check and not null: model and behavior
 - [ ] T030 [US3] MEDULLA-ENGINE-PARITY-R011.2 Constraints: unique, foreign key, check and not null: wiring and refusal
 - [ ] T031 [P] [US3] MEDULLA-ENGINE-PARITY-R011.3 Constraints: unique, foreign key, check and not null: hot-path proof
 - [x] T032 [US3] MEDULLA-ENGINE-PARITY-R012.1 Triggers as statechart rules: model and behavior
