@@ -118,3 +118,10 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T112 [US7] MEDULLA-MEDIA-VOCAB-R653 totalAmount covers purchase invoices
 - [ ] T113 [US5] MEDULLA-MEDIA-VOCAB-R654 Transcript segments carry storage, event and narrative time
 - [ ] T114 [US7] MEDULLA-MEDIA-VOCAB-R655 Food composition and nutrient reference types
+- [ ] T115 [US7] MEDULLA-MEDIA-VOCAB-R656 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T116 [US7] MEDULLA-MEDIA-VOCAB-R656.1 AsrResult/ResultStatus state machine: route 1 census findings through ResultStatus::apply
+- [ ] T117 [US7] MEDULLA-MEDIA-VOCAB-R656.2 Manifest/ManifestStatus state machine: route 1 census findings through ManifestStatus::apply
+- [ ] T118 [US7] MEDULLA-MEDIA-VOCAB-R656.3 PhaseExitArtifact/GrampsPilotPhase state machine: route 1 census findings through GrampsPilotPhase::apply
+- [ ] T119 [US7] MEDULLA-MEDIA-VOCAB-R656.4 PhaseExitArtifact/ImmichPilotPhase state machine: route 1 census findings through ImmichPilotPhase::apply
+- [ ] T120 [US7] MEDULLA-MEDIA-VOCAB-R656.5 Revision/TranscriptState state machine: route 1 census findings through TranscriptState::apply
+- [ ] T121 [US7] MEDULLA-MEDIA-VOCAB-R656.6 TtsResult/JobStatus state machine: route 1 census findings through JobStatus::apply
