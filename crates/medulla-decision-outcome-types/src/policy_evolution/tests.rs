@@ -270,6 +270,10 @@ fn every_policy_operation_and_receipt_round_trips() {
         baseline_version_id: Some(id("polver:base")),
         evaluation_set_digest: digest(16),
         evaluator_digest: digest(17),
+        held_out_trajectory_ids: medulla_types::contract::BoundedVec::new(vec![id(
+            "poltraj:held-1",
+        )])
+        .expect("held-out ids within bound"),
         metrics: EvaluationMetrics {
             task_success_ppm: 900_000,
             baseline_task_success_ppm: 850_000,
