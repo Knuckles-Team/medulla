@@ -40,8 +40,10 @@ mod topology;
 mod usage_guidance;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseRef};
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, QuestionKind, StatisticalOutcome,
+};
+use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 
 use super::stat_executor::{Executed, ExecutionContext};
@@ -85,6 +87,18 @@ pub trait DecisionFamily {
     /// (MEDULLA-DECISION-ENGINE-R001.101.3).
     fn binds_utterance(&self) -> bool {
         false
+    }
+
+    /// Record stage: the resolution kind the kind seals its outcome with;
+    /// `None` keeps the generic one.
+    fn resolution_kind(&self, _outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        None
+    }
+
+    /// Record stage: the evidence class the kind seals its outcome with;
+    /// `None` keeps the generic one.
+    fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        None
     }
 
     /// Conclude stage: the kind's refusal mapping.

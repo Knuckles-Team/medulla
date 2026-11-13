@@ -162,6 +162,73 @@ impl StoredQuery {
         Ok(bound)
     }
 
+    /// The text a language runner executes for one binding. A UQL text is returned
+    /// unchanged because the UQL parser binds its own typed parameters. A SQL or SPARQL
+    /// text has each `$name` placeholder outside quoted text and comments replaced by one
+    /// typed literal rendered from the bound value: a string is quoted and escaped, a
+    /// number or boolean is its canonical token. A placeholder that names no declared
+    /// parameter refuses `STORED_QUERY_INVALID`.
+    pub fn render(&self, bound: &BTreeMap<String, Value>) -> Result<String, StoredQueryRefusal> {
+        if self.language == StoredQueryLanguage::Uql {
+            return Ok(self.text.clone());
+        }
+        let sparql = self.language == StoredQueryLanguage::Sparql;
+        let chars: Vec<char> = self.text.chars().collect();
+        let mut out = String::with_capacity(self.text.len());
+        let mut at = 0;
+        while at < chars.len() {
+            let c = chars[at];
+            match c {
+                '\'' | '"' => {
+                    let end = quoted_end(&chars, at, sparql);
+                    out.extend(&chars[at..end]);
+                    at = end;
+                }
+                '-' if !sparql && chars.get(at + 1) == Some(&'-') => {
+                    let end = line_end(&chars, at);
+                    out.extend(&chars[at..end]);
+                    at = end;
+                }
+                '#' if sparql => {
+                    let end = line_end(&chars, at);
+                    out.extend(&chars[at..end]);
+                    at = end;
+                }
+                '/' if !sparql && chars.get(at + 1) == Some(&'*') => {
+                    let mut end = at + 2;
+                    while end < chars.len() && !(chars[end - 1] == '*' && chars[end] == '/') {
+                        end += 1;
+                    }
+                    let end = (end + 1).min(chars.len());
+                    out.extend(&chars[at..end]);
+                    at = end;
+                }
+                '$' => {
+                    let mut end = at + 1;
+                    while end < chars.len()
+                        && (chars[end].is_ascii_alphanumeric() || chars[end] == '_')
+                    {
+                        end += 1;
+                    }
+                    let name: String = chars[at + 1..end].iter().collect();
+                    let value = bound.get(&name).ok_or_else(|| {
+                        refuse(
+                            STORED_QUERY_INVALID,
+                            format!("`${name}` is not a parameter of `{}`", self.name),
+                        )
+                    })?;
+                    out.push_str(&literal(value, sparql)?);
+                    at = end;
+                }
+                _ => {
+                    out.push(c);
+                    at += 1;
+                }
+            }
+        }
+        Ok(out)
+    }
+
     /// Whether `reader` may call this query: its author always, anyone else only inside the
     /// share scope. The scope rule is the one sharing rule of the identity types.
     pub fn may_call(&self, reader: &UnitPrincipal, author: &UnitPrincipal) -> bool {
@@ -175,6 +242,71 @@ impl StoredQuery {
         };
         let owners = BTreeMap::from([(author.id.clone(), author.clone())]);
         owner_or_matching_scope(reader, &unit, &owners)
+    }
+}
+
+/// The index just past the quoted run that opens at `start` (a doubled quote does not end it, and in SPARQL
+/// neither does a backslash escape).
+fn quoted_end(chars: &[char], start: usize, backslash_escapes: bool) -> usize {
+    let quote = chars[start];
+    let mut at = start + 1;
+    while at < chars.len() {
+        if backslash_escapes && chars[at] == '\\' {
+            at += 2;
+        } else if chars[at] == quote {
+            if chars.get(at + 1) == Some(&quote) {
+                at += 2;
+            } else {
+                return at + 1;
+            }
+        } else {
+            at += 1;
+        }
+    }
+    chars.len()
+}
+
+/// The index of the end of the line that holds `start`.
+fn line_end(chars: &[char], start: usize) -> usize {
+    chars[start..]
+        .iter()
+        .position(|c| *c == '\n')
+        .map_or(chars.len(), |offset| start + offset)
+}
+
+/// One bound value as a literal of the target language.
+fn literal(value: &Value, sparql: bool) -> Result<String, StoredQueryRefusal> {
+    match value {
+        Value::String(text) if text.contains('\0') => Err(refuse(
+            STORED_QUERY_INVALID,
+            "a string argument holds a NUL",
+        )),
+        Value::String(text) if sparql => {
+            let mut out = String::from("\"");
+            for c in text.chars() {
+                match c {
+                    '\\' => out.push_str("\\\\"),
+                    '"' => out.push_str("\\\""),
+                    '\n' => out.push_str("\\n"),
+                    '\r' => out.push_str("\\r"),
+                    '\t' => out.push_str("\\t"),
+                    other => out.push(other),
+                }
+            }
+            out.push('"');
+            Ok(out)
+        }
+        Value::String(text) => Ok(format!("'{}'", text.replace('\'', "''"))),
+        Value::Bool(flag) => Ok(flag.to_string()),
+        Value::Number(number) if number.is_i64() || number.is_u64() => Ok(number.to_string()),
+        Value::Number(number) => match number.as_f64().filter(|f| f.is_finite()) {
+            Some(float) => Ok(format!("{float:?}")),
+            None => Err(refuse(
+                STORED_QUERY_INVALID,
+                "a number argument is not finite",
+            )),
+        },
+        _ => Err(refuse(STORED_QUERY_INVALID, "an argument is not a scalar")),
     }
 }
 
@@ -305,6 +437,50 @@ mod tests {
             placement: "g".into(),
             tenant: tenant.into(),
         }
+    }
+
+    fn text_query(language: StoredQueryLanguage, text: &str) -> StoredQuery {
+        StoredQuery {
+            language,
+            text: text.into(),
+            params: BTreeMap::from([
+                ("status".to_string(), StoredParamType::String),
+                ("n".to_string(), StoredParamType::Int),
+            ]),
+            ..query(RefreshPolicy::OnChange)
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.10
+    #[test]
+    fn sql_and_sparql_text_binds_typed_literals() {
+        let bound = BTreeMap::from([
+            ("status".to_string(), json!("o'pen\" x\\")),
+            ("n".to_string(), json!(3)),
+        ]);
+        let sql = text_query(
+            StoredQueryLanguage::Sql,
+            "SELECT id FROM nodes WHERE status = $status AND n > $n -- $ignored 'x\n",
+        );
+        assert_eq!(
+            sql.render(&bound).unwrap(),
+            "SELECT id FROM nodes WHERE status = 'o''pen\" x\\' AND n > 3 -- $ignored 'x"
+        );
+        let sparql = text_query(
+            StoredQueryLanguage::Sparql,
+            "SELECT ?s WHERE { ?s <p> $status . FILTER(?n > $n && \"$status\" != ?s) }",
+        );
+        assert_eq!(
+            sparql.render(&bound).unwrap(),
+            "SELECT ?s WHERE { ?s <p> \"o'pen\\\" x\\\\\" . FILTER(?n > 3 && \"$status\" != ?s) }"
+        );
+        let undeclared = text_query(StoredQueryLanguage::Sql, "SELECT $other");
+        assert_eq!(
+            undeclared.render(&bound).unwrap_err().code,
+            STORED_QUERY_INVALID
+        );
+        let uql = text_query(StoredQueryLanguage::Uql, "MATCH (n) WHERE s = $status");
+        assert_eq!(uql.render(&bound).unwrap(), uql.text);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R708.1

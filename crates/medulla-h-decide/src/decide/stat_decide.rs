@@ -593,9 +593,15 @@ fn seal(
         } else if executed.topology.is_some() {
             ResolutionKind::Optimization
         } else {
-            resolution(&outcome)
+            sealing
+                .registry
+                .resolution_kind(&outcome)
+                .unwrap_or_else(|| resolution(&outcome))
         },
-        evidence_class: evidence_class(&premise_list, &outcome),
+        evidence_class: sealing
+            .registry
+            .evidence_class(&outcome)
+            .unwrap_or_else(|| evidence_class(&premise_list, &outcome)),
         trace_fidelity: TraceFidelity::FullStep,
         premises: BoundedVec::new(premise_list)
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,

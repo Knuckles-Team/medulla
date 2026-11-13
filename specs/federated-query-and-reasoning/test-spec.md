@@ -1075,6 +1075,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R706.7` | `tests/federated/test_policy_mask_served.py::test_cross_tenant_policy_not_applied` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.8` | `tests/federated/test_stored_query_served.py::test_share_scope_limits_calls` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.9` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `crates/medulla-source-types/src/stored_query.rs::tests::sql_and_sparql_text_binds_typed_literals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `tests/federated/test_stored_query_served.py::test_sql_and_sparql_stored_queries_call` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.7` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::require_nonempty_refuses_with_code` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.8` | `crates/medulla-plan/tests/pack_source.rs::undeclared_filters_stay_local_and_residual_always_runs` |

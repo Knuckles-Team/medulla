@@ -8,6 +8,9 @@
 //! graph of the query gateway, so a record and its refreshed result commit together or not at
 //! all. UQL stored queries run through `handle_uql`, the one served UQL path, so typed
 //! parameter binding and the dependency-keyed result cache are the ones every UQL read uses.
+//! SQL stored queries run through `handle_sql` and SPARQL stored queries through the served
+//! SPARQL handler (R708.10); each `$name` becomes one typed, escaped literal
+//! (`StoredQuery::render`), and a put refuses text that is not a parse-clean read.
 
 use std::collections::BTreeMap;
 
@@ -163,6 +166,47 @@ fn placeholder_params(query: &StoredQuery) -> BTreeMap<String, UqlParam> {
         .collect()
 }
 
+/// Declared parameter types as placeholder JSON values, so a put renders the text once.
+fn placeholder_values(query: &StoredQuery) -> BTreeMap<String, Value> {
+    query
+        .params
+        .iter()
+        .map(|(name, declared)| {
+            let value = match declared {
+                StoredParamType::String => json!(""),
+                StoredParamType::Int => json!(0),
+                StoredParamType::Float => json!(0.0),
+                StoredParamType::Bool => json!(false),
+            };
+            (name.clone(), value)
+        })
+        .collect()
+}
+
+/// A SQL or SPARQL stored query must parse and must be a read; a stored query never writes.
+fn check_text(language: StoredQueryLanguage, text: &str) -> Result<(), StoredQueryRefusal> {
+    match language {
+        StoredQueryLanguage::Sql => match medulla_sql_lang::sql::classify::classify(text) {
+            Ok(medulla_sql_lang::sql::classify::StatementKind::Read) => Ok(()),
+            Ok(_) => Err(refuse(
+                STORED_QUERY_INVALID,
+                "a stored sql query must be a read statement",
+            )),
+            Err(error) => Err(refuse(STORED_QUERY_INVALID, error)),
+        },
+        #[cfg(feature = "sparql")]
+        StoredQueryLanguage::Sparql => medulla_rdf::sparql::parse_query(text)
+            .map(|_| ())
+            .map_err(|error| refuse(STORED_QUERY_INVALID, error)),
+        #[cfg(not(feature = "sparql"))]
+        StoredQueryLanguage::Sparql => Err(refuse(
+            STORED_QUERY_INVALID,
+            "sparql is not served in this build",
+        )),
+        StoredQueryLanguage::Uql => Ok(()),
+    }
+}
+
 /// `StoredQueryPut`: validate, then publish one immutable version. The author is the
 /// verified caller; the first author of a name owns every later version.
 pub(crate) fn handle_stored_put(
@@ -176,10 +220,10 @@ pub(crate) fn handle_stored_put(
                 .map_err(|error| refuse(STORED_QUERY_INVALID, error.render(&query.text)))?;
         }
         StoredQueryLanguage::Sql | StoredQueryLanguage::Sparql => {
-            return Err(refuse(
-                STORED_QUERY_INVALID,
-                "only uql stored queries are callable until sql and sparql are served",
-            ))
+            let text = query
+                .render(&placeholder_values(&query))
+                .map_err(|refusal| refuse(STORED_QUERY_INVALID, refusal.detail))?;
+            check_text(query.language, &text)?;
         }
     }
     let head = load_head(ctx.core, &query.name);
@@ -265,6 +309,92 @@ async fn run_uql(
     }
 }
 
+/// Run one stored query in its own language through the served handler of that language.
+/// SQL rows and SPARQL bindings become one object per row keyed by column, like UQL rows.
+async fn run_stored(
+    ctx: &QueryHandlerCtx<'_>,
+    query: &StoredQuery,
+    bound: &BTreeMap<String, Value>,
+) -> Result<(Vec<String>, Value, u64), String> {
+    let text = query.render(bound).map_err(|refusal| refusal.to_string())?;
+    match query.language {
+        StoredQueryLanguage::Uql => run_uql(ctx, &text, bound).await,
+        StoredQueryLanguage::Sql => run_sql(ctx, &text).await,
+        StoredQueryLanguage::Sparql => run_sparql_stored(ctx, &text).await,
+    }
+}
+
+fn objects(columns: &[String], rows: Vec<Vec<Value>>) -> Value {
+    Value::Array(
+        rows.into_iter()
+            .map(|cells| {
+                Value::Object(
+                    columns
+                        .iter()
+                        .cloned()
+                        .zip(cells.into_iter().chain(std::iter::repeat(Value::Null)))
+                        .collect(),
+                )
+            })
+            .collect(),
+    )
+}
+
+#[cfg(feature = "query")]
+async fn run_sql(
+    ctx: &QueryHandlerCtx<'_>,
+    text: &str,
+) -> Result<(Vec<String>, Value, u64), String> {
+    let response = handle_sql(ctx, text.to_string(), Vec::new())
+        .await
+        .map_err(|_| "SQL is not served in this build".to_string())?;
+    let result = response_body::<medulla_protocol_types::protocol::QueryResult>(response)?;
+    let rows = result
+        .rows
+        .iter()
+        .map(|blob| rmp_serde::from_slice::<Vec<Value>>(blob).map_err(|e| e.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let objects = objects(&result.columns, rows);
+    Ok((result.columns, objects, ctx.core.version()))
+}
+
+#[cfg(not(feature = "query"))]
+async fn run_sql(
+    _ctx: &QueryHandlerCtx<'_>,
+    _text: &str,
+) -> Result<(Vec<String>, Value, u64), String> {
+    Err("SQL is not served in this build".to_string())
+}
+
+#[cfg(feature = "sparql")]
+async fn run_sparql_stored(
+    ctx: &QueryHandlerCtx<'_>,
+    text: &str,
+) -> Result<(Vec<String>, Value, u64), String> {
+    let response = super::live_artifact::sparql_response(ctx, text).await?;
+    let result = response_body::<medulla_protocol_types::protocol::SparqlResult>(response)?;
+    let rows = result
+        .rows
+        .into_iter()
+        .map(|cells| {
+            cells
+                .into_iter()
+                .map(|cell| cell.map_or(Value::Null, Value::String))
+                .collect()
+        })
+        .collect();
+    let objects = objects(&result.vars, rows);
+    Ok((result.vars, objects, ctx.core.version()))
+}
+
+#[cfg(not(feature = "sparql"))]
+async fn run_sparql_stored(
+    _ctx: &QueryHandlerCtx<'_>,
+    _text: &str,
+) -> Result<(Vec<String>, Value, u64), String> {
+    Err("SPARQL is not served in this build".to_string())
+}
+
 /// A run failure as a refusal: the engine's own code when the text carries one.
 fn run_refusal(text: String) -> StoredQueryRefusal {
     let code = text
@@ -309,7 +439,7 @@ pub(crate) async fn handle_stored_call(
     let bound = query.bind(args)?;
     let now = now_ms();
     if !query.materialize {
-        let (columns, rows, generation) = run_uql(ctx, &query.text, &bound)
+        let (columns, rows, generation) = run_stored(ctx, query, &bound)
             .await
             .map_err(run_refusal)?;
         let row_count = rows.as_array().map_or(0, |rows| rows.len() as u64);
@@ -329,7 +459,7 @@ pub(crate) async fn handle_stored_call(
     let prior = load_result(ctx.core, name, version, &digest);
     let outcome = if needs_run(query.refresh, prior.as_ref(), now) {
         Some(
-            run_uql(ctx, &query.text, &bound)
+            run_stored(ctx, query, &bound)
                 .await
                 .map_err(run_refusal)?,
         )

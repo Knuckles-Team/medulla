@@ -169,3 +169,88 @@ async def test_share_scope_limits_calls() -> None:
     finally:
         await author.close()
         await sharee.close()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R708.10
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R708.10")
+@pytest.mark.asyncio
+async def test_sql_and_sparql_stored_queries_call() -> None:
+    client = await _connect()
+    suffix = uuid.uuid4().hex
+    status = f"o'pen-{suffix}"
+    other = f"closed-{suffix}"
+    subject = f"http://example.org/stored/{suffix}"
+    predicate = "http://example.org/stored/status"
+    try:
+        await _incident(client, suffix, status)
+        await _incident(client, suffix, other)
+        await client.rdf.add_triples(
+            ntriples=(
+                f'<{subject}-a> <{predicate}> "{status}" .\n'
+                f'<{subject}-b> <{predicate}> "{other}" .\n'
+            )
+        )
+
+        sql = f"sql-{suffix}"
+        await _put(
+            client,
+            _stored(
+                sql,
+                language="sql",
+                text="SELECT id, status FROM nodes WHERE status = $status",
+            ),
+        )
+        called = await _call(client, sql, {"status": status})
+        assert called["row_count"] == 1
+        assert called["columns"] == ["id", "status"]
+        assert called["rows"][0]["status"] == status
+        # The value is one literal: a quote and a SQL fragment in it match nothing.
+        injected = await _call(client, sql, {"status": f"{status}' OR '1'='1"})
+        assert injected["row_count"] == 0
+
+        sparql = f"sparql-{suffix}"
+        await _put(
+            client,
+            _stored(
+                sparql,
+                language="sparql",
+                text=f"SELECT ?s WHERE {{ ?s <{predicate}> $status }}",
+            ),
+        )
+        called = await _call(client, sparql, {"status": status})
+        assert called["row_count"] == 1
+        assert called["columns"] == ["s"]
+        assert called["rows"][0]["s"].strip("<>") == f"{subject}-a"
+        injected = await _call(client, sparql, {"status": 'x" . ?s ?p ?o . "'})
+        assert injected["row_count"] == 0
+
+        # Text that does not parse, an undeclared placeholder and a SQL write are
+        # refused at put, and the call refusals are the shared ones.
+        with pytest.raises(RuntimeError, match="STORED_QUERY_INVALID"):
+            await _put(
+                client,
+                _stored(f"{sql}-bad", language="sql", text="SELEC id FROM nodes"),
+            )
+        with pytest.raises(RuntimeError, match="STORED_QUERY_INVALID"):
+            await _put(
+                client,
+                _stored(
+                    f"{sql}-undeclared",
+                    language="sql",
+                    text="SELECT id FROM nodes WHERE status = $nope",
+                ),
+            )
+        with pytest.raises(RuntimeError, match="STORED_QUERY_INVALID"):
+            await _put(
+                client,
+                _stored(
+                    f"{sql}-write",
+                    language="sql",
+                    params={},
+                    text="DELETE FROM nodes WHERE id = 'x'",
+                ),
+            )
+        with pytest.raises(RuntimeError, match="STORED_QUERY_PARAM_MISSING"):
+            await _call(client, sparql, {})
+    finally:
+        await client.close()

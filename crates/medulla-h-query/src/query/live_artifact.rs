@@ -338,6 +338,15 @@ pub(super) fn row_json(columns: &[String], row: UqlRow) -> Value {
 
 #[cfg(feature = "sparql")]
 async fn run_sparql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, String> {
+    response_body::<Value>(sparql_response(ctx, text).await?)
+}
+
+/// Run one SPARQL text through the served SPARQL handler and hand back its response.
+#[cfg(feature = "sparql")]
+pub(super) async fn sparql_response(
+    ctx: &QueryHandlerCtx<'_>,
+    text: &str,
+) -> Result<Response, String> {
     use medulla_server_api::api::reentry::TryHandleContext;
     let method = Method::Sparql {
         query: text.to_string(),
@@ -351,7 +360,7 @@ async fn run_sparql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, Stri
         read_authority: ctx.read_authority,
         caller: ctx.caller,
     };
-    let response = medulla_h_sparql::rdf::try_handle(
+    medulla_h_sparql::rdf::try_handle(
         ctx.state,
         handler_ctx,
         Arc::clone(ctx.core),
@@ -360,8 +369,7 @@ async fn run_sparql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, Stri
         ctx.rls,
     )
     .await
-    .map_err(|_| "SPARQL is not served in this build".to_string())?;
-    response_body::<Value>(response)
+    .map_err(|_| "SPARQL is not served in this build".to_string())
 }
 
 #[cfg(not(feature = "sparql"))]

@@ -1053,6 +1053,9 @@ mod classes_tests;
 
 mod tool_subset_tests;
 
+// MEDULLA-DECISION-ENGINE-R137.8: the served package selection journey.
+mod context_package_tests;
+
 mod scope_bound_tests;
 
 mod consumer_tests;
