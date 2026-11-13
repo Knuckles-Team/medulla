@@ -33,17 +33,21 @@
 //! abstains with `AbstainReason::InsufficientConfidence`. The answer proposes
 //! a link and never writes `owl:sameAs`.
 
+use std::sync::Arc;
+
 use medulla_decision_stats::decision::adapter::to_q16;
 use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::entity_resolution::{
     accept_rate_drift, proposal_option_id, tier_evaluation, tier_of_option, tier_token,
     AcceptDrift, CandidateIndex, IndexedNode,
 };
+use medulla_decision_types::decision::codes::{ER_BELOW_THRESHOLD, ER_CROSS_TENANT, ER_DRIFT_HOLD};
 use medulla_decision_types::decision::entity_resolution::{ResolutionTier, ReviewOutcome};
 use medulla_decision_types::decision::knob_families::resolve_entity as resolve_entity_knobs;
 use medulla_decision_types::decision::statistical::declared::{
     DeclaredNumber, DeclaredOption, DeclaredText, MAX_DECLARED_OPTIONS,
 };
+use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_decision_types::decision::statistical::StatisticalOutcome;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, TypedParam, TypedValue,
@@ -93,6 +97,14 @@ fn is_iri(value: &str) -> bool {
 
 /// The param naming the graph whose embedded nodes are the candidate corpus.
 pub const PARAM_GRAPH: &str = "er.graph";
+/// Option text the prelude records on a proposal: the embedding space the
+/// pair was proposed in, `<id>@<revision>` or `unspecified`.
+const TEXT_MODEL: &str = "er.model";
+/// Option text the prelude records on a proposal: SHA-256 of the two embedded
+/// texts' hashes, 64 lowercase hex characters.
+const TEXT_CONTENT_HASH: &str = "er.content_hash";
+/// The model of a store that declares no embedding space.
+const MODEL_UNSPECIFIED: &str = "unspecified";
 /// Prefix of the engine params the prelude records; a caller may not supply one.
 const ENGINE_PARAM_PREFIX: &str = "er.review.";
 /// Accepted reviews of a tier (suffix `:<tier>`).
@@ -392,6 +404,148 @@ fn neighbour_options(
     Ok(added)
 }
 
+fn sha256_hex(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(text.as_bytes()))
+}
+
+/// Whether the caller's tenant holds an embedding for `node`. An absent node
+/// and another tenant's node answer alike, so the check leaks nothing.
+fn held(view: &crate::decide::stat_vectors::GraphVectors, node: &str) -> bool {
+    view.stored_vector(node).is_some()
+}
+
+/// Refuse a declared pair that joins a node the asking tenant holds with one
+/// it does not (MEDULLA-DECISION-ENGINE-R706.4). A pair neither of whose
+/// sides the graph embeds carries no embedding evidence and is not refused.
+fn check_tenants(
+    options: &[DeclaredOption],
+    view: &crate::decide::stat_vectors::GraphVectors,
+) -> Result<(), String> {
+    for option in options {
+        let Some((left, right)) = pair_of(option) else {
+            continue;
+        };
+        if held(view, left) != held(view, right) {
+            return Err(format!(
+                "{}: option '{}' pairs a node of this tenant with one it does not hold",
+                ER_CROSS_TENANT.as_str(),
+                option.option_id
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Record the model and content hash of every proposal option whose two sides
+/// the caller's tenant holds (MEDULLA-DECISION-ENGINE-R706.5). A caller may
+/// not supply either text.
+fn stamp_proposals(
+    options: Vec<DeclaredOption>,
+    view: &crate::decide::stat_vectors::GraphVectors,
+) -> Result<Vec<DeclaredOption>, String> {
+    let model = view
+        .core()
+        .semantic_store
+        .read()
+        .space()
+        .map(|space| format!("{}@{}", space.id, space.revision))
+        .unwrap_or_else(|| MODEL_UNSPECIFIED.to_string());
+    options
+        .into_iter()
+        .map(|mut option| {
+            if tier_of_option(&option.option_id).is_none() {
+                return Ok(option);
+            }
+            let Some((left, right)) = pair_of(&option) else {
+                return Ok(option);
+            };
+            if !(held(view, left) && held(view, right)) {
+                return Ok(option);
+            }
+            let hash = sha256_hex(&format!(
+                "{}|{}",
+                sha256_hex(&view.node_text(left)),
+                sha256_hex(&view.node_text(right))
+            ));
+            let mut texts = option.texts.as_slice().to_vec();
+            texts.push(DeclaredText {
+                key: TEXT_MODEL.to_string(),
+                text: model.clone(),
+            });
+            texts.push(DeclaredText {
+                key: TEXT_CONTENT_HASH.to_string(),
+                text: hash,
+            });
+            texts.sort_by(|a, b| a.key.cmp(&b.key));
+            option.texts = BoundedVec::new(texts)?;
+            Ok(option)
+        })
+        .collect()
+}
+
+/// The premises of every proposal option (MEDULLA-DECISION-ENGINE-R706.5):
+/// its tier, and the model and content hash the prelude recorded, each a
+/// `Claim` taken from the request's candidates.
+fn proposal_premises(request: &DecideRequest) -> Vec<PremiseRef> {
+    let CandidateSource::Declared { options } = &request.candidates else {
+        return Vec::new();
+    };
+    let claim = |option: &DeclaredOption, fact: String| PremiseRef {
+        subject: option.option_id.clone(),
+        fact,
+        class: PremiseClass::Claim,
+        provenance: PremiseProvenance::Request {
+            field: "candidates".to_string(),
+        },
+    };
+    let mut out = Vec::new();
+    for option in options.iter() {
+        let Some(tier) = tier_of_option(&option.option_id) else {
+            continue;
+        };
+        let id = &option.option_id;
+        out.push(claim(option, format!("er:tier:{id}={}", tier_token(tier))));
+        for (key, name) in [(TEXT_MODEL, "model"), (TEXT_CONTENT_HASH, "content_hash")] {
+            if let Some(value) = text(option, key) {
+                out.push(claim(option, format!("er:{name}:{id}={value}")));
+            }
+        }
+    }
+    out
+}
+
+/// The option the ladder's outcome names first: the acted option, or the
+/// highest scored advisory option.
+fn leading_option(outcome: &StatisticalOutcome) -> Option<&str> {
+    match outcome {
+        StatisticalOutcome::Acted { option_id, .. } => Some(option_id.as_str()),
+        StatisticalOutcome::Advisory { scores, .. } => scores
+            .iter()
+            .max_by(|a, b| {
+                a.score
+                    .value
+                    .cmp(&b.score.value)
+                    .then_with(|| b.option_id.cmp(&a.option_id))
+            })
+            .map(|scored| scored.option_id.as_str()),
+        _ => None,
+    }
+}
+
+fn family_abstention(
+    code: medulla_types::refusal_code::RefusalCode,
+    detail: String,
+) -> Result<StatisticalOutcome, String> {
+    Ok(StatisticalOutcome::Abstained {
+        reasons: BoundedVec::new(vec![AbstainReason::Family {
+            family: QuestionKind::ResolveEntity,
+            code,
+            detail,
+        }])?,
+    })
+}
+
 /// The reviews the decision log holds for proposal options: the per-tier counts
 /// and the accept-rate drift, recorded as engine params, and the drift fed to
 /// the `head_drift` gauge (MEDULLA-DECISION-ENGINE-R706.3). Reads the caller's
@@ -482,6 +636,18 @@ pub(in crate::decide) async fn with_candidates(
             reserved.name
         )));
     }
+    if let CandidateSource::Declared { options } = &request.candidates {
+        if let Some(reserved) = options.iter().find(|o| {
+            o.texts
+                .iter()
+                .any(|t| t.key == TEXT_MODEL || t.key == TEXT_CONTENT_HASH)
+        }) {
+            return Err(invalid(format!(
+                "option {} carries a text the engine records and the caller cannot supply",
+                reserved.option_id
+            )));
+        }
+    }
     let mut params = request.params.as_slice().to_vec();
     if let Some(graph) = text_param(&request, PARAM_GRAPH)? {
         let CandidateSource::Declared { options } = &request.candidates else {
@@ -493,15 +659,16 @@ pub(in crate::decide) async fn with_candidates(
         let knobs = medulla_server_api::knob_config::knobs();
         let k = usize::try_from(knobs.er_candidate_k).map_err(|e| invalid(e))?;
         let max_nodes = usize::try_from(knobs.er_index_max_nodes).map_err(|e| invalid(e))?;
+        check_tenants(options.as_slice(), &view)?;
         let added = neighbour_options(options.as_slice(), &view, verified.tenant(), k, max_nodes)?;
+        let mut all = options.as_slice().to_vec();
         if !added.is_empty() {
-            let mut all = options.as_slice().to_vec();
             all.extend(added);
             all.sort_by(|a, b| a.option_id.cmp(&b.option_id));
-            request.candidates = CandidateSource::Declared {
-                options: BoundedVec::new(all).map_err(|e| invalid(e))?,
-            };
         }
+        request.candidates = CandidateSource::Declared {
+            options: BoundedVec::new(stamp_proposals(all, &view)?).map_err(|e| invalid(e))?,
+        };
     }
     params.extend(review_params(store, verified)?);
     request.params = BoundedVec::new(params).map_err(|e| invalid(e))?;
@@ -539,7 +706,7 @@ impl DecisionFamily for ResolveEntityFamily {
 
     fn refine(
         &self,
-        _request: Option<&DecideRequest>,
+        request: Option<&DecideRequest>,
         pinned: &Pinned,
         _views: &[CandidateView],
         policy: &DecisionPolicy,
@@ -551,6 +718,23 @@ impl DecisionFamily for ResolveEntityFamily {
             return Ok(executed);
         }
         let alpha = resolve_entity_knobs::alpha_micros(policy);
+        let leading = leading_option(&executed.ladder.outcome).map(str::to_string);
+        let proposal = leading.as_deref().and_then(tier_of_option);
+        let drifted = request.is_some_and(|request| {
+            matches!(
+                param(request, PARAM_DRIFT).map(|p| &p.value),
+                Some(TypedValue::Text(state)) if state == "drifted"
+            )
+        });
+        if let (Some(ResolutionTier::Probabilistic), true, Some(id)) =
+            (proposal, drifted, leading.as_deref())
+        {
+            executed.ladder.outcome = family_abstention(
+                ER_DRIFT_HOLD,
+                format!("probabilistic proposal '{id}' is held while the accept rate drifts"),
+            )?;
+            return Ok(executed);
+        }
         let abstain = match &executed.ladder.outcome {
             StatisticalOutcome::Acted { prediction_set, .. } => {
                 prediction_set.len() != 1 || !calibrated_within(pinned, alpha)
@@ -559,8 +743,16 @@ impl DecisionFamily for ResolveEntityFamily {
             StatisticalOutcome::Explored { .. } | StatisticalOutcome::Abstained { .. } => false,
         };
         if abstain {
-            executed.ladder.outcome = StatisticalOutcome::Abstained {
-                reasons: BoundedVec::new(vec![AbstainReason::InsufficientConfidence])?,
+            let below = matches!(executed.ladder.outcome, StatisticalOutcome::Advisory { .. })
+                && proposal.is_some();
+            executed.ladder.outcome = match (below, leading.as_deref()) {
+                (true, Some(id)) => family_abstention(
+                    ER_BELOW_THRESHOLD,
+                    format!("proposal '{id}' scored under the head's certified act threshold"),
+                )?,
+                _ => StatisticalOutcome::Abstained {
+                    reasons: BoundedVec::new(vec![AbstainReason::InsufficientConfidence])?,
+                },
             };
         }
         Ok(executed)
@@ -587,7 +779,7 @@ impl DecisionFamily for ResolveEntityFamily {
     fn premises(
         &self,
         request: &DecideRequest,
-        _executed: &Executed,
+        executed: &Executed,
         _policy_digest: &str,
     ) -> Vec<PremiseRef> {
         let mut out = identity_premises(request);
@@ -603,6 +795,19 @@ impl DecisionFamily for ResolveEntityFamily {
                         },
                     });
                 }
+            }
+        }
+        out.extend(proposal_premises(request));
+        if let StatisticalOutcome::Acted { option_id, .. } = &executed.ladder.outcome {
+            if tier_of_option(option_id) == Some(ResolutionTier::Probabilistic) {
+                out.push(PremiseRef {
+                    subject: option_id.clone(),
+                    fact: format!("er:hypothesis:{option_id}"),
+                    class: PremiseClass::Claim,
+                    provenance: PremiseProvenance::Request {
+                        field: "candidates".to_string(),
+                    },
+                });
             }
         }
         out.extend(review_premises(request));

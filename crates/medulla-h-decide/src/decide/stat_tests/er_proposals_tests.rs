@@ -12,8 +12,12 @@ use super::resolve_entity_tests::{
 use super::*;
 use medulla_decision_stats::decision::entity_resolution::proposal_option_id;
 use medulla_decision_types::decision::entity_resolution::{ResolutionTier, TierEvaluation};
+use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
 use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;
-use medulla_decision_types::decision::statistical::TypedParam;
+use medulla_decision_types::decision::statistical::{
+    CandidateSource, QuestionKind, StatisticalOutcome, TypedParam,
+};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 
 const OTHER_TENANT: &str = "tenant-other";
 const GRAPH: &str = "entities";
@@ -283,4 +287,213 @@ async fn review_drift_is_recorded_with_the_proposals() {
             accepted as u64 * 1_000_000 / (window as u64 * 2)
         )]
     );
+}
+
+fn abstain_code(record: &StatisticalDecisionRecord) -> String {
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("expected an abstention: {:?}", record.outcome)
+    };
+    match reasons.as_slice() {
+        [AbstainReason::Family { family, code, .. }] => {
+            assert_eq!(*family, QuestionKind::ResolveEntity);
+            code.as_str().to_string()
+        }
+        other => panic!("expected one family reason: {other:?}"),
+    }
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R706.4: a pair joining a node the tenant
+/// holds with one it does not refuses `ER_CROSS_TENANT` (another tenant's node
+/// and an absent node answer alike), a top proposal under the head's act
+/// threshold abstains `ER_BELOW_THRESHOLD`, a probabilistic proposal abstains
+/// `ER_DRIFT_HOLD` while the accept rate has drifted, and an acted
+/// probabilistic result is a `Claim` premise `er:hypothesis:<proposal_id>`.
+// spec: MEDULLA-DECISION-ENGINE-R706.4
+#[tokio::test]
+async fn er_refusals_and_hypothesis_marking() {
+    let h = Harness::new().await;
+    entity_graph(&h).await;
+    let (schema, digest) = publish_schema(&h);
+    let head = publish_acting_head(&h, &digest, "head-er-refusals", 0.4);
+    let ask = |options: Vec<DeclaredOption>| {
+        with_graph(pair_request(
+            &schema,
+            Some(&head),
+            DecisionPolicyRef::Default,
+            options,
+        ))
+    };
+
+    // Cross tenant: the same refusal for another tenant's node and an absent one.
+    let foreign = decide(
+        &h,
+        ask(vec![pair_option(
+            "pair-x",
+            &entity("a-left"),
+            &entity("foreign"),
+            3 << 32,
+        )]),
+    )
+    .await
+    .unwrap_err();
+    let absent = decide(
+        &h,
+        ask(vec![pair_option(
+            "pair-x",
+            &entity("a-left"),
+            &entity("ghost"),
+            3 << 32,
+        )]),
+    )
+    .await
+    .unwrap_err();
+    assert!(foreign.starts_with("ER_CROSS_TENANT"), "{foreign}");
+    assert_eq!(
+        foreign, absent,
+        "an absent node reads like another tenant's"
+    );
+
+    // Below the act threshold: two equal proposals leave the top under 0.6.
+    let embedding = proposal_option_id(
+        ResolutionTier::Embedding,
+        &entity("a-left"),
+        &entity("a-right"),
+    );
+    let below = decide(
+        &h,
+        ask(vec![
+            pair_option(&embedding, &entity("a-left"), &entity("a-right"), 0),
+            pair_option("pair-b", &entity("b-left"), &entity("b-right"), 0),
+        ]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        abstain_code(&below.records.as_slice()[0]),
+        "ER_BELOW_THRESHOLD"
+    );
+
+    // A probabilistic proposal that acts is a hypothesis: a Claim premise.
+    let probabilistic = proposal_option_id(
+        ResolutionTier::Probabilistic,
+        &entity("a-left"),
+        &entity("a-right"),
+    );
+    let ask_probabilistic = || {
+        ask(vec![
+            pair_option(
+                &probabilistic,
+                &entity("a-left"),
+                &entity("a-right"),
+                3 << 32,
+            ),
+            pair_option("pair-b", &entity("b-left"), &entity("b-right"), 0),
+        ])
+    };
+    let acted = decide(&h, ask_probabilistic()).await.unwrap();
+    let acted = &acted.records.as_slice()[0];
+    assert!(
+        matches!(&acted.outcome, StatisticalOutcome::Acted { option_id, .. } if *option_id == probabilistic),
+        "{:?}",
+        acted.outcome
+    );
+    let hypothesis = format!("er:hypothesis:{probabilistic}");
+    let marked: Vec<_> = acted
+        .premises
+        .iter()
+        .filter(|p| p.fact == hypothesis)
+        .collect();
+    assert_eq!(marked.len(), 1);
+    assert_eq!(marked[0].class, PremiseClass::Claim);
+
+    // While the accept rate has drifted the probabilistic proposal is held.
+    let reviewers = pins(&h, TENANT);
+    let window = usize::try_from(medulla_server_api::knob_config::knobs().er_drift_window).unwrap();
+    let mut outcomes = run(window / 2, window / 2);
+    outcomes.extend(run(window, 0));
+    seed(&h, TENANT, &reviewers, &embedding, &outcomes).await;
+    let held = decide(&h, ask_probabilistic()).await.unwrap();
+    assert_eq!(abstain_code(&held.records.as_slice()[0]), "ER_DRIFT_HOLD");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R706.5: every proposal records its model,
+/// its content hash and its tier as `Claim` premises with request provenance
+/// `candidates`; the exact pair adds none of them, and the caller cannot
+/// supply the recorded texts.
+// spec: MEDULLA-DECISION-ENGINE-R706.5
+#[tokio::test]
+async fn proposal_records_model_hash_and_tier() {
+    let h = Harness::new().await;
+    entity_graph(&h).await;
+    let (schema, digest) = publish_schema(&h);
+    let head = publish_acting_head(&h, &digest, "head-er-evidence", 0.4);
+    let request = with_graph(pair_request(
+        &schema,
+        Some(&head),
+        DecisionPolicyRef::Default,
+        two_pairs(),
+    ));
+    let batch = decide(&h, request.clone()).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+
+    let near = proposal_option_id(
+        ResolutionTier::Embedding,
+        &entity("a-left"),
+        &entity("near-1"),
+    );
+    for name in ["tier", "model", "content_hash"] {
+        let found: Vec<_> = record
+            .premises
+            .iter()
+            .filter(|p| p.fact.starts_with(&format!("er:{name}:{near}=")))
+            .collect();
+        assert_eq!(found.len(), 1, "one {name} premise for {near}");
+        assert_eq!(found[0].class, PremiseClass::Claim);
+        assert_eq!(
+            found[0].provenance,
+            PremiseProvenance::Request {
+                field: "candidates".to_string()
+            }
+        );
+    }
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == format!("er:tier:{near}=embedding")));
+    let hash = record
+        .premises
+        .iter()
+        .find_map(|p| p.fact.strip_prefix(&format!("er:content_hash:{near}=")))
+        .unwrap();
+    assert!(medulla_decision_types::decision::entity_resolution::is_content_hash(hash));
+    // One proposal per generated option; the declared exact pairs add none.
+    let proposals = record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("er:tier:"))
+        .count();
+    assert_eq!(proposals, 4);
+    assert!(!record
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("er:model:pair-")));
+
+    // The caller never supplies what the engine records.
+    let mut forged = request;
+    let CandidateSource::Declared { options } = &forged.candidates else {
+        unreachable!()
+    };
+    let mut options = options.as_slice().to_vec();
+    let mut texts = options[0].texts.as_slice().to_vec();
+    texts.push(DeclaredText {
+        key: "er.model".to_string(),
+        text: "forged".to_string(),
+    });
+    texts.sort_by(|a, b| a.key.cmp(&b.key));
+    options[0].texts = BoundedVec::new(texts).unwrap();
+    forged.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(options).unwrap(),
+    };
+    let refused = decide(&h, forged).await.unwrap_err();
+    assert!(refused.starts_with("PARAMETER_INVALID"), "{refused}");
 }

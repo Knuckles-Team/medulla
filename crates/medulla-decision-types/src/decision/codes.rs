@@ -279,12 +279,25 @@ pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_M
 /// `er.index_max_nodes` allows an index to be built over.
 pub const ER_INDEX_TOO_LARGE: RefusalCode = RefusalCode::new("ER_INDEX_TOO_LARGE");
 
+/// A proposal pairs a node the asking tenant holds with one it does not hold
+/// (another tenant's node and an absent one read the same).
+pub const ER_CROSS_TENANT: RefusalCode = RefusalCode::new("ER_CROSS_TENANT");
+
+/// The top proposal scored under the head's certified act threshold.
+pub const ER_BELOW_THRESHOLD: RefusalCode = RefusalCode::new("ER_BELOW_THRESHOLD");
+
+/// A probabilistic proposal is held back while the accept rate has drifted.
+pub const ER_DRIFT_HOLD: RefusalCode = RefusalCode::new("ER_DRIFT_HOLD");
+
 /// Every `resolve_entity` family code, in declaration order.
 pub const RESOLVE_ENTITY: &[RefusalCode] = &[
     ENTITY_PAIR_INVALID,
     ENTITY_PAIR_SELF,
     LINK_APPROVER_MISSING,
     ER_INDEX_TOO_LARGE,
+    ER_CROSS_TENANT,
+    ER_BELOW_THRESHOLD,
+    ER_DRIFT_HOLD,
 ];
 
 // The `round_verdict` and `stage_allocation` families' refusals
