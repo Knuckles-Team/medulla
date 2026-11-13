@@ -204,6 +204,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` writes; `Read` is a graph read.
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     // MEDULLA-FEDERATED-QUERY-R724: `put` writes; `list` is a graph read.
     "SchemaProjections",
     // EH-345: record_discovery/set_override/clear_override write; list/lookup read.
@@ -385,6 +386,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // one `Method::AddNode` upsert, which carries the durable effect.
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
     // `Method::AddNode` upsert, which carries the durable effect.
     "SchemaProjections",
@@ -642,6 +644,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // R011.2.3, R018.5, MEDULLA-FEDERATED-QUERY-R724); markers like `FleetCatalog`.
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -716,6 +719,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // `record_write_audit_line`: record writes that commit their own rows.
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     "SchemaProjections",
     "FinanceRecordPut",
     "FinanceAlertRaise",
@@ -781,6 +785,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     // R018.5, MEDULLA-FEDERATED-QUERY-R724).
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -807,6 +812,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     // `record_write_marker_event_id`: defense-in-depth markers.
     "WorkflowRegistry",
     "AssistantProfile",
+    "ObservationState",
     "SchemaProjections",
     "FinanceRecordPut",
     "FinanceAlertRaise",

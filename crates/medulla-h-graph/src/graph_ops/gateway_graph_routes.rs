@@ -22,6 +22,7 @@ enum Route {
     SchemaProjections,
     ArgumentMap,
     AssistantProfile,
+    ObservationState,
     ArchitectureExchange,
     Other,
 }
@@ -161,6 +162,10 @@ fn is_architecture_exchange(method: &Method) -> bool {
     matches!(method, Method::ArchitectureModelImport { .. })
 }
 
+fn is_observation_state(method: &Method) -> bool {
+    matches!(method, Method::ObservationState { op } if op.is_mutation())
+}
+
 fn is_argument_map(method: &Method) -> bool {
     matches!(method, Method::ArgumentMapPut { .. })
 }
@@ -189,6 +194,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_schema_projections, Route::SchemaProjections),
     (is_argument_map, Route::ArgumentMap),
     (is_assistant_profile, Route::AssistantProfile),
+    (is_observation_state, Route::ObservationState),
     (is_architecture_exchange, Route::ArchitectureExchange),
 ];
 
@@ -213,6 +219,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Analytics
         | Route::ArgumentMap
         | Route::AssistantProfile
+        | Route::ObservationState
         | Route::ArchitectureExchange
         | Route::FinanceRecords
         | Route::WorkflowRegistry
@@ -294,6 +301,9 @@ async fn try_handle_admin(
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
         }
         Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
+        Route::ObservationState => {
+            super::super::observation_state::handle_put(ctx, tenant_id, method).await
+        }
         Route::AssistantProfile => {
             super::super::assistant_profile::handle_put(ctx, tenant_id, method).await
         }

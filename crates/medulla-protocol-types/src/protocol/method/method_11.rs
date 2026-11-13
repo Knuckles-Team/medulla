@@ -9,6 +9,12 @@ $($variants)*
     AssistantProfile {
         op: Box<medulla_types::assistant_profile::ProfileOp>,
     },
+    /// Run-bound observation state: store the digest a run observed at one
+    /// frame of one source, read it back while it is live
+    /// (MEDULLA-DECISION-ENGINE-R816).
+    ObservationState {
+        op: Box<medulla_work_types::observation_state::ObservationStateOp>,
+    },
     PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 

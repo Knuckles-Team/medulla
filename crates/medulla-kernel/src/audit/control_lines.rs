@@ -143,6 +143,9 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::SchemaProjections { op } => {
             op.is_mutation().then(|| "SCHEMA_PROJECTIONS".to_string())
         }
+        Method::ObservationState { op } => {
+            op.is_mutation().then(|| "OBSERVATION_STATE".to_string())
+        }
         Method::AssistantProfile { op } => {
             op.is_mutation().then(|| "ASSISTANT_PROFILE".to_string())
         }

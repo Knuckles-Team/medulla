@@ -125,6 +125,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-DECISION-ENGINE-R656.2: a profile or document-set put commits one
     // node through this gateway; the reads are graph reads.
     "AssistantProfile",
+    // MEDULLA-DECISION-ENGINE-R816: an observation put commits one node through
+    // this gateway; the get is a graph read.
+    "ObservationState",
     // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
     // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
     "SchemaProjections",
@@ -624,6 +627,9 @@ pub fn is_gateway_routed(m: &Method) -> bool {
     if let Method::AssistantProfile { op } = m {
         return op.is_mutation();
     }
+    if let Method::ObservationState { op } = m {
+        return op.is_mutation();
+    }
     GATEWAY_ROUTED.contains(&method_variant_name(m))
 }
 
@@ -736,6 +742,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "WorkflowRegistry",
     // Nor does the assistant profile upsert (MEDULLA-DECISION-ENGINE-R656.2).
     "AssistantProfile",
+    // Nor does the observation record upsert (MEDULLA-DECISION-ENGINE-R816).
+    "ObservationState",
     // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
     "SchemaProjections",
     // The branch registry row commits through the process-local
@@ -805,6 +813,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         Method::AssistantProfile { .. } => Some("AssistantProfile"),
+        Method::ObservationState { .. } => Some("ObservationState"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),
         _ => None,
     }

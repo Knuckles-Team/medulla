@@ -84,6 +84,9 @@ pub mod work_market;
 // `medulla_viz_core::ViewSpec` and resolves it.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_usage;
+// MEDULLA-DECISION-ENGINE-R816 — run-bound observation state.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod observation_state;
 // MEDULLA-FEDERATED-QUERY-R702 — search-task records and shortcut-risk reports.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod search_task;

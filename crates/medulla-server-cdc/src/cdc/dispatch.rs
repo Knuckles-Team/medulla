@@ -291,6 +291,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
     match method {
         Method::WorkflowRegistry { op } if op.is_mutation() => Some("__workflow_registry"),
         Method::AssistantProfile { op } if op.is_mutation() => Some("__assistant_profile"),
+        Method::ObservationState { op } if op.is_mutation() => Some("__observation_state"),
         Method::SchemaProjections { op } if op.is_mutation() => Some("__schema_projections"),
         Method::FinanceRecordPut { .. } => Some("__finance_record_put"),
         Method::FinanceAlertRaise { .. } => Some("__finance_alert_raise"),

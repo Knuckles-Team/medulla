@@ -785,6 +785,19 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def observation_state(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``ObservationState``: ``{"op": "put", "record": {...}}`` stores one
+        run-bound observation, ``{"op": "get", "key": {...}}`` reads it while live."""
+        result = await self.client._send(
+            "ObservationState",
+            {"op": dict(op)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",

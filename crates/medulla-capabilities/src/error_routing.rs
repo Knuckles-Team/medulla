@@ -720,6 +720,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R816: the observation state store's refusals.
+    (
+        "ObservationState",
+        &[
+            "PARAMETER_INVALID",
+            "VISUAL_STATE_CROSS_TENANT",
+            "VISUAL_STATE_STALE",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
     (
         "AssistantProfile",

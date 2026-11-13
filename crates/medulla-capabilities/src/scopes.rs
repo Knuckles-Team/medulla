@@ -288,6 +288,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:submit", User, "engine"),
     entry("work:write", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
+    entry("observation:state", User, "engine"),
     entry("profile:write", User, "engine"),
     entry("workflow:registry", User, "engine"),
     // MEDULLA-IDENTITY-R004.1: web interface workspace files under the configured root.

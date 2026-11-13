@@ -770,6 +770,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::WorkflowRegistry { .. }
         // MEDULLA-DECISION-ENGINE-R656.2: a put commits as one `AddNode` upsert.
         | Method::AssistantProfile { .. }
+        // MEDULLA-DECISION-ENGINE-R816: a put commits as one `AddNode` upsert.
+        | Method::ObservationState { .. }
         // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
         // `AddNode` upsert; a list commits nothing.
         | Method::SchemaProjections { .. } => default_mutation_domain(surface),

@@ -115,6 +115,7 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::EdgeIndex { op } => Some(op.is_mutation()),
         Method::WorkflowRegistry { op } => Some(op.is_mutation()),
         Method::AssistantProfile { op } => Some(op.is_mutation()),
+        Method::ObservationState { op } => Some(op.is_mutation()),
         Method::SchemaProjections { op } => Some(op.is_mutation()),
         Method::FleetCatalog { op } => Some(op.is_mutation()),
         Method::PolicyEvolution { op } => Some(op.is_mutation()),

@@ -29,6 +29,9 @@ mod algorithms;
 pub(crate) mod architecture_exchange;
 mod argument_map;
 pub mod assistant_profile;
+mod observation_state;
+#[cfg(test)]
+mod observation_state_tests;
 #[cfg(test)]
 mod participant_memory_tests;
 // MEDULLA-BRANCH-MERGE-R001 — served branch registry.
