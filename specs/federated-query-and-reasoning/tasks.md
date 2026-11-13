@@ -371,9 +371,9 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T350 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.1 Model of Search-task synthesis with shortcut-risk diagnostics
 - [ ] T351 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.2 Behavior: detectors and refinement of Search-task synthesis with shortcut-risk diagnostics
 - [ ] T352 [US3] MEDULLA-FEDERATED-QUERY-R702.3 Wiring of Search-task synthesis with shortcut-risk diagnostics
-- [ ] T353 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.4 Refusal of Search-task synthesis with shortcut-risk diagnostics
+- [x] T353 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.4 Refusal of Search-task synthesis with shortcut-risk diagnostics
 - [x] T354 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.5 Evidence of Search-task synthesis with shortcut-risk diagnostics
-- [ ] T355 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.6 Hot-path proof of Search-task synthesis with shortcut-risk diagnostics
+- [x] T355 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.6 Hot-path proof of Search-task synthesis with shortcut-risk diagnostics
 - [ ] T356 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.7 Behavior: analogy of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T357 [US3] MEDULLA-FEDERATED-QUERY-R607.8 Behavior: synergy of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T358 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.9 Behavior: hyperedge scoring of Topology analytics find partitions, analogies, synergy and hyperedge scores

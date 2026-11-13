@@ -570,6 +570,14 @@ name = "stored_query"
 path = "benches/stored_query.rs"
 harness = false
 
+# ── Shortcut-detector bench (MEDULLA-FEDERATED-QUERY-R702.6) ──────────────────────────
+# The four detectors over a 10,000-node evidence graph; the key `shortcut_detectors` in
+# `thresholds.json` caps p50 at 6 ms and p99 at 40 ms.
+[[bench]]
+name = "shortcut_detectors"
+path = "benches/shortcut_detectors.rs"
+harness = false
+
 # ── Incremental view maintenance delta cost (MEDULLA-INCREMENTAL-VIEWS-R001.10) ──────────
 # 1,000-row deltas against a 1,000,000-row `Scan |> Filter` circuit; asserts p99 <= 20 ms
 # and <= 64 bytes of circuit state per member row. Nightly (L6) only.

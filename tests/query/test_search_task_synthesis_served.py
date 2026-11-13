@@ -232,3 +232,87 @@ def test_risk_report_lists_values(clean_graph):
     assert rejected.report.findings[3].nodes == ["ent-star"]
     assert rejected.report.findings[3].value == 3.0
     assert single.value > rejected.thresholds.single_clue
+
+
+def _seed_star(gc) -> list[str]:
+    """One answer node whose three leaves hang off it alone: a single-clue chain."""
+    gc.nodes.add("ent-star", {"type": "Company", "name": "Star Co", "text": "Star Co"})
+    leaves = [f"ent-star-l{n}" for n in range(3)]
+    for n, leaf in enumerate(leaves):
+        gc.nodes.add(leaf, {"type": "Site", "name": f"Leaf {n}", "text": f"Leaf {n}"})
+        gc.edges.add("ent-star", leaf, {"relationship": "SUPPLIES"})
+    return leaves
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R702.4
+def test_risky_task_refused_with_detector_name(clean_graph):
+    gc = clean_graph
+    _seed(gc)
+    _seed_star(gc)
+    nodes_before, edges_before = gc.nodes.count(), gc.edges.count()
+
+    # A task over the single-clue threshold is refused, naming the detector.
+    rejected = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-star"
+    )
+    assert isinstance(rejected, SearchTaskRejection)
+    assert rejected.code == "SEARCH_TASK_SHORTCUT"
+    assert rejected.detector == ShortcutDetector.SINGLE_CLUE
+    tripped = next(
+        f for f in rejected.report.findings if f.detector == rejected.detector
+    )
+    assert tripped.value > rejected.thresholds.single_clue
+
+    # A task within every threshold is not refused.
+    accepted = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-orion"
+    )
+    assert not isinstance(accepted, SearchTaskRejection)
+
+    # Every other refusal is a registered code, and none of them writes.
+    with pytest.raises(EngineResponseError, match="SEARCH_TASK_INVALID"):
+        gc.graph.synthesize_search_task(tenant_id=TEST_TENANT, answer_node="ent-absent")
+    with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+        gc.graph.synthesize_search_task(
+            tenant_id="tenant:other", answer_node="ent-star"
+        )
+    assert (gc.nodes.count(), gc.edges.count()) == (nodes_before, edges_before)
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R702.6
+def test_single_clue_task_is_rejected(clean_graph):
+    gc = clean_graph
+    # A 200-node store: one single-clue star (4 nodes) among 49 four-node rings.
+    leaves = _seed_star(gc)
+    for ring in range(49):
+        answer = f"ent-noise-{ring}"
+        gc.nodes.add(
+            answer,
+            {"type": "Company", "name": f"Noise {ring}", "text": f"Noise {ring}"},
+        )
+        ids = [f"{answer}-m{n}" for n in range(3)]
+        for n, node_id in enumerate(ids):
+            name = f"Member {ring} {n}"
+            gc.nodes.add(node_id, {"type": "Site", "name": name, "text": name})
+        chain = [answer, *ids, answer]
+        for source, target in zip(chain, chain[1:], strict=False):
+            gc.edges.add(source, target, {"relationship": "SUPPLIES"})
+    assert gc.nodes.count() == 200
+
+    rejected = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-star"
+    )
+    assert isinstance(rejected, SearchTaskRejection)
+    assert rejected.code == "SEARCH_TASK_SHORTCUT"
+    assert rejected.detector == ShortcutDetector.SINGLE_CLUE
+    single = rejected.report.findings[0]
+    assert single.detector == ShortcutDetector.SINGLE_CLUE
+    assert single.value == 1.0
+    assert sorted(single.nodes) == sorted(leaves)
+    # The 196 other nodes are outside the star's neighbourhood: the task is judged on
+    # the evidence around its own answer node only, and a ring in the same store passes.
+    accepted = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-noise-0"
+    )
+    assert not isinstance(accepted, SearchTaskRejection)
+    assert accepted["task"]["answer_node"] == "ent-noise-0"
