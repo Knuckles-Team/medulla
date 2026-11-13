@@ -171,7 +171,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T161 [US1] MEDULLA-FEDERATED-QUERY-R727 Natural-language answers take context from AtomContext
 - [x] T162 [US1] MEDULLA-FEDERATED-QUERY-R728 Exhaustive OpKind and PredKind printer and parser round trip
 - [ ] T163 [US1] MEDULLA-FEDERATED-QUERY-R729 Federated pushdown to connector raw-source tools
-- [ ] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate
+- [x] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate
 - [ ] T165 [P] [US1] MEDULLA-FEDERATED-QUERY-R731 Queries declare a latency class
 - [ ] T166 [P] [US1] MEDULLA-FEDERATED-QUERY-R732 The unified planner improves through the evolution loop
 

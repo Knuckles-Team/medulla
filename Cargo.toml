@@ -2241,6 +2241,14 @@ path = "benches/decide_budgets.rs"
 harness = false
 required-features = ["full"]
 
+# Falsification gate of the unified planner (MEDULLA-FEDERATED-QUERY-R730): one plan in one
+# engine against the same query over two engines joined by the client.
+[[bench]]
+name = "unified_vs_contracts"
+path = "benches/unified_vs_contracts.rs"
+harness = false
+required-features = ["full"]
+
 # Nightly media-facts qualification (MEDULLA-DECISION-ENGINE-R050.3): four media types at
 # 128 parts each through `ModelInputCapabilities::validate_parts`; merges its group into
 # the decide budget report. Never gates a PR.

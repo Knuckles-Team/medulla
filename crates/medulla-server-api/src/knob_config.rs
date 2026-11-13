@@ -486,6 +486,20 @@ knobs! {
     federated_raw_scan_cost_per_kib: f64 = "federated.raw_scan_cost_per_kib", F64(1.0), [1.0, 100.0], "cost units per KiB", Tunable;
     /// Interactive query node budget.
     query_interactive_node_budget: u64 = "query.interactive_node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Unified planner gate (MEDULLA-FEDERATED-QUERY-R730): arm A passes when its p95 latency is at most this multiple of arm B's.
+    planner_gate_max_p95_ratio: f64 = "planner.gate.max_p95_ratio", F64(0.7), [0.7, 0.7], "ratio", Fixed;
+    /// Unified planner gate: the number of top vector matches whose recall must be equal in both arms.
+    planner_gate_recall_k: u64 = "planner.gate.recall_k", U64(50), [50, 50], "matches", Fixed;
+    /// Unified planner gate: claims in the workload.
+    planner_gate_claims: u64 = "planner.gate.claims", U64(10_000), [10_000, 10_000], "claims", Fixed;
+    /// Unified planner gate: embedding dimension of every claim.
+    planner_gate_embedding_dim: u64 = "planner.gate.embedding_dim", U64(1_024), [1_024, 1_024], "dimensions", Fixed;
+    /// Unified planner gate: attributes on every claim.
+    planner_gate_attributes: u64 = "planner.gate.attributes", U64(8), [8, 8], "attributes", Fixed;
+    /// Unified planner gate: concurrent writers during the measured queries.
+    planner_gate_writers: u64 = "planner.gate.writers", U64(4), [4, 4], "writers", Fixed;
+    /// Unified planner gate: writes each concurrent writer issues; every one must be readable afterwards.
+    planner_gate_writes_per_writer: u64 = "planner.gate.writes_per_writer", U64(250), [250, 250], "writes", Fixed;
     /// Cap on the search nodes `ArgumentMapEvaluate` explores under `preferred`
     /// semantics (MEDULLA-FEDERATED-QUERY-R700.3).
     argument_node_budget: u64 = "argument.node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;

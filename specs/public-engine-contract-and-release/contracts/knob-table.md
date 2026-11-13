@@ -55,6 +55,13 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `feedback.rate_limit_per_hour` | u64 | 100 | [100, 100] | events per hour | Fixed | `MEDULLA_FEEDBACK_RATE_LIMIT_PER_HOUR` |
 | `federated.raw_scan_cost_per_kib` | f64 | 1 | [1, 100] | cost units per KiB | Tunable | `MEDULLA_FEDERATED_RAW_SCAN_COST_PER_KIB` |
 | `query.interactive_node_budget` | u64 | 100000 | [1000, 10000000] | nodes | Tunable | `MEDULLA_QUERY_INTERACTIVE_NODE_BUDGET` |
+| `planner.gate.max_p95_ratio` | f64 | 0.7 | [0.7, 0.7] | ratio | Fixed | `MEDULLA_PLANNER_GATE_MAX_P95_RATIO` |
+| `planner.gate.recall_k` | u64 | 50 | [50, 50] | matches | Fixed | `MEDULLA_PLANNER_GATE_RECALL_K` |
+| `planner.gate.claims` | u64 | 10000 | [10000, 10000] | claims | Fixed | `MEDULLA_PLANNER_GATE_CLAIMS` |
+| `planner.gate.embedding_dim` | u64 | 1024 | [1024, 1024] | dimensions | Fixed | `MEDULLA_PLANNER_GATE_EMBEDDING_DIM` |
+| `planner.gate.attributes` | u64 | 8 | [8, 8] | attributes | Fixed | `MEDULLA_PLANNER_GATE_ATTRIBUTES` |
+| `planner.gate.writers` | u64 | 4 | [4, 4] | writers | Fixed | `MEDULLA_PLANNER_GATE_WRITERS` |
+| `planner.gate.writes_per_writer` | u64 | 250 | [250, 250] | writes | Fixed | `MEDULLA_PLANNER_GATE_WRITES_PER_WRITER` |
 | `ingest.link_min_shared_mentions` | u64 | 2 | [1, 20] | count | Tunable | `MEDULLA_INGEST_LINK_MIN_SHARED_MENTIONS` |
 | `media.max_blob_bytes` | u64 | 33554432 | [1048576, 268435456] | bytes | Tunable | `MEDULLA_MEDIA_MAX_BLOB_BYTES` |
 | `synthesis.context_budget_tokens` | u64 | 8192 | [512, 1048576] | tokens | Tunable | `MEDULLA_SYNTHESIS_CONTEXT_BUDGET_TOKENS` |

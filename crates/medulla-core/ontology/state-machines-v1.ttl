@@ -3816,3 +3816,66 @@
     :fromState :PackProjectionMachine_Retrying ;
     :toState :PackProjectionMachine_Failed ;
     :firedBy :PackProjectionMachine_Event_Refuse .
+# spec: MEDULLA-FEDERATED-QUERY-R730
+:PlannerScopeState a owl:Class ;
+    rdfs:label "PlannerScope State" ;
+    rdfs:comment "A state of the unified planner scope machine." ;
+    rdfs:subClassOf :State .
+
+:PlannerScopeEvent a owl:Class ;
+    rdfs:label "PlannerScope Event" ;
+    rdfs:comment "An event of the unified planner scope machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:PlannerScopeTransition a owl:Class ;
+    rdfs:label "PlannerScope Transition" ;
+    rdfs:comment "A transition of the unified planner scope machine." ;
+    rdfs:subClassOf :Transition .
+
+:PlannerScopeMachine a :StateMachine ;
+    rdfs:label "PlannerScope machine" ;
+    rdfs:comment "Whether the unified planner may gain operators: clear, or frozen by a failed falsification gate (PLANNER_SCOPE_FROZEN)." ;
+    :initialState :PlannerScopeMachine_Clear ;
+    :hasState :PlannerScopeMachine_Clear, :PlannerScopeMachine_Frozen .
+
+:PlannerScopeMachine_Clear a :PlannerScopeState ;
+    rdfs:label "PlannerScope Clear" ;
+    :storedForm "clear" .
+
+:PlannerScopeMachine_Frozen a :PlannerScopeState ;
+    rdfs:label "PlannerScope Frozen" ;
+    :storedForm "frozen" .
+
+:PlannerScopeMachine_Event_GateFailed a :PlannerScopeEvent ;
+    rdfs:label "PlannerScope event GateFailed" .
+
+:PlannerScopeMachine_Event_GatePassed a :PlannerScopeEvent ;
+    rdfs:label "PlannerScope event GatePassed" .
+
+:PlannerScopeMachine_P01 a :PlannerScopeTransition ;
+    rdfs:label "PlannerScope P01" ;
+    :edgeId "P01" ;
+    :fromState :PlannerScopeMachine_Clear ;
+    :toState :PlannerScopeMachine_Frozen ;
+    :firedBy :PlannerScopeMachine_Event_GateFailed .
+
+:PlannerScopeMachine_P02 a :PlannerScopeTransition ;
+    rdfs:label "PlannerScope P02" ;
+    :edgeId "P02" ;
+    :fromState :PlannerScopeMachine_Frozen ;
+    :toState :PlannerScopeMachine_Frozen ;
+    :firedBy :PlannerScopeMachine_Event_GateFailed .
+
+:PlannerScopeMachine_P03 a :PlannerScopeTransition ;
+    rdfs:label "PlannerScope P03" ;
+    :edgeId "P03" ;
+    :fromState :PlannerScopeMachine_Frozen ;
+    :toState :PlannerScopeMachine_Clear ;
+    :firedBy :PlannerScopeMachine_Event_GatePassed .
+
+:PlannerScopeMachine_P04 a :PlannerScopeTransition ;
+    rdfs:label "PlannerScope P04" ;
+    :edgeId "P04" ;
+    :fromState :PlannerScopeMachine_Clear ;
+    :toState :PlannerScopeMachine_Clear ;
+    :firedBy :PlannerScopeMachine_Event_GatePassed .
