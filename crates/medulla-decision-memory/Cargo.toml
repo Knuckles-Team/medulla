@@ -12,3 +12,11 @@ name = "medulla_decision_memory"
 path = "src/lib.rs"
 
 [dependencies]
+arc-swap = "1"
+medulla-ann = { path = "../medulla-ann" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-types = { path = "../medulla-types" }
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }

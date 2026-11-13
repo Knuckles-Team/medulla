@@ -4738,6 +4738,12 @@ version = "0.1.0"
 [[package]]
 name = "medulla-decision-memory"
 version = "0.1.0"
+dependencies = [
+ "arc-swap",
+ "medulla-ann",
+ "medulla-decision-types",
+ "medulla-types",
+]
 
 [[package]]
 name = "medulla-decision-outcome-types"
@@ -4778,6 +4784,10 @@ dependencies = [
 [[package]]
 name = "medulla-decision-rank"
 version = "0.1.0"
+dependencies = [
+ "medulla-decision-types",
+ "medulla-types",
+]
 
 [[package]]
 name = "medulla-decision-records"

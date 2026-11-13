@@ -12,3 +12,9 @@ name = "medulla_decision_rank"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-types = { path = "../medulla-types" }
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
