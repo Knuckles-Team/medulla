@@ -647,6 +647,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "FACT_PROVENANCE_MISSING",
         ],
     ),
+    // MEDULLA-CQ-ORCH-R705.6/R705.8: a document the exchange reader refuses.
+    (
+        "ArchitectureModelImport",
+        &[
+            "ARCHIMATE_DOC_MALFORMED",
+            "ARCHIMATE_DOC_ENTITY_REFUSED",
+            "ARCHIMATE_DOC_TOO_LARGE",
+            "ARCHIMATE_NAMESPACE_UNKNOWN",
+            "ARCHIMATE_RELATIONSHIP_INVALID",
+            "ARCHIMATE_VERSION_MISMATCH",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R153.4: a span the stored table cannot serve.
     (
         "ReadSpan",

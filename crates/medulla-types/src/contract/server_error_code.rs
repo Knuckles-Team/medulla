@@ -120,6 +120,13 @@ closed_error_codes! {
         DocumentHasReferences => "DOCUMENT_HAS_REFERENCES",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
         // MEDULLA-DECISION-ENGINE-R153.4: the ReadSpan refusals.
+        // MEDULLA-CQ-ORCH-R705.8: the architecture exchange refusals.
+        ArchimateDocMalformed => "ARCHIMATE_DOC_MALFORMED",
+        ArchimateDocEntityRefused => "ARCHIMATE_DOC_ENTITY_REFUSED",
+        ArchimateDocTooLarge => "ARCHIMATE_DOC_TOO_LARGE",
+        ArchimateNamespaceUnknown => "ARCHIMATE_NAMESPACE_UNKNOWN",
+        ArchimateRelationshipInvalid => "ARCHIMATE_RELATIONSHIP_INVALID",
+        ArchimateVersionMismatch => "ARCHIMATE_VERSION_MISMATCH",
         SpanInverted => "SPAN_INVERTED",
         SpanOutOfBounds => "SPAN_OUT_OF_BOUNDS",
         SpanTooLarge => "SPAN_TOO_LARGE",

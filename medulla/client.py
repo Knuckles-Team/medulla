@@ -7218,6 +7218,45 @@ class GraphOperationsClient:
             raise RuntimeError("RetrievalRound must answer with an object")
         return result
 
+    async def architecture_model_import(
+        self, document: str, expected_version: int | None = None
+    ) -> dict[str, Any]:
+        """Import one ArchiMate Open Exchange Format document
+        (MEDULLA-CQ-ORCH-R705.6).
+
+        The nodes and edges commit as one batch. Returns ``{document_digest,
+        model_digest, nodes, edges}``. A malformed, oversized, entity-bearing,
+        unknown-namespace or invalid-relationship document is refused with its
+        ``ARCHIMATE_*`` code and writes nothing; ``expected_version`` must equal
+        the exchange schema version the document carries.
+        """
+        params: dict[str, Any] = {
+            "document": document,
+            "expected_version": expected_version,
+        }
+        result = await self._client._send(
+            "ArchitectureModelImport", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ArchitectureModelImport must answer with an object")
+        return result
+
+    async def architecture_model_export(
+        self, scope: str | None = None
+    ) -> dict[str, Any]:
+        """Export the visible architecture nodes as one Open Exchange Format
+        document (MEDULLA-CQ-ORCH-R705.6).
+
+        ``scope`` names an optional graph within the caller's tenant. Returns
+        ``{document, document_digest, model_digest}``.
+        """
+        result = await self._client._send(
+            "ArchitectureModelExport", {"scope": scope}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ArchitectureModelExport must answer with an object")
+        return result
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.

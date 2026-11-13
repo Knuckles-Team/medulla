@@ -135,9 +135,12 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 impl ArchimateExchange {
     /// SHA-256 digest (64 lowercase hex characters) of the canonical model: identifier order, no
-    /// organizations or preserved fragments.
+    /// organizations or preserved fragments, and no model identifier or name (the same model
+    /// exported from two tenants has one digest).
     pub fn canonical_digest(&self) -> String {
         let mut canon = self.clone();
+        canon.model_id.clear();
+        canon.name.clear();
         canon.organizations.clear();
         canon.preserved.clear();
         canon
@@ -152,6 +155,30 @@ impl ArchimateExchange {
             .sort_by(|a, b| a.identifier.cmp(&b.identifier));
         sha256_hex(&serde_json::to_vec(&canon).unwrap_or_default())
     }
+}
+
+/// The answer of `ArchitectureModelExport` (MEDULLA-CQ-ORCH-R705.6, R705.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArchitectureModelExported {
+    /// The Open Exchange Format document text.
+    pub document: String,
+    /// SHA-256 of the document bytes, 64 lowercase hex characters.
+    pub document_digest: String,
+    /// The canonical model digest (`ArchimateExchange::canonical_digest`).
+    pub model_digest: String,
+}
+
+/// The answer of `ArchitectureModelImport` (MEDULLA-CQ-ORCH-R705.6, R705.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArchitectureModelImported {
+    /// SHA-256 of the imported document bytes; every imported node carries it as `importedFrom`.
+    pub document_digest: String,
+    /// The canonical model digest of the imported document.
+    pub model_digest: String,
+    /// Nodes written (created or updated), including relationship, view and proposal nodes.
+    pub nodes: u64,
+    /// Direct edges written.
+    pub edges: u64,
 }
 
 /// Why an exchange document was not read or written.

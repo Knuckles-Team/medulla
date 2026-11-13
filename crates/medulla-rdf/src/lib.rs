@@ -25,6 +25,9 @@
 pub use oxrdf;
 
 #[cfg(feature = "rdf")]
+pub mod archimate_types;
+
+#[cfg(feature = "rdf")]
 pub mod mapping;
 
 /// Served canonical hash of a Turtle payload (MEDULLA-TYPED-PACKS-R809).

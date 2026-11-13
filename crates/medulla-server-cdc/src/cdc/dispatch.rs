@@ -295,6 +295,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::FinanceRecordPut { .. } => Some("__finance_record_put"),
         Method::FinanceAlertRaise { .. } => Some("__finance_alert_raise"),
         Method::FinanceFactorRecord { .. } => Some("__finance_factor_record"),
+        Method::ArchitectureModelImport { .. } => Some("__architecture_model_import"),
         _ => None,
     }
 }

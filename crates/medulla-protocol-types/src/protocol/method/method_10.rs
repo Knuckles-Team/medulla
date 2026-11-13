@@ -133,6 +133,21 @@ $($variants)*
         op: Box<medulla_work_types::orchestration::workflows::WorkflowRegistryOp>,
     },
 
+    /// Import one ArchiMate Open Exchange Format document (MEDULLA-CQ-ORCH-R705.6).
+    /// `document` is the XML text. The import maps it onto the graph and commits
+    /// the nodes and edges as one batch. `expected_version`, when given, must
+    /// equal the exchange schema version the document carries.
+    ArchitectureModelImport {
+        document: String,
+        expected_version: Option<u32>,
+    },
+    /// Export the visible architecture nodes as one Open Exchange Format
+    /// document (MEDULLA-CQ-ORCH-R705.6). `scope` names an optional graph
+    /// within the caller's tenant. Reads only.
+    ArchitectureModelExport {
+        scope: Option<String>,
+    },
+
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.

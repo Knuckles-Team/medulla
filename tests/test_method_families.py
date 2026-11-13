@@ -161,6 +161,8 @@ _DURABLE_AT_BASE = (
         "SyncMemorySnapshot",
         # MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits graph nodes.
         "ArgumentMapPut",
+        # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
+        "ArchitectureModelImport",
     }
 )
 
@@ -288,6 +290,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "FinanceFactorRecord",
         # MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert commits graph nodes.
         "ArgumentMapPut",
+        # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
+        "ArchitectureModelImport",
     }
 )
 

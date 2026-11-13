@@ -26,6 +26,7 @@ use medulla_server_mutation::{
 };
 
 mod algorithms;
+pub(crate) mod architecture_exchange;
 mod argument_map;
 mod assistant_profile;
 #[cfg(test)]

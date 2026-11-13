@@ -326,6 +326,10 @@ knobs! {
     ingest_retention_required: bool = "ingest.retention_required", Bool(false), [false, true], "flag", Tunable;
     /// Age after which a record's synced access counts as stale (MEDULLA-INGEST-WORKER-R902.2).
     ingest_acl_stale_after_s: u64 = "ingest.acl_stale_after_s", U64(3_600), [60, 604_800], "s", Tunable;
+    /// Largest process or architecture exchange document the engine reads (MEDULLA-CQ-ORCH-R702.2).
+    process_document_max_bytes: u64 = "process.document_max_bytes", U64(16_777_216), [1_024, 268_435_456], "bytes", Tunable;
+    /// Deepest element nesting a process or architecture exchange document may have.
+    process_document_max_depth: u64 = "process.document_max_depth", U64(64), [4, 256], "levels", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).

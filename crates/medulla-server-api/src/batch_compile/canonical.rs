@@ -597,6 +597,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::WalletKeyTrustGet { .. }
         | Method::ContextFacts { .. }
         | Method::ReadSpan { .. }
+        // MEDULLA-CQ-ORCH-R705.6: an import commits as one request-graph
+        // `BatchUpdate`; an export commits nothing.
+        | Method::ArchitectureModelImport { .. }
+        | Method::ArchitectureModelExport { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }
         | Method::BranchDiff { .. }

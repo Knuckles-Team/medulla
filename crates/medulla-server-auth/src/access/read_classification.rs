@@ -87,6 +87,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ConnectedComponents",
     "ContextFacts",
     "ReadSpan",
+    "ArchitectureModelExport",
     "OpenGraphSnapshot",
     "ReadGraphChanges",
     // MEDULLA-INGEST-WORKER-R001.1008: the handler reads declaration nodes only

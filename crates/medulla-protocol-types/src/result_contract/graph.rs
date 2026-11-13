@@ -22,6 +22,9 @@ method_results! {
     WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
     SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
     SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
+    // MEDULLA-CQ-ORCH-R705.6: the architecture exchange import and export answers.
+    ArchitectureModelImport(ArchitectureModelImport) => Json<medulla_types::archimate_exchange::ArchitectureModelImported>;
+    ArchitectureModelExport(ArchitectureModelExport) => Json<medulla_types::archimate_exchange::ArchitectureModelExported>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;

@@ -134,6 +134,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
     // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
     "CreateBranch",
     // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
@@ -176,6 +178,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
 ];
 
 /// Mirrors `src/server/access.rs::requires_write`'s RUNTIME-CONDITIONAL set: the Mine*/
@@ -366,6 +370,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: a factor record self-translates into the
     // one `Method::BatchUpdate`, which carries the durable effect.
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
@@ -633,6 +639,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
     "SchemaProjections",
     // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: committed over the query gateway's
     // staged graph, the same audited commit point as `Sql`.
@@ -704,6 +712,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
     "LiveArtifactPut",
     "LiveArtifactRefresh",
     "StoredQueryPut",
@@ -764,6 +774,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
     "SchemaProjections",
     "RemoveEdge",
     "RemoveNode",
@@ -787,6 +799,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
+    // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
+    "ArchitectureModelImport",
 ];
 
 // ── KNOWN_DIVERGENCE ────────────────────────────────────────────────────────────────

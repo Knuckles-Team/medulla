@@ -153,6 +153,10 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::FinanceFactorRecord { factor_ids, .. } => {
             Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
         }
+        Method::ArchitectureModelImport { document, .. } => Some(format!(
+            "ARCHITECTURE_MODEL_IMPORT|{}",
+            medulla_types::archimate_exchange::sha256_hex(document.as_bytes())
+        )),
         Method::LiveArtifactPut { artifact } => Some(format!(
             "LIVE_ARTIFACT_PUT|{}|{}",
             artifact.id, artifact.version
