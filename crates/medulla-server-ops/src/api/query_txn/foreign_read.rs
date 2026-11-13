@@ -64,6 +64,9 @@ struct SessionRecord {
     authority_digest: Digest256,
     source_name: String,
     source_identity: ForeignReadSourceIdentity,
+    /// MEDULLA-FEDERATED-QUERY-R053.701: the server-derived submission id of a
+    /// job-form execution; a resubmission in the same owner scope resumes it.
+    submission_id: Option<String>,
     approval: ConnectorPackSourceApprovalResult,
     plan_digest: Digest256,
     query_digest: Digest256,
@@ -85,6 +88,16 @@ struct BufferedForeignRow {
     score: Option<f32>,
     columns: std::collections::BTreeMap<String, serde_json::Value>,
     provenance: Vec<String>,
+}
+
+/// What an open (or a resumed submission) hands back.
+pub struct OpenedForeignRead {
+    pub execution: ForeignReadExecutionRef,
+    pub expires_at_ms: u64,
+    pub next_sequence: u64,
+    pub source_identity: ForeignReadSourceIdentity,
+    /// True when an identical submission already had a live execution.
+    pub resumed: bool,
 }
 
 /// Process-local bounded execution handles. Durable approval and catalog state
@@ -123,6 +136,38 @@ impl ForeignReadSessions {
         query_digest: Digest256,
         limits: ForeignReadLimits,
     ) -> Result<(ForeignReadExecutionRef, u64, ForeignReadSourceIdentity), String> {
+        let opened = self.open_submission(
+            caller,
+            source_name,
+            approval,
+            plan_digest,
+            query_digest,
+            limits,
+            None,
+        )?;
+        Ok((
+            opened.execution,
+            opened.expires_at_ms,
+            opened.source_identity,
+        ))
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R053.701: open an execution, or -- when
+    /// `submission_id` names a live execution this caller already opened --
+    /// resume it: one submission id is one run, never a second execution.
+    /// The lookup is keyed by the caller's owner and effective-actor scope, so
+    /// another owner's identical submission never sees this execution.
+    #[allow(clippy::too_many_arguments)]
+    pub fn open_submission(
+        &self,
+        caller: &CarrierAuthority,
+        source_name: String,
+        approval: ConnectorPackSourceApprovalResult,
+        plan_digest: Digest256,
+        query_digest: Digest256,
+        limits: ForeignReadLimits,
+        submission_id: Option<String>,
+    ) -> Result<OpenedForeignRead, String> {
         limits.validate()?;
         if source_name.is_empty() || source_name.len() > MAX_ID_BYTES {
             return Err("INVALID_ARGUMENT: foreign read source_name is empty or too large".into());
@@ -133,6 +178,28 @@ impl ForeignReadSessions {
             .lock()
             .map_err(|_| "INTERNAL: foreign read admission lock poisoned".to_string())?;
         self.reap_expired();
+        if let Some(id) = submission_id.as_deref() {
+            for entry in self.sessions.iter() {
+                let record = lock(entry.value())?;
+                if record.submission_id.as_deref() == Some(id)
+                    && record.owner_scope == caller.owner_scope()
+                    && record.effective_actor_scope == caller.effective_actor_scope()
+                    && record.state != SessionState::Aborted
+                    && self.check_expiry(&record).is_ok()
+                {
+                    return Ok(OpenedForeignRead {
+                        execution: ForeignReadExecutionRef {
+                            execution_id: *entry.key(),
+                            query_digest: record.query_digest,
+                        },
+                        expires_at_ms: record.expires_at_ms,
+                        next_sequence: record.next_sequence,
+                        source_identity: record.source_identity.clone(),
+                        resumed: true,
+                    });
+                }
+            }
+        }
         if self.sessions.len() >= MAX_SESSIONS {
             return Err("ENGINE_RESOURCE_EXHAUSTED: too many foreign read executions".into());
         }
@@ -149,6 +216,7 @@ impl ForeignReadSessions {
             authority_digest: caller.authority_digest(),
             source_name,
             source_identity: source_identity.clone(),
+            submission_id,
             approval,
             plan_digest,
             query_digest,
@@ -163,14 +231,16 @@ impl ForeignReadSessions {
             consumed: false,
         }));
         self.sessions.insert(execution_id, Arc::clone(&record));
-        Ok((
-            ForeignReadExecutionRef {
+        Ok(OpenedForeignRead {
+            execution: ForeignReadExecutionRef {
                 execution_id,
                 query_digest,
             },
             expires_at_ms,
+            next_sequence: 0,
             source_identity,
-        ))
+            resumed: false,
+        })
     }
 
     pub fn remove(&self, execution_id: u64) {
@@ -1268,5 +1338,38 @@ mod tests {
                 serde_json::Value::String("keep".into()),
             )])
         );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R053.701
+    #[test]
+    fn identical_submission_resumes_one_execution_per_owner() {
+        let sessions = ForeignReadSessions::default();
+        let owner = CarrierAuthority::verified_for_test("owner");
+        let other = CarrierAuthority::verified_for_test("other");
+        let digest = Digest256::sha256(b"submission-query");
+        let open = |caller: &CarrierAuthority, id: &str| {
+            sessions
+                .open_submission(
+                    caller,
+                    "source".into(),
+                    approval(),
+                    digest,
+                    digest,
+                    limits(),
+                    Some(id.into()),
+                )
+                .expect("open")
+        };
+        let first = open(&owner, "id-a");
+        assert!(!first.resumed);
+        let again = open(&owner, "id-a");
+        assert!(again.resumed);
+        assert_eq!(again.execution, first.execution);
+        let changed = open(&owner, "id-b");
+        assert!(!changed.resumed);
+        assert_ne!(changed.execution, first.execution);
+        let foreign = open(&other, "id-a");
+        assert!(!foreign.resumed, "another owner never resumes this run");
+        assert_ne!(foreign.execution, first.execution);
     }
 }

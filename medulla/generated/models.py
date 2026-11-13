@@ -6771,6 +6771,26 @@ class ForeignReadLimits(BaseModel):
     max_rows: Annotated[int, Field(ge=0)]
 
 
+class ForeignReadSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    input_digests: list[str] = Field(default_factory=list)
+    parameters: dict[str, str] = Field(default_factory=dict)
+    preset_id: str
+    producer_revision: str
+    snapshot_id: str
+
+
+class ForeignReadSubmissionEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    generation: Annotated[int, Field(ge=0)]
+    producer_revision: str
+    snapshot_id: str
+    source_id: str
+    submission_id: str
+
+
 class ForeignReadOpenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -6780,6 +6800,7 @@ class ForeignReadOpenRequest(BaseModel):
     query_digest: Digest256
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     source_name: str
+    submission: ForeignReadSubmission | None = None
 
 
 class ForeignReadOpenResult(BaseModel):
@@ -6790,6 +6811,7 @@ class ForeignReadOpenResult(BaseModel):
     next_sequence: Annotated[int, Field(ge=0)]
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     source_identity: ForeignReadSourceIdentity
+    submission: ForeignReadSubmissionEvidence | None = None
 
 
 class ForeignReadRow(BaseModel):

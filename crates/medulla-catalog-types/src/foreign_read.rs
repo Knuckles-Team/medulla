@@ -131,6 +131,40 @@ pub struct ForeignReadRow {
     pub provenance: Vec<String>,
 }
 
+/// MEDULLA-FEDERATED-QUERY-R053.701: the job-form submission a host opens a
+/// `Trino`/`Spark` execution with.  The server derives the idempotent submission
+/// id from the preset, the input digests and the parameters; the host cannot
+/// choose it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ForeignReadSubmission {
+    /// The preset to run; it must be the operation the approved source offers.
+    pub preset_id: String,
+    /// Content digests of the inputs the run reads.
+    #[serde(default)]
+    pub input_digests: Vec<String>,
+    /// Run parameters, hashed in key order.
+    #[serde(default)]
+    pub parameters: BTreeMap<String, String>,
+    /// The snapshot the run reads; it must be the one the admitted pack pins.
+    pub snapshot_id: String,
+    /// The producer revision recorded on the change envelope.
+    pub producer_revision: String,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R053.701: the submission evidence an open returns:
+/// the change-envelope fence fields.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ForeignReadSubmissionEvidence {
+    pub source_id: String,
+    pub snapshot_id: String,
+    pub submission_id: String,
+    pub generation: u64,
+    pub producer_revision: String,
+}
+
 /// Open one approved source execution.  `approval` is only a candidate receipt;
 /// the server re-reads its durable current head/member before accepting it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -143,6 +177,9 @@ pub struct ForeignReadOpenRequest {
     pub plan_digest: Digest256,
     pub query_digest: Digest256,
     pub limits: ForeignReadLimits,
+    /// Present for a `Trino`/`Spark` job-form source; absent for a page read.
+    #[serde(default)]
+    pub submission: Option<ForeignReadSubmission>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -153,6 +190,9 @@ pub struct ForeignReadOpenResult {
     pub expires_at_ms: u64,
     pub next_sequence: u64,
     pub source_identity: ForeignReadSourceIdentity,
+    /// The fence fields of a job-form submission; absent for a page read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub submission: Option<ForeignReadSubmissionEvidence>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

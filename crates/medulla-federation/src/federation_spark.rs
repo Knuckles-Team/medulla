@@ -167,6 +167,19 @@ impl SubmissionFence {
     }
 }
 
+/// MEDULLA-FEDERATED-QUERY-R053.700: a `Trino` or `Spark` read names a snapshot
+/// the source registered; any other snapshot refuses with `SNAPSHOT_UNKNOWN`.
+/// It lives beside the fence so both backends share the one check.
+pub fn check_snapshot(
+    known_snapshots: &[&str],
+    snapshot_id: &str,
+) -> Result<(), medulla_types::contract::ServerErrorCode> {
+    if snapshot_id.is_empty() || !known_snapshots.contains(&snapshot_id) {
+        return Err(medulla_types::contract::ServerErrorCode::SnapshotUnknown);
+    }
+    Ok(())
+}
+
 /// Resolve a preset among those the source offers, then derive its submission id.
 pub fn derive_submission(
     available_presets: &[&str],

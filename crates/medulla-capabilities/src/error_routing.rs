@@ -1049,6 +1049,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SNAPSHOT_UNKNOWN",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R053.701: the job-form open refuses with the same codes.
+    (
+        "ForeignReadOpen",
+        &[
+            "FENCE_FIELD_MISSING",
+            "PRESET_UNAVAILABLE",
+            "SNAPSHOT_UNKNOWN",
+        ],
+    ),
     (
         "MutationOutbox",
         &[

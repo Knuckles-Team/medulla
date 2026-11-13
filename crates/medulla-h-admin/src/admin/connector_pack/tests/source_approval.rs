@@ -350,6 +350,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
                         plan_digest,
                         query_digest,
                         limits,
+                        submission: None,
                     },
                 },
             )
@@ -452,6 +453,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
                         plan_digest,
                         query_digest: abort_query_digest,
                         limits,
+                        submission: None,
                     },
                 },
             )
@@ -856,6 +858,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                                 chunk_bytes: 512,
                                 deadline_ms: 10_000,
                             },
+                            submission: None,
                         },
                     },
                 )

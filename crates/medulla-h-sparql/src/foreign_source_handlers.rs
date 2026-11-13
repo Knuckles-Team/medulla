@@ -16,7 +16,8 @@
 
 use medulla_catalog_types::foreign_read::{
     ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
-    ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,
+    ForeignReadOpenRequest, ForeignReadSubmission, ForeignReadSubmissionEvidence,
+    FOREIGN_READ_SCHEMA_VERSION,
 };
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -119,6 +120,67 @@ pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Res
     }
 }
 
+/// MEDULLA-FEDERATED-QUERY-R053.701: validate a job-form submission against the
+/// admitted approval and derive its fence evidence. The one preset a source
+/// offers is its approved operation, the one snapshot it knows is the pack
+/// digest the approval pins (both server-derived, never host-chosen), and the
+/// submission id is `SubmissionId::derive`, the only id function.
+fn submission_evidence(
+    approval: &medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult,
+    submission: &ForeignReadSubmission,
+) -> Result<ForeignReadSubmissionEvidence, String> {
+    use medulla_federation::federation_spark::{
+        check_snapshot, derive_submission, SubmissionFence,
+    };
+    let registration = &approval.registration;
+    let digests: Vec<&str> = submission
+        .input_digests
+        .iter()
+        .map(String::as_str)
+        .collect();
+    let id = derive_submission(
+        &[registration.operation.as_str()],
+        &submission.preset_id,
+        &digests,
+        &submission.parameters,
+    )
+    .map_err(|refusal| {
+        format!(
+            "{}: preset is not offered by the approved source",
+            refusal.code().as_str()
+        )
+    })?;
+    let fence = SubmissionFence {
+        source_id: Some(registration.source_id.clone()),
+        snapshot_id: Some(submission.snapshot_id.clone()),
+        submission_id: Some(id.as_str().to_string()),
+        generation: Some(approval.head.binding_revision),
+        producer_revision: Some(submission.producer_revision.clone()),
+    };
+    fence.check().map_err(|refusal| {
+        let medulla_federation::federation_spark::SubmissionRefusal::FenceFieldMissing(field) =
+            &refusal
+        else {
+            return format!("{}: fence check failed", refusal.code().as_str());
+        };
+        format!("{}: {field} is missing", refusal.code().as_str())
+    })?;
+    let pinned = approval.head.pack_digest.to_hex();
+    check_snapshot(&[pinned.as_str()], &submission.snapshot_id).map_err(|code| {
+        format!(
+            "{}: snapshot is not one the approved source registered",
+            code.as_str()
+        )
+    })?;
+    Ok(ForeignReadSubmissionEvidence {
+        source_id: registration.source_id.clone(),
+        snapshot_id: submission.snapshot_id.clone(),
+        submission_id: id.as_str().to_string(),
+        generation: approval.head.binding_revision,
+        producer_revision: submission.producer_revision.clone(),
+    })
+}
+
 async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRequest) -> Response {
     let req_id = call.req_id;
     let owner = match call.owner("ForeignReadOpen") {
@@ -154,22 +216,54 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
         plan_digest,
         query_digest,
         limits,
+        submission,
         ..
     } = request;
-    let (execution, expires_at_ms, source_identity) = {
+    let evidence = match submission.as_ref() {
+        Some(submission) => match submission_evidence(&approval, submission) {
+            Ok(evidence) => Some(evidence),
+            Err(error) => return Response::err(req_id, error),
+        },
+        None => None,
+    };
+    let opened = {
         let state = call.state.read().await;
-        match state.foreign_reads().open(
+        match state.foreign_reads().open_submission(
             &owner,
             source_name.clone(),
             approval.clone(),
             plan_digest,
             query_digest,
             limits,
+            evidence.as_ref().map(|e| e.submission_id.clone()),
         ) {
             Ok(opened) => opened,
             Err(error) => return Response::err(req_id, error),
         }
     };
+    let (execution, expires_at_ms, source_identity) = (
+        opened.execution,
+        opened.expires_at_ms,
+        opened.source_identity,
+    );
+    if opened.resumed {
+        // The identical submission already runs: name that run, never bind or
+        // start a second one.
+        let result = medulla_catalog_types::foreign_read::ForeignReadOpenResult {
+            schema_version: FOREIGN_READ_SCHEMA_VERSION,
+            execution,
+            expires_at_ms,
+            next_sequence: opened.next_sequence,
+            source_identity,
+            submission: evidence,
+        };
+        return Response::ok(
+            req_id,
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::ForeignReadOpen>(
+                result,
+            ),
+        );
+    }
     let binding = {
         let state = call.state.read().await;
         let page_source = match state.foreign_reads().page_source(execution.execution_id) {
@@ -199,6 +293,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
         expires_at_ms,
         next_sequence: 0,
         source_identity,
+        submission: evidence,
     };
     Response::ok(
         req_id,
