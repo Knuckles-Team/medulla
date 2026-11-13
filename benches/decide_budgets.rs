@@ -156,6 +156,7 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::TrajectoryJoin,
     QuestionKind::StepVerification,
     QuestionKind::AdversarialAdmission,
+    QuestionKind::SkillEvolution,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
@@ -257,6 +258,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::IngestShortfall => "ingest_shortfall",
         QuestionKind::CapacityProposal => "capacity_proposal",
         QuestionKind::ProbeSelection => "probe_selection",
+        QuestionKind::SkillEvolution => "skill_evolution",
     }
 }
 

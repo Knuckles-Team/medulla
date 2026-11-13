@@ -79,13 +79,19 @@ pub(super) fn single_option(options: &[DeclaredOption], id: &str) -> Result<(), 
 
 /// An advisory answer naming each of `ids` as chosen. Nothing is written.
 pub(in crate::decide) fn advisory(ids: Vec<String>) -> Result<Executed, String> {
-    let scores: Vec<ScoredOption> = ids
+    advisory_scored(ids.into_iter().map(|id| (id, CHOSEN_SCORE)).collect())
+}
+
+/// An advisory answer scoring each option in Q32, in the order given.
+/// Nothing is written.
+pub(in crate::decide) fn advisory_scored(options: Vec<(String, i64)>) -> Result<Executed, String> {
+    let scores: Vec<ScoredOption> = options
         .into_iter()
-        .map(|option_id| ScoredOption {
+        .map(|(option_id, value)| ScoredOption {
             option_id,
             score: QuantisedValue {
                 scale: QuantScaleTag::Q32,
-                value: CHOSEN_SCORE,
+                value,
             },
             probability: None,
         })
@@ -172,5 +178,17 @@ pub(super) fn text_param<'a>(
         None => Ok(None),
         Some(TypedValue::Text(text)) => Ok(Some(text.as_str())),
         Some(_) => Err(invalid(format!("parameter {name} is not text"))),
+    }
+}
+
+/// The IRI-list parameter `name`, or empty when absent; any other type refuses.
+pub(super) fn iri_list_param<'a>(
+    request: &'a DecideRequest,
+    name: &str,
+) -> Result<&'a [String], String> {
+    match param(request, name)? {
+        None => Ok(&[]),
+        Some(TypedValue::IriList(list)) => Ok(list.as_slice()),
+        Some(_) => Err(invalid(format!("parameter {name} is not an IRI list"))),
     }
 }

@@ -336,6 +336,13 @@ pub fn is_native(iri: &str) -> bool {
     term(iri).is_some()
 }
 
+/// Whether `iri` is a native term strictly under `root`. The one resolver
+/// behind pack annotation checks and the skill-evolution neologism rule: a
+/// term that fails it is an unresolved capability IRI.
+pub fn native_under(iri: &str, root: &str) -> bool {
+    is_native(iri) && iri != root && is_a(iri, root)
+}
+
 /// Whether `iri` is `ancestor` or is subsumed by it.
 ///
 /// This is the relation that makes classification useful: a component that

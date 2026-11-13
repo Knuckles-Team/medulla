@@ -69,6 +69,7 @@ mod run_adjustment;
 mod runtime_quota;
 mod schema_mapping;
 mod serving_technique;
+mod skill_evolution;
 pub(super) mod skill_upgrade;
 mod skill_workflow;
 mod step_verification;
@@ -97,6 +98,7 @@ pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use resolve_entity::with_candidates;
 pub(in crate::decide) use runtime_quota::quota_view;
 pub(in crate::decide) use support::advisory;
+pub(in crate::decide) use skill_evolution::with_skill_embeddings;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -357,6 +359,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         step_verification::StepVerificationFamily;
     static ADVERSARIALADMISSIONFAMILY: adversarial_admission::AdversarialAdmissionFamily =
         adversarial_admission::AdversarialAdmissionFamily;
+    static SKILLEVOLUTIONFAMILY: skill_evolution::SkillEvolutionFamily =
+        skill_evolution::SkillEvolutionFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -436,6 +440,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::TrajectoryJoin => &TRAJECTORYJOINFAMILY,
         QuestionKind::StepVerification => &STEPVERIFICATIONFAMILY,
         QuestionKind::AdversarialAdmission => &ADVERSARIALADMISSIONFAMILY,
+        QuestionKind::SkillEvolution => &SKILLEVOLUTIONFAMILY,
     }
 }
 
@@ -525,6 +530,7 @@ mod tests {
             QuestionKind::TrajectoryJoin,
             QuestionKind::StepVerification,
             QuestionKind::AdversarialAdmission,
+            QuestionKind::SkillEvolution,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -604,7 +610,8 @@ mod tests {
             | QuestionKind::AutonomyVerdict
             | QuestionKind::TrajectoryJoin
             | QuestionKind::StepVerification
-            | QuestionKind::AdversarialAdmission => true,
+            | QuestionKind::AdversarialAdmission
+            | QuestionKind::SkillEvolution => true,
         };
         assert!(exhaustive);
         kinds
@@ -616,7 +623,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            78,
+79,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

@@ -21,6 +21,19 @@ use medulla_types::contract::BoundedVec;
 pub const MAX_ROLLOUTS: usize = 4096;
 /// Most run-trace and library ids one merge candidate may cite.
 pub const MAX_MERGE_EVIDENCE: usize = 32;
+/// The `SkillEvolution` parameter that lists the skill ids runs asked for,
+/// one entry per request (MEDULLA-DECISION-ENGINE-R703.3).
+pub const PARAM_REQUESTED_SKILLS: &str = "requested_skills";
+/// The `SkillEvolution` parameter that lists the terms runs used as skill
+/// names, one entry per use.
+pub const PARAM_USED_TERMS: &str = "used_terms";
+/// The optional text parameter naming the graph whose stored vectors embed the
+/// visible skills, keyed by component id.
+pub const PARAM_EMBEDDING_GRAPH: &str = "skill_embedding_graph";
+/// The parameter the engine writes before the family concludes: a JSON object
+/// from skill id to its stored embedding, read through the caller's graph
+/// access. A request that carries it is refused as a duplicate.
+pub const PARAM_SKILL_EMBEDDINGS: &str = "skill_embeddings";
 /// Format identity of a [`RolloutSet`].
 pub const ROLLOUT_SET_SCHEMA_VERSION: u16 = 1;
 

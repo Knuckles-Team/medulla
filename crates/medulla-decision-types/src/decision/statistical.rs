@@ -298,6 +298,11 @@ pub enum QuestionKind {
     /// Admits a candidate against a bounded set of red-team probes
     /// (MEDULLA-DECISION-ENGINE-R753.750). See `decision::trajectory_verdict`.
     AdversarialAdmission,
+    /// Skill gaps, neologisms and merge candidates from run traces and the
+    /// visible skill library (MEDULLA-DECISION-ENGINE-R703.3). Advisory only:
+    /// publishing a change uses the guarded promotion. See
+    /// `decision::skill_evolution`.
+    SkillEvolution,
 }
 
 /// What is at stake. Exploration is permitted only for

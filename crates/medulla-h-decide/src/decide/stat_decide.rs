@@ -182,6 +182,17 @@ async fn serve(
             super::stat_capacity::with_read(state, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::SkillEvolution {
+        // A `skill_evolution` question reads the stored embedding of each
+        // visible skill here, through the caller's graph access, and records
+        // the vectors in its own parameter (MEDULLA-DECISION-ENGINE-R703.3).
+        telemetry::stage_async(
+            telemetry::Stage::Visibility,
+            &family,
+            verified.tenant(),
+            super::family::with_skill_embeddings(state, store.as_ref(), verified, request),
+        )
+        .await?
     } else {
         request
     };

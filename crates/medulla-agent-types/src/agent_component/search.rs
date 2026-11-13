@@ -7,7 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::facts::{AgentComponentFacts, ToolEffect};
+use super::capability_descriptor::SideEffectClass;
+use super::facts::{AgentComponentFacts, ToolEffect, ToolSideEffects};
 use super::{
     validate_names, validate_text, AgentComponentEntry, AgentComponentKind,
     AgentComponentMutationKind, AGENT_COMPONENT_SEARCH_CURSOR_DOMAIN,
@@ -256,6 +257,39 @@ impl AgentComponentEntry {
                 .classification
                 .iter()
                 .any(|term| crate::agent_ontology::is_a(term, "eg:capability/action"))
+    }
+}
+
+impl AgentComponentEntry {
+    /// The side-effect class of this component, the blocking key of skill
+    /// merge detection (MEDULLA-DECISION-ENGINE-R703.2). A tool's declared
+    /// `side_effects` map to the class; a destructive hint is `Irreversible`;
+    /// every other component is `External` when it is side-effecting
+    /// ([`Self::is_side_effecting`]) and `ReadOnly` otherwise.
+    pub fn side_effect_class(&self) -> SideEffectClass {
+        if let AgentComponentFacts::Tool {
+            side_effects,
+            destructive_hint,
+            ..
+        } = &self.facts
+        {
+            if *destructive_hint == Some(true) {
+                return SideEffectClass::Irreversible;
+            }
+            match side_effects {
+                Some(ToolSideEffects::None) => return SideEffectClass::ReadOnly,
+                Some(ToolSideEffects::WorkspaceWrite) => return SideEffectClass::GraphWrite,
+                Some(ToolSideEffects::ExternalWrite | ToolSideEffects::Network) => {
+                    return SideEffectClass::External
+                }
+                None => {}
+            }
+        }
+        if self.is_side_effecting() {
+            SideEffectClass::External
+        } else {
+            SideEffectClass::ReadOnly
+        }
     }
 }
 

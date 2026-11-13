@@ -14,8 +14,7 @@
 //! anything.
 
 use medulla_agent_types::{
-    agent_ontology::is_a, agent_ontology::is_native, agent_ontology::CAPABILITY_ROOT,
-    agent_ontology::MODALITY_ROOT,
+    agent_ontology::native_under, agent_ontology::CAPABILITY_ROOT, agent_ontology::MODALITY_ROOT,
 };
 use medulla_catalog_types::{
     connector_pack::PackAnnotations, connector_pack::PackEntryKind,
@@ -158,10 +157,6 @@ fn check_cost_and_latency(annotations: &PackAnnotations, findings: &mut Annotati
             ));
         }
     }
-}
-
-fn native_under(iri: &str, root: &str) -> bool {
-    is_native(iri) && iri != root && is_a(iri, root)
 }
 
 fn absolute_iri(value: &str) -> bool {

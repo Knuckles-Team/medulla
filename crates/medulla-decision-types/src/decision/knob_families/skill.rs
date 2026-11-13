@@ -1,4 +1,4 @@
-//! The `skill.*` knobs (MEDULLA-DECISION-ENGINE-R703.2): how skills are
+//! The `skill.*` knobs (MEDULLA-DECISION-ENGINE-R703.2, R703.3): how skills are
 //! blocked and how close two skills must be before a merge is proposed. They
 //! are decision-plane thresholds, pinned through the decision policy and
 //! sealed with its digest.
@@ -36,8 +36,24 @@ pub const MERGE_COSINE_MIN: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
+/// Fewest uses before a term no capability resolves is a neologism
+/// (MEDULLA-DECISION-ENGINE-R703.3).
+pub const NEOLOGISM_MIN_USES: KnobSpec = KnobSpec {
+    name: "skill.neologism_min_uses",
+    unit: "uses",
+    default: KnobValue::Integer(3),
+    min: KnobValue::Integer(2),
+    max: KnobValue::Integer(1000),
+    safety: KnobSafety::Tunable,
+};
+
 /// Every `skill.*` knob, each `Tunable`.
-pub const KNOBS: &[KnobSpec] = &[MAX_BLOCK, MERGE_JACCARD_MIN, MERGE_COSINE_MIN];
+pub const KNOBS: &[KnobSpec] = &[
+    MAX_BLOCK,
+    MERGE_JACCARD_MIN,
+    MERGE_COSINE_MIN,
+    NEOLOGISM_MIN_USES,
+];
 
 /// The pinned (or default) value of an integer knob.
 pub fn integer(policy: &DecisionPolicy, spec: &KnobSpec) -> u64 {

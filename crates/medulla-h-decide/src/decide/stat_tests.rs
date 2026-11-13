@@ -1280,6 +1280,8 @@ mod research_voi_tests;
 mod reward_decomposition_tests;
 mod step_verification_tests;
 mod trajectory_join_tests;
+// MEDULLA-DECISION-ENGINE-R703.3: skill gaps, neologisms and merges, served.
+mod skill_evolution_tests;
 
 // MEDULLA-DECISION-ENGINE-R177.3 to R177.5: usage guidance served through Decide.
 #[cfg(feature = "redb")]
