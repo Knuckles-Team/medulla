@@ -405,3 +405,224 @@ fn a_policy_component_whose_body_does_not_match_its_digest_is_refused() {
         .expect_err("refused");
     assert!(error.starts_with("POLICY_BODY_UNAVAILABLE: "), "{error}");
 }
+
+/// The evidence graph of a solved assembly, pinned to the committed record, with its agent
+/// published so the graph's references resolve.
+#[cfg(test)]
+fn evidence_request(
+    store: &AgentLibraryStore,
+    assembly: &Assembly,
+    key: &str,
+    nonce: u8,
+) -> AgentGraphPublishRequest {
+    let record = &assembly.record;
+    store
+        .publish(AgentLibraryPublishRequest {
+            context: mutation_context(
+                store,
+                TENANT,
+                "agent-shared",
+                nonce,
+                0,
+                "agent-library:publish",
+            ),
+            entry: assembly
+                .agents
+                .first()
+                .cloned()
+                .expect("solved answers an agent"),
+        })
+        .expect("the assembled agent publishes");
+    let mut graph = assembly.graph.clone().expect("solved answers a graph");
+    graph.synthesis_evidence = Some(ComponentDependency {
+        component_id: record.record_id.clone(),
+        kind: AgentComponentKind::DecisionRecord,
+        definition_digest: record.record_digest.clone(),
+    });
+    AgentGraphPublishRequest {
+        context: mutation_context(
+            store,
+            TENANT,
+            key,
+            nonce.wrapping_add(1),
+            0,
+            "agent-graph:publish",
+        ),
+        graph,
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.5
+#[test]
+fn shared_commit_writes_record_and_evidence_in_one_transaction() {
+    use super::shared_commit::FAIL_AFTER_RECORD_ROWS;
+    let (_dir, store) = open_agent_store();
+    seed_library(&store);
+    let assembly = decided(&store);
+    let record = assembly.record.clone();
+    let digest = record.inputs.catalog_digest.clone();
+    let evidence = evidence_request(&store, &assembly, "shared-graph", 60);
+    let graph_id = evidence.graph.graph_id.clone();
+
+    // A failure injected after the first row leaves neither the record nor the evidence.
+    FAIL_AFTER_RECORD_ROWS.with(|flag| flag.set(true));
+    let error = store
+        .commit_topology_decision(
+            commit_context(&store, "shared-1", 62),
+            &record,
+            &digest,
+            evidence.clone(),
+            "txn-mine",
+        )
+        .unwrap_err();
+    FAIL_AFTER_RECORD_ROWS.with(|flag| flag.set(false));
+    assert!(error.contains("injected failure"), "{error}");
+    assert!(store
+        .current_component(TENANT, &record.record_id)
+        .expect("reads")
+        .is_none());
+    assert!(store
+        .current_graph(TENANT, &graph_id)
+        .expect("reads")
+        .is_none());
+    assert!(store
+        .decision_record_content(TENANT, &record.record_id)
+        .is_err());
+
+    // The same commit then lands both together.
+    let parts = store
+        .commit_topology_decision(
+            commit_context(&store, "shared-2", 64),
+            &record,
+            &digest,
+            evidence.clone(),
+            "txn-mine",
+        )
+        .expect("commits");
+    assert!(!parts.record.replayed);
+    assert_eq!(parts.evidence_graph_id, graph_id);
+    assert_eq!(parts.evidence_revision, 1);
+    let graph = store
+        .current_graph(TENANT, &graph_id)
+        .expect("reads")
+        .expect("the evidence graph is published");
+    assert_eq!(graph.entry_revision, 1);
+    let pin = graph.synthesis_evidence.expect("the graph pins the record");
+    assert_eq!(pin.component_id, record.record_id);
+    let content = store
+        .decision_record_content(TENANT, &record.record_id)
+        .expect("the record body is served");
+    let served: DecisionRecord = serde_json::from_slice(&content.body).expect("decodes");
+    assert_eq!(served, record);
+
+    // A replay is a no-op: same heads, nothing written twice.
+    let again = store
+        .commit_topology_decision(
+            commit_context(&store, "shared-3", 66),
+            &record,
+            &digest,
+            evidence,
+            "txn-mine",
+        )
+        .expect("a repeat is a replay");
+    assert!(again.record.replayed);
+    assert_eq!(again.evidence_revision, 1);
+    assert_eq!(
+        store
+            .graph_revisions(TENANT, &graph_id)
+            .expect("reads")
+            .len(),
+        1
+    );
+
+    // An evidence graph that pins another record is refused before any write.
+    let (_dir_b, other) = open_agent_store();
+    seed_library(&other);
+    let assembly_b = decided(&other);
+    let mut wrong = evidence_request(&other, &assembly_b, "shared-wrong", 70);
+    if let Some(pin) = wrong.graph.synthesis_evidence.as_mut() {
+        pin.definition_digest = format!("sha256:{}", "c".repeat(64));
+    }
+    let error = other
+        .commit_topology_decision(
+            commit_context(&other, "shared-4", 72),
+            &assembly_b.record,
+            &assembly_b.record.inputs.catalog_digest,
+            wrong,
+            "txn-mine",
+        )
+        .unwrap_err();
+    assert!(error.starts_with("DERIVATION_REJECTED"), "{error}");
+    assert!(other
+        .current_component(TENANT, &assembly_b.record.record_id)
+        .expect("reads")
+        .is_none());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.5
+#[test]
+fn shared_commit_is_blocked_by_an_admission_fence() {
+    use super::super::agent_library::admission::{
+        AdmissionIntent, ComponentHead, ADMISSION_WRITE_BLOCKED,
+    };
+    let (_dir, store) = open_agent_store();
+    seed_library(&store);
+    let assembly = decided(&store);
+    let record = assembly.record.clone();
+    let digest = record.inputs.catalog_digest.clone();
+    let evidence = evidence_request(&store, &assembly, "fenced-graph", 80);
+    let mut heads: Vec<ComponentHead> = record
+        .inputs
+        .candidates
+        .iter()
+        .map(|candidate| ComponentHead {
+            component_id: candidate.component_id.clone(),
+            entry_revision: candidate.entry_revision,
+            definition_digest: candidate.definition_digest.clone(),
+        })
+        .collect();
+    heads.sort_by(|left, right| left.component_id.cmp(&right.component_id));
+    assert!(!heads.is_empty());
+    store
+        .reserve_admission(
+            TENANT,
+            &AdmissionIntent {
+                txn_id: "txn-other".into(),
+                profile_revision: "policy-v1".into(),
+                component_heads: heads,
+                visibility_digest: format!("sha256:{}", "a".repeat(64)),
+                write_key: "write-other".into(),
+            },
+        )
+        .expect("another transaction reserves the candidates");
+
+    let error = store
+        .commit_topology_decision(
+            commit_context(&store, "fenced-1", 82),
+            &record,
+            &digest,
+            evidence.clone(),
+            "txn-mine",
+        )
+        .unwrap_err();
+    assert!(error.starts_with(ADMISSION_WRITE_BLOCKED), "{error}");
+    assert!(store
+        .current_component(TENANT, &record.record_id)
+        .expect("reads")
+        .is_none());
+    assert!(store
+        .current_graph(TENANT, &evidence.graph.graph_id)
+        .expect("reads")
+        .is_none());
+
+    // The holder of the fence is not blocked by it.
+    store
+        .commit_topology_decision(
+            commit_context(&store, "fenced-2", 84),
+            &record,
+            &digest,
+            evidence,
+            "txn-other",
+        )
+        .expect("the fence holder commits");
+}

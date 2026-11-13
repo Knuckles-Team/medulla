@@ -171,6 +171,33 @@ pub(crate) fn require_unfenced(
     ))
 }
 
+/// Like [`require_unfenced`], but a fence held only by `own_txn` does not block: the
+/// coordinator transaction that reserved the components is the one writing under them.
+pub(crate) fn require_unfenced_except(
+    txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
+    tenant: &str,
+    component_id: &str,
+    own_txn: &str,
+) -> Result<(), String> {
+    let rows = txn.open_read_table(DECISION_ARTIFACTS)?;
+    let Some(row) = rows.get((tenant, fence_key(component_id).as_str()))? else {
+        return Ok(());
+    };
+    let holders: Vec<String> = decode_artifact(row.value(), "admission fence")?;
+    let others: Vec<&String> = holders.iter().filter(|holder| *holder != own_txn).collect();
+    if others.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "{ADMISSION_WRITE_BLOCKED}: component '{component_id}' is fenced by admission {}",
+        others
+            .iter()
+            .map(|holder| holder.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    ))
+}
+
 impl AgentLibraryStore {
     /// Reserve `intent` for `tenant_id`. Returns the reservation's state: an
     /// exact retry of a live or committed intent succeeds; a changed intent for

@@ -57,7 +57,7 @@ pub struct AgentGraphWriteResult {
 pub(super) struct GraphLayer;
 
 /// The graph layer's head and revision tables.
-fn graph_tables() -> RevisionTables {
+pub(crate) fn graph_tables() -> RevisionTables {
     RevisionTables {
         heads: medulla_storage::AGENT_GRAPH_HEADS,
         revisions: medulla_storage::AGENT_GRAPH_REVISIONS,
@@ -181,7 +181,7 @@ impl AgentLibraryStore {
     ///
     /// L3 -> L3 is resolved last, by `validate_composition`, which also derives
     /// the composed work ceiling from the tree it walks.
-    fn admit_graph_references_in_write(
+    pub(crate) fn admit_graph_references_in_write(
         &self,
         write: &super::agent_pin_resolution::Write<'_>,
         tenant_id: &str,
