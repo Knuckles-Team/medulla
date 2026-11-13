@@ -3223,3 +3223,170 @@
     :toState :AnalyticsJobMachine_Cancelled ;
     :guardedBy :AnalyticsJobMachine_Guard_LeaseLapsed ;
     :firedBy :AnalyticsJobMachine_Event_Reclaim .
+# spec: MEDULLA-TYPED-PACKS-R810.1
+# The Admission machine: the lifecycle of one physical write's admission. The Rust edge table
+# ADMISSION_MACHINE is the same table.
+
+:AdmissionState a owl:Class ;
+    rdfs:label "Admission State" ;
+    rdfs:comment "A state of the Admission machine." ;
+    rdfs:subClassOf :State .
+
+:AdmissionTerminalState a owl:Class ;
+    rdfs:label "Admission Terminal State" ;
+    rdfs:comment "A terminal state of the Admission machine." ;
+    rdfs:subClassOf :TerminalState, :AdmissionState .
+
+:AdmissionTransition a owl:Class ;
+    rdfs:label "Admission Transition" ;
+    rdfs:comment "A transition of the Admission machine." ;
+    rdfs:subClassOf :Transition .
+
+:AdmissionEvent a owl:Class ;
+    rdfs:label "Admission Event" ;
+    rdfs:comment "An event of the Admission machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AdmissionGuard a owl:Class ;
+    rdfs:label "Admission Guard" ;
+    rdfs:comment "A guard of the Admission machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AdmissionMachine a :StateMachine ;
+    rdfs:label "Admission machine" ;
+    :initialState :AdmissionMachine_Idle ;
+    :hasState :AdmissionMachine_Idle, :AdmissionMachine_Applying, :AdmissionMachine_Finished, :AdmissionMachine_Replayed, :AdmissionMachine_Poisoned .
+
+:AdmissionMachine_Idle a :AdmissionState ;
+    rdfs:label "Admission Idle" ;
+    rdfs:comment "No batch is admitted yet." ;
+    :storedForm "idle" .
+
+:AdmissionMachine_Applying a :AdmissionState ;
+    rdfs:label "Admission Applying" ;
+    rdfs:comment "One batch is admitted; its owner window opens and closes inside it." ;
+    :storedForm "applying" .
+
+:AdmissionMachine_Finished a :AdmissionState ;
+    rdfs:label "Admission Finished" ;
+    rdfs:comment "The admitted batch finished and awaits its commit." ;
+    :storedForm "finished" .
+
+:AdmissionMachine_Replayed a :AdmissionState ;
+    rdfs:label "Admission Replayed" ;
+    rdfs:comment "Admission resolved to an already-durable receipt; this write applies nothing for it." ;
+    :storedForm "replayed" .
+
+:AdmissionMachine_Poisoned a :AdmissionTerminalState ;
+    rdfs:label "Admission Poisoned" ;
+    rdfs:comment "An unfinished drop poisoned the write; no further event is accepted." ;
+    :storedForm "poisoned" .
+
+:AdmissionMachine_Event_Admit a :AdmissionEvent ;
+    rdfs:label "Admission Admit" .
+
+:AdmissionMachine_Event_OpenOwner a :AdmissionEvent ;
+    rdfs:label "Admission OpenOwner" .
+
+:AdmissionMachine_Event_Finish a :AdmissionEvent ;
+    rdfs:label "Admission Finish" .
+
+:AdmissionMachine_Event_Replay a :AdmissionEvent ;
+    rdfs:label "Admission Replay" .
+
+:AdmissionMachine_Event_Poison a :AdmissionEvent ;
+    rdfs:label "Admission Poison" .
+
+:AdmissionMachine_Guard_BatchMatchesOwnerClosed a :AdmissionGuard ;
+    rdfs:label "Admission BatchMatchesOwnerClosed" ;
+    rdfs:comment "Guard: The event names the admitted batch and its owner window is still closed." .
+
+:AdmissionMachine_Guard_BatchMatchesOwnerReady a :AdmissionGuard ;
+    rdfs:label "Admission BatchMatchesOwnerReady" ;
+    rdfs:comment "Guard: The event names the admitted batch and its owner work is done or the layout is ledger-only." .
+
+:AdmissionMachine_A01 a :AdmissionTransition ;
+    rdfs:label "Admission A01" ;
+    :edgeId "A01" ;
+    :fromState :AdmissionMachine_Idle ;
+    :toState :AdmissionMachine_Applying ;
+    :firedBy :AdmissionMachine_Event_Admit .
+
+:AdmissionMachine_A02 a :AdmissionTransition ;
+    rdfs:label "Admission A02" ;
+    :edgeId "A02" ;
+    :fromState :AdmissionMachine_Finished ;
+    :toState :AdmissionMachine_Applying ;
+    :firedBy :AdmissionMachine_Event_Admit .
+
+:AdmissionMachine_A03 a :AdmissionTransition ;
+    rdfs:label "Admission A03" ;
+    :edgeId "A03" ;
+    :fromState :AdmissionMachine_Replayed ;
+    :toState :AdmissionMachine_Applying ;
+    :firedBy :AdmissionMachine_Event_Admit .
+
+:AdmissionMachine_A04 a :AdmissionTransition ;
+    rdfs:label "Admission A04" ;
+    :edgeId "A04" ;
+    :fromState :AdmissionMachine_Applying ;
+    :toState :AdmissionMachine_Applying ;
+    :guardedBy :AdmissionMachine_Guard_BatchMatchesOwnerClosed ;
+    :firedBy :AdmissionMachine_Event_OpenOwner .
+
+:AdmissionMachine_A05 a :AdmissionTransition ;
+    rdfs:label "Admission A05" ;
+    :edgeId "A05" ;
+    :fromState :AdmissionMachine_Applying ;
+    :toState :AdmissionMachine_Finished ;
+    :guardedBy :AdmissionMachine_Guard_BatchMatchesOwnerReady ;
+    :firedBy :AdmissionMachine_Event_Finish .
+
+:AdmissionMachine_A06 a :AdmissionTransition ;
+    rdfs:label "Admission A06" ;
+    :edgeId "A06" ;
+    :fromState :AdmissionMachine_Idle ;
+    :toState :AdmissionMachine_Replayed ;
+    :firedBy :AdmissionMachine_Event_Replay .
+
+:AdmissionMachine_A07 a :AdmissionTransition ;
+    rdfs:label "Admission A07" ;
+    :edgeId "A07" ;
+    :fromState :AdmissionMachine_Finished ;
+    :toState :AdmissionMachine_Replayed ;
+    :firedBy :AdmissionMachine_Event_Replay .
+
+:AdmissionMachine_A08 a :AdmissionTransition ;
+    rdfs:label "Admission A08" ;
+    :edgeId "A08" ;
+    :fromState :AdmissionMachine_Replayed ;
+    :toState :AdmissionMachine_Replayed ;
+    :firedBy :AdmissionMachine_Event_Replay .
+
+:AdmissionMachine_A09 a :AdmissionTransition ;
+    rdfs:label "Admission A09" ;
+    :edgeId "A09" ;
+    :fromState :AdmissionMachine_Idle ;
+    :toState :AdmissionMachine_Poisoned ;
+    :firedBy :AdmissionMachine_Event_Poison .
+
+:AdmissionMachine_A10 a :AdmissionTransition ;
+    rdfs:label "Admission A10" ;
+    :edgeId "A10" ;
+    :fromState :AdmissionMachine_Applying ;
+    :toState :AdmissionMachine_Poisoned ;
+    :firedBy :AdmissionMachine_Event_Poison .
+
+:AdmissionMachine_A11 a :AdmissionTransition ;
+    rdfs:label "Admission A11" ;
+    :edgeId "A11" ;
+    :fromState :AdmissionMachine_Finished ;
+    :toState :AdmissionMachine_Poisoned ;
+    :firedBy :AdmissionMachine_Event_Poison .
+
+:AdmissionMachine_A12 a :AdmissionTransition ;
+    rdfs:label "Admission A12" ;
+    :edgeId "A12" ;
+    :fromState :AdmissionMachine_Replayed ;
+    :toState :AdmissionMachine_Poisoned ;
+    :firedBy :AdmissionMachine_Event_Poison .

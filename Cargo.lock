@@ -6679,6 +6679,7 @@ dependencies = [
  "medulla-semantic-index",
  "medulla-shacl",
  "medulla-source-types",
+ "medulla-transaction",
  "medulla-types",
  "medulla-virtual-graph",
  "medulla-work-types",

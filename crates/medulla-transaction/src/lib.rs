@@ -25,6 +25,7 @@ pub enum SagaBegin {
 }
 
 mod admission;
+pub mod admission_machine;
 mod admitted;
 mod commit;
 mod graft;

@@ -220,6 +220,21 @@ fn batch(identity: MutationScopeIdentity, batch_id: &str) -> MutationBatch {
     batch
 }
 
+/// One committed batch record, the shape a replayed admission carries.
+pub(crate) fn committed_record_fixture(
+) -> medulla_protocol_types::mutation_batch::MutationBatchRecord {
+    let identity = native_identity("admission-machine", "inc-1");
+    let batch = batch(identity.clone(), "admission-machine-batch");
+    medulla_protocol_types::mutation_batch::MutationBatchRecord {
+        batch,
+        identity,
+        status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
+        committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::None,
+        result_msgpack: None,
+        committed_at_ms: 1,
+    }
+}
+
 fn recovery_batch(identity: MutationScopeIdentity, batch_id: &str) -> (MutationBatch, Vec<u8>) {
     let digest = "b".repeat(64);
     let mut batch = batch(identity, batch_id);

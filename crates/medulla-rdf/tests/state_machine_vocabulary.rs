@@ -876,4 +876,13 @@ fn schedule_machine_matches_edge_table() {
 #[test]
 fn schedule_machine_classes_extend_core() {
     sm::assert_extends_core("Schedule");
+// spec: MEDULLA-TYPED-PACKS-R810.1
+#[test]
+fn admission_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_transaction::admission_machine::ADMISSION_MACHINE);
+}
+// spec: MEDULLA-TYPED-PACKS-R810.1
+#[test]
+fn admission_machine_classes_extend_core() {
+    sm::assert_extends_core("Admission");
 }

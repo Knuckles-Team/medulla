@@ -1,6 +1,7 @@
 //! Per-write admission state machine: exactly one admitted batch, exactly one
 //! owner-row window inside it, and a poisoned write on any unfinished drop.
 
+use crate::admission_machine::AdmissionEvent;
 use crate::admitted::{is_ledger_only, AdmittedMutation};
 use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord};
 use medulla_storage::{encode_bounded, OwnerDomain, OwnerLayout};
@@ -48,32 +49,10 @@ pub(crate) enum AdmissionState {
 impl<D: OwnerDomain> AdmittedMutation<'_, D> {
     pub(crate) fn admit_apply_batch(&self, batch: &MutationBatch) -> Result<(), String> {
         let encoded = encode_bounded(batch, "admitted mutation batch")?;
-        let mut state = self.admission.borrow_mut();
-        match &*state {
-            AdmissionState::Idle | AdmissionState::Finished { .. } => {
-                *state = AdmissionState::Applying {
-                    batch: encoded,
-                    owner: None,
-                };
-                Ok(())
-            }
-            // A replayed member wrote nothing, so it is not an open batch: the
-            // NEXT batch in the sequence may apply over it. (This states that a
-            // replay applies nothing itself, which `open_owner_admission` and
-            // `finish_batch_admission` still enforce -- they accept only
-            // `Applying`.)
-            AdmissionState::Replayed { .. } => {
-                *state = AdmissionState::Applying {
-                    batch: encoded,
-                    owner: None,
-                };
-                Ok(())
-            }
-            AdmissionState::Applying { .. } => {
-                Err("another mutation batch is already admitted".to_string())
-            }
-            AdmissionState::Poisoned => Err("mutation write is poisoned".to_string()),
-        }
+        self.admission
+            .borrow_mut()
+            .apply(AdmissionEvent::Admit { batch: encoded })
+            .map_err(|refused| refused.to_string())
     }
 
     /// Record that this member's batch resolved to an already-durable receipt.
@@ -84,54 +63,34 @@ impl<D: OwnerDomain> AdmittedMutation<'_, D> {
     ) -> Result<(), String> {
         let encoded = encode_bounded(batch, "replayed mutation batch")?;
         let mut state = self.admission.borrow_mut();
-        match &*state {
-            AdmissionState::Idle => {
-                *state = AdmissionState::Replayed {
-                    batch: encoded,
-                    record: Box::new(record.clone()),
-                    finished: None,
-                };
-                Ok(())
-            }
-            AdmissionState::Replayed {
-                batch: existing,
-                record: existing_record,
-                ..
-            } if existing.as_slice() == encoded.as_slice() => {
+        // Remembering the same replay again is idempotent when its record agrees.
+        if let AdmissionState::Replayed {
+            batch: existing,
+            record: existing_record,
+            ..
+        } = &*state
+        {
+            if existing.as_slice() == encoded.as_slice() {
                 let existing_batch =
                     encode_bounded(&existing_record.batch, "replayed mutation batch")?;
                 let record_batch = encode_bounded(&record.batch, "replayed mutation batch")?;
-                if existing_batch == record_batch {
+                return if existing_batch == record_batch {
                     Ok(())
                 } else {
                     Err("a replayed batch record does not match its admitted batch".to_string())
-                }
-            }
-            // A replay may follow a COMPLETED batch in the same write: the
-            // sequence's terminal reference is carried forward rather than
-            // overwritten (see `AdmissionState::Replayed::finished`). What
-            // remains refused is a replay over an OPEN (`Applying`) batch --
-            // that really would be two live batches at once.
-            AdmissionState::Finished { batch: finished } => {
-                *state = AdmissionState::Replayed {
-                    batch: encoded,
-                    record: Box::new(record.clone()),
-                    finished: Some(finished.clone()),
                 };
-                Ok(())
             }
-            AdmissionState::Replayed { finished, .. } => {
-                let finished = finished.clone();
-                *state = AdmissionState::Replayed {
-                    batch: encoded,
-                    record: Box::new(record.clone()),
-                    finished,
-                };
-                Ok(())
-            }
-            AdmissionState::Poisoned => Err("mutation write is poisoned".to_string()),
-            _ => Err("a replayed batch cannot follow an admitted one".to_string()),
         }
+        // A replay may follow a COMPLETED batch in the same write: the sequence's terminal
+        // reference is carried forward by the transition (see
+        // `AdmissionState::Replayed::finished`). A replay over an OPEN (`Applying`) batch is
+        // refused by the machine: that really would be two live batches at once.
+        state
+            .apply(AdmissionEvent::Replay {
+                batch: encoded,
+                record: Box::new(record.clone()),
+            })
+            .map_err(|refused| refused.to_string())
     }
 
     /// Mark the already-remembered replay as terminal for a group member.
@@ -183,22 +142,13 @@ impl<D: OwnerDomain> AdmittedMutation<'_, D> {
         layout: OwnerLayout,
     ) -> Result<(), String> {
         let encoded = encode_bounded(batch, "owner mutation batch")?;
-        let mut state = self.admission.borrow_mut();
-        match &mut *state {
-            AdmissionState::Applying {
-                batch: admitted,
-                owner,
-                ..
-            } if admitted.as_slice() == encoded.as_slice() && owner.is_none() => {
-                *owner = Some(layout);
-                Ok(())
-            }
-            AdmissionState::Applying { .. } => {
-                Err("owner write does not match the admitted batch".to_string())
-            }
-            AdmissionState::Poisoned => Err("mutation write is poisoned".to_string()),
-            _ => Err("owner write requires an admitted mutation batch".to_string()),
-        }
+        self.admission
+            .borrow_mut()
+            .apply(AdmissionEvent::OpenOwner {
+                batch: encoded,
+                layout,
+            })
+            .map_err(|refused| refused.to_string())
     }
 
     pub(crate) fn finish_owner_admission(&self, layout: OwnerLayout) -> Result<(), String> {
@@ -213,25 +163,24 @@ impl<D: OwnerDomain> AdmittedMutation<'_, D> {
     }
 
     pub(crate) fn poison_owner_admission(&self) {
-        *self.admission.borrow_mut() = AdmissionState::Poisoned;
+        let mut state = self.admission.borrow_mut();
+        if state.phase() == crate::admission_machine::AdmissionPhase::Poisoned {
+            return;
+        }
+        if let Err(refused) = state.apply(AdmissionEvent::Poison) {
+            tracing::error!(%refused, "poisoning a mutation write was refused");
+        }
     }
 
     pub(crate) fn finish_batch_admission(&self, batch: &MutationBatch) -> Result<(), String> {
         let encoded = encode_bounded(batch, "finished mutation batch")?;
-        let mut state = self.admission.borrow_mut();
-        match &*state {
-            AdmissionState::Applying {
-                batch: admitted,
-                owner,
-            } if admitted.as_slice() == encoded.as_slice()
-                && (is_ledger_only(D::LAYOUT) || owner.is_some()) =>
-            {
-                *state = AdmissionState::Finished { batch: encoded };
-                Ok(())
-            }
-            AdmissionState::Poisoned => Err("mutation write is poisoned".to_string()),
-            _ => Err("mutation batch owner work is unfinished or mismatched".to_string()),
-        }
+        self.admission
+            .borrow_mut()
+            .apply(AdmissionEvent::Finish {
+                batch: encoded,
+                ledger_only: is_ledger_only(D::LAYOUT),
+            })
+            .map_err(|refused| refused.to_string())
     }
 
     /// Check the finish preconditions before any terminal metadata is written.
