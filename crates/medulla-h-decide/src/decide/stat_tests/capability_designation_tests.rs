@@ -315,6 +315,7 @@ fn decide_with_runtime(
         &ctx,
         request,
         None,
+        0,
         // The verified principal's persistence id, as the served path seals it,
         // so `DecisionLog.commit` by "decider" accepts the record.
         super::retrieval_tests::principal_of("decider"),

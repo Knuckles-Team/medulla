@@ -67,6 +67,56 @@ fn stored_matrix(record: &StatisticalDecisionRecord) -> Result<FeatureMatrix, St
     ))
 }
 
+/// The caller's RLS-filtered snapshot of each graph a record read rows from,
+/// with the graph's write version, keyed by graph name.
+pub(super) type GraphSnapshots =
+    std::collections::BTreeMap<String, (medulla_graph_core::graph::GraphView, u64)>;
+
+/// Re-read the graph rows a record names and refuse a difference
+/// (MEDULLA-DECISION-ENGINE-R121.2). Rows are read from the caller's filtered
+/// snapshot, so a row the caller can no longer see differs as much as a row
+/// whose class or source changed. The store keeps no historical view, so a
+/// graph that moved on with the recorded rows unchanged still replays; the
+/// recorded `graph_version` stays in the record as the version the rows were
+/// read at.
+pub(super) fn verify_graph_rows(
+    record: &StatisticalDecisionRecord,
+    graphs: &GraphSnapshots,
+) -> Result<(), String> {
+    for row in record.inputs.graph_rows.iter() {
+        let (view, _) = graphs.get(&row.graph).ok_or_else(|| {
+            mismatch(&format!(
+                "graph {} was not re-read for row {}",
+                row.graph, row.node_id
+            ))
+        })?;
+        let properties = view
+            .node_properties
+            .get(&row.node_id)
+            .and_then(|blob| medulla_types::msgpack::decode_property_value(blob.as_slice()).ok())
+            .ok_or_else(|| {
+                mismatch(&format!(
+                    "graph row {} is no longer visible in {}",
+                    row.node_id, row.graph
+                ))
+            })?;
+        let now = super::candidates::graph_row_provenance(
+            &row.graph,
+            row.graph_version,
+            &row.node_id,
+            &properties,
+        )
+        .map_err(|detail| mismatch(&detail))?;
+        if now != *row {
+            return Err(mismatch(&format!(
+                "graph row {} no longer has the recorded class and source",
+                row.node_id
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// An executed decision is logged so an outcome can evaluate it; an
 /// abstention is logged so its escalation can be resolved against it
 /// (EH-037). An advisory score executed nothing and resolves nothing.

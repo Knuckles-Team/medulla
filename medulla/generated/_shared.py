@@ -1186,6 +1186,14 @@ class PremiseProvenanceCapacityCell(BaseModel):
     provenance: Literal["capacity_cell"]
 
 
+class PremiseProvenanceGraphRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    graph_version: Annotated[int, Field(ge=0)]
+    provenance: Literal["graph_row"]
+
+
 PremiseProvenance = Annotated[
     PremiseProvenanceNativeOntology
     | PremiseProvenancePolicy
@@ -1195,7 +1203,8 @@ PremiseProvenance = Annotated[
     | PremiseProvenanceObservation
     | PremiseProvenanceRequest
     | PremiseProvenanceSchemaSource
-    | PremiseProvenanceCapacityCell,
+    | PremiseProvenanceCapacityCell
+    | PremiseProvenanceGraphRow,
     Field(discriminator="provenance"),
 ]
 
@@ -2411,6 +2420,7 @@ PremiseProvenanceRequest.model_rebuild()
 PremiseProvenanceSchemaSource.model_rebuild()
 
 PremiseProvenanceCapacityCell.model_rebuild()
+PremiseProvenanceGraphRow.model_rebuild()
 
 PremiseRef.model_rebuild()
 
@@ -2704,6 +2714,7 @@ __all__ = [
     "PremiseClass",
     "PremiseProvenance",
     "PremiseProvenanceCapacityCell",
+    "PremiseProvenanceGraphRow",
     "PremiseProvenanceClaimedMapping",
     "PremiseProvenanceConnectorPack",
     "PremiseProvenanceNativeOntology",

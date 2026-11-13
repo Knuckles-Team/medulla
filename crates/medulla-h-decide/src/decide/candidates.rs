@@ -22,6 +22,9 @@ use medulla_agent_types::{
     agent_component::AgentComponentSearchRequest,
 };
 use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_types::decision::statistical::graph_rows::{
+    GraphNodeClass, GraphRowProvenance,
+};
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
 use medulla_decision_types::{
     decision::statistical::declared::check_declared,
@@ -58,6 +61,9 @@ pub(super) struct ReadCandidates {
     pub(super) visibility: RecordVisibility,
     /// Rule-derived classes of library candidates (EH-200); empty for graph rows.
     pub(super) derived: DerivedClasses,
+    /// The provenance of each graph row read, in id order; empty for library
+    /// and declared candidates (MEDULLA-DECISION-ENGINE-R121.2).
+    pub(super) graph_rows: Vec<GraphRowProvenance>,
 }
 
 fn too_many() -> String {
@@ -182,6 +188,7 @@ pub(super) fn library_candidates(
             classification_under: scope.classification_under.clone(),
         },
         visibility: RecordVisibility::Tenant,
+        graph_rows: Vec::new(),
     })
 }
 
@@ -264,12 +271,70 @@ fn row_view(id: String, properties: &serde_json::Value) -> CandidateView {
     CandidateView::from_row(id, numbers, texts)
 }
 
+/// Whether the node's typed label is `label`: its `type`, `node_type` or
+/// `label` field, or a member of its `labels` list. Property names other than
+/// these never decide a row's class.
+fn has_label(properties: &serde_json::Value, label: &str) -> bool {
+    ["type", "node_type", "label"]
+        .iter()
+        .any(|key| properties.get(key).and_then(serde_json::Value::as_str) == Some(label))
+        || properties
+            .get("labels")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|labels| labels.iter().any(|value| value.as_str() == Some(label)))
+}
+
+/// Whether `text` is an absolute IRI: a scheme, a colon and a non-empty rest
+/// with no whitespace or control character.
+fn is_iri(text: &str) -> bool {
+    let Some((scheme, rest)) = text.split_once(':') else {
+        return false;
+    };
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+        && !rest.is_empty()
+        && !text.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
+/// The class and source of one graph row (MEDULLA-DECISION-ENGINE-R121.2). An
+/// `Evidence` node that carries a `source` is an observation and the source
+/// must be an IRI; every other node is a claim.
+pub(super) fn graph_row_provenance(
+    graph: &str,
+    graph_version: u64,
+    node_id: &str,
+    properties: &serde_json::Value,
+) -> Result<GraphRowProvenance, String> {
+    let source = properties.get("source");
+    let (node_class, source_iri) = match source {
+        Some(source) if has_label(properties, "Evidence") => {
+            let iri = source.as_str().filter(|text| is_iri(text)).ok_or_else(|| {
+                refusal(
+                    StatisticalErrorCode::GraphProvenanceMalformed,
+                    format!("evidence row {node_id} names a source that is not an IRI"),
+                )
+            })?;
+            (GraphNodeClass::Observation, Some(iri.to_string()))
+        }
+        _ => (GraphNodeClass::Claim, None),
+    };
+    Ok(GraphRowProvenance {
+        graph: graph.to_string(),
+        node_id: node_id.to_string(),
+        node_class,
+        source_iri,
+        graph_version,
+    })
+}
+
 /// Graph candidates: the rows `plan` selects from `view`, which the caller's
 /// RLS has already filtered.
 #[cfg(feature = "query")]
 pub(super) fn graph_candidates(
     view: &medulla_graph_core::graph::GraphView,
     graph: &str,
+    graph_version: u64,
     plan: &medulla_query_types::wire::Plan,
     principal: String,
 ) -> Result<ReadCandidates, String> {
@@ -284,19 +349,22 @@ pub(super) fn graph_candidates(
     if ids.len() > MAX_ASSEMBLY_CANDIDATES {
         return Err(too_many());
     }
-    let views = ids
-        .into_iter()
-        .map(|id| {
-            let properties = view
-                .node_properties
-                .get(&id)
-                .and_then(|blob| {
-                    medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()
-                })
-                .unwrap_or(serde_json::Value::Null);
-            row_view(id, &properties)
-        })
-        .collect();
+    let mut views = Vec::with_capacity(ids.len());
+    let mut graph_rows = Vec::with_capacity(ids.len());
+    for id in ids {
+        let properties = view
+            .node_properties
+            .get(&id)
+            .and_then(|blob| medulla_types::msgpack::decode_property_value(blob.as_slice()).ok())
+            .unwrap_or(serde_json::Value::Null);
+        graph_rows.push(graph_row_provenance(
+            graph,
+            graph_version,
+            &id,
+            &properties,
+        )?);
+        views.push(row_view(id, &properties));
+    }
     Ok(ReadCandidates {
         views,
         entries: Vec::new(),
@@ -308,6 +376,7 @@ pub(super) fn graph_candidates(
         },
         visibility: RecordVisibility::Principal { principal },
         derived: DerivedClasses::default(),
+        graph_rows,
     })
 }
 
@@ -407,6 +476,7 @@ pub(super) fn declared_candidates(
             principal: principal.to_string(),
         },
         derived: DerivedClasses::default(),
+        graph_rows: Vec::new(),
     })
 }
 
@@ -419,6 +489,7 @@ pub(super) fn read_candidates(
     tenant_id: &str,
     source: &CandidateSource,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
+    graph_version: u64,
     principal: &str,
     family: &dyn DecisionFamily,
 ) -> Result<ReadCandidates, String> {
@@ -436,11 +507,11 @@ pub(super) fn read_candidates(
             })?;
             #[cfg(feature = "query")]
             {
-                graph_candidates(view, graph, plan, principal.to_string())
+                graph_candidates(view, graph, graph_version, plan, principal.to_string())
             }
             #[cfg(not(feature = "query"))]
             {
-                let _ = (view, graph, plan, principal);
+                let _ = (view, graph, graph_version, plan, principal);
                 Err(refusal(
                     StatisticalErrorCode::CandidatePlanRefused,
                     "graph candidates need the query feature",
@@ -450,20 +521,20 @@ pub(super) fn read_candidates(
     }
 }
 
-/// The caller's RLS-filtered snapshot of the graph a graph source names, or
-/// `None` for a library source. The graph ACL is checked first; the snapshot
-/// is filtered before any plan stage sees it.
+/// The caller's RLS-filtered snapshot of the graph a graph source names, with
+/// the graph's write version, or `None` for a library source. The graph ACL is
+/// checked first; the snapshot is filtered before any plan stage sees it.
 #[cfg(feature = "query")]
 pub(super) async fn filtered_graph_view(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     source: &CandidateSource,
-) -> Result<Option<medulla_graph_core::graph::GraphView>, String> {
+) -> Result<Option<(medulla_graph_core::graph::GraphView, u64)>, String> {
     let CandidateSource::Graph { graph, .. } = source else {
         return Ok(None);
     };
     Ok(Some(
-        super::stat_support::filtered_view(state, agent_id, graph).await?,
+        super::stat_support::filtered_view_versioned(state, agent_id, graph).await?,
     ))
 }
 
@@ -473,6 +544,6 @@ pub(super) async fn filtered_graph_view(
     _state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     _agent_id: &str,
     _source: &CandidateSource,
-) -> Result<Option<medulla_graph_core::graph::GraphView>, String> {
+) -> Result<Option<(medulla_graph_core::graph::GraphView, u64)>, String> {
     Ok(None)
 }

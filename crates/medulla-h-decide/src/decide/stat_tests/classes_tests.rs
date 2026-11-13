@@ -81,3 +81,243 @@ async fn derived_classes_select_candidates_as_claims_under_a_pinned_rule_set() {
         medulla_decision_types::decision::EvidenceClass::Claim
     );
 }
+
+#[cfg(feature = "query")]
+async fn add_graph_rows(h: &Harness, graph: &str, rows: &[(&str, serde_json::Value)]) {
+    let core = {
+        let mut guard = h.state.write().await;
+        guard
+            .registry
+            .create_graph(
+                graph,
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
+            .unwrap();
+        guard.registry.get(graph).unwrap().core.clone()
+    };
+    for (id, props) in rows {
+        core.add_node(id.to_string(), rmp_serde::to_vec_named(props).unwrap());
+    }
+}
+
+#[cfg(feature = "query")]
+async fn graph_class_request(h: &Harness, graph: &str, label: &str) -> DecideRequest {
+    let body = FeatureSchemaBody {
+        schema_version: FEATURE_SCHEMA_VERSION,
+        features: BoundedVec::new(vec![number_feature("score")]).unwrap(),
+    };
+    let schema_pin = h
+        .publish_test_component(
+            &format!("schema-{graph}"),
+            AgentComponentKind::FeatureSchema,
+            "graph class features",
+            Some(&body),
+            None,
+        )
+        .unwrap();
+    let mut request = request(
+        &schema_pin,
+        None,
+        DecisionPolicyRef::Default,
+        QuestionSafety::Ordinary,
+    );
+    request.candidates = CandidateSource::Graph {
+        graph: graph.to_string(),
+        plan: Box::new(medulla_types::wire::Plan::new(vec![
+            medulla_types::wire::Op::Scan {
+                label: label.to_string(),
+            },
+        ])),
+    };
+    request
+}
+
+#[cfg(feature = "query")]
+fn graph_row_premises(
+    record: &StatisticalDecisionRecord,
+) -> Vec<(String, medulla_decision_types::decision::PremiseClass)> {
+    let mut rows: Vec<_> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("graph_row:"))
+        .map(|premise| (premise.fact.clone(), premise.class))
+        .collect();
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R121.2
+#[cfg(feature = "query")]
+#[tokio::test]
+async fn graph_claim_and_evidence_control_answer_class() {
+    use medulla_decision_types::decision::statistical::graph_rows::GraphNodeClass;
+    use medulla_decision_types::decision::PremiseClass;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    add_graph_rows(
+        &h,
+        "kg-evidence",
+        &[
+            (
+                "ev-1",
+                serde_json::json!({"type": "Evidence", "score": 0.9, "source": "https://example.org/doc/1"}),
+            ),
+            (
+                "ev-2",
+                serde_json::json!({"type": "Evidence", "score": 0.4, "source": "urn:doc:2"}),
+            ),
+        ],
+    )
+    .await;
+    // A claim whose properties and subject look like evidence: it names a
+    // source and a `kind` of Evidence, but its typed label is Claim.
+    add_graph_rows(
+        &h,
+        "kg-claim",
+        &[(
+            "evidence:looks-like",
+            serde_json::json!({
+                "type": "Claim", "score": 0.7, "kind": "Evidence",
+                "source": "https://example.org/doc/3"
+            }),
+        )],
+    )
+    .await;
+    // An Evidence node that names no source is not an observation.
+    add_graph_rows(
+        &h,
+        "kg-nosource",
+        &[(
+            "ev-bare",
+            serde_json::json!({"type": "Evidence", "score": 0.5}),
+        )],
+    )
+    .await;
+    add_graph_rows(
+        &h,
+        "kg-malformed",
+        &[(
+            "ev-bad",
+            serde_json::json!({"type": "Evidence", "score": 0.5, "source": "not an iri"}),
+        )],
+    )
+    .await;
+
+    let evidence = decide(&h, graph_class_request(&h, "kg-evidence", "Evidence").await)
+        .await
+        .unwrap();
+    let evidence = evidence.records.as_slice()[0].clone();
+    assert_eq!(
+        evidence
+            .inputs
+            .graph_rows
+            .iter()
+            .map(|row| (
+                row.node_id.as_str(),
+                row.node_class,
+                row.source_iri.as_deref()
+            ))
+            .collect::<Vec<_>>(),
+        [
+            (
+                "ev-1",
+                GraphNodeClass::Observation,
+                Some("https://example.org/doc/1")
+            ),
+            ("ev-2", GraphNodeClass::Observation, Some("urn:doc:2")),
+        ]
+    );
+    assert_eq!(
+        graph_row_premises(&evidence),
+        [
+            ("graph_row:ev-1".to_string(), PremiseClass::Observation),
+            ("graph_row:ev-2".to_string(), PremiseClass::Observation),
+        ]
+    );
+    assert_eq!(
+        evidence.evidence_class,
+        medulla_decision_types::decision::EvidenceClass::Observation,
+        "only observations feed the answer, so it is an observation"
+    );
+
+    let claim = decide(&h, graph_class_request(&h, "kg-claim", "Claim").await)
+        .await
+        .unwrap();
+    let claim = claim.records.as_slice()[0].clone();
+    assert_eq!(
+        claim.inputs.graph_rows.as_slice()[0].node_class,
+        GraphNodeClass::Claim
+    );
+    assert_eq!(claim.inputs.graph_rows.as_slice()[0].source_iri, None);
+    assert_eq!(
+        graph_row_premises(&claim),
+        [(
+            "graph_row:evidence:looks-like".to_string(),
+            PremiseClass::Claim
+        )]
+    );
+    assert_eq!(
+        claim.evidence_class,
+        medulla_decision_types::decision::EvidenceClass::Claim,
+        "a claim row never lifts the answer, whatever its properties say"
+    );
+
+    let bare = decide(&h, graph_class_request(&h, "kg-nosource", "Evidence").await)
+        .await
+        .unwrap();
+    assert_eq!(
+        bare.records.as_slice()[0].inputs.graph_rows.as_slice()[0].node_class,
+        GraphNodeClass::Claim,
+        "an Evidence node without a source is a claim"
+    );
+
+    let malformed = decide(
+        &h,
+        graph_class_request(&h, "kg-malformed", "Evidence").await,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        malformed.starts_with("GRAPH_PROVENANCE_MALFORMED"),
+        "{malformed}"
+    );
+
+    // Replay: the commit re-reads the rows and refuses a difference.
+    let commit = |record: &StatisticalDecisionRecord| DecisionLogOp::Commit {
+        record: Box::new(record.clone()),
+        evaluator: None,
+    };
+    let committed: DecisionLogCommitted =
+        decode(log_op(&h, "decider", commit(&evidence)).await).unwrap();
+    assert!(!committed.replayed);
+    let core = {
+        let guard = h.state.read().await;
+        guard.registry.get("kg-evidence").unwrap().core.clone()
+    };
+    let before = core.version();
+    let relabelled =
+        serde_json::json!({"type": "Claim", "score": 0.9, "source": "https://example.org/doc/1"});
+    core.add_node(
+        "ev-1".to_string(),
+        rmp_serde::to_vec_named(&relabelled).unwrap(),
+    );
+    assert!(core.version() > before, "the write moved the graph version");
+    let fresh_claim = decide(&h, graph_class_request(&h, "kg-claim", "Claim").await)
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    assert!(
+        decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&fresh_claim)).await).is_ok()
+    );
+    // The row the first record read is now a claim: a record that was never
+    // committed refuses at its commit.
+    let mut stale = evidence.clone();
+    stale.record_id = "decision:stale-rows".to_string();
+    stale.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&stale);
+    let refused =
+        decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&stale)).await).unwrap_err();
+    assert!(refused.starts_with("DECISION_REPLAY_MISMATCH"), "{refused}");
+}

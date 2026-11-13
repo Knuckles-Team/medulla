@@ -53,7 +53,7 @@ use medulla_decision_types::{
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;
-use super::stat_replay::{replay_view, replay_with_view};
+use super::stat_replay::{replay_view, replay_with_view, verify_graph_rows, GraphSnapshots};
 use super::stat_resolve::resolve;
 use super::stat_retention::{compact, full_record, verify, Retention};
 use super::stat_slate::{evaluated_slates, slate_of, SLATE_QUESTION};
@@ -290,6 +290,7 @@ fn commit(
     record: &StatisticalDecisionRecord,
     evaluator: Option<&medulla_decision_types::decision::statistical::log::NamedEvaluator>,
     replay_graph: Option<&medulla_graph_core::graph::GraphView>,
+    graphs: &GraphSnapshots,
 ) -> Result<DecisionLogCommitted, String> {
     if record.caller_principal != reader.principal {
         return Err(
@@ -317,6 +318,10 @@ fn commit(
             "the record id is logged with other content",
         ));
     }
+    // A new record's graph rows are re-read now; an already logged record
+    // answers above without it, so a repeat commit stays idempotent after the
+    // graph moves on.
+    verify_graph_rows(record, graphs)?;
     let entry = DecisionLogEntry {
         schema_version: DECISION_LOG_SCHEMA_VERSION,
         visibility: visibility_of(&logged, &reader.principal),
@@ -829,6 +834,7 @@ fn dispatch(
     inputs: Option<&super::stat_learning::LearningInputs>,
     index: &medulla_decision_memory::memory::capability_index::CapabilityIndex,
     replay_graph: Option<&medulla_graph_core::graph::GraphView>,
+    graphs: &GraphSnapshots,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionLogAggregate,
@@ -840,9 +846,16 @@ fn dispatch(
         result_contract::coordination::DecisionLogVerify,
     };
     match op {
-        DecisionLogOp::Commit { record, evaluator } => ResultPayload::of::<DecisionLogCommit>(
-            commit(ctx, reader, &record, evaluator.as_ref(), replay_graph)?,
-        ),
+        DecisionLogOp::Commit { record, evaluator } => {
+            ResultPayload::of::<DecisionLogCommit>(commit(
+                ctx,
+                reader,
+                &record,
+                evaluator.as_ref(),
+                replay_graph,
+                graphs,
+            )?)
+        }
         DecisionLogOp::Evaluate { evaluation, .. } => {
             ResultPayload::of::<DecisionLogEvaluate>(evaluate(ctx, reader, evaluation)?)
         }
@@ -946,6 +959,31 @@ fn dispatch(
     }
 }
 
+/// The caller's filtered snapshot of every graph a committed record read rows
+/// from, read before the blocking commit; empty for every other op.
+async fn commit_graphs(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    op: &DecisionLogOp,
+) -> Result<GraphSnapshots, String> {
+    let mut graphs = GraphSnapshots::new();
+    let DecisionLogOp::Commit { record, .. } = op else {
+        return Ok(graphs);
+    };
+    for row in record.inputs.graph_rows.iter() {
+        if !graphs.contains_key(&row.graph) {
+            let snapshot = super::stat_support::filtered_view_versioned(
+                state,
+                verified.agent_id(),
+                &row.graph,
+            )
+            .await?;
+            graphs.insert(row.graph.clone(), snapshot);
+        }
+    }
+    Ok(graphs)
+}
+
 async fn serve(
     state: &SharedState,
     req_id: u64,
@@ -984,6 +1022,7 @@ async fn serve(
     };
     let blocking_graph = run_graph.clone();
     let principal = verified.agent_id().to_string();
+    let graphs = commit_graphs(state, verified, &op).await?;
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
     let result = tokio::task::spawn_blocking(move || {
@@ -1013,6 +1052,7 @@ async fn serve(
                 inputs.as_ref(),
                 &index,
                 replay_graph.as_ref(),
+                &graphs,
             )
             .map(Served::Payload),
         }

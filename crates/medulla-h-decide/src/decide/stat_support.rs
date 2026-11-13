@@ -30,6 +30,18 @@ pub(super) async fn filtered_view(
     agent_id: &str,
     graph: &str,
 ) -> Result<medulla_graph_core::graph::GraphView, String> {
+    filtered_view_versioned(state, agent_id, graph)
+        .await
+        .map(|(view, _)| view)
+}
+
+/// [`filtered_view`] with the graph's write version read just before the
+/// snapshot, so the version never claims a write the rows do not reflect.
+pub(super) async fn filtered_view_versioned(
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    agent_id: &str,
+    graph: &str,
+) -> Result<(medulla_graph_core::graph::GraphView, u64), String> {
     let (core, isolation) = readable_graph(
         state,
         agent_id,
@@ -39,6 +51,7 @@ pub(super) async fn filtered_view(
     .await?;
     #[cfg(not(feature = "security"))]
     let _ = isolation;
+    let version = core.version();
     let view = core.analysis_snapshot();
     #[cfg(feature = "security")]
     let view = {
@@ -46,7 +59,7 @@ pub(super) async fn filtered_view(
         isolation.filter_view(agent_id, &mut view);
         view
     };
-    Ok(view)
+    Ok((view, version))
 }
 
 /// Open a graph for one caller before exposing its data to a statistical read.

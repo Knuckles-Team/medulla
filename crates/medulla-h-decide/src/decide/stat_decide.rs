@@ -235,27 +235,31 @@ async fn serve(
                     &request,
                 )
                 .await
-                .map(Some)
+                .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::EditConcentration {
                 super::stat_concentration::concentration_view(state, verified.agent_id(), &request)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::HeldItemAdmission {
                 super::family::held_item_view(state, verified.agent_id(), &request)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::CommandConfig {
                 super::family::command_view(state, verified.agent_id(), &request)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::FanoutAggregate {
                 super::family::fanout_view(state, verified.agent_id(), verified.tenant(), &request)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::RuntimeQuota {
-                super::family::quota_view(state, verified.agent_id(), &request).await
+                super::family::quota_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
-                super::family::disclosure_view(state, verified.agent_id(), &request).await
+                super::family::disclosure_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ContextPackage {
                 // A `context_package` question declares its candidates and checks
                 // each against its cited source node in the graph named by its
@@ -263,7 +267,7 @@ async fn serve(
                 let graph = super::family::context_package::source_graph(&request)?;
                 super::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
             } else if super::family::planning_admission::reads_repository_graph(&request) {
                 super::family::planning_admission::planning_view(
                     state,
@@ -271,11 +275,22 @@ async fn serve(
                     &request,
                 )
                 .await
-                .map(Some)
+                .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::TeamCoordination {
                 super::stat_team::team_view(state, verified.agent_id(), &request)
                     .await
-                    .map(Some)
+                    .map(|view| Some((view, 0)))
+            } else if request.question.kind == QuestionKind::ToolActionAdmission {
+                super::family::admission_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| Some((view, 0)))
+            } else if request.question.kind == QuestionKind::AnalystSynthesis {
+                // An `analyst_synthesis` question resolves each citation against the
+                // graph named by its `source_graph` param, under the same ACL and RLS filter.
+                let graph = super::family::context_package::source_graph(&request)?;
+                super::stat_support::filtered_view(state, verified.agent_id(), graph)
+                    .await
+                    .map(|view| Some((view, 0)))
             } else {
                 super::candidates::filtered_graph_view(
                     state,
@@ -287,6 +302,10 @@ async fn serve(
         },
     )
     .await?;
+    let (graph_view, graph_version) = match graph_view {
+        Some((view, version)) => (Some(view), version),
+        None => (None, 0),
+    };
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
@@ -312,7 +331,14 @@ async fn serve(
                     designation: designation.as_ref(),
                     reader: Some(&reader),
                 };
-                decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
+                decide_blocking(
+                    &ctx,
+                    &request,
+                    graph_view.as_ref(),
+                    graph_version,
+                    principal,
+                    started,
+                )
             })
         })
     })
@@ -324,6 +350,7 @@ pub(super) fn decide_blocking(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
+    graph_version: u64,
     principal: String,
     started: Instant,
 ) -> Result<DecisionBatch, String> {
@@ -343,6 +370,7 @@ pub(super) fn decide_blocking(
             ctx.tenant_id,
             &request.candidates,
             graph_view,
+            graph_version,
             &principal,
             registry,
         )
@@ -663,6 +691,32 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
         .collect()
 }
 
+/// One premise per graph row read, `graph_row:<node_id>`, of the class the
+/// row's typed label gives it (MEDULLA-DECISION-ENGINE-R121.2). The record's
+/// evidence class is the weakest premise class, so a claim row can never
+/// lift an answer to an observation.
+fn graph_row_premises(candidates: &ReadCandidates) -> Vec<PremiseRef> {
+    use medulla_decision_types::decision::statistical::graph_rows::GraphNodeClass;
+    candidates
+        .graph_rows
+        .iter()
+        .map(|row| {
+            premise(
+                &row.node_id,
+                &format!("graph_row:{}", row.node_id),
+                match row.node_class {
+                    GraphNodeClass::Observation => PremiseClass::Observation,
+                    GraphNodeClass::Claim => PremiseClass::Claim,
+                },
+                PremiseProvenance::GraphRow {
+                    graph: row.graph.clone(),
+                    graph_version: row.graph_version,
+                },
+            )
+        })
+        .collect()
+}
+
 /// One DEFINITION premise per knob this decision read, `knob:<name>=<value>`,
 /// bound to the digest of the policy that supplied the value
 /// (MEDULLA-DECISION-ENGINE-R179.5). The decision reads the drift thresholds
@@ -831,6 +885,7 @@ fn premises(sealing: &Sealing, nl: Option<&NlBinding>) -> Vec<PremiseRef> {
     out.extend(knob_premises(sealing));
     out.extend(derived_premises(sealing));
     out.extend(declared_premises(sealing.request));
+    out.extend(graph_row_premises(sealing.candidates));
     if let Some(NlBinding {
         source:
             NlChoiceSource::LlmProposal {
@@ -961,6 +1016,7 @@ fn seal(
         exploration: exploration(&sealing, executed),
         belief_slices: bounded(sealing.slices.inputs.clone())?,
         evidence_streams: sealing.request.evidence_streams.clone(),
+        graph_rows: bounded(sealing.candidates.graph_rows.clone())?,
     };
     let inputs_digest = digest_text(
         STATISTICAL_INPUTS_DOMAIN,

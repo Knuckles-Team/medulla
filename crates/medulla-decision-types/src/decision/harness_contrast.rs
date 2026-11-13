@@ -1119,6 +1119,7 @@ mod tests {
             },
             exploration: None,
             belief_slices: BoundedVec::new(Vec::new()).unwrap(),
+            graph_rows: BoundedVec::new(Vec::new()).unwrap(),
             harness_contrast: Some(decision.clone()),
             evidence_streams: Default::default(),
         };

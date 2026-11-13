@@ -112,6 +112,7 @@ fn decide_edit(
         &ctx,
         &request(pin),
         Some(view),
+        0,
         "decider".to_string(),
         Instant::now(),
     )

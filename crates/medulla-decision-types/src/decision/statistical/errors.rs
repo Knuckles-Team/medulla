@@ -116,6 +116,9 @@ closed_error_codes! {
         ThoughtMergeCycle => "THOUGHT_MERGE_CYCLE",
         /// A thought score is not on scale Q32 (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtScoreNotFixedPoint => "THOUGHT_SCORE_NOT_FIXED_POINT",
+        /// A graph evidence row names a `source` that is not an IRI
+        /// (MEDULLA-DECISION-ENGINE-R121.2).
+        GraphProvenanceMalformed => "GRAPH_PROVENANCE_MALFORMED",
         /// A thought has a duplicate id, a missing parent or a depth that
         /// disagrees with its parent (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtNodeInvalid => "THOUGHT_NODE_INVALID",

@@ -193,6 +193,7 @@ from ._shared import (
     PremiseClass,
     PremiseProvenance,
     PremiseProvenanceCapacityCell,
+    PremiseProvenanceGraphRow,
     PremiseProvenanceClaimedMapping,
     PremiseProvenanceConnectorPack,
     PremiseProvenanceNativeOntology,
@@ -7483,6 +7484,21 @@ class Grant(BaseModel):
 class GrantEffect(str, Enum):
     ALLOW = "Allow"
     DENY = "Deny"
+
+
+class GraphNodeClass(str, Enum):
+    OBSERVATION = "observation"
+    CLAIM = "claim"
+
+
+class GraphRowProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    graph_version: Annotated[int, Field(ge=0)]
+    node_class: GraphNodeClass
+    node_id: str
+    source_iri: str | None = None
 
 
 class GraphCreated(BaseModel):
@@ -25552,6 +25568,7 @@ class StatisticalInputs(BaseModel):
     exploration: ExplorationRecord | None = None
     feature_matrix: FeatureMatrixRef
     feature_schema: ComponentDependency
+    graph_rows: BoundedVec_GraphRowProvenance_64 | None = None
     harness_contrast: HarnessContrastDecision | None = None
     harness_evaluation: HarnessConfigEvaluationEvidence | None = None
     head: ComponentDependency | None = None
@@ -28338,6 +28355,9 @@ BoundedVec_BeliefPoint_8 = Annotated[list[BeliefPoint], Field(max_length=8)]
 
 
 BoundedVec_BeliefSliceInputs_8 = Annotated[list[BeliefSliceInputs], Field(max_length=8)]
+BoundedVec_GraphRowProvenance_64 = Annotated[
+    list[GraphRowProvenance], Field(max_length=64)
+]
 
 
 BoundedVec_SqlSourceCell_256 = Annotated[list[SqlSourceCell], Field(max_length=256)]
@@ -34060,6 +34080,7 @@ __all__ = [
     "BoundedVec_AgentLibraryEntryDraft_8",
     "BoundedVec_BeliefPoint_8",
     "BoundedVec_BeliefSliceInputs_8",
+    "BoundedVec_GraphRowProvenance_64",
     "BoundedVec_BoundedVec_SqlSourceCell_256_1024",
     "BoundedVec_CandidateFacts_64",
     "BoundedVec_CapacityHeadroom_8",
@@ -35061,7 +35082,9 @@ __all__ = [
     "GraphLifecycleHealth",
     "GraphListing",
     "GraphMetrics",
+    "GraphNodeClass",
     "GraphResourceStats",
+    "GraphRowProvenance",
     "GraphSchemaClassesView",
     "GraphSchemaCommitted",
     "GraphSchemaOp",
@@ -36939,6 +36962,7 @@ __all__ = [
     "PremiseClass",
     "PremiseProvenance",
     "PremiseProvenanceCapacityCell",
+    "PremiseProvenanceGraphRow",
     "PremiseProvenanceClaimedMapping",
     "PremiseProvenanceConnectorPack",
     "PremiseProvenanceNativeOntology",

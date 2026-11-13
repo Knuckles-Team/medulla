@@ -80,6 +80,9 @@ pub enum PremiseProvenance {
     },
     /// A live capacity cell read at an epoch (swarm-topology headroom).
     CapacityCell { cell_id: String, epoch: u64 },
+    /// A row of a graph the caller's visible snapshot held, at the graph's
+    /// write version (MEDULLA-DECISION-ENGINE-R121.2).
+    GraphRow { graph: String, graph_version: u64 },
 }
 
 /// One fact the decision used.

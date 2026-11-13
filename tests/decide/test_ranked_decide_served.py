@@ -166,3 +166,31 @@ def test_tied_codes_resolve_by_item_score(clean_graph):
         {"opt-a": 0, "opt-b": Q32 * 8 // 10, "opt-c": Q32 // 10},
     )
     assert _order(swapped) == ["opt-a", "opt-b", "opt-c"]
+
+
+# spec: MEDULLA-DECISION-ENGINE-R130.3
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R130.3")
+def test_decide_orders_by_calibrated_score(clean_graph):
+    schema, head = _publish_head(clean_graph)
+    policy = _publish_policy(clean_graph)
+    # The item score of opt-a is the lowest: only the calibrated score keeps it
+    # first, and the shared code orders the other two by item score.
+    record = _decide(
+        clean_graph,
+        schema,
+        head,
+        policy,
+        {"opt-a": 0, "opt-b": Q32 // 10, "opt-c": Q32 * 8 // 10},
+    )
+    assert _order(record) == ["opt-a", "opt-c", "opt-b"]
+    assert record["resolution_kind"] == "statistical"
+    # Uncalibrated callers cannot reorder: the same options with the item
+    # scores reversed keep the calibrated option first.
+    reversed_scores = _decide(
+        clean_graph,
+        schema,
+        head,
+        policy,
+        {"opt-a": 0, "opt-b": Q32 * 8 // 10, "opt-c": Q32 // 10},
+    )
+    assert _order(reversed_scores)[0] == "opt-a"

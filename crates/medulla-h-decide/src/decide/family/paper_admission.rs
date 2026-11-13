@@ -264,6 +264,7 @@ pub(in crate::decide) async fn with_similarity(
         &request.candidates,
     )
     .await?
+    .map(|(view, _)| view)
     .ok_or_else(|| invalid("a paper_admission question reads a graph"))?;
     let papers: Vec<String> = view
         .node_properties

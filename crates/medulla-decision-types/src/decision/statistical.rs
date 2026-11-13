@@ -17,6 +17,7 @@ pub mod enrichment_schedule;
 pub mod errors;
 pub mod execution_routing;
 pub mod features;
+pub mod graph_rows;
 pub mod grounded_eval;
 pub mod harness_config;
 pub mod head;
@@ -611,6 +612,10 @@ pub struct StatisticalInputs {
     /// older record bytes and digests are unchanged.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
+    /// The graph rows a graph-sourced decision read, with the class each row's
+    /// typed label gives it (MEDULLA-DECISION-ENGINE-R121.2); omitted when none.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub graph_rows: BoundedVec<graph_rows::GraphRowProvenance, 64>,
 }
 
 /// One statistical decision, recorded. Record version 2.
