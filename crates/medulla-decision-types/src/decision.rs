@@ -37,6 +37,7 @@ pub mod knob_families;
 pub mod knobs;
 pub mod lifecycle;
 pub mod numeric;
+pub mod package_validation;
 pub mod policy;
 pub mod primitive;
 pub mod program_store;
