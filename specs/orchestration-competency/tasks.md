@@ -137,3 +137,6 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [x] T129 [US1] MEDULLA-CQ-ORCH-R820.1 Answer which harness sessions worked on this workspace and what each left
 - [x] T130 [US1] MEDULLA-CQ-ORCH-R820.2 Answer which skills and agents a coding harness receives
 - [ ] T131 [US1] MEDULLA-CQ-ORCH-R820 Coding harness competency questions
+- [ ] T132 [US1] MEDULLA-CQ-ORCH-R811.5 AnalyticsJob/JobState state machine: route 28 census findings through JobState::step
+- [ ] T133 [US1] MEDULLA-CQ-ORCH-R810.5 Candidate/BrokerMessageStatus state machine: route 1 census findings through MessageState::apply
+- [ ] T134 [US1] MEDULLA-CQ-ORCH-R811.6 Checkpoint/CheckpointStage state machine: route 4 census findings through CheckpointStage::apply
