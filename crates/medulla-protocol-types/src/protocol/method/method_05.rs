@@ -646,6 +646,24 @@ $($variants)*
     CorpusRetrieve {
         request: Box<medulla_types::corpus_retrieval::CorpusRequest>,
     },
+
+    /// MEDULLA-FEDERATED-QUERY-R039.2.5: encode one document through the pinned chunk
+    /// recipe and publish its single vector, with the encoding receipt, as the next
+    /// vector generation. Durable write; a refused encoding writes nothing and the
+    /// prior generation keeps answering. The policy is optional: absent, the server
+    /// builds it from the registered window knobs and the bound model.
+    EncodeDocument {
+        document_id: String,
+        token_ids: Vec<u32>,
+        policy: Option<medulla_index_types::embedding::DocumentEncodingPolicy>,
+    },
+
+    /// MEDULLA-FEDERATED-QUERY-R039.2.5: rank the caller's encoded documents against
+    /// one query vector under one policy digest. A read; refuses `ENCODE_POLICY_STALE`
+    /// before ranking when no vector generation exists under that digest.
+    EncodedDocumentSearch {
+        request: Box<medulla_types::retrieval::EncodedSearchRequest>,
+    },
         ]);
     };
 }

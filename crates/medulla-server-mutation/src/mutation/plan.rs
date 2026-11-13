@@ -195,6 +195,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "LiveArtifactPut",
     "LiveArtifactRefresh",
     "StoredQueryPut",
+    "EncodeDocument",
     "StoredQueryCall",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
@@ -498,6 +499,7 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
         Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
         Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
         Method::StoredQueryPut { .. } => Some("StoredQueryPut"),
+        Method::EncodeDocument { .. } => Some("EncodeDocument"),
         Method::StoredQueryCall { .. } => Some("StoredQueryCall"),
         Method::ArgumentMapPut { .. } => Some("ArgumentMapPut"),
         #[cfg(feature = "graphql")]

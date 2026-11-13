@@ -476,6 +476,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::LiveArtifactRefresh { .. }
                 // MEDULLA-FEDERATED-QUERY-R708.3: the stored-query record and its materialized result.
                 | Method::StoredQueryPut { .. }
+                // MEDULLA-FEDERATED-QUERY-R039.2.5: the encoded-document node and its index head.
+                | Method::EncodeDocument { .. }
                 | Method::StoredQueryCall { .. }
                 // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: finance records, alerts and
                 // factor records commit graph nodes through the gateway.

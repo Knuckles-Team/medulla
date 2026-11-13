@@ -116,6 +116,16 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R039.2.5: one search over the caller's encoded documents.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::EncodedDocumentSearch { request } => {
+            return Ok(super::document_encoding::handle_encoded_search(
+                hctx, *request,
+            ))
+        }
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R653.3: one corpus read over the caller's projected core.
     #[cfg(feature = "query")]
     let method = match method {
@@ -182,6 +192,7 @@ fn is_sql_query_method(method: &Method) -> bool {
             | Method::SchemaProjections { .. }
             | Method::StoredQueryPut { .. }
             | Method::StoredQueryCall { .. }
+            | Method::EncodeDocument { .. }
     )
 }
 
@@ -229,6 +240,17 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         other @ (Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }) => {
             super::stored_query::dispatch_stored_query(ctx, other).await
         }
+        // MEDULLA-FEDERATED-QUERY-R039.2.5: one document encoded and published as a generation.
+        Method::EncodeDocument {
+            document_id,
+            token_ids,
+            policy,
+        } => Ok(super::document_encoding::handle_encode_document(
+            ctx,
+            document_id,
+            token_ids,
+            policy,
+        )),
         other => Err(other),
     }
 }

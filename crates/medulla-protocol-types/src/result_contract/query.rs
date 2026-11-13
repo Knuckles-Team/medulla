@@ -40,6 +40,9 @@ method_results! {
     LiveArtifactGet(LiveArtifactGet) => Json<medulla_source_types::live_artifact::LiveArtifactView>;
     LiveArtifactRefresh(LiveArtifactRefresh) => Json<medulla_source_types::live_artifact::RefreshEntry>;
     // MEDULLA-FEDERATED-QUERY-R708.3: the published record, and one call's rows with their freshness.
+    // MEDULLA-FEDERATED-QUERY-R039.2.5: the receipt and vector of one encoded document, and a search over them.
+    EncodeDocument(EncodeDocument) => Json<medulla_types::retrieval::EncodedDocument>;
+    EncodedDocumentSearch(EncodedDocumentSearch) => Json<medulla_types::retrieval::EncodedSearchResult>;
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;

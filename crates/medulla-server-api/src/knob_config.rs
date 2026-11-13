@@ -251,6 +251,8 @@ knobs! {
     retrieval_joint_tolerance: f64 = "retrieval.joint_tolerance", F64(0.000001), [0.000000001, 0.001], "unitless", Tunable;
     /// Retrieval round: most sweeps of the joint solve.
     retrieval_joint_max_iters: u64 = "retrieval.joint_max_iters", U64(1000), [10, 100000], "sweeps", Tunable;
+    /// Chunk encoding: most chunks one document may take (MEDULLA-FEDERATED-QUERY-R039.2.6).
+    retrieval_encode_budget_chunks: u64 = "retrieval.encode_budget_chunks", U64(4096), [1, 100_000], "chunks", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

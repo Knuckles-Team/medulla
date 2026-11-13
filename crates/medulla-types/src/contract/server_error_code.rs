@@ -318,6 +318,10 @@ closed_error_codes! {
         EncodeDimMismatch => "ENCODE_DIM_MISMATCH",
         /// A chunk vector with a NaN or infinite component (MEDULLA-FEDERATED-QUERY-R039.2.4).
         EncodeNonFinite => "ENCODE_NON_FINITE",
+        /// A document with more chunks than the per-document encode budget (MEDULLA-FEDERATED-QUERY-R039.2.6).
+        EncodeBudgetExhausted => "ENCODE_BUDGET_EXHAUSTED",
+        /// An encoding policy or model revision other than the one the index carries (MEDULLA-FEDERATED-QUERY-R039.2.5).
+        EncodePolicyStale => "ENCODE_POLICY_STALE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",

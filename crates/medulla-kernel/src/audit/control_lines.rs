@@ -158,6 +158,11 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             id,
             expected_version,
         } => Some(format!("LIVE_ARTIFACT_REFRESH|{id}|{expected_version}")),
+        Method::EncodeDocument {
+            document_id,
+            token_ids,
+            ..
+        } => Some(format!("ENCODE_DOCUMENT|{document_id}|{}", token_ids.len())),
         Method::StoredQueryPut { query } => {
             Some(format!("STORED_QUERY_PUT|{}|{}", query.name, query.version))
         }
