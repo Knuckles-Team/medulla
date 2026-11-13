@@ -370,6 +370,10 @@ knobs! {
     coding_agent_max_receipt_age: u64 = "coding_agent.max_receipt_age", U64(3_600), [3_600, 3_600], "seconds", Fixed;
     /// Topology candidate-set cap.
     topology_max_candidates: u64 = "topology.max_candidates", U64(1_000), [1, 100_000], "sets", Tunable;
+    /// Most nodes a topology analytic accepts (MEDULLA-FEDERATED-QUERY-R607.4).
+    topology_max_nodes: u64 = "topology.max_nodes", U64(200_000), [1_000, 5_000_000], "nodes", Tunable;
+    /// Most edges a topology analytic accepts (MEDULLA-FEDERATED-QUERY-R607.4).
+    topology_max_edges: u64 = "topology.max_edges", U64(2_000_000), [10_000, 50_000_000], "edges", Tunable;
     /// Schema-repair shadow ingest sample.
     schema_repair_shadow_sample_nodes: u64 = "schema_repair.shadow_sample_nodes", U64(10_000), [100, 1_000_000], "nodes", Tunable;
     /// Most ids an ontology diff lists per impact category (MEDULLA-TYPED-PACKS-R804.5); counts stay exact.

@@ -14,8 +14,14 @@ pub const TOPOLOGY_K_DEFAULT: u32 = 8;
 pub const TOPOLOGY_K_MIN: u32 = 2;
 pub const TOPOLOGY_K_MAX: u32 = 256;
 
+/// The request `k` when the caller sends none.
+pub fn default_k() -> u32 {
+    TOPOLOGY_K_DEFAULT
+}
+
 /// The five topology analytics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum TopologyAnalytic {
     Spectral,
@@ -39,6 +45,7 @@ impl TopologyAnalytic {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Partition {
     pub id: String,
@@ -46,6 +53,7 @@ pub struct Partition {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct AnalogyMatch {
     pub a: String,
@@ -54,6 +62,7 @@ pub struct AnalogyMatch {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SynergyBridge {
     pub node: String,
@@ -62,6 +71,7 @@ pub struct SynergyBridge {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct HyperedgeScore {
     pub members: Vec<String>,
@@ -71,6 +81,7 @@ pub struct HyperedgeScore {
 /// Run evidence (MEDULLA-FEDERATED-QUERY-R607.5); analytic-specific fields are
 /// `None` when the analytic does not produce them.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct TopologyEvidence {
     pub nodes: u64,
@@ -87,6 +98,7 @@ pub struct TopologyEvidence {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct TopologyResult {
     pub analytic: TopologyAnalytic,

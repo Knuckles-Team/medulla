@@ -623,6 +623,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "POLICY_BODY_UNAVAILABLE",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R607.4: the refusals of a topology analytic. A graph over
+    // `topology.max_nodes` / `topology.max_edges` is too large, a bad `k`, weight or
+    // candidate set is an invalid parameter, and fewer than 3 nodes is trivial.
+    (
+        "MineTopology",
+        &[
+            "TOPOLOGY_GRAPH_TOO_LARGE",
+            "TOPOLOGY_PARAM_INVALID",
+            "TOPOLOGY_TRIVIAL_GRAPH",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R702.3: the refusals of a search-task synthesis. An unknown
     // or unreadable answer node is `SEARCH_TASK_INVALID`; a risky task names its
     // detector under `SEARCH_TASK_SHORTCUT`.

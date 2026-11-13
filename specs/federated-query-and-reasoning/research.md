@@ -432,3 +432,11 @@ than leaving terms silently unreconciled.
 - **Labels and text come from stored properties.** An evidence node's label is its `name`, `label` or `type` property, else its id; its text is `text`, else `name`. An edge's relation is its stored `relationship`, else `related`.
 - **The consumer stays outside the engine.** An accepted task carries no stored state. The caller derives a query id from the task, labels it with the answer node and sends the pinned sets to `DecisionEval` (R100.100.2); the L4 test does exactly that.
 - **Wire.** The method is a new read variant with a hand-written Python client method; the hand-maintained `models.py` carries no entry for it. WIRE-REGEN: wire vectors need the refresh at the gate.
+
+
+## R607.3: how the served topology method reads and shapes its graph
+
+- **One method, five analytics.** `MineTopology` carries the analytic as a closed enum and dispatches to the kernels that already exist in `medulla-graph-algos` (`spectral_partition`, `checked_mincut`, `analogy_matches`, `synergy_bridges`, `hyperedge_scores`); the handler only projects the snapshot onto them and shapes their output into `TopologyResult`.
+- **Graph projection.** The handler reads `analysis_snapshot` of the core the dispatcher already projected through the caller's read authority, so a node the caller cannot read is absent before any kernel runs. A node's label is its stored `type`, `node_type` or `label`; an edge's relationship is its stored `relationship`, `type` or `label`, else `related`. The request's `label` and `relationship` narrow the graph; every kept edge has weight 1. Edges are sorted before the graph is built, so one graph always yields one kernel input.
+- **Refusals.** Kernel errors map to registered codes: `TOPOLOGY_TRIVIAL_GRAPH` (fewer than 3 nodes), `TOPOLOGY_PARAM_INVALID` (a `k` outside [2, 256], a bad weight, an unknown or over-numerous candidate set) and `TOPOLOGY_GRAPH_TOO_LARGE` (over `topology.max_nodes` or `topology.max_edges`, both registry knobs). The codes, routing and knobs are the shared groundwork of R607.4, which keeps its own proof.
+- **Wire.** A new read variant with a hand-written Python client method; WIRE-REGEN: wire vectors and the generated models need the refresh at the gate.

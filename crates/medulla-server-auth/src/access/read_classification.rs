@@ -173,6 +173,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "MatchOntologyTerms",
     "MaterializationStatus",
     "MineClassifyFit",
+    "MineTopology",
     // t1-grounding-0802 follow-up audit: `medulla_h_graph::pipeline::try_handle` (module doc,
     // `src/server/handlers/pipeline.rs`) receives the SAME `core.clone()` the mining/
     // graphlearn handlers ahead of it in dispatch.rs's `'dispatch` block do -- the

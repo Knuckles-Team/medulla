@@ -1,9 +1,17 @@
 use super::*;
 
 use super::terminal::GraphOpsContext;
-use medulla_graph_algos::graph_algos::QualityFunction;
+use medulla_graph_algos::graph_algos::{
+    analogy_matches, check_topology_graph, checked_mincut, hyperedge_scores, spectral_partition,
+    synergy_bridges, AdjacencyGraph, HyperedgeError, LabeledGraph, QualityFunction,
+    TopologyKernelError,
+};
 use medulla_protocol_types::protocol::CommunityQualityFunction;
 use medulla_protocol_types::result_contract::compute as results;
+use medulla_query_types::topology::{
+    AnalogyMatch, HyperedgeScore, Partition, SynergyBridge, TopologyAnalytic, TopologyEvidence,
+    TopologyResult, TOPOLOGY_K_MAX, TOPOLOGY_K_MIN,
+};
 
 /// EH-314: wire (`medulla_protocol_types::protocol::CommunityQualityFunction`) → kernel
 /// (`medulla_graph_algos::graph_algos::QualityFunction`) — the same split
@@ -359,6 +367,242 @@ async fn handle_community_detect_ephemeral(
     }
 }
 
+/// Everything one `MineTopology` run needs: the request fields and the knob
+/// values the handler resolved for it.
+struct TopologyParams {
+    analytic: TopologyAnalytic,
+    label: Option<String>,
+    relationship: Option<String>,
+    k: u32,
+    seed: u64,
+    candidates: Vec<Vec<String>>,
+    analogy_min: f64,
+    max_candidates: usize,
+    max_nodes: u64,
+    max_edges: u64,
+}
+
+fn topology_kernel_refusal(error: TopologyKernelError) -> String {
+    match error {
+        TopologyKernelError::TrivialGraph => {
+            "TOPOLOGY_TRIVIAL_GRAPH: a topology analytic needs at least 3 nodes".to_string()
+        }
+        TopologyKernelError::InvalidWeight => {
+            "TOPOLOGY_PARAM_INVALID: an edge weight is not finite and positive".to_string()
+        }
+        TopologyKernelError::InvalidParam(name) => {
+            format!("TOPOLOGY_PARAM_INVALID: parameter `{name}` is out of range")
+        }
+    }
+}
+
+/// A node's label: its stored `type`, `node_type` or `label`, else the empty string.
+fn topology_node_label(view: &medulla_graph_core::graph::GraphView, id: &str) -> String {
+    let object = view.node_row_object(id).unwrap_or_default();
+    ["type", "node_type", "label"]
+        .iter()
+        .filter_map(|key| object.get(*key).and_then(serde_json::Value::as_str))
+        .find(|value| !value.is_empty())
+        .unwrap_or("")
+        .to_string()
+}
+
+/// The relationship an edge blob stores, else `related`.
+fn topology_edge_relation(blob: &[u8]) -> String {
+    match medulla_types::msgpack::decode_property_value(blob) {
+        Ok(serde_json::Value::Object(props)) => ["relationship", "type", "label"]
+            .iter()
+            .filter_map(|key| props.get(*key).and_then(serde_json::Value::as_str))
+            .find(|value| !value.is_empty())
+            .unwrap_or("related")
+            .to_string(),
+        _ => "related".to_string(),
+    }
+}
+
+/// Run one topology analytic over the (already row-projected) snapshot. The
+/// kernels live in `medulla_graph_algos::graph_algos`; this only projects the
+/// view onto them and shapes their output.
+fn mine_topology(
+    view: &medulla_graph_core::graph::GraphView,
+    params: &TopologyParams,
+) -> Result<TopologyResult, String> {
+    let started = std::time::Instant::now();
+    if !(TOPOLOGY_K_MIN..=TOPOLOGY_K_MAX).contains(&params.k) {
+        return Err(format!(
+            "TOPOLOGY_PARAM_INVALID: k {} is outside [{TOPOLOGY_K_MIN}, {TOPOLOGY_K_MAX}]",
+            params.k
+        ));
+    }
+    let mut node_labels: std::collections::BTreeMap<String, String> = Default::default();
+    for id in view.node_properties.keys() {
+        let label = topology_node_label(view, id);
+        if params
+            .label
+            .as_deref()
+            .is_some_and(|wanted| wanted != label)
+        {
+            continue;
+        }
+        node_labels.insert(id.clone(), label);
+    }
+    if node_labels.len() as u64 > params.max_nodes {
+        return Err(format!(
+            "TOPOLOGY_GRAPH_TOO_LARGE: {} nodes exceed topology.max_nodes {}",
+            node_labels.len(),
+            params.max_nodes
+        ));
+    }
+    let mut labeled_edges: Vec<(String, String, String)> = Vec::new();
+    for ((from, to), blobs) in &view.edge_properties {
+        if !node_labels.contains_key(from) || !node_labels.contains_key(to) {
+            continue;
+        }
+        for blob in blobs.iter() {
+            let relation = topology_edge_relation(blob);
+            if params
+                .relationship
+                .as_deref()
+                .is_some_and(|wanted| wanted != relation)
+            {
+                continue;
+            }
+            labeled_edges.push((from.clone(), to.clone(), relation));
+        }
+    }
+    if labeled_edges.len() as u64 > params.max_edges {
+        return Err(format!(
+            "TOPOLOGY_GRAPH_TOO_LARGE: {} edges exceed topology.max_edges {}",
+            labeled_edges.len(),
+            params.max_edges
+        ));
+    }
+    // The view's maps iterate in hash order; sort so one graph always yields one input.
+    labeled_edges.sort();
+    let mut outgoing: std::collections::BTreeMap<String, Vec<(String, f64)>> = node_labels
+        .keys()
+        .map(|id| (id.clone(), Vec::new()))
+        .collect();
+    for (from, to, _) in &labeled_edges {
+        if let Some(list) = outgoing.get_mut(from) {
+            list.push((to.clone(), 1.0));
+        }
+    }
+    let graph = AdjacencyGraph::from_adjacency(outgoing);
+    check_topology_graph(&graph).map_err(topology_kernel_refusal)?;
+    let k = params.k as usize;
+    let mut result = TopologyResult {
+        analytic: params.analytic,
+        partitions: Vec::new(),
+        matches: Vec::new(),
+        bridges: Vec::new(),
+        scores: Vec::new(),
+        evidence: TopologyEvidence {
+            nodes: node_labels.len() as u64,
+            edges: labeled_edges.len() as u64,
+            seed: params.seed,
+            ..TopologyEvidence::default()
+        },
+    };
+    match params.analytic {
+        TopologyAnalytic::Spectral => {
+            let spectral =
+                spectral_partition(&graph, k, params.seed).map_err(topology_kernel_refusal)?;
+            result.partitions = spectral
+                .partitions
+                .into_iter()
+                .enumerate()
+                .map(|(rank, members)| Partition {
+                    id: rank.to_string(),
+                    members,
+                })
+                .collect();
+            result.evidence.modularity = Some(spectral.modularity);
+            result.evidence.iterations = spectral.iterations;
+        }
+        TopologyAnalytic::Mincut => {
+            let cut = checked_mincut(&graph).map_err(topology_kernel_refusal)?;
+            result.partitions = vec![
+                Partition {
+                    id: "0".to_string(),
+                    members: cut.left,
+                },
+                Partition {
+                    id: "1".to_string(),
+                    members: cut.right,
+                },
+            ];
+            result.evidence.cut_weight = Some(cut.cut_weight);
+        }
+        TopologyAnalytic::Analogy => {
+            let labeled = LabeledGraph {
+                nodes: node_labels.into_iter().collect(),
+                edges: labeled_edges,
+            };
+            result.matches = analogy_matches(&labeled, params.analogy_min, k)
+                .into_iter()
+                .map(|pair| AnalogyMatch {
+                    a: pair.a,
+                    b: pair.b,
+                    score: pair.score,
+                })
+                .collect();
+            result.evidence.match_scores = result.matches.iter().map(|m| m.score).collect();
+        }
+        TopologyAnalytic::Synergy => {
+            let (bridges, _communities) = synergy_bridges(&graph, &node_labels, k, params.seed);
+            result.bridges = bridges
+                .into_iter()
+                .map(|bridge| SynergyBridge {
+                    node: bridge.node,
+                    communities: bridge.communities.iter().map(usize::to_string).collect(),
+                    score: bridge.score,
+                })
+                .collect();
+        }
+        TopologyAnalytic::HyperedgeScore => {
+            let scores = hyperedge_scores(&graph, &params.candidates, params.max_candidates)
+                .map_err(|error| match error {
+                    HyperedgeError::TooManyCandidates => format!(
+                        "TOPOLOGY_PARAM_INVALID: {} candidate sets exceed topology.max_candidates {}",
+                        params.candidates.len(),
+                        params.max_candidates
+                    ),
+                    HyperedgeError::UnknownNode(id) => {
+                        format!("TOPOLOGY_PARAM_INVALID: candidate node `{id}` is not in the graph")
+                    }
+                })?;
+            result.scores = params
+                .candidates
+                .iter()
+                .cloned()
+                .zip(scores)
+                .map(|(members, score)| HyperedgeScore { members, score })
+                .collect();
+        }
+    }
+    result
+        .validate()
+        .map_err(|error| format!("TOPOLOGY_PARAM_INVALID: {error}"))?;
+    result.evidence.elapsed_ms = started.elapsed().as_millis() as u64;
+    Ok(result)
+}
+
+/// `MineTopology` (MEDULLA-FEDERATED-QUERY-R607.3): snapshots the row-projected
+/// core like `CommunityDetectEphemeral` and runs the analytic off-lock.
+async fn handle_mine_topology(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    params: TopologyParams,
+) -> Response {
+    let snap = core.analysis_snapshot();
+    match compute_off_lock(req_id, move || mine_topology(&snap, &params)).await {
+        Ok(Ok(result)) => Response::ok(req_id, ResultPayload::of::<results::MineTopology>(result)),
+        Ok(Err(message)) => Response::err(req_id, message),
+        Err(resp) => resp,
+    }
+}
+
 /// Handle graph algorithms and metrics.
 pub(super) async fn try_handle_graph_algorithms(
     ctx: GraphOpsContext<'_>,
@@ -500,6 +744,29 @@ pub(super) async fn try_handle_community_algorithms(
             resolution,
             quality,
         } => handle_community_detect_ephemeral(req_id, node_ids, edges, resolution, quality).await,
+        Method::MineTopology {
+            analytic,
+            label,
+            relationship,
+            k,
+            seed,
+            candidates,
+        } => {
+            let knobs = medulla_server_api::knob_config::knobs();
+            let params = TopologyParams {
+                analytic,
+                label,
+                relationship,
+                k,
+                seed,
+                candidates,
+                analogy_min: knobs.topology_analogy_min,
+                max_candidates: knobs.topology_max_candidates as usize,
+                max_nodes: knobs.topology_max_nodes,
+                max_edges: knobs.topology_max_edges,
+            };
+            handle_mine_topology(req_id, core, params).await
+        }
         // GraphColoring: greedy coloring is a single O(V+E) sweep over a cheap
         // topology snapshot (Phase C-B: read algorithms take an unlocked view).
         Method::GraphColoring => {

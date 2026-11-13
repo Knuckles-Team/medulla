@@ -805,6 +805,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetChannelMembers { .. }
         | Method::HasNodesBatch { .. }
         | Method::CommunityDetectEphemeral { .. }
+        | Method::MineTopology { .. }
         | Method::BatchL2Normalize { .. }
         | Method::HasEdge { .. }
         | Method::ComputeSimilarityEdges { .. }

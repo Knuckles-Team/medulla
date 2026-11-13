@@ -7453,6 +7453,49 @@ class GraphOperationsClient:
             raise RuntimeError("SynthesizeSearchTask must answer with an object")
         return result
 
+    async def mine_topology(
+        self,
+        analytic: str,
+        *,
+        label: str | None = None,
+        relationship: str | None = None,
+        k: int = 8,
+        seed: int = 0,
+        candidates: list[list[str]] | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Run one topology analytic over the caller's readable graph
+        (MEDULLA-FEDERATED-QUERY-R607.3).
+
+        ``analytic`` is ``spectral``, ``mincut``, ``analogy``, ``synergy`` or
+        ``hyperedge_score``. ``label`` and ``relationship`` narrow the graph;
+        ``k`` is in [2, 256]; ``candidates`` is used only by
+        ``hyperedge_score``. Returns ``{analytic, partitions, matches, bridges,
+        scores, evidence}``. A graph under 3 nodes refuses
+        ``TOPOLOGY_TRIVIAL_GRAPH``, a bad parameter ``TOPOLOGY_PARAM_INVALID``
+        and an over-large graph ``TOPOLOGY_GRAPH_TOO_LARGE``. Nothing is stored.
+        ``graph`` defaults to the client's graph.
+        """
+        graph = graph or self._client._graph_name
+        result = await self._client._send(
+            "MineTopology",
+            {
+                "analytic": analytic,
+                "label": label,
+                "relationship": relationship,
+                "k": k,
+                "seed": seed,
+                "candidates": candidates or [],
+            },
+            graph,
+            idempotency_key=None,
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("MineTopology must answer with an object")
+        return result
+
     async def write_back(
         self,
         op: dict[str, Any],

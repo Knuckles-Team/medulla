@@ -29,6 +29,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `topology.analogy_min` | f64 | 0.6 | [0.1, 1.0] | ratio | Tunable | `MEDULLA_TOPOLOGY_ANALOGY_MIN` |
 | `topology.lease_ttl_ms` | u64 | 900000 | [1000, 86400000] | ms | Tunable | `MEDULLA_TOPOLOGY_LEASE_TTL_MS` |
 | `topology.max_candidates` | u64 | 1000 | [1, 100000] | sets | Tunable | `MEDULLA_TOPOLOGY_MAX_CANDIDATES` |
+| `topology.max_nodes` | u64 | 200000 | [1000, 5000000] | nodes | Tunable | `MEDULLA_TOPOLOGY_MAX_NODES` |
+| `topology.max_edges` | u64 | 2000000 | [10000, 50000000] | edges | Tunable | `MEDULLA_TOPOLOGY_MAX_EDGES` |
 | `feedback.max_rounds` | u64 | 5 | [1, 20] | rounds | Tunable | `MEDULLA_FEEDBACK_MAX_ROUNDS` |
 | `schema_repair.shadow_sample_nodes` | u64 | 10000 | [100, 1000000] | nodes | Tunable | `MEDULLA_SCHEMA_REPAIR_SHADOW_SAMPLE_NODES` |
 | `ontology_diff.max_listed` | u64 | 100 | [10, 1000] | ids | Tunable | `MEDULLA_ONTOLOGY_DIFF_MAX_LISTED` |

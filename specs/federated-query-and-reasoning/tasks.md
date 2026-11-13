@@ -352,7 +352,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 
 - [ ] T332 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.1 Model of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T333 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.2 Behavior: partitions of Topology analytics find partitions, analogies, synergy and hyperedge scores
-- [ ] T334 [US3] MEDULLA-FEDERATED-QUERY-R607.3 Wiring of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [x] T334 [US3] MEDULLA-FEDERATED-QUERY-R607.3 Wiring of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T335 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.4 Refusal of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T336 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.5 Evidence of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T337 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.6 Hot-path proof of Topology analytics find partitions, analogies, synergy and hyperedge scores

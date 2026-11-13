@@ -131,6 +131,25 @@ $($variants)*
         quality: CommunityQualityFunction,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R607.3: one topology analytic (spectral or mincut
+    /// partitions, cross-domain analogy, synergy bridges, inductive hyperedge
+    /// scores) over the caller's row-projected graph, optionally narrowed to one
+    /// node `label` and one `relationship`. `k` defaults to 8 ([2, 256]); `seed`
+    /// defaults to 0; `candidates` is used only by `hyperedge_score`. A read.
+    MineTopology {
+        analytic: medulla_query_types::topology::TopologyAnalytic,
+        #[serde(default)]
+        label: Option<String>,
+        #[serde(default)]
+        relationship: Option<String>,
+        #[serde(default = "medulla_query_types::topology::default_k")]
+        k: u32,
+        #[serde(default)]
+        seed: u64,
+        #[serde(default)]
+        candidates: Vec<Vec<String>>,
+    },
+
     GraphColoring,
 
     ComputeSimilarityEdges {

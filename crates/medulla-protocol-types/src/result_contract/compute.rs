@@ -55,6 +55,7 @@ method_results! {
     MinimumSpanningTree(MinimumSpanningTree) => Raw<Vec<(String, String, f64)>>;
     CommunityDetection(CommunityDetection) => Raw<Vec<Vec<String>>>;
     CommunityDetectEphemeral(CommunityDetectEphemeral) => Raw<Vec<Vec<String>>>;
+    MineTopology(MineTopology) => Json<medulla_query_types::topology::TopologyResult>;
     GraphColoring(GraphColoring) => Json<Vec<(String, usize)>>;
     ComputeSimilarityEdges(ComputeSimilarityEdges) => Raw<Vec<(String, String, f64)>>;
     ResolveCandidates(ResolveCandidates) => Raw<Vec<MergeProposal>>;
