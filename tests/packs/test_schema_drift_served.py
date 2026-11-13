@@ -20,17 +20,29 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import time
 import uuid
+from pathlib import Path
 
 import pytest
 from conftest import TEST_TENANT, request_context
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
+from ontology_pack_support import connect, import_entries
+
+from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated import coordination, reasoning
+from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 from medulla.generated.graph_schema import (
     GraphSchemaSourcesView,
     SchemaSourceOriginViewApproved,
+)
+from medulla.generated.source_ingestion import (
+    DriftAction,
+    DriftClass,
+    SourceIngestionReceipt,
 )
 
 FieldSpec = dict[str, object]
@@ -52,11 +64,11 @@ def canonical_contract(contract: dict[str, Fields]) -> str:
     )
 
 
-def candidate_digest(contract: dict[str, Fields]) -> str:
+def candidate_digest(contract: dict[str, Fields], source_id: str = SOURCE_ID) -> str:
     """The digest an approval grant must bind: domain, key and canonical
     contract, each NUL-terminated (``approved_candidate_digest``)."""
     framed = (
-        "\0".join([APPROVED_CANDIDATE_DOMAIN, SOURCE_ID, canonical_contract(contract)])
+        "\0".join([APPROVED_CANDIDATE_DOMAIN, source_id, canonical_contract(contract)])
         + "\0"
     )
     return hashlib.sha256(framed.encode("utf-8")).hexdigest()
@@ -78,7 +90,7 @@ DRIFTED: dict[str, Fields] = {
 
 
 async def issue_approval_lease(
-    client: MedullaClient, lease_id: str, candidate: str
+    client: MedullaClient, lease_id: str, candidate: str, source_id: str = SOURCE_ID
 ) -> None:
     now_ms = int(time.time() * 1000)
     await coordination.send_issue_control_lease(
@@ -90,7 +102,7 @@ async def issue_approval_lease(
                 "kind": APPROVAL_LEASE_KIND,
                 "grant": {
                     "kind": APPROVAL_ACTION,
-                    "target": SOURCE_ID,
+                    "target": source_id,
                     "candidate_digest": candidate,
                 },
                 "issued_at_ms": now_ms,
@@ -118,14 +130,17 @@ async def consume_approval_lease(client: MedullaClient, lease_id: str) -> None:
 
 
 async def attach_approved(
-    client: MedullaClient, lease_id: str, fields: dict[str, dict[str, object]]
+    client: MedullaClient,
+    lease_id: str,
+    fields: dict[str, dict[str, object]],
+    source_id: str = SOURCE_ID,
 ) -> None:
     await reasoning.send_graph_schema(
         client,
         {
             "op": {
                 "op": "attach_approved",
-                "source_id": SOURCE_ID,
+                "source_id": source_id,
                 "contract": {"fields": fields},
                 "approval_lease_id": lease_id,
                 "if_composed_digest": None,
@@ -136,7 +151,9 @@ async def attach_approved(
 
 
 async def validate_repair(
-    client: MedullaClient, fields: dict[str, dict[str, object]]
+    client: MedullaClient,
+    fields: dict[str, dict[str, object]],
+    source_id: str = SOURCE_ID,
 ) -> bool:
     """Run the shadow-graph validation; returns the op's `changed` flag."""
     committed = await reasoning.send_graph_schema(
@@ -144,7 +161,7 @@ async def validate_repair(
         {
             "op": {
                 "op": "validate_repair",
-                "source_id": SOURCE_ID,
+                "source_id": source_id,
                 "contract": {"fields": fields},
                 "if_composed_digest": None,
             }
@@ -289,3 +306,149 @@ async def test_breaking_drift_quarantines_and_activation_needs_approval() -> Non
     finally:
         await client.graph.clear()
         await client.close()
+
+
+# --- MEDULLA-TYPED-PACKS-R714: the delivery path reports drift ---------------
+
+DELIVERY_STREAM = "items"
+DELIVERY_SOURCE_ID = f"approved:{DELIVERY_STREAM}"
+DELIVERY_CLASS = f"urn:eg:source:{DELIVERY_STREAM}#Record"
+
+
+def delivery_declaration(connector: str) -> ConnectorPackEntryContent:
+    body = {
+        "connector": connector,
+        "schema_mappings": {
+            "item": {
+                "fields": {"id": "identifier", "name": "label"},
+                "ontology_class": "Document",
+            }
+        },
+        "sources": [],
+    }
+    return ConnectorPackEntryContent(
+        kind=PackEntryKind.RESOURCE,
+        uri="connector://resources",
+        name="connector-resources",
+        media_type="application/json",
+        body=json.dumps(body).encode(),
+        annotations=PackAnnotations(),
+    )
+
+
+def delivery_batch(
+    connector: str, page: int, previous: int | None, payload: dict[str, object]
+) -> dict[str, object]:
+    return {
+        "connector": connector,
+        "kind": "records",
+        "mode": "delta",
+        "strict_schema": False,
+        "records": [
+            {
+                "stream": DELIVERY_STREAM,
+                "record_id": f"item-{page}",
+                "mapping_reference": f"connector:{connector}#mappings/item",
+                "payload": payload,
+                "updated_at": "2026-09-20T00:00:00Z",
+                "provenance": {
+                    "connector": connector,
+                    "adapter_kind": "mcp",
+                    "server": "demo-server",
+                    "tool": "list_items",
+                    "tool_schema_sha256": "07" * 32,
+                    "source_uri": f"demo://items/item-{page}",
+                },
+            }
+        ],
+        "relationships": [],
+        "withdrawals": [],
+        "provider_checkpoint": {
+            "stream": DELIVERY_STREAM,
+            "position": {"page": page},
+            "watermark": "2026-09-20T00:00:00Z",
+        },
+        "expected_previous_checkpoint": (
+            None
+            if previous is None
+            else {"stream": DELIVERY_STREAM, "position": {"page": previous}}
+        ),
+    }
+
+
+async def submit_delivery(
+    client: MedullaClient, batch: dict[str, object]
+) -> SourceIngestionReceipt:
+    payload = await client._send(
+        "SourceIngest",
+        {"request": batch},
+        idempotency_key=f"drift:{uuid.uuid4().hex}",
+    )
+    return SourceIngestionReceipt.model_validate(payload)
+
+
+# spec: MEDULLA-TYPED-PACKS-R710
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R714")
+@pytest.mark.asyncio
+async def test_delivery_reports_drift_class() -> None:
+    connector = f"drift-{uuid.uuid4().hex[:10]}"
+    admin = await connect()
+    graph = f"drift-delivery-{uuid.uuid4().hex[:8]}"
+    try:
+        await import_entries(admin, connector, [delivery_declaration(connector)])
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    try:
+        # 1. No approved contract for the stream: the gate is skipped.
+        skipped = await submit_delivery(
+            client,
+            delivery_batch(connector, 2, None, {"id": 1, "name": "alpha"}),
+        )
+        assert skipped.drift == []
+
+        # 2. Approve the baseline contract for the stream.
+        await client.nodes.add(
+            "delivery-record", {"type": DELIVERY_CLASS, **{"id": 1, "name": "alpha"}}
+        )
+        lease = "approval:delivery"
+        await issue_approval_lease(
+            client,
+            lease,
+            candidate_digest(BASELINE, DELIVERY_SOURCE_ID),
+            DELIVERY_SOURCE_ID,
+        )
+        await consume_approval_lease(client, lease)
+        await validate_repair(client, BASELINE["fields"], DELIVERY_SOURCE_ID)
+        await attach_approved(client, lease, BASELINE["fields"], DELIVERY_SOURCE_ID)
+
+        # 3. A conforming delivery is compatible and accepted.
+        conforming = await submit_delivery(
+            client,
+            delivery_batch(connector, 3, 2, {"id": 2, "name": "beta"}),
+        )
+        assert len(conforming.drift) == 1
+        assert conforming.drift[0].stream == DELIVERY_STREAM
+        assert conforming.drift[0].report.class_ is DriftClass.COMPATIBLE
+        assert conforming.drift[0].report.action is DriftAction.ACCEPTED
+
+        # 4. A drifted delivery (a required field retyped, another missing) is
+        # classified breaking and quarantined by the fixed default policy.
+        drifted = await submit_delivery(
+            client,
+            delivery_batch(connector, 4, 3, {"name": 7}),
+        )
+        assert len(drifted.drift) == 1
+        report = drifted.drift[0].report
+        assert report.class_ is DriftClass.BREAKING
+        assert report.action is DriftAction.QUARANTINED
+    finally:
+        try:
+            await client.tenants.delete(graph)
+        finally:
+            await client.close()

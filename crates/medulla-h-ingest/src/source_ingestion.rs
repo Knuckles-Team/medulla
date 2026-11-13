@@ -37,6 +37,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
+pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
 
@@ -49,6 +50,9 @@ pub struct PrepareContext<'a> {
     pub graph_version: u64,
     pub placement_epoch: u64,
     pub fencing_token: Option<u64>,
+    /// The graph's schema sources, read by the drift gate (R714) for the
+    /// `approved:<stream>` contracts in force.
+    pub schema_sources: Arc<medulla_graph_core::graph::GraphSchemaSources>,
 }
 
 // The fields are read only by the durable terminal-receipt builder (redb + blob).
@@ -71,6 +75,8 @@ pub struct PreparedSourceIngestion {
     relationship_tombstoned_count: u64,
     governance: medulla_types::source_governance::GovernanceReport,
     committed_graph_version: u64,
+    /// Drift of each approved stream of the batch (R714); empty on a replay.
+    drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -201,6 +207,11 @@ pub async fn prepare(
     {
         return prepared_replay(ctx, batch, batch_digest, record.envelope);
     }
+    let drift = drift_gate::check(
+        &ctx.schema_sources,
+        batch.records.as_slice(),
+        medulla_server_api::knob_config::knobs().drift_sample_max as usize,
+    )?;
     let resources = load_resources(&ctx).await?;
     authorize_empty_reconciliation(&ctx, batch)?;
     let resolved = resolve_mappings(&ctx, batch, &resources)?;
@@ -321,6 +332,7 @@ pub async fn prepare(
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
         committed_graph_version: ctx.graph_version.saturating_add(1),
+        drift,
     })
 }
 
@@ -1996,6 +2008,7 @@ fn build_terminal_receipt(
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
         committed_graph_version: prepared.committed_graph_version,
+        drift: prepared.drift,
         stream_object_id,
         previous_content_digest,
         receipt_digest,
@@ -2070,6 +2083,7 @@ fn prepared_replay(
         )?,
         governance: replay_governance(&receipt)?,
         committed_graph_version,
+        drift: Vec::new(),
     })
 }
 
@@ -2930,6 +2944,7 @@ mod tests {
             graph_version: 0,
             placement_epoch: 0,
             fencing_token: None,
+            schema_sources: Arc::new(medulla_graph_core::graph::GraphSchemaSources::default()),
         };
         let blob_dir = tempfile::tempdir().unwrap();
         let blob =

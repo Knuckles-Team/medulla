@@ -228,6 +228,7 @@ mod tests {
             relationship_tombstoned_count: 0,
             governance: Default::default(),
             committed_graph_version: 9,
+            drift: Vec::new(),
             stream_object_id: "source-live-set:test".into(),
             previous_content_digest: None,
             receipt_digest: digest(5),

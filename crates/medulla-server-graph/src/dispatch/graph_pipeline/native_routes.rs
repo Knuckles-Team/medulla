@@ -569,6 +569,7 @@ async fn route_source_ingestion_request(
             graph_version,
             placement_epoch,
             fencing_token,
+            schema_sources: ctx.core.schema_sources(),
         },
         request,
     )

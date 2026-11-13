@@ -136,6 +136,12 @@ pub struct GraphSchemaSource {
     /// vocabularies, never schema axioms, so they are outside the composed digest.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub crosswalks: Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>,
+    /// The typed record contract an `approved:<name>` source was rendered from
+    /// (MEDULLA-TYPED-PACKS-R714). The rendered SHACL is lossy (type sets), so
+    /// the delivery drift gate reads the contract itself. The shapes document is
+    /// rendered from it, so it is outside the composed digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contract: Option<medulla_catalog_types::graph_schema::repair::RecordContract>,
     /// Deterministic provenance time. Replicated handlers must never read the
     /// local wall clock; until the commit envelope exposes a consensus time,
     /// live attachments use the documented sentinel `0`.
@@ -179,8 +185,18 @@ impl GraphSchemaSource {
             shapes_sha256,
             ontology_sha256,
             crosswalks: Vec::new(),
+            contract: None,
             attached_at_ms,
         })
+    }
+
+    /// The same source carrying the typed contract its shapes were rendered from.
+    pub fn with_contract(
+        mut self,
+        contract: medulla_catalog_types::graph_schema::repair::RecordContract,
+    ) -> Self {
+        self.contract = Some(contract);
+        self
     }
 
     /// The same source carrying the crosswalks the importer validated.
@@ -233,6 +249,7 @@ impl GraphSchemaSource {
         // from full-record equality.
         self.origin == other.origin
             && self.crosswalks == other.crosswalks
+            && self.contract == other.contract
             && same_schema_document(
                 self.shapes_ttl.as_deref(),
                 self.shapes_sha256,

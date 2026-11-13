@@ -463,12 +463,27 @@ pub struct SourceIngestionReceipt {
     /// (MEDULLA-INGEST-WORKER-R900.5).
     pub governance: GovernanceReport,
     pub committed_graph_version: u64,
+    /// One drift report per stream of the batch whose `approved:<stream>`
+    /// contract is in force (MEDULLA-TYPED-PACKS-R714). Observation evidence:
+    /// not part of the receipt digest, empty on a replay and when no stream
+    /// has an approved contract.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub drift: Vec<StreamDrift>,
     /// The stream's content-version object id (the live-set marker id): every
     /// batch to one stream advances this one object.
     pub stream_object_id: String,
     /// The batch digest of the prior batch on the stream, `None` for its first.
     pub previous_content_digest: Option<Digest256>,
     pub receipt_digest: Digest256,
+}
+
+/// The drift of one stream's delivery against its approved contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StreamDrift {
+    pub stream: ResourceId,
+    pub report: medulla_catalog_types::graph_schema::drift::DriftReport,
 }
 
 /// Read-only restart/failover key. Tenant and graph remain verified server

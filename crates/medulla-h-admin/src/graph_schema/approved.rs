@@ -180,7 +180,7 @@ pub(super) fn source(
         .strip_prefix(medulla_catalog_types::graph_schema::approval::APPROVED_SOURCE_PREFIX)
         .ok_or_else(|| "approved schema source id lacks its namespace".to_string())?;
     let shapes = medulla_catalog_types::graph_schema::repair::render_repair_shapes(name, contract);
-    medulla_graph_core::graph::GraphSchemaSource::new(
+    Ok(medulla_graph_core::graph::GraphSchemaSource::new(
         medulla_graph_core::graph::SchemaSourceOrigin::Approved {
             name: name.to_string(),
             approval_lease_id: approval.to_string(),
@@ -189,7 +189,8 @@ pub(super) fn source(
         Some(Arc::from(shapes)),
         None,
         0,
-    )
+    )?
+    .with_contract(contract.clone()))
 }
 
 /// The origin marker of a validated-but-never-installed candidate.

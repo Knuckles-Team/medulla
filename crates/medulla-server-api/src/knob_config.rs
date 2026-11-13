@@ -362,6 +362,8 @@ knobs! {
     identity_ownership_writer_share: f64 = "identity.ownership_writer_share", F64(0.10), [0.01, 0.5], "fraction", Tunable;
     /// Retrieval lineage depth.
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
+    /// Schema drift gate: most records of one stream sampled to infer a delivery shape.
+    drift_sample_max: u64 = "drift.sample_max", U64(1000), [10, 10_000], "records", Tunable;
     /// Regime forecast: largest horizon a request may ask for.
     finance_regime_forecast_max_horizon: u64 = "finance.regime_forecast.max_horizon", U64(10_000), [1, 1_000_000], "steps", Tunable;
     /// Regime forecast: tolerance on every probability vector and matrix row sum.

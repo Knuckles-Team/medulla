@@ -141,6 +141,57 @@ class GovernanceReport(BaseModel):
     refused: Annotated[int, Field(ge=0)]
 
 
+class DriftClass(str, Enum):
+    COMPATIBLE = "compatible"
+    WIDENING = "widening"
+    NARROWING = "narrowing"
+    RENAME = "rename"
+    BREAKING = "breaking"
+
+
+class EvolutionPolicy(str, Enum):
+    QUARANTINE = "quarantine"
+    APPLY_WIDENING = "apply_widening"
+    APPLY_MONOTONIC = "apply_monotonic"
+
+
+class DriftAction(str, Enum):
+    ACCEPTED = "accepted"
+    APPLIED = "applied"
+    QUARANTINED = "quarantined"
+
+
+class FieldDrift(str, Enum):
+    UNCHANGED = "unchanged"
+    WIDENED = "widened"
+    NARROWED = "narrowed"
+    RETYPED = "retyped"
+    REQUIRED_MISSING = "required_missing"
+    OPTIONAL_MISSING = "optional_missing"
+    NEW_REQUIRED = "new_required"
+    NEW_OPTIONAL = "new_optional"
+    RENAMED_OUT = "renamed_out"
+    RENAMED_IN = "renamed_in"
+
+
+class DriftReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: DriftAction
+    approved_digest: str
+    class_: Annotated[DriftClass, Field(alias="class")]
+    fields_: dict[str, FieldDrift] = Field(..., alias="fields")
+    policy: EvolutionPolicy
+    shape_digest: str
+
+
+class StreamDrift(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    report: DriftReport
+    stream: str
+
+
 class SourceIngestionReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -151,6 +202,7 @@ class SourceIngestionReceipt(BaseModel):
     committed_graph_version: Annotated[int, Field(ge=0)]
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
+    drift: list[StreamDrift] = Field(default_factory=list)
     governance: GovernanceReport
     live_set_digest: Digest256 | None = None
     mappings: BoundedVec_SourceMappingReceipt_5120

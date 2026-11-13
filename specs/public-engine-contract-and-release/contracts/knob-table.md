@@ -34,6 +34,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `red_team.max_probes` | u64 | 50 | [1, 500] | probes | Tunable | `MEDULLA_RED_TEAM_MAX_PROBES` |
 | `identity.ownership_writer_share` | f64 | 0.10 | [0.01, 0.5] | fraction | Tunable | `MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE` |
 | `retrieval.lineage_depth` | u64 | 8 | [1, 16] | hops | Tunable | `MEDULLA_RETRIEVAL_LINEAGE_DEPTH` |
+| `drift.sample_max` | u64 | 1000 | [10, 10000] | records | Tunable | `MEDULLA_DRIFT_SAMPLE_MAX` |
 | `finance.regime_forecast.max_horizon` | u64 | 10000 | [1, 1000000] | steps | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_MAX_HORIZON` |
 | `finance.regime_forecast.sum_tolerance` | f64 | 0.000000001 | [0.000000000001, 0.000001] | probability | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_SUM_TOLERANCE` |
 | `finance.regime_forecast.max_brier` | f64 | 2.0 | [0.0, 2.0] | squared probability | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_MAX_BRIER` |
