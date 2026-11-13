@@ -81,15 +81,15 @@ fn changed_part_reimports_alone() {
     let initial =
         prepare_seed_import(&first, None, &shapes, &sources).expect("initial seed import");
     assert_eq!(initial.outcome, SeedImportOutcome::Inserted);
-    assert_eq!(initial.state.parts.len(), 3);
+    assert_eq!(initial.content.parts.len(), 3);
     assert!(initial
-        .state
+        .content
         .parts
         .values()
         .all(|part| part.triple_count <= MAX_SEED_TRIPLES));
 
     let second = seed("new", digest(3));
-    let changed = prepare_seed_import(&second, Some(&initial.state), &shapes, &sources)
+    let changed = prepare_seed_import(&second, Some(&initial.content), &shapes, &sources)
         .expect("partial seed replacement");
     assert_eq!(
         changed.outcome,
@@ -98,16 +98,16 @@ fn changed_part_reimports_alone() {
         }
     );
     assert_eq!(
-        changed.state.parts[&SeedPartKey::Identity],
-        initial.state.parts[&SeedPartKey::Identity]
+        changed.content.parts[&SeedPartKey::Identity],
+        initial.content.parts[&SeedPartKey::Identity]
     );
     assert_eq!(
-        changed.state.parts[&SeedPartKey::References],
-        initial.state.parts[&SeedPartKey::References]
+        changed.content.parts[&SeedPartKey::References],
+        initial.content.parts[&SeedPartKey::References]
     );
     assert_ne!(
-        changed.state.parts[&SeedPartKey::Catalog],
-        initial.state.parts[&SeedPartKey::Catalog]
+        changed.content.parts[&SeedPartKey::Catalog],
+        initial.content.parts[&SeedPartKey::Catalog]
     );
 }
 
@@ -118,10 +118,10 @@ fn equal_content_digest_is_a_noop_after_the_existing_state_is_known() {
     let first = seed("same", digest(4));
     let initial =
         prepare_seed_import(&first, None, &shapes, &sources).expect("initial seed import");
-    let unchanged = prepare_seed_import(&first, Some(&initial.state), &shapes, &sources)
+    let unchanged = prepare_seed_import(&first, Some(&initial.content), &shapes, &sources)
         .expect("equal digest should be unchanged");
     assert_eq!(unchanged.outcome, SeedImportOutcome::Unchanged);
-    assert_eq!(unchanged.state, initial.state);
+    assert_eq!(unchanged.content, initial.content);
 }
 
 #[test]
@@ -163,7 +163,7 @@ fn seed_refusals_write_nothing() {
     let sources = GraphSchemaSources::default();
     let initial = prepare_seed_import(&seed("old", digest(2)), None, &shapes, &sources)
         .expect("initial seed import");
-    let before = initial.state.clone();
+    let before = initial.content.clone();
 
     let mut oversize = seed("old", digest(3));
     oversize
@@ -209,5 +209,29 @@ fn seed_refusals_write_nothing() {
         .expect("a catalog-role predicate is seed data");
 
     // The refused imports left the prior state exactly as it was.
-    assert_eq!(initial.state, before);
+    assert_eq!(initial.content, before);
+}
+
+// spec: MEDULLA-TYPED-PACKS-R810.5
+#[test]
+fn no_writer_sets_content_outside_construction() {
+    // A seed plan's content is built once by `prepare_seed_import`: nothing
+    // assigns the field afterwards. The needles are built in halves so this
+    // file does not match its own scan.
+    let assign = [".con", "tent="].concat();
+    let compare = [".con", "tent=="].concat();
+    for (name, source) in [
+        ("seed.rs", include_str!("seed.rs")),
+        ("seed_tests.rs", include_str!("seed_tests.rs")),
+    ] {
+        for (number, line) in source.lines().enumerate() {
+            let code = line.split("//").next().unwrap_or("");
+            let compact: String = code.split_whitespace().collect();
+            assert!(
+                !(compact.contains(&assign) && !compact.contains(&compare)),
+                "{name}:{}: seed plan content assigned after construction",
+                number + 1
+            );
+        }
+    }
 }

@@ -37,10 +37,12 @@ pub(crate) struct SeedPartState {
     pub(crate) triple_count: usize,
 }
 
-/// The current seed state used to make a partial replacement plan.
+/// The current seed content (digest and parts) used to make a partial replacement
+/// plan. A snapshot of data, not a lifecycle, so it carries no state machine
+/// (MEDULLA-TYPED-PACKS-R810.5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg(test)]
-pub(crate) struct SeedGraphState {
+pub(crate) struct SeedGraphContent {
     pub(crate) content_digest: Digest256,
     pub(crate) parts: BTreeMap<SeedPartKey, SeedPartState>,
 }
@@ -65,7 +67,7 @@ pub(crate) enum SeedImportOutcome {
 #[cfg(test)]
 pub(crate) struct SeedImportPlan {
     pub(crate) outcome: SeedImportOutcome,
-    pub(crate) state: SeedGraphState,
+    pub(crate) content: SeedGraphContent,
 }
 
 /// Parse, validate and prepare one seed graph against the composed SHACL graph.
@@ -78,7 +80,7 @@ pub(crate) struct SeedImportPlan {
 #[cfg(test)]
 pub(crate) fn prepare_seed_import(
     seed: &SeedGraphImport,
-    current: Option<&SeedGraphState>,
+    current: Option<&SeedGraphContent>,
     shapes: &Graph,
     sources: &GraphSchemaSources,
 ) -> Result<SeedImportPlan, String> {
@@ -121,19 +123,22 @@ pub(crate) fn prepare_seed_import(
 
     let outcome = match current {
         None => SeedImportOutcome::Inserted,
-        Some(state) if changed_parts.is_empty() && state.content_digest == seed.content_digest => {
+        Some(current_content)
+            if changed_parts.is_empty()
+                && current_content.content_digest == seed.content_digest =>
+        {
             return Ok(SeedImportPlan {
                 outcome: SeedImportOutcome::Unchanged,
-                state: state.clone(),
+                content: current_content.clone(),
             });
         }
-        Some(state) if changed_parts.is_empty() => {
+        Some(current_content) if changed_parts.is_empty() => {
             return Err(format!(
                 "SEED_DIGEST_MISMATCH: content digest {} has no changed part relative to {}",
-                seed.content_digest, state.content_digest
+                seed.content_digest, current_content.content_digest
             ));
         }
-        Some(state) if state.content_digest == seed.content_digest => {
+        Some(current_content) if current_content.content_digest == seed.content_digest => {
             return Err(format!(
                 "SEED_DIGEST_MISMATCH: content digest {} has changed parts",
                 seed.content_digest
@@ -143,7 +148,7 @@ pub(crate) fn prepare_seed_import(
     };
     Ok(SeedImportPlan {
         outcome,
-        state: SeedGraphState {
+        content: SeedGraphContent {
             content_digest: seed.content_digest,
             parts,
         },
