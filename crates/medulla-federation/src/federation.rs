@@ -1016,30 +1016,140 @@ pub(crate) enum SqlDialect {
     MySql,
 }
 
+/// Why a statement failed the read-only audit. Closed.
+#[cfg(feature = "federation-sql")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SqlRefusal {
+    /// Empty, oversized or NUL-bearing text.
+    Encoding,
+    /// The statement did not parse.
+    Parse,
+    /// Not exactly one read query (DDL, DML, COPY, external-table creation or several statements).
+    NotOneQuery,
+    /// A locking read, `SELECT INTO`, a table-valued function or another write-shaped node.
+    NotReadOnly,
+    /// A function that is not on the read-only allowlist.
+    UnknownFunction,
+}
+
+/// Which functions a statement may call.
+#[cfg(feature = "federation-sql")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FunctionPolicy {
+    /// No function check; the database read-only transaction is the second layer.
+    Any,
+    /// Only the closed [`READ_ONLY_SQL_FUNCTIONS`] set (approved source queries).
+    Allowlisted,
+}
+
+/// Functions an approved source query may call: aggregates, scalar math, text, date
+/// and conditional helpers that read no file, network, sequence or session state.
+/// Sorted; looked up by binary search on the lower-case unqualified name.
+#[cfg(feature = "federation-sql")]
+pub(crate) const READ_ONLY_SQL_FUNCTIONS: &[&str] = &[
+    "abs",
+    "avg",
+    "bool_and",
+    "bool_or",
+    "btrim",
+    "ceil",
+    "ceiling",
+    "char_length",
+    "character_length",
+    "coalesce",
+    "concat",
+    "concat_ws",
+    "count",
+    "date_trunc",
+    "dense_rank",
+    "exp",
+    "first_value",
+    "floor",
+    "greatest",
+    "ifnull",
+    "initcap",
+    "lag",
+    "last_value",
+    "lead",
+    "least",
+    "left",
+    "length",
+    "ln",
+    "log",
+    "lower",
+    "lpad",
+    "ltrim",
+    "max",
+    "min",
+    "mod",
+    "ntile",
+    "nullif",
+    "power",
+    "rank",
+    "replace",
+    "reverse",
+    "right",
+    "round",
+    "row_number",
+    "rpad",
+    "rtrim",
+    "sign",
+    "split_part",
+    "sqrt",
+    "stddev",
+    "strpos",
+    "substr",
+    "sum",
+    "to_char",
+    "to_date",
+    "to_timestamp",
+    "trim",
+    "trunc",
+    "upper",
+    "variance",
+];
+
 /// SQLx 0.9 deliberately requires an explicit audit marker for runtime SQL. This
 /// parser is that audit boundary: exactly one query is accepted, including every
 /// nested statement, and locking/`SELECT INTO` write-shaped queries are rejected.
+/// Under [`FunctionPolicy::Allowlisted`] every function call must be a bare name on
+/// [`READ_ONLY_SQL_FUNCTIONS`] and no table-valued function may appear.
 /// The database read-only transaction below remains the authoritative second layer.
 #[cfg(feature = "federation-sql")]
-pub(crate) fn validate_federated_sql(query: &str, dialect: SqlDialect) -> Result<(), String> {
+pub(crate) fn audit_read_only_sql(
+    query: &str,
+    dialect: SqlDialect,
+    functions: FunctionPolicy,
+) -> Result<(), SqlRefusal> {
     use core::ops::ControlFlow;
-    use sqlparser::ast::{Query, Select, Statement, Visit, Visitor};
+    use sqlparser::ast::{
+        Expr, ObjectNamePart, Query, Select, Statement, TableFactor, Visit, Visitor,
+    };
     use sqlparser::dialect::{MySqlDialect, PostgreSqlDialect};
     use sqlparser::parser::Parser;
 
     if query.is_empty() || query.len() > MAX_FEDERATED_SQL_BYTES || query.contains('\0') {
-        return Err("federation: invalid SQL query size or encoding".to_string());
+        return Err(SqlRefusal::Encoding);
     }
     let statements = match dialect {
         SqlDialect::Postgres => Parser::parse_sql(&PostgreSqlDialect {}, query),
         SqlDialect::MySql => Parser::parse_sql(&MySqlDialect {}, query),
     }
-    .map_err(|_| "federation: SQL query did not parse".to_string())?;
+    .map_err(|_| SqlRefusal::Parse)?;
     if statements.len() != 1 || !matches!(statements.first(), Some(Statement::Query(_))) {
-        return Err("federation: SQL source requires exactly one read query".to_string());
+        return Err(SqlRefusal::NotOneQuery);
     }
 
-    struct ReadOnlyVisitor;
+    struct ReadOnlyVisitor {
+        functions: FunctionPolicy,
+        refusal: Option<SqlRefusal>,
+    }
+    impl ReadOnlyVisitor {
+        fn refuse(&mut self, refusal: SqlRefusal) -> ControlFlow<()> {
+            self.refusal = Some(refusal);
+            ControlFlow::Break(())
+        }
+    }
     impl Visitor for ReadOnlyVisitor {
         type Break = ();
 
@@ -1047,7 +1157,7 @@ pub(crate) fn validate_federated_sql(query: &str, dialect: SqlDialect) -> Result
             if matches!(statement, Statement::Query(_)) {
                 ControlFlow::Continue(())
             } else {
-                ControlFlow::Break(())
+                self.refuse(SqlRefusal::NotReadOnly)
             }
         }
 
@@ -1055,7 +1165,7 @@ pub(crate) fn validate_federated_sql(query: &str, dialect: SqlDialect) -> Result
             if query.locks.is_empty() {
                 ControlFlow::Continue(())
             } else {
-                ControlFlow::Break(())
+                self.refuse(SqlRefusal::NotReadOnly)
             }
         }
 
@@ -1063,16 +1173,94 @@ pub(crate) fn validate_federated_sql(query: &str, dialect: SqlDialect) -> Result
             if select.into.is_none() {
                 ControlFlow::Continue(())
             } else {
-                ControlFlow::Break(())
+                self.refuse(SqlRefusal::NotReadOnly)
+            }
+        }
+
+        fn pre_visit_table_factor(&mut self, factor: &TableFactor) -> ControlFlow<Self::Break> {
+            if self.functions == FunctionPolicy::Any
+                || matches!(
+                    factor,
+                    TableFactor::Table { args: None, .. }
+                        | TableFactor::Derived { .. }
+                        | TableFactor::NestedJoin { .. }
+                )
+            {
+                ControlFlow::Continue(())
+            } else {
+                self.refuse(SqlRefusal::UnknownFunction)
+            }
+        }
+
+        fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
+            let Expr::Function(function) = expr else {
+                return ControlFlow::Continue(());
+            };
+            if self.functions == FunctionPolicy::Any {
+                return ControlFlow::Continue(());
+            }
+            let known = match function.name.0.as_slice() {
+                [ObjectNamePart::Identifier(ident)] => READ_ONLY_SQL_FUNCTIONS
+                    .binary_search(&ident.value.to_ascii_lowercase().as_str())
+                    .is_ok(),
+                _ => false,
+            };
+            if known {
+                ControlFlow::Continue(())
+            } else {
+                self.refuse(SqlRefusal::UnknownFunction)
             }
         }
     }
 
-    let mut visitor = ReadOnlyVisitor;
+    let mut visitor = ReadOnlyVisitor {
+        functions,
+        refusal: None,
+    };
     if statements[0].visit(&mut visitor).is_break() {
-        return Err("federation: SQL query is not read-only".to_string());
+        return Err(visitor.refusal.unwrap_or(SqlRefusal::NotReadOnly));
     }
     Ok(())
+}
+
+/// Audit a federated SQL source statement (no function allowlist). The messages are
+/// matched by `column_query_error` in the SPARQL handlers.
+#[cfg(feature = "federation-sql")]
+pub(crate) fn validate_federated_sql(query: &str, dialect: SqlDialect) -> Result<(), String> {
+    audit_read_only_sql(query, dialect, FunctionPolicy::Any).map_err(|refusal| match refusal {
+        SqlRefusal::Encoding => "federation: invalid SQL query size or encoding".to_string(),
+        SqlRefusal::Parse => "federation: SQL query did not parse".to_string(),
+        SqlRefusal::NotOneQuery => {
+            "federation: SQL source requires exactly one read query".to_string()
+        }
+        SqlRefusal::NotReadOnly | SqlRefusal::UnknownFunction => {
+            "federation: SQL query is not read-only".to_string()
+        }
+    })
+}
+
+/// Classify the SQL of an approved source query (MEDULLA-FEDERATED-QUERY-R085.4).
+/// Only the dialects the audit certifies are accepted (`unsupported_dialect`
+/// otherwise). DDL, DML, COPY, external-table creation, several statements, locking
+/// reads, `SELECT INTO`, table-valued functions and any function off the read-only
+/// allowlist refuse `invalid_query`. Parameters are bound separately by position, so
+/// the statement carries placeholders only; this reads no source and issues nothing.
+#[cfg(feature = "federation-sql")]
+pub fn validate_source_query_sql(
+    dialect: medulla_result_types::source_query::SourceQueryDialect,
+    sql: &str,
+) -> Result<(), medulla_result_types::source_query::SourceQueryError> {
+    use medulla_result_types::source_query::{SourceQueryDialect, SourceQueryError};
+
+    let certified = match dialect {
+        SourceQueryDialect::Postgres => SqlDialect::Postgres,
+        SourceQueryDialect::Mysql => SqlDialect::MySql,
+        SourceQueryDialect::Sqlite | SourceQueryDialect::Mssql | SourceQueryDialect::Clickhouse => {
+            return Err(SourceQueryError::UnsupportedDialect)
+        }
+    };
+    audit_read_only_sql(sql, certified, FunctionPolicy::Allowlisted)
+        .map_err(|_| SourceQueryError::InvalidQuery)
 }
 
 /// Reads rows from an EXTERNAL relational DB (Postgres/MySQL) over a pure-Rust/rustls

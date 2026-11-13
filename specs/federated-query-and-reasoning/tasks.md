@@ -225,7 +225,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T212 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.5 Evidence of Iterative retrieval stop rule with calibrated confidence and bounded termination
 - [ ] T213 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.6 Hot-path proof of Iterative retrieval stop rule with calibrated confidence and bounded termination
 - [ ] T214 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.1 Model of Arbitration between model prior and evidence
-- [ ] T215 [US2] MEDULLA-FEDERATED-QUERY-R083.2 Behavior of Arbitration between model prior and evidence
+- [x] T215 [US2] MEDULLA-FEDERATED-QUERY-R083.2 Behavior of Arbitration between model prior and evidence
 - [ ] T216 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.3 Wiring of Arbitration between model prior and evidence
 - [ ] T217 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.4 Refusal of Arbitration between model prior and evidence
 - [ ] T218 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.5 Evidence of Arbitration between model prior and evidence
@@ -379,7 +379,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T359 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.1 Model of Medulla approves immutable source queries for bounded connector execution
 - [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: issue approval of Medulla approves immutable source queries for bounded connector execution
 - [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: verify approval of Medulla approves immutable source queries for bounded connector execution
-- [ ] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
+- [x] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
 - [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring of Medulla approves immutable source queries for bounded connector execution
 - [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: bounded execution contract of Medulla approves immutable source queries for bounded connector execution
 - [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal of Medulla approves immutable source queries for bounded connector execution

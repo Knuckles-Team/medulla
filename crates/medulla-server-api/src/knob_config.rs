@@ -275,6 +275,8 @@ knobs! {
     retrieval_feedback_queries: u64 = "retrieval.feedback_queries", U64(8), [1, 64], "queries", Tunable;
     /// Retrieval round: most terms one feedback part may carry.
     retrieval_feedback_terms: u64 = "retrieval.feedback_terms", U64(32), [1, 256], "terms", Tunable;
+    /// Retrieval round: confidence gap a supported answer must exceed to win over another supported answer.
+    retrieval_arbitration_margin: f64 = "retrieval.arbitration_margin", F64(0.10), [0.0, 0.5], "confidence", Tunable;
     /// Retrieval round: most cost one retrieval loop may incur.
     retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
     /// Retrieval round: score change below which quality has saturated.

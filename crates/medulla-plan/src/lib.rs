@@ -85,6 +85,9 @@ pub mod retrieval_stop;
 // MEDULLA-FEDERATED-QUERY-R081.8.2: bounded retrieval feedback and critique.
 #[cfg(feature = "query")]
 pub mod retrieval_feedback;
+// MEDULLA-FEDERATED-QUERY-R083.2: support-first arbitration of prior and retrieved answers.
+#[cfg(feature = "query")]
+pub mod retrieval_arbitration;
 // MEDULLA-FEDERATED-QUERY-R650.1: context bundle model and certified compile.
 pub mod context_bundle;
 // MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.

@@ -212,3 +212,83 @@ fn sql_source_errors_never_reflect_connection_secrets_or_query_text() {
     assert!(!err.contains(secret));
     assert!(!err.contains(query_marker));
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R085.4
+#[test]
+fn approved_source_query_has_no_write_effects() {
+    use crate::federation::{validate_source_query_sql, READ_ONLY_SQL_FUNCTIONS};
+    use medulla_result_types::source_query::{SourceQueryDialect, SourceQueryError};
+
+    assert!(
+        READ_ONLY_SQL_FUNCTIONS
+            .windows(2)
+            .all(|pair| pair[0] < pair[1]),
+        "the allowlist is sorted and unique so the lookup is a binary search"
+    );
+
+    // Read queries with bound parameters and allowlisted functions are accepted.
+    for (dialect, sql) in [
+        (
+            SourceQueryDialect::Postgres,
+            "SELECT id, COALESCE(name, 'n') FROM docs WHERE year > $1 AND UPPER(kind) = $2",
+        ),
+        (
+            SourceQueryDialect::Mysql,
+            "SELECT id, COUNT(*) FROM docs WHERE year > ? GROUP BY id",
+        ),
+        (
+            SourceQueryDialect::Postgres,
+            "WITH recent AS (SELECT id FROM docs WHERE year > $1) SELECT id FROM recent",
+        ),
+    ] {
+        assert_eq!(validate_source_query_sql(dialect, sql), Ok(()), "{sql}");
+    }
+
+    // Every write-shaped, multi-statement, locking and unknown-function form refuses
+    // `invalid_query` without issuing anything.
+    for sql in [
+        "INSERT INTO docs (id) VALUES ($1)",
+        "UPDATE docs SET name = $1",
+        "DELETE FROM docs",
+        "DROP TABLE docs",
+        "CREATE TABLE copy_of AS SELECT * FROM docs",
+        "CREATE FOREIGN TABLE ext (id int) SERVER s",
+        "COPY docs TO '/tmp/out'",
+        "SELECT 1; SELECT 2",
+        "SELECT id FROM docs FOR UPDATE",
+        "SELECT id INTO copy_of FROM docs",
+        "WITH gone AS (DELETE FROM docs RETURNING id) SELECT id FROM gone",
+        "SELECT pg_read_file('/etc/passwd')",
+        "SELECT nextval('seq')",
+        "SELECT public.upper(name) FROM docs",
+        "SELECT * FROM generate_series(1, 10)",
+        "SELECT * FROM",
+        "",
+    ] {
+        assert_eq!(
+            validate_source_query_sql(SourceQueryDialect::Postgres, sql),
+            Err(SourceQueryError::InvalidQuery),
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        validate_source_query_sql(
+            SourceQueryDialect::Mysql,
+            "SELECT id FROM docs LOCK IN SHARE MODE"
+        ),
+        Err(SourceQueryError::InvalidQuery)
+    );
+
+    // A dialect the audit does not certify refuses `unsupported_dialect`, even for a
+    // plain read query.
+    for dialect in [
+        SourceQueryDialect::Sqlite,
+        SourceQueryDialect::Mssql,
+        SourceQueryDialect::Clickhouse,
+    ] {
+        assert_eq!(
+            validate_source_query_sql(dialect, "SELECT 1"),
+            Err(SourceQueryError::UnsupportedDialect)
+        );
+    }
+}

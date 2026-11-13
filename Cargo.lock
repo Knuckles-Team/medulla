@@ -5175,6 +5175,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-exec",
  "medulla-protocol-types",
+ "medulla-result-types",
  "medulla-sqlite-format",
  "medulla-types",
  "medulla-uql",
