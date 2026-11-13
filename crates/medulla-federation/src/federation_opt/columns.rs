@@ -368,14 +368,15 @@ mod tests {
             "id_field": "id",
             "score_field": null
         }});
-        let legacy: medulla_types::wire::ForeignSourceSpec = serde_json::from_value(json).unwrap();
-        let medulla_types::wire::ForeignSourceSpec::Sql { columns, .. } = &legacy else {
+        let legacy: medulla_query_types::wire::ForeignSourceSpec =
+            serde_json::from_value(json).unwrap();
+        let medulla_query_types::wire::ForeignSourceSpec::Sql { columns, .. } = &legacy else {
             panic!("expected SQL spec");
         };
         assert!(columns.is_empty());
         crate::federation::validate_column_mapping(&legacy).unwrap();
 
-        let mapped = medulla_types::wire::ForeignSourceSpec::Sql {
+        let mapped = medulla_query_types::wire::ForeignSourceSpec::Sql {
             dsn: "postgres://db/records".into(),
             query: "SELECT id, name FROM records".into(),
             id_field: "id".into(),
@@ -404,7 +405,7 @@ mod tests {
             .unwrap_err();
         assert!(numeric.contains("require string values"));
         let with_columns = |columns: Vec<String>| {
-            let medulla_types::wire::ForeignSourceSpec::Sql {
+            let medulla_query_types::wire::ForeignSourceSpec::Sql {
                 dsn,
                 query,
                 id_field,
@@ -414,7 +415,7 @@ mod tests {
             else {
                 panic!("the mapped fixture is a Sql spec");
             };
-            medulla_types::wire::ForeignSourceSpec::Sql {
+            medulla_query_types::wire::ForeignSourceSpec::Sql {
                 dsn,
                 query,
                 id_field,
@@ -483,7 +484,7 @@ mod tests {
             }
         }
 
-        let spec = medulla_types::wire::ForeignSourceSpec::Sql {
+        let spec = medulla_query_types::wire::ForeignSourceSpec::Sql {
             dsn: "postgres://db.invalid/records".into(),
             query: "SELECT id, name FROM records".into(),
             id_field: "id".into(),

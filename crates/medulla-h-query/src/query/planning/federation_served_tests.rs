@@ -7,11 +7,11 @@ use super::{run_unified_with, ServedIndexes};
 use medulla_exec::algebra::Op;
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_server_ops::api::query_txn::query_support::execute_rows;
 #[cfg(feature = "tsdb")]
 use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

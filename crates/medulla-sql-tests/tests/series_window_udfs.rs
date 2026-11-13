@@ -4,9 +4,9 @@
 #![cfg(feature = "numeric")]
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::series_expr::{SeriesExpr, SeriesFunc};
 use medulla_sql::{sql::exec_sql, sql::CancellationToken};
 use medulla_tsdb::derive::Program;
-use medulla_types::series_expr::{SeriesExpr, SeriesFunc};
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]

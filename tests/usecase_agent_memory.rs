@@ -30,9 +30,9 @@
 use medulla_exec::{algebra::Op, algebra::Plan, exec::execute, exec::PlanCtx};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::TimeAxis;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
-use medulla_types::wire::TimeAxis;
 use serde_json::json;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {

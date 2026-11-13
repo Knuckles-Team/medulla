@@ -41,4 +41,5 @@ sql = ["medulla-sql/sql", "medulla-table-store/sql", "medulla-tables/sql", "medu
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-sql-lang = { path = "../medulla-sql-lang" }

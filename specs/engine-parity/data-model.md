@@ -42,7 +42,7 @@ This file describes the entities that the rows add or extend.
 
 ### CdcEvent extension
 
-- Adds the kinds `InsertRow`, `UpdateRow`, `DeleteRow` to `CdcKind` and a `table` field to `CdcEvent`. Owner: `crates/medulla-types/src/wire_streaming.rs`.
+- Adds the kinds `InsertRow`, `UpdateRow`, `DeleteRow` to `CdcKind` and a `table` field to `CdcEvent`. Owner: `crates/medulla-query-types/src/wire_streaming.rs`.
 
 ### RecoveryTarget and ArchivePolicy
 

@@ -494,12 +494,12 @@ $($variants)*
         x: Vec<Vec<f64>>,
         y: Vec<f64>,
         #[serde(default)]
-        params: medulla_types::wire::EstimatorParams,
+        params: medulla_query_types::wire::EstimatorParams,
     },
 
     #[cfg(feature = "datascience")]
     DsPredictEstimator {
-        model: medulla_types::wire::FittedModel,
+        model: medulla_query_types::wire::FittedModel,
         x: Vec<Vec<f64>>,
     },
 

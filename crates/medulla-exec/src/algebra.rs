@@ -1,7 +1,7 @@
 //! The unified operator algebra (CONCEPT:AU-KG.compute.vector) — re-exported from the wire DTO.
 //!
 //! The serializable plan AST (`Op`, `Pred`, `Plan`) is the wire DTO and therefore
-//! lives at the BOTTOM of the DAG in [`medulla_types::wire`] (so `medulla-types::protocol`'s
+//! lives at the BOTTOM of the DAG in [`medulla_query_types::wire`] (so `medulla-types::protocol`'s
 //! `Method::UnifiedQuery` can embed it without depending on medulla-plan). It is pure
 //! serde — NO DataFusion — so it ships even in a default/Pi build; medulla-plan re-exports
 //! it here and attaches behavior (the executor in [`crate::exec`], the reorder in
@@ -18,7 +18,7 @@
 //! vector. A `Reason` (datalog fixpoint) op, blob/object source ops, cross-modal
 //! write ACID and cross-shard are explicit later increments (intentionally absent).
 
-pub use medulla_types::wire::{Op, Plan, Pred};
+pub use medulla_query_types::wire::{Op, Plan, Pred};
 
 #[cfg(test)]
 mod tests {

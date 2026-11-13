@@ -13,8 +13,8 @@ use std::time::Duration;
 use medulla_protocol_types::{
     protocol::Method, protocol::Request, protocol::Response, protocol::ResultPayload,
 };
+use medulla_query_types::wire::{ForeignSourceSpec, UqlResult};
 use medulla_types::acl::RequestContextClaims;
-use medulla_types::wire::{ForeignSourceSpec, UqlResult};
 
 use medulla_exec::algebra::Op;
 use medulla_exec::algebra::Plan;
@@ -447,8 +447,8 @@ mod engine_remote_tests {
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
+    use medulla_query_types::wire::ForeignSourceSpec;
     use medulla_types::acl::RequestContextClaims;
-    use medulla_types::wire::ForeignSourceSpec;
 
     use super::verified_claims;
     use medulla_exec::exec::{execute, PlanCtx};
@@ -522,9 +522,9 @@ mod engine_remote_tests {
         let request = RemoteRequest::keys(vec![key.clone()]);
         let parsed = medulla_uql::parse(&peer.render(&request).unwrap()).unwrap();
         assert!(
-            matches!(&parsed.ops[1], medulla_types::wire::Op::Filter { preds }
-            if matches!(&preds[..], [medulla_types::wire::Pred::In { values, .. }]
-                if values == &vec![medulla_types::wire::PredLiteral::Str(key)]))
+            matches!(&parsed.ops[1], medulla_query_types::wire::Op::Filter { preds }
+            if matches!(&preds[..], [medulla_query_types::wire::Pred::In { values, .. }]
+                if values == &vec![medulla_query_types::wire::PredLiteral::Str(key)]))
         );
     }
 
@@ -565,7 +565,7 @@ mod engine_remote_tests {
                 assert!(params.is_empty());
                 let statement = medulla_uql::parse_statement(&text, &params).unwrap();
                 let result = crate::uql::serve::run_statement(&statement, &ctx).unwrap();
-                let medulla_types::wire::UqlResult::Rows { rows, .. } = &result else {
+                let medulla_query_types::wire::UqlResult::Rows { rows, .. } = &result else {
                     panic!("rows expected");
                 };
                 served.push(rows.len());

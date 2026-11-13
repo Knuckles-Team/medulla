@@ -87,7 +87,7 @@ fn topology_ranks_depend_on_every_edge() {
 fn unmodelled_reads_fall_back_to_the_version_keyed_path() {
     let as_of = Op::AsOf {
         ts: 1.0,
-        axis: medulla_types::wire::TimeAxis::Valid,
+        axis: medulla_query_types::wire::TimeAxis::Valid,
     };
     assert_eq!(deps(vec![scan("A"), as_of], None), None);
     let foreign = Op::Foreign { name: "crm".into() };

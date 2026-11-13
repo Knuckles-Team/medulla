@@ -56,7 +56,7 @@ pub(crate) async fn served_foreign_leg(
         let coverage = registry
             .exclude_unreadable(&names)
             .into_iter()
-            .map(|(source, used)| medulla_types::wire::UqlSourceCoverage {
+            .map(|(source, used)| medulla_query_types::wire::UqlSourceCoverage {
                 source,
                 used,
                 reason: (!used).then(unreadable_reason),
@@ -105,7 +105,7 @@ pub(crate) async fn served_foreign_leg(
 #[derive(Default)]
 pub(crate) struct ForeignLeg {
     pub(crate) registry: Option<OwnedForeignRegistry>,
-    pub(crate) coverage: Vec<medulla_types::wire::UqlSourceCoverage>,
+    pub(crate) coverage: Vec<medulla_query_types::wire::UqlSourceCoverage>,
 }
 
 /// The wire reason of an unreadable source: the source-authority reason `Unconnected`

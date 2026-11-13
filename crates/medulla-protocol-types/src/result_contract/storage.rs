@@ -34,7 +34,7 @@ use medulla_mutation_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,
     write_back::WriteBackReceiptPage,
 };
-use medulla_types::series_expr::DerivedSeriesReceipt;
+use medulla_query_types::series_expr::DerivedSeriesReceipt;
 
 method_results! {
     visit_storage;

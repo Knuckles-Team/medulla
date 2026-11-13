@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use super::capability::{
     connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, KeyLookup, LimitPushdown,
@@ -657,7 +657,7 @@ mod snapshot_reads {
 
     use medulla_exec::algebra::Op;
     use medulla_exec::rowset::RowSet;
-    use medulla_types::wire::ForeignSourceSpec;
+    use medulla_query_types::wire::ForeignSourceSpec;
 
     use super::super::capability::{RemoteRequest, SourceCapabilities};
     use super::super::remote::{Identity, RemoteFetch};
@@ -970,7 +970,7 @@ fn mcp_remote(port: Option<Arc<FakePort>>) -> super::mcp::McpRemote {
     let spec = ForeignSourceSpec::Mcp {
         server: "objects-mcp".into(),
         tool: "list_objects".into(),
-        capabilities: medulla_types::wire::ForeignOperationCapabilities {
+        capabilities: medulla_query_types::wire::ForeignOperationCapabilities {
             key_filter_pushdown: true,
             ..Default::default()
         },
@@ -1046,7 +1046,7 @@ mod search_pushdown {
     use crate::federation_opt::{
         fetch_top_k, query_digest, SearchHit, SearchPush, SearchRemote, Shortfall,
     };
-    use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
+    use medulla_query_types::search_source::{ScoreKind, SearchIndexCapability};
 
     /// A ten-document index that records every request it receives.
     struct Recording {
@@ -1289,8 +1289,8 @@ mod search_pushdown {
 #[cfg(feature = "text")]
 mod search_fusion {
     use super::*;
-    use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
-    use medulla_types::wire::ForeignOperationCapabilities;
+    use medulla_query_types::search_source::{ScoreKind, SearchIndexCapability};
+    use medulla_query_types::wire::ForeignOperationCapabilities;
 
     /// A search-index tool that records its calls and answers three scored documents.
     struct IndexPort {
@@ -1508,7 +1508,7 @@ mod web_metasearch {
         ForeignSourceSpec::Mcp {
             server: "web-mcp".into(),
             tool: "web_search".into(),
-            capabilities: medulla_types::wire::ForeignOperationCapabilities::default(),
+            capabilities: medulla_query_types::wire::ForeignOperationCapabilities::default(),
         }
     }
 

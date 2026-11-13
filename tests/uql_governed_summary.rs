@@ -254,7 +254,7 @@ async fn uql_header_as(
     state: &test_support::SharedState,
     request: Request,
 ) -> (Vec<String>, u64, u64, Vec<bool>) {
-    use medulla_types::wire::UqlResult;
+    use medulla_query_types::wire::UqlResult;
     let response = Box::pin(dispatch_req(state, request)).await;
     assert!(response.error.is_none(), "UQL failed: {:?}", response.error);
     let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) =

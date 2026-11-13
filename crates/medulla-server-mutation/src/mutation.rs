@@ -356,7 +356,7 @@ mod tests {
                 updates_msgpack: Vec::new(),
             },
             Method::Batch {
-                operations: vec![medulla_types::wire::BatchOperation::GetNodeProperties {
+                operations: vec![medulla_query_types::wire::BatchOperation::GetNodeProperties {
                     node_id: "x".into(),
                 }],
             },

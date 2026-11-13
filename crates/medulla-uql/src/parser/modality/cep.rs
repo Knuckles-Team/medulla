@@ -8,7 +8,7 @@
 //! cep_pred = name ( "=" json | ">" signed_num | "<" signed_num | "EXISTS" ) ;
 //! ```
 
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     CepAttrPredSpec, CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec,
 };
 

@@ -98,7 +98,7 @@ $($variants)*
     // Result via `ResultPayload::raw` — a list of `[id, score|nil]` rows.
     #[cfg(feature = "query")]
     UnifiedQuery {
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
         /// Optional host-driven foreign-read execution bound to this exact plan.
         #[serde(default)]
         foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
@@ -129,7 +129,7 @@ $($variants)*
     Uql {
         text: String,
         #[serde(default)]
-        params: std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
+        params: std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
         /// Plan the exact executable text and return server-owned foreign-read
         /// pins without executing it. The later ordinary UQL request must use
         /// the same text and typed parameters when presenting the execution ref.
@@ -154,7 +154,7 @@ $($variants)*
     /// `UnifiedQuery`).
     #[cfg(feature = "query")]
     ExplainPlan {
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 
     /// `EXPLAIN PROVENANCE` — run `plan` and, for each result row, resolve its
@@ -166,7 +166,7 @@ $($variants)*
     /// schema-generated `EvidenceBundle` via `ResultPayload::raw`. Gated `query`.
     #[cfg(feature = "query")]
     ExplainProvenance {
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 
     /// `EXPLAIN PROVENANCE BY IDS` (CONCEPT:MEDULLA-KB-CURRENCY) — the ID-seeded sibling of
@@ -193,7 +193,7 @@ $($variants)*
     /// `ExplainPolicyResult` via `ResultPayload::raw`. Gated `query`.
     #[cfg(feature = "query")]
     ExplainPolicy {
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 
     /// `EXPLAIN BELIEF <node_id>` — the FULL, un-flattened E1 justification tree
@@ -505,7 +505,7 @@ $($variants)*
     #[cfg(feature = "federation")]
     RegisterForeignSource {
         name: String,
-        source: medulla_types::wire::ForeignSourceSpec,
+        source: medulla_query_types::wire::ForeignSourceSpec,
     },
 
     /// Register (or replace) a named read-only graph view over approved R2RML
@@ -537,7 +537,7 @@ $($variants)*
         #[serde(default)]
         columns: Vec<String>,
         #[serde(default)]
-        predicates: Vec<medulla_types::wire::ForeignColumnPredicate>,
+        predicates: Vec<medulla_query_types::wire::ForeignColumnPredicate>,
     },
 
     /// Open one approved, host-driven bounded foreign read. The source driver
@@ -674,7 +674,7 @@ $($variants)*
     PlanMatViewDefine {
         name: String,
         graph: String,
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 
     /// MEDULLA-FEDERATED-QUERY-R650.3: compile one context bundle for a query

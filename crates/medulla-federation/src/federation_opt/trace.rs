@@ -3,9 +3,9 @@
 use serde::Serialize;
 
 use super::snapshot::Consistency;
+use medulla_query_types::search_source::ScoreKind;
 pub use medulla_types::metadata_acceleration::FragmentExecutionMode;
 use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
-use medulla_types::search_source::ScoreKind;
 
 /// How a fragment was fetched.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]

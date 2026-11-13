@@ -10,7 +10,7 @@
 use std::collections::HashSet;
 
 use medulla_graph_core::graph::GraphView;
-use medulla_types::wire::{EdgeDir, Pred};
+use medulla_query_types::wire::{EdgeDir, Pred};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use serde_json::{Map, Value};

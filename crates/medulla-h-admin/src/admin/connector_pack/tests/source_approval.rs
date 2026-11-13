@@ -311,7 +311,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
                 "r722-four-phase:register",
                 medulla_protocol_types::protocol::Method::RegisterForeignSource {
                     name: source_name.clone(),
-                    source: medulla_types::wire::ForeignSourceSpec::Mcp {
+                    source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                         server: connector.to_string(),
                         tool: "list_suppliers".to_string(),
                         capabilities: Default::default(),
@@ -330,7 +330,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
         deadline_ms: 10_000,
     };
     let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::ForeignScan {
-        source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+        source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
             name: source_name.clone(),
         }),
         join: false,
@@ -530,7 +530,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(ADMIN),
     )
     .unwrap();
-    let spec = medulla_types::wire::ForeignSourceSpec::Mcp {
+    let spec = medulla_query_types::wire::ForeignSourceSpec::Mcp {
         server: connector.to_string(),
         tool: "list_suppliers".to_string(),
         capabilities: Default::default(),
@@ -568,12 +568,12 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     // operation or a different transport, even when both values are registered
     // in the same owner's catalog.
     for wrong_spec in [
-        medulla_types::wire::ForeignSourceSpec::Mcp {
+        medulla_query_types::wire::ForeignSourceSpec::Mcp {
             server: connector.to_string(),
             tool: "list_customers".to_string(),
             capabilities: Default::default(),
         },
-        medulla_types::wire::ForeignSourceSpec::Api {
+        medulla_query_types::wire::ForeignSourceSpec::Api {
             operation: "list_suppliers".to_string(),
             capabilities: Default::default(),
         },
@@ -677,7 +677,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     );
 
     let mut changed_spec = descriptor.clone();
-    changed_spec.spec = medulla_types::wire::ForeignSourceSpec::Api {
+    changed_spec.spec = medulla_query_types::wire::ForeignSourceSpec::Api {
         operation: "different_operation".to_string(),
         capabilities: Default::default(),
     };
@@ -801,7 +801,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
             .iter()
             .enumerate()
             .map(|(index, name)| medulla_exec::algebra::Op::ForeignScan {
-                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+                source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                     name: name.clone(),
                 }),
                 join: index != 0,
@@ -830,7 +830,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                     &format!("r722-two-sources:register:{}", registration.source_id),
                     medulla_protocol_types::protocol::Method::RegisterForeignSource {
                         name: registration.source_id.clone(),
-                        source: medulla_types::wire::ForeignSourceSpec::Mcp {
+                        source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                             server: connector.to_string(),
                             tool: registration.operation.clone(),
                             capabilities: Default::default(),

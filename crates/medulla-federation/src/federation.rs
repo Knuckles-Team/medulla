@@ -8,7 +8,7 @@
 //! `Filter`/`Traverse`/`Rank`/`Limit`, and a foreign∩local JOIN is the existing
 //! [`RowSet::intersect_keep_order`] keyed on id.
 //!
-//! Two kinds implement the trait, behind one [`medulla_types::wire::ForeignSourceSpec`]:
+//! Two kinds implement the trait, behind one [`medulla_query_types::wire::ForeignSourceSpec`]:
 //!
 //!  * [`RemoteEngineSource`] — another medulla engine reached through a LOCAL
 //!    verified-TLS tunnel/sidecar over the engine's length-prefixed-MessagePack + HMAC
@@ -34,7 +34,7 @@ use std::sync::Arc;
 
 use crate::federation_ssrf::validate_http_json_target;
 use medulla_exec::rowset::RowSet;
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 /// The federation SSRF opt-in (owned by the crate's one outbound-destination gate).
 pub use crate::federation_ssrf::HTTP_JSON_FEDERATION_ALLOW_ENV;
@@ -231,7 +231,7 @@ mod operation_bound_source_kinds {
     //! dispatch are later children (FQR-11); this child proves the budget mechanism
     //! itself (FQR-04) refuses with a typed error, independent of source kind.
     use super::source_for;
-    use medulla_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
+    use medulla_query_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
 
     fn specs_with_pushdown(key_filter_pushdown: bool) -> Vec<(ForeignSourceSpec, &'static str)> {
         let capabilities = ForeignOperationCapabilities {
@@ -665,7 +665,7 @@ impl RemoteEngineSource<'_> {
             foreign_executions: Default::default(),
         })?;
         let raw = self.round_trip(&request)?;
-        let result: medulla_types::wire::UqlResult = medulla_types::msgpack::decode_bounded(
+        let result: medulla_query_types::wire::UqlResult = medulla_types::msgpack::decode_bounded(
             &raw,
             medulla_types::msgpack::MsgpackLimits::new(
                 MAX_REMOTE_ENGINE_FRAME_BYTES,
@@ -675,9 +675,9 @@ impl RemoteEngineSource<'_> {
         )
         .map_err(|_| "federation: invalid UQL result".to_string())?;
         let rows = match result {
-            medulla_types::wire::UqlResult::Rows { rows, .. }
-            | medulla_types::wire::UqlResult::Profile { rows, .. } => rows,
-            medulla_types::wire::UqlResult::Explain { .. } => {
+            medulla_query_types::wire::UqlResult::Rows { rows, .. }
+            | medulla_query_types::wire::UqlResult::Profile { rows, .. } => rows,
+            medulla_query_types::wire::UqlResult::Explain { .. } => {
                 return Err(
                     "federation: the remote UQL statement answered no rows (EXPLAIN)".into(),
                 )
@@ -2052,7 +2052,7 @@ pub type SharedForeignSource = Arc<dyn ForeignSource + Send + Sync>;
 
 /// CONCEPT:MEDULLA-KG.query.closure-backed-source — the federation SOURCE REGISTRY: maps a foreign-source NAME to a live
 /// [`ForeignSource`]. This is the resolution seam the UQL `FOREIGN "<name>"` clause
-/// (`Op::Foreign`) and a `Named` [`medulla_types::wire::Op::ForeignScan`] resolve through —
+/// (`Op::Foreign`) and a `Named` [`medulla_query_types::wire::Op::ForeignScan`] resolve through —
 /// the piece the wire doc-comment flagged as "the server-side foreign_sources registry
 /// that medulla-plan (below the server) cannot reach". It now lives IN medulla-plan and threads
 /// into the executor via `PlanCtx::with_foreign`, so a name → rows resolution needs no
@@ -2519,7 +2519,7 @@ mod symmetric_scan_oracle {
     use medulla_exec::algebra::Plan;
     use medulla_exec::exec::{execute, PlanCtx};
     use medulla_exec::rowset::Row;
-    use medulla_types::wire::{ForeignSourceSpec, Pred};
+    use medulla_query_types::wire::{ForeignSourceSpec, Pred};
 
     /// The identical downstream applied to BOTH the internal and foreign leaf.
     fn downstream() -> Vec<Op> {

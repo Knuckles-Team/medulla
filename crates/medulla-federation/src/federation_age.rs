@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
+use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
 
 use crate::federation::{fetch_sql_columns, ForeignSource, ForeignSourceRegistry};
 use medulla_exec::rowset::RowSet;

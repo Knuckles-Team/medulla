@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "owl")]
-use medulla_types::rdf_report::ProofNodeWire;
+use medulla_query_types::rdf_report::ProofNodeWire;
 
 /// Quality (objective) function `CommunityDetectEphemeral` optimizes (EH-314) —
 /// the wire mirror of `medulla_graph_algos::graph_algos::QualityFunction`, kept as its
@@ -296,12 +296,12 @@ pub struct SparqlResult {
     pub rows: Vec<Vec<Option<String>>>,
     /// One witness proof per row, in row order, when the request asked to `explain`
     /// (EH-197); empty otherwise.
-    pub proofs: Vec<medulla_types::rdf_report::SparqlRowProof>,
+    pub proofs: Vec<medulla_query_types::rdf_report::SparqlRowProof>,
     /// Each GeoSPARQL function the query calls and whether a spatial index served it,
     /// when the request asked to `explain` (MEDULLA-FEDERATED-QUERY-R709.5); empty
     /// otherwise.
     #[serde(default)]
-    pub spatial: Vec<medulla_types::rdf_report::SparqlSpatialUse>,
+    pub spatial: Vec<medulla_query_types::rdf_report::SparqlSpatialUse>,
 }
 
 /// Materialized result of a `Method::OwlReason` run (CONCEPT:MEDULLA-KG.ontology.incremental-materialization). Returned via

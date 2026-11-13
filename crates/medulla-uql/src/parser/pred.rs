@@ -11,7 +11,7 @@
 //!    is gone);
 //!  * `x NOT IN …`, `x NOT BETWEEN …`, `x IS NOT NULL` → `Not { … }`.
 
-use medulla_types::wire::{CmpOp, JsonPathOp, Pred, PredLiteral};
+use medulla_query_types::wire::{CmpOp, JsonPathOp, Pred, PredLiteral};
 
 use super::Parser;
 use crate::diag::UqlError;

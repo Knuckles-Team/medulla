@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};
 use super::snapshot::{SnapshotBound, SnapshotConn};
@@ -273,7 +273,7 @@ mod bound_driver_tests {
     use super::{resolve_named, Identity, RemoteRequest};
     use crate::federation::{ForeignSource, ForeignSourceRegistry};
     use medulla_exec::rowset::RowSet;
-    use medulla_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
+    use medulla_query_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec};
     use std::sync::Arc;
 
     struct BoundRows;

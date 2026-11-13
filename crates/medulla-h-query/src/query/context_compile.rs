@@ -497,7 +497,7 @@ fn policy_digest(ctx: &QueryHandlerCtx<'_>) -> String {
 #[cfg(feature = "federation")]
 async fn access_check_servers(ctx: &QueryHandlerCtx<'_>) -> BTreeMap<String, String> {
     use medulla_server_ops::api::query_txn::ForeignStateExt;
-    use medulla_types::wire::ForeignSourceSpec;
+    use medulla_query_types::wire::ForeignSourceSpec;
     let Some(carrier) = ctx.read_authority.and_then(GraphReadAuthority::carrier) else {
         return BTreeMap::new();
     };

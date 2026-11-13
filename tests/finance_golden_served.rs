@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 
 use medulla_finance::golden_fixture::{compare_broker_statement_figure, GoldenFixtureFigure};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
-use medulla_types::wire::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
+use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 

@@ -160,9 +160,9 @@ pub(crate) mod tests {
 
 /// The served method one `Batch` operation stands for (MEDULLA-DURABLE-KERNEL-R871): its
 /// policy supplies the scope the caller must hold for that operation.
-impl From<&medulla_types::wire::BatchOperation> for Method {
-    fn from(operation: &medulla_types::wire::BatchOperation) -> Self {
-        use medulla_types::wire::BatchOperation;
+impl From<&medulla_query_types::wire::BatchOperation> for Method {
+    fn from(operation: &medulla_query_types::wire::BatchOperation) -> Self {
+        use medulla_query_types::wire::BatchOperation;
         match operation {
             BatchOperation::CreateNodeIfAbsent {
                 node_id,

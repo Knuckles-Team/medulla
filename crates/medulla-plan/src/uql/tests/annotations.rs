@@ -1,8 +1,8 @@
 //! Statement row annotations: `WITH KNOWLEDGE` (EH-450) and `WITH PROOF` (EH-448).
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use serde_json::json;
 
 use crate::uql::serve::run_statement;
@@ -69,7 +69,7 @@ fn an_unprovable_admission_makes_the_proof_partial() {
 #[cfg(feature = "owl")]
 mod owl {
     use super::*;
-    use medulla_types::rdf_report::SparqlProofCoverage;
+    use medulla_query_types::rdf_report::SparqlProofCoverage;
 
     /// `Article ⊑ Paper ⊑ Work`; p1 a Paper, p2 an Article, t1 a Topic.
     fn papers() -> (medulla_graph_core::graph::GraphView, SemanticStore) {

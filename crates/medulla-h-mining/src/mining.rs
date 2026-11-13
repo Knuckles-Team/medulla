@@ -981,14 +981,14 @@ mod tests {
         // Upstream retrieval plan: scan all :Doc nodes, then rank by cosine
         // similarity to a query near the FIRST group — a cross-modal
         // Scan→Rank→Limit leg that runs BEFORE the mining op ever sees a row.
-        let plan = medulla_types::wire::Plan::new(vec![
-            medulla_types::wire::Op::Scan {
+        let plan = medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::Scan {
                 label: "Doc".into(),
             },
-            medulla_types::wire::Op::Rank {
+            medulla_query_types::wire::Op::Rank {
                 query: vec![0.1, 0.1],
             },
-            medulla_types::wire::Op::Limit { k: 6 },
+            medulla_query_types::wire::Op::Limit { k: 6 },
         ]);
         let m = Method::MineCluster {
             features: Vec::new(),
@@ -1035,9 +1035,10 @@ mod tests {
     #[cfg(feature = "query")]
     fn fused_plan_no_match_degrades_to_empty() {
         let core = Arc::new(GraphCore::new());
-        let plan = medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
-            label: "NoSuchLabel".into(),
-        }]);
+        let plan =
+            medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
+                label: "NoSuchLabel".into(),
+            }]);
         let m = Method::MineCluster {
             features: Vec::new(),
             source: None,

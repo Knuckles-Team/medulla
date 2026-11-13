@@ -18,7 +18,7 @@ use medulla_result_types::retrieval_stop::{
 use medulla_retrieval::discover_signals::{SignalsReading, BASE_ADAPTER};
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::DiscoverHit;
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict, ShardGeneration,
 };
 

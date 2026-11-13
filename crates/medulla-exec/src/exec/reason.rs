@@ -5,11 +5,11 @@
 use std::collections::HashMap;
 
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::rdf_report::ProofNodeWire;
 use medulla_reasoner::owl::{
     asserted_types_with_confidence_from_view, explain_instance, instances_of_weighted,
     Classification, Reasoner,
 };
-use medulla_types::rdf_report::ProofNodeWire;
 
 use crate::rowset::RowSet;
 

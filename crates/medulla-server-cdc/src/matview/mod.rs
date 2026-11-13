@@ -35,7 +35,7 @@ pub fn note_change(graph: &str) -> usize {
 /// into every `Incremental`-mode plan-backed matview over `graph` — the delta-driven
 /// sibling of [`note_change`], called from the SAME `CdcHub::emit` spot. Returns how many
 /// views it maintained. A `Recompute`-mode view is a no-op here.
-pub fn apply_delta(graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
+pub fn apply_delta(graph: &str, event: &medulla_query_types::wire::CdcEvent) -> usize {
     manager().apply_delta(graph, event)
 }
 

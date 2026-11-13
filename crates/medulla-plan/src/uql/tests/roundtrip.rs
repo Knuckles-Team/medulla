@@ -2,7 +2,7 @@
 //! accepts, `parse(print(p)) == canonicalize(p)`. Generated values deliberately include
 //! quotes, back-quotes, unicode, reserved words, negative zero and extreme magnitudes.
 
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     uql_sample_op, uql_sample_pred, CmpOp, EdgeDir, JsonPathOp, Op, OpKind, Plan, Pred, PredKind,
     PredLiteral, TimeAxis,
 };
@@ -196,7 +196,7 @@ fn op() -> impl Strategy<Value = Op> {
         text().prop_map(|name| Op::Foreign { name }),
         any::<usize>().prop_map(|k| Op::Limit { k }),
         prop::collection::vec(
-            prop::sample::select(medulla_types::wire::OpKind::score_channels()),
+            prop::sample::select(medulla_query_types::wire::OpKind::score_channels()),
             1..3
         )
         .prop_map(|c| Op::Project {

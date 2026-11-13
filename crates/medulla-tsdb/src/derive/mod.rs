@@ -14,7 +14,7 @@ pub use medulla_numeric::series as kernels;
 use medulla_numeric::series::{
     Arith, KalmanNoise, Map, PairStat, Rolling, Shift, Smoothing, Spec, State,
 };
-use medulla_types::series_expr::{SeriesExpr, SeriesFunc};
+use medulla_query_types::series_expr::{SeriesExpr, SeriesFunc};
 use serde::{Deserialize, Serialize};
 
 /// Materialised derived series: definition, checkpoints, advance and revision replay.
@@ -45,7 +45,7 @@ enum Build {
 
 use SeriesFunc as F;
 
-/// Every function's kernel, in `medulla_types::series_expr::SIGNATURES` order.
+/// Every function's kernel, in `medulla_query_types::series_expr::SIGNATURES` order.
 const BUILDS: &[(SeriesFunc, Build)] = &[
     (F::Lag, Build::Shift(Shift::Lag)),
     (F::Diff, Build::Shift(Shift::Diff)),
@@ -185,7 +185,7 @@ impl Program {
 /// The provenance digest of a derived column: `sha256:` over the domain, the expression's
 /// canonical UQL spelling, and the kernel generation.
 pub fn expr_digest(expr: &SeriesExpr) -> Result<String, String> {
-    let canonical = medulla_types::wire::uql_series_expr(expr).map_err(|e| e.to_string())?;
+    let canonical = medulla_query_types::wire::uql_series_expr(expr).map_err(|e| e.to_string())?;
     Ok(medulla_finance_market::market::digest::framed(
         "eg/series-derive",
         &[canonical.as_bytes(), KERNEL_VERSION.as_bytes()],
@@ -195,7 +195,7 @@ pub fn expr_digest(expr: &SeriesExpr) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::series_expr::SIGNATURES;
+    use medulla_query_types::series_expr::SIGNATURES;
 
     #[test]
     fn every_function_has_a_kernel_in_signature_order() {

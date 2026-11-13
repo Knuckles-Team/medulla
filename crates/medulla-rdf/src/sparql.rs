@@ -511,7 +511,9 @@ fn evaluate_form(ctx: &Ctx, query: &Query) -> Result<QueryOutcome, String> {
 /// whether a spatial index served it (MEDULLA-FEDERATED-QUERY-R709.5). The native
 /// evaluator has no spatial index on this path, so every function reports
 /// `index_used: false`: each candidate geometry is evaluated in the FILTER.
-pub fn spatial_functions(query_str: &str) -> Vec<medulla_types::rdf_report::SparqlSpatialUse> {
+pub fn spatial_functions(
+    query_str: &str,
+) -> Vec<medulla_query_types::rdf_report::SparqlSpatialUse> {
     const GEOF: &str = "<http://www.opengis.net/def/function/geosparql/";
     let Ok(query) = parse_query(query_str) else {
         return Vec::new();
@@ -525,10 +527,12 @@ pub fn spatial_functions(query_str: &str) -> Vec<medulla_types::rdf_report::Spar
     names.dedup();
     names
         .into_iter()
-        .map(|function| medulla_types::rdf_report::SparqlSpatialUse {
-            function: function.to_string(),
-            index_used: false,
-        })
+        .map(
+            |function| medulla_query_types::rdf_report::SparqlSpatialUse {
+                function: function.to_string(),
+                index_used: false,
+            },
+        )
         .collect()
 }
 

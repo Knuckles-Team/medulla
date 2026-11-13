@@ -2,6 +2,8 @@
 
 use super::Dynamic;
 use medulla_decision_types::solve::SolveResult;
+#[cfg(feature = "datascience")]
+use medulla_query_types::wire::FittedModel;
 use medulla_result_types::compute_result::algorithms;
 #[cfg(feature = "datascience")]
 use medulla_result_types::compute_result::datascience;
@@ -20,8 +22,6 @@ use medulla_result_types::compute_result::pipeline;
 #[cfg(feature = "finance")]
 use medulla_result_types::compute_result::signal_models;
 use medulla_types::numeric_kernel;
-#[cfg(feature = "datascience")]
-use medulla_types::wire::FittedModel;
 use serde::{Deserialize, Serialize};
 
 /// One proposed entity-resolution action returned by `ResolveCandidates`.

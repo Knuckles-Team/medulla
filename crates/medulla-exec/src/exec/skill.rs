@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use medulla_numeric::evaluation::skill::{feature_skill, FeatureSkill, SkillSpec};
-use medulla_types::series_expr::SkillOp;
+use medulla_query_types::series_expr::SkillOp;
 
 use super::derive::{named_series_groups, read_channel};
 use crate::rowset::{series_row_id, Row, RowSet, ValueChannels};

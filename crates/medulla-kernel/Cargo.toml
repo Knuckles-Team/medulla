@@ -15,6 +15,7 @@ medulla-cypher = { path = "../medulla-cypher" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -61,7 +62,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 # their original `cfg(feature = ...)` gates, and the facade forwards to these.
 [features]
 default = []
-test-support = ["medulla-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-types/test-support"]
 metrics = ["dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/metrics"]
 server = ["dep:tracing-subscriber"]
 otel = ["server", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
@@ -69,13 +70,13 @@ redb = ["dep:medulla-storage"]
 security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-protocol-types/security", "medulla-core/security", "medulla-graph-core/security"]
 raft = ["server", "redb", "dep:chacha20poly1305"]
 broker = ["medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
-query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "redb", "medulla-types/query", "medulla-protocol-types/query"]
-epistemic = ["query", "dep:medulla-epistemic", "medulla-types/epistemic", "medulla-protocol-types/epistemic"]
+query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "redb", "medulla-types/query", "medulla-query-types/query", "medulla-protocol-types/query"]
+epistemic = ["query", "dep:medulla-epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic", "medulla-protocol-types/epistemic"]
 epistemic-tms = ["epistemic", "medulla-epistemic/epistemic-tms"]
-datascience = ["medulla-compute/datascience", "medulla-types/datascience", "medulla-protocol-types/datascience"]
-graphlearn = ["datascience", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn", "medulla-types/graphlearn", "medulla-protocol-types/graphlearn"]
-mining = ["medulla-compute/mining", "medulla-types/mining", "medulla-protocol-types/mining"]
-ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-protocol-types/ml-pipeline"]
+datascience = ["medulla-compute/datascience", "medulla-types/datascience", "medulla-query-types/datascience", "medulla-protocol-types/datascience"]
+graphlearn = ["datascience", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn", "medulla-types/graphlearn", "medulla-query-types/graphlearn", "medulla-protocol-types/graphlearn"]
+mining = ["medulla-compute/mining", "medulla-types/mining", "medulla-query-types/mining", "medulla-protocol-types/mining"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-query-types/ml-pipeline", "medulla-protocol-types/ml-pipeline"]
 reasoning = ["medulla-compute/reasoning"]
 graphql = ["medulla-types/graphql", "medulla-protocol-types/graphql", "server", "security"]
 knowledge-batch = ["query", "medulla-types/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-capabilities/knowledge-batch"]

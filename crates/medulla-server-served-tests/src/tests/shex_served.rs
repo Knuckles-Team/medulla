@@ -61,7 +61,7 @@ const ALICE_SHAPE_MAP: [[&str; 2]; 1] =
 const ALICE_OTHER_SHAPE_MAP: [[&str; 2]; 1] =
     [["http://example.org/alice", "http://example.org/OtherShape"]];
 
-fn shex_report(response: &Response) -> medulla_types::rdf_report::ShexValidationReport {
+fn shex_report(response: &Response) -> medulla_query_types::rdf_report::ShexValidationReport {
     assert_ok(response);
     match &response.result {
         Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone())
@@ -223,7 +223,7 @@ fn error_text(response: &Response) -> String {
 }
 
 /// `(node, conforms)` of every result, in shape-map order.
-fn outcomes(report: &medulla_types::rdf_report::ShexValidationReport) -> Vec<(String, bool)> {
+fn outcomes(report: &medulla_query_types::rdf_report::ShexValidationReport) -> Vec<(String, bool)> {
     report
         .results
         .iter()
@@ -545,7 +545,7 @@ async fn report_for(
     schema: &str,
     data: &str,
     pairs: &[(&str, &str)],
-) -> medulla_types::rdf_report::ShexValidationReport {
+) -> medulla_query_types::rdf_report::ShexValidationReport {
     shex_report(
         &dispatch_on_heap(
             state,

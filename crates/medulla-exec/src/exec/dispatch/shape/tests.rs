@@ -1,8 +1,8 @@
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::ShapeKeep;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::ShapeKeep;
 
 use super::validate_shape;
 use crate::exec::{PlanCtx, ShapeSource};

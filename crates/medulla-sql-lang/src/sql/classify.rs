@@ -53,7 +53,7 @@ use medulla_table_store::{
 // `medulla-types/query`, which the `sql` feature (this module's gate) always enables.
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use medulla_types::wire::{JsonPathOp, Pred};
+use medulla_query_types::wire::{JsonPathOp, Pred};
 use serde_json::{Map, Value};
 
 use super::pgq::GraphTableQuery;

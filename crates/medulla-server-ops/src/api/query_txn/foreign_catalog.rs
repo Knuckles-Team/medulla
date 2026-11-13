@@ -65,8 +65,8 @@ use medulla_catalog_types::{
     connector_pack::PackSourceRegistration,
 };
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
+use medulla_query_types::wire::ForeignSourceSpec;
 use medulla_types::contract::Digest256;
-use medulla_types::wire::ForeignSourceSpec;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
 use medulla_isolation::isolation::IsolationLayer;
@@ -537,7 +537,7 @@ impl ForeignSourceCatalog {
                 self.name_belongs_to_another_owner(name, caller, isolation)
             }
             medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
-                medulla_types::wire::ForeignSourceSpec::Named { name } => {
+                medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
                     self.name_belongs_to_another_owner(name, caller, isolation)
                 }
                 _ => false,
@@ -888,7 +888,7 @@ mod tests {
         ForeignSourceSpec::HttpJson {
             url: url.into(),
             json_path: "data".into(),
-            field_map: medulla_types::wire::HttpFieldMap {
+            field_map: medulla_query_types::wire::HttpFieldMap {
                 id: "id".into(),
                 score: None,
                 columns: Default::default(),

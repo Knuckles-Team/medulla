@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_query_types::nl_query::{NlDialect, NlQueryExplainResult, NlQueryPlanResult, NlTurn};
-use medulla_types::wire::UqlResult;
+use medulla_query_types::wire::UqlResult;
 
 const SECRET: &str = "nl-query-bounded-steps-secret";
 const GRAPH: &str = "__commons__";

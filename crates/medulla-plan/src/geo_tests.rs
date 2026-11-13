@@ -339,7 +339,7 @@ fn reproject_keeps_tagged_rows_drops_untagged() {
 #[test]
 fn spatial_op_buffer_and_intersection() {
     use medulla_exec::algebra::Op;
-    use medulla_types::wire::SpatialOpKind;
+    use medulla_query_types::wire::SpatialOpKind;
     let view = parcels();
     // Buffer succeeds for every parcel (derived geometry always exists).
     let buf = Plan::new(vec![

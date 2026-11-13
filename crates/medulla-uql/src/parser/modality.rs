@@ -2,7 +2,7 @@
 //! fusion (`timeseries`), complex-event patterns (`stream`) and probabilistic scoring
 //! (`probabilistic`). Every spelling here is the exact inverse of the medulla-types printer.
 
-use medulla_types::wire::Op;
+use medulla_query_types::wire::Op;
 
 use super::Parser;
 use crate::diag::UqlError;
@@ -33,8 +33,8 @@ impl<'a> Parser<'a> {
     }
 
     #[cfg(feature = "geo")]
-    fn spatial_op_kind(&mut self) -> Result<medulla_types::wire::SpatialOpKind, UqlError> {
-        use medulla_types::wire::SpatialOpKind as K;
+    fn spatial_op_kind(&mut self) -> Result<medulla_query_types::wire::SpatialOpKind, UqlError> {
+        use medulla_query_types::wire::SpatialOpKind as K;
         let word = self.name("a spatial operation")?.to_ascii_uppercase();
         Ok(match word.as_str() {
             "BUFFER" => K::Buffer {
@@ -93,8 +93,8 @@ impl<'a> Parser<'a> {
     }
 
     #[cfg(feature = "tensor")]
-    fn tensor_op_kind(&mut self) -> Result<medulla_types::wire::TensorOpKind, UqlError> {
-        use medulla_types::wire::{TensorElementwiseOp as E, TensorOpKind as K};
+    fn tensor_op_kind(&mut self) -> Result<medulla_query_types::wire::TensorOpKind, UqlError> {
+        use medulla_query_types::wire::{TensorElementwiseOp as E, TensorOpKind as K};
         let word = self.name("a tensor operation")?.to_ascii_uppercase();
         let op = match word.as_str() {
             "SLICE" => {
@@ -121,8 +121,8 @@ impl<'a> Parser<'a> {
     }
 
     #[cfg(feature = "tensor")]
-    fn tensor_reduce(&mut self) -> Result<medulla_types::wire::TensorOpKind, UqlError> {
-        use medulla_types::wire::{TensorOpKind as K, TensorReduceKind as R};
+    fn tensor_reduce(&mut self) -> Result<medulla_query_types::wire::TensorOpKind, UqlError> {
+        use medulla_query_types::wire::{TensorOpKind as K, TensorReduceKind as R};
         let kind = match self.name("a reduction")?.to_ascii_uppercase().as_str() {
             "SUM" => R::Sum,
             "MEAN" => R::Mean,
@@ -188,8 +188,8 @@ impl<'a> Parser<'a> {
     }
 
     #[cfg(feature = "timeseries")]
-    fn fuse_stream(&mut self) -> Result<medulla_types::wire::FuseStream, UqlError> {
-        use medulla_types::wire::FuseInterp as I;
+    fn fuse_stream(&mut self) -> Result<medulla_query_types::wire::FuseStream, UqlError> {
+        use medulla_query_types::wire::FuseInterp as I;
         let layer = self.string("a stream layer")?;
         let interp = match self.name("an interpolation")?.to_ascii_uppercase().as_str() {
             "NEAREST" => I::Nearest,
@@ -199,12 +199,12 @@ impl<'a> Parser<'a> {
                 return Err(self.err_at(self.prev_start(), "expected NEAREST, LINEAR or ASOF_HOLD"))
             }
         };
-        Ok(medulla_types::wire::FuseStream { layer, interp })
+        Ok(medulla_query_types::wire::FuseStream { layer, interp })
     }
 
     #[cfg(feature = "timeseries")]
-    fn fuse_clock(&mut self) -> Result<medulla_types::wire::FuseClock, UqlError> {
-        use medulla_types::wire::FuseClock as C;
+    fn fuse_clock(&mut self) -> Result<medulla_query_types::wire::FuseClock, UqlError> {
+        use medulla_query_types::wire::FuseClock as C;
         if self.eat_kw("TUMBLING") {
             self.expect_kw("WIDTH")?;
             let width_ns = self.parse_number::<i64>("a window width (ns)")?;
@@ -239,7 +239,7 @@ impl<'a> Parser<'a> {
     gated! { "probabilistic",
         /// `PROB EXPECTATION | MARGINAL … | CONDITIONAL … | SAMPLE SEED int`.
         fn prob(&mut self) -> Result<Op, UqlError> {
-            use medulla_types::wire::ProbQuery as Q;
+            use medulla_query_types::wire::ProbQuery as Q;
             let word = self.name("a probabilistic query")?.to_ascii_uppercase();
             let query = match word.as_str() {
                 "EXPECTATION" => Q::Expectation,
@@ -265,7 +265,7 @@ impl<'a> Parser<'a> {
     }
 
     #[cfg(feature = "probabilistic")]
-    fn prob_marginal(&mut self) -> Result<medulla_types::wire::ProbQuery, UqlError> {
+    fn prob_marginal(&mut self) -> Result<medulla_query_types::wire::ProbQuery, UqlError> {
         let at = if self.eat_kw("AT") {
             self.number("a marginal point")?
         } else {
@@ -276,12 +276,12 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        Ok(medulla_types::wire::ProbQuery::Marginal { at, label })
+        Ok(medulla_query_types::wire::ProbQuery::Marginal { at, label })
     }
 
     #[cfg(feature = "probabilistic")]
-    fn prob_evidence(&mut self) -> Result<medulla_types::wire::ProbEvidenceSpec, UqlError> {
-        use medulla_types::wire::ProbEvidenceSpec as E;
+    fn prob_evidence(&mut self) -> Result<medulla_query_types::wire::ProbEvidenceSpec, UqlError> {
+        use medulla_query_types::wire::ProbEvidenceSpec as E;
         if self.eat_kw("BERNOULLI") {
             let successes = self.number("a success count")?;
             return Ok(E::Bernoulli {

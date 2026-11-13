@@ -791,7 +791,7 @@ async fn foreign_tenants_and_graph_candidates_are_refused() {
     );
     graph.candidates = CandidateSource::Graph {
         graph: "kg".to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(Vec::new())),
+        plan: Box::new(medulla_query_types::wire::Plan::new(Vec::new())),
     };
     assert!(decide(&h, graph)
         .await
@@ -837,7 +837,7 @@ async fn graph_sourced_candidates_from_a_foreign_tenant_are_refused() {
     foreign_graph.tenant_id = "tenant-other".to_string();
     foreign_graph.candidates = CandidateSource::Graph {
         graph: "kg".to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(Vec::new())),
+        plan: Box::new(medulla_query_types::wire::Plan::new(Vec::new())),
     };
     let error = decide(&h, foreign_graph).await.unwrap_err();
     assert!(
@@ -890,7 +890,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
             None,
         )
         .unwrap();
-    let graph_request = |plan: medulla_types::wire::Plan| {
+    let graph_request = |plan: medulla_query_types::wire::Plan| {
         let mut request = request(
             &schema_pin,
             None,
@@ -903,7 +903,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         };
         request
     };
-    let select = medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
+    let select = medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
         label: "Tool".to_string(),
     }]);
     let batch = decide(&h, graph_request(select.clone())).await.unwrap();
@@ -926,11 +926,11 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         medulla_decision_types::decision::CandidateSourceRecord::Graph { .. }
     ));
 
-    let ranked = medulla_types::wire::Plan::new(vec![
-        medulla_types::wire::Op::Scan {
+    let ranked = medulla_query_types::wire::Plan::new(vec![
+        medulla_query_types::wire::Op::Scan {
             label: "Tool".to_string(),
         },
-        medulla_types::wire::Op::RankText {
+        medulla_query_types::wire::Op::RankText {
             query: "web".to_string(),
         },
     ]);
@@ -1032,8 +1032,8 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
     );
     graph_request.candidates = CandidateSource::Graph {
         graph: "kg-decide-log".to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(vec![
-            medulla_types::wire::Op::Scan {
+        plan: Box::new(medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::Scan {
                 label: "Tool".to_string(),
             },
         ])),

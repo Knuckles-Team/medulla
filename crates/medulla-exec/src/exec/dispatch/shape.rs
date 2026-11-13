@@ -12,8 +12,8 @@
 use std::collections::HashSet;
 
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::ShapeKeep;
 use medulla_rdf::oxrdf::{BlankNode, NamedNode, Term};
-use medulla_types::wire::ShapeKeep;
 
 use crate::exec::PlanCtx;
 use crate::rowset::RowSet;

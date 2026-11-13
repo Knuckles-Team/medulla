@@ -6,7 +6,7 @@
 #![cfg(feature = "query")]
 
 use medulla_exec::incremental::Circuit;
-use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
+use medulla_query_types::wire::{Op, Plan, Pred, TimeAxis};
 
 /// `(construct, oracle case)`: the case is a test function in `ORACLE_FILES`.
 const ORACLE_CASES: &[(&str, &str)] = &[

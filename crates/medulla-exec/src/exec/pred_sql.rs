@@ -15,7 +15,7 @@
 
 use crate::algebra::Pred;
 use crate::pred_eval::spatial_predicate;
-use medulla_types::wire::{CmpOp, PredLiteral};
+use medulla_query_types::wire::{CmpOp, PredLiteral};
 
 const MAX_FILTER_PREDICATES: usize = 256;
 const MAX_FILTER_IDENTIFIER_BYTES: usize = 256;
@@ -247,7 +247,7 @@ mod tests {
         let nested = Pred::Not {
             pred: Box::new(Pred::JsonPath {
                 path: "$.a".into(),
-                op: medulla_types::wire::JsonPathOp::Exists,
+                op: medulla_query_types::wire::JsonPathOp::Exists,
             }),
         };
         assert!(where_clause(&[nested]).is_err());

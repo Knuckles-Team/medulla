@@ -30,7 +30,7 @@ Each event of a view feed has `kind` `InsertRow` or `DeleteRow` (MEDULLA-ENGINE-
 
 ## Authoritative types
 
-- `CdcEvent` and `CdcKind`: `crates/medulla-types/src/wire_streaming.rs` in medulla.
+- `CdcEvent` and `CdcKind`: `crates/medulla-query-types/src/wire_streaming.rs` in medulla.
 - `ViewStatus`: `crates/medulla-core/src/view_status.rs` in medulla.
 
 ## Test vectors

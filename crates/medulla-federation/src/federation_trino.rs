@@ -6,7 +6,7 @@ use std::io::Read;
 use std::sync::Arc;
 use std::time::Duration;
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 use serde_json::Value;
 
 use crate::federation::{ForeignSource, ForeignSourceRegistry};

@@ -124,10 +124,10 @@ mod tests {
     //! `medulla_server::tests::foreign_tenancy::shared_source_needs_an_explicit_grant`.
     use super::*;
     use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
+    use medulla_query_types::wire::ForeignSourceSpec;
     use medulla_server_api::carrier::CarrierAuthority;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_types::wire::ForeignSourceSpec;
 
     fn carrier(agent: &str) -> CarrierAuthority {
         CarrierAuthority::verified_for_test(agent)
@@ -137,7 +137,7 @@ mod tests {
         ForeignSourceSpec::HttpJson {
             url: "http://a.invalid/".into(),
             json_path: "data".into(),
-            field_map: medulla_types::wire::HttpFieldMap {
+            field_map: medulla_query_types::wire::HttpFieldMap {
                 id: "id".into(),
                 score: None,
                 columns: Default::default(),

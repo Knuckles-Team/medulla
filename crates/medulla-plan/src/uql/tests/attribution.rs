@@ -6,8 +6,8 @@
 mod served {
     use super::super::blob;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{UqlResult, UqlRow};
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
 
     use crate::uql::serve::run_statement;
@@ -126,7 +126,9 @@ fn a_build_without_numeric_refuses_the_stage_by_feature() {
 
 #[test]
 fn spellings_print_canonically() {
-    use medulla_types::wire::{uql_op, AttributionInput, AttributionMethod, AttributionValue, Op};
+    use medulla_query_types::wire::{
+        uql_op, AttributionInput, AttributionMethod, AttributionValue, Op,
+    };
     let op = Op::Attribute {
         input: AttributionInput::Score,
         value: AttributionValue::Percentile { p: 50 },

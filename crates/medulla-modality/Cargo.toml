@@ -20,6 +20,7 @@ name = "medulla_modality"
 # re-export of the real type.
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive"] }
 # Only used to encode/decode a `StagedWrite` payload for the conformance round-trip
 # test (`decode_staged`/`encode_staged`). Already linked workspace-wide (medulla-types
@@ -43,6 +44,7 @@ sha2 = "0.10"
 # cost of building the two pilots. See `tests/fleet_tck.rs` for the mechanism writeup.
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-tensor = { path = "../medulla-tensor", features = ["contract"] }
 medulla-geo = { path = "../medulla-geo", features = ["contract"] }
 medulla-document = { path = "../medulla-document", features = ["contract", "serving"] }

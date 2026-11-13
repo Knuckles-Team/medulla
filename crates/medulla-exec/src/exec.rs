@@ -24,7 +24,7 @@ use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::{Op, Plan, Pred};
 use crate::rowset::RowSet;
-use medulla_types::wire::TimeAxis;
+use medulla_query_types::wire::TimeAxis;
 
 // EH-523 — the `ATTRIBUTE` stage (contribution attribution over the incoming rows).
 pub(crate) mod attribution;
@@ -1493,12 +1493,12 @@ fn fused_window_row(window: &medulla_tensor::WindowFrame) -> Option<(String, Opt
 #[cfg(feature = "timeseries")]
 fn sensor_align_op(
     view: &GraphView,
-    streams: &[medulla_types::wire::FuseStream],
-    clock: &medulla_types::wire::FuseClock,
+    streams: &[medulla_query_types::wire::FuseStream],
+    clock: &medulla_query_types::wire::FuseClock,
     tolerance_ns: Option<u64>,
 ) -> RowSet {
+    use medulla_query_types::wire::{FuseClock, FuseInterp};
     use medulla_tsdb::fusion::{uniform_grid, InterpMode, StreamSpec};
-    use medulla_types::wire::{FuseClock, FuseInterp};
 
     let tolerance = tolerance_ns.map(|t| t as i64);
     let specs: Vec<StreamSpec> = streams
@@ -1806,7 +1806,7 @@ fn is_jsonpath_pred(pred: &Pred) -> bool {
 /// containment). Rows with no/undecodable blob are dropped. Order- and score-preserving
 /// via [`RowSet::intersect_keep_order`] — the same shape as `spatial_filter`.
 fn jsonpath_filter(view: &GraphView, input: RowSet, pred: &Pred) -> Result<RowSet, String> {
-    use medulla_types::wire::JsonPathOp;
+    use medulla_query_types::wire::JsonPathOp;
     let Pred::JsonPath { path, op } = pred else {
         // Non-JSON preds never reach here (`filter_op` splits them out).
         return Ok(input);
@@ -1969,7 +1969,7 @@ fn spatial_reproject(
 fn spatial_op(
     view: &GraphView,
     input: RowSet,
-    kind: &medulla_types::wire::SpatialOpKind,
+    kind: &medulla_query_types::wire::SpatialOpKind,
 ) -> RowSet {
     let keep: HashSet<&str> = input
         .rows()
@@ -1988,9 +1988,9 @@ fn spatial_op(
 #[cfg(feature = "geo")]
 fn apply_spatial_op(
     g: &medulla_geo::Geometry,
-    kind: &medulla_types::wire::SpatialOpKind,
+    kind: &medulla_query_types::wire::SpatialOpKind,
 ) -> Option<medulla_geo::Geometry> {
-    use medulla_types::wire::SpatialOpKind;
+    use medulla_query_types::wire::SpatialOpKind;
     match kind {
         SpatialOpKind::Buffer { distance } => Some(medulla_geo::buffer(g, *distance)),
         SpatialOpKind::ConvexHull => Some(medulla_geo::convex_hull(g)),
@@ -2080,7 +2080,7 @@ fn tensor_scan(view: &GraphView, layer: &str) -> RowSet {
 fn tensor_op(
     ctx: &PlanCtx,
     input: RowSet,
-    kind: &medulla_types::wire::TensorOpKind,
+    kind: &medulla_query_types::wire::TensorOpKind,
 ) -> Result<RowSet, String> {
     let store = ctx
         .tensor_store
@@ -2152,9 +2152,9 @@ fn tensor_from_value(v: &serde_json::Value) -> Option<medulla_tensor::Tensor> {
 #[cfg(feature = "tensor")]
 fn apply_tensor_op(
     t: &medulla_tensor::Tensor,
-    kind: &medulla_types::wire::TensorOpKind,
+    kind: &medulla_query_types::wire::TensorOpKind,
 ) -> Result<medulla_tensor::Tensor, String> {
-    use medulla_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
+    use medulla_query_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
     match kind {
         TensorOpKind::Slice { ranges } => t.slice(ranges),
         TensorOpKind::Reduce { axis, kind } => {
@@ -2190,7 +2190,7 @@ fn apply_tensor_op(
 fn probabilistic_op(
     view: &GraphView,
     input: RowSet,
-    query: &medulla_types::wire::ProbQuery,
+    query: &medulla_query_types::wire::ProbQuery,
 ) -> RowSet {
     let mut scored: Vec<(String, f32)> = input
         .rows()
@@ -2228,9 +2228,9 @@ fn row_distribution(
 #[cfg(feature = "probabilistic")]
 fn eval_prob_query(
     dist: &medulla_catalog_types::distribution::Distribution,
-    query: &medulla_types::wire::ProbQuery,
+    query: &medulla_query_types::wire::ProbQuery,
 ) -> Option<f64> {
-    use medulla_types::wire::{ProbEvidenceSpec, ProbQuery};
+    use medulla_query_types::wire::{ProbEvidenceSpec, ProbQuery};
     match query {
         ProbQuery::Expectation => Some(dist.mean()),
         ProbQuery::Marginal { at, label } => Some(match label {
@@ -2526,7 +2526,11 @@ const CEP_ID_ATTR: &str = "_eg_row_id";
 /// fed by the MEDULLA-064 CDC `ChangeNotifier` bus — matching incrementally as the bus
 /// advances the window — is the documented follow-up; this batch executor is what lands.)
 #[cfg(feature = "stream")]
-fn cep_op(view: &GraphView, input: RowSet, spec: &medulla_types::wire::CepPatternSpec) -> RowSet {
+fn cep_op(
+    view: &GraphView,
+    input: RowSet,
+    spec: &medulla_query_types::wire::CepPatternSpec,
+) -> RowSet {
     // Build the event stream from the input rows, tagging each event with its source row
     // id so matches map back. `run` sorts by `ts` internally. A row with no graph-node
     // blob falls back to a `MOTIF`/`DISCORD`/`EVENTS` row id (EH-529): still an event,
@@ -2609,8 +2613,8 @@ fn series_event(id: &str, values: &crate::rowset::ValueChannels) -> Option<medul
 
 /// Map the pure-serde wire `CepWindowSpec` (medulla-types) to medulla-stream's `Window`.
 #[cfg(feature = "stream")]
-fn cep_window_from_spec(w: medulla_types::wire::CepWindowSpec) -> medulla_stream::Window {
-    use medulla_types::wire::CepWindowSpec;
+fn cep_window_from_spec(w: medulla_query_types::wire::CepWindowSpec) -> medulla_stream::Window {
+    use medulla_query_types::wire::CepWindowSpec;
     match w {
         CepWindowSpec::Sliding { size } => medulla_stream::Window::Sliding { size },
         CepWindowSpec::Tumbling { size } => medulla_stream::Window::Tumbling { size },
@@ -2619,8 +2623,10 @@ fn cep_window_from_spec(w: medulla_types::wire::CepWindowSpec) -> medulla_stream
 
 /// Map a pure-serde wire `CepMatcherSpec` (medulla-types) to medulla-stream's `EventMatcher`.
 #[cfg(feature = "stream")]
-fn cep_matcher_from_spec(m: &medulla_types::wire::CepMatcherSpec) -> medulla_stream::EventMatcher {
-    use medulla_types::wire::CepAttrPredSpec;
+fn cep_matcher_from_spec(
+    m: &medulla_query_types::wire::CepMatcherSpec,
+) -> medulla_stream::EventMatcher {
+    use medulla_query_types::wire::CepAttrPredSpec;
     let preds = m
         .preds
         .iter()
@@ -2652,8 +2658,8 @@ fn cep_matcher_from_spec(m: &medulla_types::wire::CepMatcherSpec) -> medulla_str
 /// The wire enums are Pi-safe (no medulla-stream dep); this seam turns them into the real NFA
 /// pattern behind the `stream` gate.
 #[cfg(feature = "stream")]
-fn cep_pattern_from_spec(p: &medulla_types::wire::CepNodeSpec) -> medulla_stream::CepPattern {
-    use medulla_types::wire::CepNodeSpec;
+fn cep_pattern_from_spec(p: &medulla_query_types::wire::CepNodeSpec) -> medulla_stream::CepPattern {
+    use medulla_query_types::wire::CepNodeSpec;
     match p {
         CepNodeSpec::Sequence(matchers) => medulla_stream::CepPattern::Sequence(
             matchers.iter().map(cep_matcher_from_spec).collect(),

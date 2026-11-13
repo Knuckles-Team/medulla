@@ -14,7 +14,7 @@ mod common;
 mod test_support;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::wire::UqlResult;
+use medulla_query_types::wire::UqlResult;
 
 const SECRET: &str = "plan-scope-tenant-secret";
 

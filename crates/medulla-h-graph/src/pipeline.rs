@@ -28,6 +28,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::{
     result_contract::compute as results, result_contract::compute::MiningPipelinePredict,
 };
+use medulla_query_types::wire::{FeatureStep, ModelSpec, PipelineSpec};
 use medulla_result_types::compute_result::graphlearn::PredictedLink;
 use medulla_result_types::{
     compute_result::pipeline::ClassifyPrediction, compute_result::pipeline::EstimatorPrediction,
@@ -37,7 +38,6 @@ use medulla_result_types::{
     compute_result::pipeline::PipelineServeResult, compute_result::pipeline::PipelineTrainResult,
     compute_result::pipeline::PipelineValueRow,
 };
-use medulla_types::wire::{FeatureStep, ModelSpec, PipelineSpec};
 use serde_json::{json, Value};
 
 use self::features::{build_features, compute_embedding_rows, first_embedding};
@@ -913,9 +913,9 @@ mod tests {
     use super::*;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphSource;
+    use medulla_query_types::wire::{FeatureStep, ModelSpec, SplitSpec};
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::carrier::GraphReadAuthority;
-    use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};
 
     fn node(props: Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&props).unwrap()

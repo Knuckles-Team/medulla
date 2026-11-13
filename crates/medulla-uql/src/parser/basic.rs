@@ -1,7 +1,7 @@
 //! The always-available clauses: `MATCH`, `WHERE`, `TRAVERSE`, `RANK`, `RERANK`,
 //! `AS OF`/`VALID AS OF`, `WINDOW`, `LIMIT`, `RETURN`, `FOREIGN` and `DECISIONS`.
 
-use medulla_types::wire::{Op, TimeAxis};
+use medulla_query_types::wire::{Op, TimeAxis};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};
@@ -230,7 +230,7 @@ impl<'a> Parser<'a> {
     fn channel(&mut self) -> Result<String, UqlError> {
         let span = self.cur_span();
         let name = self.name("a score channel")?;
-        let known = medulla_types::wire::OpKind::score_channels();
+        let known = medulla_query_types::wire::OpKind::score_channels();
         if known.contains(&name.as_str()) || self.is_value_channel(&name) {
             return Ok(name);
         }

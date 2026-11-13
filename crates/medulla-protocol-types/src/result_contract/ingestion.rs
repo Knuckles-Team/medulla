@@ -15,13 +15,14 @@ use medulla_query_types::quantum::{
     QuantumExpectationResult, QuantumQaoaResult, QuantumRankResult,
 };
 use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
+use medulla_query_types::wire::DiscoverResult;
 use medulla_source_types::{
     source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
     source_ingestion::SourceIngestionReceipt,
 };
 use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_types::{
-    ingestion_wire::DiscoverResult, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
+    ingestion_wire::IndexResult, ingestion_wire::ParseResult,
     ingestion_wire::ScreenObservationResult,
 };
 #[cfg(feature = "modality-serving")]

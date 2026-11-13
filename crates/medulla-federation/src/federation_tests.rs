@@ -14,7 +14,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 
 use crate::test_guard::MockHttpAllowGuard;
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use medulla_exec::algebra::Op;
 use medulla_exec::algebra::Plan;
@@ -153,7 +153,7 @@ fn foreign_join_with_local_equals_manual_join() {
             label: "Doc".into(),
         },
         Op::Filter {
-            preds: vec![medulla_types::wire::Pred::GtNum {
+            preds: vec![medulla_query_types::wire::Pred::GtNum {
                 prop: "year".into(),
                 n: 2023.0,
             }],

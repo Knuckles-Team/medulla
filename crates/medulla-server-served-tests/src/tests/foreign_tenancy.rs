@@ -41,7 +41,7 @@ async fn register_in(
     state: &Arc<RwLock<ServerState>>,
     id: u64,
     agent: &str,
-    source: medulla_types::wire::ForeignSourceSpec,
+    source: medulla_query_types::wire::ForeignSourceSpec,
 ) {
     let method = Method::RegisterForeignSource {
         name: "remote_docs".into(),
@@ -67,7 +67,7 @@ fn named_scan_plan() -> Method {
                 label: "Doc".into(),
             },
             medulla_exec::algebra::Op::ForeignScan {
-                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+                source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                     name: "remote_docs".into(),
                 }),
                 join: true,
@@ -188,7 +188,7 @@ async fn foreign_column_read_is_owner_scoped_and_mapping_gated() {
         &state,
         940,
         OWNER_A,
-        medulla_types::wire::ForeignSourceSpec::Sql {
+        medulla_query_types::wire::ForeignSourceSpec::Sql {
             // Registration validates the destination; subsequent mapping refusals never dial it.
             dsn: "postgres://127.0.0.1:5432/records".into(),
             query: "SELECT id, name FROM records".into(),
@@ -242,9 +242,9 @@ async fn foreign_column_read_is_owner_scoped_and_mapping_gated() {
         Method::QueryForeignColumns {
             name: "remote_docs".into(),
             columns: vec!["name".into()],
-            predicates: vec![medulla_types::wire::ForeignColumnPredicate {
+            predicates: vec![medulla_query_types::wire::ForeignColumnPredicate {
                 column: "name".into(),
-                comparison: medulla_types::wire::ForeignColumnComparison::Eq,
+                comparison: medulla_query_types::wire::ForeignColumnComparison::Eq,
                 value: serde_json::json!(42),
             }],
         },
@@ -299,10 +299,10 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
         &state,
         945,
         OWNER_A,
-        medulla_types::wire::ForeignSourceSpec::HttpJson {
+        medulla_query_types::wire::ForeignSourceSpec::HttpJson {
             url: format!("{origin}/"),
             json_path: "data".into(),
-            field_map: medulla_types::wire::HttpFieldMap {
+            field_map: medulla_query_types::wire::HttpFieldMap {
                 id: "ref".into(),
                 score: None,
                 columns: BTreeMap::from([
@@ -316,9 +316,9 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
     let query = || Method::QueryForeignColumns {
         name: "remote_docs".into(),
         columns: vec!["name".into()],
-        predicates: vec![medulla_types::wire::ForeignColumnPredicate {
+        predicates: vec![medulla_query_types::wire::ForeignColumnPredicate {
             column: "age".into(),
-            comparison: medulla_types::wire::ForeignColumnComparison::Ge,
+            comparison: medulla_query_types::wire::ForeignColumnComparison::Ge,
             value: serde_json::json!(40),
         }],
     };
@@ -327,7 +327,8 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
     let Some(ResultPayload::Raw(raw)) = owner.result else {
         panic!("foreign column response must be typed MessagePack rows");
     };
-    let rows: Vec<medulla_types::wire::ForeignColumnRow> = rmp_serde::from_slice(&raw).unwrap();
+    let rows: Vec<medulla_query_types::wire::ForeignColumnRow> =
+        rmp_serde::from_slice(&raw).unwrap();
     assert_eq!(
         rows.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(),
         vec!["b", "c"]
@@ -360,10 +361,10 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
 async fn same_name_for_two_principals_resolves_each_owners_own_spec() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let (_remote, local) = registered_by_owner_a(910).await;
-    let b_spec = medulla_types::wire::ForeignSourceSpec::HttpJson {
+    let b_spec = medulla_query_types::wire::ForeignSourceSpec::HttpJson {
         url: "http://127.0.0.1:9/eh373-principal-b".into(),
         json_path: "data".into(),
-        field_map: medulla_types::wire::HttpFieldMap {
+        field_map: medulla_query_types::wire::HttpFieldMap {
             id: "id".into(),
             score: None,
             columns: Default::default(),

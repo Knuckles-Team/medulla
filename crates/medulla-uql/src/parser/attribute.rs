@@ -1,9 +1,9 @@
 //! `ATTRIBUTE <agg> OF ( SCORE | name ) ( LINEAR | SHAPLEY [ SAMPLES n SEED s ] | OWEN BY
 //! name )` (EH-523) — contribution attribution over the incoming rows.
 
-use medulla_types::wire::Op;
+use medulla_query_types::wire::Op;
 #[cfg(feature = "numeric")]
-use medulla_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
+use medulla_query_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
 
 use super::Parser;
 use crate::diag::UqlError;

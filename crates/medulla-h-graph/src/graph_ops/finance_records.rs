@@ -61,10 +61,10 @@ fn single_object_term(value: &str) -> bool {
 /// Validate a record against its `<Kind>Shape`.
 #[cfg(all(feature = "finance", feature = "shacl"))]
 pub(super) fn check_record_shape(
-    kind: medulla_types::wire::FinanceRecordKind,
-    record: &medulla_types::wire::FinanceRecord,
+    kind: medulla_types::wire_finance::FinanceRecordKind,
+    record: &medulla_types::wire_finance::FinanceRecord,
 ) -> Result<(), String> {
-    use medulla_types::wire::finance_record_refusal::SHAPE_INVALID;
+    use medulla_query_types::wire::finance_record_refusal::SHAPE_INVALID;
     if !is_local_name(&record.record_id) {
         return Err(refuse(
             SHAPE_INVALID,
@@ -120,9 +120,8 @@ pub(super) fn admit_put(
     tenant_scope: &str,
     method: &Method,
 ) -> Result<(Method, u64), String> {
-    use medulla_types::wire::{
-        admit_finance_record_version, finance_record_refusal as code, FinanceRecordPolicy,
-    };
+    use medulla_query_types::wire::finance_record_refusal as code;
+    use medulla_types::wire_finance::{admit_finance_record_version, FinanceRecordPolicy};
     let Method::FinanceRecordPut {
         kind,
         schema_version,
@@ -365,7 +364,7 @@ fn research_refuse(error: medulla_finance::research::ResearchRecordError) -> Str
 #[cfg(all(feature = "finance", feature = "shacl"))]
 fn shape_invalid(detail: impl std::fmt::Display) -> String {
     refuse(
-        medulla_types::wire::finance_record_refusal::SHAPE_INVALID,
+        medulla_query_types::wire::finance_record_refusal::SHAPE_INVALID,
         detail,
     )
 }
@@ -466,12 +465,12 @@ fn to_json<T: serde::Serialize>(value: &T) -> Result<serde_json::Value, String> 
 fn build_research(
     core: &GraphCore,
     tenant_scope: &str,
-    kind: medulla_types::wire::FinanceRecordKind,
-    record: &medulla_types::wire::FinanceRecord,
+    kind: medulla_types::wire_finance::FinanceRecordKind,
+    record: &medulla_types::wire_finance::FinanceRecord,
 ) -> Result<ResearchRecord, String> {
     use medulla_finance::research::{fuse_scores, ResearchRecordError as Error};
     use medulla_types::finance_research as types;
-    use medulla_types::wire::FinanceRecordKind as Kind;
+    use medulla_types::wire_finance::FinanceRecordKind as Kind;
 
     let mut fields = serde_json::Map::new();
     for (name, text) in &record.fields {
@@ -654,13 +653,13 @@ fn build_research(
 fn admit_research(
     core: &GraphCore,
     tenant_scope: &str,
-    kind: medulla_types::wire::FinanceRecordKind,
+    kind: medulla_types::wire_finance::FinanceRecordKind,
     schema_version: &str,
-    record: &medulla_types::wire::FinanceRecord,
+    record: &medulla_types::wire_finance::FinanceRecord,
     expected_head: Option<u64>,
 ) -> Result<(Method, u64), String> {
     use medulla_finance::research::ResearchRecordError as Error;
-    use medulla_types::wire::finance_record_refusal as code;
+    use medulla_query_types::wire::finance_record_refusal as code;
     if !is_local_name(&record.record_id) {
         return Err(shape_invalid(
             "record_id must be a non-empty [A-Za-z0-9_] name",

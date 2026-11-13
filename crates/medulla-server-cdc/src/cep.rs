@@ -77,14 +77,14 @@ use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Wind
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_query_types::wire::CdcEvent;
+use medulla_query_types::wire::CdcKind;
+use medulla_query_types::wire::CepMatcherSpec;
+use medulla_query_types::wire::CepNodeSpec;
+use medulla_query_types::wire::CepPatternSpec;
+use medulla_query_types::wire::CepWindowSpec;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
-use medulla_types::wire::CdcEvent;
-use medulla_types::wire::CdcKind;
-use medulla_types::wire::CepMatcherSpec;
-use medulla_types::wire::CepNodeSpec;
-use medulla_types::wire::CepPatternSpec;
-use medulla_types::wire::CepWindowSpec;
 
 /// Bounded capacity of the CDC → CEP event bus. A CEP engine that falls this far behind
 /// the write firehose drops the OLDEST events (and `spawn_source` records the lag via
@@ -262,7 +262,7 @@ fn window_from_spec(w: CepWindowSpec) -> Window {
 }
 
 fn matcher_from_spec(m: &CepMatcherSpec) -> EventMatcher {
-    use medulla_types::wire::CepAttrPredSpec;
+    use medulla_query_types::wire::CepAttrPredSpec;
     let preds = m
         .preds
         .iter()
@@ -802,7 +802,7 @@ mod tests {
             pattern: Box::new(CepNodeSpec::Sequence(vec![
                 CepMatcherSpec {
                     key: Some("Alert".to_string()),
-                    preds: vec![medulla_types::wire::CepAttrPredSpec::Gt {
+                    preds: vec![medulla_query_types::wire::CepAttrPredSpec::Gt {
                         field: "sev".to_string(),
                         value: 3.0,
                     }],

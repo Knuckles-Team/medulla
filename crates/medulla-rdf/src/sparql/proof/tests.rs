@@ -1,5 +1,5 @@
 use medulla_graph_core::graph::GraphView;
-use medulla_types::rdf_report::{SparqlObjectKind, SparqlProofCoverage, SparqlRowProof};
+use medulla_query_types::rdf_report::{SparqlObjectKind, SparqlProofCoverage, SparqlRowProof};
 
 use super::super::{Dataset, Projection};
 use super::execute_explained;

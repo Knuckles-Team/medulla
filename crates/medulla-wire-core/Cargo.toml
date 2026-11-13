@@ -30,6 +30,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -56,14 +57,14 @@ mqtt-wire = ["broker", "medulla-server-api/mqtt-wire"]
 stomp-wire = ["broker", "medulla-server-api/stomp-wire"]
 mssql-wire = ["query", "medulla-server-api/mssql-wire"]
 redis-wire = ["medulla-server-api/redis-wire"]
-federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-uql/federation"]
+federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation", "medulla-uql/federation"]
 mysql-wire = ["query", "dep:sha1"]
 pgwire = ["query", "dep:rustix", "dep:pgwire", "dep:futures"]
-query = ["redb", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query", "medulla-uql/query"]
+query = ["redb", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query", "medulla-uql/query"]
 redb = ["medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-ops/redb"]
 security = ["redb", "dep:sha1", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-ops/security", "medulla-types/security"]
 sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
-test-support = ["medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-server-ops/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
+test-support = ["medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-server-ops/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
 tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
 [dev-dependencies]
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }

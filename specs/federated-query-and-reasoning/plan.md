@@ -335,7 +335,7 @@ Acceptance must cover four same-modality and twelve cross-modality pairs with re
 
 #### R040.1 and R039.3: declared hard constraints
 
-Existing code: `crates/medulla-types/src/wire_query_core.rs:27` defines Pred; `crates/medulla-exec/src/algebra.rs:21` re-exports it.
+Existing code: `crates/medulla-query-types/src/wire_query_core.rs:27` defines Pred; `crates/medulla-exec/src/algebra.rs:21` re-exports it.
 `crates/medulla-exec/src/exec.rs:536` invokes optimization and execution.
 `crates/medulla-exec/src/exec/vector_rank.rs:97` accepts a constrained candidate set.
 Reachable today: no, for compilation of the declared entity/relationship contract.
@@ -513,7 +513,7 @@ Each residual case requires its own execution evidence to satisfy the original c
 The native request is [Method::ShexValidate](../../crates/medulla-protocol-types/src/protocol/method/method_07.rs#L394).
 The protocol stores schema text, optional data_graph text and a list of string pairs.
 Omitted data_graph and shape_map use their existing empty defaults.
-The wire result is [ShexValidationReport](../../crates/medulla-types/src/rdf_report.rs#L189).
+The wire result is [ShexValidationReport](../../crates/medulla-query-types/src/rdf_report.rs#L189).
 It contains ordered results with node, shape, conforms and optional reason.
 [ShexReport::from_results](../../crates/medulla-shex/src/report.rs) computes the aggregate with all().
 Thus, an empty result list has a true aggregate. It proves no node was checked.
@@ -728,7 +728,7 @@ Preserve `MEDULLA-FEDERATED-QUERY-R081.1-.4, R081.8.1-.6`. Source record `EG:25`
 
 #### `MEDULLA-FEDERATED-QUERY-R028.1`
 
-**Typed KnowledgeSet row contract.** Reuse the existing `KnowledgeSet`/`KnowledgeRow` producer in `crates/medulla-retrieval/src/knowledge.rs`, the `UqlKnowledge` wire carrier in `crates/medulla-types/src/wire_query_core.rs`. And the existing `WITH KNOWLEDGE` attachment in `crates/medulla-plan/src/uql/serve/annotate.rs`. Do not substitute `ForeignRows`. Each row carries its own provenance-frame state and policy-frame state alongside the existing row id, `source_refs`, `evidence_refs` and `policy_labels`. `Resolved` means row provenance and policy came from the same pinned graph snapshot. `None`/unresolved must not be treated as empty success. The KnowledgeSet remains a superset of a plain row set: id/score and requested projection preserve existing values. Structured and UQL surfaces must serialize the same carrier. If either per-row frame is absent, malformed, or from a different snapshot, return typed `KNOWLEDGE_FRAME_MISSING`/`KNOWLEDGE_FRAME_STALE` and no partially annotated result. This is a contract clarification only. The source explicitly withholds UQL implementation authorization.
+**Typed KnowledgeSet row contract.** Reuse the existing `KnowledgeSet`/`KnowledgeRow` producer in `crates/medulla-retrieval/src/knowledge.rs`, the `UqlKnowledge` wire carrier in `crates/medulla-query-types/src/wire_query_core.rs`. And the existing `WITH KNOWLEDGE` attachment in `crates/medulla-plan/src/uql/serve/annotate.rs`. Do not substitute `ForeignRows`. Each row carries its own provenance-frame state and policy-frame state alongside the existing row id, `source_refs`, `evidence_refs` and `policy_labels`. `Resolved` means row provenance and policy came from the same pinned graph snapshot. `None`/unresolved must not be treated as empty success. The KnowledgeSet remains a superset of a plain row set: id/score and requested projection preserve existing values. Structured and UQL surfaces must serialize the same carrier. If either per-row frame is absent, malformed, or from a different snapshot, return typed `KNOWLEDGE_FRAME_MISSING`/`KNOWLEDGE_FRAME_STALE` and no partially annotated result. This is a contract clarification only. The source explicitly withholds UQL implementation authorization.
 
 Preserve `MEDULLA-FEDERATED-QUERY-R028, MEDULLA-FEDERATED-QUERY-R045`. Source record `EG:29` SHA256 `2eb8aadb1b6ccc2d5de77a4d1964fc04a4e944bccf9bcc1793e262f146af7583`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
 
@@ -1276,7 +1276,7 @@ Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/
 
 ### R722.5 build order (continuation)
 
-1. Add the `provenance` text map to `UqlRow` in `crates/medulla-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
+1. Add the `provenance` text map to `UqlRow` in `crates/medulla-query-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
 2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
 3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
 4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).

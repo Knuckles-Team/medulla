@@ -22,7 +22,7 @@ schemars = { version = "1.2.3", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
-wire-contract = ["medulla-types/wire-contract", "medulla-mutation-types/wire-contract"]
+wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema"]
 

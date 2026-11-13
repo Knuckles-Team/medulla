@@ -18,7 +18,7 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use medulla_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
+use medulla_query_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
 
 use medulla_uql::{Body, Mode, Statement};
 
@@ -299,7 +299,7 @@ fn estimates(ops: &[Op], ctx: &PlanCtx) -> Vec<f64> {
 }
 
 fn stage_text(op: &Op) -> String {
-    medulla_types::wire::uql_op(op).unwrap_or_else(|e| format!("<unprintable: {e}>"))
+    medulla_query_types::wire::uql_op(op).unwrap_or_else(|e| format!("<unprintable: {e}>"))
 }
 
 fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, String> {

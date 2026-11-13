@@ -1,7 +1,7 @@
 //! Query-federation handlers (CONCEPT:MEDULLA-KG.query.query-federation, Lane P).
 //!
 //! `RegisterForeignSource` records a named EXTERNAL source (a remote medulla
-//! engine or an HTTP/JSON API — [`medulla_types::wire::ForeignSourceSpec`]) in the
+//! engine or an HTTP/JSON API — [`medulla_query_types::wire::ForeignSourceSpec`]) in the
 //! owner-scoped [`medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog`] on
 //! `ServerState`, under the caller's VERIFIED owner — tenant+principal (EH-373). The actual
 //! cross-engine / HTTP fetch is driven by the unified-query handlers: an inline-spec
@@ -423,7 +423,7 @@ async fn query_columns(
     call: OwnerScopedCall<'_>,
     name: String,
     columns: Vec<String>,
-    predicates: Vec<medulla_types::wire::ForeignColumnPredicate>,
+    predicates: Vec<medulla_query_types::wire::ForeignColumnPredicate>,
 ) -> Response {
     let req_id = call.req_id;
     let owner = match call.owner("QueryForeignColumns") {
@@ -454,7 +454,7 @@ async fn query_columns(
             federation_opt::ColumnPredicate, federation_opt::Comparison,
             federation_opt::FederationSession,
         };
-        use medulla_types::wire::ForeignColumnComparison as WireComparison;
+        use medulla_query_types::wire::ForeignColumnComparison as WireComparison;
 
         let predicates = predicates
             .into_iter()
@@ -478,7 +478,7 @@ async fn query_columns(
             .map(|rows| {
                 rows.rows()
                     .iter()
-                    .map(|row| medulla_types::wire::ForeignColumnRow {
+                    .map(|row| medulla_query_types::wire::ForeignColumnRow {
                         id: row.id.clone(),
                         score: row.score,
                         columns: row.columns.clone(),

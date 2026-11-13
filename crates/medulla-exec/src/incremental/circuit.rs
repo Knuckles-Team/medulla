@@ -61,7 +61,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde_json::{Map, Value};
 
-use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
+use medulla_query_types::wire::{Op, Plan, Pred, TimeAxis};
 
 use crate::rowset::RowSet;
 use medulla_types::delta::{Delta, DeltaError, ZRow};
@@ -724,7 +724,7 @@ fn finalize_buckets(
 /// A short op name for `UnsupportedOp` messages (avoids leaning on `Debug`, which pulls
 /// full nested payloads): the wire variant name, from the one exhaustive kind mapping.
 fn op_name(op: &Op) -> &'static str {
-    medulla_types::wire::op_kind(op).name()
+    medulla_query_types::wire::op_kind(op).name()
 }
 
 // ── shared per-row predicate primitives (faithful to `exec.rs`) ───────────────

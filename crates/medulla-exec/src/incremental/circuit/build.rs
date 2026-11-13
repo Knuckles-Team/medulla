@@ -6,7 +6,7 @@
 //! so the v1 supported shape (`Scan` → `Filter`/`AsOf`* → at most one `WindowAgg` → an
 //! optional trailing `Limit`) is readable as a set of named rules.
 
-use medulla_types::wire::{Op, Pred, TimeAxis};
+use medulla_query_types::wire::{Op, Pred, TimeAxis};
 
 use super::{compile_window_agg, op_name, Circuit, Stage, StagePred, UnsupportedOp, WindowState};
 

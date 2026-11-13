@@ -12,7 +12,7 @@
 
 use medulla_numeric::series::mass::Shape;
 use medulla_numeric::series::matrix_profile::{self, Extreme, Hit, MatrixProfile, ProfileOptions};
-use medulla_types::series_expr::{MotifOp, MotifSearch};
+use medulla_query_types::series_expr::{MotifOp, MotifSearch};
 
 use super::derive::{named_series_groups, read_channel};
 use crate::rowset::{parse_series_row_id, series_event_row_id, Row, RowSet, ValueChannels};

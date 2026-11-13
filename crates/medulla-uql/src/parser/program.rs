@@ -12,7 +12,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::wire::{Op, Plan};
+use medulla_query_types::wire::{Op, Plan};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError, UqlWarnCode, UqlWarning};

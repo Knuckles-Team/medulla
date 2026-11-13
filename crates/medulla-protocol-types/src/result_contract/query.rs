@@ -52,7 +52,7 @@ method_results! {
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::ExtensionResult>;
     #[cfg(feature = "federation")]
-    QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_types::wire::ForeignColumnRow>>;
+    QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_query_types::wire::ForeignColumnRow>>;
     #[cfg(feature = "federation")]
     ForeignReadOpen(ForeignReadOpen) => Raw<medulla_catalog_types::foreign_read::ForeignReadOpenResult>;
     #[cfg(feature = "federation")]
@@ -63,7 +63,7 @@ method_results! {
     ForeignReadAbort(ForeignReadAbort) => Raw<medulla_catalog_types::foreign_read::ForeignReadAbortResult>;
     // A UQL statement's rows (with named score channels), EXPLAIN report or PROFILE.
     #[cfg(feature = "query")]
-    Uql(Uql) => Raw<medulla_types::wire::UqlResult>;
+    Uql(Uql) => Raw<medulla_query_types::wire::UqlResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R763.2: column edges and gaps of one SQL query.
     // MEDULLA-FEDERATED-QUERY-R650.3: the compiled context bundle with its certificate.
     // MEDULLA-FEDERATED-QUERY-R081.11: the rows and verdicts of one retrieval round.
@@ -123,7 +123,7 @@ method_results! {
     TxnUnifiedQuery(TxnUnifiedQuery) => Raw<Vec<medulla_types::unified_row::UnifiedRow>>;
     // A UQL statement's result inside a transaction (EH-434).
     #[cfg(feature = "query")]
-    TxnUql(TxnUql) => Raw<medulla_types::wire::UqlResult>;
+    TxnUql(TxnUql) => Raw<medulla_query_types::wire::UqlResult>;
     Decide(Decide) => Raw<DecisionBatch>;
     // MEDULLA-DECISION-ENGINE-R802: ordered selection with reasons, and the skips.
     SelectWebPages(SelectWebPages) => Raw<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesAnswer>;

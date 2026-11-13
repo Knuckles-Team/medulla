@@ -93,8 +93,8 @@ fn rank_request(pin: &ComponentDependency, scorer: Option<(u64, u32)>) -> Decide
     request.question.kind = QuestionKind::Rank;
     request.candidates = CandidateSource::Graph {
         graph: GRAPH.to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(vec![
-            medulla_types::wire::Op::Scan {
+        plan: Box::new(medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::Scan {
                 label: "Tool".to_string(),
             },
         ])),

@@ -268,10 +268,10 @@ async fn nl_query_grounds_foreign_names_from_the_verified_owner_registry() {
         "worker1",
         Method::RegisterForeignSource {
             name: "known".into(),
-            source: medulla_types::wire::ForeignSourceSpec::HttpJson {
+            source: medulla_query_types::wire::ForeignSourceSpec::HttpJson {
                 url: "http://example.invalid/worker1-secret".into(),
                 json_path: "data".into(),
-                field_map: medulla_types::wire::HttpFieldMap {
+                field_map: medulla_query_types::wire::HttpFieldMap {
                     id: "id".into(),
                     score: None,
                     columns: Default::default(),

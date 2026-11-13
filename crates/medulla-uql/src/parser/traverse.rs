@@ -1,7 +1,7 @@
 //! `TRAVERSE` and `PROPAGATE`: edge patterns (direction, relationship, edge predicates),
 //! hop ranges and the impact-model clause.
 
-use medulla_types::wire::{EdgeDir, Op, PropagateModel};
+use medulla_query_types::wire::{EdgeDir, Op, PropagateModel};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};
@@ -91,7 +91,14 @@ impl<'a> Parser<'a> {
     /// `-[rel]->` | `-[rel]-` | `<-[rel]-` | bare `name` (outgoing).
     fn edge_pattern(
         &mut self,
-    ) -> Result<(EdgeDir, Option<String>, Vec<medulla_types::wire::Pred>), UqlError> {
+    ) -> Result<
+        (
+            EdgeDir,
+            Option<String>,
+            Vec<medulla_query_types::wire::Pred>,
+        ),
+        UqlError,
+    > {
         let incoming = self.eat(&Tok::LArrow);
         if !incoming && !self.eat(&Tok::Dash) {
             let rel = self.name("a relationship type (or `-[:REL]->`)")?;

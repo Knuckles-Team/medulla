@@ -471,12 +471,12 @@ fn legacy_query_body(method: &Method) -> Option<Vec<u8>> {
     enum LegacyQuery<'a> {
         Uql {
             text: &'a str,
-            params: &'a std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
+            params: &'a std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
             #[serde(skip_serializing_if = "std::ops::Not::not")]
             prepare: bool,
         },
         UnifiedQuery {
-            plan: &'a medulla_types::wire::Plan,
+            plan: &'a medulla_query_types::wire::Plan,
         },
     }
     let legacy = match method {

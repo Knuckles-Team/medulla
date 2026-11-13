@@ -29,9 +29,9 @@ use medulla_exec::{
     rowset::RowSet,
 };
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::TimeAxis;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::delta::{Delta, ZRow};
-use medulla_types::wire::TimeAxis;
 use proptest::prelude::*;
 use serde_json::{json, Map, Value};
 

@@ -16,7 +16,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 
 use medulla_exec::exec::{execute, PlanCtx};
-use medulla_types::wire::{Op, Plan};
+use medulla_query_types::wire::{Op, Plan};
 
 /// An OWL ontology with an existential-restriction + role-chain subsumption the EL
 /// reasoner derives, plus four individuals — two only-INFERRED `ScholarlyWork`s, a

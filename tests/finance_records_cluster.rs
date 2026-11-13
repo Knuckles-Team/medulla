@@ -31,7 +31,7 @@ use medulla_raft::raft::NodeId;
 use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_types::wire::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
+use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 
 const SECRET: &str = "medulla-fin-r004-3-2-9-cluster-secret";
 const GRAPH: &str = "fin-r004-3-2-9";

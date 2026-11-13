@@ -7,7 +7,7 @@
 
 use std::str::FromStr;
 
-use medulla_types::wire::{PredLiteral, UqlParam};
+use medulla_query_types::wire::{PredLiteral, UqlParam};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};

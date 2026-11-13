@@ -375,7 +375,7 @@ fn discover(
     Response::ok(
         req_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(
-            medulla_types::ingestion_wire::DiscoverResult {
+            medulla_query_types::wire::DiscoverResult {
                 hits: results,
                 verdict,
                 plan: DiscoverPlan {

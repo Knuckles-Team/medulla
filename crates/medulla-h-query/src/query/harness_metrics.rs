@@ -45,7 +45,7 @@ pub(crate) fn handle_harness_metric(
         .collect();
     let rows = answered
         .into_iter()
-        .map(|row| medulla_types::wire::UqlRow {
+        .map(|row| medulla_query_types::wire::UqlRow {
             id: row.group,
             score: None,
             channels: row.values,
@@ -54,7 +54,7 @@ pub(crate) fn handle_harness_metric(
             provenance: Default::default(),
         })
         .collect();
-    let result = medulla_types::wire::UqlResult::Rows {
+    let result = medulla_query_types::wire::UqlResult::Rows {
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows,
         warnings,

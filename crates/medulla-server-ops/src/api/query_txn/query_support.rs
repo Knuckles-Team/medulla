@@ -182,7 +182,7 @@ pub fn plan_needs_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
         medulla_exec::algebra::Op::ForeignScan { source, .. } => {
             matches!(
                 **source,
-                medulla_types::wire::ForeignSourceSpec::Named { .. }
+                medulla_query_types::wire::ForeignSourceSpec::Named { .. }
             )
         }
         medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
@@ -200,7 +200,7 @@ pub fn plan_foreign_names(ops: &[medulla_exec::algebra::Op]) -> Vec<String> {
             let name = match op {
                 medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
                 medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
-                    medulla_types::wire::ForeignSourceSpec::Named { name } => Some(name.as_str()),
+                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => Some(name.as_str()),
                     _ => None,
                 },
                 medulla_exec::algebra::Op::FuseRrf { branches, .. } => {

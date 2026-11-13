@@ -12,8 +12,8 @@
 use medulla_catalog_types::distribution::Distribution;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::{ProbEvidenceSpec, ProbQuery};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{ProbEvidenceSpec, ProbQuery};
 use serde_json::json;
 
 use medulla_exec::algebra::{Op, Plan};

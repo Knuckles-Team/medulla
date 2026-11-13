@@ -11,7 +11,7 @@ pub(super) fn build_vectors(
     core: &Arc<GraphCore>,
     features: &[Vec<f64>],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
     #[cfg(all(feature = "query", feature = "tsdb"))] tsdb: MiningTsdbBind<'_>,
 ) -> Result<(Vec<Vec<f64>>, Vec<String>), String> {
     if !features.is_empty() {
@@ -41,7 +41,7 @@ pub(super) fn build_anomaly_rows(
     features: &[Vec<f64>],
     values: &[f64],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
     #[cfg(all(feature = "query", feature = "tsdb"))] tsdb: MiningTsdbBind<'_>,
 ) -> Result<(Vec<Vec<f64>>, Vec<String>), String> {
     if !features.is_empty() {
@@ -78,7 +78,7 @@ pub(super) fn build_vectors_replay(
     core: &GraphCore,
     features: &[Vec<f64>],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
 ) -> (Vec<Vec<f64>>, Vec<String>) {
     if !features.is_empty() {
         return (features.to_vec(), Vec::new());
@@ -100,7 +100,7 @@ pub(super) fn build_anomaly_rows_replay(
     features: &[Vec<f64>],
     values: &[f64],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
 ) -> (Vec<Vec<f64>>, Vec<String>) {
     if !features.is_empty() {
         return (features.to_vec(), Vec::new());
@@ -176,7 +176,7 @@ pub(crate) struct MiningTsdbBind<'a> {
 #[cfg(feature = "query")]
 pub(super) fn gather_plan_rows(
     core: &Arc<GraphCore>,
-    plan: &medulla_types::wire::Plan,
+    plan: &medulla_query_types::wire::Plan,
     #[cfg(feature = "tsdb")] tsdb: MiningTsdbBind<'_>,
 ) -> Result<(Vec<Vec<f64>>, Vec<String>), String> {
     let snap = core.analysis_snapshot();
@@ -279,7 +279,7 @@ pub(super) fn gather_plan_rows(
 #[cfg(feature = "query")]
 pub(super) fn gather_plan_rows_snapshot(
     core: &GraphCore,
-    plan: &medulla_types::wire::Plan,
+    plan: &medulla_query_types::wire::Plan,
 ) -> (Vec<Vec<f64>>, Vec<String>) {
     let snap = core.analysis_snapshot();
     let store = core.semantic_store.read();

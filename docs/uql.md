@@ -551,4 +551,4 @@ param           = "$" name ;
 - [Engine architecture](architecture/engine.md) — the plan executor, bi-temporal model, tiers.
 - [Concepts](concepts.md) — `AU-KG.compute.vector` (fused executor), `AU-KG.query.top-nodes-by-degree` (UQL).
 - The grammar lives in `crates/medulla-uql/src/grammar.rs`; the printer in
-  `crates/medulla-types/src/wire_query_uql.rs`; the op algebra in `crates/medulla-types/src/wire_query_core.rs`.
+  `crates/medulla-query-types/src/wire_query_uql.rs`; the op algebra in `crates/medulla-query-types/src/wire_query_core.rs`.

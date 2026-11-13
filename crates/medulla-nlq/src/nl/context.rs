@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_graph_core::graph::GraphView;
 use medulla_query_types::nl_query::{CertifiedTermUse, NlCorrection, NlDialect};
-use medulla_types::wire::{Op, Plan, Pred};
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 use super::certified::{
     certified_hint, check_certified_definitions, corrections_hint, CertifiedTerm,
@@ -694,7 +694,7 @@ impl SchemaContext {
             #[cfg(feature = "federation")]
             Op::ForeignScan { source, .. } => {
                 match source.as_ref() {
-                    medulla_types::wire::ForeignSourceSpec::Named { name } => {
+                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
                         self.check_foreign_source(name)?
                     }
                     _ => return Err(SchemaViolation::UnboundForeignSource),
@@ -709,7 +709,7 @@ impl SchemaContext {
                 value,
                 method,
             } => {
-                use medulla_types::wire::{AttributionInput, AttributionMethod};
+                use medulla_query_types::wire::{AttributionInput, AttributionMethod};
                 let mut input = input.clone();
                 let mut method = method.clone();
                 if let AttributionInput::Property { name } = &mut input {
@@ -1060,8 +1060,8 @@ fn derived_channels(ops: &[Op]) -> BTreeSet<String> {
 
 /// Every attribute name a CEP pattern's matchers read.
 #[cfg(feature = "stream")]
-fn cep_attributes(spec: &medulla_types::wire::CepPatternSpec) -> Vec<String> {
-    use medulla_types::wire::{CepAttrPredSpec, CepMatcherSpec, CepNodeSpec};
+fn cep_attributes(spec: &medulla_query_types::wire::CepPatternSpec) -> Vec<String> {
+    use medulla_query_types::wire::{CepAttrPredSpec, CepMatcherSpec, CepNodeSpec};
     fn matcher(m: &CepMatcherSpec, out: &mut Vec<String>) {
         for pred in &m.preds {
             let (CepAttrPredSpec::Eq { field, .. }

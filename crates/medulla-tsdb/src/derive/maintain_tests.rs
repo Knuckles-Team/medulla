@@ -1,5 +1,5 @@
 use super::*;
-use medulla_types::series_expr::SeriesFunc;
+use medulla_query_types::series_expr::SeriesFunc;
 
 fn expr() -> SeriesExpr {
     let ewma = SeriesExpr::call(SeriesFunc::Ewma, vec![SeriesExpr::channel("v0")], vec![4.0]);
@@ -116,7 +116,7 @@ mod state_space_bounds {
     use super::*;
     use crate::derive::state_space::{Advance, SeriesRefusal, StateSpaceState};
     use medulla_numeric::series::limits::{self as lim, Ceiling};
-    use medulla_types::series_expr::{
+    use medulla_query_types::series_expr::{
         NoisePolicy, StateSpaceModel, StateSpaceProfile, STATE_SPACE_KERNEL_REVISION,
     };
 

@@ -171,7 +171,7 @@ fn bitemporal_reason_vector_traverse_asof_eg384() {
             // SOURCE: every node live at `ts` on the Valid timeline.
             Op::AsOf {
                 ts,
-                axis: medulla_types::wire::TimeAxis::Valid,
+                axis: medulla_query_types::wire::TimeAxis::Valid,
             },
             // VECTOR: order the live set by similarity (embedded nodes only).
             Op::Rank {
@@ -262,7 +262,7 @@ fn spawn_mock_json(body: &'static str) -> String {
 #[cfg(feature = "federation")]
 #[test]
 fn federation_sparql_local_vector_foreign_sql_one_plan_eg385() {
-    use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+    use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
     use std::collections::HashSet;
 
     let fx = medulla_exec::fixture::build();
@@ -331,7 +331,7 @@ fn federation_sparql_local_vector_foreign_sql_one_plan_eg385() {
 #[cfg(feature = "federation")]
 #[test]
 fn federation_named_source_fails_closed_eg385() {
-    use medulla_types::wire::ForeignSourceSpec;
+    use medulla_query_types::wire::ForeignSourceSpec;
     let fx = medulla_exec::fixture::build();
     let plan = Plan::new(vec![Op::ForeignScan {
         source: Box::new(ForeignSourceSpec::Named {
@@ -397,7 +397,7 @@ fn places() -> (GraphView, SemanticStore) {
 #[cfg(feature = "geo")]
 #[test]
 fn geo_vector_temporal_fusion_eg386() {
-    use medulla_types::wire::TimeAxis;
+    use medulla_query_types::wire::TimeAxis;
     let (view, semantic) = places();
     let ctx = PlanCtx::new(&view, &semantic);
 
@@ -492,8 +492,8 @@ fn frames_deriving_docs() -> (GraphView, SemanticStore) {
 #[cfg(feature = "tensor")]
 #[test]
 fn tensor_graph_vector_cas_dedup_eg387() {
+    use medulla_query_types::wire::{TensorOpKind, TensorReduceKind};
     use medulla_tensor::{content_hash, Buffer, Tensor, TensorStore};
-    use medulla_types::wire::{TensorOpKind, TensorReduceKind};
     use std::sync::Mutex;
 
     let (view, semantic) = frames_deriving_docs();
@@ -597,7 +597,7 @@ fn sessions_with_readings() -> (GraphView, SemanticStore) {
 #[cfg(all(feature = "stream", feature = "timeseries"))]
 #[test]
 fn cep_stream_traverse_tsdb_window_one_plan_eg388() {
-    use medulla_types::wire::{CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec};
+    use medulla_query_types::wire::{CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec};
     let (view, semantic) = sessions_with_readings();
     let ctx = PlanCtx::new(&view, &semantic);
 
@@ -721,7 +721,7 @@ fn beliefs_reasoned() -> (GraphView, SemanticStore) {
 #[cfg(all(feature = "owl", feature = "probabilistic"))]
 #[test]
 fn probabilistic_rerank_reasoned_vector_mmr_eg389() {
-    use medulla_types::wire::ProbQuery;
+    use medulla_query_types::wire::ProbQuery;
     let (view, semantic) = beliefs_reasoned();
     let ctx = PlanCtx::new(&view, &semantic);
 

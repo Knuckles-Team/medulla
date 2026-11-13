@@ -1,6 +1,6 @@
 //! The pre-UQL-01 UQL surface tests, kept as the compatibility contract.
 
-use medulla_types::wire::{EdgeDir, Op, Plan, Pred, TimeAxis};
+use medulla_query_types::wire::{EdgeDir, Op, Plan, Pred, TimeAxis};
 use medulla_uql::{parse, UqlCode};
 
 /// THE faithfulness proof: the documented pipeline query parses to the BYTE-
@@ -122,8 +122,8 @@ fn surface_variations() {
                     },
                     Pred::Cmp {
                         prop: "rank".into(),
-                        op: medulla_types::wire::CmpOp::Eq,
-                        value: medulla_types::wire::PredLiteral::Num(1.0)
+                        op: medulla_query_types::wire::CmpOp::Eq,
+                        value: medulla_query_types::wire::PredLiteral::Num(1.0)
                     },
                 ]
             },
@@ -713,8 +713,8 @@ fn wildcard_and_edge_predicate_traversals_compile_to_expand() {
             max: 1,
             edge_preds: vec![Pred::Cmp {
                 prop: "weight".into(),
-                op: medulla_types::wire::CmpOp::Ge,
-                value: medulla_types::wire::PredLiteral::Num(0.5),
+                op: medulla_query_types::wire::CmpOp::Ge,
+                value: medulla_query_types::wire::PredLiteral::Num(0.5),
             }],
         }
     );

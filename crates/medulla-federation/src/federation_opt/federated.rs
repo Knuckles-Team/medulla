@@ -1,6 +1,6 @@
 //! The federation implementation of the executor's foreign-source seam.
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::session::FederationSession;
 use super::trace::{redacted_label, EstimateProvenance};

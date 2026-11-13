@@ -117,7 +117,7 @@ $($variants)*
         /// this field.
         #[cfg(feature = "query")]
         #[serde(default)]
-        plan: Option<medulla_types::wire::Plan>,
+        plan: Option<medulla_query_types::wire::Plan>,
         /// Which clustering engine to run.
         #[serde(default)]
         algorithm: ClusterAlgorithm,
@@ -178,7 +178,7 @@ $($variants)*
         /// `features`/`values` is non-empty.
         #[cfg(feature = "query")]
         #[serde(default)]
-        plan: Option<medulla_types::wire::Plan>,
+        plan: Option<medulla_query_types::wire::Plan>,
         /// Which detector to run.
         #[serde(default)]
         algorithm: AnomalyAlgorithm,
@@ -240,7 +240,7 @@ $($variants)*
         /// plan's resulting row order.
         #[cfg(feature = "query")]
         #[serde(default)]
-        plan: Option<medulla_types::wire::Plan>,
+        plan: Option<medulla_query_types::wire::Plan>,
         /// Integer class labels, one per row (required).
         #[serde(default)]
         y: Vec<i64>,
@@ -277,7 +277,7 @@ $($variants)*
     #[cfg(feature = "mining")]
     MineClassifyPredict {
         /// The fitted model blob from `MineClassifyFit`.
-        model: medulla_types::wire::FittedClassifier,
+        model: medulla_query_types::wire::FittedClassifier,
         /// Explicit feature matrix — each row a sample. Empty ⇒ use `source`.
         #[serde(default)]
         x: Vec<Vec<f64>>,
@@ -289,7 +289,7 @@ $($variants)*
         /// is non-empty.
         #[cfg(feature = "query")]
         #[serde(default)]
-        plan: Option<medulla_types::wire::Plan>,
+        plan: Option<medulla_query_types::wire::Plan>,
         /// Materialize each prediction as a typed `:Classification` node linked to its
         /// source node.
         #[serde(default)]
@@ -326,7 +326,7 @@ $($variants)*
         /// is non-empty.
         #[cfg(feature = "query")]
         #[serde(default)]
-        plan: Option<medulla_types::wire::Plan>,
+        plan: Option<medulla_query_types::wire::Plan>,
         /// Class labels, one per row — REQUIRED for LDA (ignored otherwise).
         #[serde(default)]
         labels: Vec<i64>,
@@ -456,7 +456,7 @@ $($variants)*
         #[serde(default)]
         y: Vec<i64>,
         /// The composable pipeline recipe (features → split → model).
-        spec: medulla_types::wire::PipelineSpec,
+        spec: medulla_query_types::wire::PipelineSpec,
         /// Persist the fitted model as a versioned `:Model` node (a graph write).
         /// `false` ⇒ dry-run: fit + report metrics without materializing an artifact.
         #[serde(default = "default_true")]

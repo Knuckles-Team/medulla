@@ -6,7 +6,7 @@ use medulla_graph_algos::graphlearn::embeddings::{
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphSource;
-use medulla_types::wire::FeatureStep;
+use medulla_query_types::wire::FeatureStep;
 
 /// Build the `(node_id, row)` feature matrix by running the ordered feature steps.
 /// Explicit `x` short-circuits the producing steps (only transforms apply).

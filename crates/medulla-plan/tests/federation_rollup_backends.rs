@@ -18,7 +18,7 @@ use medulla_federation::{
     federation_cypher_unbound::register_falkordb, federation_cypher_unbound::register_neo4j,
 };
 use medulla_federation::{mirror_target::target_for, mirror_target::MirrorTargetRegistry};
-use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
+use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
 
 fn rollup_cypher_spec(backend: ForeignCypherBackend) -> ForeignSourceSpec {
     ForeignSourceSpec::Cypher {

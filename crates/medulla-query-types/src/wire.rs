@@ -1,7 +1,7 @@
 //! Wire DTOs embedded in feature-gated `protocol::Method` variants. They live in
-//! medulla-types (the bottom of the DAG) so the protocol enum can name them without
+//! medulla-query-types (the bottom of the DAG with medulla-types) so the protocol enum can name them without
 //! depending on medulla-compute. Domain-specific DTOs are kept in private child modules
-//! and re-exported here, preserving the established `medulla_types::wire::*` API.
+//! and re-exported here, preserving the established `medulla_query_types::wire::*` API.
 
 use serde::{Deserialize, Serialize};
 
@@ -67,9 +67,6 @@ pub struct RetrievalVerdict {
 #[cfg(feature = "datascience")]
 #[path = "wire_datascience.rs"]
 mod wire_datascience;
-#[cfg(feature = "finance")]
-#[path = "wire_finance.rs"]
-mod wire_finance;
 #[cfg(feature = "mining")]
 #[path = "wire_mining.rs"]
 mod wire_mining;
@@ -124,8 +121,6 @@ mod wire_streaming;
 
 #[cfg(feature = "datascience")]
 pub use wire_datascience::*;
-#[cfg(feature = "finance")]
-pub use wire_finance::*;
 #[cfg(feature = "mining")]
 pub use wire_mining::*;
 #[cfg(feature = "ml-pipeline")]
@@ -148,6 +143,9 @@ pub use wire_query_modalities::*;
 #[path = "wire_batch.rs"]
 mod wire_batch;
 pub use wire_batch::*;
+#[path = "wire_discover.rs"]
+mod wire_discover;
+pub use wire_discover::*;
 #[cfg(all(feature = "query", any(test, feature = "test-support")))]
 pub use wire_query_samples::{uql_sample_op, uql_sample_pred};
 #[cfg(feature = "query")]

@@ -15,12 +15,12 @@
 //! construction. Lineage (`derived_from`) and the expression digest are in the receipt
 //! and in the series metadata.
 
+use medulla_query_types::series_expr::{DerivedSeriesReceipt, SeriesExpr, StateSpaceModel};
 use medulla_tsdb::derive::maintain::{latest_versions, DerivedState, Step, DERIVED_FIELDS};
 use medulla_tsdb::derive::state_space::{self, Advance, SeriesRefusal, StateSpaceState};
 use medulla_tsdb::derive::KERNEL_VERSION;
 use medulla_tsdb::point::{Point, Ts};
 use medulla_tsdb::store::{DerivedWrite, ScopedAppendBatch, SeriesKey, SeriesMeta, SeriesStore};
-use medulla_types::series_expr::{DerivedSeriesReceipt, SeriesExpr, StateSpaceModel};
 
 use super::{compute_off_lock, results, store_of, BatchScope, TsRequestContext};
 use medulla_protocol_types::protocol::Method;

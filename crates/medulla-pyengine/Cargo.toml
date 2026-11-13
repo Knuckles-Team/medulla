@@ -63,20 +63,20 @@ security = ["medulla-core/security", "medulla-isolation/security", "medulla-grap
 # call at all yet -- flagged here explicitly, per the plan's own instruction, for
 # that lane to review rather than silently discover.
 finance = ["dep:medulla-compute", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-types/finance"]
-datascience = ["dep:medulla-compute", "medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-types/datascience"]
-mining = ["dep:medulla-compute", "medulla-compute/mining", "medulla-protocol-types/mining", "medulla-types/mining"]
-graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn", "medulla-protocol-types/graphlearn", "medulla-types/graphlearn"]
-ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-protocol-types/ml-pipeline", "medulla-types/ml-pipeline"]
+datascience = ["dep:medulla-compute", "medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-types/datascience", "medulla-query-types/datascience"]
+mining = ["dep:medulla-compute", "medulla-compute/mining", "medulla-protocol-types/mining", "medulla-types/mining", "medulla-query-types/mining"]
+graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn", "medulla-protocol-types/graphlearn", "medulla-types/graphlearn", "medulla-query-types/graphlearn"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-protocol-types/ml-pipeline", "medulla-types/ml-pipeline", "medulla-query-types/ml-pipeline"]
 reasoning = ["dep:medulla-compute", "medulla-compute/reasoning"]
 # `query.rs` (the facade handler this mirrors) calls BOTH medulla_query (classify/exec_sql/
 # exec_cypher) and medulla_plan (Op/Plan/uql::parse, the unified-query-text surface) --
 # confirmed by grep, `src/server/handlers/query.rs`. `cypher` is medulla-query alone (no
 # medulla-plan), matching root Cargo.toml:432's own narrower composition.
-query = ["dep:medulla-plan", "medulla-plan/query", "medulla-protocol-types/query", "medulla-types/query"]
+query = ["dep:medulla-plan", "medulla-plan/query", "medulla-protocol-types/query", "medulla-types/query", "medulla-query-types/query"]
 cypher = []
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store"]
-streaming = ["medulla-protocol-types/streaming", "medulla-types/streaming"]
-wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf"]
+streaming = ["medulla-protocol-types/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]
+wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-protocol-types/rdf", "medulla-types/rdf"]
 blob = ["medulla-protocol-types/blob", "medulla-types/blob"]
 # `jobs.rs` also calls `medulla_compute::mining` (association-rule mining as a job kind)
@@ -122,6 +122,7 @@ medulla-wasm = { path = "../medulla-wasm", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 

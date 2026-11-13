@@ -27,17 +27,17 @@ use std::sync::OnceLock;
 use parking_lot::Mutex;
 use tokio::sync::Notify;
 
+use medulla_query_types::wire::CdcEvent;
+use medulla_query_types::wire::CdcKind;
+use medulla_query_types::wire::CdcReadResult;
+use medulla_query_types::wire::ContinuousAgg;
+use medulla_query_types::wire::ContinuousQueryResult;
+use medulla_query_types::wire::ContinuousQuerySpec;
+use medulla_query_types::wire::FiredAction;
+use medulla_query_types::wire::FiredTriggersResult;
+use medulla_query_types::wire::TriggerInfo;
+use medulla_query_types::wire::WatchBatch;
 use medulla_types::row_change::{RowChange, RowChangeKind, RowChangeSink};
-use medulla_types::wire::CdcEvent;
-use medulla_types::wire::CdcKind;
-use medulla_types::wire::CdcReadResult;
-use medulla_types::wire::ContinuousAgg;
-use medulla_types::wire::ContinuousQueryResult;
-use medulla_types::wire::ContinuousQuerySpec;
-use medulla_types::wire::FiredAction;
-use medulla_types::wire::FiredTriggersResult;
-use medulla_types::wire::TriggerInfo;
-use medulla_types::wire::WatchBatch;
 
 /// Per-graph ring capacity: the events retained for cursor reads, set by the
 /// registry knob `cdc.ring_events`. A cursor older than the trimmed window gets

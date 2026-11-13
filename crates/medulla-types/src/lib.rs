@@ -3,9 +3,9 @@
 //! `medulla-server`, the `medulla` facade) depends on it, never the reverse.
 //!
 //! It also owns the pure-data types that the protocol enum embeds but whose
-//! behavior lives upstream: `wire` (finance/datascience DTOs) and `acl`
+//! behavior lives upstream: `wire_finance` (finance DTOs) and `acl`
 //! (`AgentRole`/`AgentIdentity`). The upstream modules re-export these
-//! (`pub use medulla_types::wire::Order;`) so their algorithm code is unchanged —
+//! (`pub use medulla_types::wire_finance::Order;`) so their algorithm code is unchanged —
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
 pub mod acl;
@@ -293,15 +293,9 @@ pub mod finance_accounting;
 // Typed RDF input and the ontology inspection view, so orchestration callers
 // never build or parse RDF text themselves.
 pub mod ontology_inspection;
-// F3: RDF load/update/rule/shape-validation report bodies (medulla-rdf/medulla-shacl/medulla-shex results).
-pub mod rdf_report;
 pub mod runtime_limit;
-// EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
-pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
-// MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 — the search-index capability of an operation-bound source.
-pub mod search_source;
 // MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 — the web metasearch capability and its result record.
 pub mod source_symbol_edit;
 // MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.
@@ -341,7 +335,9 @@ pub mod consolidation_isolation;
 // child.
 pub mod immich_pilot_phase;
 pub mod usage;
-pub mod wire;
+// Finance wire DTOs; the query and data-science wire family lives in `medulla-query-types`.
+#[cfg(feature = "finance")]
+pub mod wire_finance;
 
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the
 // bottom of the DAG so `medulla-core` can evaluate it; `medulla-query` decodes SQL into it.

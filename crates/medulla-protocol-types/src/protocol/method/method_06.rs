@@ -189,7 +189,7 @@ $($variants)*
     TxnPlanWriteback {
         txn_id: String,
         /// The plan whose result `RowSet` is materialized as edges.
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
         /// The edge SOURCE every materialized edge is anchored to.
         anchor_id: String,
         /// The `relationship` property every materialized edge carries.
@@ -236,7 +236,7 @@ $($variants)*
     #[cfg(feature = "query")]
     TxnUnifiedQuery {
         txn_id: String,
-        plan: medulla_types::wire::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 
     /// A UQL statement INSIDE a transaction (CONCEPT:MEDULLA-KG.query.txn-cross-modal-ryow,
@@ -250,7 +250,7 @@ $($variants)*
         txn_id: String,
         text: String,
         #[serde(default)]
-        params: std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
+        params: std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
     },
 
     /// Commit the staged transaction (see the section doc above for the OCC
@@ -406,7 +406,7 @@ $($variants)*
     TsDefineStateSpace {
         series_id: String,
         source: String,
-        model: medulla_types::series_expr::StateSpaceModel,
+        model: medulla_query_types::series_expr::StateSpaceModel,
     },
 
 

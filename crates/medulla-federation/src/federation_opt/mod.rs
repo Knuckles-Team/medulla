@@ -86,7 +86,7 @@ pub use federated::FederatedExec;
 
 use crate::federation::ForeignSourceRegistry;
 use medulla_exec::rowset::RowSet;
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 /// Is the federation optimizer active? True unless `MEDULLA_FEDERATION_OPT=0`.
 pub fn enabled() -> bool {

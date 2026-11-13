@@ -169,9 +169,9 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
 }
 
 fn attribute_spec<'s>(
-    input: &'s medulla_types::wire::AttributionInput,
-    value: medulla_types::wire::AttributionValue,
-    method: &'s medulla_types::wire::AttributionMethod,
+    input: &'s medulla_query_types::wire::AttributionInput,
+    value: medulla_query_types::wire::AttributionValue,
+    method: &'s medulla_query_types::wire::AttributionMethod,
 ) -> super::attribution::AttributeSpec<'s> {
     super::attribution::AttributeSpec {
         input,
@@ -180,7 +180,7 @@ fn attribute_spec<'s>(
     }
 }
 
-/// A stage's SECONDARY channels ([`medulla_types::wire::OpKind::extra_channels`]): per channel,
+/// A stage's SECONDARY channels ([`medulla_query_types::wire::OpKind::extra_channels`]): per channel,
 /// the `(row id, value)` pairs the stage wrote.
 pub type StageChannels = Vec<(&'static str, Vec<(String, f32)>)>;
 
@@ -202,7 +202,7 @@ pub fn apply_with_channels(
         let attributed =
             super::attribution::attribute(ctx, input, attribute_spec(players, *value, method))?;
         let channels = vec![(
-            medulla_types::wire::ATTRIBUTION_EXTRA_CHANNELS[0],
+            medulla_query_types::wire::ATTRIBUTION_EXTRA_CHANNELS[0],
             attributed.half_widths,
         )];
         return Ok((attributed.rows, channels));
@@ -228,7 +228,7 @@ fn reliability_with_channels(
     let per_row = |value: f32| -> Vec<(String, f32)> {
         rows.ids().into_iter().map(|id| (id, value)).collect()
     };
-    let names = medulla_types::wire::RELIABILITY_EXTRA_CHANNELS;
+    let names = medulla_query_types::wire::RELIABILITY_EXTRA_CHANNELS;
     let mut channels = Vec::new();
     if let Some((lower, upper)) = reliability.interval {
         channels.push((names[0], per_row(lower as f32)));
@@ -530,9 +530,9 @@ pub(super) fn apply_timeseries(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<
 
 /// The refusal of a `ForeignScan` when no foreign executor is bound to the ctx.
 #[cfg(feature = "federation")]
-fn unbound_foreign_scan(source: &medulla_types::wire::ForeignSourceSpec) -> String {
+fn unbound_foreign_scan(source: &medulla_query_types::wire::ForeignSourceSpec) -> String {
     match source {
-        medulla_types::wire::ForeignSourceSpec::Named { name } => format!(
+        medulla_query_types::wire::ForeignSourceSpec::Named { name } => format!(
             "federation: Op::ForeignScan names foreign source '{name}' but no \
              ForeignSourceRegistry is attached to the PlanCtx \
              (CONCEPT:MEDULLA-KG.query.symmetric-foreign-scan)"

@@ -16,7 +16,7 @@
 #[cfg(feature = "owl")]
 use std::collections::HashMap;
 
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     op_kind, Op, ProofRole, UqlProofCoverage, UqlProofStep, UqlRow, UqlRowProof,
 };
 
@@ -77,7 +77,7 @@ enum Prover {
     Unproved,
     /// Row id → the witness of a SPARQL solution binding it (a complete one when any is).
     #[cfg(feature = "owl")]
-    Sparql(HashMap<String, medulla_types::rdf_report::SparqlRowProof>),
+    Sparql(HashMap<String, medulla_query_types::rdf_report::SparqlRowProof>),
     /// The stage's OWL membership closure.
     #[cfg(feature = "owl")]
     Reason(Box<medulla_exec::exec::reason::ReasonMembership>),
@@ -106,8 +106,8 @@ impl Prover {
             #[cfg(feature = "owl")]
             Prover::Sparql(by_id) => Some(match by_id.get(id) {
                 Some(proof) => {
-                    let complete =
-                        proof.coverage == medulla_types::rdf_report::SparqlProofCoverage::Complete;
+                    let complete = proof.coverage
+                        == medulla_query_types::rdf_report::SparqlProofCoverage::Complete;
                     let proof = proof.clone();
                     (UqlProofStep::Sparql { clause, proof }, complete)
                 }
@@ -152,8 +152,8 @@ fn certifying(_op: &Op, _ctx: &PlanCtx) -> Result<Prover, String> {
 /// Re-evaluate the stage's SPARQL with witnesses and index them by the row `var` binds.
 #[cfg(feature = "owl")]
 fn sparql_prover(ctx: &PlanCtx, query: &str, var: &str) -> Result<Prover, String> {
+    use medulla_query_types::rdf_report::{SparqlProofCoverage, SparqlRowProof};
     use medulla_rdf::sparql::{execute_explained, Binding, Dataset, Projection};
-    use medulla_types::rdf_report::{SparqlProofCoverage, SparqlRowProof};
 
     let dataset = Dataset::new(ctx.view, Vec::new());
     let (table, proofs) = execute_explained(&dataset, query, &Projection::raw())?;

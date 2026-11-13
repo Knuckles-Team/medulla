@@ -79,7 +79,7 @@ pub mod federation_stats;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod federation_trino;
 /// The write-side mirror-target seam (MEDULLA-DURABLE-KERNEL-R024.2) — the
-/// `MirrorTarget` trait binding a [`medulla_types::wire::MirrorTargetSpec`] to a
+/// `MirrorTarget` trait binding a [`medulla_query_types::wire::MirrorTargetSpec`] to a
 /// driver. Mirrors `federation`'s read-side `ForeignSource` seam.
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

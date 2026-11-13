@@ -28,7 +28,7 @@ serde_bytes = "0.11.19"
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-result-types/contract-schema"]
 jobs = ["medulla-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization"]
-test-support = ["medulla-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support"]
 
 # MEDULLA-UNIFIED-DATA-PLANE-R700.6 hot-path receipt; nightly only, never gates a PR.
 [[bench]]

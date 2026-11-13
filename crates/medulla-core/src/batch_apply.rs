@@ -5,7 +5,7 @@
 //! every path. [`validate_batch`] is the check that runs before the first operation does.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_types::wire::{BatchClaimedNode, BatchOpResult, BatchOperation};
+use medulla_query_types::wire::{BatchClaimedNode, BatchOpResult, BatchOperation};
 
 /// Why a batch is refused before any operation runs.
 #[derive(Clone, Debug, PartialEq, Eq)]

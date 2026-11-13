@@ -455,7 +455,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     let view = medulla_server_cdc::matview::PlanMatView {
         name: MV_NAME.to_string(),
         graph: GRAPH.to_string(),
-        plan: medulla_types::wire::Plan::new(Vec::new()),
+        plan: medulla_query_types::wire::Plan::new(Vec::new()),
     };
     redb.plan_matview_put(
         MV_NAME,

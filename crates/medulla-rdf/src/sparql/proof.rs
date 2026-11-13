@@ -17,7 +17,7 @@
 //! a row whose search exhausts [`MAX_WITNESS_STEPS`]; a partial proof is never
 //! presented as a complete one.
 
-use medulla_types::rdf_report::{
+use medulla_query_types::rdf_report::{
     SparqlObjectKind, SparqlProofCoverage, SparqlRowProof, SparqlWitnessTriple,
 };
 use spargebra::algebra::{Expression, GraphPattern};

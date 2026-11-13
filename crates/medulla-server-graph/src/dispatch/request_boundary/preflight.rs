@@ -81,7 +81,7 @@ fn preflight_graph_write_msgpack(method: &Method) -> Option<Result<(), &'static 
         } => Some(preflight_nested_msgpack(updates_msgpack)),
         // MEDULLA-DURABLE-KERNEL-R871: every blob of every inner operation, in order.
         Method::Batch { operations } => Some(operations.iter().try_for_each(|operation| {
-            use medulla_types::wire::BatchOperation;
+            use medulla_query_types::wire::BatchOperation;
             match operation {
                 BatchOperation::CreateNodeIfAbsent {
                     properties_msgpack, ..

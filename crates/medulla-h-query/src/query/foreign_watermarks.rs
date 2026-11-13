@@ -143,7 +143,7 @@ fn collect_foreign(op: &medulla_exec::algebra::Op, sources: &mut BTreeSet<String
         }
         #[cfg(feature = "federation")]
         medulla_exec::algebra::Op::ForeignScan { source, .. } => match &**source {
-            medulla_types::wire::ForeignSourceSpec::Named { name } => {
+            medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
                 sources.insert(name.clone());
                 true
             }

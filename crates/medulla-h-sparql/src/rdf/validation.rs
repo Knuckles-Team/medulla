@@ -142,8 +142,10 @@ fn shacl_report_wire(
     report: medulla_shacl::ValidationReport,
     schema_digests: Vec<String>,
     composed_digest: Option<String>,
-) -> medulla_types::rdf_report::ShaclValidationReport {
-    use medulla_types::rdf_report::{ShaclSeverity, ShaclValidationReport, ShaclValidationResult};
+) -> medulla_query_types::rdf_report::ShaclValidationReport {
+    use medulla_query_types::rdf_report::{
+        ShaclSeverity, ShaclValidationReport, ShaclValidationResult,
+    };
     let results = report
         .results
         .into_iter()
@@ -238,8 +240,8 @@ pub(super) async fn handle_shex_validate(
 #[cfg(feature = "shex")]
 fn shex_report_wire(
     report: medulla_shex::ShexReport,
-) -> medulla_types::rdf_report::ShexValidationReport {
-    use medulla_types::rdf_report::{ShexNodeResult, ShexValidationReport};
+) -> medulla_query_types::rdf_report::ShexValidationReport {
+    use medulla_query_types::rdf_report::{ShexNodeResult, ShexValidationReport};
     let results = report
         .results
         .into_iter()
@@ -348,7 +350,7 @@ mod graph_schema_shapes_tests {
 mod served_shapes_tests {
     use std::sync::Arc;
 
-    use medulla_types::wire::{Op, Plan, ShapeKeep};
+    use medulla_query_types::wire::{Op, Plan, ShapeKeep};
 
     use super::*;
     use medulla_graph_core::graph::GraphSchemaSource;

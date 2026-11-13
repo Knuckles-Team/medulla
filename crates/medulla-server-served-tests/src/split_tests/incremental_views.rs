@@ -137,8 +137,8 @@ async fn ontology_retraction_updates_closure_incrementally() {
 async fn restart_reloads_plan_view_in_incremental_mode() {
     use medulla_persistence::AsRedb;
     use medulla_protocol_types::protocol::GraphType;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_server_cdc::matview::{encode_def, manager, Mode, PlanMatView};
-    use medulla_types::wire::{Op, Plan};
 
     const VIEW: &str = "r006-restart-view";
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
@@ -198,8 +198,8 @@ const CHANGED: usize = 50;
 
 /// `Scan Doc` then `Filter year > 2000`.
 #[cfg(all(feature = "matview", feature = "redb"))]
-fn doc_plan() -> medulla_types::wire::Plan {
-    use medulla_types::wire::{Op, Plan, Pred};
+fn doc_plan() -> medulla_query_types::wire::Plan {
+    use medulla_query_types::wire::{Op, Plan, Pred};
     Plan::new(vec![
         Op::Scan {
             label: "Doc".into(),

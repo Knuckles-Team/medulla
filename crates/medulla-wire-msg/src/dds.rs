@@ -61,7 +61,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use super::ros2_bridge::{cdc_to_publish, publish_to_method, RosbridgeOp};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::wire::CdcEvent;
+use medulla_query_types::wire::CdcEvent;
 
 /// The ROS2 transport seam (CONCEPT:MEDULLA-KG.ingest.dds-transport): publish/subscribe/advertise ROS2 topics over
 /// a concrete transport (native DDS/RTPS, or the MEDULLA-325 rosbridge WebSocket). Messages are

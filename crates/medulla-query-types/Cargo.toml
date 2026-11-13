@@ -22,10 +22,35 @@ hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
 
 [features]
+# The wire-family gates moved here with their modules (MEDULLA-SDLC-R021.3); every
+# crate that forwarded `medulla-types/<gate>` forwards `medulla-query-types/<gate>` too.
+test-support = ["medulla-types/test-support"]
+datascience = []
+mining = []
+graphlearn = ["datascience"]
+ml-pipeline = ["graphlearn", "datascience", "mining"]
+query = []
+epistemic = ["query"]
+text = ["query"]
+owl = []
+owl-plan = ["owl", "query"]
+wasm-udf = []
+streaming = []
+federation = ["query"]
+geo = ["query"]
+tensor = ["query"]
+stream = ["query"]
+timeseries = ["query"]
+probabilistic = ["query"]
 asr-native = []
 quantum = []
 viz = []
-wire-complete = ["medulla-types/wire-contract", "medulla-types/timeseries", "medulla-types/probabilistic", "medulla-types/jobs", "medulla-types/statechart", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving", "quantum", "asr-native", "viz"]
+wire-contract = [
+    "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "text",
+    "streaming", "owl", "owl-plan", "wasm-udf", "federation", "geo", "tensor", "stream",
+    "medulla-types/wire-contract",
+]
+wire-complete = ["wire-contract", "timeseries", "probabilistic", "quantum", "asr-native", "viz", "medulla-types/jobs", "medulla-types/statechart", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
 
 [dev-dependencies]

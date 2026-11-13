@@ -117,20 +117,20 @@ pub enum ScopeRule {
 #[cfg(feature = "query")]
 impl ScopeRule {
     /// Whether this rule injects the scope at a leaf of the given class.
-    pub fn covers(self, leaf: medulla_types::wire::PlanScopeLeaf) -> bool {
+    pub fn covers(self, leaf: medulla_query_types::wire::PlanScopeLeaf) -> bool {
         match self {
             ScopeRule::ScanAllLeaves => matches!(
                 leaf,
-                medulla_types::wire::PlanScopeLeaf::Graph
-                    | medulla_types::wire::PlanScopeLeaf::Edge
-                    | medulla_types::wire::PlanScopeLeaf::Vector
+                medulla_query_types::wire::PlanScopeLeaf::Graph
+                    | medulla_query_types::wire::PlanScopeLeaf::Edge
+                    | medulla_query_types::wire::PlanScopeLeaf::Vector
             ),
         }
     }
 
     /// The closed leaf classes this rule stamps onto the plan.
-    pub fn leaves(self) -> Vec<medulla_types::wire::PlanScopeLeaf> {
-        use medulla_types::wire::PlanScopeLeaf;
+    pub fn leaves(self) -> Vec<medulla_query_types::wire::PlanScopeLeaf> {
+        use medulla_query_types::wire::PlanScopeLeaf;
         [
             PlanScopeLeaf::Graph,
             PlanScopeLeaf::Edge,
@@ -147,8 +147,10 @@ impl ScopeRule {
 /// Feature-gated plan ops (foreign, spatial, tsdb, tensor, OWL sources) are
 /// not leaves of this table; they scope under their own requirements.
 #[cfg(feature = "query")]
-pub fn scan_leaf(op: &medulla_types::wire::Op) -> Option<medulla_types::wire::PlanScopeLeaf> {
-    use medulla_types::wire::{Op, PlanScopeLeaf};
+pub fn scan_leaf(
+    op: &medulla_query_types::wire::Op,
+) -> Option<medulla_query_types::wire::PlanScopeLeaf> {
+    use medulla_query_types::wire::{Op, PlanScopeLeaf};
     Some(match op {
         Op::Scan { .. } | Op::ScanAll { .. } => PlanScopeLeaf::Graph,
         Op::Traverse { .. } | Op::Expand { .. } => PlanScopeLeaf::Edge,
@@ -165,7 +167,7 @@ pub fn scan_leaf(op: &medulla_types::wire::Op) -> Option<medulla_types::wire::Pl
 /// and no scan runs unscoped.
 #[cfg(feature = "query")]
 pub fn inject_scope(
-    plan: &mut medulla_types::wire::Plan,
+    plan: &mut medulla_query_types::wire::Plan,
     scope: &PlanScope,
 ) -> Result<(), PlanScopeError> {
     inject_scope_with_rule(plan, scope, ScopeRule::ScanAllLeaves)
@@ -177,12 +179,12 @@ pub fn inject_scope(
 /// never merged or appended.
 #[cfg(feature = "query")]
 pub fn inject_scope_with_rule(
-    plan: &mut medulla_types::wire::Plan,
+    plan: &mut medulla_query_types::wire::Plan,
     scope: &PlanScope,
     rule: ScopeRule,
 ) -> Result<(), PlanScopeError> {
     let predicates = scope.predicate()?;
-    plan.scope = Some(medulla_types::wire::PlanScope {
+    plan.scope = Some(medulla_query_types::wire::PlanScope {
         tenant: scope.tenant.clone(),
         clearance_labels: scope.clearance_labels.clone(),
         verified: scope.verified,
@@ -227,7 +229,7 @@ mod tests {
 #[cfg(all(test, feature = "query"))]
 mod plan_injection_tests {
     use super::{inject_scope, PlanScope, ScopeRule};
-    use medulla_types::wire::{Op, Plan, PlanScopeLeaf};
+    use medulla_query_types::wire::{Op, Plan, PlanScopeLeaf};
 
     // spec: MEDULLA-FEDERATED-QUERY-R078.2
     #[test]
@@ -298,7 +300,7 @@ mod plan_injection_tests {
         let mut plan = Plan::new(vec![Op::Scan {
             label: "Doc".into(),
         }]);
-        plan.scope = Some(medulla_types::wire::PlanScope {
+        plan.scope = Some(medulla_query_types::wire::PlanScope {
             tenant: "other-tenant".into(),
             clearance_labels: vec!["secret".into()],
             verified: false,

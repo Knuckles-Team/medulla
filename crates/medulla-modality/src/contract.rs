@@ -251,7 +251,7 @@ pub trait ModalityContract {
     fn txn_stage(&self, id: &str) -> StagedWrite;
 
     /// The CDC topic this modality's writes publish under, if any
-    /// (`medulla_types::wire::CdcEvent`-family surface). `None` is a legitimate answer
+    /// (`medulla_query_types::wire::CdcEvent`-family surface). `None` is a legitimate answer
     /// for a modality that is not (yet) CDC-observable.
     fn cdc_topic(&self) -> Option<&'static str>;
 

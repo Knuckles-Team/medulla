@@ -15,13 +15,13 @@
 use std::collections::BTreeMap;
 
 use medulla_identity_types::identity::UnitPrincipal;
+use medulla_query_types::wire::{UqlParam, UqlResult, UqlRow};
 use medulla_server_api::read_scope::ReadCaller;
 use medulla_source_types::stored_query::{
     args_digest, needs_run, refuse, serve_materialized, staleness_s, Served, StoredCall,
     StoredParamType, StoredQuery, StoredQueryLanguage, StoredQueryRefusal, StoredResult,
     ACCESS_DENIED, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID, STORED_QUERY_NOT_FOUND,
 };
-use medulla_types::wire::{UqlParam, UqlResult, UqlRow};
 use serde_json::{json, Value};
 
 use super::live_artifact::{response_body, row_json};

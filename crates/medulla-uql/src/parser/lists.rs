@@ -1,6 +1,6 @@
 //! Bracketed lists, query vectors, list parameters and JSON literals.
 
-use medulla_types::wire::{PredLiteral, UqlParam};
+use medulla_query_types::wire::{PredLiteral, UqlParam};
 
 use super::literal::Want;
 use super::Parser;

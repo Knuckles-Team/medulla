@@ -199,8 +199,8 @@ fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
 
 /// The node variables a plan binds: each row source, in plan order.
 #[cfg(feature = "query")]
-pub fn bound_variables(plan: &medulla_types::wire::Plan) -> Vec<String> {
-    use medulla_types::wire::Op;
+pub fn bound_variables(plan: &medulla_query_types::wire::Plan) -> Vec<String> {
+    use medulla_query_types::wire::Op;
     plan.ops
         .iter()
         .filter_map(|op| match op {

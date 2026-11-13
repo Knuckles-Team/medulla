@@ -12,7 +12,7 @@ use super::snapshot::{Consistency, SnapshotBound, SnapshotHandle};
 use super::stats::Fingerprint;
 use super::trace::FragmentTrace;
 use medulla_exec::budget::FederationBudget;
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 /// One foreign source op of the plan and the limit that immediately follows EVERY
 /// occurrence of it (`None` when an occurrence has no `Limit` or the limits disagree —

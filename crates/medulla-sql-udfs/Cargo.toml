@@ -24,6 +24,7 @@ petgraph = { version = "0.8.3", features = ["serde-1"], optional = true }
 tokio = { version = "1.53", features = ["rt"], optional = true }
 arrow-schema = { version = "58.4", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-text = { path = "../medulla-text", optional = true }
@@ -53,4 +54,5 @@ sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petg
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

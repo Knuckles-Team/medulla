@@ -91,7 +91,7 @@ canonical-ledger = [
     # part of the canonical published Python contract. Keep the wire feature
     # in the same profile as their domain-owned descriptors so the registry
     # bijection cannot silently omit the federation family.
-    "medulla-types/federation", "medulla-protocol-types/federation",
+    "medulla-types/federation", "medulla-query-types/federation", "medulla-protocol-types/federation",
     # `timeseries`, `probabilistic` and `program-optimization` gate wire `Op`/DTO
     # items on medulla-types' side and NO `Method` variant, so `policy()`'s exhaustive
     # Method match neither needs nor references them -- which is why they are (and
@@ -118,8 +118,8 @@ canonical-ledger = [
     # inventory, not a projection of whichever optional surfaces happened to be
     # enabled for one build" without changing one byte of the shipped build's
     # feature set.
-    "medulla-types/timeseries",
-    "medulla-types/probabilistic",
+    "medulla-types/timeseries", "medulla-query-types/timeseries",
+    "medulla-types/probabilistic", "medulla-query-types/probabilistic",
     "medulla-types/program-optimization", "medulla-agent-types/program-optimization", "medulla-work-types/program-optimization",
 ]
 # CONCEPT:INT-P2-1 -- see the module doc above. Mirrors `medulla-types/jobs` 1:1: NEVER

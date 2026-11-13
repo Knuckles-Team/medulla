@@ -221,8 +221,8 @@ pub(super) fn indexed_tool_candidates(source: &CandidateSource) -> Result<ReadCa
 
 /// Whether one plan stage only SELECTS rows of the already-filtered snapshot.
 #[cfg(feature = "query")]
-fn selects_only(op: &medulla_types::wire::Op) -> bool {
-    use medulla_types::wire::Op;
+fn selects_only(op: &medulla_query_types::wire::Op) -> bool {
+    use medulla_query_types::wire::Op;
     matches!(
         op,
         Op::Scan { .. }
@@ -235,7 +235,7 @@ fn selects_only(op: &medulla_types::wire::Op) -> bool {
 
 /// Refuse a graph plan that could rank or truncate over invisible rows.
 #[cfg(feature = "query")]
-pub(super) fn check_selecting_plan(plan: &medulla_types::wire::Plan) -> Result<(), String> {
+pub(super) fn check_selecting_plan(plan: &medulla_query_types::wire::Plan) -> Result<(), String> {
     if plan.ops.is_empty() || !plan.ops.iter().all(selects_only) {
         return Err(refusal(
             StatisticalErrorCode::CandidatePlanRefused,
@@ -270,7 +270,7 @@ fn row_view(id: String, properties: &serde_json::Value) -> CandidateView {
 pub(super) fn graph_candidates(
     view: &medulla_graph_core::graph::GraphView,
     graph: &str,
-    plan: &medulla_types::wire::Plan,
+    plan: &medulla_query_types::wire::Plan,
     principal: String,
 ) -> Result<ReadCandidates, String> {
     check_selecting_plan(plan)?;

@@ -225,7 +225,7 @@ async fn belief_refusals_leave_state_unchanged() {
 /// `CONTRADICTS <right>` over the graph: the claims linked to `right`.
 #[cfg(feature = "epistemic")]
 fn contradicting(core: &medulla_graph_core::graph::GraphCore, right: &str) -> Vec<String> {
-    use medulla_types::wire::UqlResult;
+    use medulla_query_types::wire::UqlResult;
     let graph = core.analysis_snapshot();
     let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let ctx = medulla_exec::exec::PlanCtx::new(&graph, &semantic);

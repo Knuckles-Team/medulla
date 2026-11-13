@@ -352,7 +352,7 @@ pub enum CandidateSource {
     #[cfg(feature = "query")]
     Graph {
         graph: String,
-        plan: Box<medulla_types::wire::Plan>,
+        plan: Box<medulla_query_types::wire::Plan>,
     },
     /// The caller's own options, each fact a claim the caller makes
     /// ([`declared`]). Visible to the declaring principal only.

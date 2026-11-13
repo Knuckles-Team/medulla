@@ -594,7 +594,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | Row | Test | State |
 |---|---|---|
 | MEDULLA-FEDERATED-QUERY-R001 | `crates/medulla-reasoner/src/owl/budget.rs::exact_budget_completes_and_one_less_is_exhausted` | exists |
-| MEDULLA-FEDERATED-QUERY-R002 | `crates/medulla-types/src/wire_query_core.rs::kernel_row_schema_carries_no_rejection_reason_field` | exists |
+| MEDULLA-FEDERATED-QUERY-R002 | `crates/medulla-query-types/src/wire_query_core.rs::kernel_row_schema_carries_no_rejection_reason_field` | exists |
 | MEDULLA-FEDERATED-QUERY-R003 | `crates/medulla-reasoner/src/owl/budget.rs::exact_budget_completes_and_one_less_is_exhausted` | exists |
 | MEDULLA-FEDERATED-QUERY-R004 | `crates/medulla-h-retrieve/src/reasoning_projection.rs::a_dead_lettered_claim_rebuilds_the_projection_before_further_reads` | exists |
 | MEDULLA-FEDERATED-QUERY-R007 | `crates/medulla-ann-codes/src/semantic_index_service/reconciliation_regression.rs::missing_sources_become_tombstones_only_after_complete_snapshot_proof` | exists |
@@ -750,7 +750,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R039.1.5` | `tests/retrieval/test_multimodal_served.py::test_receipt_matches_model_calls` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.6` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.1.1` | `crates/medulla-types/src/wire_query_core.rs::tests::retrieval_constraints_round_trip_and_refuse_unknown_operator` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.1` | `crates/medulla-query-types/src/wire_query_core.rs::tests::retrieval_constraints_round_trip_and_refuse_unknown_operator` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `crates/medulla-exec/src/exec/constraints.rs::tests::failed_constraint_excludes_top_candidate` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.3` | `tests/retrieval/test_constraints_served.py::test_optimized_and_unoptimized_plans_agree` | L4 |
@@ -857,7 +857,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R058.4.10:** `crates/medulla-nlq/src/nl/sql_planner.rs::tests::select_grounds_and_mutation_refuses` (L1) and `tests/nl_query_sql_served.rs::sql_dialect_plans_and_runs_a_select` (L3). Natural-language to SQL planner.
 - **MEDULLA-FEDERATED-QUERY-R058.4.11:** `crates/medulla-nlq/src/nl/sparql_planner.rs::tests::select_grounds_and_update_refuses` (L1) and `tests/nl_query_sparql_served.rs::sparql_dialect_plans_and_runs_a_select` (L3) and `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_nl_sparql_tenant_tests.rs::nl_sparql_returns_only_the_callers_tenant_rows` (L3, two tenants in one store). Natural-language to SPARQL planner.
 - **MEDULLA-FEDERATED-QUERY-R088:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). UQL rows apply visibility before limits and carry a snapshot header (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R088.1:** `crates/medulla-types/src/wire_query_core.rs::tests::uql_header_round_trips_with_defaults` (planned). Model. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R088.1:** `crates/medulla-query-types/src/wire_query_core.rs::tests::uql_header_round_trips_with_defaults` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R088.2:** `tests/uql_governed_summary.rs::hidden_rows_do_not_displace_visible_rows` (planned). Behavior. Runs through Method::Uql with two principals and LIMIT 5.
 - **MEDULLA-FEDERATED-QUERY-R088.3:** `tests/uql_governed_summary.rs::rows_and_header_share_one_snapshot` (planned). Wiring. Writes between two reads and asserts the header matches the rows.
 - **MEDULLA-FEDERATED-QUERY-R088.6:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). Hot-path proof. The fixture and expected result are stated in the row's Test cell.
@@ -883,7 +883,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R607.5:** `tests/reasoning/test_topology_served.py::test_evidence_fields_after_success_and_refusal` (planned). Evidence. Reads the field set and the captured spans.
 - **MEDULLA-FEDERATED-QUERY-R607.6:** `tests/reasoning/test_topology_served.py::test_each_analytic_is_served` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-graph-algos --bench topology meets the thresholds.
 - **MEDULLA-FEDERATED-QUERY-R608:** `tests/reasoning/test_rules_causal_served.py::test_bounded_rules_and_causal_verdict` (planned). Rule fixpoint bound and causal verification on the served reasoning methods (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R608.1:** `crates/medulla-types/src/rdf_report.rs::tests::rule_response_round_trips_with_bound_fields` (planned), `crates/medulla-types/src/causal_wire.rs::tests::verdict_round_trips` (planned). Model. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R608.1:** `crates/medulla-query-types/src/rdf_report.rs::tests::rule_response_round_trips_with_bound_fields` (planned), `crates/medulla-types/src/causal_wire.rs::tests::verdict_round_trips` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R608.2:** `crates/medulla-reasoner/src/rules.rs::tests::fixpoint_stops_at_bound_with_partial_facts` (planned), `crates/medulla-epistemic/src/causal.rs::tests::fit_verdict_at_boundary_nrmse` (planned). Behavior: fixpoint bound and causal fit. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R608.3:** `tests/reasoning/test_rules_causal_served.py::test_both_methods_reach_the_kernels`. Wiring. Compares served output with the kernel output.
 - **MEDULLA-FEDERATED-QUERY-R608.4:** `tests/reasoning/test_rules_causal_served.py::test_rule_bound_flag_and_causal_refusals` (planned). Refusal. Asserts the flag, both codes and zero writes.

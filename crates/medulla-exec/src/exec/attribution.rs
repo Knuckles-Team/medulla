@@ -10,7 +10,7 @@
 //! Contributions sum to the grand coalition's value. Deterministic: the sampled
 //! estimator's seed is part of the stage, so a re-run replays bit-identically.
 
-use medulla_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
+use medulla_query_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
 
 #[cfg(not(feature = "numeric"))]
 use super::PlanCtx;
@@ -39,13 +39,13 @@ pub(crate) fn attribute(
     _rows: RowSet,
     spec: AttributeSpec<'_>,
 ) -> Result<Attributed, String> {
-    let stage = medulla_types::wire::Op::Attribute {
+    let stage = medulla_query_types::wire::Op::Attribute {
         input: spec.input.clone(),
         value: spec.value,
         method: spec.method.clone(),
     };
     let printed =
-        medulla_types::wire::uql_op(&stage).unwrap_or_else(|e| format!("ATTRIBUTE ({e})"));
+        medulla_query_types::wire::uql_op(&stage).unwrap_or_else(|e| format!("ATTRIBUTE ({e})"));
     Err(format!(
         "{}: `{printed}` needs the `numeric` feature",
         super::dispatch::UNSUPPORTED_MODALITY_OP
@@ -65,7 +65,7 @@ mod kernel {
         attribution::Attribution, attribution::AttributionCode, attribution::AttributionError,
         attribution::SampleSpec,
     };
-    use medulla_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
+    use medulla_query_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
     use serde_json::Value;
 
     use super::{AttributeSpec, Attributed};

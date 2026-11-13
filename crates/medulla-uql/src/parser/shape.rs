@@ -15,9 +15,9 @@
 //! compiles the variant and its SHACL executor), with the `REASON` precedent's clear
 //! "not in this build" error elsewhere.
 
-use medulla_types::wire::Op;
+use medulla_query_types::wire::Op;
 #[cfg(feature = "owl")]
-use medulla_types::wire::ShapeKeep;
+use medulla_query_types::wire::ShapeKeep;
 
 use super::{Parser, UqlError};
 use crate::lexer::Tok;
@@ -99,7 +99,7 @@ impl Parser<'_> {
 
 #[cfg(all(test, feature = "owl"))]
 mod tests {
-    use medulla_types::wire::{Op, ShapeKeep};
+    use medulla_query_types::wire::{Op, ShapeKeep};
 
     use crate::parse;
 

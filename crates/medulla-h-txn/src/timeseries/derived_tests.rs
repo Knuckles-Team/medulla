@@ -4,10 +4,10 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use medulla_query_types::series_expr::DerivedSeriesReceipt;
 use medulla_tsdb::derive::maintain::latest_versions;
 use medulla_tsdb::derive::Program;
 use medulla_tsdb::point::Point;
-use medulla_types::series_expr::DerivedSeriesReceipt;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Method;

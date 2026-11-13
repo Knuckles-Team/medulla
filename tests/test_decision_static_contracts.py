@@ -22,7 +22,7 @@ DECLARATION = re.compile(
 # Each exact file may define its homonym once; a second is still a violation.
 HOMONYMS = {
     ("Relation", "crates/medulla-server-auth/src/sql_catalog_acl/relations.rs"),
-    ("ModelSpec", "crates/medulla-types/src/wire_pipeline.rs"),
+    ("ModelSpec", "crates/medulla-query-types/src/wire_pipeline.rs"),
     ("ModelSpec", "crates/medulla-compute/src/assemble/tests/fixture.rs"),
     ("ProofNode", "crates/medulla-epistemic/src/model.rs"),
     ("ProofNode", "crates/medulla-reasoner/src/owl.rs"),
@@ -168,10 +168,10 @@ def test_closure_check_refuses_new_slot_kind() -> None:
 
 def test_duplicate_scan_refuses_second_declaration_in_homonym_file() -> None:
     sources = _sources()
-    sources["crates/medulla-types/src/wire_pipeline.rs"] += (
+    sources["crates/medulla-query-types/src/wire_pipeline.rs"] += (
         "\npub struct ModelSpec {}\n"
     )
     assert (
         "ModelSpec",
-        "crates/medulla-types/src/wire_pipeline.rs",
+        "crates/medulla-query-types/src/wire_pipeline.rs",
     ) in _duplicate_dtos(sources)

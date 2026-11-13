@@ -1,7 +1,9 @@
 use medulla_compute::datascience::primitives::train_test_split;
 use medulla_compute::datascience::{estimators, metrics};
 use medulla_mining::mining::classify;
-use medulla_types::wire::{EstimatorParams, FittedClassifier, FittedModel, ModelSpec, SplitSpec};
+use medulla_query_types::wire::{
+    EstimatorParams, FittedClassifier, FittedModel, ModelSpec, SplitSpec,
+};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 

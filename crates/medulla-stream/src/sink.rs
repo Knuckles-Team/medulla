@@ -2,7 +2,7 @@
 //! CDC-to-Kafka bridge (DEC-CA-03: `medulla.cdc.<graph>`, single partition,
 //! compacted retention). Feature `cdc-kafka`, default OFF.
 //!
-//! Deliberately decoupled from `medulla_types::wire::CdcEvent`: this crate is a
+//! Deliberately decoupled from `medulla_query_types::wire::CdcEvent`: this crate is a
 //! leaf (a sibling of `medulla-ann`/`medulla-geo`/`medulla-tensor`, see the crate doc) and
 //! must not depend on `medulla-core`/`medulla-types`. [`SinkEvent`] below is the small,
 //! self-contained shape this crate actually needs; `src/server/cdc_sink/**`
@@ -89,7 +89,7 @@ use rdkafka::message::{DeliveryResult, Message};
 #[cfg(feature = "cdc-kafka")]
 use rdkafka::producer::{BaseProducer, BaseRecord, Producer, ProducerContext};
 
-/// `op` in DEC-CA-03's envelope. Every `medulla_types::wire::CdcKind` variant
+/// `op` in DEC-CA-03's envelope. Every `medulla_query_types::wire::CdcKind` variant
 /// collapses onto one of these two (mapping lives at the `cdc_sink` call
 /// site, next to the `CdcKind` import it needs): `AddNode`/`UpdateNode`/
 /// `AddEdge` -> `Upsert`, `RemoveNode`/`RemoveEdge` -> `Tombstone`.

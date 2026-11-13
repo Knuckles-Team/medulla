@@ -342,7 +342,7 @@ pub struct ServerState {
     /// `federation`), keyed by `(verified owner, name)` (EH-373), where the owner is the
     /// caller's tenant+principal (`CarrierAuthority::owner_scope`; one engine is bound to
     /// one tenant, so the principal is the working boundary). `RegisterForeignSource`
-    /// records the caller's [`medulla_types::wire::ForeignSourceSpec`] under its owner, and every served
+    /// records the caller's [`medulla_query_types::wire::ForeignSourceSpec`] under its owner, and every served
     /// plan path builds its executor `medulla_plan::federation::ForeignSourceRegistry` through
     /// [`medulla_server::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`], which copies
     /// only the caller's own entries — so a `Named` `Op::ForeignScan` / an

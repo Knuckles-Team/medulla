@@ -9,12 +9,12 @@
 //! at all. A failed run writes the same record with `error` set and leaves `data` and
 //! `version` unchanged.
 
+use medulla_query_types::wire::{UqlResult, UqlRow};
 use medulla_server_api::knob_config::knobs;
 use medulla_source_types::live_artifact::{
     LiveArtifact, LiveArtifactRefusal, LiveArtifactView, QueryLanguage, QuerySource, RefreshEntry,
     LIVE_ARTIFACT_INVALID, LIVE_ARTIFACT_NOT_FOUND,
 };
-use medulla_types::wire::{UqlResult, UqlRow};
 use serde_json::{json, Map, Value};
 
 use super::uql_statement::handle_uql;

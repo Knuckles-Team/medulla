@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ServerErrorCode;
+use medulla_types::contract::ServerErrorCode;
 
 /// Smallest and largest `max_k` a search operation may declare.
 pub const MAX_K_RANGE: (u32, u32) = (1, 10_000);

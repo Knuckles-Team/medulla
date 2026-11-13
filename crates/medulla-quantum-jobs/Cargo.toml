@@ -30,6 +30,7 @@ name = "medulla_quantum_jobs"
 [dependencies]
 medulla-version = { path = "../medulla-version" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-jobs = { path = "../medulla-jobs" }
 medulla-quantum-core = { path = "../medulla-quantum-core" }
 medulla-quantum-sim = { path = "../medulla-quantum-sim" }
@@ -48,6 +49,7 @@ medulla-exec = { path = "../medulla-exec" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 # The fixtures open a real `JobStore`, which under RF-RULING-004 needs the

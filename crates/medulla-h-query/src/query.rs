@@ -60,7 +60,7 @@ use medulla_protocol_types::{
 };
 
 #[cfg(feature = "query")]
-pub(crate) type UqlParams = std::collections::BTreeMap<String, medulla_types::wire::UqlParam>;
+pub(crate) type UqlParams = std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>;
 
 /// MessagePack bytes of a value that is not itself a result: a result-cache key, or one
 /// row of a SQL result.
@@ -191,6 +191,8 @@ mod projection;
 mod retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
+#[cfg(feature = "query")]
+pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
@@ -1818,7 +1820,7 @@ mod txn_ryow_dispatch_tests {
 
     /// Row ids of a successful `Method::Uql` response (`Rows` or `Profile`).
     fn decode_uql_ids(response: &Response) -> Vec<String> {
-        use medulla_types::wire::UqlResult;
+        use medulla_query_types::wire::UqlResult;
         assert!(
             response.error.is_none(),
             "query error: {:?}",

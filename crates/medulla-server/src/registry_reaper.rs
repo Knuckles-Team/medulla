@@ -303,7 +303,7 @@ mod tests {
         };
         assert!(
             events.iter().any(|e| e.node_id == "srv:dead-server"
-                && e.kind == medulla_types::wire::CdcKind::RemoveNode),
+                && e.kind == medulla_query_types::wire::CdcKind::RemoveNode),
             "a RemoveNode CDC event for the expired server must be observable: {events:?}"
         );
 
@@ -475,7 +475,7 @@ mod tests {
         };
         let removed: Vec<&str> = events
             .iter()
-            .filter(|e| e.kind == medulla_types::wire::CdcKind::RemoveNode)
+            .filter(|e| e.kind == medulla_query_types::wire::CdcKind::RemoveNode)
             .map(|e| e.node_id.as_str())
             .collect();
         assert_eq!(

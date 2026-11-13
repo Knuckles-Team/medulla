@@ -5,7 +5,7 @@
 //! `SourceCapabilities` can claim pushdown. Until then the source builder fails
 //! closed, including through the optimizer and the naive oracle path.
 
-use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
+use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
 
 /// How a source is permitted to participate in a query.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

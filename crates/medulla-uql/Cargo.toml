@@ -14,21 +14,22 @@ path = "src/lib.rs"
 [dependencies]
 medulla-exec = { path = "../medulla-exec" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 serde_json = "1.0"
 
 [features]
-query = ["medulla-exec/query", "medulla-types/query"]
-epistemic = ["query", "medulla-exec/epistemic", "medulla-types/epistemic"]
-federation = ["query", "medulla-exec/federation", "medulla-types/federation"]
-geo = ["query", "medulla-exec/geo", "medulla-types/geo"]
+query = ["medulla-exec/query", "medulla-types/query", "medulla-query-types/query"]
+epistemic = ["query", "medulla-exec/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
+federation = ["query", "medulla-exec/federation", "medulla-types/federation", "medulla-query-types/federation"]
+geo = ["query", "medulla-exec/geo", "medulla-types/geo", "medulla-query-types/geo"]
 numeric = ["query", "medulla-exec/numeric"]
-owl = ["query", "medulla-exec/owl", "medulla-types/owl"]
-probabilistic = ["query", "medulla-exec/probabilistic", "medulla-types/probabilistic"]
-stream = ["query", "medulla-exec/stream", "medulla-types/stream"]
-tensor = ["query", "medulla-exec/tensor", "medulla-types/tensor"]
-text = ["query", "medulla-exec/text", "medulla-types/text"]
-timeseries = ["query", "medulla-exec/timeseries", "medulla-types/timeseries"]
-wasm-udf = ["query", "medulla-exec/wasm-udf", "medulla-types/wasm-udf"]
+owl = ["query", "medulla-exec/owl", "medulla-types/owl", "medulla-query-types/owl"]
+probabilistic = ["query", "medulla-exec/probabilistic", "medulla-types/probabilistic", "medulla-query-types/probabilistic"]
+stream = ["query", "medulla-exec/stream", "medulla-types/stream", "medulla-query-types/stream"]
+tensor = ["query", "medulla-exec/tensor", "medulla-types/tensor", "medulla-query-types/tensor"]
+text = ["query", "medulla-exec/text", "medulla-types/text", "medulla-query-types/text"]
+timeseries = ["query", "medulla-exec/timeseries", "medulla-types/timeseries", "medulla-query-types/timeseries"]
+wasm-udf = ["query", "medulla-exec/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf"]
 
 [dev-dependencies]
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
@@ -36,3 +37,4 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 rmp-serde = "1.3"
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }

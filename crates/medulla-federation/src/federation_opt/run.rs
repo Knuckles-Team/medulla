@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::budget::{
     BUDGET_EXCEEDED, REPLICA_LAG_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE,

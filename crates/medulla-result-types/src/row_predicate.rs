@@ -31,15 +31,15 @@ pub enum CmpOp {
 // The relational UQL predicate uses a separate wire enum, but both predicate
 // families apply the same six ordering operators to a decoded row.
 #[cfg(feature = "query")]
-impl From<medulla_types::wire::CmpOp> for CmpOp {
-    fn from(op: medulla_types::wire::CmpOp) -> Self {
+impl From<medulla_query_types::wire::CmpOp> for CmpOp {
+    fn from(op: medulla_query_types::wire::CmpOp) -> Self {
         match op {
-            medulla_types::wire::CmpOp::Eq => Self::Eq,
-            medulla_types::wire::CmpOp::Ne => Self::Ne,
-            medulla_types::wire::CmpOp::Lt => Self::Lt,
-            medulla_types::wire::CmpOp::Le => Self::Le,
-            medulla_types::wire::CmpOp::Gt => Self::Gt,
-            medulla_types::wire::CmpOp::Ge => Self::Ge,
+            medulla_query_types::wire::CmpOp::Eq => Self::Eq,
+            medulla_query_types::wire::CmpOp::Ne => Self::Ne,
+            medulla_query_types::wire::CmpOp::Lt => Self::Lt,
+            medulla_query_types::wire::CmpOp::Le => Self::Le,
+            medulla_query_types::wire::CmpOp::Gt => Self::Gt,
+            medulla_query_types::wire::CmpOp::Ge => Self::Ge,
         }
     }
 }

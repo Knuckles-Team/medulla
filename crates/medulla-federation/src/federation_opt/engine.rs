@@ -1,7 +1,7 @@
 //! Safe UQL pushdown for a peer engine. The original signed transport and result decoder
 //! remain in `federation::RemoteEngineSource`; only the query text changes.
 
-use medulla_types::wire::{ForeignSourceSpec, Op, Plan, Pred, PredLiteral};
+use medulla_query_types::wire::{ForeignSourceSpec, Op, Plan, Pred, PredLiteral};
 
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};
 use super::remote::{Identity, RemoteFetch};

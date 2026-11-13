@@ -1210,12 +1210,12 @@ pub enum UqlResult {
         /// authenticated server fills it before returning an EXPLAIN so a
         /// foreign-read host never has to reproduce planner serialization.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        plan_digest: Option<crate::contract::Digest256>,
+        plan_digest: Option<medulla_types::contract::Digest256>,
         /// Server-computed digest of the exact UQL text and typed parameter map.
         /// A host must use this value when opening the correlated foreign read;
         /// it must not locally reconstruct the MessagePack/framing convention.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        query_digest: Option<crate::contract::Digest256>,
+        query_digest: Option<medulla_types::contract::Digest256>,
         canonical: String,
         optimized: String,
         stages: Vec<UqlStageReport>,

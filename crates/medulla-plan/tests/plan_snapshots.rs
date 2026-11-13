@@ -103,7 +103,7 @@ fn curated_hybrid_plans_are_stable() {
             },
             Op::AsOf {
                 ts: 150.0,
-                axis: medulla_types::wire::TimeAxis::Transaction,
+                axis: medulla_query_types::wire::TimeAxis::Transaction,
             },
         ],
     );

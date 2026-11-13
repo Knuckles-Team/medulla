@@ -9,7 +9,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::wire::{OpKind, UQL_RESERVED_WORDS};
+use medulla_query_types::wire::{OpKind, UQL_RESERVED_WORDS};
 use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
 use medulla_uql::parser::Parser;
 use medulla_uql::{parse_statement, Params, UqlCode, UqlError};
@@ -142,7 +142,7 @@ fn every_uql_block_in_the_docs_parses() {
 #[cfg(feature = "federation")]
 #[test]
 fn credential_bearing_foreign_specs_are_refused() {
-    use medulla_types::wire::{ForeignSourceSpec, Op, Plan, UqlPrintCode};
+    use medulla_query_types::wire::{ForeignSourceSpec, Op, Plan, UqlPrintCode};
     let sql = Plan::new(vec![Op::ForeignScan {
         source: Box::new(ForeignSourceSpec::Sql {
             dsn: ["postgres://", "u:", "secret", "@h/db"].concat(),

@@ -95,7 +95,7 @@ macro_rules! __eg_method_chunk_0 {
     /// `INVALID_ARGUMENT`, a batch over the cap refuses `BATCH_TOO_LARGE`. Separate from
     /// `BatchUpdate`, whose bulk-ingest limits are unchanged.
     Batch {
-        operations: Vec<medulla_types::wire::BatchOperation>,
+        operations: Vec<medulla_query_types::wire::BatchOperation>,
     },
 
     // ── Message broker (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges) ──────────────────────────────

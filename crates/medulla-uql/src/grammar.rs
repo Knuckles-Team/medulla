@@ -469,30 +469,34 @@ pub fn nl_system_prompt() -> String {
 // clauses lower to (the review questioned `owl` ⇒ `owl-plan`; the manifest is not
 // trusted — each line names a variant that only exists when the implication holds).
 #[cfg(feature = "owl")]
-const _: fn() -> medulla_types::wire::Op = || medulla_types::wire::Op::Reason {
+const _: fn() -> medulla_query_types::wire::Op = || medulla_query_types::wire::Op::Reason {
     target_class: String::new(),
     ontology: String::new(),
 };
 #[cfg(feature = "text")]
-const _: fn() -> medulla_types::wire::Op = || medulla_types::wire::Op::RankText {
+const _: fn() -> medulla_query_types::wire::Op = || medulla_query_types::wire::Op::RankText {
     query: String::new(),
 };
 #[cfg(feature = "wasm-udf")]
-const _: fn() -> medulla_types::wire::Op = || medulla_types::wire::Op::Udf { id: String::new() };
+const _: fn() -> medulla_query_types::wire::Op =
+    || medulla_query_types::wire::Op::Udf { id: String::new() };
 #[cfg(feature = "tensor")]
-const _: fn() -> medulla_types::wire::Op = || medulla_types::wire::Op::TensorScan {
+const _: fn() -> medulla_query_types::wire::Op = || medulla_query_types::wire::Op::TensorScan {
     layer: String::new(),
 };
 #[cfg(feature = "stream")]
-const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::Cep;
+const _: fn() -> medulla_query_types::wire::OpKind = || medulla_query_types::wire::OpKind::Cep;
 #[cfg(feature = "federation")]
-const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::ForeignScan;
+const _: fn() -> medulla_query_types::wire::OpKind =
+    || medulla_query_types::wire::OpKind::ForeignScan;
 #[cfg(feature = "timeseries")]
-const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::TsScan;
+const _: fn() -> medulla_query_types::wire::OpKind = || medulla_query_types::wire::OpKind::TsScan;
 #[cfg(feature = "probabilistic")]
-const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::Probabilistic;
+const _: fn() -> medulla_query_types::wire::OpKind =
+    || medulla_query_types::wire::OpKind::Probabilistic;
 #[cfg(feature = "epistemic")]
-const _: fn() -> medulla_types::wire::Op =
-    || medulla_types::wire::Op::ConfidenceOp { threshold: None };
+const _: fn() -> medulla_query_types::wire::Op =
+    || medulla_query_types::wire::Op::ConfidenceOp { threshold: None };
 #[cfg(feature = "geo")]
-const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::SpatialScan;
+const _: fn() -> medulla_query_types::wire::OpKind =
+    || medulla_query_types::wire::OpKind::SpatialScan;

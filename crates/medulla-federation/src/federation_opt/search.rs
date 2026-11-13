@@ -21,7 +21,7 @@ use super::capability::{PageRequest, RemoteRequest, SearchPush};
 use super::remote::Identity;
 use super::session::FederationSession;
 use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace, SearchReceipt};
-use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
+use medulla_query_types::search_source::{ScoreKind, SearchIndexCapability};
 
 /// One result of a pushed search: the document id, the remote score (absent when the source
 /// returned none; the engine never invents one) and the attributes the local residual filter

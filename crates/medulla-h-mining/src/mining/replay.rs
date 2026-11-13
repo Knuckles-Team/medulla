@@ -45,7 +45,7 @@ pub(super) fn replay_vectors<F>(
     core: &GraphCore,
     features: &[Vec<f64>],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
     apply: F,
 ) where
     F: FnOnce(&[Vec<f64>], &[String]),
@@ -279,7 +279,7 @@ pub(super) fn replay_classify_predict_rows(
     model: &FittedClassifier,
     x: &[Vec<f64>],
     source: &Option<VectorSource>,
-    #[cfg(feature = "query")] plan: &Option<medulla_types::wire::Plan>,
+    #[cfg(feature = "query")] plan: &Option<medulla_query_types::wire::Plan>,
     #[cfg(feature = "epistemic")] as_claim: &bool,
 ) {
     replay_vectors(
@@ -304,7 +304,7 @@ pub(super) struct ReduceReplay<'a> {
     x: &'a [Vec<f64>],
     source: &'a Option<VectorSource>,
     #[cfg(feature = "query")]
-    plan: &'a Option<medulla_types::wire::Plan>,
+    plan: &'a Option<medulla_query_types::wire::Plan>,
     labels: &'a [i64],
     algorithm: ReduceAlgorithm,
     n_components: usize,

@@ -4,7 +4,7 @@
 //! optional [`ForeignExecutor`], and `Op::Foreign` / `Op::ForeignScan` / the pre-run
 //! `prepare` hook call through it. The federation layer implements the trait.
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::PlanCtx;
 use crate::algebra::Op;

@@ -32,8 +32,8 @@ use medulla_exec::{
     algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, rowset::RowSet,
 };
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::TimeAxis;
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::TimeAxis;
 
 /// Run one query through the UQL front-end AND the Rust builder, assert the two lower
 /// to the IDENTICAL plan AST, and that they EXECUTE to the identical `RowSet` (ids +

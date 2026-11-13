@@ -201,7 +201,7 @@ mod serialization;
 
 pub use canonical::{quad_set_key, triple_set_key};
 pub use lowering::{load_triples, lower_triples, register_named_graph, LoweredTripleGraph};
-pub use medulla_types::rdf_report::LoadReport;
+pub use medulla_query_types::rdf_report::LoadReport;
 #[cfg(feature = "json-ld")]
 pub use parsing::parse_jsonld;
 pub use parsing::{

@@ -1,8 +1,8 @@
 //! Plan / program → canonical UQL (UQL-06), and the canonicalization that makes the
 //! round trip exact.
 //!
-//! Single ops and linear plans are printed by medulla-types ([`medulla_types::wire::uql_op`],
-//! [`medulla_types::wire::Plan::to_uql`]) where every variant's feature gate is visible. This
+//! Single ops and linear plans are printed by medulla-types ([`medulla_query_types::wire::uql_op`],
+//! [`medulla_query_types::wire::Plan::to_uql`]) where every variant's feature gate is visible. This
 //! module adds what needs the parser: [`canonicalize`] (the one encoding per meaning the
 //! parser emits) and [`dag_to_uql`] (a `LET … FROM/JOIN` program for a DAG).
 //!
@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     uql_ident, uql_op, CmpOp, EdgeDir, Op, Plan, Pred, PredLiteral, UqlPrintCode, UqlPrintError,
 };
 

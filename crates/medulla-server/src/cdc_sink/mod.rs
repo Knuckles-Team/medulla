@@ -1,12 +1,12 @@
 //! CA-11 — CDC → Kafka sink (feature `cdc-kafka`, off by default).
 //!
 //! Bridges the existing in-memory CDC ring ([`crate::cdc`], feature
-//! `streaming`) onto Kafka per `DEC-CA-03`: every ordered [`medulla_types::wire::CdcEvent`]
+//! `streaming`) onto Kafka per `DEC-CA-03`: every ordered [`medulla_query_types::wire::CdcEvent`]
 //! also lands on `medulla.cdc.<graph>`, single explicit partition, DEC-CA-03's
 //! JSON envelope shape. Everything here is glue: the trait + envelope +
 //! `rdkafka` producer live in the leaf crate `medulla_stream::sink` (must not
 //! depend on `medulla-core`/`medulla-types`); this module is the one place that knows
-//! both `medulla_types::wire::CdcEvent` AND `medulla_stream::sink::SinkEvent`, so it does
+//! both `medulla_query_types::wire::CdcEvent` AND `medulla_stream::sink::SinkEvent`, so it does
 //! the translation and installs the bridge onto the live [`crate::cdc::CdcHub`].
 //!
 //! Migration/rollback: `MEDULLA_CDC_KAFKA_BROKERS` unset ⇒
@@ -19,10 +19,10 @@ use std::sync::Arc;
 
 use medulla_stream::sink::{CdcSink, KafkaCdcSink, KafkaConfig, SinkEvent, SinkOp};
 
+use medulla_query_types::wire::CdcEvent;
+use medulla_query_types::wire::CdcKind;
 use medulla_server_cdc::cdc::CdcHub;
 use medulla_server_cdc::cdc::ExternalCdcSink;
-use medulla_types::wire::CdcEvent;
-use medulla_types::wire::CdcKind;
 
 /// Env var carrying the Kafka bootstrap-servers string. Unset ⇒ sink
 /// disabled (see module doc).
@@ -124,7 +124,7 @@ fn decode(blob: &[u8], had: bool) -> Option<serde_json::Value> {
     medulla_types::msgpack::decode_property_value(blob).ok()
 }
 
-/// `medulla_types::wire::CdcEvent` → `medulla_stream::sink::SinkEvent`. See the
+/// `medulla_query_types::wire::CdcEvent` → `medulla_stream::sink::SinkEvent`. See the
 /// `medulla_stream::sink` module doc for the four DEC-CA-03 fields
 /// (`lsn`/`tenant`/`marking`/`actor`) this cannot populate and why.
 fn translate(event: &CdcEvent) -> SinkEvent {

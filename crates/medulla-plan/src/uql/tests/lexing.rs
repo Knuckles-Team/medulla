@@ -1,6 +1,6 @@
 //! Lexer (UQL-02): comments, numbers, unicode, quoted identifiers, JSONPath/params.
 
-use medulla_types::wire::{Op, Pred};
+use medulla_query_types::wire::{Op, Pred};
 use medulla_uql::lexer::{lex, Tok};
 use medulla_uql::parse;
 
@@ -131,7 +131,7 @@ fn signed_timestamps_parse() {
         parse("MATCH (:E) |> AS OF @-5").unwrap().ops[1],
         Op::AsOf {
             ts: -5.0,
-            axis: medulla_types::wire::TimeAxis::Valid
+            axis: medulla_query_types::wire::TimeAxis::Valid
         }
     );
 }

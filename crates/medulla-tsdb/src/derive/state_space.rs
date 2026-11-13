@@ -13,7 +13,7 @@ use medulla_numeric::series::limits::{self, LimitRefusal};
 use medulla_numeric::series::state_space::{
     FilterRefusal, StateSpaceFilter, LOG_CHI2_BIAS, VOLATILITY_FLOOR,
 };
-use medulla_types::series_expr::{
+use medulla_query_types::series_expr::{
     RetryOutcome, StateSpaceCheckpoint, StateSpaceModel, StateSpaceObservation, StateSpaceProfile,
     StateSpaceRefusal, STATE_SPACE_KERNEL_REVISION,
 };

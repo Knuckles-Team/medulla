@@ -12,7 +12,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::budget::SOURCE_WRITE_FORBIDDEN;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};

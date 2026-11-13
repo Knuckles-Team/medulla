@@ -50,9 +50,9 @@ fn plan_labels(plan: &medulla_exec::algebra::Plan) -> Vec<String> {
 
 /// The catalog asset a foreign scan reads: the registered source name, when the plan names one.
 #[cfg(feature = "federation")]
-fn foreign_source_name(source: &medulla_types::wire::ForeignSourceSpec) -> Option<String> {
+fn foreign_source_name(source: &medulla_query_types::wire::ForeignSourceSpec) -> Option<String> {
     match source {
-        medulla_types::wire::ForeignSourceSpec::Named { name } => Some(name.clone()),
+        medulla_query_types::wire::ForeignSourceSpec::Named { name } => Some(name.clone()),
         _ => None,
     }
 }

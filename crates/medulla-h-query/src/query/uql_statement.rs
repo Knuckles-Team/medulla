@@ -112,7 +112,7 @@ pub(crate) async fn handle_uql(
     #[cfg(feature = "federation")]
     let source_coverage = legs.foreign_coverage.clone();
     #[cfg(not(feature = "federation"))]
-    let source_coverage: Vec<medulla_types::wire::UqlSourceCoverage> = Vec::new();
+    let source_coverage: Vec<medulla_query_types::wire::UqlSourceCoverage> = Vec::new();
     #[cfg(feature = "result-cache")]
     let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs) {
         Ok(key) => key,
@@ -169,12 +169,12 @@ pub(crate) async fn handle_uql(
         &scope,
         move |_plan, plan_ctx| {
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;
-            if let medulla_types::wire::UqlResult::Rows {
+            if let medulla_query_types::wire::UqlResult::Rows {
                 snapshot_revision,
                 knowledge_revision: reported_knowledge_revision,
                 ..
             }
-            | medulla_types::wire::UqlResult::Profile {
+            | medulla_query_types::wire::UqlResult::Profile {
                 snapshot_revision,
                 knowledge_revision: reported_knowledge_revision,
                 ..
@@ -183,7 +183,7 @@ pub(crate) async fn handle_uql(
                 *snapshot_revision = version;
                 *reported_knowledge_revision = knowledge_revision;
             }
-            if let medulla_types::wire::UqlResult::Rows {
+            if let medulla_query_types::wire::UqlResult::Rows {
                 source_coverage: reported_coverage,
                 ..
             } = &mut result
@@ -191,7 +191,7 @@ pub(crate) async fn handle_uql(
                 *reported_coverage = source_coverage;
             }
             #[cfg(feature = "federation")]
-            if let medulla_types::wire::UqlResult::Explain {
+            if let medulla_query_types::wire::UqlResult::Explain {
                 plan_digest: reported_plan_digest,
                 query_digest: reported_query_digest,
                 ..
@@ -275,7 +275,7 @@ fn inject_served_scope(
 fn uql_cache_key(
     ctx: &QueryHandlerCtx<'_>,
     text: &str,
-    params: &std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
+    params: &std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
     stmt: &medulla_uql::Statement,
     legs: &ServedPlanLegs,
 ) -> Result<Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>, String> {
@@ -299,7 +299,7 @@ fn uql_cache_key(
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod served_tests {
     use super::super::current_auth_test_support::prelude::*;
-    use medulla_types::wire::{UqlParam, UqlResult};
+    use medulla_query_types::wire::{UqlParam, UqlResult};
 
     const SECRET: &str = "uql-served-test-secret";
 

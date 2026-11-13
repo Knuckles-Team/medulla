@@ -24,6 +24,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -64,13 +65,13 @@ mqtt-wire = ["server", "medulla-server-api/mqtt-wire"]
 mssql-wire = ["query", "server", "medulla-server-api/mssql-wire"]
 oidc = ["dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
 policy_export = ["security"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-types/query"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-types/query", "medulla-query-types/query"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb"]
 redis-wire = ["kv", "server", "medulla-server-api/redis-wire"]
 security = ["oidc", "dep:sha1", "dep:argon2", "redb", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-types/security"]
 server = ["dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
 stomp-wire = ["server", "medulla-server-api/stomp-wire"]
-streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-types/streaming"]
+streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "server", "redb", "medulla-server-api/tsdb"]
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

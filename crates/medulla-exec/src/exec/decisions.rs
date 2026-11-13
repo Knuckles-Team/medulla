@@ -13,7 +13,7 @@ use super::PlanCtx;
 use crate::pred_eval;
 use crate::rowset::RowSet;
 use medulla_decision_types::decision::reputation::SourceReliability;
-use medulla_types::wire::Pred;
+use medulla_query_types::wire::Pred;
 
 /// The caller's visible decision records, one JSON object per record carrying the
 /// `decisions` relation's columns (`record_id`, `question_id`, `outcome`, …).
@@ -64,8 +64,8 @@ pub(super) fn decision_scan(ctx: &PlanCtx, preds: &[Pred]) -> Result<RowSet, Str
 mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{CmpOp, PredLiteral};
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::{CmpOp, PredLiteral};
     use serde_json::json;
 
     struct Log;

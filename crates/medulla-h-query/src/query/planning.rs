@@ -602,7 +602,7 @@ pub(crate) struct ServedPlanLegs {
     /// MEDULLA-CQ-CONN-R090 — per-source coverage of a host-driven foreign read: every
     /// named source, and whether the caller could read it.
     #[cfg(feature = "federation")]
-    pub(crate) foreign_coverage: Vec<medulla_types::wire::UqlSourceCoverage>,
+    pub(crate) foreign_coverage: Vec<medulla_query_types::wire::UqlSourceCoverage>,
     /// EH-066 — the caller's visible decision log, bound when the plan reads it.
     #[cfg(feature = "decide")]
     pub(crate) decisions: Option<Arc<dyn medulla_exec::exec::DecisionSource>>,
@@ -821,7 +821,7 @@ pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_exec::algebra
 #[cfg(feature = "query")]
 pub fn foreign_uql_query_digest(
     text: &str,
-    params: &std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
+    params: &std::collections::BTreeMap<String, medulla_query_types::wire::UqlParam>,
 ) -> Result<medulla_types::contract::Digest256, String> {
     let params_bytes = rmp_serde::to_vec_named(params)
         .map_err(|error| format!("INTERNAL: UQL parameter digest serialization failed: {error}"))?;
@@ -859,7 +859,7 @@ mod foreign_query_digest_tests {
         let mut params = BTreeMap::new();
         params.insert(
             "state".to_string(),
-            medulla_types::wire::UqlParam::Str("open".to_string()),
+            medulla_query_types::wire::UqlParam::Str("open".to_string()),
         );
         let bound = foreign_uql_query_digest("MATCH (:Issue)", &params).expect("bound digest");
         assert_ne!(
@@ -1064,9 +1064,9 @@ mod federation_served_tests;
 mod tensor_served_round_trip_tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{TensorOpKind, TensorReduceKind};
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_tensor::{Buffer, Tensor};
-    use medulla_types::wire::{TensorOpKind, TensorReduceKind};
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&v).unwrap()
@@ -1162,7 +1162,7 @@ mod tensor_served_round_trip_tests {
             },
             medulla_exec::algebra::Op::TensorOp {
                 kind: TensorOpKind::Elementwise {
-                    op: medulla_types::wire::TensorElementwiseOp::Mul,
+                    op: medulla_query_types::wire::TensorElementwiseOp::Mul,
                     scalar: 2.0,
                 },
             },

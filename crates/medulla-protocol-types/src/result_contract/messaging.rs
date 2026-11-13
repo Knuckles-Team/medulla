@@ -8,9 +8,8 @@ use crate::messaging_wire::{
     IdempotentPublish,
 };
 #[cfg(feature = "streaming")]
-use medulla_types::{
-    wire::CdcReadResult, wire::ContinuousQueryResult, wire::FiredTriggersResult, wire::TriggerInfo,
-    wire::WatchBatch,
+use medulla_query_types::wire::{
+    CdcReadResult, ContinuousQueryResult, FiredTriggersResult, TriggerInfo, WatchBatch,
 };
 
 #[cfg(feature = "streaming")]

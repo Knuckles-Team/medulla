@@ -1,6 +1,6 @@
 //! SQL window functions over the series kernels (EH-522): `medulla_<func>(series…, params…)
 //! OVER (PARTITION BY series ORDER BY ts)` for every function of the `DERIVE` table
-//! (`medulla_types::series_expr::SIGNATURES`) — `medulla_zscore(v, 60)`, `medulla_ewma(v, 12)`,
+//! (`medulla_query_types::series_expr::SIGNATURES`) — `medulla_zscore(v, 60)`, `medulla_ewma(v, 12)`,
 //! `medulla_rcorr(a, b, 20)`, `medulla_wsum(price, volume, 20)`, …
 //!
 //! ONE kernel: each partition is fed, in the window's `ORDER BY`, to the same
@@ -19,8 +19,8 @@ use datafusion::logical_expr::function::{PartitionEvaluatorArgs, WindowUDFFieldA
 use datafusion::logical_expr::{
     PartitionEvaluator, Signature, Volatility, WindowUDF, WindowUDFImpl,
 };
+use medulla_query_types::series_expr::{SeriesExpr, SeriesFunc, SIGNATURES};
 use medulla_tsdb::derive::Program;
-use medulla_types::series_expr::{SeriesExpr, SeriesFunc, SIGNATURES};
 
 /// Every `medulla_<func>` window function.
 pub fn series_window_udfs() -> Vec<WindowUDF> {

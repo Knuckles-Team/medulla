@@ -1,7 +1,7 @@
 //! MEDULLA-DURABLE-KERNEL-R024.8: the Spark job backend's `ForeignSourceSpec`
 //! source.
 //!
-//! [`medulla_types::wire::ForeignSourceSpec::SparkBatch`] already names a sealed,
+//! [`medulla_query_types::wire::ForeignSourceSpec::SparkBatch`] already names a sealed,
 //! completed batch artifact (interactive Spark SQL pushdown is deliberately
 //! absent; a query may read only a registered artifact, never launch a job
 //! or trust a caller-provided path). `federation::source_for`'s generic
@@ -12,7 +12,7 @@
 //! a named, typed reason because no bound Spark artifact-store driver exists
 //! yet in this workspace. Never silently accepted as if a driver existed.
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use crate::federation::ForeignSourceRegistry;
 

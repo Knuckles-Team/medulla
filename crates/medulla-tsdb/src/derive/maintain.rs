@@ -14,7 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::series_expr::SeriesExpr;
+use medulla_query_types::series_expr::SeriesExpr;
 use serde::{Deserialize, Serialize};
 
 use super::{expr_digest, Program};
@@ -75,7 +75,8 @@ impl DerivedState {
     pub fn define(source: &str, expr: SeriesExpr) -> Result<Self, String> {
         Ok(Self {
             source: source.to_string(),
-            canonical: medulla_types::wire::uql_series_expr(&expr).map_err(|e| e.to_string())?,
+            canonical: medulla_query_types::wire::uql_series_expr(&expr)
+                .map_err(|e| e.to_string())?,
             digest: expr_digest(&expr)?,
             program: Program::compile(&expr)?,
             expr,

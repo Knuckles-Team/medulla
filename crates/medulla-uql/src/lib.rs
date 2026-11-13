@@ -8,7 +8,7 @@
 
 //! UQL — the Unified Query Language front-end (CONCEPT:AU-KG.query.top-nodes-by-degree).
 //!
-//! A human/agent-writable TEXT surface that parses to the SAME [`medulla_types::wire::Plan`]
+//! A human/agent-writable TEXT surface that parses to the SAME [`medulla_query_types::wire::Plan`]
 //! AST `Method::UnifiedQuery` already executes — so one query expresses filter
 //! (relational) + traverse (graph) + rank (vector) + every other modality without a
 //! caller hand-building the Op list. A pure FRONT-END: it adds no executor.
@@ -17,7 +17,7 @@
 //!   generated from it);
 //! * [`parse`] / [`parse_with`] / [`parse_statement`] — text → plan, with typed `$name`
 //!   parameters bound as values (never spliced into text);
-//! * [`medulla_types::wire::Plan::to_uql`] / [`print`] — plan → canonical text; for every
+//! * [`medulla_query_types::wire::Plan::to_uql`] / [`print`] — plan → canonical text; for every
 //!   printable plan `parse(print(p)) == canonicalize(p)`;
 //! * [`UqlError`] — structured diagnostics (stable code, span, expected set, fix hint).
 //!
@@ -26,7 +26,7 @@
 //!
 //! ```
 //! use medulla_uql as uql;
-//! use medulla_types::wire::{Op, Pred};
+//! use medulla_query_types::wire::{Op, Pred};
 //!
 //! let plan = uql::parse(
 //!     "MATCH (:Doc) WHERE year > 2024 |> TRAVERSE -[:CITES]->{1,2} \
@@ -42,7 +42,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::wire::{Plan, UqlParam};
+use medulla_query_types::wire::{Plan, UqlParam};
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod diag;
@@ -128,7 +128,9 @@ fn reject_pipeline_federation_budget(stmt: &Statement, src: &str) -> Result<(), 
 
 /// Parse one series expression (the `DERIVE` sub-grammar, EH-522) whose channel names are
 /// bound by the caller — a materialised derived series' sources (EH-524).
-pub fn parse_series_expr(src: &str) -> Result<medulla_types::series_expr::SeriesExpr, UqlError> {
+pub fn parse_series_expr(
+    src: &str,
+) -> Result<medulla_query_types::series_expr::SeriesExpr, UqlError> {
     let tokens = lexer::lex(src)?;
     let params = Params::new();
     parser::Parser::new(src, &tokens, &params).series_definition()

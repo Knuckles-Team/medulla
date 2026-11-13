@@ -1,6 +1,6 @@
 //! medulla-query-types: Query plan AST and wire DTO types
 //!
-//! Layer `contract` (MEDULLA-SDLC-R021). Depends on `medulla-types` only.
+//! Layer `contract` (MEDULLA-SDLC-R021). Depends on `medulla-types` only (R021.4 adds `medulla-identity-types`).
 
 #![forbid(unsafe_code)]
 
@@ -39,3 +39,12 @@ pub mod telemetry_derive;
 pub mod topology;
 #[cfg(feature = "viz")]
 pub mod viz;
+// F3: RDF load/update/rule/shape-validation report bodies (medulla-rdf/medulla-shacl/medulla-shex results).
+pub mod rdf_report;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 — the search-index capability of an operation-bound source.
+pub mod search_source;
+// EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
+pub mod series_expr;
+// The query plan AST and wire DTOs embedded in feature-gated `protocol::Method` variants.
+// Domain-specific DTOs sit in private child modules and are re-exported by `wire` itself.
+pub mod wire;

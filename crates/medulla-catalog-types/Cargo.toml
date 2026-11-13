@@ -27,10 +27,10 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
-wire-contract = ["medulla-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-agent-types/wire-contract"]
+wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-agent-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-agent-types/wire-complete"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema"]
-test-support = ["medulla-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

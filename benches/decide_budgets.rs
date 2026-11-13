@@ -949,7 +949,7 @@ fn loop_blob(value: serde_json::Value) -> Vec<u8> {
 /// One mixed batch of 64 operations: creates, compare-and-sets, reinforcements and reads of
 /// nodes this same batch wrote.
 fn agent_loop_batch(round: u64) -> Method {
-    use medulla_types::wire::BatchOperation;
+    use medulla_query_types::wire::BatchOperation;
     let mut operations = Vec::with_capacity(
         usize::try_from(medulla_server_api::knob_config::knobs().batch_max_operations)
             .expect("the batch cap fits usize"),

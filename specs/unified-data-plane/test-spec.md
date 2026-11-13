@@ -136,7 +136,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.4`: `tests/federation/test_m
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.1` | `crates/medulla-types/src/search_source.rs::tests::search_capability_round_trips`: A serde round trip keeps every field and rejects an unknown score kind. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.1` | `crates/medulla-query-types/src/search_source.rs::tests::search_capability_round_trips`: A serde round trip keeps every field and rejects an unknown score kind. |
 
 | Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.2` | `crates/medulla-federation/src/federation_opt/tests.rs::relevance_pushdown_replenishes`: A pushed query returns k results with remote scores in their channel. |
 
@@ -276,7 +276,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.4.5:** `crates/medulla-lake/tests/metastore.rs::receipt_counts_match` (planned). Proves the row: Evidence: the scan receipt counts partitions, files, stripes and bytes.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.4.6:** `tests/federation/test_metastore_orc_avro_served.py::test_partition_pruned_scan` (planned). Proves the row: Hot-path proof: a pruned scan over a recorded metastore.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.5:** `tests/federation/test_search_index_pushdown_served.py::test_relevance_pushed_and_k_replenished` (planned). Proves the row: Search-index sources answer with relevance pushdown (rollup).
-- **MEDULLA-UNIFIED-DATA-PLANE-R038.5.1:** `crates/medulla-types/src/search_source.rs::tests::search_capability_round_trips` (planned). Proves the row: Model: `SearchIndexCapability` on the operation-bound source.
+- **MEDULLA-UNIFIED-DATA-PLANE-R038.5.1:** `crates/medulla-query-types/src/search_source.rs::tests::search_capability_round_trips` (planned). Proves the row: Model: `SearchIndexCapability` on the operation-bound source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.5.1:** `tests/federation/test_search_index_pushdown_served.py::test_relevance_pushed_and_k_replenished` (planned). Proves the row: Model: `SearchIndexCapability` on the operation-bound source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.5.2:** `crates/medulla-federation/src/federation_opt/tests.rs::relevance_pushdown_replenishes` (planned). Proves the row: Behavior: push text match, nearest-neighbour search, filters and top-k.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.5.3:** `crates/medulla-federation/src/federation_opt/tests.rs::served_search_reaches_fusion` (planned). Proves the row: Wiring: the search remote joins the shared fusion.

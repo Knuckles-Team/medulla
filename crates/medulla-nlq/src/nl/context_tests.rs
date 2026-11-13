@@ -755,7 +755,7 @@ fn stored_label_fields_and_unlabelled_node_fields_remain_queryable() {
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.1
 #[test]
 fn edge_predicates_are_grounded_against_edges_instead_of_nodes() {
-    use medulla_types::wire::{EdgeDir, PropagateModel};
+    use medulla_query_types::wire::{EdgeDir, PropagateModel};
     let core = GraphCore::new();
     for id in ["a", "b"] {
         core.add_node(id.into(), blob(json!({"type": "Item", "node_only": true})));
@@ -836,7 +836,7 @@ fn jsonpath_root_keys_are_checked_without_guessing_nested_document_shapes() {
             Op::Filter {
                 preds: vec![Pred::JsonPath {
                     path: path.into(),
-                    op: medulla_types::wire::JsonPathOp::Exists,
+                    op: medulla_query_types::wire::JsonPathOp::Exists,
                 }],
             },
         ]);
@@ -853,7 +853,7 @@ fn jsonpath_root_keys_are_checked_without_guessing_nested_document_shapes() {
             Op::Filter {
                 preds: vec![Pred::JsonPath {
                     path: path.into(),
-                    op: medulla_types::wire::JsonPathOp::Exists,
+                    op: medulla_query_types::wire::JsonPathOp::Exists,
                 }],
             },
         ]);
@@ -898,7 +898,7 @@ fn snapshot_schema_is_complete_past_the_former_scan_cap() {
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.1
 #[test]
 fn attribution_properties_and_owen_groups_are_grounded_and_repaired() {
-    use medulla_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
+    use medulla_query_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
     let context = SchemaContext::from_view(&servicenow_view());
     let plan = |name: &str, by: &str| {
         Plan::new(vec![
@@ -934,7 +934,7 @@ fn attribution_properties_and_owen_groups_are_grounded_and_repaired() {
 #[cfg(feature = "federation")]
 #[test]
 fn named_foreign_scans_require_authority_and_joins_preserve_local_scope() {
-    use medulla_types::wire::ForeignSourceSpec;
+    use medulla_query_types::wire::ForeignSourceSpec;
     let mut context = SchemaContext::from_view(&servicenow_view());
     let scan = |name: &str, join| Op::ForeignScan {
         source: Box::new(ForeignSourceSpec::Named { name: name.into() }),
@@ -1030,7 +1030,7 @@ fn mixed_fusion_cannot_erase_local_property_checks() {
 #[cfg(feature = "federation")]
 #[test]
 fn inline_foreign_adapter_cannot_bypass_the_declared_source_catalog() {
-    use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+    use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
     let mut context = SchemaContext::from_view(&servicenow_view());
     context.declare_foreign_sources(BTreeSet::from(["remote".to_string()]));
     let plan = Plan::new(vec![Op::ForeignScan {
@@ -1374,7 +1374,7 @@ fn udf_ids_are_grounded_against_the_registered_catalog() {
 #[test]
 fn cep_attributes_are_grounded_against_event_attributes() {
     use crate::nl::ground_sources::SourceCatalogs;
-    use medulla_types::wire::{
+    use medulla_query_types::wire::{
         CepAttrPredSpec, CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec,
     };
     let mut context = SchemaContext::from_view(&servicenow_view());

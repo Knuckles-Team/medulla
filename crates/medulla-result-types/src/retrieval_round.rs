@@ -287,7 +287,7 @@ pub struct RetrievalPremise {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RoundRequest {
-    pub plan: medulla_types::wire::Plan,
+    pub plan: medulla_query_types::wire::Plan,
     /// The corpus revision the caller retrieved against.
     pub corpus_revision: String,
     /// The model revision (embedder and scorers) the caller retrieved with.

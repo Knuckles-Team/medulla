@@ -91,7 +91,7 @@ fn pinned_https_target_refuses_cleartext_before_connecting() {
 
 #[test]
 fn migrated_http_json_rejects_oversized_content_length() {
-    use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+    use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/data", server.local_addr().unwrap());
     let origin = format!("http://{}/", server.local_addr().unwrap());

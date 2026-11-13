@@ -24,7 +24,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::wire::Op;
+use medulla_query_types::wire::Op;
 
 use super::diag::{UqlCode, UqlError, UqlWarning};
 use super::lexer::Token;

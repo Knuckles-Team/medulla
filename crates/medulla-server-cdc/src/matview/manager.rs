@@ -28,7 +28,7 @@ use super::spill::{settle_target, ViewStateSpill};
 pub struct PlanMatView {
     pub name: String,
     pub graph: String,
-    pub plan: medulla_types::wire::Plan,
+    pub plan: medulla_query_types::wire::Plan,
 }
 
 /// Which maintenance mode a tracked view runs in
@@ -424,7 +424,7 @@ impl PlanMatViewManager {
     /// change at/after its watermark is applied (mirroring `cdc::maintain`); the circuit's
     /// output updates `current` and the watermark advances. Returns how many views it
     /// maintained. `Mode::Recompute` views are UNTOUCHED here (they ride `note_change`).
-    pub fn apply_delta(&self, graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
+    pub fn apply_delta(&self, graph: &str, event: &medulla_query_types::wire::CdcEvent) -> usize {
         self.apply_delta_with_output(graph, event).0
     }
 
@@ -434,7 +434,7 @@ impl PlanMatViewManager {
     pub fn apply_delta_with_output(
         &self,
         graph: &str,
-        event: &medulla_types::wire::CdcEvent,
+        event: &medulla_query_types::wire::CdcEvent,
     ) -> (usize, Vec<(String, Delta)>) {
         let delta = super::incremental::event_to_delta(event);
         self.apply_signed(graph, event.seq, &delta)
@@ -634,7 +634,7 @@ mod tests {
         PlanMatView {
             name: name.into(),
             graph: graph.into(),
-            plan: medulla_types::wire::Plan::new(vec![]),
+            plan: medulla_query_types::wire::Plan::new(vec![]),
         }
     }
 
@@ -645,13 +645,13 @@ mod tests {
         id: &str,
         ty: &str,
         year: i64,
-    ) -> medulla_types::wire::CdcEvent {
+    ) -> medulla_query_types::wire::CdcEvent {
         let after =
             rmp_serde::to_vec_named(&serde_json::json!({"type": ty, "year": year})).unwrap();
-        medulla_types::wire::CdcEvent {
+        medulla_query_types::wire::CdcEvent {
             seq,
             graph: graph.into(),
-            kind: medulla_types::wire::CdcKind::AddNode,
+            kind: medulla_query_types::wire::CdcKind::AddNode,
             node_id: id.into(),
             target_id: String::new(),
             table: String::new(),
@@ -670,13 +670,13 @@ mod tests {
         id: &str,
         ty: &str,
         year: i64,
-    ) -> medulla_types::wire::CdcEvent {
+    ) -> medulla_query_types::wire::CdcEvent {
         let before =
             rmp_serde::to_vec_named(&serde_json::json!({"type": ty, "year": year})).unwrap();
-        medulla_types::wire::CdcEvent {
+        medulla_query_types::wire::CdcEvent {
             seq,
             graph: graph.into(),
-            kind: medulla_types::wire::CdcKind::RemoveNode,
+            kind: medulla_query_types::wire::CdcKind::RemoveNode,
             node_id: id.into(),
             target_id: String::new(),
             table: String::new(),
@@ -695,8 +695,8 @@ mod tests {
     /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002.3: Wiring: the circuit consolidates before it folds.
     #[test]
     fn apply_failure_demotes_with_typed_reason() {
+        use medulla_query_types::wire::{Op, Plan};
         use medulla_types::delta::ZRow;
-        use medulla_types::wire::{Op, Plan};
         let plan = Plan::new(vec![Op::Scan {
             label: "Doc".into(),
         }]);
@@ -732,7 +732,7 @@ mod tests {
     /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.6: Define, change and read are wired
     #[test]
     fn apply_delta_maintains_incremental_view_end_to_end() {
-        use medulla_types::wire::{Op, Plan, Pred};
+        use medulla_query_types::wire::{Op, Plan, Pred};
         // Scan{Doc} |> Filter year > 2000 — an Incremental-mode view.
         let plan = Plan::new(vec![
             Op::Scan {
@@ -900,7 +900,7 @@ mod tests {
     }
 
     fn scan_view(m: &PlanMatViewManager, name: &str, graph: &str, label: &str) {
-        use medulla_types::wire::{Op, Plan};
+        use medulla_query_types::wire::{Op, Plan};
         let plan = Plan::new(vec![Op::Scan {
             label: label.into(),
         }]);
@@ -985,7 +985,7 @@ mod tests {
     #[test]
     fn status_board_tracks_mode_and_changes() {
         use medulla_core::view_status::{ViewFamily, ViewMode};
-        use medulla_types::wire::{Op, Plan};
+        use medulla_query_types::wire::{Op, Plan};
         let plan = Plan::new(vec![Op::Scan {
             label: "Doc".into(),
         }]);

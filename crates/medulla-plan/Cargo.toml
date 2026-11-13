@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["medulla-sql/sql", "dep:medulla-decision-stats", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
+query = ["medulla-sql/sql", "dep:medulla-decision-stats", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -28,19 +28,19 @@ cost-opt = ["query"]
 # variants in medulla-types. It IMPLIES `query` because the new ops live inside the
 # `query`-gated `Op` enum and the text executor branch sits beside the DataFusion
 # FILTER leg. A default/Pi build sets neither feature → no medulla-text/Tantivy linked.
-text = ["medulla-exec/text", "query", "medulla-text/tantivy", "medulla-types/text", "medulla-uql/text", "medulla-nlq/text", "medulla-federation/text"]
+text = ["medulla-exec/text", "query", "medulla-text/tantivy", "medulla-types/text", "medulla-query-types/text", "medulla-uql/text", "medulla-nlq/text", "medulla-federation/text"]
 # OWL/SPARQL SOURCE ops (CONCEPT:KG-2.220): `Reason` (OWL-inferred class members) +
 # `SparqlBgp` (SPARQL-selected ids) as RowSet sources, so ONE UnifiedQuery plan can do
 # OWL/SPARQL candidate-set → graph Traverse / vector Rank / SQL Filter / Limit. Pulls
 # medulla-rdf's pure-Rust `owl` (EL⁺ reasoner) + `sparql` evaluator. IMPLIES `query` (the
 # ops live inside the `query`-gated `Op` enum, beside the DataFusion FILTER leg). A
 # default/Pi build sets neither feature → no medulla-rdf reasoner/evaluator linked here.
-owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan", "medulla-exec/owl", "medulla-uql/owl", "medulla-nlq/owl", "medulla-protocol-types/owl", "medulla-types/owl"]
+owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan", "medulla-query-types/owl-plan", "medulla-exec/owl", "medulla-uql/owl", "medulla-nlq/owl", "medulla-protocol-types/owl", "medulla-types/owl", "medulla-query-types/owl"]
 # The WASM `Udf` TRANSFORM op (CONCEPT:KG-2.228): run a registered, sandboxed
 # WebAssembly UDF over the current RowSet inside a UnifiedQuery plan. Pulls medulla-wasm's
 # wasmtime runtime + turns on the `wasm-udf` wire variant in medulla-types. IMPLIES `query`
 # (the op lives in the `query`-gated `Op` enum). A default/Pi build links no wasmtime.
-wasm-udf = ["medulla-exec/wasm-udf", "query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-uql/wasm-udf", "medulla-nlq/wasm-udf"]
+wasm-udf = ["medulla-exec/wasm-udf", "query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-uql/wasm-udf", "medulla-nlq/wasm-udf"]
 # Query federation / foreign sources (CONCEPT:KG-2.232, Lane P): the `ForeignScan`
 # SOURCE op + the `ForeignSource` trait with TWO kinds — a REMOTE medulla-engine
 # engine (reached over the SAME length-prefixed-MessagePack + HMAC transport via a
@@ -51,7 +51,7 @@ wasm-udf = ["medulla-exec/wasm-udf", "query", "dep:medulla-wasm", "medulla-wasm/
 # but NEVER `pi` — the Pi contract: a `pi` build links no rustls/ring/ureq.
 federation = ["medulla-exec/federation",
     "query",
-    "medulla-types/federation", "medulla-protocol-types/federation",
+    "medulla-types/federation", "medulla-query-types/federation", "medulla-protocol-types/federation",
     "dep:ureq",
     "dep:hmac",
     "dep:sha2",
@@ -80,7 +80,7 @@ federation = ["medulla-exec/federation",
 # `DISCORD` stages' MASS + SCRIMP++ matrix profile — the ONE place that pulls it, per
 # `medulla-numeric`'s own feature doc; the streaming left profile (`DERIVE mprofile(...)`,
 # always built) needs no FFT.
-timeseries = ["medulla-exec/timeseries", "query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif", "medulla-uql/timeseries", "medulla-nlq/timeseries"]
+timeseries = ["medulla-exec/timeseries", "query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "medulla-query-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif", "medulla-uql/timeseries", "medulla-nlq/timeseries"]
 # EXTERNAL relational-SQL federation (CONCEPT:KG-2.239): the third `ForeignSource` kind
 # — `ForeignSourceSpec::Sql` — connecting to an external Postgres/MySQL via a DSN and
 # running a SQL query, mapping rows → RowSet. Pulls `sqlx` with the
@@ -109,7 +109,7 @@ federation-sql = ["federation", "medulla-federation/federation-sql"]
 # `where_clause` match needs the variants to exist regardless. This feature therefore
 # now gates ONLY the real medulla-geo executor (`dep:medulla-geo` + the geometry-evaluating
 # functions behind `#[cfg(feature = "geo")]` in `exec.rs`), not the wire shape.
-geo = ["medulla-exec/geo", "query", "dep:medulla-geo", "medulla-uql/geo", "medulla-nlq/geo", "medulla-types/geo"]
+geo = ["medulla-exec/geo", "query", "dep:medulla-geo", "medulla-uql/geo", "medulla-nlq/geo", "medulla-types/geo", "medulla-query-types/geo"]
 # Array / tensor modality (CONCEPT:MEDULLA-085): the `Op::TensorScan` SOURCE op (seed the
 # RowSet with a `layer`'s tensor-bearing nodes) + the `Op::TensorOp { kind }` TRANSFORM
 # op (apply medulla-tensor's slice/reduce/elementwise to each row's stored tensor). Pulls the
@@ -118,7 +118,7 @@ geo = ["medulla-exec/geo", "query", "dep:medulla-geo", "medulla-uql/geo", "medul
 # `query`-gated `Op` enum, beside the DataFusion FILTER leg). OFF by default; the facade
 # folds it into node/full but NEVER `pi`. A default/Pi build (neither feature) links no
 # medulla-tensor and drops the tensor arms.
-tensor = ["medulla-exec/tensor", "query", "dep:medulla-tensor", "medulla-types/tensor", "medulla-uql/tensor", "medulla-nlq/tensor"]
+tensor = ["medulla-exec/tensor", "query", "dep:medulla-tensor", "medulla-types/tensor", "medulla-query-types/tensor", "medulla-uql/tensor", "medulla-nlq/tensor"]
 # GPU tensor-op dispatch seam (CONCEPT:MEDULLA-326) / real CUDA backend (CONCEPT:MEDULLA-327) for
 # medulla-tensor. `tensor-gpu` opts into the seam; `tensor-gpu-cuda` pulls the real cudarc
 # backend (dynamic-loading — no CUDA toolkit to build). OUT of pi/full.
@@ -139,7 +139,7 @@ tensor-gpu-cuda = ["tensor-gpu", "medulla-tensor/gpu-cuda"]
 # medulla-stream and drops the CEP arm. MEDULLA-067 `Op::Window` is the plan-side windowing
 # primitive; wiring the MEDULLA-064 CDC bus + a subscription surface into the server is the
 # documented follow-up.
-stream = ["medulla-exec/stream", "query", "medulla-stream/stream", "medulla-types/stream", "medulla-uql/stream", "medulla-nlq/stream"]
+stream = ["medulla-exec/stream", "query", "medulla-stream/stream", "medulla-types/stream", "medulla-query-types/stream", "medulla-uql/stream", "medulla-nlq/stream"]
 # Probabilistic / uncertainty query op (CONCEPT:MEDULLA-086): the `Op::Probabilistic { query }`
 # TRANSFORM op — score each row by a closed-form probabilistic query over its stored
 # `Distribution` value (expectation / marginal / conditional posterior mean / seeded
@@ -153,7 +153,7 @@ stream = ["medulla-exec/stream", "query", "medulla-stream/stream", "medulla-type
 # FOLD: opt-in; deliberately NOT added to any facade tier aggregate (node/full/pi).
 probabilistic = ["medulla-exec/probabilistic",
     "query",
-    "medulla-types/probabilistic",
+    "medulla-types/probabilistic", "medulla-query-types/probabilistic",
     "dep:medulla-compute",
     "medulla-compute/reasoning", "medulla-uql/probabilistic"]
 # KAN-learned cardinality-estimate correction (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization, W4.12
@@ -190,7 +190,7 @@ learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn", "m
 # empty; with it, malformed or incomplete loci are rejected rather than downgraded.
 epistemic = ["medulla-exec/epistemic",
     "query",
-    "medulla-types/epistemic", "medulla-protocol-types/epistemic",
+    "medulla-types/epistemic", "medulla-query-types/epistemic", "medulla-protocol-types/epistemic",
     "dep:medulla-epistemic", "medulla-uql/epistemic", "medulla-retrieval/epistemic", "medulla-nlq/epistemic"]
 # Contribution attribution (EH-523): the `ATTRIBUTE` stage's executor — linear split,
 # exact/sampled Shapley and Owen values over the incoming rows — is medulla-numeric's

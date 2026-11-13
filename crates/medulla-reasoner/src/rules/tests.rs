@@ -456,6 +456,6 @@ fn fixpoint_stops_at_bound_with_partial_facts() {
     assert_eq!(resp.steps, 1);
     assert_eq!(
         resp.bound_code.as_deref(),
-        Some(medulla_types::rdf_report::RULE_FIXPOINT_BOUND)
+        Some(medulla_query_types::rdf_report::RULE_FIXPOINT_BOUND)
     );
 }

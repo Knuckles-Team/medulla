@@ -53,4 +53,4 @@ This file describes the entities the finance rows add or extend. Classes and sha
 ### StateSpaceModel and StateSpaceCheckpoint
 
 - Fields: model revision, kernel revision, noise policy, symmetry tolerance, numeric policy; checkpoint holds mean, covariance and cursor.
-- Owner: `crates/medulla-types/src/series_expr.rs`; the checkpoint persists in the existing derived state.
+- Owner: `crates/medulla-query-types/src/series_expr.rs`; the checkpoint persists in the existing derived state.

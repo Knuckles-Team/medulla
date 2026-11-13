@@ -23,6 +23,7 @@ medulla-storage = { path = "../medulla-storage" }
 medulla-transaction = { path = "../medulla-transaction" }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 redb = { workspace = true }
 rand = "0.8"
 rmp-serde = "1.3"
@@ -46,7 +47,7 @@ metrics = ["medulla-store/metrics", "medulla-kernel/metrics", "medulla-protocol-
 raft = ["medulla-store/raft", "medulla-kernel/raft"]
 security = ["medulla-store/security", "medulla-work-store/security", "medulla-resource-store/security", "medulla-lane-store/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
 statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-work-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
-test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-work-store/test-support", "medulla-protocol-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-resource-store/test-support"]
+test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-work-store/test-support", "medulla-protocol-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-resource-store/test-support"]
 tsdb = ["dep:medulla-tsdb", "medulla-store/tsdb"]
 
 [dev-dependencies]

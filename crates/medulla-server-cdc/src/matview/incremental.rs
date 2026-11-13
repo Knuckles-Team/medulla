@@ -9,8 +9,8 @@
 //! turso's `incremental/persistence.rs`.
 
 use medulla_exec::incremental::Circuit;
+use medulla_query_types::wire::{CdcEvent, CdcKind};
 use medulla_types::delta::{Delta, ZRow};
-use medulla_types::wire::{CdcEvent, CdcKind};
 use serde_json::{Map, Value};
 
 /// Decode a msgpack node-property blob into the circuit's prop-map shape. Absent / empty

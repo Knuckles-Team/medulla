@@ -10,7 +10,7 @@
 //! then explicitly REFUSED with a named, typed reason -- never silently
 //! accepted as if a driver existed, and never a generic/opaque error.
 
-use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
+use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec};
 
 use crate::federation::ForeignSourceRegistry;
 

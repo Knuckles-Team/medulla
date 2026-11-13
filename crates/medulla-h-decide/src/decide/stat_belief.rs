@@ -62,7 +62,7 @@ pub(super) struct GraphSource<'a> {
     #[cfg(feature = "epistemic")]
     view: &'a medulla_graph_core::graph::GraphView,
     #[cfg(feature = "epistemic")]
-    plan: &'a medulla_types::wire::Plan,
+    plan: &'a medulla_query_types::wire::Plan,
     #[cfg(not(feature = "epistemic"))]
     _marker: std::marker::PhantomData<&'a ()>,
 }
@@ -97,13 +97,13 @@ fn graph_source<'a>(
 #[cfg(feature = "epistemic")]
 pub(super) fn belief_rows_at(
     view: &medulla_graph_core::graph::GraphView,
-    plan: &medulla_types::wire::Plan,
+    plan: &medulla_query_types::wire::Plan,
     as_of_ms: u64,
 ) -> Result<Vec<String>, String> {
     let mut plan = plan.clone();
     // BELIEF AS OF over an empty input is a source of every live row; the
     // candidate plan's own rows are the only ones a slice may read.
-    plan.ops.push(medulla_types::wire::Op::BeliefAsOf {
+    plan.ops.push(medulla_query_types::wire::Op::BeliefAsOf {
         ts: as_of_ms as f64,
     });
     let semantic = medulla_semantic_index::semantic::SemanticStore::new();

@@ -92,7 +92,7 @@ pub fn decode_unified_ids(response: &medulla_protocol_types::protocol::Response)
 #[cfg(feature = "query")]
 #[doc(hidden)]
 pub fn decode_uql_ids(response: &medulla_protocol_types::protocol::Response) -> Vec<String> {
-    use medulla_types::wire::UqlResult;
+    use medulla_query_types::wire::UqlResult;
     let rows = match rmp_serde::from_slice(raw_result(response)).unwrap() {
         UqlResult::Rows { rows, .. } | UqlResult::Profile { rows, .. } => rows,
         UqlResult::Explain { .. } => panic!("an EXPLAIN result has no rows"),

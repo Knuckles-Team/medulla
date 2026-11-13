@@ -233,8 +233,8 @@ fn papers_request(
         },
         candidates: CandidateSource::Graph {
             graph: STAGED.to_string(),
-            plan: Box::new(medulla_types::wire::Plan::new(vec![
-                medulla_types::wire::Op::Scan {
+            plan: Box::new(medulla_query_types::wire::Plan::new(vec![
+                medulla_query_types::wire::Op::Scan {
                     label: "Paper".to_string(),
                 },
             ])),

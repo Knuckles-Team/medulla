@@ -239,7 +239,7 @@ impl RuleReasonRequest {
 }
 
 /// The rule-reasoning response and its facts -- the `RunRules` wire body, owned by medulla-types.
-pub use medulla_types::rdf_report::{RuleFact, RuleReasonResponse};
+pub use medulla_query_types::rdf_report::{RuleFact, RuleReasonResponse};
 
 /// Execute a [`RuleReasonRequest`]: parse the Turtle into an ontology + ABox facts,
 /// register the custom rules, run the fixpoint, and project a filtered response. This
@@ -335,7 +335,7 @@ fn project_response(
         steps: result.steps,
         rules_fired: result.rules_fired,
         bound_code: (!result.complete)
-            .then(|| medulla_types::rdf_report::RULE_FIXPOINT_BOUND.to_string()),
+            .then(|| medulla_query_types::rdf_report::RULE_FIXPOINT_BOUND.to_string()),
     }
 }
 

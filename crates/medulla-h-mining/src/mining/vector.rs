@@ -22,7 +22,7 @@ pub(crate) struct ClusterRequest {
     pub(crate) features: Vec<Vec<f64>>,
     pub(crate) source: Option<VectorSource>,
     #[cfg(feature = "query")]
-    pub(crate) plan: Option<medulla_types::wire::Plan>,
+    pub(crate) plan: Option<medulla_query_types::wire::Plan>,
     pub(crate) algorithm: ClusterAlgorithm,
     pub(crate) eps: f64,
     pub(crate) min_pts: usize,
@@ -212,7 +212,7 @@ pub(crate) struct AnomalyRequest {
     pub(crate) values: Vec<f64>,
     pub(crate) source: Option<VectorSource>,
     #[cfg(feature = "query")]
-    pub(crate) plan: Option<medulla_types::wire::Plan>,
+    pub(crate) plan: Option<medulla_query_types::wire::Plan>,
     pub(crate) algorithm: AnomalyAlgorithm,
     pub(crate) k: usize,
     pub(crate) n_trees: usize,
@@ -406,7 +406,7 @@ pub(super) struct ClassifyFitRequest<'a> {
     pub(super) x: Vec<Vec<f64>>,
     pub(super) source: Option<VectorSource>,
     #[cfg(feature = "query")]
-    pub(super) plan: Option<medulla_types::wire::Plan>,
+    pub(super) plan: Option<medulla_query_types::wire::Plan>,
     pub(super) y: Vec<i64>,
     pub(super) algorithm: ClassifyAlgorithm,
     pub(super) k: usize,
@@ -482,7 +482,7 @@ pub(crate) struct ClassifyPredictRequest {
     pub(crate) x: Vec<Vec<f64>>,
     pub(crate) source: Option<VectorSource>,
     #[cfg(feature = "query")]
-    pub(crate) plan: Option<medulla_types::wire::Plan>,
+    pub(crate) plan: Option<medulla_query_types::wire::Plan>,
     pub(crate) writeback: WritebackOptions,
 }
 
@@ -625,7 +625,7 @@ pub(crate) struct ReduceRequest {
     pub(crate) x: Vec<Vec<f64>>,
     pub(crate) source: Option<VectorSource>,
     #[cfg(feature = "query")]
-    pub(crate) plan: Option<medulla_types::wire::Plan>,
+    pub(crate) plan: Option<medulla_query_types::wire::Plan>,
     pub(crate) labels: Vec<i64>,
     pub(crate) algorithm: ReduceAlgorithm,
     pub(crate) n_components: usize,

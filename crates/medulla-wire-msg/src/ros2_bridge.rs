@@ -32,8 +32,8 @@ use serde::{Deserialize, Serialize};
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
-use medulla_types::wire::CdcEvent;
-use medulla_types::wire::CdcKind;
+use medulla_query_types::wire::CdcEvent;
+use medulla_query_types::wire::CdcKind;
 
 // ── The rosbridge JSON protocol (CONCEPT:MEDULLA-KG.domains.robotics-gpu-distribution) ─────────────────────────────
 

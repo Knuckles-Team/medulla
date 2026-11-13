@@ -30,13 +30,13 @@
 //! `medulla_plan::federation::ForeignSource` closure, so a submitted-and-completed
 //! quantum job's `(id, score)` rows compose into a UQL plan through the EXISTING
 //! federation seam (`crates/medulla-plan/src/federation.rs`) with ZERO change to
-//! `medulla_types::wire::Op`.
+//! `medulla_query_types::wire::Op`.
 //!
 //! ## What this crate deliberately does NOT do
 //!
 //! Per the addendum's staging discipline ("Do not skip to (3)... Deliver the native
 //! Op only if steps 1-2 prove the pattern"), this crate does NOT add
-//! `Op::SubmitQuantum` / `Op::JoinQuantumResults` to `medulla_types::wire::Op`, does NOT
+//! `Op::SubmitQuantum` / `Op::JoinQuantumResults` to `medulla_query_types::wire::Op`, does NOT
 //! touch `crates/medulla-plan/src/exec.rs`/`dag_exec.rs`/`runtime.rs`'s executor match
 //! arms, and does NOT fork or duplicate any part of `medulla-jobs`' durable state machine
 //! — `JobStore::submit`/`claim_next`/`checkpoint_fenced`/`stage_result_fenced`/

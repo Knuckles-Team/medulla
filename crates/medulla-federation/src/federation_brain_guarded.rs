@@ -11,7 +11,7 @@
 //! typed reason -- never silently run unguarded, and never a generic/opaque
 //! error.
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use crate::federation::ForeignSourceRegistry;
 

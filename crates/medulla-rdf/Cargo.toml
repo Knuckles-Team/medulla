@@ -29,7 +29,7 @@ sparql = ["rdf", "dep:spargebra", "dep:regex", "medulla-types/sparql"]
 # Parses OWL axioms from the SAME oxttl-parsed RDF as `rdf`, so it adds NO dep beyond
 # the RDF stack: implies `rdf`, links ZERO native/C crate (pure Rust — no horned-owl,
 # no whelk-rs). Safe to fold into pi/node/full alongside rdf/sparql.
-owl = ["rdf", "medulla-types/owl", "sparql"]
+owl = ["rdf", "medulla-types/owl", "medulla-query-types/owl", "sparql"]
 # W5 — OWL-DL tableau reasoner (CONCEPT:MEDULLA-059): a description-logic tableau
 # (ALCQO + role hierarchy) that DECIDES the constructs the EL⁺/RL `owl` path cannot —
 # full cardinality (≥n/≤n, qualified), complementOf/negation (NNF), oneOf/hasValue
@@ -95,6 +95,7 @@ rmp-serde = "1.3"
 # Shared allocation-free MessagePack preflight for property blobs. Keeping this
 # policy in medulla-types avoids a second parser in the RDF/SPARQL projection layer.
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 # RDF term model + parsers/serializers (feature `rdf`). Pure Rust, no native deps.
@@ -140,6 +141,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support", "query"
 # The machine edge tables of MEDULLA-ENGINE-PARITY-R021.1 and MEDULLA-ENGINE-PARITY-R021.3.
 medulla-statechart = { path = "../medulla-statechart" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["statechart"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 # GeoSPARQL kernel parity test (MEDULLA-FEDERATED-QUERY-R709.2).
 medulla-geo = { path = "../medulla-geo" }

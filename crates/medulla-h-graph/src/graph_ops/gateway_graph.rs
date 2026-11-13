@@ -104,10 +104,10 @@ pub(super) fn stamp_owner_id_if_applicable(
 /// `CreateNodeIfAbsent` does (MEDULLA-DURABLE-KERNEL-R871).
 #[cfg(feature = "security")]
 fn stamp_batch_operation(
-    operation: medulla_types::wire::BatchOperation,
+    operation: medulla_query_types::wire::BatchOperation,
     caller_id: &str,
-) -> medulla_types::wire::BatchOperation {
-    use medulla_types::wire::BatchOperation;
+) -> medulla_query_types::wire::BatchOperation {
+    use medulla_query_types::wire::BatchOperation;
     match operation {
         BatchOperation::CreateNodeIfAbsent {
             node_id,
@@ -497,12 +497,12 @@ fn apply_claim_next(
 /// nothing the batch wrote is committed.
 fn apply_batch(
     core: &GraphCore,
-    operations: &[medulla_types::wire::BatchOperation],
+    operations: &[medulla_query_types::wire::BatchOperation],
 ) -> Result<ResultPayload, String> {
     let results = medulla_core::batch_apply::apply_batch_operations(core, operations)
         .map_err(|error| error.message())?;
     ResultPayload::of::<medulla_protocol_types::result_contract::coordination::Batch>(
-        medulla_types::wire::BatchResult { results },
+        medulla_query_types::wire::BatchResult { results },
     )
 }
 

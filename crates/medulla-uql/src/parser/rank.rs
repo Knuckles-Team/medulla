@@ -1,6 +1,6 @@
 //! `RANK BY ~…` and `RERANK …`.
 
-use medulla_types::wire::Op;
+use medulla_query_types::wire::Op;
 
 use super::Parser;
 use crate::diag::UqlError;
@@ -22,7 +22,7 @@ impl<'a> Parser<'a> {
                  (no by-name embedding registry yet) — use `~'text'`, `~[…]` or `~$param`",
             ));
         }
-        if let Some(medulla_types::wire::UqlParam::Str(text)) = self.peek_str_param() {
+        if let Some(medulla_query_types::wire::UqlParam::Str(text)) = self.peek_str_param() {
             self.bump();
             return Ok(Op::RankEmbed { text });
         }
@@ -32,12 +32,12 @@ impl<'a> Parser<'a> {
     }
 
     /// A bound STRING parameter at the cursor (not consumed; marked used).
-    fn peek_str_param(&mut self) -> Option<medulla_types::wire::UqlParam> {
+    fn peek_str_param(&mut self) -> Option<medulla_query_types::wire::UqlParam> {
         let Some(Tok::Param(name)) = self.peek_kind() else {
             return None;
         };
         let value = self.params.get(name)?.clone();
-        if !matches!(value, medulla_types::wire::UqlParam::Str(_)) {
+        if !matches!(value, medulla_query_types::wire::UqlParam::Str(_)) {
             return None;
         }
         self.used_params.insert(name.clone());

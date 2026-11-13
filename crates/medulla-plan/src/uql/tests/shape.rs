@@ -5,9 +5,9 @@
 //! (`uql::parser::shape::tests`).
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::UqlResult;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::UqlResult;
 
 use crate::uql::serve::run_statement;
 use medulla_exec::exec::PlanCtx;

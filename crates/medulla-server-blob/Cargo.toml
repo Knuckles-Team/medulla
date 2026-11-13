@@ -25,6 +25,7 @@ medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 parking_lot = "0.12"
 redb = { workspace = true, optional = true }
@@ -59,7 +60,7 @@ security = ["redb", "medulla-server-api/security", "medulla-server-auth/security
 shacl = ["dep:medulla-shacl", "dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-server-api/shacl", "medulla-kernel/shacl"]
 sparql-http = ["shacl", "security", "dep:medulla-rdf", "medulla-rdf/sparql", "medulla-server-api/sparql", "medulla-server-api/sparql-http"]
 sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service", "medulla-federation/sparql-service"]
-test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-federation/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-federation/test-support"]
 [dev-dependencies]
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }

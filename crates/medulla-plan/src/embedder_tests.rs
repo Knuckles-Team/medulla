@@ -12,8 +12,8 @@
 
 use medulla_exec::exec::{execute, HashEmbedder, PlanCtx, TextEmbedder};
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::{Op, Plan};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{Op, Plan};
 use serde_json::json;
 
 /// A tiny deterministic test embedder mapping a fixed set of texts to fixed vectors (an

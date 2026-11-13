@@ -1033,7 +1033,7 @@ components:
       - "crates/medulla-types/src/statechart.rs"
       - "crates/medulla-types/src/types.rs"
       - "crates/medulla-types/src/viz.rs"
-      - "crates/medulla-types/src/wire.rs"
+      - "crates/medulla-query-types/src/wire.rs"
       - "crates/medulla-work-types/src/work_item_command_log.rs"
       - "crates/medulla-capabilities/src/bin"
       - "crates/medulla-capabilities/src/catalog.rs"

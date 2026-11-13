@@ -10,7 +10,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use medulla_types::wire::{ForeignSourceSpec, Pred};
+use medulla_query_types::wire::{ForeignSourceSpec, Pred};
 
 use crate::federation::ForeignSourceRegistry;
 use medulla_exec::algebra::Op;

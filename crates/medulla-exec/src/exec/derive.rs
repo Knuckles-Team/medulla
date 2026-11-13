@@ -8,8 +8,8 @@
 
 use std::collections::BTreeMap;
 
+use medulla_query_types::series_expr::DeriveColumn;
 use medulla_tsdb::derive::Program;
-use medulla_types::series_expr::DeriveColumn;
 
 use crate::rowset::{parse_series_row_id, Row, RowSet, ValueChannels};
 

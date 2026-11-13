@@ -18,10 +18,10 @@ use medulla_exec::{algebra::Op, algebra::Plan, exec::execute, exec::PlanCtx, row
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_plan::uql::serve::run_statement;
+use medulla_query_types::wire::{TimeAxis, UqlResult, UqlRow};
 use medulla_retrieval::knowledge::KnowledgeSet;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
-use medulla_types::wire::{TimeAxis, UqlResult, UqlRow};
 use medulla_uql::{parse_statement, Body, Params};
 use serde_json::json;
 

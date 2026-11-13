@@ -26,16 +26,16 @@ schemars = { version = "1.2.3", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
-wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract", "medulla-mutation-types/wire-contract"]
+wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete"]
 compute-dist = ["medulla-types/compute-dist"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema"]
-datascience = ["medulla-types/datascience"]
+datascience = ["medulla-types/datascience", "medulla-query-types/datascience"]
 finance = ["medulla-types/finance"]
-graphlearn = ["datascience", "medulla-types/graphlearn"]
-mining = ["medulla-types/mining"]
-ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline"]
-query = ["medulla-types/query"]
+graphlearn = ["datascience", "medulla-types/graphlearn", "medulla-query-types/graphlearn"]
+mining = ["medulla-types/mining", "medulla-query-types/mining"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-query-types/ml-pipeline"]
+query = ["medulla-types/query", "medulla-query-types/query"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

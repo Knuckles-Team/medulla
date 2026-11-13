@@ -523,8 +523,8 @@ mod temporal_tests {
     use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::TimeAxis;
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::TimeAxis;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -1245,8 +1245,8 @@ mod as_of_edge_tests {
     use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::TimeAxis;
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::TimeAxis;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

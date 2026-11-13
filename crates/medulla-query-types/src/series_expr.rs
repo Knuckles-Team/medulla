@@ -6,7 +6,7 @@
 //! [`SeriesFunc`]. The UQL spelling is function-call only — `zscore(ewma(v0, 12), 60)`,
 //! `div(wsum(v0, v1, 20), rsum(v1, 20))` — so the canonical print (the digest input) has
 //! no precedence to normalise. The parser is medulla-plan's UQL parser; the printer is
-//! `medulla_types::wire::uql_series_expr`; the kernels are `medulla_numeric::series`.
+//! `medulla_query_types::wire::uql_series_expr`; the kernels are `medulla_numeric::series`.
 
 use serde::{Deserialize, Serialize};
 
@@ -407,8 +407,8 @@ pub enum StateSpaceRefusal {
 
 impl StateSpaceRefusal {
     /// The registered wire code.
-    pub fn code(self) -> crate::contract::ServerErrorCode {
-        use crate::contract::ServerErrorCode as C;
+    pub fn code(self) -> medulla_types::contract::ServerErrorCode {
+        use medulla_types::contract::ServerErrorCode as C;
         match self {
             Self::RetryConflict => C::StateRetryConflict,
             Self::RevisionUnsupported => C::StateRevisionUnsupported,
@@ -736,7 +736,7 @@ mod tests {
             R::DimensionMismatch,
             R::InputNonfinite,
         ] {
-            assert!(crate::contract::ServerErrorCode::ALL.contains(&r.code()));
+            assert!(medulla_types::contract::ServerErrorCode::ALL.contains(&r.code()));
         }
     }
 }

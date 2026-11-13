@@ -77,7 +77,7 @@ answer rows + provenance (source, record id, as-of) + "sources used and why" (fr
 | Vocabulary and shapes | Medulla, `crates/medulla-core/ontology/virtual_graph-v1.ttl`, `virtual_graph-v1.shapes.ttl` (loaded as the core sources `virtual-graph` and `virtual-graph-shapes` by `crates/medulla-graph-core/src/graph/schema_sources.rs`) |
 | Authority-aware selection, abstention and audit types | Medulla, `crates/medulla-virtual-graph/src/source_selection.rs` and `source_selection/live.rs` (extend; no new planner) |
 | Approval of authority | Medulla, governed-change ledger `crates/medulla-mutation-types/src/governed_change.rs` plus `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) |
-| Registered, connected source lookup | Medulla, owner-scoped foreign catalog (`MEDULLA-FEDERATED-QUERY-R013`), variants in `crates/medulla-types/src/wire_query_modalities.rs` |
+| Registered, connected source lookup | Medulla, owner-scoped foreign catalog (`MEDULLA-FEDERATED-QUERY-R013`), variants in `crates/medulla-query-types/src/wire_query_modalities.rs` |
 | Printing the audit block | Arbora (cross-repo row) |
 
 ### What R072/R073 already read (D2, CONFIRMED)

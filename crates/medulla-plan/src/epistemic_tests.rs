@@ -8,8 +8,8 @@
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::TimeAxis;
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::TimeAxis;
 use serde_json::json;
 
 use medulla_exec::algebra::{Op, Plan};

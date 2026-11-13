@@ -22,7 +22,7 @@ use medulla_types::regime_forecast::{
     HeldoutSample, HorizonThresholds, RegimeCalibrationInput, RegimeCalibrationPolicy,
     RegimeForecastRequest, RegimeSizingPolicy,
 };
-use medulla_types::wire::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
+use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
 const SECRET: &str = "medulla-fin-regime-forecast-secret";

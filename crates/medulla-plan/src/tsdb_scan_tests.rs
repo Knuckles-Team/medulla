@@ -18,11 +18,11 @@ use medulla_exec::exec::{execute, PlanCtx};
 #[cfg(feature = "timeseries")]
 use medulla_graph_core::graph::GraphCore;
 #[cfg(feature = "timeseries")]
+use medulla_query_types::wire::Plan;
+#[cfg(feature = "timeseries")]
 use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(feature = "timeseries")]
 use medulla_tsdb::{point::Point, store::SeriesKey};
-#[cfg(feature = "timeseries")]
-use medulla_types::wire::Plan;
 
 // ── mid-pipeline OWL reasoning (owl) ─────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ ex:p4 a ex:Paper .
 #[test]
 fn reason_mid_pipeline() {
     use medulla_exec::exec::{execute, PlanCtx};
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     let (view, semantic) = reason_compose_fixture();
     let plan = Plan::new(vec![
@@ -151,7 +151,7 @@ fn reason_mid_pipeline() {
 #[test]
 fn reason_empty_input_is_source() {
     use medulla_exec::exec::{execute, PlanCtx};
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     let (view, semantic) = reason_compose_fixture();
     let plan = Plan::new(vec![Op::Reason {
@@ -209,8 +209,8 @@ const TEST_TENANT: &str = "test-tenant";
 const TEST_GRAPH: &str = "test-graph";
 
 #[cfg(feature = "timeseries")]
-fn scan(series: &[&str], to: f64) -> medulla_types::wire::Op {
-    medulla_types::wire::Op::TsScan {
+fn scan(series: &[&str], to: f64) -> medulla_query_types::wire::Op {
+    medulla_query_types::wire::Op::TsScan {
         series: series.iter().map(|id| (*id).to_string()).collect(),
         from: 0.0,
         to,
@@ -253,7 +253,7 @@ fn build_series(path: &std::path::Path) -> medulla_tsdb::store::SeriesStore {
 #[test]
 fn tsdb_in_plan_fusion() {
     use medulla_exec::exec::execute;
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     let (path, store, core, mut semantic) = series_fixture("fusion", build_series);
 
@@ -319,8 +319,8 @@ fn tsdb_in_txn_ryow_staged_overlay() {
     use medulla_exec::exec::StagedSeries;
     use medulla_exec::exec::{execute, PlanCtx};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::Plan;
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::Plan;
 
     let one_s: i64 = 1_000_000_000;
     let path = temp_store_path("ryow");
@@ -417,7 +417,7 @@ fn tsdb_in_txn_ryow_staged_overlay() {
 #[test]
 fn tsscan_window_mean_consumes_and_composes() {
     use medulla_exec::exec::execute;
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     // Series "temp": 1s=10, 2s=20, 3s=30 (see build_series). A 60s window aligns all three
     // points to ONE bucket (start 0), so the mean is (10+20+30)/3 = 20.
@@ -469,7 +469,7 @@ fn tsscan_window_mean_consumes_and_composes() {
 #[test]
 fn window_agg_selects_the_aggregate() {
     use medulla_exec::exec::execute;
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     let (path, store, core, semantic) = series_fixture("window_agg", build_series);
     let view = core.analysis_snapshot();
@@ -507,8 +507,8 @@ fn window_agg_selects_the_aggregate() {
 fn window_over_graph_nodes_is_unchanged() {
     use medulla_exec::exec::{execute, PlanCtx};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::{Op, Plan};
     use serde_json::json;
 
     let core = GraphCore::new();
@@ -550,8 +550,8 @@ fn window_over_graph_nodes_is_unchanged() {
 fn tsdb_scan_without_store_is_empty() {
     use medulla_exec::exec::{execute, PlanCtx};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::Plan;
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::Plan;
 
     let core = GraphCore::new();
     let view = core.analysis_snapshot();
@@ -698,7 +698,7 @@ fn scoped_context<'a>(
 #[test]
 fn tsscan_keeps_both_series_at_a_shared_timestamp() {
     use medulla_exec::exec::execute;
-    use medulla_types::wire::Plan;
+    use medulla_query_types::wire::Plan;
 
     let (path, store, core, semantic) = series_fixture("two_series", build_two_series);
     let view = core.analysis_snapshot();
@@ -718,7 +718,7 @@ fn tsscan_keeps_both_series_at_a_shared_timestamp() {
 #[test]
 fn tsscan_value_channels_are_exact_f64_through_uql_return() {
     use crate::uql::serve::run_statement;
-    use medulla_types::wire::UqlResult;
+    use medulla_query_types::wire::UqlResult;
     use medulla_uql::{parse_statement, Params};
 
     let (path, store, core, semantic) = series_fixture("f64_channel", build_two_series);
@@ -751,7 +751,7 @@ fn tsscan_value_channels_are_exact_f64_through_uql_return() {
 #[test]
 fn tsscan_window_reads_series_row_ids_and_exact_values() {
     use medulla_exec::exec::execute;
-    use medulla_types::wire::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
 
     let (path, store, core, semantic) = series_fixture("two_series_window", build_two_series);
     let view = core.analysis_snapshot();

@@ -13,7 +13,7 @@
 
 use std::time::Instant;
 
-use medulla_types::wire::{Op, UqlResult, UqlStageReport};
+use medulla_query_types::wire::{Op, UqlResult, UqlStageReport};
 
 use super::{micros_since, record_channel, returned_channels, rows_of, stage_text, ChannelTable};
 use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};

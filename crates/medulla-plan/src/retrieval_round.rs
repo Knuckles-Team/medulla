@@ -974,12 +974,12 @@ pub fn run_round_with_state(
 mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_result_types::retrieval_round::{BenchmarkResult, SufficiencyPart};
     use medulla_result_types::retrieval_verdict::{
         FallbackPolicy, RepairStep, Verdict, RETRIEVAL_ROUND_LIMIT_REQUIRED,
     };
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_types::wire::{Op, Plan};
 
     const KNOBS: RoundKnobs = RoundKnobs {
         min_evidence: 3,

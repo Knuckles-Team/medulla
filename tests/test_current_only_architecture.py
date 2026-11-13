@@ -173,7 +173,7 @@ def test_required_field_ban_is_not_fooled_by_a_commented_attribute(gate) -> None
 
 def test_live_protocol_rejects_a_new_serde_default(gate) -> None:
     protocol = gate.protocol_source()
-    wire = gate.tree("crates/medulla-types/src/wire.rs")
+    wire = gate.tree("crates/medulla-query-types/src/wire.rs")
     gate.check_protocol(protocol, wire)
     broken, count = re.subn(
         r"(?m)^(\s*CreateNodeIfAbsent\s*\{\s*)node_id:",
@@ -188,7 +188,7 @@ def test_live_protocol_rejects_a_new_serde_default(gate) -> None:
 
 def test_causal_mode_default_derive_is_rejected(gate) -> None:
     protocol = gate.protocol_source()
-    wire = gate.tree("crates/medulla-types/src/wire.rs")
+    wire = gate.tree("crates/medulla-query-types/src/wire.rs")
     broken = protocol.replace(
         "pub enum CausalQueryModeWire",
         "#[derive(Default)]\npub enum CausalQueryModeWire",
@@ -200,7 +200,7 @@ def test_causal_mode_default_derive_is_rejected(gate) -> None:
 
 def test_legacy_default_helper_is_rejected_but_not_in_a_comment(gate) -> None:
     protocol = gate.protocol_source()
-    wire = gate.tree("crates/medulla-types/src/wire.rs")
+    wire = gate.tree("crates/medulla-query-types/src/wire.rs")
     gate.check_protocol(protocol + "\n// fn default_temperature() {}\n", wire)
     with pytest.raises(SystemExit, match="default_temperature"):
         gate.check_protocol(protocol + "\nfn default_temperature() {}\n", wire)

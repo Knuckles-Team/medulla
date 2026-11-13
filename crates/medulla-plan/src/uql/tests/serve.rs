@@ -3,8 +3,8 @@
 
 use super::blob;
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::{UqlParam, UqlResult};
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::{UqlParam, UqlResult};
 use serde_json::json;
 
 use crate::uql::serve::run_statement;

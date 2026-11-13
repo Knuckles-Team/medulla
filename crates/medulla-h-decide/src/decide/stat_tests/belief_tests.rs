@@ -11,8 +11,8 @@ use super::*;
 
 const GRAPH: &str = "kg-belief-slices";
 
-fn tool_plan() -> medulla_types::wire::Plan {
-    medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
+fn tool_plan() -> medulla_query_types::wire::Plan {
+    medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
         label: "Tool".to_string(),
     }])
 }
@@ -24,7 +24,8 @@ async fn direct_ids(h: &Harness, ts: f64) -> Vec<String> {
         .await
         .unwrap();
     let mut plan = tool_plan();
-    plan.ops.push(medulla_types::wire::Op::BeliefAsOf { ts });
+    plan.ops
+        .push(medulla_query_types::wire::Op::BeliefAsOf { ts });
     let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let rows =
         medulla_exec::exec::execute(&plan, &medulla_exec::exec::PlanCtx::new(&view, &semantic))

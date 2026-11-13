@@ -23,14 +23,14 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::result_contract::messaging as results;
+use medulla_query_types::wire::CdcEvent;
+use medulla_query_types::wire::ContinuousAgg;
+use medulla_query_types::wire::ContinuousQuerySpec;
+use medulla_query_types::wire::WatchBatch;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::access::check_graph_access;
-use medulla_types::wire::CdcEvent;
-use medulla_types::wire::ContinuousAgg;
-use medulla_types::wire::ContinuousQuerySpec;
-use medulla_types::wire::WatchBatch;
 
 /// Pull the CDC hub, or an ERROR response if the engine booted without one (only if a
 /// future build path leaves it `None` — `streaming` builds always construct it).

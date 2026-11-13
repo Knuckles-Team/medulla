@@ -4,7 +4,7 @@
 //! is in the result ([`super::proof`]). `EXPLAIN` executes nothing, so it has no rows to
 //! annotate.
 
-use medulla_types::wire::{UqlFrameState, UqlKnowledge, UqlResult, UqlRow};
+use medulla_query_types::wire::{UqlFrameState, UqlKnowledge, UqlResult, UqlRow};
 
 use super::{binding_plan, proof};
 use medulla_exec::exec::PlanCtx;

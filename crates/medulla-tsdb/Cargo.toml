@@ -44,7 +44,7 @@ promql = ["derive"]
 # EH-522 / EH-524 — derived series: a wire `SeriesExpr` compiled into a tree of
 # `medulla_numeric::series` kernels, checkpointed (`derive` module). medulla-types' `timeseries`
 # gives the canonical expression printer the provenance digest hashes.
-derive = ["dep:medulla-types", "medulla-types/timeseries"]
+derive = ["dep:medulla-types", "dep:medulla-query-types", "medulla-types/timeseries", "medulla-query-types/timeseries"]
 # CONCEPT:MEDULLA-163 — distributed traces: the span model + indexed in-memory span store
 # + parent→children trace assembly + service-dependency graph (`traces` module). A
 # hand-rolled store over std collections — NO new deps (the Pi contract holds).
@@ -71,6 +71,7 @@ medulla-compute = { path = "../medulla-compute", features = ["finance"] }
 # Same pins as the engine so footprint/throughput findings transfer 1:1.
 redb = { workspace = true, optional = true }
 medulla-types = { path = "../medulla-types", optional = true }
+medulla-query-types = { path = "../medulla-query-types", optional = true }
 # The series kernels (EH-522): `derive`, the `series_*` helpers and PromQL's moments,
 # and the barrier / time-to-exhaustion law behind the PromQL functions (EH-527).
 # Always in the tree already (medulla-compute's `finance` links it); named directly here.
@@ -101,5 +102,6 @@ medulla-finance-market = { path = "../medulla-finance-market" }
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"

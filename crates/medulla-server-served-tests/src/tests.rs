@@ -802,7 +802,7 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     use medulla_exec::algebra::Op;
-    use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
+    use medulla_query_types::wire::{FuseClock, FuseInterp, FuseStream};
 
     const NS: i64 = 1_000_000_000;
     let state = test_state();
@@ -920,7 +920,7 @@ async fn dispatch_drives_tumbling_window_sensor_fusion() {
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     use medulla_exec::algebra::Op;
-    use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
+    use medulla_query_types::wire::{FuseClock, FuseInterp, FuseStream};
 
     const NS: i64 = 1_000_000_000;
     let state = test_state();
@@ -1337,7 +1337,7 @@ async fn spawn_federation_remote() -> (Arc<RwLock<ServerState>>, String) {
     (remote, remote_addr)
 }
 
-/// The `RemoteEngine` [`medulla_types::wire::ForeignSourceSpec`] pointed at
+/// The `RemoteEngine` [`medulla_query_types::wire::ForeignSourceSpec`] pointed at
 /// [`spawn_federation_remote`]'s engine. Its UQL
 /// (`MATCH (:Doc) WHERE year > 2024 |> TRAVERSE -[:CITES]->{1,2}`) returns
 /// `{d2, d3, d4}` over the shared fixture. ONE spec, used BOTH inline (as an
@@ -1345,8 +1345,8 @@ async fn spawn_federation_remote() -> (Arc<RwLock<ServerState>>, String) {
 /// `Method::RegisterForeignSource`, then referenced as a `Named` spec /
 /// `Op::Foreign`) — the two reach the SAME federation machinery.
 #[cfg(feature = "federation")]
-fn federation_remote_spec(endpoint: String) -> medulla_types::wire::ForeignSourceSpec {
-    medulla_types::wire::ForeignSourceSpec::RemoteEngine {
+fn federation_remote_spec(endpoint: String) -> medulla_query_types::wire::ForeignSourceSpec {
+    medulla_query_types::wire::ForeignSourceSpec::RemoteEngine {
         endpoint,
         graph: "__commons__".into(),
         secret: SECRET.into(),
@@ -1485,10 +1485,10 @@ async fn test_register_foreign_source_served() {
             None,
             Method::RegisterForeignSource {
                 name: "papers_api".into(),
-                source: medulla_types::wire::ForeignSourceSpec::HttpJson {
+                source: medulla_query_types::wire::ForeignSourceSpec::HttpJson {
                     url: "http://example.invalid/papers".into(),
                     json_path: "data".into(),
-                    field_map: medulla_types::wire::HttpFieldMap {
+                    field_map: medulla_query_types::wire::HttpFieldMap {
                         id: "id".into(),
                         score: None,
                         columns: Default::default(),
@@ -1574,7 +1574,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
             }],
         },
         Op::ForeignScan {
-            source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+            source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                 name: "remote_docs".into(),
             }),
             join: true,
@@ -1693,7 +1693,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
                         }],
                     },
                     Op::ForeignScan {
-                        source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+                        source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                             name: "typo_docs".into(),
                         }),
                         join: true,
@@ -5846,8 +5846,8 @@ fn doc_node(id: &str, label: &str) -> Method {
 /// the head), so asserting `!gap` here converts a wrongly-behaving fix into
 /// a loud test failure instead of a silently wrong `events` list.
 #[cfg(feature = "streaming")]
-fn cdc_events(resp: &Response) -> Vec<medulla_types::wire::CdcEvent> {
-    let result: medulla_types::wire::CdcReadResult = match &resp.result {
+fn cdc_events(resp: &Response) -> Vec<medulla_query_types::wire::CdcEvent> {
+    let result: medulla_query_types::wire::CdcReadResult = match &resp.result {
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(b).unwrap(),
         other => panic!("expected Raw(CdcReadResult), got {other:?}"),
     };
@@ -5905,7 +5905,7 @@ async fn test_cdc_ordered_read_from_cursor() {
     assert_eq!(events[0].label, "Doc");
     assert!(matches!(
         events[0].kind,
-        medulla_types::wire::CdcKind::AddNode
+        medulla_query_types::wire::CdcKind::AddNode
     ));
     assert_eq!(events[1].seq, 1);
     assert_eq!(events[1].node_id, "n2");
@@ -5961,7 +5961,7 @@ async fn test_cdc_ordered_read_from_cursor() {
     assert_eq!(tail.len(), 1);
     assert!(matches!(
         tail[0].kind,
-        medulla_types::wire::CdcKind::RemoveNode
+        medulla_query_types::wire::CdcKind::RemoveNode
     ));
     assert_eq!(tail[0].node_id, "n1");
 
@@ -6032,10 +6032,10 @@ async fn test_continuous_query_incremental_equals_full_rerun() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = test_state();
     // Register a Count CQ over label "Doc" BEFORE any writes.
-    let spec = medulla_types::wire::ContinuousQuerySpec {
+    let spec = medulla_query_types::wire::ContinuousQuerySpec {
         graph: "__commons__".into(),
         label: "Doc".into(),
-        agg: medulla_types::wire::ContinuousAgg::Count,
+        agg: medulla_query_types::wire::ContinuousAgg::Count,
     };
     assert_ok(
         &dispatch_on_heap(
@@ -6098,7 +6098,7 @@ async fn test_continuous_query_incremental_equals_full_rerun() {
         ),
     )
     .await;
-    let cq: medulla_types::wire::ContinuousQueryResult = match r.result {
+    let cq: medulla_query_types::wire::ContinuousQueryResult = match r.result {
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(&b).unwrap(),
         other => panic!("expected Raw(ContinuousQueryResult), got {other:?}"),
     };
@@ -6181,7 +6181,7 @@ async fn test_watch_and_trigger_delivery() {
         ),
     )
     .await;
-    let batch: medulla_types::wire::WatchBatch = match w.result {
+    let batch: medulla_query_types::wire::WatchBatch = match w.result {
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(&b).unwrap(),
         other => panic!("expected Raw(WatchBatch), got {other:?}"),
     };
@@ -6210,7 +6210,7 @@ async fn test_watch_and_trigger_delivery() {
     .await;
     // B-8 follow-up: `FiredTriggers` now returns a typed `FiredTriggersResult`
     // (`{fired, gap, watermark, head_seq, epoch}`), not a bare `Vec<FiredAction>`.
-    let fired_result: medulla_types::wire::FiredTriggersResult = match f.result {
+    let fired_result: medulla_query_types::wire::FiredTriggersResult = match f.result {
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(&b).unwrap(),
         other => panic!("expected Raw(FiredTriggersResult), got {other:?}"),
     };

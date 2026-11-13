@@ -26,6 +26,7 @@ arrow-schema = { version = "58.4", optional = true }
 arrow = { version = "58.4", optional = true }
 datafusion = { version = "54", default-features = false, optional = true, features = ["nested_expressions", "sql"] }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-ann = { path = "../medulla-ann", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
@@ -47,9 +48,10 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 [features]
 # MEDULLA-FEDERATED-QUERY-R721.1: `ModalityContract` for `TableSnapshotRow` (the SQL modality).
 contract = ["dep:medulla-modality"]
-query = ["medulla-types/query"]
+query = ["medulla-types/query", "medulla-query-types/query"]
 dev-scope-grant = ["sql"]
 sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:medulla-statechart", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-protocol-types/query"]
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

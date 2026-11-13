@@ -521,7 +521,7 @@ def check_retired_fallbacks(graph: str, owl: str, geometry: str, mysql: str) -> 
 
 def main() -> None:
     require_no_retired_graph_topology()
-    check_protocol(protocol_source(), tree("crates/medulla-types/src/wire.rs"))
+    check_protocol(protocol_source(), tree("crates/medulla-query-types/src/wire.rs"))
     check_query_contract(
         read("crates/medulla-tables/src/schema.rs"),
         tree("crates/medulla-sql/src/sql/mod.rs")

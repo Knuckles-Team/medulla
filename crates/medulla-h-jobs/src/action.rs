@@ -204,8 +204,8 @@ fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<(String, Value),
 /// subscriber, and this way exactly the readers of the run see its completion.
 #[cfg(feature = "streaming")]
 async fn emit_outbox(ctx: &HandleContext<'_>, run_id: &str) {
+    use medulla_query_types::wire::CdcKind;
     use medulla_server_cdc::cdc::CdcStateExt;
-    use medulla_types::wire::CdcKind;
     let state = ctx.state.read().await;
     let Some(hub) = state.cdc_hub() else { return };
     let committed = ctx.core.get_node_properties(run_id);

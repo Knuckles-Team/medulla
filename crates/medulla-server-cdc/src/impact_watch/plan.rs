@@ -14,10 +14,10 @@ use std::collections::BTreeSet;
 
 use medulla_exec::exec::propagate::{impact_cone, ImpactEdges};
 use medulla_graph_core::graph::GraphView;
+use medulla_query_types::wire::EdgeDir;
 use medulla_result_types::{
     compute_result::mining::ImpactOptions, compute_result::mining::RiskModel,
 };
-use medulla_types::wire::EdgeDir;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 

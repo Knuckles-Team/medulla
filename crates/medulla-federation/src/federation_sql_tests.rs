@@ -12,7 +12,7 @@
 
 use std::collections::HashSet;
 
-use medulla_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::ForeignSourceSpec;
 
 use crate::federation_opt::fuse_foreign;
 use medulla_exec::algebra::Op;
@@ -50,7 +50,7 @@ fn sql_foreign_join_with_local_equals_manual_join() {
     .unwrap();
     let local = apply(
         &Op::Filter {
-            preds: vec![medulla_types::wire::Pred::GtNum {
+            preds: vec![medulla_query_types::wire::Pred::GtNum {
                 prop: "year".into(),
                 n: 2023.0,
             }],

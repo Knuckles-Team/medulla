@@ -1,8 +1,8 @@
 //! `DERIVE` and the series-expression sub-grammar (EH-522): function calls over value
 //! channels and numbers, `func(args…, params…)`, resolved against the fixed function table
-//! `medulla_types::series_expr::SIGNATURES`. The printer is `medulla_types::wire::uql_series_expr`.
+//! `medulla_query_types::series_expr::SIGNATURES`. The printer is `medulla_query_types::wire::uql_series_expr`.
 
-use medulla_types::series_expr::{SeriesExpr, SeriesFunc};
+use medulla_query_types::series_expr::{SeriesExpr, SeriesFunc};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};
@@ -14,18 +14,18 @@ const SCORE_CHANNEL: &str = "score";
 impl Parser<'_> {
     gated! { "timeseries",
         /// `DERIVE sexpr AS name {, sexpr AS name}`.
-        fn derive(&mut self) -> Result<medulla_types::wire::Op, UqlError> {
+        fn derive(&mut self) -> Result<medulla_query_types::wire::Op, UqlError> {
             let mut columns = vec![self.derive_column()?];
             while self.eat(&Tok::Comma) {
                 columns.push(self.derive_column()?);
             }
-            Ok(medulla_types::wire::Op::Derive { columns })
+            Ok(medulla_query_types::wire::Op::Derive { columns })
         }
     }
 
     gated! { "timeseries",
         /// `SKILL name AGAINST name HORIZONS [int, …] WINDOW int [BOOTSTRAP int SEED int]`.
-        fn skill(&mut self) -> Result<medulla_types::wire::Op, UqlError> {
+        fn skill(&mut self) -> Result<medulla_query_types::wire::Op, UqlError> {
             let feature = self.skill_channel()?;
             self.expect_kw("AGAINST")?;
             let outcome = self.skill_channel()?;
@@ -43,9 +43,9 @@ impl Parser<'_> {
             }
             let (resamples, seed) = self.skill_bootstrap()?;
             self.derived
-                .extend(medulla_types::series_expr::SKILL_CHANNELS.iter().map(|c| c.to_string()));
-            Ok(medulla_types::wire::Op::Skill {
-                spec: medulla_types::series_expr::SkillOp { feature, outcome, horizons, window, resamples, seed },
+                .extend(medulla_query_types::series_expr::SKILL_CHANNELS.iter().map(|c| c.to_string()));
+            Ok(medulla_query_types::wire::Op::Skill {
+                spec: medulla_query_types::series_expr::SkillOp { feature, outcome, horizons, window, resamples, seed },
             })
         }
     }
@@ -75,18 +75,18 @@ impl Parser<'_> {
     gated! { "timeseries",
         /// `MOTIF OF c (LIKE [num, …] | LENGTH int) TOP int [SEED int]` (EH-529): query-
         /// by-example (MASS) with `LIKE`, or the matrix-profile motifs with `LENGTH`.
-        fn motif(&mut self) -> Result<medulla_types::wire::Op, UqlError> {
+        fn motif(&mut self) -> Result<medulla_query_types::wire::Op, UqlError> {
             self.expect_kw("OF")?;
             let channel = self.skill_channel()?;
             let span = self.cur_span();
             let search = if self.eat_kw("LIKE") {
                 let shape = self.bracket_list("the shape", |p| p.number("a shape value"))?;
                 self.check_motif_length(shape.len(), span)?;
-                medulla_types::series_expr::MotifSearch::Like { shape }
+                medulla_query_types::series_expr::MotifSearch::Like { shape }
             } else {
                 self.expect_kw("LENGTH")?;
                 let length = self.motif_length(span)?;
-                medulla_types::series_expr::MotifSearch::Pairs { length }
+                medulla_query_types::series_expr::MotifSearch::Pairs { length }
             };
             self.motif_op(channel, search)
         }
@@ -95,13 +95,13 @@ impl Parser<'_> {
     gated! { "timeseries",
         /// `DISCORD OF c LENGTH int TOP int [SEED int]` (EH-529): the matrix-profile
         /// discords — the subsequences farthest from their nearest neighbour.
-        fn discord(&mut self) -> Result<medulla_types::wire::Op, UqlError> {
+        fn discord(&mut self) -> Result<medulla_query_types::wire::Op, UqlError> {
             self.expect_kw("OF")?;
             let channel = self.skill_channel()?;
             let span = self.cur_span();
             self.expect_kw("LENGTH")?;
             let length = self.motif_length(span)?;
-            self.motif_op(channel, medulla_types::series_expr::MotifSearch::Discord { length })
+            self.motif_op(channel, medulla_query_types::series_expr::MotifSearch::Discord { length })
         }
     }
 
@@ -114,12 +114,12 @@ impl Parser<'_> {
         /// this build never sees a value for simply emits no event (never a parse-time
         /// refusal for a plan whose earlier stages this parser cannot see, e.g. inside
         /// a `LET` binding used before its own definition is walked).
-        fn events(&mut self) -> Result<medulla_types::wire::Op, UqlError> {
+        fn events(&mut self) -> Result<medulla_query_types::wire::Op, UqlError> {
             let mut channels = vec![self.name("a value channel")?];
             while self.eat(&Tok::Comma) {
                 channels.push(self.name("a value channel")?);
             }
-            Ok(medulla_types::wire::Op::Events { channels })
+            Ok(medulla_query_types::wire::Op::Events { channels })
         }
     }
 
@@ -128,8 +128,8 @@ impl Parser<'_> {
     fn motif_op(
         &mut self,
         channel: String,
-        search: medulla_types::series_expr::MotifSearch,
-    ) -> Result<medulla_types::wire::Op, UqlError> {
+        search: medulla_query_types::series_expr::MotifSearch,
+    ) -> Result<medulla_query_types::wire::Op, UqlError> {
         self.expect_kw("TOP")?;
         let span = self.cur_span();
         let top = self.parse_number::<u64>("TOP k")?;
@@ -146,12 +146,12 @@ impl Parser<'_> {
             0
         };
         self.derived.extend(
-            medulla_types::series_expr::MOTIF_CHANNELS
+            medulla_query_types::series_expr::MOTIF_CHANNELS
                 .iter()
                 .map(|c| c.to_string()),
         );
-        Ok(medulla_types::wire::Op::Motif {
-            spec: medulla_types::series_expr::MotifOp {
+        Ok(medulla_query_types::wire::Op::Motif {
+            spec: medulla_query_types::series_expr::MotifOp {
                 channel,
                 search,
                 top,
@@ -183,12 +183,14 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "timeseries")]
-    fn derive_column(&mut self) -> Result<medulla_types::series_expr::DeriveColumn, UqlError> {
+    fn derive_column(
+        &mut self,
+    ) -> Result<medulla_query_types::series_expr::DeriveColumn, UqlError> {
         let expr = self.series_expr()?;
         self.expect_kw("AS")?;
         let name = self.name("the derived channel's name")?;
         self.derived.insert(name.clone());
-        Ok(medulla_types::series_expr::DeriveColumn { expr, name })
+        Ok(medulla_query_types::series_expr::DeriveColumn { expr, name })
     }
 
     /// One series expression: a number, a channel, or `func(…)`. In a `DERIVE` stage a
@@ -269,7 +271,7 @@ impl Parser<'_> {
 }
 
 fn unknown_function(name: &str, span: (usize, usize)) -> UqlError {
-    let names = medulla_types::series_expr::SIGNATURES
+    let names = medulla_query_types::series_expr::SIGNATURES
         .iter()
         .map(|s| format!("`{}`", s.name))
         .collect();

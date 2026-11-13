@@ -15,7 +15,7 @@
 //! requests 10 000 rows; a response that fills it is refused as
 //! [`super::RESULT_INCOMPLETE`] rather than silently truncated.
 
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
+use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use super::budget::RESULT_INCOMPLETE;
 use super::capability::{

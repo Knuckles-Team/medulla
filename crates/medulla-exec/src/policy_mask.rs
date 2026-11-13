@@ -12,7 +12,7 @@
 
 use sha2::{Digest, Sha256};
 
-use medulla_types::wire::{CmpOp, Op, Plan, Pred, PredLiteral};
+use medulla_query_types::wire::{CmpOp, Op, Plan, Pred, PredLiteral};
 
 use serde::{Deserialize, Serialize};
 

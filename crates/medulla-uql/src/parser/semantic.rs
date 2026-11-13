@@ -4,8 +4,8 @@
 //! Each is recognized in every build; see [`super::gated`].
 
 #[cfg(feature = "federation")]
-use medulla_types::wire::ForeignSourceSpec;
-use medulla_types::wire::Op;
+use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::Op;
 
 use super::Parser;
 use crate::diag::UqlError;
@@ -155,7 +155,7 @@ impl<'a> Parser<'a> {
         Ok(ForeignSourceSpec::HttpJson {
             url,
             json_path,
-            field_map: medulla_types::wire::HttpFieldMap {
+            field_map: medulla_query_types::wire::HttpFieldMap {
                 id,
                 score,
                 columns: Default::default(),

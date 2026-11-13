@@ -1,5 +1,5 @@
 //! PromQL series functions (R117.1.1): `medulla_<func>(range-vector…, params…)` for every
-//! function in `medulla_types::series_expr::SIGNATURES`, named exactly as the SQL window
+//! function in `medulla_query_types::series_expr::SIGNATURES`, named exactly as the SQL window
 //! functions are (`medulla_lag`, `medulla_rmean`, `medulla_rcorr`, ...).
 //!
 //! The planner compiles each call to the shared `Kernel` series program
@@ -10,7 +10,7 @@
 //! two-series function pairs series whose labels agree (ignoring the metric name) and
 //! feeds the timestamps both carry.
 
-use medulla_types::series_expr::{SeriesExpr, Signature, SIGNATURES};
+use medulla_query_types::series_expr::{SeriesExpr, Signature, SIGNATURES};
 
 use super::{
     as_range, err, Evaluator, Expr, InstantSample, Labels, PromqlError, RangeSeries, Value,

@@ -3,18 +3,18 @@
 //! A read-side federation source ([`crate::federation::ForeignSource`]) pulls rows
 //! IN; a mirror target pushes a committed row OUT to a downstream destination fanned
 //! out from the local mutation outbox. The seam is the same shape: one trait,
-//! [`MirrorTarget`], built from one wire spec, [`medulla_types::wire::MirrorTargetSpec`].
+//! [`MirrorTarget`], built from one wire spec, [`medulla_query_types::wire::MirrorTargetSpec`].
 //!
 //! This is the typed-model slice (`MEDULLA-DURABLE-KERNEL-R024.2.1`): the `FanOut` spec
 //! (in `medulla-types`) plus a registration-refusal builder here, mirroring how
-//! `federation::source_for` refuses an [`medulla_types::wire::ForeignSourceSpec::Trino`]
+//! `federation::source_for` refuses an [`medulla_query_types::wire::ForeignSourceSpec::Trino`]
 //! /`SparkBatch`/unbuilt-`Cypher` spec through `Oq2Unbound` before its dedicated
 //! backend exists. The entry point that drives real writes through a bound driver
 //! is a later child (`R024.2.2`).
 
 use std::collections::HashMap;
 
-use medulla_types::wire::MirrorTargetSpec;
+use medulla_query_types::wire::MirrorTargetSpec;
 
 /// A destination a mirrored row can be pushed to.
 pub trait MirrorTarget {

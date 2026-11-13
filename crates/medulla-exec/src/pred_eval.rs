@@ -11,8 +11,8 @@
 
 use std::cmp::Ordering;
 
+use medulla_query_types::wire::{Pred, PredLiteral};
 use medulla_result_types::row_predicate::cmp_op_matches;
-use medulla_types::wire::{Pred, PredLiteral};
 use serde_json::{Map, Value};
 
 // Keep the spatial family exhaustive in one place. Both the relational classifier
@@ -152,7 +152,7 @@ fn kleene_or(items: impl Iterator<Item = Truth>) -> Truth {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::wire::CmpOp;
+    use medulla_query_types::wire::CmpOp;
     use serde_json::json;
 
     fn row(v: Value) -> Map<String, Value> {

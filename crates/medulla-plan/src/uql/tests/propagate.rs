@@ -4,8 +4,8 @@
 use super::blob;
 use medulla_graph_algos::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::UqlResult;
 use medulla_semantic_index::semantic::SemanticStore;
-use medulla_types::wire::UqlResult;
 use serde_json::json;
 
 use crate::uql::serve::run_statement;
