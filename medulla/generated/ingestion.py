@@ -801,6 +801,9 @@ decode_incident_set_status = contract_decoder(
 )
 send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
 decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
+send_measure_ingest_throughput = contract_sender(
+    "MeasureIngestThroughput", "MethodMeasureIngestThroughputParams"
+)
 send_meeting_summary_commit = contract_sender(
     "MeetingSummaryCommit", "MethodMeetingSummaryCommitParams"
 )

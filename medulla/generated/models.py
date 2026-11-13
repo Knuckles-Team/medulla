@@ -13072,6 +13072,22 @@ class MethodMarkWorkItemEffectStarted(BaseModel):
     params: MethodMarkWorkItemEffectStartedParams
 
 
+class MethodDescribeContractParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: int | None = Field(default=None, ge=0, le=65535)
+
+
+class MethodDescribeContract(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DescribeContract"]
+    params: MethodDescribeContractParams = Field(
+        default_factory=MethodDescribeContractParams
+    )
+
+
 class MethodMeasureIngestThroughput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13688,6 +13704,7 @@ Method = Annotated[
         MethodLiveArtifactPut,
         MethodLiveArtifactRefresh,
         MethodMarkWorkItemEffectStarted,
+        MethodDescribeContract,
         MethodMeasureIngestThroughput,
         MethodMeetingSummaryCommit,
         MethodMeetingSummaryContext,
@@ -30483,6 +30500,8 @@ __all__ = [
     "MethodDecayNodeParams",
     "MethodDecaySweep",
     "MethodDecaySweepParams",
+    "MethodDescribeContract",
+    "MethodDescribeContractParams",
     "MethodDecide",
     "MethodDecideParams",
     "MethodDecisionCommit",

@@ -590,3 +590,8 @@ send_get_delegation_record = contract_sender(
 decode_get_delegation_record = contract_decoder(
     "GetDelegationRecord", "DelegationState"
 )
+
+
+send_describe_contract = contract_sender(
+    "DescribeContract", "MethodDescribeContractParams"
+)
