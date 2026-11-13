@@ -337,6 +337,22 @@ pub struct GenerationCycleRequest {
     /// cycle that stops here resumes from its checkpoint on the next submit.
     #[serde(default)]
     pub max_batches: Option<u32>,
+    /// An index-side adapter the shadow generation materializes: each shadow
+    /// node takes the adapter applied to the active generation's STORED
+    /// vector, and no embedding endpoint is called. `None` re-embeds node
+    /// text with the model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index_adapter: Option<IndexAdapterRef>,
+}
+
+/// The fitted index-side adapter a generation cycle materializes, named by
+/// the adapter digest and the passing receipt that qualified it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexAdapterRef {
+    pub adapter_digest: String,
+    pub receipt_digest: String,
 }
 
 /// What one cycle recorded when it activated.

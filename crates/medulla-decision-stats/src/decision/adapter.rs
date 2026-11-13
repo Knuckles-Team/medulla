@@ -14,6 +14,7 @@
 use medulla_decision_types::{
     decision::statistical::retrieval_adapter::AdapterDirection,
     decision::statistical::retrieval_adapter::AdapterScope,
+    decision::statistical::retrieval_adapter::AdapterSide,
     decision::statistical::retrieval_adapter::QueryAdapterBody,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
     decision::statistical::retrieval_adapter::UNIT_SCALE_BITS,
@@ -323,6 +324,7 @@ pub fn to_body(
         n_training: training.1,
         revision: 1,
         parent_digest: None,
+        side: AdapterSide::Query,
     };
     body.check()?;
     Ok(body)

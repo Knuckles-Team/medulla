@@ -10,6 +10,7 @@
 //! a terminal cycle, or a shadow graph that is already the active generation,
 //! changes nothing. `GenerationCycleMachine` is the only writer of the state.
 
+use medulla_decision_stats::decision::adapter::AdapterKernel;
 use medulla_decision_types::decision::statistical::body::canonical_body_bytes;
 use medulla_decision_types::decision::statistical::body::content_digest_of;
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
@@ -51,12 +52,28 @@ impl Reembedder for ConfiguredEmbedder {
     }
 }
 
+/// The embedder of a cycle that materializes an index-side adapter: the
+/// adapter transforms stored vectors, so no embedding endpoint exists to call
+/// and any call is an error.
+pub(super) struct NoEndpoint;
+
+impl Reembedder for NoEndpoint {
+    fn embed(&self, _texts: &[String]) -> Result<Vec<Vec<f32>>, String> {
+        Err(invalid(
+            "an index-side adapter materializes from stored vectors; no embedding endpoint is called",
+        ))
+    }
+}
+
 /// Everything one submission of a cycle runs against.
 pub(super) struct CycleRun<'a> {
     pub(super) ctx: &'a ExecutionContext<'a>,
     pub(super) reader: &'a LogReader,
     pub(super) gens: &'a Generations<'a>,
     pub(super) embedder: &'a dyn Reembedder,
+    /// The index-side adapter the batches apply to the active generation's
+    /// stored vectors instead of embedding node text.
+    pub(super) index: Option<&'a AdapterKernel>,
     pub(super) tenant: &'a str,
     /// The background capacity lease requested before the first batch.
     pub(super) lease_id: Option<&'a str>,
@@ -120,6 +137,17 @@ fn check_request(run: &CycleRun, request: &GenerationCycleRequest) -> Result<(),
         return Err(refusal(
             StatisticalErrorCode::GenerationDimensionMismatch,
             "the model dimension is not the dimension of the shadow generation",
+        ));
+    }
+    if request.index_adapter.is_some() != run.index.is_some() {
+        return Err(invalid(
+            "a cycle that names an index-side adapter runs with exactly that adapter",
+        ));
+    }
+    if run.index.is_some() && run.gens.active.dimensions() != run.gens.shadow.dimensions() {
+        return Err(refusal(
+            StatisticalErrorCode::GenerationDimensionMismatch,
+            "an index-side adapter keeps the vector width of the active generation",
         ));
     }
     Ok(())
@@ -191,6 +219,9 @@ fn reembed_batch(
     let start = record.job.next_node as usize;
     let end = (start + run.batch_nodes).min(ids.len());
     let batch = &ids[start..end];
+    if let Some(kernel) = run.index {
+        return materialize_batch(run, kernel, record, (start, end), ids);
+    }
     let texts: Vec<String> = batch
         .iter()
         .map(|id| run.gens.shadow.node_text(id))
@@ -210,6 +241,35 @@ fn reembed_batch(
     }
     record.job.next_node = end as u64;
     record.job.reembedded_nodes += batch.len() as u64;
+    record.job.batches += 1;
+    record.save(run)
+}
+
+/// Materialize the next batch of shadow nodes from the active generation's
+/// stored vectors: each takes the index-side adapter applied to the vector the
+/// active generation holds for that node. A node the active generation does
+/// not embed (or the caller cannot see) is left unembedded; no embedding
+/// endpoint is called.
+fn materialize_batch(
+    run: &CycleRun,
+    kernel: &AdapterKernel,
+    record: &mut Record,
+    (start, end): (usize, usize),
+    ids: &[String],
+) -> Result<(), String> {
+    let mut stored = 0_u64;
+    for id in &ids[start..end] {
+        let Some(vector) = run.gens.active.stored_vector(id) else {
+            continue;
+        };
+        let adapted = kernel.apply(&vector).ok_or_else(|| {
+            invalid("a stored vector does not have the width of the index-side adapter")
+        })?;
+        run.gens.shadow.store_embedding(id, adapted)?;
+        stored += 1;
+    }
+    record.job.next_node = end as u64;
+    record.job.reembedded_nodes += stored;
     record.job.batches += 1;
     record.save(run)
 }

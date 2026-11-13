@@ -68,6 +68,15 @@ impl GraphVectors {
         Some(vector.into_iter().map(f64::from).collect())
     }
 
+    /// A visible unit's stored vector at its stored width; `None` when
+    /// invisible or unembedded.
+    pub(super) fn stored_vector(&self, id: &str) -> Option<Vec<f32>> {
+        if !self.visible(id) {
+            return None;
+        }
+        self.core.semantic_store.read().get_embedding(id)
+    }
+
     /// The visible stored vectors of `ids`, in order, skipping the rest.
     pub(super) fn vectors(&self, ids: impl Iterator<Item = String>) -> Vec<Vec<f64>> {
         ids.filter_map(|id| self.vector(&id)).collect()

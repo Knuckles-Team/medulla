@@ -8,12 +8,14 @@
 //! derive from their own verified carrier) and the ACL-checked graphs a fit or
 //! a generation evaluation probes.
 
+use medulla_decision_stats::decision::adapter::AdapterKernel;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval_adapter::{
     AdapterFitRequest, AdapterMonitorRequest, AdapterScope,
 };
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
+use medulla_decision_types::decision::statistical::retrieval_generation::IndexAdapterRef;
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
     decision::statistical::retrieval::LearningWrite,
@@ -22,13 +24,16 @@ use medulla_decision_types::{
 };
 
 use super::stat_adapter::{
-    adapter_pointer, ensure_room, fit_adapter, monitor, qualified, scoped_adapter_pointer,
+    adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
+    scoped_adapter_pointer,
 };
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, Generations,
 };
-use super::stat_generation_cycle::{job_id, run_cycle, ConfiguredEmbedder, CycleRun, Reembedder};
+use super::stat_generation_cycle::{
+    job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
+};
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
@@ -59,6 +64,8 @@ pub(super) struct LearningInputs {
 struct CycleSupport {
     lease_id: String,
     embedder: Box<dyn Reembedder>,
+    /// The index-side adapter a cycle materializes, qualified at prepare.
+    index: Option<AdapterKernel>,
 }
 
 /// Seconds a cycle's capacity lease lives without a renewing submission.
@@ -120,6 +127,7 @@ impl Serving<'_> {
             reader: self.reader,
             gens: &gens,
             embedder: support.embedder.as_ref(),
+            index: support.index.as_ref(),
             tenant: self.tenant(),
             lease_id: Some(&support.lease_id),
             batch_nodes: medulla_server_api::knob_config::knobs().generation_batch_nodes as usize,
@@ -240,7 +248,13 @@ async fn acquire_cycle_lease(
         priority: LeasePriority::BackgroundIngestion,
         demands: vec![CapacityDemand {
             cell_id: request.capacity_cell.clone(),
-            resource_class: CapacityResourceClass::LlmEmbedding,
+            // An index-side adapter materializes from stored vectors: CPU
+            // work, never an embedding endpoint's slots.
+            resource_class: if request.index_adapter.is_some() {
+                CapacityResourceClass::Cpu
+            } else {
+                CapacityResourceClass::LlmEmbedding
+            },
             amount: 1,
         }],
         lease_id: Some(lease_id.clone()),
@@ -257,6 +271,41 @@ async fn acquire_cycle_lease(
         .await
         .map_err(|error| format!("CAPACITY_UNAVAILABLE: {error}"))?;
     Ok(lease_id)
+}
+
+/// The kernel of the index-side adapter a cycle names, once the adapter is
+/// qualified for the active generation's graph and space.
+async fn index_kernel(
+    state: &SharedState,
+    tenant: &str,
+    graphs: &[GraphVectors],
+    request: &GenerationCycleRequest,
+    reference: &IndexAdapterRef,
+) -> Result<AdapterKernel, String> {
+    let eval = &request.evaluation;
+    let active = graphs.first().ok_or("a cycle resolved no active graph")?;
+    if !active.admits_space(&eval.active_space) {
+        return Err(invalid(
+            "the active generation's store declares another embedding space",
+        ));
+    }
+    let open = state.read().await.agent_library();
+    let store = match open {
+        Some(store) => store,
+        None => state.write().await.ensure_agent_library()?,
+    };
+    let (tenant, graph, space, reference) = (
+        tenant.to_string(),
+        eval.active_graph.clone(),
+        eval.active_space.clone(),
+        reference.clone(),
+    );
+    let fitted = tokio::task::spawn_blocking(move || {
+        qualified_index(&store, &tenant, &graph, &reference, &space)
+    })
+    .await
+    .map_err(|error| error.to_string())??;
+    AdapterKernel::of(&fitted.body)
 }
 
 /// Resolve the inputs of a learning write; `None` for every other log op.
@@ -276,12 +325,26 @@ pub(super) async fn prepare(
         graphs.push(graph_vectors(state, verified.agent_id(), graph).await?);
     }
     let cycle = match write {
-        LearningWrite::RunGenerationCycle { request } => Some(CycleSupport {
-            lease_id: acquire_cycle_lease(state, verified, &served_tenant, request).await?,
-            embedder: Box::new(ConfiguredEmbedder(
-                medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env(),
-            )),
-        }),
+        LearningWrite::RunGenerationCycle { request } => {
+            let index = match &request.index_adapter {
+                Some(reference) => {
+                    Some(index_kernel(state, &served_tenant, &graphs, request, reference).await?)
+                }
+                None => None,
+            };
+            let embedder: Box<dyn Reembedder> = if index.is_some() {
+                Box::new(NoEndpoint)
+            } else {
+                Box::new(ConfiguredEmbedder(
+                    medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env(),
+                ))
+            };
+            Some(CycleSupport {
+                lease_id: acquire_cycle_lease(state, verified, &served_tenant, request).await?,
+                embedder,
+                index,
+            })
+        }
         _ => None,
     };
     Ok(Some(LearningInputs {

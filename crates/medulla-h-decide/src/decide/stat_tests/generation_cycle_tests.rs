@@ -34,7 +34,7 @@ use super::super::stat_vectors::graph_vectors;
 
 const ACTIVE: &str = "kg-cycle";
 const SHADOW: &str = "kg-cycle-2";
-const CELL: &str = "cell-embed";
+pub(super) const CELL: &str = "cell-embed";
 /// Judged runs, and the shadow nodes they cite or reject.
 const JUDGED: usize = 6;
 /// Shadow nodes: the judged ones plus fillers; two default batches of 256.
@@ -122,6 +122,7 @@ fn request(items: Vec<GenerationEvalItem>, max_batches: Option<u32>) -> Generati
         },
         capacity_cell: CELL.to_string(),
         max_batches,
+        index_adapter: None,
     }
 }
 
@@ -141,6 +142,15 @@ async fn cycle(
 /// A durable capacity ledger with one embedding cell, installed in the served
 /// state. The returned backend is the ledger the lease is read from.
 async fn with_ledger(h: &Harness, dir: &std::path::Path) -> std::sync::Arc<RedbBackend> {
+    with_ledger_class(h, dir, CapacityResourceClass::LlmEmbedding).await
+}
+
+/// A durable capacity ledger whose one cell is of `class`.
+pub(super) async fn with_ledger_class(
+    h: &Harness,
+    dir: &std::path::Path,
+    class: CapacityResourceClass,
+) -> std::sync::Arc<RedbBackend> {
     let backend = std::sync::Arc::new(
         RedbBackend::open_with_shards(dir.to_str().unwrap().to_string(), 16, 1).unwrap(),
     );
@@ -153,7 +163,7 @@ async fn with_ledger(h: &Harness, dir: &std::path::Path) -> std::sync::Arc<RedbB
                     cell: CapacityCell {
                         cell_id: CELL.into(),
                         parent_id: None,
-                        resource_class: CapacityResourceClass::LlmEmbedding,
+                        resource_class: class,
                         capacity: 8,
                         reserved_floor: 0,
                         epoch: 1,
@@ -252,6 +262,7 @@ async fn resume_activates_once() {
         reader: &reader,
         gens: &gens,
         embedder: &embedder,
+        index: None,
         tenant: TENANT,
         lease_id: None,
         batch_nodes: 100,
@@ -473,6 +484,7 @@ async fn refusal_codes() {
         reader: &reader,
         gens: &gens,
         embedder: &embedder,
+        index: None,
         tenant: TENANT,
         lease_id: None,
         batch_nodes: 512,

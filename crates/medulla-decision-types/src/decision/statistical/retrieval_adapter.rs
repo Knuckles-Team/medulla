@@ -64,11 +64,12 @@ impl AdapterScope {
 }
 
 /// Which side of retrieval an adapter transforms.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum AdapterSide {
     /// The query vector, at read.
+    #[default]
     Query,
     /// The stored vectors, at read, with no embedding endpoint call.
     Index,
@@ -101,6 +102,19 @@ pub struct QueryAdapterBody {
     pub revision: u32,
     /// Digest of the adapter this one was refitted from.
     pub parent_digest: Option<String>,
+    /// The side the body transforms. Part of the body, so a query-side and an
+    /// index-side adapter of the same directions are two adapters with two
+    /// digests and neither overwrites the other's stored receipt.
+    #[serde(default, skip_serializing_if = "AdapterSide::is_query")]
+    pub side: AdapterSide,
+}
+
+impl AdapterSide {
+    /// Whether this is the query side (the default, left out of a body).
+    #[must_use]
+    pub fn is_query(&self) -> bool {
+        matches!(self, Self::Query)
+    }
 }
 
 fn dot_q60(left: &[i32], right: &[i32]) -> i128 {
@@ -311,6 +325,7 @@ mod tests {
             n_training: 1,
             revision: 1,
             parent_digest: None,
+            side: AdapterSide::Query,
         }
     }
 

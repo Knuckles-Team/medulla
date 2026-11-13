@@ -39,6 +39,7 @@ use medulla_decision_types::{
         AdapterMonitorRequest, AdapterMonitored, AdapterScope, AdapterSide, MonitorState,
         OutcomeSource, SourceCount,
     },
+    decision::statistical::retrieval_generation::IndexAdapterRef,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use std::collections::{BTreeMap, BTreeSet};
@@ -69,12 +70,6 @@ fn check_fit_request(request: &AdapterFitRequest) -> Result<(), String> {
     }
     if request.sources.is_empty() {
         return Err(invalid("an adapter fit names at least one outcome source"));
-    }
-    if request.side == AdapterSide::Index {
-        return Err(invalid(
-            "an index-side adapter is materialized by the generation cycle \
-             (MEDULLA-DECISION-ENGINE-R174.7.3.2), not fitted here",
-        ));
     }
     if request.sources.contains(&OutcomeSource::CapabilityOutcome) {
         return Err(invalid(
@@ -376,6 +371,7 @@ pub(super) fn fit_adapter(
     let mut body = to_body(&directions, &request.space_digest, dim, training)?;
     body.revision = revision;
     body.parent_digest = parent_digest.clone();
+    body.side = request.side;
     let adapter_digest = content_digest_of(&canonical_body_bytes(&body)?);
     let provenance = Provenance {
         sources,
@@ -443,6 +439,12 @@ pub(super) fn qualified(
             "the adapter's receipt is not the named one, or did not pass",
         ));
     }
+    if fitted.receipt.side == AdapterSide::Index {
+        return Err(invalid(
+            "an index-side adapter is materialized through a generation cycle, \
+             not activated on an adapter pointer",
+        ));
+    }
     if fitted.receipt.graph != graph {
         return Err(invalid("the adapter was fitted on another graph"));
     }
@@ -453,6 +455,36 @@ pub(super) fn qualified(
         target: fitted.adapter_digest,
         receipt_digest: fitted.receipt_digest,
     })
+}
+
+/// The index-side adapter a generation cycle materializes over `graph`: the
+/// named receipt passed, qualified exactly this body, and the adapter was
+/// fitted on `graph` for the index side in the active generation's space.
+pub(super) fn qualified_index(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    graph: &str,
+    index: &IndexAdapterRef,
+    active_space: &str,
+) -> Result<AdapterFitted, String> {
+    let fitted = read_fitted(store, tenant, &index.adapter_digest)?
+        .ok_or_else(|| invalid("no fitted adapter with that digest"))?;
+    if fitted.receipt_digest != index.receipt_digest || !fitted.receipt.passed {
+        return Err(refusal(
+            StatisticalErrorCode::EvaluationReceiptMismatch,
+            "the adapter's receipt is not the named one, or did not pass",
+        ));
+    }
+    if fitted.receipt.side != AdapterSide::Index {
+        return Err(invalid("only an index-side adapter is materialized"));
+    }
+    if fitted.receipt.graph != graph || fitted.body.space_digest != active_space {
+        return Err(refusal(
+            StatisticalErrorCode::AdapterSpaceMismatch,
+            "the adapter was fitted on another graph or another embedding space",
+        ));
+    }
+    Ok(fitted)
 }
 
 /// Most adapter pointers one tenant's activation check reads.
