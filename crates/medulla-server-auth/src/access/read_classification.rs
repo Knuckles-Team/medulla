@@ -428,6 +428,44 @@ pub(super) const REASON_FOREIGN_SOURCE_OWNER_SCOPED: &str =
 pub(super) const REASON_FOREIGN_READ_SESSION_OWNER_SCOPED: &str =
     "ForeignRead{Open,Chunk,Complete,Abort} resolve an approved source and a read session from the caller's own owner-scoped (verified tenant+principal) catalog behind kg:read and return rows fetched from that external source -- never a GraphView/core.analysis_snapshot() row read";
 
+// MEDULLA-TYPED-PACKS-R804.3: a read operation carried by a gateway-routed
+// (mutating) method. `GraphSchema` as a whole needs graph write authority, but
+// `DiffOntology` reads the staged graph and returns the diff and impact; it
+// installs no schema source, writes no node and records no edit.
+pub(super) const REASON_ONTOLOGY_DIFF_READ_OP: &str =
+    "GraphSchema.DiffOntology reads the active revision of one connector-owned ontology and the staged graph's data, shapes, mappings and stored queries to report what a candidate would break -- it installs nothing and writes nothing, and the caller's tenant is verified before any read";
+
+/// Operations of mutating methods that only read: `(method, op token, reason)`.
+/// The op token is the operation's audit token, so the entry cannot drift from
+/// the operation it names.
+pub(super) const READ_ONLY_OPS: &[(&str, &str, &str)] =
+    &[("GraphSchema", "diff_ontology", REASON_ONTOLOGY_DIFF_READ_OP)];
+
+#[cfg(test)]
+mod read_only_ops_tests {
+    use super::READ_ONLY_OPS;
+    use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
+    use medulla_types::contract::ResourceId;
+
+    // spec: MEDULLA-TYPED-PACKS-R804.3
+    #[test]
+    fn diff_ontology_is_a_classified_read_op_of_graph_schema() {
+        let op = GraphSchemaOp::DiffOntology {
+            connector: ResourceId::new("weather").unwrap(),
+            ontology_iri: "http://example.org/onto".to_string(),
+            from_revision: 1,
+            to: DiffTarget::Revision(1),
+        };
+        assert!(READ_ONLY_OPS
+            .iter()
+            .any(|(method, token, _)| *method == "GraphSchema" && *token == op.action_token()));
+        // No other graph-schema operation is a read.
+        for (method, token, _) in READ_ONLY_OPS {
+            assert_eq!((*method, *token), ("GraphSchema", "diff_ontology"));
+        }
+    }
+}
+
 pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_FOREIGN_READ_SESSION_OWNER_SCOPED
     ("ForeignReadAbort", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),

@@ -480,6 +480,10 @@ pub struct GraphSchemaCommitted {
     /// (MEDULLA-TYPED-PACKS-R651.5); absent when the graph has no edits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edit_head: Option<Digest256>,
+    /// The diff and impact a `DiffOntology` request computed
+    /// (MEDULLA-TYPED-PACKS-R804.3); absent for every other operation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ontology_diff: Option<medulla_types::ontology_diff::OntologyDiffReport>,
 }
 
 /// What a runtime ontology import or withdrawal returns once R103.2 wires the

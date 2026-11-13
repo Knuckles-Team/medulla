@@ -20,23 +20,23 @@ const OWL_DEPRECATED: &str = "http://www.w3.org/2002/07/owl#deprecated";
 
 /// One side of a diff: a revision label and its documents.
 #[derive(Debug, Clone)]
-pub(crate) struct SchemaSide {
-    pub(crate) revision: String,
-    pub(crate) ontology_ttl: String,
-    pub(crate) shapes_ttl: Option<String>,
+pub struct SchemaSide {
+    pub revision: String,
+    pub ontology_ttl: String,
+    pub shapes_ttl: Option<String>,
 }
 
 /// The off-lock graph snapshot an impact run reads.
-pub(crate) struct ImpactSnapshot {
+pub struct ImpactSnapshot {
     /// The graph's data triples.
-    pub(crate) data: Graph,
+    pub data: Graph,
     /// `(mapping id, R2RML Turtle)` of every mapping in the graph.
-    pub(crate) mappings: Vec<(String, String)>,
+    pub mappings: Vec<(String, String)>,
     /// `(stored query name, query text)` of every stored query.
-    pub(crate) queries: Vec<(String, String)>,
+    pub queries: Vec<(String, String)>,
     /// The schema-source set in force, and the key the candidate replaces.
     /// When present the candidate is composed in memory and must validate.
-    pub(crate) compose: Option<(GraphSchemaSources, String)>,
+    pub compose: Option<(GraphSchemaSources, String)>,
 }
 
 fn parse(label: &str, document: &str) -> Result<Vec<Triple>, String> {
@@ -82,7 +82,7 @@ fn deprecated_iris(triples: &[Triple]) -> BTreeSet<String> {
 }
 
 /// The canonical axiom changes from `from` to `to`.
-pub(crate) fn diff_axioms(from: &SchemaSide, to: &SchemaSide) -> Result<OntologyDiff, String> {
+pub fn diff_axioms(from: &SchemaSide, to: &SchemaSide) -> Result<OntologyDiff, String> {
     let from_triples = parse("from ontology", &from.ontology_ttl)?;
     let to_triples = parse("to ontology", &to.ontology_ttl)?;
     let (before, after) = (axioms(&from_triples), axioms(&to_triples));
@@ -246,7 +246,7 @@ fn compose_candidate(
 
 /// The counts and ids of data and consumers the move from `from` to `to`
 /// breaks. Reads only `snapshot`.
-pub(crate) fn impact(
+pub fn impact(
     from: &SchemaSide,
     to: &SchemaSide,
     snapshot: &ImpactSnapshot,
@@ -274,17 +274,84 @@ pub(crate) fn impact(
         .filter(|(_, text)| query_iris(text).iter().any(|iri| removed.contains(*iri)))
         .map(|(name, _)| name.clone())
         .collect();
-    let items = ImpactItems {
-        instances,
-        shapes,
-        mappings,
-        queries: queries.into_iter().collect(),
-    };
     let counts = ChangeImpact {
-        instances_invalid: items.instances.len() as u64,
-        shapes_broken: items.shapes.len() as u64,
-        mappings_broken: items.mappings.len() as u64,
-        queries_broken: items.queries.len() as u64,
+        instances_invalid: instances.len() as u64,
+        shapes_broken: shapes.len() as u64,
+        mappings_broken: mappings.len() as u64,
+        queries_broken: queries.len() as u64,
+    };
+    // MEDULLA-TYPED-PACKS-R804.5: the counts above are exact; only the listed
+    // ids are cut, after sorting, to `ontology_diff.max_listed` each.
+    let listed = usize::try_from(medulla_server_api::knob_config::knobs().ontology_diff_max_listed)
+        .unwrap_or(usize::MAX);
+    let cut = |mut ids: Vec<String>| {
+        ids.truncate(listed);
+        ids
+    };
+    let items = ImpactItems {
+        instances: cut(instances),
+        shapes: cut(shapes),
+        mappings: cut(mappings),
+        queries: cut(queries.into_iter().collect()),
     };
     Ok((counts, items))
+}
+
+const R2RML_NS: &str = "http://www.w3.org/ns/r2rml#";
+const STORED_QUERY_LABEL: &str = "StoredQuery";
+
+/// The off-lock snapshot of `core` an impact run reads: the data triples, the
+/// R2RML mapping documents carried by the other attached schema sources, the
+/// newest version of every stored query. `key` is the source being replaced;
+/// its own documents are never read as mappings. The caller sets `compose`.
+pub fn snapshot_from_core(
+    core: &medulla_graph_core::graph::GraphCore,
+    key: &str,
+) -> Result<ImpactSnapshot, String> {
+    let mut data = Graph::new();
+    // Only RDF resources project; engine bookkeeping nodes (edits, change
+    // requests, stored queries) carry no RDF identity and contribute nothing.
+    for triple in medulla_rdf::mapping::export_view_triples(&core.analysis_snapshot())? {
+        data.insert(&triple);
+    }
+    let sources = core.schema_sources();
+    let mut mappings = Vec::new();
+    for (id, source) in &sources.dynamic {
+        if id == key {
+            continue;
+        }
+        for document in [&source.ontology_ttl, &source.shapes_ttl]
+            .into_iter()
+            .flatten()
+        {
+            if document.contains(R2RML_NS) {
+                mappings.push((id.clone(), document.to_string()));
+            }
+        }
+    }
+    let mut newest: BTreeMap<String, (u64, String)> = BTreeMap::new();
+    for (_, bytes) in core.get_nodes_by_label(STORED_QUERY_LABEL, 0) {
+        let Ok(value) = rmp_serde::from_slice::<serde_json::Value>(&bytes) else {
+            continue;
+        };
+        let query = &value["query"];
+        let (Some(name), Some(text)) = (query["name"].as_str(), query["text"].as_str()) else {
+            continue;
+        };
+        let version = query["version"].as_u64().unwrap_or(0);
+        let entry = newest.entry(name.to_string()).or_insert((0, String::new()));
+        if version >= entry.0 {
+            *entry = (version, text.to_string());
+        }
+    }
+    let queries = newest
+        .into_iter()
+        .map(|(name, (_, text))| (name, text))
+        .collect();
+    Ok(ImpactSnapshot {
+        data,
+        mappings,
+        queries,
+        compose: None,
+    })
 }

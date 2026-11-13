@@ -26,7 +26,7 @@ fn refusal(error: EditRefusal) -> String {
     error.to_string()
 }
 
-fn put(core: &GraphCore, node_id: String, label: &str, mut value: Value) -> Result<(), String> {
+pub(super) fn put(core: &GraphCore, node_id: String, label: &str, mut value: Value) -> Result<(), String> {
     value["label"] = json!(label);
     let bytes = rmp_serde::to_vec_named(&value)
         .map_err(|error| format!("ontology edit node encode failed: {error}"))?;

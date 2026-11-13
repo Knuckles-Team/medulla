@@ -125,3 +125,11 @@ medulla-server = { path = "../medulla-server", features = ["blob", "compute-dist
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"
+criterion = { version = "0.8", default-features = false }
+
+# Nightly ontology diff budget (MEDULLA-TYPED-PACKS-R804.6); never gates a pull request.
+[[bench]]
+name = "ontology_diff"
+path = "benches/ontology_diff.rs"
+harness = false
+required-features = ["shacl"]

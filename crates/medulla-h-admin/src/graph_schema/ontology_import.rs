@@ -108,6 +108,7 @@ fn committed(
         graph_version: core.version().saturating_add(u64::from(changed)),
         changed,
         edit_head: edits::head(core),
+        ontology_diff: None,
     }
 }
 
@@ -134,6 +135,44 @@ fn next_history(
     let excess = history.len().saturating_sub(MAX_ONTOLOGY_REVISION_HISTORY);
     history.drain(..excess);
     history
+}
+
+/// R804.3: the impact the next revision has on held data and consumers,
+/// measured before it commits.
+fn assess_impact(
+    core: &GraphCore,
+    source_id: &str,
+    revision: u64,
+    ontology_ttl: &str,
+    shapes_ttl: Option<&str>,
+) -> Result<Option<medulla_types::ontology_diff::ChangeImpact>, String> {
+    super::ontology_diff_serve::assess_import(core, source_id, revision, ontology_ttl, shapes_ttl)
+        .map(|assessed| assessed.map(|(counts, _)| counts))
+}
+
+/// R804.3: any non-zero impact opens one `ontology.breaking_change` request.
+fn open_breaking_change(
+    core: &GraphCore,
+    authority: &OntologyAuthority,
+    source_id: &str,
+    revision: u64,
+    digest: &Digest256,
+    impact: Option<&medulla_types::ontology_diff::ChangeImpact>,
+) -> Result<(), String> {
+    match impact {
+        Some(counts) if super::ontology_diff_serve::is_breaking(counts) => {
+            super::ontology_diff_serve::open_breaking_change(
+                core,
+                &authority.tenant,
+                &authority.importer,
+                source_id,
+                revision,
+                digest,
+                counts,
+            )
+        }
+        _ => Ok(()),
+    }
 }
 
 /// Import or revise one runtime ontology (R103.2, refusals R103.4).
@@ -209,6 +248,13 @@ pub(crate) fn import_ontology(
         }
     }
     let revision = prior_revision + 1;
+    let change_impact = assess_impact(
+        core,
+        &source_id,
+        revision,
+        ontology_ttl,
+        shapes_ttl.as_deref(),
+    )?;
     let history = next_history(
         prior,
         OntologyRevisionEntry {
@@ -216,7 +262,7 @@ pub(crate) fn import_ontology(
             revision,
             importer: authority.importer.clone(),
             at: authority.at_ms,
-            change_impact: None,
+            change_impact: change_impact.clone(),
         },
     );
     let source = GraphSchemaSource::new(
@@ -242,6 +288,14 @@ pub(crate) fn import_ontology(
     core.install_schema_sources(Arc::new(staged));
     edits::record_change(core, ontology_iri, &source_id, before, None)?;
     edits::store_findings(core, &findings)?;
+    open_breaking_change(
+        core,
+        authority,
+        &source_id,
+        revision,
+        &digest,
+        change_impact.as_ref(),
+    )?;
     Ok(committed(core, graph_name, composed, true))
 }
 

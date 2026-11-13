@@ -28,6 +28,15 @@ fn import_op(body: &str, expected_prior_revision: Option<u64>) -> GraphSchemaOp 
     }
 }
 
+fn no_impact() -> medulla_types::ontology_diff::ChangeImpact {
+    medulla_types::ontology_diff::ChangeImpact {
+        instances_invalid: 0,
+        shapes_broken: 0,
+        mappings_broken: 0,
+        queries_broken: 0,
+    }
+}
+
 fn withdraw_op(expected_revision: u64) -> GraphSchemaOp {
     GraphSchemaOp::WithdrawOntology {
         connector: ResourceId::new("weather").unwrap(),
@@ -87,14 +96,14 @@ fn import_is_idempotent_by_digest_and_revises() {
                 revision: 1,
                 importer: "alice".to_string(),
                 at: 10,
-                change_impact: None,
+                change_impact: Some(no_impact()),
             },
             OntologyRevisionEntry {
                 digest: Digest256::sha256(EX_B.as_bytes()),
                 revision: 2,
                 importer: "alice".to_string(),
                 at: 20,
-                change_impact: None,
+                change_impact: Some(no_impact()),
             },
         ]
     );

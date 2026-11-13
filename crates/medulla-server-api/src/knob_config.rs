@@ -283,6 +283,8 @@ knobs! {
     topology_max_candidates: u64 = "topology.max_candidates", U64(1_000), [1, 100_000], "sets", Tunable;
     /// Schema-repair shadow ingest sample.
     schema_repair_shadow_sample_nodes: u64 = "schema_repair.shadow_sample_nodes", U64(10_000), [100, 1_000_000], "nodes", Tunable;
+    /// Most ids an ontology diff lists per impact category (MEDULLA-TYPED-PACKS-R804.5); counts stay exact.
+    ontology_diff_max_listed: u64 = "ontology_diff.max_listed", U64(100), [10, 1_000], "ids", Tunable;
     /// Reputation minimum independent labels.
     reputation_min_support: u64 = "reputation.min_support", U64(10), [5, 1_000], "labels", Tunable;
     /// Lifetime of a signed memory snapshot list cursor (MEDULLA-DURABLE-KERNEL-R085.2).

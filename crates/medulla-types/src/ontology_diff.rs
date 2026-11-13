@@ -37,3 +37,16 @@ pub struct ImpactItems {
     pub mappings: Vec<String>,
     pub queries: Vec<String>,
 }
+
+/// What `GraphSchema.DiffOntology` returns: the axiom diff, the impact counts
+/// and the ids behind each count (MEDULLA-TYPED-PACKS-R804.5). The counts are
+/// exact; each id list is sorted and holds at most `ontology_diff.max_listed`
+/// ids.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyDiffReport {
+    pub diff: OntologyDiff,
+    pub impact: ChangeImpact,
+    pub items: ImpactItems,
+}

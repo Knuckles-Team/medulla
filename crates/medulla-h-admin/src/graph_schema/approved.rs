@@ -114,6 +114,7 @@ fn validate(
         graph_version: core.version(),
         changed: false,
         edit_head: super::edits::head(core),
+        ontology_diff: None,
     })
 }
 

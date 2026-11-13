@@ -18,11 +18,9 @@ mod edits;
 #[cfg(test)]
 mod finance_tests;
 mod ontology_import;
-// Served by MEDULLA-TYPED-PACKS-R804.3; until then only its tests call it.
-#[cfg(feature = "shacl")]
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) mod ontology_diff;
-#[cfg(all(test, feature = "shacl"))]
+pub mod ontology_diff;
+mod ontology_diff_serve;
+#[cfg(test)]
 mod ontology_diff_tests;
 #[cfg(all(test, feature = "shacl"))]
 mod swarm_topology_tests;
@@ -251,12 +249,7 @@ pub(crate) async fn handle_gateway(
             approved::handle_validate(ctx, plan, method, op).await
         }
         GraphSchemaOp::DiffOntology { .. } => {
-            // Read-only: R804.2 serves the diff; until then the op is refused
-            // and never commits.
-            medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, |_| {
-                Err("DIFF_ONTOLOGY_UNAVAILABLE: the ontology diff is not served yet".to_string())
-            })
-            .await
+            handle_diff_gateway(tenant_id, ctx, plan, method, op).await
         }
         GraphSchemaOp::ImportOntology { .. }
         | GraphSchemaOp::WithdrawOntology { .. }
@@ -264,6 +257,26 @@ pub(crate) async fn handle_gateway(
             handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
     }
+}
+
+/// R804.3: serve `DiffOntology`. It reads the staged graph and returns the
+/// diff and impact; it installs and writes nothing.
+async fn handle_diff_gateway(
+    tenant_id: &str,
+    ctx: &MutationCtx<'_>,
+    plan: &MutationPlan,
+    method: &Method,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
+) -> Response {
+    let op = op.clone();
+    let tenant = tenant_id.to_string();
+    let graph_name = ctx.graph_name.to_string();
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+        ontology_diff_serve::diff_ontology(core, &graph_name, &tenant, &op).and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>,
+        )
+    })
+    .await
 }
 
 /// R103.3: route `ImportOntology` / `WithdrawOntology` through the gateway with
@@ -391,6 +404,7 @@ pub(crate) fn apply_pack_source(
         graph_version: core.version().saturating_add(u64::from(changed)),
         changed,
         edit_head: edits::head(core),
+        ontology_diff: None,
     })
 }
 
@@ -656,6 +670,7 @@ fn apply(
             graph_version: core.version().saturating_add(u64::from(changed)),
             changed,
             edit_head,
+            ontology_diff: None,
         },
     )
 }
