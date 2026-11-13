@@ -159,6 +159,9 @@ pub enum QuestionKind {
     /// (MEDULLA-DECISION-ENGINE-R135). Evaluate-only: a lookup writes nothing.
     /// See `decision::program_store`.
     ProgramLookup,
+    /// Compile a skill document's typed draft into a stored program
+    /// (MEDULLA-DECISION-ENGINE-R156). See `decision::skill_workflow`.
+    SkillWorkflowCompile,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -231,6 +234,8 @@ pub enum TypedValue {
     Topology(Box<topology::TopologyQuestion>),
     /// The bounded frontier of a thought search (MEDULLA-DECISION-ENGINE-R750.754).
     ThoughtSearch(Box<super::thought_search::ReasoningState>),
+    /// A skill workflow draft to compile (MEDULLA-DECISION-ENGINE-R156.1).
+    SkillWorkflowDraft(Box<super::skill_workflow::SkillWorkflowDraft>),
 }
 
 /// One named parameter of a question.

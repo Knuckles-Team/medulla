@@ -34,6 +34,7 @@ mod stage_allocation;
 mod task_plan;
 #[cfg(test)]
 mod template;
+mod skill_workflow;
 mod template_choice;
 mod thought_search;
 mod tool_subset;
@@ -165,6 +166,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static CONTEXTPACKAGEFAMILY: context_package::ContextPackageFamily =
         context_package::ContextPackageFamily;
     static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;
+    static SKILLWORKFLOWFAMILY: skill_workflow::SkillWorkflowFamily =
+        skill_workflow::SkillWorkflowFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
     match kind {
@@ -200,6 +203,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ContextPackage => &CONTEXTPACKAGEFAMILY,
         QuestionKind::Topology => &TOPOLOGYFAMILY,
         QuestionKind::ProgramLookup => &PROGRAMLOOKUPFAMILY,
+        QuestionKind::SkillWorkflowCompile => &SKILLWORKFLOWFAMILY,
     }
 }
 
@@ -243,6 +247,7 @@ mod tests {
             QuestionKind::ContextPackage,
             QuestionKind::Topology,
             QuestionKind::ProgramLookup,
+            QuestionKind::SkillWorkflowCompile,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -276,7 +281,8 @@ mod tests {
             | QuestionKind::ComparativeAnalysisPlan
             | QuestionKind::ContextPackage
             | QuestionKind::Topology
-            | QuestionKind::ProgramLookup => true,
+            | QuestionKind::ProgramLookup
+            | QuestionKind::SkillWorkflowCompile => true,
         };
         assert!(exhaustive);
         kinds
@@ -288,7 +294,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            32,
+            33,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

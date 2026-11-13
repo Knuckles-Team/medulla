@@ -117,6 +117,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::Topology => "topology",
         // Needs a stored program, so it has its own bench fixture.
         QuestionKind::ProgramLookup => "program_lookup",
+        QuestionKind::SkillWorkflowCompile => "skill_workflow_compile",
     }
 }
 

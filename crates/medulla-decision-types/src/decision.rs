@@ -46,6 +46,7 @@ pub mod replay;
 pub mod reputation;
 pub mod request;
 pub mod research_voi;
+pub mod skill_workflow;
 pub mod statistical;
 pub mod task_plan;
 pub mod thought_search;
