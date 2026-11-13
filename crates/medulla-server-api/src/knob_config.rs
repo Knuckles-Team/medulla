@@ -440,6 +440,16 @@ knobs! {
     match_score_min: u64 = "match.score_min", U64(600_000), [0, 1_000_000], "ppm", Tunable;
     /// Name entropy at which a name alone never merges two features.
     match_entropy_mbit: u64 = "match.entropy_mbit", U64(3_500), [1_000, 6_000], "millibits", Tunable;
+    /// Seconds of inbound events a playbook correlation keeps per service (MEDULLA-DECISION-ENGINE-R704.2).
+    playbook_window: u64 = "playbook.window", U64(300), [10, 86_400], "seconds", Tunable;
+    /// State-change events inside the window that make a service flapping.
+    playbook_flap_min_events: u64 = "playbook.flap_min_events", U64(3), [2, 100], "events", Tunable;
+    /// Most neighbours entity-resolution candidate generation returns per node (MEDULLA-DECISION-ENGINE-R706.2).
+    er_candidate_k: u64 = "er.candidate_k", U64(16), [1, 64], "neighbours", Tunable;
+    /// Reviews in each window the entity-resolution accept rate is compared over.
+    er_drift_window: u64 = "er.drift_window", U64(200), [20, 5_000], "reviews", Tunable;
+    /// Absolute accept-rate change between two windows that reports drift.
+    er_drift_max_ppm: u64 = "er.drift_max_ppm", U64(150_000), [10_000, 500_000], "ppm", Tunable;
     /// Seconds over which a refresh budget's request allowance refills (MEDULLA-DECISION-ENGINE-R174.9.2).
     freshness_window: u64 = "freshness.window", U64(60), [1, 3_600], "seconds", Tunable;
     /// Team signal maximum age.

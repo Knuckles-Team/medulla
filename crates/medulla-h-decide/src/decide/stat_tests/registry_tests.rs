@@ -74,9 +74,14 @@ fn declared_request(
 }
 
 /// The kinds without a specialized body: one shared matrix ladder, reached
-/// through the registry. `ThoughtSearch` concludes through its own family
-/// (`thought_search_tests`) and `BranchOutcome` through `branch_outcomes_tests`.
+/// through the registry. `ThoughtSearch`, `RewardDecomposition`,
+/// `PopulationDrift`, `FanoutWidth`, `TrajectoryJoin`, `StepVerification` and
+/// `AdversarialAdmission` conclude through their own families
+/// (`thought_search_tests`, `branch_outcomes_tests`, `reward_decomposition_tests`, `population_tests`,
+/// `trajectory_join_tests`, `step_verification_tests`).
 const MATRIX_KINDS: &[QuestionKind] = &[
+    QuestionKind::CurriculumPromotion,
+    QuestionKind::AutonomyVerdict,
     QuestionKind::Route,
     QuestionKind::Rank,
     QuestionKind::Classify,

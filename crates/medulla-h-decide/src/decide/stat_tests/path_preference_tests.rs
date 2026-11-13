@@ -16,7 +16,7 @@ use medulla_decision_types::decision::{
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
 use medulla_types::contract::Digest256;
 
-const OTHER: &str = "tenant-other";
+pub(super) const OTHER: &str = "tenant-other";
 const QUESTION: &str = "route.tools";
 
 fn path_id(method: &str) -> String {
@@ -46,7 +46,7 @@ fn exploring_policy() -> DecisionPolicy {
 }
 
 /// The schema and the exploring policy of `tenant`, as pins.
-fn pins(h: &Harness, tenant: &str) -> (ComponentDependency, DecisionPolicyRef) {
+pub(super) fn pins(h: &Harness, tenant: &str) -> (ComponentDependency, DecisionPolicyRef) {
     let body = FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(vec![number_feature("score")]).unwrap(),
@@ -77,7 +77,7 @@ fn context(who: &str, tenant: &str) -> VerifiedRequestContext {
 
 /// One decision on `path` by `decider`, logged with a grant naming `evaluator`,
 /// then one independent evaluation per outcome (oldest first).
-async fn seed(
+pub(super) async fn seed(
     h: &Harness,
     tenant: &str,
     pins: &(ComponentDependency, DecisionPolicyRef),
@@ -156,7 +156,7 @@ async fn seed(
 }
 
 /// `successes` successes then failures out of ten, or any exact sequence.
-fn run(successes: usize, failures: usize) -> Vec<bool> {
+pub(super) fn run(successes: usize, failures: usize) -> Vec<bool> {
     std::iter::repeat_n(true, successes)
         .chain(std::iter::repeat_n(false, failures))
         .collect()

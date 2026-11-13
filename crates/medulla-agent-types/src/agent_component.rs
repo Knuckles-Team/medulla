@@ -121,8 +121,8 @@ const DIGEST_PREFIX: &str = "sha256:";
 /// `McpServer`, `McpPrompt`, `McpResource`, `Skill`, `Ontology`, `Schema`,
 /// `OutputValidator`, `Predicate`, `Shapes`, `A2aAgentCard`, `DecisionRecord`,
 /// `DecisionPolicy`, `DecisionHead`, `FeatureSchema`, `Rubric`, `NlTemplate`,
-/// `GuardrailRule`, `RuleInvariant`, `RedTeamAttack`, `RedTeamTransform` and
-/// `RedTeamScorer`.
+/// `GuardrailRule`, `RuleInvariant`, `RedTeamAttack`, `RedTeamTransform`,
+/// `RedTeamScorer` and `Playbook`.
 ///
 /// Closed on purpose. Every kind is either referenced from an agent slot —
 /// [`crate::agent_library::AgentLibraryEntry`],
@@ -202,7 +202,25 @@ pub enum AgentComponentKind {
     RedTeamTransform,
     /// A red-team scorer record: a category and a per-mille pass threshold.
     RedTeamScorer,
+    /// A remediation playbook: the trigger it answers and the steps it proposes
+    /// (MEDULLA-DECISION-ENGINE-R704.1). The component id is the playbook id;
+    /// `trigger` (and `ticket_class` for the `ticket_class` trigger) travel as
+    /// attributes and are refused at publish when missing or malformed.
+    Playbook,
 }
+
+/// The closed trigger set a `Playbook` component names in its `trigger`
+/// attribute.
+pub const PLAYBOOK_TRIGGERS: [&str; 4] = [
+    "service_down",
+    "service_flapping",
+    "resource_pressure",
+    "ticket_class",
+];
+/// The attribute a `Playbook` component carries its trigger in.
+pub const PLAYBOOK_TRIGGER_ATTRIBUTE: &str = "trigger";
+/// The attribute a `ticket_class` `Playbook` carries its ticket class in.
+pub const PLAYBOOK_TICKET_CLASS_ATTRIBUTE: &str = "ticket_class";
 
 impl AgentComponentKind {
     pub fn as_str(self) -> &'static str {
@@ -232,6 +250,7 @@ impl AgentComponentKind {
             Self::RedTeamAttack => "red_team_attack",
             Self::RedTeamTransform => "red_team_transform",
             Self::RedTeamScorer => "red_team_scorer",
+            Self::Playbook => "playbook",
         }
     }
 
@@ -266,7 +285,8 @@ impl AgentComponentKind {
             | Self::RuleInvariant
             | Self::RedTeamAttack
             | Self::RedTeamTransform
-            | Self::RedTeamScorer => "agent:component-write",
+            | Self::RedTeamScorer
+            | Self::Playbook => "agent:component-write",
         }
     }
 }
@@ -1640,7 +1660,7 @@ mod tests {
         ];
         /// The committed publish descriptors: every component kind and the
         /// authorization action publishing it needs.
-        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 25] = [
+        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 26] = [
             (AgentComponentKind::ModelProfile, "agent:component-write"),
             (AgentComponentKind::SystemPrompt, "agent:component-write"),
             (AgentComponentKind::Tool, "agent:component-write"),
@@ -1664,6 +1684,7 @@ mod tests {
                 "agent:component-write",
             ),
             (AgentComponentKind::RedTeamScorer, "agent:component-write"),
+            (AgentComponentKind::Playbook, "agent:component-write"),
             (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
             (AgentComponentKind::DecisionHead, "admin:decision-head"),
             (AgentComponentKind::FeatureSchema, "admin:decision-catalog"),
@@ -3210,5 +3231,41 @@ mod tests {
         decoded
             .validate()
             .expect("the decoded withdrawn entry still agrees it is schema version 3");
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R704.1
+    #[test]
+    fn playbook_body_names_a_trigger_from_the_closed_set() {
+        let playbook = |attributes: &[(&str, &str)]| {
+            let mut d = draft("playbook:restart-flapping", AgentComponentKind::Playbook);
+            d.attributes = attributes
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect();
+            d.validate()
+        };
+        for trigger in ["service_down", "service_flapping", "resource_pressure"] {
+            playbook(&[("trigger", trigger)]).expect(trigger);
+        }
+        playbook(&[
+            ("trigger", "ticket_class"),
+            ("ticket_class", "access-request"),
+        ])
+        .expect("a ticket-class playbook names its class");
+
+        for bad in [
+            playbook(&[]),
+            playbook(&[("trigger", "  ")]),
+            playbook(&[("trigger", "meltdown")]),
+            playbook(&[("trigger", "ticket_class")]),
+            playbook(&[("trigger", "service_down"), ("ticket_class", "x")]),
+        ] {
+            assert!(bad.unwrap_err().starts_with("MALFORMED_PLAYBOOK"));
+        }
+        assert_eq!(AgentComponentKind::Playbook.as_str(), "playbook");
+        assert_eq!(
+            AgentComponentKind::Playbook.publish_authz_action(),
+            "agent:component-write"
+        );
     }
 }

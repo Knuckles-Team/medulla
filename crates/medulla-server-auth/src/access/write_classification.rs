@@ -112,6 +112,7 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::DecisionFit { op } => Some(op.is_mutation()),
         Method::Claims { op } => Some(op.is_mutation()),
         Method::Loops { op } => Some(op.is_mutation()),
+        Method::FeatureLedger { op } => Some(op.is_mutation()),
         Method::BeliefRevise { .. } => Some(true),
         Method::DecisionLog { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R801.8: append and put_price both write.

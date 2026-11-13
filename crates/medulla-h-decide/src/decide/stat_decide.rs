@@ -492,9 +492,16 @@ fn feature_matrix(
 fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationRecord> {
     if matches!(
         sealing.request.question.kind,
-        QuestionKind::TaskPlan | QuestionKind::ThoughtSearch
+        QuestionKind::TaskPlan
+            | QuestionKind::ThoughtSearch
+            | QuestionKind::RewardDecomposition
+            | QuestionKind::PopulationDrift
+            | QuestionKind::FanoutWidth
+            | QuestionKind::TrajectoryJoin
+            | QuestionKind::StepVerification
+            | QuestionKind::AdversarialAdmission
     ) {
-        return None; // Explicit planning and thought search never draw.
+        return None; // Explicit planning, search and the kernel families never draw.
     }
     let medulla_decision_types::decision::ColdStart::Explore { budget } =
         &sealing.policy.policy.cold_start
@@ -619,6 +626,15 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::team_coordination::KNOBS
         }
         QuestionKind::ChangesetReview => medulla_decision_stats::decision::changeset_review::KNOBS,
+        QuestionKind::RewardDecomposition => medulla_decision_types::decision::reward::KNOBS,
+        QuestionKind::CurriculumPromotion => medulla_decision_types::decision::curriculum::KNOBS,
+        QuestionKind::AutonomyVerdict => medulla_decision_types::decision::autonomy::KNOBS,
+        QuestionKind::PopulationDrift | QuestionKind::FanoutWidth => {
+            medulla_decision_types::decision::population::KNOBS
+        }
+        QuestionKind::StepVerification | QuestionKind::AdversarialAdmission => {
+            medulla_decision_types::decision::trajectory_verdict::KNOBS
+        }
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS

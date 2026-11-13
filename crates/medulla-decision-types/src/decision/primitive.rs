@@ -57,7 +57,8 @@ impl PrimitiveKind {
             | K::RuleInvariant
             | K::RedTeamAttack
             | K::RedTeamTransform
-            | K::RedTeamScorer => None,
+            | K::RedTeamScorer
+            | K::Playbook => None,
         }
     }
 }
@@ -238,6 +239,7 @@ mod tests {
             (K::RedTeamAttack, None),
             (K::RedTeamTransform, None),
             (K::RedTeamScorer, None),
+            (K::Playbook, None),
         ];
         for (kind, primitive) in expected {
             assert_eq!(PrimitiveKind::of(kind), primitive, "{kind:?}");

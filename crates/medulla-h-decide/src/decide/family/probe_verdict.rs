@@ -14,13 +14,14 @@ use medulla_agent_types::agent_component::red_team::{
 };
 use medulla_agent_types::agent_component::{AgentComponentEntry, AgentComponentKind};
 use medulla_decision_outcome_types::decision::red_team::{
-    decide_probe_verdict, select_scorers, ProbeRefusal, ProbeVerdict, RedTeamPolicy, ScorerResult,
+    decide_probe_verdict, select_scorers, ProbeRefusal, RedTeamPolicy, ScorerResult,
 };
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
 };
+use medulla_decision_types::decision::trajectory_verdict::ProbeVerdict;
 use medulla_decision_types::decision::{
     DecisionPolicy, EvidenceClass, LibraryCandidateScope, PremiseClass, PremiseRef, QuantScaleTag,
     QuantisedValue, ResolutionKind,

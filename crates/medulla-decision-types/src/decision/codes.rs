@@ -514,6 +514,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::program_store::insight::REFUSALS,
     ),
     (QuestionKind::BranchOutcome, super::branch_fusion::REFUSALS),
+    (QuestionKind::AutonomyVerdict, super::autonomy::REFUSALS),
     (
         QuestionKind::FanoutAggregate,
         super::task_plan::fanout::REFUSALS,
@@ -528,6 +529,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (QuestionKind::LoadSet, super::load_set::REFUSALS),
     (QuestionKind::UsageGuidance, super::usage_guidance::REFUSALS),
+    (
+        QuestionKind::AdversarialAdmission,
+        super::trajectory_verdict::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

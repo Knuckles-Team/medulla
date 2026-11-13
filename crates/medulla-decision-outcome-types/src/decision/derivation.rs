@@ -199,18 +199,32 @@ fn offer(required: &mut BTreeMap<String, PremiseRef>, iri: &str, premise: Premis
 /// Ties break on the classification term, so the chain is a function of the
 /// candidate facts alone.
 pub fn coverage_chain(required: &str, candidate: &CandidateFacts) -> Option<Vec<DerivationEdge>> {
-    let (term, native) = candidate
-        .classification
-        .iter()
-        .filter_map(|term| {
-            agent_ontology::broader_chain(term, required).map(|chain| (term.as_str(), chain))
-        })
+    classification_chain(
+        &candidate.component_id,
+        candidate.classification.iter().map(String::as_str),
+        required,
+    )
+}
+
+/// The shortest `is_a` chain from a subject (a component, or an inbound event)
+/// through one of its declared classification `terms` up to `required`, or
+/// `None` when no term is subsumed by it. The first edge is the subject's own
+/// classification (a claim); the rest are native vocabulary (definitions).
+/// Ties break on the term, so the chain is a function of the inputs alone.
+pub fn classification_chain<'a>(
+    subject_id: &str,
+    terms: impl IntoIterator<Item = &'a str>,
+    required: &str,
+) -> Option<Vec<DerivationEdge>> {
+    let (term, native) = terms
+        .into_iter()
+        .filter_map(|term| agent_ontology::broader_chain(term, required).map(|chain| (term, chain)))
         .min_by(|a, b| a.1.len().cmp(&b.1.len()).then(a.0.cmp(b.0)))?;
     let mut edges = vec![DerivationEdge {
-        narrower: candidate.component_id.clone(),
+        narrower: subject_id.to_string(),
         broader: term.to_string(),
         source: EdgeSource::ComponentClassification {
-            component_id: candidate.component_id.clone(),
+            component_id: subject_id.to_string(),
         },
         class: PremiseClass::Claim,
     }];

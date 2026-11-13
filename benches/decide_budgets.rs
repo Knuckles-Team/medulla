@@ -36,8 +36,20 @@ use medulla_compute::assemble::admit_topology;
 use medulla_decision_outcome_types::decision::concentration::{
     concentration_verdict, ConcentrationPolicy, EditFact, EditStatus,
 };
+use medulla_decision_stats::decision::population::wasserstein1;
+use medulla_decision_stats::decision::reward::decompose;
+use medulla_decision_stats::decision::thought_search::choose_expansion;
+use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
+use medulla_decision_types::decision::curriculum::{
+    CurriculumRequest, CurriculumStage, PromotionPolicy,
+};
+use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
+use medulla_decision_types::decision::population::{DriftRequest, DriftWindow};
 use medulla_decision_types::decision::program_store::{
     compile_program, program_key, ProgramKnobs, MAX_PROGRAM_STEPS,
+};
+use medulla_decision_types::decision::reward::{
+    RewardDecompositionRequest, RewardKnobs, StepSignal, MAX_REWARD_STEPS,
 };
 use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
@@ -51,6 +63,10 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
 };
 use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
+use medulla_decision_types::decision::thought_search::{
+    BudgetLedger, ReasoningState, ReasoningStrategy, ThoughtNode, ThoughtSearchKnobs,
+    MAX_THOUGHT_LEAVES,
+};
 use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, publish_route_schema, request, Harness, TENANT,
@@ -65,7 +81,10 @@ use medulla_types::contract::BoundedVec;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
 
-/// Every registered family. `family_name` matches exhaustively, so a new
+/// Every registered family timed with the generic fixture request. The
+/// reward-decomposition, population-drift, curriculum-promotion and autonomy-verdict families have their own served
+/// groups (`bench_served_kernels`), because the generic request is not their body.
+/// `family_name` matches exhaustively, so a new
 /// `QuestionKind` fails to compile until it gains a group name there; add it
 /// here in the same change.
 const FAMILIES: &[QuestionKind] = &[
@@ -133,6 +152,10 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::SkillUpgrade,
     QuestionKind::SkillWorkflowCompile,
     QuestionKind::TeamCoordination,
+    QuestionKind::FanoutWidth,
+    QuestionKind::TrajectoryJoin,
+    QuestionKind::StepVerification,
+    QuestionKind::AdversarialAdmission,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
@@ -187,6 +210,16 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ContextReplacement => "context_replacement",
         QuestionKind::RecursionMode => "recursion_mode",
         QuestionKind::SubCallAdmission => "sub_call_admission",
+        QuestionKind::RewardDecomposition => "reward_decomposition",
+        QuestionKind::CurriculumPromotion => "curriculum_promotion",
+        QuestionKind::PopulationDrift => "population_drift",
+        QuestionKind::FanoutWidth => "fanout_width",
+        QuestionKind::AutonomyVerdict => "autonomy_verdict",
+        QuestionKind::TrajectoryJoin => "trajectory_join",
+        QuestionKind::StepVerification => "step_verification",
+        QuestionKind::AdversarialAdmission => "adversarial_admission",
+        QuestionKind::ResearchNext => "research_voi",
+        QuestionKind::FeatureMatch => "feature_match",
         // Needs a published template and a typed question, so it has its own
         // bench fixture, not the generic one `FAMILIES` is driven with.
         QuestionKind::Topology => "topology",
@@ -1648,6 +1681,299 @@ fn bench_usage_guidance(
     report.insert(group_name, sampled_report(rt, &h, &asked));
 }
 
+/// Calls of `choose_expansion` one sample of `decide/thought_search_kernel`
+/// takes: 100000 leaves in all, `MAX_THOUGHT_LEAVES` per call (the bound of
+/// one reasoning state).
+const KERNEL_LEAVES: usize = 100_000;
+
+/// A maximal frontier: `MAX_THOUGHT_LEAVES` leaves over four depths.
+fn widest_frontier() -> ReasoningState {
+    let nodes = (0..MAX_THOUGHT_LEAVES as u32)
+        .map(|id| ThoughtNode {
+            id,
+            parent: (id > 0).then_some(0),
+            depth: 1 + id % 4,
+            score: QuantisedValue {
+                scale: QuantScaleTag::Q32,
+                value: i64::from(id.wrapping_mul(2_654_435_761) % 1_000) << 22,
+            },
+            tokens: 16,
+            state_digest: format!("sha256:{:064x}", id % 48),
+        })
+        .collect();
+    ReasoningState::new(
+        nodes,
+        BudgetLedger {
+            nodes_used: 100,
+            tokens_used: 1_600,
+            depth_reached: 4,
+        },
+    )
+    .expect("a frontier of exactly the bound")
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R750.753
+/// The `decide/thought_search_kernel` group (MEDULLA-DECISION-ENGINE-R750.753):
+/// `choose_expansion` alone, over 100000 leaves (the maximal frontier,
+/// repeated), for every strategy. Budget: `group_budgets` in
+/// `benches/baselines/decide.json`.
+fn bench_thought_search_kernel(
+    c: &mut Criterion,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let state = widest_frontier();
+    let knobs = ThoughtSearchKnobs::default();
+    let strategies = [
+        ReasoningStrategy::Chain,
+        ReasoningStrategy::Tree,
+        ReasoningStrategy::Graph,
+        ReasoningStrategy::Planning,
+    ];
+    let sweep = || {
+        for _ in 0..(KERNEL_LEAVES / MAX_THOUGHT_LEAVES) {
+            for strategy in strategies {
+                black_box(choose_expansion(
+                    black_box(&state),
+                    strategy,
+                    black_box(&knobs),
+                ));
+            }
+        }
+    };
+    let group_name = "decide/thought_search_kernel".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("choose_expansion", |b| b.iter(sweep));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            sweep();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
+/// Trajectory steps the reward kernel group sweeps per sample.
+const REWARD_KERNEL_STEPS: usize = 10_000;
+/// Samples per drift window of the served drift group.
+const DRIFT_WINDOW: usize = 2048;
+
+fn q32(value: i64) -> QuantisedValue {
+    QuantisedValue {
+        scale: QuantScaleTag::Q32,
+        value,
+    }
+}
+
+fn trajectory(steps: usize) -> RewardDecompositionRequest {
+    let one = 1i64 << 32;
+    RewardDecompositionRequest::new(
+        "bench-trajectory".to_string(),
+        q32(one),
+        (0..steps)
+            .map(|i| StepSignal {
+                value_estimate: q32(one / 2 * (i as i64 - i as i64 / 10) / steps as i64 + 1),
+                cache_hit: i % 5 == 0,
+            })
+            .collect(),
+        Vec::new(),
+        false,
+        None,
+    )
+    .unwrap()
+}
+
+fn drift_window(len: usize, offset: i64) -> DriftWindow {
+    DriftWindow::new(
+        (0..len)
+            .map(|i| q32(((i as i64 * 7919) % 4096) * (1 << 20) + offset))
+            .collect(),
+    )
+    .unwrap()
+}
+
+/// One sampled group: Criterion times `work`, and the budget report takes
+/// `REPORT_SAMPLES` timings of it.
+fn bench_group(
+    c: &mut Criterion,
+    report: &mut BTreeMap<String, serde_json::Value>,
+    group_name: &str,
+    work: &mut dyn FnMut(),
+) {
+    let mut group = c.benchmark_group(group_name);
+    group.bench_function("run", |b| b.iter(&mut *work));
+    group.finish();
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            work();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name.to_string(),
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
+/// A kernel family request: one typed body parameter and one declared candidate.
+fn kernel_ask(
+    asked: &DecideRequest,
+    kind: QuestionKind,
+    param: &str,
+    value: TypedValue,
+    candidate: &str,
+) -> DecideRequest {
+    let mut ask = asked.clone();
+    ask.question.kind = kind;
+    ask.question.question_id = format!("bench.{param}");
+    ask.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![DeclaredOption {
+            option_id: candidate.to_string(),
+            classification: BoundedVec::default(),
+            numbers: BoundedVec::default(),
+            texts: BoundedVec::default(),
+        }])
+        .unwrap(),
+    };
+    ask.params = BoundedVec::new(vec![TypedParam {
+        name: param.to_string(),
+        value,
+    }])
+    .unwrap();
+    ask
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R751.753
+// spec: MEDULLA-DECISION-ENGINE-R752.753
+/// The served kernel groups (MEDULLA-DECISION-ENGINE-R751.753, R752.753):
+/// `decide/reward_decomposition` serves a 1024-step trajectory through
+/// `Decide`; `decide/population_drift` serves two 2048-sample windows. The
+/// `_kernel` groups time `decompose` over 10000 steps and `wasserstein1` over
+/// two 2048-sample windows. Budgets: `group_budgets` in `benches/baselines/decide.json`.
+fn bench_served_kernels(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (h, asked) = rt.block_on(fixture(QuestionKind::RewardDecomposition));
+    let served_reward = kernel_ask(
+        &asked,
+        QuestionKind::RewardDecomposition,
+        "reward_decomposition",
+        TypedValue::RewardDecomposition(Box::new(trajectory(1024))),
+        "bench-trajectory",
+    );
+    bench_group(c, report, "decide/reward_decomposition", &mut || {
+        let response = black_box(decide(rt, &h, &served_reward));
+        assert!(
+            response.error.is_none(),
+            "the served trajectory must be answered, not refused"
+        );
+    });
+    let knobs = RewardKnobs::default();
+    let full = trajectory(MAX_REWARD_STEPS);
+    let rest = trajectory(REWARD_KERNEL_STEPS % MAX_REWARD_STEPS);
+    bench_group(c, report, "decide/reward_decomposition_kernel", &mut || {
+        for _ in 0..(REWARD_KERNEL_STEPS / MAX_REWARD_STEPS) {
+            black_box(decompose(black_box(&full), &knobs).unwrap());
+        }
+        black_box(decompose(black_box(&rest), &knobs).unwrap());
+    });
+
+    let (h, asked) = rt.block_on(fixture(QuestionKind::PopulationDrift));
+    let reference = drift_window(DRIFT_WINDOW, 0);
+    let current = drift_window(DRIFT_WINDOW, 1 << 24);
+    let served_drift = kernel_ask(
+        &asked,
+        QuestionKind::PopulationDrift,
+        "population_drift",
+        TypedValue::PopulationDrift(Box::new(DriftRequest {
+            reference: reference.clone(),
+            current: current.clone(),
+        })),
+        "scores",
+    );
+    bench_group(c, report, "decide/population_drift", &mut || {
+        let response = black_box(decide(rt, &h, &served_drift));
+        assert!(
+            response.error.is_none(),
+            "the served drift windows must be answered, not refused"
+        );
+    });
+    bench_group(c, report, "decide/population_drift_kernel", &mut || {
+        black_box(
+            wasserstein1(
+                black_box(reference.as_slice()),
+                black_box(current.as_slice()),
+            )
+            .unwrap(),
+        );
+    });
+
+    // spec: MEDULLA-DECISION-ENGINE-R751.754
+    let (h, asked) = rt.block_on(fixture(QuestionKind::CurriculumPromotion));
+    let served_curriculum = kernel_ask(
+        &asked,
+        QuestionKind::CurriculumPromotion,
+        "curriculum_promotion",
+        TypedValue::CurriculumPromotion(Box::new(CurriculumRequest {
+            stage: CurriculumStage {
+                stage_id: "bench-stage".to_string(),
+                horizon_steps: 8,
+                window_runs: 20,
+            },
+            policy: PromotionPolicy {
+                promote_threshold: q32(3 << 30),
+                next_stage_id: "bench-next".to_string(),
+            },
+        })),
+        "bench-stage",
+    );
+    bench_group(c, report, "decide/curriculum_promotion", &mut || {
+        let response = black_box(decide(rt, &h, &served_curriculum));
+        assert!(
+            response.error.is_none(),
+            "the served stage must be answered, not refused"
+        );
+    });
+
+    // spec: MEDULLA-DECISION-ENGINE-R752.755
+    let (h, asked) = rt.block_on(fixture(QuestionKind::AutonomyVerdict));
+    let served_autonomy = kernel_ask(
+        &asked,
+        QuestionKind::AutonomyVerdict,
+        "autonomy_verdict",
+        TypedValue::AutonomyVerdict(Box::new(AutonomyRequest {
+            irreversibility: IrreversibilityClass::Reversible,
+        })),
+        "bench.action",
+    );
+    bench_group(c, report, "decide/autonomy_verdict", &mut || {
+        let response = black_box(decide(rt, &h, &served_autonomy));
+        assert!(
+            response.error.is_none(),
+            "the served action class must be answered, not refused"
+        );
+    });
+}
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -1703,6 +2029,8 @@ fn bench_decide(c: &mut Criterion) {
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
+    bench_thought_search_kernel(c, &mut report);
+    bench_served_kernels(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

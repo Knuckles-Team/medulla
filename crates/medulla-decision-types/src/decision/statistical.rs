@@ -267,6 +267,37 @@ pub enum QuestionKind {
     CapacityProposal,
     /// Which red-team attacks and transforms to run for a stated goal (MEDULLA-DECISION-ENGINE-R818). See `family::probe_selection`.
     ProbeSelection,
+    /// Splits one trajectory reward over its steps and hierarchy
+    /// (MEDULLA-DECISION-ENGINE-R751.750). See `decision::reward`.
+    RewardDecomposition,
+    /// The sources a research run reads next, by expected information value
+    /// under a spend budget (MEDULLA-DECISION-ENGINE-R705.3). See `decision::research_voi`.
+    ResearchNext,
+    /// Which features of studied projects match local capabilities, and the
+    /// plans that close the gaps (MEDULLA-DECISION-ENGINE-R707.3). See
+    /// `decision::feature_match`.
+    FeatureMatch,
+    /// Whether a curriculum stage's recent outcomes clear its promotion
+    /// threshold (MEDULLA-DECISION-ENGINE-R751.750). See `decision::curriculum`.
+    CurriculumPromotion,
+    /// Drift between a reference and a current score window
+    /// (MEDULLA-DECISION-ENGINE-R752.750). See `decision::population`.
+    PopulationDrift,
+    /// How many replicas to fan out from their diversity
+    /// (MEDULLA-DECISION-ENGINE-R752.750). See `decision::population`.
+    FanoutWidth,
+    /// Whether an action class may run without confirmation
+    /// (MEDULLA-DECISION-ENGINE-R752.750). See `decision::autonomy`.
+    AutonomyVerdict,
+    /// Joins competing trajectories into the strongest one
+    /// (MEDULLA-DECISION-ENGINE-R753.750). See `decision::trajectory_verdict`.
+    TrajectoryJoin,
+    /// Verifies a trace step by step and picks a recovery
+    /// (MEDULLA-DECISION-ENGINE-R753.750). See `decision::trajectory_verdict`.
+    StepVerification,
+    /// Admits a candidate against a bounded set of red-team probes
+    /// (MEDULLA-DECISION-ENGINE-R753.750). See `decision::trajectory_verdict`.
+    AdversarialAdmission,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -344,6 +375,22 @@ pub enum TypedValue {
     Topology(Box<topology::TopologyQuestion>),
     /// A placement question (MEDULLA-PLACEMENT-R001.7).
     Placement(Box<placement::PlacementQuestion>),
+    /// One trajectory's reward and step signals (MEDULLA-DECISION-ENGINE-R751.755).
+    RewardDecomposition(Box<super::reward::RewardDecompositionRequest>),
+    /// A stage and its promotion policy (MEDULLA-DECISION-ENGINE-R751.754).
+    CurriculumPromotion(Box<super::curriculum::CurriculumRequest>),
+    /// An action class's reversibility (MEDULLA-DECISION-ENGINE-R752.755).
+    AutonomyVerdict(Box<super::autonomy::AutonomyRequest>),
+    /// A reference and a current score window (MEDULLA-DECISION-ENGINE-R752.754).
+    PopulationDrift(Box<super::population::DriftRequest>),
+    /// A replica spread, width and budget (MEDULLA-DECISION-ENGINE-R752.754).
+    FanoutWidth(Box<super::population::FanoutRequest>),
+    /// Competing trajectories (MEDULLA-DECISION-ENGINE-R753.754).
+    TrajectoryJoin(Box<super::trajectory_verdict::JoinRequest>),
+    /// A trace and its checks (MEDULLA-DECISION-ENGINE-R753.755).
+    StepVerification(Box<super::trajectory_verdict::VerifyRequest>),
+    /// A candidate's probe results (MEDULLA-DECISION-ENGINE-R753.755).
+    AdversarialAdmission(Box<super::trajectory_verdict::AdmissionRequest>),
     /// The bounded frontier of a thought search (MEDULLA-DECISION-ENGINE-R750.754).
     ThoughtSearch(Box<super::thought_search::ReasoningState>),
     /// A skill workflow draft to compile (MEDULLA-DECISION-ENGINE-R156.1).

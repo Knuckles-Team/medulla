@@ -52,6 +52,56 @@ pub struct CitationWalk {
     pub depth_limit: u8,
 }
 
+/// Why a research walk ended (MEDULLA-DECISION-ENGINE-R705.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ResearchStop {
+    /// Every declared source was read.
+    Exhausted,
+    /// `knob research.node_budget` sources were read.
+    NodeBudget,
+    /// The best remaining expected value is at or below
+    /// `knob research.value_floor_micro`.
+    ValueFloor,
+    /// The next read costs more than the remaining spend budget.
+    Budget,
+}
+
+/// One source the walk chose to read, in the order chosen.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ResearchRead {
+    pub source_id: String,
+    /// The subtask that declared the source; empty when it names none.
+    pub subtask: String,
+    pub depth: u8,
+    /// `p_useful * gain - cost`, Q32.
+    pub expected_value_q32: i64,
+    /// Micro-units the read spends.
+    pub cost_micro: u64,
+}
+
+/// The answer of a `research_next` question: the ordered reads, why the walk
+/// stopped and the budget left.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ResearchAnswer {
+    pub reads: Vec<ResearchRead>,
+    pub stop: ResearchStop,
+    /// Micro-units already spent, as reported by the caller.
+    pub spent_micro: u64,
+    /// Micro-units left after the reads (`limit - spent - reads`).
+    pub remaining_micro: u64,
+}
+
+/// The option id the answer reserves for "stop reading".
+pub const STOP_OPTION_ID: &str = "stop";
+/// The first classification of an option that reports spent units.
+pub const SPENT_CLASSIFICATION: &str = "spent";
+
 #[cfg(test)]
 mod tests {
     use super::*;

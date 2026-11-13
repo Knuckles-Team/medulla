@@ -423,6 +423,8 @@ pub(super) const REASON_DECISION_LOG_VISIBILITY: &str =
 // tenant's id never resolves.
 pub(super) const REASON_LOOPS_TENANT_STATE: &str =
     "Loops.Get reads one loop with its lease epochs, transitions, offer inputs, mined support and ratchet comparison from the statecharts.redb instance keyed by the verified request tenant and the caller's id (another tenant derives another key and gets LOOP_NOT_FOUND), behind agent:loop-read -- never a GraphView/core.analysis_snapshot() row read";
+pub(super) const REASON_FEATURE_LEDGER_TENANT_STATE: &str =
+    "FeatureLedger.Get reads the entries of the verified request tenant's ledger from the statecharts.redb instance keyed by that tenant alone (another tenant derives another key and finds none of these entries), behind agent:feature-ledger-read -- never a GraphView/core.analysis_snapshot() row read";
 pub(super) const REASON_CLAIMS_TENANT_STATE: &str =
     "Claims.Get reads one claim or one sealed research artifact from the statecharts.redb instance keyed by the verified request tenant and the caller's id (another tenant derives another key and gets CLAIM_NOT_FOUND), behind agent:claim-read -- never a GraphView/core.analysis_snapshot() row read";
 // EH-400: `FreshnessFeed` returns change METADATA, not rows: invalidation events are (version,
@@ -501,6 +503,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_CLAIMS_TENANT_STATE (MEDULLA-DECISION-ENGINE-R652.5)
     ("Claims", REASON_CLAIMS_TENANT_STATE),
     ("Loops", REASON_LOOPS_TENANT_STATE),
+    ("FeatureLedger", REASON_FEATURE_LEDGER_TENANT_STATE),
     // REASON_FRESHNESS_METADATA
     ("FreshnessFeed", REASON_FRESHNESS_METADATA),
     // REASON_AGENT_LIBRARY_TENANT_SNAPSHOT

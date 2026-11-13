@@ -31,6 +31,10 @@ pub const STATISTICAL_RECORD_DIGEST_DOMAIN: &str = "eg/decision-record/v2";
 pub const DECISION_INPUTS_DIGEST_DOMAIN: &str = "eg/decision-inputs/v1";
 /// Domain of the candidate catalog a decision was taken against.
 pub const DECISION_CATALOG_DIGEST_DOMAIN: &str = "eg/decision-catalog/v1";
+/// Domain of a distilled trajectory's derivation (MEDULLA-DECISION-ENGINE-R753.751).
+pub const TRAJECTORY_DERIVATION_DIGEST_DOMAIN: &str = "eg/trajectory-derivation/v1";
+/// Domain of a verified trace (MEDULLA-DECISION-ENGINE-R753.751).
+pub const STEP_TRACE_DIGEST_DOMAIN: &str = "eg/step-trace/v1";
 /// Domain of a decision policy body.
 pub const DECISION_POLICY_DIGEST_DOMAIN: &str = "eg/decision-policy/v1";
 
@@ -132,4 +136,27 @@ pub const THOUGHT_PATH_DIGEST_DOMAIN: &str = "eg/thought-path/v1";
 /// path order.
 pub fn thought_path_digest(path: &[(u32, super::numeric::QuantisedValue)]) -> String {
     digest_text(THOUGHT_PATH_DIGEST_DOMAIN, &path)
+}
+
+/// The hex tail of a `sha256:<hex>` digest.
+fn hex_tail(digest: String) -> String {
+    digest
+        .strip_prefix(DIGEST_TEXT_PREFIX)
+        .map(str::to_string)
+        .unwrap_or(digest)
+}
+
+/// SHA-256 of the sorted source ids joined by newlines, domain-separated,
+/// as 64 lowercase hex characters (MEDULLA-DECISION-ENGINE-R753.751).
+pub fn trajectory_derivation_digest(sorted_ids: &[String]) -> String {
+    hex_tail(digest_text(
+        TRAJECTORY_DERIVATION_DIGEST_DOMAIN,
+        &sorted_ids.join("\n"),
+    ))
+}
+
+/// SHA-256 of the step digests in trace order, domain-separated, as 64
+/// lowercase hex characters (MEDULLA-DECISION-ENGINE-R753.751).
+pub fn step_trace_digest(step_digests: &[&str]) -> String {
+    hex_tail(digest_text(STEP_TRACE_DIGEST_DOMAIN, &step_digests))
 }

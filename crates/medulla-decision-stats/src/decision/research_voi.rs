@@ -74,6 +74,14 @@ pub fn expected_value_q32(node: &SourceNode) -> i64 {
     value.clamp(i128::from(i64::MIN), i128::from(i64::MAX)) as i64
 }
 
+/// A Q32 amount as micro-units, rounded down; a negative amount is zero.
+pub fn q32_to_micro(q32: i64) -> u64 {
+    if q32 <= 0 {
+        return 0;
+    }
+    ((i128::from(q32) * 1_000_000) >> 32) as u64
+}
+
 fn micro_to_q32(micro: u64) -> i64 {
     ((i128::from(micro) << 32) / 1_000_000) as i64
 }

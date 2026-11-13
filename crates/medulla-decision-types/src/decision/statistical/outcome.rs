@@ -162,6 +162,26 @@ pub enum FamilyAnswer {
     SkillUpgrade(Box<crate::decision::skill_upgrade_request::SkillUpgradeReceipt>),
     /// An admitted plan of the `planning_admission` family (MEDULLA-DECISION-ENGINE-R171.3).
     PlanningAdmission(Box<crate::decision::planning_admission::PlanningAdmissionAnswer>),
+    /// The per-step split of a trajectory reward (MEDULLA-DECISION-ENGINE-R751.755).
+    RewardDecomposition(Box<crate::decision::reward::TrajectoryReward>),
+    /// The ordered reads and stop reason of a research walk (MEDULLA-DECISION-ENGINE-R705.3).
+    Research(Box<crate::decision::research_voi::ResearchAnswer>),
+    /// The matches, merge clusters and gap plans of a feature comparison (MEDULLA-DECISION-ENGINE-R707.3).
+    FeatureMatch(Box<crate::decision::feature_match::FeatureMatchAnswer>),
+    /// Whether a curriculum stage is promoted (MEDULLA-DECISION-ENGINE-R751.754).
+    CurriculumPromotion(Box<crate::decision::curriculum::PromotionReading>),
+    /// The corrigibility verdict of an action class (MEDULLA-DECISION-ENGINE-R752.755).
+    Autonomy(Box<crate::decision::autonomy::AutonomyReading>),
+    /// The drift reading between two windows (MEDULLA-DECISION-ENGINE-R752.754).
+    PopulationDrift(Box<crate::decision::population::DriftReading>),
+    /// The replica width a fan-out should use (MEDULLA-DECISION-ENGINE-R752.754).
+    FanoutWidth { width: u32 },
+    /// The winning trajectory of a join (MEDULLA-DECISION-ENGINE-R753.754).
+    TrajectoryJoin(Box<crate::decision::trajectory_verdict::DistilledTrajectory>),
+    /// A step verdict and its recovery (MEDULLA-DECISION-ENGINE-R753.755).
+    StepVerdict(Box<crate::decision::trajectory_verdict::StepVerification>),
+    /// Whether a candidate is admitted (MEDULLA-DECISION-ENGINE-R753.755).
+    Admission(crate::decision::trajectory_verdict::AdmissionVerdict),
 }
 
 impl FamilyAnswer {
@@ -241,6 +261,88 @@ impl FamilyAnswer {
     ) -> Option<&crate::decision::planning_admission::PlanningAdmissionAnswer> {
         match self {
             Self::PlanningAdmission(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// The research walk this answer carries.
+    pub fn research(&self) -> Option<&crate::decision::research_voi::ResearchAnswer> {
+        match self {
+            Self::Research(answer) => Some(answer),
+            _ => None,
+        }
+    }
+
+    /// The feature comparison this answer carries.
+    pub fn feature_match(&self) -> Option<&crate::decision::feature_match::FeatureMatchAnswer> {
+        match self {
+            Self::FeatureMatch(answer) => Some(answer),
+            _ => None,
+        }
+    }
+
+    /// The promotion reading this answer carries.
+    pub fn curriculum_promotion(&self) -> Option<&crate::decision::curriculum::PromotionReading> {
+        match self {
+            Self::CurriculumPromotion(reading) => Some(reading),
+            _ => None,
+        }
+    }
+
+    /// The autonomy reading this answer carries.
+    pub fn autonomy(&self) -> Option<&crate::decision::autonomy::AutonomyReading> {
+        match self {
+            Self::Autonomy(reading) => Some(reading),
+            _ => None,
+        }
+    }
+
+    /// The trajectory reward this answer carries.
+    pub fn reward_decomposition(&self) -> Option<&crate::decision::reward::TrajectoryReward> {
+        match self {
+            Self::RewardDecomposition(reward) => Some(reward),
+            _ => None,
+        }
+    }
+
+    /// The drift reading this answer carries.
+    pub fn population_drift(&self) -> Option<&crate::decision::population::DriftReading> {
+        match self {
+            Self::PopulationDrift(reading) => Some(reading),
+            _ => None,
+        }
+    }
+
+    /// The fan-out width this answer carries.
+    pub fn fanout_width(&self) -> Option<u32> {
+        match self {
+            Self::FanoutWidth { width } => Some(*width),
+            _ => None,
+        }
+    }
+
+    /// The distilled trajectory this answer carries.
+    pub fn trajectory_join(
+        &self,
+    ) -> Option<&crate::decision::trajectory_verdict::DistilledTrajectory> {
+        match self {
+            Self::TrajectoryJoin(distilled) => Some(distilled),
+            _ => None,
+        }
+    }
+
+    /// The step verification this answer carries.
+    pub fn step_verdict(&self) -> Option<&crate::decision::trajectory_verdict::StepVerification> {
+        match self {
+            Self::StepVerdict(verification) => Some(verification),
+            _ => None,
+        }
+    }
+
+    /// The admission verdict this answer carries.
+    pub fn admission(&self) -> Option<crate::decision::trajectory_verdict::AdmissionVerdict> {
+        match self {
+            Self::Admission(verdict) => Some(*verdict),
             _ => None,
         }
     }

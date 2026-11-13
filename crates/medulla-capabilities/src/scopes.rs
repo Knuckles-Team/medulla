@@ -74,6 +74,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("agent:decision-evaluate", User, "engine"),
     entry("agent:decision-read", User, "engine"),
     entry("agent:decision-write", User, "engine"),
+    entry("agent:feature-ledger-read", User, "engine"),
+    entry("agent:feature-ledger-write", User, "engine"),
     entry("agent:graph-read", User, "engine"),
     entry("agent:graph-write", User, "engine"),
     entry("agent:library-read", User, "engine"),

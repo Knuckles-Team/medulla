@@ -5,16 +5,8 @@ use medulla_agent_types::agent_component::red_team::RedTeamAttack;
 use medulla_agent_types::agent_component::red_team::RedTeamScorer;
 #[cfg(test)]
 use medulla_agent_types::agent_component::red_team::RedTeamTransform;
+use medulla_decision_types::decision::trajectory_verdict::ProbeVerdict;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum ProbeVerdict {
-    Resisted,
-    Compromised,
-    Inconclusive,
-}
 
 /// One selected scorer's result. `score` is absent when the scorer gave none.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

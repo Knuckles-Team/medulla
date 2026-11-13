@@ -281,6 +281,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("BeliefRevise", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("Loops", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
+    ("FeatureLedger", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
@@ -1363,6 +1364,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
 /// organization constitution Article XXXI). Each may answer the typed record
 /// `{code: TRANSITION_REFUSED, machine, from, event, reason}`.
 pub const MACHINE_METHODS: &[&str] = &[
+    "FeatureLedger",
     "SubmitWorkItem",
     "ClaimWorkItem",
     "CancelWorkItem",

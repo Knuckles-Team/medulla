@@ -6,9 +6,11 @@
 //! family lives in its own `family/<kind>.rs` file.
 
 mod a2a_route;
+mod adversarial_admission;
 mod answer_ranking;
 #[cfg(feature = "decide")]
 pub(super) mod assemble;
+mod autonomy;
 mod branch_outcome;
 pub(in crate::decide) mod capability_designation;
 mod capacity_proposal;
@@ -23,11 +25,14 @@ pub(super) mod context_budget;
 pub(super) mod context_package;
 mod context_replacement;
 mod correction_admission;
+mod curriculum_promotion;
 mod delegation_admission;
 mod edit_concentration;
 mod enrichment_schedule;
 mod evolution_round;
 mod fanout_aggregate;
+mod fanout_width;
+mod feature_match;
 pub(super) mod feedback_loop;
 mod field_shielding;
 mod generated_code_admission;
@@ -40,12 +45,14 @@ mod ingestion_lane;
 mod insight_selection;
 mod instruction_disclosure;
 mod item_recommendation;
+mod kernel;
 mod load_set;
 mod over_window_plan;
 mod paper_admission;
 mod path_preference;
 mod placement;
 pub(super) mod planning_admission;
+mod population_drift;
 mod pre_tool_risk;
 mod probe_selection;
 mod probe_verdict;
@@ -53,8 +60,10 @@ mod process_remediation;
 mod program_store;
 mod rank;
 mod recursion_mode;
+mod research_voi;
 mod resolve_entity;
 mod retrieval_plan;
+mod reward_decomposition;
 mod route;
 mod run_adjustment;
 mod runtime_quota;
@@ -62,6 +71,7 @@ mod schema_mapping;
 mod serving_technique;
 pub(super) mod skill_upgrade;
 mod skill_workflow;
+mod step_verification;
 mod sub_call_admission;
 mod support;
 mod task_plan;
@@ -75,6 +85,7 @@ mod tool_necessity;
 mod tool_relevance;
 mod tool_subset;
 mod topology;
+mod trajectory_join;
 mod usage_guidance;
 
 pub(in crate::decide) use command_config::command_view;
@@ -328,6 +339,23 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         ingest_shortfall::IngestShortfallFamily;
     static CAPACITYPROPOSALFAMILY: capacity_proposal::CapacityProposalFamily =
         capacity_proposal::CapacityProposalFamily;
+    static REWARDDECOMPOSITIONFAMILY: reward_decomposition::RewardDecompositionFamily =
+        reward_decomposition::RewardDecompositionFamily;
+    static CURRICULUMPROMOTIONFAMILY: curriculum_promotion::CurriculumPromotionFamily =
+        curriculum_promotion::CurriculumPromotionFamily;
+    static POPULATIONDRIFTFAMILY: population_drift::PopulationDriftFamily =
+        population_drift::PopulationDriftFamily;
+    static RESEARCHVOIFAMILY: research_voi::ResearchVoiFamily = research_voi::ResearchVoiFamily;
+    static FEATUREMATCHFAMILY: feature_match::FeatureMatchFamily =
+        feature_match::FeatureMatchFamily;
+    static AUTONOMYFAMILY: autonomy::AutonomyFamily = autonomy::AutonomyFamily;
+    static FANOUTWIDTHFAMILY: fanout_width::FanoutWidthFamily = fanout_width::FanoutWidthFamily;
+    static TRAJECTORYJOINFAMILY: trajectory_join::TrajectoryJoinFamily =
+        trajectory_join::TrajectoryJoinFamily;
+    static STEPVERIFICATIONFAMILY: step_verification::StepVerificationFamily =
+        step_verification::StepVerificationFamily;
+    static ADVERSARIALADMISSIONFAMILY: adversarial_admission::AdversarialAdmissionFamily =
+        adversarial_admission::AdversarialAdmissionFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -397,6 +425,16 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
         QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
         QuestionKind::ProbeSelection => &PROBESELECTIONFAMILY,
+        QuestionKind::RewardDecomposition => &REWARDDECOMPOSITIONFAMILY,
+        QuestionKind::CurriculumPromotion => &CURRICULUMPROMOTIONFAMILY,
+        QuestionKind::ResearchNext => &RESEARCHVOIFAMILY,
+        QuestionKind::FeatureMatch => &FEATUREMATCHFAMILY,
+        QuestionKind::PopulationDrift => &POPULATIONDRIFTFAMILY,
+        QuestionKind::FanoutWidth => &FANOUTWIDTHFAMILY,
+        QuestionKind::AutonomyVerdict => &AUTONOMYFAMILY,
+        QuestionKind::TrajectoryJoin => &TRAJECTORYJOINFAMILY,
+        QuestionKind::StepVerification => &STEPVERIFICATIONFAMILY,
+        QuestionKind::AdversarialAdmission => &ADVERSARIALADMISSIONFAMILY,
     }
 }
 
@@ -476,6 +514,16 @@ mod tests {
             QuestionKind::IngestShortfall,
             QuestionKind::CapacityProposal,
             QuestionKind::ProbeSelection,
+            QuestionKind::RewardDecomposition,
+            QuestionKind::CurriculumPromotion,
+            QuestionKind::ResearchNext,
+            QuestionKind::FeatureMatch,
+            QuestionKind::PopulationDrift,
+            QuestionKind::FanoutWidth,
+            QuestionKind::AutonomyVerdict,
+            QuestionKind::TrajectoryJoin,
+            QuestionKind::StepVerification,
+            QuestionKind::AdversarialAdmission,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -545,7 +593,17 @@ mod tests {
             | QuestionKind::ProcessRemediation
             | QuestionKind::IngestShortfall
             | QuestionKind::CapacityProposal
-            | QuestionKind::ProbeSelection => true,
+            | QuestionKind::ProbeSelection
+            | QuestionKind::RewardDecomposition
+            | QuestionKind::CurriculumPromotion
+            | QuestionKind::ResearchNext
+            | QuestionKind::FeatureMatch
+            | QuestionKind::PopulationDrift
+            | QuestionKind::FanoutWidth
+            | QuestionKind::AutonomyVerdict
+            | QuestionKind::TrajectoryJoin
+            | QuestionKind::StepVerification
+            | QuestionKind::AdversarialAdmission => true,
         };
         assert!(exhaustive);
         kinds
@@ -557,7 +615,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            67,
+            78,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

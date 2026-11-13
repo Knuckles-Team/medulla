@@ -106,6 +106,13 @@ $($variants)*
     Usage {
         op: Box<medulla_types::usage::UsageOp>,
     },
+    /// The feature ledger: record a gap with the matches it came from, attach a
+    /// plan, close it by a known change, and read entries
+    /// (MEDULLA-DECISION-ENGINE-R707.3). The `FeatureLedger` handler is the
+    /// single writer of ledger state.
+    FeatureLedger {
+        op: Box<medulla_decision_types::decision::feature_match::FeatureLedgerOp>,
+    },
     /// Research claims: propose, advance along the lifecycle, record evidence
     /// on five channels, compile a sealed research artifact and read them back.
     /// The `Claims` handler is the single writer of claim state.

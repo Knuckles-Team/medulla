@@ -213,6 +213,10 @@ method_results! {
     DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackAuditRows>;
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
+    FeatureLedgerOpen(FeatureLedger / "open") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerPlan(FeatureLedger / "plan") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     BeliefRevise(BeliefRevise) => Raw<medulla_types::belief_revision::BeliefPassResult>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_types::usage::UsageAppended>;

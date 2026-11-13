@@ -333,6 +333,41 @@ pub fn loop_record_statechart_def() -> StatechartDef {
     }
 }
 
+/// Build the spec-proposal chart (MEDULLA-DECISION-ENGINE-R654.1): `drafted` is
+/// initial, `submit` enters `in_review`, `approve` or `reject` leaves review,
+/// `start` moves `approved` to `in_development` and `deliver` ends in
+/// `delivered`. `rejected` and `delivered` are final. Any other event from a
+/// state is refused by the statechart handler as `STATECHART_NO_TRANSITION`;
+/// the reviewer-is-not-the-author rule of `approve` is checked by the recording
+/// handler before the event is sent. Pure and deterministic.
+pub fn spec_proposal_statechart_def() -> StatechartDef {
+    use medulla_decision_types::decision::skill_evolution::{
+        SPEC_PROPOSAL_CHART, SPEC_PROPOSAL_EVENTS, SPEC_PROPOSAL_FINALS, SPEC_PROPOSAL_STATES,
+    };
+    let edge = |from: &str, event: &str, to: &str| {
+        Transition::new(from, event, to).with_guard(Guard::Always)
+    };
+    StatechartDef {
+        name: SPEC_PROPOSAL_CHART.to_string(),
+        schema_version: 1,
+        states: SPEC_PROPOSAL_STATES
+            .iter()
+            .map(|id| State::new(*id))
+            .collect(),
+        alphabet: SPEC_PROPOSAL_EVENTS.iter().map(|e| e.to_string()).collect(),
+        transitions: vec![
+            edge("drafted", "submit", "in_review"),
+            edge("in_review", "approve", "approved"),
+            edge("in_review", "reject", "rejected"),
+            edge("approved", "start", "in_development"),
+            edge("in_development", "deliver", "delivered"),
+        ],
+        initial: SPEC_PROPOSAL_STATES[0].to_string(),
+        finals: SPEC_PROPOSAL_FINALS.iter().map(|s| s.to_string()).collect(),
+        meta: Default::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -788,5 +823,39 @@ mod tests {
             out.next_context.get("record"),
             Some(&serde_json::json!({"n": 1}))
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R654.1
+    #[test]
+    fn spec_proposal_chart_allows_only_the_declared_edges() {
+        let def = spec_proposal_statechart_def();
+        assert_eq!(def, spec_proposal_statechart_def(), "deterministic");
+        validate(&def).expect("the spec-proposal chart is structurally valid");
+        let legal = [
+            ("drafted", "submit", "in_review"),
+            ("in_review", "approve", "approved"),
+            ("in_review", "reject", "rejected"),
+            ("approved", "start", "in_development"),
+            ("in_development", "deliver", "delivered"),
+        ];
+        let ctx = Context::new();
+        for (from, event, to) in legal {
+            let out = transition(&def, from, &ctx, &EventInput::new(event)).unwrap();
+            assert!(out.fired, "{from} --{event}--> {to}");
+            assert_eq!(out.next_state, to);
+        }
+        // Every other (state, event) pair leaves the state unchanged.
+        for from in medulla_decision_types::decision::skill_evolution::SPEC_PROPOSAL_STATES {
+            for event in medulla_decision_types::decision::skill_evolution::SPEC_PROPOSAL_EVENTS {
+                if legal.iter().any(|(f, e, _)| *f == from && *e == event) {
+                    continue;
+                }
+                let out = transition(&def, from, &ctx, &EventInput::new(event)).unwrap();
+                assert!(!out.fired, "{from} --{event}--> must not fire");
+                assert_eq!(out.next_state, from);
+            }
+        }
+        assert!(def.is_final("rejected") && def.is_final("delivered"));
+        assert!(!def.is_final("approved"));
     }
 }

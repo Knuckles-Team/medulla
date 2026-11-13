@@ -64,6 +64,9 @@ pub mod belief_statechart;
 #[cfg(feature = "statechart")]
 pub mod claim_statechart;
 
+#[cfg(feature = "statechart")]
+pub mod feature_ledger_statechart;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "statechart")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

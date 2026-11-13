@@ -266,6 +266,11 @@ namespace; concepts are :partOf their pillar.""" ;
     rdfs:seeAlso schema:HowTo ;
     rdfs:subClassOf bfo:0000015 .
 
+:Playbook a owl:Class ;
+    rdfs:label "Playbook" ;
+    rdfs:comment "A library component naming a trigger (service down, service flapping, resource pressure or a ticket class) and the remediation steps proposed for it. A proposal only: write steps run through the governed action path. BFO:Process, a kind of :Procedure." ;
+    rdfs:subClassOf :Procedure .
+
 :ReasoningTrace a owl:Class ;
     rdfs:label "Reasoning Trace" ;
     rdfs:comment "A chain-of-thought step. BFO:Process, aligned to prov:Activity." ;

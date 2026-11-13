@@ -169,6 +169,54 @@ pub enum FeatureLedgerOp {
     Get { feature_ids: Vec<String> },
 }
 
+impl FeatureLedgerOp {
+    /// Whether this operation changes durable state.
+    pub fn is_mutation(&self) -> bool {
+        !matches!(self, FeatureLedgerOp::Get { .. })
+    }
+
+    /// The authorization action this operation needs.
+    pub fn authz_action(&self) -> &'static str {
+        if self.is_mutation() {
+            "agent:feature-ledger-write"
+        } else {
+            "agent:feature-ledger-read"
+        }
+    }
+}
+
+/// What a `FeatureLedger` operation answers: the entries it touched or read,
+/// in feature id order (MEDULLA-DECISION-ENGINE-R707.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FeatureLedgerView {
+    pub entries: Vec<LedgerEntry>,
+}
+
+/// The typed answer of a `FeatureMatch` question: the scored matches, the
+/// merge clusters, how many features were past the block cap, and the plans
+/// that close the gaps (MEDULLA-DECISION-ENGINE-R707.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FeatureMatchAnswer {
+    pub matches: Vec<Match>,
+    pub clusters: Vec<Vec<String>>,
+    pub unscored: u64,
+    pub plans: Vec<PlanProposal>,
+}
+
+/// The option id of the match between `local` and `external`.
+pub fn match_option_id(local: &str, external: &str) -> String {
+    format!("match:{local}:{external}")
+}
+
+/// The option id of a plan.
+pub fn plan_option_id(plan_id: &str) -> String {
+    format!("plan:{plan_id}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +360,21 @@ mod tests {
                 edge.event.name()
             )));
         }
+    }
+    #[test]
+    fn ledger_ops_classify_reads_and_writes() {
+        let get = FeatureLedgerOp::Get {
+            feature_ids: Vec::new(),
+        };
+        let open = FeatureLedgerOp::Open {
+            feature_id: "f".into(),
+            match_ids: Vec::new(),
+        };
+        assert!(!get.is_mutation());
+        assert_eq!(get.authz_action(), "agent:feature-ledger-read");
+        assert!(open.is_mutation());
+        assert_eq!(open.authz_action(), "agent:feature-ledger-write");
+        assert_eq!(match_option_id("a", "b"), "match:a:b");
+        assert_eq!(plan_option_id("p"), "plan:p");
     }
 }

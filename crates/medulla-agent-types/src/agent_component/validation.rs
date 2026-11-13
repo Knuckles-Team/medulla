@@ -43,9 +43,46 @@ fn validate_draft_kind_body(draft: &AgentComponentDraft) -> Result<(), String> {
             super::red_team::RedTeamScorer::from_attributes(&draft.component_id, &draft.attributes)
                 .map(drop)?
         }
+        AgentComponentKind::Playbook => validate_playbook_attributes(draft)?,
         _ => {}
     }
     Ok(())
+}
+
+/// A `Playbook` names the trigger it answers from the closed set, and a
+/// `ticket_class` trigger names the class (MEDULLA-DECISION-ENGINE-R704.1).
+fn validate_playbook_attributes(draft: &AgentComponentDraft) -> Result<(), String> {
+    use super::{PLAYBOOK_TICKET_CLASS_ATTRIBUTE, PLAYBOOK_TRIGGERS, PLAYBOOK_TRIGGER_ATTRIBUTE};
+    let attribute = |name: &str| {
+        draft
+            .attributes
+            .get(name)
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+    };
+    let id = &draft.component_id;
+    let Some(trigger) = attribute(PLAYBOOK_TRIGGER_ATTRIBUTE) else {
+        return Err(format!(
+            "MALFORMED_PLAYBOOK: playbook '{id}' needs a non-empty '{PLAYBOOK_TRIGGER_ATTRIBUTE}' attribute"
+        ));
+    };
+    if !PLAYBOOK_TRIGGERS.contains(&trigger) {
+        return Err(format!(
+            "MALFORMED_PLAYBOOK: playbook '{id}' trigger '{trigger}' is not one of {PLAYBOOK_TRIGGERS:?}"
+        ));
+    }
+    let class = attribute(PLAYBOOK_TICKET_CLASS_ATTRIBUTE);
+    match (trigger == "ticket_class", class) {
+        (true, None) => Err(format!(
+            "MALFORMED_PLAYBOOK: playbook '{id}' with trigger 'ticket_class' needs a non-empty \
+             '{PLAYBOOK_TICKET_CLASS_ATTRIBUTE}' attribute"
+        )),
+        (false, Some(_)) => Err(format!(
+            "MALFORMED_PLAYBOOK: playbook '{id}' carries '{PLAYBOOK_TICKET_CLASS_ATTRIBUTE}' \
+             but its trigger is '{trigger}'"
+        )),
+        _ => Ok(()),
+    }
 }
 
 fn validate_draft_identity(draft: &AgentComponentDraft) -> Result<(), String> {

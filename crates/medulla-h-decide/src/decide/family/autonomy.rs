@@ -1,0 +1,132 @@
+//! The `autonomy_verdict` question family (MEDULLA-DECISION-ENGINE-R001.101,
+//! R752.755).
+//!
+//! The one declared option is the action class; its consecutive independent
+//! successes are read from the caller's own decision log (`recent_evaluations`,
+//! R159.3), so another tenant's outcomes never raise trust and a self-reported
+//! outcome never counts. The pure `autonomy_verdict` kernel allows a reversible
+//! class after `knob autonomy.clean_outcomes` clean outcomes; an irreversible
+//! class, and a question of safety class `Security`, `Policy`, `WriteBack` or
+//! `Irreversible`, always requires confirmation (`ACTION_NEEDS_APPROVAL`). The
+//! record is an `Observation` resolved as a `Constraint`.
+
+use medulla_decision_stats::decision::autonomy::{autonomy_verdict, ledger_from_outcomes};
+use medulla_decision_types::decision::autonomy::{
+    clean_outcomes_needed, AutonomyReading, AutonomyRequest,
+};
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+use medulla_decision_types::decision::statistical::{
+    CandidateSource, DecideRequest, StatisticalOutcome, TypedValue,
+};
+use medulla_decision_types::decision::{
+    DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
+};
+use medulla_graph_core::graph::GraphView;
+
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
+use crate::decide::stat_log::{recent_evaluations, LogReader};
+use crate::decide::stat_support::invalid_parameter;
+
+use super::kernel::{advisory, body, claim, one_option};
+use super::DecisionFamily;
+
+const KIND: &str = "autonomy_verdict";
+const PARAM: &str = "autonomy_verdict";
+
+/// The request shape: any safety class (the rule reads it), no head, no belief
+/// slices, and one declared option, the action class, without facts.
+fn parse(request: &DecideRequest) -> Result<(&AutonomyRequest, &str), String> {
+    if request.head.is_some() || !request.belief_as_of.is_empty() {
+        return Err(invalid_parameter(format!(
+            "{KIND} needs no head and no belief slices"
+        )));
+    }
+    let CandidateSource::Declared { options } = &request.candidates else {
+        return Err(invalid_parameter(format!("{KIND} declares its candidates")));
+    };
+    if options
+        .iter()
+        .any(|o| !o.classification.is_empty() || !o.numbers.is_empty() || !o.texts.is_empty())
+    {
+        return Err(invalid_parameter(format!(
+            "{KIND} candidates carry no facts"
+        )));
+    }
+    let TypedValue::AutonomyVerdict(autonomy) = body(request, KIND, PARAM)? else {
+        return Err(invalid_parameter(format!(
+            "{KIND} parameter {PARAM} has the wrong type"
+        )));
+    };
+    Ok((&**autonomy, one_option(options.as_slice(), KIND)?))
+}
+
+fn observed(subject: &str, fact: String) -> PremiseRef {
+    PremiseRef {
+        subject: subject.to_string(),
+        fact,
+        class: PremiseClass::Observation,
+        provenance: PremiseProvenance::Observation {
+            evaluation_id: subject.to_string(),
+        },
+    }
+}
+
+/// The family of the `autonomy_verdict` question kind.
+pub struct AutonomyFamily;
+
+impl DecisionFamily for AutonomyFamily {
+    fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        parse(request).map(|_| ())
+    }
+
+    fn conclude_with_log(
+        &self,
+        ctx: &ExecutionContext,
+        reader: &LogReader,
+        request: &DecideRequest,
+        policy: &DecisionPolicy,
+        _graph_view: Option<&GraphView>,
+    ) -> Option<Result<Executed, String>> {
+        Some(parse(request).and_then(|(autonomy, class)| {
+            let needed = clean_outcomes_needed(policy);
+            let outcomes = recent_evaluations(ctx.store, reader, class, needed as usize)?;
+            let ledger = ledger_from_outcomes(class, &outcomes);
+            let reading: AutonomyReading = autonomy_verdict(
+                autonomy.irreversibility,
+                request.question.safety,
+                &ledger,
+                needed,
+            );
+            let verdict = serde_json::to_value(reading.verdict)
+                .ok()
+                .and_then(|v| v.as_str().map(str::to_string))
+                .unwrap_or_default();
+            let premises = vec![
+                claim(class, format!("autonomy:class={class}"), "candidates"),
+                observed(class, format!("autonomy:clean={}", reading.clean_outcomes)),
+                claim(
+                    class,
+                    format!("autonomy:verdict={verdict}"),
+                    "params.autonomy_verdict",
+                ),
+            ];
+            Ok(Executed::from_family(
+                advisory(),
+                Some(FamilyExecuted {
+                    answer: Some(FamilyAnswer::Autonomy(Box::new(reading))),
+                    premises,
+                    resolution: None,
+                    evidence: None,
+                }),
+            ))
+        }))
+    }
+
+    fn resolution_kind(&self, _outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        Some(ResolutionKind::Constraint)
+    }
+
+    fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        Some(EvidenceClass::Observation)
+    }
+}

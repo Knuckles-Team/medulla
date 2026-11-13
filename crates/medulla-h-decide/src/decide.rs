@@ -14,6 +14,7 @@ pub(crate) mod commit;
 pub(crate) mod coverage;
 #[cfg(all(test, feature = "decide"))]
 mod coverage_tests;
+pub(crate) mod feature_ledger;
 pub(crate) mod guardrail;
 pub(crate) mod jobs;
 pub(crate) mod log;
@@ -175,11 +176,12 @@ pub use belief_revise::handle_belief_revise;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
+pub use stat_proposals::handle_revision_proposal_list;
+pub use feature_ledger::handle_feature_ledger;
 pub use guardrail::handle_guardrail_entailment;
 pub use jobs::{handle_decision_eval, handle_decision_fit};
 pub use log::handle_decision_log;
 pub use loops::handle_loops;
-pub use stat_proposals::handle_revision_proposal_list;
 pub use statistical::handle_decide;
 
 /// The caller's read-only SQL relations — the decision record views (EH-066) — when

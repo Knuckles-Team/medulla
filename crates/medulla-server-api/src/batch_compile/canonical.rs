@@ -742,6 +742,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger commits in the control owner.
         | Method::Usage { .. }
         | Method::Claims { .. }
+        | Method::FeatureLedger { .. }
         | Method::Loops { .. }
         | Method::BeliefRevise { .. }
         | Method::GraphSchema { .. }

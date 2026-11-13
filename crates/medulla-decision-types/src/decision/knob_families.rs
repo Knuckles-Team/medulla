@@ -73,4 +73,9 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::load_set_knobs::KNOBS,
     super::checker_feedback::KNOBS,
     super::team_coordination::KNOBS,
+    super::population::KNOBS,
+    super::curriculum::KNOBS,
+    super::autonomy::KNOBS,
+    super::reward::KNOBS,
+    super::trajectory_verdict::KNOBS,
 ];

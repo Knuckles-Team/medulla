@@ -112,6 +112,31 @@ pub(super) struct FamilyExecuted {
     pub(super) evidence: Option<medulla_decision_types::decision::EvidenceClass>,
 }
 
+impl Executed {
+    /// What a family that answers without the matrix ladder concluded.
+    pub(super) fn from_family(
+        outcome: medulla_decision_types::decision::statistical::StatisticalOutcome,
+        family: Option<FamilyExecuted>,
+    ) -> Self {
+        Self {
+            matrix: None,
+            ladder: LadderResult {
+                outcome,
+                calibration: None,
+                explained: None,
+                audit: None,
+                logging: Vec::new(),
+            },
+            reading: None,
+            seed: [0u8; 32],
+            harness_contrast: None,
+            family,
+            family_premises: Vec::new(),
+            route: None,
+        }
+    }
+}
+
 /// Where a premise a family computed at conclude time came from; a policy
 /// premise is bound to the digest of the policy in force when it is sealed.
 pub(super) enum FamilyPremiseSource {

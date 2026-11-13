@@ -236,8 +236,6 @@ pub mod memory_sync;
 // every wire listener routes an operation by. Pure, no dep.
 pub mod workload_class;
 
-// MEDULLA-DURABLE-KERNEL-R089.1 — per-step verification verdict. Pure, no dep.
-pub mod step_verdict;
 // MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
 pub mod rule_correction;
 // MEDULLA-DECISION-ENGINE-R702.1 — Learn-stage correction records and effects.

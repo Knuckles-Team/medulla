@@ -1800,6 +1800,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R751.750` | `crates/medulla-decision-types/src/decision/reward.rs::tests::reward_types_round_trip` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.750` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats/src/decision/reward.rs::tests::rewards_sum_exactly_and_floor_applies` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats/src/decision/reward.rs::tests::cache_hit_discounts_weight` | L1 |
+| `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats/src/decision/reward.rs::tests::decomposition_is_idempotent` | L2 |
 | `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::reward_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide/src/decide/stat_tests/curriculum_promotion_tests.rs::curriculum_refusals` | (planned) |

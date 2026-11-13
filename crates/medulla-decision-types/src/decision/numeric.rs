@@ -110,3 +110,11 @@ pub struct QuantisedValue {
     pub scale: QuantScaleTag,
     pub value: i64,
 }
+
+/// A ratio knob (`DecimalMicros`, millionths) as a `Q32` fixed-point value,
+/// rounded half up. Knob ratios lie in `[0, 1]`, so the result is exact to the
+/// last `Q32` unit and deterministic.
+pub fn micros_to_q32(micros: i64) -> i64 {
+    let wide = (i128::from(micros) << 32) + 500_000;
+    i64::try_from(wide.div_euclid(1_000_000)).unwrap_or(i64::MAX)
+}

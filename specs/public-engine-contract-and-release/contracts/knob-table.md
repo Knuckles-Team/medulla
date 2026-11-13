@@ -92,6 +92,11 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `match.max_block` | u64 | 256 | [8, 4096] | features | Tunable | `MEDULLA_MATCH_MAX_BLOCK` |
 | `match.score_min` | u64 | 600000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_SCORE_MIN` |
 | `match.entropy_mbit` | u64 | 3500 | [1000, 6000] | millibits | Tunable | `MEDULLA_MATCH_ENTROPY_MBIT` |
+| `playbook.window` | u64 | 300 | [10, 86400] | seconds | Tunable | `MEDULLA_PLAYBOOK_WINDOW` |
+| `playbook.flap_min_events` | u64 | 3 | [2, 100] | events | Tunable | `MEDULLA_PLAYBOOK_FLAP_MIN_EVENTS` |
+| `er.candidate_k` | u64 | 16 | [1, 64] | neighbours | Tunable | `MEDULLA_ER_CANDIDATE_K` |
+| `er.drift_window` | u64 | 200 | [20, 5000] | reviews | Tunable | `MEDULLA_ER_DRIFT_WINDOW` |
+| `er.drift_max_ppm` | u64 | 150000 | [10000, 500000] | ppm | Tunable | `MEDULLA_ER_DRIFT_MAX_PPM` |
 | `freshness.window` | u64 | 60 | [1, 3600] | seconds | Tunable | `MEDULLA_FRESHNESS_WINDOW` |
 | `concept_lineage.read_max_successors` | u64 | 1024 | [1, 65536] | successors | Tunable | `MEDULLA_CONCEPT_LINEAGE_READ_MAX_SUCCESSORS` |
 | `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | none (registry knob, not an environment variable) |

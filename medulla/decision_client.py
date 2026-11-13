@@ -816,6 +816,48 @@ def belief_revise_request(
     }
 
 
+def feature_ledger_open_op(
+    feature_id: str, match_ids: Sequence[str] = ()
+) -> dict[str, Any]:
+    """Record a feature gap in the ledger with the matches it came from."""
+    return {"op": "open", "feature_id": feature_id, "match_ids": list(match_ids)}
+
+
+def feature_ledger_plan_op(
+    plan_id: str,
+    feature_ids: Sequence[str],
+    rationale_digest: str,
+    expected_revision: int,
+) -> dict[str, Any]:
+    """Attach a plan to open entries that are all at ``expected_revision``."""
+    return {
+        "op": "plan",
+        "plan": {
+            "plan_id": plan_id,
+            "feature_ids": list(feature_ids),
+            "rationale_digest": rationale_digest,
+        },
+        "expected_revision": expected_revision,
+    }
+
+
+def feature_ledger_close_op(
+    feature_id: str, closed_by: str, expected_revision: int
+) -> dict[str, Any]:
+    """Close a planned entry by the change that closed the gap."""
+    return {
+        "op": "close",
+        "feature_id": feature_id,
+        "closed_by": closed_by,
+        "expected_revision": expected_revision,
+    }
+
+
+def feature_ledger_get_op(feature_ids: Sequence[str] = ()) -> dict[str, Any]:
+    """Read entries; no ids reads the whole tenant ledger."""
+    return {"op": "get", "feature_ids": list(feature_ids)}
+
+
 def claim_propose_op(claim_id: str) -> dict[str, Any]:
     """Create a claim in ``proposed``."""
     return {"op": "propose", "claim_id": claim_id}
@@ -1139,6 +1181,18 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def feature_ledger(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``FeatureLedger`` (open, plan, close and read feature gaps)."""
+        result = await self.client._send(
+            "FeatureLedger",
+            {"op": dict(op)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
     async def assistant_profile(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
@@ -1196,6 +1250,10 @@ __all__ = [
     "document_set_wire",
     "declared",
     "evaluate_op",
+    "feature_ledger_close_op",
+    "feature_ledger_get_op",
+    "feature_ledger_open_op",
+    "feature_ledger_plan_op",
     "get_document_set_op",
     "get_op",
     "get_profile_op",

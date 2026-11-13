@@ -758,6 +758,7 @@ mod tests {
         ("DecisionEval", "native MutationBatch in agent_library.redb: the terminal evaluation job row and its receipt in one control-owner WTX; local-only authority"),
         ("BeliefRevise", "native MutationBatch in statecharts.redb: one belief-ledger instance transition per graph per control-owner WTX through the statechart store; local-only authority"),
         ("Claims", "native MutationBatch in statecharts.redb: one claim or sealed-artifact instance transition per control-owner WTX through the statechart store; local-only authority"),
+        ("FeatureLedger", "native MutationBatch in statecharts.redb: one tenant ledger write (every entry an operation touches) per control-owner WTX through the statechart store; local-only authority"),
         ("Loops", "native MutationBatch in statecharts.redb: one loop-state or loop-record instance transition per control-owner WTX through the statechart store; local-only authority"),
         ("DecisionLog", "native MutationBatch in agent_library.redb: one verify-replayed statistical record or one outcome evaluation per control-owner WTX; local-only authority"),
         ("Usage", "MEDULLA-DECISION-ENGINE-R801.8: native MutationBatch in agent_library.redb: one usage batch (records, day buckets, audit line) or one price entry per control-owner WTX; local-only authority"),

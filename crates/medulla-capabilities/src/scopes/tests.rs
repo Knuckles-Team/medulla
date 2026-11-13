@@ -10,6 +10,7 @@ const OP_LEVEL_ACTIONS: &[&str] = &[
     "agent:component-read",
     "agent:decision-evaluate",
     "agent:decision-read",
+    "agent:feature-ledger-read",
     "agent:graph-read",
     "agent:library-read",
     "agent:pack-read",

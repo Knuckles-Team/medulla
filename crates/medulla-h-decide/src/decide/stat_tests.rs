@@ -1260,14 +1260,25 @@ mod command_config_tests;
 
 // MEDULLA-DECISION-ENGINE-R159.3: routing-path preference, served.
 mod path_preference_tests;
+// MEDULLA-DECISION-ENGINE-R751 to R753: the pure-kernel families, served.
+mod autonomy_tests;
 
 // MEDULLA-DECISION-ENGINE-R172.7: capability designation served through Decide.
 #[cfg(feature = "redb")]
 mod capability_designation_tests;
+mod curriculum_promotion_tests;
+#[cfg(feature = "statechart")]
+mod feature_match_tests;
+mod kernel_family_support;
 
 // MEDULLA-DECISION-ENGINE-R176.3: the load set served through Decide.
 #[cfg(feature = "redb")]
 mod load_set_tests;
+mod population_tests;
+mod research_voi_tests;
+mod reward_decomposition_tests;
+mod step_verification_tests;
+mod trajectory_join_tests;
 
 // MEDULLA-DECISION-ENGINE-R177.3 to R177.5: usage guidance served through Decide.
 #[cfg(feature = "redb")]

@@ -211,6 +211,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",
+    // MEDULLA-DECISION-ENGINE-R707.3: `Get` reads; `Open`, `Plan` and `Close` write.
+    "FeatureLedger",
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` writes; `Read` is a graph read.
     "WorkflowRegistry",
     "AssistantProfile",

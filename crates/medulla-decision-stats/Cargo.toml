@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-numeric = { path = "../medulla-numeric" }
+medulla-ann = { path = "../medulla-ann" }
 rand_chacha = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 medulla-types = { path = "../medulla-types", optional = true }
