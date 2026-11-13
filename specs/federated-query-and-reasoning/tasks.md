@@ -405,7 +405,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T385 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.7 Discover excludes unchecked records
 - [ ] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters
 - [ ] T387 [US4] MEDULLA-FEDERATED-QUERY-R722.7 Source approval compare-and-set
-- [ ] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
+- [x] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
 - [ ] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
 - [ ] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
 - [ ] T453 [US4] MEDULLA-FEDERATED-QUERY-R722.11 Served Uql binds many approved foreign sources

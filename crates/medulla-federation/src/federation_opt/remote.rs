@@ -5,10 +5,11 @@ use std::sync::Arc;
 
 use medulla_types::wire::ForeignSourceSpec;
 
-use super::capability::{RemoteRequest, SourceCapabilities};
+use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};
 use super::snapshot::{SnapshotBound, SnapshotConn};
 use super::stats::{fingerprint, short, Fingerprint};
 use crate::federation::{ForeignSource, ForeignSourceRegistry, SharedForeignSource};
+use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
 use medulla_types::metadata_acceleration::SnapshotSemantics;
 
@@ -107,6 +108,9 @@ impl Identity {
 pub(crate) struct Opaque<'a> {
     source: OpaqueSource<'a>,
     identity: Identity,
+    /// The registration declared `key_filter_pushdown` for this source
+    /// (MEDULLA-FEDERATED-QUERY-R722.8). Only a declared capability is ever pushed.
+    key_pushdown: bool,
 }
 
 enum OpaqueSource<'a> {
@@ -116,15 +120,26 @@ enum OpaqueSource<'a> {
 
 impl RemoteFetch for Opaque<'_> {
     fn capabilities(&self) -> SourceCapabilities {
+        if self.key_pushdown {
+            return SourceCapabilities::single_full_fetch(
+                KeyLookup::Batched {
+                    max_keys: FederationBudget::default().max_bind_keys,
+                },
+                LimitPushdown::Unsupported,
+            );
+        }
         SourceCapabilities::fetch_only()
     }
     fn identity(&self) -> &Identity {
         &self.identity
     }
-    fn fetch(&self, _request: &RemoteRequest) -> Result<RowSet, String> {
-        match &self.source {
-            OpaqueSource::Spec(source) => source.fetch(),
-            OpaqueSource::Registered(source) => source.fetch(),
+    fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
+        let keys = (self.key_pushdown && !request.keys.is_empty()).then_some(&request.keys[..]);
+        match (&self.source, keys) {
+            (OpaqueSource::Spec(source), Some(keys)) => source.fetch_keys(keys),
+            (OpaqueSource::Registered(source), Some(keys)) => source.fetch_keys(keys),
+            (OpaqueSource::Spec(source), None) => source.fetch(),
+            (OpaqueSource::Registered(source), None) => source.fetch(),
         }
     }
 }
@@ -180,6 +195,7 @@ pub(crate) fn resolve_named<'a>(
             // The callback is the effective source, but the retained spec remains the
             // canonical identity/fingerprint used by traces and cache keys.
             identity: Identity::of_spec(spec, Some(name)),
+            key_pushdown: declared_key_pushdown(spec),
         }));
     }
     if let Some(spec) = registry.spec(name) {
@@ -189,7 +205,20 @@ pub(crate) fn resolve_named<'a>(
     Some(Box::new(Opaque {
         source: OpaqueSource::Registered(source),
         identity: Identity::of_registered(name),
+        key_pushdown: false,
     }))
+}
+
+/// Whether the registration of an operation-bound spec declared `key_filter_pushdown`
+/// (MEDULLA-FEDERATED-QUERY-R722.8). Every other spec kind declares none here.
+fn declared_key_pushdown(spec: &ForeignSourceSpec) -> bool {
+    match spec {
+        ForeignSourceSpec::Api { capabilities, .. }
+        | ForeignSourceSpec::Mcp { capabilities, .. }
+        | ForeignSourceSpec::A2a { capabilities, .. }
+        | ForeignSourceSpec::GraphQl { capabilities, .. } => capabilities.key_filter_pushdown,
+        _ => false,
+    }
 }
 
 /// The pushdown-capable implementation for a self-describing spec.
@@ -234,6 +263,7 @@ fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn 
         other => Box::new(Opaque {
             source: OpaqueSource::Spec(crate::federation::source_for(other)),
             identity,
+            key_pushdown: declared_key_pushdown(other),
         }),
     }
 }

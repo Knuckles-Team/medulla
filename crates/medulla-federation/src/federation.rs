@@ -117,6 +117,14 @@ pub trait ForeignSource {
             .map(crate::federation_opt::ForeignRows::from_rowset)
     }
 
+    /// Pull the rows whose id is one of `keys` (MEDULLA-FEDERATED-QUERY-R722.8). The optimizer
+    /// calls this only for a source whose registration declares `key_filter_pushdown`. The answer
+    /// may be a superset of the keys: the exact local residual filter always runs afterwards, so
+    /// a source that ignores the keys (the default) is still correct.
+    fn fetch_keys(&self, _keys: &[String]) -> Result<RowSet, String> {
+        self.fetch()
+    }
+
     /// Fetch the rows for a column plan, before its local residual runs.
     /// Non-pushdown sources fetch every mapped column; source implementations
     /// may override this to narrow the remote projection and filters first.

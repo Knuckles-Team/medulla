@@ -205,3 +205,6 @@ and `sub_query` items after it. Why: one list shape, no per-item kind field to t
 ## R702.2 threshold comparison per detector
 
 The exposed-constant and prior-knowledge detectors say "at least" in their row text, so a value equal to the threshold breaches. `RiskThresholds::breached` is the one comparison, shared by the refinement loop (`over`) and `RiskReport::check`; single-clue and co-coverage stay "beyond the threshold". The boundary tests sit at exactly the threshold for both detectors.
+## R722.8 key pushdown of a bound pack source
+
+Decision: a bound callback's key lookup is offered only when its registration declares `key_filter_pushdown`; the lookup rides a new `ForeignSource::fetch_keys` whose default is the full read, and the optimizer's join always intersects the answer with the local selection (the exact residual). Why: one capability source (the registration), a source that over-claims or ignores keys returns a superset and is still correct. The key batch size is the federation budget's `max_bind_keys`, not a second limit.
