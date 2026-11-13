@@ -56,6 +56,11 @@ pub const PAIRWISE_TOP_K: KnobSpec = integer("pairwise.top_k", "candidates", 3, 
 pub const PAIRWISE_MAX_REVISION_ROUNDS: KnobSpec =
     integer("pairwise.max_revision_rounds", "rounds", 2, 0, 8);
 
+/// Deepest rung a trajectory ladder may choose (R134.12).
+pub const MAX_DEPTH: KnobSpec = integer("trajectory.max_depth", "levels", 3, 1, 8);
+/// Index of the legal rung chosen when no head ranks them (R134.12).
+pub const DEFAULT_RUNG: KnobSpec = integer("trajectory.default_rung", "index", 0, 0, 15);
+
 /// Every trajectory-decision knob, each `Tunable`.
 pub const KNOBS: &[KnobSpec] = &[
     COMPLEXITY_THRESHOLD,
@@ -69,6 +74,8 @@ pub const KNOBS: &[KnobSpec] = &[
     BREADTH_DELTA_FAILURE,
     PAIRWISE_TOP_K,
     PAIRWISE_MAX_REVISION_ROUNDS,
+    MAX_DEPTH,
+    DEFAULT_RUNG,
 ];
 
 /// The integer the policy pins for `spec`, or its default, held inside the

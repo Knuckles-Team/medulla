@@ -112,6 +112,11 @@ pub enum RunRecord {
     /// principal (MEDULLA-DECISION-ENGINE-R803.7). Any outcome is stored: a
     /// harness contrast measures failed runs as well as successful ones.
     Trace { trace: RunTraceRecord },
+    /// Store one paired comparison of a rung against the baseline
+    /// (MEDULLA-DECISION-ENGINE-R134.12.1).
+    PairedVerdict {
+        verdict: super::trajectory_ladder::PairedVerdict,
+    },
 }
 
 /// What a committed [`RunRecord`] stored: the compiled program or the insight.
@@ -144,6 +149,10 @@ pub enum StoredRun {
     },
     /// The run trace as stored.
     Trace { stored: StoredRunTrace },
+    /// The paired verdict as stored.
+    PairedVerdict {
+        verdict: super::trajectory_ladder::PairedVerdict,
+    },
 }
 
 /// One run trace as stored: the trace and the principal that committed it.

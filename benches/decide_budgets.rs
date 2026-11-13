@@ -273,6 +273,9 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::SkillEvolution => "skill_evolution",
         QuestionKind::PlaybookTriage => "playbook_triage",
         QuestionKind::ToolActionAdmission => "tool_action_admission",
+        // Need a ladder and a graph of cited records, so each has its own fixture.
+        QuestionKind::TrajectoryLadder => "trajectory_ladder",
+        QuestionKind::AnalystSynthesis => "analyst_synthesis",
     }
 }
 

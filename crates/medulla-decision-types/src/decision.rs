@@ -22,6 +22,7 @@
 //! lives above this module. These are data types and their bounds.
 
 pub mod a2a_route;
+pub mod analyst_synthesis;
 pub mod answer_ranking_request;
 pub mod autonomy;
 pub mod branch_fusion;
@@ -98,6 +99,7 @@ pub mod thought_search;
 pub mod tool_action;
 pub mod tool_necessity;
 pub mod tool_relevance;
+pub mod trajectory_ladder;
 pub mod trace_fix_binding;
 pub mod trajectory_verdict;
 pub mod transfer;

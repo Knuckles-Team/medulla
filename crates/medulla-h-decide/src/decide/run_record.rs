@@ -5,6 +5,7 @@
 //! tenant's decision artifact store. `Decide` reads it and writes nothing;
 //! this handler is the single write authority.
 
+use medulla_decision_stats::decision::trajectory_ladder::check_paired_verdict;
 use medulla_decision_types::decision::branch_fusion::{
     branch_record_key, branch_retrieval_key, BranchRecord, BranchRef, BranchRetrievalReceipt,
     BRANCH_DUPLICATE, BRANCH_READBACK_STALE,
@@ -23,13 +24,19 @@ use medulla_decision_types::decision::program_store::{
     RunRecord, RunRecordStored, StoredRun, StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS,
     RUN_TRACE_FIELD,
 };
+use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::{QuestionKind, TypedValue};
 use medulla_decision_types::decision::task_plan::horizon::{
     HORIZON_CHECKPOINT_MISSING, HORIZON_PLAN_STALE,
 };
 use medulla_decision_types::decision::task_plan::{
     attach_horizons, check_horizon_checkpoint, checkpoint_key, compute_plan_digest, HorizonKnobs,
 };
+use medulla_decision_types::decision::trajectory_ladder::{
+    PairedVerdict, TrajectoryLadderRequest, TRAJECTORY_DECISION_UNKNOWN,
+};
+use medulla_persistence_records::decision_jobs::record_key as decision_record_key;
 
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 
@@ -465,6 +472,48 @@ fn commit(
             Ok(RunRecordStored {
                 key,
                 stored: StoredRun::Trace { stored },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R134.12.1: a verdict is stored only for a trajectory-ladder
+        // decision of the caller's own tenant, with both arms and the decision's own
+        // snapshot; a retry with equal content answers the stored row.
+        RunRecord::PairedVerdict { verdict } => {
+            let unknown = || {
+                format!(
+                    "{TRAJECTORY_DECISION_UNKNOWN}: `{}` is not a trajectory-ladder decision of this tenant",
+                    verdict.decision_id
+                )
+            };
+            let Some(bytes) = ctx
+                .store
+                .decision_artifact(ctx.tenant_id, &decision_record_key(&verdict.decision_id))?
+            else {
+                return Err(unknown());
+            };
+            let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
+            let asked = entry
+                .record
+                .inputs
+                .params
+                .iter()
+                .find(|param| param.name == "ladder")
+                .and_then(|param| match &param.value {
+                    TypedValue::Text(text) => {
+                        serde_json::from_str::<TrajectoryLadderRequest>(text).ok()
+                    }
+                    _ => None,
+                })
+                .filter(|_| entry.record.question.kind == QuestionKind::TrajectoryLadder)
+                .ok_or_else(unknown)?;
+            check_paired_verdict(&verdict, &asked.input_snapshot_digest)?;
+            let key = verdict.key();
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let verdict: PairedVerdict =
+                store_once(ctx, key.clone(), "paired verdict", verdict, |a, b| a == b)?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::PairedVerdict { verdict },
                 replayed,
             })
         }

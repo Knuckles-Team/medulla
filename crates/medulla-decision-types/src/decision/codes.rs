@@ -603,6 +603,14 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::FanoutWidth,
         super::population::FANOUT_REFUSALS,
     ),
+    (
+        QuestionKind::TrajectoryLadder,
+        super::trajectory_ladder::REFUSALS,
+    ),
+    (
+        QuestionKind::AnalystSynthesis,
+        super::analyst_synthesis::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

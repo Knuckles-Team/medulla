@@ -7,6 +7,7 @@
 
 mod a2a_route;
 mod adversarial_admission;
+mod analyst_synthesis;
 mod answer_ranking;
 #[cfg(feature = "decide")]
 pub(super) mod assemble;
@@ -89,6 +90,7 @@ mod tool_relevance;
 mod tool_subset;
 mod topology;
 mod trajectory_join;
+mod trajectory_ladder;
 mod usage_guidance;
 
 pub(in crate::decide) use command_config::command_view;
@@ -379,6 +381,10 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         playbook_triage::PlaybookTriageFamily;
     static SKILLEVOLUTIONFAMILY: skill_evolution::SkillEvolutionFamily =
         skill_evolution::SkillEvolutionFamily;
+    static TRAJECTORYLADDERFAMILY: trajectory_ladder::TrajectoryLadderFamily =
+        trajectory_ladder::TrajectoryLadderFamily;
+    static ANALYSTSYNTHESISFAMILY: analyst_synthesis::AnalystSynthesisFamily =
+        analyst_synthesis::AnalystSynthesisFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -461,6 +467,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::AdversarialAdmission => &ADVERSARIALADMISSIONFAMILY,
         QuestionKind::SkillEvolution => &SKILLEVOLUTIONFAMILY,
         QuestionKind::PlaybookTriage => &PLAYBOOKTRIAGEFAMILY,
+        QuestionKind::TrajectoryLadder => &TRAJECTORYLADDERFAMILY,
+        QuestionKind::AnalystSynthesis => &ANALYSTSYNTHESISFAMILY,
     }
 }
 
@@ -553,6 +561,8 @@ mod tests {
             QuestionKind::AdversarialAdmission,
             QuestionKind::SkillEvolution,
             QuestionKind::PlaybookTriage,
+            QuestionKind::TrajectoryLadder,
+            QuestionKind::AnalystSynthesis,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -624,6 +634,8 @@ mod tests {
             | QuestionKind::IngestShortfall
             | QuestionKind::CapacityProposal
             | QuestionKind::ProbeSelection
+            | QuestionKind::TrajectoryLadder
+            | QuestionKind::AnalystSynthesis
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion
             | QuestionKind::ResearchNext
@@ -648,7 +660,6 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            81,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

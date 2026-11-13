@@ -90,4 +90,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::reward::KNOBS,
     super::trajectory_verdict::KNOBS,
     super::safety::KNOBS,
+    super::analyst_synthesis::KNOBS,
 ];

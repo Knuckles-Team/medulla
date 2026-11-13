@@ -276,10 +276,6 @@ async fn serve(
                 super::stat_team::team_view(state, verified.agent_id(), &request)
                     .await
                     .map(Some)
-            } else if request.question.kind == QuestionKind::ToolActionAdmission {
-                super::family::admission_view(state, verified.agent_id(), &request)
-                    .await
-                    .map(Some)
             } else {
                 super::candidates::filtered_graph_view(
                     state,
@@ -710,6 +706,10 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::ProbeVerdict | QuestionKind::ProbeSelection => {
             medulla_decision_types::decision::knob_families::red_team::KNOBS
         }
+        QuestionKind::TrajectoryLadder => {
+            medulla_decision_types::decision::knob_families::trajectory::KNOBS
+        }
+        QuestionKind::AnalystSynthesis => medulla_decision_types::decision::analyst_synthesis::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }

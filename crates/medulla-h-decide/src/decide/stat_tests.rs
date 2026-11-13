@@ -1102,6 +1102,10 @@ mod runtime_quota_tests;
 mod program_store_tests;
 // MEDULLA-DECISION-ENGINE-R134.14: branch outcome records and the fusion receipt, served.
 mod branch_outcomes_tests;
+// MEDULLA-DECISION-ENGINE-R134.12 and R134.12.1: the rung choice and the paired verdicts, served.
+mod trajectory_ladder_tests;
+// MEDULLA-DECISION-ENGINE-R134.13: cited analyst synthesis, served.
+mod synthesis_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
 mod tool_relevance_tests;

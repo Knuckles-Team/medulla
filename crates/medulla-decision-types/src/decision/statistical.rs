@@ -314,6 +314,13 @@ pub enum QuestionKind {
     /// never run (MEDULLA-DECISION-ENGINE-R704.3). Advisory only. See
     /// `decision::playbook`.
     PlaybookTriage,
+    /// Width and depth rung choice for one task (MEDULLA-DECISION-ENGINE-R134.12).
+    /// Evaluate-only. See `decision::trajectory_ladder`.
+    TrajectoryLadder,
+    /// Cited synthesis of analyst findings, abstaining on any gap in the
+    /// accounting, a conflict or a bad citation (MEDULLA-DECISION-ENGINE-R134.13).
+    /// Evaluate-only. See `decision::analyst_synthesis`.
+    AnalystSynthesis,
 }
 
 /// What is at stake. Exploration is permitted only for
