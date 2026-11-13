@@ -1331,6 +1331,8 @@ async fn served_decide_refuses_a_skill_parent_cycle_and_an_unknown_parent() {
         Some("skill-ghost"),
     );
     assert_invalid(&unknown, ask_over(&pin), "SKILL_PARENT_UNKNOWN").await;
+}
+
 /// A branched plan whose steps carry `(duration_ms, priority_weight)`.
 fn weighted_proposal(weights: [(u64, u64); 5]) -> serde_json::Value {
     let w = |(duration, weight): (u64, u64)| serde_json::json!({"duration_ms": duration, "priority_weight": weight});

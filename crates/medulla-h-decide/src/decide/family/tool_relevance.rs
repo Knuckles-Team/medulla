@@ -23,6 +23,7 @@ use medulla_decision_types::decision::{
     DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
+use medulla_types::contract::BoundedVec;
 use std::collections::BTreeMap;
 
 use crate::decide::stat_executor::{
@@ -152,9 +153,16 @@ fn conclude(
             .collect(),
     )?;
     if let StatisticalOutcome::Advisory { scores, .. } = &mut executed.ladder.outcome {
-        for (option, assigned) in scores.iter_mut().zip(&chosen) {
-            option.score.value = assigned.relevance_q32;
-        }
+        let rescored: Vec<_> = scores
+            .iter()
+            .zip(&chosen)
+            .map(|(option, assigned)| {
+                let mut option = option.clone();
+                option.score.value = assigned.relevance_q32;
+                option
+            })
+            .collect();
+        *scores = BoundedVec::new(rescored)?;
     }
     let rank_text = |rank: Option<u32>| rank.map_or("none".to_string(), |rank| rank.to_string());
     let mut premises: Vec<FamilyPremise> = chosen
