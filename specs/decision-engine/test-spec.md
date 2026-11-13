@@ -670,7 +670,7 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 - `MEDULLA-DECISION-ENGINE-R138.2`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::one_passing_scorer_compromises`.
 - `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict`.
 - `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::missing_scorer_abstains`.
-- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::premises_name_scorers_and_scores`.
+- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores`.
 - `MEDULLA-DECISION-ENGINE-R138.6`: `tests/decide/test_red_team_served.py::test_probe_verdict_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R137 package tests (planned)

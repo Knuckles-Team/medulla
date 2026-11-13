@@ -22,13 +22,16 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{
-    DecisionPolicy, LibraryCandidateScope, QuantScaleTag, QuantisedValue, ResolutionKind,
+    DecisionPolicy, EvidenceClass, LibraryCandidateScope, PremiseClass, PremiseRef, QuantScaleTag,
+    QuantisedValue, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
 use crate::decide::candidates::library_candidates;
-use crate::decide::stat_executor::{Executed, ExecutionContext};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 
 use super::support::{abstained, advisory, invalid, param};
 use super::DecisionFamily;
@@ -124,6 +127,16 @@ fn conclude_probe(
                 attack_id: attack_id.clone(),
             })
         })?;
+    // The attack and each transform are definitions the verdict rests on.
+    let mut premises = vec![FamilyPremise {
+        subject: "probe_verdict",
+        fact: format!("attack:{}", attack.component_id),
+        class: PremiseClass::Definition,
+        source: FamilyPremiseSource::Publisher {
+            component_id: attack.component_id.clone(),
+            definition_digest: attack.definition_digest.clone(),
+        },
+    }];
     let attack = RedTeamAttack::from_attributes(&attack.component_id, &attack.attributes)
         .map_err(invalid)?;
     for id in &transform_ids {
@@ -131,6 +144,15 @@ fn conclude_probe(
             .ok_or_else(|| invalid(format!("no visible transform {id}")))?;
         RedTeamTransform::from_attributes(&entry.component_id, &entry.attributes)
             .map_err(invalid)?;
+        premises.push(FamilyPremise {
+            subject: "probe_verdict",
+            fact: format!("transform:{}", entry.component_id),
+            class: PremiseClass::Definition,
+            source: FamilyPremiseSource::Publisher {
+                component_id: entry.component_id.clone(),
+                definition_digest: entry.definition_digest.clone(),
+            },
+        });
     }
     let scorers = entries
         .iter()
@@ -168,6 +190,21 @@ fn conclude_probe(
                 permille: value,
             }));
         }
+        premises.push(FamilyPremise {
+            subject: "probe_verdict",
+            fact: match given {
+                Some(value) => format!(
+                    "scorer:{};score_permille={value};threshold_permille={}",
+                    scorer.id, scorer.threshold
+                ),
+                None => format!(
+                    "scorer:{};score_permille=missing;threshold_permille={}",
+                    scorer.id, scorer.threshold
+                ),
+            },
+            class: PremiseClass::Claim,
+            source: FamilyPremiseSource::Request("candidates"),
+        });
         results.push(ScorerResult {
             scorer: scorer.clone(),
             score: given.map(|v| v as u16),
@@ -185,6 +222,7 @@ fn conclude_probe(
         scores: BoundedVec::new(scores.to_vec()).map_err(invalid)?,
         calibrated: false,
     };
+    executed.family_premises = premises;
     Ok(executed)
 }
 
@@ -203,7 +241,25 @@ impl DecisionFamily for ProbeVerdictFamily {
         Some(conclude_probe(ctx, request, policy))
     }
 
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        executed
+            .family_premises
+            .iter()
+            .map(|premise| premise.seal(policy_digest))
+            .collect()
+    }
+
     fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
         matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(ResolutionKind::Constraint)
+    }
+
+    /// The weakest premise is a scorer's `Claim`, so the answer is a claim.
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Claim)
     }
 }

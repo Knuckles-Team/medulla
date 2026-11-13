@@ -304,3 +304,76 @@ async fn missing_scorer_abstains() {
         [AbstainReason::Family { code, .. }] if *code == codes::NO_SCORER_FOR_CATEGORY
     ));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R138.5
+#[tokio::test]
+async fn premises_name_scorers_and_scores() {
+    use medulla_decision_types::decision::{EvidenceClass, PremiseClass, PremiseProvenance};
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    publish_red_team(&h);
+    // scorer-a is scored, scorer-b is missing, scorer-other is not selected.
+    let batch = decide(
+        &h,
+        probe_request(TENANT, &pin, vec![result("scorer-a", Some(800))]),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+
+    let scorer = |id: &str| {
+        let wanted = format!("scorer:{id};");
+        let found: Vec<_> = record
+            .premises
+            .iter()
+            .filter(|premise| premise.fact.starts_with(&wanted))
+            .collect();
+        assert_eq!(found.len(), 1, "one premise for {id}");
+        found[0].clone()
+    };
+    let a = scorer("scorer-a");
+    assert_eq!(
+        a.fact,
+        "scorer:scorer-a;score_permille=800;threshold_permille=700"
+    );
+    assert_eq!(a.class, PremiseClass::Claim);
+    assert_eq!(
+        a.provenance,
+        PremiseProvenance::Request {
+            field: "candidates".to_string()
+        }
+    );
+    let b = scorer("scorer-b");
+    assert_eq!(
+        b.fact,
+        "scorer:scorer-b;score_permille=missing;threshold_permille=500"
+    );
+    assert_eq!(b.class, PremiseClass::Claim);
+    assert!(
+        !record
+            .premises
+            .iter()
+            .any(|premise| premise.fact.starts_with("scorer:scorer-other")),
+        "an unselected scorer has no premise"
+    );
+
+    // The attack and the transform are definitions bound to their publication.
+    for (fact, id) in [("attack:attack-1", "attack-1"), ("transform:tx-1", "tx-1")] {
+        let premise = record
+            .premises
+            .iter()
+            .find(|premise| premise.fact == fact)
+            .unwrap_or_else(|| panic!("a definition premise {fact}"));
+        assert_eq!(premise.class, PremiseClass::Definition);
+        assert!(matches!(
+            &premise.provenance,
+            PremiseProvenance::Publisher { component_id, .. } if component_id == id
+        ));
+    }
+    // The knob premises of the red_team family are part of the record.
+    assert!(record
+        .premises
+        .iter()
+        .any(|premise| premise.fact.starts_with("knob:red_team.category_match=")));
+}
