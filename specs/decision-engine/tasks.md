@@ -653,7 +653,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T640 [US6] MEDULLA-DECISION-ENGINE-R615.3 Served write-back queue
 - [ ] T641 [US6] MEDULLA-DECISION-ENGINE-R615.4 Unapproved release refuses
 - [ ] T642 [US6] MEDULLA-DECISION-ENGINE-R615.5 Write-back release evidence
-- [ ] T643 [US6] MEDULLA-DECISION-ENGINE-R615.6 Hot-path proof for the write-back queue
+- [x] T643 [US6] MEDULLA-DECISION-ENGINE-R615.6 Hot-path proof for the write-back queue
 - [ ] T644 [US8] MEDULLA-DECISION-ENGINE-R617.1 Model
 - [ ] T645 [US8] MEDULLA-DECISION-ENGINE-R617.2.1 Behavior: layered project rules
 - [ ] T646 [US8] MEDULLA-DECISION-ENGINE-R617.2.2 Behavior: retention prune plan

@@ -1759,8 +1759,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide/src/decide/stat_writeback.rs::release` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::unapproved_release_refuses_without_partial_write` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R615.5` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::release_and_refusal_leave_audit_rows` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.6` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.6` | `tests/decide/test_writeback_queue_served.py::test_queue_approve_release` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.6` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | L3 |
+| `MEDULLA-DECISION-ENGINE-R615.6` | `tests/decide/test_writeback_queue_served.py::test_queue_approve_release` | L4 |
 | `MEDULLA-DECISION-ENGINE-R617` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::source_ingest_transcript_becomes_episodic_memory` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R617.2` | `crates/medulla-work-types/src/memory.rs::tests::conversation_projects_to_ordered_episodic_records` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R617.2` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::source_ingest_transcript_becomes_episodic_memory` | (planned) |

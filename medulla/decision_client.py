@@ -609,6 +609,55 @@ def capability_outcome_op(
     }
 
 
+def writeback_op(tenant_id: str, computation: Mapping[str, Any]) -> dict[str, Any]:
+    """One ``Writeback`` operation (MEDULLA-DECISION-ENGINE-R615.3): ``computation``
+    is a ``kind``-tagged body built by :func:`writeback_queue`,
+    :func:`writeback_approve` or :func:`writeback_release`."""
+    return {"op": "writeback", "tenant_id": tenant_id, "computation": dict(computation)}
+
+
+def writeback_proposal(
+    proposal_id: str,
+    external_id: str,
+    system_of_record: str,
+    risk_tier: str,
+    as_of_ms: int,
+    source_values: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """One proposal to queue with the per-source value digests its preflight reads."""
+    return {
+        "proposal": {
+            "id": proposal_id,
+            "external_id": external_id,
+            "system_of_record": system_of_record,
+            "risk_tier": risk_tier,
+            "as_of_ms": as_of_ms,
+        },
+        "source_values": dict(source_values or {}),
+    }
+
+
+def writeback_queue(
+    queue_id: str, proposals: Iterable[Mapping[str, Any]]
+) -> dict[str, Any]:
+    """Queue preflighted high-tier proposals under ``queue_id``."""
+    return {
+        "kind": "queue",
+        "queue_id": queue_id,
+        "proposals": [dict(p) for p in proposals],
+    }
+
+
+def writeback_approve(queue_id: str, proposal_id: str) -> dict[str, Any]:
+    """Approve one queued proposal; the approver is the request's verified principal."""
+    return {"kind": "approve", "queue_id": queue_id, "proposal_id": proposal_id}
+
+
+def writeback_release(queue_id: str) -> dict[str, Any]:
+    """Release the queue as one governed change set once every proposal is approved."""
+    return {"kind": "release", "queue_id": queue_id}
+
+
 def record_outcome_op(
     tenant_id: str,
     record_id: str,

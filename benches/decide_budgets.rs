@@ -43,6 +43,10 @@ use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+use medulla_decision_types::decision::statistical::writeback::{
+    ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
+};
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
 };
@@ -358,6 +362,91 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
     let group_name = "decide/claims".to_string();
     let mut group = c.benchmark_group(&group_name);
     group.bench_function("served", |b| b.iter(journey));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            journey();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
+/// One write-back operation through the served `DecisionLog` handler.
+fn writeback(rt: &Runtime, h: &Harness, computation: WritebackOp) -> Response {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
+    rt.block_on(medulla_h_decide::decide::handle_decision_log(
+        &h.state,
+        1,
+        &verified,
+        DecisionLogOp::Writeback {
+            tenant_id: TENANT.to_string(),
+            computation,
+        },
+    ))
+}
+
+/// The `decide/writeback_queue` group (MEDULLA-DECISION-ENGINE-R615.6): one
+/// high-tier proposal is queued under a fresh queue id and approved, through
+/// the served `Writeback` op. Its budget is `group_budgets` in
+/// `benches/baselines/decide.json`: p99 at most 15 ms.
+fn bench_writeback_queue(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let h = rt.block_on(Harness::new());
+    let mut next = 0u64;
+    let mut journey = || {
+        next += 1;
+        let queue_id = format!("bench-queue-{next}");
+        let proposal_id = format!("bench-proposal-{next}");
+        let queued = writeback(
+            rt,
+            &h,
+            WritebackOp::Queue {
+                queue_id: queue_id.clone(),
+                proposals: vec![QueuedProposalInput {
+                    proposal: ProposalInput {
+                        id: proposal_id.clone(),
+                        external_id: format!("bench-external-{next}"),
+                        system_of_record: "sor:ledger".to_string(),
+                        risk_tier: RiskTier::High,
+                        as_of_ms: 1_700_000_000_000,
+                    },
+                    source_values: BTreeMap::new(),
+                }],
+            },
+        );
+        assert!(queued.error.is_none(), "writeback bench queue: {queued:?}");
+        let approved = writeback(
+            rt,
+            &h,
+            WritebackOp::Approve {
+                queue_id,
+                proposal_id,
+            },
+        );
+        assert!(
+            approved.error.is_none(),
+            "writeback bench approve: {approved:?}"
+        );
+        black_box(approved);
+    };
+    let group_name = "decide/writeback_queue".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(&mut journey));
     group.finish();
 
     let before = high_water_mib();
@@ -1499,6 +1588,7 @@ fn bench_decide(c: &mut Criterion) {
         );
     }
     bench_claims(c, &rt, &mut report);
+    bench_writeback_queue(c, &rt, &mut report);
     bench_task_plan_bounds(c, &rt, &mut report);
     bench_tool_relevance_cap(c, &rt, &mut report);
     bench_program_lookup(c, &rt, &mut report);
