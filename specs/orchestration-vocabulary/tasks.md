@@ -180,3 +180,14 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T173 [US9] MEDULLA-ORCH-VOCAB-R812.5 Export the work item state vocabulary
 - [ ] T170 [US9] MEDULLA-ORCH-VOCAB-R813 Lane work item derives terminal from status
 - [ ] T174 [US9] MEDULLA-ORCH-VOCAB-R811.8 Every served machine method returns TransitionRefused through the error mapper. Size: M, 2 PRs, 5 hours.
+- [ ] T178 [US9] MEDULLA-ORCH-VOCAB-R815 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T179 [US9] MEDULLA-ORCH-VOCAB-R815.1 ActionRun/ActionStatus state machine: route 1 census findings through ActionStatus::apply
+- [ ] T180 [US9] MEDULLA-ORCH-VOCAB-R815.2 AgentInstance/AgentLifecycleState state machine: route 1 census findings through AgentLifecycleState::apply
+- [ ] T181 [US9] MEDULLA-ORCH-VOCAB-R815.3 ChildInputRecord/ChildInputState state machine: route 2 census findings through ChildInputState::apply
+- [ ] T182 [US9] MEDULLA-ORCH-VOCAB-R815.4 GapView/GapStatus state machine: route 4 census findings through GapStatus::apply
+- [ ] T183 [US9] MEDULLA-ORCH-VOCAB-R815.5 Incident/IncidentStatus state machine: route 1 census findings through IncidentStatus::apply
+- [ ] T184 [US9] MEDULLA-ORCH-VOCAB-R815.6 IncidentRecord/IncidentStatus state machine: route 1 census findings through IncidentStatus::apply
+- [ ] T185 [US9] MEDULLA-ORCH-VOCAB-R812.6 WorkItem/WorkItemStatus state machine: route 8 census findings through WorkItemStatus::apply
+- [ ] T186 [US9] MEDULLA-ORCH-VOCAB-R815.7 WorkItemDeferral/WorkItemDeferStatus state machine: route 1 census findings through WorkItemDeferStatus::apply
+- [ ] T187 [US9] MEDULLA-ORCH-VOCAB-R815.8 WorkOfferView/OfferStage state machine: route 1 census findings through OfferStage::apply
+- [ ] T188 [US9] MEDULLA-ORCH-VOCAB-R815.9 WorkflowRegistrationEntry/WorkflowLifecycle state machine: route 1 census findings through WorkflowLifecycle::apply
