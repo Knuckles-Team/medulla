@@ -2,7 +2,8 @@
 //!
 //! `ArgumentMapPut` is gateway-routed (`Route::ArgumentMap`): the map is
 //! validated by `ArgumentMap::checked` (a refused map writes nothing), then
-//! commits as one atomic batch through the staged gateway — the `ArgumentMap`
+//! commits as one atomic batch through the staged gateway (`commit_gateway`;
+//! the coalescer takes only the five structural single-node writes) — the `ArgumentMap`
 //! node holding the canonical interchange JSON, one `AifNode` node per map
 //! node (properties `aif_id`, `kind`, `text`) and one `AIF_EDGE`
 //! relationship per map edge (property `edge_id`). Replacing a stored map
@@ -13,6 +14,7 @@
 use super::*;
 use medulla_protocol_types::result_contract::query::ArgumentMapPut;
 use medulla_result_types::argument_map::ArgumentMap;
+use medulla_server_ops::api::ingest::graph::commit_gateway;
 use serde_json::json;
 
 const MAP_LABEL: &str = "ArgumentMap";
@@ -74,7 +76,7 @@ pub(super) async fn handle_put(
     let owned_id = map_id.clone();
     let owned_map = map;
     Some(
-        super::gateway::commit_gateway_coalescable(ctx, &plan, method, move |core| {
+        commit_gateway(ctx, &plan, method, move |core| {
             // Replace: drop the prior projection (node removal clears its
             // `AIF_EDGE` relationships), then write the new batch.
             if let Some(previous) = previous {
