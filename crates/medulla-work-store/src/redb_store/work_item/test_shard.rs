@@ -116,7 +116,7 @@ pub fn run_request() -> medulla_work_types::native_control::SubmitWorkItemReques
             "audience":"engine", "authentication_method":"local_process", "policy_version":"v1",
             "graph":GRAPH, "placement_epoch":null, "trace_id":"trace", "issued_at_ms":1,
             "expires_at_ms":2},
-        "idempotency_key":"run-key", "command_digest":"A".repeat(64), "kind":"test",
+        "idempotency_key":"run-key", "command_digest":"A".repeat(64), "kind":"failure_cluster",
         "priority":2, "depends_on":[], "input_ref":"input", "policy_digest":"policy",
         "catalog_digest":"catalog", "model_digest":"model", "max_attempts":3,
         "deadline_unix":null, "metadata":{"original":true}, "provenance_refs":["source"],

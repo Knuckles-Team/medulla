@@ -6,6 +6,9 @@ use crate::control_lease::IssueControlLeaseRequest;
 use medulla_types::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 
 pub const HOST_START_KIND: &str = "host.start";
+/// Web research work submitted by the arbora `research.web` operation
+/// (MEDULLA-UNIFIED-DATA-PLANE-R766).
+pub const RESEARCH_WEB_KIND: &str = "research_web";
 pub const HOST_START_ISSUE_SCOPE: &str = "host:issue-start";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -673,6 +673,7 @@ closed_error_codes! {
         DataPrepDeclarationInvalid => "DATA_PREP_DECLARATION_INVALID",
         DataPrepDeclarationTooLarge => "DATA_PREP_DECLARATION_TOO_LARGE",
         WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
+        WorkItemKindUnknown => "WORK_ITEM_KIND_UNKNOWN",
         MetastoreSpecInvalid => "METASTORE_SPEC_INVALID",
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",
         SchemaIncompatible => "SCHEMA_INCOMPATIBLE",

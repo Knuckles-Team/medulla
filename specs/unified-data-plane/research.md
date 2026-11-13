@@ -53,3 +53,23 @@ instead of duplicating them; `medulla-h-query` already depends on that crate. EX
 the wire gains exactly one field (`view`).
 
 Projection read decision (R026.4.1 to R026.4.3). A projection mapping revision is one graph node of the caller's tenant, so it is a graph fact written through the durable mutation path like every other write; the read handler writes nothing. The table is read by a typed scan of the caller-visible nodes of the mapped label rather than through an OBDA SPARQL rewrite: a projection answers a relational table read with typed columns and a primary-key digest, and the OBDA seam only carries lexical strings, so a rewrite would lose the column types the response must bind. Approval reuses the R005.1 state type, so there is one approval state. Staleness is a higher stored revision of the same mapping id. The session names its mapping in the startup parameter `medulla.mapping` (or `-c medulla.mapping=` in `options` for drivers that cannot send arbitrary startup parameters); while it is set, every non-read statement is refused with SQLSTATE `25006` before the access check, so a graph write grant never makes a projection a writer.
+## Decision: where schema_context reads its answer (MEDULLA-UNIFIED-DATA-PLANE-R029.2)
+
+The platform's `schema_context` call is owned by R029.2; no second row or method is added. The
+served `Method::SchemaContext` builds its answer only from state the engine already holds for the
+verified caller, reusing the existing read paths instead of a new catalog store: the baselined
+attached-source catalog (`catalog_read`, R014.2.3) gives columns and joins (the table's own foreign
+keys and every foreign key that references it); the caller's registered graph views give the
+ontology class, counting only a view that reads exactly this source table, because a view over
+several tables cannot say which label belongs to which table; the application is the attached
+source and the owner is the agent that registered it; the impact reuses the R763.3 downstream walk
+over the stored column edges, inside the same `lineage.impact_*` knobs, so no new limit exists.
+The answer always carries every part and the intent names the part the caller needs: a part that
+is unknowable for the table is refused for that intent (`SCHEMA_CONTEXT_UNMAPPED`,
+`SCHEMA_CONTEXT_CLASS_AMBIGUOUS`) rather than answered empty. The handler lives in
+`medulla-h-query` because it reads server state; `medulla-types` keeps the answer types and the
+lookup that refuses an unknown table. Another owner's source of the same name resolves exactly like
+an unknown source (`SCHEMA_CONTEXT_SOURCE_UNKNOWN`), so the refusal never confirms existence.
+WIRE-REGEN needed: the new method and result type change the wire contract vectors.
+## Work-item kind registry (R766)
+The closed `WorkItemKind` registry holds seven kinds, not six: `agent.execute` is submitted by the delegation path (`DelegationRequest.kind` is forwarded into `SubmitWorkItemRequest`), so a closed registry without it would refuse a production caller. Wire strings are unchanged. The registry is the single admission check; fixtures that used an arbitrary kind use a registry kind.

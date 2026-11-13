@@ -2,6 +2,21 @@
 
 use super::*;
 
+/// The kind must be in the closed `WorkItemKind` registry; any other kind
+/// refuses with `WORK_ITEM_KIND_UNKNOWN` before any row is written
+/// (MEDULLA-UNIFIED-DATA-PLANE-R766).
+pub fn check_work_item_kind(
+    kind: &str,
+) -> Result<medulla_work_types::native_control::WorkItemKind, String> {
+    medulla_work_types::native_control::WorkItemKind::from_wire(kind).ok_or_else(|| {
+        format!(
+            "{}: work item kind '{}' is not in the registry",
+            medulla_types::contract::server_error_code::ServerErrorCode::WorkItemKindUnknown,
+            kind.chars().take(64).collect::<String>()
+        )
+    })
+}
+
 pub fn validate_submit_work_item_identity(
     graph: &str,
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
@@ -29,6 +44,7 @@ pub fn validate_submit_work_item_identity(
             return Err(format!("SubmitWorkItem {field} is outside native bounds"));
         }
     }
+    check_work_item_kind(request.kind.as_str())?;
     Ok(())
 }
 
@@ -911,4 +927,119 @@ fn validate_dispatch_carrier(
         return Err("INVALID_ARGUMENT: dispatch carrier run does not match the turn".into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::redb_store::work_item::test_shard::{apply, open, run_request, GRAPH};
+    use medulla_protocol_types::protocol::{Method, ResultPayload};
+    use medulla_result_types::epistemic_operations::{
+        ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
+    };
+    use medulla_work_types::native_control::{SubmitWorkItemResult, WorkItemKind};
+
+    fn request_of(
+        kind: &str,
+        key: &str,
+    ) -> medulla_work_types::native_control::SubmitWorkItemRequest {
+        let mut request = run_request();
+        request.kind = kind.to_string();
+        request.idempotency_key = key.to_string();
+        request.run_id = None;
+        request
+    }
+
+    fn submit(shard: &Shard, kind: &str, key: &str) -> Result<SubmitWorkItemResult, String> {
+        let method = Method::SubmitWorkItem {
+            request: request_of(kind, key),
+        };
+        match apply(shard, key, method, 1_000)? {
+            ResultPayload::Json(value) => Ok(serde_json::from_value(value).unwrap()),
+            ResultPayload::Raw(bytes) => Ok(decode_durable(&bytes).unwrap()),
+            other => panic!("SubmitWorkItem answers a result, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn research_web_kind_submits_and_unknown_kind_refuses() {
+        let temp = open("research-web-kind");
+        // Every kind of the registry still submits, and its wire string is unchanged.
+        for (index, kind) in WorkItemKind::REGISTRY.into_iter().enumerate() {
+            let submitted = submit(&temp.shard, kind.as_str(), &format!("registry-{index}"))
+                .unwrap_or_else(|error| panic!("{} must submit: {error}", kind.as_str()));
+            assert!(submitted.created, "{} created a work item", kind.as_str());
+        }
+        assert_eq!(WorkItemKind::HostStart.as_str(), "host.start");
+        assert_eq!(WorkItemKind::ResearchWeb.as_str(), "research_web");
+
+        // One research_web item is readable until it is committed, and after.
+        let item = submit(&temp.shard, "research_web", "research-1").unwrap();
+        let view = read_work_item(
+            &temp.shard,
+            GRAPH,
+            "tenant",
+            &item.work_item_id,
+            DurableCrypto::none(),
+        )
+        .unwrap()
+        .expect("the submitted item is readable");
+        assert_eq!(view.kind, "research_web");
+        let claim = Method::ClaimWorkItem {
+            request: ClaimWorkItemRequest {
+                schema_version: ClaimWorkItemRequestSchemaVersion::V1,
+                tenant_ref: "tenant".into(),
+                work_item_id: Some(item.work_item_id.clone()),
+                queue_ref: None,
+                resource_class: None,
+                fairness_group: None,
+                worker_ref: "worker-1".into(),
+                now_ms: 2_000,
+                lease_ms: 60_000,
+                max_tenant_in_flight: 64,
+            },
+        };
+        let hold: ClaimWorkItemResult = match apply(&temp.shard, "claim", claim, 2_000).unwrap() {
+            ResultPayload::Raw(bytes) => decode_durable(&bytes).unwrap(),
+            other => panic!("ClaimWorkItem answers a bin-encoded result, got {other:?}"),
+        };
+        let commit = Method::CommitWorkItemResult {
+            tenant: "tenant".into(),
+            work_item_id: item.work_item_id.clone(),
+            worker_id: "worker-1".into(),
+            lease_epoch: hold.lease_epoch.unwrap(),
+            fencing_token: hold.fencing_token.unwrap(),
+            idempotency_key: "commit-research".into(),
+            outcome: "succeeded".into(),
+            result_ref: Some("cas:result:research".into()),
+            error_ref: None,
+            retryable: false,
+            now_ms: 3_000,
+            outcome_extension: None,
+            run_completion: None,
+        };
+        apply(&temp.shard, "commit", commit, 3_000).unwrap();
+        let committed = read_work_item(
+            &temp.shard,
+            GRAPH,
+            "tenant",
+            &item.work_item_id,
+            DurableCrypto::none(),
+        )
+        .unwrap()
+        .expect("the committed item is still readable");
+        assert_eq!(
+            serde_json::to_value(&committed.status).unwrap(),
+            serde_json::json!("succeeded")
+        );
+
+        // An unknown kind fails closed with the registered code and writes nothing.
+        let refused = submit(&temp.shard, "not-a-kind", "unknown-1").unwrap_err();
+        assert!(
+            refused.starts_with("WORK_ITEM_KIND_UNKNOWN"),
+            "unknown kind refuses with the typed code: {refused}"
+        );
+        assert!(check_work_item_kind("research_web").is_ok());
+        assert!(check_work_item_kind("").is_err());
+    }
 }

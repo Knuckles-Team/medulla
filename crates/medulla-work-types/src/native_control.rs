@@ -297,6 +297,62 @@ pub struct ChildInputAdmission {
     pub state: ChildInputState,
 }
 
+/// The closed registry of work-item kinds the engine admits
+/// (MEDULLA-UNIFIED-DATA-PLANE-R766). Every wire string is the one submitted
+/// before the registry existed; a rename would be a wire change.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WorkItemKind {
+    #[serde(rename = "browser.control")]
+    BrowserControl,
+    #[serde(rename = "failure_cluster")]
+    FailureCluster,
+    #[serde(rename = "gap_remediation")]
+    GapRemediation,
+    #[serde(rename = "authenticated-replay-test")]
+    AuthenticatedReplayTest,
+    #[serde(rename = "research_web")]
+    ResearchWeb,
+    #[serde(rename = "host.start")]
+    HostStart,
+    /// A delegated agent run (`DelegationRequest.kind`).
+    #[serde(rename = "agent.execute")]
+    AgentExecute,
+}
+
+impl WorkItemKind {
+    /// Every admitted kind, in registry order.
+    pub const REGISTRY: [WorkItemKind; 7] = [
+        Self::BrowserControl,
+        Self::FailureCluster,
+        Self::GapRemediation,
+        Self::AuthenticatedReplayTest,
+        Self::ResearchWeb,
+        Self::HostStart,
+        Self::AgentExecute,
+    ];
+
+    /// The wire string of this kind.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::BrowserControl => "browser.control",
+            Self::FailureCluster => "failure_cluster",
+            Self::GapRemediation => "gap_remediation",
+            Self::AuthenticatedReplayTest => "authenticated-replay-test",
+            Self::ResearchWeb => crate::host_start::RESEARCH_WEB_KIND,
+            Self::HostStart => crate::host_start::HOST_START_KIND,
+            Self::AgentExecute => "agent.execute",
+        }
+    }
+
+    /// Look a wire string up in the registry; an unknown kind is `None`.
+    pub fn from_wire(kind: &str) -> Option<Self> {
+        Self::REGISTRY
+            .into_iter()
+            .find(|candidate| candidate.as_str() == kind)
+    }
+}
+
 /// Native WorkItem admission request.  `context.tenant_id` and
 /// `context.graph` are checked against the verified request envelope; they are
 /// not caller-controlled routing hints.

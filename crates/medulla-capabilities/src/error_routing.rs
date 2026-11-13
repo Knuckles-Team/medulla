@@ -945,6 +945,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "IDEMPOTENCY_CONFLICT",
             "REPLAY_NONCE_CONSUMED",
             "REVISION_CONFLICT",
+            // MEDULLA-UNIFIED-DATA-PLANE-R766: a kind outside the closed registry.
+            "WORK_ITEM_KIND_UNKNOWN",
             "WORK_QUEUE_FULL",
         ],
     ),
