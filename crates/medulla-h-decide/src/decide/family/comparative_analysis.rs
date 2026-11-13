@@ -228,6 +228,7 @@ impl DecisionFamily for ComparativeAnalysisPlanFamily {
             context_selection: None,
             thought: None,
             family_premises: Vec::new(),
+            route: None,
         }))
     }
 

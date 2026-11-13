@@ -32,6 +32,8 @@ use crate::decide::stat_executor::{
 use crate::decide::tool_index::{ToolIndexCache, ToolIndexError};
 
 use super::support::{abstained, advisory, invalid};
+use medulla_types::contract::BoundedVec;
+
 use super::DecisionFamily;
 
 /// The parameter carrying the typed assignment request.
@@ -163,6 +165,11 @@ fn conclude(
             })
             .collect();
         *scores = BoundedVec::new(rescored)?;
+        let mut ranked = scores.as_slice().to_vec();
+        for (option, assigned) in ranked.iter_mut().zip(&chosen) {
+            option.score.value = assigned.relevance_q32;
+        }
+        *scores = BoundedVec::new(ranked).map_err(|detail| invalid(detail))?;
     }
     let rank_text = |rank: Option<u32>| rank.map_or("none".to_string(), |rank| rank.to_string());
     let mut premises: Vec<FamilyPremise> = chosen

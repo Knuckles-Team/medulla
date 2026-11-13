@@ -283,7 +283,7 @@ async fn comparative_refusals() {
         let (id, revision) = revisions.iter().find(|(known, _)| known == id).unwrap();
         candidate(id, *revision, importance)
     };
-    let refuses = |code: &str, request: DecideRequest| {
+    let refuses = |code: &'static str, request: DecideRequest| {
         let h = &h;
         async move {
             let error = decide(h, request).await.expect_err(code);
