@@ -69,6 +69,11 @@ pub struct SegmentReadAudit {
 
 /// Whether `reader` may see `unit`: its own units, or a unit whose owner shares
 /// it at a scope the reader matches. `Private` never leaves its owner.
+///
+/// The owner map is keyed by UNIT id and holds the principal that owns that unit,
+/// with the tenant it was written under. A principal id is only unique inside its
+/// tenant, so ownership is the pair (tenant, principal), never the principal id
+/// alone (MEDULLA-IDENTITY-R726).
 pub type ShareRule = fn(&UnitPrincipal, &KnowledgeUnit, &BTreeMap<String, UnitPrincipal>) -> bool;
 
 /// Which of the candidate units of one lineage survive.
@@ -87,12 +92,12 @@ pub fn owner_or_matching_scope(
     unit: &KnowledgeUnit,
     owners: &BTreeMap<String, UnitPrincipal>,
 ) -> bool {
-    if unit.owner == reader.id {
-        return true;
-    }
-    let Some(owner) = owners.get(&unit.owner) else {
+    let Some(owner) = owners.get(&unit.id) else {
         return false;
     };
+    if owner.id == unit.owner && owner.id == reader.id && owner.tenant == reader.tenant {
+        return true;
+    }
     match unit.share_scope {
         ShareScope::Private => false,
         ShareScope::Placement => {
@@ -219,6 +224,22 @@ mod tests {
         }
     }
 
+    /// The owner map of `units`: each unit id to the principal in `people` that owns it.
+    fn owners_of(
+        people: &[UnitPrincipal],
+        units: &[KnowledgeUnit],
+    ) -> BTreeMap<String, UnitPrincipal> {
+        units
+            .iter()
+            .filter_map(|u| {
+                people
+                    .iter()
+                    .find(|p| p.id == u.owner)
+                    .map(|p| (u.id.clone(), p.clone()))
+            })
+            .collect()
+    }
+
     fn deny_everyone(
         _: &UnitPrincipal,
         _: &KnowledgeUnit,
@@ -235,15 +256,12 @@ mod tests {
     #[test]
     fn superseded_and_foreign_units_hidden() {
         let alice = principal("usr:alice", "p1", "t1");
-        let owners: BTreeMap<String, UnitPrincipal> = [
+        let people = [
             alice.clone(),
             principal("usr:bob", "p1", "t1"),
             principal("usr:carol", "p2", "t1"),
             principal("usr:dave", "p9", "t2"),
-        ]
-        .into_iter()
-        .map(|p| (p.id.clone(), p))
-        .collect();
+        ];
         let units = vec![
             unit("u1", "usr:alice", 1, None, ShareScope::Private),
             unit("u2", "usr:alice", 2, Some("u1"), ShareScope::Private),
@@ -255,6 +273,7 @@ mod tests {
             unit("t1", "usr:bob", 1, None, ShareScope::Tenant),
             unit("t2", "usr:bob", 5, Some("t1"), ShareScope::Tenant),
         ];
+        let owners = owners_of(&people, &units);
         let ids = |reader: &UnitPrincipal| -> Vec<String> {
             visible_units(reader, &owners, &units)
                 .iter()
@@ -265,9 +284,9 @@ mod tests {
         // version, no private foreign unit, no other placement's placement share,
         // no other tenant's unit.
         assert_eq!(ids(&alice), ["b-place", "c-tenant", "t2", "u2"]);
-        let bob = owners["usr:bob"].clone();
+        let bob = people[1].clone();
         assert_eq!(ids(&bob), ["b-place", "b-priv", "c-tenant", "t2"]);
-        let dave = owners["usr:dave"].clone();
+        let dave = people[3].clone();
         assert_eq!(ids(&dave), ["d-tenant"]);
 
         // A foreign private newer version never hides a version the reader may see.
@@ -275,6 +294,7 @@ mod tests {
             unit("s1", "usr:bob", 1, None, ShareScope::Tenant),
             unit("s2", "usr:bob", 2, Some("s1"), ShareScope::Private),
         ];
+        let owners = owners_of(&people, &hidden_newer);
         let visible = visible_units(&alice, &owners, &hidden_newer);
         assert_eq!(
             visible.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(),
@@ -286,6 +306,7 @@ mod tests {
             share: deny_everyone,
             lineage: highest_version,
         };
+        let owners = owners_of(&people, &units);
         assert!(visible_units_with(&alice, &owners, &units, &deny_all).is_empty());
         let keep_all = VisibilityRules {
             share: owner_or_matching_scope,
@@ -295,5 +316,33 @@ mod tests {
             visible_units_with(&alice, &owners, &units, &keep_all).len(),
             6
         );
+    }
+
+    // spec: MEDULLA-IDENTITY-R726
+    #[test]
+    fn same_principal_id_in_two_tenants_owns_only_its_own_units() {
+        let ann_t1 = principal("usr:ann", "p1", "t1");
+        let ann_t2 = principal("usr:ann", "p1", "t2");
+        let units = vec![
+            unit("t1-private", "usr:ann", 1, None, ShareScope::Private),
+            unit("t2-private", "usr:ann", 1, None, ShareScope::Private),
+            unit("t2-tenant", "usr:ann", 1, None, ShareScope::Tenant),
+        ];
+        let owners: BTreeMap<String, UnitPrincipal> = [
+            ("t1-private", &ann_t1),
+            ("t2-private", &ann_t2),
+            ("t2-tenant", &ann_t2),
+        ]
+        .into_iter()
+        .map(|(id, p)| (id.to_owned(), p.clone()))
+        .collect();
+        let ids = |reader: &UnitPrincipal| -> Vec<String> {
+            visible_units(reader, &owners, &units)
+                .iter()
+                .map(|u| u.id.clone())
+                .collect()
+        };
+        assert_eq!(ids(&ann_t1), ["t1-private"]);
+        assert_eq!(ids(&ann_t2), ["t2-private", "t2-tenant"]);
     }
 }

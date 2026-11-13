@@ -162,3 +162,20 @@ def test_shared_unit_visible_only_in_scope(clean_graph):
         assert _unit_ids(reader_b) == ["ku-shared-v2"]
     finally:
         reader_b.close()
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R726")
+# spec: MEDULLA-IDENTITY-R726
+def test_same_principal_id_in_two_tenants_sees_only_its_own_units(clean_graph):
+    """Ownership is (tenant, principal): the same principal id elsewhere owns nothing here."""
+    clean_graph.nodes.add("ku-own", _unit("private"))
+    # A private unit of a principal with the same id in another tenant.
+    clean_graph.nodes.add(
+        "ku-twin", _unit("private", owner_tenant=TENANT_B, owner=OWNER)
+    )
+
+    reader = _connect(OWNER, TENANT_A)
+    try:
+        assert _unit_ids(reader) == ["ku-own"]
+    finally:
+        reader.close()

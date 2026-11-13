@@ -85,3 +85,5 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T79 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
 - [ ] T80 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
 - [ ] T81 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
+- [ ] T80 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
+  Depends: none

@@ -133,12 +133,13 @@ pub struct UnitScan {
 /// Split the `KnowledgeUnit` nodes of `view` into visible and hidden for `caller`.
 pub fn scan_units(view: &GraphView, caller: &ReadCaller) -> UnitScan {
     let mut units = Vec::new();
+    // Keyed by unit id: an owner is the pair (tenant, principal), never the principal id alone.
     let mut owners: BTreeMap<String, UnitPrincipal> = BTreeMap::new();
     for (id, map) in nodes_with(view, KNOWLEDGE_UNIT_LABEL.as_bytes()) {
         if let Some((unit, owner)) = node_unit(id, &map) {
             let mut owner = owner;
             owner.placement.clone_from(&caller.principal.placement);
-            owners.insert(owner.id.clone(), owner);
+            owners.insert(unit.id.clone(), owner);
             units.push(unit);
         }
     }
@@ -175,15 +176,17 @@ fn hidden_metadata(view: &GraphView, caller: &ReadCaller) -> BTreeSet<String> {
                 continue;
             }
             let owner = text(&map, "owner").unwrap_or_default();
-            if !caller.principal.id.is_empty() && owner == reader {
+            let owner_tenant = text(&map, OWNER_TENANT_KEY).unwrap_or_default();
+            // Ownership is the pair (tenant, principal): the same principal id in
+            // another tenant is a different owner.
+            if !caller.principal.id.is_empty() && owner == reader && owner_tenant == reader_tenant {
                 continue;
             }
             let shared = label == "Preference"
                 && match text(&map, "share") {
                     Some("placement") => true,
                     Some("tenant") => {
-                        !caller.principal.tenant.is_empty()
-                            && text(&map, OWNER_TENANT_KEY).unwrap_or_default() == reader_tenant
+                        !caller.principal.tenant.is_empty() && owner_tenant == reader_tenant
                     }
                     _ => false,
                 };
@@ -400,5 +403,37 @@ mod tests {
         let view = Arc::new(core.analysis_snapshot());
         let refused = check_unit_read("private", &blob, || view, &caller("b", "acme")).unwrap_err();
         assert_eq!(refused.to_string(), "UNIT_OUT_OF_SCOPE: private");
+    }
+
+    /// Verifies MEDULLA-IDENTITY-R726: ownership is keyed by (tenant, principal)
+    // spec: MEDULLA-IDENTITY-R726
+    #[test]
+    fn same_principal_id_in_two_tenants_sees_only_its_own_units() {
+        let core = GraphCore::new();
+        for (id, tenant) in [("acme-private", "acme"), ("other-private", "other")] {
+            put(
+                &core,
+                id,
+                serde_json::json!({
+                    "node_type": "KnowledgeUnit", "owner": "ann", "owner_tenant": tenant,
+                    "version": 1, "share_scope": "private",
+                }),
+            );
+        }
+        let view = Arc::new(core.analysis_snapshot());
+        let vars = vec!["n".to_owned()];
+        for (tenant, own, foreign) in [
+            ("acme", "acme-private", "other-private"),
+            ("other", "other-private", "acme-private"),
+        ] {
+            let scoped = scope_view(view.clone(), &caller("ann", tenant), &vars).unwrap();
+            assert!(scoped.view.has_node(own), "{tenant} sees its own unit");
+            assert!(
+                !scoped.view.has_node(foreign),
+                "{tenant} must not see {foreign}"
+            );
+            let scan = scan_units(&view, &caller("ann", tenant));
+            assert_eq!(scan.visible, [own]);
+        }
     }
 }

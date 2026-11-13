@@ -338,3 +338,6 @@ none
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-IDENTITY-R720`, `MEDULLA-IDENTITY-R721`, `MEDULLA-IDENTITY-R722` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+## Unit ownership key (MEDULLA-IDENTITY-R726)
+Decision: a principal id is unique only within its tenant, so ownership is the pair (tenant, principal). The visibility owner map is keyed by unit id and carries the owning principal with its tenant; "own unit" requires both to match the reader. This leaves the `KnowledgeUnit` wire type unchanged (no new field, no layout change). Read-side owner checks for typed metadata and stored-query calls use the same pair. Row-level security in the graph core keys on agent id inside one tenant graph and is not an owner map across tenants.

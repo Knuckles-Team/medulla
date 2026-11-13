@@ -240,7 +240,7 @@ impl StoredQuery {
             access_labels: Default::default(),
             share_scope: self.share,
         };
-        let owners = BTreeMap::from([(author.id.clone(), author.clone())]);
+        let owners = BTreeMap::from([(unit.id.clone(), author.clone())]);
         owner_or_matching_scope(reader, &unit, &owners)
     }
 }
