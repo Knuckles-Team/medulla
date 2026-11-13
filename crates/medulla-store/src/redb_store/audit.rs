@@ -14,6 +14,8 @@
 //! this module at all.
 
 #[cfg(feature = "security")]
+use super::store_prelude::*;
+#[cfg(feature = "security")]
 use super::*;
 
 #[cfg(feature = "security")]
