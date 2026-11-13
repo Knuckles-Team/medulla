@@ -19,6 +19,20 @@ pub enum FallbackReason {
     NoCalibration,
 }
 
+/// One stage of the compile pipeline, in the vocabulary the evidence reports
+/// (MEDULLA-FEDERATED-QUERY-R652.3). Closed. `Boost` joins the order when the
+/// feedback boost runs inside `ContextCompile` (MEDULLA-FEDERATED-QUERY-R705).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineStage {
+    Fuse,
+    Rerank,
+    Calibrate,
+    Cut,
+    Select,
+}
+
 /// Default `top_n`: candidates kept per source before fusion.
 pub const DEFAULT_TOP_N: u32 = 256;
 /// Largest accepted `top_n`.
@@ -238,6 +252,9 @@ pub struct BundleEvidence {
     /// (no query text to score against).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rerank: Option<RerankEvidence>,
+    /// The stages this compile ran, in the order it ran them.
+    #[serde(default)]
+    pub stages: Vec<PipelineStage>,
 }
 
 /// What one rerank did, inline in the bundle evidence

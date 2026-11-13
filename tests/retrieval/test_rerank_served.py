@@ -96,3 +96,50 @@ def test_model_scorer_when_artifact_bound(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R652.3")
+def test_context_compile_reranks_before_boost(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R652.3: rerank runs after fuse and before
+    calibration, cut and selection, and never in Discover's place."""
+    graph = f"rerank-order-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        _node(
+            client,
+            graph,
+            "alpha",
+            {"type": "document", "name": "lighthouse keeper", "description": "notes"},
+        )
+        _node(
+            client,
+            graph,
+            "beta",
+            {
+                "type": "document",
+                "name": "lighthouse",
+                "description": "notes",
+                "text": "keeper logbook",
+            },
+        )
+        evidence = _compile(client, graph, "lighthouse keeper logbook")["evidence"]
+        stages = evidence["stages"]
+        # The receipt names the stages in the order they ran: the fused list is
+        # reranked, the scores calibrated, and only then is the tail cut and the
+        # package selected. No stage ahead of the rerank reorders its output.
+        assert stages == ["fuse", "rerank", "calibrate", "cut", "select"]
+        assert "boost" not in stages
+        rerank = evidence["rerank"]
+        # The rerank saw the fused order and changed it; the cut and the
+        # selection acted on the reranked order.
+        assert rerank["input_ranks"] == [0, 1]
+        assert rerank["output_ranks"] == [1, 0]
+        assert evidence["selected"][0] == "beta"
+        # With no champion curve pinned for the scorer, calibration scales
+        # min-max and the receipt says so.
+        assert rerank.get("calibration_digest") in (None, "")
+        assert rerank["fallback"] == "no_calibration"
+    finally:
+        client.tenants.delete(graph)
+        client.close()

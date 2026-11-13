@@ -902,7 +902,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R652:** `tests/retrieval/test_rerank_served.py::test_rerank_calibrate_and_fallback` (planned). Reranking and calibrated scores (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R652.1:** `crates/medulla-plan/src/rerank.rs::tests::types_round_trip_and_reject_non_monotone_knots` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R652.2:** `crates/medulla-plan/src/rerank.rs::tests::bm25_order_and_interpolation` (planned), `crates/medulla-plan/src/rerank.rs::tests::calibration_is_monotone` (planned). Behavior: lexical scoring and calibration. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R652.3:** `tests/retrieval/test_rerank_served.py::test_context_compile_reranks_before_boost` (planned). Wiring. Asserts the receipt order of stages.
+- **MEDULLA-FEDERATED-QUERY-R652.3:** `tests/retrieval/test_rerank_served.py::test_context_compile_reranks_before_boost`. Wiring. Asserts the receipt order of stages.
 - **MEDULLA-FEDERATED-QUERY-R652.4:** `tests/retrieval/test_rerank_served.py::test_rerank_refusals` (planned). Refusal. Asserts both codes and no items.
 - **MEDULLA-FEDERATED-QUERY-R652.5:** `tests/retrieval/test_rerank_served.py::test_receipt_fields` (planned). Evidence. Reads and compares every field.
 - **MEDULLA-FEDERATED-QUERY-R652.6:** `tests/retrieval/test_rerank_served.py::test_rerank_calibrate_and_fallback` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench rerank meets the key.

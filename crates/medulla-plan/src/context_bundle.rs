@@ -262,6 +262,7 @@ pub fn compile_with(
         },
         unchecked_dropped: inputs.unchecked_dropped.clone(),
         rerank: None,
+        stages: Vec::new(),
     };
     let key = bundle_key(request, inputs);
 
@@ -279,6 +280,7 @@ pub fn compile_with(
     }
     let refs: Vec<&[String]> = lists.iter().map(Vec::as_slice).collect();
     let mut fused = medulla_text::rrf_fuse(&refs, knobs.rrf_k as f32);
+    evidence.stages.push(PipelineStage::Fuse);
     // Fuse, then rerank the head, then cut (MEDULLA-FEDERATED-QUERY-R650,
     // MEDULLA-FEDERATED-QUERY-R652.7).
     let mut unscored: Vec<String> = Vec::new();
@@ -286,6 +288,9 @@ pub fn compile_with(
         let (reordered, rest, receipt) = rerank_fused(fused, rerank, model);
         fused = reordered;
         unscored = rest;
+        // The scorer ran, then its raw scores were calibrated (rerank_with).
+        evidence.stages.push(PipelineStage::Rerank);
+        evidence.stages.push(PipelineStage::Calibrate);
         evidence.rerank = Some(RerankEvidence {
             scorer_name: receipt.scorer.name,
             scorer_version: receipt.scorer.version,
@@ -296,6 +301,7 @@ pub fn compile_with(
         });
     }
     let keep = cut_at_gap(&fused, knobs.min_items as usize);
+    evidence.stages.push(PipelineStage::Cut);
 
     let mut excluded: Vec<ExcludedItem> = inputs.pre_excluded.clone();
     for node in unscored {
@@ -378,6 +384,7 @@ pub fn compile_with(
         node_budget: knobs.solver_node_budget,
     };
     let solved = select(&package)?;
+    evidence.stages.push(PipelineStage::Select);
     let chosen: BTreeSet<&str> = solved
         .selection
         .chosen_ids
