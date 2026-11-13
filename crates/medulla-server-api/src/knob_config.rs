@@ -243,6 +243,10 @@ knobs! {
     retrieval_token_limit: u64 = "retrieval.token_limit", U64(32_000), [1000, 1_000_000], "tokens", Tunable;
     /// Retrieval round: most inference calls one retrieval loop may make.
     retrieval_inference_limit: u64 = "retrieval.inference_limit", U64(8), [1, 64], "calls", Tunable;
+    /// Retrieval round: most perspective queries one feedback part may carry.
+    retrieval_feedback_queries: u64 = "retrieval.feedback_queries", U64(8), [1, 64], "queries", Tunable;
+    /// Retrieval round: most terms one feedback part may carry.
+    retrieval_feedback_terms: u64 = "retrieval.feedback_terms", U64(32), [1, 256], "terms", Tunable;
     /// Retrieval round: most cost one retrieval loop may incur.
     retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
     /// Retrieval round: score change below which quality has saturated.

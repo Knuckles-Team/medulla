@@ -7,7 +7,7 @@
 //! and tenant scope are applied by the handler before the `PlanCtx` is built, so the plan
 //! and every part can only see what the caller may read.
 
-use crate::retrieval_stop::{decide_stop, round_progress};
+use crate::retrieval_stop::{decide_stop, round_progress, stop_premise};
 use medulla_decision_stats::sparse_select::{joint_sparse_select, SparseSelectError};
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
@@ -16,13 +16,13 @@ use medulla_result_types::retrieval_round::{
     JointCoefficient, JointSelection, RetrievalPremise, RoundRequest, RoundResult, RoundRow,
     SelectionMode, SelectionPart, SolverStatus, StopKnobs,
 };
-use medulla_result_types::retrieval_verdict::RepairStep;
 use medulla_result_types::retrieval_verdict::{
     ChunkScorePair, DescentPolicy, HierarchyRetrievalKind, HierarchyStage, HierarchyStageReceipt,
     RetrievalRefusal, SectionGranularity as WireGranularity, RETRIEVAL_CONTRACT_INVALID,
     RETRIEVAL_EMBEDDING_REVISION_MISMATCH, RETRIEVAL_POLICY_UNVERIFIED,
     RETRIEVAL_SCORE_PAIR_REQUIRED, RETRIEVAL_SOLVER_NOT_CONVERGED,
 };
+use medulla_result_types::retrieval_verdict::{FeedbackLimits, RepairStep};
 use medulla_retrieval::leanrag::{retrieve_vector_free, SectionGranularity, VectorFreeLimits};
 use medulla_retrieval::retrieval_verdict::{
     check_activation, descend_hierarchy, judge_sufficiency, select_chunks, SufficiencyCall,
@@ -64,6 +64,10 @@ pub struct RoundKnobs {
     pub joint_tolerance: f64,
     /// `knob retrieval.joint_max_iters`, sweeps. A caller may lower it, never raise it.
     pub joint_max_iters: u32,
+    /// `knob retrieval.feedback_queries`, queries. A feedback part may lower it, never raise it.
+    pub feedback_queries: u32,
+    /// `knob retrieval.feedback_terms`, terms. A feedback part may lower it, never raise it.
+    pub feedback_terms: u32,
 }
 
 impl Default for RoundKnobs {
@@ -83,6 +87,8 @@ impl Default for RoundKnobs {
             joint_lambda: 0.1,
             joint_tolerance: 0.000001,
             joint_max_iters: 1000,
+            feedback_queries: 8,
+            feedback_terms: 32,
         }
     }
 }
@@ -608,6 +614,17 @@ pub fn run_round_with_state(
     state_runtime: Option<&StateRuntime<'_>>,
 ) -> Result<RoundResult, RoundError> {
     validate(request)?;
+    if let Some(part) = &request.feedback {
+        // Refused before any row is read: revisions, limits and evidence ids.
+        let ceiling = FeedbackLimits {
+            max_rounds: knobs.round_limit,
+            max_queries: knobs.feedback_queries,
+            max_terms: knobs.feedback_terms,
+            max_tokens: knobs.token_limit,
+            max_inference_calls: knobs.inference_limit,
+        };
+        part.validate(&request.corpus_revision, &request.model_revision, &ceiling)?;
+    }
     let rows = execute(&request.plan, ctx).map_err(RoundError::Plan)?;
     let mut steps = Steps::default();
     let hierarchy_selected = match &request.hierarchy {
@@ -702,6 +719,11 @@ pub fn run_round_with_state(
                 &context,
                 &progress,
             );
+            steps.premises.push(stop_premise(
+                &verdict,
+                &policy,
+                measured.then_some(&progress),
+            ));
             if verdict.stop {
                 if let Some(s) = sufficiency.as_mut() {
                     s.repair = RepairStep::Stop;
@@ -788,6 +810,8 @@ mod tests {
         joint_lambda: 0.1,
         joint_tolerance: 0.000001,
         joint_max_iters: 1000,
+        feedback_queries: 8,
+        feedback_terms: 32,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -806,6 +830,7 @@ mod tests {
             hierarchy: None,
             stop: None,
             state: None,
+            feedback: None,
         }
     }
 

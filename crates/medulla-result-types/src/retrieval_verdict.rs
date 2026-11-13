@@ -411,6 +411,43 @@ pub struct FeedbackLimits {
 }
 
 impl FeedbackLimits {
+    /// Refuse limits that are not positive or that exceed `ceiling` in any field:
+    /// a caller may lower a bound, never raise it (the `retrieval.*` knobs).
+    pub fn validate_within(&self, ceiling: &FeedbackLimits) -> Result<(), RetrievalRefusal> {
+        self.validate()?;
+        for (field, value, max) in [
+            (
+                "max_rounds",
+                u64::from(self.max_rounds),
+                u64::from(ceiling.max_rounds),
+            ),
+            (
+                "max_queries",
+                u64::from(self.max_queries),
+                u64::from(ceiling.max_queries),
+            ),
+            (
+                "max_terms",
+                u64::from(self.max_terms),
+                u64::from(ceiling.max_terms),
+            ),
+            ("max_tokens", self.max_tokens, ceiling.max_tokens),
+            (
+                "max_inference_calls",
+                u64::from(self.max_inference_calls),
+                u64::from(ceiling.max_inference_calls),
+            ),
+        ] {
+            if value > max {
+                return Err(RetrievalRefusal::new(
+                    RETRIEVAL_BUDGET_EXCEEDED,
+                    format!("feedback limit {field} {value} exceeds the registry bound {max}"),
+                ));
+            }
+        }
+        Ok(())
+    }
+
     fn validate(&self) -> Result<(), RetrievalRefusal> {
         require_positive("max_rounds", u64::from(self.max_rounds))?;
         require_positive("max_queries", u64::from(self.max_queries))?;

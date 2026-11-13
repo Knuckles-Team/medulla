@@ -193,3 +193,6 @@ response cap are configured once in the `nl_query` section. `expansion_model` an
 answers a JSON list of strings, so the kind is assigned by the request: a request with term
 feedback yields `perspective` items; a plain request yields one `hypothetical` passage first
 and `sub_query` items after it. Why: one list shape, no per-item kind field to trust.
+## R081.8.1 feedback part decision
+
+`RoundFeedback` lives beside `RoundRequest` in `medulla-result-types`, because it embeds `RetrievalFeedback` (which `medulla-types` cannot see). The two limits with no earlier knob get registry knobs `retrieval.feedback_queries` (default 8) and `retrieval.feedback_terms` (default 32). A limit above its knob is refused `RETRIEVAL_BUDGET_EXCEEDED`, never silently lowered; the part is validated before any row is read.

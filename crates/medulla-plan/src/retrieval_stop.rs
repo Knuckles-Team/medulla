@@ -5,7 +5,7 @@
 //! evidence, quality saturation, then calibrated confidence. Progress comes from the
 //! completed round's measured evidence, never from a caller or critique claim.
 
-use medulla_result_types::retrieval_round::RoundAnswer;
+use medulla_result_types::retrieval_round::{RetrievalPremise, RoundAnswer};
 use medulla_result_types::retrieval_stop::{
     CalibrationRefusal, CalibrationTable, ExhaustedDimension, StopContext, StopReason, StopVerdict,
 };
@@ -38,6 +38,42 @@ pub fn round_progress(
     RoundProgress {
         no_new_evidence,
         quality_saturated,
+    }
+}
+
+/// The premise the stop step appends (MEDULLA-FEDERATED-QUERY-R082.5): one typed
+/// map of the round, the closed reason, the margin and threshold, the calibration
+/// refusal, the policy revision, the measured progress and the exhausted dimension.
+/// Every field is a number, a bool, a closed enum token or a revision id; none is free
+/// text. `progress` is `None` when the round supplied no measured evidence. A missing
+/// calibration stays visible as `calibration_refusal`; it is never a confidence claim.
+pub fn stop_premise(
+    verdict: &StopVerdict,
+    policy_revision: &str,
+    progress: Option<&RoundProgress>,
+) -> RetrievalPremise {
+    let value = serde_json::json!({
+        "round": verdict.round,
+        "stop": verdict.stop,
+        "reason": serde_json::to_value(verdict.reason).unwrap_or(serde_json::Value::Null),
+        "margin": verdict.margin,
+        "threshold": verdict.threshold,
+        "calibration_refusal": verdict
+            .calibration_refusal
+            .and_then(|refusal| serde_json::to_value(refusal).ok()),
+        "exhausted_dimension": verdict
+            .exhausted_dimension
+            .and_then(|dimension| serde_json::to_value(dimension).ok()),
+        "policy_revision": policy_revision,
+        "progress": progress.map(|p| serde_json::json!({
+            "no_new_evidence": p.no_new_evidence,
+            "quality_saturated": p.quality_saturated,
+        })),
+    });
+    RetrievalPremise {
+        step: "stop".to_string(),
+        name: "retrieval.stop".to_string(),
+        value,
     }
 }
 
@@ -267,5 +303,50 @@ mod tests {
         // No prior quality cannot saturate; equality at epsilon does not saturate.
         assert!(!round_progress(&["a"], &prior, Some(0.5), None, 0.01).quality_saturated);
         assert!(!round_progress(&["a"], &prior, Some(0.75), Some(0.5), 0.25).quality_saturated);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R082.5
+    #[test]
+    fn stop_premise_lists_margin_and_reason() {
+        let t = table();
+        // A calibrated confidence stop lists margin, threshold and reason.
+        let same = [answer(1, "a", 0.6), answer(2, "a", 0.8)];
+        let met = decide_stop(&t, &same, &context(2), &FRESH);
+        let premise = stop_premise(&met, "p1", Some(&FRESH));
+        assert_eq!(
+            (premise.step.as_str(), premise.name.as_str()),
+            ("stop", "retrieval.stop")
+        );
+        let v = &premise.value;
+        assert_eq!(v["round"], 2);
+        assert_eq!(v["stop"], true);
+        assert_eq!(v["reason"], "answer_repeated_margin_met");
+        assert!(v["margin"].as_f64().expect("margin") > 0.25 - 1e-9);
+        assert_eq!(v["threshold"], 0.25);
+        assert!(v["calibration_refusal"].is_null() && v["exhausted_dimension"].is_null());
+        assert_eq!(v["policy_revision"], "p1");
+        assert_eq!(v["progress"]["no_new_evidence"], false);
+
+        // A terminal verdict with no calibration row keeps the refusal visible and
+        // never carries a confidence claim.
+        let stale = RoundProgress {
+            no_new_evidence: true,
+            quality_saturated: false,
+        };
+        let uncalibrated = decide_stop(&t, &[], &context(1), &stale);
+        let premise = stop_premise(&uncalibrated, "p1", Some(&stale));
+        assert_eq!(premise.value["reason"], "no_new_evidence");
+        assert_eq!(premise.value["calibration_refusal"], "ROUND_NOT_CALIBRATED");
+        assert!(premise.value["margin"].is_null() && premise.value["threshold"].is_null());
+        assert_eq!(premise.value["progress"]["no_new_evidence"], true);
+
+        // An exhausted budget names its dimension; an unmeasured round has no progress.
+        let mut spent = context(1);
+        spent.tokens_used = spent.token_limit;
+        let exhausted = decide_stop(&t, &[], &spent, &FRESH);
+        let premise = stop_premise(&exhausted, "p1", None);
+        assert_eq!(premise.value["reason"], "budget_exhausted");
+        assert_eq!(premise.value["exhausted_dimension"], "tokens");
+        assert!(premise.value["progress"].is_null());
     }
 }

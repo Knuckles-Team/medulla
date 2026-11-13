@@ -85,6 +85,7 @@ fn request(sufficiency: Option<SufficiencyPart>) -> RoundRequest {
         hierarchy: None,
         stop: None,
         state: None,
+        feedback: None,
     }
 }
 
@@ -1225,6 +1226,57 @@ async fn stop_precedence_follows_the_declared_order() {
         refused.starts_with("RETRIEVAL_CONTRACT_INVALID"),
         "{refused}"
     );
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R082.5
+#[tokio::test(flavor = "multi_thread")]
+async fn stop_premise_lists_margin_and_reason() {
+    let state = state();
+    seed(&state, 2).await;
+
+    // A terminal verdict on a round with no calibration row: no new evidence stops
+    // the loop, and the premise keeps the refusal, the reason and the progress.
+    let mut stale = stop_part(calibration(&[2]), vec![]);
+    stale.prior_row_ids =
+        BoundedVec::new(vec!["doc-0".to_string(), "doc-1".to_string()]).expect("ids fit");
+    let result = decode(round_as(&state, None, stop_request(1, stale)).await);
+    let verdict = result.stop.clone().expect("stop verdict");
+    assert!(verdict.stop && verdict.calibration_refusal.is_some());
+    let premise = result
+        .premises
+        .iter()
+        .find(|p| p.name == "retrieval.stop")
+        .expect("stop premise");
+    assert_eq!(premise.step, "stop");
+    assert_eq!(premise.value["round"], 1);
+    assert_eq!(premise.value["stop"], true);
+    assert_eq!(premise.value["reason"], "no_new_evidence");
+    assert_eq!(premise.value["calibration_refusal"], "ROUND_NOT_CALIBRATED");
+    assert!(premise.value["margin"].is_null() && premise.value["threshold"].is_null());
+    assert_eq!(premise.value["policy_revision"], "corpus-1:model-1");
+    assert_eq!(premise.value["progress"]["no_new_evidence"], true);
+    // The insufficiency verdict stays visible beside the stop premise.
+    assert!(result.sufficiency.is_some());
+
+    // A calibrated repeat lists its margin and threshold.
+    let repeated = stop_part(
+        calibration(&[2]),
+        vec![answer(1, "d", 0.6), answer(2, "d", 0.9)],
+    );
+    let result = decode(round_as(&state, None, stop_request(2, repeated)).await);
+    let premise = result
+        .premises
+        .iter()
+        .find(|p| p.name == "retrieval.stop")
+        .expect("stop premise");
+    assert_eq!(premise.value["reason"], "answer_repeated_margin_met");
+    assert_eq!(premise.value["threshold"], 0.25);
+    assert!(premise.value["margin"].as_f64().expect("margin") > 0.25);
+    assert!(premise.value["calibration_refusal"].is_null());
+
+    // No stop part: no stop premise.
+    let bare = decode(round_as(&state, None, request(Some(part(Some(4))))).await);
+    assert!(bare.premises.iter().all(|p| p.name != "retrieval.stop"));
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R082.4

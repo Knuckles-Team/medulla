@@ -35,6 +35,8 @@ fn round_knobs() -> RoundKnobs {
         joint_lambda: knobs.retrieval_joint_lambda,
         joint_tolerance: knobs.retrieval_joint_tolerance,
         joint_max_iters: u32::try_from(knobs.retrieval_joint_max_iters).unwrap_or(u32::MAX),
+        feedback_queries: u32::try_from(knobs.retrieval_feedback_queries).unwrap_or(u32::MAX),
+        feedback_terms: u32::try_from(knobs.retrieval_feedback_terms).unwrap_or(u32::MAX),
     }
 }
 

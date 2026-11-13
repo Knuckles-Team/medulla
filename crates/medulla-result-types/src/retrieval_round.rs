@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::retrieval_stop::{CalibrationTable, StopContext};
 use crate::retrieval_verdict::{
-    FallbackPolicy, HierarchyRetrievalPolicy, SectionGranularity, SelectionPolicy,
-    SelectionReceipt, SufficiencyVerdict,
+    FallbackPolicy, FeedbackLimits, HierarchyRetrievalPolicy, RetrievalFeedback, RetrievalRefusal,
+    SectionGranularity, SelectionPolicy, SelectionReceipt, SufficiencyVerdict, TermFeedback,
+    RETRIEVAL_FEEDBACK_INVALID,
 };
 use medulla_types::contract::BoundedVec;
 
@@ -36,6 +37,49 @@ pub fn selection_policy_digest(policy: &SelectionPolicy) -> String {
 pub const MAX_ROUND_HISTORY: usize = 16;
 /// Most prior row ids a stop request may carry.
 pub const MAX_PRIOR_ROW_IDS: usize = 4096;
+
+/// Most prior-round terms a feedback part may carry.
+pub const MAX_PRIOR_TERMS: usize = 256;
+
+/// The feedback part of a round (MEDULLA-FEDERATED-QUERY-R081.8.1): the round's
+/// revision-bound feedback and the terms earlier rounds already used. Termination is
+/// never decided here; the R082 stop part is the one stop authority.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoundFeedback {
+    pub feedback: RetrievalFeedback,
+    #[serde(default)]
+    pub prior_terms: BoundedVec<TermFeedback, MAX_PRIOR_TERMS>,
+}
+
+impl RoundFeedback {
+    /// Refuse feedback whose revisions differ from the round's, whose limits exceed the
+    /// registry bounds in `ceiling`, or whose prior terms are malformed or too many.
+    pub fn validate(
+        &self,
+        corpus_revision: &str,
+        model_revision: &str,
+        ceiling: &FeedbackLimits,
+    ) -> Result<(), RetrievalRefusal> {
+        self.feedback.limits.validate_within(ceiling)?;
+        self.feedback.validate(corpus_revision, model_revision)?;
+        if self.prior_terms.len() > self.feedback.limits.max_terms as usize {
+            return Err(RetrievalRefusal::new(
+                RETRIEVAL_FEEDBACK_INVALID,
+                "prior_terms exceed max_terms",
+            ));
+        }
+        for term in &self.prior_terms {
+            if term.term.trim().is_empty() || !term.weight.is_finite() {
+                return Err(RetrievalRefusal::new(
+                    RETRIEVAL_FEEDBACK_INVALID,
+                    "a prior term is empty or its weight is not finite",
+                ));
+            }
+        }
+        Ok(())
+    }
+}
 
 /// The sufficiency part of a round (R081.3): which round this is and what the
 /// harness may do when evidence is short.
@@ -233,6 +277,9 @@ pub struct RoundRequest {
     /// (MEDULLA-FEDERATED-QUERY-R081.101.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<StatePart>,
+    /// Revision-bound feedback from the previous round (MEDULLA-FEDERATED-QUERY-R081.8.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback: Option<RoundFeedback>,
 }
 
 /// The state part of a round: the query scored against stored document state.
@@ -513,5 +560,86 @@ mod tests {
             (0..4097).map(|i| i.to_string()).collect()
         )
         .is_err());
+    }
+
+    fn limits() -> FeedbackLimits {
+        FeedbackLimits {
+            max_rounds: 4,
+            max_queries: 8,
+            max_terms: 32,
+            max_tokens: 32_000,
+            max_inference_calls: 8,
+        }
+    }
+
+    fn term(text: &str) -> TermFeedback {
+        TermFeedback {
+            term: text.into(),
+            tier: crate::retrieval_verdict::FeedbackTier::Missing,
+            weight: 0.5,
+            evidence_document_ids: Vec::new(),
+        }
+    }
+
+    fn round_feedback() -> RoundFeedback {
+        RoundFeedback {
+            feedback: RetrievalFeedback {
+                original_query: "invoice terms".into(),
+                round: 2,
+                corpus_revision: "corpus-1".into(),
+                model_revision: "model-1".into(),
+                perspectives: Vec::new(),
+                documents: Vec::new(),
+                terms: vec![term("payment")],
+                critique: None,
+                limits: limits(),
+            },
+            prior_terms: BoundedVec::new(vec![term("invoice")]).expect("one term fits"),
+        }
+    }
+
+    #[test]
+    fn round_feedback_round_trips_and_clamps_limits() {
+        let feedback = round_feedback();
+        let bytes = rmp_serde::to_vec_named(&feedback).expect("encodes");
+        let decoded: RoundFeedback = rmp_serde::from_slice(&bytes).expect("decodes");
+        assert_eq!(decoded, feedback);
+        assert!(feedback.validate("corpus-1", "model-1", &limits()).is_ok());
+
+        // A limit above the registry bound is refused, never silently lowered.
+        let mut raised = round_feedback();
+        raised.feedback.limits.max_tokens = 32_001;
+        let refused = raised
+            .validate("corpus-1", "model-1", &limits())
+            .expect_err("limit above the bound");
+        assert_eq!(
+            refused.code,
+            crate::retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED
+        );
+        let mut zero = round_feedback();
+        zero.feedback.limits.max_queries = 0;
+        assert!(zero.validate("corpus-1", "model-1", &limits()).is_err());
+
+        // Revisions must match the round; prior terms are bounded and well formed.
+        let stale = feedback
+            .validate("corpus-2", "model-1", &limits())
+            .expect_err("stale revision");
+        assert_eq!(stale.code, RETRIEVAL_FEEDBACK_INVALID);
+        let mut many = round_feedback();
+        many.feedback.limits.max_terms = 1;
+        many.prior_terms =
+            BoundedVec::new(vec![term("a"), term("b")]).expect("two terms fit the type bound");
+        assert!(many.validate("corpus-1", "model-1", &limits()).is_err());
+        let mut blank = round_feedback();
+        blank.prior_terms = BoundedVec::new(vec![term(" ")]).expect("one term fits");
+        assert!(blank.validate("corpus-1", "model-1", &limits()).is_err());
+        assert!(BoundedVec::<TermFeedback, MAX_PRIOR_TERMS>::new(
+            (0..=MAX_PRIOR_TERMS)
+                .map(|i| term(&i.to_string()))
+                .collect()
+        )
+        .is_err());
+        let unknown = serde_json::json!({"feedback": feedback.feedback, "extra": 1});
+        assert!(serde_json::from_value::<RoundFeedback>(unknown).is_err());
     }
 }

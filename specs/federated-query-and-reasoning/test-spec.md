@@ -113,7 +113,7 @@ These are required acceptance cases, not claims of completed tests.
 
 ### MEDULLA-FEDERATED-QUERY-R083 tests
 
-- `MEDULLA-FEDERATED-QUERY-R083.1`: `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates`.
+- `MEDULLA-FEDERATED-QUERY-R083.1`: `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates_and_support` and `tests::candidate_without_grounding_is_refused`.
 - `MEDULLA-FEDERATED-QUERY-R083.2`: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::margin_picks_or_abstains`.
 - `MEDULLA-FEDERATED-QUERY-R083.3`: `crates/medulla-exec/src/exec.rs::tests::execute_returns_arbitration_for_prior_candidate`.
 - `MEDULLA-FEDERATED-QUERY-R083.4`: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::abstain_returns_both_candidates`.
@@ -707,7 +707,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R081.7.6` | `tests/retrieval/test_adaptive_selection_served.py::test_rescue_and_dual_low_refusal` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.7.6` | `tests/retrieval_round_served.rs::adaptive_selection_rescues_low_embedding_chunk` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |
-| `MEDULLA-FEDERATED-QUERY-R081.8.1` | `crates/medulla-types/src/retrieval_round.rs::tests::round_feedback_round_trips_and_clamps_limits` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R081.8.1` | `crates/medulla-result-types/src/retrieval_round.rs::tests::round_feedback_round_trips_and_clamps_limits` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.1` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.2` | `crates/medulla-plan/src/retrieval_feedback.rs::tests::terms_reinforce_suppress_and_critique_cannot_promote` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.3` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |

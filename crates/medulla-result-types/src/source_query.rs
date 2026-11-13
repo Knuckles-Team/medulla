@@ -25,6 +25,84 @@ pub enum SourceQueryError {
     InvalidQuery,
     #[error("limit_exceeded")]
     LimitExceeded,
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("approval_expired")]
+    ApprovalExpired,
+    #[error("approval_revoked")]
+    ApprovalRevoked,
+    #[error("stale_source")]
+    StaleSource,
+    #[error("query_failed")]
+    QueryFailed,
+    #[error("cancelled")]
+    Cancelled,
+    #[error("verification_unavailable")]
+    VerificationUnavailable,
+}
+
+/// The step of a source query a failure happened in. Closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum SourceQueryStage {
+    Validation,
+    Approval,
+    Verification,
+    Execution,
+    Delivery,
+}
+
+/// A failed source query as it appears in an error reply (MEDULLA-FEDERATED-QUERY-R085.7).
+///
+/// It names the closed kind, the stage, the query by its digest and the last chunk
+/// delivered before the failure. It never carries SQL text, a parameter value or a
+/// credential: the identity is a 64-hex digest, and the formatted message is built
+/// from the closed tokens and numbers only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+#[error("{kind} (query {query_identity}, stage {stage:?}, last chunk {last_chunk:?})")]
+pub struct SourceQueryFailure {
+    pub kind: SourceQueryError,
+    pub query_identity: String,
+    pub stage: SourceQueryStage,
+    /// Zero-based index of the last chunk delivered; `None` when none was.
+    pub last_chunk: Option<u64>,
+}
+
+impl SourceQueryFailure {
+    /// Build a failure. An identity that is not a lower-case 64-hex digest is refused,
+    /// so no literal can ride in the identity field.
+    pub fn new(
+        kind: SourceQueryError,
+        query_identity: &str,
+        stage: SourceQueryStage,
+        last_chunk: Option<u64>,
+    ) -> Result<Self, SourceQueryError> {
+        let failure = Self {
+            kind,
+            query_identity: query_identity.to_string(),
+            stage,
+            last_chunk,
+        };
+        failure.validate()?;
+        Ok(failure)
+    }
+
+    /// Check the identity shape; the decoder of an error reply calls this too.
+    pub fn validate(&self) -> Result<(), SourceQueryError> {
+        let digest = self.query_identity.len() == 64
+            && self
+                .query_identity
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+        if digest {
+            Ok(())
+        } else {
+            Err(SourceQueryError::InvalidQuery)
+        }
+    }
 }
 
 /// SQL dialects a source may declare. Closed.
@@ -447,5 +525,80 @@ mod tests {
         mysql.dialect = SourceQueryDialect::Mysql;
         mysql.sql = "SELECT id FROM orders WHERE region = ? AND total > ?".into();
         mysql.validate().unwrap();
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R085.7
+    #[test]
+    fn errors_redact_literals_and_round_trip() {
+        const KINDS: [(SourceQueryError, &str); 10] = [
+            (SourceQueryError::UnsupportedDialect, "unsupported_dialect"),
+            (SourceQueryError::InvalidQuery, "invalid_query"),
+            (SourceQueryError::Unauthorized, "unauthorized"),
+            (SourceQueryError::ApprovalExpired, "approval_expired"),
+            (SourceQueryError::ApprovalRevoked, "approval_revoked"),
+            (SourceQueryError::StaleSource, "stale_source"),
+            (SourceQueryError::QueryFailed, "query_failed"),
+            (SourceQueryError::LimitExceeded, "limit_exceeded"),
+            (SourceQueryError::Cancelled, "cancelled"),
+            (
+                SourceQueryError::VerificationUnavailable,
+                "verification_unavailable",
+            ),
+        ];
+        let identity = "ab".repeat(32);
+        for (kind, token) in KINDS {
+            // The closed token is the wire form and the message.
+            assert_eq!(
+                serde_json::to_string(&kind).expect("encodes"),
+                format!("\"{token}\"")
+            );
+            assert_eq!(kind.to_string(), token);
+            let failure =
+                SourceQueryFailure::new(kind, &identity, SourceQueryStage::Execution, Some(3))
+                    .expect("a digest identity is accepted");
+            let bytes = rmp_serde::to_vec_named(&failure).expect("encodes");
+            let decoded: SourceQueryFailure = rmp_serde::from_slice(&bytes).expect("decodes");
+            assert_eq!(decoded, failure);
+            assert!(decoded.validate().is_ok());
+            // No formatted form carries anything but the closed tokens, the digest and numbers.
+            let shown = failure.to_string();
+            assert!(shown.contains(token) && shown.contains(&identity));
+        }
+        // A failure before any chunk has no last chunk.
+        let early = SourceQueryFailure::new(
+            SourceQueryError::Cancelled,
+            &identity,
+            SourceQueryStage::Delivery,
+            None,
+        )
+        .expect("identity ok");
+        assert_eq!(early.last_chunk, None);
+
+        // A literal, a password or SQL text cannot ride in the identity.
+        for literal in [
+            "SELECT * FROM t WHERE ssn = '123-45-6789'",
+            "password=hunter2",
+            "",
+            &"AB".repeat(32),
+            &"ab".repeat(31),
+        ] {
+            assert_eq!(
+                SourceQueryFailure::new(
+                    SourceQueryError::QueryFailed,
+                    literal,
+                    SourceQueryStage::Execution,
+                    None
+                ),
+                Err(SourceQueryError::InvalidQuery),
+                "{literal}"
+            );
+        }
+        // Unknown kinds and unknown fields refuse.
+        assert!(serde_json::from_str::<SourceQueryError>("\"boom\"").is_err());
+        let extra = serde_json::json!({
+            "kind": "query_failed", "query_identity": identity, "stage": "execution",
+            "last_chunk": null, "sql": "SELECT 1"
+        });
+        assert!(serde_json::from_value::<SourceQueryFailure>(extra).is_err());
     }
 }
