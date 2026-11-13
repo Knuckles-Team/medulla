@@ -65,3 +65,8 @@ Each entry below is planned. The test file or function does not exist in the tre
 ### MEDULLA-SRC-AUTH-R013 tests
 
 - `MEDULLA-SRC-AUTH-R013`: `crates/medulla-rdf/tests/source_authority_fixture.rs::data_location_yields_a_proposed_pack_row` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.
+
+## Explicit state machine rows (Article XXXI)
+
+- `MEDULLA-SRC-AUTH-R802`: see each child (rollup).
+- `MEDULLA-SRC-AUTH-R802.1`: `crates/medulla-plan/src/mapping_approval_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-plan/src/mapping_approval_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-plan/src/mapping_approval_machine.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::mapping_approval_machine_matches_edge_table` (planned, L1): proves: MappingNotApproved/MappingApprovalState state machine: route 1 census findings through MappingApprovalState::apply.
