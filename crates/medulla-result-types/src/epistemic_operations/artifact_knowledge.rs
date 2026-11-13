@@ -108,6 +108,10 @@ pub enum TraceOutcomeSchemaVersion {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TraceOutcomeStatus {
+    /// The initial state of `TraceOutcomeMachine`: a draft that no event has concluded. It is
+    /// never persisted or decoded: it has no wire text.
+    #[serde(skip)]
+    Pending,
     #[serde(rename = "succeeded")]
     Succeeded,
     #[serde(rename = "failed")]
@@ -238,4 +242,18 @@ pub struct TraceOutcome {
     #[serde(deserialize_with = "deserialize_required_option")]
     pub error_detail_ref: Option<String>,
     pub evaluation_scores: BTreeMap<String, f64>,
+}
+
+impl TraceOutcome {
+    /// Conclude a draft: the one writer of `status` after construction. A draft is built with
+    /// `status: TraceOutcomeStatus::Pending`; the event moves it through
+    /// `TraceOutcomeStatus::apply`, and an illegal event is the typed `TRANSITION_REFUSED`
+    /// that leaves the draft unchanged.
+    pub fn conclude(
+        mut self,
+        event: super::trace_outcome_machine::TraceOutcomeEvent,
+    ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
+        self.status = self.status.apply(event)?;
+        Ok(self)
+    }
 }

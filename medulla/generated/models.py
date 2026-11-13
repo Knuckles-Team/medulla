@@ -27448,13 +27448,19 @@ class UqlRowProof(BaseModel):
     steps: list[UqlProofStep]
 
 
+class UqlStage(str, Enum):
+    PLANNED = "planned"
+    MEASURED = "measured"
+
+
 class UqlStageReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    clause: str
     estimated_rows: float
     micros: Annotated[int, Field(ge=0)] | None = None
     rows: Annotated[int, Field(ge=0)] | None = None
-    stage: str
+    stage: UqlStage
 
 
 class UserKind(str, Enum):
@@ -37534,6 +37540,7 @@ __all__ = [
     "UqlResultRowsBody",
     "UqlRow",
     "UqlRowProof",
+    "UqlStage",
     "UqlStageReport",
     "UserKind",
     "UserRoleChange",

@@ -14,6 +14,7 @@ mod placement_operations;
 mod resource_core;
 mod resource_host;
 mod resource_status;
+mod trace_outcome_machine;
 
 pub use artifact_knowledge::*;
 pub use context_mutation::*;
@@ -26,3 +27,4 @@ pub use placement_operations::*;
 pub use resource_core::*;
 pub use resource_host::*;
 pub use resource_status::*;
+pub use trace_outcome_machine::*;

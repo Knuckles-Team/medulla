@@ -3879,3 +3879,137 @@
     :fromState :PlannerScopeMachine_Clear ;
     :toState :PlannerScopeMachine_Clear ;
     :firedBy :PlannerScopeMachine_Event_GatePassed .
+# spec: MEDULLA-FEDERATED-QUERY-R738.16
+# The TraceOutcome machine: the outcome status of one trace. The Rust edge table TRACE_OUTCOME_MACHINE is the same table.
+
+:TraceOutcomeState a owl:Class ;
+    rdfs:label "TraceOutcome State" ;
+    rdfs:comment "A state of the TraceOutcome machine." ;
+    rdfs:subClassOf :State .
+
+:TraceOutcomeTerminalState a owl:Class ;
+    rdfs:label "TraceOutcome Terminal State" ;
+    rdfs:comment "A terminal state of the TraceOutcome machine." ;
+    rdfs:subClassOf :TerminalState, :TraceOutcomeState .
+
+:TraceOutcomeTransition a owl:Class ;
+    rdfs:label "TraceOutcome Transition" ;
+    rdfs:comment "A transition of the TraceOutcome machine." ;
+    rdfs:subClassOf :Transition .
+
+:TraceOutcomeEvent a owl:Class ;
+    rdfs:label "TraceOutcome Event" ;
+    rdfs:comment "An event of the TraceOutcome machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:TraceOutcomeMachine a :StateMachine ;
+    rdfs:label "TraceOutcome machine" ;
+    :initialState :TraceOutcomeMachine_Pending ;
+    :hasState :TraceOutcomeMachine_Pending, :TraceOutcomeMachine_Succeeded, :TraceOutcomeMachine_Failed, :TraceOutcomeMachine_Cancelled, :TraceOutcomeMachine_Denied .
+
+:TraceOutcomeMachine_Pending a :TraceOutcomeState ;
+    rdfs:label "TraceOutcome Pending" ;
+    :storedForm "pending" .
+
+:TraceOutcomeMachine_Succeeded a :TraceOutcomeTerminalState ;
+    rdfs:label "TraceOutcome Succeeded" ;
+    :storedForm "succeeded" .
+
+:TraceOutcomeMachine_Failed a :TraceOutcomeTerminalState ;
+    rdfs:label "TraceOutcome Failed" ;
+    :storedForm "failed" .
+
+:TraceOutcomeMachine_Cancelled a :TraceOutcomeTerminalState ;
+    rdfs:label "TraceOutcome Cancelled" ;
+    :storedForm "cancelled" .
+
+:TraceOutcomeMachine_Denied a :TraceOutcomeTerminalState ;
+    rdfs:label "TraceOutcome Denied" ;
+    :storedForm "denied" .
+
+:TraceOutcomeMachine_Event_Succeed a :TraceOutcomeEvent ;
+    rdfs:label "TraceOutcome Succeed" .
+
+:TraceOutcomeMachine_Event_Fail a :TraceOutcomeEvent ;
+    rdfs:label "TraceOutcome Fail" .
+
+:TraceOutcomeMachine_Event_Cancel a :TraceOutcomeEvent ;
+    rdfs:label "TraceOutcome Cancel" .
+
+:TraceOutcomeMachine_Event_Deny a :TraceOutcomeEvent ;
+    rdfs:label "TraceOutcome Deny" .
+
+:TraceOutcomeMachine_T01 a :TraceOutcomeTransition ;
+    rdfs:label "TraceOutcome T01" ;
+    :edgeId "T01" ;
+    :fromState :TraceOutcomeMachine_Pending ;
+    :toState :TraceOutcomeMachine_Succeeded ;
+    :firedBy :TraceOutcomeMachine_Event_Succeed .
+
+:TraceOutcomeMachine_T02 a :TraceOutcomeTransition ;
+    rdfs:label "TraceOutcome T02" ;
+    :edgeId "T02" ;
+    :fromState :TraceOutcomeMachine_Pending ;
+    :toState :TraceOutcomeMachine_Failed ;
+    :firedBy :TraceOutcomeMachine_Event_Fail .
+
+:TraceOutcomeMachine_T03 a :TraceOutcomeTransition ;
+    rdfs:label "TraceOutcome T03" ;
+    :edgeId "T03" ;
+    :fromState :TraceOutcomeMachine_Pending ;
+    :toState :TraceOutcomeMachine_Cancelled ;
+    :firedBy :TraceOutcomeMachine_Event_Cancel .
+
+:TraceOutcomeMachine_T04 a :TraceOutcomeTransition ;
+    rdfs:label "TraceOutcome T04" ;
+    :edgeId "T04" ;
+    :fromState :TraceOutcomeMachine_Pending ;
+    :toState :TraceOutcomeMachine_Denied ;
+    :firedBy :TraceOutcomeMachine_Event_Deny .
+
+# spec: MEDULLA-FEDERATED-QUERY-R738.17
+# The Uql stage machine: the lifecycle of one EXPLAIN/PROFILE stage report. The Rust edge
+# table UQL_MACHINE is the same table.
+
+:UqlState a owl:Class ;
+    rdfs:label "Uql State" ;
+    rdfs:comment "A state of the Uql machine." ;
+    rdfs:subClassOf :State .
+
+:UqlTerminalState a owl:Class ;
+    rdfs:label "Uql Terminal State" ;
+    rdfs:comment "A terminal state of the Uql machine." ;
+    rdfs:subClassOf :TerminalState, :UqlState .
+
+:UqlTransition a owl:Class ;
+    rdfs:label "Uql Transition" ;
+    rdfs:comment "A transition of the Uql machine." ;
+    rdfs:subClassOf :Transition .
+
+:UqlEvent a owl:Class ;
+    rdfs:label "Uql Event" ;
+    rdfs:comment "An event of the Uql machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:UqlMachine a :StateMachine ;
+    rdfs:label "Uql machine" ;
+    :initialState :UqlMachine_Planned ;
+    :hasState :UqlMachine_Planned, :UqlMachine_Measured .
+
+:UqlMachine_Planned a :UqlState ;
+    rdfs:label "Uql Planned" ;
+    :storedForm "planned" .
+
+:UqlMachine_Measured a :UqlTerminalState ;
+    rdfs:label "Uql Measured" ;
+    :storedForm "measured" .
+
+:UqlMachine_Event_Measure a :UqlEvent ;
+    rdfs:label "Uql Measure" .
+
+:UqlMachine_U01 a :UqlTransition ;
+    rdfs:label "Uql U01" ;
+    :edgeId "U01" ;
+    :fromState :UqlMachine_Planned ;
+    :toState :UqlMachine_Measured ;
+    :firedBy :UqlMachine_Event_Measure .

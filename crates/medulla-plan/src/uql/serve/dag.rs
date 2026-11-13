@@ -101,11 +101,11 @@ fn reports(nodes: &[DagNode], ctx: &PlanCtx, actual: Option<&[(u64, u64)]>) -> V
         .zip(node_estimates(nodes, ctx))
         .map(|((id, node), estimated_rows)| {
             let measured = actual.and_then(|a| a.get(id)).copied();
-            UqlStageReport {
-                stage: node_stage(id, node),
-                estimated_rows,
-                rows: measured.map(|(rows, _)| rows),
-                micros: measured.map(|(_, micros)| micros),
+            match measured {
+                Some((rows, micros)) => {
+                    UqlStageReport::profiled(node_stage(id, node), estimated_rows, rows, micros)
+                }
+                None => UqlStageReport::planned(node_stage(id, node), estimated_rows),
             }
         })
         .collect()

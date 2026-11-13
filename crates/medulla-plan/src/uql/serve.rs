@@ -94,12 +94,10 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
     fn remote_ops(ops: &[Op], reports: &mut Vec<UqlStageReport>) {
         for op in ops {
             if let Some(source) = explain_source(op) {
-                reports.push(UqlStageReport {
-                    stage: format!("REMOTE {source} strategy=planned estimate=pending"),
-                    estimated_rows: 0.0,
-                    rows: None,
-                    micros: None,
-                });
+                reports.push(UqlStageReport::planned(
+                    format!("REMOTE {source} strategy=planned estimate=pending"),
+                    0.0,
+                ));
             }
             #[cfg(feature = "text")]
             if let Op::FuseRrf { branches, .. } = op {
@@ -118,29 +116,25 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
     }
     match result {
         UqlResult::Explain { stages, .. } => {
-            stages.push(UqlStageReport {
-                stage: "LOCAL evaluation (per-stage reports above)".into(),
-                estimated_rows: 0.0,
-                rows: None,
-                micros: None,
-            });
+            stages.push(UqlStageReport::planned(
+                "LOCAL evaluation (per-stage reports above)".into(),
+                0.0,
+            ));
             stages.extend(planned);
         }
         UqlResult::Profile { stages, .. } => {
-            stages.push(UqlStageReport {
-                stage: "LOCAL evaluation (per-stage reports above)".into(),
-                estimated_rows: 0.0,
-                rows: None,
-                micros: None,
-            });
+            stages.push(UqlStageReport::planned(
+                "LOCAL evaluation (per-stage reports above)".into(),
+                0.0,
+            ));
             if let Some(foreign) = ctx.federation {
                 stages.extend(foreign.fragment_reports().into_iter().map(|fragment| {
-                    UqlStageReport {
-                        stage: fragment.stage,
-                        estimated_rows: fragment.estimated_rows,
-                        rows: Some(fragment.rows),
-                        micros: Some(fragment.micros),
-                    }
+                    UqlStageReport::profiled(
+                        fragment.stage,
+                        fragment.estimated_rows,
+                        fragment.rows,
+                        fragment.micros,
+                    )
                 }));
             }
         }
@@ -293,12 +287,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         .ops
         .iter()
         .zip(estimates(&optimized.ops, ctx))
-        .map(|(op, estimated_rows)| UqlStageReport {
-            stage: stage_text(op),
-            estimated_rows,
-            rows: None,
-            micros: None,
-        })
+        .map(|(op, estimated_rows)| UqlStageReport::planned(stage_text(op), estimated_rows))
         .collect();
     let (incremental, incremental_note) = match medulla_exec::incremental::Circuit::compile(plan) {
         Ok(_) => (true, String::new()),
@@ -323,11 +312,8 @@ fn profile(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         .stages
         .iter()
         .zip(estimates(&ops, ctx))
-        .map(|((op, rows, micros), estimated_rows)| UqlStageReport {
-            stage: stage_text(op),
-            estimated_rows,
-            rows: Some(*rows),
-            micros: Some(*micros),
+        .map(|((op, rows, micros), estimated_rows)| {
+            UqlStageReport::profiled(stage_text(op), estimated_rows, *rows, *micros)
         })
         .collect();
     let columns = returned_channels(&plan.ops);

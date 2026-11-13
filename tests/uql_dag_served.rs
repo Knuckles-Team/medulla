@@ -127,8 +127,8 @@ async fn served_dag_explain_and_profile_report_each_node() {
     };
     assert_eq!(canonical, optimized, "served DAG runs as written");
     assert_eq!(stages.len(), 4, "one served EXPLAIN stage per DAG node");
-    assert!(stages[0].stage.starts_with("#0 MATCH (:Doc)"));
-    assert!(stages[2].stage.starts_with("#2 <- #0,#1 RERANK MENTIONS"));
+    assert!(stages[0].clause.starts_with("#0 MATCH (:Doc)"));
+    assert!(stages[2].clause.starts_with("#2 <- #0,#1 RERANK MENTIONS"));
     assert!(stages
         .iter()
         .all(|stage| stage.rows.is_none() && stage.micros.is_none()));

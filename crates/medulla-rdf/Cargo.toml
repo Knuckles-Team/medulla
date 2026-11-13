@@ -136,7 +136,7 @@ medulla-raft = { path = "../medulla-raft", features = ["raft"] }
 medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["raft"] }
 medulla-h-retrieve = { path = "../medulla-h-retrieve", features = ["ann-redb"] }
 medulla-core = { path = "../medulla-core", features = ["broker"] }
-medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support", "query"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 # GeoSPARQL kernel parity test (MEDULLA-FEDERATED-QUERY-R709.2).
 medulla-geo = { path = "../medulla-geo" }

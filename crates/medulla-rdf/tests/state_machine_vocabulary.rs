@@ -943,3 +943,25 @@ fn signal_machine_matches_edge_table() {
 fn signal_machine_classes_extend_core() {
     sm::assert_extends_core("SignalData");
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.16
+#[test]
+fn trace_outcome_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_result_types::epistemic_operations::TRACE_OUTCOME_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.16
+#[test]
+fn trace_outcome_machine_classes_extend_core() {
+    sm::assert_extends_core("TraceOutcome");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R738.17
+#[test]
+fn uql_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::uql_machine::UQL_MACHINE);
+}
+// spec: MEDULLA-FEDERATED-QUERY-R738.17
+#[test]
+fn uql_machine_classes_extend_core() {
+    sm::assert_extends_core("Uql");
+}

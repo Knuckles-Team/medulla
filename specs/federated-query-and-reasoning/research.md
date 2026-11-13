@@ -218,3 +218,18 @@ The gate has three parts. The bench `benches/unified_vs_contracts.rs` is the mea
 `scripts/unified_planner_gate.py` is the judgement. Every number it compares comes from the report, and the report carries the `Fixed` knob values the bench read (`planner.gate.*`), so the script holds no threshold of its own.
 
 The freeze decision is a `PlannerGateRun` node written through the served engine, one node per run, the latest one holding the state. The scope of the planner is the explicit state machine `PlannerScopeMachine` (`clear`, `frozen`; events `gate_failed`, `gate_passed`), described in `state-machines-v1.ttl`. `landing_refusal` is the check a landing gate calls to refuse a new R720 or R721 operator while the state is `frozen`. Why a graph node and not a file: the decision is a fact of the program that other gates read, and a committed generated artifact is not allowed. The R732 gate rerun against a new champion calls the same `record`.
+## R738.16 and R738.17: state machine design calls
+
+TraceOutcomeMachine: a `TraceOutcome` is written once, at the end of a trace, so the four
+persisted statuses are all terminal. The machine needs an initial state to be a machine, so
+`Pending` is the draft state: it has no wire text (`#[serde(skip)]`), a stored or decoded
+record is never `Pending`, and the protocol schema is unchanged. `TraceOutcome::conclude` is
+the one writer after construction.
+
+UqlMachine: the census flagged `UqlStageReport.stage` by its name, but the field held the
+rendered UQL clause, which is text and not a lifecycle. The text moves to `clause`. The real
+lifecycle of a stage report is Planned (EXPLAIN estimate) to Measured (PROFILE attaches rows
+and time), so `stage` becomes `UqlStage` and `rows` and `micros` are written only by
+`UqlStageReport::measured`. This changes the wire shape of `UqlStageReport` (field `clause`,
+enum `stage`); `medulla/generated/models.py` is edited in the same commit and the wire vector
+needs a refresh (WIRE-REGEN).

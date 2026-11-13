@@ -1071,13 +1071,31 @@ pub struct UqlRowProof {
     pub steps: Vec<UqlProofStep>,
 }
 
+/// MEDULLA-FEDERATED-QUERY-R738.17: the state of one stage report, the closed state set of
+/// `UqlMachine`. `Planned` is the initial state (an `EXPLAIN` estimate); `Measured` is the
+/// terminal state reached when `PROFILE` attaches the actual rows and time. The only
+/// transition function is `UqlStage::apply` (`uql_machine.rs`).
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum UqlStage {
+    /// The report carries the cost model's estimate only.
+    Planned,
+    /// The report carries the measured rows and time as well.
+    Measured,
+}
+
 /// One pipeline stage in an `EXPLAIN` / `PROFILE` report (UQL-09).
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct UqlStageReport {
     /// The stage in canonical UQL.
-    pub stage: String,
+    pub clause: String,
+    /// The lifecycle state of this report; `rows` and `micros` are present exactly when it
+    /// is `Measured`, and only `UqlStageReport::measured` writes them.
+    pub stage: UqlStage,
     /// The cost model's estimated output rows.
     pub estimated_rows: f64,
     /// Actual output rows (`PROFILE` only).

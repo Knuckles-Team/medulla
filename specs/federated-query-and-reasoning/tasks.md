@@ -469,8 +469,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T447 [US1] MEDULLA-FEDERATED-QUERY-R738.13 Tag kind flags: `is_close` and `is_self_closing` in the GPX tag parser
 - [ ] T448 [US1] MEDULLA-FEDERATED-QUERY-R738.14 SourceQueryApprovalCheck/SourceQueryPhase state machine: route 1 census findings through SourceQueryPhase::apply
 - [ ] T449 [US1] MEDULLA-FEDERATED-QUERY-R738.15 StageReceipt/PromotionStage state machine: route 1 census findings through PromotionStage::apply
-- [ ] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
-- [ ] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
+- [x] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
+- [x] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
 - [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply
 - [ ] T453 [US1] MEDULLA-FEDERATED-QUERY-R739 Census debt of federated query is closed (rollup)
 - [ ] T454 [US1] MEDULLA-FEDERATED-QUERY-R739.1 ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply

@@ -131,7 +131,7 @@ fn explain_has_redacted_remote_and_local_sections_without_running_source() {
     let UqlResult::Explain { stages, .. } = out else {
         panic!("explain expected")
     };
-    let golden = stages.iter().map(|s| s.stage.as_str()).collect::<Vec<_>>();
+    let golden = stages.iter().map(|s| s.clause.as_str()).collect::<Vec<_>>();
     assert!(golden.iter().any(|s| s.starts_with("LOCAL evaluation")));
     let remote = golden.iter().find(|s| s.starts_with("REMOTE ")).unwrap();
     assert!(remote.starts_with("REMOTE named#"), "{remote}");
@@ -227,18 +227,18 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
     };
     assert_eq!(stages.len(), 2);
     assert_eq!(
-        stages[0].stage,
+        stages[0].clause,
         "LOCAL evaluation (per-stage reports above)"
     );
     assert_eq!(
-        stages[1].stage,
+        stages[1].clause,
         "REMOTE sql#deadbeef strategy=BindJoin keys=3 limit=Some(7) requests=2 fetched=5 kept=4 estimate=learned(samples=8, rows=12.50) mode=live"
     );
     assert_eq!(
         (stages[1].estimated_rows, stages[1].rows, stages[1].micros),
         (12.5, Some(4), Some(6000))
     );
-    assert!(!stages[1].stage.contains("password"));
+    assert!(!stages[1].clause.contains("password"));
 }
 
 #[test]
@@ -317,7 +317,7 @@ fn a_program_explains_node_by_node() {
     assert_eq!(canonical, optimized, "a program runs as written");
     let reparsed = parse_statement(&canonical, &Params::new()).unwrap();
     assert!(matches!(reparsed.body, medulla_uql::Body::Dag(_)));
-    let names: Vec<&str> = stages.iter().map(|s| s.stage.as_str()).collect();
+    let names: Vec<&str> = stages.iter().map(|s| s.clause.as_str()).collect();
     assert_eq!(names.len(), 4, "{names:?}");
     assert!(names[0].starts_with("#0 MATCH (:Doc)"), "{names:?}");
     assert!(
