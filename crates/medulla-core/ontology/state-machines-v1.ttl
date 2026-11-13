@@ -2440,6 +2440,53 @@
     :toState :ReservationMachine_Aborted ;
     :firedBy :ReservationMachine_Event_Abort .
 
+# spec: MEDULLA-DECISION-ENGINE-R036.106
+# The ProfileGrant machine: the lifecycle of one durable profile-use grant. The Rust edge table
+# PROFILE_GRANT_MACHINE is the same table.
+
+:ProfileGrantState a owl:Class ;
+    rdfs:label "ProfileGrant State" ;
+    rdfs:comment "A state of the ProfileGrant machine." ;
+    rdfs:subClassOf :State .
+
+:ProfileGrantTerminalState a owl:Class ;
+    rdfs:label "ProfileGrant Terminal State" ;
+    rdfs:comment "A terminal state of the ProfileGrant machine." ;
+    rdfs:subClassOf :TerminalState, :ProfileGrantState .
+
+:ProfileGrantTransition a owl:Class ;
+    rdfs:label "ProfileGrant Transition" ;
+    rdfs:comment "A transition of the ProfileGrant machine." ;
+    rdfs:subClassOf :Transition .
+
+:ProfileGrantEvent a owl:Class ;
+    rdfs:label "ProfileGrant Event" ;
+    rdfs:comment "An event of the ProfileGrant machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ProfileGrantMachine a :StateMachine ;
+    rdfs:label "ProfileGrant machine" ;
+    :initialState :ProfileGrantMachine_Active ;
+    :hasState :ProfileGrantMachine_Active, :ProfileGrantMachine_Revoked .
+
+:ProfileGrantMachine_Active a :ProfileGrantState ;
+    rdfs:label "ProfileGrant Active" ;
+    :storedForm "active" .
+
+:ProfileGrantMachine_Revoked a :ProfileGrantTerminalState ;
+    rdfs:label "ProfileGrant Revoked" ;
+    :storedForm "revoked" .
+
+:ProfileGrantMachine_Event_Revoke a :ProfileGrantEvent ;
+    rdfs:label "ProfileGrant Revoke" .
+
+:ProfileGrantMachine_G01 a :ProfileGrantTransition ;
+    rdfs:label "ProfileGrant G01" ;
+    :edgeId "G01" ;
+    :fromState :ProfileGrantMachine_Active ;
+    :toState :ProfileGrantMachine_Revoked ;
+    :firedBy :ProfileGrantMachine_Event_Revoke .
+
 # spec: MEDULLA-DECISION-ENGINE-R707.1
 # The FeatureLedger machine: the status of one feature ledger entry. The Rust edge table
 # FEATURE_LEDGER_MACHINE is the same table.

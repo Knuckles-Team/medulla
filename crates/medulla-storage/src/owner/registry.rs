@@ -12,6 +12,9 @@ use sha2::{Digest, Sha256};
 
 // Closed owner-table registry. These names and types are the manifest contract.
 const RBAC: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("rbac");
+/// MEDULLA-DECISION-ENGINE-R036.106: one durable profile-use grant per grant id.
+pub const RBAC_PROFILE_USE_GRANT: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("rbac_profile_use_grant");
 const JOB_TABLES_BYTES: [TableDefinition<'static, &str, &[u8]>; 3] = [
     TableDefinition::new("analytics_jobs"),
     TableDefinition::new("job_intents"),
@@ -318,7 +321,10 @@ macro_rules! visit_owner_tables {
     ($layout:expr, $visit:ident) => {{
         match $layout {
             OwnerLayout::LedgerOnly => {}
-            OwnerLayout::Rbac => $visit!(RBAC),
+            OwnerLayout::Rbac => {
+                $visit!(RBAC);
+                $visit!(RBAC_PROFILE_USE_GRANT);
+            }
             OwnerLayout::Jobs => {
                 for table in JOB_TABLES_BYTES {
                     $visit!(table);
@@ -753,7 +759,7 @@ pub fn declared_table_names(layout: OwnerLayout) -> Vec<&'static str> {
 pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
     match layout {
         OwnerLayout::LedgerOnly => &[],
-        OwnerLayout::Rbac => &["rbac"],
+        OwnerLayout::Rbac => &["rbac", "rbac_profile_use_grant"],
         OwnerLayout::Jobs => &[
             "analytics_jobs",
             "analytics_job_committed_results",

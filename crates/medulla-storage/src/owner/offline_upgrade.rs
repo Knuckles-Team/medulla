@@ -10,16 +10,16 @@
 
 use super::agent_library_upgrade::{
     inspect_agent_library_mcp_catalog_upgrade, inspect_graph_shard_upgrade,
-    inspect_semantic_index_promotion_upgrade, upgrade_agent_library_mcp_catalog,
-    upgrade_graph_shard, upgrade_semantic_index_promotion, GraphShardSource,
-    OwnerLayoutUpgradeReport,
+    inspect_rbac_profile_grant_upgrade, inspect_semantic_index_promotion_upgrade,
+    upgrade_agent_library_mcp_catalog, upgrade_graph_shard, upgrade_rbac_profile_grants,
+    upgrade_semantic_index_promotion, GraphShardSource, OwnerLayoutUpgradeReport,
 };
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
     layout_predecessors, AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
-    GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, RBAC_BEFORE_PROFILE_GRANTS,
     SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
@@ -213,6 +213,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         SEMANTIC_INDEX_BEFORE_PROMOTION,
         inspect_semantic_index_promotion_upgrade,
         upgrade_semantic_index_promotion
+    ),
+    offline_upgrade!(
+        RBAC_BEFORE_PROFILE_GRANTS,
+        inspect_rbac_profile_grant_upgrade,
+        upgrade_rbac_profile_grants
     ),
 ];
 

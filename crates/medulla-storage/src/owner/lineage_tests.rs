@@ -93,6 +93,25 @@ fn semantic_index_before_promotion_matches_the_previous_pin() {
     );
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R036.106
+#[test]
+fn rbac_before_profile_grants_matches_the_previous_pin() {
+    let predecessor = &RBAC_BEFORE_PROFILE_GRANTS;
+    let contracts: Vec<_> = crate::owner::contract::expected_table_contracts(OwnerLayout::Rbac)
+        .into_iter()
+        .filter(|contract| {
+            contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                || predecessor
+                    .owner_tables
+                    .contains(&contract.table_id.as_str())
+        })
+        .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::Rbac, &contracts),
+        RBAC_PRE_PROFILE_GRANTS_DIGEST
+    );
+}
+
 #[test]
 fn the_layout_list_is_complete_and_ordered() {
     for (index, layout) in ALL_LAYOUTS.iter().enumerate() {

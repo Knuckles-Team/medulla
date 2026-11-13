@@ -26,6 +26,9 @@ pub(super) struct Admitted {
         String,
     )>,
     library: bool,
+    /// MEDULLA-DECISION-ENGINE-R036.106: the `profile_grant:<id>` premises of the caller's
+    /// active profile-use grants, read with the same authorization image the commit rests on.
+    profile_premises: Vec<String>,
 }
 
 impl Admitted {
@@ -37,7 +40,14 @@ impl Admitted {
             #[cfg(feature = "security")]
             rbac: None,
             library: false,
+            profile_premises: Vec::new(),
         }
+    }
+
+    /// The premises of the active profile-use grants the admission consulted.
+    #[allow(dead_code)]
+    pub(super) fn profile_premises(&self) -> &[String] {
+        &self.profile_premises
     }
 
     /// The sealed Agent Library intent of `record`.
@@ -81,6 +91,14 @@ impl Admitted {
         {
             let policy_store = state.read().await.isolation.policy_store();
             if let Some(policy_store) = policy_store {
+                // Read before anything is reserved, so a refusal holds nothing.
+                let profile_premises: Vec<String> = policy_store
+                    .profile_use_grants()
+                    .map_err(|error| error.to_string())?
+                    .into_iter()
+                    .filter(|grant| grant.is_active() && grant.principal == verified.principal())
+                    .map(|grant| grant.premise())
+                    .collect();
                 let revision = policy_store
                     .authority_snapshot()
                     .map_err(|error| error.to_string())?
@@ -89,6 +107,7 @@ impl Admitted {
                     .reserve_authority(revision, &txn_id)
                     .map_err(|error| error.to_string())?
                 {
+                    held.profile_premises = profile_premises;
                     held.rbac = Some((policy_store, record.premise()));
                     state.write().await.isolation.adopt_reservation_revision()?;
                 }
@@ -122,7 +141,7 @@ impl Admitted {
         if let Some((policy_store, premise)) = &self.rbac {
             match policy_store.release_authority(&self.txn_id, Some(event)) {
                 Ok(()) => {
-                    tracing::info!(txn = %self.txn_id, %premise, "decision-commit rbac reservation resolved");
+                    tracing::info!(txn = %self.txn_id, %premise, profile_grants = ?self.profile_premises, "decision-commit rbac reservation resolved");
                     if let Err(error) = state.write().await.isolation.adopt_reservation_revision() {
                         first_error.get_or_insert(error);
                     }

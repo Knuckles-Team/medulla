@@ -1,6 +1,7 @@
 //! MEDULLA-DECISION-ENGINE-R036.103 and R036.104: the cross-owner admission journey of one
 //! served `DecisionCommit`, through the handler, against a durable RBAC store and a durable
-//! Agent Library.
+//! Agent Library. MEDULLA-DECISION-ENGINE-R036.106: the same journey holds durable profile-use
+//! grants, which the admission consults and a reservation never changes.
 
 use std::sync::Arc;
 
@@ -31,6 +32,7 @@ fn verified(key: &str, nonce: u8) -> VerifiedRequestContext {
 
 // spec: MEDULLA-DECISION-ENGINE-R036.103
 // spec: MEDULLA-DECISION-ENGINE-R036.104
+// spec: MEDULLA-DECISION-ENGINE-R036.106
 #[tokio::test]
 async fn cross_owner_admission_journey() {
     #[cfg(any(feature = "security", feature = "raft"))]
@@ -39,6 +41,11 @@ async fn cross_owner_admission_journey() {
     let rbac_dir = tempfile::tempdir().unwrap();
     let rbac =
         Arc::new(medulla_isolation::test_scope_grant::open_rbac_store(rbac_dir.path()).unwrap());
+    // Durable profile-use grants the admission will consult: one active, one revoked.
+    let active = rbac.grant_profile_use("caller-a", "profile-1", 10).unwrap();
+    let withdrawn = rbac.grant_profile_use("caller-a", "profile-2", 11).unwrap();
+    rbac.revoke_profile_use(&withdrawn.grant_id, 12).unwrap();
+    let grants_before = rbac.profile_use_grants().unwrap();
     let mut server = ServerState::new_for_test("admission-journey", IsolationLayer::new());
     server.persist_dir = Some(dir.path().to_str().unwrap().to_string());
     server.isolation =
@@ -145,6 +152,18 @@ async fn cross_owner_admission_journey() {
         .unwrap()
         .iter()
         .all(|held| held.state != ReservationState::Reserved));
+
+    // 4b. The reservation granted no profile access and changed no grant: the active grant is
+    //     still the only one the caller may use, and the revoked one stayed revoked.
+    assert_eq!(rbac.profile_use_grants().unwrap(), grants_before);
+    let usable: Vec<_> = rbac
+        .profile_use_grants()
+        .unwrap()
+        .into_iter()
+        .filter(|grant| grant.is_active() && grant.principal == "caller-a")
+        .map(|grant| grant.grant_id)
+        .collect();
+    assert_eq!(usable, vec![active.grant_id]);
 
     // 5. A repeat of the stored record replays without taking a new reservation.
     let before = (

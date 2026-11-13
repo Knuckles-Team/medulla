@@ -44,5 +44,29 @@ closed_error_codes! {
         /// A required input media type is not declared by the selected
         /// model profile, or the profile declares no input capabilities.
         ModelMediaCapabilityUnknown => "MODEL_MEDIA_CAPABILITY_UNKNOWN",
+        /// MEDULLA-DECISION-ENGINE-R036.103: a durable reservation holds the authorization image.
+        RbacReserved => "RBAC_RESERVED",
+        /// MEDULLA-DECISION-ENGINE-R036.103: the reserve call named a revision that is no longer current.
+        RbacRevisionStale => "RBAC_REVISION_STALE",
+        /// MEDULLA-DECISION-ENGINE-R036.103: a release named a transaction that holds no reservation.
+        RbacReservationUnknown => "RBAC_RESERVATION_UNKNOWN",
+        /// MEDULLA-DECISION-ENGINE-R036.106: the RBAC file is a predecessor layout.
+        RbacLayoutOutdated => "RBAC_LAYOUT_OUTDATED",
+        /// MEDULLA-DECISION-ENGINE-R036.106: the RBAC file changed after its upgrade inspection.
+        RbacUpgradeSourceChanged => "RBAC_UPGRADE_SOURCE_CHANGED",
+        /// MEDULLA-DECISION-ENGINE-R036.106: a revoke named a grant that does not exist.
+        RbacGrantUnknown => "RBAC_GRANT_UNKNOWN",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a reserved component head changed.
+        AdmissionHeadChanged => "ADMISSION_HEAD_CHANGED",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a component the admission rests on was withdrawn.
+        AdmissionComponentWithdrawn => "ADMISSION_COMPONENT_WITHDRAWN",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a changed intent was sent for an existing transaction.
+        AdmissionIntentChanged => "ADMISSION_INTENT_CHANGED",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a component write is fenced by a reservation.
+        AdmissionWriteBlocked => "ADMISSION_WRITE_BLOCKED",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a new attempt on an aborted transaction.
+        AdmissionAborted => "ADMISSION_ABORTED",
+        /// MEDULLA-DECISION-ENGINE-R036.104: a decision for an unknown transaction.
+        AdmissionNotReserved => "ADMISSION_NOT_RESERVED",
     }
 }

@@ -115,8 +115,14 @@ pub enum RbacPersistError {
     ReservationStale { expected: u64, actual: u64 },
     /// `RBAC_RESERVATION_UNKNOWN`: the transaction holds no reservation.
     ReservationUnknown(String),
-    /// The reservation lifecycle machine refused the decision.
+    /// The reservation or grant lifecycle machine refused the decision.
     Machine(medulla_types::transition_refused::TransitionRefused),
+    /// `RBAC_LAYOUT_OUTDATED`: the file is a predecessor layout; an operator upgrade is required.
+    LayoutOutdated(String),
+    /// `RBAC_UPGRADE_SOURCE_CHANGED`: the file changed after its inspection.
+    UpgradeSourceChanged(String),
+    /// `RBAC_GRANT_UNKNOWN`: a revoke named a grant that does not exist.
+    GrantUnknown(String),
 }
 
 impl fmt::Display for RbacPersistError {
@@ -150,6 +156,15 @@ impl fmt::Display for RbacPersistError {
                 )
             }
             RbacPersistError::Machine(refused) => write!(f, "{refused}"),
+            RbacPersistError::LayoutOutdated(detail) => {
+                write!(f, "RBAC_LAYOUT_OUTDATED: {detail}")
+            }
+            RbacPersistError::UpgradeSourceChanged(detail) => {
+                write!(f, "RBAC_UPGRADE_SOURCE_CHANGED: {detail}")
+            }
+            RbacPersistError::GrantUnknown(id) => {
+                write!(f, "RBAC_GRANT_UNKNOWN: '{id}' is not a profile-use grant")
+            }
             RbacPersistError::IncompleteState(message) => {
                 write!(f, "rbac persist current-state error: {message}")
             }
@@ -398,6 +413,12 @@ pub trait RbacPolicyStore: Send + Sync {
         Ok(())
     }
 
+    /// Every durable profile-use grant (MEDULLA-DECISION-ENGINE-R036.106). The in-memory store
+    /// holds none.
+    fn profile_use_grants(&self) -> Result<Vec<ProfileUseGrant>, RbacPersistError> {
+        Ok(Vec::new())
+    }
+
     /// Copy this store's durable image verbatim into a FRESH bundle file at
     /// `destination`, returning the number of rows copied.
     ///
@@ -426,7 +447,12 @@ pub trait RbacPolicyStore: Send + Sync {
 
 mod durable_write;
 mod memory_store;
+mod profile_grant;
 mod reservation;
+pub use profile_grant::{
+    inspect_rbac_layout, upgrade_rbac_layout, InspectedRbacLayout, ProfileUseGrant,
+    RbacLayoutUpgradeReport, RBAC_GRANT_UNKNOWN, RBAC_LAYOUT_OUTDATED, RBAC_UPGRADE_SOURCE_CHANGED,
+};
 pub use reservation::{
     ReservationRecord, RBAC_RESERVATION_UNKNOWN, RBAC_RESERVED, RBAC_REVISION_STALE,
 };
@@ -491,7 +517,13 @@ impl RbacStore {
         } else {
             StorageKernel::create_owner::<RbacOwner>(&path, physical, None)
         }
-        .map_err(RbacPersistError::Redb)?;
+        .map_err(|error| {
+            if error.starts_with("RBAC_FORMAT_UPGRADE_REQUIRED") {
+                RbacPersistError::LayoutOutdated(error)
+            } else {
+                RbacPersistError::Redb(error)
+            }
+        })?;
         let (kernel, authority) = kernel
             .into_read_and_mutation_authority()
             .map_err(RbacPersistError::Redb)?;
@@ -726,6 +758,10 @@ impl RbacPolicyStore for RbacStore {
         decision: Option<medulla_types::reservation_machine::ReservationEvent>,
     ) -> Result<(), RbacPersistError> {
         RbacStore::release(self, txn_id, decision).map(|_| ())
+    }
+
+    fn profile_use_grants(&self) -> Result<Vec<ProfileUseGrant>, RbacPersistError> {
+        RbacStore::profile_use_grants(self)
     }
 
     fn backup_into(&self, destination: &Path) -> Option<Result<u64, String>> {
@@ -1024,6 +1060,208 @@ mod tests {
         let current = store.authority_snapshot().unwrap().revision();
         store
             .compare_and_save(current, &policy, &none, IdentityBootstrapState::Pending)
+            .unwrap();
+    }
+
+    /// A private staging directory inside the crate checkout (the inspection refuses `/tmp`).
+    fn private_staging(tag: &str) -> std::path::PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "upgrade-{tag}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&path).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        path
+    }
+
+    /// Every `rbac` row of the store file in `dir`, by key.
+    fn rbac_rows(dir: &std::path::Path) -> BTreeMap<String, Vec<u8>> {
+        use redb::{ReadableDatabase, ReadableTable};
+        let database = redb::Database::open(dir.join("rbac.redb")).unwrap();
+        let read = database.begin_read().unwrap();
+        let table = read.open_table(super::RBAC_TABLE).unwrap();
+        table
+            .iter()
+            .unwrap()
+            .map(|row| {
+                let (key, value) = row.unwrap();
+                (key.value().to_string(), value.value().to_vec())
+            })
+            .collect()
+    }
+
+    /// A predecessor file at `dir/rbac.redb` carrying `rows` in its `rbac` table.
+    fn predecessor_with(dir: &std::path::Path, rows: &BTreeMap<String, Vec<u8>>) {
+        std::fs::create_dir_all(dir).unwrap();
+        let path = dir.join("rbac.redb");
+        medulla_storage::create_predecessor_owner_file(
+            &path,
+            medulla_storage::PhysicalStoreIdentity::new(super::RBAC_PHYSICAL_STORE).unwrap(),
+            &medulla_storage::RBAC_BEFORE_PROFILE_GRANTS,
+        )
+        .unwrap();
+        let database = redb::Database::open(&path).unwrap();
+        let write = database.begin_write().unwrap();
+        {
+            let mut table = write.open_table(super::RBAC_TABLE).unwrap();
+            for (key, value) in rows {
+                table.insert(key.as_str(), value.as_slice()).unwrap();
+            }
+        }
+        write.commit().unwrap();
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R036.106
+    #[test]
+    fn upgrade_preserves_rows_and_creates_empty_grant_table() {
+        use medulla_types::reservation_machine::ReservationEvent;
+
+        // The authority and reservation rows of a real current store.
+        let source = tmp_dir("grant-source");
+        let store = open_test_store(&source).unwrap();
+        let revision = store.authority_snapshot().unwrap().revision();
+        store.reserve(revision, "txn-kept").unwrap();
+        store
+            .release("txn-kept", Some(ReservationEvent::Commit))
+            .unwrap();
+        let revision = store.authority_snapshot().unwrap().revision();
+        store.reserve(revision, "txn-open").unwrap();
+        let expected = (
+            store
+                .authority_snapshot()
+                .unwrap()
+                .policy_digest()
+                .to_string(),
+            store.reservations().unwrap(),
+        );
+        drop(store);
+        let rows = rbac_rows(&source);
+        assert!(rows.contains_key("policy") && rows.contains_key("reservations"));
+
+        // An ordinary open refuses the predecessor by name and writes nothing.
+        let dir = tmp_dir("grant-upgrade");
+        predecessor_with(&dir, &rows);
+        let before = std::fs::read(dir.join("rbac.redb")).unwrap();
+        let error = open_test_store(&dir).unwrap_err();
+        assert!(
+            error.to_string().starts_with("RBAC_LAYOUT_OUTDATED"),
+            "{error}"
+        );
+        assert_eq!(std::fs::read(dir.join("rbac.redb")).unwrap(), before);
+
+        // The explicit upgrade keeps every row and creates the empty grant table.
+        let staging = private_staging("ok");
+        let report =
+            super::upgrade_rbac_layout(super::inspect_rbac_layout(&dir, &staging).unwrap())
+                .unwrap();
+        assert_ne!(report.previous_layout_digest, report.current_layout_digest);
+        assert_eq!(rbac_rows(&dir), rows);
+        let upgraded = open_test_store(&dir).unwrap();
+        assert_eq!(
+            (
+                upgraded
+                    .authority_snapshot()
+                    .unwrap()
+                    .policy_digest()
+                    .to_string(),
+                upgraded.reservations().unwrap()
+            ),
+            expected
+        );
+        assert!(upgraded.profile_use_grants().unwrap().is_empty());
+        drop(upgraded);
+        // A file already at the current layout is not a predecessor.
+        assert!(super::inspect_rbac_layout(&dir, &staging).is_err());
+
+        // A file that changes after its inspection refuses and stays a predecessor.
+        let changed = tmp_dir("grant-changed");
+        predecessor_with(&changed, &rows);
+        let inspected = super::inspect_rbac_layout(&changed, &staging).unwrap();
+        {
+            let database = redb::Database::open(changed.join("rbac.redb")).unwrap();
+            let write = database.begin_write().unwrap();
+            write
+                .open_table(super::RBAC_TABLE)
+                .unwrap()
+                .insert("identities", b"{}".as_slice())
+                .unwrap();
+            write.commit().unwrap();
+        }
+        let error = super::upgrade_rbac_layout(inspected)
+            .err()
+            .expect("refused");
+        assert!(
+            error.to_string().starts_with("RBAC_UPGRADE_SOURCE_CHANGED"),
+            "{error}"
+        );
+        assert!(open_test_store(&changed)
+            .unwrap_err()
+            .to_string()
+            .starts_with("RBAC_LAYOUT_OUTDATED"));
+        std::fs::remove_dir_all(staging).ok();
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R036.106
+    #[test]
+    fn profile_use_grants_are_durable_and_revoke_once() {
+        use medulla_types::reservation_machine::ReservationEvent;
+        let dir = tmp_dir("grants");
+        let store = open_test_store(&dir).unwrap();
+        let grant = store
+            .grant_profile_use("caller-a", "profile-1", 10)
+            .unwrap();
+        assert!(grant.is_active() && grant.premise().starts_with("profile_grant:"));
+        // An exact repeat stores nothing new; another principal gets its own grant.
+        let version = store.current_version().unwrap();
+        assert_eq!(
+            store
+                .grant_profile_use("caller-a", "profile-1", 10)
+                .unwrap(),
+            grant
+        );
+        assert_eq!(store.current_version().unwrap(), version);
+        let other = store
+            .grant_profile_use("caller-b", "profile-1", 11)
+            .unwrap();
+        assert_ne!(other.grant_id, grant.grant_id);
+
+        // Grants survive a reopen; revoking is the one machine edge and happens once.
+        drop(store);
+        let store = open_test_store(&dir).unwrap();
+        assert_eq!(store.profile_use_grants().unwrap().len(), 2);
+        let revoked = store.revoke_profile_use(&grant.grant_id, 20).unwrap();
+        assert_eq!(
+            revoked.state,
+            medulla_types::profile_grant_machine::ProfileGrantState::Revoked
+        );
+        assert_eq!(revoked.state_changed_at_ms, 20);
+        let error = store.revoke_profile_use(&grant.grant_id, 21).unwrap_err();
+        assert!(error.to_string().contains("TRANSITION_REFUSED"), "{error}");
+        let error = store.revoke_profile_use("grant:none", 21).unwrap_err();
+        assert!(
+            error.to_string().starts_with("RBAC_GRANT_UNKNOWN"),
+            "{error}"
+        );
+        let held = store.profile_use_grants().unwrap();
+        assert_eq!(held.iter().filter(|held| held.is_active()).count(), 1);
+
+        // A reservation freezes the image, so a new grant is refused while it is held.
+        let revision = store.authority_snapshot().unwrap().revision();
+        store.reserve(revision, "txn-g").unwrap();
+        let error = store
+            .grant_profile_use("caller-c", "profile-1", 30)
+            .unwrap_err();
+        assert!(error.to_string().starts_with("RBAC_RESERVED"), "{error}");
+        store
+            .release("txn-g", Some(ReservationEvent::Abort))
+            .unwrap();
+        store
+            .grant_profile_use("caller-c", "profile-1", 30)
             .unwrap();
     }
 }

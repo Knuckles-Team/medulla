@@ -91,3 +91,12 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
 - Feedback events for the document-boost store (federated-query R705.3) are derived from the stored run receipts by
   that store, not appended by `record_run`: the run write stays one atomic batch inside the decision artifact store
   and the decision-engine handler takes no dependency on the retrieval crate.
+- Profile-use grants (R036.106) are rows in their own owner table, not fields of the authorization image, so a grant
+  never changes the policy or identity digests a reservation records. A grant has a lifecycle (active, revoked), so it
+  is the explicit `ProfileGrantMachine`: one persisted `state` field, one event `Revoke`, a second revoke refused with a
+  typed `TRANSITION_REFUSED`; the change time is `state_changed_at_ms`, never a nullable `revoked_at_ms`. A new grant is
+  refused with `RBAC_RESERVED` while a reservation holds the image, because granting changes who may use a profile.
+- The RBAC layout upgrade is one row of the shared offline upgrade registry (`RBAC_BEFORE_PROFILE_GRANTS`) rather than a
+  second private migration path, so the operator `store-upgrade` command applies it with the same inspection and
+  byte-fingerprint rechecks as every other owner file. An ordinary `RbacStore::open` of a predecessor refuses with
+  `RBAC_LAYOUT_OUTDATED` and writes nothing.

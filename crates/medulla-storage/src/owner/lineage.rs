@@ -322,6 +322,26 @@ pub const SEMANTIC_INDEX_BEFORE_PROMOTION: LayoutPredecessor = LayoutPredecessor
     file_name: "semantic_*.redb",
 };
 
+/// The Rbac owner tables before the profile-use grant records
+/// (MEDULLA-DECISION-ENGINE-R036.106), in registry order.
+const RBAC_TABLES_BEFORE_PROFILE_GRANTS: &[&str] = &["rbac"];
+
+/// The frozen layout digest of [`RBAC_BEFORE_PROFILE_GRANTS`]: the Rbac pin
+/// before the `rbac_profile_use_grant` table.
+pub const RBAC_PRE_PROFILE_GRANTS_DIGEST: [u8; 32] = [
+    0x3c, 0x89, 0xb3, 0x20, 0x7f, 0xaa, 0x96, 0x2a, 0x94, 0xeb, 0x1c, 0xe7, 0x24, 0xf9, 0x44, 0xdd,
+    0xe5, 0xa4, 0xac, 0xf9, 0x48, 0x41, 0xa2, 0x3d, 0x9c, 0x41, 0x68, 0x55, 0x86, 0x6d, 0x4c, 0x8e,
+];
+
+/// An Rbac owner file from before the profile-use grant records.
+pub const RBAC_BEFORE_PROFILE_GRANTS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Rbac,
+    label: "rbac before profile-use grant records",
+    owner_tables: RBAC_TABLES_BEFORE_PROFILE_GRANTS,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "rbac.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -334,8 +354,8 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         OwnerLayout::Blob => &[BLOB_BEFORE_HOLDERS],
         OwnerLayout::SemanticIndex => &[SEMANTIC_INDEX_BEFORE_PROMOTION],
         OwnerLayout::Sql => &[SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_DURABLE_ANN],
+        OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::LedgerOnly
-        | OwnerLayout::Rbac
         | OwnerLayout::Jobs
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
@@ -393,7 +413,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         OwnerLayout::LedgerOnly => {
             "9faad03bf787a2a893618b7a8b386de30bdd5b4e09f3930448040c3e47c59e3e"
         }
-        OwnerLayout::Rbac => "3c89b3207faa962a94eb1ce724f944dde5a4acf94841a23d9c416855866d4c8e",
+        OwnerLayout::Rbac => "c30f57c11229b629fefb4470bf9b7afb5010c06c24542d25cd20ea613d729dbd",
         OwnerLayout::Jobs => "64eb7ffd327980a8269bc8cf61147bc269b4ee8eab1ae0f5de3a244bbec9dad4",
         OwnerLayout::Statechart => {
             "d8ab661d50af9249a342a101537f0ef92c13df6808b5fd149c037d8587cff8a7"

@@ -11,8 +11,9 @@ use crate::owner::graph_shard::{
     REPOSITORY_ENRICHMENT_POLICY_REVISIONS, REPOSITORY_ENRICHMENT_SUPERSESSIONS, RUN_CHECKPOINTS,
 };
 use crate::owner::registry::{
-    predecessor_evidence, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, SEMANTIC_EMBEDDING_VERSION_TAGS,
-    SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
+    predecessor_evidence, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
+    SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS,
+    SEMANTIC_STAGE_RECEIPTS,
 };
 use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
@@ -74,6 +75,11 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
         }
         UpgradeTarget::GraphShard(source) => open_graph_shard_tables(write, source)?,
         UpgradeTarget::SemanticIndex => open_promotion_tables(write)?,
+        UpgradeTarget::Rbac => {
+            write
+                .open_table(RBAC_PROFILE_USE_GRANT)
+                .map_err(|error| error.to_string())?;
+        }
     }
     Ok(())
 }

@@ -19,6 +19,7 @@ pub mod agent_bus;
 pub mod branch;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
+pub mod profile_grant_machine;
 pub mod reservation_machine;
 pub mod refusal_code;
 pub mod transition_refused;

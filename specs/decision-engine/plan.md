@@ -159,3 +159,4 @@ referenced decisions' stored retrieval outcomes, runs the pure kernel `medulla_d
 and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revision
 (`run_credit/baseline/<sha256 of capability>/<inverted revision>`) in one batch. Knobs `run_credit.max_steps` and
 `run_credit.baseline_weight` come from the default decision policy.
+- R036.106: `ProfileGrantMachine` and the `rbac_profile_use_grant` owner table; the predecessor layout is upgraded only through the offline upgrade registry; the commit admission lists the caller's active grants as `profile_grant:<id>` premises (research.md).

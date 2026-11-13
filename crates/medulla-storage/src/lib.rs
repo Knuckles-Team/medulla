@@ -58,7 +58,7 @@ pub use owner::lineage::{
     layout_digest_hex, layout_predecessors, pinned_layout_digest, render_owner_store_formats,
     AGENT_LIBRARY_BEFORE_CONNECTOR_PACKS, AGENT_LIBRARY_BEFORE_MCP_CATALOG, ALL_LAYOUTS,
     BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
-    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
 pub use owner::offline_upgrade::{
     classify_owner_store_format, offline_upgrades_for, registered_offline_upgrade,

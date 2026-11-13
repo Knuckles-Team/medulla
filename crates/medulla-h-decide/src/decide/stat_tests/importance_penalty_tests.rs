@@ -8,6 +8,7 @@ use medulla_decision_types::decision::importance_penalty::{
     FeatureImportance, PenaltyObjective, IMPORTANCE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
+use medulla_protocol_types::protocol::Response;
 
 fn quantised(micros: i64) -> QuantisedValue {
     QuantisedValue {
