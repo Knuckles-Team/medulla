@@ -228,6 +228,12 @@ Decision: the L3 test drives the real served chain end to end. It builds the dec
 - **Nearest-neighbour similarity is a recorded question parameter.** The server reads `GraphVectors::probe` for each staged paper (excluding the paper itself) through the caller's graph ACL and records the result as `nearest_neighbour:<graph_param>` in the request, with the graph version it read at, so a replay of the record recomputes the identical matrix and never reads the live graph.
 - **The relevance floor is a decision-policy knob** (`enrichment.relevance_min`, DE-R059.1-KNOBS), read from the policy the `refine` hook receives.
 - **The proof trains a head on four archetypes** (both, goals only, graph only, neither) so a paper that matches one signal falls below the floor; a floor of 1.0 shows the threshold itself decides, and the stale and duplicate refusals are asserted by code.
+## R036.105.2: the commit handler's order and decisions (decided)
+- **Begin first.** `Coordinator::begin` writes the pending marker with the certificate request before either owner reserves, so a changed request for a decided txn id answers `CERTIFICATE_INTENT_CHANGED` before `ADMISSION_ABORTED` or `ADMISSION_INTENT_CHANGED`. An earlier ABORT refuses `CERTIFICATE_DECIDED_ABORT` and an earlier COMMIT resumes with the owners' existing reservations.
+- **The vote precedes the decision.** The stale-catalog check is the vote; a NO decides ABORT. The record is written only after a durable COMMIT, and both owners resolve from `recover`, never from the local write result. If the write fails after a durable COMMIT, a retry with the same key resumes and finishes the write.
+- **No backend, no commit.** A server without the redb coordinator store refuses `DECISION_COORDINATOR_UNAVAILABLE`; there is no local fallback.
+- **Codes are registered.** The four certificate codes and `DECISION_COORDINATOR_UNAVAILABLE` are `DecisionErrorCode` variants.
+- **Test clock.** The request time can be overridden only by a `cfg(test)` task-local, so the L3 expiry case needs no sleeping and no release build carries the seam.
 
 ## R036.105.1: certificate table placement and integrity (decided)
 - The certificate table is the last entry of the graph-shard census slot (not placed beside `xshard_decision`), because the shared table-name macro has one slot for every table added since its frozen body; a predecessor is then the current slot minus the new table, and the pinned layout digest changes with it.

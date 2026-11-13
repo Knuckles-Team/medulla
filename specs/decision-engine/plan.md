@@ -165,6 +165,7 @@ and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revi
 `run_credit.baseline_weight` come from the default decision policy.
 - R036.106: `ProfileGrantMachine` and the `rbac_profile_use_grant` owner table; the predecessor layout is upgraded only through the offline upgrade registry; the commit admission lists the caller's active grants as `profile_grant:<id>` premises (research.md).
 - R036.105.1 and R036.105.2: the coordinator-decision certificate lives in its own `xshard_decision_certificate` owner table with a graph-shard lineage predecessor and an offline-upgrade registry row, never under a reserved key of `XSHARD_PREPARE` or `XSHARD_DECISION`; `DecisionCommit` writes the pending marker and the terminal decision with the sealed certificate through `commit_cross_shard_recoverable`; the deadline is the knob `xshard.decision_deadline_ms` (research.md).
+- R036.105.2 handler order: `Coordinator::begin` (pending marker plus certificate request) runs before the owners reserve; the stale-catalog vote precedes the decision; the record is written only after a durable COMMIT; both owners resolve from `Coordinator::recover`. No backend refuses `DECISION_COORDINATOR_UNAVAILABLE` (research.md).
 - R113.2.5 and R113.3.1.1: the shared-owner commit path (record and evidence in one Agent Library transaction, lease as the graph participant, decided by the R036.105.2 coordinator decision) and the durable `decision_retry_allowance` table are the producers of R113.2.2 to R113.2.4 and R113.3.2.
 
 ## Thought search (R750.750 to R750.754)

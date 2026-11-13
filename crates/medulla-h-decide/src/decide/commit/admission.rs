@@ -12,12 +12,13 @@ use medulla_persistence_records::agent_library::admission::{
     AdmissionEvent, AdmissionIntent, ComponentHead,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::super::SharedState;
 
 /// The reservations one commit holds.
-pub(super) struct Admitted {
+pub(in crate::decide) struct Admitted {
     txn_id: String,
     tenant: String,
     #[cfg(feature = "security")]
@@ -33,7 +34,7 @@ pub(super) struct Admitted {
 
 impl Admitted {
     /// A commit that holds no reservation (an idempotent replay of a stored record).
-    pub(super) fn none(tenant: &str) -> Self {
+    pub(in crate::decide) fn none(tenant: &str) -> Self {
         Self {
             txn_id: String::new(),
             tenant: tenant.to_string(),
@@ -46,12 +47,16 @@ impl Admitted {
 
     /// The premises of the active profile-use grants the admission consulted.
     #[allow(dead_code)]
-    pub(super) fn profile_premises(&self) -> &[String] {
+    pub(in crate::decide) fn profile_premises(&self) -> &[String] {
         &self.profile_premises
     }
 
     /// The sealed Agent Library intent of `record`.
-    pub(super) fn intent(txn_id: &str, record: &DecisionRecord, profile: &str) -> AdmissionIntent {
+    pub(in crate::decide) fn intent(
+        txn_id: &str,
+        record: &DecisionRecord,
+        profile: &str,
+    ) -> AdmissionIntent {
         let mut heads: Vec<ComponentHead> = record
             .inputs
             .candidates
@@ -73,18 +78,15 @@ impl Admitted {
     }
 
     /// Reserve both owners for `record`. A refusal of either releases what was taken.
-    pub(super) async fn reserve(
+    pub(in crate::decide) async fn reserve(
         state: &SharedState,
         store: &AgentLibraryStore,
         verified: &VerifiedRequestContext,
         record: &DecisionRecord,
         profile: &str,
+        txn_id: &str,
     ) -> Result<Self, String> {
-        let txn_id = format!(
-            "decision-commit:{}:{}",
-            record.record_id,
-            verified.idempotency_key()
-        );
+        let txn_id = txn_id.to_string();
         let mut held = Self::none(verified.tenant());
         held.txn_id = txn_id.clone();
         #[cfg(feature = "security")]
@@ -124,8 +126,42 @@ impl Admitted {
         Ok(held)
     }
 
+    /// The reservations an earlier attempt of the same transaction took, adopted so the durable
+    /// decision (COMMIT, already recorded) can resolve them.
+    pub(in crate::decide) async fn resume(
+        state: &SharedState,
+        verified: &VerifiedRequestContext,
+        txn_id: &str,
+    ) -> Self {
+        let mut held = Self::none(verified.tenant());
+        held.txn_id = txn_id.to_string();
+        held.library = true;
+        #[cfg(feature = "security")]
+        {
+            let policy_store = state.read().await.isolation.policy_store();
+            held.rbac = policy_store.map(|store| (store, format!("resumed:{txn_id}")));
+        }
+        #[cfg(not(feature = "security"))]
+        let _ = state;
+        held
+    }
+
+    /// Resolve every held reservation with the durable coordinator decision.
+    pub(in crate::decide) async fn resolve_decided(
+        self,
+        state: &SharedState,
+        store: &AgentLibraryStore,
+        decision: OwnerDecision,
+    ) -> Result<(), String> {
+        let event = match decision {
+            OwnerDecision::Commit => AdmissionEvent::Commit,
+            OwnerDecision::Abort => AdmissionEvent::Abort,
+        };
+        self.resolve(state, store, event).await
+    }
+
     /// Resolve every held reservation with the commit decision.
-    pub(super) async fn resolve(
+    pub(in crate::decide) async fn resolve(
         self,
         state: &SharedState,
         store: &AgentLibraryStore,

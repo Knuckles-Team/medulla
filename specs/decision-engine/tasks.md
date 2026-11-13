@@ -107,6 +107,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T919 [US5] MEDULLA-DECISION-ENGINE-R079.6 Embedding set in SourceIngest prepare
 - [x] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
 - [x] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
+- [ ] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
+- [ ] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
 - [ ] T103 [US5] MEDULLA-DECISION-ENGINE-R080.1 Typed provenance-rung model and overwrite-protection rule
 - [ ] T104 [US5] MEDULLA-DECISION-ENGINE-R080.2 Served producers record their rung and resist overwrite
 - [ ] T105 [US5] MEDULLA-DECISION-ENGINE-R081 Confidence-weighted community detection excluding similarity edges
@@ -841,9 +843,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T832 [US2] MEDULLA-DECISION-ENGINE-R036.102 Bind graph participant prepare records to their recovery identity
 - [ ] T833 [US2] MEDULLA-DECISION-ENGINE-R036.103 Durable RBAC read reservation
 - [ ] T834 [US2] MEDULLA-DECISION-ENGINE-R036.104 Agent Library durable admission participant
-- [ ] T835 [US2] MEDULLA-DECISION-ENGINE-R036.105 Request-bound coordinator decision certificate
+- [x] T835 [US2] MEDULLA-DECISION-ENGINE-R036.105 Request-bound coordinator decision certificate
 - [ ] T919 [US2] MEDULLA-DECISION-ENGINE-R036.105.1 Coordinator-decision certificate table, lineage row, offline upgrade and sealed type. Size: M, 2 PRs, 6 hours.
-- [ ] T920 [US2] MEDULLA-DECISION-ENGINE-R036.105.2 DecisionCommit writes the durable coordinator decision with the certificate. Size: L, 2 PRs, 8 hours.
+- [x] T920 [US2] MEDULLA-DECISION-ENGINE-R036.105.2 DecisionCommit writes the durable coordinator decision with the certificate. Size: L, 2 PRs, 8 hours.
 - [ ] T836 [US2] MEDULLA-DECISION-ENGINE-R036.106 Durable profile-use grant records
 - [ ] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
 - [ ] T838 [US6] MEDULLA-DECISION-ENGINE-R038.2 Tool-action admission is a served Decide question

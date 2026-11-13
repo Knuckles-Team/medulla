@@ -68,5 +68,15 @@ closed_error_codes! {
         AdmissionAborted => "ADMISSION_ABORTED",
         /// MEDULLA-DECISION-ENGINE-R036.104: a decision for an unknown transaction.
         AdmissionNotReserved => "ADMISSION_NOT_RESERVED",
+        /// MEDULLA-DECISION-ENGINE-R036.105: a COMMIT arrived at or after the certificate deadline.
+        CertificateExpired => "CERTIFICATE_EXPIRED",
+        /// MEDULLA-DECISION-ENGINE-R036.105: a changed request was sent for a certified transaction.
+        CertificateIntentChanged => "CERTIFICATE_INTENT_CHANGED",
+        /// MEDULLA-DECISION-ENGINE-R036.105: a terminal decision row carries no certificate.
+        CertificateLegacyRow => "CERTIFICATE_LEGACY_ROW",
+        /// MEDULLA-DECISION-ENGINE-R036.105: the transaction was already decided ABORT.
+        CertificateDecidedAbort => "CERTIFICATE_DECIDED_ABORT",
+        /// MEDULLA-DECISION-ENGINE-R036.105: the engine has no durable backend to hold a decision.
+        DecisionCoordinatorUnavailable => "DECISION_COORDINATOR_UNAVAILABLE",
     }
 }
