@@ -36,7 +36,9 @@ pub struct OutboundDraft {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SyncReport {
+    /// The connection the sync ran against.
     pub connection_iri: String,
+    /// The class whose records were synced.
     pub class_iri: String,
     /// Records that needed nothing.
     pub unchanged: u64,
@@ -44,6 +46,7 @@ pub struct SyncReport {
     pub applied: u64,
     /// Records proposed outbound (graph-only changes and graph-wins conflicts).
     pub proposed: u64,
+    /// Records both sides changed, with how each was resolved.
     pub conflicts: Vec<SyncConflictEntry>,
     /// The outbound changes, in record-key order.
     pub outbound: Vec<OutboundDraft>,
