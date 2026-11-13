@@ -75,6 +75,7 @@ fn conclude_preference(
             question_id: None,
             window,
             attribution: None,
+            transfer: None,
         },
     )?;
     let mut evidence = Vec::new();

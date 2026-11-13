@@ -142,6 +142,7 @@ async fn seed(
                         lease_holder: "lease-holder".to_string(),
                         fidelity: OutcomeFidelity::ToolCalls,
                         success: Some(*success),
+                        backbone: None,
                     },
                 },
             )
