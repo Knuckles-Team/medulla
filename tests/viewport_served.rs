@@ -449,3 +449,72 @@ async fn selection_tokens_resolve_only_within_pinned_revisions() {
         "a second tenant must not read the series"
     );
 }
+
+/// Nightly group `query/viewport_scaling` (MEDULLA-DECISION-ENGINE-R178.1): a
+/// 1,000,000,000-point line series is a 1,000,000-point block repeated 1000 times at
+/// consecutive offsets. The bins, the caps and the revision pin hold as at 1,000,000
+/// points, and the answer arrives from stored block aggregates inside the latency budget.
+/// Needs about 16 GiB of store space; run with `--ignored`.
+// spec: MEDULLA-FEDERATED-QUERY-R081.103.4
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "nightly query/viewport_scaling: builds a 1,000,000,000-point series (about 16 GiB)"]
+async fn viewport_scaling_nightly() {
+    const REPEATS: i64 = 1000;
+    const P99_BUDGET_MS: f64 = 250.0;
+    let state = state();
+    for block in 0..REPEATS {
+        let points: Vec<(i64, Vec<f64>)> = (0..BIG)
+            .map(|i| ((block * BIG + i) * STEP_NS, vec![line_value(i)]))
+            .collect();
+        append(
+            &state,
+            "huge",
+            &["v"],
+            points,
+            1_000_000 + block as u64 * 100,
+        )
+        .await;
+    }
+    let total = BIG * REPEATS;
+    let span = (total - 1) * STEP_NS;
+    for width in [100u32, 800, 4096] {
+        let (result, bytes) = query(&state, 1, line_request("huge", width, span))
+            .await
+            .unwrap();
+        let bins = line_bins(&result);
+        assert_eq!(bins.len(), width as usize);
+        assert_eq!(result.source_cardinality, total as u64);
+        let max_bins = (4 * u64::from(width)).min(65_536);
+        assert!(bytes as u64 <= 16_777_216u64.min(65_536 + 96 * max_bins));
+        // Oracle: the first point index of column c is ceil(c * (total - 1) / width).
+        let first = |c: i128| -> i128 {
+            let n = i128::from(total - 1);
+            (c * n + i128::from(width) - 1) / i128::from(width)
+        };
+        for (c, bin) in bins.iter().enumerate() {
+            let end = if c + 1 == width as usize {
+                i128::from(total)
+            } else {
+                first(c as i128 + 1)
+            };
+            assert_eq!(i128::from(bin.count), end - first(c as i128), "column {c}");
+        }
+    }
+    // Latency: p99 over repeated pan and zoom queries.
+    let mut millis = Vec::new();
+    for n in 0..200u64 {
+        let mut request = line_request("huge", 800, span);
+        let shift = (n as f64 / 200.0) * span as f64 / 2.0;
+        request.domain.x_min = shift;
+        request.domain.x_max = shift + span as f64 / 2.0;
+        let started = std::time::Instant::now();
+        query(&state, 10 + n, request).await.unwrap();
+        millis.push(started.elapsed().as_secs_f64() * 1000.0);
+    }
+    millis.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let p99 = millis[(millis.len() - 1) * 99 / 100];
+    assert!(
+        p99 <= P99_BUDGET_MS,
+        "p99 {p99:.1} ms over {P99_BUDGET_MS} ms"
+    );
+}

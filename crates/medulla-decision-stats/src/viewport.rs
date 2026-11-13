@@ -132,6 +132,35 @@ struct Column {
     count: u64,
 }
 
+/// A stored block of a series folded to a summary (MEDULLA-FEDERATED-QUERY-R081.103.5):
+/// the finite samples of one field in a run of timestamps that lies inside one pixel column.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LineBlock {
+    /// Earliest timestamp of the block.
+    pub ts_min: i64,
+    /// Latest timestamp of the block.
+    pub ts_max: i64,
+    /// Finite samples in the block.
+    pub count: u64,
+    /// Earliest finite sample.
+    pub first: (i64, f64),
+    /// Latest finite sample.
+    pub last: (i64, f64),
+    /// Smallest finite value.
+    pub min: f64,
+    /// Largest finite value.
+    pub max: f64,
+}
+
+/// One input of a line fold: a sample, or a block already summarized.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LineInput {
+    /// One `(ts, value)` sample.
+    Point(i64, f64),
+    /// A summarized block that lies inside one pixel column.
+    Block(LineBlock),
+}
+
 /// Fold `(ts, value)` points into the non-empty pixel columns of `[x_min, x_max]`.
 pub fn bin_line(
     points: impl Iterator<Item = (i64, f64)>,
@@ -139,30 +168,84 @@ pub fn bin_line(
     x_max: i64,
     pixel_width: u32,
 ) -> Result<Vec<LineBin>, ViewportError> {
+    bin_line_blocks(
+        points.map(|(ts, v)| LineInput::Point(ts, v)),
+        x_min,
+        x_max,
+        pixel_width,
+    )
+}
+
+/// Fold samples and summarized blocks into the non-empty pixel columns of `[x_min, x_max]`.
+/// A block counts as one run inside the column of its earliest timestamp; a block that is
+/// not wholly inside one column of the window is refused, because folding it would move
+/// samples between columns.
+pub fn bin_line_blocks(
+    inputs: impl Iterator<Item = LineInput>,
+    x_min: i64,
+    x_max: i64,
+    pixel_width: u32,
+) -> Result<Vec<LineBin>, ViewportError> {
     let max_bins = line_max_bins(pixel_width);
     let mut columns: BTreeMap<u32, Column> = BTreeMap::new();
-    for (ts, value) in points {
-        if !value.is_finite() {
-            continue;
-        }
-        let Some(col) = line_column(ts, x_min, x_max, pixel_width) else {
-            continue;
+    for input in inputs {
+        let (col, run) = match input {
+            LineInput::Point(ts, value) => {
+                if !value.is_finite() {
+                    continue;
+                }
+                let Some(col) = line_column(ts, x_min, x_max, pixel_width) else {
+                    continue;
+                };
+                (
+                    col,
+                    Column {
+                        first: (ts, value),
+                        last: (ts, value),
+                        min: value,
+                        max: value,
+                        count: 1,
+                    },
+                )
+            }
+            LineInput::Block(block) => {
+                if block.count == 0 {
+                    continue;
+                }
+                let lo = line_column(block.ts_min, x_min, x_max, pixel_width);
+                let hi = line_column(block.ts_max, x_min, x_max, pixel_width);
+                let (Some(col), true) = (lo, lo == hi) else {
+                    return Err(ViewportError::Invalid(
+                        "a summarized block does not lie inside one pixel column".into(),
+                    ));
+                };
+                (
+                    col,
+                    Column {
+                        first: block.first,
+                        last: block.last,
+                        min: block.min,
+                        max: block.max,
+                        count: block.count,
+                    },
+                )
+            }
         };
-        let c = columns.entry(col).or_insert(Column {
-            first: (ts, value),
-            last: (ts, value),
-            min: value,
-            max: value,
-            count: 0,
-        });
-        c.count += 1;
-        c.min = c.min.min(value);
-        c.max = c.max.max(value);
-        if ts < c.first.0 {
-            c.first = (ts, value);
-        }
-        if ts >= c.last.0 {
-            c.last = (ts, value);
+        match columns.get_mut(&col) {
+            None => {
+                columns.insert(col, run);
+            }
+            Some(c) => {
+                c.count += run.count;
+                c.min = c.min.min(run.min);
+                c.max = c.max.max(run.max);
+                if run.first.0 < c.first.0 {
+                    c.first = run.first;
+                }
+                if run.last.0 >= c.last.0 {
+                    c.last = run.last;
+                }
+            }
         }
     }
     if columns.len() as u64 > max_bins {
@@ -327,5 +410,34 @@ mod tests {
         // The last timestamp lands in the last column; points outside are dropped.
         assert_eq!(line_column(999, 0, 999, 8), Some(7));
         assert_eq!(line_column(1000, 0, 999, 8), None);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R081.103.5
+    #[test]
+    fn block_fold_equals_point_fold() {
+        let points: Vec<(i64, f64)> = (0..100i64).map(|t| (t, ((t * 37) % 11) as f64)).collect();
+        let block_of = |lo: usize, hi: usize| {
+            let run = &points[lo..hi];
+            LineInput::Block(LineBlock {
+                ts_min: run[0].0,
+                ts_max: run[run.len() - 1].0,
+                count: run.len() as u64,
+                first: run[0],
+                last: run[run.len() - 1],
+                min: run.iter().map(|p| p.1).fold(f64::INFINITY, f64::min),
+                max: run.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max),
+            })
+        };
+        // Ten columns of ten; the blocks 0..10 and 20..30 fold whole, the rest are points.
+        let mut inputs = vec![block_of(0, 10)];
+        inputs.extend(points[10..20].iter().map(|p| LineInput::Point(p.0, p.1)));
+        inputs.push(block_of(20, 30));
+        inputs.extend(points[30..].iter().map(|p| LineInput::Point(p.0, p.1)));
+        let folded = bin_line_blocks(inputs.into_iter(), 0, 99, 10).unwrap();
+        let expected = bin_line(points.iter().copied(), 0, 99, 10).unwrap();
+        assert_eq!(folded, expected);
+        // A block that straddles two columns is refused.
+        let straddling = bin_line_blocks([block_of(5, 15)].into_iter(), 0, 99, 10);
+        assert!(straddling.is_err());
     }
 }

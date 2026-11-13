@@ -633,8 +633,53 @@ fn unix_ms() -> u64 {
         .unwrap_or(0)
 }
 
+/// Bytes one field's aggregate occupies in a stored chunk.
+const FIELD_AGG_BYTES: usize = 48;
+
+/// What one chunk keeps about one field so a read that needs only a summary never decodes
+/// the points (MEDULLA-FEDERATED-QUERY-R081.103.5). Only finite values count: a NaN or
+/// infinite sample is ignored by every summary read, exactly as by a point scan.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FieldAggregate {
+    /// Finite samples of the field in the chunk.
+    pub finite: u64,
+    /// Timestamp and value of the earliest finite sample.
+    pub first: (Ts, f64),
+    /// Timestamp and value of the latest finite sample (the later arrival on equal timestamps).
+    pub last: (Ts, f64),
+    /// Smallest finite value.
+    pub min: f64,
+    /// Largest finite value.
+    pub max: f64,
+}
+
+/// The summary of one stored chunk: its timestamp span, point count and per-field aggregates.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BlockAggregate {
+    /// Earliest timestamp in the chunk.
+    pub ts_min: Ts,
+    /// Latest timestamp in the chunk.
+    pub ts_max: Ts,
+    /// Points in the chunk.
+    pub count: u64,
+    /// One aggregate per field, in field order.
+    pub fields: Vec<FieldAggregate>,
+}
+
+/// One piece of a block-aware range read: a chunk folded to its aggregate, or the points of
+/// a chunk the window or the caller's cell boundaries cut.
+#[derive(Clone, Debug, PartialEq)]
+pub enum RangeBlock {
+    /// A chunk wholly inside the window and one caller cell, as its aggregate.
+    Aggregate(BlockAggregate),
+    /// The points of a chunk that must be read individually, already trimmed to the window.
+    Points(Vec<Point>),
+}
+
 /// A decoded chunk: a bucket's worth of points, kept ts-sorted.
-/// On disk: `[u32 n | u8 n_fields | i64 ts[n] | f64 vals[n*n_fields]]` (LE).
+/// On disk: `[u32 n | u8 n_fields | i64 ts[n] | f64 vals[n*n_fields] | aggregates]` (LE),
+/// where `aggregates` is, per field, `u64 finite | i64 first_ts | f64 first | i64 last_ts |
+/// f64 last | f64 min | f64 max`, written by the same `encode` as the points.
 #[derive(Default)]
 struct Chunk {
     n_fields: usize,
@@ -646,7 +691,8 @@ fn chunk_encoded_len(points: usize, fields: usize) -> Option<usize> {
     let values = points.checked_mul(fields)?;
     5usize
         .checked_add(points.checked_mul(8)?)?
-        .checked_add(values.checked_mul(8)?)
+        .checked_add(values.checked_mul(8)?)?
+        .checked_add(fields.checked_mul(FIELD_AGG_BYTES)?)
 }
 
 impl Chunk {
@@ -675,12 +721,91 @@ impl Chunk {
         for &v in &self.vals {
             out.extend_from_slice(&v.to_le_bytes());
         }
+        for agg in self.field_aggregates() {
+            out.extend_from_slice(&agg.finite.to_le_bytes());
+            out.extend_from_slice(&agg.first.0.to_le_bytes());
+            out.extend_from_slice(&agg.first.1.to_le_bytes());
+            out.extend_from_slice(&agg.last.0.to_le_bytes());
+            out.extend_from_slice(&agg.last.1.to_le_bytes());
+            out.extend_from_slice(&agg.min.to_le_bytes());
+            out.extend_from_slice(&agg.max.to_le_bytes());
+        }
         Ok(out)
     }
 
-    /// Decode a stored chunk. Returns `Codec` rather than panicking on a truncated
-    /// blob (durable bytes are trusted but a typed error beats an index panic).
-    fn decode(buf: &[u8]) -> Result<Chunk> {
+    /// The per-field aggregates of this chunk, from its points.
+    fn field_aggregates(&self) -> Vec<FieldAggregate> {
+        (0..self.n_fields)
+            .map(|f| {
+                let mut agg = FieldAggregate {
+                    finite: 0,
+                    first: (0, 0.0),
+                    last: (0, 0.0),
+                    min: f64::INFINITY,
+                    max: f64::NEG_INFINITY,
+                };
+                for (i, &ts) in self.ts.iter().enumerate() {
+                    let v = self.vals[i * self.n_fields + f];
+                    if !v.is_finite() {
+                        continue;
+                    }
+                    if agg.finite == 0 {
+                        agg.first = (ts, v);
+                    }
+                    agg.finite += 1;
+                    agg.last = (ts, v);
+                    agg.min = agg.min.min(v);
+                    agg.max = agg.max.max(v);
+                }
+                if agg.finite == 0 {
+                    agg.min = 0.0;
+                    agg.max = 0.0;
+                }
+                agg
+            })
+            .collect()
+    }
+
+    /// Read only the header, the timestamp span and the stored aggregates of a chunk blob,
+    /// without decoding its points.
+    fn decode_aggregate(buf: &[u8]) -> Result<BlockAggregate> {
+        let (n, n_fields) = Self::checked_dimensions(buf)?;
+        let mut off = 5;
+        let ts_at = |i: usize| i64::from_le_bytes(buf[5 + i * 8..13 + i * 8].try_into().unwrap());
+        let (ts_min, ts_max) = if n == 0 {
+            (0, 0)
+        } else {
+            (ts_at(0), ts_at(n - 1))
+        };
+        off += n * 8 + n * n_fields * 8;
+        let mut fields = Vec::with_capacity(n_fields);
+        let word = |at: usize| -> [u8; 8] { buf[at..at + 8].try_into().unwrap() };
+        for _ in 0..n_fields {
+            fields.push(FieldAggregate {
+                finite: u64::from_le_bytes(word(off)),
+                first: (
+                    i64::from_le_bytes(word(off + 8)),
+                    f64::from_le_bytes(word(off + 16)),
+                ),
+                last: (
+                    i64::from_le_bytes(word(off + 24)),
+                    f64::from_le_bytes(word(off + 32)),
+                ),
+                min: f64::from_le_bytes(word(off + 40)),
+                max: f64::from_le_bytes(word(off + 48)),
+            });
+            off += FIELD_AGG_BYTES;
+        }
+        Ok(BlockAggregate {
+            ts_min,
+            ts_max,
+            count: n as u64,
+            fields,
+        })
+    }
+
+    /// Validate a stored blob's header against its length and return `(points, fields)`.
+    fn checked_dimensions(buf: &[u8]) -> Result<(usize, usize)> {
         if buf.len() < 5 || buf.len() > MAX_TS_CHUNK_BYTES {
             return Err(codec_err("stored time-series chunk is invalid"));
         }
@@ -689,12 +814,17 @@ impl Chunk {
         if n > MAX_TS_POINTS_PER_CHUNK || n_fields == 0 || n_fields > MAX_TS_FIELDS {
             return Err(codec_err("stored time-series chunk is invalid"));
         }
-        let values = n
-            .checked_mul(n_fields)
-            .ok_or_else(|| codec_err("stored time-series chunk is invalid"))?;
-        let need = chunk_encoded_len(n, n_fields)
+        chunk_encoded_len(n, n_fields)
             .filter(|need| *need == buf.len())
             .ok_or_else(|| codec_err("stored time-series chunk is invalid"))?;
+        Ok((n, n_fields))
+    }
+
+    /// Decode a stored chunk. Returns `Codec` rather than panicking on a truncated
+    /// blob (durable bytes are trusted but a typed error beats an index panic).
+    fn decode(buf: &[u8]) -> Result<Chunk> {
+        let (n, n_fields) = Self::checked_dimensions(buf)?;
+        let values = n * n_fields;
         let mut off = 5;
         let mut ts = Vec::with_capacity(n);
         for _ in 0..n {
@@ -706,7 +836,7 @@ impl Chunk {
             vals.push(f64::from_le_bytes(buf[off..off + 8].try_into().unwrap()));
             off += 8;
         }
-        debug_assert_eq!(off, need);
+        debug_assert_eq!(off + n_fields * FIELD_AGG_BYTES, buf.len());
         Ok(Chunk { n_fields, ts, vals })
     }
 
@@ -1119,6 +1249,23 @@ impl SeriesStore {
 
     pub fn range_scoped(&self, key: &SeriesKey, from: Ts, to: Ts) -> Result<Vec<Point>> {
         self.range(&key.encode(), from, to)
+    }
+
+    /// Scan `[from, to)` of a scoped series as blocks (MEDULLA-FEDERATED-QUERY-R081.103.5).
+    /// A stored chunk wholly inside the window whose timestamp span `foldable(ts_min, ts_max)`
+    /// accepts comes back as its aggregate, without decoding its points; every other chunk
+    /// the window touches comes back as its points trimmed to the window. The blocks are in
+    /// timestamp order, and folding them gives the same result as folding the point scan of
+    /// [`SeriesStore::range_scoped`]; only the cost changes.
+    pub fn range_blocks_scoped(
+        &self,
+        key: &SeriesKey,
+        from: Ts,
+        to: Ts,
+        foldable: &dyn Fn(Ts, Ts) -> bool,
+    ) -> Result<Vec<RangeBlock>> {
+        let read = self.scoped_read()?;
+        range_blocks_in_rtx(&read, &key.encode(), from, to, foldable)
     }
 
     /// Full series scan (every point, ts order).
@@ -1922,6 +2069,66 @@ pub fn range_in_rtx<R: SeriesTableReader>(
     Ok(out)
 }
 
+/// The block-aware form of [`range_in_rtx`]; see [`SeriesStore::range_blocks_scoped`].
+fn range_blocks_in_rtx<R: SeriesTableReader>(
+    rtx: &R,
+    series_id: &str,
+    from: Ts,
+    to: Ts,
+    foldable: &dyn Fn(Ts, Ts) -> bool,
+) -> Result<Vec<RangeBlock>> {
+    validate_storage_key(series_id)?;
+    if from >= to {
+        return Ok(Vec::new());
+    }
+    let Some(meta) = meta_in_rtx(rtx, series_id)? else {
+        return Ok(vec![]);
+    };
+    let Some((from_bucket, to_bucket)) = range_bucket_bounds(&meta, from, to) else {
+        return Ok(vec![]);
+    };
+    let Some(chunks) = rtx.open_series_table_if_present(SERIES_CHUNKS)? else {
+        return Ok(vec![]);
+    };
+    let mut blocks = Vec::new();
+    let mut points = Vec::new();
+    let mut response_bytes = 0usize;
+    for item in chunks
+        .range((series_id, from_bucket)..=(series_id, to_bucket))
+        .map_err(redb_err)?
+    {
+        let (_k, v) = item.map_err(redb_err)?;
+        let aggregate = Chunk::decode_aggregate(v.value())?;
+        if aggregate.fields.len() != meta.n_fields {
+            return Err(codec_err("stored time-series chunk schema is invalid"));
+        }
+        if aggregate.count > 0
+            && aggregate.ts_min >= from
+            && aggregate.ts_max < to
+            && foldable(aggregate.ts_min, aggregate.ts_max)
+        {
+            if !points.is_empty() {
+                blocks.push(RangeBlock::Points(std::mem::take(&mut points)));
+            }
+            blocks.push(RangeBlock::Aggregate(aggregate));
+            continue;
+        }
+        let chunk = Chunk::decode(v.value())?;
+        append_chunk_window(
+            &chunk,
+            meta.n_fields,
+            from,
+            to,
+            &mut points,
+            &mut response_bytes,
+        )?;
+    }
+    if !points.is_empty() {
+        blocks.push(RangeBlock::Points(points));
+    }
+    Ok(blocks)
+}
+
 #[cfg(test)]
 mod ordered_chunk_tests {
     use super::*;
@@ -2004,6 +2211,102 @@ mod ordered_chunk_tests {
             ]
         );
         assert!(store.range("series", 40, 20).unwrap().is_empty());
+    }
+
+    /// Fold points into `(count, first, last, min, max)` per cell of width 25, finite values only.
+    fn fold_cells(
+        points: impl Iterator<Item = (Ts, f64)>,
+    ) -> BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)> {
+        let mut cells = BTreeMap::new();
+        for (ts, v) in points.filter(|(_, v)| v.is_finite()) {
+            let c = cells.entry(ts / 25).or_insert((0, (ts, v), (ts, v), v, v));
+            c.0 += 1;
+            c.2 = (ts, v);
+            c.3 = c.3.min(v);
+            c.4 = c.4.max(v);
+        }
+        cells
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R081.103.5
+    #[test]
+    fn block_aggregates_match_point_scan() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_test_store(&dir.path().join("series.redb")).unwrap();
+        // Two fields over ts 0..200 in chunks of 10; field 1 has NaN and infinite samples.
+        let points: Vec<Point> = (0..200i64)
+            .map(|i| Point {
+                ts: i,
+                values: vec![
+                    ((i * 7) % 13) as f64,
+                    match i % 11 {
+                        3 => f64::NAN,
+                        5 => f64::INFINITY,
+                        _ => (i % 17) as f64 - 4.0,
+                    },
+                ],
+            })
+            .collect();
+        store
+            .append_batch("series", 2, 10, &["a".into(), "b".into()], &points)
+            .unwrap();
+        let read = store.scoped_read().unwrap();
+        // The window [13, 187) cuts the first and last chunks, and a chunk that spans two
+        // cells of 25 is read as points, so both block kinds appear.
+        let foldable = |lo: Ts, hi: Ts| lo / 25 == hi / 25;
+        let blocks = range_blocks_in_rtx(&read, "series", 13, 187, &foldable).unwrap();
+        assert!(blocks.iter().any(|b| matches!(b, RangeBlock::Aggregate(_))));
+        assert!(blocks.iter().any(|b| matches!(b, RangeBlock::Points(_))));
+        for field in 0..2usize {
+            let expected = fold_cells(
+                store
+                    .range("series", 13, 187)
+                    .unwrap()
+                    .into_iter()
+                    .map(|p| (p.ts, p.values[field])),
+            );
+            let mut folded: BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)> = BTreeMap::new();
+            for block in &blocks {
+                match block {
+                    RangeBlock::Points(pts) => {
+                        for (cell, c) in fold_cells(pts.iter().map(|p| (p.ts, p.values[field]))) {
+                            merge_cell(&mut folded, cell, c);
+                        }
+                    }
+                    RangeBlock::Aggregate(agg) => {
+                        let f = agg.fields[field];
+                        if f.finite > 0 {
+                            let c = (f.finite, f.first, f.last, f.min, f.max);
+                            merge_cell(&mut folded, agg.ts_min / 25, c);
+                        }
+                    }
+                }
+            }
+            assert_eq!(folded, expected, "field {field}");
+        }
+    }
+
+    fn merge_cell(
+        into: &mut BTreeMap<i64, (u64, (Ts, f64), (Ts, f64), f64, f64)>,
+        cell: i64,
+        c: (u64, (Ts, f64), (Ts, f64), f64, f64),
+    ) {
+        match into.get_mut(&cell) {
+            None => {
+                into.insert(cell, c);
+            }
+            Some(e) => {
+                e.0 += c.0;
+                if c.1 .0 < e.1 .0 {
+                    e.1 = c.1;
+                }
+                if c.2 .0 >= e.2 .0 {
+                    e.2 = c.2;
+                }
+                e.3 = e.3.min(c.3);
+                e.4 = e.4.max(c.4);
+            }
+        }
     }
 
     #[test]

@@ -1042,7 +1042,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R081.103.3` | `tests/viewport_served.rs::selection_tokens_resolve_only_within_pinned_revisions` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R081.103.4` | `tests/viewport_served.rs::viewport_bins_are_bounded_and_pinned` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R081.103.4` | `tests/test_viewport_client.py::test_viewport_round_trip` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.5` | `crates/medulla-tsdb/src/store.rs::tests::block_aggregates_match_point_scan` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.5` | `crates/medulla-tsdb/src/store.rs::ordered_chunk_tests::block_aggregates_match_point_scan` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.1` | `crates/medulla-types/src/graphlearn_nary.rs::tests::order_changes_digest_and_arity_is_bounded` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.2` | `crates/medulla-graph-algos/src/graphlearn/nary.rs::tests::unseen_member_scores_inductively` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.3` | `tests/graphlearn_nary_served.rs::refusals_and_unchanged_graph_revision` |

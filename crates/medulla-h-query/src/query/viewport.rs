@@ -26,19 +26,33 @@ fn refusal(req_id: u64, error: ViewportError) -> Response {
 /// One source read: the points of the window and the pinned revision.
 #[cfg(feature = "tsdb")]
 struct Source {
+    /// The points of the window; empty when `blocks` carries the read.
     points: Vec<medulla_tsdb::point::Point>,
+    /// A line read as stored blocks: whole chunks folded to their aggregates and the points
+    /// of the chunks the window or a pixel column cuts (MEDULLA-FEDERATED-QUERY-R081.103.5).
+    blocks: Vec<medulla_tsdb::store::RangeBlock>,
     revision: u64,
     cardinality: u64,
     x_field: Option<usize>,
     y_field: usize,
 }
 
-/// Bind the verified caller, find its series, check the pinned revision and read the points
-/// the window needs. Every refusal comes before the scan except the ones that need it.
+/// How a source is read: as bins (a line may fold stored block aggregates) or as raw points
+/// (a selection resolves to points).
+#[cfg(feature = "tsdb")]
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Read {
+    Bins,
+    Points,
+}
+
+/// Bind the verified caller, find its series, check the pinned revision and read what the
+/// window needs. Every refusal comes before the scan except the ones that need it.
 #[cfg(feature = "tsdb")]
 async fn read_source(
     ctx: &QueryHandlerCtx<'_>,
     request: &ViewportRequest,
+    read: Read,
 ) -> Result<Source, ViewportError> {
     use medulla_tsdb::store::SeriesKey;
     request.validate()?;
@@ -90,11 +104,27 @@ async fn read_source(
         ),
         ViewportKind::Scatter => (i64::MIN, i64::MAX),
     };
-    let points = store
-        .range_scoped(&key, from, to)
-        .map_err(|_| unavailable("the source could not be read"))?;
+    let (points, blocks) = if read == Read::Bins && request.kind == ViewportKind::Line {
+        let d = &request.domain;
+        let (x_min, x_max, width) = (d.x_min as i64, d.x_max as i64, request.pixel_width);
+        // A chunk folds to its aggregate only when it lies inside one pixel column.
+        let foldable = |lo: i64, hi: i64| {
+            let col = kernel::line_column(lo, x_min, x_max, width);
+            col.is_some() && col == kernel::line_column(hi, x_min, x_max, width)
+        };
+        let blocks = store
+            .range_blocks_scoped(&key, from, to, &foldable)
+            .map_err(|_| unavailable("the source could not be read"))?;
+        (Vec::new(), blocks)
+    } else {
+        let points = store
+            .range_scoped(&key, from, to)
+            .map_err(|_| unavailable("the source could not be read"))?;
+        (points, Vec::new())
+    };
     Ok(Source {
         points,
+        blocks,
         revision,
         cardinality: meta.count,
         x_field,
@@ -110,6 +140,35 @@ fn max_bins_of(request: &ViewportRequest) -> u64 {
             kernel::scatter_max_bins(request.pixel_width, request.pixel_height)
         }
         ViewportKind::Line => kernel::line_max_bins(request.pixel_width),
+    }
+}
+
+/// The kernel inputs of one stored block for the field `y`.
+#[cfg(feature = "tsdb")]
+fn line_inputs(block: &medulla_tsdb::store::RangeBlock, y: usize) -> Vec<kernel::LineInput> {
+    use medulla_tsdb::store::RangeBlock;
+    match block {
+        RangeBlock::Points(points) => points
+            .iter()
+            .filter_map(|p| Some(kernel::LineInput::Point(p.ts, *p.values.get(y)?)))
+            .collect(),
+        RangeBlock::Aggregate(aggregate) => aggregate
+            .fields
+            .get(y)
+            .filter(|f| f.finite > 0)
+            .map(|f| {
+                kernel::LineInput::Block(kernel::LineBlock {
+                    ts_min: aggregate.ts_min,
+                    ts_max: aggregate.ts_max,
+                    count: f.finite,
+                    first: f.first,
+                    last: f.last,
+                    min: f.min,
+                    max: f.max,
+                })
+            })
+            .into_iter()
+            .collect(),
     }
 }
 
@@ -130,11 +189,11 @@ fn bin(request: &ViewportRequest, source: &Source) -> Result<ViewportBins, Viewp
             )
             .map(ViewportBins::Scatter)
         }
-        ViewportKind::Line => kernel::bin_line(
+        ViewportKind::Line => kernel::bin_line_blocks(
             source
-                .points
+                .blocks
                 .iter()
-                .filter_map(|p| Some((p.ts, *p.values.get(source.y_field)?))),
+                .flat_map(|block| line_inputs(block, source.y_field)),
             d.x_min as i64,
             d.x_max as i64,
             request.pixel_width,
@@ -150,7 +209,7 @@ pub(crate) async fn handle_viewport_query(
 ) -> Response {
     let req_id = ctx.req_id;
     let outcome = async {
-        let source = read_source(ctx, &request).await?;
+        let source = read_source(ctx, &request, Read::Bins).await?;
         let bins = bin(&request, &source)?;
         let result = ViewportResult {
             bins,
@@ -217,7 +276,7 @@ pub(crate) async fn handle_resolve_viewport_selection(
         };
         let mut pinned_request = request.clone();
         pinned_request.source_revision = Some(pinned);
-        let source = read_source(ctx, &pinned_request).await?;
+        let source = read_source(ctx, &pinned_request, Read::Points).await?;
         let d = &request.domain;
         let members: Vec<&medulla_tsdb::point::Point> = match &token {
             SelectionToken::ExactPoint { point_id, .. } => {

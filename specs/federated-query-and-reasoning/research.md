@@ -122,6 +122,8 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Cell and column formulas multiply before they divide (`(v - lo) * n / (hi - lo)`), which keeps integer-valued sources exact; line columns use integer arithmetic on nanosecond timestamps.
 - `filter_digest` is part of the viewport identity and is not applied by the engine: a caller filters by choosing the source it reads.
 - Block aggregates for the 1,000,000,000-point nightly are a separate row (R081.103.5): the range scan serves the 1,000,000-point proof, and the nightly needs a store change.
+- Decision (R081.103.5): the aggregates live in the chunk blob as a trailer, not in a new table. A second table would need its own owner-layout declaration and a second write to keep in step; the trailer is written by the one `Chunk::encode`, so the aggregate and its points cannot disagree and commit together. The cost is a format change of stored chunks, which follows the hard-cutover rule (no reader for the old layout).
+- Decision (R081.103.5): a chunk folds only when it lies wholly inside one pixel column, because folding a chunk that spans columns would move samples between them and break equality with the point scan. Non-finite samples are excluded from every aggregate, as `bin_line` skips them. Scatter is not folded: a cell needs both coordinates per point, so the nightly at 1,000,000,000 points is a line series, and scatter sources stay within the range-scan limit.
 
 ## Model scorer of the rerank stage (R652.7)
 
