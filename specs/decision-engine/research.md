@@ -976,3 +976,7 @@ The capability index feed (R172.7.2) is started by the server after the primary 
 ## R174.7.6: Discover names the capability it is asked for
 
 `Discover` carries an optional `capability` (an IRI). The served read resolves the capability-scope adapter first and the graph-scope adapter second, the order the designation question uses (R172.13); a query that names no capability resolves the graph scope only. `SemanticSearch` and a unified plan name none.
+
+## Family answers and sealed premises travel in one carrier
+
+`Executed` carries no per-family fields. A family's typed answer and the premises it seals in full ride in `Executed.family` (`FamilyExecuted`: an optional `FamilyAnswer` plus the premises). Capability designation seals `FamilyAnswer::CapabilityDesignation`; the edit-concentration family seals its counted-edit premises with no typed answer, because its answer is its outcome alone. `ExecutionContext.designation` stays as a borrowed input.
