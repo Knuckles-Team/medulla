@@ -432,6 +432,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::Rank, RANK),
     (QuestionKind::ConnectorWriteBack, CONNECTOR_WRITE_BACK),
     (QuestionKind::ResolveEntity, RESOLVE_ENTITY),
+    (QuestionKind::FeatureMatch, super::feature_match::REFUSALS),
     (
         QuestionKind::ContextPackage,
         super::context_package::REFUSALS,

@@ -20,7 +20,16 @@ use tokio::sync::RwLock;
 pub const MAX_INGEST_STREAM_ITEMS: usize = 49;
 
 /// Ingest handler behaviour reachable from crates below `medulla-h-ingest`.
-pub trait IngestApi: Send + Sync {}
+pub trait IngestApi: Send + Sync {
+    /// Whether `closed_by` names a change the repository index holds. `lookup`
+    /// answers a node id with its stored properties, only for a node the
+    /// caller may see; an absent and a hidden node answer alike.
+    fn change_known(
+        &self,
+        lookup: &dyn Fn(&str) -> Option<serde_json::Value>,
+        closed_by: &str,
+    ) -> bool;
+}
 
 /// Graph handler behaviour reachable from crates below `medulla-h-graph`.
 #[async_trait::async_trait]

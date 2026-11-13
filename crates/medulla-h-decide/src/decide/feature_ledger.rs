@@ -7,7 +7,10 @@
 //! finds none of these entries. Each entry's status is the explicit
 //! `FeatureLedgerMachine`: `LedgerStatus::apply`, through `advance_ledger`, is
 //! the only function that changes it, and an illegal event is the typed
-//! `TRANSITION_REFUSED`. A stale `expected_revision` is `REVISION_CONFLICT`.
+//! `TRANSITION_REFUSED`. A stale `expected_revision` is
+//! `LEDGER_REVISION_CONFLICT`, and a `Close` whose `closed_by` the repository
+//! index does not know is `LEDGER_CLOSE_NO_CHANGE` (checked before the
+//! compare-and-set).
 //! Every refusal returns before the store write, and one operation is one
 //! store write, so an operation over several entries changes all of them or none.
 //!
@@ -28,12 +31,23 @@ pub async fn handle_feature_ledger(
     #[cfg(feature = "statechart")]
     {
         let persist_dir = { state.read().await.persist_dir.clone() };
+        // A close names the change that closes the feature; the repository
+        // index answers whether it knows that change, before any state moves.
+        let known = match &op {
+            FeatureLedgerOp::Close { closed_by, .. } => {
+                match change_known(state, verified, closed_by).await {
+                    Ok(known) => Some(known),
+                    Err(error) => return Response::err(req_id, error),
+                }
+            }
+            _ => None,
+        };
         let served = served::FeatureLedger::open(
             persist_dir.as_deref(),
             verified.tenant(),
             &verified.principal_persistence_id(),
         )
-        .and_then(|ledger| ledger.serve(op));
+        .and_then(|ledger| ledger.serve(op, known));
         match served {
             Ok(payload) => Response::ok(req_id, payload),
             Err(error) => Response::err(req_id, error),
@@ -46,6 +60,39 @@ pub async fn handle_feature_ledger(
     }
 }
 
+/// Whether the repository index holds the change `closed_by` names, in any
+/// graph the caller may read. A graph or row the caller may not see answers
+/// like an absent one (MEDULLA-DECISION-ENGINE-R707.4).
+#[cfg(feature = "statechart")]
+async fn change_known(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    closed_by: &str,
+) -> Result<bool, String> {
+    let seam = medulla_server_ops::api::ingest::ingest_seam(state)
+        .await
+        .ok_or_else(|| "FeatureLedger Close requires the installed ingest seam".to_string())?;
+    let graphs: Vec<String> = state
+        .read()
+        .await
+        .registry
+        .list()
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect();
+    for graph in graphs {
+        // A graph the caller may not read is not part of what the caller knows.
+        let Ok(view) = super::stat_vectors::graph_vectors(state, verified.agent_id(), &graph).await
+        else {
+            continue;
+        };
+        if seam.change_known(&|id| view.visible_properties(id), closed_by) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 #[cfg(feature = "statechart")]
 pub(super) mod served {
     use std::collections::BTreeMap;
@@ -56,6 +103,9 @@ pub(super) mod served {
         FeatureLedgerOp, FeatureLedgerView, LedgerEntry, LedgerEvent, LedgerStatus, PlanProposal,
         FEATURE_LEDGER_MACHINE,
     };
+    use medulla_decision_types::decision::feature_match::{
+        LEDGER_CLOSE_NO_CHANGE, LEDGER_REVISION_CONFLICT,
+    };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         FeatureLedgerClose, FeatureLedgerGet, FeatureLedgerOpen, FeatureLedgerPlan,
@@ -65,9 +115,8 @@ pub(super) mod served {
         StatechartStore,
     };
     use medulla_store::feature_ledger_statechart::{feature_ledger_statechart_def, RECORD_EVENT};
-    use medulla_types::contract::ServerErrorCode;
 
-    use super::super::claims::served::{field, invalid, refuse, request_key, ClaimStore};
+    use super::super::claims::served::{field, invalid, request_key, ClaimStore};
 
     type Entries = BTreeMap<String, LedgerEntry>;
 
@@ -164,7 +213,7 @@ pub(super) mod served {
                 )
                 .map_err(|error| match error {
                     StatechartError::VersionConflict { .. } => {
-                        refuse(ServerErrorCode::RevisionConflict, error)
+                        format!("{}: {error}", LEDGER_REVISION_CONFLICT.as_str())
                     }
                     other => other.to_string(),
                 })?;
@@ -178,6 +227,7 @@ pub(super) mod served {
         pub(in crate::decide) fn serve(
             &self,
             op: FeatureLedgerOp,
+            change_known: Option<bool>,
         ) -> Result<ResultPayload, String> {
             match op {
                 FeatureLedgerOp::Open {
@@ -198,6 +248,7 @@ pub(super) mod served {
                     &feature_id,
                     closed_by,
                     expected_revision,
+                    change_known == Some(true),
                 )?),
                 FeatureLedgerOp::Get { feature_ids } => {
                     ResultPayload::of::<FeatureLedgerGet>(self.get(&feature_ids)?)
@@ -267,6 +318,7 @@ pub(super) mod served {
             feature_id: &str,
             closed_by: String,
             expected_revision: u64,
+            change_known: bool,
         ) -> Result<FeatureLedgerView, String> {
             if closed_by.is_empty() {
                 return Err(invalid("closed_by names no change"));
@@ -275,6 +327,12 @@ pub(super) mod served {
             let entry = entries
                 .get(feature_id)
                 .ok_or_else(|| invalid(&format!("feature {feature_id} is not in the ledger")))?;
+            if !change_known {
+                return Err(format!(
+                    "{}: '{closed_by}' names no change the repository index knows",
+                    LEDGER_CLOSE_NO_CHANGE.as_str()
+                ));
+            }
             let mut next = advance_ledger(entry, expected_revision, LedgerEvent::Close)
                 .map_err(change_refusal)?;
             debug_assert_eq!(next.status, LedgerStatus::Closed);
@@ -302,9 +360,9 @@ pub(super) mod served {
 
     fn change_refusal(error: LedgerChangeError) -> String {
         match error {
-            LedgerChangeError::RevisionConflict { expected, found } => refuse(
-                ServerErrorCode::RevisionConflict,
-                format!("the entry is at revision {found}, not {expected}"),
+            LedgerChangeError::RevisionConflict { expected, found } => format!(
+                "{}: the entry is at revision {found}, not {expected}",
+                LEDGER_REVISION_CONFLICT.as_str()
             ),
             LedgerChangeError::Transition(refused) => refused.to_string(),
         }

@@ -17,7 +17,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_stats::decision::feature_match::{dedup, MatchParams, PPM};
+use medulla_decision_stats::decision::feature_match::{dedup, name_only_pair, MatchParams, PPM};
 use medulla_decision_types::decision::feature_match::{
     match_option_id, plan_option_id, FeatureMatchAnswer, FeatureMatrixRow, Match, PlanProposal,
 };
@@ -230,6 +230,13 @@ impl DecisionFamily for FeatureMatchFamily {
                     .copied()
                     .unwrap_or_default()
             };
+            if let Some((left, right)) = name_only_pair(&parsed.rows, &embedding, &params) {
+                return Err(format!(
+                    "{}: features {left} and {right} share a high-entropy name and no other evidence",
+                    medulla_decision_types::decision::feature_match::MATCH_HIGH_ENTROPY_NAME_ONLY
+                        .as_str()
+                ));
+            }
             let found = dedup(&parsed.rows, &embedding, &params);
             let project_of: BTreeMap<&str, &str> = parsed
                 .rows

@@ -5412,6 +5412,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-h-decide",
  "medulla-h-graph",
+ "medulla-h-ingest",
  "medulla-h-jobs",
  "medulla-index-types",
  "medulla-isolation",

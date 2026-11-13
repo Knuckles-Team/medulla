@@ -11,9 +11,27 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::record::outcome::RefusalCode;
+
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
+
+/// A `Close` names a `closed_by` change the repository index does not know.
+pub const LEDGER_CLOSE_NO_CHANGE: RefusalCode = RefusalCode::new("LEDGER_CLOSE_NO_CHANGE");
+/// A compare-and-set on a ledger entry read another revision than it holds.
+pub const LEDGER_REVISION_CONFLICT: RefusalCode = RefusalCode::new("LEDGER_REVISION_CONFLICT");
+/// Two features of one block share a high-entropy name and nothing else links them.
+pub const MATCH_HIGH_ENTROPY_NAME_ONLY: RefusalCode =
+    RefusalCode::new("MATCH_HIGH_ENTROPY_NAME_ONLY");
+
+/// The refusal table of the feature ledger and the `feature_match` family
+/// (MEDULLA-DECISION-ENGINE-R707.4).
+pub const REFUSALS: &[RefusalCode] = &[
+    LEDGER_CLOSE_NO_CHANGE,
+    LEDGER_REVISION_CONFLICT,
+    MATCH_HIGH_ENTROPY_NAME_ONLY,
+];
 
 /// One feature of a studied project or of the local system.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

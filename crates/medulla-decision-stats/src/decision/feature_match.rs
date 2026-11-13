@@ -179,6 +179,41 @@ fn find(parent: &mut BTreeMap<String, String>, id: &str) -> String {
     root
 }
 
+/// The first pair, in feature id order inside a same-label block, whose only
+/// link is a shared high-entropy name: equal canonical names that reach
+/// `match.entropy_mbit`, and no embedding evidence between the two features.
+/// Such a name says nothing on its own (a hash, a generated id), so a merge
+/// resting on it is refused rather than scored as a match.
+pub fn name_only_pair(
+    rows: &[FeatureMatrixRow],
+    embedding_ppm: &dyn Fn(&str, &str) -> u32,
+    params: &MatchParams,
+) -> Option<(String, String)> {
+    let mut blocks: BTreeMap<&str, Vec<&FeatureMatrixRow>> = BTreeMap::new();
+    for row in rows {
+        blocks.entry(row.label.as_str()).or_default().push(row);
+    }
+    for block in blocks.values_mut() {
+        block.sort_by(|a, b| a.feature_id.cmp(&b.feature_id));
+        block.dedup_by(|a, b| a.feature_id == b.feature_id);
+        block.truncate(params.max_block);
+        for (i, left) in block.iter().enumerate() {
+            let canonical = canonical_id(&left.name);
+            if entropy_mbit(&canonical) < params.entropy_mbit {
+                continue;
+            }
+            for right in &block[i + 1..] {
+                if canonical_id(&right.name) == canonical
+                    && embedding_ppm(&left.feature_id, &right.feature_id) == 0
+                {
+                    return Some((left.feature_id.clone(), right.feature_id.clone()));
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Score every pair inside each same-label block and merge the pairs at or
 /// above `match.score_min`. `embedding_ppm(a, b)` is the cosine of two feature
 /// ids' embeddings.

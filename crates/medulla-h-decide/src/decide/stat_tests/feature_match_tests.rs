@@ -17,6 +17,43 @@ use medulla_decision_types::decision::statistical::declared::{
 use medulla_decision_types::decision::ResolutionKind;
 
 const ONE: i64 = 1 << 32;
+/// A commit the repository index holds, readable by the ledger writer.
+const COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
+/// A commit only another agent may see.
+const HIDDEN_COMMIT: &str = "fedcba9876543210fedcba9876543210fedcba98";
+
+/// Install the real ingest seam and write two commit nodes of the repository
+/// index into a graph: one the ledger writer sees, one it does not.
+async fn index_commits(h: &Harness) {
+    assert!(medulla_server_ops::api::ingest::install_ingest_seam(
+        &h.state.read().await.seams,
+        Arc::new(medulla_h_ingest::repository_index::IngestSeam),
+    ));
+    let mut guard = h.state.write().await;
+    guard
+        .registry
+        .create_graph(
+            "repo-index",
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
+        .unwrap();
+    let core = guard.registry.get("repo-index").unwrap().core.clone();
+    for (digest, owner, visibility) in [
+        (COMMIT, "ledger-writer", "public"),
+        (HIDDEN_COMMIT, "someone-else", "private"),
+    ] {
+        let props = serde_json::json!({
+            "type": medulla_h_ingest::repository_index::scope_facts::COMMIT_TYPE,
+            "_owner": owner,
+            "_visibility": visibility,
+        });
+        core.add_node(
+            medulla_h_ingest::repository_index::scope_facts::commit_node_id(digest),
+            rmp_serde::to_vec_named(&props).unwrap(),
+        );
+    }
+}
 const OTHER_TENANT: &str = "tenant-ledger-other";
 
 fn feature(
@@ -122,6 +159,7 @@ fn only(view: FeatureLedgerView) -> medulla_decision_types::decision::feature_ma
 #[tokio::test]
 async fn match_and_ledger_reach_their_handlers() {
     let h = Harness::new().await;
+    index_commits(&h).await;
     let pins = pins(&h, TENANT);
 
     // The match option, the plan option and the typed answer.
@@ -214,7 +252,7 @@ async fn match_and_ledger_reach_their_handlers() {
         TENANT,
         FeatureLedgerOp::Close {
             feature_id: "f-e2".into(),
-            closed_by: "change-1".into(),
+            closed_by: COMMIT.into(),
             expected_revision: 0,
         },
     )
@@ -234,7 +272,7 @@ async fn match_and_ledger_reach_their_handlers() {
     )
     .await
     .unwrap_err();
-    assert!(stale.starts_with("REVISION_CONFLICT"), "{stale}");
+    assert!(stale.starts_with("LEDGER_REVISION_CONFLICT"), "{stale}");
     let planned = only(
         ledger(
             &h,
@@ -278,7 +316,7 @@ async fn match_and_ledger_reach_their_handlers() {
         OTHER_TENANT,
         FeatureLedgerOp::Close {
             feature_id: "f-e2".into(),
-            closed_by: "change-1".into(),
+            closed_by: COMMIT.into(),
             expected_revision: 1,
         },
     )
@@ -293,7 +331,7 @@ async fn match_and_ledger_reach_their_handlers() {
             TENANT,
             FeatureLedgerOp::Close {
                 feature_id: "f-e2".into(),
-                closed_by: "change-1".into(),
+                closed_by: COMMIT.into(),
                 expected_revision: 1,
             },
         )
@@ -301,7 +339,7 @@ async fn match_and_ledger_reach_their_handlers() {
         .unwrap(),
     );
     assert_eq!(closed.status, LedgerStatus::Closed);
-    assert_eq!(closed.closed_by.as_deref(), Some("change-1"));
+    assert_eq!(closed.closed_by.as_deref(), Some(COMMIT));
     assert_eq!(closed.revision, 2);
     let read = ledger(
         &h,
@@ -313,4 +351,84 @@ async fn match_and_ledger_reach_their_handlers() {
     .await
     .unwrap();
     assert_eq!(read.entries, vec![closed]);
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R707.4: a close naming no known change
+/// (absent, or one the caller may not see) is `LEDGER_CLOSE_NO_CHANGE`, a stale
+/// revision is `LEDGER_REVISION_CONFLICT`, two features linked only by a shared
+/// high-entropy name are `MATCH_HIGH_ENTROPY_NAME_ONLY`, and each refusal
+/// leaves the ledger as it was.
+// spec: MEDULLA-DECISION-ENGINE-R707.4
+#[tokio::test]
+async fn ledger_refusals_change_no_state() {
+    let h = Harness::new().await;
+    index_commits(&h).await;
+    let pins = pins(&h, TENANT);
+
+    // The shared high-entropy name: no merge, no plan, a typed refusal.
+    let random = "q8Zx7vK2mP9wL4tR1nB6cY3hJ5dG0sFa";
+    let named = vec![
+        feature("f-a", "ext", random, "eg:cap/limits", &[]),
+        feature("f-b", "local", random, "eg:cap/limits", &[]),
+    ];
+    let refused = decide(&h, request(&pins.0, named, Some("local")))
+        .await
+        .unwrap_err();
+    assert!(
+        refused.starts_with("MATCH_HIGH_ENTROPY_NAME_ONLY"),
+        "{refused}"
+    );
+
+    // An entry planned and waiting for its change.
+    let planned_op = FeatureLedgerOp::Plan {
+        plan: medulla_decision_types::decision::feature_match::PlanProposal {
+            plan_id: "plan-1".into(),
+            feature_ids: vec!["f-e2".into()],
+            rationale_digest: "d".into(),
+        },
+        expected_revision: 0,
+    };
+    ledger(
+        &h,
+        TENANT,
+        FeatureLedgerOp::Open {
+            feature_id: "f-e2".into(),
+            match_ids: vec![],
+        },
+    )
+    .await
+    .unwrap();
+    ledger(&h, TENANT, planned_op).await.unwrap();
+    let before = ledger(
+        &h,
+        TENANT,
+        FeatureLedgerOp::Get {
+            feature_ids: vec![],
+        },
+    )
+    .await
+    .unwrap();
+
+    let close = |closed_by: &str, revision: u64| FeatureLedgerOp::Close {
+        feature_id: "f-e2".into(),
+        closed_by: closed_by.into(),
+        expected_revision: revision,
+    };
+    for closed_by in ["change-unknown", HIDDEN_COMMIT] {
+        let error = ledger(&h, TENANT, close(closed_by, 1)).await.unwrap_err();
+        assert!(error.starts_with("LEDGER_CLOSE_NO_CHANGE"), "{error}");
+    }
+    let stale = ledger(&h, TENANT, close(COMMIT, 9)).await.unwrap_err();
+    assert!(stale.starts_with("LEDGER_REVISION_CONFLICT"), "{stale}");
+
+    let after = ledger(
+        &h,
+        TENANT,
+        FeatureLedgerOp::Get {
+            feature_ids: vec![],
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(before, after, "a refusal changes no state");
 }

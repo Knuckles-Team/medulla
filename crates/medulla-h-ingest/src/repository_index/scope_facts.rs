@@ -26,6 +26,11 @@ pub const IAC_TYPE: &str = "IacResource";
 /// Node type of one service path prefix.
 pub const SERVICE_PREFIX_TYPE: &str = "ServicePrefix";
 
+/// The node id of the commit with `digest`.
+pub fn commit_node_id(digest: &str) -> String {
+    format!("commit:{digest}")
+}
+
 const VERBS: [&str; 5] = ["get", "post", "put", "delete", "patch"];
 const OPENERS: [&str; 3] = [".", "#[", "@"];
 const ROUTE_EXTENSIONS: [&str; 7] = ["py", "rs", "js", "ts", "go", "java", "kt"];
@@ -127,7 +132,7 @@ fn commit_node(
     let parents = commit.parents.join(",");
     let timestamp = commit.timestamp_ms.to_string();
     Ok(node(
-        format!("commit:{}", commit.digest),
+        commit_node_id(&commit.digest),
         COMMIT_TYPE,
         &[
             ("author", &commit.author),

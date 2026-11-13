@@ -32,6 +32,22 @@ pub mod ecosystem;
 pub mod enrich;
 pub mod scope_facts;
 
+/// The ingest seam implementation: what the repository index knows, for the
+/// handlers that sit above it (MEDULLA-DECISION-ENGINE-R707.4).
+pub struct IngestSeam;
+
+impl medulla_server_ops::api::ingest::IngestApi for IngestSeam {
+    fn change_known(
+        &self,
+        lookup: &dyn Fn(&str) -> Option<serde_json::Value>,
+        closed_by: &str,
+    ) -> bool {
+        lookup(&scope_facts::commit_node_id(closed_by)).is_some_and(|properties| {
+            properties.get("type").and_then(|t| t.as_str()) == Some(scope_facts::COMMIT_TYPE)
+        })
+    }
+}
+
 /// The projection edge a tombstone is reported as; it lowers to a removal.
 const TOMBSTONE_EDGE: &str = "removesFileVersion";
 const ENVELOPE_PREFIX: &str = "repository-index:";
