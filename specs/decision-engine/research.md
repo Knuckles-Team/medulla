@@ -116,6 +116,7 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
 - **Candidates are the leaf ids.** `Decide` needs a candidate source; the family declares the frontier leaves as options so the record's candidate digest covers exactly what was ranked. An empty frontier is refused, because a declared source names at least one option.
 - **A budget stop abstains.** The answer still carries `Stop{certified_gap}`; the outcome is `Abstained` with `BudgetExhausted` naming the best node, resolution `Optimization`, evidence `Claim` (scores are caller claims).
 - **A missing strategy is unknown.** A task class absent from `DecisionPolicy.reasoning` refuses `THOUGHT_STRATEGY_UNKNOWN`; there is no silent default strategy.
+## Drift quality, staleness and region selection (R174.8.2.1)
 
 ## Drift quality, staleness and region selection (R174.8.2.1)
 
