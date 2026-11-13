@@ -927,3 +927,15 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for tools, skills, operations, catalog items and intent actions. Size: M, 1 PR, 5 hours.
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
 - [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first. Size: S, 1 PR, 3 hours.
+- [ ] T923 [US6] MEDULLA-DECISION-ENGINE-R830 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T924 [US6] MEDULLA-DECISION-ENGINE-R830.1 Certificate/SolveStatus state machine: route 1 census findings through SolveStatus::apply
+- [ ] T925 [US6] MEDULLA-DECISION-ENGINE-R830.2 ComparativeStageBudget/ComparativeAnalysisStage state machine: route 1 census findings through ComparativeAnalysisStage::apply
+- [ ] T926 [US6] MEDULLA-DECISION-ENGINE-R830.3 DecisionJobRecord/DecisionJobState state machine: route 1 census findings through DecisionJobState::apply
+- [ ] T927 [US6] MEDULLA-DECISION-ENGINE-R830.4 EditFact/EditStatus state machine: route 1 census findings through EditStatus::apply
+- [ ] T928 [US6] MEDULLA-DECISION-ENGINE-R830.5 Gap/GapState state machine: route 1 census findings through GapState::apply
+- [ ] T929 [US6] MEDULLA-DECISION-ENGINE-R830.6 LoopInstance/LoopState state machine: route 13 census findings through LoopState::apply
+- [ ] T930 [US6] MEDULLA-DECISION-ENGINE-R830.7 PlanItem/PlanStatus state machine: route 1 census findings through PlanStatus::apply
+- [ ] T931 [US6] MEDULLA-DECISION-ENGINE-R830.8 SourceReliabilityWire/SourceReliabilityState state machine: route 1 census findings through SourceReliabilityState::apply
+- [ ] T932 [US6] MEDULLA-DECISION-ENGINE-R830.9 StageBeacon/LoopStage state machine: route 1 census findings through LoopStage::apply
+- [ ] T933 [US6] MEDULLA-DECISION-ENGINE-R830.10 StageInput/EvolutionStage state machine: route 2 census findings through EvolutionStage::apply
+- [ ] T934 [US6] MEDULLA-DECISION-ENGINE-R830.11 TrainingRun/TrainingRunStatus state machine: route 1 census findings through TrainingRunStatus::apply
