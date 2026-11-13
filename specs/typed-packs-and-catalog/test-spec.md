@@ -807,7 +807,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R809`: `tests/ontology/test_canonical_hash_served.py::test_reordered_serializations_hash_equal`
 - `MEDULLA-TYPED-PACKS-R110`: `tests/open_metadata_sync_served.rs::metadata_sync_round_trips_terms_assets_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.1`: `crates/medulla-rdf/tests/open_metadata.rs::mapped_types_resolve_one_class`
-- `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata.rs::tests::record_round_trips_and_refuses_unknown_fields`
+- `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::record_round_trips_and_refuses_unknown_fields`
 - `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
 - `MEDULLA-TYPED-PACKS-R110.5`: `tests/open_metadata_sync_served.rs::sync_reads_terms_and_writes_catalog_nodes`

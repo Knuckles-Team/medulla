@@ -278,6 +278,16 @@ catn:openMetadataType a owl:AnnotationProperty ;
     rdfs:label "open metadata type" ;
     rdfs:comment "Names the open metadata type a catalog class stands for, so the ontology drives the type mapping of the open-metadata sync. An open metadata type name with no class carrying this annotation is unmapped." .
 
+cat:externalGuid a owl:DatatypeProperty ;
+    rdfs:label "external GUID" ;
+    rdfs:comment "The GUID of the open metadata instance a catalog node was synced from (MEDULLA-TYPED-PACKS-R110.3)." ;
+    rdfs:range xsd:string .
+
+cat:externalVersion a owl:DatatypeProperty ;
+    rdfs:label "external version" ;
+    rdfs:comment "The store version of the open metadata instance at the last sync; an outbound write carries it as the expected version." ;
+    rdfs:range xsd:nonNegativeInteger .
+
 cat:ConfidentialityClassification a owl:Class ;
     rdfs:label "Confidentiality Classification" ;
     rdfs:comment "A confidentiality marking attached to a catalogued asset." ;

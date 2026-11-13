@@ -30,6 +30,7 @@ pub mod rapid_r075;
 pub mod record;
 pub mod result;
 pub mod seed_graph;
+pub mod skill_graph;
 pub mod self_served_catalog;
 pub mod source;
 pub use source::{PackSourceApproval, PackSourceKind, PackSourceRegistration};
@@ -148,6 +149,10 @@ pub use result::{
     MAX_PROJECTION_FAILURE_DETAIL_BYTES,
 };
 pub use seed_graph::{SeedGraphImport, SeedPart, SeedPartKey};
+pub use skill_graph::{
+    ConformanceReport, SkillCandidate, SkillCandidateState, SkillGraphEntry, SkillGraphManifest,
+    SkillGraphTypeError,
+};
 pub use self_served_catalog::{
     check_self_served_import, self_served_candidate, self_served_component_revision,
     McpSelfServedCatalogAttestRequest, SelfServedAttester,
