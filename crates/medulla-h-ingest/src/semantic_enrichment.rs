@@ -117,6 +117,14 @@ pub fn lower_proposals(
     write_set(methods)
 }
 
+/// The id of the assignment node of one document under one taxonomy.
+pub fn assignment_id(document: &str, taxonomy: &str) -> String {
+    format!(
+        "assignment:{}",
+        sha256_hex(format!("{document}\0{taxonomy}").as_bytes())
+    )
+}
+
 /// One topic assignment: its node (taxonomy, topic, confidence and embedder)
 /// and the `assignedTo` edge from the document to the topic.
 pub fn lower_assignment(
@@ -125,10 +133,7 @@ pub fn lower_assignment(
     embedder: &str,
     schedule_record_id: &str,
 ) -> Result<Option<IndexWriteSet>, String> {
-    let id = format!(
-        "assignment:{}",
-        sha256_hex(format!("{}\0{}", assignment.document, taxonomy).as_bytes())
-    );
+    let id = assignment_id(assignment.document.as_str(), taxonomy);
     write_set(vec![
         node(
             &id,

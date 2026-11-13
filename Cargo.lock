@@ -7223,6 +7223,7 @@ dependencies = [
  "medulla-decision-stats",
  "medulla-decision-types",
  "medulla-document",
+ "medulla-enrich",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-h-compute",

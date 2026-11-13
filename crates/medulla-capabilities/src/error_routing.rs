@@ -339,6 +339,24 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "WEB_BACKEND_INVALID",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R614.3 / R614.4: the scheduled enrichment surface.
+    (
+        "SemanticEnrich",
+        &[
+            "CARD_FACT_UNKNOWN",
+            "CARD_UNGROUNDED",
+            "DOCUMENT_NOT_FOUND",
+            "EMBEDDING_UNAVAILABLE",
+            "ENRICHMENT_NOT_SCHEDULED",
+            "ENRICHMENT_UNAVAILABLE",
+            "INVALID_CONFIDENCE",
+            "INVALID_IDENTIFIER",
+            "KNOB_OUT_OF_BOUNDS",
+            "PROJECTION_RULE_UNKNOWN_TAXONOMY",
+            "TAXONOMY_EMPTY",
+            "VECTOR_DIMENSION_MISMATCH",
+        ],
+    ),
     // MEDULLA-MEDIA-VOCAB-R001.101.3-.5 (codes of R001.101.6).
     (
         "MeetingSummaryCommit",

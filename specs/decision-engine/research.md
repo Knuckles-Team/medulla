@@ -129,3 +129,9 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
 - **The initial breadth is clamped like every result.** `breadth.initial` has range [1, 16] and `breadth.max` may be set lower; clamping to `[1, breadth.max]` keeps the invariant that no decision exceeds the maximum.
 - **The previous breadth is part of a present history.** The decision digest covers it, so the request carries it beside the cited attempts, and the engine never infers it from a stored outcome.
 - **A refusal never degrades to a default.** A missing, foreign or moved outcome refuses; it is never read as a zero outcome. Duplicate pairs in a pairwise ranking are accepted only when they are the same record.
+
+## Where `SemanticEnrich` runs and what counts as a schedule (R614.3)
+
+- The handler is a graph-scoped route in `medulla-server-graph` (`graph_pipeline/semantic_enrichment.rs`), reached from `route_web_ingest` beside `EnrichDocument`. It is not in `medulla-h-retrieve`: commit authority (the placement fence and the ChangeEnvelope applier) lives in server-graph, and h-retrieve depends on neither ingest nor enrichment. One path commits.
+- A schedule decision counts when it is a committed `DecisionLogEntry` of question kind `EnrichmentSchedule`, visible to the caller (tenant-wide, or committed by the caller), whose executed option (acted or explored) is exactly `semantic:<op>:<subject>`. An advisory or abstained decision executes nothing and schedules nothing. The check runs first, so an unscheduled call reads no graph data.
+- Classify reads the Document vector from the semantic store, or embeds the Document text off the request lock; topic centroids are the stored vectors of `Topic` nodes of the requested taxonomy. Project reads the visible nodes of the label in id order, at most `enrichment.projection_batch`, and reports `more`.

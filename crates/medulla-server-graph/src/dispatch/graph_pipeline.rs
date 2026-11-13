@@ -32,6 +32,7 @@ mod native_routes;
 mod pipeline;
 // EH-280 — the durable, graph-scoped route of a branch-aware IndexRepository.
 mod repository_index;
+mod semantic_enrichment;
 mod web_ingest;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
 pub use repository_index::drain_repository_enrichment_once;

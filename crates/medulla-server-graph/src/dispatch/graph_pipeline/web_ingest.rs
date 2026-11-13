@@ -16,6 +16,7 @@ pub async fn route_web_ingest(ctx: GraphOpRouting<'_>, method: Method) -> Result
     match method {
         Method::EnrichDocument { request } => Ok(enrich(ctx, *request).await),
         Method::SelectWebPages { request } => Ok(select(ctx, *request).await),
+        Method::SemanticEnrich { op } => Ok(super::semantic_enrichment::serve(ctx, *op).await),
         other => Err(other),
     }
 }

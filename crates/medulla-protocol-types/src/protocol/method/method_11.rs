@@ -317,6 +317,16 @@ $($variants)*
     EnrichDocument {
         request: Box<medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest>,
     },
+    /// One scheduled semantic enrichment of the request graph (MEDULLA-DECISION-ENGINE-R614.3):
+    /// store a grounded capability card, rank research concepts into proposals,
+    /// classify a Document into a taxonomy topic, or project node properties
+    /// into edges. Every op names the committed `EnrichmentSchedule` decision
+    /// that chose its work id; a call without one refuses
+    /// `ENRICHMENT_NOT_SCHEDULED`. The writes commit as one governed
+    /// ChangeEnvelope. See [`medulla_types::semantic_enrichment`].
+    SemanticEnrich {
+        op: Box<medulla_types::semantic_enrichment::SemanticEnrichOp>,
+    },
     /// Choose which web search candidates to fetch: canonical-URL and digest
     /// dedupe against each other and the request graph's held Documents,
     /// held-fresh skips, deterministic relevance/rank/freshness scoring and a

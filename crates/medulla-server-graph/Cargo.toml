@@ -19,6 +19,7 @@ hex = "0.4"
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
+medulla-enrich = { path = "../medulla-enrich" }
 medulla-h-compute = { path = "../medulla-h-compute" }
 medulla-h-graph = { path = "../medulla-h-graph" }
 medulla-h-ingest = { path = "../medulla-h-ingest" }

@@ -168,3 +168,7 @@ and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revi
 `Decide` with `QuestionKind::ThoughtSearch` runs `family/thought_search.rs`, which calls `stat_thought_search::conclude`: parse the typed `thought_search` and `task_class` params, read the strategy from `DecisionPolicy.reasoning`, validate the frontier, read the knobs through `ThoughtSearchKnobs::from_policy`, apply request lowerings, then run `choose_expansion`. The answer is sealed as `FamilyAnswer::ThoughtSearch` with `thought:*` and `knob:*` premises. Nothing is written.
 
 - R140.100 to R140.103: the four pure trajectory decisions (`trajectory_budget`, `trajectory_projection`, `branch_breadth`, `pairwise`) and their `trajectory.*`, `breadth.*` and `pairwise.*` knob table sit in `medulla-decision-types`; their refusal tables join `codes::FAMILY_TABLES` under `TaskPlan`. The projection shuffle is ChaCha8 (`rand_chacha`). The served wiring and the `trajectory_decisions_journey` root slice test land with R140.104 and R140.105.
+
+### R614.3 SemanticEnrich route
+
+`Method::SemanticEnrich` (method_11) is served by `graph_pipeline/semantic_enrichment.rs`: schedule gate, then the pure behaviours of `medulla-enrich`, then the digest-keyed write-set of `medulla-h-ingest::semantic_enrichment` committed through the ChangeEnvelope authority. Refusals map the typed `EnrichError` codes (registered in `ServerErrorCode` and the method's error routing) and write nothing.

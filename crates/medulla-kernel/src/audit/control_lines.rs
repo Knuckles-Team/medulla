@@ -289,6 +289,11 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
         Method::EnrichDocument { request } => {
             Some(format!("ENRICH_DOCUMENT|{}", request.document_id))
         }
+        Method::SemanticEnrich { op } => Some(format!(
+            "SEMANTIC_ENRICH|{}|{}",
+            op.name(),
+            op.subject()
+        )),
         Method::MeetingTranscriptRevision { request } => Some(format!(
             "MEETING_TRANSCRIPT_REVISION|{}|{}",
             request.meeting_id, request.new_revision

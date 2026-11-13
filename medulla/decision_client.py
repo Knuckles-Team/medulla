@@ -722,6 +722,19 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def semantic_enrich(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``SemanticEnrich``: one scheduled card, ranking, classification
+        or projection. ``op`` names its ``schedule_record_id``."""
+        result = await self.client._send(
+            "SemanticEnrich",
+            {"op": dict(op)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",

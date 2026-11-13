@@ -64,6 +64,8 @@ method_results! {
     VerifyIngestReadback(VerifyIngestReadback) => Raw<medulla_types::ingest_readback::ReadbackReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
+    // MEDULLA-DECISION-ENGINE-R614.3: what one scheduled enrichment wrote.
+    SemanticEnrich(SemanticEnrich) => Raw<medulla_types::semantic_enrichment::SemanticEnrichReceipt>;
     // MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5: meeting transcript surface.
     MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
     MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
