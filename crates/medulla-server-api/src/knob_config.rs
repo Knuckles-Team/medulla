@@ -267,6 +267,8 @@ knobs! {
     retrieval_round_limit: u64 = "retrieval.round_limit", U64(4), [1, 16], "rounds", Tunable;
     /// Retrieval round: most tokens one retrieval loop may use.
     retrieval_token_limit: u64 = "retrieval.token_limit", U64(32_000), [1000, 1_000_000], "tokens", Tunable;
+    /// Retrieval round: lowest measured score a transfer receipt may carry to move a query strategy to another retriever.
+    retrieval_transfer_min_threshold: f64 = "retrieval.transfer_min_threshold", F64(0.6), [0.0, 1.0], "score", Tunable;
     /// Retrieval round: most inference calls one retrieval loop may make.
     retrieval_inference_limit: u64 = "retrieval.inference_limit", U64(8), [1, 64], "calls", Tunable;
     /// Retrieval round: most perspective queries one feedback part may carry.

@@ -21,6 +21,8 @@ pub const RETRIEVAL_NORMALIZATION_INVALID: &str = "RETRIEVAL_NORMALIZATION_INVAL
 pub const RETRIEVAL_POLICY_UNVERIFIED: &str = "RETRIEVAL_POLICY_UNVERIFIED";
 /// Feedback names forged documents or incompatible revisions (R081.8.4).
 pub const RETRIEVAL_FEEDBACK_INVALID: &str = "RETRIEVAL_FEEDBACK_INVALID";
+/// A reused query strategy lacks a matching retriever binding or a passing transfer receipt (R081.8.100).
+pub const RETRIEVAL_STRATEGY_UNVERIFIED: &str = "RETRIEVAL_STRATEGY_UNVERIFIED";
 /// A hierarchy has a cycle, a stale summary or a dangling link (R081.9.4).
 pub const RETRIEVAL_HIERARCHY_INVALID: &str = "RETRIEVAL_HIERARCHY_INVALID";
 /// A breadth, depth, scoring or cost bound ran out (R081.9.4).
@@ -43,6 +45,7 @@ medulla_types::closed_error_codes! {
         BudgetExceeded => "RETRIEVAL_BUDGET_EXCEEDED",
         ContractInvalid => "RETRIEVAL_CONTRACT_INVALID",
         EmbeddingRevisionMismatch => "RETRIEVAL_EMBEDDING_REVISION_MISMATCH",
+        FeedbackInvalid => "RETRIEVAL_FEEDBACK_INVALID",
         HierarchyInvalid => "RETRIEVAL_HIERARCHY_INVALID",
         NormalizationInvalid => "RETRIEVAL_NORMALIZATION_INVALID",
         PolicyUnverified => "RETRIEVAL_POLICY_UNVERIFIED",
@@ -51,6 +54,7 @@ medulla_types::closed_error_codes! {
         SolverNotConverged => "RETRIEVAL_SOLVER_NOT_CONVERGED",
         StateInvalid => "RETRIEVAL_STATE_INVALID",
         StateStale => "RETRIEVAL_STATE_STALE",
+        StrategyUnverified => "RETRIEVAL_STRATEGY_UNVERIFIED",
     }
 }
 
@@ -505,6 +509,14 @@ impl RetrievalFeedback {
                 RETRIEVAL_FEEDBACK_INVALID,
                 "feedback revisions do not match the serving corpus and model",
             ));
+        }
+        if let Some(critique) = &self.critique {
+            if critique.model_revision != model_revision {
+                return Err(RetrievalRefusal::new(
+                    RETRIEVAL_FEEDBACK_INVALID,
+                    "the critique was made against another model revision",
+                ));
+            }
         }
         if self.perspectives.len() > self.limits.max_queries as usize {
             return Err(invalid("perspectives exceed max_queries"));

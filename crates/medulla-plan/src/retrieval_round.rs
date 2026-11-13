@@ -68,6 +68,8 @@ pub struct RoundKnobs {
     pub feedback_queries: u32,
     /// `knob retrieval.feedback_terms`, terms. A feedback part may lower it, never raise it.
     pub feedback_terms: u32,
+    /// `knob retrieval.transfer_min_threshold`, score. A transfer receipt's threshold may not be lower.
+    pub transfer_min_threshold: f64,
 }
 
 impl Default for RoundKnobs {
@@ -89,6 +91,7 @@ impl Default for RoundKnobs {
             joint_max_iters: 1000,
             feedback_queries: 8,
             feedback_terms: 32,
+            transfer_min_threshold: 0.6,
         }
     }
 }
@@ -597,6 +600,62 @@ pub fn run_round(
     run_round_with_state(request, ctx, knobs, None)
 }
 
+/// The terminal stop verdict of a continuation whose round or budget limit is spent
+/// (MEDULLA-FEDERATED-QUERY-R081.8.4). Hook 1 of the stop rule needs no row: it reads only
+/// the round, the usage and the limits, so it runs before the plan does. A round with no
+/// stop part, or with budget left, returns `None` and the round proceeds.
+fn exhausted_before_retrieval(
+    request: &RoundRequest,
+    knobs: &RoundKnobs,
+) -> Result<Option<RoundResult>, RoundError> {
+    let Some(part) = &request.stop else {
+        return Ok(None);
+    };
+    let round = part
+        .history
+        .as_slice()
+        .last()
+        .map(|answer| answer.round)
+        .or_else(|| request.sufficiency.as_ref().map(|s| s.round))
+        .unwrap_or(1);
+    let stop_knobs = StopKnobs {
+        round_limit: knobs.round_limit,
+        token_limit: knobs.token_limit,
+        inference_limit: knobs.inference_limit,
+        cost_limit: knobs.cost_limit,
+    };
+    let policy = format!("{}:{}", request.corpus_revision, request.model_revision);
+    let context = part
+        .context(&stop_knobs, round, false, &policy)
+        .map_err(|detail| contract_invalid(&detail))?;
+    let no_progress = crate::retrieval_stop::RoundProgress {
+        no_new_evidence: false,
+        quality_saturated: false,
+    };
+    let verdict = decide_stop(
+        &part.calibration,
+        part.history.as_slice(),
+        &context,
+        &no_progress,
+    );
+    if verdict.exhausted_dimension.is_none() {
+        return Ok(None);
+    }
+    let premise = stop_premise(&verdict, &policy, None);
+    Ok(Some(RoundResult {
+        state: None,
+        rows: Vec::new(),
+        sufficiency: None,
+        selection: None,
+        joint_selection: None,
+        hierarchy_selected: Vec::new(),
+        stop: Some(verdict),
+        inference: InferenceCounts::default(),
+        premises: vec![premise],
+        feedback: None,
+    }))
+}
+
 /// What a `state` part reads: the stored-state source, the bound encoder and the
 /// segment policy the states were built under (MEDULLA-FEDERATED-QUERY-R081.101.3).
 pub struct StateRuntime<'a> {
@@ -624,6 +683,11 @@ pub fn run_round_with_state(
             max_inference_calls: knobs.inference_limit,
         };
         part.validate(&request.corpus_revision, &request.model_revision, &ceiling)?;
+    }
+    // MEDULLA-FEDERATED-QUERY-R081.8.4: a continuation whose round or budget limit is
+    // already spent is terminal before any row is read; nothing is retrieved or inferred.
+    if let Some(early) = exhausted_before_retrieval(request, knobs)? {
+        return Ok(early);
     }
     let rows = execute(&request.plan, ctx).map_err(RoundError::Plan)?;
     let mut steps = Steps::default();
@@ -682,9 +746,16 @@ pub fn run_round_with_state(
             let _span = tracing::info_span!("medulla.retrieval.feedback").entered();
             let returned: Vec<&str> = rows.rows().iter().map(|r| r.id.as_str()).collect();
             let provider = crate::query_understanding::expansion_provider();
+            let binding = crate::retrieval_feedback::FeedbackBinding {
+                corpus_revision: &request.corpus_revision,
+                model_revision: &request.model_revision,
+                transfer_min_threshold: knobs.transfer_min_threshold,
+            };
             Some(crate::retrieval_feedback::apply_feedback(
                 &part.feedback,
                 part.prior_terms.as_slice(),
+                part.strategy.as_ref(),
+                &binding,
                 &returned,
                 provider.as_deref(),
             )?)
@@ -741,6 +812,20 @@ pub fn run_round_with_state(
                 &policy,
                 measured.then_some(&progress),
             ));
+            // MEDULLA-FEDERATED-QUERY-R081.8.5: the feedback premise rides beside the stop
+            // premise and carries the cost the stop step measured.
+            if let (Some(outcome), Some(fb)) =
+                (feedback_outcome.as_ref(), request.feedback.as_ref())
+            {
+                steps
+                    .premises
+                    .push(crate::retrieval_feedback::feedback_premise(
+                        outcome,
+                        &fb.feedback,
+                        &policy,
+                        Some(&part.usage),
+                    ));
+            }
             if verdict.stop {
                 if let Some(s) = sufficiency.as_mut() {
                     s.repair = RepairStep::Stop;
@@ -751,6 +836,19 @@ pub fn run_round_with_state(
             Some(verdict)
         }
     };
+    if request.stop.is_none() {
+        if let (Some(outcome), Some(fb)) = (feedback_outcome.as_ref(), request.feedback.as_ref()) {
+            let policy = format!("{}:{}", request.corpus_revision, request.model_revision);
+            steps
+                .premises
+                .push(crate::retrieval_feedback::feedback_premise(
+                    outcome,
+                    &fb.feedback,
+                    &policy,
+                    None,
+                ));
+        }
+    }
     let state = match &request.state {
         None => None,
         Some(part) => {
@@ -832,6 +930,7 @@ mod tests {
         joint_max_iters: 1000,
         feedback_queries: 8,
         feedback_terms: 32,
+        transfer_min_threshold: 0.6,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -991,6 +1090,57 @@ mod tests {
         assert_eq!(
             LexicalOverlapReranker.revision(),
             "builtin:lexical-overlap@1"
+        );
+    }
+    fn stop_request_part(
+        round_limit: Option<u32>,
+    ) -> medulla_result_types::retrieval_round::StopRequest {
+        use medulla_result_types::retrieval_round::{BudgetUsage, CallerLimits, StopRequest};
+        StopRequest {
+            calibration: medulla_result_types::retrieval_stop::CalibrationTable {
+                rows: Default::default(),
+            },
+            history: Default::default(),
+            prior_row_ids: Default::default(),
+            prior_quality: None,
+            usage: BudgetUsage::default(),
+            limits: CallerLimits {
+                round_limit,
+                ..CallerLimits::default()
+            },
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R081.8.4
+    #[test]
+    fn spent_continuation_reads_no_rows() {
+        let core = GraphCore::new();
+        core.add_node("d0".into(), blob("Doc"));
+        let view = core.analysis_snapshot();
+        let semantic = SemanticStore::new();
+        // A result-row budget of zero makes any executed plan fail: a plan that ran would
+        // surface as `RoundError::Plan`.
+        let ctx = PlanCtx::new(&view, &semantic).with_budget(medulla_exec::budget::Budget {
+            max_result_rows: 0,
+            max_traversal_visits: 1,
+            max_series_work: 1,
+        });
+        let mut live = request(Some(part(Some(4))));
+        live.stop = Some(stop_request_part(None));
+        assert!(matches!(
+            run_round(&live, &ctx, &KNOBS),
+            Err(RoundError::Plan(_))
+        ));
+        // Round limit spent: terminal before any row is read.
+        let mut spent = request(Some(part(Some(4))));
+        spent.stop = Some(stop_request_part(Some(1)));
+        let result = run_round(&spent, &ctx, &KNOBS).expect("terminal verdict, no retrieval");
+        assert!(result.rows.is_empty() && result.feedback.is_none());
+        let stop = result.stop.expect("stop verdict");
+        assert!(stop.stop);
+        assert_eq!(
+            stop.exhausted_dimension,
+            Some(medulla_result_types::retrieval_stop::ExhaustedDimension::Round)
         );
     }
 }

@@ -118,6 +118,42 @@ pub fn state_key(
     .join("|")
 }
 
+/// A query strategy bound to the retriever it was measured on
+/// (MEDULLA-FEDERATED-QUERY-R081.8.100). Nothing copies a strategy to another retriever:
+/// a changed target needs a [`TransferReceipt`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QueryStrategy {
+    pub strategy_id: String,
+    pub digest: crate::contract::Digest256,
+    pub retriever_id: String,
+    pub retriever_version: String,
+    pub corpus_revision: String,
+    pub model_revision: String,
+    pub policy_revision: String,
+    pub evaluation_set_digest: crate::contract::Digest256,
+}
+
+/// The measurement that lets a strategy run on a retriever it was not built for
+/// (MEDULLA-FEDERATED-QUERY-R081.8.100).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TransferReceipt {
+    pub target_retriever_id: String,
+    pub target_retriever_version: String,
+    pub strategy_id: String,
+    pub strategy_digest: crate::contract::Digest256,
+    pub evaluation_set_digest: crate::contract::Digest256,
+    pub metric_id: String,
+    pub measured: f64,
+    /// A request value; never below `knob retrieval.transfer_min_threshold`.
+    pub threshold: f64,
+    pub passed: bool,
+    pub corpus_revision: String,
+    pub model_revision: String,
+    pub policy_revision: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

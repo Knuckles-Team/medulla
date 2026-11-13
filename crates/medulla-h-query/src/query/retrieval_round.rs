@@ -37,6 +37,7 @@ fn round_knobs() -> RoundKnobs {
         joint_max_iters: u32::try_from(knobs.retrieval_joint_max_iters).unwrap_or(u32::MAX),
         feedback_queries: u32::try_from(knobs.retrieval_feedback_queries).unwrap_or(u32::MAX),
         feedback_terms: u32::try_from(knobs.retrieval_feedback_terms).unwrap_or(u32::MAX),
+        transfer_min_threshold: knobs.retrieval_transfer_min_threshold,
     }
 }
 

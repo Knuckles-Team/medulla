@@ -598,6 +598,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RETRIEVAL_BUDGET_EXCEEDED",
             "RETRIEVAL_CONTRACT_INVALID",
             "RETRIEVAL_EMBEDDING_REVISION_MISMATCH",
+            "RETRIEVAL_FEEDBACK_INVALID",
             "RETRIEVAL_HIERARCHY_INVALID",
             "RETRIEVAL_NORMALIZATION_INVALID",
             "RETRIEVAL_POLICY_UNVERIFIED",
@@ -606,6 +607,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RETRIEVAL_SOLVER_NOT_CONVERGED",
             "RETRIEVAL_STATE_INVALID",
             "RETRIEVAL_STATE_STALE",
+            "RETRIEVAL_STRATEGY_UNVERIFIED",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R081.103.3: the typed refusals of a viewport read.

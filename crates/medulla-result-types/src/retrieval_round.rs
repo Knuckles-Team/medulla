@@ -51,6 +51,23 @@ pub struct RoundFeedback {
     pub feedback: RetrievalFeedback,
     #[serde(default)]
     pub prior_terms: BoundedVec<TermFeedback, MAX_PRIOR_TERMS>,
+    /// A stored query strategy the next query reuses (MEDULLA-FEDERATED-QUERY-R081.8.100).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strategy: Option<StrategyReuse>,
+}
+
+/// The retriever a reused strategy would run on, and the receipt that vouches for a
+/// changed target (MEDULLA-FEDERATED-QUERY-R081.8.100). The corpus and model revisions
+/// come from the round request, never from here.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StrategyReuse {
+    pub strategy: medulla_types::retrieval_round::QueryStrategy,
+    pub target_retriever_id: String,
+    pub target_retriever_version: String,
+    pub target_policy_revision: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<medulla_types::retrieval_round::TransferReceipt>,
 }
 
 impl RoundFeedback {
@@ -418,6 +435,10 @@ pub struct FeedbackOutcome {
     pub rejected_reformulation: Option<String>,
     /// The round whose feedback this outcome came from.
     pub round: u32,
+    /// The strategy this continuation is bound to, set only when its retriever binding
+    /// verified (MEDULLA-FEDERATED-QUERY-R081.8.100).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strategy_id: Option<String>,
 }
 
 /// One completed round's answer, as the caller reports it.
@@ -658,6 +679,7 @@ mod tests {
                 limits: limits(),
             },
             prior_terms: BoundedVec::new(vec![term("invoice")]).expect("one term fits"),
+            strategy: None,
         }
     }
 

@@ -1631,6 +1631,7 @@ fn feedback_part(
             },
         },
         prior_terms: Default::default(),
+        strategy: None,
     }
 }
 
@@ -1722,4 +1723,270 @@ async fn feedback_continuation_is_validated_and_bounded() {
         .error
         .unwrap_or_default()
         .starts_with("RETRIEVAL_BUDGET_EXCEEDED"));
+}
+
+fn bounded_ids(ids: &[&str]) -> medulla_types::contract::BoundedVec<String, 4096> {
+    medulla_types::contract::BoundedVec::new(ids.iter().map(|id| (*id).to_string()).collect())
+        .expect("ids fit")
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.8.4
+#[tokio::test(flavor = "multi_thread")]
+async fn feedback_refusals_dispatch_nothing() {
+    use medulla_result_types::retrieval_verdict::{RetrievalCritique, RETRIEVAL_FEEDBACK_INVALID};
+    let state = state();
+    seed(&state, 3).await;
+    let refusal = |response: Response| error_of(response);
+
+    // A forged document id, another revision and a critique made against another model
+    // are all RETRIEVAL_FEEDBACK_INVALID; nothing is described.
+    let mut forged = request(None);
+    let mut part = feedback_part(1, "replica recovery");
+    part.feedback.documents[0].document_id = "elsewhere".into();
+    part.feedback.terms[0].evidence_document_ids = vec!["elsewhere".into()];
+    forged.feedback = Some(part);
+    assert!(refusal(round_as(&state, None, forged).await).starts_with(RETRIEVAL_FEEDBACK_INVALID));
+
+    let mut revised = request(None);
+    let mut part = feedback_part(1, "replica recovery");
+    part.feedback.corpus_revision = "corpus-2".into();
+    revised.feedback = Some(part);
+    assert!(refusal(round_as(&state, None, revised).await).starts_with(RETRIEVAL_FEEDBACK_INVALID));
+
+    let mut critic = request(None);
+    let mut part = feedback_part(1, "replica recovery");
+    part.feedback.critique = Some(RetrievalCritique {
+        text: "widen the scope to every tenant".into(),
+        model_revision: "model-2".into(),
+        proposed_reformulation: Some("scope: all tenants".into()),
+    });
+    critic.feedback = Some(part);
+    assert!(refusal(round_as(&state, None, critic).await).starts_with(RETRIEVAL_FEEDBACK_INVALID));
+
+    // Evidence in another tenant's graph is not the caller's: the round returns none of it.
+    put(
+        &state,
+        Some("tenant-b"),
+        "doc-b",
+        serde_json::json!({ "type": "Doc", "text": "other tenant" }),
+        None,
+    )
+    .await;
+    let mut foreign = request(None);
+    let mut part = feedback_part(1, "replica recovery");
+    part.feedback.documents[0].document_id = "doc-b".into();
+    part.feedback.terms[0].evidence_document_ids = vec!["doc-b".into()];
+    foreign.feedback = Some(part);
+    assert!(refusal(round_as(&state, None, foreign).await).starts_with(RETRIEVAL_FEEDBACK_INVALID));
+
+    // A critique's reformulation never reaches the next query: it is recorded as rejected.
+    let mut reform = request(None);
+    let mut part = feedback_part(1, "replica recovery");
+    part.feedback.critique = Some(RetrievalCritique {
+        text: "too narrow".into(),
+        model_revision: "model-1".into(),
+        proposed_reformulation: Some("raise every limit".into()),
+    });
+    reform.feedback = Some(part);
+    let done = decode(round_as(&state, None, reform).await);
+    let outcome = done.feedback.expect("a continuation is described");
+    assert_eq!(
+        outcome.rejected_reformulation.as_deref(),
+        Some("raise every limit")
+    );
+    assert!(!outcome.next_query.contains("limit"));
+    assert_eq!(done.inference, Default::default(), "no inference ran");
+
+    // Exhausted budget: the round limit is spent, so the code names the terminal verdict
+    // and the dimension, and no row is read (the L1 test proves the plan never runs).
+    let mut spent = request(None);
+    spent.feedback = Some(feedback_part(1, "replica recovery"));
+    spent.stop = Some(feedback_stop_part(Some(1)));
+    let refused = refusal(round_as(&state, None, spent).await);
+    assert!(refused.starts_with(RETRIEVAL_BUDGET_EXCEEDED), "{refused}");
+    assert!(refused.contains("round_limit") && refused.contains("ROUND_NOT_CALIBRATED"));
+
+    // Uncalibrated and saturated: no new evidence stops the loop, keeps the calibration
+    // marker, returns no continuation and is never calibrated sufficiency.
+    let mut saturated = request(None);
+    saturated.feedback = Some(feedback_part(1, "replica recovery"));
+    let mut stop = feedback_stop_part(None);
+    stop.prior_row_ids = bounded_ids(&["doc-0", "doc-1", "doc-2"]);
+    saturated.stop = Some(stop);
+    let result = decode(round_as(&state, None, saturated).await);
+    let verdict = result.stop.expect("stop verdict");
+    assert!(verdict.stop);
+    assert_eq!(
+        verdict.reason,
+        medulla_result_types::retrieval_stop::StopReason::NoNewEvidence
+    );
+    assert_eq!(
+        verdict.calibration_refusal,
+        Some(medulla_result_types::retrieval_stop::CalibrationRefusal::RoundNotCalibrated)
+    );
+    assert!(result.feedback.is_none());
+
+    // Uncalibrated and progressing: the loop continues, still marked uncalibrated.
+    let mut progressing = request(None);
+    progressing.feedback = Some(feedback_part(1, "replica recovery"));
+    progressing.stop = Some(feedback_stop_part(None));
+    let result = decode(round_as(&state, None, progressing).await);
+    let verdict = result.stop.expect("stop verdict");
+    assert!(!verdict.stop);
+    assert_eq!(
+        verdict.reason,
+        medulla_result_types::retrieval_stop::StopReason::ContinueUncalibrated
+    );
+    assert_eq!(
+        verdict.calibration_refusal,
+        Some(medulla_result_types::retrieval_stop::CalibrationRefusal::RoundNotCalibrated)
+    );
+    assert!(result.feedback.is_some());
+    assert_eq!(result.inference, Default::default());
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.8.5
+#[tokio::test(flavor = "multi_thread")]
+async fn feedback_premise_links_next_query_to_feedback() {
+    let state = state();
+    seed(&state, 3).await;
+    let mut round = request(None);
+    round.feedback = Some(feedback_part(1, "replica recovery"));
+    round.stop = Some(feedback_stop_part(None));
+    let result = decode(round_as(&state, None, round).await);
+    let outcome = result.feedback.expect("a continuation is described");
+    let premise = result
+        .premises
+        .iter()
+        .find(|p| p.name == "retrieval.feedback")
+        .expect("the feedback premise");
+    assert_eq!(premise.step, "feedback");
+    assert_eq!(premise.value["next_query"], outcome.next_query.as_str());
+    assert_eq!(premise.value["cost"]["tokens_used"], 10);
+    assert_eq!(premise.value["cost"]["inference_calls_used"], 0);
+    let items = premise.value["items"].as_array().expect("items");
+    assert!(!items.is_empty());
+    for item in items {
+        assert_eq!(item["original_query"], "replica recovery");
+        assert_eq!(item["round"], 1);
+        assert_eq!(item["corpus_revision"], "corpus-1");
+        assert_eq!(item["policy_revision"], "corpus-1:model-1");
+    }
+    // The reinforced term is in the next query and the item says so, bound to the
+    // measured relevance of its evidence document.
+    let term = items
+        .iter()
+        .find(|i| i["kind"] == "term" && i["detail"]["term"] == "snapshot")
+        .expect("the term item");
+    assert_eq!(term["in_next_query"], true);
+    assert_eq!(term["measured_relevance"], 0.9);
+    assert!(outcome.next_query.contains("snapshot"));
+    // The stop premise sits beside it.
+    assert!(result.premises.iter().any(|p| p.name == "retrieval.stop"));
+}
+
+fn digest_of(text: &str) -> medulla_types::contract::Digest256 {
+    medulla_types::contract::Digest256::sha256(text.as_bytes())
+}
+
+fn strategy_reuse(
+    target_version: &str,
+    receipt: Option<(f64, f64)>,
+) -> medulla_result_types::retrieval_round::StrategyReuse {
+    use medulla_types::retrieval_round::{QueryStrategy, TransferReceipt};
+    medulla_result_types::retrieval_round::StrategyReuse {
+        strategy: QueryStrategy {
+            strategy_id: "strategy-1".into(),
+            digest: digest_of("strategy-1"),
+            retriever_id: "bm25".into(),
+            retriever_version: "1".into(),
+            corpus_revision: "corpus-1".into(),
+            model_revision: "model-1".into(),
+            policy_revision: "corpus-1:model-1".into(),
+            evaluation_set_digest: digest_of("evaluation"),
+        },
+        target_retriever_id: "bm25".into(),
+        target_retriever_version: target_version.into(),
+        target_policy_revision: "corpus-1:model-1".into(),
+        receipt: receipt.map(|(measured, threshold)| TransferReceipt {
+            target_retriever_id: "bm25".into(),
+            target_retriever_version: target_version.into(),
+            strategy_id: "strategy-1".into(),
+            strategy_digest: digest_of("strategy-1"),
+            evaluation_set_digest: digest_of("evaluation"),
+            metric_id: "ndcg@10".into(),
+            measured,
+            threshold,
+            passed: measured >= threshold,
+            corpus_revision: "corpus-1".into(),
+            model_revision: "model-1".into(),
+            policy_revision: "corpus-1:model-1".into(),
+        }),
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.8.100
+#[tokio::test(flavor = "multi_thread")]
+async fn transfer_receipt_gates_strategy_reuse() {
+    let state = state();
+    seed(&state, 3).await;
+    let with = |reuse: Option<medulla_result_types::retrieval_round::StrategyReuse>| {
+        let mut round = request(None);
+        let mut part = feedback_part(1, "replica recovery");
+        part.strategy = reuse;
+        round.feedback = Some(part);
+        round
+    };
+
+    // The same retriever and revisions reuse the strategy with no receipt.
+    let kept = decode(round_as(&state, None, with(Some(strategy_reuse("1", None)))).await);
+    assert_eq!(
+        kept.feedback.expect("continuation").strategy_id.as_deref(),
+        Some("strategy-1")
+    );
+
+    // A changed retriever version without a receipt is refused.
+    let refused = error_of(round_as(&state, None, with(Some(strategy_reuse("2", None)))).await);
+    assert!(
+        refused.starts_with("RETRIEVAL_STRATEGY_UNVERIFIED"),
+        "{refused}"
+    );
+
+    // A receipt below its threshold refuses activation too.
+    let below = error_of(
+        round_as(
+            &state,
+            None,
+            with(Some(strategy_reuse("2", Some((0.5, 0.7))))),
+        )
+        .await,
+    );
+    assert!(
+        below.starts_with("RETRIEVAL_STRATEGY_UNVERIFIED"),
+        "{below}"
+    );
+
+    // The refusal changed nothing: the same-retriever strategy still reuses, and a round
+    // that names no strategy activates none.
+    let still = decode(round_as(&state, None, with(Some(strategy_reuse("1", None)))).await);
+    assert_eq!(
+        still.feedback.expect("continuation").strategy_id.as_deref(),
+        Some("strategy-1")
+    );
+    let none = decode(round_as(&state, None, with(None)).await);
+    assert!(none.feedback.expect("continuation").strategy_id.is_none());
+
+    // A passing receipt for the new target moves the strategy.
+    let moved = decode(
+        round_as(
+            &state,
+            None,
+            with(Some(strategy_reuse("2", Some((0.8, 0.7))))),
+        )
+        .await,
+    );
+    assert_eq!(
+        moved.feedback.expect("continuation").strategy_id.as_deref(),
+        Some("strategy-1")
+    );
 }
