@@ -5,6 +5,7 @@
 pub mod context;
 pub mod criterion_review;
 pub mod fanout;
+pub mod indexless;
 pub mod memory;
 pub mod participant;
 pub mod placement;
@@ -27,6 +28,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     context::KNOBS,
     criterion_review::KNOBS,
     fanout::KNOBS,
+    indexless::KNOBS,
     memory::KNOBS,
     participant::KNOBS,
     placement::KNOBS,

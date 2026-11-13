@@ -12,6 +12,10 @@ use sha2::{Digest, Sha256};
 
 use medulla_types::contract::BoundedVec;
 
+use super::knob_families::indexless::{MAX_COST_UNITS, MAX_ROWS, MAX_VISITS};
+use super::knobs::KnobValue;
+use super::policy::DecisionPolicy;
+
 /// Most operations one request may carry.
 pub const MAX_INDEXLESS_OPS: usize = 64;
 
@@ -135,6 +139,34 @@ pub fn verify_span(
     (digest == expected_digest)
         .then_some(())
         .ok_or(IndexlessErrorCode::IndexlessSpanInvalid)
+}
+
+/// The tenant ceiling the pinned policy sets: the three `indexless.*` knobs,
+/// each the pinned value or its default (MEDULLA-DECISION-ENGINE-R144.7).
+pub fn tenant_ceiling(policy: &DecisionPolicy) -> IndexlessBudget {
+    let read = |value: KnobValue| match value {
+        KnobValue::Integer(n) => u64::try_from(n).unwrap_or(0),
+        _ => 0,
+    };
+    IndexlessBudget {
+        max_rows: read(policy.knob(&MAX_ROWS)),
+        max_visits: read(policy.knob(&MAX_VISITS)),
+        max_cost_units: read(policy.knob(&MAX_COST_UNITS)),
+    }
+}
+
+/// The applied budget: the field-wise minimum of the caller budget and the
+/// tenant ceiling; no caller budget applies the ceiling. An over-ceiling
+/// request is clamped, never refused (MEDULLA-DECISION-ENGINE-R144.7).
+pub fn clamp_budget(caller: Option<IndexlessBudget>, ceiling: IndexlessBudget) -> IndexlessBudget {
+    match caller {
+        None => ceiling,
+        Some(asked) => IndexlessBudget {
+            max_rows: asked.max_rows.min(ceiling.max_rows),
+            max_visits: asked.max_visits.min(ceiling.max_visits),
+            max_cost_units: asked.max_cost_units.min(ceiling.max_cost_units),
+        },
+    }
 }
 
 /// The pure budget meter: no clock and no store.
@@ -310,5 +342,29 @@ mod tests {
         );
         assert_eq!(fresh.report(1).rows_visited, 0);
         assert_eq!(fresh.report(1).remaining.max_rows, 100);
+    }
+
+    #[test]
+    fn clamp_takes_the_field_wise_minimum_and_defaults_to_the_ceiling() {
+        let ceiling = IndexlessBudget {
+            max_rows: 10_000,
+            max_visits: 100_000,
+            max_cost_units: 1_000_000,
+        };
+        assert_eq!(tenant_ceiling(&DecisionPolicy::engine_default()), ceiling);
+        assert_eq!(clamp_budget(None, ceiling), ceiling);
+        let asked = IndexlessBudget {
+            max_rows: 20_000,
+            max_visits: 50,
+            max_cost_units: 2_000_000,
+        };
+        assert_eq!(
+            clamp_budget(Some(asked), ceiling),
+            IndexlessBudget {
+                max_rows: 10_000,
+                max_visits: 50,
+                max_cost_units: 1_000_000,
+            }
+        );
     }
 }
