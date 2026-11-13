@@ -153,6 +153,7 @@ The request fixture in `.3.3` depends on those operations.
 | MEDULLA-DECISION-ENGINE-R113.3.1 | `crates/medulla-agent-types/src/agent_topology/retry_allowance.rs` | `tests::retry_allowance_consumes_once`, `tests::invalid_allowances_fail_without_mutation` | Direct native module tests pass; workspace integration not run |
 | MEDULLA-DECISION-ENGINE-R113.3.1.1 | `crates/medulla-persistence-records/src/decision_record/retry_allowance.rs` (new) | `decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once`, `decision_record/tests.rs::the_allowance_machine_has_one_transition_function_over_every_state_and_event` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.2 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_denial_allowance_consumption_survives_restart` | SPECIFIED; not run |
+| MEDULLA-DECISION-ENGINE-R113.3.2 | `crates/medulla-h-decide/src/decide/commit/tests.rs` | `topology_denial_allowance_is_applied_by_the_recovered_abort` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.3 | `crates/medulla-h-decide/src/decide/commit/tests.rs` | `topology_denial_accepts_one_followup_request` | SPECIFIED; not run |
 
 R113.2 requires all five transaction tests (the shared path `.5` and the three fixtures, plus the refusal guard `.1`). R113.3 requires all four retry tests (the table `.1.1`, the model `.1`, durable consumption `.2` and the handler `.3`).

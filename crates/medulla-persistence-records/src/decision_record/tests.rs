@@ -844,4 +844,82 @@ fn topology_denial_allowance_consumption_survives_restart() {
         store.denial_allowance_state(TENANT, denied),
         Ok(Some(DenialAllowanceState::Consumed))
     );
+
+    // The denial's allowance rides the coordinator's ABORT (same transaction): a crash between
+    // the durable ABORT and the owners' resolution issues nothing yet, and the recovery that
+    // applies the ABORT to the reservation applies the allowance in the same owner transaction.
+    use super::super::agent_library::admission::{
+        AdmissionEvent, AdmissionIntent, ADMISSION_NOT_RESERVED,
+    };
+    let intent = |txn: &str, denied: &str| AdmissionIntent {
+        txn_id: txn.into(),
+        profile_revision: "policy-v1".into(),
+        component_heads: Vec::new(),
+        visibility_digest: format!("sha256:{}", "a".repeat(64)),
+        write_key: format!("decision-record:{denied}"),
+    };
+    let crashed = "decision:denied-crash";
+    store
+        .reserve_admission(TENANT, &intent("txn-crash", crashed))
+        .expect("the denied commit reserves");
+    store
+        .stage_abort_allowance(TENANT, "txn-crash", crashed)
+        .expect("the denial stages its allowance before the decision");
+    assert_eq!(store.denial_allowance_state(TENANT, crashed), Ok(None));
+    drop(store);
+    let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).expect("reopens");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, crashed),
+        Ok(None),
+        "a crash before the resolution leaves nothing issued"
+    );
+    store
+        .resolve_admission(TENANT, "txn-crash", AdmissionEvent::Abort)
+        .expect("recovery applies the durable ABORT");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, crashed),
+        Ok(Some(DenialAllowanceState::Issued))
+    );
+    // The recovery repeats safely.
+    store
+        .resolve_admission(TENANT, "txn-crash", AdmissionEvent::Abort)
+        .expect("a repeated resolution replays");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, crashed),
+        Ok(Some(DenialAllowanceState::Issued))
+    );
+    store
+        .consume_denial_allowance(
+            &allowance_context(&store, TENANT, "take-crash", 65, "take"),
+            crashed,
+        )
+        .expect("the recovered allowance is usable once");
+    store
+        .resolve_admission(TENANT, "txn-crash", AdmissionEvent::Abort)
+        .expect("a repeated resolution after use replays");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, crashed),
+        Ok(Some(DenialAllowanceState::Consumed)),
+        "the tombstone is never reset"
+    );
+
+    // A COMMIT resolution discards the staged allowance, and an unknown transaction refuses.
+    let committed = "decision:denied-committed";
+    store
+        .reserve_admission(TENANT, &intent("txn-commit", committed))
+        .expect("reserves");
+    store
+        .stage_abort_allowance(TENANT, "txn-commit", committed)
+        .expect("stages");
+    store
+        .resolve_admission(TENANT, "txn-commit", AdmissionEvent::Commit)
+        .expect("commits");
+    assert_eq!(store.denial_allowance_state(TENANT, committed), Ok(None));
+    assert!(store
+        .stage_abort_allowance(TENANT, "txn-commit", committed)
+        .is_err());
+    let unknown = store
+        .stage_abort_allowance(TENANT, "txn-unknown", committed)
+        .unwrap_err();
+    assert!(unknown.starts_with(ADMISSION_NOT_RESERVED), "{unknown}");
 }

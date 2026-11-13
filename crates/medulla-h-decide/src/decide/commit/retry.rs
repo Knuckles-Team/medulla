@@ -1,8 +1,9 @@
 //! MEDULLA-DECISION-ENGINE-R113.3.3: the one retry a capacity denial allows.
 //!
-//! A denied topology commit issues the durable allowance of its record id (R113.3.1.1); a
+//! A denied topology commit stages the durable allowance of its record id on its Agent Library
+//! reservation, and the coordinator's ABORT applies it (R113.3.1.1, R113.3.2); a
 //! follow-up commit that names that denied decision consumes it before it is accepted
-//! (R113.3.2). Each allowance event is its own admitted Agent Library write, so it carries its
+//! (R113.3.2). The take is its own admitted Agent Library write, so it carries its
 //! own attempt nonce and idempotency key, derived from the request's so a transport retry of the
 //! same request replays instead of conflicting.
 
@@ -60,17 +61,4 @@ pub(in crate::decide) fn consume(
             }
             other => other.to_string(),
         })
-}
-
-/// Grant the one further decision of a capacity denial. A denial that repeats after its
-/// allowance was consumed grants nothing more: the tombstone is never reset.
-pub(in crate::decide) fn grant(
-    store: &AgentLibraryStore,
-    context: &AgentLibraryMutationContext,
-    denied_decision_id: &str,
-) -> Result<(), String> {
-    match store.issue_denial_allowance(context, denied_decision_id) {
-        Ok(_) | Err(RetryAllowanceError::Exhausted) => Ok(()),
-        Err(other) => Err(other.to_string()),
-    }
 }

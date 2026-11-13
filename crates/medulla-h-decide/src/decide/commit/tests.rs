@@ -459,3 +459,61 @@ async fn topology_denial_accepts_one_followup_request() {
         Ok(None)
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn topology_denial_allowance_is_applied_by_the_recovered_abort() {
+    use super::admission::Admitted;
+    use super::certified::Coordinator;
+    use crate::decide::commit::handle_decision_commit;
+    use crate::decide::stat_tests::commit_admission_tests::{topology_world, verified};
+    use medulla_persistence_records::decision_record::retry_allowance::DenialAllowanceState;
+
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let world = topology_world().await;
+    let record = world.assembly.record.clone();
+    let denied_id = record.record_id.clone();
+    let caller = verified("crashed", 9);
+    let catalog = record.inputs.catalog_digest.clone();
+
+    // The denial stages its allowance, the coordinator decides ABORT durably, and the process
+    // stops before either owner resolves.
+    let coordinator = Coordinator::begin(&world.state, &caller, &record, &catalog)
+        .await
+        .unwrap();
+    let _held = Admitted::reserve(
+        &world.state,
+        &world.store,
+        &caller,
+        &record,
+        &commit_context(&world.store, "crashed", 9).policy_revision,
+        coordinator.txn_id(),
+    )
+    .await
+    .unwrap();
+    world
+        .store
+        .stage_abort_allowance(TENANT, coordinator.txn_id(), &denied_id)
+        .unwrap();
+    coordinator.decide(false).await.unwrap();
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, &denied_id),
+        Ok(None)
+    );
+
+    // The same request, sent again after the restart, is answered with the original ABORT and
+    // the recovery applies the abort together with the allowance.
+    let retried =
+        handle_decision_commit(&world.state, 1, &caller, world.request("crashed", 9, 75)).await;
+    assert_eq!(retried.error.as_deref(), Some("CERTIFICATE_DECIDED_ABORT"));
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, &denied_id),
+        Ok(Some(DenialAllowanceState::Issued))
+    );
+    assert!(world
+        .store
+        .current_component(TENANT, &denied_id)
+        .unwrap()
+        .is_none());
+}

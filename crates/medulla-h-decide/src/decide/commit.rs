@@ -211,8 +211,26 @@ async fn commit(
         (admission::Admitted::none(verified.tenant()), None)
     } else {
         let coordinator =
-            certified::Coordinator::begin(state, verified, &record, &expected_catalog_digest)
-                .await?;
+            match certified::Coordinator::begin(state, verified, &record, &expected_catalog_digest)
+                .await
+            {
+                Ok(coordinator) => coordinator,
+                Err(error)
+                    if error.starts_with(DecisionErrorCode::CertificateDecidedAbort.as_str()) =>
+                {
+                    // MEDULLA-DECISION-ENGINE-R113.3.2: the transaction was decided ABORT by an
+                    // earlier attempt that may have stopped before its owners resolved. The durable
+                    // decision is applied to the reservation now, which also applies the retry
+                    // allowance staged with it; both are idempotent.
+                    let txn_id = certified::Coordinator::transaction_id(&record, verified);
+                    let _ = admission::Admitted::resume(state, verified, &txn_id)
+                        .await
+                        .resolve_decided(state, &store, OwnerDecision::Abort)
+                        .await;
+                    return Err(error);
+                }
+                Err(error) => return Err(error),
+            };
         premise = Some(coordinator.premise());
         if coordinator.interrupted {
             // An earlier attempt stopped before the decision and its deadline passed: presumed
@@ -281,22 +299,26 @@ async fn commit(
         match prepared {
             Ok(capacity::Prepared::Held(hold)) => leases = Some(hold),
             Ok(capacity::Prepared::Denied(message)) => {
+                // MEDULLA-DECISION-ENGINE-R113.3.2: the denial grants one further decision in
+                // the same transaction as its ABORT. The allowance is staged on the Agent
+                // Library reservation before the coordinator decides; the durable ABORT
+                // resolves that reservation, and resolving it applies the allowance in the
+                // owner transaction that releases it (a recovery after a crash does the same).
+                // A commit that is itself the retry grants nothing more.
+                let staged = if retry_of.is_none() {
+                    store.stage_abort_allowance(
+                        verified.tenant(),
+                        coordinator.txn_id(),
+                        &record.record_id,
+                    )
+                } else {
+                    Ok(())
+                };
                 let _ = coordinator.decide(false).await;
                 let _ = admitted
                     .resolve_decided(state, &store, OwnerDecision::Abort)
                     .await;
-                // The denial grants one further decision, as its own allowance row and never a
-                // decision record. A commit that is itself the retry grants nothing more.
-                if retry_of.is_none() {
-                    let issue = retry::allowance_context(
-                        &store,
-                        req_id,
-                        verified,
-                        &request_context,
-                        "issue",
-                    )?;
-                    retry::grant(&store, &issue, &record.record_id)?;
-                }
+                staged?;
                 return Err(message);
             }
             Err(error) => {

@@ -241,6 +241,36 @@ fn write_event(
     })
 }
 
+/// Issue the allowance of `denied_decision_id` inside an owner transaction that already holds
+/// the allowance table (MEDULLA-DECISION-ENGINE-R113.3.2). The Agent Library reservation of the
+/// denied commit calls this when the coordinator's ABORT resolves it, so the allowance row is
+/// written in the same owner transaction that applies the abort. Issuing is idempotent, and a
+/// consumed allowance stays the tombstone: a repeated denial grants nothing.
+pub(crate) fn issue_in_table(
+    rows: &mut redb::Table<'_, (&'static str, &'static str), &'static [u8]>,
+    tenant_id: &str,
+    denied_decision_id: &str,
+) -> Result<(), String> {
+    let key = (tenant_id, denied_decision_id);
+    let current = rows
+        .get(key)
+        .map_err(|error| error.to_string())?
+        .map(|row| decode_row(row.value()))
+        .transpose()?
+        .map(|row| row.state);
+    match denial_allowance_transition(current, DenialAllowanceRequest::Issue) {
+        Ok(next) if current != Some(next) => {
+            let bytes = serde_json::to_vec(&DenialAllowanceRow { state: next })
+                .map_err(|error| error.to_string())?;
+            rows.insert(key, bytes.as_slice())
+                .map_err(|error| error.to_string())?;
+            Ok(())
+        }
+        Ok(_) | Err(RetryAllowanceError::Exhausted) => Ok(()),
+        Err(other) => Err(other.to_string()),
+    }
+}
+
 impl AgentLibraryStore {
     fn commit_allowance_event(
         &self,

@@ -15,7 +15,9 @@
 //! current state and the event. The state is one persisted field of the
 //! [`AdmissionRow`].
 
-use medulla_storage::{AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS, DECISION_ARTIFACTS};
+use medulla_storage::{
+    AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS, DECISION_ARTIFACTS, DECISION_RETRY_ALLOWANCES,
+};
 pub use medulla_types::reservation_machine::{
     ReservationEvent as AdmissionEvent, ReservationState as AdmissionState, RESERVATION_MACHINE,
 };
@@ -103,6 +105,12 @@ pub struct AdmissionRow {
 
 fn admission_key(txn_id: &str) -> String {
     format!("admission:{txn_id}")
+}
+
+/// The row that stages the retry allowance a transaction's ABORT applies
+/// (MEDULLA-DECISION-ENGINE-R113.3.2). Its value is the denied decision id.
+fn abort_allowance_key(txn_id: &str) -> String {
+    format!("admission-abort-allowance:{txn_id}")
 }
 
 fn write_key_row(write_key: &str) -> String {
@@ -336,11 +344,69 @@ impl AgentLibraryStore {
                         .map_err(|error| error.to_string())?;
                 }
             }
+            // MEDULLA-DECISION-ENGINE-R113.3.2: an ABORT applies the retry allowance staged for
+            // this transaction in the same owner transaction that releases the reservation, so
+            // the abort and the allowance are one durable step and a replay of the resolution
+            // (the recovery path) finds both already applied.
+            if event == AdmissionEvent::Abort {
+                if let Some(staged) = read_row(&tables, tenant_id, &abort_allowance_key(txn_id))? {
+                    let denied: String = decode_artifact(&staged, "admission abort allowance")?;
+                    let mut allowances = owner.open_table(DECISION_RETRY_ALLOWANCES)?;
+                    super::super::decision_record::retry_allowance::issue_in_table(
+                        &mut allowances,
+                        tenant_id,
+                        &denied,
+                    )?;
+                }
+            }
             put_row(&mut tables, tenant_id, &key, &encode_artifact(&row)?)?;
             outcome = Some(row.state);
             Ok(())
         })?;
         outcome.ok_or_else(|| "admission resolution produced no state".to_string())
+    }
+
+    /// Stage the retry allowance the ABORT of reservation `txn_id` applies for
+    /// `denied_decision_id` (MEDULLA-DECISION-ENGINE-R113.3.2). The staged row is durable before
+    /// the coordinator decides; it has no effect unless the reservation resolves ABORT, so a
+    /// COMMIT discards it. Staging is idempotent for the same denied decision, and refuses a
+    /// reservation that is absent or already committed.
+    pub fn stage_abort_allowance(
+        &self,
+        tenant_id: &str,
+        txn_id: &str,
+        denied_decision_id: &str,
+    ) -> Result<(), String> {
+        medulla_agent_types::agent_library::validate_key(tenant_id, denied_decision_id)?;
+        self.maintain_control_rows(tenant_id, "admission_stage_abort_allowance", |owner| {
+            let mut tables = owner.open_table(DECISION_ARTIFACTS)?;
+            let Some(bytes) = read_row(&tables, tenant_id, &admission_key(txn_id))? else {
+                return Err(format!(
+                    "{ADMISSION_NOT_RESERVED}: txn '{txn_id}' has no reservation"
+                ));
+            };
+            let row: AdmissionRow = decode_artifact(&bytes, "admission")?;
+            // A committed reservation refuses with the machine's typed transition error; an
+            // aborted one (the resolution already ran) applies the allowance at once.
+            row.state
+                .resolve(AdmissionEvent::Abort)
+                .map_err(|refused| refused.to_string())?;
+            put_row(
+                &mut tables,
+                tenant_id,
+                &abort_allowance_key(txn_id),
+                &encode_artifact(&denied_decision_id.to_string())?,
+            )?;
+            if row.state == AdmissionState::Aborted {
+                let mut allowances = owner.open_table(DECISION_RETRY_ALLOWANCES)?;
+                super::super::decision_record::retry_allowance::issue_in_table(
+                    &mut allowances,
+                    tenant_id,
+                    denied_decision_id,
+                )?;
+            }
+            Ok(())
+        })
     }
 
     /// The reservation `txn_id`, if one exists.
