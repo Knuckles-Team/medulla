@@ -6,7 +6,7 @@ Governing plan: [plan.md](plan.md). The tables list the types this spec adds or 
 
 | Type | File | Rows |
 |---|---|---|
-| `RoundRequest`, `RoundResult`, `RetrievalPremise` | `crates/medulla-types/src/retrieval_round.rs` (new) | `MEDULLA-FEDERATED-QUERY-R081.11` |
+| `RoundRequest`, `RoundResult`, `RetrievalPremise`, `SelectionPart`, `HierarchyPart`, `ActivationBenchmark`, `InferenceCounts` | `crates/medulla-result-types/src/retrieval_round.rs` | `MEDULLA-FEDERATED-QUERY-R081.11`, `MEDULLA-FEDERATED-QUERY-R081.7.3`, `MEDULLA-FEDERATED-QUERY-R081.9.3` |
 | `ChunkScorePair`, `SelectionPolicy`, `SelectionReceipt` | `crates/medulla-result-types/src/retrieval_verdict.rs` | `MEDULLA-FEDERATED-QUERY-R081.7.1` |
 | `ArgumentMap`, `AifNode`, `AifEdge`, `DungProjection`, `ExtensionResult` | `crates/medulla-result-types/src/argument_map.rs` | `MEDULLA-FEDERATED-QUERY-R700.1`, `MEDULLA-FEDERATED-QUERY-R700.5` |
 | `LiveArtifact`, `QuerySource`, `RefreshRecord` | `crates/medulla-source-types/src/live_artifact.rs` | `MEDULLA-FEDERATED-QUERY-R701.1` |
@@ -21,6 +21,8 @@ Governing plan: [plan.md](plan.md). The tables list the types this spec adds or 
 |---|---|---|
 | `AifNode` node, `AIF_EDGE` edge, `ArgumentMap` node | `aif_id`, `kind`, `text`, `edge_id` | `MEDULLA-FEDERATED-QUERY-R700.3` |
 | `LiveArtifact` node, `LiveArtifactRefresh` node, `REFRESHED` edge | `version`, `started_at`, `ended_at`, `row_count`, `error`, `new_version` | `MEDULLA-FEDERATED-QUERY-R701.3`, `MEDULLA-FEDERATED-QUERY-R701.5` |
+| `Community` node | `summary_id`, `summary_revision`, `entity_ids` | `MEDULLA-FEDERATED-QUERY-R081.9.3` |
+| `SectionNode` node | `document_id`, `document_revision`, `parent_id`, `children`, `granularity`, `source_start`, `source_end`, `summary`, `source_digest`, `summary_digest` | `MEDULLA-FEDERATED-QUERY-R081.9.7.3` |
 | `RetrievalFeedback` node | the fields of `crates/medulla-retrieval/src/feedback_boost.rs` | `MEDULLA-FEDERATED-QUERY-R705.3` |
 
 ## Invariants

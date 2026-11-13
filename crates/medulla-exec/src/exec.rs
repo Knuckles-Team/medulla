@@ -165,6 +165,10 @@ pub struct PlanCtx<'a> {
     /// (a trait object), so no feature gate: a plan that never uses `Op::RankEmbed` is
     /// unchanged whether or not an embedder is bound.
     pub embedder: Option<&'a dyn TextEmbedder>,
+    /// The server-side cross-encoder that scores `(query, text)` pairs for a retrieval round's
+    /// selection step (MEDULLA-FEDERATED-QUERY-R081.7.3). `None` when no reranker is bound; a
+    /// round that asks for selection then refuses `RETRIEVAL_SCORE_PAIR_REQUIRED`.
+    pub reranker: Option<&'a dyn Reranker>,
     /// The "now" (epoch milliseconds) a `DECAY HALF_LIFE` stage measures row age against
     /// (MEDULLA-FEDERATED-QUERY-R720.2). `None` (the default) reads the wall clock; a test
     /// or a replay pins it via [`Self::with_now_ms`] so the decay repeats exactly.
@@ -314,6 +318,55 @@ pub trait TextEmbedder: Send + Sync {
     fn embed(&self, text: &str) -> Result<Vec<f32>, String>;
 }
 
+/// A server-side cross-encoder (MEDULLA-FEDERATED-QUERY-R081.7.3): scores each text against
+/// the query on one scale, one score per text in input order. The server binds the one named
+/// by config key `retrieval.reranker_model`; the same binding provides the `ModelScorer`
+/// artifact of `MEDULLA-FEDERATED-QUERY-R652.7`. `revision` names the model and its
+/// preprocessing so a stale score is detectable.
+pub trait Reranker: Send + Sync {
+    /// One score per entry of `texts`, in order.
+    fn score(&self, query: &str, texts: &[&str]) -> Vec<f32>;
+    /// The pinned model revision the scores came from.
+    fn revision(&self) -> String;
+}
+
+/// The `retrieval.reranker_model` value that binds [`LexicalOverlapReranker`].
+pub const LEXICAL_OVERLAP_RERANKER: &str = "builtin:lexical-overlap";
+
+/// A deterministic, dependency-free [`Reranker`] for tests and offline use: the score is the
+/// share of the query's distinct lowercase alphanumeric tokens that the text contains. It has
+/// no semantic model; it exercises the selection seam end to end, as [`HashEmbedder`] does for
+/// the embedding seam.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LexicalOverlapReranker;
+
+fn overlap_tokens(text: &str) -> std::collections::BTreeSet<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|t| !t.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+impl Reranker for LexicalOverlapReranker {
+    fn score(&self, query: &str, texts: &[&str]) -> Vec<f32> {
+        let wanted = overlap_tokens(query);
+        texts
+            .iter()
+            .map(|text| {
+                if wanted.is_empty() {
+                    return 0.0;
+                }
+                let have = overlap_tokens(text);
+                wanted.intersection(&have).count() as f32 / wanted.len() as f32
+            })
+            .collect()
+    }
+
+    fn revision(&self) -> String {
+        format!("{LEXICAL_OVERLAP_RERANKER}@1")
+    }
+}
+
 /// A deterministic, dependency-free [`TextEmbedder`] fallback (CONCEPT:MEDULLA-KG.compute.no-embedder-bound-op) for tests
 /// and offline use: it hashes `text` into a fixed-dimension unit-norm vector, so the same
 /// text always yields the same vector and two different texts (almost always) yield
@@ -388,6 +441,7 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "timeseries")]
             staged_series: None,
             embedder: None,
+            reranker: None,
             now_ms: None,
             #[cfg(feature = "owl")]
             decay: None,
@@ -447,6 +501,13 @@ impl<'a> PlanCtx<'a> {
     /// default ctx is byte-for-byte the old one.
     pub fn with_embedder(mut self, embedder: &'a dyn TextEmbedder) -> Self {
         self.embedder = Some(embedder);
+        self
+    }
+
+    /// Attach the [`Reranker`] a retrieval round's selection step scores chunks with
+    /// (MEDULLA-FEDERATED-QUERY-R081.7.3).
+    pub fn with_reranker(mut self, reranker: &'a dyn Reranker) -> Self {
+        self.reranker = Some(reranker);
         self
     }
 

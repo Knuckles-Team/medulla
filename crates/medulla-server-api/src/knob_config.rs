@@ -231,6 +231,16 @@ knobs! {
     retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
     /// Retrieval round: score change below which quality has saturated.
     retrieval_saturation_epsilon: f64 = "retrieval.saturation_epsilon", F64(0.01), [0.0, 0.2], "score", Tunable;
+    /// Retrieval round: most chunks the reranker scores for selection.
+    retrieval_rerank_pool: u64 = "retrieval.rerank_pool", U64(50), [1, 256], "chunks", Tunable;
+    /// Retrieval round: most nDCG at 10 an adaptive selection policy may lose to its baseline.
+    retrieval_selection_quality_floor: f64 = "retrieval.selection_quality_floor", F64(0.01), [0.0, 0.1], "nDCG", Tunable;
+    /// Retrieval round: most the mean selected count may be of the fixed-count baseline's.
+    retrieval_selection_cost_ratio_max: f64 = "retrieval.selection_cost_ratio_max", F64(0.9), [0.5, 1.0], "ratio", Tunable;
+    /// Retrieval round: deepest document-section tree a traversal walks.
+    retrieval_section_max_depth: u64 = "retrieval.section_max_depth", U64(32), [1, 64], "levels", Tunable;
+    /// Retrieval round: most section records a traversal reads.
+    retrieval_section_max_visited: u64 = "retrieval.section_max_visited", U64(4096), [1, 65536], "records", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

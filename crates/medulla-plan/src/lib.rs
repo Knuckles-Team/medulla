@@ -73,6 +73,9 @@ pub mod code_context;
 // MEDULLA-FEDERATED-QUERY-R081.11 / R081.3: one served retrieval round.
 #[cfg(feature = "query")]
 pub mod retrieval_round;
+// MEDULLA-FEDERATED-QUERY-R081.9.3 / R081.9.7.3: graph-backed hierarchy sources of a round.
+#[cfg(feature = "query")]
+pub mod hierarchy_source;
 // MEDULLA-FEDERATED-QUERY-R082.2: the retrieval stop rule.
 #[cfg(feature = "query")]
 pub mod retrieval_stop;

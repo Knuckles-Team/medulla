@@ -1237,3 +1237,7 @@ Order: R733, then R734 and R735 in parallel.
 ### Served corpus retrieve (R653.2, R653.3, R653.8 to R653.10)
 
 `Method::CorpusRetrieve { request }` follows the seven-step recipe (variant in `method_05.rs`, policy `query:retrieval`, result `Raw<CorpusResult>`, read class, routed code `CORPUS_REGEX_TOO_COMPLEX`, client `corpus_retrieve`). `handle_corpus_retrieve` fills a `CorpusView` from the projected core and calls `medulla_plan::corpus_retrieval::dispatch`, which calls `grep_corpus`, `entity_context`, `session_hits` or `lineage_path`. `expand_hops` now lives in `medulla-graph-core`.
+
+### Selection and hierarchy parts of the served round (R081.7.3 to R081.9.7.5)
+
+`RoundRequest` gains the `selection` and `hierarchy` parts and `RoundResult` gains `selection`, `hierarchy_selected`, `inference` and `premises`. `run_round` runs hierarchy, then sufficiency over the plan rows joined with the hierarchy's selected ids, then selection. The `Reranker` port sits beside `TextEmbedder` in `medulla-exec` and is bound from `retrieval.reranker_model`. `GraphHierarchySource` and `GraphSectionTopology` live in `crates/medulla-plan/src/hierarchy_source.rs` and read the caller's narrowed snapshot, so tenant isolation needs no second filter. Each step appends one premise (`retrieval.selection`, `retrieval.hierarchy`, `retrieval.sections`) that carries its receipt and measured counters. Decisions are in research.md.

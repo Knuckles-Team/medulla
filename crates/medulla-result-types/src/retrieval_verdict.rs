@@ -759,6 +759,23 @@ pub struct HierarchyStageReceipt {
     pub score_provenance: Vec<HierarchyScoreProvenance>,
     pub beam_width: u32,
     pub depth: u32,
+    /// Root-to-record path of each selected record, in selection order, so the full
+    /// walk (rejected branches are the visited ids that are on no path) can be rebuilt
+    /// from the receipt alone (MEDULLA-FEDERATED-QUERY-R081.9.7.5).
+    #[serde(default)]
+    pub paths: Vec<Vec<String>>,
+    /// Source span of each selected record; same order and length as `paths`.
+    #[serde(default)]
+    pub selected_spans: Vec<SectionSourceSpan>,
+    /// The immutable document revision the walk read. Empty for a community stage.
+    #[serde(default)]
+    pub document_revision: String,
+    /// Digest over the visited records' summary digests, in visit order.
+    #[serde(default)]
+    pub summary_digest: String,
+    /// The policy revision the walk ran under.
+    #[serde(default)]
+    pub policy_revision: String,
 }
 
 /// Fail-closed policy and tree-shape errors.
@@ -804,6 +821,12 @@ pub enum HierarchyValidationError {
     SelectedNodeNotVisited,
     #[error("receipt kind and stage do not agree")]
     ReceiptKindStageMismatch,
+    #[error("a served request reads stored section nodes and must not carry section_nodes")]
+    ServedSectionNodes,
+    #[error("receipt paths and selected spans differ in length")]
+    PathsSpansMismatch,
+    #[error("receipt path names '{0}', which is not among visited_ids")]
+    PathNotVisited(String),
 }
 
 impl HierarchyRetrievalPolicy {
@@ -831,6 +854,24 @@ impl HierarchyRetrievalPolicy {
             }
             HierarchyRetrievalKind::DocumentSection => self.validate_sections(),
         }
+    }
+
+    /// Validate what a served document-section request carries: a revision, positive limits
+    /// and no inline nodes. The records come from stored `SectionNode` graph nodes
+    /// (MEDULLA-FEDERATED-QUERY-R081.9.7.1, R081.9.7.3).
+    pub fn validate_served_bounds(&self) -> Result<(), HierarchyValidationError> {
+        validate_text("hierarchy_revision", &self.hierarchy_revision)?;
+        validate_limits(self)?;
+        validate_score_provenance(&self.score_provenance)?;
+        if self.kind != HierarchyRetrievalKind::DocumentSection
+            || self.stage != HierarchyStage::DocumentSection
+        {
+            return Err(HierarchyValidationError::ReceiptKindStageMismatch);
+        }
+        if !self.section_nodes.is_empty() {
+            return Err(HierarchyValidationError::ServedSectionNodes);
+        }
+        Ok(())
     }
 
     /// Validate the document-section tree: exactly one root, acyclic
@@ -869,6 +910,35 @@ impl HierarchyStageReceipt {
             != (self.stage == HierarchyStage::Community)
         {
             return Err(HierarchyValidationError::ReceiptKindStageMismatch);
+        }
+        self.validate_walk()
+    }
+
+    /// The section walk's evidence: every path is non-empty and made of visited ids, every
+    /// selected record has one span, and a document-section receipt names its revisions.
+    fn validate_walk(&self) -> Result<(), HierarchyValidationError> {
+        if self.paths.len() != self.selected_spans.len() {
+            return Err(HierarchyValidationError::PathsSpansMismatch);
+        }
+        for path in &self.paths {
+            if path.is_empty() {
+                return Err(HierarchyValidationError::EmptyField("paths"));
+            }
+            if let Some(unknown) = path.iter().find(|id| !self.visited_ids.contains(id)) {
+                return Err(HierarchyValidationError::PathNotVisited(unknown.clone()));
+            }
+        }
+        for (index, span) in self.selected_spans.iter().enumerate() {
+            if span.start > span.end {
+                return Err(HierarchyValidationError::InvalidSpan(format!(
+                    "selected_spans[{index}]"
+                )));
+            }
+        }
+        if self.kind == HierarchyRetrievalKind::DocumentSection {
+            validate_text("document_revision", &self.document_revision)?;
+            validate_text("summary_digest", &self.summary_digest)?;
+            validate_text("policy_revision", &self.policy_revision)?;
         }
         Ok(())
     }
@@ -1698,6 +1768,11 @@ mod section_hierarchy_tests {
             score_provenance: Vec::new(),
             beam_width: 1,
             depth: 1,
+            paths: Vec::new(),
+            selected_spans: Vec::new(),
+            document_revision: String::new(),
+            summary_digest: String::new(),
+            policy_revision: String::new(),
         };
         assert_eq!(
             receipt.validate(),

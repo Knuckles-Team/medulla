@@ -179,7 +179,10 @@ pub fn select_chunks(
     })
 }
 
-fn check_activation(
+/// The one activation comparison (R081.7.4, R081.7.5): the policy's benchmark digest must
+/// equal the approved one. A served round calls it before it spends reranker calls, and
+/// [`select_chunks`] calls it again; neither adds a second comparison.
+pub fn check_activation(
     policy: &SelectionPolicy,
     approved_benchmark: Option<&str>,
 ) -> Result<(), RetrievalRefusal> {

@@ -406,10 +406,21 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R081.11: a round refuses a malformed part and the
-    // sufficiency step refuses a missing round limit with its typed code.
+    // sufficiency step refuses a missing round limit with its typed code. The selection
+    // step (R081.7) refuses a missing, stale or non-finite score pair, an invalid
+    // normalization and an unapproved activation; the hierarchy step (R081.9, R081.9.7.4)
+    // refuses a malformed tree and an exhausted limit.
     (
         "RetrievalRound",
-        &["RETRIEVAL_CONTRACT_INVALID", "RETRIEVAL_ROUND_LIMIT_REQUIRED"],
+        &[
+            "RETRIEVAL_BUDGET_EXCEEDED",
+            "RETRIEVAL_CONTRACT_INVALID",
+            "RETRIEVAL_HIERARCHY_INVALID",
+            "RETRIEVAL_NORMALIZATION_INVALID",
+            "RETRIEVAL_POLICY_UNVERIFIED",
+            "RETRIEVAL_ROUND_LIMIT_REQUIRED",
+            "RETRIEVAL_SCORE_PAIR_REQUIRED",
+        ],
     ),
     // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
     ("CorpusRetrieve", &["CORPUS_REGEX_TOO_COMPLEX"]),

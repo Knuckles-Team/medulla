@@ -8,6 +8,7 @@
 
 use super::planning::{run_unified_off_lock_with, UnifiedRead};
 use super::*;
+use medulla_exec::exec::{LexicalOverlapReranker, Reranker, LEXICAL_OVERLAP_RERANKER};
 use medulla_plan::retrieval_round::{run_round, RoundError, RoundKnobs};
 use medulla_protocol_types::result_contract::query::RetrievalRound;
 use medulla_result_types::retrieval_round::{RoundRequest, RoundResult};
@@ -15,10 +16,40 @@ use medulla_result_types::retrieval_round::{RoundRequest, RoundResult};
 /// The registered knobs one round reads.
 fn round_knobs() -> RoundKnobs {
     let knobs = medulla_server_api::knob_config::knobs();
+    let size = |value: u64| usize::try_from(value).unwrap_or(usize::MAX);
     RoundKnobs {
         min_evidence: knobs.retrieval_min_evidence,
         round_limit: u32::try_from(knobs.retrieval_round_limit).unwrap_or(u32::MAX),
+        rerank_pool: size(knobs.retrieval_rerank_pool),
+        selection_quality_floor: knobs.retrieval_selection_quality_floor,
+        selection_cost_ratio_max: knobs.retrieval_selection_cost_ratio_max,
+        section_max_depth: size(knobs.retrieval_section_max_depth),
+        section_max_visited: size(knobs.retrieval_section_max_visited),
     }
+}
+
+/// The process-wide reranker named by the server config key `retrieval.reranker_model`
+/// (environment `MEDULLA_RETRIEVAL_RERANKER_MODEL`), or `None` when it is unset
+/// (MEDULLA-FEDERATED-QUERY-R081.7.3). `builtin:lexical-overlap` binds the deterministic
+/// [`LexicalOverlapReranker`]; any other value names a model artifact and binds nothing
+/// until that cross-encoder provider is registered, so a selection request refuses
+/// `RETRIEVAL_SCORE_PAIR_REQUIRED` rather than scoring with a stand-in.
+fn bound_reranker() -> Option<&'static dyn Reranker> {
+    use std::sync::OnceLock;
+    static RERANKER: OnceLock<Option<Box<dyn Reranker>>> = OnceLock::new();
+    RERANKER
+        .get_or_init(|| {
+            match std::env::var("MEDULLA_RETRIEVAL_RERANKER_MODEL")
+                .ok()
+                .as_deref()
+            {
+                Some(LEXICAL_OVERLAP_RERANKER) => {
+                    Some(Box::new(LexicalOverlapReranker) as Box<dyn Reranker>)
+                }
+                _ => None,
+            }
+        })
+        .as_deref()
 }
 
 pub(crate) async fn handle_retrieval_round(
@@ -52,7 +83,20 @@ pub(crate) async fn handle_retrieval_round(
             &core,
             read,
             &scope,
-            move |_plan, plan_ctx| Ok(run_round(&request, plan_ctx, &knobs)),
+            move |_plan, plan_ctx| {
+                // The embedder the stored summaries share a space with and the bound
+                // reranker ride on this round's own copy of the context.
+                let mut round_ctx = plan_ctx.clone();
+                if round_ctx.embedder.is_none() {
+                    if let Some(embedder) = uql_text_embedder() {
+                        round_ctx = round_ctx.with_embedder(embedder);
+                    }
+                }
+                if let Some(reranker) = bound_reranker() {
+                    round_ctx = round_ctx.with_reranker(reranker);
+                }
+                Ok(run_round(&request, &round_ctx, &knobs))
+            },
         )
         .await;
     match outcome {

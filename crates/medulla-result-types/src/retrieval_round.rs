@@ -9,8 +9,28 @@
 use serde::{Deserialize, Serialize};
 
 use crate::retrieval_stop::{CalibrationTable, StopContext};
-use crate::retrieval_verdict::{FallbackPolicy, SufficiencyVerdict};
+use crate::retrieval_verdict::{
+    FallbackPolicy, HierarchyRetrievalPolicy, SectionGranularity, SelectionPolicy,
+    SelectionReceipt, SufficiencyVerdict,
+};
 use medulla_types::contract::BoundedVec;
+
+/// SHA-256 hex over the parts, each preceded by its length so two part lists never collide.
+pub fn sha256_hex_of<S: AsRef<[u8]>>(parts: &[S]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.as_ref().len() as u64).to_le_bytes());
+        hasher.update(part.as_ref());
+    }
+    hex::encode(hasher.finalize())
+}
+
+/// The digest of a selection policy as the round receipt names it.
+pub fn selection_policy_digest(policy: &SelectionPolicy) -> String {
+    let bytes = serde_json::to_vec(policy).unwrap_or_default();
+    sha256_hex_of(&[bytes])
+}
 
 /// Most completed rounds a stop request may carry.
 pub const MAX_ROUND_HISTORY: usize = 16;
@@ -35,6 +55,84 @@ pub struct SufficiencyPart {
     pub fallback: FallbackPolicy,
 }
 
+/// One measured benchmark outcome of a selection policy or of its fixed-count baseline.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BenchmarkResult {
+    /// nDCG at 10 over the benchmark's labels.
+    pub ndcg_at_10: f64,
+    /// Mean number of chunks selected per query.
+    pub mean_selected: f64,
+}
+
+/// The measured evidence that approves activating a selection policy (R081.7.5): the
+/// policy and a fixed-count baseline, run on identical candidates, models, corpus and
+/// tenant filters. `digest` binds the benchmark data, labels and both results.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationBenchmark {
+    pub digest: String,
+    pub baseline: BenchmarkResult,
+    pub candidate: BenchmarkResult,
+}
+
+/// The selection part of a round (R081.7.3): choose chunks from the plan's ranked rows by
+/// the dual score. The embedding score of a chunk is the score of its executed row; the
+/// cross-encoder score comes from the server-bound reranker over the node property `text`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectionPart {
+    /// The query text the reranker scores each chunk against.
+    pub query: String,
+    pub policy: SelectionPolicy,
+    /// Evidence that approves activation. Without it, or when it does not meet the
+    /// quality floor and cost ratio, the part refuses `RETRIEVAL_POLICY_UNVERIFIED`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub benchmark: Option<ActivationBenchmark>,
+}
+
+/// Where a document-section traversal starts and what it returns (R081.9.7.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionRequest {
+    pub root_id: String,
+    pub document_revision: String,
+    pub granularity: SectionGranularity,
+}
+
+/// The hierarchy part of a round (R081.9.3, R081.9.7.3). A `Community` policy descends
+/// stored `Community` nodes with `query`; a `DocumentSection` policy walks stored
+/// `SectionNode` nodes from `section` and makes no embedding or vector call.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HierarchyPart {
+    #[serde(default)]
+    pub query: String,
+    pub policy: HierarchyRetrievalPolicy,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub section: Option<SectionRequest>,
+}
+
+/// Model calls a round made, counted apart (R081.7.5). `selection` is always zero: the
+/// selector decides from scores that were already computed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InferenceCounts {
+    pub embedding: u32,
+    pub reranker: u32,
+    pub selection: u32,
+}
+
+/// One named, step-tagged fact a round proves its decision with (`retrieval.selection`,
+/// `retrieval.hierarchy`, `retrieval.sections`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RetrievalPremise {
+    pub step: String,
+    pub name: String,
+    pub value: serde_json::Value,
+}
+
 /// One retrieval round: a plan, the revisions it is bound to, and the parts to run.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -47,6 +145,12 @@ pub struct RoundRequest {
     /// Judge the executed rows against the sufficiency rule.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sufficiency: Option<SufficiencyPart>,
+    /// Select chunks by the dual score.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<SelectionPart>,
+    /// Descend a stored community or document-section hierarchy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hierarchy: Option<HierarchyPart>,
 }
 
 /// One executed row of the plan.
@@ -63,6 +167,17 @@ pub struct RoundResult {
     pub rows: Vec<RoundRow>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sufficiency: Option<SufficiencyVerdict>,
+    /// The selection receipt, when the request carried a `selection` part.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<SelectionReceipt>,
+    /// Entity ids (community policy) or section ids (document-section policy) the
+    /// hierarchy part selected, best first. They join the evidence set the sufficiency
+    /// part counts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hierarchy_selected: Vec<String>,
+    pub inference: InferenceCounts,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub premises: Vec<RetrievalPremise>,
 }
 
 /// One completed round's answer, as the caller reports it.
