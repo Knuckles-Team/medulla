@@ -323,3 +323,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence
 - [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof
 - [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 Open metadata hot-path proof
+- [ ] T320 [US8] MEDULLA-TYPED-PACKS-R810 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T321 [US8] MEDULLA-TYPED-PACKS-R810.1 AdmissionRow/AdmissionState state machine: route 1 census findings through AdmissionState::apply
+- [ ] T322 [US8] MEDULLA-TYPED-PACKS-R810.2 AgentLibraryEntry/AgentLibraryLifecycle state machine: route 10 census findings through AgentLibraryLifecycle::apply
+- [ ] T323 [US8] MEDULLA-TYPED-PACKS-R810.3 Python synthetic fixtures compare the library lifecycle through the contract enum, never through string literals
+- [ ] T324 [US8] MEDULLA-TYPED-PACKS-R810.4 QualityReportRef/QualityStatus state machine: route 1 census findings through QualityStatus::apply
+- [ ] T325 [US8] MEDULLA-TYPED-PACKS-R810.5 SeedImportPlan/SeedGraphState state machine: route 1 census findings through SeedGraphState::apply
