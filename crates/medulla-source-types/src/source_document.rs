@@ -228,6 +228,8 @@ mod tests {
             tombstoned_count: 0,
             relationship_tombstoned_count: 0,
             governance: Default::default(),
+            report: Default::default(),
+            classes: BoundedVec::new(Vec::new()).unwrap(),
             committed_graph_version: 9,
             drift: Vec::new(),
             column_exclusions: Vec::new(),

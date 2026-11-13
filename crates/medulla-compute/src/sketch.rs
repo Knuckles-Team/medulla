@@ -381,6 +381,91 @@ impl MinHashSketch {
     }
 }
 
+/// The stable refusal code of an invalid [`LshIndex`] shape (MEDULLA-INGEST-WORKER-R702.1).
+pub const LSH_CONFIG_INVALID: &str = "LSH_CONFIG_INVALID";
+
+/// Largest signature length (`bands * rows`) an [`LshIndex`] accepts.
+pub const LSH_MAX_SIGNATURE: usize = 1024;
+
+/// A zero or oversized band layout was refused.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LshConfigError {
+    /// The bands asked for.
+    pub bands: usize,
+    /// The rows per band asked for.
+    pub rows: usize,
+}
+
+impl LshConfigError {
+    /// The stable code: always [`LSH_CONFIG_INVALID`].
+    pub fn code(&self) -> &'static str {
+        LSH_CONFIG_INVALID
+    }
+}
+
+impl std::fmt::Display for LshConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{LSH_CONFIG_INVALID}: bands {} x rows {} must both be non-zero with a product of at most {LSH_MAX_SIGNATURE}",
+            self.bands, self.rows
+        )
+    }
+}
+
+impl std::error::Error for LshConfigError {}
+
+/// The band layout of a locality-sensitive index over [`MinHashSketch`] signatures: a
+/// signature of `bands * rows` minima is cut into `bands` bands of `rows` values, and two
+/// sets are candidates when any band agrees (MEDULLA-INGEST-WORKER-R702.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LshIndex {
+    bands: usize,
+    rows: usize,
+}
+
+impl LshIndex {
+    /// A layout of `bands` bands of `rows` rows, or `LSH_CONFIG_INVALID` for a zero
+    /// dimension or a product above [`LSH_MAX_SIGNATURE`].
+    pub fn new(bands: usize, rows: usize) -> Result<Self, LshConfigError> {
+        match bands.checked_mul(rows) {
+            Some(n) if bands > 0 && rows > 0 && n <= LSH_MAX_SIGNATURE => Ok(Self { bands, rows }),
+            _ => Err(LshConfigError { bands, rows }),
+        }
+    }
+
+    /// The number of bands.
+    pub fn bands(&self) -> usize {
+        self.bands
+    }
+
+    /// The rows per band.
+    pub fn rows(&self) -> usize {
+        self.rows
+    }
+
+    /// The signature length the layout needs: `bands * rows`.
+    pub fn signature_len(&self) -> usize {
+        self.bands * self.rows
+    }
+
+    /// An empty sketch of the signature length this layout needs.
+    pub fn new_sketch(&self) -> MinHashSketch {
+        MinHashSketch::new(self.signature_len())
+    }
+}
+
+/// Lowercased whitespace-split 3-word shingles of `text`; fewer than 3 words yield the single
+/// words (MEDULLA-INGEST-WORKER-R702.1).
+pub fn shingles(text: &str) -> Vec<String> {
+    let lower = text.to_lowercase();
+    let words: Vec<&str> = lower.split_whitespace().collect();
+    if words.len() < 3 {
+        return words.into_iter().map(str::to_string).collect();
+    }
+    words.windows(3).map(|w| w.join(" ")).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -700,5 +785,26 @@ mod tests {
         }
         a.merge(&b);
         assert_eq!(a.signature(), union.signature());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R702.1
+    #[test]
+    fn lsh_config_validates_and_round_trips() {
+        let lsh = LshIndex::new(20, 5).unwrap();
+        assert_eq!(lsh.signature_len(), 100);
+        assert_eq!(lsh.new_sketch().signature().len(), 100);
+        let json = serde_json::to_string(&lsh).unwrap();
+        assert_eq!(serde_json::from_str::<LshIndex>(&json).unwrap(), lsh);
+        assert!(LshIndex::new(32, 32).is_ok());
+        for (b, r) in [(0, 5), (5, 0), (33, 32), (usize::MAX, 2)] {
+            let err = LshIndex::new(b, r).unwrap_err();
+            assert_eq!(err.code(), "LSH_CONFIG_INVALID");
+        }
+        assert_eq!(
+            shingles("The quick  BROWN fox jumps"),
+            vec!["the quick brown", "quick brown fox", "brown fox jumps"]
+        );
+        assert_eq!(shingles("Two WORDS"), vec!["two", "words"]);
+        assert!(shingles("   ").is_empty());
     }
 }

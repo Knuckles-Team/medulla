@@ -486,6 +486,14 @@ knobs! {
     context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
     /// Bytes per token in the context facts estimate.
     context_facts_bytes_per_token: u64 = "context_facts.bytes_per_token", U64(4), [2, 8], "bytes", Tunable;
+    /// Bands of the locality-sensitive duplicate index (MEDULLA-INGEST-WORKER-R702.1).
+    ingest_lsh_bands: u64 = "ingest.lsh_bands", U64(20), [4, 64], "count", Tunable;
+    /// Rows per band of the locality-sensitive duplicate index (MEDULLA-INGEST-WORKER-R702.1).
+    ingest_lsh_rows: u64 = "ingest.lsh_rows", U64(5), [2, 16], "count", Tunable;
+    /// Most words an atom holds before its chunk splits at sentence ends (MEDULLA-INGEST-WORKER-R003.2).
+    ingest_atom_max_tokens: u64 = "ingest.atom_max_tokens", U64(200), [20, 2_000], "words", Tunable;
+    /// Words of atoms an atom context read returns (MEDULLA-INGEST-WORKER-R003.2).
+    ingest_context_token_budget: u64 = "ingest.context_token_budget", U64(2_000), [100, 32_000], "words", Tunable;
     /// Ingest link minimum shared mentions.
     ingest_link_min_shared_mentions: u64 = "ingest.link_min_shared_mentions", U64(2), [1, 20], "count", Tunable;
     /// Media blob size cap.

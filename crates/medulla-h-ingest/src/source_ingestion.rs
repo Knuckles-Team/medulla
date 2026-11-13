@@ -2331,6 +2331,14 @@ fn build_terminal_receipt(
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
+        report: medulla_types::ingest_materialize::IngestBatchReport {
+            written: prepared
+                .affected_count
+                .saturating_add(prepared.relationship_count),
+            unchanged: 0,
+            refused: prepared.governance.refused,
+        },
+        classes: medulla_types::contract::BoundedVec::new(Vec::new())?,
         committed_graph_version: prepared.committed_graph_version,
         drift: prepared.drift,
         column_exclusions: prepared.embedding_set.exclusions,

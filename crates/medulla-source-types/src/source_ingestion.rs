@@ -11,8 +11,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use medulla_types::{
-    contract::BoundedVec, contract::BoundedWriter, contract::Digest256, contract::RecordBytes,
-    contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES, contract::MAX_RECORD_BYTES,
+    contract::BoundedVec,
+    contract::BoundedWriter,
+    contract::Digest256,
+    contract::RecordBytes,
+    contract::ResourceId,
+    contract::MAX_MUTATION_ENVELOPE_BYTES,
+    contract::MAX_RECORD_BYTES,
+    ingest_materialize::{ClassReport, IngestBatchReport, MAX_CLASS_REPORTS},
     source_governance::GovernanceReport,
 };
 
@@ -468,6 +474,11 @@ pub struct SourceIngestionReceipt {
     /// Governed, refused and marked record counts of this batch
     /// (MEDULLA-INGEST-WORKER-R900.5).
     pub governance: GovernanceReport,
+    /// Written, unchanged and refused counts of this batch
+    /// (MEDULLA-INGEST-WORKER-R606.1).
+    pub report: IngestBatchReport,
+    /// The same counts per ontology class, at most 1,024 entries.
+    pub classes: BoundedVec<ClassReport, MAX_CLASS_REPORTS>,
     pub committed_graph_version: u64,
     /// One drift report per stream of the batch whose `approved:<stream>`
     /// contract is in force (MEDULLA-TYPED-PACKS-R714). Observation evidence:

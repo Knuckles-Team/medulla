@@ -30,7 +30,11 @@
 //! maintain the lexical posting index atomically, and never retain source text.
 
 /// Document delete cascade planning (MEDULLA-UNIFIED-DATA-PLANE-R651.1/.2).
+/// Atom decomposition (MEDULLA-INGEST-WORKER-R003.2).
+pub mod atoms;
 pub mod cascade;
+/// Fragments and the reader registry (MEDULLA-INGEST-WORKER-R700.1).
+pub mod fragment;
 mod decoder;
 mod document;
 mod header;

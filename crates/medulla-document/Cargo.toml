@@ -22,7 +22,7 @@ serde_json = "1.0"
 # CONCEPT:E4). Optional, only under `contract` (default OFF) — a default
 # build links none of it and `DocumentData` carries no new required trait. See
 # `src/contract.rs`.
-medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-modality = { path = "../medulla-modality" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
@@ -34,11 +34,19 @@ default = []
 # DocumentData` + the `modality_conformance_tests!` battery. OFF by default; the
 # separate `serving` feature promotes it to the governed runtime and the facade's
 # production feature surface. `cargo test -p medulla-document --features serving` runs it.
-contract = ["dep:medulla-modality"]
+contract = []
 # Production served state machine: governed batch/stream ingest, OCC update,
 # delete/replay, policy-filtered paging, lifecycle, indexes, and restart recovery.
 # Dependency-light: this reuses medulla-modality + serde only.
 serving = ["contract"]
+# One feature per format reader (MEDULLA-INGEST-WORKER-R700.1). Each admits its parser
+# dependency only after tests/test_third_party_source_policy.py passes for it:
+# lopdf (pdf), zip + quick-xml (ooxml), calamine (spreadsheet), mail-parser (email), csv.
+reader-pdf = []
+reader-ooxml = []
+reader-spreadsheet = []
+reader-email = []
+reader-csv = []
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

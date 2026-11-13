@@ -360,3 +360,31 @@ fn digest_plan_matches_the_set_plan_and_keeps_the_guards() {
         10
     );
 }
+
+// spec: MEDULLA-INGEST-WORKER-R003.2
+#[test]
+fn select_atoms_respects_budget() {
+    // Ranked by shared query terms, ties broken by atom id, stopped at the budget.
+    let atoms = vec![
+        atom("a9", "restart worker now", "doc:1#0-18"),
+        atom("a1", "restart the worker after the upgrade", "doc:1#19-55"),
+        atom("a2", "restart worker", "doc:1#56-70"),
+        atom("a3", "unrelated words here", "doc:1#71-91"),
+    ];
+    let all = select_atoms("restart worker", &atoms, 100);
+    let ids: Vec<&str> = all.iter().map(|a| a.atom_id.as_str()).collect();
+    assert_eq!(
+        ids,
+        vec!["a1", "a2", "a9"],
+        "two shared terms each; ties by atom id"
+    );
+    // Budget 5 words: a1 (6 words) does not fit and stops the selection.
+    assert!(select_atoms("restart worker", &atoms, 5).is_empty());
+    // Budget 8: a1 (6) fits, a2 (2) fits exactly, a9 (3) would exceed.
+    let ids: Vec<&str> = select_atoms("restart worker", &atoms, 8)
+        .iter()
+        .map(|a| a.atom_id.as_str())
+        .collect();
+    assert_eq!(ids, vec!["a1", "a2"]);
+    assert!(select_atoms("restart worker", &atoms, 0).is_empty());
+}

@@ -63,6 +63,7 @@ pub mod extracted_fact;
 // MEDULLA-INGEST-WORKER-R900.1/R902.1/R903.1/R904.1 — source governance records.
 pub mod source_governance;
 // MEDULLA-INGEST-WORKER-R900.4/R901.4/R902.4/R903.4/R904.4/R701.2/R701.4/R002.4/R003.4 — pure ingest refusal rules.
+pub mod ingest_materialize;
 pub mod ingest_rules;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
