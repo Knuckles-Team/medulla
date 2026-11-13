@@ -105,8 +105,12 @@ impl ExternalCdcSink for Bridge {
 /// `Tombstone`.
 fn sink_op(kind: &CdcKind) -> SinkOp {
     match kind {
-        CdcKind::AddNode | CdcKind::UpdateNode | CdcKind::AddEdge => SinkOp::Upsert,
-        CdcKind::RemoveNode | CdcKind::RemoveEdge => SinkOp::Tombstone,
+        CdcKind::AddNode
+        | CdcKind::UpdateNode
+        | CdcKind::AddEdge
+        | CdcKind::InsertRow
+        | CdcKind::UpdateRow => SinkOp::Upsert,
+        CdcKind::RemoveNode | CdcKind::RemoveEdge | CdcKind::DeleteRow => SinkOp::Tombstone,
     }
 }
 
@@ -147,6 +151,7 @@ mod tests {
             kind: CdcKind::AddNode,
             node_id: "n1".to_string(),
             target_id: String::new(),
+            table: String::new(),
             label: "Person".to_string(),
             before: Vec::new(),
             after: rmp_serde::to_vec(&serde_json::json!({"type": "Person", "name": "a"})).unwrap(),

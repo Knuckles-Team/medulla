@@ -58,7 +58,11 @@ pub fn event_to_delta(event: &CdcEvent) -> Delta {
         }
         // Edge deltas do not touch any v1-supported operator (only Traverse, which is
         // fallback-only) — a plan reaching here has no Traverse, so this is a no-op.
-        CdcKind::AddEdge | CdcKind::RemoveEdge => Delta::new(),
+        CdcKind::AddEdge
+        | CdcKind::RemoveEdge
+        | CdcKind::InsertRow
+        | CdcKind::UpdateRow
+        | CdcKind::DeleteRow => Delta::new(),
     }
 }
 

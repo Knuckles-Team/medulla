@@ -243,9 +243,9 @@ fn drain_ready(sub: &mut CepSubscription, out: &mut Vec<Match>) {
 /// Map a CDC kind to the CEP event op string (mirrors the CDC hub's trigger `op`).
 fn kind_op(kind: &CdcKind) -> &'static str {
     match kind {
-        CdcKind::AddNode | CdcKind::AddEdge => "add",
-        CdcKind::RemoveNode | CdcKind::RemoveEdge => "remove",
-        CdcKind::UpdateNode => "update",
+        CdcKind::AddNode | CdcKind::AddEdge | CdcKind::InsertRow => "add",
+        CdcKind::RemoveNode | CdcKind::RemoveEdge | CdcKind::DeleteRow => "remove",
+        CdcKind::UpdateNode | CdcKind::UpdateRow => "update",
     }
 }
 
@@ -601,6 +601,7 @@ mod tests {
             kind,
             node_id: node.to_string(),
             target_id: String::new(),
+            table: String::new(),
             label: label.to_string(),
             before: Vec::new(),
             after: Vec::new(),

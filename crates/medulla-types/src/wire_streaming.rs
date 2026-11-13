@@ -20,6 +20,12 @@ pub enum CdcKind {
     UpdateNode,
     AddEdge,
     RemoveEdge,
+    /// A committed user-table row insert (MEDULLA-ENGINE-PARITY-R015.1).
+    InsertRow,
+    /// A committed user-table row update.
+    UpdateRow,
+    /// A committed user-table row delete.
+    DeleteRow,
 }
 
 /// One ordered change in a graph's CDC feed (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions). `seq` is the per-graph
@@ -34,6 +40,10 @@ pub struct CdcEvent {
     pub seq: u64,
     pub graph: String,
     pub kind: CdcKind,
+    /// The user table of a row change (`InsertRow`/`UpdateRow`/`DeleteRow`);
+    /// empty for graph changes.
+    #[serde(default)]
+    pub table: String,
     /// The node id for node changes / the edge source for edge changes.
     pub node_id: String,
     /// The edge target (empty for node changes).

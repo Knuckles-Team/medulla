@@ -52,6 +52,7 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
+use medulla_types::row_change::{RowChange, RowChangeSink};
 use medulla_transaction::Begin;
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
@@ -597,6 +598,9 @@ pub struct TableStore {
     /// The commit sequence and the ring of recent write sets, shared by every
     /// clone of this store (R002.2).
     occ: Arc<occ::OccLog>,
+    /// Where the row changes of each durable commit go (R015.1); set once by
+    /// the server, shared by every clone.
+    row_sink: Arc<std::sync::OnceLock<Arc<dyn RowChangeSink>>>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -700,6 +704,7 @@ impl TableStore {
             ann: Arc::default(),
             sequence_blocks: Arc::default(),
             occ: Arc::default(),
+            row_sink: Arc::default(),
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -2091,6 +2096,39 @@ impl TableStore {
         self.commit_txn_batch_inner(txn, batch, committed_at_ms, None, Some(result_msgpack))
     }
 
+    /// Commit like [`Self::commit_txn_batch_result`] and also return the row
+    /// changes of the committed transaction, in the order its ops ran. A replay
+    /// returns none (its rows were reported by the original commit).
+    pub fn commit_txn_batch_result_changes(
+        &self,
+        txn: &TableTxn,
+        batch: &MutationBatch,
+        result_msgpack: Vec<u8>,
+        committed_at_ms: u64,
+    ) -> Result<(MutationBatchCommit, Vec<RowChange>), String> {
+        let (commit, changes) =
+            self.commit_with_changes(txn, batch, committed_at_ms, None, Some(result_msgpack))?;
+        self.publish_row_changes(batch, &changes);
+        Ok((commit, changes))
+    }
+
+    /// Install the sink that receives the row changes of every durable commit.
+    /// Set once; a second install is ignored.
+    pub fn install_row_change_sink(&self, sink: Arc<dyn RowChangeSink>) {
+        let _ = self.row_sink.set(sink);
+    }
+
+    /// Hand the committed changes to the installed sink. Runs only after the
+    /// commit is durable; a rolled-back transaction never reaches it.
+    fn publish_row_changes(&self, batch: &MutationBatch, changes: &[RowChange]) {
+        if changes.is_empty() {
+            return;
+        }
+        if let (Some(sink), Ok((_, graph))) = (self.row_sink.get(), sql_scope_key(batch)) {
+            sink.publish(graph, changes.to_vec());
+        }
+    }
+
     /// Resolve a retry before an external source is reopened.
     ///
     /// A replay is committed through the mutation kernel so its fresh attempt
@@ -2151,6 +2189,21 @@ impl TableStore {
         crashpoint: Option<SqlMutationCrashpoint>,
         result_override: Option<Vec<u8>>,
     ) -> Result<MutationBatchCommit, String> {
+        let (commit, changes) =
+            self.commit_with_changes(txn, batch, committed_at_ms, crashpoint, result_override)?;
+        self.publish_row_changes(batch, &changes);
+        Ok(commit)
+    }
+
+    /// The commit itself: the receipt and the row changes it made.
+    fn commit_with_changes(
+        &self,
+        txn: &TableTxn,
+        batch: &MutationBatch,
+        committed_at_ms: u64,
+        crashpoint: Option<SqlMutationCrashpoint>,
+        result_override: Option<Vec<u8>>,
+    ) -> Result<(MutationBatchCommit, Vec<RowChange>), String> {
         batch.validate_write_budget()?;
         verify_batch_is_sql_catalog_only(batch)?;
         // Rejects a graph-scoped batch before anything is admitted; the kernel
@@ -2171,12 +2224,13 @@ impl TableStore {
                     }
                 };
                 mutation.commit_finished()?;
-                return Ok(commit);
+                return Ok((commit, Vec::new()));
             }
             Begin::Apply { source_version } => source_version,
         };
         mutation.set_source_version(source_version);
         let mut recorded: Option<u64> = None;
+        let mut row_changes: Vec<RowChange> = Vec::new();
         let affected = match mutation.owner_rows(|wtx| {
             let mut accum = occ::FootprintAccum::default();
             let affected = apply_mutation_txn_ops_with_crashpoints(
@@ -2198,6 +2252,7 @@ impl TableStore {
                 })?;
             }
             recorded = self.occ.record(accum.writes);
+            row_changes = std::mem::take(&mut accum.changes);
             Ok(affected)
         }) {
             Ok(affected) => affected,
@@ -2224,7 +2279,7 @@ impl TableStore {
                 self.occ.retract(seq);
             }
         }
-        committed
+        committed.map(|commit| (commit, row_changes))
     }
 
     /// The commit sequence a `BEGIN` pins as its snapshot (R002.2).

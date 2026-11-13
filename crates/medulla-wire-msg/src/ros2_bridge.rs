@@ -98,6 +98,9 @@ pub fn cdc_to_publish(event: &CdcEvent, topic: &str) -> RosbridgeOp {
         CdcKind::UpdateNode => "update_node",
         CdcKind::AddEdge => "add_edge",
         CdcKind::RemoveEdge => "remove_edge",
+        CdcKind::InsertRow => "insert_row",
+        CdcKind::UpdateRow => "update_row",
+        CdcKind::DeleteRow => "delete_row",
     };
     let data = serde_json::json!({
         "seq": event.seq,
@@ -449,6 +452,7 @@ mod tests {
             kind: CdcKind::AddNode,
             node_id: "n1".to_string(),
             target_id: String::new(),
+            table: String::new(),
             label: "Sensor".to_string(),
             before: vec![],
             after: vec![],

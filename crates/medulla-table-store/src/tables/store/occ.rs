@@ -9,6 +9,8 @@
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
+use medulla_types::row_change::{RowChange, RowChangeKind};
+
 use medulla_tables::schema::{Cell, TableConstraint, TableSchema};
 use medulla_transaction::occ::{CommittedWrites, KeyRange, TxnFootprint};
 
@@ -171,12 +173,55 @@ fn row_key(cols: &[usize], cells: &[Cell]) -> Vec<u8> {
 pub(super) struct FootprintAccum {
     pub reads: Vec<KeyRange>,
     pub writes: Vec<KeyRange>,
+    /// The row changes of the transaction, in the order its ops ran (R015.1).
+    pub changes: Vec<RowChange>,
+}
+
+/// The primary key of `cells` rendered as text; every cell when the table has none.
+fn key_text(schema: &TableSchema, cells: &[Cell]) -> String {
+    let cols = key_columns(schema);
+    let picked: Vec<usize> = if cols.is_empty() {
+        (0..cells.len()).collect()
+    } else {
+        cols
+    };
+    picked
+        .iter()
+        .filter_map(|i| {
+            let col = schema.columns().get(*i)?;
+            let cell = cells.get(*i)?;
+            Some(match cell.to_typed_json(col.ty) {
+                serde_json::Value::String(s) => s,
+                other => other.to_string(),
+            })
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// The row as a MessagePack map of column name to typed value.
+fn row_image(schema: &TableSchema, cells: &[Cell]) -> Vec<u8> {
+    let mut map = serde_json::Map::with_capacity(schema.columns().len());
+    for (i, col) in schema.columns().iter().enumerate() {
+        let cell = cells.get(i).cloned().unwrap_or(Cell::Null);
+        map.insert(col.name.clone(), cell.to_typed_json(col.ty));
+    }
+    rmp_serde::to_vec_named(&map).unwrap_or_default()
 }
 
 impl FootprintAccum {
     /// An insert writes the new row's key. A table without a primary key has no
     /// key identity for a new row, so concurrent inserts never conflict.
     pub fn inserted(&mut self, table: &str, schema: &TableSchema, rows: &[Vec<Cell>]) {
+        for cells in rows {
+            self.changes.push(RowChange {
+                table: table.to_string(),
+                kind: RowChangeKind::Insert,
+                key: key_text(schema, cells),
+                before: None,
+                after: Some(row_image(schema, cells)),
+            });
+        }
         let cols = key_columns(schema);
         if cols.is_empty() {
             return;
@@ -196,6 +241,13 @@ impl FootprintAccum {
     ) {
         let cols = key_columns(schema);
         for (old, new) in changes {
+            self.changes.push(RowChange {
+                table: table.to_string(),
+                kind: RowChangeKind::Update,
+                key: key_text(schema, new),
+                before: Some(row_image(schema, old)),
+                after: Some(row_image(schema, new)),
+            });
             let old_key = KeyRange::point(table, &row_key(&cols, old));
             self.reads.push(old_key.clone());
             self.writes.push(old_key);
@@ -208,6 +260,13 @@ impl FootprintAccum {
     pub fn deleted(&mut self, table: &str, schema: &TableSchema, removed: &[Vec<Cell>]) {
         let cols = key_columns(schema);
         for cells in removed {
+            self.changes.push(RowChange {
+                table: table.to_string(),
+                kind: RowChangeKind::Delete,
+                key: key_text(schema, cells),
+                before: Some(row_image(schema, cells)),
+                after: None,
+            });
             let key = KeyRange::point(table, &row_key(&cols, cells));
             self.reads.push(key.clone());
             self.writes.push(key);

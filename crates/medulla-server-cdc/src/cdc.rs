@@ -27,6 +27,7 @@ use std::sync::OnceLock;
 use parking_lot::Mutex;
 use tokio::sync::Notify;
 
+use medulla_types::row_change::{RowChange, RowChangeKind, RowChangeSink};
 use medulla_types::wire::CdcEvent;
 use medulla_types::wire::CdcKind;
 use medulla_types::wire::CdcReadResult;
@@ -123,6 +124,18 @@ pub trait ExternalCdcSink: Send + Sync {
     /// Block up to `timeout_ms` for every queued event to reach the broker.
     /// For graceful shutdown / tests, never the commit path. Default no-op.
     fn flush(&self, _timeout_ms: u64) {}
+}
+
+impl std::fmt::Debug for CdcHub {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CdcHub").field("epoch", &self.epoch).finish()
+    }
+}
+
+impl RowChangeSink for CdcHub {
+    fn publish(&self, graph: &str, changes: Vec<RowChange>) {
+        self.emit_row_changes(graph, changes);
+    }
 }
 
 /// The CDC hub on `ServerState`. One per engine; routes by graph name.
@@ -275,6 +288,53 @@ impl CdcHub {
         before: Option<Vec<u8>>,
         after: Option<Vec<u8>>,
     ) -> u64 {
+        self.emit_in(
+            graph,
+            String::new(),
+            kind,
+            node_id,
+            target_id,
+            before,
+            after,
+        )
+    }
+
+    /// Append the row changes of one durable user-table commit to `graph`'s
+    /// feed, in commit order (MEDULLA-ENGINE-PARITY-R015.1). Returns the
+    /// assigned seqs. The same feed, ring and cursor as graph changes.
+    pub fn emit_row_changes(&self, graph: &str, changes: Vec<RowChange>) -> Vec<u64> {
+        changes
+            .into_iter()
+            .map(|c| {
+                let kind = match c.kind {
+                    RowChangeKind::Insert => CdcKind::InsertRow,
+                    RowChangeKind::Update => CdcKind::UpdateRow,
+                    RowChangeKind::Delete => CdcKind::DeleteRow,
+                };
+                self.emit_in(
+                    graph,
+                    c.table,
+                    kind,
+                    c.key,
+                    String::new(),
+                    c.before,
+                    c.after,
+                )
+            })
+            .collect()
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn emit_in(
+        &self,
+        graph: &str,
+        table: String,
+        kind: CdcKind,
+        node_id: String,
+        target_id: String,
+        before: Option<Vec<u8>>,
+        after: Option<Vec<u8>>,
+    ) -> u64 {
         let label = extract_label(after.as_deref().or(before.as_deref()));
         // EH-526: the impact watch sees the change only for a watched graph (the
         // strings are cloned only then).
@@ -301,6 +361,7 @@ impl CdcHub {
                 kind,
                 node_id,
                 target_id,
+                table,
                 label,
                 had_before: before.is_some(),
                 had_after: after.is_some(),
@@ -824,9 +885,9 @@ pub fn emit_served_modality(
 /// Map a CDC kind to the trigger `op` string.
 fn kind_op(kind: &CdcKind) -> &'static str {
     match kind {
-        CdcKind::AddNode | CdcKind::AddEdge => "add",
-        CdcKind::RemoveNode | CdcKind::RemoveEdge => "remove",
-        CdcKind::UpdateNode => "update",
+        CdcKind::AddNode | CdcKind::AddEdge | CdcKind::InsertRow => "add",
+        CdcKind::RemoveNode | CdcKind::RemoveEdge | CdcKind::DeleteRow => "remove",
+        CdcKind::UpdateNode | CdcKind::UpdateRow => "update",
     }
 }
 
@@ -896,6 +957,57 @@ mod tests {
 
     fn props(v: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&v).unwrap()
+    }
+
+    /// R015.1: the row changes of one commit land on the table graph's feed in
+    /// commit order, with their table, key and row images, through the same
+    /// ring and cursor as graph changes.
+    #[test]
+    fn row_changes_emit_in_commit_order() {
+        let hub = CdcHub::new();
+        let row = |v: i64| props(serde_json::json!({"id": v}));
+        let changes = vec![
+            RowChange {
+                table: "orders".into(),
+                kind: RowChangeKind::Insert,
+                key: "1".into(),
+                before: None,
+                after: Some(row(1)),
+            },
+            RowChange {
+                table: "orders".into(),
+                kind: RowChangeKind::Update,
+                key: "1".into(),
+                before: Some(row(1)),
+                after: Some(row(2)),
+            },
+            RowChange {
+                table: "items".into(),
+                kind: RowChangeKind::Delete,
+                key: "9".into(),
+                before: Some(row(9)),
+                after: None,
+            },
+        ];
+        // The hub is the installed sink: publish is the store's entry point.
+        RowChangeSink::publish(&hub, "g", changes);
+        let read = hub.read("g", 0, 10);
+        let kinds: Vec<_> = read.events.iter().map(|e| e.kind.clone()).collect();
+        assert_eq!(
+            kinds,
+            vec![CdcKind::InsertRow, CdcKind::UpdateRow, CdcKind::DeleteRow]
+        );
+        let seqs: Vec<u64> = read.events.iter().map(|e| e.seq).collect();
+        assert!(seqs.windows(2).all(|w| w[1] == w[0] + 1));
+        assert_eq!(read.events[0].table, "orders");
+        assert_eq!(read.events[2].table, "items");
+        assert_eq!(read.events[2].node_id, "9");
+        assert!(!read.events[0].had_before && read.events[0].had_after);
+        assert!(read.events[2].had_before && !read.events[2].had_after);
+        // A commit that emits nothing leaves the feed untouched.
+        let head = hub.head_seq("g");
+        RowChangeSink::publish(&hub, "g", Vec::new());
+        assert_eq!(hub.head_seq("g"), head);
     }
 
     /// `capture_before`'s `AddEdge` pre-image must select the existing entry by
