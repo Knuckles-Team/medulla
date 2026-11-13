@@ -1098,6 +1098,12 @@ mod branch_outcomes_tests;
 mod insight_tests;
 mod tool_relevance_tests;
 
+// MEDULLA-DECISION-ENGINE-R137.13: the served recursion-mode decision.
+mod recursion_mode_tests;
+
+// MEDULLA-DECISION-ENGINE-R137.15: the served sub-call admission check.
+mod sub_call_admission_tests;
+
 mod scope_bound_tests;
 
 mod consumer_tests;

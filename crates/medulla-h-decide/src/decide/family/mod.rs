@@ -45,6 +45,7 @@ mod pre_tool_risk;
 mod probe_verdict;
 mod program_store;
 mod rank;
+mod recursion_mode;
 mod resolve_entity;
 mod retrieval_plan;
 mod route;
@@ -53,6 +54,7 @@ mod runtime_quota;
 mod schema_mapping;
 mod skill_upgrade;
 mod skill_workflow;
+mod sub_call_admission;
 mod support;
 mod task_plan;
 mod team_coordination;
@@ -67,13 +69,13 @@ mod tool_subset;
 mod topology;
 mod usage_guidance;
 
-pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use command_config::command_view;
+pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
-pub(in crate::decide) use support::advisory;
 pub(in crate::decide) use runtime_quota::quota_view;
+pub(in crate::decide) use support::advisory;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -259,6 +261,10 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         capability_designation::CapabilityDesignationFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
+    static RECURSIONMODEFAMILY: recursion_mode::RecursionModeFamily =
+        recursion_mode::RecursionModeFamily;
+    static SUBCALLADMISSIONFAMILY: sub_call_admission::SubCallAdmissionFamily =
+        sub_call_admission::SubCallAdmissionFamily;
     static CONTEXTREPLACEMENTFAMILY: context_replacement::ContextReplacementFamily =
         context_replacement::ContextReplacementFamily;
     static COMMANDCONFIGFAMILY: command_config::CommandConfigFamily =
@@ -339,6 +345,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::TeamCoordination => &TEAMCOORDINATIONFAMILY,
         QuestionKind::CapabilityDesignation => &CAPABILITYDESIGNATIONFAMILY,
         QuestionKind::ContextReplacement => &CONTEXTREPLACEMENTFAMILY,
+        QuestionKind::RecursionMode => &RECURSIONMODEFAMILY,
+        QuestionKind::SubCallAdmission => &SUBCALLADMISSIONFAMILY,
         QuestionKind::CommandConfig => &COMMANDCONFIGFAMILY,
         QuestionKind::RunAdjustment => &RUNADJUSTMENTFAMILY,
         QuestionKind::PathPreference => &PATHPREFERENCEFAMILY,
@@ -408,6 +416,8 @@ mod tests {
             QuestionKind::TeamCoordination,
             QuestionKind::CapabilityDesignation,
             QuestionKind::ContextReplacement,
+            QuestionKind::RecursionMode,
+            QuestionKind::SubCallAdmission,
             QuestionKind::CommandConfig,
             QuestionKind::RunAdjustment,
             QuestionKind::PathPreference,
@@ -468,6 +478,8 @@ mod tests {
             | QuestionKind::TeamCoordination
             | QuestionKind::CapabilityDesignation
             | QuestionKind::ContextReplacement
+            | QuestionKind::RecursionMode
+            | QuestionKind::SubCallAdmission
             | QuestionKind::CommandConfig
             | QuestionKind::RunAdjustment
             | QuestionKind::PathPreference
@@ -496,7 +508,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            58,
+            60,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

@@ -66,7 +66,7 @@ fn typed_param<'a>(request: &'a DecideRequest, name: &str, what: &str) -> Result
         })
         .ok_or_else(|| {
             invalid_parameter(format!(
-                "a harness_contrast question requires a {name} ({what}) param"
+                "a question that reads a named graph requires a {name} ({what}) param"
             ))
         })
 }

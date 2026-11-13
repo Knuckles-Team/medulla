@@ -137,15 +137,21 @@ async fn serve(
     } else {
         request
     };
-    // A `harness_contrast` question declares its candidates but still reads
-    // its evidence (held versions, probe runs, stored contrasts) from the
-    // graph named by its `graph` param, under the same RLS filter.
+    // A `harness_contrast`, `recursion_mode` or `sub_call_admission` question
+    // declares its candidates but still reads its evidence (held versions,
+    // probe runs, stored contrasts, signal references, stored signatures) from
+    // the graph named by its `graph` param, under the same RLS filter.
     let graph_view = telemetry::stage_async(
         telemetry::Stage::Visibility,
         &family,
         verified.tenant(),
         async {
-            if request.question.kind == QuestionKind::HarnessContrast {
+            if matches!(
+                request.question.kind,
+                QuestionKind::HarnessContrast
+                    | QuestionKind::RecursionMode
+                    | QuestionKind::SubCallAdmission
+            ) {
                 super::stat_harness_contrast::contrast_evidence_view(
                     state,
                     verified.agent_id(),
@@ -498,7 +504,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::knob_families::resolve_entity::KNOBS
         }
         QuestionKind::StageAllocation => medulla_decision_types::decision::harness_contrast::KNOBS,
-        QuestionKind::ContextPackage => {
+        QuestionKind::ContextPackage | QuestionKind::RecursionMode => {
             medulla_decision_types::decision::knob_families::context::KNOBS
         }
         QuestionKind::OverWindowPlan => {

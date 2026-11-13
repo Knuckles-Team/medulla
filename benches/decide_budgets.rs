@@ -79,6 +79,8 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::ComparativeAnalysisPlan,
     QuestionKind::ContextPackage,
     QuestionKind::ContextReplacement,
+    QuestionKind::RecursionMode,
+    QuestionKind::SubCallAdmission,
     QuestionKind::CommandConfig,
     QuestionKind::RunAdjustment,
     QuestionKind::PathPreference,
@@ -137,6 +139,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ComparativeAnalysisPlan => "comparative_analysis_plan",
         QuestionKind::ContextPackage => "context_package",
         QuestionKind::ContextReplacement => "context_replacement",
+        QuestionKind::RecursionMode => "recursion_mode",
+        QuestionKind::SubCallAdmission => "sub_call_admission",
         // Needs a published template and a typed question, so it has its own
         // bench fixture, not the generic one `FAMILIES` is driven with.
         QuestionKind::Topology => "topology",

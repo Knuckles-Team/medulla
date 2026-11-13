@@ -1086,3 +1086,45 @@
     rdfs:comment "Row key critique_verdict: accept or reject." ;
     rdfs:domain :HeldItem ;
     rdfs:range xsd:string .
+
+# MEDULLA-DECISION-ENGINE-R137.15: the stored signature of one kind of
+# sub-call. A call is admitted only when it matches this node.
+:SubCallSignature a owl:Class ;
+    rdfs:label "Sub-call signature" ;
+    rdfs:comment "The admitted revision, input and output schema digests, tool set and model of one kind of sub-call." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:signature_id a owl:DatatypeProperty ;
+    rdfs:label "signature id" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .
+
+:revision a owl:DatatypeProperty ;
+    rdfs:label "signature revision" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:integer .
+
+:digest a owl:DatatypeProperty ;
+    rdfs:label "signature digest" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .
+
+:input_schema_digest a owl:DatatypeProperty ;
+    rdfs:label "input schema digest" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .
+
+:output_schema_digest a owl:DatatypeProperty ;
+    rdfs:label "output schema digest" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .
+
+:admitted_tool_ids a owl:DatatypeProperty ;
+    rdfs:label "admitted tool id" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .
+
+:model_id a owl:DatatypeProperty ;
+    rdfs:label "model id" ;
+    rdfs:domain :SubCallSignature ;
+    rdfs:range xsd:string .

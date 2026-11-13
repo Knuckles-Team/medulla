@@ -102,7 +102,38 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::DecimalMicros(1_000_000),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "context.recursive_output_bytes",
+        unit: "bytes",
+        default: KnobValue::Integer(65_536),
+        min: KnobValue::Integer(1024),
+        max: KnobValue::Integer(1_073_741_824),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "context.recursive_graph_nodes",
+        unit: "nodes",
+        default: KnobValue::Integer(50_000),
+        min: KnobValue::Integer(100),
+        max: KnobValue::Integer(100_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "context.signal_max_age_ms",
+        unit: "ms",
+        default: KnobValue::Integer(60_000),
+        min: KnobValue::Integer(1000),
+        max: KnobValue::Integer(3_600_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
+
+/// Index of `context.recursive_output_bytes` in [`KNOBS`].
+pub const RECURSIVE_OUTPUT_BYTES: usize = 12;
+/// Index of `context.recursive_graph_nodes` in [`KNOBS`].
+pub const RECURSIVE_GRAPH_NODES: usize = 13;
+/// Index of `context.signal_max_age_ms` in [`KNOBS`].
+pub const SIGNAL_MAX_AGE_MS: usize = 14;
 
 /// The integer value of the knob at `index` in [`KNOBS`].
 pub fn integer(policy: &DecisionPolicy, index: usize) -> u64 {

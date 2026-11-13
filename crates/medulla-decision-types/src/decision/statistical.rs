@@ -195,6 +195,13 @@ pub enum QuestionKind {
     /// held-out comparison (MEDULLA-DECISION-ENGINE-R137.14). See
     /// `decision::context_replacement`.
     ContextReplacement,
+    /// Whether a run works on its tool output directly or recursively, from
+    /// measured output size and graph size (MEDULLA-DECISION-ENGINE-R137.13).
+    /// See `decision::context_budget` in the outcome types.
+    RecursionMode,
+    /// Whether a sub-call may be dispatched, from its stored signature
+    /// (MEDULLA-DECISION-ENGINE-R137.15). See `decision::sub_call`.
+    SubCallAdmission,
     /// Command mode and settings choice (MEDULLA-DECISION-ENGINE-R148). See `decision::command_config`.
     CommandConfig,
     /// Model tier and width adjustment from a run error window (MEDULLA-DECISION-ENGINE-R158). See `decision::run_adjustment`.

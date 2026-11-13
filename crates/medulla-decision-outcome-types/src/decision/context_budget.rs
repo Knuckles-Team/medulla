@@ -287,5 +287,221 @@ pub fn decide_over_window(
     })
 }
 
+/// The domain of a signal digest.
+pub const CONTEXT_BUDGET_SIGNALS_DOMAIN: &str = "context_budget_signals";
+
+/// Measured size signals of one run step (MEDULLA-DECISION-ENGINE-R137.13).
+///
+/// `signal_digest` is the SHA-256 digest (`sha256:` plus 64 hex characters) of
+/// every other field, so a caller cannot edit a measure after sealing it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContextBudgetSignals {
+    pub run_id: String,
+    pub tool_output_bytes: u64,
+    pub tool_output_digest: String,
+    /// The tenant graph node of the tool call that produced the output.
+    pub tool_call_ref: String,
+    /// The tenant graph node of the graph snapshot that was measured.
+    pub graph_snapshot_ref: String,
+    pub graph_node_count: u64,
+    pub observed_at_ms: u64,
+    pub signal_digest: String,
+}
+
+/// The fields the signal digest covers, in wire order.
+#[derive(Serialize)]
+struct SignalBody<'a> {
+    run_id: &'a str,
+    tool_output_bytes: u64,
+    tool_output_digest: &'a str,
+    tool_call_ref: &'a str,
+    graph_snapshot_ref: &'a str,
+    graph_node_count: u64,
+    observed_at_ms: u64,
+}
+
+impl ContextBudgetSignals {
+    /// The digest the fields give; `signal_digest` must equal it.
+    pub fn compute_digest(&self) -> String {
+        medulla_query_types::solve_scalar::digest_text(
+            CONTEXT_BUDGET_SIGNALS_DOMAIN,
+            &SignalBody {
+                run_id: &self.run_id,
+                tool_output_bytes: self.tool_output_bytes,
+                tool_output_digest: &self.tool_output_digest,
+                tool_call_ref: &self.tool_call_ref,
+                graph_snapshot_ref: &self.graph_snapshot_ref,
+                graph_node_count: self.graph_node_count,
+                observed_at_ms: self.observed_at_ms,
+            },
+        )
+    }
+
+    /// Decode the signals from their JSON text. A missing, negative or
+    /// non-integer value, an empty reference and an unknown field are all
+    /// [`SignalRefusal::Invalid`], never a generic decode error.
+    pub fn from_json(text: &str) -> Result<Self, SignalRefusal> {
+        let invalid = |detail: String| SignalRefusal::Invalid { detail };
+        let value: serde_json::Value =
+            serde_json::from_str(text).map_err(|e| invalid(format!("not JSON: {e}")))?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| invalid("signals are not an object".to_string()))?;
+        for field in ["tool_output_bytes", "graph_node_count", "observed_at_ms"] {
+            match object.get(field) {
+                None | Some(serde_json::Value::Null) => {
+                    return Err(invalid(format!("{field} is missing")))
+                }
+                Some(number) if number.as_u64().is_none() => {
+                    return Err(invalid(format!("{field} is negative or not an integer")))
+                }
+                Some(_) => {}
+            }
+        }
+        let signals: Self = serde_json::from_value(value).map_err(|e| invalid(e.to_string()))?;
+        for (field, text) in [
+            ("run_id", &signals.run_id),
+            ("tool_output_digest", &signals.tool_output_digest),
+            ("tool_call_ref", &signals.tool_call_ref),
+            ("graph_snapshot_ref", &signals.graph_snapshot_ref),
+            ("signal_digest", &signals.signal_digest),
+        ] {
+            if text.trim().is_empty() {
+                return Err(invalid(format!("{field} is empty")));
+            }
+        }
+        Ok(signals)
+    }
+
+    /// Check the digest, then the age against `max_age_ms` at `now_ms`.
+    pub fn check(&self, now_ms: u64, max_age_ms: u64) -> Result<(), SignalRefusal> {
+        let expected = self.compute_digest();
+        if self.signal_digest != expected {
+            return Err(SignalRefusal::DigestMismatch {
+                expected,
+                actual: self.signal_digest.clone(),
+            });
+        }
+        let age_ms = now_ms.saturating_sub(self.observed_at_ms);
+        if age_ms > max_age_ms {
+            return Err(SignalRefusal::Stale { age_ms, max_age_ms });
+        }
+        Ok(())
+    }
+}
+
+/// Why a set of signals cannot decide a mode. Each is a request refusal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SignalRefusal {
+    /// A value is missing, negative or not a number.
+    Invalid { detail: String },
+    /// The digest does not match the fields.
+    DigestMismatch { expected: String, actual: String },
+    /// The signals are older than the age limit.
+    Stale { age_ms: u64, max_age_ms: u64 },
+    /// A reference does not resolve in the caller's tenant.
+    CrossTenant { reference: String },
+}
+
+impl SignalRefusal {
+    /// The registered code (`decision::codes`).
+    pub fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        use medulla_decision_types::decision::codes;
+        match self {
+            Self::Invalid { .. } => codes::SIGNAL_INVALID,
+            Self::DigestMismatch { .. } => codes::SIGNAL_DIGEST_MISMATCH,
+            Self::Stale { .. } => codes::SIGNAL_STALE,
+            Self::CrossTenant { .. } => codes::SIGNAL_CROSS_TENANT,
+        }
+    }
+
+    /// The refusal as the served request error text: the code, then the cause.
+    pub fn text(&self) -> String {
+        let detail = match self {
+            Self::Invalid { detail } => detail.clone(),
+            Self::DigestMismatch { expected, actual } => {
+                format!("expected {expected}, got {actual}")
+            }
+            Self::Stale { age_ms, max_age_ms } => {
+                format!("observed {age_ms} ms ago, limit {max_age_ms} ms")
+            }
+            Self::CrossTenant { reference } => {
+                format!("{reference} does not resolve in the caller tenant")
+            }
+        };
+        format!("{}: {detail}", self.code().as_str())
+    }
+}
+
+/// How a run handles its tool output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RecursionMode {
+    Direct,
+    Recursive,
+}
+
+impl RecursionMode {
+    /// The option id the mode is answered as.
+    pub fn option_id(self) -> &'static str {
+        match self {
+            Self::Direct => "mode:direct",
+            Self::Recursive => "mode:recursive",
+        }
+    }
+}
+
+/// Which measure chose the mode. Output bytes are checked first, so a run
+/// above both thresholds reports `OUTPUT_BYTES_AT_OR_ABOVE`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RecursionReason {
+    OutputBytesAtOrAbove,
+    GraphNodesAtOrAbove,
+    BelowBoth,
+}
+
+impl RecursionReason {
+    /// The reason code of the answer.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::OutputBytesAtOrAbove => "OUTPUT_BYTES_AT_OR_ABOVE",
+            Self::GraphNodesAtOrAbove => "GRAPH_NODES_AT_OR_ABOVE",
+            Self::BelowBoth => "BELOW_BOTH",
+        }
+    }
+}
+
+/// The thresholds a mode decision reads (the `context.recursive_*` knobs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RecursionThresholds {
+    pub output_bytes: u64,
+    pub graph_nodes: u64,
+}
+
+/// `recursive` when either measure meets its threshold, otherwise `direct`.
+pub fn decide_recursion_mode(
+    signals: &ContextBudgetSignals,
+    thresholds: &RecursionThresholds,
+) -> (RecursionMode, RecursionReason) {
+    if signals.tool_output_bytes >= thresholds.output_bytes {
+        (
+            RecursionMode::Recursive,
+            RecursionReason::OutputBytesAtOrAbove,
+        )
+    } else if signals.graph_node_count >= thresholds.graph_nodes {
+        (
+            RecursionMode::Recursive,
+            RecursionReason::GraphNodesAtOrAbove,
+        )
+    } else {
+        (RecursionMode::Direct, RecursionReason::BelowBoth)
+    }
+}
+
 #[cfg(test)]
 mod tests;

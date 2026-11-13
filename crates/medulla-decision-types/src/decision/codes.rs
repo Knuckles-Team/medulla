@@ -326,6 +326,25 @@ pub const STAGE_ALLOCATION: &[RefusalCode] = &[
     ALLOCATION_NO_ADEQUATE_MODEL,
 ];
 
+// Recursion-mode signal refusals (MEDULLA-DECISION-ENGINE-R137.13). Each is a
+// request refusal whose wire error is `PARAMETER_INVALID`.
+/// The signal digest does not match the signal fields.
+pub const SIGNAL_DIGEST_MISMATCH: RefusalCode = RefusalCode::new("SIGNAL_DIGEST_MISMATCH");
+/// The signal was observed longer ago than `context.signal_max_age_ms`.
+pub const SIGNAL_STALE: RefusalCode = RefusalCode::new("SIGNAL_STALE");
+/// A signal reference does not resolve in the caller's tenant.
+pub const SIGNAL_CROSS_TENANT: RefusalCode = RefusalCode::new("SIGNAL_CROSS_TENANT");
+/// A signal value is missing, negative or not a number.
+pub const SIGNAL_INVALID: RefusalCode = RefusalCode::new("SIGNAL_INVALID");
+
+/// Every recursion-mode signal code, in declaration order.
+pub const RECURSION_SIGNALS: &[RefusalCode] = &[
+    SIGNAL_DIGEST_MISMATCH,
+    SIGNAL_STALE,
+    SIGNAL_CROSS_TENANT,
+    SIGNAL_INVALID,
+];
+
 /// The `REFUSALS` table of every registered family, keyed by its question
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
@@ -342,6 +361,8 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::GeneratedCodeAdmission,
         GENERATED_CODE_ADMISSION,
     ),
+    (QuestionKind::RecursionMode, RECURSION_SIGNALS),
+    (QuestionKind::SubCallAdmission, super::sub_call::REFUSALS),
     (
         QuestionKind::RetrievalPlan,
         super::statistical::run_credit::REFUSALS,

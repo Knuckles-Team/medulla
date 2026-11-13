@@ -71,6 +71,7 @@ pub mod run_governance;
 pub mod skill_upgrade_request;
 pub mod skill_workflow;
 pub mod statistical;
+pub mod sub_call;
 pub mod task_plan;
 pub mod team_coordination;
 pub mod temporal_query;

@@ -240,6 +240,7 @@ mod tests {
         assert_eq!(&serde_json::from_str::<T>(&wire).unwrap(), value);
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R139.1
     #[test]
     fn comparative_types_round_trip() {
         let candidates = BoundedVec::new((0..64).map(candidate).collect()).unwrap();
