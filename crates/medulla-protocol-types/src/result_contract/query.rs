@@ -48,7 +48,7 @@ method_results! {
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;
-    ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::PreferredExtensions>;
+    ArgumentMapEvaluate(ArgumentMapEvaluate) => Json<medulla_result_types::argument_map::ExtensionResult>;
     #[cfg(feature = "federation")]
     QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_types::wire::ForeignColumnRow>>;
     #[cfg(feature = "federation")]

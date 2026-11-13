@@ -158,6 +158,10 @@ class WebGateway:
     """A loopback fleet gateway: replays a recorded `web_search` reply, counts calls."""
 
     calls: list[dict] = field(default_factory=list)
+    # Read-time access checks (MEDULLA-FEDERATED-QUERY-R703.3): each check the engine
+    # posted, and the record refs this gateway answers as denied.
+    access_calls: list[dict] = field(default_factory=list)
+    denied_refs: set[str] = field(default_factory=set)
 
     @property
     def row_calls(self) -> int:
@@ -182,6 +186,14 @@ def web_gateway() -> Iterator[WebGateway]:
                         if known
                         else None
                     )
+                }
+            elif op == "access_check":
+                gateway.access_calls.append(body)
+                refs = body["record_refs"]
+                reply = {
+                    "allowed": [r for r in refs if r not in gateway.denied_refs],
+                    "denied": [r for r in refs if r in gateway.denied_refs],
+                    "checked_at": int(time.time() * 1000),
                 }
             elif op == "web_capability":
                 reply = {"capability": RECORDED["capability"] if known else None}

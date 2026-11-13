@@ -8,6 +8,8 @@ stores the golden vector, exports it byte-equal and evaluates it.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import uuid
 
@@ -81,3 +83,44 @@ async def test_put_get_round_trip_and_evaluate() -> None:
     preferred = await _evaluate(client, map_id, "preferred")
     assert preferred["complete"] is True
     assert preferred["extensions"] == [["b"]]
+
+
+def _digest(doc: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode()
+    ).hexdigest()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R700.5
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R700.5")
+@pytest.mark.asyncio
+async def test_digest_binds_map() -> None:
+    client = await _connect()
+    map_id = f"aif-{uuid.uuid4().hex}"
+    await _put(client, map_id, GOLDEN)
+
+    exported = await _get(client, map_id)
+    grounded = await _evaluate(client, map_id, "grounded")
+    assert grounded["semantics"] == "grounded"
+    assert grounded["map_digest"] == _digest(exported)
+    assert grounded["extensions"] == [["b"]]
+
+    # Re-derive the extension from the exported map: `b` attacks `a` through `ca`.
+    attacked = {edge["toID"] for edge in exported["edges"] if edge["fromID"] == "ca"}
+    arguments = {n["nodeID"] for n in exported["nodes"] if n["type"] == "I"}
+    assert [sorted(arguments - attacked)] == grounded["extensions"]
+
+    # Evaluation stores nothing: the digest is unchanged by evaluating again.
+    preferred = await _evaluate(client, map_id, "preferred")
+    assert preferred["map_digest"] == grounded["map_digest"]
+    assert preferred["complete"] is True
+
+    # Replacing the map changes the digest the next evaluation reports.
+    changed = {
+        **GOLDEN,
+        "nodes": [{**GOLDEN["nodes"][0], "text": "other"}, *GOLDEN["nodes"][1:]],
+    }
+    await _put(client, map_id, changed)
+    again = await _evaluate(client, map_id, "grounded")
+    assert again["map_digest"] == _digest(changed)
+    assert again["map_digest"] != grounded["map_digest"]

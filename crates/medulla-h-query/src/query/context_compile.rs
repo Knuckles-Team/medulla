@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::access_port::ForeignAccessCheckPort;
 use super::retrieval_round::{reranker_binding, RerankerBinding};
 use super::*;
 use medulla_decision_types::decision::context_bundle::{
@@ -18,8 +19,7 @@ use medulla_decision_types::decision::context_bundle::{
     DroppedRecord, ExcludedItem, ExclusionReason, ProofEdge, MAX_TOP_N,
 };
 use medulla_exec::access_check::{
-    filter_hits, AccessCache, AccessCheckAnswer, AccessCheckPort, AccessCheckRequest, AccessHit,
-    AccessMode, DropReason, MAX_CACHE_TTL_MS,
+    filter_hits, AccessCache, AccessHit, AccessMode, DropReason, MAX_CACHE_TTL_MS,
 };
 use medulla_plan::context_bundle::{
     bundle_key_of, compile_with, CompileInputs, ContextKnobs, RerankDoc, RerankInputs,
@@ -48,16 +48,6 @@ fn refuse(code: &'static str, detail: impl Into<String>) -> Refusal {
 
 fn refusal_response(req_id: u64, (code, detail): Refusal) -> Response {
     Response::err(req_id, format!("{code}: {detail}"))
-}
-
-/// A source that decides access only at read time and has no registered port:
-/// every check is unavailable, so its hits fail closed (R703.4).
-struct NoAccessPort;
-
-impl AccessCheckPort for NoAccessPort {
-    fn check(&mut self, _request: &AccessCheckRequest) -> Option<(AccessCheckAnswer, u64)> {
-        None
-    }
 }
 
 /// What the request must carry before any row is read.
@@ -328,6 +318,7 @@ fn run_compile(
     tenant: &str,
     principal: &str,
     policy_digest: &str,
+    access_servers: BTreeMap<String, String>,
 ) -> Result<Compiled, Refusal> {
     let knobs = medulla_server_api::knob_config::knobs();
     let bytes_per_token = knobs.context_facts_bytes_per_token;
@@ -361,7 +352,13 @@ fn run_compile(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0);
-    let filtered = filter_hits(hits, principal, &mut NoAccessPort, &mut cache, now_ms);
+    let filtered = filter_hits(
+        hits,
+        principal,
+        &mut ForeignAccessCheckPort::new(access_servers),
+        &mut cache,
+        now_ms,
+    );
     let mut pre_excluded = Vec::new();
     let mut unchecked_dropped = Vec::new();
     let mut gone: BTreeSet<String> = BTreeSet::new();
@@ -489,6 +486,34 @@ fn policy_digest(ctx: &QueryHandlerCtx<'_>) -> String {
     )
 }
 
+/// The connector server of each operation-bound source the caller may use, so a
+/// `checked_at_read` hit's check reaches its own connector (R703.3). The caller's
+/// registry is the scoping chokepoint: another owner's source is never named.
+#[cfg(feature = "federation")]
+async fn access_check_servers(ctx: &QueryHandlerCtx<'_>) -> BTreeMap<String, String> {
+    use medulla_server_ops::api::query_txn::ForeignStateExt;
+    use medulla_types::wire::ForeignSourceSpec;
+    let Some(carrier) = ctx.read_authority.and_then(GraphReadAuthority::carrier) else {
+        return BTreeMap::new();
+    };
+    let s = ctx.state.read().await;
+    let owned = s.foreign_sources().registry_for(carrier, &s.isolation);
+    let registry = owned.registry();
+    registry
+        .names()
+        .into_iter()
+        .filter_map(|name| match registry.spec(&name)? {
+            ForeignSourceSpec::Mcp { server, .. } => Some((name, server.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+#[cfg(not(feature = "federation"))]
+async fn access_check_servers(_ctx: &QueryHandlerCtx<'_>) -> BTreeMap<String, String> {
+    BTreeMap::new()
+}
+
 /// Serve one `ContextCompile`.
 pub(crate) async fn handle_context_compile(
     ctx: &QueryHandlerCtx<'_>,
@@ -547,12 +572,20 @@ pub(crate) async fn handle_context_compile(
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
 
+    let access_servers = access_check_servers(ctx).await;
     let core = Arc::clone(ctx.core);
     let principal = ctx.caller.to_string();
     let worker_tenant = tenant.clone();
     let worker_request = request;
     let outcome = compute_off_lock(req_id, move || {
-        run_compile(&core, &worker_request, &worker_tenant, &principal, &policy)
+        run_compile(
+            &core,
+            &worker_request,
+            &worker_tenant,
+            &principal,
+            &policy,
+            access_servers,
+        )
     })
     .await;
     match outcome {

@@ -54,8 +54,36 @@ pub struct ConnectorRows {
     pub missing_source: Option<String>,
 }
 
+/// One read-time access check handed to the provider
+/// (MEDULLA-FEDERATED-QUERY-R703.3): which of `record_refs` may `principal` read.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConnectorAccessCheck {
+    pub server: String,
+    pub tool: String,
+    pub principal: String,
+    pub record_refs: Vec<String>,
+    pub timeout_ms: u64,
+}
+
+/// The provider's answer to one access check.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConnectorAccessAnswer {
+    pub allowed: Vec<String>,
+    pub denied: Vec<String>,
+    /// Unix milliseconds.
+    pub checked_at: u64,
+}
+
 /// The host-registered port that serves operation-bound MCP sources.
 pub trait ConnectorRowSource: Send + Sync {
+    /// Ask the connector which records `principal` may read. A provider that cannot
+    /// answer access checks reports `Err`, and the caller fails closed.
+    fn access_check(
+        &self,
+        _request: &ConnectorAccessCheck,
+    ) -> Result<ConnectorAccessAnswer, String> {
+        Err("this connector port does not answer access checks".to_string())
+    }
     /// The argument names the tool declares, or `None` when the tool is not registered.
     fn declared_arguments(&self, server: &str, tool: &str) -> Option<Vec<String>>;
     /// Run the call; `Err` is any failure, timeout or non-row-list result.
@@ -82,7 +110,7 @@ pub fn register_connector_row_source(port: SharedPort) {
 
 /// The registered port: the one the host bound, else the HTTP gateway named by
 /// `MEDULLA_CONNECTOR_GATEWAY_URL` (see [`super::gateway`]), else none.
-pub(crate) fn registered_port() -> Option<SharedPort> {
+pub fn registered_port() -> Option<SharedPort> {
     PORT.read()
         .ok()
         .and_then(|slot| slot.clone())

@@ -174,3 +174,14 @@ The pack-source read already builds `connector`, `contract_iri`, `mapping_iri`, 
 ## R081.101 compressed document state
 
 Decisions. The state key is one length-prefixed string, so the owner table keeps the single `&str` key shape every other owner table uses and no tuple-key support is added. The encoder is a port with no decode or generate method, so "no decoder call" holds by construction and the result reports `decoder_calls: 0`. The engine ships one deterministic encoder (signed hashed bag of tokens, 32 wide, key and value vectors); it is bound by a bool registry knob because knobs are never strings, and a model-backed encoder is a later implementation of the same port. The build job runs at the document commit that already reads the source text (`complete_sql_source_stage`), once per content digest. Query time reads only: a missing state refuses `RETRIEVAL_STATE_STALE` instead of building. The state part rides on the existing `RetrievalRound` method as an optional part, so no new public operation is added.
+
+## R703.3 access check path (decision)
+The engine never calls a connector itself, so the read-time access check rides the one
+connector port operation-bound sources already use: `ConnectorRowSource` gains `access_check`
+(default: cannot answer, which fails closed), and the gateway carries it as op `access_check`.
+The connector server comes from the caller's registered `Mcp` source named by the hit's
+`source`, resolved through the owner-scoped registry. No second driver path and no new cache.
+
+## R700.5 digest helper (decision)
+`medulla-kernel` has no SHA-256 helper; `ArgumentMap::digest` in `medulla-result-types`
+hashes the canonical interchange JSON with `sha2`, the crate that already owns the map type.

@@ -19,7 +19,10 @@ use medulla_exec::rowset::{RowSet, TextChannels, ValueChannels};
 use medulla_types::web_source::WebSearchCapability;
 use serde_json::{json, Value};
 
-use super::mcp::{ConnectorRowRequest, ConnectorRowSource, ConnectorRows};
+use super::mcp::{
+    ConnectorAccessAnswer, ConnectorAccessCheck, ConnectorRowRequest, ConnectorRowSource,
+    ConnectorRows,
+};
 
 /// The environment variable naming the gateway endpoint.
 pub const GATEWAY_URL_ENV: &str = "MEDULLA_CONNECTOR_GATEWAY_URL";
@@ -79,6 +82,41 @@ impl ConnectorRowSource for HttpConnectorGateway {
             .iter()
             .map(|name| name.as_str().map(str::to_string))
             .collect()
+    }
+
+    fn access_check(
+        &self,
+        request: &ConnectorAccessCheck,
+    ) -> Result<ConnectorAccessAnswer, String> {
+        let reply = self.post(&json!({
+            "op": "access_check",
+            "server": request.server,
+            "tool": request.tool,
+            "principal": request.principal,
+            "record_refs": request.record_refs,
+            "timeout_ms": request.timeout_ms,
+        }))?;
+        let names = |key: &str| -> Result<Vec<String>, String> {
+            reply
+                .get(key)
+                .and_then(Value::as_array)
+                .ok_or_else(|| format!("the access check reply has no `{key}` list"))?
+                .iter()
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| format!("the access check `{key}` list holds a non-string"))
+                })
+                .collect()
+        };
+        Ok(ConnectorAccessAnswer {
+            allowed: names("allowed")?,
+            denied: names("denied")?,
+            checked_at: reply
+                .get("checked_at")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| "the access check reply has no `checked_at`".to_string())?,
+        })
     }
 
     fn web_capability(&self, server: &str, tool: &str) -> Option<WebSearchCapability> {

@@ -156,6 +156,8 @@ mod code_map;
 mod sql_read;
 pub(crate) use sql_read::*;
 #[cfg(feature = "query")]
+mod access_port;
+#[cfg(feature = "query")]
 mod asset_usage;
 #[cfg(feature = "query")]
 mod catalog_search;

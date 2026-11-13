@@ -9,7 +9,7 @@
 //! `argument.node_budget` knob. Evaluation is a read and stores nothing.
 
 use medulla_protocol_types::result_contract::query as results;
-use medulla_result_types::argument_map::{ArgumentMap, PreferredExtensions};
+use medulla_result_types::argument_map::{ArgumentMap, ExtensionResult};
 use medulla_server_api::knob_config::knobs;
 use medulla_types::msgpack::decode_property_object;
 use serde_json::Value;
@@ -85,22 +85,28 @@ fn handle_evaluate(
     map_id: &str,
     semantics: &str,
     node_budget: Option<u64>,
-) -> Result<PreferredExtensions, String> {
-    let projection = stored_map(ctx, map_id)?
-        .project()
-        .map_err(|refusal| refusal.to_string())?;
-    match semantics {
-        "grounded" => Ok(PreferredExtensions {
-            extensions: vec![projection.grounded()],
-            complete: true,
-            nodes_explored: 0,
-            node_budget: 0,
-        }),
-        "preferred" => Ok(projection.preferred(
-            node_budget.unwrap_or_else(|| knobs().argument_node_budget),
-        )),
-        other => Err(format!(
-            "ARGUMENT_MAP_INVALID_SEMANTICS: `semantics` is `grounded` or `preferred`, got `{other}`"
-        )),
-    }
+) -> Result<ExtensionResult, String> {
+    let map = stored_map(ctx, map_id)?;
+    let map_digest = map.digest().map_err(|refusal| refusal.to_string())?;
+    let projection = map.project().map_err(|refusal| refusal.to_string())?;
+    let (extensions, complete, nodes_used) = match semantics {
+        "grounded" => (vec![projection.grounded()], true, 0),
+        "preferred" => {
+            let found = projection
+                .preferred(node_budget.unwrap_or_else(|| knobs().argument_node_budget));
+            (found.extensions, found.complete, found.nodes_explored)
+        }
+        other => {
+            return Err(format!(
+                "ARGUMENT_MAP_INVALID_SEMANTICS: `semantics` is `grounded` or `preferred`, got `{other}`"
+            ))
+        }
+    };
+    Ok(ExtensionResult {
+        semantics: semantics.to_string(),
+        extensions,
+        complete,
+        nodes_used,
+        map_digest,
+    })
 }

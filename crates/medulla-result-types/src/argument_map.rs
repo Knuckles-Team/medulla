@@ -230,6 +230,32 @@ pub struct PreferredExtensions {
     pub node_budget: u64,
 }
 
+/// The evaluation of a stored map under one semantics (MEDULLA-FEDERATED-QUERY-R700.5).
+///
+/// `map_digest` is the SHA-256 hex of the canonical interchange JSON read back from
+/// the store, so a caller can bind the extension to the exact map evaluated.
+/// `complete` is false when the node budget stopped preferred enumeration: the
+/// extensions are then the certified lower bound of MEDULLA-FEDERATED-QUERY-R700.4.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ExtensionResult {
+    pub semantics: String,
+    pub extensions: Vec<Vec<String>>,
+    pub complete: bool,
+    pub nodes_used: u64,
+    pub map_digest: String,
+}
+
+impl ArgumentMap {
+    /// SHA-256 hex of the canonical interchange JSON of this map.
+    pub fn digest(&self) -> Result<String, ArgumentMapRefusal> {
+        use sha2::{Digest, Sha256};
+        let json = serde_json::to_string(self).map_err(|_| refuse(AIF_MALFORMED, "map"))?;
+        Ok(hex::encode(Sha256::digest(json.as_bytes())))
+    }
+}
+
 struct Indexed {
     attackers: Vec<Vec<usize>>,
     attacked: Vec<Vec<usize>>,
@@ -477,6 +503,20 @@ mod tests {
             single.extensions,
             vec![vec!["a".to_string(), "c".into(), "p".into()]]
         );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R700.5
+    #[test]
+    fn digest_is_sha256_of_canonical_json_and_binds_content() {
+        use sha2::{Digest, Sha256};
+        let map: ArgumentMap = serde_json::from_str(GOLDEN).unwrap();
+        assert_eq!(
+            map.digest().unwrap(),
+            hex::encode(Sha256::digest(GOLDEN.as_bytes()))
+        );
+        let mut changed = map.clone();
+        changed.nodes[0].text.push('!');
+        assert_ne!(changed.digest().unwrap(), map.digest().unwrap());
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R700.4

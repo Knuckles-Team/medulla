@@ -13,7 +13,7 @@ import pytest
 from conftest import request_context
 
 from medulla.client import MedullaClient
-from medulla.generated import query
+from medulla.generated import cluster, query
 
 GOOD_QUERY = "MATCH (:ServedHot)"
 BAD_QUERY = "MATCH ("
@@ -82,5 +82,49 @@ async def test_refresh_records_success_and_failure() -> None:
 
         with pytest.raises(RuntimeError, match="LIVE_ARTIFACT_VERSION_CONFLICT"):
             await _refresh(client, good_id, 1)
+    finally:
+        await client.close()
+
+
+PRIOR_DATA = [{"id": "prior-1"}, {"id": "prior-2"}]
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R701.6
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R701.6")
+@pytest.mark.asyncio
+async def test_failed_refresh_preserves_prior_data() -> None:
+    client = await _connect()
+    source = f"closed-port-{uuid.uuid4().hex}"
+    artifact_id = f"foreign-{uuid.uuid4().hex}"
+    try:
+        # A registered source on closed loopback port 1: the read fails with a real
+        # connection error, not a refusal from the engine.
+        await cluster.send_register_foreign_source(
+            client,
+            {
+                "name": source,
+                "source": {
+                    "HttpJson": {
+                        "url": "http://127.0.0.1:1/rows",
+                        "json_path": "",
+                        "field_map": {"id": "id"},
+                    }
+                },
+            },
+        )
+        artifact = _artifact(artifact_id, f"FOREIGN '{source}'")
+        artifact["data"] = PRIOR_DATA
+        await _put(client, artifact)
+
+        failed = await _refresh(client, artifact_id, 1)
+        assert failed["new_version"] == 1
+        assert failed["record"]["error"]
+
+        view = await _get(client, artifact_id)
+        assert view["artifact"]["data"] == PRIOR_DATA
+        assert view["artifact"]["version"] == 1
+        assert [r["record"]["error"] for r in view["refreshes"]] == [
+            failed["record"]["error"]
+        ]
     finally:
         await client.close()
