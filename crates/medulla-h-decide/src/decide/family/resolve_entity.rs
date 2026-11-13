@@ -15,8 +15,8 @@
 //! Candidate stage (MEDULLA-DECISION-ENGINE-R706.3): a question that names a
 //! graph in the param `er.graph` also weighs the nearest neighbours of each
 //! declared pair side. [`with_candidates`] reads that graph as the caller may
-//! see it, indexes the embedded nodes the caller's tenant owns (the node
-//! property `tenant_id`), asks the index for `er.candidate_k` neighbours with
+//! see it, indexes the embedded nodes the engine's row-visibility check lets
+//! the caller see (never a caller-writable node property), asks the index for `er.candidate_k` neighbours with
 //! the tenant predicate inside the search, and adds every unseen pair as one
 //! more declared option `er:embedding:<left>|<right>`. The same prelude reads
 //! the reviews the decision log holds for proposal options, records the
@@ -105,8 +105,6 @@ const PARAM_LATEST: &str = "er.review.latest";
 const PARAM_DRIFT: &str = "er.review.drift";
 /// The absolute accept-rate change between the two windows, in ppm.
 const PARAM_DRIFT_CHANGE: &str = "er.review.drift_change_ppm";
-/// Property of a graph node naming the tenant that owns it.
-const TENANT_PROPERTY: &str = "tenant_id";
 
 const TIERS: [ResolutionTier; 3] = [
     ResolutionTier::Exact,
@@ -321,16 +319,14 @@ fn neighbour_options(
 ) -> Result<Vec<DeclaredOption>, String> {
     let mut nodes = Vec::new();
     for id in view.node_ids() {
-        let (Some(vector), Some(properties)) =
-            (view.stored_vector(&id), view.visible_properties(&id))
-        else {
-            continue;
-        };
-        let Some(owner) = properties.get(TENANT_PROPERTY).and_then(|v| v.as_str()) else {
+        // `node_ids` and `stored_vector` answer only for nodes the engine's one
+        // row-visibility check lets the caller see; no node property decides
+        // whose node it is, so a forged `tenant_id` cannot admit a node.
+        let Some(vector) = view.stored_vector(&id) else {
             continue;
         };
         nodes.push(IndexedNode {
-            tenant: owner.to_string(),
+            tenant: tenant.to_string(),
             node: id,
             vector,
         });

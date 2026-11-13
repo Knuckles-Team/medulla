@@ -26,7 +26,14 @@ fn node(
     vector: Vec<f32>,
 ) -> String {
     let id = entity(name);
-    let props = serde_json::json!({"type": "Entity", "tenant_id": owner});
+    // `tenant_id` is caller-writable and always claims the asking tenant;
+    // only the row owner decides visibility.
+    let props = serde_json::json!({
+        "type": "Entity",
+        "tenant_id": TENANT,
+        "_owner": owner,
+        "_visibility": "private",
+    });
     core.add_node(id.clone(), rmp_serde::to_vec_named(&props).unwrap());
     core.semantic_store
         .write()
@@ -37,14 +44,14 @@ fn node(
 
 /// The entity graph: the declared pair `a-left`/`a-right`, two of this
 /// tenant's nodes (`near-1`, `near-2`) and one of another tenant that is the
-/// nearest node to `a-left` of all.
+/// nearest node to `a-left` of all and forges the asking tenant's `tenant_id`.
 async fn entity_graph(h: &Harness) {
     let core = super::learning_tests::graph_with(h, GRAPH, "er-m", 3, Vec::new()).await;
-    node(&core, "a-left", TENANT, vec![1.0, 0.0, 0.0]);
-    node(&core, "a-right", TENANT, vec![0.0, -1.0, 0.0]);
-    node(&core, "near-1", TENANT, vec![0.3, 0.954, 0.0]);
-    node(&core, "near-2", TENANT, vec![0.2, 0.0, 0.98]);
-    node(&core, "foreign", OTHER_TENANT, vec![1.0, 0.01, 0.0]);
+    node(&core, "a-left", "decider", vec![1.0, 0.0, 0.0]);
+    node(&core, "a-right", "decider", vec![0.0, -1.0, 0.0]);
+    node(&core, "near-1", "decider", vec![0.3, 0.954, 0.0]);
+    node(&core, "near-2", "decider", vec![0.2, 0.0, 0.98]);
+    node(&core, "foreign", "other-agent", vec![1.0, 0.01, 0.0]);
 }
 
 fn with_graph(mut request: DecideRequest) -> DecideRequest {
