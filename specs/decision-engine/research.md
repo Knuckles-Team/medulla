@@ -1099,3 +1099,6 @@ The generic bench fixture is not a kernel family's body, so the reward-decomposi
 ## R753.755: where the probe verdict type lives (2026-11-13)
 - `ProbeVerdict` is defined once, in `medulla-decision-types` (`trajectory_verdict`), below the outcome types, because the admission answer names it and the outcome crate depends on the decision-types crate. `red_team` and the `probe_verdict` family import it from there; the outcome crate no longer defines a copy and nothing re-exports it. The red-team attack, transform and scorer records stay the agent-component types.
 - A family carries its answer in the one `Executed.family` field (`FamilyExecuted { answer, premises, evidence }`, the `spec/fde-executed-family` shape). `evidence` is the class a family computes from its request (the trajectory join takes its weakest entry, research and feature matching are claims); `None` leaves the registry hook and the generic rule. `Executed::from_family` builds the executed result of a family that answers without the matrix ladder.
+
+## One family field on Executed (rebase onto the train)
+`Executed.family` is the only field a family uses to carry its typed answer. It also carries the resolution kind and evidence class a family seals (the fields the train's earlier `answered` carried); the `answered` field and its type are removed and every family writes `family`.
