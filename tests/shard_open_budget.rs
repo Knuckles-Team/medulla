@@ -2,7 +2,7 @@
 //! loaded host. One scenario, two checks:
 //!
 //! * The REGRESSION GATE (the default tests): one process, run serially, with
-//!   limits about twice the measured single-process R820 numbers, while 16
+//!   limits about twice the measured single-process build-host numbers, while 16
 //!   fsync-writer and 32 CPU-burn threads run alongside.
 //! * The STRESS CHECK (`#[ignore]`d, run explicitly with `--ignored`): ten
 //!   copies of the same scenario in parallel child processes. Each copy starts
@@ -52,7 +52,7 @@ struct Limits {
     populated_marker_reopen: Duration,
 }
 
-/// Regression gate: about 2x the single-process R820 numbers under the load
+/// Regression gate: about 2x the single-process build-host numbers under the load
 /// above (fresh 1.55-1.82 s, small reopen 0.61-0.83 s, populated marker
 /// reopen 1.00-1.12 s). Measurements: plans/medulla-shard-open-latency-2026-10-23.md.
 const GATE: Limits = Limits {
@@ -62,7 +62,7 @@ const GATE: Limits = Limits {
     populated_marker_reopen: Duration::from_millis(2500),
 };
 
-/// Stress check: ten parallel copies. Worst R820 cases were fresh 37.8 s and
+/// Stress check: ten parallel copies. Worst build-host cases were fresh 37.8 s and
 /// reopen 24.1 s.
 const STRESS: Limits = Limits {
     label: "stress",
@@ -602,7 +602,7 @@ fn shard_open_stress_child() {
 /// stress limits.
 // spec: MEDULLA-DURABLE-KERNEL-R006.2
 #[test]
-#[ignore = "stress check, not the regression gate: ten parallel copies, about 1 h on R820; run with --ignored"]
+#[ignore = "stress check, not the regression gate: ten parallel copies, about 1 h on the build host; run with --ignored"]
 fn shard_open_stress_ten_parallel_copies() {
     let exe = std::env::current_exe().unwrap();
     let logs = tempfile::tempdir().unwrap();

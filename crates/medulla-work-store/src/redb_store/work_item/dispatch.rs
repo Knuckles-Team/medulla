@@ -33,7 +33,7 @@ pub struct WorkItemApplyRequest<'args, 'table, 'crypto> {
     pub command_sequences: &'args mut NativeSequenceRows<'table>,
     pub committed_at_ms: u64,
     pub crypto: DurableCrypto<'crypto>,
-    /// The R820.1 effect tables, keyed `(graph, work_item_id, attempt)`.
+    /// The MEDULLA-DURABLE-KERNEL-R820.1 effect tables, keyed `(graph, work_item_id, attempt)`.
     pub effect_receipts: &'args mut super::effect::EffectTable<'table>,
     pub admitted_requests: &'args mut super::effect::EffectTable<'table>,
 }

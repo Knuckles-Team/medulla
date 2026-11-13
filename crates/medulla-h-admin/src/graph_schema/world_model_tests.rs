@@ -111,7 +111,7 @@ fn world_model_modules_are_core_modules_within_the_catalog_bound() {
 /// EH-355 budgets with the world model in the corpus: the restore-path terminology
 /// check stays consistent and the full-ABox entry check is decided within the step
 /// budget the pre-world-model corpus needed. Timings are printed for the WRAPUP
-/// (medulla-reasoning measured 2.6 s terminology, 2.7 s full ABox on R820).
+/// (medulla-reasoning measured 2.6 s terminology, 2.7 s full ABox on the build host).
 // spec: MEDULLA-FEDERATED-QUERY-R001
 // spec: MEDULLA-FEDERATED-QUERY-R010
 #[test]

@@ -17,10 +17,10 @@ use medulla_work_types::work_item_read::{
     WORK_ITEM_EFFECT_PHASE, WORK_ITEM_ROW_REVISION,
 };
 
-/// The one receipt per `(graph, work_item_id, attempt)` (R820.1).
+/// The one receipt per `(graph, work_item_id, attempt)` (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const EFFECT_RECEIPTS: redb::TableDefinition<(&str, &str, u64), &[u8]> =
     redb::TableDefinition::new("work_item_effect_receipts");
-/// The admitted request record per `(graph, work_item_id, attempt)` (R820.1).
+/// The admitted request record per `(graph, work_item_id, attempt)` (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const ADMITTED_REQUESTS: redb::TableDefinition<(&str, &str, u64), &[u8]> =
     redb::TableDefinition::new("work_item_admitted_requests");
 

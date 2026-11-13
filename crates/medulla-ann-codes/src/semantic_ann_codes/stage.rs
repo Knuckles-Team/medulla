@@ -304,7 +304,7 @@ impl SemanticCodeStore {
         // EH-315: this used to be one `ensure` over three ANDed conditions
         // (`lease_epoch != 0 && attempt != 0 && lease_until_ms > now_ms`) with
         // one message ("...is absent, unissued, or expired") that could not
-        // say which had actually fired. A real R820 failure (`lease_epoch: 1,
+        // say which had actually fired. A real build-host failure (`lease_epoch: 1,
         // attempt: 0, lease_until_ms: 5004` at `now_ms: 3`) needed manual
         // arithmetic against the Debug-printed lease to work out that only
         // the middle condition (`attempt != 0`) was false — exactly the class

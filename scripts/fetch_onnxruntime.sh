@@ -9,7 +9,7 @@
 # (api-24). An older library such as Debian's `libonnxruntime1.23` cannot
 # serve that API version. The archive is checked against a pinned sha256
 # before use. The official Microsoft release was measured running these
-# tests on a host without AVX2 (Westmere-class R820).
+# tests on a host without AVX2 (Westmere-class build host).
 #
 # Optional argument: cache directory (default: $XDG_CACHE_HOME/medulla-onnxruntime).
 set -euo pipefail

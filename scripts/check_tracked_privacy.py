@@ -425,7 +425,7 @@ _CREDENTIAL_PLACEHOLDER_TOKENS = frozenset(
 )
 _HOST_IDENTITY_RE = re.compile(r"(?i)\bssh://(?!\$\{)[^\s/@]+@")
 # D-MEDULLA-PRIVACY-R001-FALSEPOS (2026-10-09): this pattern's job is a bare host
-# alias (`r710`, `r820`, `host123`), but with no lookbehind on `-` it ALSO
+# alias (a short rack-server alias, `host123`), but with no lookbehind on `-` it ALSO
 # matched the tail of this fleet's own hyphen-joined requirement-ID
 # convention (`MEDULLA-UNIFIED-DATA-PLANE-R001`, `MEDULLA-DECISION-ENGINE-R118`,
 # `MERISTEM-SEMANTIC-R004`, ...) whenever the "R" + 3-or-more-digit requirement

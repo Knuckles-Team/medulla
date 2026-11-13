@@ -38,7 +38,7 @@ const SHAPE: AssemblyShape = AssemblyShape {
 /// Verified host-portable and dependency-stable before this change, ruling out both
 /// other candidate explanations: `cargo test -p medulla-compute --all-features --test
 /// solve determinism::the_certificate_digest_matches_the_committed_golden_vector` on
-/// both R820 and R710 computed the identical new value below (rules out
+/// two different build hosts computed the identical new value below (rules out
 /// nondeterminism — the solve path and generator use no maps, floats, clock or
 /// threads); `Cargo.lock`'s package set is byte-identical across
 /// `4b11f6289..be0f1acb0` and between FX-SOLVER's own branch tip `64d870556` and

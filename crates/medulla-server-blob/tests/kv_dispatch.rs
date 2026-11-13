@@ -407,7 +407,7 @@ async fn kv_served_hot_path_meets_latency_budgets() {
     );
     // Budgets (MEDULLA-DURABLE-KERNEL-R102.5), including envelope verification and the
     // durable commit. A hosted runner's fsync tail reached 111 ms at p99 (p50 2 ms),
-    // so the KvPut p99 bound covers that disk class rather than R820's 7 ms.
+    // so the KvPut p99 bound covers that disk class rather than the build host's 7 ms.
     assert!(
         get_p50 < std::time::Duration::from_millis(5),
         "KvGet p50 {get_p50:?}"

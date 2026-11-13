@@ -561,7 +561,7 @@ def _check_mutation_applier_inventory(
         "CasWorkItemMetadata",
         "PublishCurrentPlan",
         "PublishRunCheckpoint",
-        # MEDULLA-DURABLE-KERNEL-R820.3/R820.4: uncertain-effect writes commit in
+        # MEDULLA-DURABLE-KERNEL-R820.3 and MEDULLA-DURABLE-KERNEL-R820.4: uncertain-effect writes commit in
         # the same WorkItem kernel as the lease transitions they guard.
         "MarkWorkItemEffectStarted",
         "RecordEffectReceipt",
