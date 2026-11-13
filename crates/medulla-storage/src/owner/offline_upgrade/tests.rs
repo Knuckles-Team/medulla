@@ -246,3 +246,70 @@ fn graph_shard_upgrade_creates_empty_decision_certificate_table() {
     assert!(inspected.apply().is_err());
     assert!(ordinary_open(&changed, predecessor.layout).is_err());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
+#[test]
+fn agent_library_upgrade_creates_empty_retry_allowance_table() {
+    use crate::owner::domain::AgentLibraryOwner;
+    use crate::owner::registry::{AGENT_LIBRARY_REVISIONS, DECISION_RETRY_ALLOWANCES};
+    use redb::{ReadableDatabase, ReadableTableMetadata};
+
+    let upgrade = registered_offline_upgrade(&AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES)
+        .expect("the retry-allowance generation has a registered upgrade");
+    let directory = private_local_tempdir();
+    let path = directory.path().join("agent_library.redb");
+    create_predecessor_owner_file(&path, identity(), &AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES)
+        .unwrap();
+    {
+        let database = redb::Database::open(&path).unwrap();
+        let write = database.begin_write().unwrap();
+        write
+            .open_table(AGENT_LIBRARY_REVISIONS)
+            .unwrap()
+            .insert(("tenant-a", "agent-a", 1), &b"kept revision"[..])
+            .unwrap();
+        write.commit().unwrap();
+    }
+    // An ordinary open refuses the predecessor by its named code.
+    let refusal = StorageKernel::open_owner::<AgentLibraryOwner>(&path, identity(), None)
+        .err()
+        .expect("a predecessor must not open");
+    assert!(
+        refusal.starts_with("AGENT_LIBRARY_FORMAT_UPGRADE_REQUIRED"),
+        "{refusal}"
+    );
+    let report = upgrade
+        .inspect(&path, identity(), None, options(&path))
+        .unwrap()
+        .apply()
+        .unwrap();
+    assert_eq!(
+        report.current_layout_digest,
+        OwnerLayout::AgentLibrary.digest()
+    );
+    assert_eq!(
+        report.previous_layout_digest,
+        crate::owner::lineage::AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST
+    );
+    let database = redb::Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(
+        read.open_table(DECISION_RETRY_ALLOWANCES)
+            .unwrap()
+            .len()
+            .unwrap(),
+        0
+    );
+    let kept = read
+        .open_table(AGENT_LIBRARY_REVISIONS)
+        .unwrap()
+        .get(("tenant-a", "agent-a", 1))
+        .unwrap()
+        .unwrap()
+        .value()
+        .to_vec();
+    assert_eq!(kept, b"kept revision");
+    drop(read);
+    drop(database);
+    StorageKernel::open_owner::<AgentLibraryOwner>(&path, identity(), None).unwrap();
+}

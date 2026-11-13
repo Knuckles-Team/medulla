@@ -634,3 +634,157 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
         )
         .expect("the fence holder commits");
 }
+
+use super::retry_allowance::{
+    denial_allowance_transition, DenialAllowanceEvent, DenialAllowanceRequest,
+    DenialAllowanceState, RetryAllowanceError,
+};
+fn allowance_context(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    key: &str,
+    nonce: u8,
+    action: &str,
+) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    mutation_context(
+        store,
+        tenant,
+        key,
+        nonce,
+        0,
+        &format!("decision-retry-allowance:{action}"),
+    )
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
+#[test]
+fn retry_allowance_table_issues_once_and_consumes_once() {
+    let (dir, store) = open_agent_store();
+    let denied = "decision:denied-a";
+    assert_eq!(store.denial_allowance_state(TENANT, denied), Ok(None));
+
+    // Issue writes `Issued` once and is idempotent for the same key.
+    let issued = store
+        .issue_denial_allowance(
+            &allowance_context(&store, TENANT, "issue-1", 1, "issue"),
+            denied,
+        )
+        .expect("issues");
+    assert_eq!(issued.state, DenialAllowanceState::Issued);
+    let again = store
+        .issue_denial_allowance(
+            &allowance_context(&store, TENANT, "issue-2", 2, "issue"),
+            denied,
+        )
+        .expect("a second issue is idempotent");
+    assert_eq!(again.state, DenialAllowanceState::Issued);
+    assert_eq!(
+        store.denial_allowance_state(TENANT, denied),
+        Ok(Some(DenialAllowanceState::Issued))
+    );
+
+    // Another tenant finds nothing, and cannot take this tenant's row.
+    assert_eq!(store.denial_allowance_state("tenant-b", denied), Ok(None));
+    assert_eq!(
+        store.take_denial_allowance(
+            &allowance_context(&store, "tenant-b", "take-other", 3, "take"),
+            denied
+        ),
+        Err(RetryAllowanceError::NotIssued)
+    );
+    // A key that was never issued is the same not-found refusal.
+    assert_eq!(
+        store.take_denial_allowance(
+            &allowance_context(&store, TENANT, "take-unknown", 4, "take"),
+            "decision:never-denied"
+        ),
+        Err(RetryAllowanceError::NotIssued)
+    );
+
+    // The first take consumes; the second is refused.
+    store
+        .take_denial_allowance(
+            &allowance_context(&store, TENANT, "take-1", 5, "take"),
+            denied,
+        )
+        .expect("the first take consumes the allowance");
+    assert_eq!(
+        store.take_denial_allowance(
+            &allowance_context(&store, TENANT, "take-2", 6, "take"),
+            denied
+        ),
+        Err(RetryAllowanceError::Exhausted)
+    );
+    // A consumed allowance is never issued again.
+    assert_eq!(
+        store
+            .issue_denial_allowance(
+                &allowance_context(&store, TENANT, "issue-3", 7, "issue"),
+                denied,
+            )
+            .unwrap_err(),
+        RetryAllowanceError::Exhausted
+    );
+
+    // A reopen keeps the tombstone: the allowance is never restored.
+    drop(store);
+    let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).expect("reopens");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, denied),
+        Ok(Some(DenialAllowanceState::Consumed))
+    );
+    assert_eq!(
+        store.take_denial_allowance(
+            &allowance_context(&store, TENANT, "take-3", 8, "take"),
+            denied
+        ),
+        Err(RetryAllowanceError::Exhausted)
+    );
+    assert_eq!(store.denial_allowance_state("tenant-b", denied), Ok(None));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
+#[test]
+fn the_allowance_machine_has_one_transition_function_over_every_state_and_event() {
+    use DenialAllowanceRequest::{Issue, Take};
+    use DenialAllowanceState::{Consumed, Issued};
+    assert_eq!(denial_allowance_transition(None, Issue), Ok(Issued));
+    assert_eq!(denial_allowance_transition(Some(Issued), Issue), Ok(Issued));
+    assert_eq!(
+        denial_allowance_transition(Some(Issued), Take),
+        Ok(Consumed)
+    );
+    assert_eq!(
+        denial_allowance_transition(None, Take),
+        Err(RetryAllowanceError::NotIssued)
+    );
+    assert_eq!(
+        denial_allowance_transition(Some(Consumed), Issue),
+        Err(RetryAllowanceError::Exhausted)
+    );
+    assert_eq!(
+        denial_allowance_transition(Some(Consumed), Take),
+        Err(RetryAllowanceError::Exhausted)
+    );
+    // The machine edge itself is typed: the tombstone accepts no event.
+    let refused = DenialAllowanceState::Consumed
+        .apply(DenialAllowanceEvent::Take)
+        .unwrap_err();
+    assert_eq!(refused.machine, "DenialAllowanceMachine");
+    assert_eq!(refused.from, "consumed");
+    assert_eq!(refused.event, "Take");
+    assert_eq!(
+        DenialAllowanceState::Issued.apply(DenialAllowanceEvent::Take),
+        Ok(DenialAllowanceState::Consumed)
+    );
+    // The typed refusals carry stable codes; a storage failure has none.
+    assert_eq!(
+        RetryAllowanceError::Exhausted.code(),
+        Some("RETRY_ALLOWANCE_EXHAUSTED")
+    );
+    assert_eq!(
+        RetryAllowanceError::NotIssued.code(),
+        Some("RETRY_ALLOWANCE_NOT_ISSUED")
+    );
+    assert_eq!(RetryAllowanceError::Storage("x".into()).code(), None);
+}

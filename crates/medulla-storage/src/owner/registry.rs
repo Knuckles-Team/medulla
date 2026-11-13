@@ -386,6 +386,12 @@ pub const WRITE_BACK_RECEIPTS: TableDefinition<'static, (&str, &str, u64), &[u8]
 /// Next append position for one change set's receipt stream.
 pub const WRITE_BACK_RECEIPT_HEADS: TableDefinition<'static, (&str, &str), u64> =
     TableDefinition::new("write_back_receipt_heads");
+/// MEDULLA-DECISION-ENGINE-R113.3.1.1: one retry allowance per tenant and
+/// denied decision, keyed `(tenant, denied_decision_id)`. The value is the
+/// typed `RetryAllowance` state (`issued`, then `consumed`). A `consumed` row
+/// is the tombstone: it is retained forever and never deleted or reset.
+pub const DECISION_RETRY_ALLOWANCES: TableDefinition<'static, (&str, &str), &[u8]> =
+    TableDefinition::new("decision_retry_allowance");
 
 macro_rules! visit_owner_tables {
     ($layout:expr, $visit:ident) => {{
@@ -518,6 +524,7 @@ macro_rules! visit_owner_tables {
                 $visit!(WRITE_BACK_RECEIPTS);
                 $visit!(WRITE_BACK_RECEIPT_HEADS);
                 $visit!(CAPABILITY_REWARD);
+                $visit!(DECISION_RETRY_ALLOWANCES);
             }
             OwnerLayout::BranchRegistry => $visit!(crate::owner::branch_registry::BRANCH_REGISTRY),
             OwnerLayout::RetrievalState => $visit!(crate::owner::retrieval_state::DOC_STATE),
@@ -945,6 +952,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "write_back_receipts",
             "write_back_receipt_heads",
             "capability_reward",
+            "decision_retry_allowance",
         ],
         OwnerLayout::BranchRegistry => &["branch_registry"],
         OwnerLayout::RetrievalState => &["doc_state"],

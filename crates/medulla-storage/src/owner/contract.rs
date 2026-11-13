@@ -230,6 +230,7 @@ fn connector_owner_key_type(name: &str) -> Option<&'static str> {
         | "concept_ids"
         | "decision_artifacts"
         | "decision_records"
+        | "decision_retry_allowance"
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipt_heads"
@@ -384,6 +385,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "decision_artifacts"
         | "capability_reward"
         | "decision_records"
+        | "decision_retry_allowance"
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipts"
@@ -463,7 +465,7 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipts" => "msgpack-v1",
-        "decision_records" | "capability_reward" => "json-utf8-v1",
+        "decision_records" | "capability_reward" | "decision_retry_allowance" => "json-utf8-v1",
         "rbac" | "rbac_profile_use_grant" => "json-utf8-v1",
         "kv" | "cas_chunks" => "raw-bytes-v1",
         "series_chunks" => "packed-timeseries-chunk-v1",
@@ -707,6 +709,7 @@ fn connector_capabilities(name: &str) -> Option<u16> {
         | "concept_lineage_edges"
         | "write_back_receipt_heads"
         | "capability_reward"
+        | "decision_retry_allowance"
         | "decision_artifacts" => CAP_READ | CAP_INSERT | CAP_UPDATE,
         "connector_pack_bindings" => CAP_READ | CAP_INSERT | CAP_UPDATE | CAP_DELETE,
         _ => return None,

@@ -2,8 +2,8 @@
 //! SemanticIndex layout.
 
 use super::{
-    successor, validate_census, validate_descriptor, validate_predecessor, GraphShardSource,
-    UpgradeTarget, ValidatedOwnerLayoutUpgrade,
+    successor, validate_census, validate_descriptor, validate_predecessor, AgentLibrarySource,
+    GraphShardSource, UpgradeTarget, ValidatedOwnerLayoutUpgrade,
 };
 use crate::owner::graph_shard::{
     ADMITTED_REQUESTS, AUDIT_REQUESTS, CURRENT_PLANS, EFFECT_RECEIPTS,
@@ -13,7 +13,7 @@ use crate::owner::graph_shard::{
 };
 use crate::owner::registry::{
     predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
-    MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
+    DECISION_RETRY_ALLOWANCES, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
     SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS,
     SEMANTIC_STAGE_RECEIPTS,
 };
@@ -67,21 +67,7 @@ pub(super) fn commit_upgrade(
 
 fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Result<(), String> {
     match target {
-        UpgradeTarget::AgentLibrary => {
-            write
-                .open_table(MCP_CATALOG_CONFIGS)
-                .map_err(|error| error.to_string())?;
-            write
-                .open_table(MCP_CATALOG_SCOPES)
-                .map_err(|error| error.to_string())?;
-            open_concept_lineage_tables(write)?;
-            open_capability_reward_table(write)?;
-        }
-        UpgradeTarget::AgentLibraryConceptLineage => {
-            open_concept_lineage_tables(write)?;
-            open_capability_reward_table(write)?;
-        }
-        UpgradeTarget::AgentLibraryReward => open_capability_reward_table(write)?,
+        UpgradeTarget::AgentLibrary(source) => open_agent_library_tables(write, source)?,
         UpgradeTarget::GraphShard(source) => open_graph_shard_tables(write, source)?,
         UpgradeTarget::SemanticIndex => open_promotion_tables(write)?,
         UpgradeTarget::Rbac => {
@@ -108,6 +94,37 @@ fn open_concept_lineage_tables(write: &WriteTransaction) -> Result<(), String> {
         .map_err(|error| error.to_string())?;
     write
         .open_table(CONCEPT_LINEAGE_EDGES)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+/// Create, empty, every table the current Agent Library has that `source`
+/// lacked. Every upgrade ends at the current layout, so the retry-allowance
+/// table is created for all of them; each earlier table only for the
+/// generations that predate it.
+fn open_agent_library_tables(
+    write: &WriteTransaction,
+    source: AgentLibrarySource,
+) -> Result<(), String> {
+    if source == AgentLibrarySource::BeforeMcpCatalog {
+        write
+            .open_table(MCP_CATALOG_CONFIGS)
+            .map_err(|error| error.to_string())?;
+        write
+            .open_table(MCP_CATALOG_SCOPES)
+            .map_err(|error| error.to_string())?;
+    }
+    if matches!(
+        source,
+        AgentLibrarySource::BeforeMcpCatalog | AgentLibrarySource::BeforeConceptLineage
+    ) {
+        open_concept_lineage_tables(write)?;
+    }
+    if source != AgentLibrarySource::BeforeRetryAllowances {
+        open_capability_reward_table(write)?;
+    }
+    write
+        .open_table(DECISION_RETRY_ALLOWANCES)
         .map(|_| ())
         .map_err(|error| error.to_string())
 }

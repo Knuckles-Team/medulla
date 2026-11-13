@@ -10,9 +10,9 @@ use super::identity::PhysicalStoreIdentity;
 use super::layout::{layout_digest_over, OwnerLayout};
 use super::lineage::{
     AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD, AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
-    AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
-    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS,
-    SEMANTIC_INDEX_BEFORE_PROMOTION,
+    AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
+    GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
 };
 use super::persisted_layout::LayoutPredecessor;
 use super::registry::predecessor_evidence;
@@ -41,16 +41,49 @@ mod commit;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum UpgradeTarget {
-    AgentLibrary,
-    /// The Agent Library before the known concept ids and lineage edges.
-    AgentLibraryConceptLineage,
-    /// The Agent Library before the learned capability reward rows.
-    AgentLibraryReward,
+    AgentLibrary(AgentLibrarySource),
     GraphShard(GraphShardSource),
     /// The semantic index before the promotion-gate records.
     SemanticIndex,
     /// The RBAC store before the profile-use grant records.
     Rbac,
+}
+
+/// The Agent Library generation an offline upgrade starts from. Every one ends
+/// at the current layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentLibrarySource {
+    /// Before served MCP catalog authority rows.
+    BeforeMcpCatalog,
+    /// Before the known concept ids and concept lineage edges.
+    BeforeConceptLineage,
+    /// Before the learned capability reward rows.
+    BeforeCapabilityReward,
+    /// Before the durable retry-allowance table.
+    BeforeRetryAllowances,
+}
+
+impl AgentLibrarySource {
+    fn descriptor(self) -> (&'static LayoutPredecessor, [u8; 32]) {
+        match self {
+            Self::BeforeMcpCatalog => (
+                &AGENT_LIBRARY_BEFORE_MCP_CATALOG,
+                super::lineage::AGENT_LIBRARY_PRE_MCP_CATALOG_DIGEST,
+            ),
+            Self::BeforeConceptLineage => (
+                &AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
+                super::lineage::AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST,
+            ),
+            Self::BeforeCapabilityReward => (
+                &AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
+                super::lineage::AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST,
+            ),
+            Self::BeforeRetryAllowances => (
+                &AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
+                super::lineage::AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST,
+            ),
+        }
+    }
 }
 
 /// The graph-shard generation an offline upgrade starts from. Every one ends
@@ -113,9 +146,7 @@ impl GraphShardSource {
 impl UpgradeTarget {
     fn layout(self) -> OwnerLayout {
         match self {
-            Self::AgentLibrary | Self::AgentLibraryConceptLineage | Self::AgentLibraryReward => {
-                OwnerLayout::AgentLibrary
-            }
+            Self::AgentLibrary(_) => OwnerLayout::AgentLibrary,
             Self::GraphShard(_) => OwnerLayout::GraphShard,
             Self::SemanticIndex => OwnerLayout::SemanticIndex,
             Self::Rbac => OwnerLayout::Rbac,
@@ -124,9 +155,7 @@ impl UpgradeTarget {
 
     fn predecessor(self) -> &'static LayoutPredecessor {
         match self {
-            Self::AgentLibrary => &AGENT_LIBRARY_BEFORE_MCP_CATALOG,
-            Self::AgentLibraryConceptLineage => &AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
-            Self::AgentLibraryReward => &AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
+            Self::AgentLibrary(source) => source.descriptor().0,
             Self::GraphShard(source) => source.declared_generation(),
             Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
             Self::Rbac => &RBAC_BEFORE_PROFILE_GRANTS,
@@ -135,11 +164,7 @@ impl UpgradeTarget {
 
     fn pinned(self) -> [u8; 32] {
         match self {
-            Self::AgentLibrary => super::lineage::AGENT_LIBRARY_PRE_MCP_CATALOG_DIGEST,
-            Self::AgentLibraryConceptLineage => {
-                super::lineage::AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST
-            }
-            Self::AgentLibraryReward => super::lineage::AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST,
+            Self::AgentLibrary(source) => source.descriptor().1,
             Self::GraphShard(source) => source.frozen_digest(),
             Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
             Self::Rbac => super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
@@ -179,7 +204,7 @@ pub fn inspect_agent_library_concept_lineage_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibraryConceptLineage,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeConceptLineage),
     )
 }
 
@@ -196,7 +221,7 @@ pub fn inspect_agent_library_capability_reward_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibraryReward,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeCapabilityReward),
     )
 }
 
@@ -211,7 +236,24 @@ pub fn inspect_agent_library_mcp_catalog_upgrade(
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::AgentLibrary,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeMcpCatalog),
+    )
+}
+
+/// Inspect an Agent Library owner file from before the durable retry-allowance
+/// table (MEDULLA-DECISION-ENGINE-R113.3.1.1).
+pub fn inspect_agent_library_retry_allowance_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: AgentLibraryInspectionOptions,
+) -> Result<ValidatedAgentLibraryUpgrade, String> {
+    inspect_layout_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeRetryAllowances),
     )
 }
 
@@ -310,7 +352,22 @@ fn inspect_layout_upgrade(
 pub fn upgrade_agent_library_mcp_catalog(
     token: ValidatedAgentLibraryUpgrade,
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
-    upgrade_layout(token, UpgradeTarget::AgentLibrary)
+    upgrade_layout(
+        token,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeMcpCatalog),
+    )
+}
+
+/// Bring an inspected Agent Library file from before the retry-allowance table
+/// to the current layout in one durable commit: every existing row is kept and
+/// the `decision_retry_allowance` table is created empty.
+pub fn upgrade_agent_library_retry_allowances(
+    token: ValidatedAgentLibraryUpgrade,
+) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
+    upgrade_layout(
+        token,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeRetryAllowances),
+    )
 }
 
 /// Bring an inspected Agent Library file to the current layout in one durable
@@ -318,7 +375,10 @@ pub fn upgrade_agent_library_mcp_catalog(
 pub fn upgrade_agent_library_capability_reward(
     token: ValidatedAgentLibraryUpgrade,
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
-    upgrade_layout(token, UpgradeTarget::AgentLibraryReward)
+    upgrade_layout(
+        token,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeCapabilityReward),
+    )
 }
 
 /// Bring an inspected Agent Library to the current layout in one durable
@@ -327,7 +387,10 @@ pub fn upgrade_agent_library_capability_reward(
 pub fn upgrade_agent_library_concept_lineage(
     token: ValidatedAgentLibraryUpgrade,
 ) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
-    upgrade_layout(token, UpgradeTarget::AgentLibraryConceptLineage)
+    upgrade_layout(
+        token,
+        UpgradeTarget::AgentLibrary(AgentLibrarySource::BeforeConceptLineage),
+    )
 }
 
 /// Bring an inspected graph shard to the current layout in one durable
@@ -400,9 +463,7 @@ fn upgrade_layout(
     drop(opened_file);
     let options = StoreOpenOptions::default().with_cache_bytes(UPGRADE_CACHE_BYTES)?;
     let kernel = match target {
-        UpgradeTarget::AgentLibrary
-        | UpgradeTarget::AgentLibraryConceptLineage
-        | UpgradeTarget::AgentLibraryReward => StorageKernel::open_owner_with::<AgentLibraryOwner>(
+        UpgradeTarget::AgentLibrary(_) => StorageKernel::open_owner_with::<AgentLibraryOwner>(
             &token.source.path,
             current.physical_identity,
             token.source.private_integrity,

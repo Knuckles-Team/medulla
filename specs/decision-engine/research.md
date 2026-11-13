@@ -1110,3 +1110,8 @@ The question names the graph holding the content (`graph` param) and the content
 - **Policy knobs.** The three weights and `accept_min` are decision-policy knobs (`knob_families/schema_mapping.rs`, `DecimalMicros`), read from the policy the request resolves and held to range; the score is integer Q32 arithmetic.
 - **One premise path.** The family's own premise (`mapping:<column>=<property>`, at the rule's class) travels as a `FamilyPremise` in `Executed.family_premises`, which the family's `premises` hook seals beside the generic premises; any later family that needs a conclusion-derived premise reuses it.
 - **One kernel (DE-R033.2.1-ONE-KERNEL).** The family calls the kernel already on the train (`schema_mapping::rank`); this branch adds no second scorer and only the `schema_mapping.accept_min` knob beside the existing weights.
+## Denial allowance table: machine, layout step and write path (R113.3.1.1)
+
+- The allowance lifecycle is `DenialAllowanceMachine` on the core machine contract: `Issued` is the initial state a denial creates, `Consumed` is terminal, and the one edge is `Take`. `Issue` creates the initial state (idempotent while `Issued`) and a consumed allowance refuses it, because a tombstone is never reset.
+- The new table changes the Agent Library layout, so it ships as a declared predecessor generation (`AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES`, frozen digest, recorded fixture) with an offline upgrade that creates the table empty. The earlier MCP catalog generation upgrades straight to the current layout, so it also creates this table.
+- Writes are admitted Agent Library pack writes carrying the verified mutation context, so each is replay-checked and ledgered; the tenant is the context's tenant.

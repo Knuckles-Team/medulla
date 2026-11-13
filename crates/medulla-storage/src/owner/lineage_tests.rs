@@ -442,3 +442,63 @@ fn agent_library_before_concept_lineage_matches_the_previous_pin() {
         AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
+#[test]
+fn agent_library_before_retry_allowances_is_a_frozen_predecessor() {
+    let predecessor = &AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES;
+    let contracts: Vec<_> =
+        crate::owner::contract::expected_table_contracts(OwnerLayout::AgentLibrary)
+            .into_iter()
+            .filter(|contract| {
+                contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                    || predecessor
+                        .owner_tables
+                        .contains(&contract.table_id.as_str())
+            })
+            .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::AgentLibrary, &contracts),
+        AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST
+    );
+    assert_ne!(
+        AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST,
+        OwnerLayout::AgentLibrary.digest()
+    );
+    // The predecessor lacks exactly the new table and has every other one.
+    let current = owner_table_names(OwnerLayout::AgentLibrary);
+    assert!(current.contains(&"decision_retry_allowance"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"decision_retry_allowance"));
+    let mut expected: Vec<&str> = current
+        .iter()
+        .copied()
+        .filter(|table| *table != "decision_retry_allowance")
+        .collect();
+    expected.sort_unstable();
+    let mut declared: Vec<&str> = predecessor.owner_tables.to_vec();
+    declared.sort_unstable();
+    assert_eq!(declared, expected);
+    // It is declared last, recognised by name and never reported as an
+    // unknown format.
+    let declared_order = layout_predecessors(OwnerLayout::AgentLibrary);
+    assert_eq!(declared_order.last(), Some(predecessor));
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("agent_library.redb");
+    create_predecessor_owner_file(&path, identity(), predecessor).unwrap();
+    let error = crate::kernel::open_physical_with(
+        &path,
+        identity(),
+        None,
+        OwnerLayout::AgentLibrary,
+        crate::StoreOpenOptions::default(),
+    )
+    .err()
+    .expect("a predecessor file must not open");
+    assert!(
+        error.starts_with("AGENT_LIBRARY_FORMAT_UPGRADE_REQUIRED"),
+        "{error}"
+    );
+    assert!(error.contains(predecessor.label), "{error}");
+}

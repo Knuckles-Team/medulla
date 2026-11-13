@@ -163,6 +163,52 @@ pub const AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD: LayoutPredecessor = LayoutPred
     file_name: "agent_library.redb",
 };
 
+/// The Agent Library table set immediately before the durable retry-allowance
+/// table (MEDULLA-DECISION-ENGINE-R113.3.1.1).
+const AGENT_LIBRARY_TABLES_BEFORE_RETRY_ALLOWANCES: &[&str] = &[
+    "agent_library",
+    "agent_library_heads",
+    "agent_graph",
+    "agent_graph_heads",
+    "agent_component",
+    "agent_component_heads",
+    "agent_template",
+    "agent_template_heads",
+    "connector_pack_heads",
+    "connector_pack_members",
+    "connector_pack_imports",
+    "connector_pack_body_holders",
+    "connector_pack_bindings",
+    "mcp_catalog_configs",
+    "mcp_catalog_scopes",
+    "concept_ids",
+    "concept_lineage_edges",
+    "decision_artifacts",
+    "decision_records",
+    "write_back_change_sets",
+    "write_back_idempotency",
+    "write_back_receipts",
+    "write_back_receipt_heads",
+    "capability_reward",
+];
+
+/// The frozen layout digest of `agent_library.redb` before the durable
+/// retry-allowance table: the digest of the layout that has the concept tables
+/// and the capability reward table and no retry-allowance table.
+pub const AGENT_LIBRARY_PRE_RETRY_ALLOWANCES_DIGEST: [u8; 32] = [
+    0xab, 0x99, 0xeb, 0x3e, 0x0a, 0xc4, 0xdc, 0xa9, 0xcc, 0x78, 0x2d, 0xab, 0xc8, 0xea, 0x9c, 0x92,
+    0xf9, 0xf9, 0xe0, 0x43, 0x67, 0x8c, 0xf1, 0xa2, 0x5c, 0x8c, 0x8d, 0x34, 0xc6, 0x7c, 0x3f, 0x64,
+];
+
+/// `agent_library.redb` before the durable retry-allowance table.
+pub const AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::AgentLibrary,
+    label: "Agent Library before durable retry allowances",
+    owner_tables: AGENT_LIBRARY_TABLES_BEFORE_RETRY_ALLOWANCES,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "agent_library.redb",
+};
+
 /// `blob.redb` before holder rows, retention and the cursor high-water mark.
 pub const BLOB_BEFORE_HOLDERS: LayoutPredecessor = LayoutPredecessor {
     layout: OwnerLayout::Blob,
@@ -537,6 +583,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             AGENT_LIBRARY_BEFORE_MCP_CATALOG,
             AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
             AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
+            AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
         ],
         OwnerLayout::Blob => &[BLOB_BEFORE_HOLDERS],
         OwnerLayout::SemanticIndex => &[SEMANTIC_INDEX_BEFORE_PROMOTION],
@@ -643,7 +690,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "c613d48af8649e05a3a0737ce6aba8d4edd58c88c0ca244d05fc11dd9edc52a5"
         }
         OwnerLayout::AgentLibrary => {
-            "ab99eb3e0ac4dca9cc782dabc8ea9c92f9f9e043678cf1a25c8c8d34c67c3f64"
+            "2c6c76fd721bf9b0115dc2f2fc51245d6449027069238b63b66bb36d8bc8a569"
         }
         OwnerLayout::BranchRegistry => {
             "f8b3f0bc54cc11357787200c0091ebf8ccd7ae67af7fbea1930837e1d24019b4"

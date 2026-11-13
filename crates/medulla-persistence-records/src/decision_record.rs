@@ -396,6 +396,7 @@ fn snapshot_check(
 }
 
 pub mod shared_commit;
+pub mod retry_allowance;
 mod sources;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "decide"))]
