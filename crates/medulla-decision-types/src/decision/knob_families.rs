@@ -17,6 +17,7 @@ pub mod round_verdict;
 pub mod route;
 pub mod schema_mapping;
 pub mod task_plan;
+pub mod skill;
 pub mod topology;
 pub mod trajectory;
 pub mod verifier;
@@ -40,6 +41,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     round_verdict::KNOBS,
     route::KNOBS,
     schema_mapping::KNOBS,
+    skill::KNOBS,
     topology::KNOBS,
     trajectory::KNOBS,
     verifier::KNOBS,

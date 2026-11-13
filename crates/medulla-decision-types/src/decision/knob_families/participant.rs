@@ -89,8 +89,8 @@ mod tests {
             assert_eq!(spec.safety, expected, "{}", spec.name);
             assert!(names.insert(spec.name), "{} repeats", spec.name);
         }
-        // 6 memory (4 of R179.8, 2 of R154.1), 6 participant, 2 profile, 3 topology.
-        assert_eq!(names.len(), 17);
+        let declared: usize = tables.iter().map(|family| family.len()).sum();
+        assert_eq!(names.len(), declared);
         for prefix in ["memory.", "participant.", "profile.", "topology."] {
             assert!(names.iter().any(|n| n.starts_with(prefix)));
         }

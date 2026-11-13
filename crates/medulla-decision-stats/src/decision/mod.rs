@@ -72,6 +72,7 @@ pub mod route;
 pub mod run_credit;
 pub mod schema_mapping;
 pub mod scorer;
+pub mod skill_evolution;
 pub mod skill_plan;
 pub mod step_verify;
 mod targets;
