@@ -5,6 +5,8 @@
 pub mod context;
 pub mod criterion_review;
 pub mod fanout;
+pub mod context_search;
+pub mod grounded;
 pub mod indexless;
 pub mod memory;
 pub mod participant;
@@ -18,6 +20,8 @@ pub mod route;
 pub mod schema_mapping;
 pub mod skill;
 pub mod task_plan;
+pub mod ranking_eval;
+pub mod retention;
 pub mod topology;
 pub mod trajectory;
 pub mod verifier;
@@ -30,6 +34,8 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     criterion_review::KNOBS,
     fanout::KNOBS,
     indexless::KNOBS,
+    context_search::KNOBS,
+    grounded::KNOBS,
     memory::KNOBS,
     participant::KNOBS,
     placement::KNOBS,
@@ -43,6 +49,8 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     route::KNOBS,
     schema_mapping::KNOBS,
     skill::KNOBS,
+    ranking_eval::KNOBS,
+    retention::KNOBS,
     topology::KNOBS,
     trajectory::KNOBS,
     verifier::KNOBS,

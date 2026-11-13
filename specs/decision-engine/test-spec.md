@@ -1449,8 +1449,9 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R100.100.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/retrieval_eval_tests.rs::ranking_evaluation_is_sealed_and_readable`.
 - `MEDULLA-DECISION-ENGINE-R100.100.3`: planned L1 `crates/medulla-decision-stats/src/decision/context_search.rs::tests::offsets_slice_the_original_bytes_for_composed_and_decomposed_text`.
 - `MEDULLA-DECISION-ENGINE-R100.100.3`: planned L3 `tests/served_context_search.rs::context_search_is_authorized_and_bounded`.
-- `MEDULLA-DECISION-ENGINE-R100.100.4`: planned L3 `tests/served_context_search.rs::context_search_is_authorized_and_bounded`.
-- `MEDULLA-DECISION-ENGINE-R100.100.4`: planned L3 `tests/decide/test_context_search_served.py::test_context_search_round_trip`.
+- `MEDULLA-DECISION-ENGINE-R100.100.4`: L3 `tests/served_context_search.rs::context_search_is_authorized_and_bounded`.
+- `MEDULLA-DECISION-ENGINE-R100.100.4`: L3 `tests/served_context_search.rs::a_denied_document_answers_as_an_absent_one`.
+- `MEDULLA-DECISION-ENGINE-R100.100.4`: L4 `tests/decide/test_context_search_served.py::test_context_search_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R152.1`: planned L1 `crates/medulla-decision-types/src/context_facts.rs::tests::context_fact_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R152.1`: planned L3 `crates/medulla-h-graph/src/graph_ops/context_facts_tests.rs::served_context_facts_returns_cited_facts_within_budget`.
 - `MEDULLA-DECISION-ENGINE-R152.2`: planned L2 `crates/medulla-decision-types/src/context_facts.rs::tests::selection_is_deterministic_and_within_budget`.

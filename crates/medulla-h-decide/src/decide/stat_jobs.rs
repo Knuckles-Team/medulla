@@ -616,6 +616,20 @@ fn submit_job(
                 true,
                 started,
             ),
+            DecisionJobOutput::RankingEval { .. } => telemetry::stage_done(
+                telemetry::Stage::Learn,
+                "ranking_eval",
+                &identity.tenant_id,
+                true,
+                started,
+            ),
+            DecisionJobOutput::GroundedEval { .. } => telemetry::stage_done(
+                telemetry::Stage::Learn,
+                "grounded_eval",
+                &identity.tenant_id,
+                true,
+                started,
+            ),
             DecisionJobOutput::Fit { draft, .. } => {
                 telemetry::fitted(draft.n_training, draft.calibration.is_some(), started);
                 telemetry::stage_done(
@@ -707,6 +721,8 @@ async fn serve_eval(
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionEvalDelegationQuality,
+        result_contract::coordination::DecisionEvalGroundedAnswerSubmit,
+        result_contract::coordination::DecisionEvalRetrievalRankingSubmit,
         result_contract::coordination::DecisionEvalStatus,
         result_contract::coordination::DecisionEvalSubmit,
     };
@@ -772,6 +788,44 @@ async fn serve_eval(
             &request.tenant_id,
             &request.job_id,
         )?),
+        DecisionEvalOp::RetrievalRankingSubmit { request } => {
+            let id = identity(
+                DecisionJobKind::Eval,
+                &request.tenant_id,
+                &request.idempotency_key,
+                &request,
+                now_ms,
+            );
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || {
+                    submit_job(&store, &id, || {
+                        super::stat_ranking_eval::run(&store, &request)
+                    })
+                },
+            )
+            .await?;
+            ResultPayload::of::<DecisionEvalRetrievalRankingSubmit>(job)
+        }
+        DecisionEvalOp::GroundedAnswerSubmit { request } => {
+            let id = identity(
+                DecisionJobKind::Eval,
+                &request.tenant_id,
+                &request.idempotency_key,
+                &request,
+                now_ms,
+            );
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || {
+                    submit_job(&store, &id, || {
+                        super::stat_grounded_eval::run(&store, &request)
+                    })
+                },
+            )
+            .await?;
+            ResultPayload::of::<DecisionEvalGroundedAnswerSubmit>(job)
+        }
         DecisionEvalOp::Receipt { request } => serve_eval_receipt(&store, &request),
         DecisionEvalOp::Receipts { request } => serve_eval_receipts(&store, &request),
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),

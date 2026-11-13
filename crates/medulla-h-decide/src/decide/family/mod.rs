@@ -104,6 +104,7 @@ pub(in crate::decide) use support::advisory;
 pub(in crate::decide) use tool_action_admission::admission_view;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalProviderBinding;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
@@ -178,6 +179,16 @@ pub trait DecisionFamily {
         executed: Executed,
     ) -> Result<Executed, String> {
         Ok(executed)
+    }
+
+    /// Constraints stage: the provider binding the kind commits to, resolved
+    /// before any candidate is ranked (MEDULLA-DECISION-ENGINE-R029.1).
+    fn bind(
+        &self,
+        _ctx: &ExecutionContext,
+        _request: &DecideRequest,
+    ) -> Result<Option<RetrievalProviderBinding>, String> {
+        Ok(None)
     }
 
     /// Record stage: the kind's extra premises, derived from the request, from

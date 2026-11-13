@@ -1841,6 +1841,15 @@ class CalibrationWire(BaseModel):
     level: float
 
 
+class CandidatePool(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    context_digest: str
+    exploitation: list[str]
+    exploration: list[str]
+    matched_records: list[str]
+
+
 class CandidateSourceAgentLibrary(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -3932,6 +3941,7 @@ class DecisionLogCompacted(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     compacted: Annotated[int, Field(ge=0)]
+    expired: Annotated[int, Field(ge=0)] | None = None
     more: bool
     retired: Annotated[int, Field(ge=0)]
 
@@ -6095,6 +6105,7 @@ class ExplorationRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     budget_digest: str
+    pool: CandidatePool | None = None
     revealed_seed: str | None = None
     seed_commitment: str
 
@@ -22249,6 +22260,16 @@ class RetrievalPathTemplate(BaseModel):
     task_class: str
 
 
+class RetrievalProviderBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    config_digest: str
+    provider: ComponentDependency
+    reasoning_model: ComponentDependency | None = None
+    request_digest: str
+    tenant_id: str
+
+
 class RetrievalQualityMiningResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -25476,6 +25497,7 @@ class StatisticalDecisionRecord(BaseModel):
     record_digest: str
     record_id: str
     resolution_kind: ResolutionKind
+    retrieval_binding: RetrievalProviderBinding | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     synthetic_evidence: bool
     tenant_id: str

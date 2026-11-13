@@ -236,6 +236,37 @@ impl RiskReport {
     }
 }
 
+/// Version of the `SynthesizeSearchTask` request and result shapes.
+pub const SEARCH_TASK_SCHEMA_VERSION: u16 = 1;
+
+/// One served synthesis (MEDULLA-FEDERATED-QUERY-R702.3): the task is built
+/// around `answer_node` from the evidence the caller may read in `graph`.
+/// `tenant_id` must be the verified tenant of the call.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SynthesizeSearchTaskRequest {
+    pub schema_version: u16,
+    pub tenant_id: String,
+    pub graph: String,
+    pub answer_node: String,
+}
+
+/// An accepted task with the complete detector report and the thresholds it
+/// was judged against. The engine stores nothing: the caller turns accepted
+/// tasks into pinned query-set items.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SynthesizeSearchTaskResult {
+    pub task: SearchTask,
+    pub report: RiskReport,
+    pub thresholds: RiskThresholds,
+    pub rounds_used: u32,
+    /// Evidence nodes the caller could read and the task was built from.
+    pub evidence_nodes: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

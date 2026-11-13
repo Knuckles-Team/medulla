@@ -11,7 +11,7 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
 use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::decision::exploration::permit;
+use medulla_decision_stats::decision::exploration::{permit, ExplorationPermit};
 use medulla_decision_stats::{
     decision::features::feature_matrix, decision::features::FeatureInputs,
     decision::features::FeatureMatrix, decision::features::MatrixOutcome,
@@ -26,6 +26,7 @@ use medulla_decision_stats::{
 };
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::CandidatePool;
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::{
     decision::statistical::keyed::decision_seed, decision::statistical::keyed::exploration_key,
@@ -299,6 +300,9 @@ pub(super) struct MatrixInputs<'a> {
     pub(super) params: &'a [TypedParam],
     pub(super) now_ms: u64,
     pub(super) server_secret: &'a [u8],
+    /// The context-matched pool the record sealed; a non-empty exploitation
+    /// pool forces exploration off (MEDULLA-DECISION-ENGINE-R020.1.2).
+    pub(super) pool: Option<&'a CandidatePool>,
 }
 
 /// The decision function over a complete matrix: head reading, drift check,
@@ -309,7 +313,13 @@ pub(super) fn run_on_matrix(
     policy: &ResolvedPolicy,
     matrix: FeatureMatrix,
 ) -> Result<Executed, String> {
-    let exploration = permit(&policy.policy, inputs.question).map_err(|r| r.render())?;
+    let mut exploration = permit(&policy.policy, inputs.question).map_err(|r| r.render())?;
+    if inputs
+        .pool
+        .is_some_and(|pool| !pool.exploitation.is_empty())
+    {
+        exploration = ExplorationPermit::Off;
+    }
     let digest = state_digest(
         inputs.question,
         inputs.params,
@@ -367,6 +377,7 @@ pub(super) fn execute(
     pinned: &Pinned,
     policy: &ResolvedPolicy,
     views: &[CandidateView],
+    pool: Option<&CandidatePool>,
 ) -> Result<Executed, String> {
     permit(&policy.policy, &request.question).map_err(|r| r.render())?;
     let features = FeatureInputs {
@@ -399,6 +410,7 @@ pub(super) fn execute(
         params: request.params.as_slice(),
         now_ms: ctx.now_ms,
         server_secret: ctx.server_secret,
+        pool,
     };
     run_on_matrix(&inputs, pinned, policy, matrix)
 }

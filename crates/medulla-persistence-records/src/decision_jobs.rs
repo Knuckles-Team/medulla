@@ -3,7 +3,7 @@
 //! They live in the tenant-scoped Agent Library control owner, beside the
 //! components a receipt qualifies, so the `DecisionHead` publish check reads a
 //! receipt from the same authority that commits the head. One table with
-//! `job:`, `receipt:`, `receipt-threshold:`, `receipt-time:`, `draft:`, and
+//! `job:`, `receipt:`, `receipt-threshold:`, `receipt-time:`, `draft:`, `grounded-pin:`,
 //! `evaluation-run:`, and `replay-cursor:` key families, every row
 //! written once: a job runs to its terminal state inside its submit, so there
 //! is nothing to update. The `receipt-time:` family indexes only non-synthetic
@@ -57,6 +57,17 @@ pub fn replay_cursor_key(cursor: &str) -> String {
     format!("replay-cursor:{cursor}")
 }
 
+/// Key of the digest a grounded-evaluation input set pinned for one revision:
+/// `id` at `revision`. Written once with the first accepted evaluation that
+/// binds it (MEDULLA-DECISION-ENGINE-R100.101.3).
+pub fn grounded_pin_key(set_id: &str, revision: u32) -> String {
+    format!("{}{revision:010}", grounded_pin_prefix(set_id))
+}
+
+/// Prefix of every stored revision of the grounded input set `set_id`.
+pub fn grounded_pin_prefix(set_id: &str) -> String {
+    format!("grounded-pin:{set_id}:")
+}
 /// Key of a fit draft.
 pub fn draft_key(draft_sha256: &str) -> String {
     format!("draft:{draft_sha256}")
@@ -132,6 +143,50 @@ impl AgentLibraryStore {
                 .map_err(|error| error.to_string())?;
             Ok(())
         })
+    }
+
+    /// Remove every decision artifact of `tenant_id` whose key is one of
+    /// `keys` or starts with one of `prefixes`, in one owner transaction, and
+    /// return how many rows went. Retention expiry (MEDULLA-DECISION-ENGINE-
+    /// R066.4) is the only caller: an expired record leaves no joined row
+    /// behind.
+    pub fn remove_decision_artifacts(
+        &self,
+        tenant_id: &str,
+        keys: &[String],
+        prefixes: &[String],
+    ) -> Result<usize, String> {
+        let mut removed = 0;
+        self.maintain_control_rows(tenant_id, "decision_artifacts", |owner| {
+            let mut table = owner.open_table(DECISION_ARTIFACTS)?;
+            removed = 0;
+            let mut doomed: Vec<String> = Vec::new();
+            for prefix in prefixes {
+                for row in table
+                    .range((tenant_id, prefix.as_str())..)
+                    .map_err(|error| error.to_string())?
+                {
+                    let (key, _) = row.map_err(|error| error.to_string())?;
+                    let (row_tenant, row_key) = key.value();
+                    if row_tenant != tenant_id || !row_key.starts_with(prefix.as_str()) {
+                        break;
+                    }
+                    doomed.push(row_key.to_string());
+                }
+            }
+            doomed.extend(keys.iter().cloned());
+            for key in doomed {
+                if table
+                    .remove((tenant_id, key.as_str()))
+                    .map_err(|error| error.to_string())?
+                    .is_some()
+                {
+                    removed += 1;
+                }
+            }
+            Ok(())
+        })?;
+        Ok(removed)
     }
 
     /// Compare-and-set one decision artifact: write `bytes` only when the row

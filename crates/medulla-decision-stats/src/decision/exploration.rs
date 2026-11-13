@@ -19,6 +19,7 @@ use medulla_decision_types::{
 };
 
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use medulla_decision_types::decision::statistical::CandidatePool;
 
 use super::quant::exact_wire;
 
@@ -40,7 +41,7 @@ pub const KNOBS: &[KnobSpec] = &[
         unit: "records",
         default: KnobValue::Integer(256),
         min: KnobValue::Integer(1),
-        max: KnobValue::Integer(4096),
+        max: KnobValue::Integer(512),
         safety: KnobSafety::Tunable,
     },
 ];
@@ -78,6 +79,38 @@ pub fn permit(
         return Ok(ExplorationPermit::Off);
     }
     Ok(ExplorationPermit::Budget(budget.fraction))
+}
+
+/// Split the visible options by what earlier decisions in the same context
+/// executed (MEDULLA-DECISION-ENGINE-R020.1.2). `matched` pairs each matched
+/// record id with the option it executed. The exploitation pool holds every
+/// visible option executed in a matched record; the exploration pool holds the
+/// rest. Both are sorted by option id ascending, and an option executed in
+/// several records appears once. A matched record whose option is no longer
+/// visible joins no pool, but stays in `matched_records`.
+pub fn build_pool(
+    context_digest: &str,
+    visible: &[String],
+    matched: &[(String, String)],
+) -> CandidatePool {
+    let executed: std::collections::BTreeSet<&str> =
+        matched.iter().map(|(_, option)| option.as_str()).collect();
+    let mut ids: Vec<&String> = visible.iter().collect();
+    ids.sort();
+    ids.dedup();
+    let (exploitation, exploration): (Vec<&String>, Vec<&String>) = ids
+        .into_iter()
+        .partition(|id| executed.contains(id.as_str()));
+    let mut matched_records: Vec<String> =
+        matched.iter().map(|(record, _)| record.clone()).collect();
+    matched_records.sort();
+    matched_records.dedup();
+    CandidatePool {
+        context_digest: context_digest.to_string(),
+        exploitation: exploitation.into_iter().cloned().collect(),
+        exploration: exploration.into_iter().cloned().collect(),
+        matched_records,
+    }
 }
 
 /// What the randomised policy executed.

@@ -102,6 +102,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "DiffAgainst",
     "DiscountedReturn",
     "ContextCompile",
+    "RetrievalContextSearch",
+    "SynthesizeSearchTask",
     "RetrievalRound",
     "EncodedDocumentSearch",
     "ProjectionRead",

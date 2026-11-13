@@ -39,7 +39,7 @@ const PRINCIPAL_PREFIX: &str = "principal:sha256:";
 /// Longest role name a grant may name.
 const MAX_ROLE_BYTES: usize = 128;
 
-fn lease_key(record_id: &str) -> String {
+pub(super) fn lease_key(record_id: &str) -> String {
     format!("evaluator-lease:{record_id}")
 }
 

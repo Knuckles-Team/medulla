@@ -413,6 +413,21 @@ $($variants)*
         capability: Option<String>,
     },
 
+    /// MEDULLA-DECISION-ENGINE-R100.100.4: find the matches of a query's n-grams
+    /// in the stored text of the caller's `Document` nodes, each with its
+    /// context and half-open byte offsets into the original text. A read;
+    /// nothing is committed.
+    RetrievalContextSearch {
+        request: Box<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchRequest>,
+    },
+
+    /// MEDULLA-FEDERATED-QUERY-R702.3: synthesize one multi-hop search task around an
+    /// answer node from the evidence the caller may read, with its shortcut-risk
+    /// report. A read; nothing is committed.
+    SynthesizeSearchTask {
+        request: Box<medulla_work_types::search_task::SynthesizeSearchTaskRequest>,
+    },
+
     /// CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free lexical classification gate: which
     /// capability-node terms (Tool/Skill/MCPServer names+synonyms) appear in the
     /// query. The "free" tier between structural routing and `SemanticSearch`.

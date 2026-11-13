@@ -152,6 +152,11 @@ pub const MAX_COMPACT_PER_CALL: u32 = 256;
 pub struct DecisionLogCompacted {
     pub compacted: u32,
     pub retired: u32,
+    /// Graph-sourced entries deleted, with their joined evaluations, once
+    /// their retirement age reached `retention.graph_summary_expire_after`
+    /// (R066.4). Counted for the calling tenant only.
+    #[serde(default)]
+    pub expired: u32,
     /// True when the per-call bound stopped the pass; call again.
     pub more: bool,
 }

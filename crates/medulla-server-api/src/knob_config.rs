@@ -774,6 +774,14 @@ knobs! {
     scheduler_ann_storage_ceiling_bytes: u64 = "scheduler.ann_storage_ceiling_bytes", U64(2_147_483_648), [1_048_576, 1_099_511_627_776], "bytes", Tunable;
     /// Scheduler: hub-preserving pruning of compact ANN artifacts (MEDULLA-FEDERATED-QUERY-R040.5.5).
     scheduler_ann_hub_pruning: bool = "scheduler.ann_hub_pruning", Bool(false), [false, true], "switch", Tunable;
+    /// Fraction of clues one clue's evidence may decide alone before a served search task is refused (MEDULLA-FEDERATED-QUERY-R702.3).
+    search_task_single_clue_max: f64 = "search_task.single_clue_max", F64(0.5), [0.0, 1.0], "ratio", Tunable;
+    /// Fraction of evidence nodes that may be adjacent to two other clues' nodes before a served search task is refused (MEDULLA-FEDERATED-QUERY-R702.3).
+    search_task_co_coverage_max: f64 = "search_task.co_coverage_max", F64(0.5), [0.0, 1.0], "ratio", Tunable;
+    /// Hops from the answer node the served evidence subgraph reaches (MEDULLA-FEDERATED-QUERY-R702.3).
+    search_task_evidence_hops: u32 = "search_task.evidence_hops", U64(3), [1, 8], "hops", Tunable;
+    /// Evidence nodes one served synthesis reads; a larger neighbourhood is refused (MEDULLA-FEDERATED-QUERY-R702.3).
+    search_task_max_evidence_nodes: u64 = "search_task.max_evidence_nodes", U64(10_000), [10, 1_000_000], "nodes", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

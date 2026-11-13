@@ -7375,6 +7375,84 @@ class GraphOperationsClient:
             raise RuntimeError("SourceSync must answer with an object")
         return result
 
+    async def retrieval_context_search(
+        self,
+        *,
+        tenant_id: str,
+        query: str,
+        graph: str | None = None,
+        ngram_n: int = 0,
+        max_spans: int = 0,
+        cursor: str | None = None,
+        policy: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Search the stored text of the caller's ``Document`` nodes
+        (MEDULLA-DECISION-ENGINE-R100.100.4).
+
+        Returns ``{spans, query_revision, index_digest, authorization_revision,
+        next_cursor}``. Each span carries half-open byte offsets into the
+        original text, the text digest and the surrounding context. ``ngram_n``
+        and ``max_spans`` of 0 take the ``context_search.*`` knobs of the named
+        ``policy`` (default: the engine default policy). Pass ``next_cursor``
+        back as ``cursor`` for the next page. ``graph`` defaults to the client's
+        graph. The method writes nothing.
+        """
+        graph = graph or self._client._graph_name
+        request: dict[str, Any] = {
+            "schema_version": 1,
+            "tenant_id": tenant_id,
+            "graph": graph,
+            "query": query,
+            "ngram_n": ngram_n,
+            "max_spans": max_spans,
+            "cursor": cursor,
+        }
+        if policy is not None:
+            request["policy"] = policy
+        result = await self._client._send(
+            "RetrievalContextSearch", {"request": request}, graph, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("RetrievalContextSearch must answer with an object")
+        return result
+
+    async def synthesize_search_task(
+        self,
+        *,
+        tenant_id: str,
+        answer_node: str,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Synthesize one multi-hop search task around ``answer_node``
+        (MEDULLA-FEDERATED-QUERY-R702.3).
+
+        The engine reads the evidence the caller may read within the
+        ``search_task.evidence_hops`` neighbourhood of the answer node, builds a
+        clue chain and a templated question with no model call, runs the four
+        shortcut detectors and refines the task. Returns ``{task, report,
+        thresholds, rounds_used, evidence_nodes}``; a task over any threshold
+        is refused with ``SEARCH_TASK_SHORTCUT`` naming the detector. Nothing
+        is stored: the caller turns an accepted task into a pinned query-set
+        item for ``DecisionEval``. ``graph`` defaults to the client's graph.
+        """
+        graph = graph or self._client._graph_name
+        request: dict[str, Any] = {
+            "schema_version": 1,
+            "tenant_id": tenant_id,
+            "graph": graph,
+            "answer_node": answer_node,
+        }
+        result = await self._client._send(
+            "SynthesizeSearchTask", {"request": request}, graph, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("SynthesizeSearchTask must answer with an object")
+        return result
+
     async def write_back(
         self,
         op: dict[str, Any],

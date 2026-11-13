@@ -1,12 +1,13 @@
 //! Valid sample values for the statistical decision surface.
 
 use crate::decision::{
-    CalibrationMethod, CalibrationStatement, CandidateSource, DecideRequest, DecisionEvalOp,
-    DecisionEvalRequest, DecisionFitOp, DecisionFitRequest, DecisionJobStatusRequest,
-    DecisionPolicyRef, EvalCandidate, ExplorationRecord, FeatureMatrixRef, HeadKind, LabelRegime,
-    LibraryCandidateScope, OpeEstimatorKind, OptimiserSpec, QuantScaleTag, QuantisedValue,
-    QuestionKind, QuestionSafety, RecordWindow, RiskMethod, RiskStatement, ScoredOption,
-    ShortlistProvenance, StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
+    CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,
+    DecisionEvalOp, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
+    DecisionJobStatusRequest, DecisionPolicyRef, EvalCandidate, ExplorationRecord,
+    FeatureMatrixRef, HeadKind, LabelRegime, LibraryCandidateScope, OpeEstimatorKind,
+    OptimiserSpec, QuantScaleTag, QuantisedValue, QuestionKind, QuestionSafety, RecordWindow,
+    RiskMethod, RiskStatement, ScoredOption, ShortlistProvenance, StatisticalOutcome,
+    StatisticalQuestion, TypedParam, TypedValue,
 };
 use medulla_agent_types::agent_component::AgentComponentKind;
 
@@ -107,6 +108,12 @@ pub fn exploration() -> ExplorationRecord {
         seed_commitment: digest_text(0xa3),
         revealed_seed: Some(digest_text(0xa4)),
         budget_digest: digest_text(0xa5),
+        pool: Some(CandidatePool {
+            context_digest: digest_text(0xa6),
+            exploitation: vec!["option-a".to_string()],
+            exploration: vec!["option-b".to_string()],
+            matched_records: vec!["decision:a".to_string()],
+        }),
     }
 }
 
@@ -269,7 +276,127 @@ pub fn eval_ops() -> Vec<(&'static str, DecisionEvalOp)> {
                 },
             },
         ),
+        (
+            "DecisionEval.retrieval_ranking_submit",
+            DecisionEvalOp::RetrievalRankingSubmit {
+                request: Box::new(ranking_request()),
+            },
+        ),
+        (
+            "DecisionEval.grounded_answer_submit",
+            DecisionEvalOp::GroundedAnswerSubmit {
+                request: Box::new(grounded_request()),
+            },
+        ),
     ]
+}
+
+fn pinned_set(id: &str, byte: u8) -> crate::decision::statistical::ranking_eval::PinnedSet {
+    crate::decision::statistical::ranking_eval::PinnedSet {
+        id: id.to_string(),
+        revision: 1,
+        digest: digest_text(byte),
+    }
+}
+
+/// A two-algorithm ranking evaluation submission.
+fn ranking_request() -> crate::decision::statistical::ranking_eval::RetrievalRankingRequest {
+    use crate::decision::statistical::ranking_eval::{
+        AlgorithmRun, LabelPair, LabelSet, QueryRanking, QuerySet, RetrievalRankingRequest,
+        RANKING_EVAL_SCHEMA_VERSION,
+    };
+    let run = |id: &str| AlgorithmRun {
+        algorithm_id: id.to_string(),
+        version: "1".to_string(),
+        settings_digest: digest_text(0xc1),
+        corpus_digest: digest_text(0xc2),
+        input_digest: digest_text(0xc3),
+        rankings: vec![QueryRanking {
+            query_id: "q1".to_string(),
+            ranked_ids: vec!["d1".to_string()],
+        }],
+    };
+    RetrievalRankingRequest {
+        schema_version: RANKING_EVAL_SCHEMA_VERSION,
+        tenant_id: "tenant-a".to_string(),
+        idempotency_key: "ranking-1".to_string(),
+        corpus: pinned_set("corpus", 0xc2),
+        labels: LabelSet {
+            pinned: pinned_set("labels", 0xc4),
+            pairs: vec![LabelPair {
+                query_id: "q1".to_string(),
+                doc_id: "d1".to_string(),
+            }],
+        },
+        queries: QuerySet {
+            pinned: pinned_set("queries", 0xc5),
+            query_ids: vec!["q1".to_string()],
+        },
+        k: 10,
+        evaluator_revision: 1,
+        algorithms: vec![run("bm25"), run("dense")],
+    }
+}
+
+/// A grounded evaluation submission over one query, topic and claim.
+fn grounded_request() -> crate::decision::statistical::grounded_eval::GroundedAnswerRequest {
+    use crate::decision::statistical::grounded_eval::{
+        CitationSupport, ClaimSupport, ClaimVotes, ExpectedTopicSet, GroundedAnswerRequest,
+        GroundedClaimPrediction, GroundedScope, GroundedScorerRecord, TopicSupport,
+        GROUNDED_EVAL_SCHEMA_VERSION,
+    };
+    GroundedAnswerRequest {
+        schema_version: GROUNDED_EVAL_SCHEMA_VERSION,
+        tenant_id: "tenant-a".to_string(),
+        idempotency_key: "grounded-1".to_string(),
+        corpus: pinned_set("corpus", 0xd1),
+        queries: pinned_set("queries", 0xd2),
+        answers: pinned_set("answers", 0xd3),
+        claims: pinned_set("claims", 0xd4),
+        citations: pinned_set("citations", 0xd5),
+        labels: pinned_set("labels", 0xd6),
+        scope: GroundedScope::SingleDocument,
+        evaluator_revision: 1,
+        policy: DecisionPolicyRef::Default,
+        expected: vec![ExpectedTopicSet {
+            query_id: "q1".to_string(),
+            topic_ids: vec!["t1".to_string()],
+        }],
+        support: vec![TopicSupport {
+            query_id: "q1".to_string(),
+            topic_id: "t1".to_string(),
+            claims: vec![ClaimSupport {
+                claim_id: "c1".to_string(),
+                citations: vec![CitationSupport {
+                    citation_id: "s1".to_string(),
+                    supporting: 3,
+                    total: 3,
+                }],
+            }],
+        }],
+        claim_ids: vec!["c1".to_string()],
+        predictions: vec![GroundedClaimPrediction {
+            claim_id: "c1".to_string(),
+            answer_digest: digest_text(0xd7),
+            input_digest: digest_text(0xd8),
+            scorer_id: "detector".to_string(),
+            scorer_revision: 1,
+            scorer_artifact_digest: digest_text(0xd9),
+            p_ppm: 100_000,
+        }],
+        votes: vec![ClaimVotes {
+            claim_id: "c1".to_string(),
+            annotators: vec!["a1".to_string(), "a2".to_string(), "a3".to_string()],
+            unsupported_votes: 1,
+            supported_votes: 2,
+        }],
+        scorer: GroundedScorerRecord {
+            scorer_id: "detector".to_string(),
+            scorer_revision: 1,
+            scorer_artifact_digest: digest_text(0xd9),
+            inputs_read: vec![digest_text(0xda)],
+        },
+    }
 }
 
 /// A walk-forward replay submission over an inline gold set (EH-528).

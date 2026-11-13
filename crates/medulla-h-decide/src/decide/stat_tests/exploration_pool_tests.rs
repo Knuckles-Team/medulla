@@ -6,6 +6,7 @@ use super::super::stat_log::{context_digest_of, matched_trajectories, LogReader,
 use super::*;
 use medulla_decision_types::decision::statistical::log::{EntryInputs, RecordVisibility};
 use medulla_decision_types::decision::statistical::outcome::StatisticalOutcome;
+use medulla_decision_types::decision::statistical::CandidatePool;
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_persistence_records::decision_jobs::{encode_artifact, record_key};
 
@@ -28,11 +29,24 @@ fn write_history(
     context: &str,
     age_ms: u64,
 ) {
+    write_history_at(h, tenant, base, id, principal, context, NOW - age_ms);
+}
+
+/// Log `base` as an executed decision of `principal` created at `created_at_ms`.
+fn write_history_at(
+    h: &Harness,
+    tenant: &str,
+    base: &StatisticalDecisionRecord,
+    id: &str,
+    principal: &str,
+    context: &str,
+    created_at_ms: u64,
+) {
     let mut record = base.clone();
     record.record_id = format!("decision:{id}");
     record.tenant_id = tenant.to_string();
     record.caller_principal = principal.to_string();
-    record.created_at_ms = NOW - age_ms;
+    record.created_at_ms = created_at_ms;
     record.inputs.context_digest = Some(context.to_string());
     record.outcome = StatisticalOutcome::Explored {
         option_id: "tool-a".to_string(),
@@ -196,4 +210,138 @@ async fn only_same_principal_history_matches() {
     // either tenant-a principal's records.
     assert_eq!(ids(&stranger, 256), ["decision:strangers"]);
     assert_eq!(ids(&other_tenant, 256), ["decision:foreign"]);
+}
+
+fn pool_of(record: &StatisticalDecisionRecord) -> &CandidatePool {
+    record
+        .inputs
+        .exploration
+        .as_ref()
+        .expect("an exploring policy seals its draw")
+        .pool
+        .as_ref()
+        .expect("the draw seals the candidate pool")
+}
+
+fn matrix_ids(record: &StatisticalDecisionRecord) -> Vec<String> {
+    match &record.inputs.feature_matrix {
+        FeatureMatrixRef::Inline { candidate_ids, .. } => candidate_ids.as_slice().to_vec(),
+        other => panic!("expected an inline matrix, got {other:?}"),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R020.1.2
+#[tokio::test]
+async fn matched_context_exploits_and_unmatched_context_may_explore() {
+    let h = Harness::new().await;
+    for id in ["tool-a", "tool-b"] {
+        h.publish_test_component(
+            id,
+            AgentComponentKind::Tool,
+            "web search",
+            None::<&()>,
+            None,
+        )
+        .unwrap();
+    }
+    let schema_pin = h
+        .publish_test_component(
+            "schema",
+            AgentComponentKind::FeatureSchema,
+            "features",
+            Some(&schema()),
+            None,
+        )
+        .unwrap();
+    let policy_pin = h.publish_policy("policy-explore", &ordinary_exploration_policy());
+    let pinned = DecisionPolicyRef::Pinned {
+        component: policy_pin,
+    };
+    let asked = request(&schema_pin, None, pinned.clone(), QuestionSafety::Ordinary);
+    let digest = context_digest_of(&asked.question.question_id, asked.params.as_slice());
+
+    // No history: the exploitation pool is empty, the budget is unchanged and
+    // (fraction 1/1) the decision explores over every visible option.
+    let first = decide(&h, asked.clone()).await.unwrap();
+    let first = first.records.as_slice()[0].clone();
+    assert!(matches!(first.outcome, StatisticalOutcome::Explored { .. }));
+    let pool = pool_of(&first);
+    assert_eq!(pool.context_digest, digest);
+    assert!(pool.exploitation.is_empty() && pool.matched_records.is_empty());
+    assert_eq!(pool.exploration, ["tool-a", "tool-b"]);
+    assert_eq!(matrix_ids(&first), ["tool-a", "tool-b"]);
+    assert!(first
+        .premises
+        .iter()
+        .all(|p| !p.fact.starts_with("matched_record:")));
+
+    // A strange principal's history in the same context never gates it.
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    write_history_at(
+        &h,
+        TENANT,
+        &first,
+        "strangers",
+        "stranger",
+        &digest,
+        now - 1_000,
+    );
+    let still = decide(&h, asked.clone()).await.unwrap().records.as_slice()[0].clone();
+    assert!(matches!(still.outcome, StatisticalOutcome::Explored { .. }));
+    assert!(pool_of(&still).exploitation.is_empty());
+
+    // The caller's own executed record in the same context makes its option
+    // the exploitation pool: exploration is forced off and ranking is
+    // restricted to that pool.
+    let mine = reader("decider", TENANT);
+    write_history_at(
+        &h,
+        TENANT,
+        &first,
+        "mine",
+        &mine.principal,
+        &digest,
+        now - 1_000,
+    );
+    let matched = decide(&h, asked.clone()).await.unwrap().records.as_slice()[0].clone();
+    assert!(
+        !matches!(matched.outcome, StatisticalOutcome::Explored { .. }),
+        "a non-empty exploitation pool never explores: {:?}",
+        matched.outcome
+    );
+    let pool = pool_of(&matched);
+    assert_eq!(pool.exploitation, ["tool-a"]);
+    assert_eq!(pool.exploration, ["tool-b"]);
+    assert_eq!(pool.matched_records, ["decision:mine"]);
+    assert_eq!(matrix_ids(&matched), ["tool-a"]);
+    let premise = matched
+        .premises
+        .iter()
+        .find(|p| p.fact == "matched_record:decision:mine")
+        .expect("each match is a premise");
+    assert_eq!(premise.class, PremiseClass::Observation);
+    assert_eq!(
+        premise.provenance,
+        PremiseProvenance::Observation {
+            evaluation_id: "decision:mine".to_string()
+        }
+    );
+
+    // An unmatched context (another parameter value) may explore again.
+    let mut other = asked.clone();
+    let mut params = other.params.as_slice().to_vec();
+    params
+        .iter_mut()
+        .find(|p| p.name == "query")
+        .expect("the request names a query")
+        .value = TypedValue::Text("something else entirely".to_string());
+    other.params = BoundedVec::new(params).unwrap();
+    let unmatched = decide(&h, other).await.unwrap().records.as_slice()[0].clone();
+    assert!(matches!(
+        unmatched.outcome,
+        StatisticalOutcome::Explored { .. }
+    ));
+    let pool = pool_of(&unmatched);
+    assert!(pool.exploitation.is_empty() && pool.matched_records.is_empty());
+    assert_eq!(pool.exploration, ["tool-a", "tool-b"]);
 }

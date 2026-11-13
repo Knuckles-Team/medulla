@@ -389,3 +389,46 @@ The R722.2 proof is served: it imports a pack, approves the source, and reads it
 - A SQL or SPARQL answer has the row shape of its own method, so `NlQuery` answers with the `Method::Sql` or `Method::Sparql` response, produced by the same handler under the caller's authority. `NlQueryExplain` discloses UQL and its `[id, score]` rows, so it plans in UQL only; the steps and planner identity of a text dialect are not disclosed through it.
 - Planners are resolved like the UQL planner: injected (`set_sql_nl_planner`, `set_sparql_nl_planner`) or the configured chat-completions client of the hosted model, which implements all three ports with its own system prompt. `auto` chooses among the dialects whose planner is configured. The UQL planner stays required, because it also rewrites follow-up questions.
 - The cross-tenant proof is a served test with both tenants holding rows in one store (`crates/medulla-server-served-tests`, `nl_sparql_returns_only_the_callers_tenant_rows`): each tenant imports a connector pack, the projection writes its surface nodes into the tenant's pack graph, and each tenant's `NlQuery` of dialect `sparql` returns only its own nodes and the same rows a direct `Method::Sparql` of that tenant returns. A request signed for another tenant being refused at admission is a separate, weaker case and is not the proof. Catalog and ontology visibility of the caller is the authority the SQL and SPARQL handlers apply.
+A deployment admits exactly one tenant: `validate_deployment_binding` (`crates/medulla-server-auth/src/auth/claims.rs`) refuses a request context whose tenant is not `MEDULLA_TENANT` with `AUTH_TENANT_MISMATCH` before any handler runs. Two tenants therefore never hold data in one served store, and the cross-tenant negative these hot-path rows name is the refusal of a request signed for another tenant, followed by the owning tenant's unchanged answer. The tests assert both.
+
+## Decision: A multimodal space is declared through a served graph write
+
+**Decision.** `MEDULLA-FEDERATED-QUERY-R039.1.7` adds the served `DeclareEmbeddingSpace` write. R039.1.4 and R039.1.5 are proved by served Python tests, and before this row the only way to give a graph a multimodal space was an in-process fixture call on the semantic store. The declaration rides the same graph mutation commit as `AddEmbedding` and rewrites the graph's semantic store row in that transaction, so it is durable and replayable; it reuses `SemanticStore::declare_space` and its width rule rather than a second validator.
+
+**Rationale.** A space that only a fixture can set is not a served capability; a graph write on the existing commit path is the simplest durable form and needs no new store.
+
+## Decision: multimodal refusal, budget and receipt (R039.1.4, R039.1.5, R039.1.7)
+
+- **Incompatible versus unavailable.** A space whose text binding names no registered encoder refuses `QUERY_ENCODER_UNAVAILABLE`. A binding that names a registered encoder pinned to another identity would embed the query in another space; that pair is refused `EMBEDDING_SPACE_INCOMPATIBLE` by the one comparison rule `pair_allowed`, before anything is ranked. Before this, both cases read as unavailable and the incompatible refusal had no served trigger.
+- **Text-embedded top-k.** `RankEmbed` followed by `Limit k` runs as the same top-`k` step as a literal-vector `Rank`, so a text query reports the same typed shortfall.
+- **Authorized missing count.** `Shortfall.missing_embeddings` is counted over the candidates the step may rank (after the hard constraints), so hidden rows never change it. It serializes only when non-zero, so existing shortfall answers are unchanged.
+- **Row budget.** The result-row budget behind `budget_exhausted` is the registry knob `retrieval.max_result_rows`; served plans had used a compiled-in default.
+- **Receipt.** `RetrievalReceipt.modality` nests the multimodal evidence. A `RecordingEncoder` wraps the registry encoder for one request and records each successful call once; `execute_ranked` reads it. `Modality` moved to `medulla-types` (the receipt's crate), since `medulla-index-types` depends on `medulla-types`.
+- **Declaration.** `DeclareEmbeddingSpace` refuses on the live store first (`SemanticStore::check_space_declaration`, the same rule `declare_space` applies), so a refusal never reaches the durable commit; the row writer applies the rule again in the commit's transaction.
+- WIRE-REGEN needed: the new `DeclareEmbeddingSpace` method, `Shortfall.missing_embeddings` and `RetrievalReceipt.modality` change the wire contract (`models.py` edited by hand; wire vectors to refresh).
+
+## Decision: pinned encoders load from the data directory; a query names its modality (R039.1.6)
+
+**Decision.** The engine's query encoders are the built-in one plus every pinned encoder file under `<data-dir>/encoders/`, read once at start by `ModalityEncoderRegistry::load_dir` and installed before any request is served. A file names its id, the one modality it embeds, the space identity it is pinned to and its weights (a token table for text, a linear projection for feature inputs). The checked-in test encoders and production entries use the same file shape and loader. A query names its modality on `Op::RankEmbed` (`modality`, text by default and omitted on the wire for text; UQL `MODALITY <name>`), and the bind step selects the encoder the space binds for that modality.
+
+**Why.** The registry location is deployment data, not a tunable, so it lives in the data directory rather than a knob or an environment variable, and a bad file fails the boot instead of a later query. Carrying the modality on the existing ranking operator, rather than a second operator, keeps one ranking path and leaves every existing text plan byte-identical on the wire. An encoder that embeds one modality refuses any other (`QUERY_ENCODER_UNAVAILABLE`), and input its weights cannot read refuses `ENCODER_INPUT_INVALID`, so a query is never embedded by the wrong model. WIRE-REGEN needed: `Op::RankEmbed.modality` (optional, text omitted) changes the contract schema.
+## Decision: where pack glossary terms and their conflicts are recorded (R058.9)
+
+Certified planning reads `:GlossaryTerm` nodes from the graph a question runs
+against. Each pack projects into its own pack graph, so two sources never meet
+there. The cross-source home is the shared `__commons__` graph: projection
+writes each source's definition there as a `GlossaryTerm` node keyed by tenant,
+connector and normalized name, and reconciles it against the same tenant's
+other sources. The write is one `BatchUpdate` through the served dispatch under
+the importer's verified claims, so it is durable, owner-stamped and
+tenant-scoped like any other write. Definitions are reported, never merged; a
+conflict already recorded keeps its state so a certifier's resolution is not
+reopened by a later projection. A failed write fails the projection rather
+than leaving terms silently unreconciled.
+## R702.3: where the served synthesis reads its evidence
+
+- **One read chokepoint, then a bounded walk.** `handle_synthesize` reads the row-level-security snapshot the other served reads use and narrows it with `ReadScope::narrow` before it looks at any node. The evidence is the neighbourhood of the answer node within `search_task.evidence_hops`, capped by `search_task.max_evidence_nodes`, so the cost of one call is bounded by the knobs and not by the size of the graph. A hidden answer node refuses like an absent one (NO-EXISTENCE-LEAK).
+- **Thresholds are registry knobs.** The detectors of R702.2 take their limits as arguments. The handler resolves them from `search_task.single_clue_max`, `search_task.co_coverage_max`, `search_task.expose_overlap` and `search_task.prior_degree`; the request carries no threshold, so a caller cannot widen what counts as a shortcut. The result echoes the thresholds it judged against so a reader can compare each report value.
+- **Labels and text come from stored properties.** An evidence node's label is its `name`, `label` or `type` property, else its id; its text is `text`, else `name`. An edge's relation is its stored `relationship`, else `related`.
+- **The consumer stays outside the engine.** An accepted task carries no stored state. The caller derives a query id from the task, labels it with the answer node and sends the pinned sets to `DecisionEval` (R100.100.2); the L4 test does exactly that.
+- **Wire.** The method is a new read variant with a hand-written Python client method; the hand-maintained `models.py` carries no entry for it. WIRE-REGEN: wire vectors need the refresh at the gate.

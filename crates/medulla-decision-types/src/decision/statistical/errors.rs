@@ -246,6 +246,47 @@ closed_error_codes! {
         /// A used distilled score's low fidelity bound is under the floor
         /// (MEDULLA-DECISION-ENGINE-R147.4).
         DistilledFidelityBelowFloor => "DISTILLED_FIDELITY_BELOW_FLOOR",
+        /// A ranking evaluation names no queries (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingQuerySetEmpty => "RANKING_QUERY_SET_EMPTY"
+        /// A ranking evaluation names more queries than its knob allows
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingQuerySetTooLarge => "RANKING_QUERY_SET_TOO_LARGE"
+        /// A pinned set's digest differs from the digest of its content
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingDigestMismatch => "RANKING_DIGEST_MISMATCH"
+        /// The cutoff `k` is 0 or above its knob maximum
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingKOutOfRange => "RANKING_K_OUT_OF_RANGE"
+        /// Fewer algorithm runs than the knob requires
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingAlgorithmsTooFew => "RANKING_ALGORITHMS_TOO_FEW"
+        /// A query has no relevance pair (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingLabelsMissing => "RANKING_LABELS_MISSING"
+        /// A run reports another corpus digest than the request's
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingCorpusDrift => "RANKING_CORPUS_DRIFT"
+        /// A run ranks fewer, more or other queries than the request names
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingResultsIncomplete => "RANKING_RESULTS_INCOMPLETE"
+        /// A run's input digest differs from the request's input digest
+        /// (MEDULLA-DECISION-ENGINE-R100.100.1).
+        RankingSettingsMismatch => "RANKING_SETTINGS_MISMATCH"
+        /// A normalized-to-original offset map is not ordered, does not cover
+        /// the text, or addresses bytes inside a character
+        /// (MEDULLA-DECISION-ENGINE-R100.100.3).
+        ContextMapInvalid => "CONTEXT_MAP_INVALID"
+        /// A context search query has no tokens
+        /// (MEDULLA-DECISION-ENGINE-R100.100.3).
+        ContextQueryEmpty => "CONTEXT_QUERY_EMPTY"
+        /// A context span is longer than `context_search.max_span_bytes`
+        /// (MEDULLA-DECISION-ENGINE-R100.100.3).
+        ContextSpanTooLarge => "CONTEXT_SPAN_TOO_LARGE"
+        /// A context-search cursor is malformed, fails its check value, or
+        /// belongs to another tenant or query (MEDULLA-DECISION-ENGINE-R100.100.4).
+        ContextCursorInvalid => "CONTEXT_CURSOR_INVALID"
+        /// A context-search cursor was issued against an older snapshot
+        /// revision than the one being read (MEDULLA-DECISION-ENGINE-R100.100.4).
+        ContextCursorStale => "CONTEXT_CURSOR_STALE"
     }
 }
 

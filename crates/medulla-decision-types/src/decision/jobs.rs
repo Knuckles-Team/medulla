@@ -15,7 +15,9 @@ use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
 use super::replay::{EvalMode, EvaluationRun};
 use super::request::DecisionPolicyRef;
 use super::statistical::dataset::LabelledDataset;
+use super::statistical::grounded_eval::{GroundedAnswerRequest, GroundedEvalReceipt};
 use super::statistical::head::DecisionHeadBody;
+use super::statistical::ranking_eval::{RetrievalRankingReceipt, RetrievalRankingRequest};
 use super::statistical::CalibrationMethod;
 use super::statistical::CalibrationStatement;
 
@@ -524,6 +526,12 @@ pub enum DecisionJobOutput {
     MemoryBenchmark {
         receipt: Box<super::memory_benchmark::MemoryBenchmarkReceipt>,
     },
+    /// A pinned retrieval ranking evaluation's receipt (R100.100.2).
+    RankingEval {
+        receipt: Box<RetrievalRankingReceipt>,
+    },
+    /// A grounded evaluation's receipt (R100.101.3).
+    GroundedEval { receipt: Box<GroundedEvalReceipt> },
 }
 
 /// Where a job is.
@@ -657,6 +665,16 @@ pub enum DecisionEvalOp {
     MemoryChangeBenchmarkSubmit {
         request: Box<super::memory_benchmark::MemoryChangeBenchmarkRequest>,
     },
+    /// Score pinned retrieval algorithm runs with hits-at-k and seal the
+    /// receipt (R100.100.2).
+    RetrievalRankingSubmit {
+        request: Box<RetrievalRankingRequest>,
+    },
+    /// Score grounded topic coverage and unsupported-claim Brier and seal the
+    /// receipt (R100.101.3).
+    GroundedAnswerSubmit {
+        request: Box<GroundedAnswerRequest>,
+    },
 }
 
 impl DecisionEvalOp {
@@ -667,6 +685,8 @@ impl DecisionEvalOp {
                 | Self::DelegationQuality { .. }
                 | Self::MemoryRewriteSubmit { .. }
                 | Self::MemoryChangeBenchmarkSubmit { .. }
+                | Self::RetrievalRankingSubmit { .. }
+                | Self::GroundedAnswerSubmit { .. }
         )
     }
 
@@ -684,6 +704,8 @@ impl DecisionEvalOp {
             Self::DelegationQuality { request } => &request.tenant_id,
             Self::MemoryRewriteSubmit { request } => &request.tenant_id,
             Self::MemoryChangeBenchmarkSubmit { request } => &request.tenant_id,
+            Self::RetrievalRankingSubmit { request } => &request.tenant_id,
+            Self::GroundedAnswerSubmit { request } => &request.tenant_id,
         }
     }
 }

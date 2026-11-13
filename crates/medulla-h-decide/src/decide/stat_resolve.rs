@@ -23,6 +23,11 @@ use super::stat_executor::ExecutionContext;
 use super::stat_log::{store_once, visible_entry, LogReader};
 use super::stat_support::refusal;
 
+/// Key prefix of every resolution of one logged abstention.
+pub(super) fn resolution_prefix(record_id: &str) -> String {
+    resolution_key(record_id, "")
+}
+
 /// Key of one resolution of a logged abstention.
 fn resolution_key(record_id: &str, resolution_id: &str) -> String {
     format!("resolution:{record_id}:{resolution_id}")

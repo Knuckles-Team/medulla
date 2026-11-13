@@ -409,6 +409,7 @@ pub(super) fn replay_with_view(
         params: inputs.params.as_slice(),
         now_ms: inputs.shortlist.now_ms,
         server_secret: ctx.server_secret,
+        pool: inputs.exploration.as_ref().and_then(|e| e.pool.as_ref()),
     };
     let matrix = stored_matrix(record)?;
     let options = matrix.candidate_ids.len();

@@ -24,9 +24,10 @@ serde_json = "1.0"
 sha2 = "0.10"
 unicode-normalization = "0.1"
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+unicode-normalization = { version = "0.1", optional = true }
 
 [features]
-decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/decision"]
+decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/decision", "dep:unicode-normalization"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

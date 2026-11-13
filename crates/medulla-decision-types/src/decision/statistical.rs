@@ -9,6 +9,7 @@
 pub mod belief;
 pub mod body;
 pub mod capacity;
+pub mod context_search;
 pub mod dataset;
 pub mod declared;
 pub mod distilled;
@@ -26,6 +27,7 @@ pub mod nl;
 pub mod outcome;
 pub mod placement;
 pub mod placement_plan;
+pub mod ranking_eval;
 pub mod retrieval;
 pub mod retrieval_adapter;
 pub mod retrieval_calibration;
@@ -533,6 +535,26 @@ pub struct ExplorationRecord {
     #[serde(default)]
     pub revealed_seed: Option<String>,
     pub budget_digest: String,
+    /// The context-matched candidate pool the draw was gated by
+    /// (MEDULLA-DECISION-ENGINE-R020.1.2); omitted when the record predates it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pool: Option<CandidatePool>,
+}
+
+/// The visible options split by what earlier decisions in the same context
+/// executed: `exploitation` holds the options executed in a matched record,
+/// `exploration` every other visible option. A non-empty exploitation pool
+/// forces exploration off and restricts ranking to that pool
+/// (MEDULLA-DECISION-ENGINE-R020.1.2). Both lists are sorted by option id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CandidatePool {
+    pub context_digest: String,
+    pub exploitation: Vec<String>,
+    pub exploration: Vec<String>,
+    /// The matched record ids, ascending.
+    pub matched_records: Vec<String>,
 }
 
 /// The input set of one statistical decision.
@@ -622,6 +644,10 @@ pub struct StatisticalDecisionRecord {
     pub belief: BoundedVec<belief::BeliefPoint, 8>,
     /// Synthetic evidence is labelled as such, always.
     pub synthetic_evidence: bool,
+    /// The provider a retrieval-plan decision committed to
+    /// (MEDULLA-DECISION-ENGINE-R029.1); omitted when none was named.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retrieval_binding: Option<retrieval_plan::RetrievalProviderBinding>,
     pub record_digest: String,
 }
 

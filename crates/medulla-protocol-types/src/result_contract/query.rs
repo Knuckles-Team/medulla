@@ -77,6 +77,10 @@ method_results! {
     ResolveViewportSelection(ResolveViewportSelection) => Raw<medulla_types::viewport::ResolvedSelection>;
     // MEDULLA-SRC-AUTH-R004.6.1: the verdicts and audit of one source-coverage read.
     SourceCoverage(SourceCoverage) => Raw<medulla_identity_types::source_coverage::SourceCoverageReply>;
+    // MEDULLA-DECISION-ENGINE-R100.100.4: the spans of one context search.
+    RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchResult>;
+    // MEDULLA-FEDERATED-QUERY-R702.3: the accepted task and risk report of one synthesis.
+    SynthesizeSearchTask(SynthesizeSearchTask) => Raw<medulla_work_types::search_task::SynthesizeSearchTaskResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.

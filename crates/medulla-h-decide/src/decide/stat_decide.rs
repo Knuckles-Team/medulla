@@ -20,12 +20,12 @@ use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
 };
 use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::DecisionBatch, decision::statistical::ExplorationRecord,
-    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
-    decision::statistical::ShortlistProvenance, decision::statistical::StatisticalDecisionRecord,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalInputs,
-    decision::statistical::StatisticalOutcome,
+    decision::statistical::CandidatePool, decision::statistical::CandidateSource,
+    decision::statistical::DecideRequest, decision::statistical::DecisionBatch,
+    decision::statistical::ExplorationRecord, decision::statistical::FeatureMatrixRef,
+    decision::statistical::QuestionKind, decision::statistical::ShortlistProvenance,
+    decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
+    decision::statistical::StatisticalInputs, decision::statistical::StatisticalOutcome,
 };
 use medulla_decision_types::{
     decision::EvidenceClass, decision::PremiseClass, decision::PremiseProvenance,
@@ -347,11 +347,12 @@ pub(super) fn decide_blocking(
             registry,
         )
     })?;
-    let (pinned, policy) = telemetry::stage(Stage::Constraints, family, tenant, || {
+    let (pinned, policy, binding) = telemetry::stage(Stage::Constraints, family, tenant, || {
         registry.constraints(request)?;
+        let binding = registry.bind(ctx, request)?;
         let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
         let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
-        Ok::<_, String>((pinned, policy))
+        Ok::<_, String>((pinned, policy, binding))
     })?;
     let comparative = super::family::comparative_analysis::plan(
         request,
@@ -380,6 +381,24 @@ pub(super) fn decide_blocking(
         reader: Some(&reader),
         ..*ctx
     };
+    // The context-matched pool gates exploration (R020.1.2): options executed
+    // in a matched record are exploited, and a non-empty exploitation pool
+    // restricts ranking to it. Only a decision that may explore has a pool.
+    let pool = candidate_pool(
+        request,
+        &policy,
+        &context_digest,
+        &candidates.views,
+        &matched,
+    );
+    if let Some(pool) = pool.as_ref().filter(|p| !p.exploitation.is_empty()) {
+        candidates
+            .views
+            .retain(|v| pool.exploitation.contains(&v.id));
+        candidates
+            .entries
+            .retain(|e| pool.exploitation.contains(&e.component_id));
+    }
     fill_outcome_rates(
         ctx.store,
         &reader,
@@ -400,7 +419,14 @@ pub(super) fn decide_blocking(
         let executed =
             match registry.conclude_with_log(ctx, &reader, request, &policy.policy, graph_view) {
                 Some(result) => result?,
-                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
+                None => execute(
+                    ctx,
+                    request,
+                    &pinned,
+                    &policy,
+                    &candidates.views,
+                    pool.as_ref(),
+                )?,
             };
         registry.refine(
             Some(request),
@@ -429,6 +455,8 @@ pub(super) fn decide_blocking(
                 slices: &slices,
                 registry,
                 context_digest,
+                pool,
+                binding,
             },
             &executed,
             nl,
@@ -461,6 +489,37 @@ struct Sealing<'a> {
     slices: &'a Slices,
     registry: &'a dyn super::family::DecisionFamily,
     context_digest: String,
+    /// The context-matched candidate pool; `Some` exactly when exploration is
+    /// permitted for this question (MEDULLA-DECISION-ENGINE-R020.1.2).
+    pool: Option<CandidatePool>,
+    /// The provider a retrieval-plan decision committed to (R029.1).
+    binding: Option<
+        medulla_decision_types::decision::statistical::retrieval_plan::RetrievalProviderBinding,
+    >,
+}
+
+/// The pool a decision that may explore draws against. A refused permit
+/// yields no pool: the executor reports the refusal.
+fn candidate_pool(
+    request: &DecideRequest,
+    policy: &ResolvedPolicy,
+    context_digest: &str,
+    views: &[medulla_decision_stats::decision::candidate::CandidateView],
+    matched: &[super::stat_log::MatchedTrajectory],
+) -> Option<CandidatePool> {
+    use medulla_decision_stats::decision::exploration::{build_pool, permit, ExplorationPermit};
+    if !matches!(
+        permit(&policy.policy, &request.question),
+        Ok(ExplorationPermit::Budget(_))
+    ) {
+        return None;
+    }
+    let visible: Vec<String> = views.iter().map(|v| v.id.clone()).collect();
+    let pairs: Vec<(String, String)> = matched
+        .iter()
+        .map(|m| (m.record_id.clone(), m.option_id.clone()))
+        .collect();
+    Some(build_pool(context_digest, &visible, &pairs))
 }
 
 /// The same-principal records that share this decision's context, within the
@@ -538,6 +597,7 @@ fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationReco
         seed_commitment: seed_commitment(&executed.seed),
         revealed_seed: None,
         budget_digest: digest_text("eg/decide-exploration-budget/v1", budget),
+        pool: sealing.pool.clone(),
     })
 }
 
@@ -727,6 +787,36 @@ fn premises(sealing: &Sealing, nl: Option<&NlBinding>) -> Vec<PremiseRef> {
                 definition_digest: pin.definition_digest.clone(),
             },
         ));
+    }
+    if let Some(pool) = &sealing.pool {
+        out.extend(pool.matched_records.iter().map(|id| {
+            premise(
+                id,
+                &format!("matched_record:{id}"),
+                PremiseClass::Observation,
+                PremiseProvenance::Observation {
+                    evaluation_id: id.clone(),
+                },
+            )
+        }));
+    }
+    if let Some(binding) = &sealing.binding {
+        let claim = |pin: &medulla_agent_types::agent_component::ComponentDependency,
+                     fact: &str| {
+            premise(
+                &pin.component_id,
+                fact,
+                PremiseClass::Claim,
+                PremiseProvenance::Publisher {
+                    component_id: pin.component_id.clone(),
+                    definition_digest: pin.definition_digest.clone(),
+                },
+            )
+        };
+        out.push(claim(&binding.provider, "retrieval_provider"));
+        if let Some(model) = &binding.reasoning_model {
+            out.push(claim(model, "reasoning_model"));
+        }
     }
     out.extend(knob_premises(sealing));
     out.extend(derived_premises(sealing));
@@ -961,6 +1051,7 @@ fn seal(
         nl_binding: nl,
         belief: bounded(sealing.slices.points.clone())?,
         synthetic_evidence: synthetic,
+        retrieval_binding: sealing.binding.clone(),
         record_digest: String::new(),
     };
     // A load set answer carries the premises it was sealed with

@@ -166,9 +166,9 @@ pub use request::{
     DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
 };
 pub use statistical::{
-    CalibrationMethod, CalibrationStatement, CandidateSource, DecideRequest, DecisionBatch,
-    ExplorationRecord, FeatureMatrixRef, QuestionKind, QuestionSafety, RiskMethod, RiskStatement,
-    ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
+    CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,
+    DecisionBatch, ExplorationRecord, FeatureMatrixRef, QuestionKind, QuestionSafety, RiskMethod,
+    RiskStatement, ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
     StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
 

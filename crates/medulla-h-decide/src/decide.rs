@@ -70,6 +70,8 @@ mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_harness_adoption;
 #[cfg(feature = "decide")]
+mod stat_grounded_eval;
+#[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
@@ -88,6 +90,8 @@ mod stat_penalty;
 #[cfg(feature = "decide")]
 mod stat_pointer;
 mod stat_proposals;
+#[cfg(feature = "decide")]
+mod stat_ranking_eval;
 #[cfg(feature = "decide")]
 mod stat_replay;
 #[cfg(feature = "decide")]

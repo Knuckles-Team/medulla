@@ -166,6 +166,8 @@ mod column_lineage;
 #[cfg(feature = "query")]
 mod context_compile;
 #[cfg(feature = "query")]
+mod context_search;
+#[cfg(feature = "query")]
 mod corpus_retrieve;
 #[cfg(feature = "query")]
 mod schema_projections;
@@ -189,6 +191,12 @@ pub mod expansion;
 mod projection;
 #[cfg(feature = "query")]
 mod retrieval_round;
+#[cfg(feature = "query")]
+mod search_task;
+#[cfg(feature = "query")]
+pub(crate) use context_search::handle_context_search;
+#[cfg(feature = "query")]
+pub(crate) use search_task::handle_synthesize;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
 #[cfg(feature = "query")]

@@ -1231,3 +1231,46 @@ A graph-intake question declares the one option `resolve_intake`; the sources ri
 
 ## R163.5/R163.6: graph intake evidence and journey (decision)
 The `premises` hook derives each source's premises from the request's pinned sources, which is sound because `conclude` refuses any source whose resolved revision or digest differs from the pin. One premise per field: `intake:<n>:type`, `:authority` and `:revision` (graph only), `:query` (the path for a filesystem source) and `:digest`, subject `intake:<n>`. A graph premise is an `Observation` whose provenance is the observation `<authority>:<query>@<revision>`, naming the authority node (reused, not copied); a filesystem premise is a `Claim`. The record class comes from the generic `evidence_class`: the weakest premise, never stronger than a claim for an advisory answer. The nightly budget is the generic `decide/graph_intake` group of `benches/decide_budgets.rs` under the R178 defaults.
+## Graph-summary expiry (R066.4)
+
+- **The window is a `Fixed` decision knob read through the pinned policy.** `retention.graph_summary_expire_after` (default 90 d, range [1, 3650] d) is declared in `knob_families/retention.rs`. A knob-set revision can never move it because expiry cannot be undone; only a pinned policy sets it. The window runs from the retirement time (`retired_at_ms`), so an entry always passes compaction and retirement before it can expire.
+- **Expiry deletes every row joined to the record.** The log entry, its evaluations, its abstention resolutions and its evaluator grant go in one owner transaction (`AgentLibraryStore::remove_decision_artifacts`), so no joined row outlives its record. The compact result's `expired` counter is per call, and a call is always one tenant.
+- **Library-sourced entries never expire.** `due` returns before the retirement branch for an `AgentLibrary` candidate source, the same rule as R066.1.
+
+## Soft-label Brier score (R100.101.2)
+
+- **The kernel is pure and integer.** `weighted_brier` works in parts per million squared in 128-bit integers; the only rounding steps are the per-claim target `q` and the final score, both half to even through one helper. The score is returned as an integer `score_scaled` with its `digits`, never a float.
+- **A duplicate prediction is an extra prediction.** Each required claim needs exactly one prediction, so a second prediction for the same claim refuses `GROUNDED_PREDICTION_EXTRA`, the same as a prediction for a claim outside the required set.
+- **Missing votes are zero valid votes.** A required claim with no `ClaimVotes` row refuses `GROUNDED_VOTES_ZERO`; labelled votes never stand in for a prediction.
+- **Only the digit count is a knob.** `grounded.score_digits` is declared in `knob_families/grounded.rs`; the rounding mode is a constant (half to even), not a knob.
+
+## Ranking evaluation inputs (R100.100.1)
+
+- **Digests are over content, hex only, order-independent.** The label and query digests are SHA-256 over the sorted lines of their content under a domain prefix, rendered as 64 lowercase hex characters (no `sha256:` prefix, as the row states). The corpus has no content in the request, so its digest is checked for shape and each run must report the same one (`RANKING_CORPUS_DRIFT`).
+- **One input digest binds the settings.** `RetrievalRankingRequest::input_digest` covers the corpus, label and query digests, `k` and the evaluator revision; a run that echoes another value refuses `RANKING_SETTINGS_MISMATCH`, so a run made under other inputs cannot be scored against this request.
+- **A query set above the knob refuses with its own code.** `RANKING_QUERY_SET_TOO_LARGE` is added beside the codes the row names, because `ranking_eval.max_queries` needs a refusal and no named code means "too many".
+- **A run misses a query only by being incomplete.** `hits_at_k` counts an unranked query as a miss, but `check_request` refuses such a run first, so a served score never reflects a silent gap.
+
+## Context search offsets (R100.100.3)
+
+- **One normalization function serves the query and the document.** Normalization is NFC applied segment by segment, where a segment starts at each character with combining class 0. Whole-string NFC can compose across starters (Hangul jamo), which would break the segment map; using the segment form on both sides keeps matching exact and the map provable.
+- **A match snaps outward to whole segments.** A normalized match that begins or ends inside a segment (for example the base letter of a composed accent) maps to the full original segment, so public offsets never split a character and always slice the bytes the `text_digest` names.
+- **The map is proved, not trusted.** `validate_map` re-normalizes each original segment and compares it with its normalized range, besides checking order, contiguity, coverage, bounds and character boundaries.
+- **A span past `context_search.max_span_bytes` refuses rather than truncates.** Truncating would break the guarantee that the context is the original text between the two offsets.
+
+## Ranking and grounded evaluation wiring (R100.100.2, R100.101.3)
+- **Both are `DecisionJobKind::Eval` jobs.** The job id is derived from (kind, tenant, key), so one idempotency key names one evaluation job whichever op submitted it; `Status` and `Receipt` reads need no new arm. Replay returns the stored job and another request under the same key is `IDEMPOTENCY_CONFLICT`.
+- **Receipts carry their own premises.** The evidence premises are listed on the sealed receipt and covered by its digest. The `Decide` `premises` hook is not reused: an evaluation receipt is not a decision answer and has no weakest-class rule to apply.
+- **Pins are checked against content, then against the store.** The request carries the content its pins name, so the handler recomputes each content-bound digest instead of trusting the caller. The corpus is not carried and is checked only against the store. The store row is a new key family (`grounded-pin:`) in the existing decision-artifact table written with the job in one owner transaction, so there is no layout change.
+- **Grounded knobs are policy knobs.** `grounded.min_topic_support` and `grounded.min_valid_votes` join `grounded.score_digits` in `knob_families/grounded.rs` and resolve through the pinned decision policy (DE-R059.1-KNOBS).
+
+## Context search served (R100.100.4)
+
+- **Visibility comes from the one read chokepoint.** The handler reads the row-level-security snapshot of the caller and narrows it with `ReadScope::narrow` (tenant and visible units, with the read audit line) before it indexes, matches, counts or builds a cursor. A denied document is therefore absent from the view, and a test compares a world holding a hidden Document with a world holding a plain Note in its place: the two answers are equal, including `index_digest`, `query_revision` and the cursor.
+- **Knobs come from the request's named policy.** The `context_search.*` knobs are decision-policy knobs (DE-R059.1-KNOBS), so the request gains `policy` (default: the engine policy) and the handler resolves it through the decision-policy seam, reading a pinned policy from the verified tenant's Agent Library. The served test pins a policy with `context_search.max_spans = 2` and sees the page capped at two.
+- **The cursor pins the snapshot revision, not the authorization revision.** The cursor carries tenant, query digest (graph, query text, resolved n-gram width), snapshot revision and next span index, as the row says. A write moves the revision, so a cursor taken before it is stale.
+- **`document_revision` is the snapshot revision.** The ontology declares no per-document revision property and the graph keeps none per node, so the span names the revision of the snapshot it was read at; the exact bytes are identified by `text_digest`.
+- **`authorization_revision` reuses the change-feed helper.** One definition of the revision of a caller's authority (`authorization_revision(agent, scopes)`), not a second one.
+- **A request tenant that is not the verified tenant refuses `ACCESS_DENIED`.** The graph read is always the caller's own; the field exists so a cursor and a result name their tenant.
+- **Paging recomputes the search.** Each call walks the visible Documents and slices the page from the ordered spans; the cursor holds an index, not state, so a server restart or another node answers the same page.
+

@@ -7,9 +7,14 @@
 //! `Compacted`. Verification restores the matrix from CAS, re-checks the
 //! record digest and replays the decision. Past `drop_blob_after_ms` the blob
 //! holder is released and verification answers `INPUTS_RETIRED` -- the digest
-//! is still the attested one, but nothing can be re-derived. Summaries (the
-//! record minus its matrix) are kept for ever.
+//! is still the attested one, but nothing can be re-derived. A graph-sourced
+//! summary (the record minus its matrix) is kept until its retirement age
+//! reaches `retention.graph_summary_expire_after` (default 90 days); then the
+//! entry and every row joined to it are deleted (R066.4). Library-sourced
+//! entries are kept for ever (R066.1).
 
+use medulla_decision_types::decision::knob_families::retention;
+use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::{
     decision::statistical::body::canonical_body_bytes,
     decision::statistical::body::content_digest_of,
@@ -24,11 +29,13 @@ use medulla_decision_types::{
     decision::statistical::StatisticalErrorCode,
 };
 use medulla_decision_types::{decision::DecisionPolicyRef, decision::StatisticalPolicy};
+use medulla_persistence_records::decision_jobs::{evaluation_key, record_key};
 use medulla_server_blob::blob::BlobStateExt;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader, MAX_LOG_ROWS};
 use super::stat_replay::replay;
+use super::stat_resolve::resolution_prefix;
 use super::stat_support::{refusal, resolve_policy};
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::encode_artifact;
@@ -172,9 +179,29 @@ fn release_inputs(_: &Retention, _: &InputsBlob, _: u64) -> Result<(), String> {
 enum Step {
     Compact,
     Retire(InputsBlob, u64),
+    /// Delete the entry and every row joined to it.
+    Expire,
 }
 
-fn due(entry: &DecisionLogEntry, policy: &StatisticalPolicy, now_ms: u64) -> Option<Step> {
+/// The retirement age at which a graph summary expires: the pinned knob, or
+/// its default (R066.4).
+fn expire_after_ms(policy: &medulla_decision_types::decision::DecisionPolicy) -> u64 {
+    let spec = &retention::KNOBS[retention::GRAPH_SUMMARY_EXPIRE_AFTER];
+    match policy.knob(spec) {
+        KnobValue::DurationMs(ms) => ms,
+        _ => match spec.default {
+            KnobValue::DurationMs(ms) => ms,
+            _ => u64::MAX,
+        },
+    }
+}
+
+fn due(
+    entry: &DecisionLogEntry,
+    policy: &StatisticalPolicy,
+    expire_after_ms: u64,
+    now_ms: u64,
+) -> Option<Step> {
     // Library evidence remains reproducible indefinitely, regardless of policy.
     if matches!(
         entry.record.candidate_source,
@@ -202,7 +229,10 @@ fn due(entry: &DecisionLogEntry, policy: &StatisticalPolicy, now_ms: u64) -> Opt
                 .is_some_and(|after| age >= after)
                 .then(|| Step::Retire(blob.clone(), *compacted_at_ms))
         }
-        EntryInputs::Retired { .. } => None,
+        EntryInputs::Retired { retired_at_ms, .. } => {
+            let age = now_ms.saturating_sub(*retired_at_ms);
+            (age >= expire_after_ms).then_some(Step::Expire)
+        }
     }
 }
 
@@ -228,7 +258,7 @@ fn apply(
     retention: &Retention,
     mut entry: DecisionLogEntry,
     step: Step,
-) -> Result<DecisionLogEntry, String> {
+) -> Result<Option<DecisionLogEntry>, String> {
     match step {
         Step::Compact => {
             let body = canonical_body_bytes(&entry.record.inputs.feature_matrix)?;
@@ -240,6 +270,10 @@ fn apply(
                 compacted_at_ms: ctx.now_ms,
             };
         }
+        Step::Expire => {
+            expire(ctx, &entry.record.record_id)?;
+            return Ok(None);
+        }
         Step::Retire(blob, compacted_at_ms) => {
             release_inputs(retention, &blob, ctx.now_ms)?;
             entry.inputs = EntryInputs::Retired {
@@ -249,7 +283,7 @@ fn apply(
             };
         }
     }
-    Ok(entry)
+    Ok(Some(entry))
 }
 
 /// Apply the policy's retention to at most `limit` due entries of the tenant.
@@ -259,11 +293,14 @@ pub(super) fn compact(
     policy: &DecisionPolicyRef,
     limit: u32,
 ) -> Result<DecisionLogCompacted, String> {
-    let policy = resolve_policy(ctx.store, ctx.tenant_id, policy)?.statistical;
+    let resolved = resolve_policy(ctx.store, ctx.tenant_id, policy)?;
+    let expire_after = expire_after_ms(&resolved.policy);
+    let policy = resolved.statistical;
     let limit = limit.clamp(1, MAX_COMPACT_PER_CALL);
     let mut done = DecisionLogCompacted {
         compacted: 0,
         retired: 0,
+        expired: 0,
         more: false,
     };
     for (key, bytes) in
@@ -271,22 +308,37 @@ pub(super) fn compact(
             .decision_artifacts_with_prefix(ctx.tenant_id, "record:", MAX_LOG_ROWS)?
     {
         let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
-        let Some(step) = due(&entry, &policy, ctx.now_ms) else {
+        let Some(step) = due(&entry, &policy, expire_after, ctx.now_ms) else {
             continue;
         };
-        if done.compacted + done.retired == limit {
+        if done.compacted + done.retired + done.expired == limit {
             done.more = true;
             break;
         }
         match step {
             Step::Compact => done.compacted += 1,
             Step::Retire(..) => done.retired += 1,
+            Step::Expire => done.expired += 1,
         }
-        let updated = apply(ctx, retention, entry, step)?;
-        ctx.store
-            .replace_decision_artifact(ctx.tenant_id, &key, encode_artifact(&updated)?)?;
+        if let Some(updated) = apply(ctx, retention, entry, step)? {
+            ctx.store
+                .replace_decision_artifact(ctx.tenant_id, &key, encode_artifact(&updated)?)?;
+        }
     }
     Ok(done)
+}
+
+/// Delete one expired entry with its evaluations, abstention resolutions and
+/// evaluator grant, in one owner transaction.
+fn expire(ctx: &ExecutionContext, record_id: &str) -> Result<(), String> {
+    let keys = [
+        record_key(record_id),
+        super::stat_evaluator::lease_key(record_id),
+    ];
+    let prefixes = [evaluation_key(record_id, ""), resolution_prefix(record_id)];
+    ctx.store
+        .remove_decision_artifacts(ctx.tenant_id, &keys, &prefixes)
+        .map(|_| ())
 }
 
 fn restored(

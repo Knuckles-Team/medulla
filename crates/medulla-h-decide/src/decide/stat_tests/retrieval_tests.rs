@@ -3,8 +3,10 @@
 //! nothing is learned before an independent verdict, and what was learned is
 //! read only through the decision views' reserved SQL relations.
 
-use super::consumer_tests::declared_abstention;
+use super::consumer_tests::{declared, declared_abstention, declared_request, score_schema};
+use super::log_tests::log_op;
 use super::*;
+use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
     decision::statistical::retrieval::LearningWrite, decision::statistical::retrieval::PathEdge,
@@ -313,4 +315,241 @@ async fn paths_and_usage_follow_the_verdict(h: &Harness) {
     )
     .await;
     assert_eq!(cited, vec![vec![json!("e5")]]);
+}
+
+/// Publish a component for `tenant` straight into the library.
+fn publish_for(
+    h: &Harness,
+    tenant: &str,
+    id: &str,
+    kind: AgentComponentKind,
+) -> ComponentDependency {
+    let mut draft = medulla_persistence_records::agent_component::test_component_draft(tenant, id);
+    draft.kind = kind;
+    let request = medulla_agent_types::agent_component::AgentComponentPublishRequest {
+        context: medulla_persistence_records::agent_fixtures::mutation_context(
+            &h.store,
+            tenant,
+            &format!("publish-{tenant}-{id}"),
+            900,
+            0,
+            "agent-component:publish",
+        ),
+        component: draft,
+        evaluation_receipt_digest: None,
+    };
+    let committed = h.store.publish_component(request).unwrap();
+    ComponentDependency {
+        component_id: id.to_string(),
+        kind,
+        definition_digest: committed.result.component.definition_digest,
+    }
+}
+
+fn pin_text(pin: &ComponentDependency) -> String {
+    serde_json::to_string(pin).unwrap()
+}
+
+fn bound_request(
+    schema: &ComponentDependency,
+    provider: Option<&ComponentDependency>,
+    model: Option<&ComponentDependency>,
+) -> DecideRequest {
+    let mut asked = declared_request(
+        schema,
+        vec![
+            declared("plan-deep", 1 << 31),
+            declared("plan-hyde", 1 << 32),
+        ],
+    );
+    let mut params = Vec::new();
+    for (name, pin) in [
+        ("retrieval.provider", provider),
+        ("retrieval.reasoning_model", model),
+    ] {
+        if let Some(pin) = pin {
+            params.push(TypedParam {
+                name: name.to_string(),
+                value: TypedValue::Text(pin_text(pin)),
+            });
+        }
+    }
+    asked.params = BoundedVec::new(params).unwrap();
+    asked
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R029.1
+#[tokio::test]
+async fn provider_binding_is_independent_and_never_substituted() {
+    let h = Harness::new().await;
+    let schema = h
+        .publish_test_component(
+            "schema-declared",
+            AgentComponentKind::FeatureSchema,
+            "declared-option features",
+            Some(&score_schema()),
+            None,
+        )
+        .unwrap();
+    let provider = publish_for(&h, TENANT, "provider-a", AgentComponentKind::McpServer);
+    let spare = publish_for(&h, TENANT, "provider-b", AgentComponentKind::McpServer);
+    let model = publish_for(&h, TENANT, "model-a", AgentComponentKind::ModelProfile);
+    let retired = publish_for(
+        &h,
+        TENANT,
+        "provider-retired",
+        AgentComponentKind::McpServer,
+    );
+    h.store
+        .retire_component(
+            medulla_agent_types::agent_component::AgentComponentRetireRequest {
+                context: medulla_persistence_records::agent_fixtures::mutation_context(
+                    &h.store,
+                    TENANT,
+                    "retire-provider",
+                    901,
+                    1,
+                    "agent-component:retire",
+                ),
+                component_id: "provider-retired".to_string(),
+            },
+        )
+        .unwrap();
+    let foreign = publish_for(
+        &h,
+        "tenant-b",
+        "provider-foreign",
+        AgentComponentKind::McpServer,
+    );
+
+    // Both bound: the record commits exactly the named pins and digests.
+    let batch = decide(&h, bound_request(&schema, Some(&provider), Some(&model)))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    let binding = record
+        .retrieval_binding
+        .clone()
+        .expect("a binding is sealed");
+    assert_eq!(binding.provider, provider);
+    assert_eq!(binding.reasoning_model, Some(model.clone()));
+    assert_eq!(binding.tenant_id, TENANT);
+    let entry = h
+        .store
+        .current_component(TENANT, "provider-a")
+        .unwrap()
+        .unwrap();
+    assert_eq!(binding.config_digest, entry.content_digest);
+    assert!(binding.request_digest.starts_with("sha256:"));
+    for (fact, subject) in [
+        ("retrieval_provider", "provider-a"),
+        ("reasoning_model", "model-a"),
+    ] {
+        let premise = record
+            .premises
+            .iter()
+            .find(|p| p.fact == fact)
+            .unwrap_or_else(|| panic!("premise {fact}"));
+        assert_eq!(premise.subject, subject);
+        assert_eq!(premise.class, PremiseClass::Claim);
+        assert!(matches!(
+            premise.provenance,
+            PremiseProvenance::Publisher { .. }
+        ));
+    }
+
+    // The provider alone binds with no model; the model is independent.
+    let alone = decide(&h, bound_request(&schema, Some(&provider), None))
+        .await
+        .unwrap();
+    assert_eq!(
+        alone.records.as_slice()[0]
+            .retrieval_binding
+            .as_ref()
+            .unwrap()
+            .reasoning_model,
+        None
+    );
+    // A different provider pin binds that provider, never the first.
+    let other = decide(&h, bound_request(&schema, Some(&spare), Some(&model)))
+        .await
+        .unwrap();
+    assert_eq!(
+        other.records.as_slice()[0]
+            .retrieval_binding
+            .as_ref()
+            .unwrap()
+            .provider,
+        spare
+    );
+    // No provider named: no binding, the plan decision runs as before.
+    let none = decide(&h, bound_request(&schema, None, None))
+        .await
+        .unwrap();
+    assert!(none.records.as_slice()[0].retrieval_binding.is_none());
+
+    // A retired provider is unavailable; the spare is never substituted.
+    let error = decide(&h, bound_request(&schema, Some(&retired), None))
+        .await
+        .unwrap_err();
+    assert!(
+        error.starts_with("RETRIEVAL_PROVIDER_UNAVAILABLE"),
+        "{error}"
+    );
+    // Another tenant's provider is invisible, so unavailable.
+    let error = decide(&h, bound_request(&schema, Some(&foreign), None))
+        .await
+        .unwrap_err();
+    assert!(
+        error.starts_with("RETRIEVAL_PROVIDER_UNAVAILABLE"),
+        "{error}"
+    );
+    // A pin at a digest that is not the provider's current revision is stale.
+    let mut stale = provider.clone();
+    stale.definition_digest = "sha256:not-the-current-revision".to_string();
+    let error = decide(&h, bound_request(&schema, Some(&stale), None))
+        .await
+        .unwrap_err();
+    assert!(error.starts_with("RETRIEVAL_PROVIDER_STALE"), "{error}");
+    // The reasoning model fails on its own, whatever the provider is.
+    let mut stale_model = model.clone();
+    stale_model.definition_digest = "sha256:old-model".to_string();
+    let error = decide(
+        &h,
+        bound_request(&schema, Some(&provider), Some(&stale_model)),
+    )
+    .await
+    .unwrap_err();
+    assert!(error.starts_with("RETRIEVAL_PROVIDER_STALE"), "{error}");
+    // A reasoning model without a provider is a malformed request.
+    let error = decide(&h, bound_request(&schema, None, Some(&model)))
+        .await
+        .unwrap_err();
+    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+
+    // DecisionLog Commit persists the binding with the record.
+    let committed: DecisionLogCommitted = decode(
+        log_op(
+            &h,
+            "decider",
+            DecisionLogOp::Commit {
+                record: Box::new(record.clone()),
+                evaluator: None,
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let bytes = h
+        .store
+        .decision_artifact(
+            TENANT,
+            &medulla_persistence_records::decision_jobs::record_key(&committed.record_id),
+        )
+        .unwrap()
+        .expect("the committed record is stored");
+    let stored: DecisionLogEntry =
+        medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "decision log entry")
+            .unwrap();
+    assert_eq!(stored.record.retrieval_binding, record.retrieval_binding);
 }

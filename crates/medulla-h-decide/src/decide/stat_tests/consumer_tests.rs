@@ -17,7 +17,7 @@ use medulla_decision_types::{
     decision::statistical::log::AbstentionResolver, decision::statistical::log::StoredResolution,
 };
 
-fn declared(id: &str, score: i64) -> DeclaredOption {
+pub(super) fn declared(id: &str, score: i64) -> DeclaredOption {
     DeclaredOption {
         option_id: id.to_string(),
         classification: BoundedVec::default(),
@@ -57,14 +57,17 @@ fn enrichment_option(id: &str, expected_value_q32: i64, cost_q32: i64) -> Declar
     }
 }
 
-fn score_schema() -> FeatureSchemaBody {
+pub(super) fn score_schema() -> FeatureSchemaBody {
     FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(vec![number_feature("score")]).unwrap(),
     }
 }
 
-fn declared_request(schema: &ComponentDependency, options: Vec<DeclaredOption>) -> DecideRequest {
+pub(super) fn declared_request(
+    schema: &ComponentDependency,
+    options: Vec<DeclaredOption>,
+) -> DecideRequest {
     DecideRequest {
         tenant_id: TENANT.to_string(),
         question: StatisticalQuestion {

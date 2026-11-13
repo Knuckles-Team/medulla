@@ -18,7 +18,44 @@
 //! run RETURNED and CITED after the fact; this module fixes what a request
 //! may choose BEFORE that decision runs.
 
+use crate::decision::record::outcome::RefusalCode;
+use medulla_agent_types::agent_component::ComponentDependency;
 use serde::{Deserialize, Serialize};
+
+/// The parameter naming the retrieval provider a plan is bound to: a JSON
+/// [`ComponentDependency`] pin (MEDULLA-DECISION-ENGINE-R029.1).
+pub const PROVIDER_PARAM: &str = "retrieval.provider";
+/// The parameter naming the reasoning model, resolved independently of the
+/// provider: a JSON [`ComponentDependency`] pin.
+pub const REASONING_MODEL_PARAM: &str = "retrieval.reasoning_model";
+
+/// The provider is not served: retired, withdrawn, unknown or not visible to
+/// the tenant. Medulla never substitutes another provider.
+pub const RETRIEVAL_PROVIDER_UNAVAILABLE: RefusalCode =
+    RefusalCode::new("RETRIEVAL_PROVIDER_UNAVAILABLE");
+/// The pin's definition digest is not the provider's current revision.
+pub const RETRIEVAL_PROVIDER_STALE: RefusalCode = RefusalCode::new("RETRIEVAL_PROVIDER_STALE");
+
+/// The refusal codes of the committed provider binding, in the
+/// `RetrievalPlan` table.
+pub const REFUSALS: &[RefusalCode] = &[RETRIEVAL_PROVIDER_STALE, RETRIEVAL_PROVIDER_UNAVAILABLE];
+
+/// The provider (and optional reasoning model) a retrieval-plan decision
+/// commits to. The consumer executes only this provider
+/// (MEDULLA-DECISION-ENGINE-R029.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RetrievalProviderBinding {
+    pub provider: ComponentDependency,
+    /// The provider revision's content digest at decision time.
+    pub config_digest: String,
+    /// Digest of the question and its typed parameters.
+    pub request_digest: String,
+    pub tenant_id: String,
+    #[serde(default)]
+    pub reasoning_model: Option<ComponentDependency>,
+}
 
 /// The fixed set of retrieval-plan families a routing decision may choose
 /// among. Adding a plan is a registry change here, not a new code path at
@@ -106,6 +143,15 @@ impl RetrievalPlanRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::decision::codes;
+
+    // spec: MEDULLA-DECISION-ENGINE-R029.1
+    #[test]
+    fn binding_refusals_are_registered() {
+        for code in REFUSALS {
+            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+        }
+    }
 
     #[test]
     fn every_plan_option_id_resolves_back_to_its_plan() {

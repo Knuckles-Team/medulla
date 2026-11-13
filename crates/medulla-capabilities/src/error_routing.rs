@@ -608,6 +608,32 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // `ensure_job_workers` refuses an invalid analytics worker timing.
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-DECISION-ENGINE-R100.100.4: the refusals of a context search. The kernel
+    // codes pass through unchanged; a cursor is invalid when forged, edited or issued
+    // for another tenant or query, and stale when the snapshot moved.
+    (
+        "RetrievalContextSearch",
+        &[
+            "COMPONENT_PIN_MISMATCH",
+            "CONTEXT_CURSOR_INVALID",
+            "CONTEXT_CURSOR_STALE",
+            "CONTEXT_MAP_INVALID",
+            "CONTEXT_QUERY_EMPTY",
+            "CONTEXT_SPAN_TOO_LARGE",
+            "POLICY_BODY_UNAVAILABLE",
+        ],
+    ),
+    // MEDULLA-FEDERATED-QUERY-R702.3: the refusals of a search-task synthesis. An unknown
+    // or unreadable answer node is `SEARCH_TASK_INVALID`; a risky task names its
+    // detector under `SEARCH_TASK_SHORTCUT`.
+    (
+        "SynthesizeSearchTask",
+        &[
+            "SEARCH_TASK_INVALID",
+            "SEARCH_TASK_SHORTCUT",
+            "SEARCH_TASK_TOO_LARGE",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R650.4: the refusals of a context bundle compile; the
     // package codes pass through unchanged from the selection kernel.
     (
