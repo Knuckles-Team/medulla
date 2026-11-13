@@ -206,9 +206,16 @@ impl AgentTemplateEntry {
         if entry_revision <= self.entry_revision {
             return Err("agent template tombstone revision must advance".to_string());
         }
+        let lifecycle = self
+            .lifecycle
+            .apply(
+                crate::agent_library::agent_library_machine::AgentLibraryEvent::Retire,
+                &crate::agent_library::agent_library_machine::LifecycleFacts::native(),
+            )
+            .map_err(|refused| refused.to_string())?;
         let retired = Self {
             entry_revision,
-            lifecycle: AgentLibraryLifecycle::Retired,
+            lifecycle,
             updated_at_ms: retired_at_ms,
             ..self.clone()
         };

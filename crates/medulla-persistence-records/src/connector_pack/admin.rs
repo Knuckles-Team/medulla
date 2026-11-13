@@ -253,10 +253,23 @@ impl RetirePlan {
             .entry_revision
             .checked_add(1)
             .ok_or_else(|| "agent component revision overflow".to_string())?;
+        let lifecycle = current
+            .lifecycle
+            .apply(
+                medulla_agent_types::agent_library::agent_library_machine::AgentLibraryEvent::Retire,
+                &medulla_agent_types::agent_library::agent_library_machine::LifecycleFacts::of_component(
+                    &current.component_id,
+                ),
+            )
+            .map_err(|refused| {
+                medulla_agent_types::agent_library::agent_library_machine::lifecycle_refusal_text(
+                    &refused,
+                )
+            })?;
         let retired = AgentComponentEntry::create(
             current.as_draft(),
             revision,
-            AgentLibraryLifecycle::Retired,
+            lifecycle,
             current.created_at_ms,
             now_ms,
         )?;
@@ -272,7 +285,7 @@ impl RetirePlan {
         let mut row = member;
         row.entry_revision = revision;
         row.definition_digest = retired.definition_digest.clone();
-        row.lifecycle = AgentLibraryLifecycle::Retired;
+        row.lifecycle = retired.lifecycle;
         self.members.push(row);
         self.components.push(ConnectorPackComponentCommit {
             expected_revision: current.entry_revision,

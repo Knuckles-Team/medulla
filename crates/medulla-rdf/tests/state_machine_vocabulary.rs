@@ -886,3 +886,16 @@ fn admission_machine_matches_edge_table() {
 fn admission_machine_classes_extend_core() {
     sm::assert_extends_core("Admission");
 }
+
+// spec: MEDULLA-TYPED-PACKS-R810.2
+#[test]
+fn agent_library_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_agent_types::agent_library::agent_library_machine::AGENT_LIBRARY_MACHINE,
+    );
+}
+// spec: MEDULLA-TYPED-PACKS-R810.2
+#[test]
+fn agent_library_machine_classes_extend_core() {
+    sm::assert_extends_core("AgentLibrary");
+}

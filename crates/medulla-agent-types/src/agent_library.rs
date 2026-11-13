@@ -47,6 +47,7 @@ const MAX_REFERENCE_COUNT: usize = 1_024;
 const MAX_REFERENCE_BYTES: usize = 4 * 1024;
 const DIGEST_PREFIX: &str = "sha256:";
 
+pub mod agent_library_machine;
 pub mod lifecycle;
 
 pub use crate::agent_component::ComponentDependency;
@@ -520,6 +521,13 @@ impl AgentLibraryEntry {
         if entry_revision <= self.entry_revision {
             return Err("agent library tombstone revision must advance".to_string());
         }
+        let lifecycle = self
+            .lifecycle
+            .apply(
+                agent_library_machine::AgentLibraryEvent::Retire,
+                &agent_library_machine::LifecycleFacts::native(),
+            )
+            .map_err(|refused| refused.to_string())?;
         let retired = Self {
             schema_version: self.schema_version,
             agent_id: self.agent_id.clone(),
@@ -542,7 +550,7 @@ impl AgentLibraryEntry {
             runtime: self.runtime.clone(),
             instantiated_from: self.instantiated_from.clone(),
             entry_revision,
-            lifecycle: AgentLibraryLifecycle::Retired,
+            lifecycle,
             definition_digest: self.definition_digest.clone(),
             created_at_ms: self.created_at_ms,
             updated_at_ms: retired_at_ms,

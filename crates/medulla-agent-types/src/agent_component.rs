@@ -546,23 +546,14 @@ pub fn check_lifecycle_transition(
     prior: AgentLibraryLifecycle,
     next: AgentLibraryLifecycle,
 ) -> Result<(), String> {
-    use crate::agent_library::lifecycle::{
-        LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_TRANSITION_INVALID, WITHDRAWN_NOT_ALLOWED,
-    };
-    use AgentLibraryLifecycle::{Published, Retired, Withdrawn};
-    match (prior, next) {
-        (Published, Published) | (Published, Retired) | (Withdrawn, Published) => Ok(()),
-        (Published, Withdrawn) if component_id.starts_with("mcp:") => Ok(()),
-        (Published, Withdrawn) => Err(format!(
-            "{WITHDRAWN_NOT_ALLOWED}: only a connector pack member may be withdrawn"
-        )),
-        (Retired, Published) | (Retired, Retired) | (Retired, Withdrawn) => Err(format!(
-            "{LIFECYCLE_RETIRED_TERMINAL}: a retired component cannot change lifecycle"
-        )),
-        (Withdrawn, Withdrawn) | (Withdrawn, Retired) => Err(format!(
-            "{LIFECYCLE_TRANSITION_INVALID}: {prior:?} -> {next:?} is not an allowed transition"
-        )),
-    }
+    use crate::agent_library::agent_library_machine::{lifecycle_refusal_text, LifecycleFacts};
+    prior
+        .apply(
+            AgentLibraryLifecycle::event_to(next),
+            &LifecycleFacts::of_component(component_id),
+        )
+        .map(|_| ())
+        .map_err(|refused| lifecycle_refusal_text(&refused))
 }
 
 /// Refuse a retained revision chain whose lifecycle states are not a legal path
@@ -707,17 +698,22 @@ impl AgentComponentEntry {
                 crate::agent_library::lifecycle::LIFECYCLE_RETIRED_TERMINAL
             ));
         }
-        check_lifecycle_transition(
-            &self.component_id,
-            self.lifecycle,
-            AgentLibraryLifecycle::Retired,
-        )?;
+        use crate::agent_library::agent_library_machine::{
+            lifecycle_refusal_text, AgentLibraryEvent, LifecycleFacts,
+        };
+        let lifecycle = self
+            .lifecycle
+            .apply(
+                AgentLibraryEvent::Retire,
+                &LifecycleFacts::of_component(&self.component_id),
+            )
+            .map_err(|refused| lifecycle_refusal_text(&refused))?;
         if entry_revision <= self.entry_revision {
             return Err("agent component tombstone revision must advance".to_string());
         }
         let retired = Self {
             entry_revision,
-            lifecycle: AgentLibraryLifecycle::Retired,
+            lifecycle,
             updated_at_ms: retired_at_ms,
             ..self.clone()
         };

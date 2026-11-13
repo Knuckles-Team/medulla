@@ -2,6 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::agent_library::agent_library_machine::{
+    lifecycle_refusal_text, AgentLibraryEvent, LifecycleFacts,
+};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
@@ -376,7 +379,7 @@ impl<'a> PlanCollector<'a> {
             component_id: component.component_id.clone(),
             entry_revision: component.entry_revision,
             definition_digest: component.definition_digest.clone(),
-            lifecycle: AgentLibraryLifecycle::Published,
+            lifecycle: component.lifecycle,
             body_sha256: entry.body.sha256,
             engine_manifest_digest: prior_holder
                 .as_ref()
@@ -410,7 +413,7 @@ impl<'a> PlanCollector<'a> {
             if old.lifecycle == AgentLibraryLifecycle::Published
                 && republished.contains(&old.component_id)
             {
-                self.add_moved_member(old);
+                self.add_moved_member(old)?;
             } else if old.lifecycle == AgentLibraryLifecycle::Published {
                 self.withdraw_one(old)?;
             } else {
@@ -425,9 +428,15 @@ impl<'a> PlanCollector<'a> {
     /// The old URI of a component this import republishes under a new URI. The
     /// URI is withdrawn; the component keeps the one revision the new URI plans,
     /// and the old row keeps the revision it last served.
-    fn add_moved_member(&mut self, old: ConnectorPackMemberRow) {
+    fn add_moved_member(&mut self, old: ConnectorPackMemberRow) -> Result<(), String> {
         let mut member = old.clone();
-        member.lifecycle = AgentLibraryLifecycle::Withdrawn;
+        member.lifecycle = old
+            .lifecycle
+            .apply(
+                AgentLibraryEvent::Withdraw,
+                &LifecycleFacts::of_component(&old.component_id),
+            )
+            .map_err(|refused| lifecycle_refusal_text(&refused))?;
         member.last_record_id = self.record_id.clone();
         self.members.push(member);
         self.records.push(PackEntryRecord {
@@ -439,6 +448,7 @@ impl<'a> PlanCollector<'a> {
             entry_revision: old.entry_revision,
             definition_digest: old.definition_digest,
         });
+        Ok(())
     }
 
     fn withdraw_one(&mut self, old: ConnectorPackMemberRow) -> Result<(), String> {
@@ -449,10 +459,17 @@ impl<'a> PlanCollector<'a> {
                 "CORRUPT_CONNECTOR_PACK: member has no component revision".to_string()
             })?;
         let revision = current.entry_revision + 1;
+        let lifecycle = current
+            .lifecycle
+            .apply(
+                AgentLibraryEvent::Withdraw,
+                &LifecycleFacts::of_component(&current.component_id),
+            )
+            .map_err(|refused| lifecycle_refusal_text(&refused))?;
         let withdrawn = AgentComponentEntry::create(
             current.as_draft(),
             revision,
-            AgentLibraryLifecycle::Withdrawn,
+            lifecycle,
             current.created_at_ms,
             self.request.context.created_at_ms,
         )?;
@@ -493,7 +510,7 @@ impl<'a> PlanCollector<'a> {
         let mut member = old.clone();
         member.entry_revision = revision;
         member.definition_digest = withdrawn.definition_digest.clone();
-        member.lifecycle = AgentLibraryLifecycle::Withdrawn;
+        member.lifecycle = withdrawn.lifecycle;
         member.last_record_id = self.record_id.clone();
         self.members.push(member);
         self.records.push(PackEntryRecord {

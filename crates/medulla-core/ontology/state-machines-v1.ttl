@@ -3390,3 +3390,94 @@
     :fromState :AdmissionMachine_Replayed ;
     :toState :AdmissionMachine_Poisoned ;
     :firedBy :AdmissionMachine_Event_Poison .
+
+# spec: MEDULLA-TYPED-PACKS-R810.2
+# The AgentLibrary machine: the lifecycle of one Agent Library revision. The Rust edge table
+# AGENT_LIBRARY_MACHINE is the same table.
+
+:AgentLibraryState a owl:Class ;
+    rdfs:label "AgentLibrary State" ;
+    rdfs:comment "A state of the AgentLibrary machine." ;
+    rdfs:subClassOf :State .
+
+:AgentLibraryTerminalState a owl:Class ;
+    rdfs:label "AgentLibrary Terminal State" ;
+    rdfs:comment "A terminal state of the AgentLibrary machine." ;
+    rdfs:subClassOf :TerminalState, :AgentLibraryState .
+
+:AgentLibraryTransition a owl:Class ;
+    rdfs:label "AgentLibrary Transition" ;
+    rdfs:comment "A transition of the AgentLibrary machine." ;
+    rdfs:subClassOf :Transition .
+
+:AgentLibraryEvent a owl:Class ;
+    rdfs:label "AgentLibrary Event" ;
+    rdfs:comment "An event of the AgentLibrary machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AgentLibraryGuard a owl:Class ;
+    rdfs:label "AgentLibrary Guard" ;
+    rdfs:comment "A guard of the AgentLibrary machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AgentLibraryMachine a :StateMachine ;
+    rdfs:label "AgentLibrary machine" ;
+    :initialState :AgentLibraryMachine_Published ;
+    :hasState :AgentLibraryMachine_Published, :AgentLibraryMachine_Retired, :AgentLibraryMachine_Withdrawn .
+
+:AgentLibraryMachine_Published a :AgentLibraryState ;
+    rdfs:label "AgentLibrary Published" ;
+    rdfs:comment "The entry is offered and may take a new revision." ;
+    :storedForm "published" .
+
+:AgentLibraryMachine_Retired a :AgentLibraryTerminalState ;
+    rdfs:label "AgentLibrary Retired" ;
+    rdfs:comment "A durable tombstone; no later publish may replace it." ;
+    :storedForm "retired" .
+
+:AgentLibraryMachine_Withdrawn a :AgentLibraryState ;
+    rdfs:label "AgentLibrary Withdrawn" ;
+    rdfs:comment "A connector pack stopped serving the entry; a later import may republish it." ;
+    :storedForm "withdrawn" .
+
+:AgentLibraryMachine_Event_Publish a :AgentLibraryEvent ;
+    rdfs:label "AgentLibrary Publish" .
+
+:AgentLibraryMachine_Event_Retire a :AgentLibraryEvent ;
+    rdfs:label "AgentLibrary Retire" .
+
+:AgentLibraryMachine_Event_Withdraw a :AgentLibraryEvent ;
+    rdfs:label "AgentLibrary Withdraw" .
+
+:AgentLibraryMachine_Guard_PackMember a :AgentLibraryGuard ;
+    rdfs:label "AgentLibrary PackMember" ;
+    rdfs:comment "Guard: The entry is a connector pack member (mcp: component id)." .
+
+:AgentLibraryMachine_L01 a :AgentLibraryTransition ;
+    rdfs:label "AgentLibrary L01" ;
+    :edgeId "L01" ;
+    :fromState :AgentLibraryMachine_Published ;
+    :toState :AgentLibraryMachine_Published ;
+    :firedBy :AgentLibraryMachine_Event_Publish .
+
+:AgentLibraryMachine_L02 a :AgentLibraryTransition ;
+    rdfs:label "AgentLibrary L02" ;
+    :edgeId "L02" ;
+    :fromState :AgentLibraryMachine_Withdrawn ;
+    :toState :AgentLibraryMachine_Published ;
+    :firedBy :AgentLibraryMachine_Event_Publish .
+
+:AgentLibraryMachine_L03 a :AgentLibraryTransition ;
+    rdfs:label "AgentLibrary L03" ;
+    :edgeId "L03" ;
+    :fromState :AgentLibraryMachine_Published ;
+    :toState :AgentLibraryMachine_Retired ;
+    :firedBy :AgentLibraryMachine_Event_Retire .
+
+:AgentLibraryMachine_L04 a :AgentLibraryTransition ;
+    rdfs:label "AgentLibrary L04" ;
+    :edgeId "L04" ;
+    :fromState :AgentLibraryMachine_Published ;
+    :toState :AgentLibraryMachine_Withdrawn ;
+    :guardedBy :AgentLibraryMachine_Guard_PackMember ;
+    :firedBy :AgentLibraryMachine_Event_Withdraw .
