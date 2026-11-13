@@ -25,6 +25,7 @@ except ModuleNotFoundError:  # package-root import
 TENANT_A = TEST_TENANT
 TENANT_B = "tenant-b"
 OWNER = "usr:a"
+FOREIGN_OWNER = "usr:foreign"  # a principal of TENANT_B, not OWNER
 READER_B = "usr:b"
 READER_C = "usr:c"
 
@@ -35,10 +36,11 @@ def _unit(
     version: int = 1,
     supersedes: str | None = None,
     owner_tenant: str = TENANT_A,
+    owner: str = OWNER,
 ) -> dict[str, object]:
     props: dict[str, object] = {
         "node_type": "KnowledgeUnit",
-        "owner": OWNER,
+        "owner": owner,
         "owner_tenant": owner_tenant,
         "version": version,
         "share_scope": share_scope,
@@ -123,7 +125,9 @@ def test_shared_unit_visible_only_in_scope(clean_graph):
     clean_graph.nodes.add("ku-private", _unit("private"))
     clean_graph.nodes.add("ku-shared-v1", _unit("tenant"))
     # A tenant-shared unit owned by another tenant never reaches this scope.
-    clean_graph.nodes.add("ku-foreign", _unit("tenant", owner_tenant=TENANT_B))
+    clean_graph.nodes.add(
+        "ku-foreign", _unit("tenant", owner_tenant=TENANT_B, owner=FOREIGN_OWNER)
+    )
 
     reader_b = _connect(READER_B, TENANT_A)
     try:
