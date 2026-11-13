@@ -526,6 +526,14 @@ name = "live_artifact_refresh"
 path = "benches/live_artifact_refresh.rs"
 harness = false
 
+# ── Context bundle compile bench (MEDULLA-FEDERATED-QUERY-R650.6) ─────────────────────
+# 256 ranked hits per source in an 8,000-token budget; the key `context_bundle_compile` in
+# `thresholds.json` caps p50 at 2 ms and p99 at 12 ms.
+[[bench]]
+name = "context_bundle"
+path = "benches/context_bundle.rs"
+harness = false
+
 # ── Stored-query read bench (MEDULLA-FEDERATED-QUERY-R708.6) ──────────────────────────
 # One 10,000-row materialized read; the key `stored_query` in `thresholds.json` caps p99
 # at 3 ms. Nightly only.

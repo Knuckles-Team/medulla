@@ -612,6 +612,13 @@ $($variants)*
         graph: String,
         plan: medulla_types::wire::Plan,
     },
+
+    /// MEDULLA-FEDERATED-QUERY-R650.3: compile one context bundle for a query
+    /// under a token budget, with a certified resolution choice per item. A
+    /// read; nothing is committed.
+    ContextCompile {
+        request: Box<medulla_decision_types::decision::context_bundle::ContextBundleRequest>,
+    },
         ]);
     };
 }

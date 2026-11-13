@@ -9,7 +9,7 @@
 
 mod error;
 mod objective;
-mod spec;
+pub(crate) mod spec;
 mod validate;
 
 use serde::{Deserialize, Serialize};

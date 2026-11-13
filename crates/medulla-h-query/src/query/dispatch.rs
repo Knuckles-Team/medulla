@@ -96,6 +96,14 @@ async fn dispatch_query_family(
         Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op).await),
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R650.3: one bundle compile over the caller's projected core.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::ContextCompile { request } => {
+            return Ok(handle_context_compile(hctx, *request).await)
+        }
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;

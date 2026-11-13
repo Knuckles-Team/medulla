@@ -24,6 +24,7 @@ hmac = "0.12"
 medulla-alignment = { path = "../medulla-alignment", optional = true }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }

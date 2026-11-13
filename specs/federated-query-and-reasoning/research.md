@@ -71,3 +71,15 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
 - `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
 - Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.
+
+## Served context compile decisions (R650.3 to R650.6)
+
+- The wire records move below the protocol crate (`medulla-decision-types`, beside the package records) so `Method::ContextCompile` can carry the request and answer the bundle; `medulla-plan` re-exports them and keeps only the compile. One definition, no mirror.
+- The engine measures tokens itself: bytes divided by the registered knob `context_facts.bytes_per_token`, rounded up and at least one, the same estimator `ContextFacts` uses. The request's `tokenizer_id` and `tokenizer_version` name the tokenizer the caller's model uses; they are carried into every candidate and the bundle key, and an empty one refuses `CONTEXT_BUDGET_MISSING` together with a zero window.
+- Resolutions are real text spans of a node: the name, the name with the first 240 bytes of description, and the name with the whole description. Repeated spans are not offered twice. The citation is the covered byte range of the node text at the graph revision read, with the SHA-256 of that text.
+- Arms are the lexical keyword overlap and the semantic store search over the caller's row-projected core, bounded by the lexical scan cap of `Discover`; `hybrid` runs both, a missing embedding degrades `hybrid` to lexical, and `semantic` without an embedding is `INVALID_ARGUMENT`.
+- `CONTEXT_ITEM_COST_INVALID` is refused when a query-embedding component or an arm score is non-finite: the item's inclusion value would otherwise reach the solver as an invalid cost.
+- `CONTEXT_SCOPE_FOREIGN` is refused when `agent_ref` names no node in the caller's tenant graph; the projected core holds no other tenant's rows, so a foreign agent is indistinguishable from an absent one and both refuse.
+- `as_of` is accepted only at the served revision; the engine keeps no older read view, so any other value is `INVALID_ARGUMENT` rather than a silent read of the current state.
+- A hit whose node declares `access_mode = checked_at_read` goes through `filter_hits` before any fusion. With no registered port the check is unavailable and the hit is dropped, listed in `evidence.unchecked_dropped` and excluded as `denied`. A bundle that needed any such check is never cached.
+- The served answer is cached under the caller-scoped hash of the `BundleKey`, invalidated by graph version; the policy digest in the key is the caller-scoped hash, so two callers with different visibility never share a bundle.

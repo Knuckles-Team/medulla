@@ -160,11 +160,15 @@ mod asset_usage;
 #[cfg(feature = "query")]
 mod column_lineage;
 #[cfg(feature = "query")]
+mod context_compile;
+#[cfg(feature = "query")]
 mod schema_projections;
 #[cfg(all(feature = "query", feature = "federation-sql"))]
 pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
 pub(crate) use column_lineage::handle_column_lineage;
+#[cfg(feature = "query")]
+pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;

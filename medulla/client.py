@@ -6948,6 +6948,64 @@ class GraphOperationsClient:
             raise RuntimeError("ReadSpan must answer with an object")
         return result
 
+    async def context_compile(
+        self,
+        query_text: str,
+        *,
+        window_tokens: int,
+        tokenizer_id: str,
+        tokenizer_version: str,
+        query_embedding: list[float] | None = None,
+        reserved_output_tokens: int = 0,
+        mode: str = "hybrid",
+        as_of: int | None = None,
+        agent_ref: str | None = None,
+        top_n: int = 256,
+        budget: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Compile one context bundle under a token budget
+        (MEDULLA-FEDERATED-QUERY-R650.3).
+
+        Returns ``{items, excluded, certificate, key, evidence}``. Each item keeps
+        the resolution an exact, certified selection chose inside the budget, with
+        its citation and proof edges; ``excluded`` names every other hit with a
+        closed reason. A request without a window or tokenizer is refused
+        ``CONTEXT_BUDGET_MISSING``, a non-finite score ``CONTEXT_ITEM_COST_INVALID``
+        and an agent of another tenant ``CONTEXT_SCOPE_FOREIGN``. ``budget`` adds
+        the optional caller, money and latency ceilings.
+        """
+        ceilings = {
+            "window_tokens": window_tokens,
+            "reserved_output_tokens": reserved_output_tokens,
+            "caller_ceiling_tokens": None,
+            "money_ceiling_micro": None,
+            "price_micro_per_token": None,
+            "latency_ceiling_ms": None,
+            "tokens_per_second": None,
+        }
+        ceilings.update(budget or {})
+        request: dict[str, Any] = {
+            "query_text": query_text,
+            "query_embedding": list(query_embedding or []),
+            "budget": ceilings,
+            "tokenizer_id": tokenizer_id,
+            "tokenizer_version": tokenizer_version,
+            "mode": mode,
+            "top_n": top_n,
+        }
+        if as_of is not None:
+            request["as_of"] = as_of
+        if agent_ref is not None:
+            request["agent_ref"] = agent_ref
+        result = await self._client._send(
+            "ContextCompile", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("ContextCompile must answer with an object")
+        return result
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.

@@ -1229,3 +1229,7 @@ Order: R733, then R734 and R735 in parallel.
 - Fusion is `medulla_text::rrf_fuse`, the function the plan executor already uses; `medulla-text` is always linked, its Tantivy index stays behind the `text` feature.
 - `certificate` is absent only for an empty candidate set; every other bundle carries the verified selection.
 - Calibration consumes a pinned curve when the source has one and falls back to min-max scaling with a `no_calibration` reason; fitting curves is `MEDULLA-DECISION-ENGINE-R822`.
+
+### Served context compile (R650.3 to R650.6)
+
+`Method::ContextCompile { request }` is registered by the seven-step recipe: variant in `method_05.rs`, policy `query:retrieval` in `domains/query.rs`, result `Raw<ContextBundle>` in `result_contract/query.rs`, the RLS-routed read table, the canonical read arm, `add_typed_handler_errors` codes, and `medulla/client.py::context_compile`. `handle_context_compile` validates, serves a cached bundle by `BundleKey` when one exists, else gathers the lexical and semantic arms off-lock, measures spans, runs `filter_hits`, calls `compile`. Bench `context_bundle` guards the compile (p50 2 ms, p99 12 ms). Decisions: `research.md`, section "Served context compile decisions".

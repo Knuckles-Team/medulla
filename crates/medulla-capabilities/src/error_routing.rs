@@ -392,6 +392,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // `ensure_job_workers` refuses an invalid analytics worker timing.
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-FEDERATED-QUERY-R650.4: the refusals of a context bundle compile; the
+    // package codes pass through unchanged from the selection kernel.
+    (
+        "ContextCompile",
+        &[
+            "ACCESS_CHECK_UNAVAILABLE",
+            "CONTEXT_BUDGET_MISSING",
+            "CONTEXT_ITEM_COST_INVALID",
+            "CONTEXT_PACKAGE_INVALID_MEASUREMENT",
+            "CONTEXT_PACKAGE_MISSING_FACT",
+            "CONTEXT_SCOPE_FOREIGN",
+        ],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: an empty provenance list or an unresolved key.

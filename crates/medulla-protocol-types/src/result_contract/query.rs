@@ -59,6 +59,8 @@ method_results! {
     #[cfg(feature = "query")]
     Uql(Uql) => Raw<medulla_types::wire::UqlResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R763.2: column edges and gaps of one SQL query.
+    // MEDULLA-FEDERATED-QUERY-R650.3: the compiled context bundle with its certificate.
+    ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     #[cfg(feature = "query")]
     ExplainPlan(ExplainPlan) => Raw<ExplainPlanResult>;

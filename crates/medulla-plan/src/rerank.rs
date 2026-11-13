@@ -256,13 +256,7 @@ pub fn rerank_top(
     (hits, fallback)
 }
 
-/// Why the rerank fell back to the input order. Closed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FallbackReason {
-    ScorerUnavailable,
-    NoCalibration,
-}
+pub use medulla_decision_types::decision::context_bundle::FallbackReason;
 
 /// What one rerank did.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
