@@ -230,6 +230,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "ENCODE_NON_FINITE",
             "ENCODE_BUDGET_EXHAUSTED",
             "ENCODE_POLICY_STALE",
+            "EMBED_BUDGET_EXHAUSTED",
+            "EMBED_VECTOR_INVALID",
+            "EMBED_PROVIDER_FAILED",
         ],
     ),
     // Local-only authority: a clustered server refuses it with the typed

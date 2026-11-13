@@ -316,7 +316,9 @@ pub use semantic_regeneration::{
 
 #[path = "semantic_embedding_batch.rs"]
 mod semantic_embedding_batch;
-pub use semantic_embedding_batch::{BoundedCachingEmbeddingProvider, CacheNamespace};
+pub use semantic_embedding_batch::{
+    BoundedCachingEmbeddingProvider, CacheNamespace, EmbedErrorCode, EmbedLimits,
+};
 
 /// Shared entry-point validation every `add_embedding` implementation runs BEFORE
 /// touching any state (CONCEPT:MEDULLA-KG.compute.rank-dim-mismatch-guard, BUG-007 + GOC-08). `store_dim == 0`

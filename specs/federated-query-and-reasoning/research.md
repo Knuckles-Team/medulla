@@ -161,3 +161,5 @@ Chunk-encoding wiring decision (R039.2.5 to R039.2.7). The recipe has one execut
 ## Low-storage ANN artifact layering (R040.5.1, R040.5.2, R040.5.5)
 
 Decision: the compact artifact is one container in `medulla-ann` (version byte 2) wrapping the existing vectorless compact HNSW image, per-row SQ8 codes (the IVF-PQ SQ8 encoder, reused) and tombstoned stable ids, with the manifest persisted beside it. Hub pruning reuses the existing bounded `PrunePolicy` transform; the manifest records the policy. The byte ceiling and the pruning switch are `SchedulerConfig` keys (`ann_storage_ceiling_bytes`, `ann_hub_pruning`). No second store, no vector copy of source text.
+
+- R040.5.4 decision: the embedding-provider budgets are `embed.*` registry knobs, not `SchedulerConfig` fields, so one registry owns every tunable; the provider takes an `EmbedLimits` value built from them. A run is one provider wrapper and its call counter; a refused wave has no provider effect.

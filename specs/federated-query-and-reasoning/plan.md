@@ -1259,3 +1259,5 @@ Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/
 ## Low-storage ANN layering
 
 `medulla-ann::low_storage` holds the manifest, checked accounting, the compact artifact (`HnswIndex::to_compact`, `LowStorageArtifact::{encode,decode,candidates}`) and `prune_hubs`. Regeneration, the bounded provider and the served path (R040.5.3, R040.5.4, R040.5.6) layer on top and own the L4 proof of the slice.
+
+- R040.5.4: `BoundedCachingEmbeddingProvider::with_limits(EmbedLimits)` batches by items and bytes, runs waves of `embed.concurrency` batches on scoped threads, reserves calls per wave, keeps an LRU cache capped by `embed.cache_entries` and `embed.cache_bytes`, and returns `EMBED_*` coded refusals.

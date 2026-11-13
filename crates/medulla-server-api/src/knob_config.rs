@@ -253,6 +253,18 @@ knobs! {
     retrieval_joint_max_iters: u64 = "retrieval.joint_max_iters", U64(1000), [10, 100000], "sweeps", Tunable;
     /// Chunk encoding: most chunks one document may take (MEDULLA-FEDERATED-QUERY-R039.2.6).
     retrieval_encode_budget_chunks: u64 = "retrieval.encode_budget_chunks", U64(4096), [1, 100_000], "chunks", Tunable;
+    /// Embedding provider: most items in one call (MEDULLA-FEDERATED-QUERY-R040.5.4).
+    embed_batch_items: u64 = "embed.batch_items", U64(64), [1, 1024], "items", Tunable;
+    /// Embedding provider: most source bytes in one call.
+    embed_batch_bytes: u64 = "embed.batch_bytes", U64(1_048_576), [4096, 67_108_864], "bytes", Tunable;
+    /// Embedding provider: calls in flight at once.
+    embed_concurrency: u64 = "embed.concurrency", U64(4), [1, 64], "calls", Tunable;
+    /// Embedding provider: calls one run may spend.
+    embed_calls_max: u64 = "embed.calls_max", U64(1000), [1, 1_000_000], "calls", Tunable;
+    /// Embedding provider: resident cache entries.
+    embed_cache_entries: u64 = "embed.cache_entries", U64(10_000), [0, 10_000_000], "entries", Tunable;
+    /// Embedding provider: resident cache bytes.
+    embed_cache_bytes: u64 = "embed.cache_bytes", U64(67_108_864), [0, 4_294_967_296], "bytes", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

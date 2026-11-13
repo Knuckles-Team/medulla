@@ -8,7 +8,8 @@ use super::EmbeddingProvider;
 use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_types::contract::Digest256;
 use parking_lot::Mutex;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Maximum candidate count accepted by one regeneration call. This matches the
 /// existing bounded semantic source page size, keeping returned vectors bounded
@@ -16,13 +17,7 @@ use std::collections::HashMap;
 pub const MAX_REGENERATION_CHUNKS: usize = 256;
 /// Maximum combined UTF-8 source bytes accepted by one regeneration call.
 pub const MAX_REGENERATION_TEXT_BYTES: usize = 8 * 1024 * 1024;
-/// Maximum inputs sent to one concrete provider invocation.
-pub const MAX_PROVIDER_BATCH_ITEMS: usize = 32;
-/// Maximum logical resident cache budget, including a fixed per-entry allowance
-/// for the digest key and map bookkeeping.
-pub const MAX_EMBEDDING_CACHE_BYTES: usize = 8 * 1024 * 1024;
 const CACHE_ENTRY_OVERHEAD_BYTES: usize = 128;
-const MAX_CACHE_ENTRIES: usize = 256;
 const MAX_NAMESPACE_COMPONENT_BYTES: usize = 256;
 
 /// Validated authority scope for reusable embedding outputs. A cache entry can
@@ -69,41 +64,159 @@ impl CacheNamespace {
     }
 }
 
-/// A provider adapter that batches calls and reuses exact, pinned-space outputs
-/// in a bounded in-memory cache. Provider calls and each internal batch are
-/// synchronous; cooperative request interruption is checked between batches.
+/// The six embedding-provider budgets (MEDULLA-FEDERATED-QUERY-R040.5.4). The
+/// caller builds it from the `embed.*` registry knobs in `knob_config.rs`
+/// (`embed.batch_items`, `embed.batch_bytes`, `embed.concurrency`,
+/// `embed.calls_max`, `embed.cache_entries`, `embed.cache_bytes`); this layer
+/// re-checks the same inclusive bounds before any provider work.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EmbedLimits {
+    /// Largest items in one provider call, `[1, 1024]`.
+    pub embed_batch_items: u64,
+    /// Largest source bytes in one provider call, `[4096, 67108864]`.
+    pub embed_batch_bytes: u64,
+    /// Provider calls in flight at once, `[1, 64]`.
+    pub embed_concurrency: u64,
+    /// Provider calls one run may spend, `[1, 1000000]`.
+    pub embed_calls_max: u64,
+    /// Resident cache entries, `[0, 10000000]`.
+    pub embed_cache_entries: u64,
+    /// Resident cache bytes, `[0, 4294967296]`.
+    pub embed_cache_bytes: u64,
+}
+
+impl Default for EmbedLimits {
+    fn default() -> Self {
+        Self {
+            embed_batch_items: 64,
+            embed_batch_bytes: 1_048_576,
+            embed_concurrency: 4,
+            embed_calls_max: 1000,
+            embed_cache_entries: 10_000,
+            embed_cache_bytes: 67_108_864,
+        }
+    }
+}
+
+impl EmbedLimits {
+    /// The key, value and inclusive bounds of every limit.
+    pub fn entries(&self) -> [(&'static str, u64, (u64, u64)); 6] {
+        [
+            ("embed.batch_items", self.embed_batch_items, (1, 1024)),
+            (
+                "embed.batch_bytes",
+                self.embed_batch_bytes,
+                (4096, 67_108_864),
+            ),
+            ("embed.concurrency", self.embed_concurrency, (1, 64)),
+            ("embed.calls_max", self.embed_calls_max, (1, 1_000_000)),
+            (
+                "embed.cache_entries",
+                self.embed_cache_entries,
+                (0, 10_000_000),
+            ),
+            (
+                "embed.cache_bytes",
+                self.embed_cache_bytes,
+                (0, 4_294_967_296),
+            ),
+        ]
+    }
+
+    /// Refuse the first limit outside its bounds.
+    pub fn validate(&self) -> Result<(), String> {
+        for (key, value, (lo, hi)) in self.entries() {
+            if !(lo..=hi).contains(&value) {
+                return Err(format!("{key} {value} is outside [{lo}, {hi}]"));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Closed refusal set of the bounded embedding provider
+/// (MEDULLA-FEDERATED-QUERY-R040.5.4). `as_str` is the wire token; every
+/// refusal string the provider returns begins with it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EmbedErrorCode {
+    /// A batch, byte or call ceiling would be crossed.
+    BudgetExhausted,
+    /// A vector of the wrong width or with a non-finite component, or the
+    /// wrong number of vectors.
+    VectorInvalid,
+    /// The concrete provider failed.
+    ProviderFailed,
+}
+
+impl EmbedErrorCode {
+    /// The wire token of this refusal.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::BudgetExhausted => "EMBED_BUDGET_EXHAUSTED",
+            Self::VectorInvalid => "EMBED_VECTOR_INVALID",
+            Self::ProviderFailed => "EMBED_PROVIDER_FAILED",
+        }
+    }
+}
+
+fn refuse(code: EmbedErrorCode, detail: impl std::fmt::Display) -> String {
+    format!("{}: {detail}", code.as_str())
+}
+
+#[derive(Default)]
+struct Lru {
+    map: HashMap<Digest256, (Vec<f32>, u64)>,
+    order: BTreeMap<u64, Digest256>,
+    tick: u64,
+}
+
+impl Lru {
+    fn next_tick(&mut self) -> u64 {
+        self.tick = self.tick.saturating_add(1);
+        self.tick
+    }
+}
+
+/// A provider adapter that batches calls under finite budgets and reuses
+/// exact, pinned-space outputs in a bounded in-memory cache. The cache is a
+/// recomputable accelerator, not a store. One adapter is one run: its call
+/// counter spends `embed_calls_max`.
 pub struct BoundedCachingEmbeddingProvider<'a> {
     provider: &'a dyn EmbeddingProvider,
     namespace: CacheNamespace,
     space: EmbeddingSpaceRef,
-    batch_items: usize,
+    limits: EmbedLimits,
     cache_capacity: usize,
-    cache: Mutex<HashMap<Digest256, (Vec<f32>, u64)>>,
-    tick: Mutex<u64>,
+    cache: Mutex<Lru>,
+    calls_used: AtomicU64,
 }
 
 impl<'a> BoundedCachingEmbeddingProvider<'a> {
-    /// Wrap `provider` with explicit batch and cache budgets.
-    ///
-    /// `batch_items` must be in `1..=MAX_PROVIDER_BATCH_ITEMS`; the cache budget
-    /// must not exceed [`MAX_EMBEDDING_CACHE_BYTES`]. A budget too small for one
-    /// vector simply disables caching while preserving batching.
+    /// Wrap `provider` with the default concurrency and call budgets and an
+    /// explicit batch size and cache byte budget (both checked against the
+    /// `EmbedLimits` bounds).
     pub fn new(
         provider: &'a dyn EmbeddingProvider,
         namespace: CacheNamespace,
         batch_items: usize,
         cache_bytes: usize,
     ) -> Result<Self, String> {
-        if batch_items == 0 || batch_items > MAX_PROVIDER_BATCH_ITEMS {
-            return Err(format!(
-                "embedding batch size must be in 1..={MAX_PROVIDER_BATCH_ITEMS}"
-            ));
-        }
-        if cache_bytes > MAX_EMBEDDING_CACHE_BYTES {
-            return Err(format!(
-                "embedding cache budget exceeds {MAX_EMBEDDING_CACHE_BYTES} bytes"
-            ));
-        }
+        let limits = EmbedLimits {
+            embed_batch_items: batch_items as u64,
+            embed_cache_bytes: cache_bytes as u64,
+            ..EmbedLimits::default()
+        };
+        Self::with_limits(provider, namespace, limits)
+    }
+
+    /// Wrap `provider` under the six `embed.*` knob limits. A cache
+    /// budget too small for one vector disables caching while batching stays.
+    pub fn with_limits(
+        provider: &'a dyn EmbeddingProvider,
+        namespace: CacheNamespace,
+        limits: EmbedLimits,
+    ) -> Result<Self, String> {
+        limits.validate()?;
         let space = provider.space().clone();
         space.validate()?;
         let entry_bytes = space
@@ -111,16 +224,22 @@ impl<'a> BoundedCachingEmbeddingProvider<'a> {
             .checked_mul(std::mem::size_of::<f32>())
             .and_then(|bytes| bytes.checked_add(CACHE_ENTRY_OVERHEAD_BYTES))
             .ok_or_else(|| "embedding cache entry size overflowed".to_string())?;
-        let cache_capacity = (cache_bytes / entry_bytes).min(MAX_CACHE_ENTRIES);
+        let by_bytes = (limits.embed_cache_bytes / entry_bytes as u64).min(usize::MAX as u64);
+        let cache_capacity = by_bytes.min(limits.embed_cache_entries) as usize;
         Ok(Self {
             provider,
             namespace,
             space,
-            batch_items,
+            limits,
             cache_capacity,
-            cache: Mutex::new(HashMap::with_capacity(cache_capacity)),
-            tick: Mutex::new(0),
+            cache: Mutex::new(Lru::default()),
+            calls_used: AtomicU64::new(0),
         })
+    }
+
+    /// Provider calls spent so far by this run.
+    pub fn calls_used(&self) -> u64 {
+        self.calls_used.load(Ordering::SeqCst)
     }
 
     fn cache_key(&self, text: &str) -> Result<Digest256, String> {
@@ -139,11 +258,13 @@ impl<'a> BoundedCachingEmbeddingProvider<'a> {
 
     fn touch(&self, key: Digest256) -> Option<Vec<f32>> {
         let mut cache = self.cache.lock();
-        let value = cache.get_mut(&key)?;
-        let mut tick = self.tick.lock();
-        *tick = tick.saturating_add(1);
-        value.1 = *tick;
-        Some(value.0.clone())
+        let tick = cache.next_tick();
+        let (vector, used) = cache.map.get_mut(&key)?;
+        let previous = std::mem::replace(used, tick);
+        let vector = vector.clone();
+        cache.order.remove(&previous);
+        cache.order.insert(tick, key);
+        Some(vector)
     }
 
     fn insert(&self, key: Digest256, vector: Vec<f32>) {
@@ -151,34 +272,71 @@ impl<'a> BoundedCachingEmbeddingProvider<'a> {
             return;
         }
         let mut cache = self.cache.lock();
-        let mut tick = self.tick.lock();
-        *tick = tick.saturating_add(1);
-        cache.insert(key, (vector, *tick));
-        while cache.len() > self.cache_capacity {
-            let Some(oldest) = cache
-                .iter()
-                .min_by_key(|(_, (_, used))| *used)
-                .map(|(key, _)| *key)
-            else {
+        let tick = cache.next_tick();
+        if let Some((_, previous)) = cache.map.insert(key, (vector, tick)) {
+            cache.order.remove(&previous);
+        }
+        cache.order.insert(tick, key);
+        while cache.map.len() > self.cache_capacity {
+            let Some((_, oldest)) = cache.order.pop_first() else {
                 break;
             };
-            cache.remove(&oldest);
+            cache.map.remove(&oldest);
         }
     }
 
     fn validate_vector(&self, text_index: usize, vector: &[f32]) -> Result<(), String> {
         if vector.len() != self.space.dimensions {
-            return Err(format!(
-                "embedding provider returned dimension {} for input {text_index}; pinned space requires {}",
-                vector.len(), self.space.dimensions
+            return Err(refuse(
+                EmbedErrorCode::VectorInvalid,
+                format!(
+                    "embedding provider returned dimension {} for input {text_index}; pinned space requires {}",
+                    vector.len(),
+                    self.space.dimensions
+                ),
             ));
         }
         if let Some(index) = vector.iter().position(|component| !component.is_finite()) {
-            return Err(format!(
-                "embedding provider returned a non-finite component at index {index} for input {text_index}"
+            return Err(refuse(
+                EmbedErrorCode::VectorInvalid,
+                format!(
+                    "embedding provider returned a non-finite component at index {index} for input {text_index}"
+                ),
             ));
         }
         Ok(())
+    }
+
+    /// Split the unresolved inputs into batches that respect both the item and
+    /// the byte ceiling. A single input over the byte ceiling is refused.
+    fn plan_batches<'t>(
+        &self,
+        pending: &'t [(Digest256, usize, &'t str)],
+    ) -> Result<Vec<&'t [(Digest256, usize, &'t str)]>, String> {
+        let max_items = self.limits.embed_batch_items as usize;
+        let max_bytes = self.limits.embed_batch_bytes as usize;
+        let mut batches = Vec::new();
+        let (mut start, mut bytes) = (0usize, 0usize);
+        for (index, (_, _, text)) in pending.iter().enumerate() {
+            if text.len() > max_bytes {
+                return Err(refuse(
+                    EmbedErrorCode::BudgetExhausted,
+                    format!(
+                        "one source of {} bytes exceeds embed_batch_bytes {max_bytes}",
+                        text.len()
+                    ),
+                ));
+            }
+            if index > start && (index - start >= max_items || bytes + text.len() > max_bytes) {
+                batches.push(&pending[start..index]);
+                (start, bytes) = (index, 0);
+            }
+            bytes += text.len();
+        }
+        if start < pending.len() {
+            batches.push(&pending[start..]);
+        }
+        Ok(batches)
     }
 }
 
@@ -192,9 +350,12 @@ impl EmbeddingProvider for BoundedCachingEmbeddingProvider<'_> {
             return Err("embedding regeneration was cancelled before provider work".into());
         }
         if texts.len() > MAX_REGENERATION_CHUNKS {
-            return Err(format!(
-                "embedding request has {} chunks; maximum is {MAX_REGENERATION_CHUNKS}",
-                texts.len()
+            return Err(refuse(
+                EmbedErrorCode::BudgetExhausted,
+                format!(
+                    "embedding request has {} chunks; maximum is {MAX_REGENERATION_CHUNKS}",
+                    texts.len()
+                ),
             ));
         }
         let total_text_bytes = texts.iter().try_fold(0usize, |total, text| {
@@ -203,8 +364,11 @@ impl EmbeddingProvider for BoundedCachingEmbeddingProvider<'_> {
                 .filter(|bytes| *bytes <= MAX_REGENERATION_TEXT_BYTES)
         });
         if total_text_bytes.is_none() {
-            return Err(format!(
-                "embedding source text exceeds the {MAX_REGENERATION_TEXT_BYTES}-byte call budget"
+            return Err(refuse(
+                EmbedErrorCode::BudgetExhausted,
+                format!(
+                    "embedding source text exceeds the {MAX_REGENERATION_TEXT_BYTES}-byte call budget"
+                ),
             ));
         }
         if self.provider.space() != &self.space {
@@ -239,28 +403,72 @@ impl EmbeddingProvider for BoundedCachingEmbeddingProvider<'_> {
             }
         }
 
-        for chunk in pending.chunks(self.batch_items) {
+        let batches = self.plan_batches(&pending)?;
+        let concurrency = self.limits.embed_concurrency as usize;
+        for wave in batches.chunks(concurrency) {
             if crate::interrupt::requested() {
                 return Err("embedding regeneration was cancelled between provider batches".into());
             }
-            let batch_texts: Vec<&str> = chunk.iter().map(|(_, _, text)| *text).collect();
-            let vectors = self.provider.embed_batch(&batch_texts)?;
-            if vectors.len() != chunk.len() {
-                return Err(format!(
-                    "embedding provider returned {} vectors for {} requested chunks",
-                    vectors.len(),
-                    chunk.len()
+            // Reserve the whole wave before any call so a refused budget has
+            // no provider effect for the wave.
+            let wanted = wave.len() as u64;
+            let before = self.calls_used.fetch_add(wanted, Ordering::SeqCst);
+            if before.saturating_add(wanted) > self.limits.embed_calls_max {
+                self.calls_used.fetch_sub(wanted, Ordering::SeqCst);
+                return Err(refuse(
+                    EmbedErrorCode::BudgetExhausted,
+                    format!(
+                        "embed_calls_max {} would be crossed",
+                        self.limits.embed_calls_max
+                    ),
                 ));
             }
-            for (offset, vector) in vectors.iter().enumerate() {
-                self.validate_vector(chunk[offset].1, vector)?;
+            let outputs: Vec<Result<Vec<Vec<f32>>, String>> = if wave.len() == 1 {
+                let texts: Vec<&str> = wave[0].iter().map(|(_, _, text)| *text).collect();
+                vec![self.provider.embed_batch(&texts)]
+            } else {
+                std::thread::scope(|scope| {
+                    let handles: Vec<_> = wave
+                        .iter()
+                        .map(|chunk| {
+                            let texts: Vec<&str> = chunk.iter().map(|(_, _, text)| *text).collect();
+                            let provider = self.provider;
+                            scope.spawn(move || provider.embed_batch(&texts))
+                        })
+                        .collect();
+                    handles
+                        .into_iter()
+                        .map(|handle| {
+                            handle
+                                .join()
+                                .unwrap_or_else(|_| Err("provider panicked".into()))
+                        })
+                        .collect()
+                })
+            };
+            for (chunk, output) in wave.iter().zip(outputs) {
+                let vectors =
+                    output.map_err(|detail| refuse(EmbedErrorCode::ProviderFailed, detail))?;
+                if vectors.len() != chunk.len() {
+                    return Err(refuse(
+                        EmbedErrorCode::VectorInvalid,
+                        format!(
+                            "embedding provider returned {} vectors for {} requested chunks",
+                            vectors.len(),
+                            chunk.len()
+                        ),
+                    ));
+                }
+                for (offset, vector) in vectors.iter().enumerate() {
+                    self.validate_vector(chunk[offset].1, vector)?;
+                }
+                for ((key, _index, _), vector) in chunk.iter().zip(vectors) {
+                    self.insert(*key, vector.clone());
+                    resolved.insert(*key, vector);
+                }
             }
             if crate::interrupt::requested() {
                 return Err("embedding regeneration was cancelled between provider batches".into());
-            }
-            for ((key, _index, _), vector) in chunk.iter().zip(vectors) {
-                self.insert(*key, vector.clone());
-                resolved.insert(*key, vector);
             }
         }
 
@@ -286,6 +494,13 @@ mod tests {
     use crate::semantic::SemanticStore;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::Arc;
+
+    fn limited(
+        provider: &TestProvider,
+        limits: EmbedLimits,
+    ) -> BoundedCachingEmbeddingProvider<'_> {
+        BoundedCachingEmbeddingProvider::with_limits(provider, namespace(), limits).unwrap()
+    }
 
     #[derive(Clone, Copy)]
     enum ProviderOutput {
@@ -424,20 +639,10 @@ mod tests {
     fn refuses_invalid_limits_and_provider_spaces() {
         let provider = TestProvider::new(ProviderOutput::Valid);
         assert!(BoundedCachingEmbeddingProvider::new(&provider, namespace(), 0, 0).is_err());
-        assert!(BoundedCachingEmbeddingProvider::new(
-            &provider,
-            namespace(),
-            MAX_PROVIDER_BATCH_ITEMS + 1,
-            0
-        )
-        .is_err());
-        assert!(BoundedCachingEmbeddingProvider::new(
-            &provider,
-            namespace(),
-            1,
-            MAX_EMBEDDING_CACHE_BYTES + 1
-        )
-        .is_err());
+        assert!(BoundedCachingEmbeddingProvider::new(&provider, namespace(), 1025, 0).is_err());
+        assert!(
+            BoundedCachingEmbeddingProvider::new(&provider, namespace(), 1, 4_294_967_297).is_err()
+        );
 
         let wrapper = wrapper(&provider, 1, 0);
         assert_eq!(wrapper.space(), &provider.space);
@@ -450,7 +655,7 @@ mod tests {
         let wrapper = wrapper(&provider, 1, 136);
         wrapper.embed_batch(&["first"]).unwrap();
         wrapper.embed_batch(&["second"]).unwrap();
-        assert_eq!(wrapper.cache.lock().len(), 1);
+        assert_eq!(wrapper.cache.lock().map.len(), 1);
         wrapper.embed_batch(&["first"]).unwrap();
         assert_eq!(provider.calls.load(Ordering::SeqCst), 3);
     }
@@ -475,7 +680,16 @@ mod tests {
         let cancel = Arc::new(AtomicBool::new(false));
         let mut provider = TestProvider::new(ProviderOutput::Valid);
         provider.cancel_on_call = Some(Arc::clone(&cancel));
-        let wrapper = wrapper(&provider, 1, 4096);
+        let wrapper = BoundedCachingEmbeddingProvider::with_limits(
+            &provider,
+            namespace(),
+            EmbedLimits {
+                embed_batch_items: 1,
+                embed_concurrency: 1,
+                ..EmbedLimits::default()
+            },
+        )
+        .unwrap();
         let probe = Arc::clone(&cancel);
         let result = crate::interrupt::scoped(
             move || probe.load(Ordering::SeqCst),
@@ -572,5 +786,150 @@ mod tests {
             "x".repeat(MAX_NAMESPACE_COMPONENT_BYTES + 1)
         )
         .is_err());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.5.4
+    #[test]
+    fn budgets_keys_and_duplicates() {
+        // Duplicate rows count one provider effect.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(&provider, EmbedLimits::default());
+        let out = run.embed_batch(&["a", "a", "bb", "a"]).unwrap();
+        assert_eq!(out[0], out[1]);
+        assert_eq!(out[0], out[3]);
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+        assert_eq!(run.calls_used(), 1);
+        assert_eq!(provider.batches()[0].len(), 2);
+
+        // The item ceiling and the byte ceiling both split batches.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(
+            &provider,
+            EmbedLimits {
+                embed_batch_items: 2,
+                embed_concurrency: 1,
+                ..EmbedLimits::default()
+            },
+        );
+        run.embed_batch(&["a", "b", "c", "d", "e"]).unwrap();
+        assert_eq!(
+            provider.batches().iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![2, 2, 1]
+        );
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(
+            &provider,
+            EmbedLimits {
+                embed_batch_bytes: 4096,
+                embed_concurrency: 1,
+                ..EmbedLimits::default()
+            },
+        );
+        let (x, y, z) = ("x".repeat(3000), "y".repeat(3000), "z".repeat(1000));
+        run.embed_batch(&[x.as_str(), y.as_str(), z.as_str()])
+            .unwrap();
+        assert_eq!(
+            provider.batches().iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
+        let big = "w".repeat(4097);
+        let refused = run.embed_batch(&[big.as_str()]).unwrap_err();
+        assert!(refused.starts_with("EMBED_BUDGET_EXHAUSTED"), "{refused}");
+
+        // Concurrency runs a wave of batches together; all calls are counted.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(
+            &provider,
+            EmbedLimits {
+                embed_batch_items: 1,
+                embed_concurrency: 2,
+                ..EmbedLimits::default()
+            },
+        );
+        run.embed_batch(&["p", "q", "r"]).unwrap();
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 3);
+        assert_eq!(run.calls_used(), 3);
+
+        // A call budget that the next wave would cross refuses with no effect.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(
+            &provider,
+            EmbedLimits {
+                embed_batch_items: 1,
+                embed_concurrency: 4,
+                embed_calls_max: 1,
+                ..EmbedLimits::default()
+            },
+        );
+        let refused = run.embed_batch(&["p", "q"]).unwrap_err();
+        assert!(refused.starts_with("EMBED_BUDGET_EXHAUSTED"), "{refused}");
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
+        assert_eq!(run.calls_used(), 0);
+        run.embed_batch(&["p"]).unwrap();
+        assert_eq!(run.calls_used(), 1);
+        assert!(run
+            .embed_batch(&["q"])
+            .unwrap_err()
+            .starts_with("EMBED_BUDGET_EXHAUSTED"));
+
+        // Cache hits stay inside the key: a foreign tenant, source scope, policy
+        // revision or space recomputes; the same key never calls twice.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let own = limited(&provider, EmbedLimits::default());
+        own.embed_batch(&["shared"]).unwrap();
+        own.embed_batch(&["shared"]).unwrap();
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+        for other in [
+            CacheNamespace::new("tenant-b", "corpus-a", "encoding-v1").unwrap(),
+            CacheNamespace::new("tenant-a", "corpus-b", "encoding-v1").unwrap(),
+            CacheNamespace::new("tenant-a", "corpus-a", "encoding-v2").unwrap(),
+        ] {
+            let before = provider.calls.load(Ordering::SeqCst);
+            let foreign = BoundedCachingEmbeddingProvider::with_limits(
+                &provider,
+                other,
+                EmbedLimits::default(),
+            )
+            .unwrap();
+            foreign.embed_batch(&["shared"]).unwrap();
+            assert_eq!(provider.calls.load(Ordering::SeqCst), before + 1);
+        }
+
+        // The entry ceiling evicts the least recently used vector.
+        let provider = TestProvider::new(ProviderOutput::Valid);
+        let run = limited(
+            &provider,
+            EmbedLimits {
+                embed_cache_entries: 1,
+                ..EmbedLimits::default()
+            },
+        );
+        run.embed_batch(&["one"]).unwrap();
+        run.embed_batch(&["two"]).unwrap();
+        assert_eq!(run.cache.lock().map.len(), 1);
+        run.embed_batch(&["one"]).unwrap();
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 3);
+
+        // Wrong vectors and provider failures carry their typed code.
+        for (mode, code) in [
+            (ProviderOutput::WrongDimension, "EMBED_VECTOR_INVALID"),
+            (ProviderOutput::NonFinite, "EMBED_VECTOR_INVALID"),
+            (ProviderOutput::WrongCardinality, "EMBED_VECTOR_INVALID"),
+            (ProviderOutput::Error, "EMBED_PROVIDER_FAILED"),
+        ] {
+            let provider = TestProvider::new(mode);
+            let run = limited(&provider, EmbedLimits::default());
+            let refused = run.embed_batch(&["one", "two"]).unwrap_err();
+            assert!(refused.starts_with(code), "{refused}");
+            assert_eq!(
+                run.cache.lock().map.len(),
+                0,
+                "a refused batch caches nothing"
+            );
+        }
+        assert_eq!(
+            EmbedErrorCode::BudgetExhausted.as_str(),
+            "EMBED_BUDGET_EXHAUSTED"
+        );
     }
 }

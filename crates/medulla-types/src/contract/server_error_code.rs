@@ -322,6 +322,12 @@ closed_error_codes! {
         EncodeBudgetExhausted => "ENCODE_BUDGET_EXHAUSTED",
         /// An encoding policy or model revision other than the one the index carries (MEDULLA-FEDERATED-QUERY-R039.2.5).
         EncodePolicyStale => "ENCODE_POLICY_STALE",
+        /// A batch, byte or call ceiling of the bounded embedding provider would be crossed (MEDULLA-FEDERATED-QUERY-R040.5.4).
+        EmbedBudgetExhausted => "EMBED_BUDGET_EXHAUSTED",
+        /// The embedding provider returned a vector of the wrong width, a non-finite component or the wrong count (MEDULLA-FEDERATED-QUERY-R040.5.4).
+        EmbedVectorInvalid => "EMBED_VECTOR_INVALID",
+        /// The embedding provider failed (MEDULLA-FEDERATED-QUERY-R040.5.4).
+        EmbedProviderFailed => "EMBED_PROVIDER_FAILED",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
