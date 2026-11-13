@@ -34,6 +34,33 @@ pub const PROGRAM_TOO_LONG: RefusalCode = RefusalCode::new("PROGRAM_TOO_LONG");
 pub const RUN_NOT_SUCCESSFUL: RefusalCode = RefusalCode::new("RUN_NOT_SUCCESSFUL");
 /// Abstain reason: no program is stored for the signature.
 pub const NO_PROGRAM: RefusalCode = RefusalCode::new("NO_PROGRAM");
+/// Refusal: the source `RunTrace` node a program would link to is not in the
+/// caller's tenant view. A node of another tenant refuses the same way as a
+/// node that does not exist (DECISIONS NO-EXISTENCE-LEAK).
+pub const PROGRAM_TRACE_UNKNOWN: RefusalCode = RefusalCode::new("PROGRAM_TRACE_UNKNOWN");
+
+/// The ontology class every compiled-program graph node carries as its typed
+/// label (`orchestration` module).
+pub const PROGRAM_NODE_CLASS: &str = "CompiledProgram";
+/// The edge from a compiled program to its source `RunTrace` node.
+pub const COMPILED_FROM: &str = "compiled_from";
+/// The property of a `RunTrace` receipt node that carries its `RunTraceRecord`.
+pub const RUN_TRACE_FIELD: &str = "run_trace";
+
+/// The `RunTrace` node a run record names as its source: the graph that holds
+/// it and the node id (MEDULLA-DECISION-ENGINE-R135.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TraceSource {
+    pub graph: String,
+    pub node_id: String,
+}
+
+/// The graph node id of the program stored for `task_signature`.
+pub fn program_node_id(task_signature: &str) -> String {
+    format!("program:{task_signature}")
+}
 
 /// One run-record commit (`DecisionLogOp::RunRecord`,
 /// MEDULLA-DECISION-ENGINE-R135.3). A closed enum: later rows add variants.
@@ -51,6 +78,9 @@ pub enum RunRecord {
     CompiledProgram {
         trace: RunTraceRecord,
         policy: crate::decision::request::DecisionPolicyRef,
+        /// The `RunTrace` node the program is linked to with `compiled_from`
+        /// (MEDULLA-DECISION-ENGINE-R135.5).
+        source: TraceSource,
         #[serde(default)]
         reusable: bool,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -88,6 +118,8 @@ pub enum StoredRun {
     /// The compiled program as stored.
     CompiledProgram {
         program: CompiledProgram,
+        /// The graph node of the stored program, linked to its source trace.
+        program_node: String,
         /// The reusable pattern the commit promoted, when it asked for one.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pattern: Option<preplan::ReusablePattern>,
@@ -152,6 +184,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     PROGRAM_TOO_LONG,
     RUN_NOT_SUCCESSFUL,
     NO_PROGRAM,
+    PROGRAM_TRACE_UNKNOWN,
     preplan::PREPLAN_RECEIPT_MISSING,
     preplan::PREPLAN_COMMAND_MISMATCH,
     preplan::PREPLAN_RECEIPT_STALE,
@@ -252,6 +285,9 @@ pub enum ProgramError {
     TooLong { steps: usize },
     /// The run did not succeed (`RUN_NOT_SUCCESSFUL`).
     RunNotSuccessful { outcome: RunOutcome },
+    /// The source trace node is not in the caller's view
+    /// (`PROGRAM_TRACE_UNKNOWN`).
+    TraceUnknown { graph: String, node_id: String },
     /// The wire value did not decode.
     Malformed(String),
     /// A field broke an invariant.
@@ -264,6 +300,7 @@ impl ProgramError {
         match self {
             Self::TooLong { .. } => Some(PROGRAM_TOO_LONG),
             Self::RunNotSuccessful { .. } => Some(RUN_NOT_SUCCESSFUL),
+            Self::TraceUnknown { .. } => Some(PROGRAM_TRACE_UNKNOWN),
             _ => None,
         }
     }
@@ -281,6 +318,11 @@ impl std::fmt::Display for ProgramError {
                 f,
                 "{}: the run ended {outcome:?}",
                 RUN_NOT_SUCCESSFUL.as_str()
+            ),
+            Self::TraceUnknown { graph, node_id } => write!(
+                f,
+                "{}: `{node_id}` in graph `{graph}` is not a run trace this caller can see",
+                PROGRAM_TRACE_UNKNOWN.as_str()
             ),
             Self::Malformed(detail) => write!(f, "program is malformed: {detail}"),
             Self::Invalid(detail) => write!(f, "program is invalid: {detail}"),

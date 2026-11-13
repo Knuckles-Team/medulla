@@ -5,13 +5,15 @@
 
 use super::*;
 use medulla_decision_types::decision::program_store::{
-    program_key, CompiledProgram, RunRecord, RunRecordStored, StoredRun,
+    program_key, program_node_id, CompiledProgram, RunRecord, RunRecordStored, StoredRun,
+    TraceSource, COMPILED_FROM,
 };
 use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
 };
 use medulla_decision_types::decision::{EvidenceClass, PremiseClass, ResolutionKind};
 use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 const FOREIGN: &str = "tenant-foreign";
 const SIGNATURE: &str = "summarize-report";
@@ -45,12 +47,118 @@ fn trace(run_id: &str, outcome: RunOutcome, steps: usize, title: &str) -> RunTra
     }
 }
 
+/// The graph the source `RunTrace` nodes and workflows live in.
+const GRAPH: &str = "run-graph";
+
+fn trace_node_id(run_id: &str) -> String {
+    format!("trace:{run_id}")
+}
+
+/// A served harness whose principals are provisioned, with one graph and a
+/// durable MutationBatch backend: a run record's program node and its link are
+/// graph facts, committed through the durable path.
+struct Fixture {
+    h: Harness,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
+    backend: Arc<medulla_persistence::redb_backend::RedbBackend>,
+}
+
+impl Fixture {
+    async fn new() -> Self {
+        let mut isolation = ServerState::test_isolation("recorder");
+        isolation.register_agent(medulla_types::acl::AgentIdentity {
+            agent_id: "decider".into(),
+            role: medulla_types::acl::AgentRole::System,
+            teams: Vec::new(),
+            roles: Vec::new(),
+        });
+        let h = Harness::with_isolation(isolation).await;
+        let dir = h._dir.path().join("durable");
+        let backend = Arc::new(
+            medulla_persistence::redb_backend::RedbBackend::open_with_shards(
+                dir.to_str().unwrap().to_string(),
+                16,
+                1,
+            )
+            .unwrap(),
+        );
+        let core = {
+            let mut guard = h.state.write().await;
+            guard.persistence = Some(backend.clone());
+            guard
+                .registry
+                .create_graph(
+                    GRAPH,
+                    medulla_protocol_types::protocol::GraphType::Team,
+                    None,
+                )
+                .unwrap();
+            guard.registry.get(GRAPH).unwrap().core.clone()
+        };
+        Self { h, core, backend }
+    }
+
+    /// Put the `RunTrace` receipt node of `trace`, owned by `owner`.
+    fn add_trace_node(&self, trace: &RunTraceRecord, owner: &str) -> String {
+        let id = trace_node_id(&trace.run_id);
+        let props = serde_json::json!({
+            "type": "RunTrace",
+            "kind": "run_trace",
+            "run_trace": serde_json::to_value(trace).unwrap(),
+            "_owner": owner,
+            "_visibility": "private",
+        });
+        self.core
+            .add_node(id.clone(), rmp_serde::to_vec_named(&props).unwrap());
+        id
+    }
+
+    fn props(&self, id: &str) -> serde_json::Value {
+        rmp_serde::from_slice(&self.core.get_node_properties(id).expect("node exists")).unwrap()
+    }
+
+    /// The nodes and edges the durable backend holds for `GRAPH`.
+    async fn durable(&self) -> (Vec<String>, Vec<(String, String)>) {
+        let (snapshot, _) = self
+            .backend
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize(GRAPH))
+            .await
+            .unwrap()
+            .expect("the run record committed a durable image");
+        (
+            snapshot.nodes.iter().map(|(id, _)| id.clone()).collect(),
+            snapshot
+                .edges
+                .iter()
+                .map(|(a, b, _)| (a.clone(), b.clone()))
+                .collect(),
+        )
+    }
+}
+
+impl std::ops::Deref for Fixture {
+    type Target = Harness;
+
+    fn deref(&self) -> &Harness {
+        &self.h
+    }
+}
+
 fn run_record_op(trace: RunTraceRecord) -> DecisionLogOp {
+    let source = TraceSource {
+        graph: GRAPH.to_string(),
+        node_id: trace_node_id(&trace.run_id),
+    };
+    run_record_op_from(trace, source)
+}
+
+fn run_record_op_from(trace: RunTraceRecord, source: TraceSource) -> DecisionLogOp {
     DecisionLogOp::RunRecord {
         tenant_id: TENANT.to_string(),
         record: RunRecord::CompiledProgram {
             trace,
             policy: DecisionPolicyRef::Default,
+            source,
             reusable: false,
             plan_binding: None,
             preplan_receipt: None,
@@ -66,8 +174,15 @@ fn program_of(stored: &RunRecordStored) -> CompiledProgram {
     }
 }
 
-async fn commit_run(h: &Harness, trace: RunTraceRecord) -> Result<RunRecordStored, String> {
-    decode(super::log_tests::log_op(h, "recorder", run_record_op(trace)).await)
+async fn commit_op(f: &Fixture, op: DecisionLogOp) -> Result<RunRecordStored, String> {
+    decode(super::log_tests::log_op(&f.h, "recorder", op).await)
+}
+
+/// Commit `trace` after its receipt node is in the graph, as the terminal
+/// commit leaves it.
+async fn commit_run(f: &Fixture, trace: RunTraceRecord) -> Result<RunRecordStored, String> {
+    f.add_trace_node(&trace, "recorder");
+    commit_op(f, run_record_op(trace)).await
 }
 
 fn lookup_request(h: &Harness, signature: Option<&str>) -> DecideRequest {
@@ -155,7 +270,7 @@ fn lookup_in(
 // spec: MEDULLA-DECISION-ENGINE-R135.3
 #[tokio::test]
 async fn decide_routes_program_lookup() {
-    let h = Harness::new().await;
+    let h = Fixture::new().await;
 
     // Nothing is committed: the lookup abstains and `Decide` stored nothing.
     let batch = decide(&h, lookup_request(&h, Some(SIGNATURE)))
@@ -242,10 +357,145 @@ async fn decide_routes_program_lookup() {
     );
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R135.5
+#[tokio::test]
+async fn program_links_source_trace() {
+    let f = Fixture::new().await;
+    let h = &f.h;
+    let source = trace("run-1", RunOutcome::Succeeded, 3, "weekly");
+    let stored = commit_run(&f, source.clone()).await.unwrap();
+    let node = match &stored.stored {
+        StoredRun::CompiledProgram { program_node, .. } => program_node.clone(),
+        other => panic!("a program record, got {other:?}"),
+    };
+    assert_eq!(node, program_node_id(SIGNATURE));
+
+    // A graph query from the program returns its source trace node.
+    assert_eq!(
+        f.core.get_successors(&node).unwrap(),
+        vec![trace_node_id("run-1")]
+    );
+    let edge = f
+        .core
+        .get_edges()
+        .into_iter()
+        .find(|(from, to, _)| *from == node && *to == trace_node_id("run-1"))
+        .expect("the compiled_from edge exists");
+    let edge_props: serde_json::Value = rmp_serde::from_slice(&edge.2).unwrap();
+    assert_eq!(edge_props["relationship"], COMPILED_FROM);
+    assert_eq!(edge_props["tenant"], TENANT);
+
+    // The node carries its ontology class as its typed label and the program's
+    // identity, and the engine-recorded trace node is untouched.
+    let props = f.props(&node);
+    assert_eq!(props["type"], "CompiledProgram");
+    assert_eq!(
+        props["program_digest"],
+        program_of(&stored).program_digest.as_str()
+    );
+    assert_eq!(props["source_run_id"], "run-1");
+    assert_eq!(f.props(&trace_node_id("run-1"))["type"], "RunTrace");
+
+    // The link is a durable graph fact: the backend holds the node and edge.
+    let (nodes, edges) = f.durable().await;
+    assert!(nodes.contains(&node), "{nodes:?}");
+    assert!(
+        edges.contains(&(node.clone(), trace_node_id("run-1"))),
+        "{edges:?}"
+    );
+
+    // A replay converges: still one node, one edge from it.
+    let again = commit_run(&f, source).await.unwrap();
+    assert!(again.replayed);
+    assert_eq!(f.core.get_successors(&node).unwrap().len(), 1);
+
+    // The stored program's premises state its signature, counts and source run
+    // as claims, and the answer is an engine-recorded observation.
+    let batch = decide(h, lookup_request(h, Some(SIGNATURE))).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.evidence_class, EvidenceClass::Observation);
+    for fact in [
+        "program.task_signature=summarize-report",
+        "program.step_count=3",
+        "program.parameter_count=2",
+        "program.source_run_id=run-1",
+    ] {
+        let found = record
+            .premises
+            .iter()
+            .find(|p| p.fact == fact)
+            .unwrap_or_else(|| panic!("premise {fact} is missing"));
+        assert_eq!(found.class, PremiseClass::Claim);
+    }
+
+    // A trace node the caller cannot see is as unknown as one that does not
+    // exist: a private node owned by another principal is invisible to a
+    // stranger's graph query, and a commit naming an absent node refuses.
+    let isolation = h.state.read().await.isolation.clone();
+    let stranger = super::super::stat_vectors::GraphVectors::from_parts(
+        f.core.clone(),
+        isolation.clone(),
+        "stranger".to_string(),
+    );
+    assert!(stranger
+        .visible_properties(&trace_node_id("run-1"))
+        .is_none());
+    let owner = super::super::stat_vectors::GraphVectors::from_parts(
+        f.core.clone(),
+        isolation,
+        "recorder".to_string(),
+    );
+    assert!(owner.visible_properties(&trace_node_id("run-1")).is_some());
+    let before = stored_rows(h, TENANT);
+    let mut other = trace("run-other", RunOutcome::Succeeded, 2, "weekly");
+    other.task_signature = "other-task".into();
+    let missing = commit_op(&f, run_record_op(other.clone()))
+        .await
+        .unwrap_err();
+    assert!(missing.contains("PROGRAM_TRACE_UNKNOWN"), "{missing}");
+    // A node that is not a run trace, or records another run, is refused too.
+    f.core.add_node(
+        "not-a-trace".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({"type": "Doc"})).unwrap(),
+    );
+    let wrong = commit_op(
+        &f,
+        run_record_op_from(
+            other.clone(),
+            TraceSource {
+                graph: GRAPH.into(),
+                node_id: "not-a-trace".into(),
+            },
+        ),
+    )
+    .await
+    .unwrap_err();
+    assert!(wrong.contains("PROGRAM_TRACE_UNKNOWN"), "{wrong}");
+    f.add_trace_node(&trace("run-1", RunOutcome::Succeeded, 1, "x"), "recorder");
+    let mismatch = commit_op(
+        &f,
+        run_record_op_from(
+            other,
+            TraceSource {
+                graph: GRAPH.into(),
+                node_id: trace_node_id("run-1"),
+            },
+        ),
+    )
+    .await
+    .unwrap_err();
+    assert!(mismatch.contains("records another run"), "{mismatch}");
+    assert_eq!(stored_rows(h, TENANT), before, "a refusal stores nothing");
+    assert!(f
+        .core
+        .get_node_properties(&program_node_id("other-task"))
+        .is_none());
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R135.4
 #[tokio::test]
 async fn overlong_trace_is_refused() {
-    let h = Harness::new().await;
+    let h = Fixture::new().await;
 
     let long = commit_run(&h, trace("run-long", RunOutcome::Succeeded, 41, "weekly"))
         .await
@@ -356,15 +606,21 @@ mod preplan {
     }
 
     async fn promote(
-        h: &Harness,
+        h: &Fixture,
         binding: Option<PlanBinding>,
         receipt: Option<PrePlanTestReceipt>,
     ) -> Result<RunRecordStored, String> {
+        let run = trace("run-1", RunOutcome::Succeeded, 3, "weekly");
+        h.add_trace_node(&run, "recorder");
         let op = DecisionLogOp::RunRecord {
             tenant_id: TENANT.to_string(),
             record: RunRecord::CompiledProgram {
-                trace: trace("run-1", RunOutcome::Succeeded, 3, "weekly"),
+                trace: run,
                 policy: DecisionPolicyRef::Default,
+                source: TraceSource {
+                    graph: GRAPH.to_string(),
+                    node_id: trace_node_id("run-1"),
+                },
                 reusable: true,
                 plan_binding: binding,
                 preplan_receipt: receipt,
@@ -376,7 +632,7 @@ mod preplan {
     // spec: MEDULLA-DECISION-ENGINE-R135.7
     #[tokio::test]
     async fn reusable_pattern_requires_a_verified_preplan_receipt() {
-        let h = Harness::new().await;
+        let h = Fixture::new().await;
         let manifest = put_manifest(&h, TENANT, b"junit.xml\ncoverage.json").await;
         let foreign_manifest = put_manifest(&h, FOREIGN, b"other tenant artifacts").await;
         let ok = receipt(&manifest);
@@ -453,7 +709,10 @@ mod preplan {
         let stored = promote(&h, Some(binding()), Some(ok.clone()))
             .await
             .unwrap();
-        let StoredRun::CompiledProgram { program, pattern } = &stored.stored else {
+        let StoredRun::CompiledProgram {
+            program, pattern, ..
+        } = &stored.stored
+        else {
             panic!("a program record");
         };
         let pattern = pattern.clone().expect("the pattern was promoted");

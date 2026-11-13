@@ -9,6 +9,8 @@ use medulla_decision_types::decision::branch_fusion::{
     branch_record_key, branch_retrieval_key, BranchRecord, BranchRef, BranchRetrievalReceipt,
     BRANCH_DUPLICATE, BRANCH_READBACK_STALE,
 };
+use std::sync::Arc;
+
 use medulla_decision_types::decision::program_store::preplan::PrePlanError;
 use medulla_decision_types::decision::program_store::{
     compile_program,
@@ -17,7 +19,8 @@ use medulla_decision_types::decision::program_store::{
         max_receipt_age_ms, pattern_key, verify_preplan, ManifestReading, PrePlanTestReceipt,
         ReusablePattern,
     },
-    program_key, ProgramKnobs, RunRecord, RunRecordStored, StoredRun,
+    program_key, program_node_id, CompiledProgram, ProgramError, ProgramKnobs, RunRecord,
+    RunRecordStored, StoredRun, COMPILED_FROM, PROGRAM_NODE_CLASS, RUN_TRACE_FIELD,
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::task_plan::horizon::{
@@ -32,28 +35,204 @@ use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifac
 use super::stat_executor::ExecutionContext;
 use super::stat_log::store_once;
 use super::stat_retention::Retention;
-use super::stat_support::{refusal, resolve_policy};
+use super::stat_support::{graph_at_level, refusal, resolve_policy};
+use super::stat_vectors::GraphVectors;
+use super::SharedState;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+
+/// The graph node and edge a compiled run commits through the durable path.
+pub(super) struct StagedLink {
+    pub graph: String,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    pub method: Method,
+}
+
+/// A run record whose artifacts are stored and whose graph link, when it has
+/// one, is still to commit (MEDULLA-DECISION-ENGINE-R135.5).
+pub(super) struct Staged {
+    pub stored: RunRecordStored,
+    pub link: Option<StagedLink>,
+}
+
+/// Open the graph a compiled run writes its link into, for the verified
+/// caller. `None` for a run record that writes no graph fact.
+pub(super) async fn open_graph(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    op: &medulla_decision_types::decision::statistical::log::DecisionLogOp,
+) -> Result<Option<Arc<GraphVectors>>, String> {
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+    use medulla_isolation::isolation::AccessLevel;
+    let DecisionLogOp::RunRecord {
+        record: RunRecord::CompiledProgram { source, .. },
+        ..
+    } = op
+    else {
+        return Ok(None);
+    };
+    let (core, isolation) = graph_at_level(
+        state,
+        verified.agent_id(),
+        &source.graph,
+        StatisticalErrorCode::ParameterInvalid,
+        AccessLevel::Write,
+    )
+    .await?;
+    Ok(Some(Arc::new(GraphVectors::from_parts(
+        core,
+        isolation,
+        verified.agent_id().to_string(),
+    ))))
+}
+
+fn program_refusal(error: ProgramError) -> String {
+    refusal(StatisticalErrorCode::ParameterInvalid, error)
+}
+
+/// The source node must be a `RunTrace` receipt node the caller can see, whose
+/// record names the run the program compiles. A node that is absent and a node
+/// the caller may not see refuse the same way.
+fn check_trace_node(
+    view: &GraphVectors,
+    graph: &str,
+    node_id: &str,
+    run_id: &str,
+) -> Result<(), ProgramError> {
+    let unknown = || ProgramError::TraceUnknown {
+        graph: graph.to_string(),
+        node_id: node_id.to_string(),
+    };
+    let properties = view.visible_properties(node_id).ok_or_else(unknown)?;
+    if properties.get("kind").and_then(|kind| kind.as_str()) != Some("run_trace") {
+        return Err(unknown());
+    }
+    let named = properties
+        .get(RUN_TRACE_FIELD)
+        .and_then(|record| record.get("run_id"))
+        .and_then(|id| id.as_str());
+    if named != Some(run_id) {
+        return Err(ProgramError::Invalid(format!(
+            "trace node `{node_id}` records another run than `{run_id}`"
+        )));
+    }
+    Ok(())
+}
+
+/// The `BatchUpdate` that writes the program node, typed with its ontology
+/// class, and its `compiled_from` edge. Upserts, so a retry of a commit whose
+/// graph write failed converges.
+fn link_batch(
+    node_id: &str,
+    program: &CompiledProgram,
+    trace_node: &str,
+    tenant: &str,
+    principal: &str,
+) -> Result<Method, String> {
+    let operations = serde_json::json!([
+        {
+            "op": "upsert_node",
+            "id": node_id,
+            "properties": {
+                "type": PROGRAM_NODE_CLASS,
+                "task_signature": program.task_signature,
+                "program_digest": program.program_digest,
+                "source_run_id": program.source_run_id,
+                "step_count": program.steps.len(),
+                "_owner": principal,
+            },
+        },
+        {
+            "op": "upsert_edge",
+            "source": node_id,
+            "target": trace_node,
+            "properties": {"relationship": COMPILED_FROM, "tenant": tenant},
+        },
+    ]);
+    let operations_msgpack = rmp_serde::to_vec_named(&operations).map_err(|error| {
+        refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            format!("run record link encoding failed: {error}"),
+        )
+    })?;
+    Ok(Method::BatchUpdate { operations_msgpack })
+}
+
+/// Store one run record's artifacts and stage its graph link. A refused
+/// compile stores nothing; the link of a compiled run commits after the
+/// artifacts, through the durable mutation path (`stat_log`).
+pub(super) fn stage(
+    ctx: &ExecutionContext,
+    retention: &Retention,
+    record: RunRecord,
+    view: Option<&GraphVectors>,
+    principal: &str,
+) -> Result<Staged, String> {
+    let source = match &record {
+        RunRecord::CompiledProgram { source, .. } => Some(source.clone()),
+        _ => None,
+    };
+    let stored = commit(ctx, retention, record, view)?;
+    let link = match (&stored.stored, source, view) {
+        (
+            StoredRun::CompiledProgram {
+                program,
+                program_node,
+                ..
+            },
+            Some(source),
+            Some(view),
+        ) => {
+            let method = link_batch(
+                program_node,
+                program,
+                &source.node_id,
+                ctx.tenant_id,
+                principal,
+            )?;
+            Some(StagedLink {
+                graph: source.graph,
+                core: Arc::clone(view.core()),
+                method,
+            })
+        }
+        _ => None,
+    };
+    Ok(Staged { stored, link })
+}
 
 /// Commit one run record. A refused compile stores nothing; a retry with equal
 /// content answers the stored row and other content under the key refuses
 /// `IDEMPOTENCY_CONFLICT`.
-pub(super) fn commit(
+fn commit(
     ctx: &ExecutionContext,
     retention: &Retention,
     record: RunRecord,
+    view: Option<&GraphVectors>,
 ) -> Result<RunRecordStored, String> {
     match record {
         RunRecord::CompiledProgram {
             trace,
             policy,
+            source,
             reusable,
             plan_binding,
             preplan_receipt,
         } => {
             let resolved = resolve_policy(ctx.store, ctx.tenant_id, &policy)?;
             let knobs = ProgramKnobs::from_policy(&resolved.policy);
-            let program = compile_program(&trace, &knobs)
-                .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+            let program = compile_program(&trace, &knobs).map_err(program_refusal)?;
+            // MEDULLA-DECISION-ENGINE-R135.5: the source must be a run trace the
+            // caller sees, checked before anything is stored.
+            let view = view.ok_or_else(|| {
+                refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "a compiled run is staged against its opened graph",
+                )
+            })?;
+            check_trace_node(view, &source.graph, &source.node_id, &trace.run_id)
+                .map_err(program_refusal)?;
             // MEDULLA-DECISION-ENGINE-R135.7: a refused promotion stores nothing, so the
             // prior library stays as it was.
             let promoted = if reusable {
@@ -81,6 +260,7 @@ pub(super) fn commit(
                 None
             };
             let key = program_key(&program.task_signature);
+            let program_node = program_node_id(&program.task_signature);
             let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
             let program = store_once(ctx, key.clone(), "compiled program", program, |a, b| a == b)?;
             let pattern = match promoted {
@@ -95,7 +275,11 @@ pub(super) fn commit(
             };
             Ok(RunRecordStored {
                 key,
-                stored: StoredRun::CompiledProgram { program, pattern },
+                stored: StoredRun::CompiledProgram {
+                    program,
+                    program_node,
+                    pattern,
+                },
                 replayed,
             })
         }

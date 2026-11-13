@@ -45,6 +45,7 @@ tracing = "0.1"
 tempfile = { version = "3", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-finance-market = { path = "../medulla-finance-market" }
@@ -76,7 +77,7 @@ finance = ["medulla-compute/finance", "medulla-protocol-types/finance", "medulla
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-server-ops/owl", "medulla-types/owl", "rdf", "server", "sparql"]
 query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "dep:medulla-raft-xshard", "medulla-raft-xshard/raft", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "server"]
-redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
+redb = ["medulla-server-mutation/redb", "medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-epistemic", "dep:medulla-h-jobs", "dep:medulla-statechart", "dep:medulla-store", "medulla-h-jobs/statechart", "medulla-protocol-types/statechart", "medulla-store/statechart", "medulla-types/statechart", "server"]
 security = ["redb", "dep:medulla-store", "medulla-store/security", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
 solve = ["medulla-compute/solve", "medulla-decision-policy/solve"]
@@ -109,7 +110,7 @@ sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-reasoner/s
 geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql", "medulla-persistence/geosparql", "medulla-server-api/geosparql", "geo", "query", "rdf", "redb", "server", "sparql"]
 owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "rdf", "server", "sparql"]
 shacl = ["dep:medulla-shacl", "medulla-kernel/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "owl", "owl-dl", "rdf", "server", "sparql"]
-test-support = ["dep:tempfile", "redb", "medulla-isolation/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
+test-support = ["medulla-server-mutation/test-support", "dep:tempfile", "redb", "medulla-isolation/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
 [dev-dependencies]
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }

@@ -62,6 +62,30 @@ pub(super) async fn readable_graph(
     ),
     String,
 > {
+    graph_at_level(
+        state,
+        agent_id,
+        graph,
+        missing_code,
+        medulla_isolation::isolation::AccessLevel::Read,
+    )
+    .await
+}
+
+/// `graph`, with `level` access checked for `agent_id`.
+pub(super) async fn graph_at_level(
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    agent_id: &str,
+    graph: &str,
+    missing_code: StatisticalErrorCode,
+    level: medulla_isolation::isolation::AccessLevel,
+) -> Result<
+    (
+        Arc<medulla_graph_core::graph::GraphCore>,
+        medulla_isolation::isolation::IsolationLayer,
+    ),
+    String,
+> {
     let guard = state.read().await;
     let entry = guard
         .registry
@@ -73,7 +97,7 @@ pub(super) async fn readable_graph(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
-        medulla_isolation::isolation::AccessLevel::Read,
+        level,
     )?;
     Ok((Arc::clone(&entry.core), guard.isolation.clone()))
 }

@@ -23,6 +23,35 @@ pub(super) struct GraphVectors {
 }
 
 impl GraphVectors {
+    /// A view of `core` as `caller` may see it.
+    pub(super) fn from_parts(
+        core: Arc<GraphCore>,
+        isolation: IsolationLayer,
+        caller: String,
+    ) -> Self {
+        Self {
+            core,
+            isolation,
+            caller,
+        }
+    }
+
+    /// The graph the view reads.
+    pub(super) fn core(&self) -> &Arc<GraphCore> {
+        &self.core
+    }
+
+    /// A node's stored properties, or `None` when the node is absent or the
+    /// caller may not see it (the two are indistinguishable by design).
+    pub(super) fn visible_properties(&self, id: &str) -> Option<serde_json::Value> {
+        if !self.visible(id) {
+            return None;
+        }
+        self.core
+            .get_node_properties(id)
+            .and_then(|blob| rmp_serde::from_slice(&blob).ok())
+    }
+
     /// Whether the store may hold vectors of `space_digest`: a store that
     /// declares a space must declare exactly that one.
     pub(super) fn admits_space(&self, space_digest: &str) -> bool {

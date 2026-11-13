@@ -24,14 +24,23 @@ use medulla_agent_types::agent_topology::{
     LeasePlan, SlotPlan, StopRule, TopologyPlan, TopologyPolicy,
 };
 use medulla_compute::assemble::admit_topology;
+use medulla_decision_types::decision::program_store::{
+    compile_program, program_key, ProgramKnobs, MAX_PROGRAM_STEPS,
+};
+use medulla_decision_types::decision::run_governance::{
+    RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
+};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, TypedParam, TypedValue,
 };
 use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
 use medulla_decision_types::decision::DecisionPolicyRef;
-use medulla_h_decide::decide::stat_test_support::{publish_route_schema, request, Harness, TENANT};
+use medulla_h_decide::decide::stat_test_support::{
+    declared_request, publish_route_schema, request, Harness, TENANT,
+};
 use medulla_mutation_types::capacity_lease::LeasePriority;
+use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -579,6 +588,109 @@ fn bench_topology_admit(c: &mut Criterion, report: &mut BTreeMap<String, serde_j
     );
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R135.6
+/// The task signature the `decide/program_lookup` group looks up.
+const PROGRAM_SIGNATURE: &str = "summarize-report";
+
+/// A successful run of `MAX_PROGRAM_STEPS` steps with two literals a step: the
+/// widest program the store holds.
+fn widest_trace() -> RunTraceRecord {
+    let step = |index: usize| TraceStep {
+        index: index as u32,
+        kind: StepKind::ToolCall,
+        action_ref: format!("tool:t{index}"),
+        outcome: StepOutcome::Ok,
+        arguments: BoundedVec::new(vec![
+            TraceArgument {
+                name: "title".into(),
+                value: TraceScalar::Text(format!("weekly-{index}")),
+            },
+            TraceArgument {
+                name: "limit".into(),
+                value: TraceScalar::Int(index as i64),
+            },
+        ])
+        .unwrap(),
+    };
+    RunTraceRecord {
+        schema_version: 1,
+        run_id: "bench-run".into(),
+        task_signature: PROGRAM_SIGNATURE.into(),
+        model_id: "model-1".into(),
+        steps: BoundedVec::new((0..MAX_PROGRAM_STEPS).map(step).collect()).unwrap(),
+        outcome: RunOutcome::Succeeded,
+        started_at_ms: 1,
+    }
+}
+
+/// The `decide/program_lookup` group (MEDULLA-DECISION-ENGINE-R135.6, R178.1):
+/// a stored compiled program is looked up by task signature through the served
+/// `Decide` path. The fixture seeds the widest program under its run-record key
+/// and asserts the first answer is the stored program, so the group times the
+/// hit, not the `NO_PROGRAM` refusal.
+fn bench_program_lookup(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let h = rt.block_on(Harness::new());
+    let program = compile_program(
+        &widest_trace(),
+        &ProgramKnobs {
+            max_steps: MAX_PROGRAM_STEPS,
+        },
+    )
+    .expect("the widest trace compiles");
+    h.store
+        .put_decision_artifacts(
+            TENANT,
+            &[(
+                program_key(PROGRAM_SIGNATURE),
+                encode_artifact(&program).unwrap(),
+            )],
+        )
+        .expect("seed the stored program");
+    let (schema_pin, _) = publish_route_schema(&h);
+    let asked = declared_request(
+        &schema_pin,
+        TENANT,
+        QuestionKind::ProgramLookup,
+        "program",
+        DecisionPolicyRef::Default,
+        vec![TypedParam {
+            name: "task_signature".into(),
+            value: TypedValue::Text(PROGRAM_SIGNATURE.into()),
+        }],
+    );
+    let hit = serde_json::to_string(&decide(rt, &h, &asked).result).unwrap();
+    assert!(
+        hit.contains("program:{") && !hit.contains("NO_PROGRAM"),
+        "program_lookup fixture must answer the stored program: {hit}"
+    );
+    let group_name = "decide/program_lookup".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(decide(rt, &h, &asked));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -612,6 +724,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_claims(c, &rt, &mut report);
     bench_task_plan_bounds(c, &rt, &mut report);
     bench_tool_relevance_cap(c, &rt, &mut report);
+    bench_program_lookup(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();

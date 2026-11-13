@@ -783,9 +783,13 @@ fn dispatch(
             &tenant_id,
             computation,
         )?),
-        DecisionLogOp::RunRecord { record, .. } => ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::DecisionLogRunRecord,
-        >(super::run_record::commit(ctx, &reader.retention, record)?),
+        DecisionLogOp::RunRecord { .. } => {
+            return Err(refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                "a run record is staged by `run_record::stage` and its graph link is committed \
+                 through the durable mutation path",
+            ))
+        }
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,
@@ -797,6 +801,7 @@ fn dispatch(
 
 async fn serve(
     state: &SharedState,
+    req_id: u64,
     verified: &VerifiedRequestContext,
     op: DecisionLogOp,
 ) -> Result<ResultPayload, String> {
@@ -811,6 +816,9 @@ async fn serve(
     };
     let reader = LogReader::served(state, verified).await;
     let inputs = super::stat_learning::prepare(state, verified, &op).await?;
+    let run_graph = super::run_record::open_graph(state, verified, &op).await?;
+    let blocking_graph = run_graph.clone();
+    let principal = verified.agent_id().to_string();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
     let result = tokio::task::spawn_blocking(move || {
@@ -821,12 +829,76 @@ async fn serve(
             server_secret: secret.as_bytes(),
             matched: &[],
         };
-        dispatch(&ctx, &reader, op, inputs.as_ref())
+        match op {
+            DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(
+                &ctx,
+                &reader.retention,
+                record,
+                blocking_graph.as_deref(),
+                &principal,
+            )
+            .map(|staged| Served::RunRecord(Box::new(staged))),
+            op => dispatch(&ctx, &reader, op, inputs.as_ref()).map(Served::Payload),
+        }
     })
     .await
     .map_err(|error| format!("DecisionLog task failed: {error}"))?;
+    let result = match result {
+        Ok(Served::Payload(payload)) => Ok(payload),
+        Ok(Served::RunRecord(staged)) => commit_run_record(state, req_id, verified, *staged).await,
+        Err(error) => Err(error),
+    };
     telemetry::logged(result.is_ok(), started);
     result
+}
+
+/// What the blocking half of a `DecisionLog` op produced.
+enum Served {
+    Payload(ResultPayload),
+    /// A run record whose graph link commits through the durable mutation path
+    /// before the answer is returned.
+    RunRecord(Box<super::run_record::Staged>),
+}
+
+/// Commit a staged run record's graph link (the program node and its
+/// `compiled_from` edge) through the MutationBatch commit used for every other
+/// graph fact. With no durable backend the commit is refused.
+async fn commit_run_record(
+    state: &SharedState,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    staged: super::run_record::Staged,
+) -> Result<ResultPayload, String> {
+    if let Some(link) = staged.link {
+        let persistence = state.read().await.persistence.clone();
+        let batch_id = medulla_server_api::batch_compile::opaque_request_key(
+            "run-record",
+            &link.graph,
+            req_id,
+            &link.method,
+        );
+        medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+                persistence.as_ref(),
+                &link.core,
+                medulla_server_mutation::mutation_batch::CommitOrigin {
+                    request_id: req_id,
+                    principal: Some(verified.agent_id()),
+                },
+                &link.graph,
+                &batch_id,
+                vec![link.method],
+                &ResultPayload::Bool(true),
+            ),
+        )
+        .await
+        .map_err(|error| {
+            format!("PERSISTENCE_UNAVAILABLE: run record link not committed: {error}")
+        })?;
+    }
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::DecisionLogRunRecord>(
+        staged.stored,
+    )
 }
 
 /// Serve one `DecisionLog` op.
@@ -837,7 +909,7 @@ pub(super) async fn handle_log(
     op: DecisionLogOp,
 ) -> Response {
     let span = telemetry::span("DecisionLog", verified.tenant());
-    match serve(state, verified, op).instrument(span).await {
+    match serve(state, req_id, verified, op).instrument(span).await {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => {
             telemetry::refused("DecisionLog", &error);
