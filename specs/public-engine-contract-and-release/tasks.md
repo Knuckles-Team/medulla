@@ -123,3 +123,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T113 [US1] MEDULLA-CONTRACT-R060.1 Debug info splits from the shipped binary and the build-id stays in both. Files: `Cargo.toml`, `scripts/split_release_symbols.sh`. Test: `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes`.
 - [ ] T114 [US1] MEDULLA-CONTRACT-R060.2 Each release uploads a symbol artifact per platform, named by build-id. Files: `.github/workflows/release.yml`. Test: `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`.
 - [ ] T115 [US1] MEDULLA-CONTRACT-R060.3 One command symbolizes a stack. Files: `scripts/symbolize.sh`, `docs/interfaces/engine-observability.md`. Test: `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact`.
+- [ ] T117 [US1] MEDULLA-CONTRACT-R062 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T118 [US1] MEDULLA-CONTRACT-R062.1 ControlQubit/ControlState state machine: route 1 census findings through ControlState::apply
+- [ ] T119 [US1] MEDULLA-CONTRACT-R062.2 HardwareJob/JobStatus state machine: route 1 census findings through JobStatus::apply
+- [ ] T120 [US1] MEDULLA-CONTRACT-R062.3 HealthReport/HealthStatus state machine: route 1 census findings through HealthStatus::apply
+- [ ] T121 [US1] MEDULLA-CONTRACT-R062.4 Ranking fact flags: `is_clifford` and `noise_requested`
+- [ ] T122 [US1] MEDULLA-CONTRACT-R062.5 QuantumBackend/BackendState state machine: route 3 census findings through BackendState::apply
