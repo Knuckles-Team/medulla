@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import threading
@@ -82,7 +83,15 @@ class PgSource:
 @pytest.fixture(scope="session")
 def pg_source() -> Iterator[PgSource]:
     name = f"medulla-fed-pg-{uuid.uuid4().hex[:8]}"
-    subprocess.run(
+    # The source is a real PostgreSQL container: a host with no reachable
+    # container runtime cannot host it, so the test reports a skip with the
+    # reason instead of an error. Hosts that have docker (hosted CI) run it.
+    if shutil.which("docker") is None:
+        pytest.skip("docker is not installed: no PostgreSQL source container")
+    info = subprocess.run(["docker", "info"], capture_output=True)
+    if info.returncode != 0:
+        pytest.skip("the docker daemon is unreachable: no PostgreSQL source container")
+    started = subprocess.run(
         [
             "docker",
             "run",
@@ -96,9 +105,13 @@ def pg_source() -> Iterator[PgSource]:
             f"127.0.0.1:{PG_PORT}:5432",
             "postgres:16-alpine",
         ],
-        check=True,
         capture_output=True,
     )
+    if started.returncode != 0:
+        pytest.skip(
+            "the PostgreSQL source container did not start: "
+            + started.stderr.decode(errors="replace").strip()[-300:]
+        )
     try:
         deadline = time.monotonic() + 60
         while True:
