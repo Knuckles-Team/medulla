@@ -8,7 +8,7 @@
 //! governance/versioning vocabulary GOC-11 (analytics snapshots) and GOC-12
 //! (cross-modal predicate pushdown) need to pin an immutable fence and reason about
 //! schema/quality: tenant, owner, classification, purpose, retention/legal-hold,
-//! commit fence, schema digest, quality status (GOC-10 invariant 2).
+//! commit fence, schema digest, quality outcome (GOC-10 invariant 2).
 //!
 //! This module is the CANONICAL value shape for that authority (GOC-10-W02): pure
 //! serde, no I/O, no dependency beyond this crate. It intentionally does not touch
@@ -162,10 +162,12 @@ impl CommitFenceRef {
 }
 
 /// A prior quality validation's outcome (GOC-10 invariant 4: `TableSnapshot`
-/// pins "quality checks").
+/// pins "quality checks"). A report's result, set once when the report is built;
+/// it has no lifecycle, so it is an outcome, not a state machine
+/// (MEDULLA-TYPED-PACKS-R810.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum QualityStatus {
+pub enum QualityOutcome {
     /// No quality check has been run against this version/snapshot yet.
     Unvalidated,
     Passing,
@@ -178,9 +180,9 @@ pub enum QualityStatus {
 #[serde(deny_unknown_fields)]
 pub struct QualityReportRef {
     pub report_id: String,
-    pub status: QualityStatus,
+    pub outcome: QualityOutcome,
     pub checked_at_ms: u64,
-    /// Named failed checks. Required non-empty when `status == Failing` — a
+    /// Named failed checks. Required non-empty when `outcome == Failing` — a
     /// failing report with no recorded cause is not evidence of anything.
     pub failed_checks: Vec<String>,
 }
@@ -190,7 +192,7 @@ impl QualityReportRef {
         if self.report_id.trim().is_empty() {
             return Err("quality report_id must not be empty".to_string());
         }
-        if self.status == QualityStatus::Failing && self.failed_checks.is_empty() {
+        if self.outcome == QualityOutcome::Failing && self.failed_checks.is_empty() {
             return Err(
                 "a failing quality report must record at least one failed check".to_string(),
             );
@@ -461,7 +463,7 @@ pub struct PartitionManifestRef {
 /// "`TableSnapshot` pins table/catalog versions, partition/file manifests,
 /// commit sequence, quality checks, and policy digest"). Consumed by GOC-11
 /// (analytics jobs) and GOC-12 (cross-modal predicate pushdown reads the schema
-/// digest + quality status, never a raw partition scan).
+/// digest + quality outcome, never a raw partition scan).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LakeSnapshot {
@@ -625,6 +627,44 @@ pub enum ProjectionAccess {
 
 #[cfg(test)]
 mod tests {
+    // spec: MEDULLA-TYPED-PACKS-R810.4
+    #[test]
+    fn no_writer_sets_outcome_outside_construction() {
+        // A report's outcome is fixed when the report is built: no source file of
+        // this crate assigns `.outcome` after construction.
+        // Built in two halves so this file does not match its own scan.
+        let assign = [".out", "come="].concat();
+        let compare = [".out", "come=="].concat();
+        fn visit(dir: &std::path::Path, hits: &mut Vec<String>, assign: &str, compare: &str) {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    visit(&path, hits, assign, compare);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    let text = std::fs::read_to_string(&path).unwrap();
+                    for (number, line) in text.lines().enumerate() {
+                        let code = line.split("//").next().unwrap_or("");
+                        let compact: String = code.split_whitespace().collect();
+                        if compact.contains(assign) && !compact.contains(compare) {
+                            hits.push(format!("{}:{}", path.display(), number + 1));
+                        }
+                    }
+                }
+            }
+        }
+        let mut hits = Vec::new();
+        visit(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut hits,
+            &assign,
+            &compare,
+        );
+        assert!(
+            hits.is_empty(),
+            "outcome assigned after construction: {hits:?}"
+        );
+    }
+
     use super::*;
     use medulla_types::{msgpack::decode_bounded, msgpack::MsgpackLimits};
 
@@ -952,7 +992,7 @@ mod tests {
             commit_sequence: 7,
             quality: Some(QualityReportRef {
                 report_id: "qr-1".to_string(),
-                status: QualityStatus::Passing,
+                outcome: QualityOutcome::Passing,
                 checked_at_ms: 999,
                 failed_checks: Vec::new(),
             }),
@@ -975,7 +1015,7 @@ mod tests {
         let mut snap = snapshot();
         snap.quality = Some(QualityReportRef {
             report_id: "qr-2".to_string(),
-            status: QualityStatus::Failing,
+            status: QualityOutcome::Failing,
             checked_at_ms: 999,
             failed_checks: Vec::new(),
         });

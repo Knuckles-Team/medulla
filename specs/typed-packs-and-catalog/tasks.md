@@ -327,5 +327,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T321 [US8] MEDULLA-TYPED-PACKS-R810.1 AdmissionRow/AdmissionState state machine: route 1 census findings through AdmissionState::apply
 - [ ] T322 [US8] MEDULLA-TYPED-PACKS-R810.2 AgentLibraryEntry/AgentLibraryLifecycle state machine: route 10 census findings through AgentLibraryLifecycle::apply
 - [ ] T323 [US8] MEDULLA-TYPED-PACKS-R810.3 Python synthetic fixtures compare the library lifecycle through the contract enum, never through string literals
-- [ ] T324 [US8] MEDULLA-TYPED-PACKS-R810.4 QualityReportRef/QualityStatus state machine: route 1 census findings through QualityStatus::apply
+- [ ] T324 [US8] MEDULLA-TYPED-PACKS-R810.4 QualityReportRef.status becomes QualityOutcome.outcome (no lifecycle, no machine)
 - [ ] T325 [US8] MEDULLA-TYPED-PACKS-R810.5 SeedImportPlan/SeedGraphState state machine: route 1 census findings through SeedGraphState::apply
