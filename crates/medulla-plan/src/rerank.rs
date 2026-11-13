@@ -424,6 +424,7 @@ mod tests {
         "ab".repeat(32)
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R652.1
     #[test]
     fn types_round_trip_and_reject_non_monotone_knots() {
         let scorer = ScorerId::new("cross", "1").unwrap();

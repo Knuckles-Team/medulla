@@ -712,22 +712,39 @@ impl UreqNlPlanner {
 #[cfg(feature = "nl-query")]
 impl NlPlanner for UreqNlPlanner {
     fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
+        let user = if schema_hint.trim().is_empty() {
+            format!("Question: {nl}")
+        } else {
+            format!("Schema hint:\n{schema_hint}\n\nQuestion: {nl}")
+        };
+        let content = self.complete(&self.system_prompt, &user)?;
+        let query = strip_query(&content);
+        if query.is_empty() {
+            return Err("nl-query: LLM produced an empty query".to_string());
+        }
+        Ok(query)
+    }
+}
+
+#[cfg(feature = "nl-query")]
+impl UreqNlPlanner {
+    /// One chat completion against the configured endpoint: the system and user
+    /// messages in, the raw `choices[0].message.content` text out. The one HTTP path
+    /// of this type; `plan` and the expansion port (MEDULLA-FEDERATED-QUERY-R651.3)
+    /// both go through it, so timeouts, TLS, headers, bearer and the response cap
+    /// are shared.
+    pub fn complete(&self, system: &str, user: &str) -> Result<String, String> {
         use std::io::Read;
 
         // Bounded, timeout-guarded agent with mandatory certificate and hostname
         // verification (SAFETY: no hang on a slow endpoint).
         let agent = self.build_agent()?;
 
-        let user = if schema_hint.trim().is_empty() {
-            format!("Question: {nl}")
-        } else {
-            format!("Schema hint:\n{schema_hint}\n\nQuestion: {nl}")
-        };
         let mut body = serde_json::json!({
             "model": self.model,
             "temperature": 0,
             "messages": [
-                { "role": "system", "content": self.system_prompt },
+                { "role": "system", "content": system },
                 { "role": "user", "content": user },
             ],
         });
@@ -778,11 +795,7 @@ impl NlPlanner for UreqNlPlanner {
             .pointer("/choices/0/message/content")
             .and_then(|v| v.as_str())
             .ok_or("nl-query: LLM response had no choices[0].message.content")?;
-        let query = strip_query(content);
-        if query.is_empty() {
-            return Err("nl-query: LLM produced an empty query".to_string());
-        }
-        Ok(query)
+        Ok(content.to_string())
     }
 }
 

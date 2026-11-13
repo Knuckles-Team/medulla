@@ -1269,3 +1269,9 @@ Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/
 2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
 3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
 4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).
+
+## Expansion port wiring (R651.3)
+`ExpansionProvider`, `set_expansion_provider`, `expansion_provider` and `run_expansion` live in
+`crates/medulla-plan/src/query_understanding.rs`. `HttpExpansionProvider` lives in
+`crates/medulla-h-query/src/query/expansion.rs` and is installed from `install_seams`
+(`crates/medulla-server/src/seams_install.rs`). `UreqNlPlanner::complete` is the one HTTP path.

@@ -185,6 +185,8 @@ pub(crate) use viewport::{handle_resolve_viewport_selection, handle_viewport_que
 mod document_encoding;
 #[cfg(feature = "query")]
 mod retrieval_round;
+#[cfg(all(feature = "query", feature = "nl-query"))]
+pub mod expansion;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]

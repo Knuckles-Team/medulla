@@ -80,6 +80,10 @@ struct NlSettings {
     read_timeout_secs: Option<u64>,
     /// Extra chat-completions body members (`None` ⇒ the planner default: thinking off).
     extra_body: Option<serde_json::Value>,
+    /// Model of the expansion port (`expansion_model`); `None` ⇒ the planner model.
+    expansion_model: Option<String>,
+    /// Read timeout of the expansion port (`expansion_read_timeout_secs`, default 30, 1 to 600).
+    expansion_read_timeout_secs: Option<u64>,
     /// The first unparseable request value (env or config), refused when the planner is built.
     request_error: Option<NlConfigError>,
 }
@@ -100,6 +104,50 @@ fn build_default_from_config() -> ConfigDefault {
         // Nothing configured — the NL surface stays inert and NlQuery reports it clearly.
         return Ok(None);
     }
+    let model = settings.model.clone();
+    let read_timeout = settings.read_timeout_secs;
+    let planner = build_planner(settings, model, read_timeout)?;
+    Ok(Some(Arc::new(planner) as Arc<dyn NlPlanner>))
+}
+
+/// Build the planner-shaped HTTP client of the expansion port
+/// (MEDULLA-FEDERATED-QUERY-R651.3) from the same `nl_query` section: same endpoint,
+/// credentials, headers and TLS; `expansion_model` (default: the planner model) and
+/// `expansion_read_timeout_secs` (default 30, range 1 to 600). `Ok(None)` when no
+/// endpoint is configured.
+pub(crate) fn build_expansion_client() -> Result<Option<UreqNlPlanner>, NlConfigError> {
+    let settings = load_or_scaffold_settings();
+    if settings.endpoint.trim().is_empty() {
+        return Ok(None);
+    }
+    let model = settings
+        .expansion_model
+        .clone()
+        .filter(|m| !m.trim().is_empty())
+        .unwrap_or_else(|| settings.model.clone());
+    let timeout = settings
+        .expansion_read_timeout_secs
+        .unwrap_or(DEFAULT_EXPANSION_READ_TIMEOUT_SECS);
+    if !(1..=600).contains(&timeout) {
+        return Err(NlConfigError::InvalidValue {
+            source: "expansion_read_timeout_secs".into(),
+            raw: timeout.to_string(),
+            reason: "is outside 1 to 600".into(),
+        });
+    }
+    build_planner(settings, model, Some(timeout)).map(Some)
+}
+
+/// Default read timeout of the expansion port, in seconds.
+const DEFAULT_EXPANSION_READ_TIMEOUT_SECS: u64 = 30;
+
+/// One HTTP client from resolved settings: the single construction path shared by the
+/// NL planner and the expansion port.
+fn build_planner(
+    settings: NlSettings,
+    model: String,
+    read_timeout_secs: Option<u64>,
+) -> Result<UreqNlPlanner, NlConfigError> {
     let api_key = settings
         .api_key_env
         .as_deref()
@@ -121,15 +169,14 @@ fn build_default_from_config() -> ConfigDefault {
             auth_style: o.auth_style,
         })
     });
-    let planner = UreqNlPlanner::new(settings.endpoint, settings.model, api_key)
+    let planner = UreqNlPlanner::new(settings.endpoint, model, api_key)
         .with_headers(settings.headers)
         .with_tls_ca_path(settings.tls_ca_path)
         .with_oauth2(oauth2);
     if let Some(e) = settings.request_error {
         return Err(e);
     }
-    let planner = apply_request_settings(planner, settings.read_timeout_secs, settings.extra_body)?;
-    Ok(Some(Arc::new(planner) as Arc<dyn NlPlanner>))
+    apply_request_settings(planner, read_timeout_secs, settings.extra_body)
 }
 
 /// Apply the configured read timeout / extra request body (MEDULLA-FEDERATED-QUERY-R058.5),
@@ -243,6 +290,8 @@ impl NlSettings {
             oauth2: None,
             read_timeout_secs: None,
             extra_body: None,
+            expansion_model: None,
+            expansion_read_timeout_secs: None,
             request_error: None,
         }
     }
@@ -333,6 +382,10 @@ fn parse_config(path: &std::path::Path) -> Option<NlSettings> {
         oauth2,
         read_timeout_secs: section.get("read_timeout_secs").and_then(|v| v.as_u64()),
         extra_body: section.get("extra_body").cloned(),
+        expansion_model: getstr("expansion_model").filter(|s| !s.is_empty()),
+        expansion_read_timeout_secs: section
+            .get("expansion_read_timeout_secs")
+            .and_then(|v| v.as_u64()),
         request_error: section
             .get("read_timeout_secs")
             .filter(|v| v.as_u64().is_none())

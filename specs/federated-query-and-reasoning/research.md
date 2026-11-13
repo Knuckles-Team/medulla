@@ -185,3 +185,11 @@ The connector server comes from the caller's registered `Mcp` source named by th
 ## R700.5 digest helper (decision)
 `medulla-kernel` has no SHA-256 helper; `ArgumentMap::digest` in `medulla-result-types`
 hashes the canonical interchange JSON with `sha2`, the crate that already owns the map type.
+## Expansion port: kinds and the single HTTP path (R651.3, R651.7)
+Decision: the expansion port reuses the one chat-completion path of the NL planner client
+(`UreqNlPlanner::complete`), so endpoint, credentials, headers, TLS, timeouts and the
+response cap are configured once in the `nl_query` section. `expansion_model` and
+`expansion_read_timeout_secs` override only the model and the read timeout. The model
+answers a JSON list of strings, so the kind is assigned by the request: a request with term
+feedback yields `perspective` items; a plain request yields one `hypothetical` passage first
+and `sub_query` items after it. Why: one list shape, no per-item kind field to trust.

@@ -279,8 +279,23 @@ pub struct Expansion {
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum ExpansionError {
     EmptyQuery,
-    QueryTooLong { bytes: usize },
-    PerspectivesOutOfRange { perspectives: u8 },
+    QueryTooLong {
+        bytes: usize,
+    },
+    PerspectivesOutOfRange {
+        perspectives: u8,
+    },
+    /// The provider answered with more expansions than the request allowed.
+    FanoutExceeded {
+        requested: u8,
+        returned: usize,
+    },
+    /// No provider is installed (`EXPANSION_PROVIDER_UNCONFIGURED`).
+    ProviderUnconfigured,
+    /// The provider failed; carries its error text (`EXPANSION_PROVIDER_FAILED`).
+    ProviderFailed {
+        message: String,
+    },
 }
 
 impl std::fmt::Display for ExpansionError {
@@ -297,11 +312,58 @@ impl std::fmt::Display for ExpansionError {
                 f,
                 "perspectives {perspectives} outside {PERSPECTIVES_MIN} to {PERSPECTIVES_MAX}"
             ),
+            Self::FanoutExceeded {
+                requested,
+                returned,
+            } => write!(
+                f,
+                "expansion provider returned {returned} items for a request of {requested}"
+            ),
+            Self::ProviderUnconfigured => write!(f, "no expansion provider is configured"),
+            Self::ProviderFailed { message } => {
+                write!(f, "expansion provider failed: {message}")
+            }
         }
     }
 }
 
 impl std::error::Error for ExpansionError {}
+
+/// The one expansion port (MEDULLA-FEDERATED-QUERY-R651.3). Its output is data and
+/// never a decision. Callers: `plan_discover` and the feedback operator.
+pub trait ExpansionProvider: Send + Sync {
+    /// Produce at most `req.perspectives` expansions for `req.query`.
+    fn expand(&self, req: &ExpansionRequest) -> Result<Vec<Expansion>, ExpansionError>;
+}
+
+static EXPANSION_PROVIDER: std::sync::OnceLock<std::sync::Arc<dyn ExpansionProvider>> =
+    std::sync::OnceLock::new();
+
+/// Install the process-wide expansion provider at server start. Set once; a second
+/// call is ignored so the wiring is stable for the process lifetime.
+pub fn set_expansion_provider(provider: std::sync::Arc<dyn ExpansionProvider>) {
+    let _ = EXPANSION_PROVIDER.set(provider);
+}
+
+/// The installed provider, or `None` when the deployment configures none.
+pub fn expansion_provider() -> Option<std::sync::Arc<dyn ExpansionProvider>> {
+    EXPANSION_PROVIDER.get().cloned()
+}
+
+/// Run the port: validate the request, call the installed provider and refuse an
+/// answer larger than the request. No provider is the typed `ProviderUnconfigured`.
+pub fn run_expansion(req: &ExpansionRequest) -> Result<Vec<Expansion>, ExpansionError> {
+    req.validate()?;
+    let provider = expansion_provider().ok_or(ExpansionError::ProviderUnconfigured)?;
+    let out = provider.expand(req)?;
+    if out.len() > usize::from(req.perspectives) {
+        return Err(ExpansionError::FanoutExceeded {
+            requested: req.perspectives,
+            returned: out.len(),
+        });
+    }
+    Ok(out)
+}
 
 #[cfg(test)]
 mod tests {
@@ -317,6 +379,7 @@ mod tests {
         assert_eq!(&back, value);
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R651.1
     #[test]
     fn types_round_trip_and_reject_unknown_kind() {
         round_trip(&QueryFilters {
