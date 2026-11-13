@@ -352,6 +352,35 @@ $($variants)*
         mutation: Box<Method>,
     },
 
+    /// The change feed between two versions of one branch chain
+    /// (MEDULLA-BRANCH-MERGE-R006): the entity changes of every commit after
+    /// `from_version` (`None` is the empty baseline) up to and including
+    /// `to_version` (`None` is the head). One page holds at most
+    /// `branch.diff_page_size` entries; `offset` is the first entry of the page.
+    /// Refusals: `BRANCH_VERSION_NOT_ON_CHAIN`, `BRANCH_TENANT_DENIED`,
+    /// `BRANCH_UNKNOWN`, `BRANCH_DELETED`. Reads only.
+    BranchDiff {
+        tenant: String,
+        graph: String,
+        branch: String,
+        #[serde(default)]
+        from_version: Option<u64>,
+        #[serde(default)]
+        to_version: Option<u64>,
+        #[serde(default)]
+        offset: u64,
+    },
+
+    /// Read a branch as of one engine version on its chain
+    /// (MEDULLA-BRANCH-MERGE-R006). Refusals: `BRANCH_VERSION_NOT_ON_CHAIN`,
+    /// `BRANCH_TENANT_DENIED`, `BRANCH_UNKNOWN`, `BRANCH_DELETED`. Reads only.
+    BranchReadAt {
+        tenant: String,
+        graph: String,
+        branch: String,
+        engine_version: u64,
+    },
+
     /// Submit one source changeset to a branch (MEDULLA-SCM-R002). File bytes
     /// were uploaded first through `BlobBegin`/`BlobChunkPut`/`BlobCommit`; the
     /// request names them by digest. The changeset is the payload of the

@@ -146,6 +146,8 @@ pub struct BranchCommitInput {
     pub actor: String,
     /// Commit time, epoch milliseconds.
     pub created_at_ms: u64,
+    /// The record the commit carries (a branch write's mutation, R006), if any.
+    pub payload: Option<Vec<u8>>,
 }
 
 /// Row key of the payload a commit carries (a source changeset,
@@ -282,7 +284,7 @@ impl BranchRegistry {
             manifest_digest: input.manifest_digest.clone(),
             actor: input.actor.clone(),
             created_at_ms: input.created_at_ms,
-            payload: None,
+            payload: input.payload.clone(),
         };
         match self.append_with(branch, caller_tenant, &input.batch_id, |_, _| Ok(plan)) {
             Ok(done) => Ok(done),
@@ -503,6 +505,7 @@ mod tests {
             manifest_digest: format!("m-{batch}"),
             actor: "agent".into(),
             created_at_ms: 5,
+            payload: Some(batch.as_bytes().to_vec()),
         }
     }
 

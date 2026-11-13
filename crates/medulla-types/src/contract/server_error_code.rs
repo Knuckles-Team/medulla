@@ -53,6 +53,7 @@ closed_error_codes! {
         BranchNameReserved => "BRANCH_NAME_RESERVED",
         BranchTenantDenied => "BRANCH_TENANT_DENIED",
         BranchUnknown => "BRANCH_UNKNOWN",
+        BranchVersionNotOnChain => "BRANCH_VERSION_NOT_ON_CHAIN",
         BranchWriteInvalid => "BRANCH_WRITE_INVALID",
         BasisPolicyUnsupported => "BASIS_POLICY_UNSUPPORTED",
         BlobDigestMismatch => "BLOB_DIGEST_MISMATCH",

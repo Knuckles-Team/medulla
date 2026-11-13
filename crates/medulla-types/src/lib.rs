@@ -20,6 +20,8 @@ pub mod regime_forecast;
 pub mod agent_bus;
 // MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.
 pub mod branch;
+// MEDULLA-BRANCH-MERGE-R006 — transaction, commit and diff vocabulary of branch time travel.
+pub mod versioning;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
 pub mod profile_grant_machine;

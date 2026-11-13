@@ -7,7 +7,7 @@ One task per leaf row of `requirements.md`, producer first: the branch model (US
 - [ ] T001 [US1] MEDULLA-BRANCH-MERGE-R001 Typed branch model and CreateBranch
 - [x] T0021 [US1] MEDULLA-BRANCH-MERGE-R002.1 Typed branch-slice model for branch-scoped mutations
 - [x] T002 [US1] MEDULLA-BRANCH-MERGE-R002 Branch-scoped mutations on one commit chain
-- [ ] T003 [US2] MEDULLA-BRANCH-MERGE-R006 Branch diff and time-travel reads
+- [x] T003 [US2] MEDULLA-BRANCH-MERGE-R006 Branch diff and time-travel reads
 - [ ] T004 [US3] MEDULLA-BRANCH-MERGE-R003 Merge base and fast-forward
 - [ ] T005 [P] [US3] MEDULLA-BRANCH-MERGE-R008 Line-level three-way merge for file blobs
 - [ ] T006 [US3] MEDULLA-BRANCH-MERGE-R004 Entity-level three-way merge

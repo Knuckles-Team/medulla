@@ -9,6 +9,8 @@
 pub mod merge;
 // MEDULLA-BRANCH-MERGE-R010 — line-granularity file merge for source changesets.
 pub mod line_merge;
+// MEDULLA-BRANCH-MERGE-R006 — branch diff and time-travel reads.
+pub mod time_travel;
 
 use std::sync::Arc;
 
@@ -226,6 +228,17 @@ impl BranchTarget {
             .map_err(|error| BranchCreateError::Store(error.to_string()))?
     }
 
+    /// Every commit of the branch, oldest first (R006).
+    pub async fn chain(&self) -> Result<Vec<medulla_types::branch::BranchCommit>, String> {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        let mut commits = tokio::task::spawn_blocking(move || registry.chain(&reference))
+            .await
+            .map_err(|error| error.to_string())??;
+        commits.reverse();
+        Ok(commits)
+    }
+
     /// The payload a commit carries (a source changeset, MEDULLA-SCM-R002).
     pub async fn payload(&self, commit_id: &str) -> Result<Option<Vec<u8>>, String> {
         let registry = Arc::clone(&self.registry);
@@ -308,14 +321,27 @@ pub fn receipt_response(req_id: u64, receipt: BranchWriteReceipt) -> Response {
     }
 }
 
+/// The canonical named MessagePack of the mutation: the payload the branch
+/// commit carries (MEDULLA-BRANCH-MERGE-R006) and the bytes its manifest
+/// digest covers.
+pub fn mutation_payload(
+    mutation: &medulla_protocol_types::protocol::Method,
+) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(mutation).map_err(|error| error.to_string())
+}
+
+/// SHA-256 of a mutation payload, hex: the commit manifest digest.
+pub fn payload_digest(payload: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(payload))
+}
+
 /// The digest recorded as the commit manifest: SHA-256 of the mutation's
 /// canonical named MessagePack.
 pub fn mutation_manifest_digest(
     mutation: &medulla_protocol_types::protocol::Method,
 ) -> Result<String, String> {
-    use sha2::{Digest, Sha256};
-    let bytes = rmp_serde::to_vec_named(mutation).map_err(|error| error.to_string())?;
-    Ok(hex::encode(Sha256::digest(bytes)))
+    mutation_payload(mutation).map(|bytes| payload_digest(&bytes))
 }
 
 #[cfg(test)]

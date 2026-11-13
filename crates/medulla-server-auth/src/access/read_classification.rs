@@ -272,6 +272,8 @@ pub(super) const REASON_BLOB_OWNER_SCOPED: &str =
     "src/server/handlers/blob.rs checks authority.owner_scope() against the stored manifest/cursor owner_scope on every fetch (ensure_blob_owner/authorize_fetch); content is addressed by digest, not by a graph row";
 pub(super) const REASON_TENANT_KEY_SCOPED_KV: &str =
     "src/server/kv.rs namespaces every key via CarrierAuthority::namespace(\"kv-namespace\", ...) -- the identical tenant+actor-scoped-key pattern as timeseries; never constructs a GraphView";
+pub(super) const REASON_BRANCH_CHAIN_TENANT_SCOPED: &str =
+    "crates/medulla-h-graph/src/graph_ops/branch/time_travel.rs reads the branch commit chain from the branch registry after `resolve_target`, which refuses any branch whose tenant is not the verified tenant (BRANCH_TENANT_DENIED); the answer is folded from that chain's recorded mutations, never from a GraphView of another tenant's rows";
 pub(super) const REASON_ADMIN_ONLY_CEP: &str =
     "src/server/cep.rs gates CEP subscription management, including polling one, behind CarrierAuthority::require_admin -- stricter than row RLS, not row-scoped at all";
 // L-RLS-1 follow-up audit (CONCEPT:EPI-P3-3/P3-6): the 5 formerly-`NOT_YET_AUDITED` epistemic
@@ -666,6 +668,9 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("BlobChunkGet", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchBegin", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchEnd", REASON_BLOB_OWNER_SCOPED),
+    // REASON_BRANCH_CHAIN_TENANT_SCOPED (MEDULLA-BRANCH-MERGE-R006)
+    ("BranchDiff", REASON_BRANCH_CHAIN_TENANT_SCOPED),
+    ("BranchReadAt", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // REASON_TENANT_KEY_SCOPED_KV
     ("KvGet", REASON_TENANT_KEY_SCOPED_KV),
     ("KvScan", REASON_TENANT_KEY_SCOPED_KV),

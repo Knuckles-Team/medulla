@@ -53,7 +53,7 @@ tests/test_branch_*.py                                 new: served tests
 
 ## Phase 0: Research
 
-No unknowns that block planning; no research.md.
+No unknowns that block planning; decisions taken while building are recorded in [research.md](research.md).
 
 ## Phase 1: Design
 
@@ -63,6 +63,7 @@ No unknowns that block planning; no research.md.
 4. **Closed outcome vocabulary.** Clients branch on `MergeOutcome`, never on prose.
 5. **One commit chain.** A source changeset is the payload of a branch commit; no second chain exists.
 6. **One line merge.** `merge_lines` in `medulla-compute` is the only diff3; `merge_file` adapts it.
+7. **History is the chain.** Each branch commit carries its record as the payload, so a version reads and diffs by folding the chain (`branch/time_travel.rs`); the engine keeps no second copy of past states.
 
 Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); the seam has a document in `contracts/`.
 
@@ -85,7 +86,7 @@ none
 
 ## Production caller chain
 
-- `Method::CreateBranch`, `Method::BranchMerge`, `Method::BranchDiff` and `Method::BranchReadAt` arms in `dispatch_graph_lifecycle_methods` (`crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs:7`, chained at `router.rs:145`) to the handlers in `crates/medulla-h-graph/src/graph_ops/branch.rs`.
+- `Method::CreateBranch`, `Method::BranchMerge`, `Method::BranchDiff` and `Method::BranchReadAt` arms in `dispatch_graph_lifecycle_methods` (`crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs:7`, chained at `router.rs:145`) to the handlers in `crates/medulla-h-graph/src/graph_ops/branch.rs` (`BranchDiff` and `BranchReadAt`: `branch/time_travel.rs`).
 - `handle_branch_merge` to `merge_entities` (`branch/merge.rs`), `resolve` (`branch/conflict.rs`) and `publish_merge` (`branch/publish.rs`) to `commit_mutation_batch_crossmodal` (`crates/medulla-server-api/src/api/persistence.rs:314`).
 - `Method::BranchWrite` in `dispatch_graph_lifecycle_methods` to `handle_branch_write` (`crates/medulla-server-router/src/dispatch/router/branch_write.rs`), which resolves the target with `resolve_target`, commits the mutation to the branch target graph through `dispatch_graph_op`, then appends the commit with `BranchRegistry::append_commit`.
 - Obsolete paths to delete: none; every path above is new.

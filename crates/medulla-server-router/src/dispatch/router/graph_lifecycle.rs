@@ -77,6 +77,38 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-BRANCH-MERGE-R006: the change feed between two chain versions.
+        Method::BranchDiff {
+            tenant,
+            graph,
+            branch,
+            from_version,
+            to_version,
+            offset,
+        } => {
+            branch_diff(
+                state,
+                req.id,
+                verified_context,
+                (tenant, graph, branch, from_version, to_version, offset),
+            )
+            .await
+        }
+        // MEDULLA-BRANCH-MERGE-R006: a branch as of one engine version.
+        Method::BranchReadAt {
+            tenant,
+            graph,
+            branch,
+            engine_version,
+        } => {
+            branch_read_at(
+                state,
+                req.id,
+                verified_context,
+                (tenant, graph, branch, engine_version),
+            )
+            .await
+        }
         // MEDULLA-SCM-R002: one source changeset on a branch.
         Method::SubmitChangeset { request } => {
             dispatch_boxed(super::submit_changeset::handle_submit_changeset(
@@ -119,6 +151,74 @@ async fn create_branch(
     {
         let _ = (state, verified_context, fields);
         Response::err(req_id, "CreateBranch requires the `redb` feature")
+    }
+}
+
+/// `BranchDiff` (MEDULLA-BRANCH-MERGE-R006), served only by a `redb` build.
+async fn branch_diff(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+    fields: (String, String, String, Option<u64>, Option<u64>, u64),
+) -> Response {
+    #[cfg(feature = "redb")]
+    {
+        let (tenant, graph, branch, from_version, to_version, offset) = fields;
+        let request = medulla_h_graph::graph_ops::branch::time_travel::BranchDiffRequest {
+            tenant,
+            graph,
+            branch,
+            from_version,
+            to_version,
+            offset,
+        };
+        dispatch_boxed(
+            medulla_h_graph::graph_ops::branch::time_travel::handle_branch_diff(
+                state,
+                req_id,
+                verified_context,
+                request,
+            ),
+        )
+        .await
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, verified_context, fields);
+        Response::err(req_id, "BranchDiff requires the `redb` feature")
+    }
+}
+
+/// `BranchReadAt` (MEDULLA-BRANCH-MERGE-R006), served only by a `redb` build.
+async fn branch_read_at(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+    fields: (String, String, String, u64),
+) -> Response {
+    #[cfg(feature = "redb")]
+    {
+        let (tenant, graph, branch, engine_version) = fields;
+        let request = medulla_h_graph::graph_ops::branch::time_travel::BranchReadAtRequest {
+            tenant,
+            graph,
+            branch,
+            engine_version,
+        };
+        dispatch_boxed(
+            medulla_h_graph::graph_ops::branch::time_travel::handle_branch_read_at(
+                state,
+                req_id,
+                verified_context,
+                request,
+            ),
+        )
+        .await
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, verified_context, fields);
+        Response::err(req_id, "BranchReadAt requires the `redb` feature")
     }
 }
 

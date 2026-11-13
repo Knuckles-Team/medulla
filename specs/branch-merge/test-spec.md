@@ -76,7 +76,7 @@ Each row's acceptance test binds its ID where the test lands. The lines below re
 - `# spec: MEDULLA-BRANCH-MERGE-R003` — `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned, L4)
-- `# spec: MEDULLA-BRANCH-MERGE-R006` — `tests/test_branch_time_travel.py::test_as_of_reads_and_diff` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R006` — `tests/test_branch_time_travel.py::test_as_of_reads_and_diff` (L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R008` — `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned, L2)
 - `# spec: MEDULLA-BRANCH-MERGE-R009` — `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged` (planned, L3)

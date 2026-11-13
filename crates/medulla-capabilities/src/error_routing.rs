@@ -561,6 +561,25 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_TENANT_DENIED",
         ],
     ),
+    // MEDULLA-BRANCH-MERGE-R006: the time-travel read refusals.
+    (
+        "BranchDiff",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "BRANCH_VERSION_NOT_ON_CHAIN",
+        ],
+    ),
+    (
+        "BranchReadAt",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "BRANCH_VERSION_NOT_ON_CHAIN",
+        ],
+    ),
     // MEDULLA-BRANCH-MERGE-R002: the branch-scoped write refusals, all before any graph change.
     (
         "BranchWrite",

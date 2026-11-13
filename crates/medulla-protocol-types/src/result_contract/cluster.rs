@@ -18,6 +18,8 @@ method_results! {
     DeleteGraph(DeleteGraph) => Json<GraphDeleted>;
     CreateBranch(CreateBranch) => Json<medulla_types::branch::Branch>;
     BranchWrite(BranchWrite) => Json<medulla_types::branch::BranchWriteReceipt>;
+    BranchDiff(BranchDiff) => Json<medulla_types::versioning::KgDiff>;
+    BranchReadAt(BranchReadAt) => Json<medulla_types::versioning::BranchSnapshot>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_types::source_changeset::SubmitChangesetReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;

@@ -128,10 +128,11 @@ pub async fn handle_branch_write(
         Ok(None) => {}
         Err(error) => return Response::err(req.id, error),
     }
-    let manifest_digest = match ops::mutation_manifest_digest(&mutation) {
-        Ok(digest) => digest,
+    let payload = match ops::mutation_payload(&mutation) {
+        Ok(bytes) => bytes,
         Err(error) => return Response::err(req.id, error),
     };
+    let manifest_digest = ops::payload_digest(&payload);
     if let Err(refused) = ensure_target_graph(state, req, verified, &target.target_graph).await {
         return refused;
     }
@@ -162,6 +163,9 @@ pub async fn handle_branch_write(
             .duration_since(std::time::UNIX_EPOCH)
             .map(|elapsed| elapsed.as_millis() as u64)
             .unwrap_or(0),
+        // The mutation is the commit's payload, so every version of the chain
+        // reads and diffs (MEDULLA-BRANCH-MERGE-R006).
+        payload: Some(payload),
     };
     match target.append(verified.tenant(), input).await {
         Ok(appended) => ops::receipt_response(req.id, target.receipt(appended)),

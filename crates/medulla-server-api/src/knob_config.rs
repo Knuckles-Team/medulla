@@ -251,6 +251,8 @@ knobs! {
     retrieval_section_max_depth: u64 = "retrieval.section_max_depth", U64(32), [1, 64], "levels", Tunable;
     /// Retrieval round: most section records a traversal reads.
     retrieval_section_max_visited: u64 = "retrieval.section_max_visited", U64(4096), [1, 65536], "records", Tunable;
+    /// Branch diff: most entries one `BranchDiff` page returns (MEDULLA-BRANCH-MERGE-R006).
+    branch_diff_page_size: u64 = "branch.diff_page_size", U64(1000), [1, 10000], "entities", Tunable;
     /// Chunk encoding: tokens in one encoder window (MEDULLA-FEDERATED-QUERY-R039.2.2).
     retrieval_encode_window_tokens: u64 = "retrieval.encode_window_tokens", U64(512), [16, 8192], "tokens", Tunable;
     /// Chunk encoding: tokens shared by neighbouring windows; below the window size.
