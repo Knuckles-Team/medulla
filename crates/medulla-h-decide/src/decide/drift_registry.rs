@@ -128,9 +128,13 @@ impl ShardMonitor {
                 else {
                     return Err(self.refuse(event, "warming state without a warming body"));
                 };
-                reference
-                    .push(vector)
-                    .map_err(|r| self.refuse(event, format!("{r:?}")))?;
+                let state = self.state;
+                reference.push(vector).map_err(|r| ShardMonitorError {
+                    machine: "drift.shard_monitor",
+                    state,
+                    event,
+                    detail: format!("{r:?}"),
+                })?;
                 for token in tokens {
                     vocabulary.insert(token);
                 }

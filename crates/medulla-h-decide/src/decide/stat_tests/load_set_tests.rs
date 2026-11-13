@@ -198,6 +198,7 @@ fn runtime_of(
 ) -> DesignationRuntime {
     let digest = format!("sha256:{}", "ab".repeat(32));
     DesignationRuntime {
+        adapter: None,
         index,
         projection: SchemaProjection::new(&digest, Vec::<(String, String)>::new()),
         schema_digest: digest,
@@ -222,6 +223,7 @@ fn decide_with_runtime(
         server_secret: b"decide-stat-test-secret",
         matched: &[],
         designation: Some(&runtime),
+        reader: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

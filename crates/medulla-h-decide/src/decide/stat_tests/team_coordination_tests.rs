@@ -102,6 +102,7 @@ fn decide_team(
         tenant_id: TENANT,
         now_ms: NOW_MS,
         server_secret: b"decide-stat-test-secret",
+        matched: &[],
         designation: None,
         reader: None,
     };

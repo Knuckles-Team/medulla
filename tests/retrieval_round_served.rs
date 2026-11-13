@@ -1634,7 +1634,9 @@ fn feedback_part(
     }
 }
 
-fn stop_part(round_limit: Option<u32>) -> medulla_result_types::retrieval_round::StopRequest {
+fn feedback_stop_part(
+    round_limit: Option<u32>,
+) -> medulla_result_types::retrieval_round::StopRequest {
     use medulla_result_types::retrieval_round::{BudgetUsage, CallerLimits, StopRequest};
     StopRequest {
         calibration: medulla_result_types::retrieval_stop::CalibrationTable {
@@ -1664,7 +1666,7 @@ async fn feedback_continuation_is_validated_and_bounded() {
     // Round 1: validated feedback yields the next-query description.
     let mut first = request(None);
     first.feedback = Some(feedback_part(1, "replica recovery"));
-    first.stop = Some(stop_part(None));
+    first.stop = Some(feedback_stop_part(None));
     let one = decode(round_as(&state, None, first).await);
     let outcome = one.feedback.expect("a continuation is described");
     assert_eq!(outcome.next_query, "replica recovery snapshot");
@@ -1684,7 +1686,7 @@ async fn feedback_continuation_is_validated_and_bounded() {
     ])
     .expect("one term fits");
     second.feedback = Some(part);
-    second.stop = Some(stop_part(None));
+    second.stop = Some(feedback_stop_part(None));
     let two = decode(round_as(&state, None, second).await);
     let next = two.feedback.expect("second continuation");
     assert_eq!(next.terms[0].term, "snapshot");
@@ -1693,7 +1695,7 @@ async fn feedback_continuation_is_validated_and_bounded() {
     // A terminal stop verdict returns no continuation.
     let mut last = request(None);
     last.feedback = Some(feedback_part(1, "replica recovery"));
-    last.stop = Some(stop_part(Some(1)));
+    last.stop = Some(feedback_stop_part(Some(1)));
     let done = decode(round_as(&state, None, last).await);
     assert!(done.stop.expect("stop verdict").stop);
     assert!(done.feedback.is_none(), "terminal verdict, no continuation");

@@ -134,16 +134,15 @@ impl LexicalScorer {
     /// Raw BM25 score per document, in input order.
     pub fn score(&self, query: &str, docs: &[LexicalDoc<'_>]) -> Vec<f32> {
         use std::collections::BTreeMap;
-        let terms: std::collections::BTreeSet<String> =
-            medulla_nlq::nl::context::question_terms(query)
-                .into_iter()
-                .collect();
+        let terms: std::collections::BTreeSet<String> = medulla_nlq::terms::question_terms(query)
+            .into_iter()
+            .collect();
         let tokenised: Vec<Vec<String>> = docs
             .iter()
             .map(|d| {
-                let mut all = medulla_nlq::nl::context::question_terms(d.name);
-                all.extend(medulla_nlq::nl::context::question_terms(d.description));
-                all.extend(medulla_nlq::nl::context::question_terms(d.text));
+                let mut all = medulla_nlq::terms::question_terms(d.name);
+                all.extend(medulla_nlq::terms::question_terms(d.description));
+                all.extend(medulla_nlq::terms::question_terms(d.text));
                 all
             })
             .collect();

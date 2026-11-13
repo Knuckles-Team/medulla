@@ -774,6 +774,7 @@ fn pack_runtime(
 ) -> DesignationRuntime {
     let digest = format!("sha256:{}", "ef".repeat(32));
     DesignationRuntime {
+        adapter: None,
         index,
         projection: SchemaProjection::new(
             &digest,
@@ -821,67 +822,6 @@ fn target_request(h: &Harness, targets: &[&str]) -> DecideRequest {
 #[tokio::test]
 async fn pack_target_refusals() {
     let h = Harness::new().await;
-// --- the active adapter re-aims the task embedding before rank ------------
-
-use super::learning_tests::{
-    activate, embedded_graph, fit_request, judged_runs, pointer_state, GRAPH,
-};
-use medulla_decision_types::decision::statistical::retrieval::{PointerMovement, PointerRef};
-use medulla_decision_types::decision::statistical::retrieval_adapter::{
-    AdapterDirection, QueryAdapterBody,
-};
-use medulla_server_ops::api::admin::served_adapter::ServedAdapter;
-
-/// One direction at 45 degrees between axes 0 and 1 with gain 1/2: a query
-/// along axis 0 is pulled toward axis 1.
-fn tilt_body() -> QueryAdapterBody {
-    let unit = (std::f64::consts::FRAC_1_SQRT_2 * f64::from(1_u32 << 30)).round() as i32;
-    QueryAdapterBody {
-        schema_version: 1,
-        space_digest: format!("sha256:{}", "ef".repeat(32)),
-        dimensions: 3,
-        directions: BoundedVec::new(vec![AdapterDirection {
-            gain_q16: 1 << 15,
-            unit_q30: BoundedVec::new(vec![unit, unit, 0]).unwrap(),
-        }])
-        .unwrap(),
-        training_digest: format!("sha256:{}", "01".repeat(32)),
-        n_training: 40,
-        revision: 1,
-        parent_digest: None,
-    }
-}
-
-fn applied_tilt() -> crate::decide::stat_designation::AppliedAdapter {
-    let digest = format!("sha256:{}", "aa".repeat(32));
-    crate::decide::stat_designation::AppliedAdapter {
-        served: std::sync::Arc::new(ServedAdapter::for_body(&digest, &tilt_body()).unwrap()),
-        revision: 7,
-    }
-}
-
-fn ranked_ids(record: &StatisticalDecisionRecord) -> Vec<String> {
-    ids_of(answer_of(record))
-        .into_iter()
-        .map(str::to_string)
-        .collect()
-}
-
-fn adapter_premises(record: &StatisticalDecisionRecord) -> Vec<String> {
-    record
-        .premises
-        .as_slice()
-        .iter()
-        .filter(|premise| premise.fact.starts_with("adapter:"))
-        .map(|premise| premise.fact.clone())
-        .collect()
-}
-
-// spec: MEDULLA-DECISION-ENGINE-R172.13
-#[tokio::test]
-async fn capability_adapter_applies_before_rank() {
-    let h = Harness::new().await;
-    let pin = schema_pin(&h);
     seed(
         &h,
         vec![
@@ -892,12 +832,6 @@ async fn capability_adapter_applies_before_rank() {
             (
                 pack_record("tool-old", &["Position"], &[], 4),
                 vec![0.0, 1.0, 0.0],
-                record(Some(TENANT), "agent-n", &["cap:x"]),
-                vec![1.0, 0.0, 0.0],
-            ),
-            (
-                record(Some(TENANT), "agent-m", &["cap:x"]),
-                vec![0.8, 0.6, 0.0],
             ),
         ],
     )
@@ -960,6 +894,132 @@ async fn capability_adapter_applies_before_rank() {
     assert_eq!(epoch_of(&index), epoch);
     assert_eq!(artifacts(&h), count);
     assert_eq!(h.store.capability_rewards(TENANT).unwrap(), held);
+}
+
+// --- the active adapter re-aims the task embedding before rank ------------
+
+use super::learning_tests::{
+    activate, embedded_graph, fit_request, judged_runs, pointer_state, GRAPH,
+};
+use medulla_decision_types::decision::statistical::retrieval::{PointerMovement, PointerRef};
+use medulla_decision_types::decision::statistical::retrieval_adapter::{
+    AdapterDirection, QueryAdapterBody,
+};
+use medulla_server_ops::api::admin::served_adapter::ServedAdapter;
+
+/// One direction at 45 degrees between axes 0 and 1 with gain 1/2: a query
+/// along axis 0 is pulled toward axis 1.
+fn tilt_body() -> QueryAdapterBody {
+    let unit = (std::f64::consts::FRAC_1_SQRT_2 * f64::from(1_u32 << 30)).round() as i32;
+    QueryAdapterBody {
+        schema_version: 1,
+        space_digest: format!("sha256:{}", "ef".repeat(32)),
+        dimensions: 3,
+        directions: BoundedVec::new(vec![AdapterDirection {
+            gain_q16: 1 << 15,
+            unit_q30: BoundedVec::new(vec![unit, unit, 0]).unwrap(),
+        }])
+        .unwrap(),
+        training_digest: format!("sha256:{}", "01".repeat(32)),
+        n_training: 40,
+        revision: 1,
+        parent_digest: None,
+        side: Default::default(),
+    }
+}
+
+fn applied_tilt() -> crate::decide::stat_designation::AppliedAdapter {
+    let digest = format!("sha256:{}", "aa".repeat(32));
+    crate::decide::stat_designation::AppliedAdapter {
+        served: std::sync::Arc::new(ServedAdapter::for_body(&digest, &tilt_body()).unwrap()),
+        revision: 7,
+    }
+}
+
+fn ranked_ids(record: &StatisticalDecisionRecord) -> Vec<String> {
+    ids_of(answer_of(record))
+        .into_iter()
+        .map(str::to_string)
+        .collect()
+}
+
+fn adapter_premises(record: &StatisticalDecisionRecord) -> Vec<String> {
+    record
+        .premises
+        .as_slice()
+        .iter()
+        .filter(|premise| premise.fact.starts_with("adapter:"))
+        .map(|premise| premise.fact.clone())
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R172.13
+#[tokio::test]
+async fn capability_adapter_applies_before_rank() {
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    seed(
+        &h,
+        vec![
+            (
+                record(Some(TENANT), "agent-n", &["cap:x"]),
+                vec![1.0, 0.0, 0.0],
+            ),
+            (
+                record(Some(TENANT), "agent-m", &["cap:x"]),
+                vec![0.8, 0.6, 0.0],
+            ),
+        ],
+    )
+    .await;
+    let index = shared_capability_index(&*h.state.read().await);
+    let request = designation_request(
+        &pin,
+        question(&[1.0, 0.0, 0.0], 2, weights(Q32_ONE, 0)),
+        DecisionPolicyRef::Default,
+    );
+
+    // No adapter: the base vector ranks, and no adapter premise is recorded.
+    let base = decide_with_runtime(&h, &request, runtime_of(index.clone())).unwrap();
+    assert_eq!(ranked_ids(&base), vec!["agent-n", "agent-m"]);
+    assert!(adapter_premises(&base).is_empty());
+
+    // The active adapter pulls the task embedding toward axis 1 before the
+    // index is read, so the order changes, and the premise names the adapter
+    // and the revision of its activation.
+    let applied = applied_tilt();
+    let mut runtime = runtime_of(index.clone());
+    runtime.adapter = Some(applied.clone());
+    let adapted = decide_with_runtime(&h, &request, runtime).unwrap();
+    assert_eq!(ranked_ids(&adapted), vec!["agent-m", "agent-n"]);
+    assert_eq!(adapter_premises(&adapted), vec![applied.fact()]);
+    assert!(applied.fact().ends_with("@7"));
+
+    // The adapted score is the cosine of the adapted, renormalised vector.
+    let moved = crate::decide::family::capability_designation::adapted_query(
+        &{
+            let mut r = runtime_of(index.clone());
+            r.adapter = Some(applied);
+            r
+        },
+        vec![1.0, 0.0, 0.0],
+    );
+    let norm = moved.iter().map(|v| v * v).sum::<f32>().sqrt();
+    assert!((norm - 1.0).abs() < 1e-5, "unit length again: {norm}");
+    let expected_cosine = f64::from(0.8 * moved[0] + 0.6 * moved[1]);
+    let scored = answer_of(&adapted).designations[0].cosine_q32;
+    let got = scored as f64 / Q32_ONE as f64;
+    assert!(
+        (got - expected_cosine).abs() < 1e-3,
+        "{got} vs {expected_cosine}"
+    );
+
+    // A query of another width is served unadapted (the base order).
+    let mut runtime = runtime_of(index);
+    runtime.adapter = Some(applied_tilt());
+    let narrow =
+        crate::decide::family::capability_designation::adapted_query(&runtime, vec![1.0, 0.0]);
+    assert_eq!(narrow, vec![1.0, 0.0]);
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R172.12.5
@@ -1169,53 +1229,6 @@ async fn feed_without_an_active_generation_indexes_nothing() {
         .map(|shard| shard.snapshot().live_count())
         .unwrap_or(0);
     assert_eq!(live, 0, "no embedding generation: nothing is indexed");
-    let request = designation_request(
-        &pin,
-        question(&[1.0, 0.0, 0.0], 2, weights(Q32_ONE, 0)),
-        DecisionPolicyRef::Default,
-    );
-
-    // No adapter: the base vector ranks, and no adapter premise is recorded.
-    let base = decide_with_runtime(&h, &request, runtime_of(index.clone())).unwrap();
-    assert_eq!(ranked_ids(&base), vec!["agent-n", "agent-m"]);
-    assert!(adapter_premises(&base).is_empty());
-
-    // The active adapter pulls the task embedding toward axis 1 before the
-    // index is read, so the order changes, and the premise names the adapter
-    // and the revision of its activation.
-    let applied = applied_tilt();
-    let mut runtime = runtime_of(index.clone());
-    runtime.adapter = Some(applied.clone());
-    let adapted = decide_with_runtime(&h, &request, runtime).unwrap();
-    assert_eq!(ranked_ids(&adapted), vec!["agent-m", "agent-n"]);
-    assert_eq!(adapter_premises(&adapted), vec![applied.fact()]);
-    assert!(applied.fact().ends_with("@7"));
-
-    // The adapted score is the cosine of the adapted, renormalised vector.
-    let moved = crate::decide::family::capability_designation::adapted_query(
-        &{
-            let mut r = runtime_of(index.clone());
-            r.adapter = Some(applied);
-            r
-        },
-        vec![1.0, 0.0, 0.0],
-    );
-    let norm = moved.iter().map(|v| v * v).sum::<f32>().sqrt();
-    assert!((norm - 1.0).abs() < 1e-5, "unit length again: {norm}");
-    let expected_cosine = f64::from(0.8 * moved[0] + 0.6 * moved[1]);
-    let scored = answer_of(&adapted).designations[0].cosine_q32;
-    let got = scored as f64 / Q32_ONE as f64;
-    assert!(
-        (got - expected_cosine).abs() < 1e-3,
-        "{got} vs {expected_cosine}"
-    );
-
-    // A query of another width is served unadapted (the base order).
-    let mut runtime = runtime_of(index);
-    runtime.adapter = Some(applied_tilt());
-    let narrow =
-        crate::decide::family::capability_designation::adapted_query(&runtime, vec![1.0, 0.0]);
-    assert_eq!(narrow, vec![1.0, 0.0]);
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R172.13
@@ -1310,6 +1323,7 @@ fn wide_runtime(
         .map(|n| (format!("cap:sub{n:03}"), "cap:x".to_string()))
         .collect();
     DesignationRuntime {
+        adapter: None,
         index,
         projection: SchemaProjection::new(&digest, edges),
         schema_digest: digest,

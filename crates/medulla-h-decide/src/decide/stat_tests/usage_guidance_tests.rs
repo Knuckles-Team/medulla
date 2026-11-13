@@ -177,6 +177,7 @@ fn guidance_request(
 fn runtime_of(h: &Harness, read: UsageGuidanceRead) -> DesignationRuntime {
     let index = futures_lite_block(shared_index(h));
     DesignationRuntime {
+        adapter: None,
         index,
         projection: SchemaProjection::default(),
         schema_digest: String::new(),
@@ -209,6 +210,7 @@ fn decide_with_read(
         server_secret: b"decide-stat-test-secret",
         matched: &[],
         designation: Some(&runtime),
+        reader: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,
