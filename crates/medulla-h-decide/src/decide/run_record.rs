@@ -492,20 +492,7 @@ fn commit(
                 return Err(unknown());
             };
             let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
-            let asked = entry
-                .record
-                .inputs
-                .params
-                .iter()
-                .find(|param| param.name == "ladder")
-                .and_then(|param| match &param.value {
-                    TypedValue::Text(text) => {
-                        serde_json::from_str::<TrajectoryLadderRequest>(text).ok()
-                    }
-                    _ => None,
-                })
-                .filter(|_| entry.record.question.kind == QuestionKind::TrajectoryLadder)
-                .ok_or_else(unknown)?;
+            let asked = ladder_of_entry(&entry).ok_or_else(unknown)?;
             check_paired_verdict(&verdict, &asked.input_snapshot_digest)?;
             let key = verdict.key();
             let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
@@ -567,4 +554,20 @@ fn read_manifest(
         let _ = (ctx, retention, receipt);
         Ok(ManifestReading::Unreadable)
     }
+}
+
+/// The ladder request a logged trajectory-ladder decision was asked with, or
+/// `None` when the entry is another kind of decision.
+pub(super) fn ladder_of_entry(entry: &DecisionLogEntry) -> Option<TrajectoryLadderRequest> {
+    entry
+        .record
+        .inputs
+        .params
+        .iter()
+        .find(|param| param.name == "ladder")
+        .and_then(|param| match &param.value {
+            TypedValue::Text(text) => serde_json::from_str::<TrajectoryLadderRequest>(text).ok(),
+            _ => None,
+        })
+        .filter(|_| entry.record.question.kind == QuestionKind::TrajectoryLadder)
 }

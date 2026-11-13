@@ -81,6 +81,7 @@ mod stat_learning;
 mod stat_load_set;
 #[cfg(feature = "decide")]
 mod stat_log;
+mod stat_verdict_dataset;
 #[cfg(feature = "decide")]
 mod stat_memory_change;
 #[cfg(feature = "decide")]

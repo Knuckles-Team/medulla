@@ -9,12 +9,16 @@
 
 use std::cmp::Ordering;
 
+use medulla_decision_types::decision::statistical::dataset::{
+    ItemLabel, LabelSource, LabelledItem,
+};
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::trajectory_ladder::{
     decision_digest_prefix, PairedVerdict, RungChoice, TrajectoryLadderRequest, TrajectoryRung,
     Winner, TRAJECTORY_ARM_MISSING, TRAJECTORY_BASELINE_MISSING, TRAJECTORY_NO_LEGAL_RUNG,
     TRAJECTORY_SNAPSHOT_MISMATCH,
 };
+use medulla_types::contract::BoundedVec;
 
 /// Why the ladder cannot choose a rung.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,5 +173,56 @@ pub fn improvement_proven(
         verdict.rung_id == rung_id
             && verdict.input_snapshot_digest == input_snapshot_digest
             && verdict.winner == Winner::Arm
+    })
+}
+
+/// The feature columns of the ladder head's dataset, in the order `head_score`
+/// reads them.
+pub const LADDER_FEATURE_NAMES: [&str; 2] = ["width", "depth"];
+
+/// The class key of every verdict item: one calibration class.
+pub const VERDICT_CLASS_KEY: &str = "trajectory_ladder";
+
+/// One stored verdict joined with the two rungs it compares and the time the
+/// decision it answers was made.
+pub struct VerdictRow<'a> {
+    pub verdict: &'a PairedVerdict,
+    pub arm: &'a TrajectoryRung,
+    pub baseline: &'a TrajectoryRung,
+    pub decided_at_ms: u64,
+}
+
+/// The labelled item of one stored verdict (R134.12.1): the candidates are the
+/// arm rung and the baseline rung, their features are `[width, depth]` in Q32,
+/// and the acceptable candidates are the winner (both on a tie). Returns `None`
+/// when the verdict does not name the baseline it was compared against.
+pub fn verdict_item(row: &VerdictRow<'_>) -> Option<LabelledItem> {
+    if row.verdict.rung_id != row.arm.rung_id || row.verdict.baseline_id != row.baseline.rung_id {
+        return None;
+    }
+    let acceptable = match row.verdict.winner {
+        Winner::Arm => vec![row.arm.rung_id.clone()],
+        Winner::Baseline => vec![row.baseline.rung_id.clone()],
+        Winner::Tie => vec![row.arm.rung_id.clone(), row.baseline.rung_id.clone()],
+    };
+    let q32 = |value: u32| i64::from(value) << 32;
+    Some(LabelledItem {
+        item_id: format!("{}/{}", row.verdict.decision_id, row.verdict.rung_id),
+        recorded_at_ms: row.decided_at_ms,
+        class_key: VERDICT_CLASS_KEY.to_string(),
+        candidate_ids: BoundedVec::new(vec![row.arm.rung_id.clone(), row.baseline.rung_id.clone()])
+            .ok()?,
+        features: BoundedVec::new(vec![
+            q32(row.arm.width),
+            q32(row.arm.depth),
+            q32(row.baseline.width),
+            q32(row.baseline.depth),
+        ])
+        .ok()?,
+        label: ItemLabel::Gold {
+            acceptable: BoundedVec::new(acceptable).ok()?,
+            source: LabelSource::SyntheticConstruction,
+        },
+        audit_inclusion: None,
     })
 }

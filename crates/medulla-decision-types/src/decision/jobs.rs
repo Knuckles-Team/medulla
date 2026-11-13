@@ -147,6 +147,12 @@ pub enum DatasetSource {
     /// `question_id` the caller may read, with its independent evaluations.
     /// Bandit labels only.
     Logged { question_id: String },
+    /// The tenant's stored paired-comparison verdicts of trajectory-ladder
+    /// decisions (`RunRecord::PairedVerdict`, MEDULLA-DECISION-ENGINE-R134.12.1):
+    /// one item per verdict, over the `[width, depth]` features of the rung
+    /// and the baseline, labelled by the verdict's winner. The feature schema
+    /// must name exactly `width` and `depth`.
+    PairedVerdicts,
 }
 
 /// Which off-policy estimator an evaluation runs.

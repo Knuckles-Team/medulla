@@ -348,3 +348,185 @@ async fn paired_verdict_requires_complete_arms() {
     // Decide wrote nothing beyond the two verdict rows.
     assert_eq!(rows(&h, TENANT), stored_rows + 1);
 }
+
+/// The ladder head's feature schema: exactly `width` and `depth`.
+fn ladder_schema(h: &Harness) -> (ComponentDependency, String) {
+    use medulla_decision_types::decision::statistical::body::encode_body;
+    use medulla_decision_types::decision::statistical::features::{
+        FeatureSchemaBody, FEATURE_SCHEMA_VERSION,
+    };
+    let body = FeatureSchemaBody {
+        schema_version: FEATURE_SCHEMA_VERSION,
+        features: BoundedVec::new(vec![number_feature("width"), number_feature("depth")]).unwrap(),
+    };
+    let pin = h
+        .publish_test_component(
+            "schema-ladder-head",
+            AgentComponentKind::FeatureSchema,
+            "ladder head features",
+            Some(&body),
+            None,
+        )
+        .unwrap();
+    (pin, encode_body(&body).unwrap().content_digest)
+}
+
+fn verdict_fit(
+    pin: &ComponentDependency,
+    key: &str,
+    gold_set_digest: String,
+) -> medulla_decision_types::decision::DecisionFitRequest {
+    use medulla_decision_types::decision::jobs::{DatasetSource, LabelRegime};
+    medulla_decision_types::decision::DecisionFitRequest {
+        tenant_id: TENANT.to_string(),
+        idempotency_key: key.to_string(),
+        head_kind: HeadKind::ListwiseLogistic,
+        feature_schema: pin.clone(),
+        policy: DecisionPolicyRef::Default,
+        label_regime: LabelRegime::FullLabel { gold_set_digest },
+        window: window(),
+        optimiser: fit_optimiser(),
+        source: DatasetSource::PairedVerdicts,
+        penalty: None,
+        features: Default::default(),
+        parent_head: None,
+    }
+}
+
+async fn submit(
+    h: &Harness,
+    request: medulla_decision_types::decision::DecisionFitRequest,
+) -> medulla_protocol_types::protocol::Response {
+    super::super::jobs::handle_decision_fit(
+        &h.state,
+        7,
+        &verified(),
+        medulla_decision_types::decision::DecisionFitOp::Submit {
+            request: Box::new(request),
+        },
+    )
+    .await
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.12.1
+#[tokio::test]
+async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
+    use medulla_decision_types::decision::DecisionJobRecord;
+    let h = Harness::new().await;
+    let (pin, schema_digest) = ladder_schema(&h);
+
+    // With no stored verdict there is nothing to fit.
+    let none = super::super::stat_verdict_dataset::verdict_dataset(
+        h.store.as_ref(),
+        TENANT,
+        &schema_digest,
+    );
+    assert!(none.unwrap_err().contains("NO_ADMISSIBLE_LABELS"));
+
+    // Eight ladder decisions, each with three verdicts: the wider rung wins
+    // on w2d1, loses on w2d2 and ties on w4d2.
+    for n in 0..8 {
+        let mut asked = ladder(4, standard());
+        asked.task_digest = format!("task-{n}");
+        let decision = log_decision(&h, TENANT, &asked);
+        for (rung, winner) in [
+            ("w2d1", Winner::Arm),
+            ("w2d2", Winner::Baseline),
+            ("w4d2", Winner::Tie),
+        ] {
+            write_verdict(&h, verdict(&decision, rung, winner))
+                .await
+                .unwrap();
+        }
+    }
+    // A verdict of another tenant's decision is never in this tenant's set.
+    let foreign = log_decision(&h, FOREIGN, &ladder(4, standard()));
+    assert!(write_verdict(&h, verdict(&foreign, "w2d1", Winner::Arm))
+        .await
+        .is_err());
+
+    let dataset = super::super::stat_verdict_dataset::verdict_dataset(
+        h.store.as_ref(),
+        TENANT,
+        &schema_digest,
+    )
+    .unwrap();
+    assert_eq!(dataset.items.len(), 24, "one item per stored verdict");
+    assert_eq!(
+        dataset.feature_names.as_slice(),
+        ["width".to_string(), "depth".to_string()]
+    );
+    assert!(dataset.synthetic, "stored verdicts are caller-authored");
+    let tie = dataset
+        .items
+        .iter()
+        .find(|item| item.item_id.ends_with("/w4d2"))
+        .unwrap();
+    assert_eq!(tie.candidate_ids.as_slice(), ["w4d2", "w1d1"]);
+    assert_eq!(
+        tie.features.as_slice(),
+        [4 << 32, 2 << 32, 1 << 32, 1 << 32]
+    );
+    let medulla_decision_types::decision::statistical::dataset::ItemLabel::Gold {
+        acceptable, ..
+    } = &tie.label
+    else {
+        panic!("a verdict is a gold label")
+    };
+    assert_eq!(
+        acceptable.as_slice(),
+        ["w4d2", "w1d1"],
+        "a tie accepts both"
+    );
+
+    // A fit pinned by the stored verdicts' digest trains on exactly them.
+    let digest = super::super::stat_jobs::dataset_digest(&dataset).unwrap();
+    let job: DecisionJobRecord =
+        decode(submit(&h, verdict_fit(&pin, "fit-verdicts", digest.clone())).await).unwrap();
+    let medulla_decision_types::decision::DecisionJobOutput::Fit { draft, .. } = succeeded(&job)
+    else {
+        panic!("fit output")
+    };
+    assert_eq!(draft.n_training, 24);
+    assert_eq!(draft.weights.len(), 2, "one weight per ladder feature");
+    assert!(draft.synthetic);
+    let first_lineage = draft.training_records_digest.clone();
+
+    // A wrong pin is refused and names the digest the stored verdicts hash to.
+    let refused = submit(
+        &h,
+        verdict_fit(&pin, "fit-wrong-pin", "sha256:wrong".into()),
+    )
+    .await;
+    let error = decode::<DecisionJobRecord>(refused)
+        .map(|record| format!("{:?}", record.state))
+        .unwrap_or_else(|error| error);
+    assert!(
+        error.contains(&format!("the stored verdicts hash to {digest}")),
+        "{error}"
+    );
+
+    // A new verdict changes the dataset, so the head's lineage changes with it.
+    let mut asked = ladder(4, standard());
+    asked.task_digest = "task-extra".into();
+    let decision = log_decision(&h, TENANT, &asked);
+    write_verdict(&h, verdict(&decision, "w2d1", Winner::Arm))
+        .await
+        .unwrap();
+    let grown = super::super::stat_verdict_dataset::verdict_dataset(
+        h.store.as_ref(),
+        TENANT,
+        &schema_digest,
+    )
+    .unwrap();
+    assert_eq!(grown.items.len(), 25);
+    let digest = super::super::stat_jobs::dataset_digest(&grown).unwrap();
+    let job: DecisionJobRecord =
+        decode(submit(&h, verdict_fit(&pin, "fit-verdicts-grown", digest)).await).unwrap();
+    let medulla_decision_types::decision::DecisionJobOutput::Fit { draft, .. } = succeeded(&job)
+    else {
+        panic!("fit output")
+    };
+    assert_eq!(draft.n_training, 25);
+    assert_ne!(draft.training_records_digest, first_lineage);
+}

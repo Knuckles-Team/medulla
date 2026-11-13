@@ -51,6 +51,7 @@ use medulla_types::contract::BoundedVec;
 use super::stat_log::{logged_dataset, LogReader};
 use super::stat_penalty::{draft_premises, precheck_importance, resolve_penalty};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
+use super::stat_verdict_dataset::verdict_dataset;
 use super::telemetry;
 use super::SharedState;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -171,14 +172,25 @@ fn rules<'a>(
     }
 }
 
+/// The refusal of a gold-set pin that does not match the dataset. The stored
+/// verdicts are not caller-submitted, so the caller learns their digest here.
+fn pin_mismatch(source: &DatasetSource, dataset: &LabelledDataset) -> String {
+    let detail = match (source, dataset_digest(dataset)) {
+        (DatasetSource::PairedVerdicts, Ok(digest)) => {
+            format!(
+                "gold_set_digest does not pin this dataset; the stored verdicts hash to {digest}"
+            )
+        }
+        _ => "gold_set_digest does not pin this dataset".to_string(),
+    };
+    refusal(StatisticalErrorCode::DatasetInvalid, detail)
+}
+
 fn fit_regime(request: &DecisionFitRequest, dataset: &LabelledDataset) -> Result<Regime, String> {
     match &request.label_regime {
         LabelRegime::FullLabel { gold_set_digest } => {
-            if !is_inline(&request.source) || *gold_set_digest != dataset_digest(dataset)? {
-                return Err(refusal(
-                    StatisticalErrorCode::DatasetInvalid,
-                    "gold_set_digest does not pin this dataset",
-                ));
+            if !is_pinnable(&request.source) || *gold_set_digest != dataset_digest(dataset)? {
+                return Err(pin_mismatch(&request.source, dataset));
             }
             Ok(Regime::FullLabel)
         }
@@ -191,8 +203,14 @@ pub(super) type ArtifactRows = Vec<(String, Vec<u8>)>;
 /// What a job run yields: its output and the artifact rows it commits.
 pub(super) type JobRun = Result<(DecisionJobOutput, ArtifactRows), String>;
 
-fn is_inline(source: &DatasetSource) -> bool {
-    matches!(source, DatasetSource::Inline { .. })
+/// Whether the source is a caller-pinned gold set: the submitted dataset, or
+/// the stored paired verdicts, which a full-label regime pins by the digest of
+/// the dataset they resolve to.
+fn is_pinnable(source: &DatasetSource) -> bool {
+    matches!(
+        source,
+        DatasetSource::Inline { .. } | DatasetSource::PairedVerdicts
+    )
 }
 
 /// Inline labels and the `synthetic` flag arrive in the same caller-authored
@@ -201,7 +219,7 @@ fn is_inline(source: &DatasetSource) -> bool {
 /// inline fit/eval results remain synthetic and cannot feed the real-world
 /// coverage, risk or threshold timeline.
 fn mark_unverified_inline(dataset: &mut LabelledDataset, source: &DatasetSource) {
-    if is_inline(source) {
+    if is_pinnable(source) {
         dataset.synthetic = true;
     }
 }
@@ -219,6 +237,7 @@ fn resolve_dataset(
         DatasetSource::Logged { question_id } => {
             logged_dataset(store, reader, question_id, schema_digest)
         }
+        DatasetSource::PairedVerdicts => verdict_dataset(store, &reader.tenant_id, schema_digest),
     }
 }
 
@@ -315,12 +334,11 @@ pub(super) fn candidate_head(
 }
 
 fn eval_regime(request: &DecisionEvalRequest, dataset: &LabelledDataset) -> Result<Regime, String> {
-    let inline = is_inline(&request.source);
+    let pinnable = is_pinnable(&request.source);
     match &request.gold_set_digest {
-        Some(digest) if !inline || *digest != dataset_digest(dataset)? => Err(refusal(
-            StatisticalErrorCode::DatasetInvalid,
-            "gold_set_digest does not pin this dataset",
-        )),
+        Some(digest) if !pinnable || *digest != dataset_digest(dataset)? => {
+            Err(pin_mismatch(&request.source, dataset))
+        }
         Some(_) => Ok(Regime::FullLabel),
         None => Ok(Regime::BanditLabel),
     }
