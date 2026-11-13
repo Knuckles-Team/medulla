@@ -397,7 +397,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T377 [US4] MEDULLA-FEDERATED-QUERY-R706.5 Evidence of Tag-based column masking and row filters
 - [ ] T378 [US4] MEDULLA-FEDERATED-QUERY-R706.6 Hot-path proof of Tag-based column masking and row filters
 - [ ] T379 [P] [US4] MEDULLA-FEDERATED-QUERY-R722.1 Model of Connector data resources register as virtual-graph sources at pack import
-- [ ] T380 [US4] MEDULLA-FEDERATED-QUERY-R722.2 Registration and digest behavior
+- [x] T380 [US4] MEDULLA-FEDERATED-QUERY-R722.2 Registration and digest behavior
 - [ ] T381 [US4] MEDULLA-FEDERATED-QUERY-R722.3 Registration handoff and read path
 - [ ] T382 [US4] MEDULLA-FEDERATED-QUERY-R722.4 Refusal of Connector data resources register as virtual-graph sources at pack import
 - [x] T383 [US4] MEDULLA-FEDERATED-QUERY-R722.5 Evidence of Connector data resources register as virtual-graph sources at pack import
@@ -408,6 +408,10 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
 - [ ] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
 - [ ] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
+- [ ] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
+- [x] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
+- [x] T389a [US4] MEDULLA-FEDERATED-QUERY-R722.9.1 Bound-driver precedence in source resolution (split from R722.9 to break the R722.3/R722.9 cycle)
+- [x] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
 - [ ] T453 [US4] MEDULLA-FEDERATED-QUERY-R722.11 Served Uql binds many approved foreign sources
 
 ## User Story 5: SPARQL update, stored queries and live artifacts

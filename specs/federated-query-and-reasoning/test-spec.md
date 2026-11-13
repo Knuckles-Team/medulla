@@ -493,7 +493,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 
 - `MEDULLA-FEDERATED-QUERY-R722`: See each child.
 - `MEDULLA-FEDERATED-QUERY-R722.1`: `crates/medulla-types/tests/pack_source.rs::access_kinds_map_to_foreign_source_kinds`.
-- `MEDULLA-FEDERATED-QUERY-R722.2`: `crates/medulla-plan/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held`; `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` proves the admitted approval CAS; `tests/federated/test_pack_source_served.py::test_import_registers_through_the_one_catalog` proves the served catalog import.
+- `MEDULLA-FEDERATED-QUERY-R722.2`: `crates/medulla-h-admin/src/admin/connector_pack/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held`; `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` proves the admitted approval CAS; `tests/federated/test_pack_source_served.py::test_import_registers_through_the_one_catalog` proves the served catalog import.
 - `MEDULLA-FEDERATED-QUERY-R722.4`: `tests/federated/test_pack_source_served.py::test_secret_guard_held_and_unavailable_refuse_with_named_codes`.
 - `MEDULLA-FEDERATED-QUERY-R722.5`: `tests/federated/test_pack_source_served.py::test_rows_carry_contract_provenance_and_nothing_is_copied`.
 - `MEDULLA-FEDERATED-QUERY-R722.6`: `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy`.
@@ -548,7 +548,7 @@ prove any of these rows.
 
 | Case | Requirement | Planned proving test | Required observation |
 |---|---|---|---|
-| Registry identity and precedence | R722.3 | `crates/medulla-federation/src/federation_registry_tests.rs::eg722_bound_driver_resolves_naively_and_retains_spec`; `crates/medulla-federation/src/federation_opt/remote.rs::bound_driver_tests::bound_driver_precedes_spec_and_preserves_identity` | The bound driver retains the registered source kind, operation and fingerprint. Naive and optimized resolution select the same bound source; the spec fallback is never used. |
+| Registry identity and precedence | R722.9.1 (used by R722.3) | `crates/medulla-federation/src/federation_registry_tests.rs::eg722_bound_driver_resolves_naively_and_retains_spec`; `crates/medulla-federation/src/federation_opt/remote.rs::bound_driver_tests::bound_driver_precedes_spec_and_preserves_identity` | The bound driver retains the registered source kind, operation and fingerprint. Naive and optimized resolution select the same bound source; the spec fallback is never used. |
 | Registration and context binding | R722.3/R042/R085 | `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs::binding_requires_verified_owner_tenant_and_current_registration` | Verified context supplies tenant, owner, actor and delegation. Wrong tenant/owner, missing approval, stale head, changed body or contract digest refuse before a driver call. Revoked authority and changed plan/query digest also refuse. |
 | Four-phase lifecycle | R722.3/R043.7; SDK-SOURCE-INGEST-R004.7-.10 invariants mapped by the SDK owner | `tests/federated/test_pack_source_served.py::test_approved_source_open_chunk_complete_abort_is_bounded` | `ForeignReadOpen` issues one opaque bound handle. Chunks use monotone sequence and finite row/byte/deadline caps. Complete or Abort is the only terminal transition. Replay, expiry, cancellation and over-limit cases return named errors. Existing R004.7-.10 alone do not prove a generic pack receiver. |
 | Governed source call | R043.7/R722.3 | `tests/federated/test_pack_source_served.py::test_approved_source_reaches_fleet_call_once` | The served path calls `FleetSourceExecutor` through `fleet.call` with read effect and never opens a direct URL or second transport. (planned) |
@@ -1014,8 +1014,8 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-uql/src/parser/modality.rs::tests::unknown_modality_refuses_without_plan` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R722` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R722.2` | `crates/medulla-plan/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R722` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R722.2` | `crates/medulla-h-admin/src/admin/connector_pack/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.3` | `tests/federated/test_pack_source_served.py::test_import_registers_through_the_one_catalog` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.4` | `tests/federated/test_pack_source_served.py::test_secret_guard_held_and_unavailable_refuse_with_named_codes` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.5` | `tests/federated/test_pack_source_served.py::test_rows_carry_contract_provenance_and_nothing_is_copied` |
@@ -1082,6 +1082,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `tests/federated/test_stored_query_served.py::test_sql_and_sparql_stored_queries_call` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.7` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::require_nonempty_refuses_with_code` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.9` | `tests/test_uql_foreign_execution.py::test_driver_binding_rejects_payload_authority` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R722.9.1` | `crates/medulla-federation/src/federation_registry_tests.rs::eg722_bound_driver_resolves_naively_and_retains_spec`; `crates/medulla-federation/src/federation_registry_tests.rs::eg722_unbound_operation_spec_refuses_in_naive_path`; `crates/medulla-federation/src/federation_opt/remote.rs::bound_driver_tests::bound_driver_precedes_spec_and_preserves_identity` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.10` | `tests/test_uql_foreign_execution.py::test_lifecycle_sequence_replay_expiry_and_terminal` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `tests/test_uql_foreign_execution.py::test_uql_forwards_many_server_issued_foreign_executions` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `crates/medulla-server-served-tests/src/tests/foreign_tenancy.rs::uql_joins_two_approved_sources_in_one_query` |

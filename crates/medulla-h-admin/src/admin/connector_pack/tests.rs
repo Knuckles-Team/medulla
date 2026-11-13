@@ -43,6 +43,8 @@ mod model_input_capabilities;
 mod ontology;
 #[cfg(feature = "shacl")]
 mod outbox;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod pack_source;
 mod scale;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]

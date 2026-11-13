@@ -293,6 +293,7 @@ mod bound_driver_tests {
 
     /// MEDULLA-FEDERATED-QUERY-R722.3 — optimized resolution prefers the bound callback while
     /// retaining the spec-derived identity rather than the generic registered identity.
+    // spec: MEDULLA-FEDERATED-QUERY-R722.9.1
     // spec: MEDULLA-FEDERATED-QUERY-R722.3
     #[test]
     fn bound_driver_precedes_spec_and_preserves_identity() {
