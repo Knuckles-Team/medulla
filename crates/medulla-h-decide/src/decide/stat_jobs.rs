@@ -21,7 +21,9 @@ use medulla_decision_stats::{
     decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted,
     decision::admission::Regime,
 };
-use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{
+    decision::evaluate::evaluate, decision::evaluate::seal_receipt, decision::evaluate::EvalSpec,
+};
 use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
@@ -47,6 +49,7 @@ use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_log::{logged_dataset, LogReader};
+use super::stat_penalty::{draft_premises, resolve_penalty};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
@@ -55,6 +58,7 @@ use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::draft_key;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_persistence_records::decision_jobs::job_key;
+use medulla_persistence_records::decision_jobs::penalty_key;
 use medulla_persistence_records::decision_jobs::receipt_key;
 use medulla_persistence_records::decision_jobs::receipt_threshold_key;
 use medulla_persistence_records::decision_jobs::receipt_time_key;
@@ -234,17 +238,26 @@ fn run_fit(store: &AgentLibraryStore, reader: &LogReader, request: &DecisionFitR
     mark_unverified_inline(&mut dataset, &request.source);
     let approved = policy.statistical.approved_commit_principals.as_slice();
     let admitted = admit(&dataset, &rules(regime, request.window, &policy, approved));
+    let resolved = resolve_penalty(store, request, &schema_digest, &dataset)?;
     let spec = FitSpec {
         head_kind: request.head_kind,
         regime,
         optimiser: request.optimiser,
         feature_schema_digest: &schema_digest,
         statistical: &policy.statistical,
+        penalty: resolved.as_ref().map(|r| &r.penalty),
     };
     let head = fit(&dataset, &admitted.items, &spec).map_err(|r| r.render())?;
     let bytes = canonical_body_bytes(&head)?;
     let sha = content_digest_of(&bytes);
-    let row = (draft_key(&sha), encode_artifact(&head)?);
+    let mut rows = vec![(draft_key(&sha), encode_artifact(&head)?)];
+    let penalty = match resolved {
+        Some(resolved) => {
+            rows.push((penalty_key(&sha), encode_artifact(&resolved.receipt)?));
+            Some(Box::new(resolved.receipt))
+        }
+        None => None,
+    };
     Ok((
         DecisionJobOutput::Fit {
             draft_sha256: sha.clone(),
@@ -254,8 +267,9 @@ fn run_fit(store: &AgentLibraryStore, reader: &LogReader, request: &DecisionFitR
             synthetic: head.synthetic,
             draft: Box::new(head),
             exclusions: admitted.exclusions,
+            penalty,
         },
-        vec![row],
+        rows,
     ))
 }
 
@@ -318,6 +332,8 @@ pub(super) struct EvalInputs {
     pub(super) dataset: LabelledDataset,
     pub(super) policy: ResolvedPolicy,
     pub(super) regime: Regime,
+    /// Premises the candidate carries into its receipt (R151.5).
+    pub(super) premises: Vec<String>,
 }
 
 impl EvalInputs {
@@ -358,11 +374,18 @@ fn eval_inputs(
     let policy = resolve_policy(store, &request.tenant_id, &request.policy)?;
     let regime = eval_regime(request, &dataset)?;
     mark_unverified_inline(&mut dataset, &request.source);
+    let premises = match &request.candidate {
+        EvalCandidate::DraftArtifact { sha256, .. } => {
+            draft_premises(store, &request.tenant_id, sha256)?
+        }
+        EvalCandidate::PublishedHead { .. } => Vec::new(),
+    };
     Ok(EvalInputs {
         head,
         dataset,
         policy,
         regime,
+        premises,
     })
 }
 
@@ -433,6 +456,12 @@ fn run_eval(inputs: &EvalInputs, request: &DecisionEvalRequest) -> JobRun {
         &spec,
     )
     .map_err(|r| r.render())?;
+    let mut receipt = receipt;
+    if !inputs.premises.is_empty() {
+        receipt.premises = BoundedVec::new(inputs.premises.clone())
+            .map_err(|_| "CORRUPT_DECISION_ARTIFACT: too many evaluation premises".to_string())?;
+        seal_receipt(&mut receipt);
+    }
     if receipt.policy_digest != inputs.policy.digest {
         return Err("CORRUPT_DECISION_ARTIFACT: evaluation policy digest mismatch".into());
     }
@@ -972,6 +1001,7 @@ mod threshold_tests {
             pooled: BoundedVec::default(),
             failed_gates: BoundedVec::default(),
             feature_power: BoundedVec::default(),
+            premises: BoundedVec::default(),
             passed: true,
             synthetic: false,
         }

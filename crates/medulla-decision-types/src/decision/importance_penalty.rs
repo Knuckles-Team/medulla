@@ -6,7 +6,9 @@
 //! coordinate toward the parent head, in proportion to its importance.
 
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::{QuantScaleTag, QuantisedValue};
@@ -133,6 +135,64 @@ pub struct PenaltyObjective {
     pub schema_version: u32,
     pub loss_coefficient: QuantisedValue,
     pub importance_scale: QuantisedValue,
+}
+
+/// The evidence record of one penalised fit: every importance entry, the two
+/// coefficients, and a digest over the canonical list. It rides the fit output
+/// and the stored draft, and an evaluation of that draft names its digest as
+/// the premise `penalty:<penalty_digest>` (MEDULLA-DECISION-ENGINE-R151.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PenaltyReceipt {
+    #[serde(default = "schema_version")]
+    pub schema_version: u32,
+    /// One entry per feature: `feature_id`, `importance_weight`,
+    /// `evidence_digest`; sorted by `feature_id`.
+    pub features: ImportanceFeatures,
+    pub loss_coefficient: QuantisedValue,
+    pub importance_scale: QuantisedValue,
+    /// `sha256:<hex>` over the canonical list of entries and coefficients.
+    pub penalty_digest: String,
+    /// Always `Observation`: the weights are caller-supplied, not proven.
+    pub evidence_class: EvidenceClass,
+}
+
+/// The evaluation premise that names a penalty.
+pub fn penalty_premise(penalty_digest: &str) -> String {
+    format!("penalty:{penalty_digest}")
+}
+
+impl PenaltyReceipt {
+    /// Seal the receipt of a fit: entries sorted by `feature_id`, then hashed.
+    pub fn seal(
+        penalty: &PenaltyObjective,
+        features: &[FeatureImportance],
+    ) -> Result<Self, String> {
+        let mut entries: Vec<FeatureImportance> = features.to_vec();
+        entries.sort_by(|a, b| a.feature_id.cmp(&b.feature_id));
+        let canonical = serde_json::to_vec(&(
+            &entries,
+            &penalty.loss_coefficient,
+            &penalty.importance_scale,
+        ))
+        .map_err(|error| format!("penalty does not encode: {error}"))?;
+        let penalty_digest = format!("sha256:{}", hex::encode(Sha256::digest(canonical)));
+        Ok(Self {
+            schema_version: IMPORTANCE_SCHEMA_VERSION,
+            features: BoundedVec::new(entries)
+                .map_err(|error| format!("too many features: {error:?}"))?,
+            loss_coefficient: penalty.loss_coefficient,
+            importance_scale: penalty.importance_scale,
+            penalty_digest,
+            evidence_class: EvidenceClass::Observation,
+        })
+    }
+
+    /// The premise an evaluation of the penalised draft names.
+    pub fn premise(&self) -> String {
+        penalty_premise(&self.penalty_digest)
+    }
 }
 
 /// The feature list a request carries.

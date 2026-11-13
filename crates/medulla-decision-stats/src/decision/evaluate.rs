@@ -305,9 +305,16 @@ pub fn evaluate(
             Some(knobs) => bounded(feature_power(dataset, items, knobs)?)?,
             None => Default::default(),
         },
+        premises: Default::default(),
         passed: failed.is_empty(),
         synthetic: dataset.synthetic,
     };
-    receipt.receipt_digest = digest_text(EVAL_RECEIPT_DOMAIN, &receipt);
+    seal_receipt(&mut receipt);
     Ok(receipt)
+}
+
+/// Set `receipt_digest` over every other field of the receipt.
+pub fn seal_receipt(receipt: &mut DecisionEvalReceipt) {
+    receipt.receipt_digest = String::new();
+    receipt.receipt_digest = digest_text(EVAL_RECEIPT_DOMAIN, &*receipt);
 }

@@ -39,6 +39,7 @@ pub mod fit;
 mod fit_calibrate;
 pub mod grounded_eval;
 pub mod head_eval;
+pub mod importance_penalty;
 pub mod ladder;
 pub mod legal_option_filter;
 pub mod nl;

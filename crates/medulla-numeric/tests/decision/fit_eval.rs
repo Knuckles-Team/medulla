@@ -53,6 +53,7 @@ pub(super) fn fitted(kind: HeadKind, data: &LabelledDataset) -> DecisionHeadBody
         optimiser: optimiser(),
         feature_schema_digest: SCHEMA_DIGEST,
         statistical: &stat,
+        penalty: None,
     };
     fit(data, &admitted.items, &spec).expect("fits")
 }

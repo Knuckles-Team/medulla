@@ -28,6 +28,7 @@ use medulla_query_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
 use super::fit_calibrate::{calibrate, calibrate_scorer};
+use super::importance_penalty::ImportancePenalty;
 use super::quant::{q32, raw_value, value_of};
 use super::refusal::{bounded, Refusal, RefusalResult};
 use super::scorer::train::train;
@@ -62,6 +63,8 @@ pub struct FitSpec<'a> {
     pub optimiser: OptimiserSpec,
     pub feature_schema_digest: &'a str,
     pub statistical: &'a StatisticalPolicy,
+    /// The caller-supplied importance penalty (MEDULLA-DECISION-ENGINE-R151.2).
+    pub penalty: Option<&'a ImportancePenalty>,
 }
 
 fn raw_rows(dataset: &LabelledDataset, item: &LabelledItem) -> Vec<Vec<f64>> {
@@ -173,6 +176,7 @@ pub(crate) fn fit_weights(
     examples: &[Example],
     dim: usize,
     optimiser: OptimiserSpec,
+    penalty: Option<&ImportancePenalty>,
 ) -> RefusalResult<Vec<f64>> {
     let mut weights = vec![0.0; dim];
     let mut logits = initial_logits(examples);
@@ -181,8 +185,10 @@ pub(crate) fn fit_weights(
         let mut largest: f64 = 0.0;
         for k in 0..dim {
             let current = weights[k];
-            let slope =
-                |w: f64| coordinate_slope(examples, &logits, k, w - current) + 2.0 * RIDGE * w;
+            let pull = |w: f64| penalty.map_or(0.0, |p| p.slope(k, w));
+            let slope = |w: f64| {
+                coordinate_slope(examples, &logits, k, w - current) + 2.0 * RIDGE * w + pull(w)
+            };
             let next = minimise_convex_unbounded(slope, current, 1.0, LINE_SEARCH_STEPS)?;
             let delta = next - current;
             for (z, example) in logits.iter_mut().zip(examples) {
@@ -272,6 +278,12 @@ pub fn fit(
         (items.to_vec(), Vec::new())
     };
     let standards = standardisation(dataset, items)?;
+    if spec.penalty.is_some_and(|p| p.width() != standards.len()) {
+        return Err(Refusal::new(
+            StatisticalErrorCode::HeadInvalid,
+            "the penalty does not cover the dataset's features",
+        ));
+    }
     let train_examples = examples(dataset, &training, &standards);
     if train_examples.is_empty() {
         return Err(Refusal::new(
@@ -279,7 +291,12 @@ pub fn fit(
             "no admitted item carries a positive training signal",
         ));
     }
-    let weights = fit_weights(&train_examples, standards.len(), spec.optimiser)?;
+    let weights = fit_weights(
+        &train_examples,
+        standards.len(),
+        spec.optimiser,
+        spec.penalty,
+    )?;
     let quantised = weights
         .iter()
         .map(|w| q32(*w))
@@ -305,4 +322,141 @@ pub fn fit(
     }
     head.checked()
         .map_err(|detail| Refusal::new(StatisticalErrorCode::HeadInvalid, detail))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_decision_types::decision::statistical::dataset::{
+        ItemLabel, LabelSource, LABELLED_DATASET_SCHEMA_VERSION,
+    };
+    use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue, UnitRationalWire};
+    use medulla_types::contract::BoundedVec;
+
+    use crate::decision::importance_penalty::ImportancePenalty;
+
+    fn bv<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
+        BoundedVec::new(values).expect("inside bound")
+    }
+
+    fn policy() -> StatisticalPolicy {
+        let rational = |n, d| UnitRationalWire::new(n, d).expect("rational");
+        StatisticalPolicy {
+            alpha: rational(1, 10),
+            epsilon: rational(1, 10),
+            delta: rational(1, 10),
+            n_min: 20,
+            min_support: 5,
+            min_ess: QuantisedValue {
+                scale: QuantScaleTag::Q32,
+                value: 10 << 32,
+            },
+            min_outcome_fidelity: medulla_decision_types::decision::TraceFidelityLevel::ToolCalls,
+            tenant_public_features: false,
+            audit_sample: rational(1, 20),
+            approved_commit_principals: bv(vec!["approved".to_string()]),
+            compact_after_ms: None,
+            drop_blob_after_ms: None,
+        }
+    }
+
+    /// Two features: `quality` marks the gold option, `noise` is unrelated.
+    fn dataset(n: usize) -> LabelledDataset {
+        let q = |x: f64| (x * 4_294_967_296.0) as i64;
+        let items = (0..n)
+            .map(|i| {
+                let gold = i % 3;
+                let mut rows = Vec::new();
+                for j in 0..3 {
+                    let quality =
+                        if j == gold { 2.0 } else { 0.0 } + ((i * 7 + j * 13) % 10) as f64 / 5.0;
+                    let noise = ((i * 3 + j * 5) % 7) as f64 / 7.0;
+                    rows.push(q(quality));
+                    rows.push(q(noise));
+                }
+                LabelledItem {
+                    item_id: format!("item-{i:04}"),
+                    recorded_at_ms: 1_000 + i as u64,
+                    class_key: "task".to_string(),
+                    candidate_ids: bv((0..3).map(|j| format!("option-{j}")).collect()),
+                    features: bv(rows),
+                    label: ItemLabel::Gold {
+                        acceptable: bv(vec![format!("option-{gold}")]),
+                        source: LabelSource::SyntheticConstruction,
+                    },
+                    audit_inclusion: None,
+                }
+            })
+            .collect();
+        LabelledDataset {
+            schema_version: LABELLED_DATASET_SCHEMA_VERSION,
+            feature_schema_digest: "sha256:schema".to_string(),
+            feature_names: bv(vec!["quality".to_string(), "noise".to_string()]),
+            scale: QuantScaleTag::Q32,
+            items: bv(items),
+            synthetic: true,
+        }
+    }
+
+    fn fitted(data: &LabelledDataset, penalty: Option<&ImportancePenalty>) -> DecisionHeadBody {
+        let stat = policy();
+        let items: Vec<&LabelledItem> = data.items.iter().collect();
+        let spec = FitSpec {
+            head_kind: HeadKind::ListwiseLogistic,
+            regime: Regime::FullLabel,
+            optimiser: OptimiserSpec {
+                max_iterations: 60,
+                tolerance: QuantisedValue {
+                    scale: QuantScaleTag::Q32,
+                    value: 1 << 12,
+                },
+                seed: 0,
+            },
+            feature_schema_digest: "sha256:schema",
+            statistical: &stat,
+            penalty,
+        };
+        fit(data, &items, &spec).expect("fits")
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R151.2
+    #[test]
+    fn penalized_fit_is_deterministic() {
+        let data = dataset(120);
+        // Anchor `quality` (index 0) hard to a parent weight of zero.
+        let penalty = ImportancePenalty::new(1.0, 5.0, vec![0.9, 0.0], vec![0.0, 0.0]).unwrap();
+        let first = fitted(&data, Some(&penalty));
+        assert_eq!(
+            first,
+            fitted(&data, Some(&penalty)),
+            "same items, same bits"
+        );
+
+        let free = fitted(&data, None);
+        let pulled = |head: &DecisionHeadBody, k: usize| value_of(head.weights.as_slice()[k]).abs();
+        assert!(
+            pulled(&first, 0) < pulled(&free, 0),
+            "the important feature moves less than in the free fit"
+        );
+        // A penalty over the wrong number of features refuses.
+        let wrong = ImportancePenalty::new(1.0, 1.0, vec![0.5], vec![0.0]).unwrap();
+        let stat = policy();
+        let items: Vec<&LabelledItem> = data.items.iter().collect();
+        let spec = FitSpec {
+            head_kind: HeadKind::ListwiseLogistic,
+            regime: Regime::FullLabel,
+            optimiser: OptimiserSpec {
+                max_iterations: 5,
+                tolerance: QuantisedValue {
+                    scale: QuantScaleTag::Q32,
+                    value: 1 << 12,
+                },
+                seed: 0,
+            },
+            feature_schema_digest: "sha256:schema",
+            statistical: &stat,
+            penalty: Some(&wrong),
+        };
+        assert!(fit(&data, &items, &spec).is_err());
+    }
 }

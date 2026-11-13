@@ -107,6 +107,7 @@ fn replayed(
         optimiser: refit.optimiser,
         feature_schema_digest: &inputs.head.feature_schema_digest,
         statistical: &inputs.policy.statistical,
+        penalty: None,
     });
     let mut candidate = HeadReplay {
         dataset: &inputs.dataset,

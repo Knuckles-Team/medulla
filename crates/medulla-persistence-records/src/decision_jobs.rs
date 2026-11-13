@@ -56,6 +56,11 @@ pub fn draft_key(draft_sha256: &str) -> String {
     format!("draft:{draft_sha256}")
 }
 
+/// Key of the penalty receipt stored beside a penalised fit draft.
+pub fn penalty_key(draft_sha256: &str) -> String {
+    format!("draft-penalty:{draft_sha256}")
+}
+
 fn put_absent(
     owner: &AdmittedOwnerWrite<'_, AgentLibraryOwner>,
     tenant_id: &str,

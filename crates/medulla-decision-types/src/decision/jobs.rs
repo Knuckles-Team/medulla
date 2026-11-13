@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::importance_penalty::{ImportanceFeatures, PenaltyObjective};
+use super::importance_penalty::{ImportanceFeatures, PenaltyObjective, PenaltyReceipt};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
 use super::replay::{EvalMode, EvaluationRun};
@@ -386,6 +386,10 @@ pub struct DecisionEvalReceipt {
     /// when empty, so a receipt that measured none keeps its bytes.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub feature_power: BoundedVec<super::replay::FeaturePowerReport, 32>,
+    /// The premises the evaluation rests on beyond its dataset, such as
+    /// `penalty:<digest>` for a penalised draft (R151.5). Omitted when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub premises: BoundedVec<String, 8>,
     pub passed: bool,
     pub synthetic: bool,
 }
@@ -454,6 +458,9 @@ pub enum DecisionJobOutput {
         /// passed evaluation receipt naming `draft_sha256`.
         draft: Box<DecisionHeadBody>,
         exclusions: LabelExclusions,
+        /// The evidence of a penalised fit (R151.5); absent for a plain fit.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        penalty: Option<Box<PenaltyReceipt>>,
     },
     /// Boxed: a receipt is several times the size of every other arm.
     Eval { receipt: Box<DecisionEvalReceipt> },

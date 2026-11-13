@@ -9,6 +9,8 @@
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
 pub mod acl;
+// MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
+pub mod assistant_profile;
 // MEDULLA-FINANCE-PRIMITIVES-R002.2.5 — served numeric kernel evaluation wire types.
 pub mod numeric_kernel;
 // MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
