@@ -382,6 +382,16 @@ $($variants)*
         /// `n` hops from the top-`k` hits.
         #[serde(default)]
         hops: u32,
+        /// The natural-language query the planner expands in `deep` mode
+        /// (MEDULLA-FEDERATED-QUERY-R090.1); at most 2,048 bytes.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        query_text: Option<String>,
+        /// `standard` (one weighted blend) or `deep` (expansion arms fused by rank).
+        #[serde(default)]
+        mode: medulla_types::ingestion_wire::DiscoverMode,
+        /// Unix seconds the recency decay is measured against; absent means now.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        as_of: Option<i64>,
     },
 
     /// CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free lexical classification gate: which

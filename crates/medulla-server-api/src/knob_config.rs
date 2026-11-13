@@ -207,6 +207,10 @@ knobs! {
     discover_hop_fanout: u64 = "discover.hop_fanout", U64(32), [1, 256], "nodes", Tunable;
     /// Discover neighbour expansion: score decay per hop.
     discover_hop_decay: f64 = "discover.hop_decay", F64(0.5), [0.1, 0.9], "ratio", Tunable;
+    /// Discover verdict: lowest mean hit score that still passes the quality gate.
+    discover_min_composite_quality: f64 = "discover.min_composite_quality", F64(0.25), [0.0, 1.0], "score", Tunable;
+    /// Discover verdict: lowest returned-to-requested hit ratio that still passes the gate.
+    discover_min_population_ratio: f64 = "discover.min_population_ratio", F64(0.5), [0.0, 1.0], "ratio", Tunable;
     /// Context bundle: reciprocal-rank-fusion damping constant.
     context_rrf_k: u64 = "context.rrf_k", U64(60), [1, 1000], "rank", Tunable;
     /// Context bundle: fewest items kept by the gap cut.

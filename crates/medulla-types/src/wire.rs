@@ -17,11 +17,28 @@ pub enum RetrievalFailureMode {
     SparseIndex,
 }
 
-/// Model-only retrieval-quality evidence returned alongside Discover rows.
-///
-/// The served computation and policy lookup are delivered by the later R089
-/// children.  Keeping this DTO in the bottom-of-DAG wire crate lets those
-/// children share one closed, serde-compatible shape.
+/// The two thresholds a retrieval-quality verdict was judged against
+/// (MEDULLA-FEDERATED-QUERY-R089.1), in Q16 fixed point.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DiscoverThresholds {
+    pub min_composite_quality_q16: u16,
+    pub min_population_ratio_q16: u16,
+}
+
+/// The generation one shard of the index served the answer from.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ShardGeneration {
+    pub shard_id: String,
+    pub generation: u64,
+}
+
+/// Retrieval-quality evidence returned with the `Discover` rows
+/// (MEDULLA-FEDERATED-QUERY-R089.1): the verdict, the thresholds it was judged
+/// against and the index generations it read.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -33,6 +50,18 @@ pub struct RetrievalVerdict {
     pub above_threshold: bool,
     pub total_candidates: usize,
     pub policy_revision: String,
+    /// The generation of the resident semantic index that answered.
+    #[serde(default)]
+    pub index_generation: u64,
+    /// The thresholds the quality and population measures were judged against.
+    #[serde(default)]
+    pub thresholds: DiscoverThresholds,
+    /// Digest of the caller's active query adapter, when one re-aimed the probe.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_digest: Option<String>,
+    /// The generation each shard served; empty on an unsharded index.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shard_generations: Vec<ShardGeneration>,
 }
 
 #[cfg(feature = "datascience")]
@@ -132,8 +161,9 @@ pub use wire_streaming::*;
 
 #[cfg(test)]
 mod tests {
-    use super::{RetrievalFailureMode, RetrievalVerdict};
+    use super::{DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict, ShardGeneration};
 
+    // spec: MEDULLA-FEDERATED-QUERY-R089.1
     #[test]
     fn verdict_round_trips() {
         let verdict = RetrievalVerdict {
@@ -150,6 +180,16 @@ mod tests {
             above_threshold: false,
             total_candidates: 17,
             policy_revision: "retrieval-quality-v1".to_string(),
+            index_generation: 42,
+            thresholds: DiscoverThresholds {
+                min_composite_quality_q16: 32_768,
+                min_population_ratio_q16: 16_384,
+            },
+            adapter_digest: Some("ab".repeat(32)),
+            shard_generations: vec![ShardGeneration {
+                shard_id: "s0".into(),
+                generation: 7,
+            }],
         };
 
         let bytes = rmp_serde::to_vec_named(&verdict).expect("encode retrieval verdict");

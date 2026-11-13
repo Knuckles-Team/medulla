@@ -38,15 +38,19 @@ class _FakeClient(MedullaClient):
         idempotency_key: str | None = None,
     ) -> Any:
         self.sent.append((method, params))
-        return [
-            {
-                "id": "deploy_runbook",
-                "name": "Deploy Runbook",
-                "description": "how to deploy a service",
-                "type": "doc",
-                "score": 0.87,
-            }
-        ]
+        return {
+            "hits": [
+                {
+                    "id": "deploy_runbook",
+                    "name": "Deploy Runbook",
+                    "description": "how to deploy a service",
+                    "type": "doc",
+                    "score": 0.87,
+                }
+            ],
+            "verdict": {"gate_passed": True, "index_generation": 1},
+            "plan": {"expansions": []},
+        }
 
 
 @pytest.mark.asyncio
@@ -64,10 +68,12 @@ async def test_discover_sends_one_rpc() -> None:
             },
         )
     ]
-    assert out[0]["id"] == "deploy_runbook"
-    assert out[0]["name"] == "Deploy Runbook"
-    assert out[0]["type"] == "doc"
-    assert "score" in out[0]
+    hits = out["hits"]
+    assert hits[0]["id"] == "deploy_runbook"
+    assert hits[0]["name"] == "Deploy Runbook"
+    assert hits[0]["type"] == "doc"
+    assert "score" in hits[0]
+    assert out["verdict"]["gate_passed"] is True
 
 
 @pytest.mark.asyncio

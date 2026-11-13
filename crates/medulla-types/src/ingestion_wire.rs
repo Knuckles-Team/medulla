@@ -337,9 +337,15 @@ pub struct DiscoverHit {
     /// Combined keyword + semantic score.
     pub score: f32,
     /// Seed-to-hit node ids when the hit was reached by neighbour expansion
-    /// (MEDULLA-FEDERATED-QUERY-R090.8); empty for a fused seed hit.
+    /// (MEDULLA-FEDERATED-QUERY-R090.8, R090.1); empty for a fused seed hit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub path: Vec<String>,
+    pub hop_path: Vec<String>,
+    /// The rank this hit held in each retrieval arm that returned it (R090.1).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub arm_ranks: Vec<ArmRank>,
+    /// The recency multiplier applied to the fused score; `1.0` when none applied.
+    #[serde(default = "neutral_boost")]
+    pub recency_boost: f32,
     /// Source URL when the hit is a web Document (MEDULLA-FEDERATED-QUERY-R653.7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
@@ -352,4 +358,255 @@ pub struct DiscoverHit {
     /// SHA-256 of the query that found the web Document.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query_digest: Option<String>,
+}
+
+fn neutral_boost() -> f32 {
+    1.0
+}
+
+/// Longest `query_text` a `Discover` request may carry, in bytes (R090.1).
+pub const DISCOVER_QUERY_TEXT_MAX_BYTES: usize = 2048;
+/// Deepest neighbour expansion a `Discover` request may ask for (R090.1).
+pub const DISCOVER_HOPS_MAX: u32 = 2;
+/// Wire code of a `deep` request with no expansion provider installed (R090.4).
+pub const DISCOVER_PLANNER_UNCONFIGURED: &str = "DISCOVER_PLANNER_UNCONFIGURED";
+/// Wire code of a request text above [`DISCOVER_QUERY_TEXT_MAX_BYTES`] (R651.4).
+pub const QUERY_TEXT_TOO_LONG: &str = "QUERY_TEXT_TOO_LONG";
+/// Wire code of a request or provider answer above the expansion fan-out (R651.4).
+pub const EXPANSION_FANOUT_EXCEEDED: &str = "EXPANSION_FANOUT_EXCEEDED";
+/// Wire code of an expansion request with no provider installed (R651.4).
+pub const EXPANSION_PROVIDER_UNCONFIGURED: &str = "EXPANSION_PROVIDER_UNCONFIGURED";
+/// Wire code of a provider failure; the message carries its error text (R651.4).
+pub const EXPANSION_PROVIDER_FAILED: &str = "EXPANSION_PROVIDER_FAILED";
+
+/// How a `Discover` request plans its arms (R090.1).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DiscoverMode {
+    /// One weighted blend of the semantic and keyword signals.
+    #[default]
+    Standard,
+    /// Expansions from the one expansion port, one semantic arm each, fused by rank.
+    Deep,
+}
+
+/// The retrieval arm a rank belongs to.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DiscoverArm {
+    Semantic,
+    Keyword,
+    Expansion,
+}
+
+/// A hit's 1-based rank in one arm.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ArmRank {
+    pub arm: DiscoverArm,
+    pub rank: u32,
+}
+
+/// What produced one expansion: its text digest and the provider identity (R090.5).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ExpansionEvidence {
+    /// SHA-256 of the expansion text, 64 lowercase hex characters.
+    pub digest: String,
+    /// `hypothetical`, `sub_query` or `perspective`.
+    pub kind: String,
+    pub provider_id: String,
+    pub provider_revision: String,
+}
+
+/// Why a `deep` plan answered as `standard`.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(tag = "state", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DiscoverDegraded {
+    /// The provider failed; `message` is its error text.
+    ProviderFailed { message: String },
+}
+
+/// The plan a `Discover` answer was produced by (R090.1, R090.4, R090.5).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DiscoverPlan {
+    #[serde(default)]
+    pub expansions: Vec<ExpansionEvidence>,
+    /// Set when a `deep` request degraded to `standard` (`provider_failed`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub degraded: Option<DiscoverDegraded>,
+}
+
+/// The `Discover` answer envelope (R089.1): the hits, the quality verdict and the plan.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DiscoverResult {
+    pub hits: Vec<DiscoverHit>,
+    pub verdict: crate::wire::RetrievalVerdict,
+    #[serde(default)]
+    pub plan: DiscoverPlan,
+}
+
+/// The planner fields of a `Discover` request, checked as one unit (R090.1, R090.4).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DiscoverPlanRequest {
+    pub query_text: Option<String>,
+    pub mode: DiscoverMode,
+    pub as_of: Option<i64>,
+    pub hops: u32,
+}
+
+/// A planner field outside its bound; the wire code names it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DiscoverRefusal {
+    /// `INVALID_ARGUMENT`: `hops` above [`DISCOVER_HOPS_MAX`] or `as_of` before the epoch.
+    InvalidArgument { detail: String },
+    /// `QUERY_TEXT_TOO_LONG`: `query_text` above [`DISCOVER_QUERY_TEXT_MAX_BYTES`].
+    QueryTextTooLong { bytes: usize },
+}
+
+impl DiscoverRefusal {
+    /// The wire code of this refusal.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidArgument { .. } => "INVALID_ARGUMENT",
+            Self::QueryTextTooLong { .. } => QUERY_TEXT_TOO_LONG,
+        }
+    }
+}
+
+impl std::fmt::Display for DiscoverRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidArgument { detail } => write!(f, "{detail}"),
+            Self::QueryTextTooLong { bytes } => write!(
+                f,
+                "query_text is {bytes} bytes; the limit is {DISCOVER_QUERY_TEXT_MAX_BYTES}"
+            ),
+        }
+    }
+}
+
+impl DiscoverPlanRequest {
+    /// Refuse a planner field outside its bound before any retrieval runs.
+    pub fn validate(&self) -> Result<(), DiscoverRefusal> {
+        if self.hops > DISCOVER_HOPS_MAX {
+            return Err(DiscoverRefusal::InvalidArgument {
+                detail: format!("hops {} is above {DISCOVER_HOPS_MAX}", self.hops),
+            });
+        }
+        if self.as_of.is_some_and(|t| t < 0) {
+            return Err(DiscoverRefusal::InvalidArgument {
+                detail: "as_of is before the unix epoch".into(),
+            });
+        }
+        if let Some(text) = &self.query_text {
+            if text.len() > DISCOVER_QUERY_TEXT_MAX_BYTES {
+                return Err(DiscoverRefusal::QueryTextTooLong { bytes: text.len() });
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod discover_plan_tests {
+    use super::*;
+    use crate::wire::{DiscoverThresholds, RetrievalVerdict};
+
+    fn hit() -> DiscoverHit {
+        DiscoverHit {
+            id: "n1".into(),
+            name: "n".into(),
+            description: "d".into(),
+            node_type: "doc".into(),
+            score: 0.5,
+            hop_path: vec!["n0".into(), "n1".into()],
+            arm_ranks: vec![
+                ArmRank {
+                    arm: DiscoverArm::Semantic,
+                    rank: 1,
+                },
+                ArmRank {
+                    arm: DiscoverArm::Expansion,
+                    rank: 3,
+                },
+            ],
+            recency_boost: 1.25,
+            url: None,
+            retrieved_at: None,
+            backend: None,
+            query_digest: None,
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R090.1
+    #[test]
+    fn discover_plan_round_trips() {
+        let result = DiscoverResult {
+            hits: vec![hit()],
+            verdict: RetrievalVerdict {
+                gate_passed: true,
+                failure_modes: vec![],
+                composite_quality_q16: 40_000,
+                index_population_ratio_q16: 65_535,
+                above_threshold: true,
+                total_candidates: 1,
+                policy_revision: "p".into(),
+                index_generation: 3,
+                thresholds: DiscoverThresholds::default(),
+                adapter_digest: None,
+                shard_generations: vec![],
+            },
+            plan: DiscoverPlan {
+                expansions: vec![ExpansionEvidence {
+                    digest: "0".repeat(64),
+                    kind: "sub_query".into(),
+                    provider_id: "m".into(),
+                    provider_revision: "r".into(),
+                }],
+                degraded: Some(DiscoverDegraded::ProviderFailed {
+                    message: "down".into(),
+                }),
+            },
+        };
+        let bytes = rmp_serde::to_vec_named(&result).expect("encode");
+        let back: DiscoverResult = rmp_serde::from_slice(&bytes).expect("decode");
+        assert_eq!(back, result);
+        let seed_only: DiscoverHit = serde_json::from_value(serde_json::json!({
+            "id": "a", "name": "a", "description": "", "type": "doc", "score": 1.0
+        }))
+        .expect("every new field defaults");
+        assert_eq!(seed_only.recency_boost, 1.0);
+        assert!(seed_only.hop_path.is_empty() && seed_only.arm_ranks.is_empty());
+
+        let ok = DiscoverPlanRequest {
+            query_text: Some("x".repeat(2048)),
+            hops: 2,
+            ..Default::default()
+        };
+        assert_eq!(ok.validate(), Ok(()));
+        let deep_hops = DiscoverPlanRequest {
+            hops: 3,
+            ..Default::default()
+        };
+        assert_eq!(deep_hops.validate().unwrap_err().code(), "INVALID_ARGUMENT");
+        let long = DiscoverPlanRequest {
+            query_text: Some("x".repeat(2049)),
+            ..Default::default()
+        };
+        assert_eq!(long.validate().unwrap_err().code(), QUERY_TEXT_TOO_LONG);
+        let before_epoch = DiscoverPlanRequest {
+            as_of: Some(-1),
+            ..Default::default()
+        };
+        assert_eq!(
+            before_epoch.validate().unwrap_err().code(),
+            "INVALID_ARGUMENT"
+        );
+    }
 }

@@ -3304,14 +3304,18 @@ async fn test_discover_blends_keyword_and_semantic() {
                 k: 3,
                 quality_policy_ref: None,
                 hops: 0,
+                query_text: None,
+                mode: Default::default(),
+                as_of: None,
             },
         ),
     )
     .await;
     assert_ok(&resp);
-    let Some(ResultPayload::Json(serde_json::Value::Array(rows))) = resp.result else {
-        panic!("expected Json array discover payload");
+    let Some(ResultPayload::Json(serde_json::Value::Object(envelope))) = resp.result else {
+        panic!("expected the Discover envelope");
     };
+    let rows = envelope["hits"].as_array().expect("hits").clone();
     assert_eq!(rows.len(), 3, "all three candidates returned, ranked");
     // `deploy_runbook` wins: keyword overlap (0.4) + strong sim beats the
     // marginally-closer keyword-less `deployer`.
@@ -3336,14 +3340,18 @@ async fn test_discover_blends_keyword_and_semantic() {
                 k: 5,
                 quality_policy_ref: None,
                 hops: 0,
+                query_text: None,
+                mode: Default::default(),
+                as_of: None,
             },
         ),
     )
     .await;
     assert_ok(&kw_only);
-    let Some(ResultPayload::Json(serde_json::Value::Array(rows))) = kw_only.result else {
-        panic!("expected Json array discover payload");
+    let Some(ResultPayload::Json(serde_json::Value::Object(envelope))) = kw_only.result else {
+        panic!("expected the Discover envelope");
     };
+    let rows = envelope["hits"].as_array().expect("hits").clone();
     // Only `deploy_runbook` has "deploy" in its text (name+description).
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], "deploy_runbook");

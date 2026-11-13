@@ -6907,7 +6907,7 @@ class GraphOperationsClient:
         keywords: list[str],
         query_embedding: list[float],
         k: int = 5,
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         """One-round-trip hybrid discovery
         (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
 
@@ -6915,7 +6915,8 @@ class GraphOperationsClient:
         ``type``) AND semantic similarity to ``query_embedding``, returning the
         top-``k`` hydrated with their human-readable text::
 
-            [{"id", "name", "description", "type", "score"}, ...]
+            {"hits": [{"id", "name", "description", "type", "score"}, ...],
+             "verdict": {...retrieval-quality verdict...}, "plan": {...}}
 
         Complements :meth:`semantic_search` (which returns bare ``(id, score)``
         pairs): Discover folds the keyword signal into the ranking and hydrates the

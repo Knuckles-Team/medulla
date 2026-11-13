@@ -78,6 +78,69 @@ fn normalized_keywords(keywords: &[String]) -> Vec<String> {
         .collect()
 }
 
+/// The retrieval-quality verdict of one `Discover` answer (MEDULLA-FEDERATED-QUERY-R089.1).
+///
+/// Quality is the mean hit score and population is the returned-to-requested hit
+/// ratio, both in Q16 and judged against the registry knobs
+/// `discover.min_composite_quality` and `discover.min_population_ratio`. An answer
+/// below a threshold names its closed failure mode; an answer below the
+/// `retrieval.min_evidence` row count is a sparse index. The index generation is the
+/// resident semantic index's.
+fn discover_verdict(
+    core: &GraphCore,
+    hits: &[medulla_types::ingestion_wire::DiscoverHit],
+    k: usize,
+    has_emb: bool,
+) -> medulla_types::wire::RetrievalVerdict {
+    use medulla_types::wire::{DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict};
+    fn q16(x: f64) -> u16 {
+        (x.clamp(0.0, 1.0) * 65_535.0).round() as u16
+    }
+    let knobs = medulla_server_api::knob_config::knobs();
+    let thresholds = DiscoverThresholds {
+        min_composite_quality_q16: q16(knobs.discover_min_composite_quality),
+        min_population_ratio_q16: q16(knobs.discover_min_population_ratio),
+    };
+    let quality = if hits.is_empty() {
+        0.0
+    } else {
+        hits.iter().map(|h| f64::from(h.score)).sum::<f64>() / hits.len() as f64
+    };
+    let population = if k == 0 {
+        1.0
+    } else {
+        (hits.len() as f64 / k as f64).min(1.0)
+    };
+    let (composite, ratio) = (q16(quality), q16(population));
+    let mut failure_modes = Vec::new();
+    if composite < thresholds.min_composite_quality_q16 {
+        failure_modes.push(RetrievalFailureMode::LowRelevanceTopk);
+    }
+    if ratio < thresholds.min_population_ratio_q16
+        || (hits.len() as u64) < knobs.retrieval_min_evidence
+    {
+        failure_modes.push(RetrievalFailureMode::SparseIndex);
+    }
+    let generation = if has_emb {
+        core.semantic_store.read().generation()
+    } else {
+        0
+    };
+    RetrievalVerdict {
+        gate_passed: failure_modes.is_empty(),
+        above_threshold: composite >= thresholds.min_composite_quality_q16,
+        failure_modes,
+        composite_quality_q16: composite,
+        index_population_ratio_q16: ratio,
+        total_candidates: hits.len(),
+        policy_revision: "discover-quality".to_string(),
+        index_generation: generation,
+        thresholds,
+        adapter_digest: None,
+        shard_generations: Vec::new(),
+    }
+}
+
 /// One-round-trip hybrid discovery (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
 ///
 /// Ranks nodes by BOTH lexical keyword overlap (over `name`/`description`/`type`)
@@ -178,7 +241,7 @@ fn discover(
                 retrieved_at: web.retrieved_at,
                 backend: web.backend,
                 query_digest: web.query_digest,
-                path: if hit.path.len() > 1 {
+                hop_path: if hit.path.len() > 1 {
                     hit.path
                 } else {
                     Vec::new()
@@ -188,13 +251,22 @@ fn discover(
                 description,
                 node_type,
                 score: hit.score,
+                arm_ranks: Vec::new(),
+                recency_boost: 1.0,
             }
         })
         .collect();
 
+    let verdict = discover_verdict(core, &results, k, has_emb);
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(results),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(
+            medulla_types::ingestion_wire::DiscoverResult {
+                hits: results,
+                verdict,
+                plan: Default::default(),
+            },
+        ),
     )
 }
 
@@ -273,12 +345,18 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             k,
             quality_policy_ref,
             hops,
+            query_text,
+            mode,
+            as_of,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(ctx.state, tenant, served, query_embedding).await,
             k,
             quality_policy_ref,
             hops,
+            query_text,
+            mode,
+            as_of,
         },
         other => other,
     }

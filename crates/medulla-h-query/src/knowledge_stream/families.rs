@@ -251,13 +251,19 @@ async fn execute_vector(
                 k: *k,
                 quality_policy_ref: None,
                 hops: 0,
+                query_text: None,
+                mode: Default::default(),
+                as_of: None,
             },
         )
         .await;
     let mut source_result = response_result(response)?;
     let visible = visible_node_ids(core, authority)?;
     let values = match &mut source_result {
-        ResultPayload::Json(serde_json::Value::Array(values)) => values,
+        ResultPayload::Json(serde_json::Value::Object(envelope)) => envelope
+            .get_mut("hits")
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or_else(|| "invalid vector result shape".to_string())?,
         _ => return Err("invalid vector result shape".to_string()),
     };
     values.retain(|value| {

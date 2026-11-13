@@ -281,7 +281,9 @@ fn semantic_search_rows(r: &Response) -> Vec<(String, f32)> {
 fn discover_ids(r: &Response) -> Vec<String> {
     assert!(r.error.is_none(), "Discover failed: {:?}", r.error);
     match &r.result {
-        Some(ResultPayload::Json(serde_json::Value::Array(items))) => items
+        Some(ResultPayload::Json(serde_json::Value::Object(envelope))) => envelope["hits"]
+            .as_array()
+            .expect("the Discover envelope carries `hits`")
             .iter()
             .map(|v| {
                 v.get("id")
@@ -290,7 +292,7 @@ fn discover_ids(r: &Response) -> Vec<String> {
                     .to_string()
             })
             .collect(),
-        other => panic!("expected Json array result, got {other:?}"),
+        other => panic!("expected the Discover envelope, got {other:?}"),
     }
 }
 
@@ -375,6 +377,9 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 k: 2,
                 quality_policy_ref: None,
                 hops: 0,
+                query_text: None,
+                mode: Default::default(),
+                as_of: None,
             },
         ),
     ))
@@ -399,6 +404,9 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 k: 2,
                 quality_policy_ref: None,
                 hops: 0,
+                query_text: None,
+                mode: Default::default(),
+                as_of: None,
             },
         ),
     ))

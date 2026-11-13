@@ -51,13 +51,15 @@ def _edge(client: Any, graph: str, src: str, tgt: str, weight: float) -> None:
 
 
 def _discover(client: Any, graph: str, hops: int) -> list[dict[str, Any]]:
-    return _decode(
+    envelope = _decode(
         client._send(
             "Discover",
             {"keywords": ["lighthouse"], "query_embedding": [], "k": 10, "hops": hops},
             graph,
         )
     )
+    assert {"hits", "verdict", "plan"} <= set(envelope)
+    return envelope["hits"]
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R090.8")
@@ -81,9 +83,9 @@ def test_two_hop_neighbour_is_returned_with_path(start_medulla_server) -> None:
 
         two = {hit["id"]: hit for hit in _discover(client, graph, 2)}
         assert set(two) == {"seed", "mid", "far"}
-        assert two["far"]["path"] == ["seed", "mid", "far"]
-        assert two["mid"]["path"] == ["seed", "mid"]
-        assert "path" not in two["seed"]
+        assert two["far"]["hop_path"] == ["seed", "mid", "far"]
+        assert two["mid"]["hop_path"] == ["seed", "mid"]
+        assert "hop_path" not in two["seed"]
         assert two["far"]["score"] == pytest.approx(two["seed"]["score"] * 0.25)
     finally:
         client.tenants.delete(graph)

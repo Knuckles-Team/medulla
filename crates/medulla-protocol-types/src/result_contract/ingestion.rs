@@ -21,7 +21,7 @@ use medulla_source_types::{
 };
 use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_types::{
-    ingestion_wire::DiscoverHit, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
+    ingestion_wire::DiscoverResult, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
     ingestion_wire::ScreenObservationResult,
 };
 #[cfg(feature = "modality-serving")]
@@ -92,7 +92,7 @@ method_results! {
     LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.
     SemanticSearch(SemanticSearch) => Raw<Vec<(String, f32)>>;
-    Discover(Discover) => Json<Vec<DiscoverHit>>;
+    Discover(Discover) => Json<DiscoverResult>;
     SemanticIndexAdmitBinding(SemanticIndex / "admit_binding") => Raw<SemanticMutationReceipt>;
     SemanticIndexRefreshBinding(SemanticIndex / "refresh_binding") => Raw<SemanticMutationReceipt>;
     SemanticIndexTransitionBinding(SemanticIndex / "transition_binding") => Raw<SemanticMutationReceipt>;
