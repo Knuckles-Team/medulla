@@ -2921,3 +2921,64 @@
     :fromState :ClusterRunMachine_Updating ;
     :toState :ClusterRunMachine_Refused ;
     :firedBy :ClusterRunMachine_Event_Refuse .
+# spec: MEDULLA-PLACEMENT-R751.756
+# The Schedule machine: an owned schedule is enabled or paused. The Rust edge table
+# SCHEDULE_MACHINE is the same table; the ontology test asserts equal edge sets.
+
+:ScheduleState a owl:Class ;
+    rdfs:label "Schedule State" ;
+    rdfs:comment "A state of the Schedule machine." ;
+    rdfs:subClassOf :State .
+
+:ScheduleTerminalState a owl:Class ;
+    rdfs:label "Schedule Terminal State" ;
+    rdfs:comment "A terminal state of the Schedule machine; the machine has none." ;
+    rdfs:subClassOf :TerminalState, :ScheduleState .
+
+:ScheduleTransition a owl:Class ;
+    rdfs:label "Schedule Transition" ;
+    rdfs:comment "A transition of the Schedule machine." ;
+    rdfs:subClassOf :Transition .
+
+:ScheduleEvent a owl:Class ;
+    rdfs:label "Schedule Event" ;
+    rdfs:comment "An event of the Schedule machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ScheduleGuard a owl:Class ;
+    rdfs:label "Schedule Guard" ;
+    rdfs:comment "A guard of the Schedule machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ScheduleMachine a :StateMachine ;
+    rdfs:label "Schedule machine" ;
+    :initialState :ScheduleMachine_Enabled ;
+    :hasState :ScheduleMachine_Enabled, :ScheduleMachine_Paused .
+
+:ScheduleMachine_Enabled a :ScheduleState ;
+    rdfs:label "Schedule Enabled" ;
+    :storedForm "enabled" .
+
+:ScheduleMachine_Paused a :ScheduleState ;
+    rdfs:label "Schedule Paused" ;
+    :storedForm "paused" .
+
+:ScheduleMachine_Event_Pause a :ScheduleEvent ;
+    rdfs:label "Schedule Pause" .
+
+:ScheduleMachine_Event_Resume a :ScheduleEvent ;
+    rdfs:label "Schedule Resume" .
+
+:ScheduleMachine_S01 a :ScheduleTransition ;
+    rdfs:label "Schedule S01" ;
+    :edgeId "S01" ;
+    :fromState :ScheduleMachine_Enabled ;
+    :toState :ScheduleMachine_Paused ;
+    :firedBy :ScheduleMachine_Event_Pause .
+
+:ScheduleMachine_S02 a :ScheduleTransition ;
+    rdfs:label "Schedule S02" ;
+    :edgeId "S02" ;
+    :fromState :ScheduleMachine_Paused ;
+    :toState :ScheduleMachine_Enabled ;
+    :firedBy :ScheduleMachine_Event_Resume .

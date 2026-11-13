@@ -855,3 +855,14 @@ fn cluster_run_machine_matches_edge_table() {
 fn cluster_run_machine_classes_extend_core() {
     sm::assert_extends_core("ClusterRun");
 }
+
+// spec: MEDULLA-PLACEMENT-R751.756
+#[test]
+fn schedule_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_jobs::schedule_run::SCHEDULE_MACHINE);
+}
+// spec: MEDULLA-PLACEMENT-R751.756
+#[test]
+fn schedule_machine_classes_extend_core() {
+    sm::assert_extends_core("Schedule");
+}

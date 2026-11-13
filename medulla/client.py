@@ -14868,6 +14868,24 @@ class RbacClient:
         ).payload
 
 
+def _schedule_body(
+    graph: str,
+    name: str,
+    spec: dict[str, Any],
+    task_kind: str,
+    **policy: int | str | None,
+) -> dict[str, Any]:
+    """The wire body of a schedule create or update; absent policy fields drop."""
+    body: dict[str, Any] = {
+        "graph": graph,
+        "name": name,
+        "spec": spec,
+        "task_kind": task_kind,
+    }
+    body.update({key: value for key, value in policy.items() if value is not None})
+    return body
+
+
 class JobsClient:
     """CONCEPT:INT-P2-1 — the durable analytics-job plane: async submit/status/
     cancel/resume over a redb-backed ``AnalyticsJob`` state machine (``medulla-jobs``),
@@ -15212,22 +15230,38 @@ class JobsClient:
         ).payload
 
     async def schedule_create(
-        self, graph: str, name: str, spec: dict[str, Any], task_kind: str
+        self,
+        graph: str,
+        name: str,
+        spec: dict[str, Any],
+        task_kind: str,
+        *,
+        max_run_s: int | None = None,
+        max_tokens: int | None = None,
+        period_s: int | None = None,
+        exclusion_group: str | None = None,
+        min_spacing_s: int | None = None,
     ) -> dict[str, Any]:
-        """Create an owned schedule (invalid specs are refused)."""
+        """Create an owned schedule (invalid specs are refused).
+
+        Budget limits default to the server's `jobs.schedule_budget_*` knobs; a schedule
+        that names an `exclusion_group` never runs while another member of the group has
+        an active run, nor within `min_spacing_s` of a member's fired window.
+        """
+        body = _schedule_body(
+            graph,
+            name,
+            spec,
+            task_kind,
+            max_run_s=max_run_s,
+            max_tokens=max_tokens,
+            period_s=period_s,
+            exclusion_group=exclusion_group,
+            min_spacing_s=min_spacing_s,
+        )
         return (
             await _gen.coordination.send_analytics_job(
-                self._client,
-                {
-                    "op": {
-                        "ScheduleCreate": {
-                            "graph": graph,
-                            "name": name,
-                            "spec": spec,
-                            "task_kind": task_kind,
-                        }
-                    }
-                },
+                self._client, {"op": {"ScheduleCreate": body}}
             )
         ).payload
 
@@ -15248,22 +15282,57 @@ class JobsClient:
         ).payload
 
     async def schedule_update(
-        self, graph: str, name: str, spec: dict[str, Any], task_kind: str
+        self,
+        graph: str,
+        name: str,
+        spec: dict[str, Any],
+        task_kind: str,
+        *,
+        max_run_s: int | None = None,
+        max_tokens: int | None = None,
+        period_s: int | None = None,
+        exclusion_group: str | None = None,
+        min_spacing_s: int | None = None,
     ) -> dict[str, Any]:
-        """Replace a schedule's spec and task kind; owner only."""
+        """Replace a schedule's spec and task kind; owner only.
+
+        A budget or exclusion field that is not given keeps its current value.
+        """
+        body = _schedule_body(
+            graph,
+            name,
+            spec,
+            task_kind,
+            max_run_s=max_run_s,
+            max_tokens=max_tokens,
+            period_s=period_s,
+            exclusion_group=exclusion_group,
+            min_spacing_s=min_spacing_s,
+        )
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client, {"op": {"ScheduleUpdate": body}}
+            )
+        ).payload
+
+    async def schedule_pause(self, graph: str, name: str) -> dict[str, Any]:
+        """Pause a schedule: due windows record skipped ticks (idempotent; owner)."""
         return (
             await _gen.coordination.send_analytics_job(
                 self._client,
-                {
-                    "op": {
-                        "ScheduleUpdate": {
-                            "graph": graph,
-                            "name": name,
-                            "spec": spec,
-                            "task_kind": task_kind,
-                        }
-                    }
-                },
+                {"op": {"SchedulePause": {"graph": graph, "name": name}}},
+            )
+        ).payload
+
+    async def schedule_resume(self, graph: str, name: str) -> dict[str, Any]:
+        """Resume a paused schedule; windows that passed while paused do not fire.
+
+        Idempotent; owner only.
+        """
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client,
+                {"op": {"ScheduleResume": {"graph": graph, "name": name}}},
             )
         ).payload
 
@@ -15288,7 +15357,7 @@ class JobsClient:
         return (
             await _gen.coordination.send_analytics_job(
                 self._client,
-                {"op": {"ScheduleList": {}}},
+                {"op": {"ScheduleList": {"graph": graph}}},
             )
         ).payload
 

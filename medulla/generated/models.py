@@ -8465,6 +8465,13 @@ class JobOpCancelBody(BaseModel):
     job_id: str
 
 
+class JobUsage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_s: Annotated[int, Field(ge=0)]
+    tokens: Annotated[int, Field(ge=0)]
+
+
 class JobOpResume(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -8486,6 +8493,11 @@ class JobOpScheduleCreate(BaseModel):
 class JobOpScheduleCreateBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    exclusion_group: str | None = None
+    max_run_s: Annotated[int | None, Field(ge=0)] = None
+    max_tokens: Annotated[int | None, Field(ge=0)] = None
+    min_spacing_s: Annotated[int | None, Field(ge=0)] = None
+    period_s: Annotated[int | None, Field(ge=0)] = None
     graph: str
     name: str
     spec: Any
@@ -8530,6 +8542,32 @@ class JobOpScheduleListBody(BaseModel):
     graph: str
 
 
+class JobOpSchedulePause(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    SchedulePause: JobOpSchedulePauseBody
+
+
+class JobOpSchedulePauseBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+
+
+class JobOpScheduleResume(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleResume: JobOpScheduleResumeBody
+
+
+class JobOpScheduleResumeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    name: str
+
+
 class JobOpScheduleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -8539,6 +8577,11 @@ class JobOpScheduleUpdate(BaseModel):
 class JobOpScheduleUpdateBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    exclusion_group: str | None = None
+    max_run_s: Annotated[int | None, Field(ge=0)] = None
+    max_tokens: Annotated[int | None, Field(ge=0)] = None
+    min_spacing_s: Annotated[int | None, Field(ge=0)] = None
+    period_s: Annotated[int | None, Field(ge=0)] = None
     graph: str
     name: str
     spec: Any
@@ -8724,6 +8767,7 @@ class JobResult(BaseModel):
     schema_: list[JobResultColumn] = Field(..., alias="schema")
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     uncertainty: float | None = None
+    usage: JobUsage | None = None
 
 
 class JobResultColumn(BaseModel):
@@ -26715,6 +26759,8 @@ JobOp = (
     | JobOpScheduleDelete
     | JobOpScheduleGet
     | JobOpScheduleList
+    | JobOpSchedulePause
+    | JobOpScheduleResume
     | JobOpScheduleUpdate
 )
 
@@ -30549,6 +30595,10 @@ __all__ = [
     "JobOpScheduleGetBody",
     "JobOpScheduleList",
     "JobOpScheduleListBody",
+    "JobOpSchedulePause",
+    "JobOpSchedulePauseBody",
+    "JobOpScheduleResume",
+    "JobOpScheduleResumeBody",
     "JobOpScheduleUpdate",
     "JobOpScheduleUpdateBody",
     "JobOpWorkerCancel",
@@ -30572,6 +30622,7 @@ __all__ = [
     "JobResult",
     "JobResultCalibration",
     "JobResultColumn",
+    "JobUsage",
     "JobRetryPolicy",
     "JobState",
     "JobStateCancelled",

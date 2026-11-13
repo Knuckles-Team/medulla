@@ -66,6 +66,7 @@ pub mod result;
 // cost-bounded allocation slices.
 pub mod leader_lease;
 pub mod schedule;
+pub mod schedule_run;
 pub mod store;
 
 // Development/test composition root for the store's scope grant (see the module
@@ -81,7 +82,7 @@ pub use model::{
     compute_result_ref, digest_params, AlgoVersion, AnalyticsJob, Checkpoint, InputSnapshotHandle,
     JobId, JobPlacement, JobPolicy, JobState, ResourceBudget, RetryPolicy, WorkerLease,
 };
-pub use result::{ReproducibilityManifest, ResultColumn, TypedJobResult};
+pub use result::{ReproducibilityManifest, ResultColumn, ResultUsage, TypedJobResult};
 pub use store::{
     analytics_job_scope_identity, ClaimPacing, JobError, JobStore, SubmitSpec, TenantJobQuota,
     WorkerClaim,

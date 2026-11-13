@@ -45,6 +45,7 @@ crates/medulla-h-jobs/src/jobs/host_capabilities.rs                      new    
 crates/medulla-jobs/src/store.rs                                         existing  claim_next routing and pacing (R004, R750.753)
 crates/medulla-resource/src/admission.rs                                 existing  PriorityClass, ClaimPacer (R750)
 crates/medulla-jobs/src/schedule.rs                                      existing  schedule, tick ledger, leadership (R751)
+crates/medulla-jobs/src/schedule_run.rs                                  new       pause machine, budget, skip rules, exclusion group (R751.755 to R751.757, R751.760)
 crates/medulla-h-jobs/src/jobs/executor_loop.rs                          existing  worker pool and tick task (R002.14, R751.753)
 medulla/placement.py                                                     existing  tenant pool, breaker, route directory (R611)
 ```

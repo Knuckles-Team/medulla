@@ -219,6 +219,14 @@ knobs! {
     context_value_floor_micro_per_token: u64 = "context.value_floor_micro_per_token", U64(0), [0, 1_000_000], "micro-units", Tunable;
     /// Executor schedule tick: seconds between passes over the due schedule windows.
     jobs_schedule_poll_s: u64 = "jobs.schedule_poll_s", U64(1), [1, 60], "seconds", Tunable;
+    /// Schedule budget: default most run seconds one schedule's runs may use per budget period.
+    jobs_schedule_budget_run_s: u64 = "jobs.schedule_budget_run_s", U64(3_600), [1, 31_536_000], "seconds", Tunable;
+    /// Schedule budget: default most tokens one schedule's runs may use per budget period.
+    jobs_schedule_budget_tokens: u64 = "jobs.schedule_budget_tokens", U64(1_000_000), [1, 1_000_000_000_000], "tokens", Tunable;
+    /// Schedule budget: default length of one budget period.
+    jobs_schedule_budget_period_s: u64 = "jobs.schedule_budget_period_s", U64(86_400), [1, 31_536_000], "seconds", Tunable;
+    /// Schedule tick: how far back a new leader records missed windows.
+    jobs_schedule_missed_lookback_s: u64 = "jobs.schedule_missed_lookback_s", U64(86_400), [60, 2_592_000], "seconds", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.

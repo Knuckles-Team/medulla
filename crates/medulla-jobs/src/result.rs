@@ -141,6 +141,17 @@ pub struct TypedJobResult {
     pub uncertainty: Option<f64>,
     pub calibration: Option<(f64, f64)>,
     pub reproducibility: ReproducibilityManifest,
+    /// What the run used, reported by the worker with the completed result
+    /// (MEDULLA-PLACEMENT-R751.755). Not part of the content digest.
+    #[serde(default)]
+    pub usage: Option<ResultUsage>,
+}
+
+/// Run seconds and tokens one run reports with its completed result.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResultUsage {
+    pub run_s: u64,
+    pub tokens: u64,
 }
 
 impl TypedJobResult {
@@ -174,7 +185,14 @@ impl TypedJobResult {
             uncertainty,
             calibration,
             reproducibility,
+            usage: None,
         })
+    }
+
+    /// The same result carrying the usage the run reports.
+    pub fn with_usage(mut self, usage: Option<ResultUsage>) -> Self {
+        self.usage = usage;
+        self
     }
 
     pub fn validate(&self) -> Result<(), String> {

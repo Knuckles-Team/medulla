@@ -98,16 +98,45 @@ pub enum JobOp {
         name: String,
         spec: serde_json::Value,
         task_kind: String,
+        /// Budget limits; each defaults to its `jobs.schedule_budget_*` knob.
+        #[serde(default)]
+        max_run_s: Option<u64>,
+        #[serde(default)]
+        max_tokens: Option<u64>,
+        #[serde(default)]
+        period_s: Option<u64>,
+        /// Exclusion group within the tenant (MEDULLA-PLACEMENT-R751.760).
+        #[serde(default)]
+        exclusion_group: Option<String>,
+        #[serde(default)]
+        min_spacing_s: Option<u64>,
     },
     /// Read one schedule of the caller's tenant.
     ScheduleGet { graph: String, name: String },
-    /// Replace a schedule's spec and task kind. Owner only.
+    /// Replace a schedule's spec and task kind, and the budget and exclusion group fields that
+    /// are given (an absent field keeps its value). Owner only.
     ScheduleUpdate {
         graph: String,
         name: String,
         spec: serde_json::Value,
         task_kind: String,
+        #[serde(default)]
+        max_run_s: Option<u64>,
+        #[serde(default)]
+        max_tokens: Option<u64>,
+        #[serde(default)]
+        period_s: Option<u64>,
+        #[serde(default)]
+        exclusion_group: Option<String>,
+        #[serde(default)]
+        min_spacing_s: Option<u64>,
     },
+    /// Pause a schedule: every due window records a skipped tick (R751.756). Owner only,
+    /// idempotent.
+    SchedulePause { graph: String, name: String },
+    /// Resume a paused schedule; windows that passed while paused are not fired. Owner only,
+    /// idempotent.
+    ScheduleResume { graph: String, name: String },
     /// Remove a schedule. Owner only.
     ScheduleDelete { graph: String, name: String },
     /// List the schedules of the caller's tenant.
@@ -159,6 +188,18 @@ pub struct JobResult {
     #[serde(default)]
     pub calibration: Option<(f64, f64)>,
     pub reproducibility: JobReproducibilityManifest,
+    /// What the run used; the schedule that submitted it charges this against its budget
+    /// (MEDULLA-PLACEMENT-R751.755). Absent: the schedule charges the run's wall time.
+    #[serde(default)]
+    pub usage: Option<JobUsage>,
+}
+
+/// Run seconds and tokens one run used.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct JobUsage {
+    pub run_s: u64,
+    pub tokens: u64,
 }
 
 /// Wire spec for [`JobOp::Submit`] (CONCEPT:INT-P2-1). `graph` is BOTH the tenancy

@@ -10,19 +10,22 @@ use medulla_jobs::schedule::{
     ScheduleError, ScheduleRecord, ScheduleSpec, INVALID_SCHEDULE, SCHEDULE_EXISTS,
     SCHEDULE_NOT_FOUND,
 };
+use medulla_jobs::schedule_run::{ScheduleBudget, ScheduleEvent, ScheduleState};
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::result_contract::coordination::{
-    JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobScheduleUpdate,
-    ScheduleRemoved, ScheduleView, ScheduleViewList,
+    JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobSchedulePause,
+    JobScheduleResume, JobScheduleUpdate, ScheduleRemoved, ScheduleView, ScheduleViewList,
 };
 use medulla_protocol_types::result_contract::MethodResult;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
+use medulla_types::transition_refused::MachineState;
 use serde_json::{json, Map, Value};
 
 use super::prelude_server::*;
 use super::prelude_std::*;
 use super::submit::resolve_submit_graph_core;
+use super::unix_ms;
 
 const NODE_TYPE: &str = "Schedule";
 const BODY: &str = "schedule_body";
@@ -53,7 +56,42 @@ fn view(record: ScheduleRecord) -> Result<ScheduleView, String> {
         owner: record.owner,
         tenant: record.tenant,
         task_kind: record.task_kind,
+        state: record.state.stored().to_string(),
+        resumed_ms: record.resumed_ms,
+        max_run_s: record.budget.max_run_s,
+        max_tokens: record.budget.max_tokens,
+        period_s: record.budget.period_s,
+        exclusion_group: record.exclusion_group,
+        min_spacing_s: record.min_spacing_s,
     })
+}
+
+/// The budget and exclusion group fields a create or update op carries.
+#[derive(Default)]
+pub(super) struct PolicyInput {
+    pub max_run_s: Option<u64>,
+    pub max_tokens: Option<u64>,
+    pub period_s: Option<u64>,
+    pub exclusion_group: Option<String>,
+    pub min_spacing_s: Option<u64>,
+}
+
+impl PolicyInput {
+    /// The budget: a given limit, else the record's current one, else the knob default.
+    fn budget(&self, current: Option<ScheduleBudget>) -> ScheduleBudget {
+        let knobs = medulla_server_api::knob_config::knobs();
+        ScheduleBudget {
+            max_run_s: self.max_run_s.unwrap_or_else(|| {
+                current.map_or(knobs.jobs_schedule_budget_run_s, |b| b.max_run_s)
+            }),
+            max_tokens: self.max_tokens.unwrap_or_else(|| {
+                current.map_or(knobs.jobs_schedule_budget_tokens, |b| b.max_tokens)
+            }),
+            period_s: self.period_s.unwrap_or_else(|| {
+                current.map_or(knobs.jobs_schedule_budget_period_s, |b| b.period_s)
+            }),
+        }
+    }
 }
 
 fn parse_spec(spec: Value) -> Result<ScheduleSpec, String> {
@@ -131,6 +169,7 @@ pub(super) async fn create(
     name: String,
     spec: Value,
     task_kind: String,
+    policy: PolicyInput,
 ) -> Response {
     let result = async {
         let core = core_of(&call, &graph).await?;
@@ -147,6 +186,11 @@ pub(super) async fn create(
             tenant,
             spec: parse_spec(spec)?,
             task_kind,
+            state: ScheduleState::default(),
+            resumed_ms: 0,
+            budget: policy.budget(None),
+            exclusion_group: policy.exclusion_group,
+            min_spacing_s: policy.min_spacing_s.unwrap_or(0),
         };
         record.validate().map_err(refuse)?;
         commit(&call, &graph, upsert_op(&call, &record)?).await?;
@@ -171,6 +215,7 @@ pub(super) async fn update(
     name: String,
     spec: Value,
     task_kind: String,
+    policy: PolicyInput,
 ) -> Response {
     let result = async {
         let core = core_of(&call, &graph).await?;
@@ -181,6 +226,9 @@ pub(super) async fn update(
         let record = ScheduleRecord {
             spec: parse_spec(spec)?,
             task_kind,
+            budget: policy.budget(Some(existing.budget)),
+            exclusion_group: policy.exclusion_group.or(existing.exclusion_group.clone()),
+            min_spacing_s: policy.min_spacing_s.unwrap_or(existing.min_spacing_s),
             ..existing
         };
         record.validate().map_err(refuse)?;
@@ -228,4 +276,37 @@ pub(super) async fn list(call: ScheduleCall<'_>, graph: String) -> Response {
     }
     .await;
     typed::<JobScheduleList>(call.req_id, result)
+}
+
+/// Pause or resume a schedule. The owner only; a repeated pause or resume answers with the
+/// unchanged record and writes nothing, so both are idempotent. The state is written only
+/// through `ScheduleState::apply`.
+pub(super) async fn set_state(
+    call: ScheduleCall<'_>,
+    graph: String,
+    name: String,
+    event: ScheduleEvent,
+) -> Response {
+    let result = async {
+        let core = core_of(&call, &graph).await?;
+        let existing = load(&core, call.verified_context.tenant(), &name)?;
+        existing
+            .authorize_write(call.authority.agent_id())
+            .map_err(refuse)?;
+        if existing.state == ScheduleState::target(event) {
+            return view(existing);
+        }
+        let mut record = existing;
+        record.state = record.state.apply(event).map_err(|e| e.to_string())?;
+        if event == ScheduleEvent::Resume {
+            record.resumed_ms = unix_ms() as u64;
+        }
+        commit(&call, &graph, upsert_op(&call, &record)?).await?;
+        view(record)
+    }
+    .await;
+    match event {
+        ScheduleEvent::Pause => typed::<JobSchedulePause>(call.req_id, result),
+        ScheduleEvent::Resume => typed::<JobScheduleResume>(call.req_id, result),
+    }
 }

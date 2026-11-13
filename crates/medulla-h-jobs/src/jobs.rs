@@ -49,6 +49,7 @@ use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
+use medulla_jobs::schedule_run::ScheduleEvent;
 use medulla_jobs::store::{JobStore, SubmitSpec};
 use medulla_types::contract::Nonce;
 use medulla_work_types::jobs::JobKind;
@@ -324,7 +325,21 @@ pub async fn handle(
             name,
             spec,
             task_kind,
-        } => schedules::create(schedule_call(), graph, name, spec, task_kind).await,
+            max_run_s,
+            max_tokens,
+            period_s,
+            exclusion_group,
+            min_spacing_s,
+        } => {
+            let policy = schedules::PolicyInput {
+                max_run_s,
+                max_tokens,
+                period_s,
+                exclusion_group,
+                min_spacing_s,
+            };
+            schedules::create(schedule_call(), graph, name, spec, task_kind, policy).await
+        }
         JobOp::ScheduleGet { graph, name } => {
             schedules::get(schedule_call(), graph, name).await
         }
@@ -333,7 +348,27 @@ pub async fn handle(
             name,
             spec,
             task_kind,
-        } => schedules::update(schedule_call(), graph, name, spec, task_kind).await,
+            max_run_s,
+            max_tokens,
+            period_s,
+            exclusion_group,
+            min_spacing_s,
+        } => {
+            let policy = schedules::PolicyInput {
+                max_run_s,
+                max_tokens,
+                period_s,
+                exclusion_group,
+                min_spacing_s,
+            };
+            schedules::update(schedule_call(), graph, name, spec, task_kind, policy).await
+        }
+        JobOp::SchedulePause { graph, name } => {
+            schedules::set_state(schedule_call(), graph, name, ScheduleEvent::Pause).await
+        }
+        JobOp::ScheduleResume { graph, name } => {
+            schedules::set_state(schedule_call(), graph, name, ScheduleEvent::Resume).await
+        }
         JobOp::ScheduleDelete { graph, name } => {
             schedules::delete(schedule_call(), graph, name).await
         }

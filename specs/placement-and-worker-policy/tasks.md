@@ -70,12 +70,12 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T090 [US4] MEDULLA-PLACEMENT-R751.763 Served test harness can start two engines sharing one durable store
 - [ ] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.
 - [x] T063 [US4] MEDULLA-PLACEMENT-R751.754 Owned schedule record.
-- [ ] T064 [US4] MEDULLA-PLACEMENT-R751.755 Per-schedule budget.
-- [ ] T065 [US4] MEDULLA-PLACEMENT-R751.756 Pause and resume.
-- [ ] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
+- [x] T064 [US4] MEDULLA-PLACEMENT-R751.755 Per-schedule budget.
+- [x] T065 [US4] MEDULLA-PLACEMENT-R751.756 Pause and resume.
+- [x] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
 - [ ] T067 [US4] MEDULLA-PLACEMENT-R751.758 Run observability.
 - [ ] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.
-- [ ] T087 [US4] MEDULLA-PLACEMENT-R751.760 Exclusion group with minimum spacing across schedules.
+- [x] T087 [US4] MEDULLA-PLACEMENT-R751.760 Exclusion group with minimum spacing across schedules.
 - [ ] T069 [US4] MEDULLA-PLACEMENT-R780 Development lane hold is one explicit state machine
 - [x] T070 [US4] MEDULLA-PLACEMENT-R780.1 Hold transition function
 - [ ] T071 [US4] MEDULLA-PLACEMENT-R780.2 Terminal work item releases the hold by event, and the machine is described

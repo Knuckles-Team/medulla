@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::schedule_run::{validate_group, ScheduleBudget, ScheduleState};
+
 pub const TICK_REPLAYED_AFTER_ACK: &str = "TICK_REPLAYED_AFTER_ACK";
 pub const LEADER_FENCE_EXPIRED: &str = "LEADER_FENCE_EXPIRED";
 pub const SLICE_SUM_OVER_BUDGET: &str = "SLICE_SUM_OVER_BUDGET";
@@ -298,6 +300,8 @@ pub struct ScheduledJob {
     pub algorithm: &'static str,
     pub min_support: f64,
     pub min_confidence: f64,
+    /// The worker capability the submitted job requires; empty for the engine's own executor.
+    pub required_capability: &'static str,
 }
 
 /// The closed table of task kinds. A kind has exactly one job spec; a kind without an entry is
@@ -308,12 +312,21 @@ pub const SCHEDULE_TASK_KINDS: &[ScheduledJob] = &[
         algorithm: "fpgrowth",
         min_support: 0.1,
         min_confidence: 0.5,
+        required_capability: "",
     },
     ScheduledJob {
         task_kind: "association.rebuild",
         algorithm: "eclat",
         min_support: 0.05,
         min_confidence: 0.5,
+        required_capability: "",
+    },
+    ScheduledJob {
+        task_kind: "association.remote",
+        algorithm: "fpgrowth",
+        min_support: 0.1,
+        min_confidence: 0.5,
+        required_capability: "association-remote-worker",
     },
 ];
 
@@ -341,6 +354,20 @@ pub struct ScheduleRecord {
     pub tenant: String,
     pub spec: ScheduleSpec,
     pub task_kind: String,
+    /// The pause machine state (`ScheduleMachine`); written only by the pause and resume ops.
+    #[serde(default)]
+    pub state: ScheduleState,
+    /// The instant of the last resume; windows before it came due while paused.
+    #[serde(default)]
+    pub resumed_ms: u64,
+    /// Most run seconds and tokens the schedule's runs may use per budget period.
+    pub budget: ScheduleBudget,
+    /// The exclusion group this schedule belongs to, within its tenant.
+    #[serde(default)]
+    pub exclusion_group: Option<String>,
+    /// Least seconds between a group member's fired window and the next member's window.
+    #[serde(default)]
+    pub min_spacing_s: u64,
 }
 
 impl ScheduleRecord {
@@ -361,6 +388,8 @@ impl ScheduleRecord {
             }
         }
         job_for_task_kind(&self.task_kind)?;
+        self.budget.validate()?;
+        validate_group(self.exclusion_group.as_deref(), self.min_spacing_s)?;
         self.spec.validate()
     }
 
@@ -524,6 +553,15 @@ mod tests {
                 hour: "*/6".into(),
             },
             task_kind: "association.refresh".into(),
+            state: ScheduleState::Enabled,
+            resumed_ms: 0,
+            budget: ScheduleBudget {
+                max_run_s: 3_600,
+                max_tokens: 1_000,
+                period_s: 86_400,
+            },
+            exclusion_group: None,
+            min_spacing_s: 0,
         };
         assert!(record.validate().is_ok());
         assert!(record.authorize_write("alice").is_ok());

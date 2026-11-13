@@ -180,6 +180,15 @@ pub struct ScheduleView {
     pub tenant: String,
     pub spec: serde_json::Value,
     pub task_kind: String,
+    /// The pause machine state: `enabled` or `paused`.
+    pub state: String,
+    /// The instant of the last resume, 0 when never resumed.
+    pub resumed_ms: u64,
+    pub max_run_s: u64,
+    pub max_tokens: u64,
+    pub period_s: u64,
+    pub exclusion_group: Option<String>,
+    pub min_spacing_s: u64,
 }
 
 /// The schedules of one tenant, ordered by name.

@@ -32,6 +32,10 @@ pub(super) fn typed_result_from_wire(result: JobResult) -> TypedJobResult {
             environment_version: result.reproducibility.environment_version,
             policy_fingerprint: result.reproducibility.policy_fingerprint,
         },
+        usage: result.usage.map(|usage| medulla_jobs::ResultUsage {
+            run_s: usage.run_s,
+            tokens: usage.tokens,
+        }),
     }
 }
 

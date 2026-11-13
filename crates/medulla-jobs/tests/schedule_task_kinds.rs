@@ -3,6 +3,7 @@
 use medulla_jobs::schedule::{
     job_for_task_kind, ScheduleRecord, ScheduleSpec, INVALID_SCHEDULE, SCHEDULE_TASK_KINDS,
 };
+use medulla_jobs::schedule_run::{ScheduleBudget, ScheduleState};
 
 fn record(task_kind: &str) -> ScheduleRecord {
     ScheduleRecord {
@@ -11,6 +12,15 @@ fn record(task_kind: &str) -> ScheduleRecord {
         tenant: "t1".into(),
         spec: ScheduleSpec::OneShot { at_ms: 1 },
         task_kind: task_kind.into(),
+        state: ScheduleState::Enabled,
+        resumed_ms: 0,
+        budget: ScheduleBudget {
+            max_run_s: 3_600,
+            max_tokens: 1_000,
+            period_s: 86_400,
+        },
+        exclusion_group: None,
+        min_spacing_s: 0,
     }
 }
 

@@ -165,6 +165,10 @@ method_results! {
     #[cfg(feature = "jobs")]
     JobScheduleCreate(AnalyticsJob / "ScheduleCreate") => Json<ScheduleView>;
     #[cfg(feature = "jobs")]
+    JobSchedulePause(AnalyticsJob / "SchedulePause") => Json<ScheduleView>;
+    #[cfg(feature = "jobs")]
+    JobScheduleResume(AnalyticsJob / "ScheduleResume") => Json<ScheduleView>;
+    #[cfg(feature = "jobs")]
     JobScheduleGet(AnalyticsJob / "ScheduleGet") => Json<ScheduleView>;
     #[cfg(feature = "jobs")]
     JobScheduleUpdate(AnalyticsJob / "ScheduleUpdate") => Json<ScheduleView>;

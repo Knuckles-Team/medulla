@@ -7,11 +7,21 @@
 //! job of the schedule's task kind (`MEDULLA-PLACEMENT-R751.762`) and acknowledged by a
 //! `ScheduleTick` node. The node id carries the window, so a tick replayed by a later leader
 //! finds its acknowledgement and submits nothing.
+//!
+//! Before it submits, each window is decided by `medulla_jobs::schedule_run::decide_window`
+//! (R751.755 to R751.757, R751.760): a paused schedule, a window missed while no leader acted,
+//! a spent budget, a still-active run of the schedule or of its exclusion group, or a window
+//! inside the group spacing records a `skipped` tick with its reason and submits nothing. The
+//! tick node and the schedule's `ScheduleRun` record (cursor, last fired window, active work
+//! item, budget usage) are written in one batch, so two leaders cannot both fire a window.
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_jobs::leader_lease::{contend, LeaseCell, LeaseRecord, LEASE_NODE_ID};
 use medulla_jobs::schedule::{
     job_for_task_kind, ScheduleRecord, ScheduleTick, TickLedger, TickStatus,
+};
+use medulla_jobs::schedule_run::{
+    decide_window, finished_usage, ScheduleRun, TickOutcome, WindowFacts,
 };
 use medulla_protocol_types::protocol::Request;
 use serde_json::{json, Value};
@@ -59,6 +69,10 @@ impl LeaseCell for GraphLeaseCell<'_> {
 #[derive(Default)]
 struct ScheduleCache {
     by_graph: BTreeMap<String, (u64, u64, Vec<ScheduleRecord>)>,
+    /// Graphs whose due windows this engine has followed without a gap. A graph not in the set
+    /// (a new process, or a pass that was due while another engine led) is scanned from each
+    /// schedule's cursor, so the windows nobody acted on are recorded as missed.
+    followed: std::collections::BTreeSet<String>,
 }
 
 impl ScheduleCache {
@@ -122,27 +136,42 @@ async fn tick_pass(
             .map(|entry| (entry.name.clone(), entry.core.clone()))
             .collect()
     };
+    let store = outbox_job_store(state).await?;
+    let lookback_ms = medulla_server_api::knob_config::knobs()
+        .jobs_schedule_missed_lookback_s
+        .saturating_mul(1_000);
     for (graph, core) in graphs {
+        let schedules = cache.schedules(&graph, &core, now_ms);
         let mut due = Vec::new();
-        for record in cache.schedules(&graph, &core, now_ms) {
-            if let Ok(windows) = record.spec.due_windows(from_ms, now_ms + 1) {
-                due.extend(windows.into_iter().map(|window| (record.clone(), window)));
+        for record in &schedules {
+            let run = load_run(&core, record);
+            let start = match run.cursor_ms {
+                Some(cursor) if !cache.followed.contains(&graph) => cursor + 1,
+                _ => from_ms,
+            }
+            .max(from_ms.saturating_sub(lookback_ms));
+            if let Ok(windows) = record.spec.due_windows(start, now_ms + 1) {
+                due.extend(windows.into_iter().map(|window| (window, record.clone())));
             }
         }
         if due.is_empty() {
+            cache.followed.insert(graph);
             continue;
         }
+        due.sort_by(|a, b| (a.0, &a.1.name).cmp(&(b.0, &b.1.name)));
         if decode_node(&core, LEASE_NODE_ID).is_none() {
             let fields = LeaseRecord::default().to_fields();
-            commit(state, &graph, upsert(LEASE_NODE_ID, fields)).await?;
+            commit(state, &graph, vec![upsert(LEASE_NODE_ID, fields)]).await?;
         }
         let cell = GraphLeaseCell { core: &core };
         let ttl_ms = poll_s.max(1) * 3_000;
         let Some(fence) = contend(&cell, host, now_ms, ttl_ms).map_err(|e| format!("{e:?}"))?
         else {
+            cache.followed.remove(&graph);
             continue;
         };
-        for (record, window) in due {
+        cache.followed.insert(graph.clone());
+        for (window, record) in due {
             let tick = ScheduleTick {
                 schedule_id: ScheduleRecord::node_id(&record.tenant, &record.name),
                 window_start_ms: window,
@@ -160,17 +189,108 @@ async fn tick_pass(
                 .leadership()
                 .authorize(host, fence, now_ms)
                 .map_err(|e| e.to_string())?;
-            submit_scheduled_job(state, &graph, &record, window).await?;
+            let mut run = load_run(&core, &record);
+            settle(&mut run, &store);
+            run.roll_period(window, &record.budget);
+            let (group_run_active, group_last_fired_ms) =
+                group_facts(&core, &store, &record, &schedules);
+            let facts = WindowFacts {
+                window_ms: window,
+                live_from_ms: from_ms,
+                own_run_active: run
+                    .active_job
+                    .as_deref()
+                    .is_some_and(|job| job_active(&store, job)),
+                group_run_active,
+                group_last_fired_ms,
+            };
+            let outcome = decide_window(&record, &run, &facts);
+            let mut job_id = String::new();
+            if outcome == TickOutcome::Fired {
+                job_id = submit_scheduled_job(state, &graph, &record, window).await?;
+                run.active_job = Some(job_id.clone());
+                run.last_fired_ms = Some(window);
+            }
+            run.cursor_ms = Some(window);
             ledger.acknowledge(&tick);
             let mut fields = serde_json::Map::new();
             fields.insert("type".into(), TICK_NODE_TYPE.into());
             fields.insert("schedule".into(), record.name.clone().into());
+            fields.insert("tenant".into(), record.tenant.clone().into());
             fields.insert("window_start_ms".into(), window.into());
             fields.insert("host".into(), host.into());
-            commit(state, &graph, upsert(&tick_id, fields)).await?;
+            fields.insert("outcome".into(), outcome.as_str().into());
+            fields.insert("reason".into(), outcome.reason().into());
+            fields.insert("job_id".into(), job_id.into());
+            let run_fields = run.to_fields(&record.tenant, &record.name);
+            let run_id = ScheduleRun::node_id(&record.tenant, &record.name);
+            commit(
+                state,
+                &graph,
+                vec![upsert(&tick_id, fields), upsert(&run_id, run_fields)],
+            )
+            .await?;
         }
     }
     Ok(())
+}
+
+/// The run record of a schedule, the initial one when none is stored.
+fn load_run(core: &GraphCore, record: &ScheduleRecord) -> ScheduleRun {
+    let id = ScheduleRun::node_id(&record.tenant, &record.name);
+    ScheduleRun::from_fields(decode_node(core, &id).as_ref())
+}
+
+/// Whether the work item is still active. A work item the store no longer holds is finished.
+fn job_active(store: &JobStore, job_id: &str) -> bool {
+    store
+        .get(job_id)
+        .map(|job| !job.state.is_terminal())
+        .unwrap_or(false)
+}
+
+/// Charge the schedule for its last work item once it has finished.
+fn settle(run: &mut ScheduleRun, store: &JobStore) {
+    let Some(job_id) = run.active_job.clone() else {
+        return;
+    };
+    match store.get(&job_id) {
+        Ok(job) => {
+            if let Some(usage) = finished_usage(&job) {
+                run.charge(usage);
+            }
+        }
+        Err(_) => run.active_job = None,
+    }
+}
+
+/// Whether another member of the schedule's exclusion group has an active work item, and the
+/// newest fired window of any member. Group members are the schedules of the same tenant that
+/// name the same group.
+fn group_facts(
+    core: &GraphCore,
+    store: &JobStore,
+    record: &ScheduleRecord,
+    schedules: &[ScheduleRecord],
+) -> (bool, Option<u64>) {
+    let Some(group) = record.exclusion_group.as_deref() else {
+        return (false, None);
+    };
+    let mut active = false;
+    let mut last_fired = None;
+    for member in schedules.iter().filter(|other| {
+        other.tenant == record.tenant && other.exclusion_group.as_deref() == Some(group)
+    }) {
+        let run = load_run(core, member);
+        last_fired = last_fired.max(run.last_fired_ms);
+        if member.name != record.name {
+            active |= run
+                .active_job
+                .as_deref()
+                .is_some_and(|job| job_active(store, job));
+        }
+    }
+    (active, last_fired)
 }
 
 fn upsert(id: &str, fields: serde_json::Map<String, Value>) -> Value {
@@ -217,7 +337,7 @@ async fn dispatch(
     graph: &str,
     session: String,
     method: Method,
-) -> Result<(), String> {
+) -> Result<Response, String> {
     let context = service_context(state, graph, session).await?;
     let response = medulla_server_api::api::reentry::dispatch_verified_request(
         state,
@@ -231,11 +351,16 @@ async fn dispatch(
         context,
     )
     .await;
-    response.refusal_text().map_or(Ok(()), Err)
+    response.refusal_text().map_or(Ok(response), Err)
 }
 
-async fn commit(state: &Arc<RwLock<ServerState>>, graph: &str, op: Value) -> Result<(), String> {
-    let operations_msgpack = rmp_serde::to_vec_named(&vec![op])
+/// Write `ops` as one batch.
+async fn commit(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    ops: Vec<Value>,
+) -> Result<(), String> {
+    let operations_msgpack = rmp_serde::to_vec_named(&ops)
         .map_err(|_| "schedule tick batch encoding failed".to_string())?;
     let session = format!("{SERVICE}:{graph}:{}", unix_ms());
     dispatch(
@@ -245,6 +370,7 @@ async fn commit(state: &Arc<RwLock<ServerState>>, graph: &str, op: Value) -> Res
         Method::BatchUpdate { operations_msgpack },
     )
     .await
+    .map(|_| ())
 }
 
 /// Submit the job of the schedule's task kind; the idempotency session names the tick, so a
@@ -254,7 +380,7 @@ async fn submit_scheduled_job(
     graph: &str,
     record: &ScheduleRecord,
     window_ms: u64,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let job = job_for_task_kind(&record.task_kind).map_err(|e| e.to_string())?;
     let spec = SubmitJobSpec {
         graph: graph.to_string(),
@@ -269,7 +395,10 @@ async fn submit_scheduled_job(
         output_bytes: None,
         worker_pool: String::new(),
         worker_region: String::new(),
-        required_capabilities: Vec::new(),
+        required_capabilities: (!job.required_capability.is_empty())
+            .then(|| job.required_capability.to_string())
+            .into_iter()
+            .collect(),
         max_attempts: 1,
         backoff_ms: 0,
         kind: JobKind::MineAssociate {
@@ -280,7 +409,7 @@ async fn submit_scheduled_job(
         },
     };
     let session = tick_node_id(&record.tenant, &record.name, window_ms);
-    dispatch(
+    let response = dispatch(
         state,
         graph,
         session,
@@ -288,5 +417,16 @@ async fn submit_scheduled_job(
             op: JobOp::Submit(spec),
         },
     )
-    .await
+    .await?;
+    submitted_job_id(&response).ok_or_else(|| "scheduled job submit returned no job id".to_string())
+}
+
+/// The work item id a submit response carries.
+fn submitted_job_id(response: &Response) -> Option<String> {
+    let record = match response.result.as_ref()? {
+        ResultPayload::Json(value) => value.clone(),
+        ResultPayload::Raw(bytes) => rmp_serde::from_slice::<Value>(bytes).ok()?,
+        _ => return None,
+    };
+    record.get("job_id")?.as_str().map(str::to_string)
 }

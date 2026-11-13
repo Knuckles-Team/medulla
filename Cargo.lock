@@ -6666,6 +6666,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-h-retrieve",
  "medulla-identity-types",
+ "medulla-jobs",
  "medulla-modality",
  "medulla-mutation-types",
  "medulla-numeric",
