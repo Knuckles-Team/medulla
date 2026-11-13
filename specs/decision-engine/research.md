@@ -1131,3 +1131,13 @@ A request is refused when it asks the engine to carry a playbook out: `execute` 
 
 ## R703.6: the skill-evolution journey and its bench group
 The L3 journey publishes skills in two tenants, submits requested skills and terms and an embedding graph, and asserts the three proposal kinds (gap, neologism, merge), the advisory outcome sealed as `Statistical` at class `Claim`, a typed refusal for a named pair of different side-effect classes, the other tenant's skill appearing in no candidate of this tenant, and the library's published definitions (ids and digests, both tenants) identical before and after. The nightly group `decide/skill_evolution` has its own served fixture (a 256-skill library block, requested skills and used terms) and is removed from the generic family list, because the generic request carries no body and would time a refusal; the fixture asserts the answer names a gap and a neologism. Its budget is the default group budget of `benches/baselines/decide.json`.
+## R753.753: the trajectory bench groups time answers, not refusals
+
+The generic family loop in `benches/decide_budgets.rs` drives every kind with the
+route fixture, so a kernel family answers it with a refusal. `decide/trajectory_join`
+(a valid 64-trajectory join) and `decide/step_verification` (a valid 256-step trace)
+therefore have their own served fixtures and are left out of the generic loop;
+`decide/trajectory_join_kernel` times `join` over 256 trajectories. The three share
+the row's budget in `benches/baselines/decide.json` (p50 2 ms, p99 6 ms, peak 4 MiB).
+The group bodies build a request through `kernel_asked`, which re-kinds the served
+fixture's request with one typed body parameter.

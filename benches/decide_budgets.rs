@@ -39,6 +39,7 @@ use medulla_decision_outcome_types::decision::concentration::{
 use medulla_decision_stats::decision::population::wasserstein1;
 use medulla_decision_stats::decision::reward::decompose;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
+use medulla_decision_stats::decision::trajectory_join::join;
 use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
 use medulla_decision_types::decision::curriculum::{
     CurriculumRequest, CurriculumStage, PromotionPolicy,
@@ -69,7 +70,10 @@ use medulla_decision_types::decision::thought_search::{
     BudgetLedger, ReasoningState, ReasoningStrategy, ThoughtNode, ThoughtSearchKnobs,
     MAX_THOUGHT_LEAVES,
 };
-use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_decision_types::decision::trajectory_verdict::{
+    JoinRequest, StepCheck, TraceStep, TrajectoryEntry, VerifyRequest, MAX_TRAJECTORIES,
+};
+use medulla_decision_types::decision::{DecisionPolicyRef, EvidenceClass};
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, publish_route_schema, request, Harness, TENANT,
 };
@@ -155,8 +159,6 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::SkillWorkflowCompile,
     QuestionKind::TeamCoordination,
     QuestionKind::FanoutWidth,
-    QuestionKind::TrajectoryJoin,
-    QuestionKind::StepVerification,
     QuestionKind::AdversarialAdmission,
 ];
 
@@ -1905,16 +1907,33 @@ fn kernel_ask(
     value: TypedValue,
     candidate: &str,
 ) -> DecideRequest {
+    kernel_ask_many(asked, kind, param, value, vec![candidate.to_string()])
+}
+
+/// `asked` re-pointed at `kind` with one typed body parameter and the
+/// declared candidates that name its subject.
+fn kernel_ask_many(
+    asked: &DecideRequest,
+    kind: QuestionKind,
+    param: &str,
+    value: TypedValue,
+    candidate_ids: Vec<String>,
+) -> DecideRequest {
     let mut ask = asked.clone();
     ask.question.kind = kind;
     ask.question.question_id = format!("bench.{param}");
     ask.candidates = CandidateSource::Declared {
-        options: BoundedVec::new(vec![DeclaredOption {
-            option_id: candidate.to_string(),
-            classification: BoundedVec::default(),
-            numbers: BoundedVec::default(),
-            texts: BoundedVec::default(),
-        }])
+        options: BoundedVec::new(
+            candidate_ids
+                .into_iter()
+                .map(|option_id| DeclaredOption {
+                    option_id,
+                    classification: BoundedVec::default(),
+                    numbers: BoundedVec::default(),
+                    texts: BoundedVec::default(),
+                })
+                .collect(),
+        )
         .unwrap(),
     };
     ask.params = BoundedVec::new(vec![TypedParam {
@@ -2038,6 +2057,117 @@ fn bench_served_kernels(
         );
     });
 }
+
+/// Trajectories the served `decide/trajectory_join` group joins
+/// (MEDULLA-DECISION-ENGINE-R753.753).
+const SERVED_JOIN_TRAJECTORIES: usize = 64;
+
+/// Steps the served `decide/step_verification` group verifies.
+const SERVED_VERIFY_STEPS: usize = 256;
+
+/// `entries` competing trajectories: observation sources with spread scores
+/// and one proof source, so the join has a single winner.
+fn join_entries(entries: usize) -> Vec<TrajectoryEntry> {
+    (0..entries)
+        .map(|n| {
+            let evidence = if n == entries / 2 {
+                EvidenceClass::Proof
+            } else {
+                EvidenceClass::Observation
+            };
+            TrajectoryEntry::new(
+                format!("t{n:04}"),
+                evidence,
+                QuantisedValue {
+                    scale: QuantScaleTag::Q32,
+                    value: ((n as i64 * 7919) % 1_000) << 22,
+                },
+                "cd".repeat(32),
+            )
+            .expect("a well-formed trajectory entry")
+        })
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R753.753
+/// The `decide/trajectory_join` and `decide/step_verification` groups
+/// (MEDULLA-DECISION-ENGINE-R753.753): a valid 64-trajectory join and a valid
+/// 256-step verification through the served `Decide` path, so each group times
+/// the family's answer and not its refusal of the generic fixture request.
+fn bench_trajectory_served(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (h, asked) = rt.block_on(fixture(QuestionKind::TrajectoryJoin));
+    let entries = join_entries(SERVED_JOIN_TRAJECTORIES);
+    let mut ids: Vec<String> = entries.iter().map(|e| e.trajectory_id.clone()).collect();
+    ids.sort();
+    let joined = kernel_ask_many(
+        &asked,
+        QuestionKind::TrajectoryJoin,
+        "trajectory_join",
+        TypedValue::TrajectoryJoin(Box::new(JoinRequest {
+            entries: BoundedVec::new(entries).unwrap(),
+        })),
+        ids,
+    );
+    let response = decide(rt, &h, &joined);
+    assert!(
+        response.error.is_none(),
+        "trajectory_join fixture: {response:?}"
+    );
+    bench_group(c, report, "decide/trajectory_join", &mut || {
+        black_box(decide(rt, &h, &joined));
+    });
+
+    let steps: Vec<TraceStep> = (0..SERVED_VERIFY_STEPS)
+        .map(|n| TraceStep {
+            step_id: format!("s{n:04}"),
+            digest: format!("{:02x}", n % 251 + 1).repeat(32),
+        })
+        .collect();
+    let checks: Vec<StepCheck> = (0..SERVED_VERIFY_STEPS)
+        .map(|n| StepCheck {
+            step_id: format!("s{n:04}"),
+            passed: true,
+            check_digest: format!("{:02x}", n % 127 + 128).repeat(32),
+        })
+        .collect();
+    let verified = kernel_ask(
+        &asked,
+        QuestionKind::StepVerification,
+        "step_verification",
+        TypedValue::StepVerification(Box::new(VerifyRequest {
+            steps: BoundedVec::new(steps).unwrap(),
+            checks: BoundedVec::new(checks).unwrap(),
+            attempts: 0,
+        })),
+        "trace-1",
+    );
+    let response = decide(rt, &h, &verified);
+    assert!(
+        response.error.is_none(),
+        "step_verification fixture: {response:?}"
+    );
+    bench_group(c, report, "decide/step_verification", &mut || {
+        black_box(decide(rt, &h, &verified));
+    });
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R753.753
+/// The `decide/trajectory_join_kernel` group (MEDULLA-DECISION-ENGINE-R753.753):
+/// `join` alone over `MAX_TRAJECTORIES` (256) trajectories.
+fn bench_trajectory_join_kernel(
+    c: &mut Criterion,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let entries = join_entries(MAX_TRAJECTORIES);
+    bench_group(c, report, "decide/trajectory_join_kernel", &mut || {
+        black_box(join(black_box(&entries)).expect("a valid join"));
+    });
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -2096,6 +2226,8 @@ fn bench_decide(c: &mut Criterion) {
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);
     bench_skill_evolution(c, &rt, &mut report);
+    bench_trajectory_served(c, &rt, &mut report);
+    bench_trajectory_join_kernel(c, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

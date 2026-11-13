@@ -126,6 +126,29 @@ async fn served_decide_joins_and_distills_trajectories() {
         mixed.records.as_slice()[0].evidence_class,
         EvidenceClass::Observation
     );
+
+    // The hot path (R753.753): a 64-trajectory join through the same served
+    // call, every source named in id order and the strongest one winning.
+    let many: Vec<TrajectoryEntry> = (0..64_i64)
+        .map(|n| {
+            let evidence = if n == 37 {
+                EvidenceClass::Proof
+            } else {
+                EvidenceClass::Observation
+            };
+            entry(&format!("t{n:03}"), evidence, (n * 7919) % 1000)
+        })
+        .collect();
+    let wide = decide(&h, join(&schema, many)).await.unwrap();
+    let wide = wide.records.as_slice()[0]
+        .answer
+        .as_ref()
+        .and_then(|a| a.trajectory_join())
+        .expect("the family answers a distilled trajectory over 64 sources");
+    assert_eq!(wide.winner_id, "t037");
+    assert_eq!(wide.source_ids.as_slice().len(), 64);
+    assert!(wide.source_ids.as_slice().windows(2).all(|w| w[0] < w[1]));
+    assert_eq!(wide.derivation_digest.len(), 64);
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R753.754: the derivation names every source
