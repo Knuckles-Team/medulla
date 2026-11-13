@@ -136,3 +136,6 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T133 [US1] MEDULLA-SDLC-R014.12 Ingest every repository's specs and `Spec:` history.
 - [ ] T134 [US1] MEDULLA-SDLC-R014.13 Spec intelligence report: overlap clusters and shape discrepancies.
 - [ ] T135 [US1] MEDULLA-SDLC-R014.14 Hot-path proof: row to commit to test, and the intelligence report.
+- [ ] T136 [US1] MEDULLA-SDLC-R030.3 Defect/DefectStatus state machine: route 3 census findings through DefectStatus::apply
+- [ ] T137 [US1] MEDULLA-SDLC-R030.4 SpecRowState/SpecState state machine: route 1 census findings through SpecState::apply
+- [ ] T138 [US1] MEDULLA-SDLC-R030.5 TaskRowState/TaskState state machine: route 1 census findings through TaskState::apply
