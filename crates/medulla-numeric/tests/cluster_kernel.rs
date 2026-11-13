@@ -159,6 +159,7 @@ fn seeding_is_deterministic_and_distinct() {
     assert_eq!(s.len(), 16 * dim);
 }
 
+// spec: MEDULLA-CLUSTER-R003
 // spec: MEDULLA-CLUSTER-R003.2
 
 #[test]
@@ -174,6 +175,11 @@ fn centroids_bit_identical_across_threads() {
         fit_simple(rows, 12, &cfg).unwrap()
     };
     let one = run(1);
+    // Same seed and input on a second run at the same thread count: identical bytes.
+    let again = run(1);
+    let bits0 = |v: &[f32]| v.iter().map(|x| x.to_bits()).collect::<Vec<_>>();
+    assert_eq!(bits0(&one.centroids), bits0(&again.centroids), "rerun");
+    assert_eq!(one.labels, again.labels);
     for t in [2, 8] {
         let other = run(t);
         let bits = |v: &[f32]| v.iter().map(|x| x.to_bits()).collect::<Vec<_>>();

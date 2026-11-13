@@ -34,9 +34,9 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-CLUSTER-R002.4` | Exact mode | `crates/medulla-numeric/tests/cluster_kernel.rs::exact_mode_matches_brute_force_lloyd_oracle` (planned) |
 | `MEDULLA-CLUSTER-R002.5` | Every tunable is a knob | `crates/medulla-decision-stats/src/decision/cluster_knobs.rs::tests::defaults_lie_inside_bounds_and_equal_kernel_defaults` (planned) |
 | `MEDULLA-CLUSTER-R002.6` | Wiring: the engine resolves knobs once per build | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::activation_uses_pinned_cluster_knobs` |
-| `MEDULLA-CLUSTER-R003` | Bit-identical results (rollup) | `crates/medulla-numeric/tests/cluster_kernel.rs::centroids_bit_identical_across_threads` (planned) |
+| `MEDULLA-CLUSTER-R003` | Bit-identical results (rollup) | `crates/medulla-numeric/tests/cluster_kernel.rs::centroids_bit_identical_across_threads` |
 | `MEDULLA-CLUSTER-R003.1` | Fixed reduction order | `crates/medulla-numeric/tests/cluster_kernel.rs::tie_goes_to_lowest_index_and_fold_is_row_ordered` (planned) |
-| `MEDULLA-CLUSTER-R003.2` | Thread-count independence | `crates/medulla-numeric/tests/cluster_kernel.rs::centroids_bit_identical_across_threads` (planned) |
+| `MEDULLA-CLUSTER-R003.2` | Thread-count independence | `crates/medulla-numeric/tests/cluster_kernel.rs::centroids_bit_identical_across_threads` |
 | `MEDULLA-CLUSTER-R003.3` | Index codebooks reproduce | `crates/medulla-ann/tests/ivfpq_kernel.rs::codebooks_are_byte_identical_across_runs_and_threads` (planned) |
 | `MEDULLA-CLUSTER-R004` | Explicit run state machine (rollup) | `crates/medulla-numeric/src/cluster/state.rs::tests::run_visits_states_in_table_order` |
 | `MEDULLA-CLUSTER-R004.1` | Transition table | `crates/medulla-numeric/src/cluster/state.rs::tests::legal_transitions_follow_table` (planned) |
