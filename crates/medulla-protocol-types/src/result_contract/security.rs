@@ -17,6 +17,27 @@ pub struct AuditReport {
     pub entries: u64,
     pub first_broken_seq: Option<u64>,
     pub detail: String,
+    /// Entries of the caller tenant's read-audit chain for this graph
+    /// ([`AuditChain::Read`], MEDULLA-IDENTITY-R023.5). That chain has its own
+    /// sequence, so a scan of it is bounded by this count, never by `entries`.
+    #[serde(default)]
+    pub read_entries: u64,
+}
+
+/// Which audit chain of a graph an operation reads (MEDULLA-IDENTITY-R023.5).
+///
+/// `Graph` is the graph's own chain: its mutations and the operation events
+/// appended in its mutation scope. `Read` is the caller tenant's read-audit
+/// chain for the graph. It lives in a scope of its own, so a read-audit line
+/// never advances the graph's version. The two chains number their entries
+/// independently, so a sequence number means nothing without its chain.
+#[cfg(feature = "security")]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum AuditChain {
+    Graph,
+    Read,
 }
 
 /// Commit-before-ack reference for one operation audit event. An idempotent

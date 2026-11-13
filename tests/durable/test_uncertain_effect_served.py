@@ -69,7 +69,9 @@ def _audit_lines(client) -> list[str]:
     lines = []
     for seq in range(client.admin.audit_verify()["entries"] + 1):
         try:
-            lines.append(client.admin.audit_read_event(seq)["event_line"])
+            lines.append(
+                client.admin.audit_read_event(seq, chain="graph")["event_line"]
+            )
         except EngineResponseError:
             continue
     return lines

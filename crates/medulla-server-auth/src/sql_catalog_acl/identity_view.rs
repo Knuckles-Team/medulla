@@ -27,7 +27,9 @@ pub(crate) const IDENTITY_RELATION_PREFIX: &str = "__identity__";
 
 use medulla_server_api::identity_view::published;
 
-/// Refuse a tenant table name in the reserved identity namespace.
+/// Refuse a tenant table name in the reserved identity namespace. Its one
+/// caller, `create_owned_table`, is a test-support entry point.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn refuse_reserved_name(name: &str) -> Result<(), String> {
     if name
         .to_ascii_lowercase()

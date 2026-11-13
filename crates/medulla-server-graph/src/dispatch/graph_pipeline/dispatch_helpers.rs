@@ -160,17 +160,54 @@ pub async fn dispatch_op_tsdb_ops(
     };
 }
 
+/// Where one of a graph's audit chains lives, and the tenant spelling its
+/// events carry (MEDULLA-IDENTITY-R023.5).
+///
+/// The graph chain is the graph's own durable key; its operation events name
+/// the carrier's opaque tenant scope. The read-audit chain is the caller
+/// tenant's own scope for the graph, which never advances the graph's version;
+/// its lines name the verified tenant id.
+#[cfg(feature = "security")]
+pub struct AuditChainTarget<'a> {
+    pub fname: String,
+    pub tenant: &'a str,
+}
+
+#[cfg(feature = "security")]
+impl<'a> AuditChainTarget<'a> {
+    pub fn of(
+        graph_name: &str,
+        chain: medulla_protocol_types::protocol::AuditChain,
+        tenant_scope: &'a str,
+        verified_tenant: &'a str,
+    ) -> Self {
+        use medulla_protocol_types::protocol::AuditChain;
+        let graph = medulla_kernel::persist::sanitize(graph_name);
+        match chain {
+            AuditChain::Graph => Self {
+                fname: graph,
+                tenant: tenant_scope,
+            },
+            AuditChain::Read => Self {
+                fname: medulla_store::redb_store::read_audit_chain_scope(verified_tenant, &graph),
+                tenant: verified_tenant,
+            },
+        }
+    }
+}
+
 #[cfg(feature = "security")]
 pub async fn dispatch_op_audit_read_event(
     req_id: u64,
-    graph_name: &str,
-    verified_tenant: &str,
+    target: AuditChainTarget<'_>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     seq: u64,
 ) -> Response {
-    let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
-        Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
+        Some(redb) => match redb
+            .audit_read_event(&target.fname, target.tenant, seq)
+            .await
+        {
             Ok(proof) => Response::ok(
                 req_id,
                 ResultPayload::of::<
@@ -232,21 +269,38 @@ pub async fn dispatch_op_audit_append(
     }
 }
 
+/// Verify the graph's chain and the caller tenant's read-audit chain for the
+/// graph. `entries` and `read_entries` bound a scan of each chain; the report
+/// is `ok` only when both chains verify, and a read-chain break is named as
+/// one in `detail`.
 #[cfg(feature = "security")]
 pub async fn dispatch_op_audit_verify(
     req_id: u64,
     graph_name: &str,
+    verified_tenant: &str,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
+    let read_chain = medulla_store::redb_store::read_audit_chain_scope(verified_tenant, &fname);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
-        Some(redb) => match redb.audit_verify_blocking(&fname) {
-            Ok(report) => Response::ok(
-                req_id,
-                ResultPayload::of::<medulla_protocol_types::result_contract::security::AuditVerify>(
-                    report,
-                ),
-            ),
+        Some(redb) => match redb
+            .audit_verify_blocking(&fname)
+            .and_then(|graph| Ok((graph, redb.audit_verify_blocking(&read_chain)?)))
+        {
+            Ok((mut report, read)) => {
+                report.read_entries = read.entries;
+                if report.ok && !read.ok {
+                    report.ok = false;
+                    report.first_broken_seq = read.first_broken_seq;
+                    report.detail = format!("read-audit chain: {}", read.detail);
+                }
+                Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::security::AuditVerify,
+                    >(report),
+                )
+            }
             Err(e) => Response::err(req_id, format!("AuditVerify error: {e}")),
         },
         None => Response::err(

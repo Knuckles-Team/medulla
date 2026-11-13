@@ -963,7 +963,7 @@ where
     let (tsdb, tsdb_tenant, tsdb_graph) = bound_tsdb_leg(state, tsdb_scope).await;
     #[cfg(not(feature = "tsdb"))]
     let _ = state;
-    compute_off_lock(req_id, move || {
+    let result = compute_off_lock(req_id, move || {
         #[cfg(feature = "decide")]
         let finish = with_decision_log(decisions, finish);
         // EH-396: the tenant's adapter re-aims every vector rank of the plan.
@@ -991,7 +991,12 @@ where
             finish,
         )
     })
-    .await
+    .await;
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    scope
+        .close(matches!(result, Ok(Ok(_))))
+        .map_err(|code| Response::err(req_id, code.as_str()))?;
+    result
 }
 
 #[cfg(feature = "tsdb")]
@@ -1194,6 +1199,8 @@ mod tenant_scope_served_tests {
             graph_name: format!("tenant__{tenant}"),
             #[cfg(all(feature = "security", feature = "redb"))]
             persistence: None,
+            #[cfg(all(feature = "security", feature = "redb"))]
+            pending: std::sync::Mutex::new(None),
         }
     }
 

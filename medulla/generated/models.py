@@ -1540,6 +1540,11 @@ class AuditEventProof(BaseModel):
     seq: Annotated[int, Field(ge=0)]
 
 
+class AuditChain(str, Enum):
+    graph = "graph"
+    read = "read"
+
+
 class AuditReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -1548,6 +1553,7 @@ class AuditReport(BaseModel):
     first_broken_seq: Annotated[int, Field(ge=0)] | None = None
     graph: str
     ok: bool
+    read_entries: Annotated[int, Field(ge=0)] = 0
 
 
 class AuthMode(str, Enum):
@@ -14114,6 +14120,7 @@ class MethodAuditProveInclusionParams(BaseModel):
 class MethodAuditReadEventParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    chain: AuditChain
     seq: Annotated[int, Field(ge=0)]
 
 

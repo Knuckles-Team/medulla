@@ -16153,11 +16153,18 @@ class AdminClient:
             )
         ).payload
 
-    async def audit_read_event(self, seq: int) -> dict[str, Any]:
-        """Read one committed operation event and its chain verification result."""
+    async def audit_read_event(self, seq: int, *, chain: str) -> dict[str, Any]:
+        """Read one committed operation event and its chain verification result.
+
+        ``chain`` names the chain ``seq`` numbers: ``"graph"`` for the graph's
+        own chain, ``"read"`` for the caller tenant's read-audit chain of the
+        graph. The two chains number their entries independently; bound a scan
+        with :meth:`audit_verify`'s ``entries`` and ``read_entries``.
+        """
         return (
             await _gen.security.send_audit_read_event(
-                self._client, {"seq": _integer("seq", seq, minimum=0)}
+                self._client,
+                {"seq": _integer("seq", seq, minimum=0), "chain": chain},
             )
         ).payload
 

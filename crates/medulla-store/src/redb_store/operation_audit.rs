@@ -46,6 +46,24 @@ pub fn audit_writer_unavailable(cause: impl std::fmt::Display) -> String {
     format!("{AUDIT_WRITER_UNAVAILABLE}: {cause}")
 }
 
+/// The scope that holds one tenant's read-audit chain for one graph
+/// (MEDULLA-IDENTITY-R023.5): the durable key of the logical name
+/// `read-audit:<tenant>/<graph key>`.
+///
+/// A read-audit line is never a graph mutation: appending it in the graph's
+/// own mutation scope would advance the graph's version on every read, and the
+/// reader's next write, whose version claim came from that read, would meet
+/// `STALE_VERSION`. The chain therefore lives in a scope of its own, with its
+/// own sequence and version. Graph creation refuses the
+/// [`medulla_types::contract::READ_AUDIT_CHAIN_PREFIX`] prefix, so no graph's
+/// durable key is this one.
+pub fn read_audit_chain_scope(tenant: &str, graph_fname: &str) -> String {
+    super::sanitize(&format!(
+        "{}{tenant}/{graph_fname}",
+        medulla_types::contract::READ_AUDIT_CHAIN_PREFIX
+    ))
+}
+
 /// The audit classes an operation may declare.
 const AUDIT_CLASSES: [&str; 3] = ["event", "identity_chain", "scope_exceeds_policy"];
 /// How a caller spells "this operation declares no audit class".

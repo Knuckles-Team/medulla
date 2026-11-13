@@ -46,8 +46,10 @@ impl ReadCaller {
         let tenant_raw = carrier
             .map(|c| c.log_owner().0.to_owned())
             .unwrap_or_default();
+        // MEDULLA-IDENTITY-R023.3: the unit principal is the verified request
+        // principal, never the agent carrying the request.
         let id = authority
-            .and_then(|a| a.verified_actor().ok())
+            .map(GraphReadAuthority::verified_principal)
             .unwrap_or_default()
             .to_owned();
         Self {

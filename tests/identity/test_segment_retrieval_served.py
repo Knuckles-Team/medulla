@@ -66,25 +66,33 @@ def _unit_ids(client: SyncMedullaClient) -> list[str]:
 
 
 def _read_audit_line(client: SyncMedullaClient, hidden_count: int) -> dict[str, object]:
-    """The newest `SegmentReadAudit.hidden-<n>` line of the graph audit chain.
+    """The newest `SegmentReadAudit.hidden-<n>` outcome line of the read-audit chain.
 
-    The engine appends the line from a bounded queue drained off the read path
-    (MEDULLA-IDENTITY-R610.5), so the line lands shortly after the read returns;
-    the chain is re-read until it appears, within a fixed bound.
+    The line lives on the caller tenant's read-audit chain of the graph, which
+    numbers its entries apart from the graph's own chain, so the scan is bounded
+    by that chain's `read_entries`. The engine appends the line from a bounded
+    queue drained off the read path (MEDULLA-IDENTITY-R610.5), so the line lands
+    shortly after the read returns; the chain is re-read until it appears,
+    within a fixed bound.
     """
     for _ in range(100):
-        entries = int(client.admin.audit_verify()["entries"])
-        for seq in range(entries, -1, -1):
+        entries = int(client.admin.audit_verify()["read_entries"])
+        for seq in range(entries - 1, -1, -1):
             try:
-                line = client.admin.audit_read_event(seq)["event_line"]
+                line = client.admin.audit_read_event(seq, chain="read")["event_line"]
             except EngineResponseError:
                 continue  # not an operation event
             event = dict(part.split("=", 1) for part in line.split("|") if "=" in part)
-            if event.get("op") == f"SegmentReadAudit.hidden-{hidden_count}":
+            # The read's line is its outcome, which links the reservation made
+            # when the read was admitted; the reservation itself is skipped.
+            if (
+                event.get("op") == f"SegmentReadAudit.hidden-{hidden_count}"
+                and "reservation" in event
+            ):
                 return event
         time.sleep(0.1)
     raise AssertionError(
-        f"no SegmentReadAudit.hidden-{hidden_count} line in the audit chain"
+        f"no SegmentReadAudit.hidden-{hidden_count} line in the read-audit chain"
     )
 
 
