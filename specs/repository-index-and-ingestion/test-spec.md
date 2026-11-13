@@ -150,3 +150,9 @@ Advance inventory before indexing completes. Both changed and unchanged symbol q
 Test same-content renames with unchanged grammar suffix and parser/identity scheme: retain symbol IDs while updating file-version and membership. Change the grammar suffix and require reparse; allow changed symbol IDs. Also reparse after parser/identity scheme changes. Independently read current spans, revisions and generation in each case.
 
 - **MEDULLA-REPO-INGEST-R002.1.6:** `crates/medulla-h-ingest/tests/admit_kind.rs::skill_document_is_admitted_and_other_kinds_stay_refused` (planned). Proves the row at its entry point; no receipt is asserted.
+
+## Explicit state machine rows (Article XXXI)
+
+- `MEDULLA-REPO-INGEST-R802`: see each child (rollup).
+- `MEDULLA-REPO-INGEST-R802.1`: `crates/medulla-types/src/index_file_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/index_file_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/index_file_machine.rs::tests::no_writer_sets_status_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::index_file_machine_matches_edge_table` (planned, L1): proves: IndexFileOutcome/IndexFileStatus state machine: route 2 census findings through IndexFileStatus::apply.
+- `MEDULLA-REPO-INGEST-R802.2`: `crates/medulla-types/src/index_ref_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/index_ref_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/index_ref_machine.rs::tests::no_writer_sets_status_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::index_ref_machine_matches_edge_table` (planned, L1): proves: IndexRef/IndexRefStatus state machine: route 1 census findings through IndexRefStatus::apply.

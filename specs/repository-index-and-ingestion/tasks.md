@@ -93,3 +93,6 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T086 [US2] MEDULLA-REPO-INGEST-R700.5 Evidence
 - [ ] T087 [US2] MEDULLA-REPO-INGEST-R700.6 Hot-path proof
 - [ ] T088 [US1] MEDULLA-REPO-INGEST-R801 Ecosystem packages and architecture layers become typed nodes
+- [ ] T90 [US1] MEDULLA-REPO-INGEST-R802 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T91 [US1] MEDULLA-REPO-INGEST-R802.1 IndexFileOutcome/IndexFileStatus state machine: route 2 census findings through IndexFileStatus::apply
+- [ ] T92 [US1] MEDULLA-REPO-INGEST-R802.2 IndexRef/IndexRefStatus state machine: route 1 census findings through IndexRefStatus::apply
