@@ -15,7 +15,7 @@ use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext, TopologyExecuted};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_topology::question_of;
 
 use super::DecisionFamily;
@@ -23,7 +23,7 @@ use super::DecisionFamily;
 /// The family of the `topology` question kind.
 pub struct TopologyFamily;
 
-fn executed(outcome: StatisticalOutcome, topology: Option<TopologyExecuted>) -> Executed {
+fn executed(outcome: StatisticalOutcome, family: Option<FamilyExecuted>) -> Executed {
     Executed {
         matrix: None,
         ladder: LadderResult {
@@ -36,12 +36,9 @@ fn executed(outcome: StatisticalOutcome, topology: Option<TopologyExecuted>) -> 
         reading: None,
         seed: [0u8; 32],
         harness_contrast: None,
-        topology,
-        context_selection: None,
-        thought: None,
+        family,
         family_premises: Vec::new(),
         route: None,
-        answered: None,
     }
 }
 
@@ -77,7 +74,16 @@ fn conclude_topology(
                 scores: BoundedVec::default(),
                 calibrated: false,
             },
-            Some(TopologyExecuted { plan, premises }),
+            Some(FamilyExecuted {
+                answer: Some(
+                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::Topology(
+                        plan,
+                    ),
+                ),
+                premises,
+                resolution: None,
+                evidence: None,
+            }),
         ),
         TopologyConclusion::Abstained(mut reasons) => {
             reasons.truncate(64);

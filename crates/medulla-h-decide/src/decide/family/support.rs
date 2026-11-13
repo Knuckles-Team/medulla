@@ -107,12 +107,9 @@ pub(in crate::decide) fn advisory(ids: Vec<String>) -> Result<Executed, String> 
         reading: None,
         seed: [0u8; 32],
         harness_contrast: None,
-        topology: None,
-        thought: None,
+        family: None,
         family_premises: Vec::new(),
-        context_selection: None,
         route: None,
-        answered: None,
     })
 }
 
@@ -138,12 +135,9 @@ pub(super) fn abstained(
         reading: None,
         seed: [0u8; 32],
         harness_contrast: None,
-        topology: None,
-        thought: None,
+        family: None,
         family_premises: Vec::new(),
-        context_selection: None,
         route: None,
-        answered: None,
     }
 }
 

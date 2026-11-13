@@ -33,7 +33,7 @@ impl DecisionFamily for ThoughtSearchFamily {
     ) -> Option<Result<Executed, String>> {
         Some(
             crate::decide::stat_thought_search::conclude(request, policy).map(
-                |(outcome, thought)| Executed {
+                |(outcome, family)| Executed {
                     matrix: None,
                     ladder: LadderResult {
                         outcome,
@@ -45,12 +45,9 @@ impl DecisionFamily for ThoughtSearchFamily {
                     reading: None,
                     seed: [0u8; 32],
                     harness_contrast: None,
-                    topology: None,
-                    context_selection: None,
-                    thought,
+                    family,
                     family_premises: Vec::new(),
                     route: None,
-                    answered: None,
                 },
             ),
         )

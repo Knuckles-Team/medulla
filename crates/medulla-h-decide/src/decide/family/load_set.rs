@@ -34,7 +34,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, TenantId};
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
-use crate::decide::stat_executor::{AnsweredFamily, Executed, ExecutionContext};
+use crate::decide::stat_executor::{FamilyExecuted, Executed, ExecutionContext};
 use crate::decide::stat_load_set::question_of;
 use crate::decide::stat_support::invalid_parameter;
 
@@ -377,7 +377,7 @@ pub(crate) fn load_set_outcome(
             scores: BoundedVec::new(scores).map_err(|detail| invalid_parameter(detail))?,
             calibrated: false,
         },
-        Some(AnsweredFamily {
+        Some(FamilyExecuted {
             answer: Some(FamilyAnswer::LoadSet(Box::new(answer))),
             premises,
             resolution: None,

@@ -24,7 +24,7 @@ use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseR
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 
-use crate::decide::stat_executor::{Executed, Pinned};
+use crate::decide::stat_executor::{Executed, FamilyExecuted, Pinned};
 use crate::decide::stat_support::refusal;
 
 use super::DecisionFamily;
@@ -213,25 +213,18 @@ impl DecisionFamily for ContextBudgetFamily {
         executed.ladder.calibration = None;
         executed.ladder.audit = None;
         executed.ladder.logging = Vec::new();
-        executed.context_selection = Some(ContextSourceSelection {
+        let selection = ContextSourceSelection {
             partition: result,
             policy_digest: policy_digest.to_string(),
             source_digest: digest_text(SNAPSHOT_DOMAIN, &sources),
+        };
+        executed.family = Some(FamilyExecuted {
+            answer: None,
+            premises: premises(&selection),
+            resolution: None,
+            evidence: None,
         });
         Ok(executed)
-    }
-
-    fn premises(
-        &self,
-        _request: &DecideRequest,
-        executed: &Executed,
-        _policy_digest: &str,
-    ) -> Vec<PremiseRef> {
-        executed
-            .context_selection
-            .as_ref()
-            .map(premises)
-            .unwrap_or_default()
     }
 }
 

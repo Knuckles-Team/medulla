@@ -21,7 +21,7 @@ use medulla_decision_types::decision::{
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
 
-use super::stat_executor::ThoughtExecuted;
+use super::stat_executor::FamilyExecuted;
 use super::stat_support::{invalid_parameter, refusal};
 
 const STATE_PARAM: &str = "thought_search";
@@ -187,7 +187,7 @@ fn premises(
 pub(super) fn conclude(
     request: &DecideRequest,
     policy: &DecisionPolicy,
-) -> Result<(StatisticalOutcome, Option<ThoughtExecuted>), String> {
+) -> Result<(StatisticalOutcome, Option<FamilyExecuted>), String> {
     let parsed = parse(request)?;
     let strategy = *policy.reasoning.get(parsed.task_class).ok_or_else(|| {
         refusal(
@@ -247,5 +247,17 @@ pub(super) fn conclude(
     };
     let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
     let premises = premises(&parsed, strategy, &policy_digest, &answer);
-    Ok((outcome, Some(ThoughtExecuted { answer, premises })))
+    Ok((
+        outcome,
+        Some(FamilyExecuted {
+            answer: Some(
+                medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ThoughtSearch(
+                    Box::new(answer),
+                ),
+            ),
+            premises,
+            resolution: None,
+            evidence: None,
+        }),
+    ))
 }

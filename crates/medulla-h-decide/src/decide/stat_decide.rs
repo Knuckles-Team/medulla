@@ -15,6 +15,7 @@ use tracing::Instrument;
 
 use medulla_decision_types::decision::digest::statistical_record_digest;
 use medulla_decision_types::decision::statistical::keyed::seed_commitment;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
 };
@@ -837,20 +838,14 @@ fn seal(
     if let Some(plan) = &comparative {
         premise_list.extend(super::family::comparative_analysis::premises(plan));
     }
-    if let Some(topology) = &executed.topology {
-        premise_list.extend(topology.premises.iter().cloned());
-    }
-    if let Some(thought) = &executed.thought {
-        premise_list.extend(thought.premises.iter().cloned());
+    if let Some(family) = &executed.family {
+        premise_list.extend(family.premises.iter().cloned());
     }
     premise_list.extend(sealing.registry.premises(
         sealing.request,
         executed,
         &sealing.policy.digest,
     ));
-    if let Some(answered) = &executed.answered {
-        premise_list.extend(answered.premises.iter().cloned());
-    }
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
         .pinned
@@ -869,11 +864,17 @@ fn seal(
         inputs_digest,
         resolution_kind: if task_plan.is_some() {
             ResolutionKind::Constraint
-        } else if executed.topology.is_some() {
+        } else if executed.family.as_ref().is_some_and(|family| {
+            family
+                .answer
+                .as_ref()
+                .and_then(FamilyAnswer::topology_plan)
+                .is_some()
+        }) {
             ResolutionKind::Optimization
         } else if let Some(route) = &executed.route {
             route.resolution
-        } else if let Some(sealed) = executed.answered.as_ref().and_then(|a| a.resolution) {
+        } else if let Some(sealed) = executed.family.as_ref().and_then(|a| a.resolution) {
             sealed
         } else {
             sealing
@@ -881,10 +882,10 @@ fn seal(
                 .resolution_kind(&outcome)
                 .unwrap_or_else(|| resolution(&outcome))
         },
-        evidence_class: if let Some(sealed) = executed.answered.as_ref().and_then(|a| a.evidence) {
+        evidence_class: if let Some(sealed) = executed.family.as_ref().and_then(|a| a.evidence) {
             sealed
         } else if executed
-            .answered
+            .family
             .as_ref()
             .is_some_and(|d| d.premises.iter().any(|p| p.class == PremiseClass::Claim))
         {
@@ -901,41 +902,15 @@ fn seal(
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
         outcome,
         answer: task_plan
-            .map(|plan| {
-                medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
-                    Box::new(plan),
-                )
-            })
-            .or_else(|| {
-                comparative.map(|plan| {
-                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ComparativeAnalysis(
-                        Box::new(plan),
-                    )
-                })
-            })
-            .or_else(|| {
-                skill_upgrade_receipt(sealing.request, &executed.ladder.outcome)
-            })
+            .map(|plan| FamilyAnswer::TaskPlan(Box::new(plan)))
+            .or_else(|| skill_upgrade_receipt(sealing.request, &executed.ladder.outcome))
             .or_else(|| planning_admission_answer(sealing.request, &executed.ladder.outcome))
-            .or_else(|| {
-                executed.thought.as_ref().map(|thought| {
-                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ThoughtSearch(
-                        Box::new(thought.answer.clone()),
-                    )
-                })
-            })
+            .or_else(|| comparative.map(|plan| FamilyAnswer::ComparativeAnalysis(Box::new(plan))))
             .or_else(|| {
                 executed
-                    .answered
+                    .family
                     .as_ref()
-                    .and_then(|answered| answered.answer.clone())
-            })
-            .or_else(|| {
-                executed.topology.as_ref().map(|topology| {
-                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::Topology(
-                        topology.plan.clone(),
-                    )
-                })
+                    .and_then(|family| family.answer.clone())
             }),
         calibration: executed.ladder.calibration,
         explanation: recorded_explanation(sealing.pinned, executed)?,

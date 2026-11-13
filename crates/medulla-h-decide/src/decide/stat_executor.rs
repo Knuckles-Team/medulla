@@ -77,19 +77,6 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R803); `None` for every other kind.
     pub(super) harness_contrast:
         Option<medulla_decision_types::decision::harness_contrast::HarnessContrastDecision>,
-    /// The proven plan and premises a `Topology` question sealed
-    /// (MEDULLA-DECISION-ENGINE-R111.1); `None` for every other kind and for
-    /// a topology abstention.
-    pub(super) topology: Option<TopologyExecuted>,
-    /// The expansion choice or stop a `ThoughtSearch` question sealed
-    /// (MEDULLA-DECISION-ENGINE-R750.754); `None` for every other kind and
-    /// for a thought-search abstention.
-    pub(super) thought: Option<ThoughtExecuted>,
-    /// The selected and omitted context sources a `ContextBudget` question
-    /// sealed (MEDULLA-DECISION-ENGINE-R029.2.2); `None` for every other kind
-    /// and when the head did not read.
-    pub(super) context_selection:
-        Option<medulla_decision_outcome_types::decision::context_budget::ContextSourceSelection>,
     /// The premises a family computed while it concluded, where a family's
     /// premises need what only the conclude stage reads (a profile lookup, the
     /// pinned policy's knobs); the family's `premises` hook seals them.
@@ -98,10 +85,31 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R035.750.1); `None` for every other kind and
     /// when the shared ladder (the learned policy) answered.
     pub(super) route: Option<RouteExecuted>,
-    /// The typed answer and premises a `CapabilityDesignation`, `LoadSet` or `UsageGuidance`
-    /// question sealed (MEDULLA-DECISION-ENGINE-R172.7, R176.3, R177.4); `None` for
-    /// every other kind and for an abstention.
-    pub(super) answered: Option<AnsweredFamily>,
+    /// The typed answer and the premises a family sealed beyond the shared
+    /// outcome: the proven plan of a `Topology` question
+    /// (MEDULLA-DECISION-ENGINE-R111.1), the expansion choice or stop of a
+    /// `ThoughtSearch` question (MEDULLA-DECISION-ENGINE-R750.754) and the
+    /// claims a `ContextBudget` partition sealed
+    /// (MEDULLA-DECISION-ENGINE-R029.2.2), and the answer a `CapabilityDesignation`,
+    /// `LoadSet` or `UsageGuidance` question sealed (MEDULLA-DECISION-ENGINE-R172.7,
+    /// R176.3, R177.4); `None` for every other kind and for
+    /// a family abstention. A family carries its answer in `FamilyAnswer`,
+    /// never in a field of its own here.
+    pub(super) family: Option<FamilyExecuted>,
+}
+
+/// A family's typed answer with the premises it rests on.
+pub(super) struct FamilyExecuted {
+    /// The typed answer sealed in the record; `None` where the family's answer
+    /// is its outcome alone and only its premises are sealed in full.
+    pub(super) answer: Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer>,
+    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
+    /// The resolution kind the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the family hook's.
+    pub(super) resolution: Option<medulla_decision_types::decision::ResolutionKind>,
+    /// The evidence class the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the claim rule of the record stage.
+    pub(super) evidence: Option<medulla_decision_types::decision::EvidenceClass>,
 }
 
 /// Where a premise a family computed at conclude time came from; a policy
@@ -170,30 +178,6 @@ pub(super) struct RouteExecuted {
     /// The matched earlier decisions that ran the chosen option, when the
     /// stage reads history (team reuse); empty otherwise.
     pub(super) matched_records: Vec<String>,
-}
-
-/// A family answer with the premises it rests on.
-pub(super) struct AnsweredFamily {
-    pub(super) answer: Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer>,
-    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
-    /// The resolution kind the family seals its answer with, when the answer
-    /// itself decides it; `None` keeps the family hook's.
-    pub(super) resolution: Option<medulla_decision_types::decision::ResolutionKind>,
-    /// The evidence class the family seals its answer with, when the answer
-    /// itself decides it; `None` keeps the claim rule of the record stage.
-    pub(super) evidence: Option<medulla_decision_types::decision::EvidenceClass>,
-}
-
-/// A thought-search answer with the premises it rests on.
-pub(super) struct ThoughtExecuted {
-    pub(super) answer: medulla_decision_types::decision::thought_search::ThoughtSearchAnswer,
-    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
-}
-
-/// A topology plan with the premises it rests on.
-pub(super) struct TopologyExecuted {
-    pub(super) plan: Box<medulla_agent_types::agent_topology::TopologyPlan>,
-    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
 }
 
 /// Read and validate the feature schema and head a decision pins.
@@ -321,12 +305,9 @@ pub(super) fn run_on_matrix(
                 reading: None,
                 seed,
                 harness_contrast: None,
-                topology: None,
-                context_selection: None,
-                thought: None,
+                family: None,
                 family_premises: Vec::new(),
                 route: None,
-                answered: None,
             });
         }
         Some(Ok(evaluated)) => Some(evaluated),
@@ -348,12 +329,9 @@ pub(super) fn run_on_matrix(
         reading,
         seed,
         harness_contrast: None,
-        topology: None,
-        context_selection: None,
-        thought: None,
+        family: None,
         family_premises: Vec::new(),
         route: None,
-        answered: None,
     })
 }
 
@@ -385,12 +363,9 @@ pub(super) fn execute(
                 reading: None,
                 seed: [0u8; 32],
                 harness_contrast: None,
-                topology: None,
-                context_selection: None,
-                thought: None,
+                family: None,
                 family_premises: Vec::new(),
                 route: None,
-                answered: None,
             });
         }
     };

@@ -42,7 +42,7 @@ use medulla_types::contract::{BoundedVec, OpaqueId, ResourceId};
 use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_designation::{coded, question_of, DesignationRuntime};
-use crate::decide::stat_executor::{AnsweredFamily, Executed, ExecutionContext};
+use crate::decide::stat_executor::{FamilyExecuted, Executed, ExecutionContext};
 use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;
@@ -54,7 +54,7 @@ pub use medulla_decision_types::decision::capability_designation::REFUSALS;
 /// The family of the `capability_designation` question kind.
 pub struct CapabilityDesignationFamily;
 
-pub(super) fn executed(outcome: StatisticalOutcome, answered: Option<AnsweredFamily>) -> Executed {
+pub(super) fn executed(outcome: StatisticalOutcome, answered: Option<FamilyExecuted>) -> Executed {
     Executed {
         matrix: None,
         ladder: LadderResult {
@@ -67,12 +67,10 @@ pub(super) fn executed(outcome: StatisticalOutcome, answered: Option<AnsweredFam
         reading: None,
         seed: [0u8; 32],
         harness_contrast: None,
-        topology: None,
-        thought: None,
-        context_selection: None,
+        family: None,
         family_premises: Vec::new(),
         route: None,
-        answered,
+        family: answered,
     }
 }
 
@@ -690,7 +688,7 @@ pub(crate) fn capability_designation_outcome(
             scores: BoundedVec::new(scores).map_err(|detail| invalid_parameter(detail))?,
             calibrated: false,
         },
-        Some(AnsweredFamily {
+        Some(FamilyExecuted {
             answer: Some(FamilyAnswer::CapabilityDesignation(Box::new(answer))),
             premises,
             resolution: None,
