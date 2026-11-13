@@ -271,3 +271,26 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T262 MEDULLA-DURABLE-KERNEL-R873 Lazy paging proves forward progress
 - [ ] T263 MEDULLA-DURABLE-KERNEL-R873.1 A progress guard in `page_in_remaining`. Files: `crates/medulla-persistence/src/cold_offload.rs`. Test: `crates/medulla-persistence/src/cold_offload.rs::tests::frozen_cursor_ends_with_no_progress_and_marks_manifest_failed`.
 - [ ] T264 MEDULLA-DURABLE-KERNEL-R873.2 Paging resumes by seek, not by skip. Files: `crates/medulla-store-apply/src/redb_store/dump.rs`. Test: `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length`.
+- [ ] T265 MEDULLA-DURABLE-KERNEL-R874 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T266 MEDULLA-PLACEMENT-R782.1 CapacityLease/CapacityLeaseState state machine: route 3 census findings through CapacityLeaseState::apply
+- [ ] T267 MEDULLA-DURABLE-KERNEL-R874.1 CertificationFaultSpec/MutationCommitPhase state machine: route 1 census findings through MutationCommitPhase::apply
+- [ ] T268 MEDULLA-DURABLE-KERNEL-R874.2 CommitDescriptor/CommitStatus state machine: route 6 census findings through CommitStatus::apply
+- [ ] T269 MEDULLA-DURABLE-KERNEL-R874.3 CommitPhaseTimer/CommitPhase state machine: route 1 census findings through CommitPhase::apply
+- [ ] T270 MEDULLA-DURABLE-KERNEL-R874.4 DirectStateInstallJournal/DirectStateInstallPhase state machine: route 1 census findings through DirectStateInstallPhase::apply
+- [ ] T271 MEDULLA-DURABLE-KERNEL-R874.5 EmbeddingBinding/BindingState state machine: route 1 census findings through BindingState::apply
+- [ ] T272 MEDULLA-DURABLE-KERNEL-R874.6 ExactRetirement/ExactRetirementPhase state machine: route 1 census findings through ExactRetirementPhase::apply
+- [ ] T273 MEDULLA-IDENTITY-R720.1 GovernedChange/GovernedChangeState state machine: route 5 census findings through GovernedStatus::apply
+- [ ] T274 MEDULLA-DURABLE-KERNEL-R874.7 GraphWriter/CoalescerState state machine: route 2 census findings through CoalescerState::apply
+- [ ] T275 MEDULLA-DURABLE-KERNEL-R874.8 JournalEntry/JournalState state machine: route 1 census findings through JournalState::apply
+- [ ] T276 MEDULLA-DURABLE-KERNEL-R874.9 ManagedIndexStatus/ManagedIndexState state machine: route 2 census findings through ManagedIndexState::apply
+- [ ] T277 MEDULLA-DURABLE-KERNEL-R874.10 MutationBatchRecord/MutationBatchStatus state machine: route 1 census findings through MutationBatchStatus::apply
+- [ ] T278 MEDULLA-DURABLE-KERNEL-R874.11 MutationOutboxStatusView/OutboxConsumerStatus state machine: route 7 census findings through OutboxConsumerStatus::apply
+- [ ] T279 MEDULLA-DURABLE-KERNEL-R874.12 OperationAuditEvent/AuditStatus state machine: route 1 census findings through AuditStatus::apply
+- [ ] T280 MEDULLA-DURABLE-KERNEL-R874.13 OutboxRecord/OutboxDeliveryState state machine: route 8 census findings through OutboxDeliveryState::apply
+- [ ] T281 MEDULLA-DURABLE-KERNEL-R874.14 ParentTransactionRecord/ParentTransactionState state machine: route 4 census findings through ParentTransactionState::apply
+- [ ] T282 MEDULLA-DURABLE-KERNEL-R874.15 ParticipantTransactionRecord/ParticipantTransactionState state machine: route 4 census findings through ParticipantTransactionState::apply
+- [ ] T283 MEDULLA-DURABLE-KERNEL-R874.16 ProjectionCursor/ProjectionState state machine: route 4 census findings through ProjectionState::apply
+- [ ] T284 MEDULLA-DURABLE-KERNEL-R874.17 SemanticSourceReconciliationCheckpoint/SemanticSourceReconciliationPhase state machine: route 1 census findings through SemanticSourceReconciliationPhase::apply
+- [ ] T285 MEDULLA-DURABLE-KERNEL-R874.18 SemanticStageIntent/SemanticStage state machine: route 4 census findings through SemanticStage::apply
+- [ ] T286 MEDULLA-DURABLE-KERNEL-R874.19 StoreReport/StoreStatus state machine: route 1 census findings through StoreStatus::apply
+- [ ] T287 MEDULLA-DURABLE-KERNEL-R874.20 TransactionPhaseSubmission/TransactionConsensusPhase state machine: route 1 census findings through TransactionConsensusPhase::apply
