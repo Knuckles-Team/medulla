@@ -16,6 +16,7 @@ use medulla_persistence_records::decision_record::tests::{
 };
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_raft_xshard::cross_shard_txn::certificate::{request_digest, OwnerDecision};
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::reservation_machine::{ReservationEvent, ReservationState};
@@ -376,7 +377,7 @@ struct TopologyWorld {
     _dir: tempfile::TempDir,
     backend: Arc<RedbBackend>,
     state: crate::decide::SharedState,
-    store: medulla_persistence_records::agent_library::AgentLibraryStore,
+    store: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
     assembly: medulla_compute::assemble::Assembly,
 }
 
