@@ -275,7 +275,7 @@ def test_quota_and_trace_end_to_end(authenticated_plan_client):
         committed = _commit(
             client, item, claim, run_id, trace_id, claim["fencing_token"]
         )
-        assert committed["status"] == "succeeded", committed
+        assert committed["outcome"] == "succeeded", committed
         traces = _traces(client)
         assert list(traces) == [trace_id]
         assert traces[trace_id]["node_type"] == "RunTrace"
@@ -297,7 +297,7 @@ def test_quota_and_trace_end_to_end(authenticated_plan_client):
             stale_trace,
             stale_claim["fencing_token"] + 1,
         )
-        assert stale["status"] == "fenced", stale
+        assert stale["outcome"] == "fenced", stale
         assert list(_traces(client)) == [trace_id]
         assert stale_trace not in client._send("GetNeighbors", {"node_id": stale_item})
     finally:

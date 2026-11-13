@@ -33,21 +33,21 @@ pub struct CancelWorkItemInput<'args, 'table, 'crypto> {
 fn cancel_status_refusal(
     props: &serde_json::Map<String, serde_json::Value>,
     now_s: f64,
-) -> Option<medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus> {
+) -> Option<medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome> {
     if super::machine::is_terminal_row(props) {
         return Some(
-            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Noop,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::Noop,
         );
     }
     if super::machine::holds_lease_row(props) && property_f64(props, "lease_expires_at") >= now_s {
         return Some(
-            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::InFlight,
         );
     }
     // Every known live state is cancellable; only an unknown stored text is not.
     if super::machine::stored_status(props).is_err() {
         return Some(
-            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::NotCancellable,
         );
     }
     None
@@ -176,7 +176,7 @@ pub fn apply_cancel_work_item_row(
     let Some(mut props) = super::control_lease::load_row(nodes, graph, work_item_id, crypto)?
     else {
         return cancel_transition_result(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::Missing,
             None,
         ))
         .map(Some);
@@ -184,7 +184,7 @@ pub fn apply_cancel_work_item_row(
     let pre_props = props.clone();
     if property_string(&props, "tenant") != tenant {
         return cancel_transition_result(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::Missing,
             None,
         ))
         .map(Some);
@@ -192,13 +192,13 @@ pub fn apply_cancel_work_item_row(
     let now_s = now_ms as f64 / 1000.0;
     if let Some(status) = cancel_status_refusal(&props, now_s) {
         if status
-            == medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight
+            == medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::InFlight
             && stamp_cancel_request(&mut props, now_ms)?
         {
             write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
             return cancel_transition_result(
                 medulla_protocol_types::result_contract::coordination::WorkItemTransition {
-                    status,
+                    outcome: status,
                     work_item_id: Some(work_item_id.to_string()),
                     lease_epoch: None,
                     fencing_token: None,
@@ -232,7 +232,7 @@ pub fn apply_cancel_work_item_row(
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
     cancel_transition_result(
         medulla_protocol_types::result_contract::coordination::WorkItemTransition {
-            status: medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Cancelled,
+            outcome: medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::Cancelled,
             work_item_id: Some(work_item_id.to_string()),
             lease_epoch: Some(next_epoch),
             fencing_token: Some(next_fencing_token),
@@ -460,7 +460,7 @@ mod tests {
         props.insert("lease_expires_at".into(), 100.0.into());
         assert_eq!(
             cancel_status_refusal(&props, 50.0),
-            Some(medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight)
+            Some(medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::InFlight)
         );
         assert!(!cancel_requested(&props));
         assert!(stamp_cancel_request(&mut props, 50_000).unwrap());

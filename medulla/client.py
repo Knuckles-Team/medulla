@@ -4259,7 +4259,7 @@ class WorkItemClient:
     ) -> dict[str, Any]:
         """Cancel a submitted/ready item without acquiring a synthetic lease.
 
-        An active lease is preserved and returns ``status="in_flight"``. Only
+        An active lease is preserved and returns ``outcome="in_flight"``. Only
         an opaque ``reason_ref`` is transmitted; free-form reason bodies are not
         retained by the engine.
         """

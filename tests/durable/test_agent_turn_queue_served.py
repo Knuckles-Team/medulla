@@ -108,7 +108,7 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
         idempotency_key=stem + ":cancel-2",
         now_ms=now,
     )
-    assert again["status"] == "noop"
+    assert again["outcome"] == "noop"
     assert (
         client.work_items.get(tenant=TEST_TENANT, work_item_id=first["work_item_id"])
         == terminal
@@ -165,7 +165,7 @@ def test_cancel_reaches_leased_worker_on_renew(queue_client):
         idempotency_key=stem + ":cancel",
         now_ms=now + 1,
     )
-    assert cancelled["status"] == "in_flight"
+    assert cancelled["outcome"] == "in_flight"
 
     # The leased worker observes the cancel on its next renewal.
     renewed = client.work_items.renew(

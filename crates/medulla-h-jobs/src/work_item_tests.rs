@@ -454,7 +454,7 @@ async fn terminal_commit_with_run_trace_receipt() {
         )
         .await,
     );
-    assert_eq!(committed["status"], "succeeded", "{committed}");
+    assert_eq!(committed["outcome"], "succeeded", "{committed}");
     let (node, links) = trace_and_links(&state, 7).await;
     assert_eq!(node["run_trace"]["run_id"], "run:terminal");
     assert_eq!(node["run_trace"]["steps"][0]["action_ref"], "tool:fixture");
@@ -553,7 +553,7 @@ async fn cyclic_trace_refuses_without_state_change() {
         )
         .await,
     );
-    assert_eq!(committed["status"], "succeeded", "{committed}");
+    assert_eq!(committed["outcome"], "succeeded", "{committed}");
 }
 
 /// A nested trace of four nodes (root -> a -> c, root -> b) of mixed kinds.
@@ -624,7 +624,7 @@ async fn commit_nested_trace(state: &Arc<RwLock<ServerState>>, tag: &str) {
         )
         .await,
     );
-    assert_eq!(committed["status"], "succeeded", "{committed}");
+    assert_eq!(committed["outcome"], "succeeded", "{committed}");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R133.7.3

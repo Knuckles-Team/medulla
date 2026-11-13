@@ -4888,7 +4888,7 @@ fn cancel_work_item_marks_ready_item_cancelled_and_replay_is_a_noop() {
         medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
         other => panic!("CancelWorkItem must return a JSON result, got {other:?}"),
     };
-    assert_eq!(value["status"], "cancelled");
+    assert_eq!(value["outcome"], "cancelled");
 
     let row = read_one_node(&db, "graph-a", "work-cancel", DurableCrypto::none())
         .unwrap()
@@ -4933,7 +4933,7 @@ fn cancel_work_item_marks_ready_item_cancelled_and_replay_is_a_noop() {
         medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
         other => panic!("CancelWorkItem must return a JSON result, got {other:?}"),
     };
-    assert_eq!(value["status"], "noop");
+    assert_eq!(value["outcome"], "noop");
 
     drop(db);
     let _ = std::fs::remove_file(path);
@@ -5499,7 +5499,7 @@ fn terminal_extension_negative_results_have_no_receipt_rows_or_run_event() {
             medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("terminal result must be JSON, got {other:?}"),
         };
-        assert_eq!(result["status"], outcome_case);
+        assert_eq!(result["outcome"], outcome_case);
         assert!(
             read_one_node(&db, "graph-a", "trace:terminal", DurableCrypto::none())
                 .unwrap()

@@ -431,7 +431,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
         let medulla_protocol_types::protocol::ResultPayload::Json(refusal) = response else {
             panic!("expected a typed commit refusal");
         };
-        assert_eq!(refusal["status"], "fenced", "{tag} must be fenced");
+        assert_eq!(refusal["outcome"], "fenced", "{tag} must be fenced");
         assert_eq!(row(&shard), before, "{tag} must not alter terminal binding");
     }
     apply(
@@ -676,7 +676,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         );
         let refusal: serde_json::Value =
             decode_result(stale.record.result_msgpack.as_ref().unwrap());
-        assert_eq!(refusal["status"], "fenced");
+        assert_eq!(refusal["outcome"], "fenced");
         assert_eq!(row(&shard, &id), before);
         assert!(events(&shard).is_empty());
         assert_eq!(counters(&shard), counters_before);
@@ -730,7 +730,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             ),
         );
         let result: serde_json::Value = decode_result(noop.record.result_msgpack.as_ref().unwrap());
-        assert_eq!(result["status"], "noop");
+        assert_eq!(result["outcome"], "noop");
         assert_eq!(events(&shard), evidence);
         assert_eq!(row(&shard, &id), finished);
         assert_eq!(counters(&shard), counters_finished);

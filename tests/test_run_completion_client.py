@@ -31,7 +31,7 @@ pytestmark = pytest.mark.no_engine
     ],
 )
 def test_public_commit_preserves_optional_completion(completion):
-    transport = CapturingEngine({"status": "failed"})
+    transport = CapturingEngine({"outcome": "failed"})
     client = WorkItemClient(cast(MedullaClient, transport))
     result = asyncio.run(
         client.commit_result(
@@ -46,7 +46,7 @@ def test_public_commit_preserves_optional_completion(completion):
             run_completion=completion,
         )
     )
-    assert result == {"status": "failed"}
+    assert result == {"outcome": "failed"}
     assert len(transport.sent) == 1
     method, raw_params = transport.sent[0]
     params = cast(dict[str, object], raw_params)

@@ -139,12 +139,12 @@ fn lease_renewal_refused(
 }
 
 /// A WorkItem transition that changed no row.
-pub fn unchanged_transition<Status>(
-    status: Status,
+pub fn unchanged_transition<Outcome>(
+    outcome: Outcome,
     work_item_id: Option<&str>,
-) -> medulla_protocol_types::result_contract::coordination::WorkItemTransition<Status> {
+) -> medulla_protocol_types::result_contract::coordination::WorkItemTransition<Outcome> {
     medulla_protocol_types::result_contract::coordination::WorkItemTransition {
-        status,
+        outcome,
         work_item_id: work_item_id.map(str::to_string),
         lease_epoch: None,
         fencing_token: None,
@@ -154,7 +154,7 @@ pub fn unchanged_transition<Status>(
 
 pub fn commit_transition_result(
     transition: medulla_protocol_types::result_contract::coordination::WorkItemTransition<
-        medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus,
+        medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome,
     >,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     medulla_protocol_types::protocol::ResultPayload::of::<
@@ -164,7 +164,7 @@ pub fn commit_transition_result(
 
 pub fn cancel_transition_result(
     transition: medulla_protocol_types::result_contract::coordination::WorkItemTransition<
-        medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus,
+        medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome,
     >,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     medulla_protocol_types::protocol::ResultPayload::of::<
@@ -175,20 +175,20 @@ pub fn cancel_transition_result(
 /// The declared status of an applied commit.
 pub fn declared_commit_status(
     status: &str,
-) -> Result<medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus, String> {
+) -> Result<medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome, String> {
     match status {
         "succeeded" => {
-            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Succeeded)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Succeeded)
         }
-        "failed" => Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Failed),
+        "failed" => Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Failed),
         "cancelled" => {
-            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Cancelled)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Cancelled)
         }
         "dead_letter" => {
-            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::DeadLetter)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::DeadLetter)
         }
         "retry_scheduled" => {
-            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::RetryScheduled)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::RetryScheduled)
         }
         other => Err(format!(
             "CommitWorkItemResult produced an undeclared status '{other}'"

@@ -37,11 +37,12 @@ pub struct WorkItemLeaseRenewal {
     pub changed_work_item_ids: Vec<String>,
 }
 
-/// The status a `CommitWorkItemResult` answers with.
+/// The outcome a `CommitWorkItemResult` answers with: a reply to one call,
+/// not a lifecycle (the WorkItem's own lifecycle is `WorkItemStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum WorkItemCommitStatus {
+pub enum WorkItemCommitOutcome {
     /// No WorkItem with this id is visible to the tenant.
     Missing,
     /// The WorkItem was already terminal; nothing changed.
@@ -57,11 +58,12 @@ pub enum WorkItemCommitStatus {
     RetryScheduled,
 }
 
-/// The status a `CancelWorkItem` answers with.
+/// The outcome a `CancelWorkItem` answers with: a reply to one call, not a
+/// lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum WorkItemCancelStatus {
+pub enum WorkItemCancelOutcome {
     /// No WorkItem with this id is visible to the tenant.
     Missing,
     /// The WorkItem was already terminal; nothing changed.
@@ -84,10 +86,10 @@ pub enum WorkItemCancelStatus {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[cfg_attr(
     feature = "contract-schema",
-    schemars(rename = "WorkItemTransition_{Status}")
+    schemars(rename = "WorkItemTransition_{Outcome}")
 )]
-pub struct WorkItemTransition<Status> {
-    pub status: Status,
+pub struct WorkItemTransition<Outcome> {
+    pub outcome: Outcome,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub work_item_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -128,4 +130,66 @@ pub struct WorkItemDeferral {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub defer_count: Option<u64>,
     pub changed_work_item_ids: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R875.2
+    /// Verifies MEDULLA-DURABLE-KERNEL-R875.2: the commit and cancel replies carry
+    /// their per-call answer under `outcome`, keep their wire words, and no
+    /// longer answer under the lifecycle key `status`.
+    #[test]
+    fn work_item_reply_outcomes_are_not_lifecycle_fields() {
+        let commit_words = [
+            (WorkItemCommitOutcome::Missing, "missing"),
+            (WorkItemCommitOutcome::Noop, "noop"),
+            (WorkItemCommitOutcome::Fenced, "fenced"),
+            (WorkItemCommitOutcome::Succeeded, "succeeded"),
+            (WorkItemCommitOutcome::Failed, "failed"),
+            (WorkItemCommitOutcome::Cancelled, "cancelled"),
+            (WorkItemCommitOutcome::DeadLetter, "dead_letter"),
+            (WorkItemCommitOutcome::RetryScheduled, "retry_scheduled"),
+        ];
+        for (outcome, word) in commit_words {
+            let reply = WorkItemTransition {
+                outcome,
+                work_item_id: Some("wi-1".to_string()),
+                lease_epoch: None,
+                fencing_token: None,
+                changed_work_item_ids: Vec::new(),
+            };
+            let wire = serde_json::to_value(&reply).unwrap();
+            assert_eq!(wire["outcome"], word);
+            assert!(wire.get("status").is_none(), "{wire}");
+            let back: WorkItemTransition<WorkItemCommitOutcome> =
+                serde_json::from_value(wire).unwrap();
+            assert_eq!(back, reply);
+        }
+        let cancel_words = [
+            (WorkItemCancelOutcome::Missing, "missing"),
+            (WorkItemCancelOutcome::Noop, "noop"),
+            (WorkItemCancelOutcome::InFlight, "in_flight"),
+            (WorkItemCancelOutcome::NotCancellable, "not_cancellable"),
+            (WorkItemCancelOutcome::Cancelled, "cancelled"),
+        ];
+        for (outcome, word) in cancel_words {
+            let reply = WorkItemTransition {
+                outcome,
+                work_item_id: None,
+                lease_epoch: None,
+                fencing_token: None,
+                changed_work_item_ids: Vec::new(),
+            };
+            let wire = serde_json::to_value(&reply).unwrap();
+            assert_eq!(wire["outcome"], word);
+            assert!(wire.get("status").is_none(), "{wire}");
+        }
+
+        // The old lifecycle key is gone: a reply that names `status` instead of
+        // `outcome` does not decode (hard cutover, no alias).
+        let old = serde_json::json!({"status": "fenced", "changed_work_item_ids": []});
+        assert!(serde_json::from_value::<WorkItemTransition<WorkItemCommitOutcome>>(old).is_err());
+    }
 }

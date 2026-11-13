@@ -87,8 +87,8 @@ method_results! {
     MintWorkItemClaimCapability(MintWorkItemClaimCapability) => Raw<WorkItemClaimCapabilityResult>;
     VerifyWorkItemClaimCapability(VerifyWorkItemClaimCapability) => Raw<WorkItemClaimCapabilityResult>;
     RenewWorkItemLease(RenewWorkItemLease) => Json<WorkItemLeaseRenewal>;
-    CommitWorkItemResult(CommitWorkItemResult) => Json<WorkItemTransition<WorkItemCommitStatus>>;
-    CancelWorkItem(CancelWorkItem) => Json<WorkItemTransition<WorkItemCancelStatus>>;
+    CommitWorkItemResult(CommitWorkItemResult) => Json<WorkItemTransition<WorkItemCommitOutcome>>;
+    CancelWorkItem(CancelWorkItem) => Json<WorkItemTransition<WorkItemCancelOutcome>>;
     DeferWorkItem(DeferWorkItem) => Json<WorkItemDeferral>;
     CasWorkItemMetadata(CasWorkItemMetadata) => Raw<CasWorkItemMetadataResult>;
     // EH-219 typed WorkItem reads. `null` when no WorkItem with this id is

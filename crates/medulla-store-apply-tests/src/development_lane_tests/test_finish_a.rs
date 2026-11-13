@@ -161,7 +161,7 @@ fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
             .as_deref()
             .expect("foreign owner result bytes"),
     );
-    assert_eq!(foreign_result["status"], "fenced");
+    assert_eq!(foreign_result["outcome"], "fenced");
     let status_after_foreign = read_development_lane_status(
         &fixture.shard,
         TEST_GRAPH,

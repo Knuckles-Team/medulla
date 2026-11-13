@@ -28052,7 +28052,7 @@ class WhyNotWire(BaseModel):
     reason: str
 
 
-class WorkItemCancelStatus(str, Enum):
+class WorkItemCancelOutcome(str, Enum):
     CANCELLED = "cancelled"
     MISSING = "missing"
     NOOP = "noop"
@@ -28154,23 +28154,23 @@ class WorkItemPage(BaseModel):
     next_cursor: str | None = None
 
 
-class WorkItemTransition_WorkItemCancelStatus(BaseModel):
+class WorkItemTransition_WorkItemCancelOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     changed_work_item_ids: list[str]
     fencing_token: Annotated[int, Field(ge=0)] | None = None
     lease_epoch: Annotated[int, Field(ge=0)] | None = None
-    status: WorkItemCancelStatus
+    outcome: WorkItemCancelOutcome
     work_item_id: str | None = None
 
 
-class WorkItemTransition_WorkItemCommitStatus(BaseModel):
+class WorkItemTransition_WorkItemCommitOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     changed_work_item_ids: list[str]
     fencing_token: Annotated[int, Field(ge=0)] | None = None
     lease_epoch: Annotated[int, Field(ge=0)] | None = None
-    status: WorkItemCommitStatus
+    outcome: WorkItemCommitOutcome
     work_item_id: str | None = None
 
 
@@ -29990,7 +29990,7 @@ VizDatasetSource = (
 VizOp = VizOpRender | Literal["CapabilityMatrix"] | VizOpRenderProvenance
 
 
-WorkItemCommitStatus = (
+WorkItemCommitOutcome = (
     str
     | Literal["missing"]
     | Literal["noop"]
@@ -37888,22 +37888,22 @@ __all__ = [
     "WhatChangedResult",
     "WhyNot",
     "WhyNotWire",
-    "WorkItemCancelStatus",
+    "WorkItemCancelOutcome",
     "WorkItemClaimCapabilityDecision",
     "WorkItemClaimCapabilityMintRequest",
     "WorkItemClaimCapabilityRequestSchemaVersion",
     "WorkItemClaimCapabilityResult",
     "WorkItemClaimCapabilityResultSchemaVersion",
     "WorkItemClaimCapabilityVerifyRequest",
-    "WorkItemCommitStatus",
+    "WorkItemCommitOutcome",
     "WorkItemDeferStatus",
     "WorkItemDeferral",
     "WorkItemLeaseRenewal",
     "WorkItemOutcomeView",
     "WorkItemPage",
     "WorkItemStatus",
-    "WorkItemTransition_WorkItemCancelStatus",
-    "WorkItemTransition_WorkItemCommitStatus",
+    "WorkItemTransition_WorkItemCancelOutcome",
+    "WorkItemTransition_WorkItemCommitOutcome",
     "WorkItemView",
     "WorkOffer",
     "WorkOfferPutOutcome",

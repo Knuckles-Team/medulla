@@ -186,7 +186,7 @@ fn native_retryable_failure_refuses_before_leaving_an_active_hold() {
             .expect("fenced WorkItem result bytes"),
     )
     .expect("decode fenced WorkItem result");
-    assert_eq!(fenced_result["status"], "fenced");
+    assert_eq!(fenced_result["outcome"], "fenced");
 
     let error = fixture
         .commit_work_item_result("failed", true, "retryable-failure", 200)

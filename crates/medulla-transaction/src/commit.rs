@@ -704,12 +704,12 @@ fn terminal_outbox_intent_applies(
         rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(result_msgpack)
             .map_err(|_| "terminal WorkItem result is not a decodable payload".to_string())?;
     let medulla_protocol_types::protocol::ResultPayload::Json(value) = payload else {
-        return Err("terminal WorkItem result does not carry a status object".to_string());
+        return Err("terminal WorkItem result does not carry an outcome object".to_string());
     };
-    match value.get("status").and_then(|status| status.as_str()) {
+    match value.get("outcome").and_then(|outcome| outcome.as_str()) {
         Some("missing" | "noop" | "fenced" | "retry_scheduled") => Ok(false),
         Some("succeeded" | "failed" | "cancelled" | "dead_letter") => Ok(true),
-        _ => Err("terminal WorkItem result has an unknown status".to_string()),
+        _ => Err("terminal WorkItem result has an unknown outcome".to_string()),
     }
 }
 

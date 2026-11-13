@@ -31,24 +31,24 @@ pub fn commit_work_item_result_precheck(
     now_ms: u64,
 ) -> Option<
     medulla_protocol_types::result_contract::coordination::WorkItemTransition<
-        medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus,
+        medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome,
     >,
 > {
     if property_string(props, "tenant") != tenant {
         return Some(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Missing,
             None,
         ));
     }
     if super::machine::is_terminal_row(props) {
         return Some(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Noop,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Noop,
             Some(work_item_id),
         ));
     }
     if !commit_work_item_lease_is_valid(props, worker_id, lease_epoch, fencing_token, now_ms) {
         return Some(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Fenced,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Fenced,
             Some(work_item_id),
         ));
     }
@@ -227,7 +227,7 @@ pub fn apply_commit_work_item_result_row(
         .transpose()?;
     let Some(bytes) = current else {
         return commit_transition_result(unchanged_transition(
-            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitOutcome::Missing,
             None,
         ))
         .map(Some);
@@ -367,7 +367,7 @@ pub fn apply_commit_work_item_result_row(
     }
     commit_transition_result(
         medulla_protocol_types::result_contract::coordination::WorkItemTransition {
-            status: declared_commit_status(committed_status)?,
+            outcome: declared_commit_status(committed_status)?,
             work_item_id: Some(input.work_item_id.to_string()),
             lease_epoch: Some(input.lease_epoch),
             fencing_token: Some(input.fencing_token),
@@ -1083,7 +1083,7 @@ mod tests {
             }
             other => panic!("unexpected commit payload {other:?}"),
         };
-        value["status"].as_str().unwrap_or_default().to_string()
+        value["outcome"].as_str().unwrap_or_default().to_string()
     }
 
     /// The trace node and the `produced` edge row read from the work item.

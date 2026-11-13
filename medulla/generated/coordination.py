@@ -852,10 +852,10 @@ async def send_commit_work_item_result(
 
 def decode_commit_work_item_result(
     result: OpaqueResult,
-) -> _models.WorkItemTransition_WorkItemCommitStatus:
+) -> _models.WorkItemTransition_WorkItemCommitOutcome:
     """Validate this method's result against its contract model."""
     return decode_result(
-        "CommitWorkItemResult", models().WorkItemTransition_WorkItemCommitStatus, result
+        "CommitWorkItemResult", models().WorkItemTransition_WorkItemCommitOutcome, result
     )
 
 
@@ -901,10 +901,10 @@ async def send_cancel_work_item(
 
 def decode_cancel_work_item(
     result: OpaqueResult,
-) -> _models.WorkItemTransition_WorkItemCancelStatus:
+) -> _models.WorkItemTransition_WorkItemCancelOutcome:
     """Validate this method's result against its contract model."""
     return decode_result(
-        "CancelWorkItem", models().WorkItemTransition_WorkItemCancelStatus, result
+        "CancelWorkItem", models().WorkItemTransition_WorkItemCancelOutcome, result
     )
 
 
