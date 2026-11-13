@@ -934,7 +934,7 @@ fn seal(
                 executed
                     .answered
                     .as_ref()
-                    .map(|answered| answered.answer.clone())
+                    .and_then(|answered| answered.answer.clone())
             })
             .or_else(|| {
                 executed.topology.as_ref().map(|topology| {

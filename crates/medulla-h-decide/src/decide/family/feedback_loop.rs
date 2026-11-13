@@ -151,7 +151,11 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         seed: [0u8; 32],
         harness_contrast: None,
         topology: None,
-        family: None,
+        thought: None,
+        context_selection: None,
+        family_premises: Vec::new(),
+        route: None,
+        answered: None,
     }
 }
 
@@ -225,7 +229,8 @@ impl DecisionFamily for FeedbackLoopFamily {
     fn premises(
         &self,
         request: &DecideRequest,
-        _graph_view: Option<&GraphView>,
+        _executed: &Executed,
+        _policy_digest: &str,
     ) -> Vec<PremiseRef> {
         let Ok(record) = record_of(request.params.as_slice()) else {
             return Vec::new();

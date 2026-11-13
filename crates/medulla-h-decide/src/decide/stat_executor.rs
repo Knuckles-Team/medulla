@@ -174,7 +174,7 @@ pub(super) struct RouteExecuted {
 
 /// A family answer with the premises it rests on.
 pub(super) struct AnsweredFamily {
-    pub(super) answer: medulla_decision_types::decision::statistical::outcome::FamilyAnswer,
+    pub(super) answer: Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer>,
     pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
     /// The resolution kind the family seals its answer with, when the answer
     /// itself decides it; `None` keeps the family hook's.

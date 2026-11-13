@@ -344,7 +344,7 @@ pub(crate) fn usage_guidance_outcome(
             calibrated: false,
         },
         Some(AnsweredFamily {
-            answer: FamilyAnswer::UsageGuidance(Box::new(guidance)),
+            answer: Some(FamilyAnswer::UsageGuidance(Box::new(guidance))),
             premises,
             resolution: Some(resolution),
             evidence: Some(evidence),

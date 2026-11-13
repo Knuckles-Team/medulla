@@ -8,7 +8,7 @@
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseRef, ResolutionKind};
+use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
@@ -50,10 +50,6 @@ impl DecisionFamily for TeamCoordinationFamily {
             policy,
             graph_view,
         ))
-    }
-
-    fn premises(&self, request: &DecideRequest, graph_view: Option<&GraphView>) -> Vec<PremiseRef> {
-        stat_team::premises(request, &request.tenant_id, graph_view)
     }
 
     fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {

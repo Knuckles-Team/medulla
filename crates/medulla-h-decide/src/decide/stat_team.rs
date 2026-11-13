@@ -25,7 +25,7 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 
-use super::stat_executor::Executed;
+use super::stat_executor::{AnsweredFamily, Executed};
 use super::stat_support::{filtered_view, invalid_parameter};
 
 const PARAM_GRAPH: &str = "graph";
@@ -184,7 +184,11 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         seed: [0u8; 32],
         harness_contrast: None,
         topology: None,
-        family: None,
+        thought: None,
+        context_selection: None,
+        family_premises: Vec::new(),
+        route: None,
+        answered: None,
     }
 }
 
@@ -259,11 +263,18 @@ pub(super) fn conclude(
         score: q32(i64::from(id == chosen)),
         probability: None,
     };
-    Ok(executed(StatisticalOutcome::Advisory {
+    let mut concluded = executed(StatisticalOutcome::Advisory {
         scores: BoundedVec::new(vec![score(PRIMARY_CHANNEL), score(TEAM_COORDINATION)])
             .expect("two scores fit the bound"),
         calibrated: false,
-    }))
+    });
+    concluded.answered = Some(AnsweredFamily {
+        answer: None,
+        premises: premises(request, tenant, graph_view),
+        resolution: None,
+        evidence: None,
+    });
+    Ok(concluded)
 }
 
 /// The premises of a team decision (MEDULLA-DECISION-ENGINE-R170.5): the

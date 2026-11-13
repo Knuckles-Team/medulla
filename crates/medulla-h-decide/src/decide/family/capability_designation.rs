@@ -644,7 +644,7 @@ pub(crate) fn capability_designation_outcome(
             calibrated: false,
         },
         Some(AnsweredFamily {
-            answer: FamilyAnswer::CapabilityDesignation(Box::new(answer)),
+            answer: Some(FamilyAnswer::CapabilityDesignation(Box::new(answer))),
             premises,
             resolution: None,
             evidence: None,

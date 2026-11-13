@@ -175,7 +175,7 @@ impl Serving<'_> {
                     RefreshPriority::Downtime,
                     format!("refresh-{logical}@{to}"),
                 )
-                .map_err(|detail| invalid(&detail))?;
+                .map_err(|detail| invalid_parameter(detail))?;
                 let plan_digest = digest_text("eg/drift-refresh-plan/v1", &plan);
                 let record = ScheduledRefresh {
                     plan_digest: plan_digest.clone(),

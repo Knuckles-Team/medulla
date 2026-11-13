@@ -378,7 +378,7 @@ pub(crate) fn load_set_outcome(
             calibrated: false,
         },
         Some(AnsweredFamily {
-            answer: FamilyAnswer::LoadSet(Box::new(answer)),
+            answer: Some(FamilyAnswer::LoadSet(Box::new(answer))),
             premises,
             resolution: None,
             evidence: None,
