@@ -965,7 +965,7 @@ fn designation_record(
 /// are the unfiltered read; the filtered read (one required capability
 /// selecting at most 5 %), recall@5 against an exact scan, the incremental
 /// upsert p99 and the resident bytes ride beside them for
-/// `scripts/check_decide_budgets.py`.
+/// `cargo xtask decide-budgets`.
 fn bench_capability_designation(
     c: &mut Criterion,
     group_name: &str,

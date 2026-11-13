@@ -15,6 +15,10 @@ pub const SUMMARY: &str = "a decision-budget run stays within budget and its sto
 
 const METRICS: [&str; 3] = ["p50_ms", "p99_ms", "peak_mib"];
 const DEFAULT_BASELINE: &str = "benches/baselines/decide.json";
+/// The capability-designation groups carry the extra metrics of
+/// MEDULLA-DECISION-ENGINE-R172.10 beside the three generic ones.
+const DESIGNATION_PREFIX: &str = "decide/capability_designation";
+const DESIGNATION_CEILINGS: [&str; 3] = ["filtered_p50_ms", "filtered_p99_ms", "upsert_p99_ms"];
 
 pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
     let mut report = None;
@@ -107,7 +111,85 @@ pub fn check(run: &Value, baseline: &Value) -> Result<Vec<String>, String> {
             }
         }
     }
+    for group in groups.keys().filter(|n| n.starts_with(DESIGNATION_PREFIX)) {
+        let budget = &baseline["group_budgets"][group.as_str()];
+        designation_findings(group, &groups[group], budget, &mut findings)?;
+    }
     Ok(findings)
+}
+
+/// The recall floor, the filtered and upsert latencies and the resident-byte ceiling of one
+/// capability-designation group (MEDULLA-DECISION-ENGINE-R172.10).
+fn designation_findings(
+    group: &str,
+    measured: &Value,
+    budget: &Value,
+    findings: &mut Vec<String>,
+) -> Result<(), String> {
+    if budget.is_null() {
+        findings.push(format!("{group}: no group budget in the baseline"));
+        return Ok(());
+    }
+    for metric in DESIGNATION_CEILINGS {
+        match measured.get(metric) {
+            None => findings.push(format!("{group}: missing {metric}")),
+            Some(raw) => {
+                let value = number(raw, metric)?;
+                let ceiling = number(&budget[metric], &format!("group budget {metric}"))?;
+                if value > ceiling {
+                    findings.push(format!(
+                        "{group}: {metric} {} exceeds budget {}",
+                        g(value),
+                        g(ceiling)
+                    ));
+                }
+            }
+        }
+    }
+    match measured.get("recall_at_5") {
+        None => findings.push(format!("{group}: missing recall_at_5")),
+        Some(raw) => {
+            let value = number(raw, "recall_at_5")?;
+            let floor = number(&budget["recall_at_5_min"], "group budget recall_at_5_min")?;
+            if value < floor {
+                findings.push(format!(
+                    "{group}: recall_at_5 {} is below {}",
+                    g(value),
+                    g(floor)
+                ));
+            }
+        }
+    }
+    let (Some(resident), Some(records), Some(dim)) = (
+        measured.get("resident_bytes"),
+        measured.get("records"),
+        measured.get("dim"),
+    ) else {
+        findings.push(format!("{group}: missing resident_bytes, records or dim"));
+        return Ok(());
+    };
+    let (resident, records, dim) = (
+        number(resident, "resident_bytes")?,
+        number(records, "records")?,
+        number(dim, "dim")?,
+    );
+    let allowed = number(
+        &budget["resident_bytes_vector_factor"],
+        "group budget resident_bytes_vector_factor",
+    )? * records
+        * dim
+        + number(
+            &budget["resident_bytes_per_record_overhead"],
+            "group budget resident_bytes_per_record_overhead",
+        )? * records;
+    if resident > allowed {
+        findings.push(format!(
+            "{group}: resident_bytes {} exceeds budget {}",
+            g(resident),
+            g(allowed)
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -146,6 +228,37 @@ mod tests {
             breach.len() == 3 && breach.iter().all(|f| f.contains("exceeds budget")),
             "{breach:?}"
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R172.10
+    #[test]
+    fn a_designation_breach_fails_each_metric() {
+        let baseline = baseline();
+        let group = "decide/capability_designation";
+        let steady = json!({"groups": {group: {
+            "p50_ms": 2.5, "p99_ms": 12.0, "peak_mib": 100.0,
+            "filtered_p50_ms": 1.5, "filtered_p99_ms": 8.0, "recall_at_5": 0.97,
+            "upsert_p99_ms": 0.5, "records": 100000, "dim": 1024,
+            "resident_bytes": 100000.0 * 1024.0 * 1.25
+        }}});
+        assert!(check(&steady, &baseline).unwrap().is_empty());
+        let mut planted = steady.clone();
+        planted["groups"][group]["recall_at_5"] = json!(0.9);
+        planted["groups"][group]["upsert_p99_ms"] = json!(2.0);
+        planted["groups"][group]["filtered_p99_ms"] = json!(11.0);
+        planted["groups"][group]["resident_bytes"] = json!(200_000_000.0);
+        let found = check(&planted, &baseline).unwrap();
+        for metric in [
+            "recall_at_5",
+            "upsert_p99_ms",
+            "filtered_p99_ms",
+            "resident_bytes",
+        ] {
+            assert!(
+                found.iter().any(|f| f.contains(metric)),
+                "{metric}: {found:?}"
+            );
+        }
     }
 
     #[test]

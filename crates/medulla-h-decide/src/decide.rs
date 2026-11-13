@@ -30,11 +30,11 @@ mod candidates;
 #[cfg(feature = "redb")]
 pub mod capability_feed;
 #[cfg(feature = "decide")]
+pub mod drift_registry;
+#[cfg(feature = "decide")]
 mod family;
 #[cfg(feature = "decide")]
 mod stat_adapter;
-#[cfg(feature = "decide")]
-pub mod drift_registry;
 #[cfg(feature = "decide")]
 mod stat_belief;
 mod stat_capability_outcome;
@@ -61,8 +61,6 @@ mod stat_generation_cycle;
 pub(crate) mod stat_generation_space;
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
-mod stat_team;
-#[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
@@ -83,6 +81,8 @@ mod stat_pointer;
 mod stat_proposals;
 #[cfg(feature = "decide")]
 mod stat_replay;
+#[cfg(feature = "decide")]
+mod stat_team;
 #[cfg(feature = "decide")]
 mod stat_resolve;
 #[cfg(feature = "decide")]

@@ -1206,6 +1206,12 @@ mod memory_change_tests;
 mod probe_selection_tests;
 mod skill_upgrade_tests;
 mod feedback_loop_tests;
+mod planning_admission_tests;
+mod rank_tests;
+mod registry_tests;
+mod skill_upgrade_tests;
+mod task_plan_tests;
+mod team_coordination_tests;
 
 // MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
 mod telemetry_tests;
