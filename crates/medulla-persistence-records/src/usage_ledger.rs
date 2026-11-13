@@ -161,6 +161,22 @@ pub struct RunOutcome {
     pub errored: bool,
 }
 
+/// One run folded into the observation the run-adjustment family reads
+/// (MEDULLA-DECISION-ENGINE-R158.7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunWindow {
+    /// The run.
+    pub run_id: String,
+    /// True when any record of the run has outcome `error`.
+    pub errored: bool,
+    /// When the run's newest record was recorded.
+    pub newest_at_ms: u64,
+    /// The summed latency of the run's calls, in milliseconds.
+    pub latency_ms: u64,
+    /// The run's cost in micro-units; `None` when a record has no price.
+    pub cost_micro: Option<u64>,
+}
+
 fn record_prefix(tenant: &str) -> String {
     format!("usage:{tenant}/")
 }
@@ -499,8 +515,34 @@ impl AgentLibraryStore {
         operation: &str,
         n: usize,
     ) -> Result<Vec<RunOutcome>, UsageRefusal> {
-        // (newest recorded_at_ms, errored) per run.
-        let mut runs: BTreeMap<String, (u64, bool)> = BTreeMap::new();
+        let catalog = PriceCatalog {
+            aliases: BTreeMap::new(),
+            entries: Vec::new(),
+        };
+        Ok(self
+            .recent_run_windows(tenant, child_id, operation, n, 0, &catalog)?
+            .into_iter()
+            .map(|run| RunOutcome {
+                run_id: run.run_id,
+                errored: run.errored,
+            })
+            .collect())
+    }
+
+    /// The newest `n` distinct runs of `(child_id, operation)` whose newest
+    /// record is at or after `since_ms`, newest first, each folded into one
+    /// observation (MEDULLA-DECISION-ENGINE-R158.7). `cost_micro` is priced
+    /// against `catalog` and is `None` when any record of the run has no price.
+    pub fn recent_run_windows(
+        &self,
+        tenant: &str,
+        child_id: &str,
+        operation: &str,
+        n: usize,
+        since_ms: u64,
+        catalog: &PriceCatalog,
+    ) -> Result<Vec<RunWindow>, UsageRefusal> {
+        let mut runs: BTreeMap<String, RunWindow> = BTreeMap::new();
         let prefix = record_prefix(tenant);
         let mut after: Option<String> = None;
         loop {
@@ -514,22 +556,37 @@ impl AgentLibraryStore {
                 if record.child_id != child_id || record.operation != operation {
                     continue;
                 }
-                let errored = record.outcome == UsageOutcome::Error;
-                let entry = runs.entry(record.run_id).or_insert((0, false));
-                entry.0 = entry.0.max(record.recorded_at_ms);
-                entry.1 |= errored;
+                let cost = cost_micro(&record, catalog);
+                let entry = runs.entry(record.run_id.clone()).or_insert(RunWindow {
+                    run_id: record.run_id.clone(),
+                    errored: false,
+                    newest_at_ms: 0,
+                    latency_ms: 0,
+                    cost_micro: Some(0),
+                });
+                entry.newest_at_ms = entry.newest_at_ms.max(record.recorded_at_ms);
+                entry.errored |= record.outcome == UsageOutcome::Error;
+                entry.latency_ms = entry.latency_ms.saturating_add(record.latency_ms);
+                entry.cost_micro = match (entry.cost_micro, cost) {
+                    (Some(sum), Some(add)) => Some(sum.saturating_add(add)),
+                    _ => None,
+                };
             }
             if !full {
                 break;
             }
         }
-        let mut ordered: Vec<(String, (u64, bool))> = runs.into_iter().collect();
-        ordered.sort_by(|a, b| b.1 .0.cmp(&a.1 .0).then_with(|| a.0.cmp(&b.0)));
-        Ok(ordered
-            .into_iter()
-            .take(n)
-            .map(|(run_id, (_, errored))| RunOutcome { run_id, errored })
-            .collect())
+        let mut ordered: Vec<RunWindow> = runs
+            .into_values()
+            .filter(|run| run.newest_at_ms >= since_ms)
+            .collect();
+        ordered.sort_by(|a, b| {
+            b.newest_at_ms
+                .cmp(&a.newest_at_ms)
+                .then_with(|| a.run_id.cmp(&b.run_id))
+        });
+        ordered.truncate(n);
+        Ok(ordered)
     }
 }
 

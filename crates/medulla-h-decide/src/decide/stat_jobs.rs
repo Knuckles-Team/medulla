@@ -678,6 +678,7 @@ async fn serve_eval(
     op: DecisionEvalOp,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
+        result_contract::coordination::DecisionEvalDelegationQuality,
         result_contract::coordination::DecisionEvalStatus,
         result_contract::coordination::DecisionEvalSubmit,
     };
@@ -706,6 +707,14 @@ async fn serve_eval(
         DecisionEvalOp::Receipt { request } => serve_eval_receipt(&store, &request),
         DecisionEvalOp::Receipts { request } => serve_eval_receipts(&store, &request),
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),
+        DecisionEvalOp::DelegationQuality { request } => {
+            let outcome = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || super::stat_delegation::seal(&store, now_ms, &request),
+            )
+            .await?;
+            ResultPayload::of::<DecisionEvalDelegationQuality>(outcome)
+        }
     }
 }
 

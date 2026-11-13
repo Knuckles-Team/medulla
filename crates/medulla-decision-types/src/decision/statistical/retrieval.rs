@@ -322,6 +322,11 @@ pub enum LearningWrite {
     RunOutcome {
         outcome: Box<super::run_credit::RunOutcome>,
     },
+    /// Store one batch of distilled teacher scores for a scorer revision
+    /// (MEDULLA-DECISION-ENGINE-R147.3).
+    UploadDistilledScores {
+        upload: Box<super::distilled::DistilledUpload>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -340,6 +345,7 @@ impl LearningWrite {
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
+            | Self::UploadDistilledScores { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }
@@ -358,6 +364,8 @@ pub enum LearningRecorded {
     Pointer(Box<PointerState>),
     Run(Box<super::run_credit::RunCreditReceipt>),
     Refreshed(Box<super::retrieval_refresh::FreshnessReceipt>),
+    /// The scorer manifest after a distilled score upload.
+    DistilledScores(Box<super::distilled::DistilledScorerManifest>),
 }
 
 #[cfg(test)]

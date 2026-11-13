@@ -687,7 +687,7 @@ These are acceptance targets, not execution evidence. Retain every existing R137
 These are acceptance targets only, not implementation or execution evidence. Retain R137/R138 tests unchanged.
 
 - `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::plan_round_trips_and_binds_all_stages`; preserve every revision, digest, candidate/order, threshold, budget, refusal and question kind; reject duplicate/over-limit candidates.
-- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::thresholds_and_budgets_select_only_admissible_stages`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
+- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-stats/src/decision/comparative_analysis.rs::tests::thresholds_inclusive_and_budgets`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
 - `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
 - `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
 - `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::plan_digest_binds_inputs_and_budgets`; every bound mutation changes digest and Meristem receipt validation rejects a different plan or over-budget calls.
@@ -1461,7 +1461,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R153.5`: planned L3 `crates/medulla-h-graph/src/graph_ops/read_span_tests.rs::span_response_binds_toc_and_source_digests`.
 - `MEDULLA-DECISION-ENGINE-R153.6`: planned L3 `crates/medulla-h-graph/src/graph_ops/read_span_tests.rs::served_ingest_then_bounded_span_read`.
 - `MEDULLA-DECISION-ENGINE-R153.6`: planned L4 `tests/retrieval/test_offline_toc_served.py::test_read_span_after_ingest`.
-- `MEDULLA-DECISION-ENGINE-R154.1`: planned L1 `crates/medulla-work-types/src/memory.rs::tests::memory_knobs_cover_every_policy_field`.
+- `MEDULLA-DECISION-ENGINE-R154.1`: planned L1 `crates/medulla-decision-types/src/decision/knob_families/memory.rs::tests::memory_knobs_cover_every_policy_field`.
 - `MEDULLA-DECISION-ENGINE-R154.1`: planned L3 `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::recall_stays_stable_as_the_corpus_doubles`.
 - `MEDULLA-DECISION-ENGINE-R154.2`: planned L3 `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::recall_stays_stable_as_the_corpus_doubles`.
 - `MEDULLA-DECISION-ENGINE-R154.2`: planned L1 `tests/test_check_decide_budgets.py::test_memory_scaling_growth_above_2_2_fails`.

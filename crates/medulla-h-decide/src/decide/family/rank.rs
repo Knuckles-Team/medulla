@@ -162,6 +162,15 @@ impl DecisionFamily for RankFamily {
         executed: &Executed,
         policy_digest: &str,
     ) -> Vec<PremiseRef> {
+        // A distilled ranking carries its scorer premises (R147.5) and no
+        // calibrated head reading.
+        if !executed.family_premises.is_empty() {
+            return executed
+                .family_premises
+                .iter()
+                .map(|premise| premise.seal(policy_digest))
+                .collect();
+        }
         let StatisticalOutcome::Advisory { scores, .. } = &executed.ladder.outcome else {
             return Vec::new();
         };

@@ -27,6 +27,7 @@ use super::stat_adapter::{
     adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
     scoped_adapter_pointer,
 };
+use super::stat_distilled::upload_scores;
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, Generations,
@@ -221,6 +222,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         LearningWrite::RefreshFreshness { request } => vec![request.logical_graph.as_str()],
         LearningWrite::RecordOutcome { .. }
         | LearningWrite::RunOutcome { .. }
+        | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
     }
 }
@@ -382,6 +384,9 @@ pub(super) fn dispatch(
         LearningWrite::RunOutcome { outcome } => Ok(LearningRecorded::Run(Box::new(record_run(
             ctx, reader, *outcome,
         )?))),
+        LearningWrite::UploadDistilledScores { upload } => Ok(LearningRecorded::DistilledScores(
+            Box::new(upload_scores(ctx, *upload)?),
+        )),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

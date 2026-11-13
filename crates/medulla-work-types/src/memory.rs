@@ -31,6 +31,16 @@ pub enum MemoryError {
     InvalidPolicy(String),
     #[error("MEMORY_BUDGET_INVALID: {0}")]
     InvalidBudget(String),
+    #[error("SEARCH_STATE_INCOMPLETE: {0}")]
+    SearchStateIncomplete(String),
+    #[error("SEARCH_STATE_MALFORMED: {0}")]
+    SearchStateMalformed(String),
+    #[error("SEARCH_STATE_REVISION_MISMATCH: {0}")]
+    SearchStateRevisionMismatch(String),
+    #[error("MEMORY_EPISODE_WINDOW_INVALID: {0}")]
+    EpisodeWindowInvalid(String),
+    #[error("MEMORY_EPISODE_DIGEST_MISMATCH: {0}")]
+    EpisodeDigestMismatch(String),
 }
 
 fn identifier<T: Into<String>>(value: T, field: &str) -> Result<ResourceId, MemoryError> {
@@ -344,6 +354,58 @@ impl SearchStateEnvelope {
     }
 }
 
+/// The fields a search-state body must carry.
+const SEARCH_STATE_ARRAYS: [&str; 4] = ["transcript", "evidence", "constraints", "open_claims"];
+
+/// Validate a search-state body saved at `snapshot_revision` on top of
+/// `parent_revision` (MEDULLA-DECISION-ENGINE-R149.2). The body must be a
+/// UTF-8 JSON object with a non-empty `search_run_id` and the four arrays
+/// (which may be empty); its `state_revision` must equal the snapshot revision
+/// and be at least 1; the snapshot revision must be the parent plus 1. The
+/// compare-and-set of the expected head stays with the snapshot write.
+pub fn validate_search_state(
+    bytes: &[u8],
+    snapshot_revision: u64,
+    parent_revision: u64,
+) -> Result<SearchStateEnvelope, MemoryError> {
+    let text = std::str::from_utf8(bytes)
+        .map_err(|_| MemoryError::SearchStateMalformed("body is not UTF-8".into()))?;
+    let value: serde_json::Value = serde_json::from_str(text)
+        .map_err(|e| MemoryError::SearchStateMalformed(format!("body is not JSON: {e}")))?;
+    let object = value
+        .as_object()
+        .ok_or_else(|| MemoryError::SearchStateMalformed("body is not a JSON object".into()))?;
+    for field in ["search_run_id", "state_revision"]
+        .into_iter()
+        .chain(SEARCH_STATE_ARRAYS)
+    {
+        if !object.contains_key(field) {
+            return Err(MemoryError::SearchStateIncomplete(format!(
+                "{field} is absent"
+            )));
+        }
+    }
+    let envelope: SearchStateEnvelope = serde_json::from_value(value)
+        .map_err(|e| MemoryError::SearchStateMalformed(e.to_string()))?;
+    if envelope.search_run_id.is_empty() {
+        return Err(MemoryError::SearchStateMalformed(
+            "search_run_id is empty".into(),
+        ));
+    }
+    if envelope.state_revision < 1 || envelope.state_revision != snapshot_revision {
+        return Err(MemoryError::SearchStateRevisionMismatch(format!(
+            "state_revision {} differs from snapshot revision {snapshot_revision}",
+            envelope.state_revision
+        )));
+    }
+    if parent_revision.checked_add(1) != Some(snapshot_revision) {
+        return Err(MemoryError::SearchStateRevisionMismatch(format!(
+            "snapshot revision {snapshot_revision} is not parent revision {parent_revision} plus 1"
+        )));
+    }
+    Ok(envelope)
+}
+
 /// One session note (MEDULLA-DECISION-ENGINE-R150.1). The tenant comes from
 /// the verified request, so it is not a field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -401,6 +463,156 @@ impl NoteView {
             ));
         }
         Ok(self)
+    }
+}
+
+/// The schema version an [`Episode`] is sealed under.
+pub const EPISODE_SCHEMA_VERSION: u16 = 1;
+
+/// One sealed episode: the memory records of one session window, in time order
+/// (MEDULLA-DECISION-ENGINE-R155.1). The store holds it as a node of type
+/// `Episode` with one `CONTAINS` edge per record. It is immutable after
+/// sealing: the only constructor is [`Episode::seal`], and deserialization
+/// re-derives the digest and refuses a body that no longer matches it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct Episode {
+    pub episode_id: ResourceId,
+    pub tenant: TenantId,
+    pub session_id: ResourceId,
+    /// Milliseconds since the Unix epoch; the window never runs backwards.
+    pub start_ms: i64,
+    pub end_ms: i64,
+    /// `MemoryRecord` ids in time order.
+    pub record_ids: Vec<ResourceId>,
+    /// SHA-256 over the canonical body, 64 lowercase hex characters.
+    pub digest: String,
+    pub schema_version: u16,
+}
+
+impl Episode {
+    /// Seal an episode: validate the window and derive the digest.
+    pub fn seal(
+        episode_id: impl Into<String>,
+        tenant: impl Into<String>,
+        session_id: impl Into<String>,
+        start_ms: i64,
+        end_ms: i64,
+        record_ids: Vec<String>,
+    ) -> Result<Self, MemoryError> {
+        let episode_id = identifier(episode_id, "episode_id")?;
+        let tenant = tenant_id(tenant)?;
+        let session_id = identifier(session_id, "session_id")?;
+        let record_ids = record_ids
+            .into_iter()
+            .map(|id| identifier(id, "record_ids"))
+            .collect::<Result<Vec<_>, _>>()?;
+        Self::check_window(start_ms, end_ms)?;
+        let digest = Self::body_digest(
+            &episode_id,
+            &tenant,
+            &session_id,
+            start_ms,
+            end_ms,
+            &record_ids,
+            EPISODE_SCHEMA_VERSION,
+        );
+        Ok(Self {
+            episode_id,
+            tenant,
+            session_id,
+            start_ms,
+            end_ms,
+            record_ids,
+            digest,
+            schema_version: EPISODE_SCHEMA_VERSION,
+        })
+    }
+
+    /// `end_ms` is not below `start_ms`.
+    pub fn check_window(start_ms: i64, end_ms: i64) -> Result<(), MemoryError> {
+        if end_ms < start_ms {
+            return Err(MemoryError::EpisodeWindowInvalid(format!(
+                "end_ms {end_ms} is below start_ms {start_ms}"
+            )));
+        }
+        Ok(())
+    }
+
+    /// The sealed body is intact: the window is ordered and the digest is the
+    /// digest of the other fields.
+    pub fn validate(&self) -> Result<(), MemoryError> {
+        Self::check_window(self.start_ms, self.end_ms)?;
+        let expected = Self::body_digest(
+            &self.episode_id,
+            &self.tenant,
+            &self.session_id,
+            self.start_ms,
+            self.end_ms,
+            &self.record_ids,
+            self.schema_version,
+        );
+        if expected != self.digest {
+            return Err(MemoryError::EpisodeDigestMismatch(format!(
+                "episode {} digest is {}, its body hashes to {expected}",
+                self.episode_id.as_str(),
+                self.digest
+            )));
+        }
+        Ok(())
+    }
+
+    fn body_digest(
+        episode_id: &ResourceId,
+        tenant: &TenantId,
+        session_id: &ResourceId,
+        start_ms: i64,
+        end_ms: i64,
+        record_ids: &[ResourceId],
+        schema_version: u16,
+    ) -> String {
+        let body = serde_json::json!({
+            "episode_id": episode_id,
+            "tenant": tenant,
+            "session_id": session_id,
+            "start_ms": start_ms,
+            "end_ms": end_ms,
+            "record_ids": record_ids,
+            "schema_version": schema_version,
+        });
+        let bytes = serde_json::to_vec(&body).unwrap_or_default();
+        Digest256::from_bytes(Sha256::digest(bytes).into()).to_hex()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EpisodeWire {
+    episode_id: ResourceId,
+    tenant: TenantId,
+    session_id: ResourceId,
+    start_ms: i64,
+    end_ms: i64,
+    record_ids: Vec<ResourceId>,
+    digest: String,
+    schema_version: u16,
+}
+
+impl<'de> Deserialize<'de> for Episode {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let wire = EpisodeWire::deserialize(deserializer)?;
+        let episode = Self {
+            episode_id: wire.episode_id,
+            tenant: wire.tenant,
+            session_id: wire.session_id,
+            start_ms: wire.start_ms,
+            end_ms: wire.end_ms,
+            record_ids: wire.record_ids,
+            digest: wire.digest,
+            schema_version: wire.schema_version,
+        };
+        episode.validate().map_err(serde::de::Error::custom)?;
+        Ok(episode)
     }
 }
 
@@ -586,5 +798,154 @@ mod tests {
             serde_json::to_string(&MemoryKind::SessionNote).unwrap(),
             "\"session_note\""
         );
+    }
+
+    fn body(revision: u64) -> serde_json::Value {
+        serde_json::json!({
+            "search_run_id": "run:1",
+            "state_revision": revision,
+            "transcript": [{"turn": 1}],
+            "evidence": [],
+            "constraints": [],
+            "open_claims": [{"claim": "x"}],
+        })
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R149.2
+    #[test]
+    fn eviction_readback_validates_revision_and_arrays() {
+        let bytes = |value: &serde_json::Value| serde_json::to_vec(value).unwrap();
+        // A valid body, arrays may be empty, validates and reads back equal.
+        let state = validate_search_state(&bytes(&body(2)), 2, 1).unwrap();
+        assert_eq!(state.search_run_id, "run:1");
+        assert_eq!(state.state_revision, 2);
+        assert!(state.evidence.is_empty());
+        assert_eq!(state.transcript.len(), 1);
+        // Each array and the run id missing is incomplete.
+        for field in [
+            "search_run_id",
+            "state_revision",
+            "transcript",
+            "evidence",
+            "constraints",
+            "open_claims",
+        ] {
+            let mut value = body(2);
+            value.as_object_mut().unwrap().remove(field);
+            let refused = validate_search_state(&bytes(&value), 2, 1).unwrap_err();
+            assert!(
+                matches!(&refused, MemoryError::SearchStateIncomplete(d) if d.contains(field)),
+                "{field}: {refused:?}"
+            );
+        }
+        // Malformed bodies: not UTF-8, not JSON, not an object, empty run id,
+        // a non-array field, an unknown field.
+        let cases: [&[u8]; 3] = [&[0xff, 0xfe], b"{not json", b"[1,2]"];
+        for raw in cases {
+            assert!(matches!(
+                validate_search_state(raw, 2, 1),
+                Err(MemoryError::SearchStateMalformed(_))
+            ));
+        }
+        let mut empty_id = body(2);
+        empty_id["search_run_id"] = serde_json::json!("");
+        let mut not_array = body(2);
+        not_array["evidence"] = serde_json::json!({"a": 1});
+        let mut unknown = body(2);
+        unknown["extra"] = serde_json::json!(1);
+        for value in [empty_id, not_array, unknown] {
+            assert!(matches!(
+                validate_search_state(&bytes(&value), 2, 1),
+                Err(MemoryError::SearchStateMalformed(_))
+            ));
+        }
+        // Revision rules: body vs snapshot, at least 1, parent plus 1.
+        assert!(matches!(
+            validate_search_state(&bytes(&body(3)), 2, 1),
+            Err(MemoryError::SearchStateRevisionMismatch(_))
+        ));
+        assert!(matches!(
+            validate_search_state(&bytes(&body(0)), 0, u64::MAX),
+            Err(MemoryError::SearchStateRevisionMismatch(_))
+        ));
+        assert!(matches!(
+            validate_search_state(&bytes(&body(2)), 2, 0),
+            Err(MemoryError::SearchStateRevisionMismatch(_))
+        ));
+        assert!(validate_search_state(&bytes(&body(1)), 1, 0).is_ok());
+        let refusal = validate_search_state(&bytes(&body(3)), 2, 1)
+            .unwrap_err()
+            .to_string();
+        assert!(refusal.starts_with("SEARCH_STATE_REVISION_MISMATCH"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R155.1
+    #[test]
+    fn episode_round_trip_and_digest() {
+        let episode = Episode::seal(
+            "episode:1",
+            "tenant-a",
+            "session:1",
+            1_000,
+            2_000,
+            vec!["mem:1".into(), "mem:2".into(), "mem:3".into()],
+        )
+        .unwrap();
+        // Serde round trip keeps every field, record order included.
+        let json = serde_json::to_string(&episode).unwrap();
+        let restored: Episode = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored, episode);
+        let order: Vec<&str> = restored.record_ids.iter().map(|id| id.as_str()).collect();
+        assert_eq!(order, ["mem:1", "mem:2", "mem:3"]);
+        // The digest is 64 lowercase hex characters and stable.
+        assert_eq!(episode.digest.len(), 64);
+        assert!(episode
+            .digest
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+        let again = Episode::seal(
+            "episode:1",
+            "tenant-a",
+            "session:1",
+            1_000,
+            2_000,
+            vec!["mem:1".into(), "mem:2".into(), "mem:3".into()],
+        )
+        .unwrap();
+        assert_eq!(again.digest, episode.digest);
+        // A different record order or window is a different episode.
+        let reordered = Episode::seal(
+            "episode:1",
+            "tenant-a",
+            "session:1",
+            1_000,
+            2_000,
+            vec!["mem:2".into(), "mem:1".into(), "mem:3".into()],
+        )
+        .unwrap();
+        assert_ne!(reordered.digest, episode.digest);
+        // A zero-length window is allowed; one that runs backwards is refused
+        // at sealing and at deserialization.
+        assert!(Episode::seal("episode:2", "tenant-a", "session:1", 5, 5, vec![]).is_ok());
+        let err =
+            Episode::seal("episode:3", "tenant-a", "session:1", 2_000, 1_000, vec![]).unwrap_err();
+        assert!(matches!(err, MemoryError::EpisodeWindowInvalid(_)));
+        let mut backwards: serde_json::Value = serde_json::from_str(&json).unwrap();
+        backwards["start_ms"] = serde_json::json!(3_000);
+        let refused = serde_json::from_value::<Episode>(backwards).unwrap_err();
+        assert!(refused
+            .to_string()
+            .contains("MEMORY_EPISODE_WINDOW_INVALID"));
+        // A sealed body that was edited no longer matches its digest.
+        let mut edited: serde_json::Value = serde_json::from_str(&json).unwrap();
+        edited["record_ids"] = serde_json::json!(["mem:1"]);
+        let refused = serde_json::from_value::<Episode>(edited).unwrap_err();
+        assert!(refused
+            .to_string()
+            .contains("MEMORY_EPISODE_DIGEST_MISMATCH"));
+        // Unknown fields are refused.
+        let mut extra: serde_json::Value = serde_json::from_str(&json).unwrap();
+        extra["sealed"] = serde_json::json!(false);
+        assert!(serde_json::from_value::<Episode>(extra).is_err());
     }
 }

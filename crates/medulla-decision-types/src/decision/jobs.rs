@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::delegation_quality::DelegationQualityRequest;
 use super::importance_penalty::{ImportanceFeatures, PenaltyObjective, PenaltyReceipt};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
@@ -632,11 +633,16 @@ pub enum DecisionEvalOp {
     Timeline {
         request: DecisionReceiptTimelineRequest,
     },
+    /// Judge a delegation quality window and seal the admission as the scope's
+    /// job artifact (MEDULLA-DECISION-ENGINE-R157.3).
+    DelegationQuality {
+        request: Box<DelegationQualityRequest>,
+    },
 }
 
 impl DecisionEvalOp {
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Submit { .. })
+        matches!(self, Self::Submit { .. } | Self::DelegationQuality { .. })
     }
 
     pub fn authz_action(&self) -> &'static str {
@@ -650,6 +656,7 @@ impl DecisionEvalOp {
             Self::Receipt { request } => &request.tenant_id,
             Self::Receipts { request } => &request.tenant_id,
             Self::Timeline { request } => &request.tenant_id,
+            Self::DelegationQuality { request } => &request.tenant_id,
         }
     }
 }

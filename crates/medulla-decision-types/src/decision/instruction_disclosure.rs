@@ -8,6 +8,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::context_package::is_sha256_hex;
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 
@@ -16,6 +19,50 @@ pub const INSTRUCTION_DISCLOSURE_DOMAIN: &str = "instruction_disclosure";
 
 /// The most events one set's disclosure history carries.
 pub const MAX_DISCLOSURE_EVENTS: usize = 64;
+
+/// The `disclosure.*` knobs (MEDULLA-DECISION-ENGINE-R143.2).
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "disclosure.timeout",
+    unit: "seconds",
+    default: KnobValue::Integer(300),
+    min: KnobValue::Integer(30),
+    max: KnobValue::Integer(86_400),
+    safety: KnobSafety::Tunable,
+}];
+
+/// Refusal code: a non-initial trigger names no prior event.
+pub const DISCLOSURE_PRIOR_MISSING: RefusalCode = RefusalCode::new("DISCLOSURE_PRIOR_MISSING");
+/// Refusal code: the `initial` trigger came with a prior event.
+pub const DISCLOSURE_PRIOR_UNEXPECTED: RefusalCode =
+    RefusalCode::new("DISCLOSURE_PRIOR_UNEXPECTED");
+/// Refusal code: the prior event belongs to another instruction set.
+pub const DISCLOSURE_SET_MISMATCH: RefusalCode = RefusalCode::new("DISCLOSURE_SET_MISMATCH");
+/// Refusal code: the new instructions hash equals the prior hash.
+pub const DISCLOSURE_HASH_UNCHANGED: RefusalCode = RefusalCode::new("DISCLOSURE_HASH_UNCHANGED");
+/// Refusal code: a `timeout` trigger before `disclosure.timeout` seconds elapsed.
+pub const DISCLOSURE_TIMEOUT_NOT_ELAPSED: RefusalCode =
+    RefusalCode::new("DISCLOSURE_TIMEOUT_NOT_ELAPSED");
+
+/// The refusal codes the `instruction_disclosure` family declares: the event
+/// computation's (MEDULLA-DECISION-ENGINE-R143.2) and the served question's
+/// (R137.100). The table is registered in `codes::FAMILY_TABLES`.
+pub const REFUSALS: &[RefusalCode] = &[
+    DISCLOSURE_PRIOR_MISSING,
+    DISCLOSURE_PRIOR_UNEXPECTED,
+    DISCLOSURE_SET_MISMATCH,
+    DISCLOSURE_HASH_UNCHANGED,
+    DISCLOSURE_TIMEOUT_NOT_ELAPSED,
+    DISCLOSURE_VERSION_STALE,
+    DISCLOSURE_UNAUTHORIZED,
+];
+
+/// The resolved `disclosure.timeout`, in seconds.
+pub fn timeout_s(policy: &DecisionPolicy) -> u64 {
+    match policy.knob(&KNOBS[0]) {
+        KnobValue::Integer(v) => u64::try_from(v).unwrap_or(300),
+        _ => 300,
+    }
+}
 
 /// Why a disclosure event was released.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

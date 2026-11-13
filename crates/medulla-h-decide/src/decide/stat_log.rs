@@ -459,6 +459,39 @@ pub(super) fn aggregate_log(
     })
 }
 
+/// The latest `n` outcomes of `option_id` that count as labels (independent,
+/// observed, uncensored, at the fidelity floor), newest first; `true` is a
+/// success. Synthetic records never count. This is the skip rule's input
+/// (MEDULLA-DECISION-ENGINE-R159.3): it reads the same label rule as
+/// [`aggregate_log`].
+pub(super) fn recent_evaluations(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    option_id: &str,
+    n: usize,
+) -> Result<Vec<bool>, String> {
+    use medulla_decision_stats::decision::aggregate::{label_use, LabelUse};
+    let floor = default_statistical_policy().min_outcome_fidelity;
+    let mut labels: Vec<(u64, String, bool)> = Vec::new();
+    for (entry, evaluations) in joined(store, reader, None, None)? {
+        let record = &entry.record;
+        if record.synthetic_evidence || executed_option(&record.outcome) != Some(option_id) {
+            continue;
+        }
+        for stored in &evaluations {
+            if let LabelUse::Label(success) = label_use(stored, &record.caller_principal, floor) {
+                labels.push((
+                    stored.recorded_at_ms,
+                    stored.evaluation.evaluation_id.clone(),
+                    success,
+                ));
+            }
+        }
+    }
+    labels.sort_by(|a, b| (b.0, &b.1).cmp(&(a.0, &a.1)));
+    Ok(labels.into_iter().take(n).map(|(_, _, ok)| ok).collect())
+}
+
 /// Options of the caller's visible, non-synthetic log that earned a skill
 /// (MEDULLA-DECISION-ENGINE-R059.2). Writes nothing; the knobs are the
 /// resolved registry values.

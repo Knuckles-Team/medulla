@@ -8,6 +8,7 @@
 mod a2a_route;
 mod branch_outcome;
 mod capability_designation;
+mod changeset_review;
 mod classify;
 mod command_config;
 mod comparative_analysis_plan;
@@ -39,6 +40,7 @@ mod planning_admission;
 mod pre_tool_risk;
 mod probe_verdict;
 mod program_store;
+mod program_store;
 mod rank;
 mod resolve_entity;
 mod retrieval_plan;
@@ -48,11 +50,16 @@ mod schema_mapping;
 mod skill_upgrade;
 mod skill_workflow;
 mod support;
+mod support;
+mod task_plan;
 mod task_plan;
 mod team_coordination;
 #[cfg(test)]
 mod template;
+#[cfg(test)]
+mod template;
 mod template_choice;
+mod temporal_basis;
 mod thought_search;
 mod tool_necessity;
 mod tool_subset;
@@ -60,9 +67,11 @@ mod topology;
 mod usage_guidance;
 
 pub(in crate::decide) use held_item_admission::held_item_view;
+pub(in crate::decide) use command_config::command_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
+pub(in crate::decide) use support::advisory;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -107,6 +116,20 @@ pub trait DecisionFamily {
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         None
+    }
+
+    /// Solve stage for a family whose answer reads the verified caller's own
+    /// decision log: it receives that caller's log reader. The default is
+    /// `conclude`; one family overrides one of the two, never both.
+    fn conclude_with_log(
+        &self,
+        ctx: &ExecutionContext,
+        _reader: &super::stat_log::LogReader,
+        request: &DecideRequest,
+        policy: &DecisionPolicy,
+        graph_view: Option<&GraphView>,
+    ) -> Option<Result<Executed, String>> {
+        self.conclude(ctx, request, policy, graph_view)
     }
 
     /// Solve stage, after `conclude` or the shared ladder: the kind's
@@ -258,6 +281,10 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         paper_admission::PaperAdmissionFamily;
     static HELDITEMADMISSIONFAMILY: held_item_admission::HeldItemAdmissionFamily =
         held_item_admission::HeldItemAdmissionFamily;
+    static CHANGESETREVIEWFAMILY: changeset_review::ChangesetReviewFamily =
+        changeset_review::ChangesetReviewFamily;
+    static TEMPORALBASISFAMILY: temporal_basis::TemporalBasisFamily =
+        temporal_basis::TemporalBasisFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -280,6 +307,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ContextBudget => &CONTEXTBUDGETFAMILY,
         QuestionKind::OverWindowPlan => &OVERWINDOWPLANFAMILY,
         QuestionKind::InstructionDisclosure => &INSTRUCTIONDISCLOSUREFAMILY,
+        QuestionKind::ChangesetReview => &CHANGESETREVIEWFAMILY,
+        QuestionKind::TemporalBasis => &TEMPORALBASISFAMILY,
         QuestionKind::RoundVerdict => &ROUNDVERDICTFAMILY,
         QuestionKind::StageAllocation => &STAGEALLOCATIONFAMILY,
         QuestionKind::ProbeVerdict => &PROBEVERDICTFAMILY,
@@ -342,6 +371,8 @@ mod tests {
             QuestionKind::ContextBudget,
             QuestionKind::OverWindowPlan,
             QuestionKind::InstructionDisclosure,
+            QuestionKind::ChangesetReview,
+            QuestionKind::TemporalBasis,
             QuestionKind::RoundVerdict,
             QuestionKind::StageAllocation,
             QuestionKind::ProbeVerdict,
@@ -395,6 +426,8 @@ mod tests {
             | QuestionKind::ContextBudget
             | QuestionKind::OverWindowPlan
             | QuestionKind::InstructionDisclosure
+            | QuestionKind::ChangesetReview
+            | QuestionKind::TemporalBasis
             | QuestionKind::RoundVerdict
             | QuestionKind::StageAllocation
             | QuestionKind::ProbeVerdict
@@ -436,7 +469,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            51,
+            53,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

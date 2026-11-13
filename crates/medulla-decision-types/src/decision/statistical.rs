@@ -131,6 +131,16 @@ pub enum QuestionKind {
     /// trigger has occurred (MEDULLA-DECISION-ENGINE-R137.100). Evaluate-only.
     /// See `decision::instruction_disclosure`.
     InstructionDisclosure,
+    /// Whether a changeset review's findings block the change: findings in the
+    /// five flaw classes, each bound to the lines it cites, with the low-impact
+    /// doubted ones filtered (MEDULLA-DECISION-ENGINE-R138.101.2). Evaluate-only.
+    /// See `decision::changeset_review`.
+    ChangesetReview,
+    /// Which of the three clocks (event, narrative, storage) a time-windowed
+    /// query should retry on, and the widened window to retry with
+    /// (MEDULLA-DECISION-ENGINE-R146.3). Evaluate-only: the caller runs the
+    /// fallback. See `decision::temporal_query`.
+    TemporalBasis,
     /// Whether an evolution round's observed flips verify or falsify its
     /// declaration (MEDULLA-DECISION-ENGINE-R136). See `decision::evolution_round`.
     RoundVerdict,

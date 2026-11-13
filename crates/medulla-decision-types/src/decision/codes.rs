@@ -253,6 +253,12 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::statistical::run_credit::REFUSALS,
     ),
     (QuestionKind::ThoughtSearch, super::thought_search::REFUSALS),
+    (QuestionKind::CommandConfig, super::command_config::REFUSALS),
+    (QuestionKind::RunAdjustment, super::run_adjustment::REFUSALS),
+    (
+        QuestionKind::CorrectionAdmission,
+        super::trace_fix_binding::REFUSALS,
+    ),
     (
         QuestionKind::ContextReplacement,
         super::context_replacement::REFUSALS,
@@ -283,6 +289,19 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::InstructionDisclosure,
         super::instruction_disclosure::REFUSALS,
     ),
+    (
+        QuestionKind::ComparativeAnalysisPlan,
+        super::comparative_analysis::REFUSALS,
+    ),
+    (
+        QuestionKind::ChangesetReview,
+        super::changeset_review::REFUSALS,
+    ),
+    (QuestionKind::TemporalBasis, super::temporal_query::REFUSALS),
+    (
+        QuestionKind::FieldShielding,
+        super::field_shielding::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the
@@ -296,6 +315,15 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     };
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
+        ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),
+        (
+            "delegation_quality",
+            super::delegation_quality::REFUSALS.to_vec(),
+        ),
+        (
+            "distilled",
+            super::statistical::distilled::REFUSALS.to_vec(),
+        ),
         ("belief_revision", codes(belief_revision::REFUSALS)),
         ("claims", codes(claims::REFUSALS)),
         ("context_facts", context_facts::REFUSALS.to_vec()),

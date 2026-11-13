@@ -8,8 +8,111 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
+use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
+
+/// Refusal code: a space, vector, result or candidate revision differs from the visible state.
+pub const COMPARATIVE_STALE_INPUT: RefusalCode = RefusalCode::new("COMPARATIVE_STALE_INPUT");
+/// Refusal code: a candidate is invisible, malformed or duplicate.
+pub const COMPARATIVE_CANDIDATE_INVALID: RefusalCode =
+    RefusalCode::new("COMPARATIVE_CANDIDATE_INVALID");
+/// Refusal code: more candidates than the bound.
+pub const COMPARATIVE_OVER_LIMIT: RefusalCode = RefusalCode::new("COMPARATIVE_OVER_LIMIT");
+/// Refusal code: an importance outside [0, 1].
+pub const COMPARATIVE_IMPORTANCE_INVALID: RefusalCode =
+    RefusalCode::new("COMPARATIVE_IMPORTANCE_INVALID");
+/// Refusal code: the extraction minimum is below the synthesis minimum.
+pub const COMPARATIVE_THRESHOLD_ORDER: RefusalCode =
+    RefusalCode::new("COMPARATIVE_THRESHOLD_ORDER");
+/// Refusal code: a budget or ceiling is absent, zero where a call is needed, or above its knob maximum.
+pub const COMPARATIVE_BUDGET_INVALID: RefusalCode = RefusalCode::new("COMPARATIVE_BUDGET_INVALID");
+/// Refusal code: a stage cannot fit the remaining call ceiling.
+pub const COMPARATIVE_STAGE_EXCEEDS_TOTAL: RefusalCode =
+    RefusalCode::new("COMPARATIVE_STAGE_EXCEEDS_TOTAL");
+
+/// The `REFUSALS` table of the `comparative_analysis_plan` family, registered
+/// in `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R139.4).
+pub const REFUSALS: &[RefusalCode] = &[
+    COMPARATIVE_STALE_INPUT,
+    COMPARATIVE_CANDIDATE_INVALID,
+    COMPARATIVE_OVER_LIMIT,
+    COMPARATIVE_IMPORTANCE_INVALID,
+    COMPARATIVE_THRESHOLD_ORDER,
+    COMPARATIVE_BUDGET_INVALID,
+    COMPARATIVE_STAGE_EXCEEDS_TOTAL,
+];
+
+/// The `comparative.*` knobs (MEDULLA-DECISION-ENGINE-R139.2).
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "comparative.synthesis_importance_min",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "comparative.extraction_importance_min",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(800_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "comparative.synthesis_batch",
+        unit: "candidates per call",
+        default: KnobValue::Integer(32),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(64),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "comparative.total_call_ceiling_max",
+        unit: "calls",
+        default: KnobValue::Integer(66),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(130),
+        safety: KnobSafety::Tunable,
+    },
+];
+
+/// The resolved `comparative.*` knob values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ComparativeKnobs {
+    /// The least importance entering synthesis, in millionths.
+    pub synthesis_importance_min_micros: i64,
+    /// The least importance entering extraction, in millionths.
+    pub extraction_importance_min_micros: i64,
+    /// The most candidates one synthesis call takes.
+    pub synthesis_batch: u32,
+    /// The most calls a request's ceiling may name.
+    pub total_call_ceiling_max: u32,
+}
+
+impl ComparativeKnobs {
+    /// The values the policy in force resolves.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let micros = |spec: &KnobSpec| match policy.knob(spec) {
+            KnobValue::DecimalMicros(v) => v,
+            _ => 0,
+        };
+        let count = |spec: &KnobSpec| match policy.knob(spec) {
+            KnobValue::Integer(v) => u32::try_from(v).unwrap_or(0),
+            _ => 0,
+        };
+        Self {
+            synthesis_importance_min_micros: micros(&KNOBS[0]),
+            extraction_importance_min_micros: micros(&KNOBS[1]),
+            synthesis_batch: count(&KNOBS[2]),
+            total_call_ceiling_max: count(&KNOBS[3]),
+        }
+    }
+}
 
 /// The most candidates one comparative analysis plans over.
 pub const MAX_COMPARATIVE_CANDIDATES: usize = 64;

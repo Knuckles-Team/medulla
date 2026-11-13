@@ -153,6 +153,72 @@ closed_error_codes! {
         /// The logical graph has no registered search source
         /// (MEDULLA-DECISION-ENGINE-R174.9.4).
         SearchSourceUnregistered => "SEARCH_SOURCE_UNREGISTERED",
+        /// A context source is named twice, in the declared options or in
+        /// `context.requested_sources` (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextSourceDuplicate => "CONTEXT_SOURCE_DUPLICATE",
+        /// A context-budget question carries no positive `context.token_budget`
+        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextBudgetMissing => "CONTEXT_BUDGET_MISSING",
+        /// A context source declares no usable `context.tokens`
+        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextTokensUnknown => "CONTEXT_TOKENS_UNKNOWN",
+        /// A pinned instruction digest differs from the latest version of its
+        /// set (MEDULLA-DECISION-ENGINE-R137.100).
+        DisclosureVersionStale => "DISCLOSURE_VERSION_STALE",
+        /// A named instruction set has no version in the caller's tenant
+        /// graph (MEDULLA-DECISION-ENGINE-R137.100).
+        DisclosureUnauthorized => "DISCLOSURE_UNAUTHORIZED",
+        /// A changeset review names no base or head revision
+        /// (MEDULLA-DECISION-ENGINE-R138.101.2).
+        ReviewRevisionMissing => "REVIEW_REVISION_MISSING",
+        /// A changeset review names or cites a flaw class outside the five.
+        ReviewClassUnsupported => "REVIEW_CLASS_UNSUPPORTED",
+        /// A finding cites a class the review did not claim to cover.
+        ReviewClassUnreviewed => "REVIEW_CLASS_UNREVIEWED",
+        /// A finding carries no evidence, path or cited lines.
+        ReviewProofAbsent => "REVIEW_PROOF_ABSENT",
+        /// The changed-files digest is not the digest of the changed paths.
+        ReviewChangesetDigestMismatch => "REVIEW_CHANGESET_DIGEST_MISMATCH",
+        /// A finding cites a path the changeset does not contain.
+        ReviewFindingOutsideChangeset => "REVIEW_FINDING_OUTSIDE_CHANGESET",
+        /// A temporal-basis question has no usable temporal context
+        /// (MEDULLA-DECISION-ENGINE-R146.4).
+        TemporalContextMissing => "TEMPORAL_CONTEXT_MISSING",
+        /// A temporal query's window is inverted (MEDULLA-DECISION-ENGINE-R146.4).
+        TemporalWindowInvalid => "TEMPORAL_WINDOW_INVALID",
+        /// A temporal-basis question's options are not event, narrative and
+        /// storage (MEDULLA-DECISION-ENGINE-R146.4).
+        TemporalBasisUnmappable => "TEMPORAL_BASIS_UNMAPPABLE",
+        /// A delegation quality window ended before the maximum window age
+        /// (MEDULLA-DECISION-ENGINE-R157.4).
+        DelegationWindowStale => "DELEGATION_WINDOW_STALE",
+        /// A delegation quality window is shorter than the minimum window
+        /// (MEDULLA-DECISION-ENGINE-R157.4).
+        DelegationWindowUnstable => "DELEGATION_WINDOW_UNSTABLE",
+        /// A delegation quality threshold names an unknown metric or a value
+        /// outside `[0, 1000000]` (MEDULLA-DECISION-ENGINE-R157.4).
+        DelegationThresholdUndefined => "DELEGATION_THRESHOLD_UNDEFINED",
+        /// A delegation quality window holds fewer observations than the
+        /// minimum (MEDULLA-DECISION-ENGINE-R157.4).
+        DelegationInsufficientSamples => "DELEGATION_INSUFFICIENT_SAMPLES",
+        /// A distilled score is out of range or its fidelity bounds are
+        /// inverted (MEDULLA-DECISION-ENGINE-R147.1).
+        DistilledScoreInvalid => "DISTILLED_SCORE_INVALID",
+        /// A candidate has no stored distilled score
+        /// (MEDULLA-DECISION-ENGINE-R147.4).
+        DistilledScoreMissing => "DISTILLED_SCORE_MISSING",
+        /// The requested scorer revision is not the stored one
+        /// (MEDULLA-DECISION-ENGINE-R147.4).
+        ScorerRevisionStale => "SCORER_REVISION_STALE",
+        /// A distilled ranking `top_k` is 0 or above `distilled.max_top_k`
+        /// (MEDULLA-DECISION-ENGINE-R147.4).
+        TopKInvalid => "TOP_K_INVALID",
+        /// A distilled scorer holds no stored score
+        /// (MEDULLA-DECISION-ENGINE-R147.4).
+        DistilledScorerEmpty => "DISTILLED_SCORER_EMPTY",
+        /// A used distilled score's low fidelity bound is under the floor
+        /// (MEDULLA-DECISION-ENGINE-R147.4).
+        DistilledFidelityBelowFloor => "DISTILLED_FIDELITY_BELOW_FLOOR",
     }
 }
 

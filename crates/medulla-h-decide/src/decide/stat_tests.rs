@@ -1056,10 +1056,13 @@ use log_tests::{retention_compacts_and_verifies, retention_retires};
 
 mod classes_tests;
 
-mod tool_subset_tests;
 mod route_tests;
+mod tool_subset_tests;
 
 mod resolve_entity_tests;
+// MEDULLA-DECISION-ENGINE-R157.3, R157.4: the served delegation quality gate.
+mod delegation_quality_tests;
+mod distilled_rank_tests;
 
 mod context_budget_tests;
 
@@ -1106,6 +1109,7 @@ mod retrieval_plan_tests;
 mod learning_tests;
 
 #[cfg(feature = "query")]
+mod run_adjustment_tests;
 mod run_credit_tests;
 
 #[cfg(feature = "query")]
@@ -1156,10 +1160,10 @@ mod exploration_pool_tests;
 #[cfg(feature = "finance")]
 mod replay_tests;
 
-mod registry_tests;
-mod rank_tests;
-mod task_plan_tests;
 mod concentration_tests;
+mod rank_tests;
+mod registry_tests;
+mod task_plan_tests;
 
 // MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
 mod telemetry_tests;
@@ -1186,3 +1190,21 @@ mod belief_revision_tests;
 
 // MEDULLA-DECISION-ENGINE-R750: bounded multi-step reasoning search, served.
 mod thought_search_tests;
+
+// MEDULLA-DECISION-ENGINE-R138.101: changeset review, served.
+mod changeset_review_tests;
+
+// MEDULLA-DECISION-ENGINE-R146.3: temporal basis, served.
+mod temporal_basis_tests;
+
+// MEDULLA-DECISION-ENGINE-R161.3: correction admission, served.
+mod correction_admission_tests;
+
+// MEDULLA-DECISION-ENGINE-R162.3: field shielding, served.
+mod field_shielding_tests;
+
+// MEDULLA-DECISION-ENGINE-R148.3: command config, served.
+mod command_config_tests;
+
+// MEDULLA-DECISION-ENGINE-R159.3: routing-path preference, served.
+mod path_preference_tests;

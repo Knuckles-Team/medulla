@@ -193,6 +193,7 @@ method_results! {
     DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::DecisionEvalReceipt>>;
     DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::DecisionReceiptPage>;
     DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_decision_types::decision::DecisionReceiptTimelinePage>;
+    DecisionEvalDelegationQuality(DecisionEval / "delegation_quality") => Raw<medulla_decision_types::decision::delegation_quality::DelegationQualityOutcome>;
     DecisionLogCommit(DecisionLog / "commit") => Raw<DecisionLogCommitted>;
     DecisionLogEvaluate(DecisionLog / "evaluate") => Raw<StoredEvaluation>;
     DecisionLogGet(DecisionLog / "get") => Raw<Option<DecisionLogEntry>>;

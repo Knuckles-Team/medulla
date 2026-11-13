@@ -7,11 +7,11 @@ pub mod memory;
 pub mod participant;
 pub mod placement;
 pub mod profile;
-pub mod task_plan;
 pub mod resolve_entity;
 pub mod round_verdict;
 pub mod route;
 pub mod schema_mapping;
+pub mod task_plan;
 pub mod topology;
 pub mod trajectory;
 
@@ -40,4 +40,11 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::field_shielding::KNOBS,
     super::paper_admission::KNOBS,
     super::held_item::KNOBS,
+    super::command_config::KNOBS,
+    super::instruction_disclosure::KNOBS,
+    super::memory_benchmark::KNOBS,
+    super::run_adjustment::KNOBS,
+    super::path_success::KNOBS,
+    super::temporal_query::KNOBS,
+    super::comparative_analysis::KNOBS,
 ];

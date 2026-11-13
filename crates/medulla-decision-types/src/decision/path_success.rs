@@ -7,7 +7,46 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use crate::decision::policy::DecisionPolicy;
 use medulla_types::contract::Digest256;
+
+/// The `path.*` knobs: `min_samples`, `window_ms`, `prefer_above_rate`, then
+/// `skip_after_failures`.
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "path.min_samples",
+        unit: "attempts",
+        default: KnobValue::Integer(10),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(10_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "path.window_ms",
+        unit: "milliseconds",
+        default: KnobValue::DurationMs(604_800_000),
+        min: KnobValue::DurationMs(3_600_000),
+        max: KnobValue::DurationMs(7_776_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "path.prefer_above_rate",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "path.skip_after_failures",
+        unit: "attempts",
+        default: KnobValue::Integer(3),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(20),
+        safety: KnobSafety::Tunable,
+    },
+];
 
 /// One routing path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +102,28 @@ pub struct PathPreferenceRule {
     pub min_samples: u32,
     pub prefer_above_rate: u32,
     pub skip_after_failures: u32,
+}
+
+impl PathPreferenceRule {
+    /// The rule the policy pins, or the knob defaults.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let count = |spec: &KnobSpec| match policy.knob(spec) {
+            KnobValue::Integer(value) => u32::try_from(value).unwrap_or(0),
+            _ => 0,
+        };
+        Self {
+            window_ms: match policy.knob(&KNOBS[1]) {
+                KnobValue::DurationMs(value) => value,
+                _ => 0,
+            },
+            min_samples: count(&KNOBS[0]),
+            prefer_above_rate: match policy.knob(&KNOBS[2]) {
+                KnobValue::DecimalMicros(value) => u32::try_from(value).unwrap_or(0),
+                _ => 0,
+            },
+            skip_after_failures: count(&KNOBS[3]),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -45,6 +45,7 @@ fn commit_slate(
         slots: BoundedVec::new(slots).unwrap(),
         certificate: certificate.clone(),
         topology: None,
+        context_selection: None,
     };
     let digest = record.inputs.catalog_digest.clone();
     h.store

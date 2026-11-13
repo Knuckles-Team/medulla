@@ -9,7 +9,31 @@ use std::collections::BTreeMap;
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use serde::{Deserialize, Serialize};
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
 use medulla_types::contract::Digest256;
+
+/// Refusal code: no mode matches the request or the default ordinal.
+pub const MODE_UNKNOWN: &str = "MODE_UNKNOWN";
+/// Refusal code: a setting is missing, unknown or of the wrong type.
+pub const CONFIG_INVALID: &str = "CONFIG_INVALID";
+
+/// The refusal codes the `command_config` family declares.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(MODE_UNKNOWN),
+    RefusalCode::new(CONFIG_INVALID),
+];
+
+/// The `mode.*` knobs. `mode.default_mode_id` is an integer, so it names a
+/// mode ordinal.
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "mode.default_mode_id",
+    unit: "ordinal",
+    default: KnobValue::Integer(0),
+    min: KnobValue::Integer(0),
+    max: KnobValue::Integer(1024),
+    safety: KnobSafety::Tunable,
+}];
 
 /// The domain of a config digest.
 pub const COMMAND_CONFIG_DIGEST_DOMAIN: &str = "eg/command-config";
@@ -119,6 +143,111 @@ impl CommandConfig {
     }
 }
 
+/// Why a mode could not be selected or a config could not be built.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ModeRefusal {
+    /// No mode matches (`MODE_UNKNOWN`).
+    ModeUnknown { detail: String },
+    /// A setting fails the schema (`CONFIG_INVALID`).
+    ConfigInvalid { detail: String },
+}
+
+impl ModeRefusal {
+    /// The registered refusal code.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::ModeUnknown { .. } => MODE_UNKNOWN,
+            Self::ConfigInvalid { .. } => CONFIG_INVALID,
+        }
+    }
+
+    /// The human-readable detail.
+    pub fn detail(&self) -> &str {
+        match self {
+            Self::ModeUnknown { detail } | Self::ConfigInvalid { detail } => detail,
+        }
+    }
+}
+
+impl DecisionRefusal for ModeRefusal {
+    fn code(&self) -> RefusalCode {
+        RefusalCode::new(ModeRefusal::code(self))
+    }
+
+    fn detail(&self) -> String {
+        ModeRefusal::detail(self).to_string()
+    }
+}
+
+/// Pick a mode: the one named by `requested`, or, without a request, the one
+/// whose ordinal equals `default_ordinal` (the `mode.default_mode_id` knob).
+pub fn select_mode<'a>(
+    table: &'a [CommandMode],
+    requested: Option<&str>,
+    default_ordinal: u32,
+) -> Result<&'a CommandMode, ModeRefusal> {
+    let found = match requested {
+        Some(id) => table.iter().find(|mode| mode.mode_id == id),
+        None => table
+            .iter()
+            .find(|mode| mode.mode_ordinal == default_ordinal),
+    };
+    found.ok_or_else(|| ModeRefusal::ModeUnknown {
+        detail: match requested {
+            Some(id) => format!("no mode with id {id}"),
+            None => format!("no mode with default ordinal {default_ordinal}"),
+        },
+    })
+}
+
+/// Build the immutable config of a mode, checking every setting against the
+/// schema. Unknown and missing keys and wrong types refuse.
+pub fn build_config(
+    mode: &CommandMode,
+    schema: &CommandConfigSchema,
+) -> Result<CommandConfig, ModeRefusal> {
+    if mode.schema_id != schema.schema_id {
+        return Err(ModeRefusal::ConfigInvalid {
+            detail: format!(
+                "mode {} names schema {} but schema {} was given",
+                mode.mode_id, mode.schema_id, schema.schema_id
+            ),
+        });
+    }
+    for (key, value) in &mode.settings {
+        match schema.fields.get(key) {
+            None => {
+                return Err(ModeRefusal::ConfigInvalid {
+                    detail: format!("unknown setting {key}"),
+                })
+            }
+            Some(expected) if *expected != value.field_type() => {
+                return Err(ModeRefusal::ConfigInvalid {
+                    detail: format!(
+                        "setting {key} is {:?}, the schema requires {expected:?}",
+                        value.field_type()
+                    ),
+                })
+            }
+            Some(_) => {}
+        }
+    }
+    if let Some(missing) = schema
+        .fields
+        .keys()
+        .find(|key| !mode.settings.contains_key(*key))
+    {
+        return Err(ModeRefusal::ConfigInvalid {
+            detail: format!("missing setting {missing}"),
+        });
+    }
+    Ok(CommandConfig::new(
+        mode.schema_id.clone(),
+        mode.mode_id.clone(),
+        mode.settings.clone(),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +314,81 @@ mod tests {
         let mut value: serde_json::Value = serde_json::from_str(&text).unwrap();
         value["extra"] = serde_json::json!(1);
         assert!(serde_json::from_value::<CommandConfig>(value).is_err());
+    }
+
+    fn schema() -> CommandConfigSchema {
+        CommandConfigSchema {
+            schema_version: COMMAND_CONFIG_SCHEMA_VERSION,
+            schema_id: "schema:cmd".into(),
+            revision: 1,
+            fields: BTreeMap::from([
+                ("retries".to_string(), FieldType::Int),
+                ("label".to_string(), FieldType::Text),
+                ("dry_run".to_string(), FieldType::Bool),
+            ]),
+        }
+    }
+
+    fn mode(id: &str, ordinal: u32, retries: i64) -> CommandMode {
+        CommandMode {
+            schema_version: COMMAND_CONFIG_SCHEMA_VERSION,
+            mode_id: id.into(),
+            mode_ordinal: ordinal,
+            mode_revision: 1,
+            schema_id: "schema:cmd".into(),
+            settings: settings(retries),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R148.2
+    #[test]
+    fn replay_idempotence() {
+        let m = mode("mode:fast", 1, 3);
+        let first = build_config(&m, &schema()).unwrap();
+        let second = build_config(&m, &schema()).unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.config_digest, second.config_digest);
+        let changed = build_config(&mode("mode:fast", 1, 4), &schema()).unwrap();
+        assert_ne!(first.config_digest, changed.config_digest);
+        // Unknown, missing and mistyped settings refuse with CONFIG_INVALID.
+        let mut extra = mode("mode:fast", 1, 3);
+        extra
+            .settings
+            .insert("unknown".into(), ConfigScalar::Bool(true));
+        let mut missing = mode("mode:fast", 1, 3);
+        missing.settings.remove("label");
+        let mut mistyped = mode("mode:fast", 1, 3);
+        mistyped
+            .settings
+            .insert("retries".into(), ConfigScalar::Text("x".into()));
+        for bad in [extra, missing, mistyped] {
+            let refusal = build_config(&bad, &schema()).unwrap_err();
+            assert_eq!(refusal.code(), CONFIG_INVALID);
+            assert!(!refusal.detail().is_empty());
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R148.2
+    #[test]
+    fn default_ordinal_selects_a_mode() {
+        let table = vec![mode("mode:slow", 0, 1), mode("mode:fast", 1, 3)];
+        assert_eq!(
+            select_mode(&table, None, 1).unwrap().mode_id,
+            "mode:fast",
+            "the default ordinal picks the mode"
+        );
+        assert_eq!(
+            select_mode(&table, Some("mode:slow"), 1).unwrap().mode_id,
+            "mode:slow",
+            "a requested id wins over the default"
+        );
+        let unknown = select_mode(&table, Some("mode:none"), 1).unwrap_err();
+        assert_eq!(unknown.code(), MODE_UNKNOWN);
+        assert_eq!(
+            select_mode(&table, None, 9).unwrap_err().code(),
+            MODE_UNKNOWN
+        );
+        assert!(KNOBS[0].admits(&KNOBS[0].default));
+        assert!(!KNOBS[0].admits(&KnobValue::Integer(1025)));
     }
 }

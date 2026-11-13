@@ -161,6 +161,10 @@ async fn serve(
                 super::family::held_item_view(state, verified.agent_id(), &request)
                     .await
                     .map(Some)
+            } else if request.question.kind == QuestionKind::CommandConfig {
+                super::family::command_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
                 super::family::disclosure_view(state, verified.agent_id(), &request)
                     .await
@@ -258,10 +262,18 @@ pub(super) fn decide_blocking(
     // The kind's family concludes its specialized answer; the shared
     // matrix ladder is the fall-through (R001.101).
     let executed = telemetry::stage(Stage::Solve, family, tenant, || {
-        let executed = match registry.conclude(ctx, request, &policy.policy, graph_view) {
-            Some(result) => result?,
-            None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
-        };
+        // A rank question that names a distilled scorer ranks from stored
+        // scores alone (R147.3): no head reading, so nothing to refine.
+        if let Some(ranked) =
+            super::stat_distilled::rank(ctx, request, &policy.policy, &candidates.views)?
+        {
+            return Ok(ranked);
+        }
+        let executed =
+            match registry.conclude_with_log(ctx, &reader, request, &policy.policy, graph_view) {
+                Some(result) => result?,
+                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
+            };
         registry.refine(
             Some(request),
             &pinned,
@@ -484,6 +496,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         {
             medulla_decision_types::decision::knob_families::task_plan::SKILL_TREE_KNOBS
         }
+        QuestionKind::TemporalBasis => medulla_decision_types::decision::temporal_query::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS

@@ -6,23 +6,71 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_types::contract::Digest256;
+use crate::decision::record::outcome::RefusalCode;
+use medulla_types::contract::{BoundedVec, Digest256};
 
 /// Refusal code: a score is out of range or its fidelity bounds are inverted.
 pub const DISTILLED_SCORE_INVALID: &str = "DISTILLED_SCORE_INVALID";
+
+/// Refusal code: a candidate has no stored score (MEDULLA-DECISION-ENGINE-R147.4).
+pub const DISTILLED_SCORE_MISSING: RefusalCode = RefusalCode::new("DISTILLED_SCORE_MISSING");
+/// Refusal code: the requested scorer revision is not the stored one.
+pub const SCORER_REVISION_STALE: RefusalCode = RefusalCode::new("SCORER_REVISION_STALE");
+/// Refusal code: `top_k` is 0 or above `distilled.max_top_k`.
+pub const TOP_K_INVALID: RefusalCode = RefusalCode::new("TOP_K_INVALID");
+/// Refusal code: the scorer holds no stored score.
+pub const DISTILLED_SCORER_EMPTY: RefusalCode = RefusalCode::new("DISTILLED_SCORER_EMPTY");
+/// Refusal code: a used score's low fidelity bound is under `distilled.min_fidelity`.
+pub const DISTILLED_FIDELITY_BELOW_FLOOR: RefusalCode =
+    RefusalCode::new("DISTILLED_FIDELITY_BELOW_FLOOR");
+
+/// The distilled ranking refusals, registered with the decision refusal
+/// registry (`codes::module_tables`); each is also a `StatisticalErrorCode`.
+/// `IDEMPOTENCY_CONFLICT` (an upload with a different score for a stored
+/// document) is the existing statistical code of that meaning.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(DISTILLED_SCORE_INVALID),
+    DISTILLED_SCORE_MISSING,
+    SCORER_REVISION_STALE,
+    TOP_K_INVALID,
+    DISTILLED_SCORER_EMPTY,
+    DISTILLED_FIDELITY_BELOW_FLOOR,
+];
+
+/// The most scores one upload can carry on the wire; the knob
+/// `distilled.max_scores_per_write` bounds it further.
+pub const MAX_UPLOAD_SCORES: usize = 65_536;
 
 /// The largest Q16 score.
 pub const Q16_ONE: u32 = 65_536;
 
 /// The `distilled.*` knobs.
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "distilled.max_top_k",
-    unit: "items",
-    default: KnobValue::Integer(100),
-    min: KnobValue::Integer(1),
-    max: KnobValue::Integer(1000),
-    safety: KnobSafety::Tunable,
-}];
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "distilled.max_top_k",
+        unit: "items",
+        default: KnobValue::Integer(100),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(1000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "distilled.max_scores_per_write",
+        unit: "scores",
+        default: KnobValue::Integer(4096),
+        min: KnobValue::Integer(64),
+        max: KnobValue::Integer(65_536),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "distilled.min_fidelity",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+];
 
 /// One teacher judgment of one document, with its fidelity bounds, all Q16.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -58,6 +106,17 @@ pub struct DistilledScorerManifest {
     pub score_count: u64,
     pub score_digest: Digest256,
     pub persisted_at_ms: u64,
+}
+
+/// One batch of teacher judgments for one scorer revision
+/// (MEDULLA-DECISION-ENGINE-R147.3), uploaded through `DecisionLog` `Learn`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DistilledUpload {
+    pub scorer_id: String,
+    pub scorer_revision: u64,
+    pub scores: BoundedVec<TeacherJudgment, MAX_UPLOAD_SCORES>,
 }
 
 #[cfg(test)]

@@ -172,6 +172,42 @@ fn span_response_binds_toc_and_source_digests() {
     assert_eq!(last.byte_end as usize, SOURCE.len());
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R153.6
+#[test]
+fn served_ingest_then_bounded_span_read() {
+    let blobs = MemoryBlobs::default();
+    let core = GraphCore::new();
+    // Ingest, then read: every section range of the original source comes back
+    // as the exact bytes of that range, and an out-of-bounds range is refused.
+    let staged = ingest(&blobs, &core, "doc-journey", 9);
+    let lines: Vec<&str> = SOURCE.split_inclusive('\n').collect();
+    let total = lines.len() as u64;
+    assert_eq!(staged.toc.total_lines, total);
+
+    for (start, end) in [(1u64, 1u64), (2, 4), (5, 7), (8, 10), (11, 11), (1, total)] {
+        let served = result_of(&serve_read_span(
+            start,
+            &core,
+            &blobs,
+            &span("doc-journey", 9, start, end),
+        ));
+        let expected: String = lines[(start - 1) as usize..end as usize].concat();
+        assert_eq!(served.text, expected, "lines {start}..={end}");
+        assert_eq!(served.toc_digest, staged.toc_digest);
+        assert_eq!(
+            &SOURCE.as_bytes()[served.byte_start as usize..served.byte_end as usize],
+            expected.as_bytes()
+        );
+    }
+
+    let past_end = serve_read_span(100, &core, &blobs, &span("doc-journey", 9, 5, total + 1));
+    assert!(past_end.result.is_none());
+    assert!(past_end
+        .refusal_text()
+        .unwrap()
+        .starts_with("SPAN_OUT_OF_BOUNDS"));
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R153.3
 #[cfg(feature = "security")]
 #[test]

@@ -7,6 +7,48 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::record::outcome::RefusalCode;
+
+/// Refusal code: the question names no base or no head revision.
+pub const REVIEW_REVISION_MISSING: RefusalCode = RefusalCode::new("REVIEW_REVISION_MISSING");
+/// Refusal code: a named or cited flaw class is not one of the five.
+pub const REVIEW_CLASS_UNSUPPORTED: RefusalCode = RefusalCode::new("REVIEW_CLASS_UNSUPPORTED");
+/// Refusal code: a finding cites a class the review did not claim to cover.
+pub const REVIEW_CLASS_UNREVIEWED: RefusalCode = RefusalCode::new("REVIEW_CLASS_UNREVIEWED");
+/// Refusal code: a finding carries no evidence, path or cited lines.
+pub const REVIEW_PROOF_ABSENT: RefusalCode = RefusalCode::new("REVIEW_PROOF_ABSENT");
+/// Refusal code: the changed-files digest is not the digest of the changed paths.
+pub const REVIEW_CHANGESET_DIGEST_MISMATCH: RefusalCode =
+    RefusalCode::new("REVIEW_CHANGESET_DIGEST_MISMATCH");
+/// Refusal code: a finding cites a path the changeset does not contain.
+pub const REVIEW_FINDING_OUTSIDE_CHANGESET: RefusalCode =
+    RefusalCode::new("REVIEW_FINDING_OUTSIDE_CHANGESET");
+
+/// The `REFUSALS` table of the `changeset_review` family, registered in
+/// `codes::FAMILY_TABLES`.
+pub const REFUSALS: &[RefusalCode] = &[
+    REVIEW_REVISION_MISSING,
+    REVIEW_CLASS_UNSUPPORTED,
+    REVIEW_CLASS_UNREVIEWED,
+    REVIEW_PROOF_ABSENT,
+    REVIEW_CHANGESET_DIGEST_MISMATCH,
+    REVIEW_FINDING_OUTSIDE_CHANGESET,
+];
+
+/// The classification prefix of a finding's flaw class.
+pub const CLASS_PREFIX: &str = "review:class:";
+/// The classification prefix of a finding's severity.
+pub const SEVERITY_PREFIX: &str = "review:severity:";
+
+/// The digest of a changed-path set: SHA-256 over the sorted, de-duplicated
+/// paths joined by a newline, as 64 lowercase hex characters.
+pub fn changed_files_digest<'a>(paths: impl IntoIterator<Item = &'a str>) -> String {
+    let mut sorted: Vec<&str> = paths.into_iter().collect();
+    sorted.sort_unstable();
+    sorted.dedup();
+    medulla_types::retrieval::sha256_hex(sorted.join("\n").as_bytes())
+}
+
 /// The five flaw classes a changeset review distinguishes.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -30,7 +72,51 @@ pub enum Severity {
     Critical,
 }
 
+impl ReviewClass {
+    /// Every class, in declaration order.
+    pub const ALL: [ReviewClass; 5] = [
+        Self::Injection,
+        Self::AuthBypass,
+        Self::DataExposure,
+        Self::CryptoFlaw,
+        Self::BusinessLogic,
+    ];
+
+    /// The wire name of the class.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Injection => "injection",
+            Self::AuthBypass => "auth_bypass",
+            Self::DataExposure => "data_exposure",
+            Self::CryptoFlaw => "crypto_flaw",
+            Self::BusinessLogic => "business_logic",
+        }
+    }
+
+    /// The class a wire name denotes.
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|class| class.as_str() == name)
+    }
+}
+
 impl Severity {
+    /// The wire name of the severity.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::Critical => "critical",
+        }
+    }
+
+    /// The severity a wire name denotes.
+    pub fn parse(name: &str) -> Option<Self> {
+        (0..=3)
+            .filter_map(Self::from_rank)
+            .find(|severity| severity.as_str() == name)
+    }
+
     /// The integer a knob stores for this severity: `low` 0 to `critical` 3.
     pub fn rank(self) -> i64 {
         match self {
