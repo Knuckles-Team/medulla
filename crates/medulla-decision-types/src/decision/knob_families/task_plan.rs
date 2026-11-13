@@ -44,12 +44,52 @@ pub const SKILL_SPLIT_PROMPT_BYTES: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
-/// Every `task_plan.*` and `skill_plan.*` knob, each `Tunable`.
+/// The fewest matching prior outcomes at which a skill's outcome rate moves its score.
+pub const SKILL_TREE_MIN_OUTCOMES: KnobSpec = KnobSpec {
+    name: "skill_tree.min_outcomes",
+    unit: "count",
+    default: KnobValue::Integer(5),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(1000),
+    safety: KnobSafety::Tunable,
+};
+
+/// How far the outcome rate moves a skill's score from its relevance.
+pub const SKILL_TREE_OUTCOME_WEIGHT: KnobSpec = KnobSpec {
+    name: "skill_tree.outcome_weight",
+    unit: "fraction",
+    default: KnobValue::DecimalMicros(300_000),
+    min: KnobValue::DecimalMicros(0),
+    max: KnobValue::DecimalMicros(1_000_000),
+    safety: KnobSafety::Tunable,
+};
+
+/// The most skills one task's tree keeps.
+pub const SKILL_TREE_MAX_NODES: KnobSpec = KnobSpec {
+    name: "skill_tree.max_nodes",
+    unit: "count",
+    default: KnobValue::Integer(8),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(32),
+    safety: KnobSafety::Tunable,
+};
+
+/// The knobs a ranked skill tree reads (MEDULLA-DECISION-ENGINE-R134.9).
+pub const SKILL_TREE_KNOBS: &[KnobSpec] = &[
+    SKILL_TREE_MIN_OUTCOMES,
+    SKILL_TREE_OUTCOME_WEIGHT,
+    SKILL_TREE_MAX_NODES,
+];
+
+/// Every `task_plan.*`, `skill_plan.*` and `skill_tree.*` knob, each `Tunable`.
 pub const KNOBS: &[KnobSpec] = &[
     SPECIALIST_MIN_SCORE,
     SKILL_BM25_SATURATION,
     SKILL_RELEVANCE_FLOOR,
     SKILL_SPLIT_PROMPT_BYTES,
+    SKILL_TREE_MIN_OUTCOMES,
+    SKILL_TREE_OUTCOME_WEIGHT,
+    SKILL_TREE_MAX_NODES,
 ];
 
 #[cfg(test)]

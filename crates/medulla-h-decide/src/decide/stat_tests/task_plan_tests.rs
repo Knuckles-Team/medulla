@@ -615,9 +615,23 @@ async fn decomposition_parameter_routes_through_decide() {
 }
 
 fn publish_skill(h: &Harness, tenant: &str, nonce: u8, id: &str, text: &str) {
+    publish_skill_with_parent(h, tenant, nonce, id, text, None);
+}
+
+fn publish_skill_with_parent(
+    h: &Harness,
+    tenant: &str,
+    nonce: u8,
+    id: &str,
+    text: &str,
+    parent: Option<&str>,
+) {
     let mut draft = test_component_draft(tenant, id);
     draft.kind = AgentComponentKind::Skill;
     draft.summary = text.to_string();
+    if let Some(parent) = parent {
+        draft.attributes.insert("parent".into(), parent.into());
+    }
     h.store
         .publish_component(AgentComponentPublishRequest {
             context: mutation_context(
@@ -671,6 +685,7 @@ async fn skill_query_parameter_plans_over_the_visible_skills() {
         TypedValue::SkillPlanQuery(Box::new(SkillPlanQuery {
             output_task_id: "z".into(),
             subtasks: BoundedVec::new(subtasks).unwrap(),
+            outcome_pins: BoundedVec::default(),
         }))
     };
     let request = plan_request(
@@ -717,4 +732,261 @@ async fn skill_query_parameter_plans_over_the_visible_skills() {
         &["z"],
     );
     assert_invalid(&empty, request, "EMPTY_SKILL_INDEX").await;
+}
+
+/// Log `base` as an earlier decision of the deciding principal that shares its
+/// context, with one stored evaluation of `skill`.
+fn log_skill_outcome(
+    h: &Harness,
+    base: &StatisticalDecisionRecord,
+    id: &str,
+    skill: &str,
+    ok: bool,
+) {
+    use medulla_decision_types::decision::statistical::log::{
+        DecisionLogEntry, DecisionOutcomeEvaluation, EntryInputs, RecordVisibility,
+        StoredEvaluation, DECISION_LOG_SCHEMA_VERSION,
+    };
+    use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
+    let mut record = base.clone();
+    record.record_id = format!("decision:{id}");
+    record.caller_principal = verified().principal_persistence_id();
+    let entry = DecisionLogEntry {
+        schema_version: DECISION_LOG_SCHEMA_VERSION,
+        visibility: RecordVisibility::Tenant,
+        committed_by: record.caller_principal.clone(),
+        committed_at_ms: record.created_at_ms,
+        record: Box::new(record.clone()),
+        inputs: EntryInputs::Inline,
+    };
+    let stored = StoredEvaluation {
+        evaluation: DecisionOutcomeEvaluation {
+            record_id: record.record_id.clone(),
+            evaluation_id: format!("eval-{id}"),
+            class: EvidenceClass::Observation,
+            selected_agent: skill.to_string(),
+            lease_holder: "worker".to_string(),
+            fidelity: OutcomeFidelity::ToolCalls,
+            success: Some(ok),
+            backbone: None,
+        },
+        producer: "evaluator".to_string(),
+        recorded_at_ms: record.created_at_ms,
+    };
+    h.store
+        .put_decision_artifacts(
+            TENANT,
+            &[
+                (
+                    record_key(&record.record_id),
+                    encode_artifact(&entry).unwrap(),
+                ),
+                (
+                    evaluation_key(&record.record_id, &stored.evaluation.evaluation_id),
+                    encode_artifact(&stored).unwrap(),
+                ),
+            ],
+        )
+        .unwrap();
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.9
+#[tokio::test]
+async fn served_decide_returns_ranked_skill_tree() {
+    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    use medulla_decision_types::decision::task_plan::skill_tree::OutcomeRef;
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    publish_skill(
+        &h,
+        TENANT,
+        41,
+        "skill-search",
+        "search documents archive retrieval index",
+    );
+    publish_skill_with_parent(
+        &h,
+        TENANT,
+        42,
+        "skill-index",
+        "search documents index retrieval catalogue",
+        Some("skill-search"),
+    );
+    publish_skill(
+        &h,
+        TENANT,
+        43,
+        "skill-report",
+        "summarise findings report narrative",
+    );
+    // Another tenant's skill never enters this tenant's tree.
+    publish_skill(
+        &h,
+        "foreign-tenant",
+        44,
+        "foreign-search",
+        "search documents archive retrieval index",
+    );
+    let query = |pins: Vec<OutcomeRef>| {
+        TypedValue::SkillPlanQuery(Box::new(SkillPlanQuery {
+            output_task_id: "a".into(),
+            subtasks: BoundedVec::new(vec![SkillSubtask {
+                id: "a".into(),
+                text: "search documents archive retrieval".into(),
+                depends_on: BoundedVec::default(),
+            }])
+            .unwrap(),
+            outcome_pins: BoundedVec::new(pins).unwrap(),
+        }))
+    };
+    let ask = |pins: Vec<OutcomeRef>| plan_request(&pin, "skill_query", query(pins), &["a"]);
+    let node = |record: &StatisticalDecisionRecord, skill: &str| {
+        record
+            .task_plan()
+            .unwrap()
+            .skill_trees
+            .iter()
+            .find(|tree| tree.task_id == "a")
+            .unwrap()
+            .nodes
+            .iter()
+            .find(|n| n.skill_id == skill)
+            .cloned()
+    };
+
+    // Relevance alone: every skill above the floor is a node, ranked, linked.
+    let first = decide(&h, ask(vec![])).await.unwrap();
+    let base = first.records.as_slice()[0].clone();
+    let tree = &base.task_plan().unwrap().skill_trees.as_slice()[0];
+    let ids: Vec<(&str, u16)> = tree
+        .nodes
+        .iter()
+        .map(|n| (n.skill_id.as_str(), n.rank))
+        .collect();
+    assert_eq!(ids, vec![("skill-search", 1), ("skill-index", 2)]);
+    assert_eq!(
+        tree.nodes.as_slice()[1].parent_skill_id.as_deref(),
+        Some("skill-search")
+    );
+    assert_eq!(tree.nodes.as_slice()[0].parent_skill_id, None);
+    let context = base.inputs.context_digest.clone().unwrap();
+    assert!(tree
+        .nodes
+        .iter()
+        .all(|n| n.context_digest == context && n.prior_outcome_refs.is_empty()));
+    assert!(base.premises.iter().any(|p| p.fact
+        == format!(
+            "skill_node:task=a;skill=skill-index;parent=skill-search;rank=2;score_q32={}",
+            tree.nodes.as_slice()[1].score_q32
+        )));
+    assert!(base
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("knob:skill_tree.max_nodes=")));
+    let again = decide(&h, ask(vec![])).await.unwrap();
+    assert_eq!(
+        again.records.as_slice()[0].task_plan(),
+        base.task_plan(),
+        "same tree, same plan digest"
+    );
+    let relevance = node(&base, "skill-index").unwrap().score_q32;
+
+    // Below `skill_tree.min_outcomes` the outcomes are cited but do not move the score.
+    for n in 0..4 {
+        log_skill_outcome(&h, &base, &format!("h{n}"), "skill-index", true);
+    }
+    let four = decide(&h, ask(vec![])).await.unwrap();
+    let four = node(&four.records.as_slice()[0], "skill-index").unwrap();
+    assert_eq!(four.score_q32, relevance);
+    assert_eq!(four.prior_outcome_refs.len(), 4);
+
+    // At the support floor the outcome rate moves it: 5 of 5 adds weight * 1/2.
+    log_skill_outcome(&h, &base, "h4", "skill-index", true);
+    let five = decide(&h, ask(vec![])).await.unwrap();
+    let five_record = five.records.as_slice()[0].clone();
+    let five_node = node(&five_record, "skill-index").unwrap();
+    assert_eq!(five_node.score_q32, relevance + (3 * (1_i64 << 32)) / 20);
+    assert_eq!(five_node.prior_outcome_refs.len(), 5);
+    // The sealed refs pin the stored outcome, and pinning them reproduces the tree.
+    let pins: Vec<OutcomeRef> = five_node.prior_outcome_refs.iter().cloned().collect();
+    assert!(pins
+        .iter()
+        .all(|r| r.outcome_revision == 1 && r.outcome_digest.starts_with("sha256:")));
+    let pinned = decide(&h, ask(pins.clone())).await.unwrap();
+    assert_eq!(
+        node(&pinned.records.as_slice()[0], "skill-index"),
+        Some(five_node.clone())
+    );
+
+    // A stale ref, a ref to no record, and an outcome of another context refuse.
+    let mut stale = pins.clone();
+    stale[0].outcome_digest = "sha256:stale".into();
+    assert_invalid(&h, ask(stale), "STALE_OUTCOME_EVIDENCE").await;
+    let mut missing = pins.clone();
+    missing[0].record_id = "decision:none".into();
+    assert_invalid(&h, ask(missing), "STALE_OUTCOME_EVIDENCE").await;
+    let mut other = base.clone();
+    other.inputs.context_digest = Some("another-context".into());
+    log_skill_outcome(&h, &other, "other", "skill-index", true);
+    let other_ref = OutcomeRef {
+        record_id: "decision:other".into(),
+        outcome_revision: 1,
+        outcome_digest: "x".into(),
+    };
+    assert_invalid(&h, ask(vec![other_ref]), "STALE_OUTCOME_EVIDENCE").await;
+    // The foreign tenant's skill never appears.
+    assert!(node(&five_record, "foreign-search").is_none());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.9
+#[tokio::test]
+async fn served_decide_refuses_a_skill_parent_cycle_and_an_unknown_parent() {
+    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    let ask_over = |pin: &ComponentDependency| {
+        plan_request(
+            pin,
+            "skill_query",
+            TypedValue::SkillPlanQuery(Box::new(SkillPlanQuery {
+                output_task_id: "a".into(),
+                subtasks: BoundedVec::new(vec![SkillSubtask {
+                    id: "a".into(),
+                    text: "search documents retrieval".into(),
+                    depends_on: BoundedVec::default(),
+                }])
+                .unwrap(),
+                outcome_pins: BoundedVec::default(),
+            })),
+            &["a"],
+        )
+    };
+    let cycle = Harness::new().await;
+    let (pin, _) = publish_route_schema(&cycle);
+    publish_skill_with_parent(
+        &cycle,
+        TENANT,
+        51,
+        "skill-a",
+        "search documents retrieval",
+        Some("skill-b"),
+    );
+    publish_skill_with_parent(
+        &cycle,
+        TENANT,
+        52,
+        "skill-b",
+        "search documents index",
+        Some("skill-a"),
+    );
+    assert_invalid(&cycle, ask_over(&pin), "SKILL_TREE_CYCLE").await;
+    let unknown = Harness::new().await;
+    let (pin, _) = publish_route_schema(&unknown);
+    publish_skill_with_parent(
+        &unknown,
+        TENANT,
+        53,
+        "skill-a",
+        "search documents retrieval",
+        Some("skill-ghost"),
+    );
+    assert_invalid(&unknown, ask_over(&pin), "SKILL_PARENT_UNKNOWN").await;
 }

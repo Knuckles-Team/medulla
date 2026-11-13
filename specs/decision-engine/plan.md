@@ -120,6 +120,8 @@ none
 - `Method::ConnectorPack` arm (`decision_plane.rs:161`) to `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`), which leaves an outbox row for the capability feed of `MEDULLA-DECISION-ENGINE-R172.7.2`.
 - Obsolete paths to delete: the per-kind `if` chains in `stat_decide.rs` and `candidates.rs` once the family registry lands.
 
+Ranked skill tree (R134.9): `plan_of_request` in `stat_task_plan.rs` ranks each subtask's visible skills with `rank_skill_tree` (`task_plan/skill_tree.rs`) after `plan_over_skills` succeeds, reading prior outcomes from the decision log, and seals the result as `TaskPlan.skill_trees`.
+
 ### Capability ranking catalog (R829.1 to R829.3)
 
 Pre-untangled design, one line per answer.

@@ -36,6 +36,11 @@ pub struct SkillSubtask {
 pub struct SkillPlanQuery {
     pub output_task_id: String,
     pub subtasks: BoundedVec<SkillSubtask, 64>,
+    /// Outcome evidence the caller saw (MEDULLA-DECISION-ENGINE-R134.9). When
+    /// present, exactly these outcomes feed the ranked tree and each must equal
+    /// the stored outcome; when empty the engine reads the matching log.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub outcome_pins: BoundedVec<super::skill_tree::OutcomeRef, 64>,
 }
 
 /// The knobs skill planning reads, resolved from the pinned decision policy.

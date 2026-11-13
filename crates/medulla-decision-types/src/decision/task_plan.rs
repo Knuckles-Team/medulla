@@ -18,15 +18,12 @@ mod control;
 mod decompose;
 pub mod pairwise;
 pub mod skill_plan;
+pub mod skill_tree;
 pub mod trajectory_budget;
 pub mod trajectory_projection;
 pub mod trajectory_refusal;
 pub use aggregation::{
     AggregationOp, TaskPlanAggregation, PLAN_AGGREGATION_INVALID, PLAN_AGGREGATION_NOT_OUTPUT,
-};
-pub use decompose::{
-    decompose_task, independent_count, independent_ids, topology_requirements, DecomposeFacts,
-    DecomposeKnobs, DecomposeSubtask, SpecialistScore, NO_SPECIALIST_FOR_SUBTASK,
 };
 pub use call::{
     task_bindings, TaskPlanBinding, TaskPlanCall, BINDING_KEY, MAX_BINDINGS_PER_CALL,
@@ -37,6 +34,10 @@ pub use control::{
     BranchDecisionCondition, BranchKind, BranchSpec, CompareOp, DecisionSpec, JoinSpec,
     APPROVAL_TIMEOUT_OUT_OF_RANGE, BRANCH_ARM_UNKNOWN, BRANCH_JOIN_UNMATCHED, BRANCH_NO_DEFAULT,
     CONTROL_STEP_INVALID, MAX_APPROVAL_TIMEOUT_S, MIN_APPROVAL_TIMEOUT_S, STEP_KIND_CONFLICT,
+};
+pub use decompose::{
+    decompose_task, independent_count, independent_ids, topology_requirements, DecomposeFacts,
+    DecomposeKnobs, DecomposeSubtask, SpecialistScore, NO_SPECIALIST_FOR_SUBTASK,
 };
 
 pub const TASK_PLAN_POLICY_REVISION: &str = "bounded-explicit-dag-v2";
@@ -148,6 +149,11 @@ pub struct TaskPlan {
     pub policy_digest: String,
     pub input_digest: String,
     pub plan_digest: String,
+    /// The ranked skill tree of each subtask of a `skill_query` plan
+    /// (MEDULLA-DECISION-ENGINE-R134.9); absent for every other plan, whose
+    /// bytes stay unchanged.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub skill_trees: BoundedVec<skill_tree::TaskSkillTree, 64>,
 }
 
 /// The policy digest includes every engine bound and ordering rule.
@@ -313,6 +319,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
         policy_digest: task_plan_policy_digest(),
         input_digest: digest_text("eg/task-plan-input/v1", proposal),
         plan_digest: String::new(),
+        skill_trees: BoundedVec::default(),
     };
     plan.plan_digest = digest_text(
         "eg/task-plan/v1",

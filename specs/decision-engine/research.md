@@ -328,3 +328,14 @@ Decision: the L3 test drives the real served chain end to end. It builds the dec
 - **Every refusal is decided before the first read.** Policies are checked first, then the budget is charged for every query on a copy of the bucket; the copy replaces the held bucket only when the whole refresh stores. A refused refresh writes no row, no region mark and no receipt.
 - **A region is the shard of the URL's host.** Marks are `{shard_id, node_type: Document, revision}` with one revision per new or superseding row, kept as a per-graph counter beside the rows and the receipt in one atomic batch. The drift monitor loads them into its changed-revision bitmap.
 - **The request allowance bucket lives in process memory.** It is a rate limiter over `freshness.window`; a restart refills it, which only ever allows a fresh window.
+
+
+## Ranked skill tree: design calls (R134.9)
+
+- A prior outcome needs a skill attribution the log already carries: an evaluation's `selected_agent` names the skill it judged, and its record's sealed `context_digest` names the context. No second outcome store exists; the tree reads the decision log through the same visibility rules as the exploration match (same tenant, same principal).
+- The request's context digest is the sealed `context_digest_of(question, params)` with `outcome_pins` cleared, so a pinned and an unpinned ask of one query share a context and prior plans of the same query match.
+- `outcome_revision` is the record's stored evaluation count (the log only appends) and `outcome_digest` is the digest of every stored evaluation (id, success, agent) of the record; a ref is stale when either differs. A caller pins refs through `SkillPlanQuery.outcome_pins`; the engine then uses exactly those records, refusing `STALE_OUTCOME_EVIDENCE` for a missing record, another context or another principal, or a changed outcome. Unpinned asks read the matching log, newest first, at most 64 records.
+- The score is exact integer arithmetic on `Q32`: `relevance + weight * (2s - n) / (2n)`, floored, clamped to `[0, 1]`; below `skill_tree.min_outcomes` it is the relevance alone. Equal scores order by skill id.
+- A node's parent is the nearest kept ancestor on the `parent` attribute chain. A chain that returns to a skill refuses `SKILL_TREE_CYCLE`; a parent the tenant does not see refuses `SKILL_PARENT_UNKNOWN`.
+- The trees are sealed as `TaskPlan.skill_trees`, which is part of the record answer and so of the record digest, and the plan digest is re-bound over them. A plan with no trees keeps its bytes.
+- Knob premises (`knob:skill_tree.*`) are added only to a `skill_query` plan, so other task plans keep their premises.

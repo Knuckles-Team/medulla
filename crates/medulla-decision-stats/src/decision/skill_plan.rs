@@ -47,13 +47,13 @@ fn reaches(relevance_q32: i64, floor_micros: i64) -> bool {
     i128::from(relevance_q32) * 1_000_000 >= i128::from(floor_micros) << 32
 }
 
-/// Choose, per subtask, the most relevant skill at or above the floor. Ties go
-/// to the lowest skill id. The first uncovered subtask id (in id order) refuses.
-fn choose(
+/// The relevance of every visible skill to each subtask, as `Q32`: subtasks in
+/// id order, skills in id order. A duplicate subtask id refuses.
+pub fn skill_relevances(
     query: &SkillPlanQuery,
     skills: &[SkillDocument],
     knobs: &SkillPlanKnobs,
-) -> Result<Vec<Chosen>, String> {
+) -> Result<Vec<(String, Vec<(String, i64)>)>, String> {
     let mut ordered: Vec<&SkillDocument> = skills.iter().collect();
     ordered.sort_by(|a, b| a.id.cmp(&b.id));
     let documents: Vec<&str> = ordered.iter().map(|s| s.text.as_str()).collect();
@@ -61,28 +61,57 @@ fn choose(
     let mut subtasks: Vec<_> = query.subtasks.iter().collect();
     subtasks.sort_by(|a, b| a.id.cmp(&b.id));
     let mut seen = BTreeSet::new();
-    let mut chosen = Vec::with_capacity(subtasks.len());
+    let mut out = Vec::with_capacity(subtasks.len());
     for subtask in subtasks {
         if !seen.insert(subtask.id.as_str()) {
             return Err(refusal("duplicate_task_id", &subtask.id));
         }
         let scores = bm25::scores(&documents, &subtask.text);
-        let mut best: Option<(i64, &str)> = None;
+        let mut row = Vec::with_capacity(ordered.len());
         for (skill, score) in ordered.iter().zip(scores) {
             let relevance = q32(score / (score + saturation))
                 .map_err(|r| r.render())?
                 .value;
+            row.push((skill.id.clone(), relevance));
+        }
+        out.push((subtask.id.clone(), row));
+    }
+    Ok(out)
+}
+
+/// Whether a `Q32` relevance reaches a floor given in millionths.
+pub fn relevance_reaches(relevance_q32: i64, floor_micros: i64) -> bool {
+    reaches(relevance_q32, floor_micros)
+}
+
+/// Choose, per subtask, the most relevant skill at or above the floor. Ties go
+/// to the lowest skill id. The first uncovered subtask id (in id order) refuses.
+fn choose(
+    query: &SkillPlanQuery,
+    skills: &[SkillDocument],
+    knobs: &SkillPlanKnobs,
+) -> Result<Vec<Chosen>, String> {
+    let rows = skill_relevances(query, skills, knobs)?;
+    let mut chosen = Vec::with_capacity(rows.len());
+    for (id, row) in rows {
+        let mut best: Option<(i64, &str)> = None;
+        for (skill, relevance) in &row {
             // Strictly greater replaces, so the lowest skill id wins a tie.
-            if best.map_or(true, |(have, _)| relevance > have) {
-                best = Some((relevance, skill.id.as_str()));
+            if best.map_or(true, |(have, _)| *relevance > have) {
+                best = Some((*relevance, skill.as_str()));
             }
         }
         let Some((_, skill)) = best.filter(|(r, _)| reaches(*r, knobs.relevance_floor_micros))
         else {
-            return Err(refusal(NO_SKILL_FOR_SUBTASK, &subtask.id));
+            return Err(refusal(NO_SKILL_FOR_SUBTASK, &id));
         };
+        let subtask = query
+            .subtasks
+            .iter()
+            .find(|subtask| subtask.id == id)
+            .expect("the relevance rows name query subtasks");
         chosen.push(Chosen {
-            id: subtask.id.clone(),
+            id,
             text: subtask.text.clone(),
             deps: subtask.depends_on.iter().cloned().collect(),
             skill: skill.to_string(),
@@ -266,6 +295,7 @@ mod tests {
         SkillPlanQuery {
             output_task_id: output.into(),
             subtasks: BoundedVec::new(subtasks).unwrap(),
+            outcome_pins: BoundedVec::default(),
         }
     }
 

@@ -145,7 +145,21 @@ pub(super) fn context_digest_of(
     question_id: &str,
     params: &[medulla_decision_types::decision::statistical::TypedParam],
 ) -> String {
-    let mut sorted: Vec<_> = params.iter().collect();
+    // Outcome pins are evidence about the context, never part of it
+    // (MEDULLA-DECISION-ENGINE-R134.9): a pinned and an unpinned ask match.
+    let mut sorted: Vec<medulla_decision_types::decision::statistical::TypedParam> = params
+        .iter()
+        .map(|param| {
+            let mut param = param.clone();
+            if let medulla_decision_types::decision::statistical::TypedValue::SkillPlanQuery(
+                query,
+            ) = &mut param.value
+            {
+                query.outcome_pins = Default::default();
+            }
+            param
+        })
+        .collect();
     sorted.sort_by(|a, b| a.name.cmp(&b.name));
     medulla_query_types::solve_scalar::digest_text("eg/decision-context", &(question_id, sorted))
 }
