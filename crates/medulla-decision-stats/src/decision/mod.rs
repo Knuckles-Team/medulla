@@ -34,6 +34,7 @@ pub mod evaluate;
 mod evaluate_bandit;
 pub mod exploration;
 pub mod feature_power;
+pub mod feature_match;
 pub mod features;
 pub mod fit;
 mod fit_calibrate;

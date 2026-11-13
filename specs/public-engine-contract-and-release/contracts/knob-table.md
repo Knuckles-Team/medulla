@@ -67,6 +67,12 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `research.node_budget` | u64 | 1000 | [10, 100000] | nodes | Tunable | `MEDULLA_RESEARCH_NODE_BUDGET` |
 | `research.depth_limit` | u64 | 3 | [1, 10] | links | Tunable | `MEDULLA_RESEARCH_DEPTH_LIMIT` |
 | `research.value_floor_micro` | u64 | 0 | [0, 1000000] | micro-units | Tunable | `MEDULLA_RESEARCH_VALUE_FLOOR_MICRO` |
+| `match.w_token` | u64 | 400000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_W_TOKEN` |
+| `match.w_label` | u64 | 300000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_W_LABEL` |
+| `match.w_embedding` | u64 | 300000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_W_EMBEDDING` |
+| `match.max_block` | u64 | 256 | [8, 4096] | features | Tunable | `MEDULLA_MATCH_MAX_BLOCK` |
+| `match.score_min` | u64 | 600000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_SCORE_MIN` |
+| `match.entropy_mbit` | u64 | 3500 | [1000, 6000] | millibits | Tunable | `MEDULLA_MATCH_ENTROPY_MBIT` |
 
 ## Wire shape
 

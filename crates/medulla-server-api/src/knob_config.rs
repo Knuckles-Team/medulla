@@ -358,6 +358,18 @@ knobs! {
     research_depth_limit: u64 = "research.depth_limit", U64(3), [1, 10], "links", Tunable;
     /// A research walk stops when the best expected value is at or below this.
     research_value_floor_micro: u64 = "research.value_floor_micro", U64(0), [0, 1_000_000], "micro-units", Tunable;
+    /// Weight of token similarity in a feature pair score (MEDULLA-DECISION-ENGINE-R707.2).
+    match_w_token: u64 = "match.w_token", U64(400_000), [0, 1_000_000], "ppm", Tunable;
+    /// Weight of ontology label equality in a feature pair score.
+    match_w_label: u64 = "match.w_label", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Weight of embedding cosine in a feature pair score.
+    match_w_embedding: u64 = "match.w_embedding", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Most features scored in one same-label block.
+    match_max_block: u64 = "match.max_block", U64(256), [8, 4_096], "features", Tunable;
+    /// Lowest pair score that counts as a match.
+    match_score_min: u64 = "match.score_min", U64(600_000), [0, 1_000_000], "ppm", Tunable;
+    /// Name entropy at which a name alone never merges two features.
+    match_entropy_mbit: u64 = "match.entropy_mbit", U64(3_500), [1_000, 6_000], "millibits", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.

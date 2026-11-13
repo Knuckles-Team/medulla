@@ -179,3 +179,5 @@ Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualifie
 Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
 
 Research frontier (R705.2): `expand_frontier` in `medulla-decision-stats` is a binary-heap walk over caller-supplied source nodes (Q32 expected value, id tie-break); the family `research_voi` (R705.3) supplies the nodes from the graph and reads `research.*` knobs through the registry.
+
+Feature matching (R707.2): `crates/medulla-decision-stats/src/decision/feature_match.rs` holds `canonical_id`, `entropy_mbit`, `score_pair`, `dedup` and `advance_ledger`, all pure; the family `feature_match` (R707.3) supplies embedding cosines and the `match.*` knobs, and the ledger handler calls `advance_ledger` with the revision the caller read.

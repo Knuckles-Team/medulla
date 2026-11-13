@@ -146,3 +146,6 @@ Decision: `:precedes` is a hard constraint and a success rate only chooses among
 
 ## Research walk: what counts against the node budget and the value floor (R705.2)
 Decision: the node budget counts sources read, so the result count never bounds the walk. The floor is tested on the best queued expected value before a read, so a source at or below the floor is never read and ends the walk. Links are queued once per source (a source reached by two paths keeps the shallower first reach), and a source whose depth would exceed `research.depth_limit` is skipped, not queued. Why: the walk is bounded by work done, not by what it returns, and the heap makes the best remaining value the only value the stop rule needs.
+
+## Matching: what the entropy guard removes (R707.2)
+Decision: a name at or above `match.entropy_mbit` contributes no token similarity, so two features that share only such a name score at most the label and embedding weights and fall below `match.score_min` unless the embeddings agree. Entropy is computed with an integer base-2 logarithm (Q20), so the guard is the same on every platform and needs no float transcendental. Blocks are filled in feature id order so the cap is reproducible; the count of features past the cap is returned, not hidden.

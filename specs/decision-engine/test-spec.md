@@ -1977,6 +1977,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R707.1` | `crates/medulla-decision-types/src/decision/feature_match.rs::tests::feature_types_round_trip` | L1 |
 | `MEDULLA-DECISION-ENGINE-R707.1` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-decision-stats/src/decision/feature_match.rs::tests::blocked_scores_and_entropy_guard` | L2 |
+| `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-decision-stats/src/decision/feature_match.rs::tests::status_changes_by_compare_and_set_on_revision` | L1 |
 | `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.3` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::match_and_ledger_reach_their_handlers` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.3` | `tests/decide/test_feature_ledger_served.py::test_ledger_served` | L4 |
