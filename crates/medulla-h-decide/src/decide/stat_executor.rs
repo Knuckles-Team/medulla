@@ -94,10 +94,6 @@ pub(super) struct Executed {
     /// premises need what only the conclude stage reads (a profile lookup, the
     /// pinned policy's knobs); the family's `premises` hook seals them.
     pub(super) family_premises: Vec<FamilyPremise>,
-    /// Premises a family sealed in full while it concluded, where a premise's
-    /// subject is data the request names (the edit-concentration family's
-    /// dimension) and so cannot be a `FamilyPremise` static subject.
-    pub(super) sealed_premises: Vec<medulla_decision_types::decision::PremiseRef>,
     /// The route stage that answered a `Route` question
     /// (MEDULLA-DECISION-ENGINE-R035.750.1); `None` for every other kind and
     /// when the shared ladder (the learned policy) answered.
@@ -329,7 +325,6 @@ pub(super) fn run_on_matrix(
                 context_selection: None,
                 thought: None,
                 family_premises: Vec::new(),
-                sealed_premises: Vec::new(),
                 route: None,
                 answered: None,
             });
@@ -357,7 +352,6 @@ pub(super) fn run_on_matrix(
         context_selection: None,
         thought: None,
         family_premises: Vec::new(),
-        sealed_premises: Vec::new(),
         route: None,
         answered: None,
     })
@@ -395,7 +389,6 @@ pub(super) fn execute(
                 context_selection: None,
                 thought: None,
                 family_premises: Vec::new(),
-                sealed_premises: Vec::new(),
                 route: None,
                 answered: None,
             });

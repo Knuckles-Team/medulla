@@ -49,7 +49,6 @@ impl DecisionFamily for ThoughtSearchFamily {
                     context_selection: None,
                     thought,
                     family_premises: Vec::new(),
-                    sealed_premises: Vec::new(),
                     route: None,
                     answered: None,
                 },

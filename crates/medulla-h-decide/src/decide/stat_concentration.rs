@@ -25,7 +25,7 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
-use super::stat_executor::Executed;
+use super::stat_executor::{Executed, FamilyExecuted};
 use super::stat_support::{filtered_view, invalid_parameter};
 
 const PARAM_GRAPH: &str = "graph";
@@ -161,7 +161,6 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         thought: None,
         context_selection: None,
         family_premises: Vec::new(),
-        sealed_premises: Vec::new(),
         route: None,
         answered: None,
     }
@@ -278,7 +277,10 @@ pub(super) fn conclude(
                     scores: BoundedVec::new(scores).expect("three scores fit the bound"),
                     calibrated: false,
                 });
-                answered.sealed_premises = premises(request, tenant, graph_view);
+                answered.family = Some(FamilyExecuted {
+                    answer: None,
+                    premises: premises(request, tenant, graph_view),
+                });
                 answered
             }
         },

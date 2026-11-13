@@ -151,7 +151,7 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         seed: [0u8; 32],
         harness_contrast: None,
         topology: None,
-        designation: None,
+        family: None,
     }
 }
 
