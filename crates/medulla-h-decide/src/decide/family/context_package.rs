@@ -264,16 +264,17 @@ fn kernel_refusal(refusal: PackageRefusal) -> Result<Executed, String> {
     )
 }
 
-/// The solver of a served package question. Under test a solver registered for
-/// the question id replaces it, so one test corrupts the proof without
-/// touching another's.
+/// The solver of a served package question. Under a test build or the
+/// `test-solver-seam` feature, a solver registered for the question id replaces
+/// it, so one question corrupts the proof without touching another's. A
+/// default or release build has no seam: it always runs the real solver.
 fn solver(question_id: &str) -> impl FnOnce(&Model, &SolverConfig) -> Certificate {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-solver-seam"))]
     let replacement = overrides::get(question_id);
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-solver-seam")))]
     let _ = question_id;
     move |model: &Model, config: &SolverConfig| {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-solver-seam"))]
         if let Some(replacement) = replacement {
             return replacement(model, config);
         }
@@ -281,35 +282,69 @@ fn solver(question_id: &str) -> impl FnOnce(&Model, &SolverConfig) -> Certificat
     }
 }
 
-#[cfg(test)]
+/// The test-only solver seam (MEDULLA-DECISION-ENGINE-R137.12). Compiled only
+/// under `cfg(test)` or the `test-solver-seam` cargo feature, which the served
+/// test build alone enables.
+#[cfg(any(test, feature = "test-solver-seam"))]
 pub(in crate::decide) mod overrides {
-    use std::collections::BTreeMap;
-    use std::sync::{Mutex, OnceLock};
-
     use medulla_decision_policy::solve::{Certificate, Model, SolverConfig};
 
     /// A replacement solver.
     pub(in crate::decide) type SolverFn = fn(&Model, &SolverConfig) -> Certificate;
 
-    fn table() -> &'static Mutex<BTreeMap<String, SolverFn>> {
-        static TABLE: OnceLock<Mutex<BTreeMap<String, SolverFn>>> = OnceLock::new();
-        TABLE.get_or_init(|| Mutex::new(BTreeMap::new()))
+    /// The question id whose solver always returns a corrupted certificate, so a
+    /// served test proves that the independent verifier rejects it.
+    pub const CORRUPT_CERTIFICATE_QUESTION_ID: &str = "context.package.corrupt-certificate";
+
+    /// A solver whose certificate claims the optimum but names an assignment
+    /// that breaks the capacity row: the independent verifier must reject it.
+    pub(in crate::decide) fn corrupting_solver(
+        model: &Model,
+        config: &SolverConfig,
+    ) -> Certificate {
+        let mut certificate = medulla_decision_policy::solve::solve(model, config);
+        if let Some(incumbent) = certificate.incumbent.as_mut() {
+            incumbent
+                .selected
+                .iter_mut()
+                .for_each(|picked| *picked = true);
+        }
+        certificate
+    }
+
+    #[cfg(test)]
+    mod table {
+        use std::collections::BTreeMap;
+        use std::sync::{Mutex, OnceLock};
+
+        use super::SolverFn;
+
+        pub(super) fn get() -> &'static Mutex<BTreeMap<String, SolverFn>> {
+            static TABLE: OnceLock<Mutex<BTreeMap<String, SolverFn>>> = OnceLock::new();
+            TABLE.get_or_init(|| Mutex::new(BTreeMap::new()))
+        }
     }
 
     /// Replace the solver of the question `question_id`.
+    #[cfg(test)]
     pub(in crate::decide) fn set(question_id: &str, solver: SolverFn) {
-        table()
+        table::get()
             .lock()
             .expect("override table")
             .insert(question_id.to_string(), solver);
     }
 
     pub(super) fn get(question_id: &str) -> Option<SolverFn> {
-        table()
+        #[cfg(test)]
+        if let Some(solver) = table::get()
             .lock()
             .expect("override table")
             .get(question_id)
             .copied()
+        {
+            return Some(solver);
+        }
+        (question_id == CORRUPT_CERTIFICATE_QUESTION_ID).then_some(corrupting_solver as SolverFn)
     }
 }
 

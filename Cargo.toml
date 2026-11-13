@@ -281,6 +281,8 @@ numeric = ["medulla-server/numeric", "medulla-wire/numeric", "medulla-h-admin/nu
 # The general bounded 0-1 integer programme (`Method::Solve`). Wire DTOs are
 # unconditional in medulla-types; this gates the medulla-compute search and verifier.
 solve = ["medulla-decision-policy/solve", "medulla-h-decide/solve", "medulla-compute/solve"]
+# Test-only: enabled solely by the served-test build (tests/conftest.py); a release build never carries the solver seam.
+test-solver-seam = ["medulla-h-decide/test-solver-seam"]
 # RF-ADR-010: the Decide layer's handlers. The wire contract is unconditional
 # (the capability rows are, following the `SemanticIndex` precedent), so this
 # gates only the server-side implementation and the crates it needs.

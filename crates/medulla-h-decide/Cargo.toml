@@ -88,6 +88,8 @@ redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-server-mutati
 statechart = ["dep:medulla-epistemic", "dep:medulla-h-jobs", "dep:medulla-statechart", "dep:medulla-store", "medulla-h-jobs/statechart", "medulla-protocol-types/statechart", "medulla-store/statechart", "medulla-work-types/statechart", "server"]
 security = ["redb", "dep:medulla-store", "medulla-store/security", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
 solve = ["medulla-compute/solve", "medulla-decision-policy/solve"]
+# Test-only: a served test build swaps the package solver for a corrupting one under a named question id. Never in a default or release build.
+test-solver-seam = []
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
 numeric = ["medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric", "medulla-exec/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]

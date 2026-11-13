@@ -17,6 +17,10 @@ TEST_AGENT_ID = "service:test-suite"
 TEST_SIGNER_KEY = "test-operation-signer-key"  # sanitizer:ignore — test-only value
 TEST_AUDIENCE = "medulla-test"
 TEST_TENANT = "tenant:test"
+# The served-test engine build: `full` plus the test-only package-solver seam
+# (MEDULLA-DECISION-ENGINE-R137.12). A release build never enables the seam; a
+# caller that supplies MEDULLA_TEST_BINARY builds it with the same features.
+SERVED_TEST_FEATURES = "full,test-solver-seam"
 TEST_POLICY_VERSION = "policy:test"
 
 # NE-247. NE-065 replaced the flat `{signer_id: key}` signer registry with a
@@ -447,13 +451,15 @@ def start_medulla_server(request, tmp_path_factory):
         # a `server`-only build compiles out — every such test would otherwise fail
         # with "Method not available in this server build".
         subprocess.run(
-            ["cargo", "build", "--features", "full"], cwd=rust_dir, check=False
+            ["cargo", "build", "--features", SERVED_TEST_FEATURES],
+            cwd=rust_dir,
+            check=False,
         )
         command = [
             "cargo",
             "run",
             "--features",
-            "full",
+            SERVED_TEST_FEATURES,
             "--bin",
             "medulla-server",
             "--",

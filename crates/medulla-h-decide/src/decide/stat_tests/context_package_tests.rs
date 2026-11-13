@@ -310,21 +310,7 @@ async fn decide_routes_package_selection() {
     assert_eq!(class, EvidenceClass::Proof);
 }
 
-/// A solver whose certificate claims the optimum but names an assignment that
-/// breaks the capacity row: the independent verifier must reject it.
-fn corrupting_solver(
-    model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_policy::solve::SolverConfig,
-) -> medulla_decision_policy::solve::Certificate {
-    let mut certificate = medulla_decision_policy::solve::solve(model, config);
-    if let Some(incumbent) = certificate.incumbent.as_mut() {
-        incumbent
-            .selected
-            .iter_mut()
-            .for_each(|picked| *picked = true);
-    }
-    certificate
-}
+use super::super::family::context_package::overrides::corrupting_solver;
 
 // spec: MEDULLA-DECISION-ENGINE-R137.9
 #[tokio::test]
