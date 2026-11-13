@@ -248,17 +248,11 @@ fn evaluate(
 }
 
 fn over(report: &RiskReport, thresholds: &RiskThresholds, detector: ShortcutDetector) -> bool {
-    let limit = match detector {
-        ShortcutDetector::SingleClue => thresholds.single_clue,
-        ShortcutDetector::CoCoverage => thresholds.co_coverage,
-        ShortcutDetector::ExposedConstant => thresholds.exposed_constant,
-        ShortcutDetector::PriorKnowledge => thresholds.prior_knowledge,
-    };
     report
         .findings
         .iter()
         .find(|f| f.detector == detector)
-        .is_some_and(|f| f.value > limit)
+        .is_some_and(|f| thresholds.breached(detector, f.value))
 }
 
 fn exposed_tokens(text: &str, answer_tokens: &BTreeSet<String>) -> u64 {
@@ -479,17 +473,17 @@ mod tests {
             nodes: vec![node("a", "hub"), node("e1", "one"), node("e2", "two")],
             edges: vec![edge("a", "e1"), edge("e1", "e2")],
         };
-        let out = synthesize(&chain, "a", &thresholds(0.5, 1.0, 1.0, 100.0), 0).expect("synthesis");
+        let out = synthesize(&chain, "a", &thresholds(0.5, 1.0, 1.1, 100.0), 0).expect("synthesis");
         assert_eq!(
             finding(&out.report, ShortcutDetector::SingleClue).value,
             0.5
         );
         out.report
-            .check(&thresholds(0.5, 1.0, 1.0, 100.0))
+            .check(&thresholds(0.5, 1.0, 1.1, 100.0))
             .expect("a value equal to the threshold passes");
         let refusal = out
             .report
-            .check(&thresholds(0.499, 1.0, 1.0, 100.0))
+            .check(&thresholds(0.499, 1.0, 1.1, 100.0))
             .unwrap_err();
         assert_eq!(
             (refusal.code.as_str(), refusal.subject.as_str()),
@@ -515,17 +509,17 @@ mod tests {
                 edge("e1", "e3"),
             ],
         };
-        let out = synthesize(&co, "a", &thresholds(1.0, 1.0, 1.0, 100.0), 0).expect("synthesis");
+        let out = synthesize(&co, "a", &thresholds(1.0, 1.0, 1.1, 100.0), 0).expect("synthesis");
         assert_eq!(
             finding(&out.report, ShortcutDetector::CoCoverage).value,
             1.0
         );
         out.report
-            .check(&thresholds(1.0, 1.0, 1.0, 100.0))
+            .check(&thresholds(1.0, 1.0, 1.1, 100.0))
             .expect("a value equal to the threshold passes");
         let refusal = out
             .report
-            .check(&thresholds(1.0, 0.999, 1.0, 100.0))
+            .check(&thresholds(1.0, 0.999, 1.1, 100.0))
             .unwrap_err();
         assert_eq!(
             (refusal.code.as_str(), refusal.subject.as_str()),
@@ -548,9 +542,17 @@ mod tests {
             finding(&out.report, ShortcutDetector::ExposedConstant).value,
             0.5
         );
-        out.report
+        let refusal = out
+            .report
             .check(&thresholds(1.0, 1.0, 0.5, 100.0))
-            .expect("a value equal to the threshold passes");
+            .unwrap_err();
+        assert_eq!(
+            (refusal.code.as_str(), refusal.subject.as_str()),
+            ("SEARCH_TASK_SHORTCUT", "exposed_constant")
+        );
+        out.report
+            .check(&thresholds(1.0, 1.0, 0.5001, 100.0))
+            .expect("a value below the threshold passes");
         let refusal = out
             .report
             .check(&thresholds(1.0, 1.0, 0.4999, 100.0))
@@ -578,17 +580,25 @@ mod tests {
                 edge("a", "n5"),
             ],
         };
-        let out = synthesize(&prior, "a", &thresholds(1.0, 1.0, 1.0, 5.0), 0).expect("synthesis");
+        let out = synthesize(&prior, "a", &thresholds(1.0, 1.0, 1.1, 5.0), 0).expect("synthesis");
         assert_eq!(
             finding(&out.report, ShortcutDetector::PriorKnowledge).value,
             5.0
         );
-        out.report
-            .check(&thresholds(1.0, 1.0, 1.0, 5.0))
-            .expect("a value equal to the threshold passes");
         let refusal = out
             .report
-            .check(&thresholds(1.0, 1.0, 1.0, 4.9))
+            .check(&thresholds(1.0, 1.0, 1.1, 5.0))
+            .unwrap_err();
+        assert_eq!(
+            (refusal.code.as_str(), refusal.subject.as_str()),
+            ("SEARCH_TASK_SHORTCUT", "prior_knowledge")
+        );
+        out.report
+            .check(&thresholds(1.0, 1.0, 1.1, 5.1))
+            .expect("a value below the threshold passes");
+        let refusal = out
+            .report
+            .check(&thresholds(1.0, 1.0, 1.1, 4.9))
             .unwrap_err();
         assert_eq!(
             (refusal.code.as_str(), refusal.subject.as_str()),
@@ -613,7 +623,7 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             let graph = EvidenceGraph { nodes, edges };
-            let lenient = thresholds(1.0, 1.0, 1.0, f64::MAX);
+            let lenient = thresholds(1.0, 1.0, 1.1, f64::MAX);
             let started = Instant::now();
             let out = synthesize(&graph, "n000000", &lenient, 0).expect("synthesis");
             times.push(started.elapsed());
@@ -682,7 +692,7 @@ mod tests {
                 edge("free", "h"),
             ],
         };
-        let thresholds = thresholds(0.5, 1.0, 1.0, 100.0);
+        let thresholds = thresholds(0.5, 1.0, 1.1, 100.0);
         let out = synthesize(&graph, "a", &thresholds, 2).expect("synthesis");
         assert_eq!(out.rounds_used, 1);
         assert!(out

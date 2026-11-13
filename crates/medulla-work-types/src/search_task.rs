@@ -188,6 +188,19 @@ impl RiskThresholds {
             ShortcutDetector::PriorKnowledge => self.prior_knowledge,
         }
     }
+
+    /// Whether a detector's value breaches its threshold. The exposed-constant
+    /// and prior-knowledge detectors flag a value at least the threshold
+    /// (MEDULLA-FEDERATED-QUERY-R702.2: "shares at least", "degree is at
+    /// least"); the single-clue and co-coverage detectors flag a value beyond
+    /// it.
+    pub fn breached(&self, detector: ShortcutDetector, value: f64) -> bool {
+        let limit = self.get(detector);
+        match detector {
+            ShortcutDetector::ExposedConstant | ShortcutDetector::PriorKnowledge => value >= limit,
+            ShortcutDetector::SingleClue | ShortcutDetector::CoCoverage => value > limit,
+        }
+    }
 }
 
 /// Every detector's value for one task (MEDULLA-FEDERATED-QUERY-R702.1).
@@ -215,7 +228,7 @@ impl RiskReport {
         match self
             .findings
             .iter()
-            .find(|f| f.value > thresholds.get(f.detector))
+            .find(|f| thresholds.breached(f.detector, f.value))
         {
             Some(finding) => Err(refuse(SEARCH_TASK_SHORTCUT, finding.detector.name())),
             None => Ok(()),
@@ -315,6 +328,23 @@ mod tests {
         let mut unknown = task();
         unknown.clues[1].evidence_nodes = vec!["zz".into()];
         assert_eq!(unknown.validate(&graph()).unwrap_err().subject, "zz");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R702.2
+    #[test]
+    fn exposed_constant_and_prior_knowledge_breach_at_exactly_the_threshold() {
+        let thresholds = RiskThresholds {
+            single_clue: 0.5,
+            co_coverage: 0.5,
+            exposed_constant: 0.5,
+            prior_knowledge: 50.0,
+        };
+        assert!(thresholds.breached(ShortcutDetector::ExposedConstant, 0.5));
+        assert!(!thresholds.breached(ShortcutDetector::ExposedConstant, 0.4999));
+        assert!(thresholds.breached(ShortcutDetector::PriorKnowledge, 50.0));
+        assert!(!thresholds.breached(ShortcutDetector::PriorKnowledge, 49.0));
+        assert!(!thresholds.breached(ShortcutDetector::SingleClue, 0.5));
+        assert!(thresholds.breached(ShortcutDetector::SingleClue, 0.5001));
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R702.4
