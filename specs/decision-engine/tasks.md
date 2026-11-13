@@ -554,7 +554,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T543 [US8] MEDULLA-DECISION-ENGINE-R172.8 Designation refusals
 - [ ] T544 [US8] MEDULLA-DECISION-ENGINE-R172.9 Designation evidence
 - [ ] T545 [US8] MEDULLA-DECISION-ENGINE-R172.10 Designation latency and recall budgets
-- [ ] T546 [US8] MEDULLA-DECISION-ENGINE-R172.11 Designation served journey
+- [x] T546 [US8] MEDULLA-DECISION-ENGINE-R172.11 Designation served journey
 - [ ] T547 [US8] MEDULLA-DECISION-ENGINE-R172.12.1 Pack surface fields
 - [ ] T548 [US8] MEDULLA-DECISION-ENGINE-R172.12.2 Target-class subsumption
 - [ ] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
