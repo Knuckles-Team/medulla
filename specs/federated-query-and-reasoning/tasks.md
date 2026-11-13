@@ -452,3 +452,22 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T428 [US1] MEDULLA-FEDERATED-QUERY-R736.3 Behavior: select a forest under a token budget.
 - [ ] T429 [US1] MEDULLA-FEDERATED-QUERY-R736.4 Wiring: the retrieval round returns the forest.
 - [ ] T430 [US1] MEDULLA-FEDERATED-QUERY-R736.5 Hot-path proof and benchmark: forest quality and cost.
+- [ ] T434 [US1] MEDULLA-FEDERATED-QUERY-R738 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T435 [US1] MEDULLA-FEDERATED-QUERY-R738.1 CapabilityEntry/CapabilityStatus state machine: route 2 census findings through CapabilityStatus::apply
+- [ ] T436 [US1] MEDULLA-FEDERATED-QUERY-R738.2 CausalLink/OpsCausalStage state machine: route 1 census findings through OpsCausalStage::apply
+- [ ] T437 [US1] MEDULLA-FEDERATED-QUERY-R738.3 ClaimRecord/ClaimState state machine: route 1 census findings through ClaimState::apply
+- [ ] T438 [US1] MEDULLA-FEDERATED-QUERY-R738.4 CodeContextAnswer/CodeContextStatus state machine: route 1 census findings through CodeContextStatus::apply
+- [ ] T439 [US1] MEDULLA-FEDERATED-QUERY-R738.5 ContradictionRecord/ContradictionStatus state machine: route 1 census findings through ContradictionStatus::apply
+- [ ] T440 [US1] MEDULLA-FEDERATED-QUERY-R738.6 ForeignFragmentReport/FragmentStage state machine: route 1 census findings through FragmentStage::apply
+- [ ] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
+- [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask/TaskStatus state machine: route 1 census findings through TaskStatus::apply
+- [ ] T443 [US1] MEDULLA-FEDERATED-QUERY-R738.9 HierarchyStageReceipt/HierarchyStage state machine: route 2 census findings through HierarchyStage::apply
+- [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentStage state machine: route 1 census findings through DescentStage::apply
+- [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverStatus state machine: route 1 census findings through SolverStatus::apply
+- [ ] T446 [US1] MEDULLA-FEDERATED-QUERY-R738.12 Non-lifecycle fields named `state`: the generator word of four `SplitMix64` pseudo-random generators
+- [ ] T447 [US1] MEDULLA-FEDERATED-QUERY-R738.13 Tag kind flags: `is_close` and `is_self_closing` in the GPX tag parser
+- [ ] T448 [US1] MEDULLA-FEDERATED-QUERY-R738.14 SourceQueryApprovalCheck/SourceQueryPhase state machine: route 1 census findings through SourceQueryPhase::apply
+- [ ] T449 [US1] MEDULLA-FEDERATED-QUERY-R738.15 StageReceipt/PromotionStage state machine: route 1 census findings through PromotionStage::apply
+- [ ] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
+- [ ] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
+- [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply
