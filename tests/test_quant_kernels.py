@@ -128,7 +128,7 @@ def test_bayesian_kelly_shrinks_with_uncertainty(clean_graph):
 
 
 def test_purged_cpcv_roundtrip(clean_graph):
-    splits = clean_graph.finance.purged_cpcv(
+    splits = clean_graph.numeric.purged_cpcv(
         120, n_groups=6, n_test_groups=2, purge_window=5, embargo=5
     )
     assert len(splits) == 15  # C(6,2)
@@ -139,11 +139,11 @@ def test_purged_cpcv_roundtrip(clean_graph):
 
 def test_deflated_sharpe_and_dm_roundtrip(clean_graph):
     rets = [0.01 + 0.001 * ((i % 7) - 3) for i in range(100)]
-    dsr = clean_graph.finance.deflated_sharpe(1.5, 10, rets)
+    dsr = clean_graph.numeric.deflated_sharpe(1.5, 10, rets)
     assert 0.0 <= dsr <= 1.0
     a = [1.0] * 50
     b = [2.0] * 50
-    dm = clean_graph.finance.diebold_mariano(a, b, 1)
+    dm = clean_graph.numeric.diebold_mariano(a, b, 1)
     assert dm["a_better"] is True
 
 

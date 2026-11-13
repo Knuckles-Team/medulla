@@ -402,8 +402,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceBreakevenAlpha { .. }
         | Method::DsLogSoftmax { .. }
         | Method::DsSoftmax { .. }
-        | Method::FinanceOuOptimalThresholds { .. }
-        | Method::FinancePurgedCpcv { .. }
         | Method::FinanceCrossSectionalRank { .. }
         | Method::FinishDevelopmentLane { .. }
         | Method::LeaveChannel { .. }
@@ -439,7 +437,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceExpectedPnlRate { .. }
         | Method::DiffAgainst { .. }
         | Method::Health
-        | Method::FinanceInformationCoefficient { .. }
         | Method::DsTrainTestSplit { .. }
         | Method::GetContextView { .. }
         | Method::CloseChannel { .. }
@@ -463,12 +460,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ApplyMutation { .. }
         | Method::TxnRemoveEdge { .. }
         | Method::PruneByLifecycle { .. }
-        | Method::FinanceDetectRegimes { .. }
         | Method::TxnAddMeasurement { .. }
         | Method::DsKlDivergence { .. }
         | Method::ParseFile { .. }
         | Method::FinanceBayesianKelly { .. }
-        | Method::FinanceDieboldMariano { .. }
         | Method::AgentGraph { .. }
         | Method::Ping
         | Method::PageRank { .. }
@@ -481,9 +476,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetShortestPath { .. }
         | Method::TsGapFill { .. }
         | Method::GetChangeCursor { .. }
-        | Method::FinanceProbabilityBacktestOverfit { .. }
         | Method::PlacementAdmin { .. }
-        | Method::FinanceDeflatedSharpe { .. }
         | Method::ListChannels
         | Method::GetLedger
         | Method::ShaclValidate { .. }
@@ -508,7 +501,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MatchOntologyTerms { .. }
         | Method::IndexRepository { .. }
         | Method::ClearLedger
-        | Method::FinanceKalmanBeta { .. }
         | Method::RegisterIdentity { .. }
         | Method::FinanceSabrCalibrate { .. }
         | Method::SetPose { .. }
@@ -522,7 +514,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::RbacElevation { .. }
         | Method::Identity { .. }
         | Method::GovernedChange { .. }
-        | Method::FinanceKalmanFilter1d { .. }
         | Method::FinanceRiskParity { .. }
         | Method::ReserveDevelopmentLane { .. }
         | Method::NlQuery { .. }
@@ -537,7 +528,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::RemoveEdge { .. }
         | Method::EdgeCount
         | Method::PlacementRoute { .. }
-        | Method::FinanceOuCalibrate { .. }
         | Method::AppendStep { .. }
         | Method::ParseFiles { .. }
         | Method::Metrics
@@ -611,7 +601,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }
         | Method::FinanceDownsideDeviation { .. }
-        | Method::FinanceKalmanVolatility { .. }
         | Method::Reinforce { .. }
         | Method::FinanceEfficientFrontier { .. }
         | Method::CreateNodeIfAbsent { .. }
@@ -637,12 +626,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CompactNodesByType { .. }
         | Method::CreateChannel { .. }
         | Method::FinanceKyleLambda { .. }
-        | Method::FinanceInformationRatio { .. }
         | Method::GetEdgesPage { .. }
         | Method::CreateSummaryNode { .. }
         | Method::GetChannelMessages { .. }
         | Method::SummariesAtLevel { .. }
-        | Method::FinanceAdfTest { .. }
         | Method::DsKMeans { .. }
         | Method::FinanceAvellanedaStoikov { .. }
         | Method::CypherQuery { .. }
@@ -795,7 +782,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ApplyChangeEnvelope { .. }
         | Method::TxnRemoveNode { .. }
         | Method::GetChannelMembers { .. }
-        | Method::FinanceBrierScore { .. }
         | Method::HasNodesBatch { .. }
         | Method::CommunityDetectEphemeral { .. }
         | Method::BatchL2Normalize { .. }
@@ -803,7 +789,6 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ComputeSimilarityEdges { .. }
         | Method::FinanceSignalDecay { .. }
         | Method::FinancePosteriorCredibleInterval { .. }
-        | Method::FinanceEffectiveIndependentN { .. }
         | Method::GetChangeEnvelope { .. }
         | Method::CompareAndSetNodeFields { .. }
         | Method::ClearGraph

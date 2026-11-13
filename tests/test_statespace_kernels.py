@@ -13,14 +13,16 @@ import math
 def test_kalman_beta_roundtrip(clean_graph):
     rm = [math.sin(i * 0.1) * 0.01 for i in range(300)]
     ra = [1.5 * m + 1e-5 * ((i % 3) - 1) for i, m in enumerate(rm)]
-    out = clean_graph.finance.kalman_beta(rm, ra, q=1e-6, r=1e-4)
+    out = clean_graph.numeric.kalman_beta(rm, ra, q=1e-6, r=1e-4, beta0=1.0, p0=1.0)
     assert len(out["states"]) == 300
     assert abs(out["states"][-1] - 1.5) < 0.2  # recovers the true beta
 
 
 def test_kalman_volatility_roundtrip(clean_graph):
     rets = [0.01 * math.sin(i * 0.3) for i in range(250)]
-    vol = clean_graph.finance.kalman_volatility(rets, q=0.1, r=1.0)
+    vol = clean_graph.numeric.kalman_volatility(
+        rets, q=0.1, r=1.0, log_var0=None, p0=1.0, annualization=252.0
+    )
     assert len(vol) == 250
     assert all(v >= 0.0 for v in vol)
 
@@ -33,7 +35,7 @@ def test_adf_test_roundtrip(clean_graph):
         seed = (seed * 6364136223846793005 + 1442695040888963407) % (2**64)
         e = ((seed >> 33) / (2**31)) - 1.0
         xs.append(0.2 * xs[-1] + e)
-    res = clean_graph.finance.adf_test(xs, max_lag=1)
+    res = clean_graph.numeric.adf(xs, max_lag=1)
     assert res["stationary_5pct"] is True
     assert res["statistic"] < res["crit_5pct"]
 
@@ -42,10 +44,10 @@ def test_ou_calibrate_and_thresholds_roundtrip(clean_graph):
     s = [0.5]
     for i in range(500):
         s.append(s[-1] + 0.3 * (0.5 - s[-1]) + 0.01 * ((i % 11) - 5))
-    p = clean_graph.finance.ou_calibrate(s, dt=1.0)
+    p = clean_graph.numeric.ou_calibrate(s, dt=1.0)
     assert p["theta"] > 0.0
     assert abs(p["mu"] - 0.5) < 0.2
-    th = clean_graph.finance.ou_optimal_thresholds(
+    th = clean_graph.numeric.ou_thresholds(
         p["theta"], p["mu"], p["sigma"], p["sigma_eq"], cost=0.001
     )
     assert th["entry_long"] < th["exit"] < th["entry_short"]
@@ -62,10 +64,10 @@ def test_markov_transition_roundtrip(clean_graph):
 
 
 def test_information_ratio_and_effective_n_roundtrip(clean_graph):
-    ir = clean_graph.finance.information_ratio(0.05, 50.0)
+    ir = clean_graph.numeric.information_ratio(0.05, 50.0)
     assert abs(ir - 0.05 * math.sqrt(50)) < 1e-6
     same = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-    neff = clean_graph.finance.effective_independent_n([same, same])
+    neff = clean_graph.numeric.effective_independent_n([same, same])
     assert neff < 1.5  # two identical signals ≈ 1 independent
 
 
@@ -82,10 +84,7 @@ def test_alpha_combination_and_obi_roundtrip(clean_graph):
 
 
 def test_brier_and_convergence_gate_roundtrip(clean_graph):
-    assert (
-        abs(clean_graph.finance.brier_score([0.5] * 4, [1.0, 0.0, 1.0, 0.0]) - 0.25)
-        < 1e-9
-    )
+    assert abs(clean_graph.numeric.brier([0.5] * 4, [1.0, 0.0, 1.0, 0.0]) - 0.25) < 1e-9
     g = clean_graph.finance.convergence_gate([0.9, 0.8, 0.95, 0.85, 0.9], 0.6, 5)
     assert g["pass"] is True and g["direction"] == 1
     g2 = clean_graph.finance.convergence_gate([0.9, 0.8, 0.1, 0.0, 0.7], 0.6, 5)

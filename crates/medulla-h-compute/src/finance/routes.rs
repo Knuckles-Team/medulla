@@ -7,7 +7,6 @@ use medulla_protocol_types::protocol::Response;
 enum FinanceRoute {
     Portfolio,
     Risk,
-    Regime,
     Signals,
     Execution,
     MarketMaking,
@@ -15,7 +14,6 @@ enum FinanceRoute {
     Sizing,
     NumericKernels,
     ResearchKernels,
-    Backtest,
     Forensic,
     StateSpace,
     SignalCalibration,
@@ -46,13 +44,11 @@ fn route_for_primary(method: &Method) -> Option<FinanceRoute> {
         | Method::FinanceRiskMetrics { .. }
         | Method::FinanceMonteCarloVar { .. }
         | Method::FinanceStressTest { .. } => Some(FinanceRoute::Risk),
-        Method::FinanceDetectRegimes { .. } => Some(FinanceRoute::Regime),
         Method::FinanceSignalDecay { .. }
         | Method::FinanceCombineAlphas { .. }
         | Method::FinanceCrossSectionalRank { .. }
         | Method::FinanceMomentum { .. }
-        | Method::FinanceMeanReversion { .. }
-        | Method::FinanceInformationCoefficient { .. } => Some(FinanceRoute::Signals),
+        | Method::FinanceMeanReversion { .. } => Some(FinanceRoute::Signals),
         Method::FinanceTwap { .. }
         | Method::FinanceVwap { .. }
         | Method::FinanceMarketImpact { .. }
@@ -103,18 +99,8 @@ fn route_for_market(method: &Method) -> Option<FinanceRoute> {
 
 fn route_for_validation(method: &Method) -> Option<FinanceRoute> {
     match method {
-        Method::FinancePurgedCpcv { .. }
-        | Method::FinanceDeflatedSharpe { .. }
-        | Method::FinanceProbabilityBacktestOverfit { .. }
-        | Method::FinanceDieboldMariano { .. } => Some(FinanceRoute::Backtest),
         Method::FinanceForensicReport { .. } => Some(FinanceRoute::Forensic),
-        Method::FinanceKalmanFilter1d { .. }
-        | Method::FinanceKalmanBeta { .. }
-        | Method::FinanceKalmanVolatility { .. }
-        | Method::FinanceAdfTest { .. }
-        | Method::FinanceOuCalibrate { .. }
-        | Method::FinanceOuOptimalThresholds { .. }
-        | Method::FinanceMarkovTransitionMatrix { .. } => Some(FinanceRoute::StateSpace),
+        Method::FinanceMarkovTransitionMatrix { .. } => Some(FinanceRoute::StateSpace),
         _ => None,
     }
 }
@@ -125,10 +111,7 @@ fn route_for_calibration(method: &Method) -> Option<FinanceRoute> {
         | Method::FinanceQueueImbalance { .. }
         | Method::FinanceRealizedVolTick { .. }
         | Method::FinanceSpreadReversion { .. }
-        | Method::FinanceInformationRatio { .. }
-        | Method::FinanceEffectiveIndependentN { .. }
         | Method::FinanceAlphaCombinationEngine { .. }
-        | Method::FinanceBrierScore { .. }
         | Method::FinanceConvergenceGate { .. }
         | Method::FinanceEmpiricalKelly { .. } => Some(FinanceRoute::SignalCalibration),
         Method::FinanceSabrImpliedVol { .. }
@@ -142,7 +125,6 @@ pub fn try_handle(req_id: u64, tenant: &str, method: Method) -> Result<Response,
     match route_for(&method) {
         FinanceRoute::Portfolio => super::route_families::handle_portfolio(req_id, method),
         FinanceRoute::Risk => super::route_families::handle_risk(req_id, method),
-        FinanceRoute::Regime => super::route_families::handle_regime(req_id, method),
         FinanceRoute::Signals => super::route_families::handle_signals(req_id, method),
         FinanceRoute::Execution => super::route_families::handle_execution(req_id, method),
         FinanceRoute::MarketMaking => super::route_families::handle_market_making(req_id, method),
@@ -156,7 +138,6 @@ pub fn try_handle(req_id: u64, tenant: &str, method: Method) -> Result<Response,
         FinanceRoute::ResearchKernels => {
             super::research_kernels::handle_research_kernels(req_id, tenant, method)
         }
-        FinanceRoute::Backtest => super::route_families::handle_backtest(req_id, method),
         FinanceRoute::Forensic => super::route_families::handle_forensic(req_id, method),
         FinanceRoute::StateSpace => super::route_families::handle_state_space(req_id, method),
         FinanceRoute::SignalCalibration => {

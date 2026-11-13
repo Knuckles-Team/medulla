@@ -35,18 +35,18 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T029 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.14 Regime HMM generic caller migration
 - [ ] T030 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.1 Rolling z-score finance alias removal
 - [ ] T031 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.2 EWMA finance alias removal
-- [ ] T032 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.3 Information coefficient finance alias removal
-- [ ] T033 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.4 Information ratio finance alias removal
-- [ ] T034 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.5 Effective sample size finance alias removal
-- [ ] T035 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.6 Diebold-Mariano finance alias removal
-- [ ] T036 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.7 Deflated Sharpe finance alias removal
-- [ ] T037 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.8 Purged combinatorial cross-validation finance alias removal
-- [ ] T038 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.9 Probability of backtest overfitting finance alias removal
-- [ ] T039 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.10 Brier finance alias removal
-- [ ] T040 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.11 Kalman finance alias removal
-- [ ] T041 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.12 Ornstein-Uhlenbeck finance alias removal
-- [ ] T042 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.13 ADF finance alias removal
-- [ ] T043 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.14 Regime HMM finance alias removal
+- [x] T032 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.3 Information coefficient finance alias removal
+- [x] T033 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.4 Information ratio finance alias removal
+- [x] T034 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.5 Effective sample size finance alias removal
+- [x] T035 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.6 Diebold-Mariano finance alias removal
+- [x] T036 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.7 Deflated Sharpe finance alias removal
+- [x] T037 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.8 Purged combinatorial cross-validation finance alias removal
+- [x] T038 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.9 Probability of backtest overfitting finance alias removal
+- [x] T039 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.10 Brier finance alias removal
+- [x] T040 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.11 Kalman finance alias removal
+- [x] T041 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.12 Ornstein-Uhlenbeck finance alias removal
+- [x] T042 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.13 ADF finance alias removal
+- [x] T043 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.14 Regime HMM finance alias removal
 - [ ] T044 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.1 Rolling z-score UQL time-series exposure
 - [ ] T045 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.2 EWMA UQL time-series exposure
 - [ ] T046 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.3 Information coefficient UQL time-series exposure
@@ -64,7 +64,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T058 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15 UQL EVALUATE report stage
 - [ ] T059 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.4 Complete caller coverage verification
 - [ ] T060 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.5 Served NumericEvaluate method and kernel registry
-- [ ] T061 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.3 Client bindings for NumericEvaluate and retired-method absence
+- [x] T061 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.3 Client bindings for NumericEvaluate and retired-method absence
 - [ ] T062 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.4 Bound original regime derivations and streaming work
 - [ ] T063 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.5 Define versioned state-space inputs and checkpoints
 - [ ] T064 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.6.1 Shared causal linear recurrence

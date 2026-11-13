@@ -402,4 +402,150 @@ mod tests {
         assert_eq!(err.code, KernelCode::OpUnknown);
         assert!(err.to_string().starts_with("KERNEL_OP_UNKNOWN: "));
     }
+    /// One representative op per wire tag, in `NUMERIC_EVALUATE_OPS` order.
+    fn round_trip_ops() -> Vec<NumericEvaluateOp> {
+        let v = |n: usize| {
+            (0..n)
+                .map(|i| ((i * 7919) % 23) as f64 / 10.0 - 1.1)
+                .collect::<Vec<f64>>()
+        };
+        vec![
+            NumericEvaluateOp::RollingZScore {
+                values: v(12),
+                window: 4,
+            },
+            NumericEvaluateOp::Ewma {
+                values: v(12),
+                smoothing: EwmaSmoothing::Span(5.0),
+            },
+            NumericEvaluateOp::InformationCoefficient {
+                signal: v(12),
+                forward_returns: v(12).iter().map(|x| x * 0.5 + 0.1).collect(),
+            },
+            NumericEvaluateOp::InformationRatio {
+                ic: 0.05,
+                n_independent: 16.0,
+            },
+            NumericEvaluateOp::EffectiveIndependentN {
+                returns_matrix: vec![
+                    v(10),
+                    v(10).iter().map(|x| -x).collect(),
+                    v(10).iter().map(|x| x * 0.3).collect(),
+                ],
+            },
+            NumericEvaluateOp::DieboldMariano {
+                losses_a: v(30),
+                losses_b: v(30).iter().map(|x| x * x).collect(),
+                h: 1,
+            },
+            NumericEvaluateOp::DeflatedSharpe {
+                observed_sr: 1.2,
+                n_trials: 20,
+                sr_returns: v(40),
+            },
+            NumericEvaluateOp::PurgedCpcv {
+                n_samples: 60,
+                n_groups: 6,
+                n_test_groups: 2,
+                purge_window: 2,
+                embargo: 1,
+            },
+            NumericEvaluateOp::ProbabilityOfBacktestOverfit {
+                insample: vec![
+                    v(8),
+                    v(8).iter().map(|x| x + 0.2).collect(),
+                    v(8).iter().map(|x| x * 0.4).collect(),
+                    v(8).iter().map(|x| -x).collect(),
+                ],
+                oos: vec![
+                    v(8).iter().map(|x| x - 0.1).collect(),
+                    v(8),
+                    v(8).iter().map(|x| x * 0.2).collect(),
+                    v(8).iter().map(|x| x + 0.3).collect(),
+                ],
+            },
+            NumericEvaluateOp::Brier {
+                forecasts: vec![0.1, 0.8, 0.6, 0.3],
+                outcomes: vec![0.0, 1.0, 1.0, 0.0],
+            },
+            NumericEvaluateOp::KalmanLevel {
+                observations: v(10),
+                f: 1.0,
+                q: 0.01,
+                h: 1.0,
+                r: 0.1,
+                x0: 0.0,
+                p0: 1.0,
+            },
+            NumericEvaluateOp::KalmanBeta {
+                market_returns: v(20),
+                asset_returns: v(20).iter().map(|x| x * 1.2).collect(),
+                q: 0.001,
+                r: 0.01,
+                beta0: 1.0,
+                p0: 1.0,
+            },
+            NumericEvaluateOp::KalmanVolatility {
+                returns: v(20),
+                q: 0.01,
+                r: 0.1,
+                log_var0: None,
+                p0: 1.0,
+                annualization: 252.0,
+            },
+            NumericEvaluateOp::OuCalibrate {
+                spread: v(60),
+                dt: 1.0,
+            },
+            NumericEvaluateOp::OuThresholds {
+                theta: 0.5,
+                mu: 0.0,
+                sigma: 0.2,
+                sigma_eq: 0.3,
+                cost: 0.01,
+            },
+            NumericEvaluateOp::Adf {
+                series: v(40),
+                max_lag: 1,
+            },
+            NumericEvaluateOp::RegimeHmm {
+                observations: v(40),
+                n_states: 2,
+                max_iter: 20,
+                tol: 1e-4,
+            },
+        ]
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.3
+    #[test]
+    fn emit_round_trip_vectors() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/numeric_evaluate_vectors.json");
+        let ops = round_trip_ops();
+        assert_eq!(ops.len(), NUMERIC_EVALUATE_OPS.len());
+        let generated = serde_json::json!({
+            "vectors": ops.iter().map(|op| serde_json::to_value(op).unwrap()).collect::<Vec<_>>()
+        });
+        if std::env::var_os("MEDULLA_EMIT_NUMERIC_VECTORS").is_some() {
+            let text = serde_json::to_string_pretty(&generated).expect("vectors serialise");
+            std::fs::write(&path, format!("{text}\n")).expect("write fixture");
+        }
+        let committed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).expect("fixture present"))
+                .expect("fixture is JSON");
+        assert_eq!(
+            committed, generated,
+            "tests/fixtures/numeric_evaluate_vectors.json drifted from the serde types; rerun with MEDULLA_EMIT_NUMERIC_VECTORS=1"
+        );
+        for (vector, name) in generated["vectors"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(NUMERIC_EVALUATE_OPS)
+        {
+            assert_eq!(vector["op"], name);
+            assert_eq!(NumericEvaluateOp::parse(vector).unwrap().name(), name);
+        }
+    }
 }

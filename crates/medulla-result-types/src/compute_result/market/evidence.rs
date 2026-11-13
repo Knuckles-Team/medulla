@@ -15,7 +15,7 @@ pub struct FlipFeatures {
     pub timeframe_agreement: bool,
     /// The close is above the 200-week SMA.
     pub above_200w_sma: bool,
-    /// A regime label (e.g. from `FinanceDetectRegimes`).
+    /// A regime label (e.g. from `NumericEvaluate` op `regime_hmm`).
     pub regime: u32,
 }
 

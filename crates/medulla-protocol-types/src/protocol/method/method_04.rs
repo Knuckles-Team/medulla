@@ -12,12 +12,6 @@ $($variants)*
 
 
     // ── Extended Finance: Regime detection (HMM) ──────────────────────
-    FinanceDetectRegimes {
-        observations: Vec<f64>,
-        n_states: usize,
-        max_iter: usize,
-        tol: f64,
-    },
 
 
     // ── Extended Finance: Signals / alpha ─────────────────────────────
@@ -46,11 +40,6 @@ $($variants)*
     FinanceMeanReversion {
         values: Vec<f64>,
         window: usize,
-    },
-
-    FinanceInformationCoefficient {
-        signal: Vec<f64>,
-        forward_returns: Vec<f64>,
     },
 
 
@@ -332,30 +321,6 @@ $($variants)*
 
 
     // ── Backtest Validation (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest) ────────────────────────
-    FinancePurgedCpcv {
-        n_samples: usize,
-        n_groups: usize,
-        n_test_groups: usize,
-        purge_window: usize,
-        embargo: usize,
-    },
-
-    FinanceDeflatedSharpe {
-        observed_sr: f64,
-        n_trials: usize,
-        sr_returns: Vec<f64>,
-    },
-
-    FinanceProbabilityBacktestOverfit {
-        insample: Vec<Vec<f64>>,
-        oos: Vec<Vec<f64>>,
-    },
-
-    FinanceDieboldMariano {
-        losses_a: Vec<f64>,
-        losses_b: Vec<f64>,
-        h: usize,
-    },
 
 
     // ── Forensic Accounting (CONCEPT:MEDULLA-KG.domains.forensic-accounting-kernels) ────────────────────────
@@ -368,51 +333,6 @@ $($variants)*
 
 
     // ── State-Space / Stat-Arb (CONCEPT:MEDULLA-KG.domains.state-space-statistical-arbitrage) ─────────────────────
-    FinanceKalmanFilter1d {
-        observations: Vec<f64>,
-        f: f64,
-        q: f64,
-        h: f64,
-        r: f64,
-        x0: f64,
-        p0: f64,
-    },
-
-    FinanceKalmanBeta {
-        market_returns: Vec<f64>,
-        asset_returns: Vec<f64>,
-        q: f64,
-        r: f64,
-        beta0: f64,
-        p0: f64,
-    },
-
-    FinanceKalmanVolatility {
-        returns: Vec<f64>,
-        q: f64,
-        r: f64,
-        log_var0: Option<f64>,
-        p0: f64,
-        annualization: f64,
-    },
-
-    FinanceAdfTest {
-        series: Vec<f64>,
-        max_lag: usize,
-    },
-
-    FinanceOuCalibrate {
-        spread: Vec<f64>,
-        dt: f64,
-    },
-
-    FinanceOuOptimalThresholds {
-        theta: f64,
-        mu: f64,
-        sigma: f64,
-        sigma_eq: f64,
-        cost: f64,
-    },
 
     FinanceMarkovTransitionMatrix {
         states: Vec<usize>,
@@ -444,23 +364,9 @@ $($variants)*
         window: usize,
     },
 
-    FinanceInformationRatio {
-        ic: f64,
-        n_independent: f64,
-    },
-
-    FinanceEffectiveIndependentN {
-        returns_matrix: Vec<Vec<f64>>,
-    },
-
     FinanceAlphaCombinationEngine {
         returns_matrix: Vec<Vec<f64>>,
         lookback: usize,
-    },
-
-    FinanceBrierScore {
-        forecasts: Vec<f64>,
-        outcomes: Vec<f64>,
     },
 
     FinanceConvergenceGate {

@@ -9077,6 +9077,215 @@ class ConsensusClient:
         ).payload
 
 
+class NumericClient:
+    """Serve the shared numeric kernels through `NumericEvaluate`.
+
+    MEDULLA-FINANCE-PRIMITIVES-R002.3. The Rust serde type `NumericEvaluateOp` is the
+    only source of truth: each method takes that op's field names and sends one op.
+    A bad field is refused by the engine with its `KERNEL_*` code; the retired
+    `Finance<Kernel>` methods no longer exist on `FinanceClient`.
+    """
+
+    def __init__(self, client: MedullaClient) -> None:
+        self._client = client
+
+    async def _evaluate(self, op: str, fields: dict[str, Any]) -> Any:
+        return await self._client._send(
+            "NumericEvaluate", {"op": {"op": op, **fields}}, None
+        )
+
+    async def rolling_z_score(self, values: list[float], window: int) -> Any:
+        """Evaluate the `rolling_z_score` op."""
+        return await self._evaluate(
+            "rolling_z_score", {"values": values, "window": window}
+        )
+
+    async def ewma(self, values: list[float], smoothing: dict[str, float]) -> Any:
+        """Evaluate the `ewma` op."""
+        return await self._evaluate("ewma", {"values": values, "smoothing": smoothing})
+
+    async def information_coefficient(
+        self, signal: list[float], forward_returns: list[float]
+    ) -> Any:
+        """Evaluate the `information_coefficient` op."""
+        return await self._evaluate(
+            "information_coefficient",
+            {"signal": signal, "forward_returns": forward_returns},
+        )
+
+    async def information_ratio(self, ic: float, n_independent: float) -> Any:
+        """Evaluate the `information_ratio` op."""
+        return await self._evaluate(
+            "information_ratio", {"ic": ic, "n_independent": n_independent}
+        )
+
+    async def effective_independent_n(self, returns_matrix: list[list[float]]) -> Any:
+        """Evaluate the `effective_independent_n` op."""
+        return await self._evaluate(
+            "effective_independent_n", {"returns_matrix": returns_matrix}
+        )
+
+    async def diebold_mariano(
+        self, losses_a: list[float], losses_b: list[float], h: int
+    ) -> Any:
+        """Evaluate the `diebold_mariano` op."""
+        return await self._evaluate(
+            "diebold_mariano", {"losses_a": losses_a, "losses_b": losses_b, "h": h}
+        )
+
+    async def deflated_sharpe(
+        self, observed_sr: float, n_trials: int, sr_returns: list[float]
+    ) -> Any:
+        """Evaluate the `deflated_sharpe` op."""
+        return await self._evaluate(
+            "deflated_sharpe",
+            {
+                "observed_sr": observed_sr,
+                "n_trials": n_trials,
+                "sr_returns": sr_returns,
+            },
+        )
+
+    async def purged_cpcv(
+        self,
+        n_samples: int,
+        n_groups: int,
+        n_test_groups: int,
+        purge_window: int,
+        embargo: int,
+    ) -> Any:
+        """Evaluate the `purged_cpcv` op."""
+        return await self._evaluate(
+            "purged_cpcv",
+            {
+                "n_samples": n_samples,
+                "n_groups": n_groups,
+                "n_test_groups": n_test_groups,
+                "purge_window": purge_window,
+                "embargo": embargo,
+            },
+        )
+
+    async def probability_of_backtest_overfit(
+        self, insample: list[list[float]], oos: list[list[float]]
+    ) -> Any:
+        """Evaluate the `probability_of_backtest_overfit` op."""
+        return await self._evaluate(
+            "probability_of_backtest_overfit", {"insample": insample, "oos": oos}
+        )
+
+    async def brier(self, forecasts: list[float], outcomes: list[float]) -> Any:
+        """Evaluate the `brier` op."""
+        return await self._evaluate(
+            "brier", {"forecasts": forecasts, "outcomes": outcomes}
+        )
+
+    async def kalman_level(
+        self,
+        observations: list[float],
+        f: float,
+        q: float,
+        h: float,
+        r: float,
+        x0: float,
+        p0: float,
+    ) -> Any:
+        """Evaluate the `kalman_level` op."""
+        return await self._evaluate(
+            "kalman_level",
+            {
+                "observations": observations,
+                "f": f,
+                "q": q,
+                "h": h,
+                "r": r,
+                "x0": x0,
+                "p0": p0,
+            },
+        )
+
+    async def kalman_beta(
+        self,
+        market_returns: list[float],
+        asset_returns: list[float],
+        q: float,
+        r: float,
+        beta0: float,
+        p0: float,
+    ) -> Any:
+        """Evaluate the `kalman_beta` op."""
+        return await self._evaluate(
+            "kalman_beta",
+            {
+                "market_returns": market_returns,
+                "asset_returns": asset_returns,
+                "q": q,
+                "r": r,
+                "beta0": beta0,
+                "p0": p0,
+            },
+        )
+
+    async def kalman_volatility(
+        self,
+        returns: list[float],
+        q: float,
+        r: float,
+        log_var0: float | None,
+        p0: float,
+        annualization: float,
+    ) -> Any:
+        """Evaluate the `kalman_volatility` op."""
+        return await self._evaluate(
+            "kalman_volatility",
+            {
+                "returns": returns,
+                "q": q,
+                "r": r,
+                "log_var0": log_var0,
+                "p0": p0,
+                "annualization": annualization,
+            },
+        )
+
+    async def ou_calibrate(self, spread: list[float], dt: float) -> Any:
+        """Evaluate the `ou_calibrate` op."""
+        return await self._evaluate("ou_calibrate", {"spread": spread, "dt": dt})
+
+    async def ou_thresholds(
+        self, theta: float, mu: float, sigma: float, sigma_eq: float, cost: float
+    ) -> Any:
+        """Evaluate the `ou_thresholds` op."""
+        return await self._evaluate(
+            "ou_thresholds",
+            {
+                "theta": theta,
+                "mu": mu,
+                "sigma": sigma,
+                "sigma_eq": sigma_eq,
+                "cost": cost,
+            },
+        )
+
+    async def adf(self, series: list[float], max_lag: int) -> Any:
+        """Evaluate the `adf` op."""
+        return await self._evaluate("adf", {"series": series, "max_lag": max_lag})
+
+    async def regime_hmm(
+        self, observations: list[float], n_states: int, max_iter: int, tol: float
+    ) -> Any:
+        """Evaluate the `regime_hmm` op."""
+        return await self._evaluate(
+            "regime_hmm",
+            {
+                "observations": observations,
+                "n_states": n_states,
+                "max_iter": max_iter,
+                "tol": tol,
+            },
+        )
+
+
 class FinanceClient:
     """Provide the quantitative finance namespace.
 
@@ -9229,26 +9438,6 @@ class FinanceClient:
             )
         ).payload
 
-    # ── Regime detection (HMM) ────────────────────────────────────────
-    async def detect_regimes(
-        self,
-        observations: list[float],
-        n_states: int = 2,
-        max_iter: int = 100,
-        tol: float = 1e-4,
-    ) -> dict[str, Any]:
-        return (
-            await _gen.compute.send_finance_detect_regimes(
-                self._client,
-                {
-                    "observations": observations,
-                    "n_states": n_states,
-                    "max_iter": max_iter,
-                    "tol": tol,
-                },
-            )
-        ).payload
-
     # ── Signals / alpha ───────────────────────────────────────────────
     # The rolling z-score and EWMA were retired here (EH-530): run them where the data
     # lives — UQL ``DERIVE zscore(v0, w)`` / ``ewma(v0, span)``, SQL
@@ -9292,13 +9481,6 @@ class FinanceClient:
                 self._client, {"values": values, "window": window}
             )
         ).payload
-
-    async def information_coefficient(
-        self, signal: list[float], forward_returns: list[float]
-    ) -> float:
-        return await _gen.compute.send_finance_information_coefficient(
-            self._client, {"signal": signal, "forward_returns": forward_returns}
-        )
 
     # ── Execution / microstructure ────────────────────────────────────
     async def twap(
@@ -9693,63 +9875,6 @@ class FinanceClient:
             )
         ).payload
 
-    # ── Backtest validation
-    # (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest)
-    # ─────────────────────────
-    async def purged_cpcv(
-        self,
-        n_samples: int,
-        n_groups: int = 6,
-        n_test_groups: int = 2,
-        purge_window: int = 0,
-        embargo: int = 0,
-    ) -> list[dict[str, list[int]]]:
-        """Purged combinatorial CV splits — each {train: [...], test: [...]}."""
-        return (
-            await _gen.compute.send_finance_purged_cpcv(
-                self._client,
-                {
-                    "n_samples": n_samples,
-                    "n_groups": n_groups,
-                    "n_test_groups": n_test_groups,
-                    "purge_window": purge_window,
-                    "embargo": embargo,
-                },
-            )
-        ).payload
-
-    async def deflated_sharpe(
-        self, observed_sr: float, n_trials: int, sr_returns: list[float]
-    ) -> float:
-        """Probability the observed Sharpe beats zero after deflating for trials
-        and non-normality (Bailey & López de Prado). DSR > 0.95 = strong."""
-        return await _gen.compute.send_finance_deflated_sharpe(
-            self._client,
-            {
-                "observed_sr": observed_sr,
-                "n_trials": n_trials,
-                "sr_returns": sr_returns,
-            },
-        )
-
-    async def probability_backtest_overfit(
-        self, insample: list[list[float]], oos: list[list[float]]
-    ) -> float:
-        """PBO — rows = CV splits, cols = strategies. < 0.3 robust; > 0.5 overfit."""
-        return await _gen.compute.send_finance_probability_backtest_overfit(
-            self._client, {"insample": insample, "oos": oos}
-        )
-
-    async def diebold_mariano(
-        self, losses_a: list[float], losses_b: list[float], h: int = 1
-    ) -> dict[str, Any]:
-        """Test of equal predictive accuracy (Newey-West HAC for h>1)."""
-        return (
-            await _gen.compute.send_finance_diebold_mariano(
-                self._client, {"losses_a": losses_a, "losses_b": losses_b, "h": h}
-            )
-        ).payload
-
     # ── Forensic accounting (CONCEPT:MEDULLA-KG.domains.forensic-accounting-kernels)
     # ─────────────────────────
     async def forensic_report(
@@ -9761,128 +9886,6 @@ class FinanceClient:
         return (
             await _gen.compute.send_finance_forensic_report(
                 self._client, {"this_year": this_year, "prior_year": prior_year}
-            )
-        ).payload
-
-    # ── State-space / stat-arb
-    # (CONCEPT:MEDULLA-KG.domains.state-space-statistical-arbitrage)
-    # ──────────────────────
-    async def kalman_filter_1d(
-        self,
-        observations: list[float],
-        f: float = 1.0,
-        q: float = 1e-5,
-        h: float = 1.0,
-        r: float = 1e-3,
-        x0: float = 0.0,
-        p0: float = 1.0,
-    ) -> dict[str, Any]:
-        """Scalar Kalman filter — returns {states, variances} per step."""
-        return (
-            await _gen.compute.send_finance_kalman_filter1d(
-                self._client,
-                {
-                    "observations": observations,
-                    "f": f,
-                    "q": q,
-                    "h": h,
-                    "r": r,
-                    "x0": x0,
-                    "p0": p0,
-                },
-            )
-        ).payload
-
-    async def kalman_beta(
-        self,
-        market_returns: list[float],
-        asset_returns: list[float],
-        q: float = 1e-5,
-        r: float = 1e-3,
-        beta0: float = 1.0,
-        p0: float = 1.0,
-    ) -> dict[str, Any]:
-        """Dynamic (time-varying) beta via Kalman filter — {states (betas), variances}.
-        OLS gives the average; this gives the current hidden beta with uncertainty."""
-        return (
-            await _gen.compute.send_finance_kalman_beta(
-                self._client,
-                {
-                    "market_returns": market_returns,
-                    "asset_returns": asset_returns,
-                    "q": q,
-                    "r": r,
-                    "beta0": beta0,
-                    "p0": p0,
-                },
-            )
-        ).payload
-
-    async def kalman_volatility(
-        self,
-        returns: list[float],
-        q: float = 0.1,
-        r: float = 1.0,
-        log_var0: float | None = None,
-        p0: float = 1.0,
-        annualization: float = 252.0,
-    ) -> list[float]:
-        """Kalman volatility tracker (log-variance state) — annualised vol series.
-        Tells you what volatility *is* now, not what it was (vs GARCH/EWMA)."""
-        return (
-            await _gen.compute.send_finance_kalman_volatility(
-                self._client,
-                {
-                    "returns": returns,
-                    "q": q,
-                    "r": r,
-                    "log_var0": log_var0,
-                    "p0": p0,
-                    "annualization": annualization,
-                },
-            )
-        ).payload
-
-    async def adf_test(self, series: list[float], max_lag: int = 1) -> dict[str, Any]:
-        """Augmented Dickey-Fuller cointegration/stationarity test — returns
-        {statistic, crit_5pct, stationary_5pct, ...}."""
-        return (
-            await _gen.compute.send_finance_adf_test(
-                self._client, {"series": series, "max_lag": max_lag}
-            )
-        ).payload
-
-    async def ou_calibrate(
-        self, spread: list[float], dt: float = 1.0
-    ) -> dict[str, Any]:
-        """Calibrate an Ornstein-Uhlenbeck mean-reversion process from a spread —
-        {theta, mu, sigma, half_life, sigma_eq}."""
-        return (
-            await _gen.compute.send_finance_ou_calibrate(
-                self._client, {"spread": spread, "dt": dt}
-            )
-        ).payload
-
-    async def ou_optimal_thresholds(
-        self,
-        theta: float,
-        mu: float,
-        sigma: float,
-        sigma_eq: float,
-        cost: float = 0.0,
-    ) -> dict[str, Any]:
-        """MFPT-optimal OU entry/exit band — {entry_long, entry_short, exit, z,
-        expected_return_per_unit_time}."""
-        return (
-            await _gen.compute.send_finance_ou_optimal_thresholds(
-                self._client,
-                {
-                    "theta": theta,
-                    "mu": mu,
-                    "sigma": sigma,
-                    "sigma_eq": sigma_eq,
-                    "cost": cost,
-                },
             )
         ).payload
 
@@ -9955,19 +9958,6 @@ class FinanceClient:
             )
         ).payload
 
-    async def information_ratio(self, ic: float, n_independent: float) -> float:
-        """Fundamental law of active management: IR = IC · √(N_independent)."""
-        return await _gen.compute.send_finance_information_ratio(
-            self._client, {"ic": ic, "n_independent": n_independent}
-        )
-
-    async def effective_independent_n(self, returns_matrix: list[list[float]]) -> float:
-        """Effective number of independent signals (eigenvalue participation ratio)
-        — correlated signals collapse, exposing the real N in IR = IC·√N."""
-        return await _gen.compute.send_finance_effective_independent_n(
-            self._client, {"returns_matrix": returns_matrix}
-        )
-
     async def alpha_combination_engine(
         self, returns_matrix: list[list[float]], lookback: int = 20
     ) -> list[float]:
@@ -9978,13 +9968,6 @@ class FinanceClient:
                 self._client, {"returns_matrix": returns_matrix, "lookback": lookback}
             )
         ).payload
-
-    async def brier_score(self, forecasts: list[float], outcomes: list[float]) -> float:
-        """Brier score of probabilistic forecasts vs binary outcomes (< 0.25 =
-        production-grade calibration)."""
-        return await _gen.compute.send_finance_brier_score(
-            self._client, {"forecasts": forecasts, "outcomes": outcomes}
-        )
 
     async def convergence_gate(
         self, strengths: list[float], strong_threshold: float = 0.6, min_agree: int = 5
@@ -16534,6 +16517,7 @@ class MedullaClient:
         self.raft_admin = RaftAdminClient(self)
         self.consensus = ConsensusClient(self)
         self.finance = FinanceClient(self)
+        self.numeric = NumericClient(self)
         self.datascience = DataScienceClient(self)
         self.mining = MiningClient(self)
         self.graphlearn = GraphLearnClient(self)
@@ -17947,6 +17931,7 @@ class SyncMedullaClient:
         self.raft_admin = self._SyncWrapper(self._client.raft_admin, self._loop)
         self.consensus = self._SyncWrapper(self._client.consensus, self._loop)
         self.finance = self._SyncWrapper(self._client.finance, self._loop)
+        self.numeric = self._SyncWrapper(self._client.numeric, self._loop)
         self.datascience = self._SyncWrapper(self._client.datascience, self._loop)
         self.mining = self._SyncWrapper(self._client.mining, self._loop)
         self.graphlearn = self._SyncWrapper(self._client.graphlearn, self._loop)

@@ -401,29 +401,6 @@
     "sha256": "fd07928baf16210714930af500f6eebcda717980080accb5f376e5963f4d49a2"
   },
   {
-    "method": "FinanceAdfTest",
-    "request": {
-      "method": "FinanceAdfTest",
-      "params": {
-        "max_lag": 0,
-        "series": []
-      }
-    },
-    "result": {
-      "crit_10pct": 0.0,
-      "crit_1pct": 0.0,
-      "crit_5pct": 0.0,
-      "n_obs": 0,
-      "p_value_approx": 0.0,
-      "stationary_10pct": false,
-      "stationary_1pct": false,
-      "stationary_5pct": false,
-      "statistic": 0.0,
-      "used_lag": 0
-    },
-    "sha256": "0da59c77ea2a89949db18a8b6a09249c4ba40d1593ec079c9eb2045dfb1d71d3"
-  },
-  {
     "method": "FinanceAlphaCombinationEngine",
     "request": {
       "method": "FinanceAlphaCombinationEngine",
@@ -530,18 +507,6 @@
     "sha256": "6b1ca210978af9dfb85fe736e20c0545c95f4300b670b8bd628871f9ab7a31cb"
   },
   {
-    "method": "FinanceBrierScore",
-    "request": {
-      "method": "FinanceBrierScore",
-      "params": {
-        "forecasts": [],
-        "outcomes": []
-      }
-    },
-    "result": 0.0,
-    "sha256": "e2669944563b07985e2da5048786f9019e7bcfff8b26d790502c884bc06bcbe6"
-  },
-  {
     "method": "FinanceCapitalRatios",
     "request": {
       "method": "FinanceCapitalRatios",
@@ -619,58 +584,6 @@
     "sha256": "9b66ad7315f372009c5328b872cd28ff2e93792c7a0ab10c1fe9340915d96448"
   },
   {
-    "method": "FinanceDeflatedSharpe",
-    "request": {
-      "method": "FinanceDeflatedSharpe",
-      "params": {
-        "n_trials": 0,
-        "observed_sr": 0.0,
-        "sr_returns": []
-      }
-    },
-    "result": 0.0,
-    "sha256": "b102771b904d08dbeb13cd4f15920420991dfeac00d18ea5460e086018333c67"
-  },
-  {
-    "method": "FinanceDetectRegimes",
-    "request": {
-      "method": "FinanceDetectRegimes",
-      "params": {
-        "max_iter": 0,
-        "n_states": 0,
-        "observations": [],
-        "tol": 0.0
-      }
-    },
-    "result": {
-      "initial_probs": [],
-      "log_likelihood": 0.0,
-      "means": [],
-      "n_iterations": 0,
-      "states": [],
-      "stds": [],
-      "transition_matrix": []
-    },
-    "sha256": "5fb3c182cb9c4ba334f5c88c3a4bd71a77e6c1e64d7969862c19d8645822a64e"
-  },
-  {
-    "method": "FinanceDieboldMariano",
-    "request": {
-      "method": "FinanceDieboldMariano",
-      "params": {
-        "h": 0,
-        "losses_a": [],
-        "losses_b": []
-      }
-    },
-    "result": {
-      "a_better": false,
-      "p_value": 0.0,
-      "statistic": 0.0
-    },
-    "sha256": "31140132e4cef2d1a180eff8814739b9a24a819f7cd8f20e34cd31b1191a8d04"
-  },
-  {
     "method": "FinanceDistributionShift",
     "request": {
       "method": "FinanceDistributionShift",
@@ -709,17 +622,6 @@
     },
     "result": [],
     "sha256": "cbdaca2ea75af0c582388620de1ff78b31cbc59b0bf0bd7a34e12c34eff8f586"
-  },
-  {
-    "method": "FinanceEffectiveIndependentN",
-    "request": {
-      "method": "FinanceEffectiveIndependentN",
-      "params": {
-        "returns_matrix": []
-      }
-    },
-    "result": 0.0,
-    "sha256": "4954f45c5f88cd614ff3a0868942ecfc8463d3383bd97b85f4fc4584c7b2be38"
   },
   {
     "method": "FinanceEfficientFrontier",
@@ -954,85 +856,6 @@
       "mu": 0.0
     },
     "sha256": "6b7110e4244202400160f116c552e8de806db3e5ec69f07165371025d905c8d6"
-  },
-  {
-    "method": "FinanceInformationCoefficient",
-    "request": {
-      "method": "FinanceInformationCoefficient",
-      "params": {
-        "forward_returns": [],
-        "signal": []
-      }
-    },
-    "result": 0.0,
-    "sha256": "d994def3d90233d8ebb8f56594f062fca86c912a5b80a1ce920eba8932b9ffa8"
-  },
-  {
-    "method": "FinanceInformationRatio",
-    "request": {
-      "method": "FinanceInformationRatio",
-      "params": {
-        "ic": 0.0,
-        "n_independent": 0.0
-      }
-    },
-    "result": 0.0,
-    "sha256": "b9e54258f1f919e7c946dbe0e9ff84b8a2de5394900a0e1737c3fa1ac498d14e"
-  },
-  {
-    "method": "FinanceKalmanBeta",
-    "request": {
-      "method": "FinanceKalmanBeta",
-      "params": {
-        "asset_returns": [],
-        "beta0": 0.0,
-        "market_returns": [],
-        "p0": 0.0,
-        "q": 0.0,
-        "r": 0.0
-      }
-    },
-    "result": {
-      "states": [],
-      "variances": []
-    },
-    "sha256": "76780124dbbdfea1a24b881288e6da908291d8bb7c08a86e2b00f3bd7d0d0539"
-  },
-  {
-    "method": "FinanceKalmanFilter1d",
-    "request": {
-      "method": "FinanceKalmanFilter1d",
-      "params": {
-        "f": 0.0,
-        "h": 0.0,
-        "observations": [],
-        "p0": 0.0,
-        "q": 0.0,
-        "r": 0.0,
-        "x0": 0.0
-      }
-    },
-    "result": {
-      "states": [],
-      "variances": []
-    },
-    "sha256": "565a8060cb4d0de1c9dee1d0d6507ef24f424204b88d8129da98ed37d7403ca4"
-  },
-  {
-    "method": "FinanceKalmanVolatility",
-    "request": {
-      "method": "FinanceKalmanVolatility",
-      "params": {
-        "annualization": 0.0,
-        "log_var0": 0.0,
-        "p0": 0.0,
-        "q": 0.0,
-        "r": 0.0,
-        "returns": []
-      }
-    },
-    "result": [],
-    "sha256": "f85c88718df657c47b2b9c4ac2e6a9033e4039c1f6ab113f1f390780b7db5f41"
   },
   {
     "method": "FinanceKellyFraction",
@@ -1493,45 +1316,6 @@
     "sha256": "c9a62910bdb817b2914923c1c3ca8a0282254b0692d8243d35df05ac25437277"
   },
   {
-    "method": "FinanceOuCalibrate",
-    "request": {
-      "method": "FinanceOuCalibrate",
-      "params": {
-        "dt": 0.0,
-        "spread": []
-      }
-    },
-    "result": {
-      "half_life": 0.0,
-      "mu": 0.0,
-      "sigma": 0.0,
-      "sigma_eq": 0.0,
-      "theta": 0.0
-    },
-    "sha256": "044cd753bfea9c11636d65f67172567514678f53bc59578a0312d15f5ecf2802"
-  },
-  {
-    "method": "FinanceOuOptimalThresholds",
-    "request": {
-      "method": "FinanceOuOptimalThresholds",
-      "params": {
-        "cost": 0.0,
-        "mu": 0.0,
-        "sigma": 0.0,
-        "sigma_eq": 0.0,
-        "theta": 0.0
-      }
-    },
-    "result": {
-      "entry_long": 0.0,
-      "entry_short": 0.0,
-      "exit": 0.0,
-      "expected_return_per_unit_time": 0.0,
-      "z": 0.0
-    },
-    "sha256": "5720f09dbfc4a5597e4592c89ed1ce34fd1bfa213121786839d9923e1c399fe1"
-  },
-  {
     "method": "FinancePairsSignal",
     "request": {
       "method": "FinancePairsSignal",
@@ -1612,18 +1396,6 @@
     "sha256": "5ce4d356beddf76e61c86a3fa2f9db6d71f956c86a9fc74314ad66a741563473"
   },
   {
-    "method": "FinanceProbabilityBacktestOverfit",
-    "request": {
-      "method": "FinanceProbabilityBacktestOverfit",
-      "params": {
-        "insample": [],
-        "oos": []
-      }
-    },
-    "result": 0.0,
-    "sha256": "3a4f9850cf105ca2f962dc0055c23cacdcff45cfe9efe80c279422be3640c387"
-  },
-  {
     "method": "FinanceProfitAttribution",
     "request": {
       "method": "FinanceProfitAttribution",
@@ -1639,21 +1411,6 @@
       "selection": 0.0
     },
     "sha256": "8bc569e8758b2cae10d0045ae1a3f008a0e6554189dcaebee5750dba4548ac5c"
-  },
-  {
-    "method": "FinancePurgedCpcv",
-    "request": {
-      "method": "FinancePurgedCpcv",
-      "params": {
-        "embargo": 0,
-        "n_groups": 0,
-        "n_samples": 0,
-        "n_test_groups": 0,
-        "purge_window": 0
-      }
-    },
-    "result": [],
-    "sha256": "214bcc6cca687e6c6a2250470da8f1cd708ff453830105b2aa941e533397fdc9"
   },
   {
     "method": "FinanceQueueImbalance",

@@ -139,7 +139,7 @@ def test_risk_metrics_roundtrip(clean_graph):
 def test_detect_regimes_roundtrip(clean_graph):
     # two clear regimes: low then high
     obs = [0.0, 0.1, -0.1, 0.0] * 5 + [5.0, 5.1, 4.9, 5.0] * 5
-    res = clean_graph.finance.detect_regimes(obs, n_states=2, max_iter=50, tol=1e-4)
+    res = clean_graph.numeric.regime_hmm(obs, n_states=2, max_iter=50, tol=1e-4)
     assert len(res["states"]) == len(obs)
     assert len(res["means"]) == 2
 

@@ -11178,13 +11178,6 @@ class MethodFinanceStressTest(BaseModel):
     params: MethodFinanceStressTestParams
 
 
-class MethodFinanceDetectRegimes(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceDetectRegimes"]
-    params: MethodFinanceDetectRegimesParams
-
-
 class MethodFinanceSignalDecay(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -11218,13 +11211,6 @@ class MethodFinanceMeanReversion(BaseModel):
 
     method: Literal["FinanceMeanReversion"]
     params: MethodFinanceMeanReversionParams
-
-
-class MethodFinanceInformationCoefficient(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceInformationCoefficient"]
-    params: MethodFinanceInformationCoefficientParams
 
 
 class MethodFinanceTwap(BaseModel):
@@ -11451,81 +11437,11 @@ class MethodFinancePosteriorCredibleInterval(BaseModel):
     params: MethodFinancePosteriorCredibleIntervalParams
 
 
-class MethodFinancePurgedCpcv(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinancePurgedCpcv"]
-    params: MethodFinancePurgedCpcvParams
-
-
-class MethodFinanceDeflatedSharpe(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceDeflatedSharpe"]
-    params: MethodFinanceDeflatedSharpeParams
-
-
-class MethodFinanceProbabilityBacktestOverfit(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceProbabilityBacktestOverfit"]
-    params: MethodFinanceProbabilityBacktestOverfitParams
-
-
-class MethodFinanceDieboldMariano(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceDieboldMariano"]
-    params: MethodFinanceDieboldMarianoParams
-
-
 class MethodFinanceForensicReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     method: Literal["FinanceForensicReport"]
     params: MethodFinanceForensicReportParams
-
-
-class MethodFinanceKalmanFilter1d(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceKalmanFilter1d"]
-    params: MethodFinanceKalmanFilter1dParams
-
-
-class MethodFinanceKalmanBeta(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceKalmanBeta"]
-    params: MethodFinanceKalmanBetaParams
-
-
-class MethodFinanceKalmanVolatility(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceKalmanVolatility"]
-    params: MethodFinanceKalmanVolatilityParams
-
-
-class MethodFinanceAdfTest(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceAdfTest"]
-    params: MethodFinanceAdfTestParams
-
-
-class MethodFinanceOuCalibrate(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceOuCalibrate"]
-    params: MethodFinanceOuCalibrateParams
-
-
-class MethodFinanceOuOptimalThresholds(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceOuOptimalThresholds"]
-    params: MethodFinanceOuOptimalThresholdsParams
 
 
 class MethodFinanceMarkovTransitionMatrix(BaseModel):
@@ -11563,32 +11479,11 @@ class MethodFinanceSpreadReversion(BaseModel):
     params: MethodFinanceSpreadReversionParams
 
 
-class MethodFinanceInformationRatio(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceInformationRatio"]
-    params: MethodFinanceInformationRatioParams
-
-
-class MethodFinanceEffectiveIndependentN(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceEffectiveIndependentN"]
-    params: MethodFinanceEffectiveIndependentNParams
-
-
 class MethodFinanceAlphaCombinationEngine(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     method: Literal["FinanceAlphaCombinationEngine"]
     params: MethodFinanceAlphaCombinationEngineParams
-
-
-class MethodFinanceBrierScore(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    method: Literal["FinanceBrierScore"]
-    params: MethodFinanceBrierScoreParams
 
 
 class MethodFinanceConvergenceGate(BaseModel):
@@ -13650,13 +13545,11 @@ Method = Annotated[
         MethodFinanceRiskMetrics,
         MethodFinanceMonteCarloVar,
         MethodFinanceStressTest,
-        MethodFinanceDetectRegimes,
         MethodFinanceSignalDecay,
         MethodFinanceCombineAlphas,
         MethodFinanceCrossSectionalRank,
         MethodFinanceMomentum,
         MethodFinanceMeanReversion,
-        MethodFinanceInformationCoefficient,
         MethodFinanceTwap,
         MethodFinanceVwap,
         MethodFinanceMarketImpact,
@@ -13689,26 +13582,13 @@ Method = Annotated[
         MethodFinanceFactorRank,
         MethodFinanceBayesianKelly,
         MethodFinancePosteriorCredibleInterval,
-        MethodFinancePurgedCpcv,
-        MethodFinanceDeflatedSharpe,
-        MethodFinanceProbabilityBacktestOverfit,
-        MethodFinanceDieboldMariano,
         MethodFinanceForensicReport,
-        MethodFinanceKalmanFilter1d,
-        MethodFinanceKalmanBeta,
-        MethodFinanceKalmanVolatility,
-        MethodFinanceAdfTest,
-        MethodFinanceOuCalibrate,
-        MethodFinanceOuOptimalThresholds,
         MethodFinanceMarkovTransitionMatrix,
         MethodFinanceOrderBookImbalance,
         MethodFinanceQueueImbalance,
         MethodFinanceRealizedVolTick,
         MethodFinanceSpreadReversion,
-        MethodFinanceInformationRatio,
-        MethodFinanceEffectiveIndependentN,
         MethodFinanceAlphaCombinationEngine,
-        MethodFinanceBrierScore,
         MethodFinanceConvergenceGate,
         MethodFinanceEmpiricalKelly,
         MethodFinanceSabrImpliedVol,
@@ -14907,13 +14787,6 @@ class MethodExportSqliteFileParams(BaseModel):
     tables: list[str] = Field(default_factory=list)
 
 
-class MethodFinanceAdfTestParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    max_lag: Annotated[int, Field(ge=0)]
-    series: list[float]
-
-
 class MethodFinanceAlphaCombinationEngineParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14970,13 +14843,6 @@ class MethodFinanceBreakevenAlphaParams(BaseModel):
     v_l: float
 
 
-class MethodFinanceBrierScoreParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    forecasts: list[float]
-    outcomes: list[float]
-
-
 class MethodFinanceCapitalRatiosParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15015,31 +14881,6 @@ class MethodFinanceCvarParams(BaseModel):
     returns: list[float]
 
 
-class MethodFinanceDeflatedSharpeParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    n_trials: Annotated[int, Field(ge=0)]
-    observed_sr: float
-    sr_returns: list[float]
-
-
-class MethodFinanceDetectRegimesParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    max_iter: Annotated[int, Field(ge=0)]
-    n_states: Annotated[int, Field(ge=0)]
-    observations: list[float]
-    tol: float
-
-
-class MethodFinanceDieboldMarianoParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    h: Annotated[int, Field(ge=0)]
-    losses_a: list[float]
-    losses_b: list[float]
-
-
 class MethodFinanceDistributionShiftParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15059,12 +14900,6 @@ class MethodFinanceDrawdownSeriesParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     returns: list[float]
-
-
-class MethodFinanceEffectiveIndependentNParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    returns_matrix: list[list[float]]
 
 
 class MethodFinanceEfficientFrontierParams(BaseModel):
@@ -15167,54 +15002,6 @@ class MethodFinanceHawkesMleParams(BaseModel):
     max_iter: Annotated[int, Field(ge=0)]
     t_horizon: float
     times: list[float]
-
-
-class MethodFinanceInformationCoefficientParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    forward_returns: list[float]
-    signal: list[float]
-
-
-class MethodFinanceInformationRatioParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    ic: float
-    n_independent: float
-
-
-class MethodFinanceKalmanBetaParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    asset_returns: list[float]
-    beta0: float
-    market_returns: list[float]
-    p0: float
-    q: float
-    r: float
-
-
-class MethodFinanceKalmanFilter1dParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    f: float
-    h: float
-    observations: list[float]
-    p0: float
-    q: float
-    r: float
-    x0: float
-
-
-class MethodFinanceKalmanVolatilityParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    annualization: float
-    log_var0: float | None = None
-    p0: float
-    q: float
-    r: float
-    returns: list[float]
 
 
 class MethodFinanceKellyFractionParams(BaseModel):
@@ -15350,23 +15137,6 @@ class MethodFinanceOrderBookImbalanceParams(BaseModel):
     v_bid: list[float]
 
 
-class MethodFinanceOuCalibrateParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    dt: float
-    spread: list[float]
-
-
-class MethodFinanceOuOptimalThresholdsParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    cost: float
-    mu: float
-    sigma: float
-    sigma_eq: float
-    theta: float
-
-
 class MethodFinancePairsSignalParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15401,23 +15171,6 @@ class MethodFinancePosteriorCredibleIntervalParams(BaseModel):
     alpha: float
     beta: float
     level: float
-
-
-class MethodFinanceProbabilityBacktestOverfitParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    insample: list[list[float]]
-    oos: list[list[float]]
-
-
-class MethodFinancePurgedCpcvParams(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    embargo: Annotated[int, Field(ge=0)]
-    n_groups: Annotated[int, Field(ge=0)]
-    n_samples: Annotated[int, Field(ge=0)]
-    n_test_groups: Annotated[int, Field(ge=0)]
-    purge_window: Annotated[int, Field(ge=0)]
 
 
 class MethodFinanceQueueImbalanceParams(BaseModel):
@@ -31229,8 +30982,6 @@ __all__ = [
     "MethodExplainProvenanceParams",
     "MethodExportSqliteFile",
     "MethodExportSqliteFileParams",
-    "MethodFinanceAdfTest",
-    "MethodFinanceAdfTestParams",
     "MethodFinanceAlertRaise",
     "MethodFinanceAlertRaiseParams",
     "MethodFinanceAlphaCombinationEngine",
@@ -31245,8 +30996,6 @@ __all__ = [
     "MethodFinanceBlackLittermanParams",
     "MethodFinanceBreakevenAlpha",
     "MethodFinanceBreakevenAlphaParams",
-    "MethodFinanceBrierScore",
-    "MethodFinanceBrierScoreParams",
     "MethodFinanceCapitalRatios",
     "MethodFinanceCapitalRatiosParams",
     "MethodFinanceCombineAlphas",
@@ -31257,20 +31006,12 @@ __all__ = [
     "MethodFinanceCrossSectionalRankParams",
     "MethodFinanceCvar",
     "MethodFinanceCvarParams",
-    "MethodFinanceDeflatedSharpe",
-    "MethodFinanceDeflatedSharpeParams",
-    "MethodFinanceDetectRegimes",
-    "MethodFinanceDetectRegimesParams",
-    "MethodFinanceDieboldMariano",
-    "MethodFinanceDieboldMarianoParams",
     "MethodFinanceDistributionShift",
     "MethodFinanceDistributionShiftParams",
     "MethodFinanceDownsideDeviation",
     "MethodFinanceDownsideDeviationParams",
     "MethodFinanceDrawdownSeries",
     "MethodFinanceDrawdownSeriesParams",
-    "MethodFinanceEffectiveIndependentN",
-    "MethodFinanceEffectiveIndependentNParams",
     "MethodFinanceEfficientFrontier",
     "MethodFinanceEfficientFrontierParams",
     "MethodFinanceEmpiricalKelly",
@@ -31295,16 +31036,6 @@ __all__ = [
     "MethodFinanceHardimanBouchaudParams",
     "MethodFinanceHawkesMle",
     "MethodFinanceHawkesMleParams",
-    "MethodFinanceInformationCoefficient",
-    "MethodFinanceInformationCoefficientParams",
-    "MethodFinanceInformationRatio",
-    "MethodFinanceInformationRatioParams",
-    "MethodFinanceKalmanBeta",
-    "MethodFinanceKalmanBetaParams",
-    "MethodFinanceKalmanFilter1d",
-    "MethodFinanceKalmanFilter1dParams",
-    "MethodFinanceKalmanVolatility",
-    "MethodFinanceKalmanVolatilityParams",
     "MethodFinanceKellyFraction",
     "MethodFinanceKellyFractionParams",
     "MethodFinanceKyleLambda",
@@ -31337,10 +31068,6 @@ __all__ = [
     "MethodFinanceOptimizePortfolioParams",
     "MethodFinanceOrderBookImbalance",
     "MethodFinanceOrderBookImbalanceParams",
-    "MethodFinanceOuCalibrate",
-    "MethodFinanceOuCalibrateParams",
-    "MethodFinanceOuOptimalThresholds",
-    "MethodFinanceOuOptimalThresholdsParams",
     "MethodFinancePairsSignal",
     "MethodFinancePairsSignalParams",
     "MethodFinancePairsTrading",
@@ -31351,12 +31078,8 @@ __all__ = [
     "MethodFinancePositionSizeParams",
     "MethodFinancePosteriorCredibleInterval",
     "MethodFinancePosteriorCredibleIntervalParams",
-    "MethodFinanceProbabilityBacktestOverfit",
-    "MethodFinanceProbabilityBacktestOverfitParams",
     "MethodFinanceProfitAttribution",
     "MethodFinanceProfitAttributionParams",
-    "MethodFinancePurgedCpcv",
-    "MethodFinancePurgedCpcvParams",
     "MethodFinanceQueueImbalance",
     "MethodFinanceQueueImbalanceParams",
     "MethodFinanceRealizedVolTick",
