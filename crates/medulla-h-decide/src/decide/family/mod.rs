@@ -658,10 +658,14 @@ mod tests {
     #[test]
     fn every_question_kind_has_a_family() {
         let kinds = all_kinds();
-        assert_eq!(
-            kinds.len(),
-            "one family registration per QuestionKind variant"
-        );
+        // The exhaustive match in `all_kinds` proves every variant is listed; no
+        // literal count (a line every family branch would edit). Each kind once:
+        for (i, kind) in kinds.iter().enumerate() {
+            assert!(
+                !kinds[i + 1..].contains(kind),
+                "one family registration per QuestionKind variant: {kind:?} listed twice"
+            );
+        }
         for kind in &kinds {
             // The registry is total by construction: `for_kind` cannot name
             // a kind the exhaustive match does not map.
