@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     PlacementAdminRequest = _models.MethodPlacementAdminParams
     CancelRequestRequest = _models.MethodCancelRequestParams
     RegisterForeignSourceRequest = _models.MethodRegisterForeignSourceParams
+    RegisterGraphViewRequest = _models.MethodRegisterGraphViewParams
     PlanMatViewDefineRequest = _models.MethodPlanMatViewDefineParams
     PlanMatViewGetRequest = _models.MethodPlanMatViewGetParams
     PlanMatViewRefreshRequest = _models.MethodPlanMatViewRefreshParams
@@ -1245,6 +1246,43 @@ async def send_register_foreign_source(
     return expect_string("RegisterForeignSource", payload)
 
 
+async def send_register_graph_view(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> str:
+    """Send one engine-contract request.
+
+    Method:
+        RegisterGraphView
+    Authorization:
+        federation:admin
+    Durability:
+        ControlRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::String
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodRegisterGraphViewParams.model_validate(params or {})
+    payload = await client._send(
+        "RegisterGraphView",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return expect_string("RegisterGraphView", payload)
+
+
 async def send_plan_mat_view_define(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -1420,6 +1458,7 @@ _REQUEST_METHODS = frozenset(
         "PlacementAdmin",
         "CancelRequest",
         "RegisterForeignSource",
+        "RegisterGraphView",
         "PlanMatViewDefine",
         "PlanMatViewGet",
         "PlanMatViewRefresh",

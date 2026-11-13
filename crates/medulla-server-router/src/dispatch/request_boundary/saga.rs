@@ -48,7 +48,7 @@ fn is_session_control_mutation(method: &Method) -> bool {
         #[cfg(feature = "wasm-udf")]
         Method::RegisterUdf { .. } => true,
         #[cfg(feature = "federation")]
-        Method::RegisterForeignSource { .. } => true,
+        Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } => true,
         _ => false,
     }
 }
@@ -182,7 +182,7 @@ fn validate_session_control_result(method: &Method, result: &ResultPayload) -> R
             })
         }
         #[cfg(feature = "federation")]
-        Method::RegisterForeignSource { .. } => {
+        Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } => {
             require_session_control_variant(method, result, "String", |value| {
                 matches!(value, ResultPayload::String(_))
             })

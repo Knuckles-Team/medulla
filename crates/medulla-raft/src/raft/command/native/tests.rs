@@ -455,10 +455,12 @@ fn cypher_write_is_native_and_read_is_not() {
     let write = Method::CypherQuery {
         query: "CREATE (:Node)".to_string(),
         mode: medulla_protocol_types::protocol::CypherMode::Write,
+        view: None,
     };
     let read = Method::CypherQuery {
         query: "MATCH (n) RETURN n".to_string(),
         mode: medulla_protocol_types::protocol::CypherMode::Read,
+        view: None,
     };
 
     assert_eq!(

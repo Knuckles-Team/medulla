@@ -41,3 +41,13 @@ Decisions (owner standard: most correct, long-term, simplest):
 ## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2)
 
 Decision: `medulla-cypher` cannot depend on `medulla-virtual-graph` (the latter reaches the former), so the compiler emits a plain `ViewPlan` of SPARQL text plus `ViewJoin` records, and `apply_view_joins` in the shared virtual-graph crate turns same-database joins into one derived triples map. Property and relationship predicates follow the namespace-of-class naming rule, so a view needs no extra property table. Unbounded `*` is capped by the parser at 16 hops and therefore refuses against the default knob of 8.
+
+## Decision: how a named graph view reaches its sources (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3)
+
+`RegisterGraphView` carries the view, the R2RML text its labels map through, the engine tables and the live relational sources
+(`name`, `dsn`, `table`) that mapping reads; the registered foreign-source catalog holds a query, not a table, so it cannot name
+the source table of a mapping. The view is owner-scoped in the same catalog partition as foreign sources, in memory only, and its
+`mapping_digest` must be the SHA-256 of the mapping text, so a view cannot name a mapping other than the one it runs. A read runs
+through `view_virtual` in `medulla-h-sparql`, which shares the SSRF gate, snapshot session and source driver of `SparqlVirtual`
+instead of duplicating them; `medulla-h-query` already depends on that crate. EXPLAIN is the leading keyword of the Cypher text, so
+the wire gains exactly one field (`view`).

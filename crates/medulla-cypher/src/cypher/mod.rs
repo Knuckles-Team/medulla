@@ -61,7 +61,8 @@ pub use exec::{exec_cypher_params_indexed, IndexSource};
 pub use plan::{CypherQuery, Statement, WriteOp, WriteQuery};
 pub use proc::{CypherProcedure, ProcRow, YieldValue};
 pub use virtual_view::{
-    compile_view_query, compile_view_statement, resolve_view_plan, ViewRefusal, ViewResolver,
+    compile_view_query, compile_view_statement, explain_fragments, resolve_view_plan,
+    split_explain, ExplainFragment, ViewRefusal, ViewResolver,
 };
 
 /// Parser-derived statement classification used by served authorization.

@@ -120,6 +120,49 @@ pub fn compile_view_statement(
     }
 }
 
+/// Split a leading `EXPLAIN` keyword off a view query: `(explain, rest)`
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.5).
+pub fn split_explain(text: &str) -> (bool, &str) {
+    let trimmed = text.trim_start();
+    match trimmed.get(..7) {
+        Some(head)
+            if head.eq_ignore_ascii_case("explain")
+                && trimmed[7..].starts_with(|c: char| c.is_whitespace()) =>
+        {
+            (true, trimmed[7..].trim_start())
+        }
+        _ => (false, text),
+    }
+}
+
+/// One source statement of a view read with the digest of the mapping it ran under
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.5). Never carries an endpoint or credential.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExplainFragment {
+    /// The registered name of the source that ran the statement.
+    pub source: String,
+    pub pushed_statement: String,
+    pub mapping_digest: String,
+}
+
+/// Pair every statement the sources ran (`(source name, statement)`) with the mapping digest
+/// of `plan`. A statement that names an endpoint is withheld rather than shown.
+pub fn explain_fragments(plan: &ViewPlan, pushed: &[(String, String)]) -> Vec<ExplainFragment> {
+    let digest = plan.mapping_digests.first().cloned().unwrap_or_default();
+    pushed
+        .iter()
+        .map(|(source, statement)| ExplainFragment {
+            source: source.clone(),
+            pushed_statement: if statement.contains("://") {
+                "[statement withheld: it names an endpoint]".to_string()
+            } else {
+                statement.clone()
+            },
+            mapping_digest: digest.clone(),
+        })
+        .collect()
+}
+
 fn unsupported<T>(token: &str) -> Result<T, ViewRefusal> {
     Err(ViewRefusal::ClauseUnsupported(token.to_string()))
 }

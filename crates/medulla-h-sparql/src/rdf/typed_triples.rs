@@ -142,7 +142,11 @@ mod tests {
                 "https://knuckles-team.github.io/ontology/core#p",
                 text("ok"),
             ),
-            triple("not an iri", "https://knuckles-team.github.io/ontology/core#p", text("x")),
+            triple(
+                "not an iri",
+                "https://knuckles-team.github.io/ontology/core#p",
+                text("x"),
+            ),
         ];
         let error = graph_from_typed_triples(&typed).unwrap_err();
         assert!(

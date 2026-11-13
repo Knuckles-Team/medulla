@@ -47,6 +47,7 @@ method_results! {
     Shutdown(Shutdown) => Text<String>;
     CancelRequest(CancelRequest) => Bool<bool>;
     RegisterForeignSource(RegisterForeignSource) => Text<String>;
+    RegisterGraphView(RegisterGraphView) => Text<String>;
     RegisterUdf(RegisterUdf) => Text<String>;
     CreateMatView(CreateMatView) => Count<u64>;
     #[cfg(feature = "compute-dist")]

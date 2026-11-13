@@ -171,10 +171,12 @@ fn runtime_conditional_policy_uses_query_mode_and_modality_operation() {
     let read = Method::CypherQuery {
         query: String::new(),
         mode: CypherMode::Read,
+        view: None,
     };
     let write = Method::CypherQuery {
         query: String::new(),
         mode: CypherMode::Write,
+        view: None,
     };
     assert_eq!(
         policy(&read),

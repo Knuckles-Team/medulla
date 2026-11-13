@@ -10,7 +10,10 @@ use medulla_virtual_graph::obda::{
     ObdaSourceRegistry, SourceIdentity, TriplesMap, VirtualGraph, JOIN_RIGHT_PREFIX,
 };
 
-use super::super::{compile_view_statement, resolve_view_plan, ViewRefusal, ViewResolver};
+use super::super::{
+    compile_view_statement, explain_fragments, resolve_view_plan, split_explain, ViewRefusal,
+    ViewResolver,
+};
 
 const NS: &str = "http://example.org/";
 const XSD_INTEGER: &str = "http://www.w3.org/2001/XMLSchema#integer";
@@ -322,6 +325,7 @@ impl ViewResolver for Views {
     }
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.6.3
 #[test]
 fn served_read_resolves_view() {
     let views = Views(HashMap::from([("people".to_string(), view())]));
@@ -340,4 +344,57 @@ fn served_read_resolves_view() {
     let refusal =
         resolve_view_plan(&views, "other", "MATCH (p:Person) RETURN p.name", 8).unwrap_err();
     assert_eq!(refusal, ViewRefusal::UnknownView("other".to_string()));
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.6.5
+#[test]
+fn explain_names_mapping() {
+    // The EXPLAIN keyword is split off; a query without it is untouched.
+    assert_eq!(
+        split_explain("EXPLAIN MATCH (p:Person) RETURN p.name"),
+        (true, "MATCH (p:Person) RETURN p.name")
+    );
+    assert_eq!(
+        split_explain("  explain\nMATCH (p:Person) RETURN p"),
+        (true, "MATCH (p:Person) RETURN p")
+    );
+    assert_eq!(
+        split_explain("MATCH (p:Person) RETURN p"),
+        (false, "MATCH (p:Person) RETURN p")
+    );
+    assert_eq!(split_explain("EXPLAINED (x)"), (false, "EXPLAINED (x)"));
+
+    let digest = "ab12".repeat(16);
+    let mut bound = view();
+    bound.mapping_digest = digest.clone();
+    let plan =
+        compile_view_statement(&bound, "MATCH (p:Person) RETURN p.name", 8).expect("compiles");
+    let pushed = vec![
+        (
+            "people".to_string(),
+            "SELECT \"name\" FROM \"people\"".to_string(),
+        ),
+        (
+            "orgs".to_string(),
+            "SELECT \"id\" FROM \"orgs\" -- postgres://user:secret@host/db".to_string(),
+        ),
+    ];
+    let fragments = explain_fragments(&plan, &pushed);
+    assert_eq!(fragments.len(), 2);
+    for fragment in &fragments {
+        assert_eq!(fragment.mapping_digest, digest);
+        assert_eq!(fragment.mapping_digest.len(), 64);
+        assert!(fragment
+            .mapping_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+        assert!(!fragment.pushed_statement.contains("secret"));
+    }
+    assert_eq!(
+        fragments[0].pushed_statement,
+        "SELECT \"name\" FROM \"people\""
+    );
+    assert!(fragments[1]
+        .pushed_statement
+        .starts_with("[statement withheld"));
 }

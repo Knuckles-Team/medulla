@@ -48,6 +48,11 @@ $($variants)*
         query: String,
         /// Exact requested execution authority; no implicit or inferred mode.
         mode: CypherMode,
+        /// Name of a registered graph view (`RegisterGraphView`): the read compiles over
+        /// the view's approved mappings and reads the sources live, with no copy
+        /// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3). Absent keeps the native graph path.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        view: Option<String>,
     },
 
     // Read-only GraphQL query surface (CONCEPT:MEDULLA-KG.query.sparql-completeness). A GraphQL `query`
@@ -471,6 +476,26 @@ $($variants)*
     RegisterForeignSource {
         name: String,
         source: medulla_types::wire::ForeignSourceSpec,
+    },
+
+    /// Register (or replace) a named read-only graph view over approved R2RML
+    /// mappings of live relational sources, owner-scoped like a foreign source. A
+    /// `CypherQuery` carrying `view: name` reads through it
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3). `mapping_digest` of the view is the
+    /// SHA-256 of `mapping`, lowercase hex; a mismatch refuses
+    /// `GRAPH_VIEW_DIGEST_MISMATCH`. Returns the name.
+    #[cfg(feature = "federation")]
+    RegisterGraphView {
+        name: String,
+        view: medulla_types::virtual_graph_view::GraphView,
+        /// The R2RML Turtle document (or compact mapping) the view's labels map through.
+        mapping: String,
+        /// Engine user tables the mapping reads.
+        #[serde(default)]
+        tables: Vec<String>,
+        /// Live relational sources the mapping reads.
+        #[serde(default)]
+        sources: Vec<medulla_types::virtual_graph_view::ViewSource>,
     },
 
     /// Read mapped columns from this caller's registered SQL or HTTP source. The source

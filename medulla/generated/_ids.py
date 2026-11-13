@@ -32,6 +32,7 @@ METHOD_IDS = frozenset(
         "Shutdown",
         "CancelRequest",
         "RegisterForeignSource",
+        "RegisterGraphView",
         "PlanMatViewDefine",
         "PlanMatViewGet",
         "PlanMatViewRefresh",

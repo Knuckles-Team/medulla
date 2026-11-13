@@ -17,7 +17,7 @@ pub(crate) fn sql_refusal(error: impl std::fmt::Display) -> String {
 /// must reject a mismatch before choosing a read lane or MutationBatch path.
 #[cfg(feature = "cypher")]
 pub fn validate_cypher_mode(method: &Method) -> Result<(), String> {
-    let Method::CypherQuery { query, mode } = method else {
+    let Method::CypherQuery { query, mode, .. } = method else {
         return Ok(());
     };
     let parsed_mode = match medulla_cypher::cypher::classify_cypher(query) {

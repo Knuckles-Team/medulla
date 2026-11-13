@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// One node label and the ontology class and approved mapping behind it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct NodeLabelMapping {
     pub label: String,
@@ -17,6 +18,7 @@ pub struct NodeLabelMapping {
 
 /// One relationship type: a join between two mapped labels.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RelationshipTypeMapping {
     pub rel_type: String,
@@ -26,8 +28,20 @@ pub struct RelationshipTypeMapping {
     pub join_condition: String,
 }
 
+/// One live relational source a registered view reads: the foreign-source name the
+/// mapping's triples maps use as `logical_source`, the database DSN and the table.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ViewSource {
+    pub name: String,
+    pub dsn: String,
+    pub table: String,
+}
+
 /// A read-only graph view over approved mappings, bound to their digest.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct GraphView {
     pub mapping_digest: String,

@@ -155,6 +155,7 @@ async fn t04_cypher_read_query_over_empty_graph() {
         Method::CypherQuery {
             query: "MATCH (n) RETURN n LIMIT 5".to_string(),
             mode: CypherMode::Read,
+            view: None,
         },
     )
     .await;
@@ -196,6 +197,7 @@ async fn retired_graph_compatibility_sql_is_rejected_while_native_cypher_remains
         Method::CypherQuery {
             query: "MATCH (n) RETURN n LIMIT 5".to_string(),
             mode: CypherMode::Read,
+            view: None,
         },
     )
     .await;

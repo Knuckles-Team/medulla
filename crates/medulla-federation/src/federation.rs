@@ -663,6 +663,7 @@ impl RemoteEngineSource<'_> {
             self.signed_request(medulla_protocol_types::protocol::Method::CypherQuery {
                 query: self.cypher.to_string(),
                 mode: medulla_protocol_types::protocol::CypherMode::Read,
+                view: None,
             })?;
         let raw = self.round_trip(&request)?;
         let result: medulla_protocol_types::protocol::QueryResult =

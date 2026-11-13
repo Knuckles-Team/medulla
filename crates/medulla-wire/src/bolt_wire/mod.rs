@@ -248,6 +248,7 @@ async fn authenticate_session(
     let probe = Method::CypherQuery {
         query: "MATCH (n) RETURN n LIMIT 0".to_string(),
         mode: medulla_protocol_types::protocol::CypherMode::Read,
+        view: None,
     };
     let action = medulla_capabilities::policy(&probe).authz_action;
     if !verified.allows_method(action, false) && !verified.allows_method(action, true) {
@@ -422,6 +423,7 @@ fn authorize_cypher(
         } else {
             medulla_protocol_types::protocol::CypherMode::Read
         },
+        view: None,
     };
     let action = medulla_capabilities::policy(&method).authz_action;
     if !verified.allows_method(action, is_write) {
@@ -537,6 +539,7 @@ fn receipt_method(writes: &[BufferedCypher]) -> Method {
     Method::CypherQuery {
         query: format!("BOLT CYPHER sha256:{}", hex::encode(digest.finalize())),
         mode: medulla_protocol_types::protocol::CypherMode::Write,
+        view: None,
     }
 }
 

@@ -73,6 +73,11 @@ pub struct FragmentTrace {
     /// The source returned more rows than its declared `max_results` and the engine cut the
     /// rest (MEDULLA-UNIFIED-DATA-PLANE-R038.7.4).
     pub truncated: bool,
+    /// The one statement a graph-view read pushed to the source, credential-free
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.5).
+    pub pushed_statement: Option<String>,
+    /// SHA-256 of the mapping the fragment ran under, 64 lowercase hex characters.
+    pub mapping_digest: Option<String>,
 }
 
 /// The receipt of one pushed search. The fragment's `source` label names the source; the
@@ -106,6 +111,8 @@ impl FragmentTrace {
             consistency: Consistency::Snapshot,
             search: None,
             truncated: false,
+            pushed_statement: None,
+            mapping_digest: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,
@@ -166,7 +173,7 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
         .iter()
         .map(|t| {
             format!(
-                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}",
+                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}{}{}",
                 redacted_label(&t.source),
                 t.strategy,
                 t.keys_pushed,
@@ -188,7 +195,15 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
                 match t.consistency {
                     Consistency::PerFragment => " consistency=per_fragment",
                     Consistency::Snapshot => "",
-                }
+                },
+                t.pushed_statement
+                    .as_ref()
+                    .map(|statement| format!(" pushed={statement:?}"))
+                    .unwrap_or_default(),
+                t.mapping_digest
+                    .as_ref()
+                    .map(|digest| format!(" mapping_digest={digest}"))
+                    .unwrap_or_default()
             )
         })
         .collect::<Vec<_>>()
@@ -217,6 +232,23 @@ mod tests {
         );
         assert!(output.contains("keys=3 limit=None requests=2 fetched=5 kept=4"));
         assert!(!output.contains("redact-me") && !output.contains("example.invalid"));
+    }
+
+    #[test]
+    fn render_trace_names_pushed_statement_and_mapping_digest() {
+        let mut fragment = FragmentTrace::new(
+            "sql:people#0a0b0c0d".into(),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Live,
+        );
+        fragment.pushed_statement = Some("SELECT \"name\" FROM \"people\"".into());
+        fragment.mapping_digest = Some("ab12".repeat(16));
+        let output = render_trace(&[fragment]);
+        assert!(
+            output.contains("pushed=\"SELECT \\\"name\\\" FROM \\\"people\\\"\""),
+            "{output}"
+        );
+        assert!(output.contains(&format!("mapping_digest={}", "ab12".repeat(16))));
     }
 
     #[test]

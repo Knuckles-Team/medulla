@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "CypherQuery",
+    "params": {
+      "mode": "read",
+      "query": "MATCH (p:Person) RETURN p.name",
+      "view": "people"
+    }
+  },
+  "without_view": {
+    "method": "CypherQuery",
+    "params": {
+      "mode": "read",
+      "query": "MATCH (p:Person) RETURN p.name"
+    }
+  }
+}

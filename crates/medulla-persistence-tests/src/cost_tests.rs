@@ -491,6 +491,7 @@ mod integration {
                 Method::CypherQuery {
                     query: "MATCH (n) RETURN n".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )

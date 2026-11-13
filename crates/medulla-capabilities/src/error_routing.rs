@@ -163,6 +163,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "UnifiedQuery",
         &["SNAPSHOT_UNAVAILABLE", "CODE_MAP_STALE", "CODE_MAP_INVALID"],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with
+    // the view codes before any source statement.
+    (
+        "RegisterGraphView",
+        &[
+            "GRAPH_VIEW_DIGEST_MISSING",
+            "GRAPH_VIEW_DIGEST_MISMATCH",
+            "UNMAPPED_LABEL",
+            "UNMAPPED_RELATIONSHIP",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
     ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
@@ -652,7 +663,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "WORKSTREAM_PRINCIPAL_MISMATCH",
         ],
     ),
-    ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
+    (
+        "CypherQuery",
+        &[
+            "REPLAY_NONCE_CONSUMED",
+            "VIRTUAL_VIEW_READ_ONLY",
+            "UNMAPPED_LABEL",
+            "PATH_DEPTH_EXCEEDED",
+            "VIEW_CLAUSE_UNSUPPORTED",
+            "VIEW_JOIN_INVALID",
+            "UNKNOWN_VIEW",
+        ],
+    ),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
     // MEDULLA-DURABLE-KERNEL-R865 (child input), R750.750.1 (signed agent-turn
     // envelope) and R750.752 (conversation head).

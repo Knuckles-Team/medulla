@@ -243,7 +243,9 @@ impl AdminSagaResultContract {
             #[cfg(feature = "wasm-udf")]
             Method::RegisterUdf { .. } => Some(Self::Text),
             #[cfg(feature = "federation")]
-            Method::RegisterForeignSource { .. } => Some(Self::Text),
+            Method::RegisterForeignSource { .. } | Method::RegisterGraphView { .. } => {
+                Some(Self::Text)
+            }
             #[cfg(feature = "compute-dist")]
             Method::CreateMatView { .. } | Method::RefreshMatView { .. } => Some(Self::Count),
             #[cfg(feature = "matview")]

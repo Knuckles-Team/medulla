@@ -73,6 +73,39 @@ pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Res
                 >(name),
             ))
         }
+        Method::RegisterGraphView {
+            name,
+            view,
+            mapping,
+            tables,
+            sources,
+        } => {
+            let owner = match call.owner("RegisterGraphView") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let s = call.state.read().await;
+            let registered = s.foreign_sources().views().register(
+                &owner,
+                name.clone(),
+                medulla_server_ops::api::query_txn::foreign_catalog::RegisteredGraphView {
+                    view,
+                    mapping,
+                    tables,
+                    sources,
+                },
+            );
+            drop(s);
+            match registered {
+                Ok(()) => Ok(Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<
+                        medulla_protocol_types::result_contract::cluster::RegisterGraphView,
+                    >(name),
+                )),
+                Err(error) => Ok(Response::err(req_id, error)),
+            }
+        }
         Method::QueryForeignColumns {
             name,
             columns,

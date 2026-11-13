@@ -40,7 +40,10 @@ fn a_compiled_connector_manifest_keeps_its_pinned_canonical_digest() {
     assert_eq!(view.triple_count, 89);
     assert_eq!(view.schema_digests.len(), 1);
     assert_eq!(view.composed_digest, None);
-    assert_eq!(view.ontologies, ["https://knuckles-team.github.io/ontology/connector/arr"]);
+    assert_eq!(
+        view.ontologies,
+        ["https://knuckles-team.github.io/ontology/connector/arr"]
+    );
     let album = view
         .classes
         .iter()

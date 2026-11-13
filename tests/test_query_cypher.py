@@ -101,3 +101,25 @@ async def test_cypher_write_declares_write_mode() -> None:
             {"query": "MATCH (n) SET n.active = true", "mode": "write"},
         )
     ]
+
+
+@pytest.mark.asyncio
+async def test_cypher_view_matches_the_rust_vector() -> None:
+    """The ``view`` field the client adds is the one the Rust round-trip vector pins
+    (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3); a read without it sends no ``view`` key."""
+    import json
+    from pathlib import Path
+
+    vector = json.loads(
+        (Path(__file__).parent / "fixtures" / "cypher_view_vector.json").read_text()
+    )
+    fake = _FakeClient(columns=["p.name"], rows=[["Ann"]])
+    qc = QueryClient(fake)
+    query = vector["request"]["params"]["query"]
+    out = await qc.cypher_read(query, view="people")
+    assert fake.sent == [("CypherQuery", vector["request"]["params"])]
+    assert out == [{"p.name": "Ann"}]
+
+    plain = _FakeClient(columns=["p.name"], rows=[["Ann"]])
+    await QueryClient(plain).cypher_read(query)
+    assert plain.sent == [("CypherQuery", vector["without_view"]["params"])]

@@ -137,9 +137,7 @@ async fn dispatch_query_family(
     // MEDULLA-FEDERATED-QUERY-R081.103.3: viewport bins and selection resolve over the caller's series.
     #[cfg(feature = "query")]
     let method = match method {
-        Method::ViewportQuery { request } => {
-            return Ok(handle_viewport_query(hctx, *request).await)
-        }
+        Method::ViewportQuery { request } => return Ok(handle_viewport_query(hctx, *request).await),
         Method::ResolveViewportSelection { request, token } => {
             return Ok(handle_resolve_viewport_selection(hctx, *request, token).await)
         }
@@ -455,7 +453,9 @@ async fn dispatch_external_query_method(
         #[cfg(feature = "graphql")]
         Method::GraphQl { query, variables } => handle_graphql(ctx, query, variables).await,
         #[cfg(feature = "cypher")]
-        Method::CypherQuery { query, mode } => handle_cypher_query(ctx, query, mode).await,
+        Method::CypherQuery { query, mode, view } => {
+            handle_cypher_query(ctx, query, mode, view).await
+        }
         other => Err(other),
     }
 }

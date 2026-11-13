@@ -102,10 +102,10 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 Hot-path proof: pushed relevance with k replenished
 - [ ] T093 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 openCypher answers over relational and lake sources through the virtual view, without a copy: Model
 - [ ] T094 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.2 Behavior: compile node and relationship patterns to the virtual SPARQL path
-- [ ] T095 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 Wiring: a named view routes the read through view compilation
+- [x] T095 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 Wiring: a named view routes the read through view compilation
 - [ ] T096 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.4 Refusal: view writes, unmapped labels, over-deep paths, unsupported clauses
-- [ ] T097 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.5 Evidence: EXPLAIN names the pushed statement and mapping digest per fragment
-- [ ] T098 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.6 Hot-path proof: openCypher and SPARQL agree over one relational source
+- [x] T097 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.5 Evidence: EXPLAIN names the pushed statement and mapping digest per fragment
+- [x] T098 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.6 Hot-path proof: openCypher and SPARQL agree over one relational source
 - [ ] T099 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 Model: `WebSearchCapability` and `WebResult`
 - [ ] T100 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.2 Behavior: push query arguments and cache by argument digest with a time-to-live
 - [ ] T101 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.3 Wiring: web search reaches the connector call and the shared cache

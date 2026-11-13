@@ -22,6 +22,8 @@
 mod dispatch;
 #[cfg(feature = "obda")]
 mod obda;
+#[cfg(all(feature = "obda", feature = "federation"))]
+pub use obda::{view_virtual, ViewAnswer, ViewRun};
 mod reasoning;
 #[cfg(feature = "sparql")]
 mod sparql;

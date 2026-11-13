@@ -511,6 +511,7 @@ SEND_BY_METHOD = {
     "RefreshMatView": cluster.send_refresh_mat_view,
     "RegisterContinuousQuery": messaging.send_register_continuous_query,
     "RegisterForeignSource": cluster.send_register_foreign_source,
+    "RegisterGraphView": cluster.send_register_graph_view,
     "RegisterIdentity": security.send_register_identity,
     "RegisterServer": cluster.send_register_server,
     "RegisterTrigger": messaging.send_register_trigger,

@@ -508,12 +508,22 @@ mod graph_schema_authority_tests {
         let core = GraphCore::new();
         let view = core.analysis_snapshot();
         let expected_digest = view.schema_sources.composed_digest().to_hex();
-        let result = owl_reason(&[&view], "", "", "https://knuckles-team.github.io/ontology/core#", 0, 1.0, 0.0).unwrap();
+        let result = owl_reason(
+            &[&view],
+            "",
+            "",
+            "https://knuckles-team.github.io/ontology/core#",
+            0,
+            1.0,
+            0.0,
+        )
+        .unwrap();
 
         assert_eq!(result.schema_digests, vec![expected_digest]);
         assert!(result.direct_subclasses.iter().any(|(child, parent)| {
             child == "<https://knuckles-team.github.io/ontology/core#WarmForkFanoutCapability>"
-                && parent == "<https://knuckles-team.github.io/ontology/core#SandboxExecutionCapability>"
+                && parent
+                    == "<https://knuckles-team.github.io/ontology/core#SandboxExecutionCapability>"
         }));
         assert!(result.subclasses.iter().any(|(child, parent)| {
             child == "<https://knuckles-team.github.io/ontology/core#CollaborationCapability>"

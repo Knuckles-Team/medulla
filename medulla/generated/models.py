@@ -11841,6 +11841,13 @@ class MethodRegisterForeignSource(BaseModel):
     params: MethodRegisterForeignSourceParams
 
 
+class MethodRegisterGraphView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RegisterGraphView"]
+    params: MethodRegisterGraphViewParams
+
+
 class MethodQueryForeignColumns(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13682,6 +13689,7 @@ Method = Annotated[
         MethodNlQueryExplain,
         MethodNlQueryPlan,
         MethodRegisterForeignSource,
+        MethodRegisterGraphView,
         MethodQueryForeignColumns,
         MethodForeignReadOpen,
         MethodForeignReadChunk,
@@ -14476,6 +14484,7 @@ class MethodCypherQueryParams(BaseModel):
 
     mode: CypherMode
     query: str
+    view: str | None = None
 
 
 class MethodDecayMemoriesParams(BaseModel):
@@ -16685,6 +16694,16 @@ class MethodRegisterForeignSourceParams(BaseModel):
     source: ForeignSourceSpec
 
 
+class MethodRegisterGraphViewParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    mapping: str
+    name: str
+    sources: list[ViewSource] = []
+    tables: list[str] = []
+    view: GraphView
+
+
 class MethodRegisterIdentityParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17854,6 +17873,40 @@ NlTarget = Annotated[
     NlTargetDecide | NlTargetAgentAssemble | NlTargetNamedQuery,
     Field(discriminator="target"),
 ]
+
+
+class NodeLabelMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    label: str
+    mapping_id: str
+    ontology_class: str
+
+
+class RelationshipTypeMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_label: str
+    join_condition: str
+    join_mapping_ids: list[str]
+    rel_type: str
+    to_label: str
+
+
+class GraphView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    mapping_digest: str
+    node_labels: list[NodeLabelMapping]
+    relationship_types: list[RelationshipTypeMapping]
+
+
+class ViewSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dsn: str
+    name: str
+    table: str
 
 
 class ObdaExternalSource(BaseModel):
@@ -31515,6 +31568,12 @@ __all__ = [
     "MethodRegisterContinuousQueryParams",
     "MethodRegisterForeignSource",
     "MethodRegisterForeignSourceParams",
+    "MethodRegisterGraphView",
+    "MethodRegisterGraphViewParams",
+    "GraphView",
+    "NodeLabelMapping",
+    "RelationshipTypeMapping",
+    "ViewSource",
     "MethodRegisterIdentity",
     "MethodRegisterIdentityParams",
     "MethodRegisterServer",

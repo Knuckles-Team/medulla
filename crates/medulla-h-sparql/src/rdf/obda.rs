@@ -220,6 +220,88 @@ fn sparql_virtual(
     })
 }
 
+/// One registered view's sources and mapping, ready to run (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3).
+#[cfg(all(feature = "obda", feature = "federation"))]
+pub struct ViewRun<'a> {
+    pub mapping: &'a str,
+    pub tables: &'a [String],
+    pub sources: &'a [medulla_types::virtual_graph_view::ViewSource],
+    pub plan: &'a medulla_types::virtual_graph_view::ViewPlan,
+}
+
+/// What one view read returned: the SPARQL variables and rows, and one pushed statement per
+/// source statement the evaluator issued (credential-free: table and column names only).
+#[cfg(all(feature = "obda", feature = "federation"))]
+pub struct ViewAnswer {
+    pub vars: Vec<String>,
+    pub rows: Vec<Vec<Option<String>>>,
+    pub pushed: Vec<(String, String)>,
+}
+
+/// Executor wrapper that records every statement it runs, with the source's registered name.
+#[cfg(all(feature = "obda", feature = "federation"))]
+struct RecordingExecutor {
+    name: String,
+    inner: std::sync::Arc<dyn ObdaSqlExecutor>,
+    log: std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>>,
+}
+
+#[cfg(all(feature = "obda", feature = "federation"))]
+impl ObdaSqlExecutor for RecordingExecutor {
+    fn run_select(
+        &self,
+        sql: &str,
+    ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
+        if let Ok(mut log) = self.log.lock() {
+            log.push((self.name.clone(), sql.to_string()));
+        }
+        self.inner.run_select(sql)
+    }
+}
+
+/// The blocking half of a named-view read: the same sources, mapping parser, SSRF gate and
+/// one-snapshot session as [`sparql_virtual`], with the compiled view's same-source joins
+/// applied before the plan's SPARQL runs through the virtual evaluator.
+#[cfg(all(feature = "obda", feature = "federation"))]
+pub fn view_virtual(
+    authority: &medulla_server_api::carrier::CarrierAuthority,
+    persist_dir: &std::path::Path,
+    run: &ViewRun<'_>,
+) -> Result<ViewAnswer, String> {
+    let mut reg = medulla_virtual_graph::obda::ObdaSourceRegistry::new();
+    let share = request_share();
+    for table in run.tables {
+        let src = TableStoreSource::load(authority, persist_dir, table)?;
+        reg.register(table.clone(), std::sync::Arc::new(src));
+    }
+    let log = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    for source in run.sources {
+        let mut live = SqlObdaSource::connect(&source.dsn, &source.table, &share)
+            .map_err(|error| format!("obda: refused external source {}: {error}", source.name))?;
+        live.executor = std::sync::Arc::new(RecordingExecutor {
+            name: source.name.clone(),
+            inner: live.executor.clone(),
+            log: log.clone(),
+        });
+        reg.register(source.name.clone(), std::sync::Arc::new(live));
+    }
+    let mut vg = if run.mapping.contains("r2rml#") || run.mapping.contains("TriplesMap") {
+        medulla_virtual_graph::obda::parse_r2rml_turtle(run.mapping)?
+    } else {
+        medulla_virtual_graph::obda::parse_mapping(run.mapping)?
+    };
+    medulla_virtual_graph::obda::apply_view_joins(&mut vg, &mut reg, &run.plan.joins)?;
+    let proj = medulla_rdf::sparql::Projection::raw();
+    let outcome =
+        medulla_virtual_graph::obda::run_outcome_virtual(&vg, &reg, &run.plan.sparql, &proj)?;
+    let (vars, rows) = match outcome {
+        medulla_rdf::sparql::QueryOutcome::Solutions(res) => res.to_rows(),
+        _ => return Err("a view read answers with solutions".to_string()),
+    };
+    let pushed = log.lock().map(|log| log.clone()).unwrap_or_default();
+    Ok(ViewAnswer { vars, rows, pushed })
+}
+
 /// Register all OBDA external sources after checking each destination.  A refused source must
 /// never enter the registry, but it must not prevent a later allowed source in the same request
 /// from being checked and registered either.  The caller still receives an error after the whole

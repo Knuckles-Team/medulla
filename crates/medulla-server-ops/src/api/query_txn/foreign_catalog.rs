@@ -110,6 +110,68 @@ pub struct ForeignSourceBindingDescriptor {
 #[derive(Default)]
 pub struct ForeignSourceCatalog {
     entries: DashMap<CatalogKey, OwnedSpec>,
+    views: GraphViewCatalog,
+}
+
+/// One registered graph view with the mapping and sources it reads
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3).
+#[derive(Clone, Debug)]
+pub struct RegisteredGraphView {
+    pub view: medulla_types::virtual_graph_view::GraphView,
+    pub mapping: String,
+    pub tables: Vec<String>,
+    pub sources: Vec<medulla_types::virtual_graph_view::ViewSource>,
+}
+
+/// Every owner's registered graph views, partitioned by verified owner scope exactly as
+/// [`ForeignSourceCatalog`] partitions sources: another owner's view name resolves to
+/// nothing and cannot be overwritten. In memory only.
+#[derive(Default)]
+pub struct GraphViewCatalog {
+    entries: DashMap<CatalogKey, RegisteredGraphView>,
+}
+
+impl GraphViewCatalog {
+    /// Record (or replace) `owner`'s view `name` after validating it: the view must be
+    /// well formed and its digest must be the SHA-256 of the mapping text, lowercase hex.
+    pub fn register(
+        &self,
+        owner: &CarrierAuthority,
+        name: String,
+        entry: RegisteredGraphView,
+    ) -> Result<(), String> {
+        use sha2::{Digest, Sha256};
+        entry
+            .view
+            .validate()
+            .map_err(|error| format!("{}: {error}", error.code()))?;
+        let actual = hex::encode(Sha256::digest(entry.mapping.as_bytes()));
+        if entry.view.mapping_digest != actual {
+            return Err(
+                "GRAPH_VIEW_DIGEST_MISMATCH: the view's mapping_digest is not the SHA-256 of \
+                 its mapping"
+                    .to_string(),
+            );
+        }
+        self.entries.insert(
+            CatalogKey {
+                owner_scope: owner.owner_scope().to_string(),
+                name,
+            },
+            entry,
+        );
+        Ok(())
+    }
+
+    /// `owner`'s view `name`, if the owner registered one.
+    pub fn get(&self, owner: &CarrierAuthority, name: &str) -> Option<RegisteredGraphView> {
+        self.entries
+            .get(&CatalogKey {
+                owner_scope: owner.owner_scope().to_string(),
+                name: name.to_string(),
+            })
+            .map(|entry| entry.value().clone())
+    }
 }
 
 /// A caller's registry, built by [`ForeignSourceCatalog::registry_for`]: its own sources
@@ -500,6 +562,11 @@ impl ForeignSourceCatalog {
         self.entries
             .get(&key)
             .map(|entry| entry.value().spec.clone())
+    }
+
+    /// The graph views registered beside the sources.
+    pub fn views(&self) -> &GraphViewCatalog {
+        &self.views
     }
 
     /// Whether no owner has registered any source.

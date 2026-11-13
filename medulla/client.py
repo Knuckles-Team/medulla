@@ -12011,7 +12011,37 @@ class QueryClient:
         ).payload
         return self._rows_to_dicts(result)
 
-    async def cypher_read(self, query: str) -> list[dict[str, Any]]:
+    async def register_graph_view(
+        self,
+        name: str,
+        view: dict[str, Any],
+        mapping: str,
+        sources: list[dict[str, str]] | None = None,
+        tables: list[str] | None = None,
+    ) -> str:
+        """Register (or replace) a named read-only graph view over approved R2RML
+        mappings of live relational sources, owner-scoped like a foreign source
+        (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3).
+
+        ``view`` is ``{"mapping_digest", "node_labels", "relationship_types"}``;
+        ``mapping_digest`` is the lowercase-hex SHA-256 of ``mapping``. ``sources``
+        are ``{"name", "dsn", "table"}`` rows the mapping reads. Read it with
+        ``cypher_read(query, view=name)``.
+        """
+        return await _gen.cluster.send_register_graph_view(
+            self._client,
+            {
+                "name": name,
+                "view": view,
+                "mapping": mapping,
+                "sources": sources or [],
+                "tables": tables or [],
+            },
+        )
+
+    async def cypher_read(
+        self, query: str, view: str | None = None
+    ) -> list[dict[str, Any]]:
         """Run a Cypher-subset ``query`` and return a list of row dicts keyed by
         RETURN column.
 
@@ -12029,7 +12059,11 @@ class QueryClient:
         ``Raw`` payload the transport already double-unpacks); each row blob is a
         list of cell values aligned to ``columns``.
         """
-        request = {"query": query, "mode": "read"}
+        request: dict[str, Any] = {"query": query, "mode": "read"}
+        if view is not None:
+            # A named view reads through its approved mappings with no copy
+            # (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3); absent keeps the native path.
+            request["view"] = view
         try:
             response = await _gen.query.send_cypher_query(self._client, request)
         except ConnectionError:

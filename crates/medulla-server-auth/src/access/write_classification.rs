@@ -216,7 +216,7 @@ fn requires_write_query_surface(method: &Method) -> Option<bool> {
     if let Method::Sql { query, .. } = method {
         return Some(classify_sql_write(query));
     }
-    if let Method::CypherQuery { query, mode } = method {
+    if let Method::CypherQuery { query, mode, .. } = method {
         return Some(classify_cypher_write(query, *mode));
     }
     if let Method::GraphQl { query, .. } = method {
@@ -633,12 +633,14 @@ mod eh316_eh319_slim_profile_tests {
         let read = Method::CypherQuery {
             query: "MATCH (n) RETURN n".into(),
             mode: CypherMode::Read,
+            view: None,
         };
         assert!(!requires_write(&read));
 
         let write = Method::CypherQuery {
             query: "MATCH (n) RETURN n".into(),
             mode: CypherMode::Write,
+            view: None,
         };
         assert!(
             requires_write(&write),

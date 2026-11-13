@@ -1831,6 +1831,7 @@ async fn test_cypher_match_returns_rows() {
             Method::CypherQuery {
                 query: "MATCH (a:Person) WHERE a.name = 'Alice' RETURN a".into(),
                 mode: medulla_protocol_types::protocol::CypherMode::Read,
+                view: None,
             },
         ),
     )
@@ -1859,6 +1860,7 @@ async fn test_cypher_match_returns_rows() {
             Method::CypherQuery {
                 query: "MATCH (a:Person)-[:KNOWS]->(b:Person) RETURN a, b".into(),
                 mode: medulla_protocol_types::protocol::CypherMode::Read,
+                view: None,
             },
         ),
     )
@@ -1908,6 +1910,7 @@ async fn test_cypher_gated_out_returns_not_built() {
     let method = Method::CypherQuery {
         query: "MATCH (a:Person) RETURN a".into(),
         mode: medulla_protocol_types::protocol::CypherMode::Read,
+        view: None,
     };
     let resp = dispatch_on_heap(&state, request(1, "__commons__", None, method)).await;
     assert_not_built(&resp, "method");
@@ -2016,6 +2019,7 @@ async fn test_graphql_routes_and_equals_cypher() {
                                 RETURN b.name"
                         .into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )

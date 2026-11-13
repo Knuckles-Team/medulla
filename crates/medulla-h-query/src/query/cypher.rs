@@ -48,11 +48,18 @@ pub(crate) async fn handle_cypher_query(
     ctx: &QueryHandlerCtx<'_>,
     query: String,
     mode: medulla_protocol_types::protocol::CypherMode,
+    view: Option<String>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3: a named view routes the read through view
+    // compilation before the native snapshot path. A request without `view` is unchanged.
+    if let Some(name) = view {
+        return Ok(handle_cypher_view(ctx, query, mode, name).await);
+    }
     let validation_method = Method::CypherQuery {
         query: query.clone(),
         mode,
+        view: None,
     };
     if let Err(error) = validate_cypher_mode(&validation_method) {
         return Ok(Response::err(req_id, error));
@@ -61,6 +68,225 @@ pub(crate) async fn handle_cypher_query(
         return Ok(handle_cypher_write(req_id, ctx.core.clone(), query).await);
     }
     Ok(handle_cypher_read(ctx, query).await)
+}
+
+/// Read through a registered graph view: compile the pattern over the view's approved
+/// mappings, run it live on the sources (no copy) and answer in the Cypher result shape;
+/// a leading `EXPLAIN` answers the pushed statements and mapping digest instead.
+#[cfg(feature = "cypher")]
+async fn handle_cypher_view(
+    ctx: &QueryHandlerCtx<'_>,
+    query: String,
+    mode: medulla_protocol_types::protocol::CypherMode,
+    name: String,
+) -> Response {
+    let req_id = ctx.req_id;
+    if matches!(mode, medulla_protocol_types::protocol::CypherMode::Write) {
+        return Response::err(
+            req_id,
+            medulla_cypher::cypher::ViewRefusal::ReadOnly("WRITE".to_string()).to_string(),
+        );
+    }
+    #[cfg(all(feature = "obda", feature = "federation"))]
+    {
+        view_read(ctx, query, name).await
+    }
+    #[cfg(not(all(feature = "obda", feature = "federation")))]
+    {
+        let _ = (query, name);
+        Response::err(
+            req_id,
+            "INVALID_ARGUMENT: graph views need a build with the obda and federation features"
+                .to_string(),
+        )
+    }
+}
+
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+struct OneView(String, Option<medulla_types::virtual_graph_view::GraphView>);
+
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+impl medulla_cypher::cypher::ViewResolver for OneView {
+    fn view(&self, name: &str) -> Option<medulla_types::virtual_graph_view::GraphView> {
+        (name == self.0).then(|| self.1.clone()).flatten()
+    }
+}
+
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+async fn view_read(ctx: &QueryHandlerCtx<'_>, query: String, name: String) -> Response {
+    use medulla_server_ops::api::query_txn::ForeignStateExt;
+    let req_id = ctx.req_id;
+    let Some(carrier) = ctx
+        .read_authority
+        .and_then(medulla_server_api::carrier::GraphReadAuthority::carrier)
+    else {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: a view read needs verified tenant authority".to_string(),
+        );
+    };
+    let (registered, persist_dir) = {
+        let state = ctx.state.read().await;
+        (
+            state.foreign_sources().views().get(carrier, &name),
+            state.persist_dir.clone(),
+        )
+    };
+    let Some(persist_dir) = persist_dir.map(std::path::PathBuf::from) else {
+        return Response::err(
+            req_id,
+            "owner-scoped SQL catalog requires the configured persistence directory".to_string(),
+        );
+    };
+    let (explain, text) = medulla_cypher::cypher::split_explain(&query);
+    let depth =
+        usize::try_from(medulla_server_api::knob_config::knobs().federation_cypher_max_path_depth)
+            .unwrap_or(usize::MAX);
+    let resolver = OneView(
+        name.clone(),
+        registered.as_ref().map(|entry| entry.view.clone()),
+    );
+    let plan = match medulla_cypher::cypher::resolve_view_plan(&resolver, &name, text, depth) {
+        Ok(plan) => plan,
+        Err(refusal) => return Response::err(req_id, refusal.to_string()),
+    };
+    let Some(registered) = registered else {
+        return Response::err(req_id, format!("UNKNOWN_VIEW: {name}"));
+    };
+    let authority = carrier.clone();
+    let joined = tokio::task::spawn_blocking(move || {
+        let run = medulla_h_sparql::rdf::ViewRun {
+            mapping: &registered.mapping,
+            tables: &registered.tables,
+            sources: &registered.sources,
+            plan: &plan,
+        };
+        medulla_h_sparql::rdf::view_virtual(&authority, &persist_dir, &run)
+            .map(|answer| (answer, plan.clone()))
+    })
+    .await;
+    let (answer, plan) = match joined {
+        Ok(Ok(done)) => done,
+        Ok(Err(message)) => {
+            return Response::err(
+                req_id,
+                medulla_protocol_types::error_registry::classify_refusal(
+                    "INVALID_ARGUMENT",
+                    "Cypher view error: ",
+                    &message,
+                ),
+            )
+        }
+        Err(error) => {
+            return Response::err(req_id, format!("Cypher view task join error: {error}"))
+        }
+    };
+    let result = if explain {
+        view_explain_result(&plan, &answer.pushed)
+    } else {
+        view_rows_result(&plan, &answer)
+    };
+    match result {
+        Ok(result) => dynamic_response::<query_results::CypherQuery, _>(req_id, &result),
+        Err(message) => Response::err(
+            req_id,
+            format!("INVALID_ARGUMENT: Cypher view error: {message}"),
+        ),
+    }
+}
+
+/// The answer in the Cypher result shape: one column per RETURN item, cells in the
+/// lexical form the source returned (numbers and booleans keep their JSON type).
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+fn view_rows_result(
+    plan: &medulla_types::virtual_graph_view::ViewPlan,
+    answer: &medulla_h_sparql::rdf::ViewAnswer,
+) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
+    let index: Vec<Option<usize>> = plan
+        .projection
+        .iter()
+        .map(|(variable, _)| answer.vars.iter().position(|v| v == variable))
+        .collect();
+    let columns: Vec<String> = plan
+        .projection
+        .iter()
+        .map(|(_, column)| column.clone())
+        .collect();
+    let mut rows = Vec::with_capacity(answer.rows.len());
+    for row in &answer.rows {
+        let cells: Vec<serde_json::Value> = index
+            .iter()
+            .map(
+                |at| match at.and_then(|i| row.get(i)).and_then(Option::as_ref) {
+                    Some(text) => lexical_cell(text),
+                    None => serde_json::Value::Null,
+                },
+            )
+            .collect();
+        rows.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
+    }
+    Ok(medulla_protocol_types::protocol::QueryResult { columns, rows })
+}
+
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+fn lexical_cell(text: &str) -> serde_json::Value {
+    if let Ok(number) = text.parse::<i64>() {
+        return serde_json::Value::from(number);
+    }
+    if let Some(number) = text
+        .parse::<f64>()
+        .ok()
+        .and_then(serde_json::Number::from_f64)
+    {
+        return serde_json::Value::Number(number);
+    }
+    serde_json::Value::String(text.to_string())
+}
+
+/// `EXPLAIN`: one row per fragment with its pushed statement and mapping digest, built from
+/// the same [`FragmentTrace`] the federated profile renders.
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+fn view_explain_result(
+    plan: &medulla_types::virtual_graph_view::ViewPlan,
+    pushed: &[(String, String)],
+) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
+    use medulla_federation::federation_opt::{
+        render_trace, FetchStrategy, FragmentExecutionMode, FragmentTrace,
+    };
+    let columns = vec![
+        "fragment".to_string(),
+        "pushed_statement".to_string(),
+        "mapping_digest".to_string(),
+    ];
+    let mut rows = Vec::new();
+    for fragment in medulla_cypher::cypher::explain_fragments(plan, pushed) {
+        let mut trace = FragmentTrace::new(
+            format!(
+                "sql:{}#{}",
+                fragment.source,
+                source_fingerprint(&fragment.source)
+            ),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Live,
+        );
+        trace.requests = 1;
+        trace.pushed_statement = Some(fragment.pushed_statement.clone());
+        trace.mapping_digest = Some(fragment.mapping_digest.clone());
+        let cells = vec![
+            serde_json::Value::String(render_trace(&[trace])),
+            serde_json::Value::String(fragment.pushed_statement),
+            serde_json::Value::String(fragment.mapping_digest),
+        ];
+        rows.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
+    }
+    Ok(medulla_protocol_types::protocol::QueryResult { columns, rows })
+}
+
+/// The 8-hex fingerprint of a source name, the label shape `FragmentTrace` expects.
+#[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
+fn source_fingerprint(name: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(&Sha256::digest(name.as_bytes())[..4])
 }
 
 #[cfg(feature = "cypher")]

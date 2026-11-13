@@ -1127,6 +1127,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     let method = Method::CypherQuery {
         query: "CREATE (n:ReplayProbe {id: 'n1'})".to_string(),
         mode: medulla_protocol_types::protocol::CypherMode::Write,
+        view: None,
     };
     let plan = MutationPlan::for_method(&method);
     let apply_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -1188,6 +1189,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     let changed = Method::CypherQuery {
         query: "CREATE (n:ReplayProbe {id: 'n2'})".to_string(),
         mode: medulla_protocol_types::protocol::CypherMode::Write,
+        view: None,
     };
     let changed_plan = MutationPlan::for_method(&changed);
     let conflict = MutationCtx {

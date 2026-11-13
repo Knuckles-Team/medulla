@@ -905,6 +905,7 @@ mod admission_tests {
                         Method::CypherQuery {
                             query: "MATCH (n:Doc) RETURN n".to_string(),
                             mode: medulla_protocol_types::protocol::CypherMode::Read,
+                            view: None,
                         },
                     ),
                 )
@@ -946,6 +947,7 @@ mod admission_tests {
                 Method::CypherQuery {
                     query: "MATCH (a:Doc)-[:RELATED_TO]->(b:Doc) RETURN a, b".to_string(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -969,6 +971,7 @@ mod admission_tests {
                 Method::CypherQuery {
                     query: "MATCH (n:Doc) RETURN n".to_string(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )

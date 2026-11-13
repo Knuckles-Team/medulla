@@ -182,9 +182,9 @@ mod document_encoding;
 #[cfg(feature = "query")]
 mod retrieval_round;
 #[cfg(feature = "query")]
-pub(crate) use retrieval_round::handle_retrieval_round;
-#[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
+#[cfg(feature = "query")]
+pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;
@@ -574,6 +574,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -592,6 +593,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -613,6 +615,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -638,6 +641,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -672,6 +676,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -683,6 +688,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -730,6 +736,7 @@ mod result_cache_dispatch_tests {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -898,6 +905,7 @@ mod rls_aware_cache_no_cross_agent_leak {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -928,6 +936,7 @@ mod rls_aware_cache_no_cross_agent_leak {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -965,6 +974,7 @@ mod rls_aware_cache_no_cross_agent_leak {
                 Method::CypherQuery {
                     query: Q.into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -1249,6 +1259,7 @@ mod dispatch_write_tests {
                 Method::CypherQuery {
                     query: "CREATE (n:Widget {name: 'gizmo', qty: 7})".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Write,
+                    view: None,
                 },
             ),
         )
@@ -1262,6 +1273,7 @@ mod dispatch_write_tests {
                 Method::CypherQuery {
                     query: "MATCH (n:Widget) RETURN n.name".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -1289,6 +1301,7 @@ mod dispatch_write_tests {
                 Method::CypherQuery {
                     query: "CREATE (n:Forbidden {name: 'write-through-read'})".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
@@ -1309,6 +1322,7 @@ mod dispatch_write_tests {
                 Method::CypherQuery {
                     query: "MATCH (n) RETURN n".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Write,
+                    view: None,
                 },
             ),
         )
@@ -1690,6 +1704,7 @@ mod dispatch_write_tests {
                 Method::CypherQuery {
                     query: "MATCH (n:Gadget) RETURN n.name".into(),
                     mode: medulla_protocol_types::protocol::CypherMode::Read,
+                    view: None,
                 },
             ),
         )
