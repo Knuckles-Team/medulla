@@ -26,7 +26,7 @@ use crate::decide::commit::admission::Admitted;
 use crate::decide::commit::certified::{Coordinator, REQUEST_NOW_MS};
 use crate::decide::commit::handle_decision_commit;
 
-fn verified(key: &str, nonce: u8) -> VerifiedRequestContext {
+pub(in crate::decide) fn verified(key: &str, nonce: u8) -> VerifiedRequestContext {
     let claims = VerifiedRequestContext::verified_for_test_in_tenant("caller-a", TENANT);
     VerifiedRequestContext::from_verified_claims_with_nonce(
         claims.claims().clone(),
@@ -70,6 +70,7 @@ async fn cross_owner_admission_journey() {
         expected_catalog_digest: catalog.to_string(),
         record: record.clone(),
         topology: None,
+        retry_of: None,
     };
     let rbac_state = |txn_id: &str| {
         rbac.reservations()
@@ -374,17 +375,17 @@ async fn cross_owner_admission_journey() {
 
 /// A served state with a durable backend holding one capacity ledger graph, an Agent Library
 /// and a solved topology assembly whose plan leases from `cell-llm`.
-struct TopologyWorld {
+pub(in crate::decide) struct TopologyWorld {
     _dir: tempfile::TempDir,
-    backend: Arc<RedbBackend>,
-    state: crate::decide::SharedState,
-    store: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
-    assembly: medulla_compute::assemble::Assembly,
+    pub(in crate::decide) backend: Arc<RedbBackend>,
+    pub(in crate::decide) state: crate::decide::SharedState,
+    pub(in crate::decide) store: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
+    pub(in crate::decide) assembly: medulla_compute::assemble::Assembly,
 }
 
 const LEDGER: &str = "topology";
 
-async fn topology_world() -> TopologyWorld {
+pub(in crate::decide) async fn topology_world() -> TopologyWorld {
     use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass};
     use medulla_work_types::native_control::{
         CapacityCellUpdateRequest, NativeControlSchemaVersion,
@@ -490,7 +491,12 @@ impl TopologyWorld {
             .count()
     }
 
-    fn request(&self, key: &str, nonce: u8, graph_nonce: u8) -> DecisionCommitRequest {
+    pub(in crate::decide) fn request(
+        &self,
+        key: &str,
+        nonce: u8,
+        graph_nonce: u8,
+    ) -> DecisionCommitRequest {
         let record = self.assembly.record.clone();
         DecisionCommitRequest {
             context: commit_context(&self.store, key, nonce),
@@ -505,6 +511,7 @@ impl TopologyWorld {
                     graph_nonce,
                 ),
             }),
+            retry_of: None,
         }
     }
 
@@ -530,7 +537,47 @@ impl TopologyWorld {
     }
 }
 
-fn decode_commit(response: medulla_protocol_types::protocol::Response) -> DecisionCommitResult {
+/// Another holder takes the whole `cell-llm`, so the plan's lease is denied by the ledger.
+pub(in crate::decide) async fn block_cell(world: &TopologyWorld) {
+    use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
+    use medulla_work_types::native_control::{
+        CapacityAcquireRequest, CapacityAcquireResult, CapacityDecision, CapacityDemand,
+        NativeControlSchemaVersion,
+    };
+    let blocker = world
+        .backend
+        .commit_capacity_lease(
+            LEDGER,
+            medulla_protocol_types::protocol::Method::AcquireCapacity {
+                request: CapacityAcquireRequest {
+                    schema_version: NativeControlSchemaVersion::V1,
+                    tenant_ref: TENANT.into(),
+                    work_item_id: "blocker".into(),
+                    owner_digest: "other-owner".into(),
+                    idempotency_key: "blocker".into(),
+                    priority: LeasePriority::BackgroundIngestion,
+                    demands: vec![CapacityDemand {
+                        cell_id: "cell-llm".into(),
+                        resource_class: CapacityResourceClass::LlmGenerator,
+                        amount: 8,
+                    }],
+                    lease_id: None,
+                    ttl_ms: 600_000,
+                    now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+                    cost_budget_micros: None,
+                    token_budget: None,
+                },
+            },
+        )
+        .await
+        .unwrap();
+    let blocker: CapacityAcquireResult = rmp_serde::from_slice(&blocker).unwrap();
+    assert_eq!(blocker.decision, CapacityDecision::Accepted);
+}
+
+pub(in crate::decide) fn decode_commit(
+    response: medulla_protocol_types::protocol::Response,
+) -> DecisionCommitResult {
     assert!(response.error.is_none(), "{:?}", response.error);
     let Some(ResultPayload::Raw(bytes)) = response.result else {
         panic!("commit result")
@@ -759,46 +806,13 @@ async fn topology_commit_publishes_capacity_and_evidence() {
 // spec: MEDULLA-DECISION-ENGINE-R113.2.3
 #[tokio::test]
 async fn topology_capacity_denial_leaves_no_commit_parts() {
-    use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
-    use medulla_work_types::native_control::{
-        CapacityAcquireRequest, CapacityAcquireResult, CapacityDecision, CapacityDemand,
-        NativeControlSchemaVersion,
-    };
     #[cfg(any(feature = "security", feature = "raft"))]
     let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let world = topology_world().await;
     let record = world.assembly.record.clone();
 
     // Another holder takes the whole cell, so the plan's lease is denied by the ledger itself.
-    let blocker = world
-        .backend
-        .commit_capacity_lease(
-            LEDGER,
-            medulla_protocol_types::protocol::Method::AcquireCapacity {
-                request: CapacityAcquireRequest {
-                    schema_version: NativeControlSchemaVersion::V1,
-                    tenant_ref: TENANT.into(),
-                    work_item_id: "blocker".into(),
-                    owner_digest: "other-owner".into(),
-                    idempotency_key: "blocker".into(),
-                    priority: LeasePriority::BackgroundIngestion,
-                    demands: vec![CapacityDemand {
-                        cell_id: "cell-llm".into(),
-                        resource_class: CapacityResourceClass::LlmGenerator,
-                        amount: 8,
-                    }],
-                    lease_id: None,
-                    ttl_ms: 600_000,
-                    now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-                    cost_budget_micros: None,
-                    token_budget: None,
-                },
-            },
-        )
-        .await
-        .unwrap();
-    let blocker: CapacityAcquireResult = rmp_serde::from_slice(&blocker).unwrap();
-    assert_eq!(blocker.decision, CapacityDecision::Accepted);
+    block_cell(&world).await;
     let held_before = world.leases().await;
     assert_eq!(held_before.len(), 1);
 

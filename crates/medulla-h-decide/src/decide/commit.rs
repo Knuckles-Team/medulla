@@ -85,6 +85,7 @@ async fn commit(
         record,
         expected_catalog_digest,
         topology,
+        retry_of,
     } = request;
     if record.tenant_id != verified.tenant() {
         return Err(
@@ -140,6 +141,7 @@ async fn commit(
         }
     }
     let store = state.write().await.ensure_agent_library()?;
+    let request_context = context.clone();
     let context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
@@ -196,6 +198,13 @@ async fn commit(
                 .map(|asked| format!(" with evidence graph {}", asked.evidence.graph.graph_id))
                 .unwrap_or_default()
         ));
+    }
+    // MEDULLA-DECISION-ENGINE-R113.3.3: a follow-up commit that names a denied decision consumes
+    // that denial's one retry before anything else is written. A repeat of a stored record is a
+    // replay and consumes nothing.
+    if let (Some(denied), false) = (retry_of.as_deref(), replaying) {
+        let take = retry::allowance_context(&store, req_id, verified, &request_context, "take")?;
+        retry::consume(&store, &take, denied)?;
     }
     let mut premise = None;
     let (admitted, coordinator) = if replaying {
@@ -276,6 +285,18 @@ async fn commit(
                 let _ = admitted
                     .resolve_decided(state, &store, OwnerDecision::Abort)
                     .await;
+                // The denial grants one further decision, as its own allowance row and never a
+                // decision record. A commit that is itself the retry grants nothing more.
+                if retry_of.is_none() {
+                    let issue = retry::allowance_context(
+                        &store,
+                        req_id,
+                        verified,
+                        &request_context,
+                        "issue",
+                    )?;
+                    retry::grant(&store, &issue, &record.record_id)?;
+                }
                 return Err(message);
             }
             Err(error) => {
@@ -412,5 +433,7 @@ pub(in crate::decide) mod admission;
 pub(in crate::decide) mod capacity;
 #[cfg(feature = "decide")]
 pub(in crate::decide) mod certified;
+#[cfg(feature = "decide")]
+pub(in crate::decide) mod retry;
 #[cfg(all(test, feature = "decide", feature = "redb"))]
 pub(in crate::decide) mod tests;

@@ -314,6 +314,19 @@ impl AgentLibraryStore {
             .map(drop)
     }
 
+    /// `DecisionCommit`'s consumption of the one retry a capacity denial allowed
+    /// (MEDULLA-DECISION-ENGINE-R113.3.2): wraps [`Self::take_denial_allowance`]. The first
+    /// call moves the row to the retained `Consumed` tombstone; every later call, across
+    /// restarts, is `Exhausted` (`RETRY_ALLOWANCE_EXHAUSTED`); a key the tenant was never
+    /// granted, including another tenant's, is `NotIssued`.
+    pub fn consume_denial_allowance(
+        &self,
+        context: &AgentLibraryMutationContext,
+        denied_decision_id: &str,
+    ) -> Result<(), RetryAllowanceError> {
+        self.take_denial_allowance(context, denied_decision_id)
+    }
+
     /// The current state of one allowance, if any was issued.
     pub fn denial_allowance_state(
         &self,

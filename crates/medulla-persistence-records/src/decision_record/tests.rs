@@ -147,6 +147,11 @@ fn request() -> AssemblyRequest {
 }
 
 pub fn decided(store: &AgentLibraryStore) -> Assembly {
+    decided_at(store, 20)
+}
+
+/// The same solved assembly, decided at `created_at_ms`: a distinct record id per time.
+pub fn decided_at(store: &AgentLibraryStore, created_at_ms: u64) -> Assembly {
     let entries = store
         .assembly_candidates(TENANT, &request().candidates)
         .expect("reads");
@@ -161,7 +166,7 @@ pub fn decided(store: &AgentLibraryStore) -> Assembly {
     let identity = RecordIdentity {
         tenant_id: TENANT.to_string(),
         caller_principal: "caller-a".to_string(),
-        created_at_ms: 20,
+        created_at_ms,
     };
     let assembly = assemble(inputs, identity).expect("assembles");
     assert!(assembly.record.is_solved(), "{:?}", assembly.record.outcome);
@@ -787,4 +792,56 @@ fn the_allowance_machine_has_one_transition_function_over_every_state_and_event(
         Some("RETRY_ALLOWANCE_NOT_ISSUED")
     );
     assert_eq!(RetryAllowanceError::Storage("x".into()).code(), None);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.2
+#[test]
+fn topology_denial_allowance_consumption_survives_restart() {
+    let (dir, store) = open_agent_store();
+    let denied = "decision:denied-restart";
+    store
+        .issue_denial_allowance(
+            &allowance_context(&store, TENANT, "issue-r", 61, "issue"),
+            denied,
+        )
+        .expect("the denial issues its allowance");
+
+    // The first use consumes it and writes the tombstone.
+    store
+        .consume_denial_allowance(
+            &allowance_context(&store, TENANT, "take-r1", 62, "take"),
+            denied,
+        )
+        .expect("the first use is accepted");
+    assert_eq!(
+        store.denial_allowance_state(TENANT, denied),
+        Ok(Some(DenialAllowanceState::Consumed))
+    );
+
+    // A restart never restores it: the refusal is the stable code.
+    drop(store);
+    let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).expect("reopens");
+    let error = store
+        .consume_denial_allowance(
+            &allowance_context(&store, TENANT, "take-r2", 63, "take"),
+            denied,
+        )
+        .unwrap_err();
+    assert_eq!(error, RetryAllowanceError::Exhausted);
+    assert_eq!(error.code(), Some("RETRY_ALLOWANCE_EXHAUSTED"));
+    assert!(error.to_string().starts_with("RETRY_ALLOWANCE_EXHAUSTED"));
+
+    // A different tenant finds no allowance under the same denied decision id.
+    assert_eq!(store.denial_allowance_state("tenant-b", denied), Ok(None));
+    assert_eq!(
+        store.consume_denial_allowance(
+            &allowance_context(&store, "tenant-b", "take-other", 64, "take"),
+            denied
+        ),
+        Err(RetryAllowanceError::NotIssued)
+    );
+    assert_eq!(
+        store.denial_allowance_state(TENANT, denied),
+        Ok(Some(DenialAllowanceState::Consumed))
+    );
 }

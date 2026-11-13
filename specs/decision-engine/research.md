@@ -1115,3 +1115,12 @@ The question names the graph holding the content (`graph` param) and the content
 - The allowance lifecycle is `DenialAllowanceMachine` on the core machine contract: `Issued` is the initial state a denial creates, `Consumed` is terminal, and the one edge is `Take`. `Issue` creates the initial state (idempotent while `Issued`) and a consumed allowance refuses it, because a tombstone is never reset.
 - The new table changes the Agent Library layout, so it ships as a declared predecessor generation (`AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES`, frozen digest, recorded fixture) with an offline upgrade that creates the table empty. The earlier MCP catalog generation upgrades straight to the current layout, so it also creates this table.
 - Writes are admitted Agent Library pack writes carrying the verified mutation context, so each is replay-checked and ledgered; the tenant is the context's tenant.
+
+## Retry after a capacity denial (R113.3.2, R113.3.3)
+
+- **The request names the denied decision.** `DecisionCommitRequest.retry_of` carries the denied record id. The commit consumes that denial's allowance before it writes anything else; a repeat of a stored record is a replay and consumes nothing, so a transport retry never burns the allowance.
+- **A retry grants nothing.** A commit that carries `retry_of` and is itself denied issues no allowance, so one denial allows exactly one further decision, never a chain.
+- **Allowance writes are their own admitted writes.** The issue and take events each bind a fresh Agent Library context from the verified request, with a nonce hashed from the request's nonce and the action and an idempotency key suffixed with the action. They never reuse the commit's nonce, which the record write consumes, and a retried request replays instead of conflicting.
+- **Unknown and foreign are one refusal.** A denied decision the verified tenant holds no allowance for answers `ACCESS_DENIED`, whether another tenant owns it or it never existed, so the answer confirms nothing.
+- **Issue follows the coordinator's ABORT.** The allowance row is written after the durable ABORT decision; a repeated denial of the same record issues it again idempotently, which covers a crash between the two.
+- **Codes.** `RETRY_ALLOWANCE_EXHAUSTED` and `RETRY_ALLOWANCE_NOT_ISSUED` are registered in the `topology_enforcement` refusals family.

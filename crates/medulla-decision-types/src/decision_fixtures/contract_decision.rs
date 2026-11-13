@@ -353,6 +353,7 @@ pub fn commit_request() -> DecisionCommitRequest {
         record: record(solved),
         expected_catalog_digest: digest_text(0x73),
         topology: None,
+        retry_of: None,
     }
 }
 

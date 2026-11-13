@@ -223,6 +223,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         expected_catalog_digest: record.inputs.catalog_digest.clone(),
         record: record.clone(),
         topology: None,
+        retry_of: None,
     };
     let status = CapacityStatusRequest {
         schema_version: NativeControlSchemaVersion::V1,
@@ -284,6 +285,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
             expected_catalog_digest: plain.inputs.catalog_digest.clone(),
             record: plain.clone(),
             topology: None,
+            retry_of: None,
         },
     )
     .await;
@@ -303,5 +305,157 @@ async fn topology_commit_refuses_uncoordinated_owners() {
             .await
             .unwrap(),
         capacity_before
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.3.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn topology_denial_accepts_one_followup_request() {
+    use crate::decide::commit::handle_decision_commit;
+    use crate::decide::commit::retry::allowance_context;
+    use crate::decide::stat_tests::commit_admission_tests::{
+        block_cell, decode_commit, topology_world, verified,
+    };
+    use medulla_persistence_records::decision_record::retry_allowance::DenialAllowanceState;
+    use medulla_persistence_records::decision_record::tests::decided_at;
+
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let world = topology_world().await;
+    let denied_id = world.assembly.record.record_id.clone();
+    block_cell(&world).await;
+    let followup = |record: medulla_decision_types::decision::DecisionRecord,
+                    key: &str,
+                    nonce: u8| DecisionCommitRequest {
+        context: commit_context(&world.store, key, nonce),
+        expected_catalog_digest: record.inputs.catalog_digest.clone(),
+        record,
+        topology: None,
+        retry_of: Some(denied_id.clone()),
+    };
+
+    // A commit that is itself a retry grants no further allowance when the ledger denies it.
+    let earlier = "decision:earlier-denial";
+    let issue = allowance_context(
+        &world.store,
+        1,
+        &verified("seed-earlier", 40),
+        &commit_context(&world.store, "seed-earlier", 40),
+        "issue",
+    )
+    .unwrap();
+    world.store.issue_denial_allowance(&issue, earlier).unwrap();
+    let mut retried = world.request("retried", 41, 74);
+    retried.retry_of = Some(earlier.to_string());
+    let response = handle_decision_commit(&world.state, 1, &verified("retried", 41), retried).await;
+    assert_eq!(response.error.as_deref(), Some("CAPACITY_DENIED"));
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, earlier),
+        Ok(Some(DenialAllowanceState::Consumed))
+    );
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, &denied_id),
+        Ok(None),
+        "a denied retry grants nothing"
+    );
+
+    // The denial itself grants the one further decision, as an allowance row and no record.
+    let denied = handle_decision_commit(
+        &world.state,
+        2,
+        &verified("denied", 8),
+        world.request("denied", 8, 73),
+    )
+    .await;
+    assert_eq!(denied.error.as_deref(), Some("CAPACITY_DENIED"));
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, &denied_id),
+        Ok(Some(DenialAllowanceState::Issued))
+    );
+    assert!(world
+        .store
+        .current_component(TENANT, &denied_id)
+        .unwrap()
+        .is_none());
+
+    // Two follow-ups race for the one allowance: exactly one is accepted.
+    let first = decided_at(&world.store, 21).record;
+    let second = decided_at(&world.store, 22).record;
+    let third = decided_at(&world.store, 23).record;
+    let (first_request, second_request) = (
+        followup(first.clone(), "retry-1", 51),
+        followup(second.clone(), "retry-2", 52),
+    );
+    let (a, b) = (world.state.clone(), world.state.clone());
+    let task_a = tokio::spawn(async move {
+        handle_decision_commit(&a, 3, &verified("retry-1", 51), first_request).await
+    });
+    let task_b = tokio::spawn(async move {
+        handle_decision_commit(&b, 4, &verified("retry-2", 52), second_request).await
+    });
+    let (a, b) = (task_a.await.unwrap(), task_b.await.unwrap());
+    let (won, lost, winner, loser) = if a.error.is_none() {
+        (a, b, first, second)
+    } else {
+        (b, a, second, first)
+    };
+    let committed = decode_commit(won);
+    assert_eq!(committed.record_id, winner.record_id);
+    assert_eq!(lost.error.as_deref(), Some("RETRY_ALLOWANCE_EXHAUSTED"));
+    assert!(lost.result.is_none());
+    assert!(world
+        .store
+        .current_component(TENANT, &winner.record_id)
+        .unwrap()
+        .is_some());
+    assert!(world
+        .store
+        .current_component(TENANT, &loser.record_id)
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        world.store.denial_allowance_state(TENANT, &denied_id),
+        Ok(Some(DenialAllowanceState::Consumed))
+    );
+
+    // Replay: the accepted follow-up, sent again, is an idempotent replay that consumes nothing.
+    let (winner_key, winner_nonce) = if winner.created_at_ms == 21 {
+        ("retry-1", 51)
+    } else {
+        ("retry-2", 52)
+    };
+    let replay = handle_decision_commit(
+        &world.state,
+        5,
+        &verified(winner_key, winner_nonce),
+        followup(winner, winner_key, winner_nonce),
+    )
+    .await;
+    assert!(decode_commit(replay).replayed);
+
+    // A later, different follow-up naming the same denied decision is refused.
+    let again = handle_decision_commit(
+        &world.state,
+        6,
+        &verified("retry-3", 53),
+        followup(third.clone(), "retry-3", 53),
+    )
+    .await;
+    assert_eq!(again.error.as_deref(), Some("RETRY_ALLOWANCE_EXHAUSTED"));
+    assert!(world
+        .store
+        .current_component(TENANT, &third.record_id)
+        .unwrap()
+        .is_none());
+
+    // Tenant binding: another tenant's request is refused ACCESS_DENIED, and that tenant holds
+    // no allowance under the denied decision.
+    let foreign = VerifiedRequestContext::verified_for_test_in_tenant("caller-a", "foreign");
+    let refused =
+        handle_decision_commit(&world.state, 7, &foreign, followup(third, "retry-4", 54)).await;
+    assert_eq!(refused.error.as_deref(), Some("ACCESS_DENIED"));
+    assert_eq!(
+        world.store.denial_allowance_state("foreign", &denied_id),
+        Ok(None)
     );
 }

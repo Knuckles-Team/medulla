@@ -1046,7 +1046,7 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
 #[cfg(feature = "redb")]
 mod assemble_tests;
 #[cfg(feature = "security")]
-mod commit_admission_tests;
+pub(in crate::decide) mod commit_admission_tests;
 
 mod retention_tests;
 

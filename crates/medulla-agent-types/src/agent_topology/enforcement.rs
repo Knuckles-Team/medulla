@@ -27,6 +27,14 @@ pub const TOPOLOGY_TOKENS_EXCEEDS_CAP: RefusalCode =
 /// one further decision is allowed (MEDULLA-DECISION-ENGINE-R113.2.3).
 pub const CAPACITY_DENIED: RefusalCode = RefusalCode::new("CAPACITY_DENIED");
 
+/// A follow-up commit named a denied decision whose one retry was already used
+/// (MEDULLA-DECISION-ENGINE-R113.3.2).
+pub const RETRY_ALLOWANCE_EXHAUSTED: RefusalCode = RefusalCode::new("RETRY_ALLOWANCE_EXHAUSTED");
+
+/// The allowance store refused a take for a key it never issued (another tenant's key answers
+/// the same). `DecisionCommit` answers this as `ACCESS_DENIED`.
+pub const RETRY_ALLOWANCE_NOT_ISSUED: RefusalCode = RefusalCode::new("RETRY_ALLOWANCE_NOT_ISSUED");
+
 /// Every admission refusal code, in declaration order.
 pub const REFUSALS: &[RefusalCode] = &[
     TOPOLOGY_WIDTH_EXCEEDS_CAP,
@@ -34,6 +42,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     TOPOLOGY_ROUNDS_EXCEEDS_CAP,
     TOPOLOGY_TOKENS_EXCEEDS_CAP,
     CAPACITY_DENIED,
+    RETRY_ALLOWANCE_EXHAUSTED,
+    RETRY_ALLOWANCE_NOT_ISSUED,
 ];
 
 /// Hash domain of a plan inside its enforcement record.

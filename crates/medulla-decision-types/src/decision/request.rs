@@ -245,6 +245,12 @@ pub struct DecisionCommitRequest {
     /// capacity; absent for every other record.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<TopologyCommitEvidence>,
+    /// The id of the capacity-denied decision this commit is the one allowed retry of
+    /// (MEDULLA-DECISION-ENGINE-R113.3.3). The commit consumes that denial's durable retry
+    /// allowance before it is accepted; a second use refuses `RETRY_ALLOWANCE_EXHAUSTED`. A
+    /// commit that is itself a retry never grants a further allowance when it is denied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_of: Option<String>,
 }
 
 /// The ledger graph a topology plan leases from, and the evidence graph that
