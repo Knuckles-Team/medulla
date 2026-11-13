@@ -40,6 +40,8 @@ use medulla_server_api::state::ServerState;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod sweep;
 
 pub struct PrepareContext<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
@@ -1683,6 +1685,29 @@ fn relationship_properties(
     Ok(mapped)
 }
 
+/// The one tombstone write of a source record. The reconcile sweep
+/// (MEDULLA-INGEST-WORKER-R903.2) reuses it, so a record deleted by a sweep and
+/// a record withdrawn by its provider carry the same fields.
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(crate) fn tombstone_method(
+    node_id: &str,
+    reason: &str,
+    checkpoint_digest: &str,
+) -> Result<Method, String> {
+    let updates = serde_json::json!({
+        "source_tombstoned": true,
+        "source_withdrawal_reason": reason,
+        "source_withdrawal_checkpoint": checkpoint_digest,
+    });
+    Ok(Method::CompareAndSetNodeFields {
+        node_id: node_id.to_string(),
+        conditions_msgpack: rmp_serde::to_vec_named(&serde_json::json!({}))
+            .map_err(|error| format!("source tombstone condition encoding failed: {error}"))?,
+        updates_msgpack: rmp_serde::to_vec_named(&updates)
+            .map_err(|error| format!("source tombstone encoding failed: {error}"))?,
+    })
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_tombstones(
     ctx: &PrepareContext<'_>,
@@ -1700,18 +1725,11 @@ fn admit_tombstones(
             withdrawal.entity.stream.as_str(),
             &withdrawal.entity.record_id,
         )?;
-        let updates = serde_json::json!({
-            "source_tombstoned": true,
-            "source_withdrawal_reason": withdrawal.reason,
-            "source_withdrawal_checkpoint": checkpoint_digest,
-        });
-        admitted.methods.push(Method::CompareAndSetNodeFields {
-            node_id: node_id.clone(),
-            conditions_msgpack: rmp_serde::to_vec_named(&serde_json::json!({}))
-                .map_err(|error| format!("source tombstone condition encoding failed: {error}"))?,
-            updates_msgpack: rmp_serde::to_vec_named(&updates)
-                .map_err(|error| format!("source tombstone encoding failed: {error}"))?,
-        });
+        admitted.methods.push(tombstone_method(
+            &node_id,
+            &withdrawal.reason,
+            &checkpoint_digest,
+        )?);
         admitted.policies.push(policy(
             &node_id,
             ctx.tenant_scope,

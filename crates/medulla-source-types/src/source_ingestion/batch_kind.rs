@@ -33,6 +33,24 @@ pub enum SourceBatchKind {
     Transcripts,
 }
 
+/// One page of an identifier-only enumeration run (MEDULLA-INGEST-WORKER-R903.2).
+/// Pages of one `run_id` are numbered from zero; the page flagged `last_page`
+/// closes the run. `complete` is the provider's statement that the run listed
+/// every identifier, and `ids_digest` (required on the last page) is the digest
+/// of the sorted identifier digests of the whole run.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EnumerationPage {
+    pub run_id: String,
+    pub page: u32,
+    pub last_page: bool,
+    pub complete: bool,
+    #[serde(default)]
+    pub ids_digest: Option<String>,
+    pub ids: BoundedVec<SourceEntityRef, MAX_ENUMERATION_IDS>,
+}
+
 /// One variant per non-record kind. Element payloads stay opaque JSON here;
 /// the row that owns each kind types its elements at admission.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,7 +59,7 @@ pub enum SourceBatchKind {
 pub enum SourceBatchExtension {
     Access(BoundedVec<SourceJson, MAX_ACCESS_SNAPSHOTS>),
     Groups(BoundedVec<SourceJson, MAX_SOURCE_GROUPS>),
-    Enumeration(BoundedVec<SourceEntityRef, MAX_ENUMERATION_IDS>),
+    Enumeration(EnumerationPage),
     Containers(BoundedVec<SourceJson, MAX_CONTAINERS>),
     Proposals(BoundedVec<SourceJson, MAX_PROPOSALS>),
     Facts(BoundedVec<SourceJson, MAX_FACTS>),

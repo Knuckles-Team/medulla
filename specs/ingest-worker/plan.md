@@ -119,3 +119,5 @@ none
 ## Decisions: governance admission
 
 Governance refusal is per record and writes nothing; the receipt carries `GovernanceReport{governed, refused, marked}`. Retention policy is the engine knob `ingest.retention_required`. The governance bench calls `admit_record_governance`. Rationale is in [research.md](research.md).
+
+Reconcile (R903.2): `sweep.rs` holds the `enumeration_run` machine, `admit_enumeration` (stage pages, check the declared digest, plan with `plan_reconcile_digests`), `split_due`, `sweep_methods` (tombstone or Document cascade, marker and plan update) and `spawn_reconcile_sweep` (started in `src/main.rs`).

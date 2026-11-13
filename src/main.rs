@@ -483,6 +483,9 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     spawn_memory_and_lifecycle_sweeps(&state, host_capacity, txn_limits.0).await;
 
+    #[cfg(all(feature = "redb", feature = "blob"))]
+    medulla_h_ingest::source_ingestion::sweep::spawn_reconcile_sweep(state.clone());
+
     start_raft(&state).await?;
 
     // ── Graceful shutdown coordination (reference-counted) ────────────────

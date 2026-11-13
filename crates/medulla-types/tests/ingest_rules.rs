@@ -334,3 +334,29 @@ fn an_atom_without_provenance_is_refused_and_no_relevant_atom_gives_an_empty_con
     assert_eq!(chosen.len(), 1);
     assert_eq!(chosen[0].atom_id, "a2");
 }
+
+// spec: MEDULLA-INGEST-WORKER-R903.2
+#[test]
+fn digest_plan_matches_the_set_plan_and_keeps_the_guards() {
+    use medulla_types::ingest_rules::plan_reconcile_digests;
+    let digest = |n: u8| [n; 32];
+    let held: Vec<[u8; 32]> = (1..=10).map(digest).collect();
+    let enumerated: Vec<[u8; 32]> = (1..=9).map(digest).collect();
+    assert_eq!(
+        plan_reconcile_digests(&held, &enumerated, true, false).unwrap(),
+        vec![digest(10)]
+    );
+    assert!(plan_reconcile_digests(&held, &[], false, false)
+        .unwrap()
+        .is_empty());
+    assert!(matches!(
+        plan_reconcile_digests(&held, &[], true, false),
+        Err(IngestRefusal::MassDeleteGuard { .. })
+    ));
+    assert_eq!(
+        plan_reconcile_digests(&held, &[], true, true)
+            .unwrap()
+            .len(),
+        10
+    );
+}

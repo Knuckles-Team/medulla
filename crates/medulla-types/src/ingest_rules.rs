@@ -144,6 +144,39 @@ pub fn plan_reconcile(
     Ok(missing)
 }
 
+/// Plan the deletions of an identifier-only enumeration from SHA-256 identifier
+/// digests (MEDULLA-INGEST-WORKER-R903.2). `held` and `enumerated` are sorted
+/// ascending without duplicates; one merge pass keeps memory at the two input
+/// vectors plus the missing set, which is what makes 1M identifiers cheap.
+/// Refusal and override rules are those of [`plan_reconcile`].
+pub fn plan_reconcile_digests(
+    held: &[[u8; 32]],
+    enumerated: &[[u8; 32]],
+    complete: bool,
+    admin_override: bool,
+) -> Result<Vec<[u8; 32]>, IngestRefusal> {
+    if !complete {
+        return Ok(Vec::new());
+    }
+    let mut missing = Vec::new();
+    let mut next = 0usize;
+    for digest in held {
+        while next < enumerated.len() && enumerated[next] < *digest {
+            next += 1;
+        }
+        if next >= enumerated.len() || enumerated[next] != *digest {
+            missing.push(*digest);
+        }
+    }
+    if !admin_override && missing.len() * 100 > held.len() * MASS_DELETE_PERCENT {
+        return Err(IngestRefusal::MassDeleteGuard {
+            missing: missing.len(),
+            held: held.len(),
+        });
+    }
+    Ok(missing)
+}
+
 /// Validate a container batch: no parent cycle and nesting within the bound.
 /// A parent outside the batch is a root of this batch.
 pub fn check_container_tree(containers: &[SourceContainer]) -> Result<(), IngestRefusal> {

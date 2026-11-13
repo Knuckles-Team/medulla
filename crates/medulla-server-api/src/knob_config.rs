@@ -340,6 +340,12 @@ knobs! {
     process_document_max_depth: u64 = "process.document_max_depth", U64(64), [4, 256], "levels", Tunable;
     /// Most source records one `SourceSync` reconciles (MEDULLA-SRC-AUTH-R012.6); a larger read is refused.
     sync_max_records: u64 = "sync.max_records", U64(50_000), [1, 1_000_000], "records", Tunable;
+    /// Grace window a held record missing from a complete enumeration waits before the sweep deletes it (MEDULLA-INGEST-WORKER-R903.2).
+    ingest_reconcile_grace_s: u64 = "ingest.reconcile_grace_s", U64(86_400), [3_600, 2_592_000], "s", Tunable;
+    /// Interval of the reconcile sweep job (MEDULLA-INGEST-WORKER-R903.2).
+    ingest_reconcile_sweep_interval_s: u64 = "ingest.reconcile_sweep_interval_s", U64(300), [10, 86_400], "s", Tunable;
+    /// Most nodes one document delete cascade may remove (MEDULLA-UNIFIED-DATA-PLANE-R651.4).
+    document_max_cascade_nodes: u64 = "document.max_cascade_nodes", U64(100_000), [1, 10_000_000], "nodes", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).

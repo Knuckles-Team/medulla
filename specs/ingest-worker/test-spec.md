@@ -115,7 +115,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R902.5` | `tests/ingest/test_source_permission_sync_served.py::test_stale_restricted_record_fails_closed` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R902.6` | `benches/ingest_permission_sync.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R903.1` | `crates/medulla-types/tests/source_governance.rs::reconcile_plan_round_trips` | L4 | exists |
-| `MEDULLA-INGEST-WORKER-R903.2` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::missing_records_delete_after_grace` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R903.2` | `crates/medulla-h-ingest/src/source_ingestion/sweep.rs::tests::missing_records_delete_after_grace` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R903.3` | `tests/ingest/test_source_reconcile_served.py::test_enumeration_prunes_deleted_record` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R903.4` | `crates/medulla-types/tests/ingest_rules.rs::incomplete_enumerations_never_delete_and_mass_deletes_are_guarded` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R903.5` | `tests/ingest/test_source_reconcile_served.py::test_reconcile_receipt_reads_back` | L4 | planned |
