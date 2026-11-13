@@ -721,6 +721,7 @@ async fn verdict_adapter(h: &Harness, core: &Arc<medulla_graph_core::graph::Grap
             query_text: None,
             mode: Default::default(),
             as_of: None,
+            perspectives: None,
         },
     )
     .await;

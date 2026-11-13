@@ -196,3 +196,8 @@ and `sub_query` items after it. Why: one list shape, no per-item kind field to t
 ## R081.8.1 feedback part decision
 
 `RoundFeedback` lives beside `RoundRequest` in `medulla-result-types`, because it embeds `RetrievalFeedback` (which `medulla-types` cannot see). The two limits with no earlier knob get registry knobs `retrieval.feedback_queries` (default 8) and `retrieval.feedback_terms` (default 32). A limit above its knob is refused `RETRIEVAL_BUDGET_EXCEEDED`, never silently lowered; the part is validated before any row is read.
+
+## R651.4 refusal semantics: required versus best-effort expansions
+
+`Discover` gains `perspectives`, the count of expansions a caller requires. Absent, the plan is best effort: `knob discover.expansions`, a failing provider degrades the plan (R090.4) and a missing provider is `DISCOVER_PLANNER_UNCONFIGURED`. Present, the caller depends on the expansions, so a missing provider is `EXPANSION_PROVIDER_UNCONFIGURED`, a failing provider is `EXPANSION_PROVIDER_FAILED` with its error text, and a count above 8 is `EXPANSION_FANOUT_EXCEEDED`, all before any retrieval. Why: the knob is bounded to 1 to 8, so without a request field the fan-out bound and the port-level codes could never be reached from a served call, and a silent degrade is wrong for a caller that asked for a number. `NlQuery` keeps `NL_PLANNER_UNCONFIGURED` (R058), because that code already names the missing endpoint; it gains the shared 2,048-byte text bound.
+

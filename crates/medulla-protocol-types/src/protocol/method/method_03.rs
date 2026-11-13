@@ -392,6 +392,12 @@ $($variants)*
         /// Unix seconds the recency decay is measured against; absent means now.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         as_of: Option<i64>,
+        /// Expansions a `deep` request requires (MEDULLA-FEDERATED-QUERY-R651.4), 1 to 8.
+        /// Absent: `knob discover.expansions`, best effort. Present: above 8 is
+        /// `EXPANSION_FANOUT_EXCEEDED`, and an unconfigured or failing provider refuses
+        /// with `EXPANSION_PROVIDER_UNCONFIGURED` or `EXPANSION_PROVIDER_FAILED`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        perspectives: Option<u32>,
     },
 
     /// CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free lexical classification gate: which

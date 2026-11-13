@@ -77,17 +77,35 @@ pub(crate) struct DeepArms {
 pub(crate) fn plan_discover(
     request: &medulla_types::ingestion_wire::DiscoverPlanRequest,
     expansions: usize,
+    perspectives: Option<u32>,
 ) -> Result<DeepArms, PlanRefusal> {
     use medulla_plan::query_understanding::{
         expansion_provider, run_expansion, ExpansionError, ExpansionKind, ExpansionRequest,
+        PERSPECTIVES_MAX, PERSPECTIVES_MIN,
     };
     use medulla_types::ingestion_wire::{
-        DiscoverMode, DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED, QUERY_TEXT_TOO_LONG,
+        DiscoverMode, DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED,
+        EXPANSION_PROVIDER_FAILED, EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,
     };
     request.validate().map_err(|refusal| PlanRefusal {
         code: refusal.code(),
         detail: refusal.to_string(),
     })?;
+    // R651.4: an explicit expansion count is checked before any retrieval, in every mode.
+    if let Some(asked) = perspectives {
+        if asked > u32::from(PERSPECTIVES_MAX) {
+            return Err(PlanRefusal {
+                code: EXPANSION_FANOUT_EXCEEDED,
+                detail: format!("perspectives {asked} is above {PERSPECTIVES_MAX}"),
+            });
+        }
+        if asked < u32::from(PERSPECTIVES_MIN) {
+            return Err(PlanRefusal {
+                code: "INVALID_ARGUMENT",
+                detail: format!("perspectives {asked} is below {PERSPECTIVES_MIN}"),
+            });
+        }
+    }
     if request.mode == DiscoverMode::Standard {
         return Ok(DeepArms::default());
     }
@@ -99,7 +117,13 @@ pub(crate) fn plan_discover(
             code: "INVALID_ARGUMENT",
             detail: "mode deep needs a non-empty query_text".into(),
         })?;
-    let wanted = u8::try_from(expansions.clamp(1, 8)).unwrap_or(8);
+    let wanted = match perspectives {
+        Some(asked) => u8::try_from(asked).unwrap_or(PERSPECTIVES_MAX),
+        None => u8::try_from(expansions.clamp(1, 8)).unwrap_or(8),
+    };
+    // A caller that names `perspectives` requires that many expansions: its provider
+    // problems are refusals, not the best-effort degrade of the default plan (R090.4).
+    let required = perspectives.is_some();
     let asked = ExpansionRequest {
         query: text.to_string(),
         perspectives: wanted,
@@ -110,7 +134,11 @@ pub(crate) fn plan_discover(
         Ok(items) => items,
         Err(ExpansionError::ProviderUnconfigured) => {
             return Err(PlanRefusal {
-                code: DISCOVER_PLANNER_UNCONFIGURED,
+                code: if required {
+                    EXPANSION_PROVIDER_UNCONFIGURED
+                } else {
+                    DISCOVER_PLANNER_UNCONFIGURED
+                },
                 detail: "mode deep needs a configured expansion provider".into(),
             })
         }
@@ -127,6 +155,12 @@ pub(crate) fn plan_discover(
             return Err(PlanRefusal {
                 code: QUERY_TEXT_TOO_LONG,
                 detail: format!("query_text is {bytes} bytes"),
+            })
+        }
+        Err(ExpansionError::ProviderFailed { message }) if required => {
+            return Err(PlanRefusal {
+                code: EXPANSION_PROVIDER_FAILED,
+                detail: message,
             })
         }
         Err(ExpansionError::ProviderFailed { message }) => {
@@ -282,5 +316,33 @@ mod tests {
         assert_eq!(recency_boost(0.5, 30.0, now, Some(now + 1)), 1.0);
         // A zero weight is neutral everywhere.
         assert_eq!(recency_boost(0.0, 30.0, now, Some(now)), 1.0);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R651.4
+    #[cfg(feature = "query")]
+    #[test]
+    fn explicit_perspectives_are_checked_before_any_provider_call() {
+        use medulla_types::ingestion_wire::{
+            DiscoverMode, DiscoverPlanRequest, EXPANSION_FANOUT_EXCEEDED, QUERY_TEXT_TOO_LONG,
+        };
+        let deep = |text: String| DiscoverPlanRequest {
+            query_text: Some(text),
+            mode: DiscoverMode::Deep,
+            ..Default::default()
+        };
+        let over = plan_discover(&deep("replica".into()), 4, Some(9)).unwrap_err();
+        assert_eq!(over.code, EXPANSION_FANOUT_EXCEEDED);
+        let none = plan_discover(&deep("replica".into()), 4, Some(0)).unwrap_err();
+        assert_eq!(none.code, "INVALID_ARGUMENT");
+        let long = plan_discover(&deep("x".repeat(2049)), 4, Some(3)).unwrap_err();
+        assert_eq!(long.code, QUERY_TEXT_TOO_LONG);
+        // Standard mode checks the count too and runs no provider.
+        let standard = DiscoverPlanRequest::default();
+        let over = plan_discover(&standard, 4, Some(9)).unwrap_err();
+        assert_eq!(over.code, EXPANSION_FANOUT_EXCEEDED);
+        assert_eq!(
+            plan_discover(&standard, 4, Some(3)).unwrap(),
+            DeepArms::default()
+        );
     }
 }

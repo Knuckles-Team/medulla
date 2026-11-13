@@ -66,6 +66,19 @@ pub(crate) fn handle_nl_query_plan(
     history: &[medulla_query_types::nl_query::NlTurn],
     max_steps: usize,
 ) -> Result<(String, medulla_exec::algebra::Plan, Option<String>), Response> {
+    // MEDULLA-FEDERATED-QUERY-R651.4: the same bound `Discover` holds, refused before any
+    // planner call so nothing is retrieved or asked.
+    if text.len() > medulla_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES {
+        return Err(Response::err(
+            req_id,
+            format!(
+                "{}: NlQuery: text is {} bytes; the limit is {}",
+                medulla_types::ingestion_wire::QUERY_TEXT_TOO_LONG,
+                text.len(),
+                medulla_types::ingestion_wire::DISCOVER_QUERY_TEXT_MAX_BYTES
+            ),
+        ));
+    }
     let planner = crate::nl::resolve_planner()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?
         .ok_or_else(|| {

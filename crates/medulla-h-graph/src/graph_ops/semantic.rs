@@ -407,6 +407,7 @@ async fn handle_discover(
     query_text: Option<String>,
     mode: medulla_types::ingestion_wire::DiscoverMode,
     as_of: Option<i64>,
+    perspectives: Option<u32>,
     served: (Option<String>, Option<String>),
 ) -> Response {
     let (tenant, adapter_digest) = served;
@@ -418,7 +419,7 @@ async fn handle_discover(
     };
     let expansions = medulla_server_api::knob_config::knobs().discover_expansions as usize;
     let planned = match compute_off_lock(req_id, move || {
-        super::discover_plan::plan_discover(&request, expansions)
+        super::discover_plan::plan_discover(&request, expansions, perspectives)
     })
     .await
     {
@@ -524,6 +525,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             query_text,
             mode,
             as_of,
+            perspectives,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(ctx.state, tenant, served, query_embedding).await,
@@ -533,6 +535,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             query_text,
             mode,
             as_of,
+            perspectives,
         },
         other => other,
     }
@@ -583,6 +586,7 @@ pub(super) async fn try_handle_semantic_compute(
             query_text,
             mode,
             as_of,
+            perspectives,
             ..
         } => {
             let served = discover_served(&ctx).await;
@@ -597,6 +601,7 @@ pub(super) async fn try_handle_semantic_compute(
                 query_text,
                 mode,
                 as_of,
+                perspectives,
                 served,
             )
             .await

@@ -69,6 +69,7 @@ async fn verdict(state: &test_support::SharedState, id: u64) -> serde_json::Valu
             query_text: None,
             mode: Default::default(),
             as_of: None,
+            perspectives: None,
         },
     )
     .await;

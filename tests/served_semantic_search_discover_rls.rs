@@ -380,6 +380,7 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 query_text: None,
                 mode: Default::default(),
                 as_of: None,
+                perspectives: None,
             },
         ),
     ))
@@ -407,6 +408,7 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 query_text: None,
                 mode: Default::default(),
                 as_of: None,
+                perspectives: None,
             },
         ),
     ))

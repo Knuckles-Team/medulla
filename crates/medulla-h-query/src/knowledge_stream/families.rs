@@ -254,6 +254,7 @@ async fn execute_vector(
                 query_text: None,
                 mode: Default::default(),
                 as_of: None,
+                perspectives: None,
             },
         )
         .await;
