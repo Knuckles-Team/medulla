@@ -75,9 +75,11 @@ fn next_version(stamp: u64, current: u64) -> u64 {
 }
 
 /// Row access inside ONE write: a redb owner table or the locked in-memory map.
-trait RowAccess {
+pub(super) trait RowAccess {
     fn row(&mut self, namespace: &str, key: &str) -> Result<Option<Vec<u8>>, String>;
     fn store(&mut self, namespace: &str, key: &str, row: Option<&[u8]>) -> Result<(), String>;
+    /// Whether `namespace` holds any row at all.
+    fn has_rows(&mut self, namespace: &str) -> Result<bool, String>;
 }
 
 impl RowAccess for redb::Table<'_, (&'static str, &'static str), &'static [u8]> {
@@ -95,6 +97,14 @@ impl RowAccess for redb::Table<'_, (&'static str, &'static str), &'static [u8]> 
         }
         .map_err(|e| e.to_string())
     }
+
+    fn has_rows(&mut self, namespace: &str) -> Result<bool, String> {
+        let mut range = self.range((namespace, "")..).map_err(|e| e.to_string())?;
+        match range.next() {
+            Some(entry) => Ok(entry.map_err(|e| e.to_string())?.0.value().0 == namespace),
+            None => Ok(false),
+        }
+    }
 }
 
 impl RowAccess for BTreeMap<(String, String), Vec<u8>> {
@@ -109,6 +119,13 @@ impl RowAccess for BTreeMap<(String, String), Vec<u8>> {
             None => self.remove(&slot),
         };
         Ok(())
+    }
+
+    fn has_rows(&mut self, namespace: &str) -> Result<bool, String> {
+        Ok(self
+            .range((namespace.to_string(), String::new())..)
+            .next()
+            .is_some_and(|((ns, _), _)| ns == namespace))
     }
 }
 
@@ -159,14 +176,21 @@ impl KvStore {
         namespace: &str,
         key: &str,
     ) -> Result<Option<KvEntry>, String> {
-        self.get(namespace, key)?
-            .map(|row| {
-                decode_row(&row).map(|(version, value)| KvEntry {
-                    value: value.to_vec(),
-                    version,
-                })
+        let row = match self.ephemeral_rows(namespace)? {
+            Some(ephemeral) => ephemeral
+                .rows
+                .lock()
+                .get(&(namespace.to_string(), key.to_string()))
+                .cloned(),
+            None => self.get(namespace, key)?,
+        };
+        row.map(|row| {
+            decode_row(&row).map(|(version, value)| KvEntry {
+                value: value.to_vec(),
+                version,
             })
-            .transpose()
+        })
+        .transpose()
     }
 
     /// `KvPut` (`expected == None`) and `KvCas` (`Some(version)`), as one admitted
@@ -183,6 +207,18 @@ impl KvStore {
             validate_value(value)?;
         }
         let new = new.as_deref();
+        // A namespace declared ephemeral is served from process memory and never
+        // appends to the durable log.
+        if let Some(ephemeral) = self.ephemeral_rows(namespace)? {
+            let stamp = ephemeral.next_stamp();
+            return versioned_write(
+                &mut *ephemeral.rows.lock(),
+                (namespace, key),
+                expected,
+                new,
+                stamp,
+            );
+        }
         match &self.backend {
             Backend::Redb(store) => store.admit_batch(write.batch, write.at_ms, |owner_write| {
                 let mut table = owner_write.open_table(KV)?;
@@ -205,6 +241,10 @@ impl KvStore {
         validate_key(namespace, prefix)?;
         let start = scan_start(prefix, cursor)?;
         let mut page = PageBuilder::new(prefix, cursor, page_limit(limit));
+        if let Some(ephemeral) = self.ephemeral_rows(namespace)? {
+            scan_memory_page(&ephemeral.rows.lock(), namespace, start, &mut page)?;
+            return Ok(page.finish());
+        }
         match &self.backend {
             Backend::Redb(store) => scan_redb_page(store, namespace, start, &mut page)?,
             Backend::Memory(m) => scan_memory_page(&m.lock(), namespace, start, &mut page)?,

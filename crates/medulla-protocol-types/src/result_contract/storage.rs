@@ -4,7 +4,7 @@ use super::Dynamic;
 #[cfg(feature = "query")]
 use crate::storage_wire::SqlSourceBatchResult;
 use crate::storage_wire::{
-    BackupReceipt, KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt, RestoreReceipt,
+    BackupReceipt, KvCasOutcome, KvEntry, KvNamespaceClass, KvScanPage, KvWriteReceipt, RestoreReceipt,
     SqliteExportReport, SqliteImportReport,
 };
 use medulla_agent_types::agent_component::AgentComponentCommittedResult;
@@ -100,6 +100,9 @@ method_results! {
     // One bounded page of `(key, value, version)` rows and the next-page cursor.
     KvScan(KvScan) => Raw<KvScanPage>;
     KvCas(KvCas) => Raw<KvCasOutcome>;
+    // The namespace's stored (or default) durability class.
+    KvDeclareNamespace(KvDeclareNamespace) => Raw<KvNamespaceClass>;
+    KvNamespaceDeclaration(KvNamespaceDeclaration) => Raw<KvNamespaceClass>;
     #[cfg(feature = "query")]
     SqlSourceBatch(SqlSourceBatch) => Raw<SqlSourceBatchResult>;
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;

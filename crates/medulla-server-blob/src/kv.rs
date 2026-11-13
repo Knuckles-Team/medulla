@@ -17,7 +17,8 @@
 //! in-memory ordered map (no durable place ⇒ ephemeral), like the blob substrate.
 //!
 //! ## Operations
-//! `KvGet`/`KvPut`/`KvDelete`/`KvScan`/`KvCas` — the wire shape of each, and its
+//! `KvGet`/`KvPut`/`KvDelete`/`KvScan`/`KvCas`, plus `KvDeclareNamespace` and
+//! `KvNamespaceDeclaration` for a namespace's durability class ([`declaration`]) — the wire shape of each, and its
 //! response payload, is the `Method::Kv*` match in [`try_handle`].
 
 use std::collections::{BTreeMap, HashMap};
@@ -202,6 +203,8 @@ fn write_kv_row(
 /// is configured, else an in-memory ordered map.
 pub struct KvStore {
     backend: Backend,
+    /// Rows of namespaces declared `ephemeral` (MEDULLA-DURABLE-KERNEL-R038.3).
+    ephemeral: declaration::EphemeralRows,
 }
 
 enum Backend {
@@ -387,7 +390,10 @@ impl KvStore {
             }
             None => Backend::Memory(Mutex::new(BTreeMap::new())),
         };
-        Ok(Self { backend })
+        Ok(Self {
+            backend,
+            ephemeral: declaration::EphemeralRows::new(),
+        })
     }
 
     /// `true` if writes land durably on disk.
@@ -550,6 +556,13 @@ impl KvStore {
         committed_at_ms: u64,
     ) -> Result<bool, String> {
         validate_key(namespace, key)?;
+        if let Some(ephemeral) = self.ephemeral_rows(namespace)? {
+            return Ok(ephemeral
+                .rows
+                .lock()
+                .remove(&(namespace.to_string(), key.to_string()))
+                .is_some());
+        }
         match &self.backend {
             Backend::Redb(store) => store.admit_batch(batch, committed_at_ms, |owner_write| {
                 write_kv_row(owner_write, namespace, key, None)
@@ -728,6 +741,7 @@ impl medulla_server_api::api::persistence::BundledStoreSource for KvStore {
     }
 }
 
+mod declaration;
 mod dispatch_handlers;
 #[cfg(test)]
 mod tests;

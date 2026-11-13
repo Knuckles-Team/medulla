@@ -455,6 +455,8 @@ METHOD_IDS = frozenset(
         "KvDelete",
         "KvScan",
         "KvCas",
+        "KvDeclareNamespace",
+        "KvNamespaceDeclaration",
         "SqlSourceBatch",
         "ImportSqliteFile",
         "ExportSqliteFile",

@@ -73,9 +73,10 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::BlobGc => DurabilityDomain::BlobStore,
         // Wire-unconditional, same reason as `blob` just above: `medulla-capabilities`
         // forces `medulla-types/kv` on unconditionally too (EH-319).
-        Method::KvPut { .. } | Method::KvDelete { .. } | Method::KvCas { .. } => {
-            DurabilityDomain::KvStore
-        }
+        Method::KvPut { .. }
+        | Method::KvDelete { .. }
+        | Method::KvCas { .. }
+        | Method::KvDeclareNamespace { .. } => DurabilityDomain::KvStore,
         // `TsAppend`/`TsEvict`/`TsDeleteSeries` are wire-unconditional (only the
         // SERVER-SIDE handling is gated behind `tsdb`; a slim build still carries
         // the variant and routes it to the "not built" catch-all downstream) --
@@ -859,7 +860,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
             .unwrap_or_else(|| unreachable!("{method:?} is claimed by owner_domain")),
         // Wire-unconditional (`medulla-capabilities` forces `medulla-types/kv` on
         // unconditionally), same reason as `blob` above (EH-319).
-        Method::KvPut { .. } | Method::KvDelete { .. } | Method::KvCas { .. } => owner_domain(
+        Method::KvPut { .. }
+        | Method::KvDelete { .. }
+        | Method::KvCas { .. }
+        | Method::KvDeclareNamespace { .. } => owner_domain(
             method,
         )
         .unwrap_or_else(|| unreachable!("{method:?} is claimed by owner_domain")),

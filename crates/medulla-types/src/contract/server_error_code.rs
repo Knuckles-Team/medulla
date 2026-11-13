@@ -162,6 +162,11 @@ closed_error_codes! {
         ProjectionAccessDenied => "PROJECTION_ACCESS_DENIED",
         /// A write statement on a projected table; projections are read only.
         ProjectionReadOnly => "PROJECTION_READ_ONLY",
+        // MEDULLA-DURABLE-KERNEL-R038.3: a namespace declaration refusal.
+        DurabilityClassMismatch => "DURABILITY_CLASS_MISMATCH",
+        DurabilityClassUnknown => "DURABILITY_CLASS_UNKNOWN",
+        // MEDULLA-DURABLE-KERNEL-R038.100: a deployment profile this engine does not serve.
+        DeploymentProfileUnknown => "DEPLOYMENT_PROFILE_UNKNOWN",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
         // MEDULLA-DECISION-ENGINE-R099.2: entity documents lowered to alignment claims.

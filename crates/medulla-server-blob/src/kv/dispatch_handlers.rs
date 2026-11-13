@@ -171,6 +171,8 @@ fn names_shared(method: &Method) -> bool {
             | Method::KvDelete { shared: true, .. }
             | Method::KvScan { shared: true, .. }
             | Method::KvCas { shared: true, .. }
+            | Method::KvDeclareNamespace { shared: true, .. }
+            | Method::KvNamespaceDeclaration { shared: true, .. }
     )
 }
 
@@ -204,6 +206,10 @@ pub fn handle(call: &KvCall<'_>, method: Method) -> Response {
             new,
             ..
         } => kv_cas(call, &original, (&namespace, &key), expected_version, new),
+        Method::KvDeclareNamespace {
+            namespace, class, ..
+        } => kv_declare(call, &original, &namespace, &class),
+        Method::KvNamespaceDeclaration { namespace, .. } => kv_declaration(call, &namespace),
         _ => Response::err(call.req_id, "kv dispatch routing error"),
     }
 }
@@ -285,5 +291,33 @@ fn kv_cas(
             ResultPayload::of_ref::<results::KvCas>(&outcome),
         ),
         Err(e) => Response::err(call.req_id, format!("KvCas error: {e}")),
+    }
+}
+
+fn kv_declare(call: &KvCall<'_>, method: &Method, namespace: &str, class: &str) -> Response {
+    let requested = match super::declaration::parse_requested(class) {
+        Ok(requested) => requested,
+        Err(refusal) => return Response::err(call.req_id, refusal),
+    };
+    let namespace = call.namespace(namespace);
+    let declared = call.mutate(&namespace, method, |write| {
+        call.store.declare_class(&namespace, requested, write)
+    });
+    match declared {
+        Ok(declared) => Response::ok(
+            call.req_id,
+            ResultPayload::of_ref::<results::KvDeclareNamespace>(&declared),
+        ),
+        Err(refusal) => Response::err(call.req_id, refusal),
+    }
+}
+
+fn kv_declaration(call: &KvCall<'_>, namespace: &str) -> Response {
+    match call.store.namespace_class(&call.namespace(namespace)) {
+        Ok(declared) => Response::ok(
+            call.req_id,
+            ResultPayload::of_ref::<results::KvNamespaceDeclaration>(&declared),
+        ),
+        Err(e) => Response::err(call.req_id, format!("KvNamespaceDeclaration error: {e}")),
     }
 }

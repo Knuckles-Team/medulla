@@ -9826,6 +9826,14 @@ class KvEntry(BaseModel):
     version: Annotated[int, Field(ge=0)]
 
 
+class KvNamespaceClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    class_: str = Field(..., alias="class")
+    declared: bool
+    loss_window_ms: Annotated[int, Field(ge=0)] | None = None
+
+
 class KvScanPage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13052,6 +13060,20 @@ class MethodKvCas(BaseModel):
     params: MethodKvCasParams
 
 
+class MethodKvDeclareNamespace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["KvDeclareNamespace"]
+    params: MethodKvDeclareNamespaceParams
+
+
+class MethodKvNamespaceDeclaration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["KvNamespaceDeclaration"]
+    params: MethodKvNamespaceDeclarationParams
+
+
 class MethodSqlSourceBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14894,6 +14916,8 @@ Method = Annotated[
         MethodKvDelete,
         MethodKvScan,
         MethodKvCas,
+        MethodKvDeclareNamespace,
+        MethodKvNamespaceDeclaration,
         MethodSqlSourceBatch,
         MethodImportSqliteFile,
         MethodExportSqliteFile,
@@ -17030,6 +17054,21 @@ class MethodKvCasParams(BaseModel):
     key: str
     namespace: str
     new: _EgOctets | None = None
+    shared: bool | None = None
+
+
+class MethodKvDeclareNamespaceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    class_: str = Field(..., alias="class")
+    namespace: str
+    shared: bool | None = None
+
+
+class MethodKvNamespaceDeclarationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    namespace: str
     shared: bool | None = None
 
 
@@ -35289,6 +35328,7 @@ __all__ = [
     "KvCasOutcome",
     "KvEntry",
     "KvGetResult",
+    "KvNamespaceClass",
     "KvScanPage",
     "KvScanRow",
     "KvWriteReceipt",
@@ -36000,10 +36040,14 @@ __all__ = [
     "MethodKnowledgeStreamParams",
     "MethodKvCas",
     "MethodKvCasParams",
+    "MethodKvDeclareNamespace",
+    "MethodKvDeclareNamespaceParams",
     "MethodKvDelete",
     "MethodKvDeleteParams",
     "MethodKvGet",
     "MethodKvGetParams",
+    "MethodKvNamespaceDeclaration",
+    "MethodKvNamespaceDeclarationParams",
     "MethodKvPut",
     "MethodKvPutParams",
     "MethodKvScan",

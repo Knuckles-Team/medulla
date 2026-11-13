@@ -811,6 +811,7 @@ mod tests {
         ("KvPut", "native MutationBatch in kv.redb: KV row + status/fence/idempotency/outbox in one WTX"),
         ("KvDelete", "native MutationBatch in kv.redb: KV row + status/fence/idempotency/outbox in one WTX"),
         ("KvCas", "native MutationBatch in kv.redb: CAS decision/row + exact result/coordinator metadata in one WTX"),
+        ("KvDeclareNamespace", "native MutationBatch in kv.redb: the namespace declaration row + exact result/coordinator metadata in one WTX"),
         ("TsAppend", "native MutationBatch in series.redb: series rows/projection + coordinator metadata in one WTX"),
         ("TsEvict", "self-routes via dispatch.rs's tsdb block to timeseries.rs, like TsAppend above; one series.redb WTX via SeriesStore::evict_before_scoped -- no medulla_transaction idempotency batch, because retention is content-idempotent (re-evicting an already-past cutoff is a safe no-op), unlike TsAppend"),
         ("TsDeleteSeries", "self-routes via dispatch.rs's tsdb block to timeseries.rs, like TsAppend above; one series.redb WTX via SeriesStore::delete_scoped -- no medulla_transaction idempotency batch, because deletion is content-idempotent (re-deleting an already-gone series is a safe no-op), unlike TsAppend"),

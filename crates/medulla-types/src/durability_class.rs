@@ -42,6 +42,28 @@ impl DurabilityClass {
         }
     }
 
+    /// The lowercase wire name of this class: the inverse of [`Self::parse_declared`].
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ephemeral => "ephemeral",
+            Self::Async => "async",
+            Self::Sync => "sync",
+        }
+    }
+
+    /// The one rule for changing a namespace's declared class (MEDULLA-DURABLE-KERNEL-R038.3).
+    /// A declaration is never silently weakened: the same class is accepted again,
+    /// `async` may be strengthened to `sync`, and every other change -- in particular
+    /// any change between `ephemeral` and a durable class -- is refused with the
+    /// current and requested classes named.
+    pub fn admit_redeclaration(self, requested: Self) -> Result<Self, DurabilityClassMismatch> {
+        match (self, requested) {
+            (current, requested) if current == requested => Ok(requested),
+            (Self::Async, Self::Sync) => Ok(Self::Sync),
+            (current, requested) => Err(DurabilityClassMismatch { current, requested }),
+        }
+    }
+
     /// Parse the wire name a namespace declaration carries. Refuses (rather
     /// than silently downgrading to a default) any name that is not one of
     /// the three declared classes, including case variants and whitespace --
@@ -155,6 +177,27 @@ impl fmt::Display for UnknownDurabilityClass {
 }
 
 impl std::error::Error for UnknownDurabilityClass {}
+
+/// A namespace redeclared a durability class the one admission rule refuses
+/// ([`DurabilityClass::admit_redeclaration`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DurabilityClassMismatch {
+    pub current: DurabilityClass,
+    pub requested: DurabilityClass,
+}
+
+impl fmt::Display for DurabilityClassMismatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "namespace is declared {} and cannot be redeclared {}",
+            self.current.as_str(),
+            self.requested.as_str()
+        )
+    }
+}
+
+impl std::error::Error for DurabilityClassMismatch {}
 
 /// A class's measured commit loss window exceeded its declared bound.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -288,5 +331,26 @@ mod tests {
         DurabilityClass::Async
             .refuse_if_durable_log_write()
             .unwrap();
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R038.3
+    #[test]
+    fn redeclaration_never_weakens_and_never_crosses_ephemeral() {
+        use DurabilityClass::{Async, Ephemeral, Sync};
+        for class in [Ephemeral, Async, Sync] {
+            assert_eq!(class.admit_redeclaration(class), Ok(class));
+            assert_eq!(DurabilityClass::parse_declared(class.as_str()), Ok(class));
+        }
+        assert_eq!(Async.admit_redeclaration(Sync), Ok(Sync));
+        for (current, requested) in [
+            (Ephemeral, Sync),
+            (Ephemeral, Async),
+            (Sync, Ephemeral),
+            (Async, Ephemeral),
+            (Sync, Async),
+        ] {
+            let refused = current.admit_redeclaration(requested).unwrap_err();
+            assert_eq!((refused.current, refused.requested), (current, requested));
+        }
     }
 }

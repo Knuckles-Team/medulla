@@ -5,7 +5,7 @@
 //! (`result_contract::storage`) can name the exact body a handler encodes.
 
 pub mod kv;
-pub use kv::{KvCasOutcome, KvEntry, KvScanPage, KvScanRow, KvWriteReceipt};
+pub use kv::{KvCasOutcome, KvEntry, KvNamespaceClass, KvScanPage, KvScanRow, KvWriteReceipt};
 pub mod source_batch;
 pub use source_batch::{
     SqlSourceBatch, SqlSourceBatchDigests, SqlSourceBatchRequest, SqlSourceBatchResult,

@@ -680,6 +680,7 @@ fn kv_shared_write_policy(method: &Method) -> Option<MethodPolicy> {
         Method::KvPut { shared: true, .. }
             | Method::KvDelete { shared: true, .. }
             | Method::KvCas { shared: true, .. }
+            | Method::KvDeclareNamespace { shared: true, .. }
     );
     if !shared {
         return None;

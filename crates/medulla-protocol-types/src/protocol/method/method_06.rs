@@ -552,6 +552,30 @@ $($variants)*
         #[serde(default)]
         shared: bool,
     },
+
+    /// Declare the durability class of `namespace` (`ephemeral`, `async` or `sync`),
+    /// stored in `kv.redb` through the durable path (MEDULLA-DURABLE-KERNEL-R038.3).
+    /// An unrecognized class name is refused, never downgraded; redeclaring a
+    /// namespace in a way that weakens its class is refused `DURABILITY_CLASS_MISMATCH`.
+    /// Answers the stored declaration.
+    #[cfg(feature = "kv")]
+    KvDeclareNamespace {
+        namespace: String,
+        class: String,
+        /// Scope of the namespace, as on every `Kv*` method.
+        #[serde(default)]
+        shared: bool,
+    },
+
+    /// Read back the declared durability class of `namespace`; an undeclared
+    /// namespace answers `sync` with `declared: false`.
+    #[cfg(feature = "kv")]
+    KvNamespaceDeclaration {
+        namespace: String,
+        /// Scope of the namespace, as on every `Kv*` method.
+        #[serde(default)]
+        shared: bool,
+    },
         ]);
     };
 }

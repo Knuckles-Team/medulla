@@ -89,6 +89,8 @@ if TYPE_CHECKING:
     KvDeleteRequest = _models.MethodKvDeleteParams
     KvScanRequest = _models.MethodKvScanParams
     KvCasRequest = _models.MethodKvCasParams
+    KvDeclareNamespaceRequest = _models.MethodKvDeclareNamespaceParams
+    KvNamespaceDeclarationRequest = _models.MethodKvNamespaceDeclarationParams
     SqlSourceBatchRequest = _models.MethodSqlSourceBatchParams
     ImportSqliteFileRequest = _models.MethodImportSqliteFileParams
     ExportSqliteFileRequest = _models.MethodExportSqliteFileParams
@@ -2128,6 +2130,93 @@ def decode_kv_cas(result: OpaqueResult) -> _models.KvCasOutcome:
     return decode_result("KvCas", models().KvCasOutcome, result)
 
 
+async def send_kv_declare_namespace(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        KvDeclareNamespace
+    Authorization:
+        kv:write
+    Durability:
+        KvRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/KvDeclareNamespace
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - DURABILITY_CLASS_MISMATCH
+        - DURABILITY_CLASS_UNKNOWN
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodKvDeclareNamespaceParams.model_validate(params or {})
+    payload = await client._send(
+        "KvDeclareNamespace",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("KvDeclareNamespace", payload)
+
+
+def decode_kv_declare_namespace(result: OpaqueResult) -> _models.KvNamespaceClass:
+    """Validate this method's result against its contract model."""
+    return decode_result("KvDeclareNamespace", models().KvNamespaceClass, result)
+
+
+async def send_kv_namespace_declaration(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        KvNamespaceDeclaration
+    Authorization:
+        kv:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/KvNamespaceDeclaration
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodKvNamespaceDeclarationParams.model_validate(params or {})
+    payload = await client._send(
+        "KvNamespaceDeclaration",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("KvNamespaceDeclaration", payload)
+
+
+def decode_kv_namespace_declaration(result: OpaqueResult) -> _models.KvNamespaceClass:
+    """Validate this method's result against its contract model."""
+    return decode_result("KvNamespaceDeclaration", models().KvNamespaceClass, result)
+
+
 async def send_sql_source_batch(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -2293,6 +2382,8 @@ _REQUEST_METHODS = frozenset(
         "KvDelete",
         "KvScan",
         "KvCas",
+        "KvDeclareNamespace",
+        "KvNamespaceDeclaration",
         "SqlSourceBatch",
         "ImportSqliteFile",
         "ExportSqliteFile",

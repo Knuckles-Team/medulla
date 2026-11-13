@@ -670,6 +670,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_TENANT_KEY_SCOPED_KV
     ("KvGet", REASON_TENANT_KEY_SCOPED_KV),
     ("KvScan", REASON_TENANT_KEY_SCOPED_KV),
+    ("KvNamespaceDeclaration", REASON_TENANT_KEY_SCOPED_KV),
     // REASON_ADMIN_ONLY_CEP
     ("CepPoll", REASON_ADMIN_ONLY_CEP),
     // REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE

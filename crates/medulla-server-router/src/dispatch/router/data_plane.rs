@@ -148,7 +148,11 @@ pub async fn dispatch_store_methods(
             | Method::KvPut { .. }
             | Method::KvDelete { .. }
             | Method::KvScan { .. }
-            | Method::KvCas { .. }) => dispatch_store_methods_arm_1(ctx, method).await,
+            | Method::KvCas { .. }
+            | Method::KvDeclareNamespace { .. }
+            | Method::KvNamespaceDeclaration { .. }) => {
+                dispatch_store_methods_arm_1(ctx, method).await
+            }
 
             // ── SQLite `.db` file import/export (CONCEPT:MEDULLA-KG.query.medulla-feature/MEDULLA-332) ──
             // File-scoped, NOT graph-scoped: both ops target a filesystem `path` and move
@@ -249,7 +253,9 @@ async fn dispatch_store_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) -> R
         | Method::KvPut { .. }
         | Method::KvDelete { .. }
         | Method::KvScan { .. }
-        | Method::KvCas { .. }) => {
+        | Method::KvCas { .. }
+        | Method::KvDeclareNamespace { .. }
+        | Method::KvNamespaceDeclaration { .. }) => {
             dispatch_boxed(async {
                 let req_id = req.id;
                 {

@@ -107,6 +107,8 @@ macro_rules! native_method_catalog {
             record KvDelete => KeyValue,
             #[cfg(feature = "kv")]
             record KvCas => KeyValue,
+            #[cfg(feature = "kv")]
+            record KvDeclareNamespace => KeyValue,
 
             #[cfg(feature = "tsdb")]
             record TsAppend => TimeSeries,

@@ -11,6 +11,10 @@ pub(super) fn audit_line(method: &Method) -> Option<String> {
         Method::KvPut { namespace, key, .. } => ("KV_PUT", namespace, key),
         Method::KvDelete { namespace, key, .. } => ("KV_DELETE", namespace, key),
         Method::KvCas { namespace, key, .. } => ("KV_CAS", namespace, key),
+        // The declaration's `key` is its class name, so the line digests what was declared.
+        Method::KvDeclareNamespace {
+            namespace, class, ..
+        } => ("KV_DECLARE", namespace, class),
         _ => return None,
     };
     let mut digest = Sha256::new();

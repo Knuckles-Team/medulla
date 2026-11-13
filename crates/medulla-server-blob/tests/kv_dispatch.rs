@@ -8,7 +8,9 @@ use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_protocol_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt};
+use medulla_protocol_types::storage_wire::{
+    KvCasOutcome, KvEntry, KvNamespaceClass, KvScanPage, KvWriteReceipt,
+};
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::build_shared_test_request;
 use medulla_server_auth::auth::compute_verified_envelope_token;
@@ -525,4 +527,120 @@ async fn kv_shared_namespace_spans_principals_and_needs_kv_shared_write() {
         denied.error_detail
     );
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn declare(class: &str) -> Method {
+    Method::KvDeclareNamespace {
+        namespace: "cfg".into(),
+        class: class.into(),
+        shared: false,
+    }
+}
+
+fn declared() -> Method {
+    Method::KvNamespaceDeclaration {
+        namespace: "cfg".into(),
+        shared: false,
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R038.3
+#[tokio::test]
+async fn kv_namespace_declaration_reads_back_survives_restart_and_refuses_weakening() {
+    let (dir, state) = temp_state("declaration");
+    let undeclared: KvNamespaceClass = decode(&dispatch_on_heap(&state, req(1, declared())).await);
+    assert_eq!(
+        undeclared,
+        KvNamespaceClass {
+            class: "sync".into(),
+            declared: false,
+            loss_window_ms: None
+        }
+    );
+
+    let unknown = dispatch_on_heap(&state, req(2, declare("Async"))).await;
+    assert_eq!(unknown.error.as_deref(), Some("DURABILITY_CLASS_UNKNOWN"));
+    let still: KvNamespaceClass = decode(&dispatch_on_heap(&state, req(3, declared())).await);
+    assert!(!still.declared, "a refused declaration stores nothing");
+
+    let async_class: KvNamespaceClass =
+        decode(&dispatch_on_heap(&state, req(4, declare("async"))).await);
+    assert_eq!(
+        async_class,
+        KvNamespaceClass {
+            class: "async".into(),
+            declared: true,
+            loss_window_ms: Some(100)
+        }
+    );
+    let ephemeral = dispatch_on_heap(&state, req(5, declare("ephemeral"))).await;
+    assert_eq!(
+        ephemeral.error.as_deref(),
+        Some("DURABILITY_CLASS_MISMATCH")
+    );
+    let strengthened: KvNamespaceClass =
+        decode(&dispatch_on_heap(&state, req(6, declare("sync"))).await);
+    assert_eq!(strengthened.class, "sync");
+    let weakened = dispatch_on_heap(&state, req(7, declare("async"))).await;
+    assert_eq!(weakened.error.as_deref(), Some("DURABILITY_CLASS_MISMATCH"));
+
+    // Another principal of the same tenant never sees this principal's declaration.
+    let other = how("__commons__", &["*"], "nonce-other");
+    let other = Signed {
+        agent: "other-agent",
+        ..other
+    };
+    let seen: KvNamespaceClass =
+        decode(&dispatch_on_heap(&state, signed(8, &other, declared())).await);
+    assert!(!seen.declared);
+
+    // The declaration is a durable row: a reopened store still answers it.
+    drop(state);
+    let reopened = state_with_kv(&dir.to_string_lossy());
+    let after: KvNamespaceClass = decode(&dispatch_on_heap(&reopened, req(9, declared())).await);
+    assert_eq!(after.class, "sync");
+    assert!(after.declared);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R038.3
+#[tokio::test]
+async fn kv_ephemeral_namespace_is_served_from_memory_and_not_declared_over_durable_rows() {
+    let (dir, state) = temp_state("ephemeral");
+    let declared_class: KvNamespaceClass =
+        decode(&dispatch_on_heap(&state, req(1, declare("ephemeral"))).await);
+    assert_eq!(declared_class.class, "ephemeral");
+    let written: KvWriteReceipt = decode(&dispatch_on_heap(&state, req(2, put("k", b"v"))).await);
+    let entry: Option<KvEntry> = decode(&dispatch_on_heap(&state, req(3, get("k"))).await);
+    assert_eq!(
+        entry,
+        Some(KvEntry {
+            value: b"v".to_vec(),
+            version: written.version
+        })
+    );
+    let page: KvScanPage = decode(&dispatch_on_heap(&state, req(4, scan("", 10, None))).await);
+    assert_eq!(page.entries.len(), 1);
+
+    // Restart: the declaration is durable, the rows are not.
+    drop(state);
+    let reopened = state_with_kv(&dir.to_string_lossy());
+    let class: KvNamespaceClass = decode(&dispatch_on_heap(&reopened, req(5, declared())).await);
+    assert_eq!(class.class, "ephemeral");
+    let gone: Option<KvEntry> = decode(&dispatch_on_heap(&reopened, req(6, get("k"))).await);
+    assert_eq!(gone, None);
+
+    // A namespace that already holds acknowledged durable rows cannot become ephemeral.
+    let writer = Signed {
+        agent: "durable-agent",
+        ..how("__commons__", &["*"], "nonce-durable-put")
+    };
+    let first: KvWriteReceipt =
+        decode(&dispatch_on_heap(&reopened, signed(7, &writer, put("d", b"1"))).await);
+    assert!(first.version > 0);
+    let declarer = Signed {
+        agent: "durable-agent",
+        ..how("__commons__", &["*"], "nonce-durable-declare")
+    };
+    let refused = dispatch_on_heap(&reopened, signed(8, &declarer, declare("ephemeral"))).await;
+    assert_eq!(refused.error.as_deref(), Some("DURABILITY_CLASS_MISMATCH"));
 }

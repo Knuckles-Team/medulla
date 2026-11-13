@@ -442,6 +442,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("KvPut", "KvStore"),
     ("KvDelete", "KvStore"),
     ("KvCas", "KvStore"),
+    ("KvDeclareNamespace", "KvStore"),
     ("TsAppend", "TimeSeries"),
     ("TsEvict", "TimeSeries"),
     ("TsDeleteSeries", "TimeSeries"),

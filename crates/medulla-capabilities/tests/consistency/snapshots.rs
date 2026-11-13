@@ -93,6 +93,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "GraphSchema",
     "InvalidateEdge",
     "KvCas",
+    "KvDeclareNamespace",
     "KvDelete",
     "KvPut",
     "Maintain",
@@ -738,6 +739,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ServedModality",
     // Served KV mutations (MEDULLA-DURABLE-KERNEL-R102).
     "KvCas",
+    "KvDeclareNamespace",
     "KvDelete",
     "KvPut",
     // `record_write_audit_line`: record writes that commit their own rows.

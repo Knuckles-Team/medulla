@@ -177,7 +177,10 @@ fn requires_write_native_surface(method: &Method) -> Option<bool> {
     // Wire-unconditional (see module doc): no cfg gate.
     if matches!(
         method,
-        Method::KvPut { .. } | Method::KvDelete { .. } | Method::KvCas { .. }
+        Method::KvPut { .. }
+            | Method::KvDelete { .. }
+            | Method::KvCas { .. }
+            | Method::KvDeclareNamespace { .. }
     ) {
         return Some(true);
     }

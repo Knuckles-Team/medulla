@@ -63,3 +63,17 @@ pub struct KvScanPage {
     /// Pass back as `cursor` to read the next page; `None` when the prefix is exhausted.
     pub next_cursor: Option<String>,
 }
+
+/// A KV namespace's durability class as `KvDeclareNamespace` stored it and
+/// `KvNamespaceDeclaration` reads it back (MEDULLA-DURABLE-KERNEL-R038.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct KvNamespaceClass {
+    /// The class wire name: `ephemeral`, `async` or `sync`.
+    pub class: String,
+    /// `false` when the namespace never declared a class and is served as `sync`.
+    pub declared: bool,
+    /// The declared loss-window ceiling in milliseconds (`async` only).
+    pub loss_window_ms: Option<u64>,
+}

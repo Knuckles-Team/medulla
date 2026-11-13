@@ -896,6 +896,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "GRAPH_INCARNATION_STALE",
         ],
     ),
+    // MEDULLA-DURABLE-KERNEL-R038.3: a namespace declaration the engine refuses.
+    (
+        "KvDeclareNamespace",
+        &["DURABILITY_CLASS_MISMATCH", "DURABILITY_CLASS_UNKNOWN"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
     (
         "FinanceRecordPut",
