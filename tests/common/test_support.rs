@@ -194,6 +194,28 @@ pub async fn connect_pgwire_with_password(
     Ok(client)
 }
 
+/// Connect as a projection session: the startup `options` carry `-c medulla.mapping=<id@revision>`
+/// (MEDULLA-UNIFIED-DATA-PLANE-R026.4.1).
+#[cfg(feature = "pgwire")]
+pub async fn connect_pgwire_with_mapping(
+    addr: &str,
+    password: &str,
+    user: &str,
+    dbname: &str,
+    mapping: &str,
+) -> Result<tokio_postgres::Client, tokio_postgres::Error> {
+    let port = addr.rsplit(':').next().unwrap();
+    let conn_str = format!(
+        "host=127.0.0.1 port={port} user={user} password={password} dbname={dbname} \
+         options='-c medulla.mapping={mapping}'"
+    );
+    let (client, connection) = tokio_postgres::connect(&conn_str, tokio_postgres::NoTls).await?;
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    Ok(client)
+}
+
 #[cfg(feature = "pgwire")]
 pub fn simple_ids(msgs: Vec<tokio_postgres::SimpleQueryMessage>) -> Vec<String> {
     msgs.into_iter()

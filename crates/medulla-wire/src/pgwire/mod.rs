@@ -607,9 +607,11 @@ fn outcome_to_response(outcome: WireOutcome, format: Option<&Format>) -> Respons
         } => Response::CopyOut(pgwire::api::results::CopyResponse::new(
             format_code,
             num_columns,
-            futures::stream::iter(lines.into_iter().map(|line| {
-                Ok(pgwire::messages::copy::CopyData::new(line.into()))
-            })),
+            futures::stream::iter(
+                lines
+                    .into_iter()
+                    .map(|line| Ok(pgwire::messages::copy::CopyData::new(line.into()))),
+            ),
         )),
     }
 }
@@ -826,6 +828,17 @@ impl EngineBackend {
         let user = meta.get(pgwire::api::METADATA_USER).cloned();
         let db = meta.get(pgwire::api::METADATA_DATABASE).cloned();
         self.session.resolve_startup(user.clone(), db);
+        // MEDULLA-UNIFIED-DATA-PLANE-R026.4.1: the startup parameter `medulla.mapping`
+        // (or `-c medulla.mapping=` in `options`) makes this a read-only projection session.
+        self.session.bind_mapping(
+            meta.get(medulla_wire_core::wire::projection::MAPPING_STARTUP_PARAMETER)
+                .cloned()
+                .or_else(|| {
+                    meta.get("options").and_then(|options| {
+                        medulla_wire_core::wire::projection::mapping_from_options(options)
+                    })
+                }),
+        );
         let user = user
             .filter(|value| !value.trim().is_empty())
             .ok_or_else(|| user_err("authenticated SQL identity is required"))?;

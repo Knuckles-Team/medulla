@@ -131,6 +131,7 @@ use medulla_server_api::state::ServerState;
 mod seam;
 pub use seam::WireSeam;
 mod copy_out;
+pub mod projection;
 pub mod sqlstate;
 
 // ── wire-neutral currency ────────────────────────────────────────────────────
@@ -1248,6 +1249,11 @@ pub struct WireSession {
     /// latches the graph once metadata is available (unless an explicit `SET graph`
     /// already chose one).
     pub startup_resolved: std::sync::atomic::AtomicBool,
+    /// The mapping a projection session reads, `id@revision`, from the startup parameter
+    /// `medulla.mapping` (MEDULLA-UNIFIED-DATA-PLANE-R026.4.1). Set once at startup by
+    /// [`WireSession::bind_mapping`]; while set, every write statement is refused
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R026.4.2).
+    bound_mapping: parking_lot::Mutex<Option<String>>,
     /// The authenticated actor (engine `agent_id`) for this connection
     /// (CONCEPT:MEDULLA-KG.query.concept-13). `None` means no authenticated wire identity
     /// has been mapped. Latched only from a verified request or the server-owned
@@ -1422,10 +1428,29 @@ impl WireSession {
     /// connection runs against until `SET graph`/startup overrides it. The session
     /// remains unusable until the wire binds an authenticated actor.
     pub fn new(state: Arc<RwLock<ServerState>>, default_graph: String) -> Self {
+        Self::new_unbound(state, default_graph)
+    }
+
+    /// Name the mapping this session reads (the startup parameter `medulla.mapping`,
+    /// `id@revision`). Idempotent: the first non-empty value stays for the connection.
+    pub fn bind_mapping(&self, mapping: Option<String>) {
+        let Some(mapping) = mapping.filter(|value| !value.is_empty()) else {
+            return;
+        };
+        self.bound_mapping.lock().get_or_insert(mapping);
+    }
+
+    /// The mapping this session reads, when it is a projection session.
+    pub fn bound_mapping(&self) -> Option<String> {
+        self.bound_mapping.lock().clone()
+    }
+
+    fn new_unbound(state: Arc<RwLock<ServerState>>, default_graph: String) -> Self {
         Self {
             state,
             graph: parking_lot::Mutex::new(default_graph),
             startup_resolved: Default::default(),
+            bound_mapping: Default::default(),
             actor: Default::default(),
             authority: Default::default(),
             attempt_nonce: Default::default(),
@@ -4995,6 +5020,12 @@ impl WireSession {
         sql: &str,
     ) -> Option<WireResult<WireOutcome>> {
         let stmt = Self::detect_crossmodal(sql)?;
+        // A cross-modal write is a write too (MEDULLA-UNIFIED-DATA-PLANE-R026.4.2).
+        if let Some(mapping) = self.bound_mapping() {
+            if !matches!(Self::crossmodal_access(&stmt), AccessLevel::Read) {
+                return Some(Err(projection::projection_read_only_error(&mapping)));
+            }
+        }
         if self.in_txn() && self.txn_aborted() {
             return Some(Err(aborted_txn_err()));
         }
@@ -5425,6 +5456,14 @@ impl WireProtocol for WireSession {
             StatementKind::Commit => return self.run_commit().await,
             StatementKind::Rollback => return Ok(self.handle_rollback()),
             _ => {}
+        }
+
+        // ── projection sessions are read only (MEDULLA-UNIFIED-DATA-PLANE-R026.4.2) ──────────
+        // Refused before the ACL check: a graph mutation grant never makes a projection a writer.
+        if let Some(refusal) =
+            projection::refuse_projection_write(&kind, self.bound_mapping().as_deref())
+        {
+            return Err(refusal);
         }
 
         // ── aborted-transaction gate (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) ──────────────────────────────

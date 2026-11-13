@@ -301,3 +301,5 @@ the cursor, scope-stamping and refusal decisions.
 ## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
 
 `virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.
+
+Projection read wiring (R026.4): `Method::ProjectionRead` is served by `handle_projection_read` in `crates/medulla-h-query/src/query/projection.rs` (types and pure evaluation in `crates/medulla-types/src/projection_read.rs`, codes `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`, `PROJECTION_ACCESS_DENIED`, `PROJECTION_READ_ONLY` in `ServerErrorCode`). The pgwire session binds `medulla.mapping` through `WireSession::bind_mapping`; `refuse_projection_write` in `crates/medulla-wire-core/src/wire/projection.rs` refuses writes. Served tests: `tests/projection_read_served.rs`.
