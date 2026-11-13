@@ -5,6 +5,7 @@
 
 use super::*;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
+use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_types::usage::{PriceCatalog, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION};
 
 const OTHER: &str = "tenant-other";
@@ -276,4 +277,172 @@ async fn windows_drive_model_and_width_and_refuse_mid_run_widening() {
         options(&narrow),
         ["budget_tokens:1000", "model:m2", "width:3"]
     );
+}
+
+/// `request` with the parameter `name` set to `value`.
+fn with_param(mut request: DecideRequest, name: &str, value: TypedValue) -> DecideRequest {
+    let mut params: Vec<TypedParam> = request.params.iter().cloned().collect();
+    params.retain(|p| p.name != name);
+    params.push(TypedParam {
+        name: name.to_string(),
+        value,
+    });
+    params.sort_by(|a, b| a.name.cmp(&b.name));
+    request.params = BoundedVec::new(params).unwrap();
+    request
+}
+
+/// The refusal a request earns: `PARAMETER_INVALID` naming the registered code.
+fn refused_with(result: Result<DecisionBatch, String>, code: &str) {
+    let refusal = result.expect_err("the request is refused");
+    assert!(
+        refusal.contains("PARAMETER_INVALID") && refusal.contains(code),
+        "expected PARAMETER_INVALID naming {code}, got {refusal}"
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R158.4
+#[tokio::test]
+async fn invalid_policy_refuses() {
+    use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
+    use medulla_decision_types::decision::run_adjustment::{
+        ADJUSTMENT_POLICY_UNDEFINED, CURRENT_MODEL_NOT_CANDIDATE, ERRORS_UNPARTITIONED,
+        HOST_CEILING_EXCEEDED, INSUFFICIENT_SAMPLES,
+    };
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    seed(&h, TENANT, "noisy", 20, 5);
+    seed(&h, TENANT, "few", 3, 3);
+
+    // An empty partition refuses before any run is read.
+    refused_with(
+        decide(&h, adjustment(&pin, "", "m1", 4)).await,
+        ERRORS_UNPARTITIONED,
+    );
+    refused_with(
+        decide(
+            &h,
+            with_param(
+                adjustment(&pin, "noisy", "m1", 4),
+                "operation",
+                TypedValue::Text(String::new()),
+            ),
+        )
+        .await,
+        ERRORS_UNPARTITIONED,
+    );
+    // The current width above the host ceiling, and a zero ceiling.
+    refused_with(
+        decide(&h, adjustment(&pin, "noisy", "m1", 9)).await,
+        HOST_CEILING_EXCEEDED,
+    );
+    refused_with(
+        decide(
+            &h,
+            with_param(
+                adjustment(&pin, "noisy", "m1", 4),
+                "host_width_ceiling",
+                TypedValue::Int(0),
+            ),
+        )
+        .await,
+        HOST_CEILING_EXCEEDED,
+    );
+    // The current model is not among the declared options.
+    refused_with(
+        decide(&h, adjustment(&pin, "noisy", "m9", 4)).await,
+        CURRENT_MODEL_NOT_CANDIDATE,
+    );
+    // A pinned policy whose low threshold exceeds its high one.
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        KnobName::new("width.error_hi"),
+        KnobValue::DecimalMicros(10_000),
+    );
+    policy.knobs.insert(
+        KnobName::new("width.error_lo"),
+        KnobValue::DecimalMicros(500_000),
+    );
+    let mut inverted = adjustment(&pin, "noisy", "m1", 4);
+    inverted.policy = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-inverted-width", &policy),
+    };
+    refused_with(decide(&h, inverted).await, ADJUSTMENT_POLICY_UNDEFINED);
+    // Too few runs is an abstention, not a refusal.
+    let few = decide(&h, adjustment(&pin, "few", "m1", 4)).await.unwrap();
+    assert!(abstention_text(&few).contains(INSUFFICIENT_SAMPLES));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R158.5
+#[tokio::test]
+async fn adjustment_evidence_binds() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    seed(&h, TENANT, "noisy", 20, 5);
+    let batch = decide(&h, adjustment(&pin, "noisy", "m1", 4))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let fact = |prefix: &str| -> Vec<&PremiseRef> {
+        record
+            .premises
+            .iter()
+            .filter(|p| p.fact.starts_with(prefix))
+            .collect()
+    };
+    let one = |prefix: &str| -> &PremiseRef {
+        let found = fact(prefix);
+        assert_eq!(found.len(), 1, "one {prefix} premise, got {found:?}");
+        found[0]
+    };
+    // The counts are Observation premises read from the ledger.
+    for (prefix, value) in [
+        ("run_adjustment.runs=", "20".to_string()),
+        ("run_adjustment.errored_runs=", "5".to_string()),
+        // 5 of 20 runs errored: 0.25 in Q32.
+        ("run_adjustment.error_rate_q32=", (1u64 << 30).to_string()),
+    ] {
+        let premise = one(prefix);
+        assert_eq!(premise.fact, format!("{prefix}{value}"));
+        assert_eq!(premise.class, PremiseClass::Observation);
+        assert!(matches!(
+            premise.provenance,
+            PremiseProvenance::Observation { .. }
+        ));
+    }
+    // The request's partition and current values are Request premises.
+    for (prefix, value) in [
+        ("run_adjustment.child_id=", "noisy"),
+        ("run_adjustment.operation=", "decide"),
+        ("run_adjustment.current_model=", "m1"),
+        ("run_adjustment.current_width=", "4"),
+        ("run_adjustment.host_width_ceiling=", "8"),
+        ("run_adjustment.budget_tokens=", "1000"),
+    ] {
+        let premise = one(prefix);
+        assert_eq!(premise.fact, format!("{prefix}{value}"));
+        assert!(matches!(
+            premise.provenance,
+            PremiseProvenance::Request { .. }
+        ));
+    }
+    // The rationale and its digest, and the before and after values.
+    assert_eq!(
+        one("run_adjustment.rationale=").fact,
+        "run_adjustment.rationale=error_high"
+    );
+    assert_eq!(
+        one("run_adjustment.rationale_digest=").fact.len(),
+        "run_adjustment.rationale_digest=".len() + 64
+    );
+    assert_eq!(
+        options(&batch),
+        ["budget_tokens:1000", "model:m2", "width:3"]
+    );
+    // The width knobs the decision read are sealed (R179.5).
+    let knobs = fact("knob:width.");
+    assert_eq!(knobs.len(), 6, "{knobs:?}");
+    assert!(knobs
+        .iter()
+        .any(|p| p.fact == "knob:width.error_hi=0.020000"));
 }

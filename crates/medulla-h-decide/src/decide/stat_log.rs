@@ -470,9 +470,31 @@ pub(super) fn recent_evaluations(
     option_id: &str,
     n: usize,
 ) -> Result<Vec<bool>, String> {
+    Ok(recent_labels(store, reader, option_id, n)?
+        .into_iter()
+        .map(|label| label.success)
+        .collect())
+}
+
+/// One outcome that counts as a label: when it was recorded, which evaluation
+/// recorded it and whether it succeeded.
+pub(super) struct OutcomeLabel {
+    pub(super) recorded_at_ms: u64,
+    pub(super) evaluation_id: String,
+    pub(super) success: bool,
+}
+
+/// The latest `n` labels of `option_id`, newest first, under the same label
+/// rule as [`recent_evaluations`] (MEDULLA-DECISION-ENGINE-R159.5).
+pub(super) fn recent_labels(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    option_id: &str,
+    n: usize,
+) -> Result<Vec<OutcomeLabel>, String> {
     use medulla_decision_stats::decision::aggregate::{label_use, LabelUse};
     let floor = default_statistical_policy().min_outcome_fidelity;
-    let mut labels: Vec<(u64, String, bool)> = Vec::new();
+    let mut labels: Vec<OutcomeLabel> = Vec::new();
     for (entry, evaluations) in joined(store, reader, None, None)? {
         let record = &entry.record;
         if record.synthetic_evidence || executed_option(&record.outcome) != Some(option_id) {
@@ -480,16 +502,19 @@ pub(super) fn recent_evaluations(
         }
         for stored in &evaluations {
             if let LabelUse::Label(success) = label_use(stored, &record.caller_principal, floor) {
-                labels.push((
-                    stored.recorded_at_ms,
-                    stored.evaluation.evaluation_id.clone(),
+                labels.push(OutcomeLabel {
+                    recorded_at_ms: stored.recorded_at_ms,
+                    evaluation_id: stored.evaluation.evaluation_id.clone(),
                     success,
-                ));
+                });
             }
         }
     }
-    labels.sort_by(|a, b| (b.0, &b.1).cmp(&(a.0, &a.1)));
-    Ok(labels.into_iter().take(n).map(|(_, _, ok)| ok).collect())
+    labels.sort_by(|a, b| {
+        (b.recorded_at_ms, &b.evaluation_id).cmp(&(a.recorded_at_ms, &a.evaluation_id))
+    });
+    labels.truncate(n);
+    Ok(labels)
 }
 
 /// Options of the caller's visible, non-synthetic log that earned a skill

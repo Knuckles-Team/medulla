@@ -9,7 +9,23 @@ use sha2::{Digest, Sha256};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::policy::DecisionPolicy;
+use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::Digest256;
+
+/// The path has no evaluation (MEDULLA-DECISION-ENGINE-R159.4).
+pub const PATH_UNMEASURED: &str = "PATH_UNMEASURED";
+/// Evaluations exist but none lies inside the window (MEDULLA-DECISION-ENGINE-R159.4).
+pub const PATH_WINDOW_STALE: &str = "PATH_WINDOW_STALE";
+/// Fewer than `path.min_samples` attempts lie inside the window
+/// (MEDULLA-DECISION-ENGINE-R159.4).
+pub const PATH_OUTCOME_MISSING: &str = "PATH_OUTCOME_MISSING";
+
+/// The elimination and abstention codes the `path_preference` family declares.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(PATH_UNMEASURED),
+    RefusalCode::new(PATH_WINDOW_STALE),
+    RefusalCode::new(PATH_OUTCOME_MISSING),
+];
 
 /// The `path.*` knobs: `min_samples`, `window_ms`, `prefer_above_rate`, then
 /// `skip_after_failures`.

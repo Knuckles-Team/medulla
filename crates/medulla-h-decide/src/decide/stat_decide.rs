@@ -536,6 +536,8 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }
         QuestionKind::DelegationAdmission => medulla_decision_types::decision::delegation::KNOBS,
+        QuestionKind::RunAdjustment => medulla_decision_types::decision::run_adjustment::KNOBS,
+        QuestionKind::PathPreference => medulla_decision_types::decision::path_success::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS

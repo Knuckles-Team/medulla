@@ -10,7 +10,10 @@ use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, De
 use medulla_decision_types::decision::statistical::log::{
     DecisionLogCommitted, DecisionLogOp, DecisionOutcomeEvaluation, NamedEvaluator,
 };
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
+use medulla_decision_types::decision::{
+    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
+};
+use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
 use medulla_types::contract::Digest256;
 
 const OTHER: &str = "tenant-other";
@@ -300,4 +303,192 @@ async fn other_tenant_outcomes_never_count() {
         vec![(a, q32_of(900_000))],
         "A keeps this tenant's 9 of 10; F is unmeasured here"
     );
+}
+
+/// `outcomes` recorded `age_ms` ago for `path`: the record a decision made and
+/// one independent evaluation per outcome, written with their recorded time
+/// (an evaluation can only be backdated by writing its row).
+async fn seed_aged(
+    h: &Harness,
+    tenant: &str,
+    pins: &(ComponentDependency, DecisionPolicyRef),
+    path: &str,
+    outcomes: &[bool],
+    age_ms: u64,
+) {
+    use medulla_decision_types::decision::statistical::log::{
+        DecisionLogEntry, EntryInputs, RecordVisibility, StoredEvaluation,
+        DECISION_LOG_SCHEMA_VERSION,
+    };
+    let request = DecideRequest {
+        tenant_id: tenant.to_string(),
+        question: StatisticalQuestion {
+            question_id: QUESTION.to_string(),
+            kind: QuestionKind::Route,
+            safety: QuestionSafety::Ordinary,
+        },
+        candidates: CandidateSource::Declared {
+            options: BoundedVec::new(vec![route_option(path)]).unwrap(),
+        },
+        feature_schema: pins.0.clone(),
+        head: None,
+        policy: pins.1.clone(),
+        params: BoundedVec::default(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    };
+    let decider = context("decider", tenant);
+    let batch: DecisionBatch =
+        decode(super::super::statistical::handle_decide(&h.state, 1, &decider, request).await)
+            .unwrap();
+    let mut record = batch.records.as_slice()[0].clone();
+    let then = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() - age_ms;
+    record.record_id = format!("decision:aged-{path}");
+    record.created_at_ms = then;
+    let entry = DecisionLogEntry {
+        schema_version: DECISION_LOG_SCHEMA_VERSION,
+        visibility: RecordVisibility::Tenant,
+        committed_by: record.caller_principal.clone(),
+        committed_at_ms: then,
+        record: Box::new(record.clone()),
+        inputs: EntryInputs::Inline,
+    };
+    let mut rows = vec![(
+        record_key(&record.record_id),
+        encode_artifact(&entry).unwrap(),
+    )];
+    for (i, success) in outcomes.iter().enumerate() {
+        let stored = StoredEvaluation {
+            evaluation: DecisionOutcomeEvaluation {
+                record_id: record.record_id.clone(),
+                evaluation_id: format!("aged-{i:03}"),
+                class: EvidenceClass::Observation,
+                selected_agent: "selected-agent".to_string(),
+                lease_holder: "lease-holder".to_string(),
+                fidelity: OutcomeFidelity::ToolCalls,
+                success: Some(*success),
+                backbone: None,
+            },
+            producer: "independent-evaluator".to_string(),
+            recorded_at_ms: then + i as u64,
+        };
+        rows.push((
+            evaluation_key(&record.record_id, &format!("aged-{i:03}")),
+            encode_artifact(&stored).unwrap(),
+        ));
+    }
+    h.store.put_decision_artifacts(tenant, &rows).unwrap();
+}
+
+fn premise_facts(record: &StatisticalDecisionRecord) -> Vec<String> {
+    record.premises.iter().map(|p| p.fact.clone()).collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R159.4
+#[tokio::test]
+async fn unmeasured_and_stale_paths_refuse() {
+    use medulla_decision_types::decision::path_success::{
+        PATH_OUTCOME_MISSING, PATH_UNMEASURED, PATH_WINDOW_STALE,
+    };
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let (a, unmeasured, stale, thin) = (
+        path_id("a"),
+        path_id("unmeasured"),
+        path_id("stale"),
+        path_id("thin"),
+    );
+    seed(&h, TENANT, &pins, &a, &run(7, 3)).await;
+    // Ten evaluations, all eight days old: outside the seven-day window.
+    seed_aged(&h, TENANT, &pins, &stale, &run(10, 0), 8 * 86_400_000).await;
+    // Nine attempts inside the window: below path.min_samples.
+    seed(&h, TENANT, &pins, &thin, &run(9, 0)).await;
+
+    let record = prefer(&h, &pins, &[&a, &unmeasured, &stale, &thin]).await;
+    assert_eq!(ranked(&record).len(), 1, "only the measured path is ranked");
+    let facts = premise_facts(&record);
+    for (id, code) in [
+        (&unmeasured, PATH_UNMEASURED),
+        (&stale, PATH_WINDOW_STALE),
+        (&thin, PATH_OUTCOME_MISSING),
+    ] {
+        let fact = format!("path:eliminated={code} path_id={id}");
+        let premise = record
+            .premises
+            .iter()
+            .find(|p| p.fact == fact)
+            .unwrap_or_else(|| panic!("no elimination premise {fact}: {facts:?}"));
+        assert_eq!(premise.class, PremiseClass::Proof);
+    }
+    assert!(!facts
+        .iter()
+        .any(|f| f.contains(&format!("path:id={unmeasured}"))));
+
+    // None remains: the answer abstains with the code of the first
+    // eliminated path in path_id order. The engine never defaults a rate.
+    let mut eliminated = vec![
+        (unmeasured.clone(), PATH_UNMEASURED),
+        (stale.clone(), PATH_WINDOW_STALE),
+        (thin.clone(), PATH_OUTCOME_MISSING),
+    ];
+    eliminated.sort();
+    let record = prefer(&h, &pins, &[&unmeasured, &stale, &thin]).await;
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("no path remains, got {:?}", record.outcome)
+    };
+    let text = format!("{reasons:?}");
+    assert!(text.contains(eliminated[0].1), "{text}");
+    for (_, code) in &eliminated[1..] {
+        if *code != eliminated[0].1 {
+            assert!(!text.contains(code), "only the first code is named: {text}");
+        }
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R159.5
+#[tokio::test]
+async fn path_success_evidence_binds() {
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let (a, b) = (path_id("a"), path_id("b"));
+    let mut a_outcomes = run(4, 1);
+    a_outcomes.extend(run(5, 0));
+    seed(&h, TENANT, &pins, &a, &a_outcomes).await;
+    // B: 3 of 10, the latest three failed: skipped.
+    seed(&h, TENANT, &pins, &b, &run(3, 7)).await;
+
+    let record = prefer(&h, &pins, &[&a, &b]).await;
+    let observed = |fact: String| {
+        let premise = record
+            .premises
+            .iter()
+            .find(|p| p.fact == fact)
+            .unwrap_or_else(|| panic!("no premise {fact}: {:?}", premise_facts(&record)));
+        assert_eq!(premise.class, PremiseClass::Observation);
+        // The evidence cites the latest evaluation of the path.
+        assert!(
+            matches!(
+                &premise.provenance,
+                PremiseProvenance::Observation { evaluation_id } if evaluation_id == "e-009"
+            ),
+            "{:?}",
+            premise.provenance
+        );
+    };
+    observed(format!("path:id={a}"));
+    observed("path:rate=9/10".to_string());
+    observed("path:window_ms=604800000".to_string());
+    observed(format!("path:id={b}"));
+    observed("path:rate=3/10".to_string());
+    observed(format!("path:preference=applied path_id={a}"));
+    observed(format!("path:preference=skipped path_id={b}"));
+    // The path knobs the decision read are sealed (R179.5).
+    let knobs: Vec<&PremiseRef> = record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("knob:path."))
+        .collect();
+    assert_eq!(knobs.len(), 4, "{knobs:?}");
+    assert!(knobs.iter().any(|p| p.fact == "knob:path.min_samples=10"));
+    assert_eq!(record.evidence_class, EvidenceClass::Observation);
 }

@@ -15,20 +15,22 @@
 
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::run_adjustment::{
-    decide_adjustment, latency_p95, AdjustmentRefusal, Current, ErrorWindow, ModelTier, Observed,
-    WidthKnobs, INSUFFICIENT_SAMPLES, LATENCY_UNKNOWN,
+    decide_adjustment, error_rate_q32, latency_p95, AdjustmentRefusal, Current, ErrorWindow,
+    ModelTier, Observed, WidthKnobs, INSUFFICIENT_SAMPLES, LATENCY_UNKNOWN,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicy};
+use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::usage_ledger::RunWindow;
 use medulla_types::contract::BoundedVec;
 use medulla_types::usage::PriceCatalog;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 
 use super::support::{advisory, int_param, invalid, param, text_param};
 use super::DecisionFamily;
@@ -165,11 +167,92 @@ fn conclude_adjustment(
         &tiers(options.as_slice())?,
         &knobs,
     ) {
-        Ok(adjustment) => advisory(vec![
-            format!("model:{}", adjustment.after_model),
-            format!("width:{}", adjustment.after_width),
-            format!("budget_tokens:{}", adjustment.after_budget_tokens),
-        ]),
+        Ok(adjustment) => {
+            let mut executed = advisory(vec![
+                format!("model:{}", adjustment.after_model),
+                format!("width:{}", adjustment.after_width),
+                format!("budget_tokens:{}", adjustment.after_budget_tokens),
+            ])?;
+            // The counts come from the usage ledger; the newest run is the
+            // node that holds them.
+            let newest = runs
+                .iter()
+                .max_by_key(|run| run.newest_at_ms)
+                .map(|run| run.run_id.clone())
+                .unwrap_or_default();
+            let counted = |subject: &'static str, fact: String| FamilyPremise {
+                subject,
+                fact,
+                class: PremiseClass::Observation,
+                source: FamilyPremiseSource::Observation(newest.clone()),
+            };
+            let stated = |subject: &'static str, fact: String, field: &'static str| FamilyPremise {
+                subject,
+                fact,
+                class: PremiseClass::Claim,
+                source: FamilyPremiseSource::Request(field),
+            };
+            let rationale = serde_json::to_value(adjustment.rationale)
+                .ok()
+                .and_then(|value| value.as_str().map(str::to_string))
+                .ok_or_else(|| invalid("the adjustment rationale is not a name"))?;
+            executed.family_premises = vec![
+                counted(
+                    "run_adjustment_runs",
+                    format!("run_adjustment.runs={}", window.runs),
+                ),
+                counted(
+                    "run_adjustment_errored_runs",
+                    format!("run_adjustment.errored_runs={}", window.errored_runs),
+                ),
+                counted(
+                    "run_adjustment_error_rate",
+                    format!("run_adjustment.error_rate_q32={}", error_rate_q32(&window)),
+                ),
+                stated(
+                    "run_adjustment_child_id",
+                    format!("run_adjustment.child_id={child_id}"),
+                    "params.child_id",
+                ),
+                stated(
+                    "run_adjustment_operation",
+                    format!("run_adjustment.operation={operation}"),
+                    "params.operation",
+                ),
+                stated(
+                    "run_adjustment_current_model",
+                    format!("run_adjustment.current_model={}", current.model),
+                    "params.current_model",
+                ),
+                stated(
+                    "run_adjustment_current_width",
+                    format!("run_adjustment.current_width={}", current.width),
+                    "params.current_width",
+                ),
+                stated(
+                    "run_adjustment_host_ceiling",
+                    format!("run_adjustment.host_width_ceiling={}", current.host_ceiling),
+                    "params.host_width_ceiling",
+                ),
+                stated(
+                    "run_adjustment_budget_tokens",
+                    format!("run_adjustment.budget_tokens={}", current.budget_tokens),
+                    "params.budget_tokens",
+                ),
+                counted(
+                    "run_adjustment_rationale",
+                    format!("run_adjustment.rationale={rationale}"),
+                ),
+                counted(
+                    "run_adjustment_rationale_digest",
+                    format!(
+                        "run_adjustment.rationale_digest={}",
+                        adjustment.rationale_digest.to_hex()
+                    ),
+                ),
+            ];
+            Ok(executed)
+        }
         Err(AdjustmentRefusal::InsufficientSamples { .. }) => {
             let mut executed = advisory(Vec::new())?;
             executed.ladder.outcome = StatisticalOutcome::Abstained {
@@ -213,5 +296,18 @@ impl DecisionFamily for RunAdjustmentFamily {
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(conclude_adjustment(ctx, request, policy))
+    }
+
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        executed
+            .family_premises
+            .iter()
+            .map(|premise| premise.seal(policy_digest))
+            .collect()
     }
 }
