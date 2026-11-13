@@ -6,6 +6,7 @@
 //! family lives in its own `family/<kind>.rs` file.
 
 mod a2a_route;
+mod answer_ranking;
 #[cfg(feature = "decide")]
 pub(super) mod assemble;
 mod branch_outcome;
@@ -21,9 +22,11 @@ pub(super) mod context_budget;
 pub(super) mod context_package;
 mod context_replacement;
 mod correction_admission;
+mod delegation_admission;
 mod edit_concentration;
 mod enrichment_schedule;
 mod evolution_round;
+mod fanout_aggregate;
 mod feedback_loop;
 mod field_shielding;
 mod generated_code_admission;
@@ -70,6 +73,7 @@ mod topology;
 mod usage_guidance;
 
 pub(in crate::decide) use command_config::command_view;
+pub(in crate::decide) use fanout_aggregate::fanout_view;
 pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
@@ -303,6 +307,12 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         tool_relevance::ToolRelevanceFamily;
     static INSIGHTSELECTIONFAMILY: insight_selection::InsightSelectionFamily =
         insight_selection::InsightSelectionFamily;
+    static FANOUTAGGREGATEFAMILY: fanout_aggregate::FanoutAggregateFamily =
+        fanout_aggregate::FanoutAggregateFamily;
+    static DELEGATIONADMISSIONFAMILY: delegation_admission::DelegationAdmissionFamily =
+        delegation_admission::DelegationAdmissionFamily;
+    static ANSWERRANKINGFAMILY: answer_ranking::AnswerRankingFamily =
+        answer_ranking::AnswerRankingFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -364,6 +374,9 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::RuntimeQuota => &RUNTIMEQUOTAFAMILY,
         QuestionKind::InsightSelection => &INSIGHTSELECTIONFAMILY,
         QuestionKind::ToolRelevance => &TOOLRELEVANCEFAMILY,
+        QuestionKind::FanoutAggregate => &FANOUTAGGREGATEFAMILY,
+        QuestionKind::DelegationAdmission => &DELEGATIONADMISSIONFAMILY,
+        QuestionKind::AnswerRanking => &ANSWERRANKINGFAMILY,
     }
 }
 
@@ -435,6 +448,9 @@ mod tests {
             QuestionKind::RuntimeQuota,
             QuestionKind::InsightSelection,
             QuestionKind::ToolRelevance,
+            QuestionKind::FanoutAggregate,
+            QuestionKind::DelegationAdmission,
+            QuestionKind::AnswerRanking,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -496,7 +512,10 @@ mod tests {
             | QuestionKind::GeneratedCodeAdmission
             | QuestionKind::RuntimeQuota
             | QuestionKind::InsightSelection
-            | QuestionKind::ToolRelevance => true,
+            | QuestionKind::ToolRelevance
+            | QuestionKind::FanoutAggregate
+            | QuestionKind::DelegationAdmission
+            | QuestionKind::AnswerRanking => true,
         };
         assert!(exhaustive);
         kinds
@@ -508,7 +527,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            60,
+            63,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

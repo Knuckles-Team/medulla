@@ -11,58 +11,18 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
+use medulla_decision_types::decision::answer_ranking_request::{
+    AnswerRankingRequest, AnswerTieRule, PairwiseComparison, PairwisePreference,
+    MAX_ANSWER_CANDIDATES, MAX_PAIRWISE_COMPARISONS,
+};
 use medulla_decision_types::{
     decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
 };
 use medulla_query_types::solve_scalar::digest_text;
 
 pub const ANSWER_RANKING_SCHEMA: &str = "answer-candidate-ranking/v1";
-pub const MAX_ANSWER_CANDIDATES: usize = 16;
-/// Every unordered pair of the largest candidate set.
-pub const MAX_PAIRWISE_COMPARISONS: usize = MAX_ANSWER_CANDIDATES * (MAX_ANSWER_CANDIDATES - 1) / 2;
 /// The engine never proposes more revisions than this in one ranking.
 pub const MAX_REVISION_ACTIONS: usize = 8;
-
-/// Which side of one comparison the caller preferred.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum PairwisePreference {
-    First,
-    Second,
-    Tie,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct PairwiseComparison {
-    pub first: String,
-    pub second: String,
-    pub preference: PairwisePreference,
-}
-
-/// How equal scores are ordered. The only rule is the lowest candidate id.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum AnswerTieRule {
-    LowestCandidateId,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct AnswerRankingRequest {
-    pub candidate_ids: BoundedVec<String, MAX_ANSWER_CANDIDATES>,
-    pub comparisons: BoundedVec<PairwiseComparison, MAX_PAIRWISE_COMPARISONS>,
-    /// A named verifier is refused: this ranking is verifier-free by contract.
-    #[serde(default)]
-    pub verifier: Option<String>,
-    pub retain_top_k: u16,
-    pub max_revisions: u16,
-}
-
 /// One ranked candidate. `score` counts two per pairwise win and one per tie.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -96,6 +96,9 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::CriterionReview,
     QuestionKind::GeneratedCodeAdmission,
     QuestionKind::RuntimeQuota,
+    QuestionKind::FanoutAggregate,
+    QuestionKind::DelegationAdmission,
+    QuestionKind::AnswerRanking,
 ];
 
 /// The samples the budget report takes per group.
@@ -170,6 +173,9 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::InsightSelection => "insight_selection",
         // Needs a tool index, so it has its own bench fixture.
         QuestionKind::ToolRelevance => "tool_relevance",
+        QuestionKind::FanoutAggregate => "fanout_aggregate",
+        QuestionKind::DelegationAdmission => "delegation_admission",
+        QuestionKind::AnswerRanking => "answer_ranking",
     }
 }
 
@@ -383,6 +389,7 @@ fn maximum_plan_request(asked: &DecideRequest) -> DecideRequest {
             output_task_id: "t63".into(),
             max_concurrency: 8,
             max_steps: 64,
+            final_artifact: None,
         })),
     }])
     .unwrap();

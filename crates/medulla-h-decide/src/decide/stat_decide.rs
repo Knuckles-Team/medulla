@@ -171,6 +171,10 @@ async fn serve(
                 super::family::command_view(state, verified.agent_id(), &request)
                     .await
                     .map(Some)
+            } else if request.question.kind == QuestionKind::FanoutAggregate {
+                super::family::fanout_view(state, verified.agent_id(), verified.tenant(), &request)
+                    .await
+                    .map(Some)
             } else if request.question.kind == QuestionKind::RuntimeQuota {
                 super::family::quota_view(state, verified.agent_id(), &request).await
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
@@ -531,6 +535,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }
+        QuestionKind::DelegationAdmission => medulla_decision_types::decision::delegation::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS

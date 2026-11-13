@@ -268,6 +268,7 @@ pub fn plan_over_skills(
             output_task_id: resolve(&query.output_task_id),
             max_concurrency: independent.clamp(1, usize::from(MAX_CONCURRENCY)) as u16,
             max_steps,
+            final_artifact: None,
         },
         relevance_q32,
     })

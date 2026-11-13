@@ -29,6 +29,7 @@ fn proposal() -> TaskPlanProposal {
         output_task_id: "join".into(),
         max_concurrency: 2,
         max_steps: 4,
+        final_artifact: None,
     }
 }
 
@@ -169,6 +170,7 @@ fn work_and_text_bounds_refuse() {
         output_task_id: "t63".into(),
         max_concurrency: 8,
         max_steps: 64,
+        final_artifact: None,
     };
     // All tasks are bounded, but most do not feed the output sink.
     assert!(plan_explicit_tasks(&input)
@@ -205,6 +207,7 @@ fn maximum_bounded_chain_is_valid() {
         output_task_id: "t63".into(),
         max_concurrency: 8,
         max_steps: 64,
+        final_artifact: None,
     };
     let plan = plan_explicit_tasks(&input).unwrap();
     assert_eq!(plan.total_tasks, 64);
@@ -307,6 +310,7 @@ fn mixed(arguments: serde_json::Value) -> TaskPlanProposal {
         output_task_id: "b".into(),
         max_concurrency: 1,
         max_steps: 2,
+        final_artifact: None,
     }
 }
 
@@ -447,6 +451,7 @@ fn binding_bounds() {
         output_task_id: "t63".into(),
         max_concurrency: 8,
         max_steps: 64,
+        final_artifact: None,
     };
     assert_eq!(plan_explicit_tasks(&tools).unwrap().total_tasks, 64);
     let mut over_total = mixed(bound_arguments(0, MAX_CALL_ARGUMENT_BYTES - base));
@@ -1190,5 +1195,35 @@ fn every_planner_code_is_registered_upper_snake() {
         "PLAN_PARAMETER_CONFLICT",
     ] {
         assert!(resolve(raised).is_some(), "{raised} is registered");
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.101
+#[test]
+fn final_artifact_is_covered_by_the_digest_and_validated() {
+    let base = plan_explicit_tasks(&proposal()).unwrap();
+    let mut declared = proposal();
+    declared.final_artifact = Some(FinalArtifactDecl {
+        schema_id: "report".into(),
+        schema_version: 1,
+        kind: "markdown".into(),
+    });
+    let with = plan_explicit_tasks(&declared).unwrap();
+    assert_ne!(base.plan_digest, with.plan_digest);
+    assert_eq!(with.final_artifact, declared.final_artifact);
+    // A plan without the field serialises exactly as before.
+    assert!(!serde_json::to_string(&proposal())
+        .unwrap()
+        .contains("final_artifact"));
+    for edit in [
+        (|d: &mut FinalArtifactDecl| d.schema_version = 0) as fn(&mut FinalArtifactDecl),
+        |d| d.kind = " ".into(),
+        |d| d.schema_id = String::new(),
+    ] {
+        let mut bad = declared.clone();
+        edit(bad.final_artifact.as_mut().unwrap());
+        assert!(plan_explicit_tasks(&bad)
+            .unwrap_err()
+            .starts_with("invalid_final_artifact"));
     }
 }

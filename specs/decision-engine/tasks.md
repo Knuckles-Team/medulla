@@ -295,7 +295,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T284 [US7] MEDULLA-DECISION-ENGINE-R137.13 Measured signals select direct or recursive mode
 - [ ] T285 [US7] MEDULLA-DECISION-ENGINE-R134.9 Behavior: ranked skill tree per task
 - [ ] T286 [US7] MEDULLA-DECISION-ENGINE-R137.14 Held-out comparison gates context replacement
-- [ ] T287 [US7] MEDULLA-DECISION-ENGINE-R134.10 Summary-only child returns and parent budget
+- [x] T287 [US7] MEDULLA-DECISION-ENGINE-R134.10 Summary-only child returns and parent budget
 - [ ] T288 [US7] MEDULLA-DECISION-ENGINE-R137.15 Sub-call signatures are checked before dispatch
 - [ ] T289 [US7] MEDULLA-DECISION-ENGINE-R134.11 Horizon partition and credit checkpoints
 - [ ] T290 [US3] MEDULLA-DECISION-ENGINE-R059.1.1 Model: backbone binding and transfer estimate
@@ -328,13 +328,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T317 [US7] MEDULLA-DECISION-ENGINE-R135.14 Evidence: insight selection premises
 - [ ] T318 [US7] MEDULLA-DECISION-ENGINE-R135.15 Hot-path proof: insight write then selection served
 - [ ] T319 [US4] MEDULLA-DECISION-ENGINE-R129.100 Versioned rule lifecycle from correction to revocation
-- [ ] T320 [US7] MEDULLA-DECISION-ENGINE-R134.100 Fan-out aggregation decision
-- [ ] T321 [US7] MEDULLA-DECISION-ENGINE-R134.101 Designated coordinator and one final artifact
+- [x] T320 [US7] MEDULLA-DECISION-ENGINE-R134.100 Fan-out aggregation decision
+- [x] T321 [US7] MEDULLA-DECISION-ENGINE-R134.101 Designated coordinator and one final artifact
 - [ ] T322 [US7] MEDULLA-DECISION-ENGINE-R137.100 Relevance-triggered instruction disclosure
-- [ ] T323 [US7] MEDULLA-DECISION-ENGINE-R134.102 Delegation admission over a stable outcome window
+- [x] T323 [US7] MEDULLA-DECISION-ENGINE-R134.102 Delegation admission over a stable outcome window
 - [ ] T324 [US7] MEDULLA-DECISION-ENGINE-R134.104 Model
 - [ ] T325 [US7] MEDULLA-DECISION-ENGINE-R134.105 Behavior
-- [ ] T326 [US7] MEDULLA-DECISION-ENGINE-R134.106 Wiring: answer ranking through Decide
+- [x] T326 [US7] MEDULLA-DECISION-ENGINE-R134.106 Wiring: answer ranking through Decide
 - [ ] T327 [US7] MEDULLA-DECISION-ENGINE-R134.107 Refusal
 - [ ] T328 [US7] MEDULLA-DECISION-ENGINE-R134.108 Evidence: answer-ranking premises
 - [ ] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served

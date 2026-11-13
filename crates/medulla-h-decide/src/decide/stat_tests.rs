@@ -701,6 +701,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
     // Library inputs remain inline and continue to train.
     fit_from_the_engine_log(&h, &schema_pin, record).await;
     log_tests::mixed_origin_aggregates_exclude_synthetic(&h, &schema_pin, record).await;
+    delegation_tests::window_matrix_admits_or_refuses(&h, record).await;
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R020
@@ -1064,8 +1065,6 @@ mod resolve_entity_tests;
 mod delegation_quality_tests;
 mod distilled_rank_tests;
 
-mod context_budget_tests;
-
 // MEDULLA-DECISION-ENGINE-R137.8: the served package selection journey.
 mod context_package_tests;
 
@@ -1097,6 +1096,12 @@ mod branch_outcomes_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
 mod tool_relevance_tests;
+// MEDULLA-DECISION-ENGINE-R134.100: the served fan-out aggregation.
+mod fanout_tests;
+// MEDULLA-DECISION-ENGINE-R134.102: delegation admission over an outcome window.
+mod delegation_tests;
+// MEDULLA-DECISION-ENGINE-R134.106: the served answer ranking.
+mod answer_ranking_tests;
 
 // MEDULLA-DECISION-ENGINE-R137.13: the served recursion-mode decision.
 mod recursion_mode_tests;

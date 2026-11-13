@@ -196,5 +196,6 @@ pub fn decompose_task(
         output_task_id: facts.output_task_id.clone(),
         max_concurrency: count.clamp(1, usize::from(MAX_CONCURRENCY)) as u16,
         max_steps,
+        final_artifact: None,
     })
 }

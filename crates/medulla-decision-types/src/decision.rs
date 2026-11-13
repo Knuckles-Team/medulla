@@ -22,6 +22,7 @@
 //! lives above this module. These are data types and their bounds.
 
 pub mod a2a_route;
+pub mod answer_ranking_request;
 pub mod branch_fusion;
 pub mod capability_designation;
 pub mod changeset_review;
@@ -34,6 +35,7 @@ pub mod context_bundle;
 pub mod context_package;
 pub mod context_replacement;
 pub mod context_source;
+pub mod delegation;
 pub mod delegation_quality;
 pub mod digest;
 pub mod errors;

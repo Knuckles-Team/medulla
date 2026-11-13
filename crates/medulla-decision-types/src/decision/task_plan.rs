@@ -18,6 +18,7 @@ mod call;
 mod control;
 pub mod critical_path;
 mod decompose;
+pub mod fanout;
 pub mod horizon;
 pub mod pairwise;
 pub mod skill_plan;
@@ -142,6 +143,19 @@ pub struct TaskPlanTask {
     pub priority_weight: Option<u32>,
 }
 
+/// The one typed artifact a plan's designated coordinator delivers
+/// (MEDULLA-DECISION-ENGINE-R134.101). The coordinator is the plan's
+/// `output_task_id`; the plan keeps one output sink and adds no second
+/// orchestrator.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FinalArtifactDecl {
+    pub schema_id: String,
+    pub schema_version: u32,
+    pub kind: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -150,6 +164,9 @@ pub struct TaskPlanProposal {
     pub output_task_id: String,
     pub max_concurrency: u16,
     pub max_steps: u16,
+    /// The final artifact the output task delivers, when the plan declares one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_artifact: Option<FinalArtifactDecl>,
 }
 
 /// Canonical task order is a topological order with lexical ready-task ties.
@@ -163,6 +180,9 @@ pub struct TaskPlan {
     pub output_task_id: String,
     pub max_concurrency: u16,
     pub max_steps: u16,
+    /// The final artifact the output task delivers, when the plan declares one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_artifact: Option<FinalArtifactDecl>,
     pub total_tasks: u16,
     pub policy_revision: String,
     pub policy_digest: String,
@@ -342,6 +362,16 @@ fn ordered(tasks: &BTreeMap<String, TaskPlanTask>) -> Result<Vec<TaskPlanTask>, 
     Ok(output)
 }
 
+fn check_final_artifact(decl: &FinalArtifactDecl) -> Result<(), String> {
+    if decl.schema_version == 0 || decl.kind.trim().is_empty() || decl.schema_id.trim().is_empty() {
+        return Err(error(
+            "invalid_final_artifact",
+            "schema_version must be positive and schema_id and kind must be non-empty",
+        ));
+    }
+    Ok(())
+}
+
 fn check_output(tasks: &BTreeMap<String, TaskPlanTask>, output: &str) -> Result<(), String> {
     if !tasks.contains_key(output) {
         return Err(error("INVALID_OUTPUT_TASK", output));
@@ -370,6 +400,9 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
     call::check_bindings(&tasks)?;
     control::check_control(&tasks)?;
     check_output(&tasks, &proposal.output_task_id)?;
+    if let Some(decl) = &proposal.final_artifact {
+        check_final_artifact(decl)?;
+    }
     aggregation::check_aggregation(&tasks, &proposal.output_task_id)?;
     let mut plan = TaskPlan {
         total_tasks: canonical.len() as u16,
@@ -377,6 +410,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
         output_task_id: proposal.output_task_id.clone(),
         max_concurrency: proposal.max_concurrency,
         max_steps: proposal.max_steps,
+        final_artifact: proposal.final_artifact.clone(),
         policy_revision: TASK_PLAN_POLICY_REVISION.to_string(),
         policy_digest: task_plan_policy_digest(),
         input_digest: digest_text("eg/task-plan-input/v1", proposal),
@@ -390,7 +424,8 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
 }
 
 /// The plan digest: the canonical body and policy, plus the critical chain when
-/// the plan carries one (R134.15). A plan without a chain digests as before.
+/// the plan carries one (R134.15) and the final-artifact declaration when the plan
+/// declares one (R134.101). A plan without any of them digests as before.
 pub fn compute_plan_digest(plan: &TaskPlan) -> String {
     let body = (
         &plan.tasks,
@@ -401,7 +436,12 @@ pub fn compute_plan_digest(plan: &TaskPlan) -> String {
         &plan.policy_revision,
         &plan.policy_digest,
     );
-    if plan.critical_chain.is_none() && plan.horizons.is_none() {
+    if let Some(decl) = &plan.final_artifact {
+        digest_text(
+            "eg/task-plan/v3",
+            &(body, &plan.critical_chain, &plan.horizons, decl),
+        )
+    } else if plan.critical_chain.is_none() && plan.horizons.is_none() {
         digest_text("eg/task-plan/v1", &body)
     } else {
         digest_text(

@@ -244,6 +244,17 @@ pub enum QuestionKind {
     /// embedding relevance (MEDULLA-DECISION-ENGINE-R134.110). Evaluate-only.
     /// See `decision::tool_relevance`.
     ToolRelevance,
+    /// Aggregate a fan-out's complete receipt set with the plan's already-selected
+    /// operator (MEDULLA-DECISION-ENGINE-R134.100). Evaluate-only. See
+    /// `decision::task_plan::fanout`.
+    FanoutAggregate,
+    /// Admit delegation over a stable outcome window (MEDULLA-DECISION-ENGINE-R134.102).
+    /// Evaluate-only. See `decision::delegation`.
+    DelegationAdmission,
+    /// Rank answer candidates from pairwise caller claims, with no verifier
+    /// (MEDULLA-DECISION-ENGINE-R134.106). Evaluate-only. See
+    /// `decision::answer_ranking_request`.
+    AnswerRanking,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -350,6 +361,12 @@ pub enum TypedValue {
     Feedback(Box<super::checker_feedback::FeedbackRecord>),
     /// A tool-assignment request (MEDULLA-DECISION-ENGINE-R134.110.1).
     ToolAssignment(Box<super::tool_relevance::ToolAssignmentRequest>),
+    /// The complete receipt set of one fan-out (MEDULLA-DECISION-ENGINE-R134.100).
+    FanoutResults(Box<super::task_plan::fanout::FanoutAggregateRequest>),
+    /// A delegation admission request (MEDULLA-DECISION-ENGINE-R134.102).
+    DelegationAdmission(super::delegation::DelegationAdmissionRequest),
+    /// Pairwise caller claims over answer candidates (MEDULLA-DECISION-ENGINE-R134.106).
+    AnswerRanking(Box<super::answer_ranking_request::AnswerRankingRequest>),
 }
 
 /// One named parameter of a question.
@@ -616,6 +633,7 @@ mod tests {
             output_task_id: "b".into(),
             max_concurrency: 1,
             max_steps: 2,
+            final_artifact: None,
         };
         // The request body is one `TypedValue` variant.
         let body = TypedValue::TaskPlan(Box::new(proposal.clone()));

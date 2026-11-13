@@ -196,6 +196,7 @@ fn proposal_of(steps: &[ParsedStep<'_>]) -> Result<TaskPlanProposal, SkillPlanRe
         output_task_id: steps[steps.len() - 1].id.to_string(),
         max_concurrency: count.min(MAX_CONCURRENCY),
         max_steps: count,
+        final_artifact: None,
     })
 }
 

@@ -4,6 +4,7 @@
 
 pub mod context;
 pub mod criterion_review;
+pub mod fanout;
 pub mod memory;
 pub mod participant;
 pub mod placement;
@@ -23,6 +24,7 @@ use super::knobs::KnobSpec;
 pub const REGISTRY: &[&[KnobSpec]] = &[
     context::KNOBS,
     criterion_review::KNOBS,
+    fanout::KNOBS,
     memory::KNOBS,
     participant::KNOBS,
     placement::KNOBS,
@@ -56,4 +58,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::program_store::insight::KNOBS,
     super::program_store::preplan::KNOBS,
     super::tool_relevance::KNOBS,
+    super::delegation::KNOBS,
 ];

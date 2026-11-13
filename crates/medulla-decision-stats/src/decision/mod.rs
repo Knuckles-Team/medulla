@@ -33,6 +33,7 @@ pub mod cluster_knobs;
 pub mod comparative_analysis;
 pub mod context_partition;
 pub mod distilled;
+pub mod delegation;
 pub mod drift;
 pub mod evaluate;
 pub mod evolution_round;

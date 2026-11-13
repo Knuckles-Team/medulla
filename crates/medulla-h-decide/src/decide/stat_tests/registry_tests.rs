@@ -135,6 +135,7 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
                 output_task_id: "b".into(),
                 max_concurrency: 1,
                 max_steps: 2,
+                final_artifact: None,
             })),
         }])
         .unwrap(),

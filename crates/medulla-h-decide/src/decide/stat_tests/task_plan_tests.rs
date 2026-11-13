@@ -61,6 +61,7 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
                 output_task_id: "join".into(),
                 max_concurrency: 2,
                 max_steps: 4,
+                final_artifact: None,
             })),
         }])
         .unwrap(),
