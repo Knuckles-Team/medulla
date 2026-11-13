@@ -9,15 +9,20 @@
 //! (`put_decision_artifacts`). The adoption supersedes the previous adoption
 //! of the same agent and task class by edge; both stay readable.
 
+use medulla_decision_outcome_types::decision::promotion::{
+    DefinitionKind, RevisionStage, RevisionSubject,
+};
+use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::decision::statistical::log::{
-    HarnessAdoptionStored, HarnessAdoptionWrite,
+    HarnessAdoptionStored, HarnessAdoptionWrite, HarnessLessonQuery, HarnessLessonsFound,
 };
 use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::improvement::{
-    register_adoption, register_lesson, AdoptedHarness, AdoptionSupersession, HarnessContrast,
-    HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence, LessonSupersession,
+    register_adoption, register_lesson, retrieve_lessons, AdoptedHarness, AdoptionSupersession,
+    HarnessContrast, HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence,
+    LessonSupersession,
 };
 use serde::de::DeserializeOwned;
 
@@ -170,6 +175,17 @@ pub(super) fn adopt(
         contrast_ref: Some(contrast.node_id()),
     };
     let adopted_ref = adopted.node_id();
+    let revision_key = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::HarnessBundle,
+        definition_ref: format!("{}:{}", write.agent_ref, write.task_class),
+    }
+    .pointer_key();
+    let (subject_kind, subject_ref) = RevisionRow::subject_of(&revision_key).ok_or_else(|| {
+        refuse(
+            ImprovementLibraryRefusal::RecordMalformed,
+            "revision subject",
+        )
+    })?;
     let mut adoptions: Vec<AdoptedHarness> = load(ctx, ADOPTED_PREFIX, "adopted harness")?;
     let mut adoption_edges: Vec<AdoptionSupersession> =
         load(ctx, ADOPTION_EDGE_PREFIX, "adoption supersession")?;
@@ -205,6 +221,18 @@ pub(super) fn adopt(
             ordered_key(ADOPTED_PREFIX, ctx.now_ms, &adopted_ref),
             encode_artifact(&adoptions[adoptions_before])?,
         ));
+        // The adoption is an `Evaluated` revision of the agent's harness bundle
+        // for this task class (R805.10), written in the same owner write.
+        let revision = RevisionRow {
+            id: adopted_ref.clone(),
+            subject_kind,
+            subject_ref,
+            stage: RevisionStage::Evaluated,
+            digest: write.decision_record_digest.clone(),
+            evaluation_receipt_id: Some(adoptions[adoptions_before].decision_ref.clone()),
+            created_ms: ctx.now_ms,
+        };
+        rows.push((revision.key(), encode_artifact(&revision)?));
     }
     for edge in &adoption_edges[adoption_edges_before..] {
         rows.push((
@@ -227,4 +255,34 @@ pub(super) fn adopt(
     rows.push((write_key, encode_artifact(&stored)?));
     ctx.store.put_decision_artifacts(ctx.tenant_id, &rows)?;
     Ok(stored)
+}
+
+/// Serve one `HarnessLessons` read: the tenant's stored lessons that apply,
+/// current as of the query's instant, ranked by confidence. A well-formed
+/// query nothing matches abstains with the library's registered code
+/// (DE-REFUSE-VS-ABSTAIN) and returns no lesson.
+pub(super) fn lessons(
+    ctx: &ExecutionContext,
+    query: &HarnessLessonQuery,
+) -> Result<HarnessLessonsFound, String> {
+    let stored: Vec<HarnessLesson> = load(ctx, LESSON_PREFIX, "harness lesson")?;
+    let edges: Vec<LessonSupersession> = load(ctx, LESSON_EDGE_PREFIX, "lesson supersession")?;
+    match retrieve_lessons(
+        &stored,
+        &edges,
+        &query.task_class,
+        &query.deficiency,
+        query.trajectory_features.as_slice(),
+        query.as_of_ms,
+    ) {
+        Ok(hits) => Ok(HarnessLessonsFound {
+            lessons: hits.into_iter().cloned().collect(),
+            abstain_reason: None,
+        }),
+        Err(refusal @ ImprovementLibraryRefusal::NoLessons) => Ok(HarnessLessonsFound {
+            lessons: Vec::new(),
+            abstain_reason: Some(refusal.code().to_string()),
+        }),
+        Err(other) => Err(refuse(other, "the lesson read is not admitted")),
+    }
 }

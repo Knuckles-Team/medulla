@@ -212,6 +212,7 @@ method_results! {
     DecisionLogGenerationSpace(DecisionLog / "generation_space") => Raw<medulla_decision_types::decision::statistical::retrieval_generation::GenerationSpaceRead>;
     DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackAuditRows>;
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
+    DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
     BeliefRevise(BeliefRevise) => Raw<medulla_types::belief_revision::BeliefPassResult>;
     ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;

@@ -474,6 +474,40 @@ pub enum DecisionLogOp {
         tenant_id: String,
         write: HarnessAdoptionWrite,
     },
+    /// Read the tenant's stored harness lessons that apply to a task class,
+    /// deficiency and trajectory features, current as of a time
+    /// (MEDULLA-DECISION-ENGINE-R803.8): the served form of the improvement
+    /// library's lesson retrieval, ranked by confidence.
+    HarnessLessons {
+        tenant_id: String,
+        query: HarnessLessonQuery,
+    },
+}
+
+/// The lesson retrieval of a `HarnessLessons` read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HarnessLessonQuery {
+    pub task_class: String,
+    pub deficiency: String,
+    /// Trajectory features every returned lesson's applicability contains.
+    #[serde(default)]
+    pub trajectory_features: BoundedVec<String, 64>,
+    /// The instant the read is current as of, in milliseconds.
+    pub as_of_ms: u64,
+}
+
+/// The stored lessons a `HarnessLessons` read found.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HarnessLessonsFound {
+    /// The current lessons, highest confidence first; empty when the read
+    /// abstained.
+    pub lessons: Vec<medulla_work_types::orchestration::improvement::HarnessLesson>,
+    /// The registered abstention code when no lesson matched.
+    pub abstain_reason: Option<String>,
 }
 
 /// What a `HarnessAdoption` op carries: the identity of the adoption, the
@@ -572,7 +606,8 @@ impl DecisionLogOp {
             | Self::Aggregate { .. }
             | Self::Verify { .. }
             | Self::GenerationSpace { .. }
-            | Self::WritebackAudit { .. } => LogOpClass::Read,
+            | Self::WritebackAudit { .. }
+            | Self::HarnessLessons { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
@@ -613,7 +648,8 @@ impl DecisionLogOp {
             | Self::CapabilityOutcome { tenant_id, .. }
             | Self::GenerationSpace { tenant_id, .. }
             | Self::WritebackAudit { tenant_id, .. }
-            | Self::HarnessAdoption { tenant_id, .. } => tenant_id,
+            | Self::HarnessAdoption { tenant_id, .. }
+            | Self::HarnessLessons { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

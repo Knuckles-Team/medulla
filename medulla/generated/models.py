@@ -3789,6 +3789,91 @@ class DecisionLogOpLearn(BaseModel):
     write: LearningWrite
 
 
+class HarnessComponentKind(str, Enum):
+    SYSTEM_PROMPT = "system_prompt"
+    GUARDRAILS = "guardrails"
+    MEMORY = "memory"
+    TOOL_GUIDANCE = "tool_guidance"
+    SUBAGENT = "subagent"
+    SKILL = "skill"
+    SCRIPT = "script"
+    PLUGIN = "plugin"
+
+
+class HarnessAdoptionWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adopted_version_ref: str
+    agent_ref: str
+    applicability: Annotated[list[str], Field(max_length=64)] = []
+    changed_component_kind: HarnessComponentKind
+    conditions_digest: str
+    confidence_ppm: Annotated[int, Field(ge=0, le=4294967295)]
+    decision_record_digest: str
+    deficiency: str
+    evidence_run_ids: Annotated[list[str], Field(max_length=32)] = []
+    situation: str
+    task_class: str
+    task_ref: str
+    what_changed: str
+
+
+class HarnessAdoptionStored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adopted_harness_ref: str
+    contrast_ref: str
+    lesson_ref: str
+    replayed: bool
+    supersedes_ref: str | None = None
+
+
+class HarnessLessonQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of_ms: Annotated[int, Field(ge=0)]
+    deficiency: str
+    task_class: str
+    trajectory_features: Annotated[list[str], Field(max_length=64)] = []
+
+
+class HarnessLesson(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    applicability: Annotated[list[str], Field(max_length=64)] = []
+    changed_component_kind: HarnessComponentKind
+    confidence: float
+    deficiency: str
+    evidence_run_ids: Annotated[list[str], Field(max_length=32)]
+    situation: str
+    supersedes_id: str | None = None
+    task_class: str
+    what_changed: str
+
+
+class HarnessLessonsFound(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    abstain_reason: str | None = None
+    lessons: list[HarnessLesson]
+
+
+class DecisionLogOpHarnessAdoption(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["harness_adoption"]
+    tenant_id: str
+    write: HarnessAdoptionWrite
+
+
+class DecisionLogOpHarnessLessons(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["harness_lessons"]
+    query: HarnessLessonQuery
+    tenant_id: str
+
+
 DecisionLogOp = Annotated[
     DecisionLogOpCommit
     | DecisionLogOpEvaluate
@@ -3798,6 +3883,8 @@ DecisionLogOp = Annotated[
     | DecisionLogOpVerify
     | DecisionLogOpResolve
     | DecisionLogOpLearn
+    | DecisionLogOpHarnessAdoption
+    | DecisionLogOpHarnessLessons
     | DecisionLogOpPromoteRule,
     Field(discriminator="op"),
 ]
@@ -29744,6 +29831,8 @@ __all__ = [
     "DecisionLogOpCompact",
     "DecisionLogOpEvaluate",
     "DecisionLogOpGet",
+    "DecisionLogOpHarnessAdoption",
+    "DecisionLogOpHarnessLessons",
     "DecisionLogOpLearn",
     "DecisionLogOpPromoteRule",
     "DecisionLogOpResolve",
@@ -30302,9 +30391,15 @@ __all__ = [
     "HarnessConfigAnswer",
     "HarnessConfigEvaluationEvidence",
     "HarnessConfigRequestBody",
+    "HarnessAdoptionStored",
+    "HarnessAdoptionWrite",
+    "HarnessComponentKind",
     "HarnessContrast",
     "HarnessContrastAbstainReason",
     "HarnessContrastDecision",
+    "HarnessLesson",
+    "HarnessLessonQuery",
+    "HarnessLessonsFound",
     "HarnessPart_ActionSpace",
     "HarnessPart_ActionSpaceAbstained",
     "HarnessPart_ActionSpaceDecided",

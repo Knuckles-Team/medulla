@@ -4,8 +4,11 @@
 //! adoption supersedes the first by edge, and each refusal writes nothing.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::decision::statistical::log::{
     DecisionLogCommitted, DecisionLogOp, HarnessAdoptionStored, HarnessAdoptionWrite,
+    HarnessLessonQuery, HarnessLessonsFound,
 };
 use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
 use medulla_decision_types::decision::DecisionPolicyRef;
@@ -123,6 +126,20 @@ async fn adoption_contrast_and_lesson_commit_together() {
     assert_eq!(stored.supersedes_ref, None);
     // One adoption, one contrast, one lesson, one head edge each, one write row.
     assert_eq!(counts(&h), [1, 1, 1, 1, 1, 1]);
+    // The adoption is an Evaluated revision of the agent's harness bundle.
+    let revisions = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "revision:", 10)
+        .unwrap();
+    assert_eq!(revisions.len(), 1);
+    let revision: RevisionRow = decode_stored(&revisions[0].1);
+    assert_eq!(revision.id, stored.adopted_harness_ref);
+    assert_eq!(revision.stage, RevisionStage::Evaluated);
+    assert_eq!(revision.subject_kind, "definition");
+    assert_eq!(
+        revision.subject_ref,
+        "harness_bundle:agent:deployer:eg:taskclass/deploy"
+    );
 
     let adoption_rows = h
         .store
@@ -227,4 +244,52 @@ async fn adoption_refusals_are_typed_and_write_nothing() {
         ImprovementLibraryRefusal::AdoptedHarnessNoDecision,
     );
     assert_eq!(counts(&h), [0, 0, 0, 0, 0, 0]);
+}
+
+async fn lessons(h: &Harness, as_of_ms: u64, features: &[&str]) -> HarnessLessonsFound {
+    decode(
+        log_op(
+            h,
+            "decider",
+            DecisionLogOp::HarnessLessons {
+                tenant_id: TENANT.to_string(),
+                query: HarnessLessonQuery {
+                    task_class: "eg:taskclass/deploy".to_string(),
+                    deficiency: "retries".to_string(),
+                    trajectory_features: BoundedVec::new(
+                        features.iter().map(|f| f.to_string()).collect(),
+                    )
+                    .unwrap(),
+                    as_of_ms,
+                },
+            },
+        )
+        .await,
+    )
+    .unwrap()
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R803.8: a stored lesson is retrieved through the served read.
+// spec: MEDULLA-DECISION-ENGINE-R803.8
+#[tokio::test]
+async fn adopted_lesson_is_retrieved_through_the_served_read() {
+    let h = Harness::new().await;
+    // Nothing stored: the read abstains with the registered code, no lesson.
+    let none = lessons(&h, u64::MAX, &[]).await;
+    assert!(none.lessons.is_empty());
+    assert_eq!(
+        none.abstain_reason.as_deref(),
+        Some(ImprovementLibraryRefusal::NoLessons.code())
+    );
+
+    let record = committed_contrast(&h, 0.05, 0.10).await;
+    let stored = adopt(&h, write_for(&record, B)).await.unwrap();
+    let found = lessons(&h, u64::MAX, &["tool_error"]).await;
+    assert_eq!(found.abstain_reason, None);
+    assert_eq!(found.lessons.len(), 1);
+    assert_eq!(found.lessons[0].node_id(), stored.lesson_ref);
+    // A feature the lesson does not list filters it out.
+    let other = lessons(&h, u64::MAX, &["timeout"]).await;
+    assert!(other.lessons.is_empty());
+    assert!(other.abstain_reason.is_some());
 }

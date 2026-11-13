@@ -572,6 +572,35 @@ def aggregate_op(
     }
 
 
+def harness_adoption_op(tenant_id: str, **write: Any) -> dict[str, Any]:
+    """Store one harness adoption with its contrast and lesson (R803.8).
+
+    The write names the committed ``harness_contrast`` decision by its record
+    digest; it never carries the contrast deltas, which the engine reads from
+    that decision."""
+    return {"op": "harness_adoption", "tenant_id": tenant_id, "write": dict(write)}
+
+
+def harness_lessons_op(
+    tenant_id: str,
+    task_class: str,
+    deficiency: str,
+    as_of_ms: int,
+    trajectory_features: list[str] | None = None,
+) -> dict[str, Any]:
+    """Read the stored harness lessons that apply, current as of ``as_of_ms``."""
+    return {
+        "op": "harness_lessons",
+        "tenant_id": tenant_id,
+        "query": {
+            "task_class": task_class,
+            "deficiency": deficiency,
+            "trajectory_features": list(trajectory_features or []),
+            "as_of_ms": as_of_ms,
+        },
+    }
+
+
 def learn_op(tenant_id: str, write: str, **fields: Any) -> dict[str, Any]:
     """The one retrieval-learning write (EH-394..EH-397): ``record_outcome``,
     ``fit_adapter``, ``evaluate_generation`` or ``move_pointer``. What was
