@@ -48,7 +48,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T042 [US2] MEDULLA-DECISION-ENGINE-R037 Escalated abstentions re-enter as claims
 - [ ] T043 [US6] MEDULLA-DECISION-ENGINE-R038.1 Typed pre-tool risk question exists
 - [ ] T044 [US6] MEDULLA-DECISION-ENGINE-R039.1 Routing abstains naming the fact when L5 accounting data is missing
-- [ ] T045 [US6] MEDULLA-DECISION-ENGINE-R039.2 Cost preference among near-tied legal options
+- [x] T045 [US6] MEDULLA-DECISION-ENGINE-R039.2 Cost preference among near-tied legal options
 - [ ] T046 [US4] MEDULLA-DECISION-ENGINE-R040 Guarded promotion of fitted heads via publish receipt
 - [ ] T047 [US6] MEDULLA-DECISION-ENGINE-R041.1 Connector-event evaluate-only triage path with sampled audit logging
 - [ ] T048 [US6] MEDULLA-DECISION-ENGINE-R044.1 Typed A2ARoutingResolution refusal over ResolutionKind/EvidenceClass

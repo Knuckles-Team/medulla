@@ -1298,3 +1298,11 @@ The `premises` hook derives each source's premises from the request's pinned sou
 
 ## spec/f680b compile check (2026-11-13)
 After three writer-check rounds the branch's own errors are fixed (assembly candidates indexed through `as_slice`, every `DecideRequest` literal carries `evidence_streams`). The errors left are in files this branch does not touch and appear identically on a train/next-only check in the featureless writer-check build: `medulla-h-admin` (`service_grant`, `graph_schema_gateway`), `medulla-server-graph` `graph_pipeline/pipeline.rs:66` arity, and `medulla-h-decide` modules declared without the `decide` feature gate. They are environment or train/next reds, not this branch's.
+## Cost tie-break among near-tied route options (R039.2)
+
+- **The tie-break is the route family's post-ladder `refine`.** The rule stages answer first; when the shared ladder ran, `RouteFamily::refine` applies `ladder::cost_tie_break` to an advisory score list. A calibrated act is licensed for its own top option and a rule-stage answer keeps its rule, so neither is re-chosen.
+- **Rank lexicographically, not by weight.** The tie set is every option within `routing.cost_tie_epsilon` of the best score (a decision-policy knob, default 0.02, range [0, 0.2], converted to Q32); the lowest observed cost wins and equal cost breaks on option id. A tie set of one has nothing to break and needs no cost.
+- **Cost comes from the usage ledger.** `fill_observed_costs` (beside `fill_outcome_rates`, route questions only) files the mean derived cost per call of the model an option names under `l5.observed_cost` (Q32 micro-units), keyed by the verified tenant. A model with no ledger row or no covering price gets no number; a tie-set option without one abstains `UnknownFact{field: l5.observed_cost}` naming the first such option in id order (R039.1).
+- **Evidence and replay.** Each tie-set option with a cost seals `observed_cost:<option>=<micro-units>` (class `Observation`). A logged abstention replays through `replay_cost_tie`, which reads those sealed costs in place of the ledger, so the replay reproduces the answer.
+- **Wire.** No wire change; the knob is declared in `knob_families/route.rs`.
+

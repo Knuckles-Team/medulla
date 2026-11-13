@@ -1101,6 +1101,72 @@ pub(super) async fn handle_log(
     }
 }
 
+/// The numeric fact a route option's observed cost is filed under (R039.2).
+pub(super) const OBSERVED_COST_KEY: &str = "l5.observed_cost";
+
+/// Fill each option's `l5.observed_cost` number from the tenant's usage
+/// ledger (R039.2, R801): the mean derived cost per call of the model the
+/// option names, in micro-units on the `Q32` scale. The ledger is keyed by
+/// the verified tenant. An option whose model has no ledger row, or a row no
+/// price covers, gets no number: unknown is never read as zero.
+pub(super) fn fill_observed_costs(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    views: &mut [CandidateView],
+) -> Result<(), String> {
+    if views.is_empty() {
+        return Ok(());
+    }
+    let refused = |error: medulla_persistence_records::usage_ledger::UsageRefusal| {
+        refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            format!("the usage ledger refused the read: {error:?}"),
+        )
+    };
+    let catalog = medulla_types::usage::PriceCatalog {
+        aliases: BTreeMap::new(),
+        entries: store.price_entries(tenant_id).map_err(refused)?,
+    };
+    let rollup = store
+        .usage_rollup(tenant_id, &catalog, 0, u64::MAX)
+        .map_err(refused)?;
+    // Per model: calls and the summed cost; `None` once any day has no price.
+    let mut per_model: BTreeMap<&str, (u64, Option<u64>)> = BTreeMap::new();
+    for day in &rollup.days {
+        let slot = per_model
+            .entry(day.model_key.as_str())
+            .or_insert((0, Some(0)));
+        slot.0 = slot.0.saturating_add(day.calls);
+        slot.1 = slot
+            .1
+            .and_then(|sum| day.cost_micro.and_then(|cost| sum.checked_add(cost)));
+    }
+    for view in views.iter_mut() {
+        let key =
+            medulla_persistence_records::usage_ledger::normalize_model_key(&catalog, &view.id);
+        let Some((calls, Some(sum))) = per_model.get(key.as_str()).copied() else {
+            continue;
+        };
+        if calls == 0 {
+            continue;
+        }
+        let micros = i64::try_from(sum / calls)
+            .ok()
+            .and_then(|mean| mean.checked_mul(1i64 << 32))
+            .ok_or_else(|| {
+                refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    format!(
+                        "the observed cost of {} does not fit the Q32 scale",
+                        view.id
+                    ),
+                )
+            })?;
+        view.numbers.insert(OBSERVED_COST_KEY.to_string(), micros);
+    }
+    Ok(())
+}
+
 /// Fill every `OutcomeRate` feature's numeric fact from the log's pooled
 /// rates (§6.1 outcome statistics, EH-063). Those rates summarise other
 /// principals' runs, so they are readable only when the policy declares

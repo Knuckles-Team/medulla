@@ -396,3 +396,149 @@ fn policy_pin(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPol
         component: h.publish_policy(id, &policy),
     }
 }
+
+/// Append one priced call of `model` for `tenant` and put its price.
+fn seed_model_cost(h: &Harness, tenant: &str, model: &str, out_per_mtok_micro: u64) {
+    use medulla_types::usage::{
+        PriceCatalog, PriceEntry, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
+    };
+    let entry = PriceEntry {
+        schema_version: USAGE_SCHEMA_VERSION,
+        model_key: model.to_string(),
+        valid_from_ms: 0,
+        in_per_mtok_micro: 0,
+        out_per_mtok_micro,
+        cached_per_mtok_micro: 0,
+    };
+    h.store.put_price(tenant, &entry).unwrap();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let record = UsageRecord {
+        schema_version: USAGE_SCHEMA_VERSION,
+        recorded_at_ms: now - 1_000,
+        child_id: "route-cost".to_string(),
+        operation: "decide".to_string(),
+        tenant: tenant.to_string(),
+        principal: "p1".to_string(),
+        run_id: format!("run-{tenant}-{model}"),
+        model_key: model.to_string(),
+        tokens_in: 0,
+        tokens_out: 1_000,
+        tokens_cached: 0,
+        latency_ms: 10,
+        outcome: UsageOutcome::Ok,
+        content_digest: "a".repeat(64),
+    };
+    let catalog = PriceCatalog {
+        aliases: std::collections::BTreeMap::new(),
+        entries: vec![entry],
+    };
+    h.store
+        .append_usage(tenant, "p1", &catalog, &[record], now)
+        .unwrap();
+}
+
+fn signal_option(id: &str, signal: i64) -> DeclaredOption {
+    DeclaredOption {
+        option_id: id.to_string(),
+        classification: BoundedVec::default(),
+        numbers: BoundedVec::new(vec![
+            medulla_decision_types::decision::statistical::declared::DeclaredNumber {
+                key: "signal".to_string(),
+                q32: signal,
+            },
+        ])
+        .unwrap(),
+        texts: BoundedVec::default(),
+    }
+}
+
+fn observed_cost_facts(record: &StatisticalDecisionRecord) -> Vec<String> {
+    record
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("observed_cost:"))
+        .map(|premise| {
+            assert_eq!(premise.class, PremiseClass::Observation);
+            premise.fact.clone()
+        })
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R039.2
+#[tokio::test]
+async fn lower_cost_option_wins_within_the_tie_epsilon() {
+    use medulla_decision_types::decision::{AbstainReason, ColdStart};
+    let h = Harness::new().await;
+    let (schema, head) =
+        super::rank_tests::published_head(&h, HeadKind::WeightedFeatures, "head-route-cost").await;
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.cold_start = ColdStart::AdvisoryUncalibrated;
+    let policy = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-route-cost", &policy),
+    };
+    // opt-a and opt-b score alike; opt-c scores far lower.
+    let ask = || {
+        let mut request = route_request(&schema, policy.clone(), None);
+        request.feature_schema = schema.clone();
+        request.head = Some(head.clone());
+        request.params = BoundedVec::default();
+        request.candidates = CandidateSource::Declared {
+            options: BoundedVec::new(vec![
+                signal_option("opt-a", 1 << 32),
+                signal_option("opt-b", 1 << 32),
+                signal_option("opt-c", 0),
+            ])
+            .unwrap(),
+        };
+        request
+    };
+    let unknown = |batch: &DecisionBatch| match &batch.records.as_slice()[0].outcome {
+        StatisticalOutcome::Abstained { reasons } => reasons.as_slice().to_vec(),
+        other => panic!("expected an abstention, got {other:?}"),
+    };
+    let missing = |id: &str| {
+        vec![AbstainReason::UnknownFact {
+            component_id: id.to_string(),
+            field: "l5.observed_cost".to_string(),
+        }]
+    };
+
+    // A tied option with no ledger entry abstains naming it: first opt-a.
+    let batch = decide(&h, ask()).await.unwrap();
+    assert_eq!(unknown(&batch), missing("opt-a"));
+
+    // With opt-a priced, the next tied option without an entry is named.
+    seed_model_cost(&h, TENANT, "opt-a", 5_000_000);
+    let batch = decide(&h, ask()).await.unwrap();
+    assert_eq!(unknown(&batch), missing("opt-b"));
+    assert_eq!(
+        observed_cost_facts(&batch.records.as_slice()[0]),
+        vec!["observed_cost:opt-a=5000".to_string()]
+    );
+
+    // The cheaper tied option wins over the lower id; opt-c is cheapest but
+    // outside the tie set and neither wins nor needs a ledger entry.
+    seed_model_cost(&h, TENANT, "opt-b", 1_000_000);
+    // Another tenant's cheaper calls are never read.
+    seed_model_cost(&h, "tenant-other", "opt-a", 1_000);
+    let batch = decide(&h, ask()).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        panic!("advisory: {:?}", record.outcome)
+    };
+    assert_eq!(scores.as_slice()[0].option_id, "opt-b");
+    assert_eq!(
+        observed_cost_facts(record),
+        vec![
+            "observed_cost:opt-a=5000".to_string(),
+            "observed_cost:opt-b=1000".to_string()
+        ]
+    );
+    seed_model_cost(&h, TENANT, "opt-c", 100_000);
+    let batch = decide(&h, ask()).await.unwrap();
+    let StatisticalOutcome::Advisory { scores, .. } = &batch.records.as_slice()[0].outcome else {
+        panic!("advisory")
+    };
+    assert_eq!(scores.as_slice()[0].option_id, "opt-b");
+    assert_eq!(observed_cost_facts(&batch.records.as_slice()[0]).len(), 2);
+}

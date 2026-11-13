@@ -21,7 +21,7 @@ fn schema_body() -> FeatureSchemaBody {
 
 /// Fit, evaluate and publish a head of `kind` over declared options whose one
 /// feature, `signal`, is high only on `opt-a`; returns the pins.
-async fn published_head(
+pub(super) async fn published_head(
     h: &Harness,
     kind: HeadKind,
     id: &str,

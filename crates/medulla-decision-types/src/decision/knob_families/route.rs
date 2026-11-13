@@ -35,12 +35,33 @@ pub const TEAM_REUSE_MIN_RATE: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
-/// Every `route.*` knob, each `Tunable`.
+/// How close to the best score an option must lie to count as tied with it,
+/// on the probability scale, in micros (R039.2).
+pub const COST_TIE_EPSILON: KnobSpec = KnobSpec {
+    name: "routing.cost_tie_epsilon",
+    unit: "fraction",
+    default: KnobValue::DecimalMicros(20_000),
+    min: KnobValue::DecimalMicros(0),
+    max: KnobValue::DecimalMicros(200_000),
+    safety: KnobSafety::Tunable,
+};
+
+/// Every route knob, each `Tunable`.
 pub const KNOBS: &[KnobSpec] = &[
     FAST_PATH_MAX_TOKENS,
     TEAM_REUSE_MIN_SAMPLES,
     TEAM_REUSE_MIN_RATE,
+    COST_TIE_EPSILON,
 ];
+
+/// The cost tie epsilon the pinned policy sets, in micros: the knob or its
+/// default.
+pub fn cost_tie_epsilon_micros(policy: &crate::decision::policy::DecisionPolicy) -> i64 {
+    match policy.knob(&COST_TIE_EPSILON) {
+        KnobValue::DecimalMicros(micros) => micros.clamp(0, 200_000),
+        _ => 20_000,
+    }
+}
 
 /// The fast-path bound the pinned policy sets: the knob, or its default.
 pub fn fast_path_max_tokens(policy: &crate::decision::policy::DecisionPolicy) -> i64 {
@@ -95,5 +116,17 @@ mod tests {
         assert!(!TEAM_REUSE_MIN_RATE.admits(&KnobValue::DecimalMicros(1_000_001)));
         let policy = crate::decision::policy::DecisionPolicy::engine_default();
         assert_eq!(team_reuse_floors(&policy), (5, 800_000));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R039.2
+    #[test]
+    fn the_cost_tie_epsilon_knob_is_declared_and_defaults_inside_its_bounds() {
+        assert!(COST_TIE_EPSILON.admits(&COST_TIE_EPSILON.default));
+        assert!(COST_TIE_EPSILON.admits(&KnobValue::DecimalMicros(0)));
+        assert!(COST_TIE_EPSILON.admits(&KnobValue::DecimalMicros(200_000)));
+        assert!(!COST_TIE_EPSILON.admits(&KnobValue::DecimalMicros(200_001)));
+        assert!(!COST_TIE_EPSILON.admits(&KnobValue::DecimalMicros(-1)));
+        let policy = crate::decision::policy::DecisionPolicy::engine_default();
+        assert_eq!(cost_tie_epsilon_micros(&policy), 20_000);
     }
 }

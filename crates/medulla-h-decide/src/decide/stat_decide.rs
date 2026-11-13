@@ -40,7 +40,7 @@ use super::stat_belief::{live_slices, Slices};
 use super::stat_executor::{
     execute, pinned_inputs, recorded_explanation, Executed, ExecutionContext, Pinned,
 };
-use super::stat_log::{fill_outcome_rates, LogReader};
+use super::stat_log::{fill_observed_costs, fill_outcome_rates, LogReader};
 use super::stat_nl::binding;
 use super::stat_support::{
     refusal, require_supported_question_kind, resolve_policy, ResolvedPolicy,
@@ -411,6 +411,9 @@ pub(super) fn decide_blocking(
         policy.statistical.tenant_public_features,
         &mut candidates.views,
     )?;
+    if request.question.kind == QuestionKind::Route {
+        fill_observed_costs(ctx.store, ctx.tenant_id, &mut candidates.views)?;
+    }
     // The kind's family concludes its specialized answer; the shared
     // matrix ladder is the fall-through (R001.101).
     let executed = telemetry::stage(Stage::Solve, family, tenant, || {

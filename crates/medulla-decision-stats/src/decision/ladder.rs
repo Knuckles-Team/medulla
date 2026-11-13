@@ -251,3 +251,143 @@ pub fn decide(inputs: &LadderInputs) -> RefusalResult<LadderResult> {
         _ => uncalibrated(inputs, inputs.reading),
     }
 }
+
+/// What [`cost_tie_break`] concluded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CostTie {
+    /// Fewer than two options lie within epsilon of the best score: there is
+    /// nothing to break and the scores stand.
+    NoTie,
+    /// The tie set and the option whose observed cost is lowest (equal cost
+    /// breaks on option id ascending).
+    Chosen {
+        option_id: String,
+        /// Every tie-set option with its observed cost in micro-units, in id
+        /// order.
+        tie_set: Vec<(String, u64)>,
+    },
+    /// A tie-set option has no observed cost; the first such option in id
+    /// order. Unknown is never read as zero.
+    MissingCost { option_id: String },
+}
+
+/// The ids of the options whose score lies within `epsilon_q32` of the best,
+/// in id order.
+pub fn tie_ids(scored: &[ScoredOption], epsilon_q32: i64) -> Vec<&str> {
+    let Some(best) = scored.iter().map(|option| option.score.value).max() else {
+        return Vec::new();
+    };
+    let floor = best.saturating_sub(epsilon_q32.max(0));
+    let mut tied: Vec<&str> = scored
+        .iter()
+        .filter(|option| option.score.value >= floor)
+        .map(|option| option.option_id.as_str())
+        .collect();
+    tied.sort_unstable();
+    tied
+}
+
+/// Among options whose score lies within `epsilon_q32` of the best, prefer
+/// the one with the lowest observed cost (R039.2). Scores and epsilon are
+/// `Q32` integers, so the rule is exact. `costs` maps an option id to its
+/// observed cost; an absent id has none.
+pub fn cost_tie_break(
+    scored: &[ScoredOption],
+    costs: &std::collections::BTreeMap<String, u64>,
+    epsilon_q32: i64,
+) -> CostTie {
+    let tied = tie_ids(scored, epsilon_q32);
+    if tied.len() < 2 {
+        return CostTie::NoTie;
+    }
+    let mut tie_set = Vec::with_capacity(tied.len());
+    for id in tied {
+        match costs.get(id) {
+            Some(cost) => tie_set.push((id.to_string(), *cost)),
+            None => {
+                return CostTie::MissingCost {
+                    option_id: id.to_string(),
+                }
+            }
+        }
+    }
+    // The set is in id order, so the first minimum is the lowest id.
+    let option_id = tie_set
+        .iter()
+        .min_by_key(|(_, cost)| *cost)
+        .map(|(id, _)| id.clone())
+        .expect("a tie set has at least two options");
+    CostTie::Chosen { option_id, tie_set }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue};
+    use std::collections::BTreeMap;
+
+    const ONE: i64 = 1 << 32;
+
+    fn scored(id: &str, value: i64) -> ScoredOption {
+        ScoredOption {
+            option_id: id.to_string(),
+            score: QuantisedValue {
+                scale: QuantScaleTag::Q32,
+                value,
+            },
+            probability: None,
+        }
+    }
+
+    fn costs(rows: &[(&str, u64)]) -> BTreeMap<String, u64> {
+        rows.iter().map(|(id, c)| (id.to_string(), *c)).collect()
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R039.2
+    #[test]
+    fn cost_breaks_ties_within_epsilon_only() {
+        let epsilon = ONE / 50; // 0.02
+        let options = [
+            scored("a", ONE * 9 / 10),
+            scored("b", ONE * 9 / 10 - epsilon),
+            scored("c", ONE * 9 / 10 - epsilon - 1),
+        ];
+        // c is the cheapest but lies one step outside the tie set; b is
+        // exactly on the boundary and belongs to it.
+        let all = costs(&[("a", 500), ("b", 300), ("c", 1)]);
+        let CostTie::Chosen { option_id, tie_set } = cost_tie_break(&options, &all, epsilon) else {
+            panic!("a tie of two options chooses")
+        };
+        assert_eq!(option_id, "b");
+        assert_eq!(
+            tie_set,
+            vec![("a".to_string(), 500), ("b".to_string(), 300)]
+        );
+
+        // Equal cost breaks on option id ascending.
+        let equal = costs(&[("a", 300), ("b", 300), ("c", 1)]);
+        let CostTie::Chosen { option_id, .. } = cost_tie_break(&options, &equal, epsilon) else {
+            panic!("chooses")
+        };
+        assert_eq!(option_id, "a");
+
+        // Epsilon zero ties only exact equals: the best score stands alone.
+        assert_eq!(cost_tie_break(&options, &all, 0), CostTie::NoTie);
+        // A tie-set option without a cost is named; a cost outside the set is
+        // not needed.
+        let missing = costs(&[("a", 500), ("c", 1)]);
+        assert_eq!(
+            cost_tie_break(&options, &missing, epsilon),
+            CostTie::MissingCost {
+                option_id: "b".to_string()
+            }
+        );
+        let outside = costs(&[("a", 500), ("b", 300)]);
+        assert!(matches!(
+            cost_tie_break(&options, &outside, epsilon),
+            CostTie::Chosen { .. }
+        ));
+        // No options, no tie.
+        assert_eq!(cost_tie_break(&[], &all, epsilon), CostTie::NoTie);
+    }
+}

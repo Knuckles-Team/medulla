@@ -422,6 +422,13 @@ pub(super) fn replay_with_view(
         &policy.digest,
         run_on_matrix(&matrix_inputs, &pinned, &policy, matrix)?,
     )?;
+    // The cost tie-break reads the ledger at decide time; its observed costs
+    // are sealed premises of the record, which stand in for the ledger here.
+    let replayed = if record.question.kind == QuestionKind::Route {
+        super::family::route::replay_cost_tie(record, replayed, &policy.policy)?
+    } else {
+        replayed
+    };
     let explanation = recorded_explanation(&pinned, &replayed)? == record.explanation;
     let belief =
         points(&pinned, inputs.belief_slices.as_slice(), options)? == record.belief.as_slice();

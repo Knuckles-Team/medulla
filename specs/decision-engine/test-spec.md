@@ -1267,7 +1267,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
 | `MEDULLA-DECISION-ENGINE-R033.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
 | `MEDULLA-DECISION-ENGINE-R039` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
-| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-decision-stats/src/decision/ladder.rs::cost_breaks_ties_within_epsilon_only` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-decision-stats/src/decision/ladder.rs::tests::cost_breaks_ties_within_epsilon_only` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
 | `MEDULLA-DECISION-ENGINE-R044` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
 | `MEDULLA-DECISION-ENGINE-R044.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |

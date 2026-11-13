@@ -65,7 +65,7 @@ mod research_voi;
 mod resolve_entity;
 mod retrieval_plan;
 mod reward_decomposition;
-mod route;
+pub(super) mod route;
 mod run_adjustment;
 mod runtime_quota;
 mod schema_mapping;
