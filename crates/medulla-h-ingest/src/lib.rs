@@ -47,6 +47,10 @@ pub mod repository_enrichment_worker;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod repository_index;
 
+/// Lowering of the served `SemanticEnrich` writes (MEDULLA-DECISION-ENGINE-R614.3).
+#[allow(missing_docs)]
+pub mod semantic_enrichment;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

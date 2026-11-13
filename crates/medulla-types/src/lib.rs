@@ -12,6 +12,7 @@ pub mod acl;
 pub mod row_change;
 // MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
 pub mod assistant_profile;
+pub mod semantic_enrichment;
 // MEDULLA-FINANCE-PRIMITIVES-R002.2.5 — served numeric kernel evaluation wire types.
 pub mod numeric_kernel;
 // MEDULLA-FINANCE-PRIMITIVES-R002.11 — the regime forecast, calibration gate and sizing input.

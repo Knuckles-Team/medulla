@@ -359,6 +359,14 @@ knobs! {
     /// Cap on the search nodes `ArgumentMapEvaluate` explores under `preferred`
     /// semantics (MEDULLA-FEDERATED-QUERY-R700.3).
     argument_node_budget: u64 = "argument.node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Most enhancement proposals one `RankProposals` call keeps
+    /// (MEDULLA-DECISION-ENGINE-R614.2.2).
+    enrichment_proposal_top_n: u64 = "enrichment.proposal_top_n", U64(20), [1, 200], "proposals", Tunable;
+    /// Lowest confidence, in basis points, at which `Classify` writes an assignment
+    /// (MEDULLA-DECISION-ENGINE-R614.2.3).
+    enrichment_topic_min_confidence_bp: u64 = "enrichment.topic_min_confidence_bp", U64(3_000), [0, 10_000], "basis points", Tunable;
+    /// Most nodes one `Project` call reads (MEDULLA-DECISION-ENGINE-R614.2.4).
+    enrichment_projection_batch: u64 = "enrichment.projection_batch", U64(10_000), [100, 100_000], "nodes", Tunable;
     /// Longest `instructions` text of an assistant profile
     /// (MEDULLA-DECISION-ENGINE-R656.1).
     profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
