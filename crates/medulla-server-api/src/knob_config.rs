@@ -229,6 +229,8 @@ knobs! {
     jobs_schedule_missed_lookback_s: u64 = "jobs.schedule_missed_lookback_s", U64(86_400), [60, 2_592_000], "seconds", Tunable;
     /// User tables: times an auto-commit UPDATE or DELETE retries after `TXN_CONFLICT` before `TXN_RETRY_EXHAUSTED` (MEDULLA-ENGINE-PARITY-R004.2).
     tables_occ_max_retries: u64 = "tables.occ_max_retries", U64(3), [0, 10], "retries", Tunable;
+    /// Trace critique read: most nodes one page returns (MEDULLA-DECISION-ENGINE-R133.7.3).
+    trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.

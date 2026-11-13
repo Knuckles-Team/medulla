@@ -22,6 +22,7 @@
 //! lives above this module. These are data types and their bounds.
 
 pub mod a2a_route;
+pub mod branch_fusion;
 pub mod capability_designation;
 pub mod changeset_review;
 pub mod checker_feedback;
@@ -57,18 +58,18 @@ pub mod path_success;
 pub mod planning_admission;
 pub mod policy;
 pub mod primitive;
-pub mod branch_fusion;
 pub mod program_store;
 pub mod rapid_r015;
 pub mod record;
+pub mod recursive_trace;
 pub mod replay;
 pub mod reputation;
 pub mod request;
 pub mod research_voi;
 pub mod run_adjustment;
+pub mod run_governance;
 pub mod skill_upgrade_request;
 pub mod skill_workflow;
-pub mod run_governance;
 pub mod statistical;
 pub mod task_plan;
 pub mod team_coordination;

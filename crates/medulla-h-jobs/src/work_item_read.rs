@@ -75,6 +75,12 @@ pub enum WorkItemRead {
     EffectReceipt(medulla_work_types::work_item_read::EffectRecordKey),
     /// MEDULLA-DURABLE-KERNEL-R820.3: the admitted request of one attempt.
     AdmittedRequest(medulla_work_types::work_item_read::EffectRecordKey),
+    /// MEDULLA-DECISION-ENGINE-R133.7.3: one page of a stored recursive trace.
+    /// `content_authorized` is whether the verified caller holds `trace:read-content`.
+    TraceCritique {
+        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+        content_authorized: bool,
+    },
 }
 
 impl WorkItemRead {
@@ -94,6 +100,7 @@ impl WorkItemRead {
             Self::ControlLease { tenant, .. } | Self::Gap { tenant, .. } => tenant,
             Self::Gaps(request) => &request.tenant,
             Self::EffectReceipt(key) | Self::AdmittedRequest(key) => &key.tenant,
+            Self::TraceCritique { query, .. } => &query.tenant,
         }
     }
 }
@@ -114,20 +121,35 @@ pub async fn answer(
     }
     let graph = medulla_kernel::persist::sanitize(graph_name);
     let checkpoint = matches!(&read, WorkItemRead::Checkpoint { .. });
+    let critique = matches!(&read, WorkItemRead::TraceCritique { .. });
     match serve_native(&graph, persistence, read).await {
         Ok(payload) => Response::ok(req_id, payload),
-        Err(error) if preserves_native_refusal(&error, checkpoint) => Response::err(req_id, error),
+        Err(error) if preserves_native_refusal(&error, checkpoint, critique) => {
+            Response::err(req_id, error)
+        }
         Err(error) => Response::err(req_id, format!("WorkItem read failed: {error}")),
     }
 }
 
-/// Keep checkpoint claim conflicts typed without widening other read contracts.
-fn preserves_native_refusal(error: &str, checkpoint: bool) -> bool {
+/// Keep checkpoint claim conflicts and trace critique refusals typed without
+/// widening other read contracts.
+fn preserves_native_refusal(error: &str, checkpoint: bool, critique: bool) -> bool {
     error.split_once(": ").is_some_and(|(code, _)| {
         code == medulla_types::contract::ServerErrorCode::RunAdmissionUnavailable.as_str()
             || (checkpoint && code == medulla_types::contract::EngineErrorCode::Conflict.as_str())
+            || (critique && TRACE_CRITIQUE_CODES.contains(&code))
     })
 }
+
+/// The refusal codes a `TraceCritique` read returns to the caller unchanged.
+const TRACE_CRITIQUE_CODES: &[&str] = &[
+    "TRACE_PROJECTION_UNAUTHORIZED",
+    "TRACE_STALE_CURSOR",
+    "TRACE_SNAPSHOT_MISMATCH",
+    "TRACE_INCOMPLETE_ANCESTRY",
+    "TRACE_CYCLE",
+    "INVALID_ARGUMENT",
+];
 
 async fn serve_native(
     graph: &str,
@@ -232,6 +254,19 @@ async fn serve_native(
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::GetAdmittedRequest,
             >(backend.read_admitted_request(graph, key).await?)
+        }
+        WorkItemRead::TraceCritique {
+            query,
+            content_authorized,
+        } => {
+            let page_limit =
+                u32::try_from(medulla_server_api::knob_config::knobs().trace_critique_page_limit)
+                    .map_err(|error| error.to_string())?;
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::TraceCritique>(
+                backend
+                    .read_trace_critique(graph, query, content_authorized, page_limit)
+                    .await?,
+            )
         }
     }
 }

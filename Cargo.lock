@@ -8483,6 +8483,7 @@ dependencies = [
  "hex",
  "medulla-decision-outcome-types",
  "medulla-decision-types",
+ "medulla-durable",
  "medulla-graph-algos",
  "medulla-kernel",
  "medulla-lane-store",

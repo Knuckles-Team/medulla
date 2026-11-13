@@ -58,6 +58,12 @@ $($variants)*
     GetAdmittedRequest {
         request: medulla_work_types::work_item_read::EffectRecordKey,
     },
+    /// One authorized page of a stored recursive reasoning trace with its
+    /// complete ancestry (MEDULLA-DECISION-ENGINE-R133.7.3). Scope `trace:read`;
+    /// the content fields need `trace:read-content`.
+    TraceCritique {
+        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+    },
     /// One bounded page of `tenant`'s WorkItems, optionally of one `kind`.
     /// Pages by the limit / scan / byte bounds of `AgentComponent.Search`; an
     /// empty page may still carry `next_cursor`. The cursor is opaque and

@@ -263,6 +263,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("telemetry:derive", ServiceOnly, "telemetry"),
     entry("telemetry:read", User, "graph-os"),
     entry("telemetry:write", ServiceOnly, "telemetry"),
+    entry("trace:read", User, "engine"),
+    entry("trace:read-content", User, "engine"),
     entry("timeseries:read", User, "engine"),
     entry("timeseries:write", ServiceOnly, "engine"),
     entry("txn:control", User, "engine"),

@@ -81,8 +81,10 @@ pub mod read;
 mod row_guard;
 pub mod run_owner;
 mod session_usage;
+mod trace_critique;
 pub use run_owner::read_admission as read_run_admission;
 pub use session_usage::read_session_usage;
+pub use trace_critique::read_trace_critique;
 mod sealed_record;
 mod submit;
 #[cfg(any(test, feature = "test-support"))]

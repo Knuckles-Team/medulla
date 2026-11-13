@@ -48,6 +48,10 @@ pub mod work_item;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_read;
 
+// MEDULLA-DECISION-ENGINE-R133.8: terminal commit with a run trace, through dispatch.
+#[cfg(all(test, feature = "redb"))]
+mod work_item_tests;
+
 /// MEDULLA-DURABLE-KERNEL-R077: served scheduler worker-admission reads.
 #[cfg(feature = "redb")]
 pub mod worker_admission;

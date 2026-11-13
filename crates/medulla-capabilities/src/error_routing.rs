@@ -824,6 +824,27 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REVISION_CONFLICT",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R133.8: a terminal commit whose run trace receipt is invalid.
+    (
+        "CommitWorkItemResult",
+        &[
+            "RUN_TRACE_INVALID",
+            "TRACE_INCOMPLETE_ANCESTRY",
+            "TRACE_CYCLE",
+            "TRACE_MISSING_DIGEST",
+        ],
+    ),
+    // MEDULLA-DECISION-ENGINE-R133.7.3: the typed refusals of the authorized trace critique read.
+    (
+        "TraceCritique",
+        &[
+            "TRACE_PROJECTION_UNAUTHORIZED",
+            "TRACE_STALE_CURSOR",
+            "TRACE_SNAPSHOT_MISMATCH",
+            "TRACE_INCOMPLETE_ANCESTRY",
+            "TRACE_CYCLE",
+        ],
+    ),
     ("TsListSeries", &["REPLAY_NONCE_CONSUMED"]),
     // delegation/validation.rs refuses a retired Agent Library head or entry.
     (

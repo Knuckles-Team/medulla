@@ -95,6 +95,7 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "SubmitAdmittedRequest",
             "GetEffectReceipt",
             "GetAdmittedRequest",
+            "TraceCritique",
             // graph-os MEDULLA-2: native control leases share the WorkItem kernel.
             "IssueHostStartGrant",
             "IssueControlLease",

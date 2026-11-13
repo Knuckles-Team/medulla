@@ -169,6 +169,7 @@ fn terminal_receipt_node(
         ReceiptNodeKind::ToolCall => "tool_call",
         ReceiptNodeKind::OutcomeEvaluation => "outcome_evaluation",
         ReceiptNodeKind::ModelRequest => "model_request",
+        ReceiptNodeKind::RecursiveTraceNode => "recursive_trace_node",
     };
     let payload_ref = format!("cas:receipt:{node_id}");
     let properties = serde_json::json!({

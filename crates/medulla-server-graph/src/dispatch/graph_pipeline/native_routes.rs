@@ -316,6 +316,12 @@ async fn route_work_item_reads(
         Method::GetAdmittedRequest { request } => {
             medulla_h_jobs::work_item_read::WorkItemRead::AdmittedRequest(request)
         }
+        Method::TraceCritique { query } => {
+            medulla_h_jobs::work_item_read::WorkItemRead::TraceCritique {
+                query,
+                content_authorized: ctx.verified_context.allows_action("trace:read-content"),
+            }
+        }
         Method::ListControlLeases { request } => {
             medulla_h_jobs::work_item_read::WorkItemRead::ControlLeases(request)
         }

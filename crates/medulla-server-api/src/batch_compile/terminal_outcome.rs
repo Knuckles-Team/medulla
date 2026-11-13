@@ -227,6 +227,7 @@ mod tests {
             ReceiptNodeKind::ToolCall => "tool_call",
             ReceiptNodeKind::OutcomeEvaluation => "outcome_evaluation",
             ReceiptNodeKind::ModelRequest => "model_request",
+            ReceiptNodeKind::RecursiveTraceNode => "recursive_trace_node",
         };
         let properties = serde_json::json!({
             "node_id": node_id,

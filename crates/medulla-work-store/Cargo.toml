@@ -34,6 +34,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-lane-store = { path = "../medulla-lane-store" }
+medulla-durable = { path = "../medulla-durable" }
 
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 

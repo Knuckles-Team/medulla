@@ -511,6 +511,20 @@ closed_error_codes! {
         DurableUnitRunConflict => "DURABLE_UNIT_RUN_CONFLICT",
         DurableUnitRunMissing => "DURABLE_UNIT_RUN_MISSING",
         RunTraceShapeInvalid => "RUN_TRACE_SHAPE_INVALID",
+        /// A terminal commit's run trace receipt does not decode or names another run (MEDULLA-DECISION-ENGINE-R133.8).
+        RunTraceInvalid => "RUN_TRACE_INVALID",
+        /// A recursive trace snapshot names a parent or child that is absent, an unlinked pair or a node of another snapshot (MEDULLA-DECISION-ENGINE-R133.7.1).
+        TraceIncompleteAncestry => "TRACE_INCOMPLETE_ANCESTRY",
+        /// A recursive trace snapshot's parent links form a cycle (MEDULLA-DECISION-ENGINE-R133.7.1).
+        TraceCycle => "TRACE_CYCLE",
+        /// A recursive trace node carries a digest that is not 64 lowercase hex characters (MEDULLA-DECISION-ENGINE-R133.7.1).
+        TraceMissingDigest => "TRACE_MISSING_DIGEST",
+        /// A trace critique projection names a content field the caller may not read (MEDULLA-DECISION-ENGINE-R133.7.3).
+        TraceProjectionUnauthorized => "TRACE_PROJECTION_UNAUTHORIZED",
+        /// A trace critique cursor belongs to another root, snapshot, revision or kind filter (MEDULLA-DECISION-ENGINE-R133.7.3).
+        TraceStaleCursor => "TRACE_STALE_CURSOR",
+        /// A trace critique names a snapshot id or revision the root does not carry (MEDULLA-DECISION-ENGINE-R133.7.3).
+        TraceSnapshotMismatch => "TRACE_SNAPSHOT_MISMATCH",
         StepDigestInvalid => "STEP_DIGEST_INVALID",
         StepOrderInvalid => "STEP_ORDER_INVALID",
         ValidityInverted => "VALIDITY_INVERTED",

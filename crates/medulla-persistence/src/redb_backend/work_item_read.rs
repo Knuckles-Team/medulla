@@ -323,4 +323,27 @@ impl RedbBackend {
         })
         .await
     }
+
+    /// `TraceCritique` (MEDULLA-DECISION-ENGINE-R133.7.3): one page of a stored
+    /// recursive trace, read off one snapshot for `query.tenant`.
+    pub async fn read_trace_critique(
+        &self,
+        graph_fname: &str,
+        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+        content_authorized: bool,
+        page_limit: u32,
+    ) -> Result<medulla_decision_types::decision::recursive_trace::TraceCritiquePage, String> {
+        let graph = graph_fname.to_owned();
+        self.read_snapshot(graph_fname, move |shard, crypto| {
+            medulla_work_store::redb_store::work_item::read_trace_critique(
+                shard,
+                &graph,
+                &query,
+                content_authorized,
+                page_limit,
+                crypto,
+            )
+        })
+        .await
+    }
 }

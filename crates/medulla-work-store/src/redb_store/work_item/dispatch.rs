@@ -160,6 +160,7 @@ pub fn apply_work_item_rows(
             run_completion: run_completion.as_deref(),
             batch_id,
             nodes: &mut *nodes,
+            edges: &mut *edges,
             holds: &mut *holds,
             work_item_index,
             counters: &mut *counters,

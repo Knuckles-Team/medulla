@@ -667,6 +667,25 @@
     ordered :RunEvent path plus the :RunCommit history a fork/revert branches from.""" ;
     rdfs:seeAlso prov:Activity .
 
+:CompiledProgram a owl:Class ;
+    rdfs:label "CompiledProgram" ;
+    rdfs:comment """MEDULLA-DECISION-ENGINE-R135.5 — the stored state-machine program a
+    successful run compiled into, keyed by task signature. The node `DecisionLog` writes for a
+    committed program carries this class as its typed label and links to its source :RunTrace
+    with :compiledFrom.""" ;
+    rdfs:subClassOf :Procedure .
+
+:compiledFrom a owl:ObjectProperty ;
+    rdfs:label "compiled from" ;
+    rdfs:comment "MEDULLA-DECISION-ENGINE-R135.5 — CompiledProgram -[:compiledFrom]-> the engine-recorded RunTrace it was compiled from." ;
+    rdfs:domain :CompiledProgram ;
+    rdfs:range :RunTrace .
+
+:RecursiveTraceNode a owl:Class ;
+    rdfs:label "RecursiveTraceNode" ;
+    rdfs:subClassOf :RunTrace ;
+    rdfs:comment "One code run, sub-call or intermediate of a recursive reasoning run, stored at terminal commit and linked to its parent node by :child_of (MEDULLA-DECISION-ENGINE-R133.7)." .
+
 :Agent a owl:Class ;
     rdfs:label "Agent" ;
     rdfs:comment "A synthesized or registered agent (prompt + tools + skills)." .

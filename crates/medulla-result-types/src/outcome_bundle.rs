@@ -136,6 +136,8 @@ pub enum ReceiptNodeKind {
     OutcomeEvaluation,
     /// One model request step of a run (MEDULLA-ORCH-VOCAB-R013.1).
     ModelRequest,
+    /// One node of a recursive reasoning trace (MEDULLA-DECISION-ENGINE-R133.7.2).
+    RecursiveTraceNode,
 }
 
 /// The closed kind of one [`StepRecord`] (MEDULLA-ORCH-VOCAB-R013.1).
@@ -709,6 +711,7 @@ fn receipt_kind_name(kind: ReceiptNodeKind) -> &'static str {
         ReceiptNodeKind::ToolCall => "tool_call",
         ReceiptNodeKind::OutcomeEvaluation => "outcome_evaluation",
         ReceiptNodeKind::ModelRequest => "model_request",
+        ReceiptNodeKind::RecursiveTraceNode => "recursive_trace_node",
     }
 }
 
@@ -728,6 +731,9 @@ fn receipt_node_kind_matches_bundle(bundle: &CommitOutcomeBundle, node: &Receipt
         ReceiptNodeKind::OutcomeEvaluation => node.node_id == bundle.outcome_ref,
         // A terminal bundle binds no model-request receipt refs.
         ReceiptNodeKind::ModelRequest => false,
+        // Recursive trace nodes are extra nodes of the run: the identity checks
+        // above bind them, and the snapshot check relates them to each other.
+        ReceiptNodeKind::RecursiveTraceNode => true,
     }
 }
 

@@ -104,6 +104,8 @@ method_results! {
     SubmitAdmittedRequest(SubmitAdmittedRequest) => Raw<medulla_work_types::work_item_read::EffectWriteResult>;
     GetEffectReceipt(GetEffectReceipt) => Raw<Option<medulla_work_types::work_item_read::EffectReceipt>>;
     GetAdmittedRequest(GetAdmittedRequest) => Raw<Option<medulla_work_types::work_item_read::AdmittedRequestRecord>>;
+    // MEDULLA-DECISION-ENGINE-R133.7.3: one authorized page of a stored recursive trace.
+    TraceCritique(TraceCritique) => Raw<medulla_decision_types::decision::recursive_trace::TraceCritiquePage>;
     ListWorkItems(ListWorkItems) => Raw<WorkItemPage>;
     // graph-os MEDULLA-3: `null` when the WorkItem is not visible or has no bundle.
     GetWorkItemOutcome(GetWorkItemOutcome) => Raw<Option<WorkItemOutcomeView>>;
