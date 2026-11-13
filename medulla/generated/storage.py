@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     AgentGraphRequest = _models.MethodAgentGraphParams
     AgentTemplateRequest = _models.MethodAgentTemplateParams
     CapabilityCoverageRequest = _models.MethodCapabilityCoverageParams
+    RevisionProposalListRequest = _models.MethodRevisionProposalListParams
     GuardrailEntailmentRequest = _models.MethodGuardrailEntailmentParams
     TsAppendRequest = _models.MethodTsAppendParams
     TsRangeRequest = _models.MethodTsRangeParams
@@ -765,6 +766,50 @@ def decode_guardrail_entailment(
     return decode_result(
         "GuardrailEntailment", models().GuardrailEntailmentResult, result
     )
+
+
+async def send_revision_proposal_list(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        RevisionProposalList
+    Authorization:
+        agent:decision-read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/RevisionProposalList
+    Errors:
+        - PROPOSAL_CURSOR_INVALID
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodRevisionProposalListParams.model_validate(params or {})
+    payload = await client._send(
+        "RevisionProposalList",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("RevisionProposalList", payload)
+
+
+def decode_revision_proposal_list(
+    result: OpaqueResult,
+) -> _models.RevisionProposalPage:
+    """Validate this method's result against its contract model."""
+    return decode_result("RevisionProposalList", models().RevisionProposalPage, result)
 
 
 class DecisionCommitRequest(BaseModel):

@@ -8,7 +8,7 @@ use super::SharedState;
 use medulla_decision_outcome_types::decision::promotion::{RevisionEvent, RevisionStage};
 use medulla_decision_outcome_types::decision::revision_list::{
     cursor_of, key_after_cursor, RevisionProposalListRequest, RevisionProposalPage, RevisionRow,
-    REVISION_KEY_PREFIX, REVISION_PROPOSAL_DEFAULT_LIMIT, REVISION_PROPOSAL_PAGE_SCHEMA_VERSION,
+    REVISION_KEY_PREFIX, REVISION_PROPOSAL_PAGE_SCHEMA_VERSION,
 };
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
@@ -68,10 +68,10 @@ fn list_page(
             "PROPOSAL_CURSOR_INVALID: the cursor is not a revision page cursor".to_string()
         })?),
     };
+    let ceiling = medulla_server_api::knob_config::knobs().revision_proposals_page_limit;
     let limit = request
         .limit
-        .unwrap_or(REVISION_PROPOSAL_DEFAULT_LIMIT)
-        .max(1) as usize;
+        .map_or(ceiling, |asked| u64::from(asked).clamp(1, ceiling)) as usize;
     let mut stored =
         store.decision_artifacts_page(tenant, REVISION_KEY_PREFIX, after.as_deref(), limit + 1)?;
     let more = stored.len() > limit;

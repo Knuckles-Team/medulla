@@ -1118,6 +1118,9 @@ mod harness_contrast_tests;
 // MEDULLA-DECISION-ENGINE-R803.8: adoption, contrast and lesson stored in one write, served.
 mod harness_adoption_tests;
 
+// MEDULLA-DECISION-ENGINE-R817: the revision proposal list, tenant scoped and paged.
+mod revision_proposal_tests;
+
 mod knob_tests;
 
 #[cfg(feature = "redb")]

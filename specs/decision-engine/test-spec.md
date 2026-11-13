@@ -2053,6 +2053,9 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R805.13` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_read_returns_champion_and_refuses_unknown_key` |
 | `MEDULLA-DECISION-ENGINE-R815` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::model_media_capability_and_unknown_code` |
 | `MEDULLA-DECISION-ENGINE-R816` | `tests/observation_state_served.rs::state_is_run_bound` (served); `crates/medulla-h-graph/src/graph_ops/observation_state_tests.rs::records_are_keyed_by_tenant_and_expire` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::list_is_tenant_scoped_and_paged` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::malformed_cursor_refuses_by_name` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::limit_is_held_to_the_registry_ceiling` |
 | `MEDULLA-DECISION-ENGINE-R817` | `tests/decide/test_revision_proposals_served.py::test_list_is_tenant_scoped_and_paged` |
 | `MEDULLA-DECISION-ENGINE-R818` | `crates/medulla-h-decide/src/decide/stat_tests/probe_selection_tests.rs::selects_declared_entries_and_refuses_empty` |
 | `MEDULLA-DECISION-ENGINE-R819` | `crates/medulla-h-decide/src/decide/stat_tests/serving_technique_tests.rs::verdict_follows_receipts_and_knobs` |

@@ -43,6 +43,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `held_item.min_passes` | u64 | 2 | [1, 20] | passes | Tunable | `MEDULLA_HELD_ITEM_MIN_PASSES` |
 | `measured_fact.min_cases` | u64 | 30 | [1, 100000] | cases | Tunable | `MEDULLA_MEASURED_FACT_MIN_CASES` |
 | `red_team.max_probes` | u64 | 50 | [1, 500] | probes | Tunable | `MEDULLA_RED_TEAM_MAX_PROBES` |
+| `revision_proposals.page_limit` | u64 | 100 | [1, 1000] | rows | Tunable | `MEDULLA_REVISION_PROPOSALS_PAGE_LIMIT` |
 | `identity.ownership_writer_share` | f64 | 0.10 | [0.01, 0.5] | fraction | Tunable | `MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE` |
 | `retrieval.lineage_depth` | u64 | 8 | [1, 16] | hops | Tunable | `MEDULLA_RETRIEVAL_LINEAGE_DEPTH` |
 | `drift.sample_max` | u64 | 1000 | [10, 10000] | records | Tunable | `MEDULLA_DRIFT_SAMPLE_MAX` |

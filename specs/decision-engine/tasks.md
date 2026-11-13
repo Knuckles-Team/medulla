@@ -903,7 +903,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T888 [US8] MEDULLA-DECISION-ENGINE-R814.8 Packaged prompts validate against the canonical blueprint
 - [ ] T889 [US6] MEDULLA-DECISION-ENGINE-R815 Model media capability on the model selection answer
 - [x] T890 [US8] MEDULLA-DECISION-ENGINE-R816 Store run-bound observation state
-- [ ] T891 [US4] MEDULLA-DECISION-ENGINE-R817 Serve revision proposals as a tenant-scoped list
+- [x] T891 [US4] MEDULLA-DECISION-ENGINE-R817 Serve revision proposals as a tenant-scoped list
 - [ ] T892 [US6] MEDULLA-DECISION-ENGINE-R818 Probe selection from a goal
 - [ ] T893 [US6] MEDULLA-DECISION-ENGINE-R819 Serving technique activation verdict
 - [ ] T894 [US6] MEDULLA-DECISION-ENGINE-R820 Process remediation verdict

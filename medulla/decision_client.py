@@ -937,6 +937,26 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def revision_proposal_list(
+        self, *, cursor: str | None = None, limit: int | None = None
+    ) -> Any:
+        """Send ``RevisionProposalList``: the verified tenant's revision rows.
+
+        The request carries no tenant; the engine pages the caller's own rows in
+        creation order. Pass the previous page's ``next_cursor`` to continue.
+        """
+        from medulla.generated.storage import send_revision_proposal_list
+
+        request: dict[str, Any] = {}
+        if cursor is not None:
+            request["cursor"] = cursor
+        if limit is not None:
+            request["limit"] = limit
+        result = await send_revision_proposal_list(
+            self.client, {"request": request}, self.graph
+        )
+        return _payload(result)
+
     async def claims(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:

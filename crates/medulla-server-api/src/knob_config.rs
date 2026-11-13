@@ -444,6 +444,8 @@ knobs! {
     measured_fact_min_cases: u64 = "measured_fact.min_cases", U64(30), [1, 100_000], "cases", Tunable;
     /// Red-team probe cap.
     red_team_max_probes: u64 = "red_team.max_probes", U64(50), [1, 500], "probes", Tunable;
+    /// Revision proposal list page size: the default and the ceiling a request's limit is held to (MEDULLA-DECISION-ENGINE-R817).
+    revision_proposals_page_limit: u64 = "revision_proposals.page_limit", U64(100), [1, 1_000], "rows", Tunable;
     /// Identity ownership writer share.
     identity_ownership_writer_share: f64 = "identity.ownership_writer_share", F64(0.10), [0.01, 0.5], "fraction", Tunable;
     /// Retrieval lineage depth.

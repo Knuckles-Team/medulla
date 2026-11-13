@@ -9,9 +9,6 @@ use super::promotion::RevisionStage;
 /// The schema version of [`RevisionProposalPage`].
 pub const REVISION_PROPOSAL_PAGE_SCHEMA_VERSION: u16 = 1;
 
-/// Rows one page returns when the request names no limit.
-pub const REVISION_PROPOSAL_DEFAULT_LIMIT: u32 = 100;
-
 /// The store key prefix of revision rows; a key is
 /// `revision:<created_ms, 20 digits>:<id>`, so key order is creation order.
 pub const REVISION_KEY_PREFIX: &str = "revision:";

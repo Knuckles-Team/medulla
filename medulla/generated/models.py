@@ -12662,6 +12662,13 @@ class MethodCapabilityCoverage(BaseModel):
     params: MethodCapabilityCoverageParams
 
 
+class MethodRevisionProposalList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RevisionProposalList"]
+    params: MethodRevisionProposalListParams
+
+
 class MethodGuardrailEntailment(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13840,6 +13847,7 @@ Method = Annotated[
         MethodMineCommunity,
         MethodAgentAssemble,
         MethodCapabilityCoverage,
+        MethodRevisionProposalList,
         MethodGuardrailEntailment,
         MethodDecisionCommit,
         MethodDecide,
@@ -16773,6 +16781,12 @@ class MethodResourceStatsPageParams(BaseModel):
     cursor: str | None = None
     limit: Annotated[int, Field(ge=0)] | None = None
     summary: bool | None = None
+
+
+class MethodRevisionProposalListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: RevisionProposalListRequest
 
 
 class MethodRestoreParams(BaseModel):
@@ -20880,6 +20894,36 @@ class RetrievalCandidateWire(BaseModel):
     id: str
     similarity: float
     source_reliability: float
+
+
+RevisionStage = Literal["draft", "evaluated", "published", "champion", "retired"]
+
+
+class RevisionRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_ms: Annotated[int, Field(ge=0)]
+    digest: str
+    evaluation_receipt_id: str | None = None
+    id: str
+    stage: RevisionStage
+    subject_kind: str
+    subject_ref: str
+
+
+class RevisionProposalListRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class RevisionProposalPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    rows: list[RevisionRow]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
 class RetrievalOutcome(BaseModel):
@@ -29486,6 +29530,10 @@ __all__ = [
     "CapabilityCoverageOutcomeCovered",
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
+    "RevisionProposalListRequest",
+    "RevisionProposalPage",
+    "RevisionRow",
+    "RevisionStage",
     "CapacityAcquireRequest",
     "CapacityAcquireResult",
     "CapacityAvailability",
@@ -31587,6 +31635,8 @@ __all__ = [
     "MethodRebalanceExecuteParams",
     "MethodRebalancePlan",
     "MethodRebalancePlanParams",
+    "MethodRevisionProposalList",
+    "MethodRevisionProposalListParams",
     "MethodReclaimExpiredCapacity",
     "MethodReclaimExpiredCapacityParams",
     "MethodReclaimWorkItemResources",
