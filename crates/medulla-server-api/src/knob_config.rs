@@ -201,6 +201,8 @@ knobs! {
     kvcache_cold_bytes: u64 = "kvcache.cold_bytes", U64(68_719_476_736), [67_108_864, 1_099_511_627_776], "bytes", Tunable;
     /// KV-cache admission floor: milliseconds saved per byte per hit.
     kvcache_min_worth: f64 = "kvcache.min_worth", F64(0.001), [0.0, 1000.0], "ms per byte per hit", Tunable;
+    /// KV-cache demotion score weight of graph importance: score = recency + weight * importance.
+    kvcache_importance_weight: f64 = "kvcache.importance_weight", F64(1.0), [0.0, 10.0], "ratio", Tunable;
     /// KV-cache served-answer tier capacity.
     kvcache_answer_max_bytes: u64 = "kvcache.answer_max_bytes", U64(268_435_456), [1_048_576, 68_719_476_736], "bytes", Tunable;
     /// Discover neighbour expansion: neighbours kept per hop.

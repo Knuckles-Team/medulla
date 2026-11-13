@@ -111,7 +111,11 @@ mod fork;
 /// KV-cache over the engine's live `kv.redb` (feature `kv`). See [`shared_store`].
 mod metrics;
 #[cfg(feature = "kv")]
+mod cold_namespace;
+#[cfg(feature = "kv")]
 mod shared_store;
+#[cfg(feature = "kv")]
+pub use cold_namespace::KvNamespaceColdStore;
 #[cfg(feature = "kv")]
 pub use shared_store::{
     rank_keys_by_importance, SharedKvStoreBackend, SharedKvStoreStats, StoreOutcome,

@@ -13,6 +13,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `kvcache.cold_bytes` | u64 | 68719476736 | [67108864, 1099511627776] | bytes | Tunable | `MEDULLA_KVCACHE_COLD_BYTES` |
 | `kvcache.min_worth` | f64 | 0.001 | [0, 1000] | ms per byte per hit | Tunable | `MEDULLA_KVCACHE_MIN_WORTH` |
 | `resp.incr_retry_limit` | u64 | 8 | [1, 64] | attempts | Tunable | `MEDULLA_RESP_INCR_RETRY_LIMIT` |
+| `kvcache.importance_weight` | f64 | 1 | [0, 10] | ratio | Tunable | `MEDULLA_KVCACHE_IMPORTANCE_WEIGHT` |
 | `kvcache.answer_max_bytes` | u64 | 268435456 | [1048576, 68719476736] | bytes | Tunable | `MEDULLA_KVCACHE_ANSWER_MAX_BYTES` |
 | `rule_promotion.min_agreement` | f64 | 0.8 | [0.5, 1] | fraction | Fixed | none |
 | `rule_promotion.min_overrides` | u64 | 5 | [1, 1000] | resolutions | Fixed | none |
