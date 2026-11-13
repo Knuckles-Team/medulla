@@ -545,6 +545,41 @@ impl AgentLibraryStore {
             .collect())
     }
 
+    /// The cost in micro-units of every ledger record of `run_id` in `tenant`,
+    /// priced against `catalog`; `None` when the run has no record or any of
+    /// its records has no price (MEDULLA-DECISION-ENGINE-R803.7).
+    pub fn run_cost_micro(
+        &self,
+        tenant: &str,
+        run_id: &str,
+        catalog: &PriceCatalog,
+    ) -> Result<Option<u64>, UsageRefusal> {
+        let prefix = record_prefix(tenant);
+        let mut after: Option<String> = None;
+        let mut total: Option<u64> = None;
+        loop {
+            let page =
+                self.decision_artifacts_page(tenant, &prefix, after.as_deref(), SCAN_PAGE)?;
+            let Some((last, _)) = page.last() else { break };
+            after = Some(last.clone());
+            let full = page.len() == SCAN_PAGE;
+            for (_, bytes) in &page {
+                let record = decode::<UsageRecord>(bytes)?;
+                if record.run_id != run_id {
+                    continue;
+                }
+                let Some(cost) = cost_micro(&record, catalog) else {
+                    return Ok(None);
+                };
+                total = Some(total.unwrap_or(0).saturating_add(cost));
+            }
+            if !full {
+                break;
+            }
+        }
+        Ok(total)
+    }
+
     /// The newest `n` distinct runs of `(child_id, operation)` whose newest
     /// record is at or after `since_ms`, newest first, each folded into one
     /// observation (MEDULLA-DECISION-ENGINE-R158.7). `cost_micro` is priced

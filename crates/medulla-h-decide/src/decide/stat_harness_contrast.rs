@@ -37,8 +37,10 @@ use medulla_work_types::{
     orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
 };
 
-use super::stat_executor::Executed;
+use super::run_record::read_run_trace;
+use super::stat_executor::{Executed, ExecutionContext};
 use super::stat_support::{filtered_view, invalid_parameter};
+use medulla_decision_types::decision::harness_contrast::{measure_contrast, MeasuredRun};
 
 /// The closed set of typed params a `harness_contrast` question must carry.
 const PARAM_TASK_REF: &str = "task_ref";
@@ -71,28 +73,6 @@ fn typed_param<'a>(request: &'a DecideRequest, name: &str, what: &str) -> Result
         })
 }
 
-/// The four declared delta numbers of one option, on the Q32 scale.
-fn declared_deltas(option: &DeclaredOption) -> Result<(i64, i64, i64, i64), String> {
-    let number = |key: &str| -> Result<i64, String> {
-        option
-            .numbers
-            .iter()
-            .find(|number| number.key == key)
-            .map(|number| number.q32)
-            .ok_or_else(|| {
-                invalid_parameter(format!(
-                    "a harness_contrast candidate must declare its {key} number"
-                ))
-            })
-    };
-    Ok((
-        number("retry_delta")?,
-        number("tool_selection_delta")?,
-        number("eval_score_delta")?,
-        number("cost_delta")?,
-    ))
-}
-
 /// The probe trace id one option declares, if it names one.
 fn declared_trace(option: &DeclaredOption) -> Result<Option<String>, String> {
     match option
@@ -121,12 +101,19 @@ pub(super) async fn contrast_evidence_view(
 /// `Some` only for a `HarnessContrast` question: the executed decision to
 /// seal in place of the ordinary scored ladder.
 pub(super) fn contrast_executed(
+    ctx: &ExecutionContext,
     request: &DecideRequest,
     policy: &medulla_decision_types::decision::DecisionPolicy,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Option<Result<Executed, String>> {
-    (request.question.kind == QuestionKind::HarnessContrast)
-        .then(|| compute(request, &ContrastKnobs::from_policy(policy), graph_view))
+    (request.question.kind == QuestionKind::HarnessContrast).then(|| {
+        compute(
+            ctx,
+            request,
+            &ContrastKnobs::from_policy(policy),
+            graph_view,
+        )
+    })
 }
 
 /// The stored probe run behind one trace id, when the view holds a
@@ -147,6 +134,47 @@ fn stored_contrast(
 ) -> Option<HarnessContrast> {
     view.node_row_object(node_id)
         .and_then(|props| decode_harness_contrast_write(&props).ok())
+}
+
+/// The independent `:Score` values of one run in the view, in millionths of
+/// each row's range: the rows that name the run through `scoresRun` and whose
+/// grader kind may decide a promotion (MEDULLA-DECISION-ENGINE-R803.7).
+fn run_scores_ppm(view: &medulla_graph_core::graph::GraphView, run_id: &str) -> Vec<i64> {
+    let mut rows: Vec<(&String, i64)> = Vec::new();
+    for (id, blob) in &view.node_properties {
+        let Ok(serde_json::Value::Object(props)) =
+            medulla_types::msgpack::decode_property_value(blob)
+        else {
+            continue;
+        };
+        if props.get("node_type").and_then(|v| v.as_str()) != Some("Score")
+            || props.get("scoresRun").and_then(|v| v.as_str()) != Some(run_id)
+        {
+            continue;
+        }
+        let independent = props
+            .get("grader_kind")
+            .and_then(|v| {
+                serde_json::from_value::<
+                    medulla_decision_outcome_types::decision::promotion::GraderKind,
+                >(v.clone())
+                .ok()
+            })
+            .is_some_and(|kind| kind.decides_promotion());
+        let number = |key: &str| props.get(key).and_then(|v| v.as_f64());
+        let (Some(value), Some(min), Some(max)) =
+            (number("value"), number("range_min"), number("range_max"))
+        else {
+            continue;
+        };
+        if !independent || max <= min {
+            continue;
+        }
+        let ppm = ((value - min) / (max - min) * 1_000_000.0).round() as i64;
+        rows.push((id, ppm.clamp(0, 1_000_000)));
+    }
+    rows.sort();
+    rows.into_iter().map(|(_, ppm)| ppm).collect()
 }
 
 fn refusal_text(
@@ -193,6 +221,7 @@ fn refusal_text(
 
 /// Read the evidence out of the view and run the kernel.
 fn compute(
+    ctx: &ExecutionContext,
     request: &DecideRequest,
     knobs: &ContrastKnobs,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
@@ -215,23 +244,65 @@ fn compute(
             knobs.min_candidates, knobs.max_candidates
         )));
     }
+    let baseline_trace = read_run_trace(ctx, baseline_trace_id)?;
+    let catalog = medulla_types::usage::PriceCatalog {
+        aliases: BTreeMap::new(),
+        entries: ctx
+            .store
+            .price_entries(ctx.tenant_id)
+            .map_err(|e| e.to_string())?,
+    };
     let mut declared: Vec<DeclaredCandidate> = Vec::with_capacity(options.len());
     let mut held_versions = BTreeSet::new();
     let mut probe_runs: BTreeMap<String, HarnessProbeRun> = BTreeMap::new();
     let mut stored_contrasts: BTreeMap<String, HarnessContrast> = BTreeMap::new();
     for option in options {
-        let (retry, selection, eval, cost) = declared_deltas(option)?;
         let probe_trace_id = declared_trace(option)?;
-        let deltas = HarnessContrast {
+        let candidate_trace = match &probe_trace_id {
+            Some(trace) => read_run_trace(ctx, trace)?,
+            None => None,
+        };
+        let measured = match (&baseline_trace, &candidate_trace) {
+            (Some(base), Some(cand)) => {
+                let cost = |run: &str| {
+                    ctx.store
+                        .run_cost_micro(ctx.tenant_id, run, &catalog)
+                        .map_err(|e| e.to_string())
+                };
+                let (base_scores, cand_scores) = (
+                    run_scores_ppm(view, &base.run_id),
+                    run_scores_ppm(view, &cand.run_id),
+                );
+                measure_contrast(
+                    task_ref,
+                    conditions_digest,
+                    &MeasuredRun {
+                        trace: base,
+                        scores_ppm: &base_scores,
+                        cost_micro: cost(&base.run_id)?,
+                    },
+                    &MeasuredRun {
+                        trace: cand,
+                        scores_ppm: &cand_scores,
+                        cost_micro: cost(&cand.run_id)?,
+                    },
+                )
+            }
+            _ => None,
+        };
+        // An absent trace, score or price leaves the candidate unprobed: the
+        // kernel abstains `insufficient_evidence` and no number is invented.
+        let probe_trace_id = probe_trace_id.filter(|_| measured.is_some());
+        let deltas = measured.unwrap_or_else(|| HarnessContrast {
             task_ref: task_ref.to_string(),
             conditions_digest: conditions_digest.to_string(),
             run_a_trace_id: baseline_trace_id.to_string(),
-            run_b_trace_id: probe_trace_id.clone().unwrap_or_default(),
-            retry_delta: retry,
-            tool_selection_delta: selection,
-            eval_score_delta: eval,
-            cost_delta: cost,
-        };
+            run_b_trace_id: String::new(),
+            retry_delta: 0,
+            tool_selection_delta: 0,
+            eval_score_delta: 0,
+            cost_delta: 0,
+        });
         if view
             .node_row_object(&option.option_id)
             .is_some_and(|props| is_harness_component_write(&props))

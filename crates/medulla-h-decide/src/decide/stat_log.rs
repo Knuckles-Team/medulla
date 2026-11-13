@@ -921,6 +921,7 @@ async fn serve(
                 record,
                 blocking_graph.as_deref(),
                 &principal,
+                &reader.principal,
             )
             .map(|staged| Served::RunRecord(Box::new(staged))),
             op => dispatch(

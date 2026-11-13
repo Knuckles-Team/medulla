@@ -19,10 +19,12 @@ use medulla_work_types::orchestration::improvement::{
 use medulla_work_types::orchestration::HarnessComponentKind;
 
 use super::harness_contrast_tests::{
-    contrast_request, contrast_schema, decide_contrast, graph_view, option, BASELINE, CONDITIONS,
+    commit_trace, contrast_request, contrast_schema, decide_contrast, graph_view, ledger, option,
+    trace_record, BASELINE, CONDITIONS,
 };
 use super::log_tests::log_op;
 use super::*;
+use medulla_decision_types::decision::run_governance::{StepKind, StepOutcome};
 
 const A: &str = "harness-component:prompt:a";
 const B: &str = "harness-component:prompt:b";
@@ -37,11 +39,21 @@ async fn committed_contrast(h: &Harness, a_eval: f64, b_eval: f64) -> Statistica
             None,
         )
         .unwrap();
-    let view = graph_view(&[A, B], &[BASELINE, "trace:a", "trace:b"]);
-    let options = vec![
-        option(A, "trace:a", a_eval, 1),
-        option(B, "trace:b", b_eval, 1),
-    ];
+    let view = graph_view(
+        &[A, B],
+        &[BASELINE, "trace:a", "trace:b"],
+        &[
+            (BASELINE, 0.5, "human"),
+            ("trace:a", 0.5 + a_eval, "human"),
+            ("trace:b", 0.5 + b_eval, "human"),
+        ],
+    );
+    let run = [(StepKind::ToolCall, "t", StepOutcome::Ok)];
+    for id in [BASELINE, "trace:a", "trace:b"] {
+        commit_trace(h, "decider", trace_record(id, &run)).await;
+    }
+    ledger(h, TENANT, &[(BASELINE, 0), ("trace:a", 1), ("trace:b", 1)]).await;
+    let options = vec![option(A, "trace:a"), option(B, "trace:b")];
     let record = decide_contrast(
         h,
         &contrast_request(&schema_pin, DecisionPolicyRef::Default, options),

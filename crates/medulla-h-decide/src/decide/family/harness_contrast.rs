@@ -17,11 +17,11 @@ pub struct HarnessContrastFamily;
 impl DecisionFamily for HarnessContrastFamily {
     fn conclude(
         &self,
-        _ctx: &ExecutionContext,
+        ctx: &ExecutionContext,
         request: &DecideRequest,
         policy: &DecisionPolicy,
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
-        crate::decide::stat_harness_contrast::contrast_executed(request, policy, graph_view)
+        crate::decide::stat_harness_contrast::contrast_executed(ctx, request, policy, graph_view)
     }
 }

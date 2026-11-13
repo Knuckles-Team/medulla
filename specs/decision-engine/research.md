@@ -1141,3 +1141,21 @@ therefore have their own served fixtures and are left out of the generic loop;
 the row's budget in `benches/baselines/decide.json` (p50 2 ms, p99 6 ms, peak 4 MiB).
 The group bodies build a request through `kernel_asked`, which re-kinds the served
 fixture's request with one typed body parameter.
+
+## R801.7: one usage read through `Method::Usage`
+
+The read is one more op of `UsageOp`, not a second method: the per-op policy (`is_mutation`
+false, scope `usage:read`) already routes a read and a write of the same method differently.
+The rollup's `DayRollup` moved to `medulla-types` so the result type and the store share one
+definition. The cursor is the last returned record key, hex-encoded with the `hex` crate the
+handler already depends on, and the store refuses a key outside the caller's tenant record
+family with `USAGE_BAD_CURSOR`, so a cursor never reaches another tenant's rows. A model filter
+is normalized like the ledger's own keys before it is compared.
+
+
+## R803.7 contrast measured from stored evidence
+
+- The contrast request carries trace ids only. The engine measures each delta from stored evidence: the `RunTraceRecord` committed through `DecisionLog` `RunRecord::Trace` (read through `ExecutionContext.reader`, visible only to the committing principal in the caller's tenant), the independent `:Score` rows naming the run through `scoresRun`, and the usage-ledger cost of the run (`AgentLibraryStore::run_cost_micro`).
+- A retry is a step repeating the kind and action of an earlier step that ended in an error. `tool_selection_delta` counts `ok` tool-call steps. Deltas are on the Q32 scale (counts shifted by 32, scores from millionths).
+- An absent trace, score row or price leaves the candidate unprobed, so the kernel abstains `insufficient_evidence`; no number is invented. A stored probe run with another conditions digest refuses `HARNESS_CONTRAST_TRACE_MISMATCH`.
+- The reader field on `ExecutionContext` matches the one of the step-verification branch; the two fold into one field when the train lands both.

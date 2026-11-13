@@ -108,6 +108,10 @@ pub enum RunRecord {
     BranchRetrieval {
         receipt: super::branch_fusion::BranchRetrievalReceipt,
     },
+    /// Store one finished run's trace under its run id, owned by the committing
+    /// principal (MEDULLA-DECISION-ENGINE-R803.7). Any outcome is stored: a
+    /// harness contrast measures failed runs as well as successful ones.
+    Trace { trace: RunTraceRecord },
 }
 
 /// What a committed [`RunRecord`] stored: the compiled program or the insight.
@@ -138,6 +142,23 @@ pub enum StoredRun {
     BranchRetrieval {
         receipt: super::branch_fusion::BranchRetrievalReceipt,
     },
+    /// The run trace as stored.
+    Trace { stored: StoredRunTrace },
+}
+
+/// One run trace as stored: the trace and the principal that committed it.
+/// Only that principal reads it back through the log.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StoredRunTrace {
+    pub principal: String,
+    pub trace: RunTraceRecord,
+}
+
+/// The decision-artifact key of the trace stored for `run_id`.
+pub fn run_trace_key(run_id: &str) -> String {
+    format!("run_record/trace/{run_id}")
 }
 
 /// The answer of a committed [`RunRecord`].

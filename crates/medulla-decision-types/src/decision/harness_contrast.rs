@@ -591,10 +591,96 @@ pub fn replay_record(
     Ok(())
 }
 
+/// One probe run as the engine reads it: the stored trace, the independent
+/// score rows of the run (millionths) and the ledger cost of the run
+/// (MEDULLA-DECISION-ENGINE-R803.7).
+#[derive(Debug, Clone, Copy)]
+pub struct MeasuredRun<'a> {
+    /// The stored trace of the run.
+    pub trace: &'a crate::decision::run_governance::RunTraceRecord,
+    /// The `:Score` values of the run, in millionths of the score range.
+    pub scores_ppm: &'a [i64],
+    /// The ledger cost of the run in micro-units; `None` when unpriced.
+    pub cost_micro: Option<u64>,
+}
+
+/// The retry events of a run: a step that repeats the kind and action of an
+/// earlier step that ended in an error.
+pub fn retry_count(trace: &crate::decision::run_governance::RunTraceRecord) -> i64 {
+    use crate::decision::run_governance::StepOutcome;
+    let mut failed: BTreeSet<(u8, &str)> = BTreeSet::new();
+    let mut retries = 0i64;
+    for step in trace.steps.as_slice() {
+        let key = (step.kind as u8, step.action_ref.as_str());
+        if failed.contains(&key) {
+            retries += 1;
+        }
+        if step.outcome == StepOutcome::Error {
+            failed.insert(key);
+        }
+    }
+    retries
+}
+
+/// The tool-call steps of a run that ended `ok`.
+pub fn ok_tool_calls(trace: &crate::decision::run_governance::RunTraceRecord) -> i64 {
+    use crate::decision::run_governance::{StepKind, StepOutcome};
+    i64::try_from(
+        trace
+            .steps
+            .as_slice()
+            .iter()
+            .filter(|step| step.kind == StepKind::ToolCall && step.outcome == StepOutcome::Ok)
+            .count(),
+    )
+    .unwrap_or(i64::MAX)
+}
+
+/// A signed count on the Q32 delta scale.
+fn count_q32(count: i64) -> i64 {
+    i64::try_from(i128::from(count) << 32).unwrap_or(if count < 0 { i64::MIN } else { i64::MAX })
+}
+
+fn mean_ppm(values: &[i64]) -> Option<i64> {
+    let count = i64::try_from(values.len())
+        .ok()
+        .filter(|count| *count > 0)?;
+    Some(values.iter().fold(0i64, |sum, v| sum.saturating_add(*v)) / count)
+}
+
+/// Measure the four deltas of one candidate run against the baseline from the
+/// stored evidence (MEDULLA-DECISION-ENGINE-R803.7). `None` when either run
+/// has no score row or no priced ledger cost: the caller abstains
+/// `insufficient_evidence` rather than inventing a number.
+pub fn measure_contrast(
+    task_ref: &str,
+    conditions_digest: &str,
+    baseline: &MeasuredRun<'_>,
+    candidate: &MeasuredRun<'_>,
+) -> Option<HarnessContrast> {
+    let eval_delta = mean_ppm(candidate.scores_ppm)?.saturating_sub(mean_ppm(baseline.scores_ppm)?);
+    let cost_delta = i64::try_from(candidate.cost_micro?)
+        .ok()?
+        .saturating_sub(i64::try_from(baseline.cost_micro?).ok()?);
+    Some(HarnessContrast {
+        task_ref: task_ref.to_string(),
+        conditions_digest: conditions_digest.to_string(),
+        run_a_trace_id: baseline.trace.run_id.clone(),
+        run_b_trace_id: candidate.trace.run_id.clone(),
+        retry_delta: count_q32(retry_count(candidate.trace) - retry_count(baseline.trace)),
+        tool_selection_delta: count_q32(
+            ok_tool_calls(candidate.trace) - ok_tool_calls(baseline.trace),
+        ),
+        eval_score_delta: micros_to_q32(eval_delta),
+        cost_delta: count_q32(cost_delta),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::decision::digest::statistical_record_digest;
+    use crate::decision::run_governance::{RunOutcome, StepKind, StepOutcome, TraceStep};
     use crate::decision::statistical::{
         ShortlistProvenance, StatisticalInputs, StatisticalQuestion,
     };
@@ -1218,5 +1304,79 @@ mod tests {
                 .1,
             crate::decision::knobs::KnobRefusalCode::KnobNotTunable
         );
+    }
+
+    fn trace_of(
+        run_id: &str,
+        steps: Vec<(StepKind, &str, StepOutcome)>,
+    ) -> crate::decision::run_governance::RunTraceRecord {
+        crate::decision::run_governance::RunTraceRecord {
+            schema_version: 1,
+            run_id: run_id.to_string(),
+            task_signature: "sig".to_string(),
+            model_id: "model".to_string(),
+            steps: BoundedVec::new(
+                steps
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, (kind, action, outcome))| TraceStep {
+                        index: index as u32,
+                        kind,
+                        action_ref: action.to_string(),
+                        outcome,
+                        arguments: BoundedVec::default(),
+                    })
+                    .collect(),
+            )
+            .unwrap(),
+            outcome: RunOutcome::Succeeded,
+            started_at_ms: 1,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R803.7
+    #[test]
+    fn measured_deltas_come_from_stored_evidence() {
+        let base = trace_of(
+            "a",
+            vec![
+                (StepKind::ToolCall, "t", StepOutcome::Error),
+                (StepKind::ToolCall, "t", StepOutcome::Ok),
+            ],
+        );
+        let cand = trace_of(
+            "b",
+            vec![
+                (StepKind::ToolCall, "t", StepOutcome::Ok),
+                (StepKind::ToolCall, "u", StepOutcome::Ok),
+            ],
+        );
+        assert_eq!((retry_count(&base), ok_tool_calls(&base)), (1, 1));
+        let baseline = MeasuredRun {
+            trace: &base,
+            scores_ppm: &[500_000, 700_000],
+            cost_micro: Some(300),
+        };
+        let candidate = MeasuredRun {
+            trace: &cand,
+            scores_ppm: &[800_000],
+            cost_micro: Some(200),
+        };
+        let measured = measure_contrast("task", "cond", &baseline, &candidate).unwrap();
+        assert_eq!(measured.retry_delta, -(1i64 << 32));
+        assert_eq!(measured.tool_selection_delta, 1i64 << 32);
+        assert_eq!(measured.eval_score_delta, micros_to_q32(200_000));
+        assert_eq!(measured.cost_delta, -100 * (1i64 << 32));
+        assert_eq!(measured.run_b_trace_id, "b");
+        let unscored = MeasuredRun {
+            scores_ppm: &[],
+            ..candidate
+        };
+        assert!(measure_contrast("task", "cond", &baseline, &unscored).is_none());
+        let unpriced = MeasuredRun {
+            cost_micro: None,
+            ..candidate
+        };
+        assert!(measure_contrast("task", "cond", &baseline, &unpriced).is_none());
     }
 }

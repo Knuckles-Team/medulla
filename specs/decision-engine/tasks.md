@@ -886,7 +886,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T871 [US7] MEDULLA-DECISION-ENGINE-R158.7 Latency and cost inputs and knobs for run adjustment
 - [ ] T872 [US9] MEDULLA-DECISION-ENGINE-R179.7 Harness evolution knobs
 - [ ] T873 [US9] MEDULLA-DECISION-ENGINE-R179.8 Participant memory knobs
-- [ ] T874 [US9] MEDULLA-DECISION-ENGINE-R803.7 Contrast measured from stored traces, scores and the usage ledger
+- [x] T874 [US9] MEDULLA-DECISION-ENGINE-R803.7 Contrast measured from stored traces, scores and the usage ledger
 - [ ] T875 [US9] MEDULLA-DECISION-ENGINE-R803.8 DecisionLog op HarnessAdoption stores the adoption, contrast and lesson
 - [ ] T876 [US4] MEDULLA-DECISION-ENGINE-R805.10 Model: three more revision subject kinds
 - [ ] T877 [US4] MEDULLA-DECISION-ENGINE-R805.11 Behaviour: gate rule per added subject kind

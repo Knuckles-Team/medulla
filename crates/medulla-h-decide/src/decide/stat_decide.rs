@@ -375,6 +375,7 @@ pub(super) fn decide_blocking(
     );
     let ctx = &ExecutionContext {
         matched: &matched,
+        reader: Some(&reader),
         ..*ctx
     };
     fill_outcome_rates(

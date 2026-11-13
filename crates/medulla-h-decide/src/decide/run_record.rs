@@ -19,8 +19,9 @@ use medulla_decision_types::decision::program_store::{
         max_receipt_age_ms, pattern_key, verify_preplan, ManifestReading, PrePlanTestReceipt,
         ReusablePattern,
     },
-    program_key, program_node_id, CompiledProgram, ProgramError, ProgramKnobs, RunRecord,
-    RunRecordStored, StoredRun, COMPILED_FROM, PROGRAM_NODE_CLASS, RUN_TRACE_FIELD,
+    program_key, program_node_id, run_trace_key, CompiledProgram, ProgramError, ProgramKnobs,
+    RunRecord, RunRecordStored, StoredRun, StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS,
+    RUN_TRACE_FIELD,
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::task_plan::horizon::{
@@ -171,12 +172,13 @@ pub(super) fn stage(
     record: RunRecord,
     view: Option<&GraphVectors>,
     principal: &str,
+    committer: &str,
 ) -> Result<Staged, String> {
     let source = match &record {
         RunRecord::CompiledProgram { source, .. } => Some(source.clone()),
         _ => None,
     };
-    let stored = commit(ctx, retention, record, view)?;
+    let stored = commit(ctx, retention, committer, record, view)?;
     let link = match (&stored.stored, source, view) {
         (
             StoredRun::CompiledProgram {
@@ -205,12 +207,34 @@ pub(super) fn stage(
     Ok(Staged { stored, link })
 }
 
+/// The trace stored for `run_id`, when the caller's reader may see it: the
+/// row belongs to the reader's tenant by its key and to the principal that
+/// committed it (MEDULLA-DECISION-ENGINE-R803.7). Another tenant's or
+/// principal's trace is absent.
+pub(super) fn read_run_trace(
+    ctx: &ExecutionContext,
+    run_id: &str,
+) -> Result<Option<medulla_decision_types::decision::run_governance::RunTraceRecord>, String> {
+    let Some(reader) = ctx.reader else {
+        return Ok(None);
+    };
+    let Some(bytes) = ctx
+        .store
+        .decision_artifact(&reader.tenant_id, &run_trace_key(run_id))?
+    else {
+        return Ok(None);
+    };
+    let stored: StoredRunTrace = decode_artifact(&bytes, "run trace")?;
+    Ok((stored.principal == reader.principal).then_some(stored.trace))
+}
+
 /// Commit one run record. A refused compile stores nothing; a retry with equal
 /// content answers the stored row and other content under the key refuses
 /// `IDEMPOTENCY_CONFLICT`.
 fn commit(
     ctx: &ExecutionContext,
     retention: &Retention,
+    principal: &str,
     record: RunRecord,
     view: Option<&GraphVectors>,
 ) -> Result<RunRecordStored, String> {
@@ -413,6 +437,34 @@ fn commit(
             Ok(RunRecordStored {
                 key,
                 stored: StoredRun::BranchRetrieval { receipt },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R803.7: the trace is stored once per run id
+        // under the committing principal; equal content replays, other
+        // content under the id refuses `IDEMPOTENCY_CONFLICT`.
+        RunRecord::Trace { trace } => {
+            if trace.run_id.trim().is_empty() {
+                return Err(refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "a run trace names its run".to_string(),
+                ));
+            }
+            let key = run_trace_key(&trace.run_id);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let stored = store_once(
+                ctx,
+                key.clone(),
+                "run trace",
+                StoredRunTrace {
+                    principal: principal.to_string(),
+                    trace,
+                },
+                |a, b| a == b,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::Trace { stored },
                 replayed,
             })
         }
