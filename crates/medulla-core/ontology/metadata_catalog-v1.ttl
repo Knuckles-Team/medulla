@@ -191,6 +191,12 @@ cat:steward a cat:StewardshipRole ;
 cat:custodian a cat:StewardshipRole ;
     rdfs:label "custodian" .
 
+cat:sourceRecord a owl:DatatypeProperty ;
+    rdfs:label "source record" ;
+    rdfs:comment "The id of the engine-held record a catalog node describes. The catalog links to the record and copies none of its content (MEDULLA-TYPED-PACKS-R108.2)." ;
+    rdfs:domain cat:Asset ;
+    rdfs:range xsd:string .
+
 cat:flag a owl:DatatypeProperty ;
     rdfs:label "flag" ;
     rdfs:comment "A catalog quality flag on an asset, for example owner_missing." ;
