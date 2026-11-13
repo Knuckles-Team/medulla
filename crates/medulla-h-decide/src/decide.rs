@@ -221,8 +221,9 @@ impl medulla_server_ops::api::admin::DecideApi for DecideSeam {
         tenant: Option<&str>,
         graph: &str,
         core: &medulla_graph_core::graph::GraphCore,
+        capability: Option<&str>,
     ) -> Option<std::sync::Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>> {
-        served_adapter::served_for(state, tenant, graph, core).await
+        served_adapter::served_for(state, tenant, graph, core, capability).await
     }
 
     #[cfg(feature = "query")]

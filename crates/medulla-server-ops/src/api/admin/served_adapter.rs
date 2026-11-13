@@ -54,9 +54,10 @@ pub async fn adapted_query(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     tenant: Option<&str>,
     (graph, core): (&str, &GraphCore),
+    capability: Option<&str>,
     query: Vec<f32>,
 ) -> Vec<f32> {
-    match resolve_served(state, tenant, graph, core).await {
+    match resolve_served(state, tenant, graph, core, capability).await {
         Some(adapter) => adapter.adapt(&query).unwrap_or(query),
         None => query,
     }
@@ -69,9 +70,12 @@ pub async fn resolve_served(
     tenant: Option<&str>,
     graph: &str,
     core: &GraphCore,
+    capability: Option<&str>,
 ) -> Option<Arc<ServedAdapter>> {
     let decide = super::decide_seam(state).await?;
-    decide.served_adapter(state, tenant, graph, core).await
+    decide
+        .served_adapter(state, tenant, graph, core, capability)
+        .await
 }
 
 /// Fold the active adapter's digest into a result-cache key payload.
@@ -103,7 +107,7 @@ pub async fn served_plan_adapter(
         return None;
     }
     let core = Arc::clone(&state.read().await.registry.get(graph)?.core);
-    resolve_served(state, carrier_tenant(authority), graph, &core).await
+    resolve_served(state, carrier_tenant(authority), graph, &core, None).await
 }
 
 /// `plan` with every vector rank re-aimed by `adapter` (unchanged without one).

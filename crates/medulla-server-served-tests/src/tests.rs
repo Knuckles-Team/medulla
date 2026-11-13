@@ -3308,6 +3308,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 mode: Default::default(),
                 as_of: None,
                 perspectives: None,
+                capability: None,
             },
         ),
     )
@@ -3345,6 +3346,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 mode: Default::default(),
                 as_of: None,
                 perspectives: None,
+                capability: None,
             },
         ),
     )

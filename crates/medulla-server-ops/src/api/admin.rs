@@ -44,8 +44,9 @@ pub trait DecideApi: Send + Sync {
         tenant: Option<&str>,
         graph: &str,
         core: &medulla_graph_core::graph::GraphCore,
+        capability: Option<&str>,
     ) -> Option<Arc<served_adapter::ServedAdapter>> {
-        let _ = (state, tenant, graph, core);
+        let _ = (state, tenant, graph, core, capability);
         None
     }
 

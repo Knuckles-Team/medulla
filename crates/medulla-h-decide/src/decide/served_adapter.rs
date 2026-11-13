@@ -88,7 +88,8 @@ fn load(
 }
 
 /// The adapter active for `graph` under the verified carrier tenant
-/// `tenant`. `None` when there is no carrier, the Agent Library was never
+/// `tenant`: the scope of `capability` when that scope has an active adapter
+/// (MEDULLA-DECISION-ENGINE-R174.7.6), else the graph scope. `None` when there is no carrier, the Agent Library was never
 /// opened, the store declares a space other than the adapter's, or the
 /// state cannot be read (logged; the base query is served).
 pub(crate) async fn served_for(
@@ -96,15 +97,24 @@ pub(crate) async fn served_for(
     tenant: Option<&str>,
     graph: &str,
     core: &GraphCore,
+    capability: Option<&str>,
 ) -> Option<Arc<ServedAdapter>> {
-    served_at(
-        state,
-        tenant?,
-        &super::stat_adapter::adapter_pointer(graph),
-        core,
-    )
-    .await
-    .map(|(adapter, _)| adapter)
+    use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterScope;
+    let tenant = tenant?;
+    let mut scopes = Vec::new();
+    if let Some(capability) = capability {
+        scopes.push(AdapterScope::Capability {
+            capability_iri: capability.to_string(),
+        });
+    }
+    scopes.push(AdapterScope::Graph);
+    for scope in scopes {
+        let key = super::stat_adapter::scoped_adapter_pointer(graph, &scope);
+        if let Some((adapter, _)) = served_at(state, tenant, &key, core).await {
+            return Some(adapter);
+        }
+    }
+    None
 }
 
 /// The adapter active at `pointer_key` under `tenant` and the revision of

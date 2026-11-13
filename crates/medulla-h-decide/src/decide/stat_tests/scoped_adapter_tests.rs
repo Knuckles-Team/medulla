@@ -54,6 +54,7 @@ async fn discover_applies_the_resolved_adapter() {
             &h.state,
             Some(&tenant),
             (GRAPH, core.as_ref()),
+            None,
             query.clone(),
         )
     };
@@ -66,7 +67,7 @@ async fn discover_applies_the_resolved_adapter() {
     // prefers the negatives.
     assert_eq!(served_query().await, query);
     assert!(top(&core, &served_query().await).starts_with('n'));
-    assert!(resolve_served(&h.state, Some(&tenant), GRAPH, &core)
+    assert!(resolve_served(&h.state, Some(&tenant), GRAPH, &core, None)
         .await
         .is_none());
 
@@ -81,7 +82,7 @@ async fn discover_applies_the_resolved_adapter() {
         top(&core, &adapted).starts_with('p'),
         "the adapter re-orders the rows toward what was cited"
     );
-    let resolved = resolve_served(&h.state, Some(&tenant), GRAPH, &core)
+    let resolved = resolve_served(&h.state, Some(&tenant), GRAPH, &core, None)
         .await
         .expect("the activated adapter resolves");
     assert_eq!(resolved.digest(), fitted.adapter_digest);
@@ -95,6 +96,7 @@ async fn discover_applies_the_resolved_adapter() {
             &h.state,
             Some("tenant-other"),
             (GRAPH, core.as_ref()),
+            None,
             query.clone()
         )
         .await,
@@ -731,6 +733,7 @@ async fn discovered(
             mode: Default::default(),
             as_of: None,
             perspectives: None,
+            capability: None,
         },
     )
     .await;

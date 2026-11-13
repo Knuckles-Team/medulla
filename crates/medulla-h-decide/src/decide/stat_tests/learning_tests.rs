@@ -188,7 +188,7 @@ async fn an_adapter_is_served_only_after_its_passing_receipt_and_rolls_back() {
         .unwrap()
         .tenant_scope()
         .to_string();
-    let served = || super::super::served_adapter::served_for(&h.state, Some(&tenant), GRAPH, &core);
+    let served = || super::super::served_adapter::served_for(&h.state, Some(&tenant), GRAPH, &core, None);
     let query = [1.0_f32, 0.9, 0.0];
     assert!(served().await.is_none(), "fitted is not active");
     assert!(

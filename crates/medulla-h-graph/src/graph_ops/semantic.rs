@@ -379,15 +379,28 @@ fn discover(
 /// The verified carrier tenant of a `Discover` read and the digest of the adapter that
 /// re-aims its query (MEDULLA-FEDERATED-QUERY-R089.7, MEDULLA-DECISION-ENGINE-R174.7.5).
 #[cfg(all(feature = "query", feature = "decide"))]
-async fn discover_served(ctx: &GraphOpsContext<'_>) -> (Option<String>, Option<String>) {
+async fn discover_served(
+    ctx: &GraphOpsContext<'_>,
+    capability: Option<&str>,
+) -> (Option<String>, Option<String>) {
     use medulla_server_ops::api::admin::served_adapter::{carrier_tenant, resolve_served};
     let tenant = carrier_tenant(Some(ctx.read_authority)).map(str::to_string);
-    let adapter = resolve_served(ctx.state, tenant.as_deref(), ctx.graph_name, ctx.core).await;
+    let adapter = resolve_served(
+        ctx.state,
+        tenant.as_deref(),
+        ctx.graph_name,
+        ctx.core,
+        capability,
+    )
+    .await;
     (tenant, adapter.map(|a| a.digest().to_string()))
 }
 
 #[cfg(all(feature = "query", not(feature = "decide")))]
-async fn discover_served(_ctx: &GraphOpsContext<'_>) -> (Option<String>, Option<String>) {
+async fn discover_served(
+    _ctx: &GraphOpsContext<'_>,
+    _capability: Option<&str>,
+) -> (Option<String>, Option<String>) {
     (None, None)
 }
 
@@ -513,7 +526,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             query_embedding,
             n_results,
         } => Method::SemanticSearch {
-            query_embedding: adapted_query(ctx.state, tenant, served, query_embedding).await,
+            query_embedding: adapted_query(ctx.state, tenant, served, None, query_embedding).await,
             n_results,
         },
         Method::Discover {
@@ -526,9 +539,17 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             mode,
             as_of,
             perspectives,
+            capability,
         } => Method::Discover {
             keywords,
-            query_embedding: adapted_query(ctx.state, tenant, served, query_embedding).await,
+            query_embedding: adapted_query(
+                ctx.state,
+                tenant,
+                served,
+                capability.as_deref(),
+                query_embedding,
+            )
+            .await,
             k,
             quality_policy_ref,
             hops,
@@ -536,6 +557,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             mode,
             as_of,
             perspectives,
+            capability,
         },
         other => other,
     }
@@ -587,9 +609,10 @@ pub(super) async fn try_handle_semantic_compute(
             mode,
             as_of,
             perspectives,
+            capability,
             ..
         } => {
-            let served = discover_served(&ctx).await;
+            let served = discover_served(&ctx, capability.as_deref()).await;
             handle_discover(
                 req_id,
                 core,

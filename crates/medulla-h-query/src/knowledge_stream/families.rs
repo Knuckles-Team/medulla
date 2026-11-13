@@ -255,6 +255,7 @@ async fn execute_vector(
                 mode: Default::default(),
                 as_of: None,
                 perspectives: None,
+                capability: None,
             },
         )
         .await;

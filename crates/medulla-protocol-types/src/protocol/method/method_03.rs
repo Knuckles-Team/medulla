@@ -398,6 +398,10 @@ $($variants)*
         /// with `EXPANSION_PROVIDER_UNCONFIGURED` or `EXPANSION_PROVIDER_FAILED`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         perspectives: Option<u32>,
+        /// The capability the query is made for (MEDULLA-DECISION-ENGINE-R174.7.6): the
+        /// served read resolves the capability-scope adapter first, then the graph's.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        capability: Option<String>,
     },
 
     /// CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free lexical classification gate: which
