@@ -70,6 +70,8 @@ pub mod participant;
 pub mod corpus_retrieval;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;
+// MEDULLA-FEDERATED-QUERY-R081.101.1 — the reusable compressed document state.
+pub mod retrieval_round;
 // MEDULLA-FEDERATED-QUERY-R081.103.1 — viewport query wire types.
 pub mod viewport;
 pub mod evidence_class;

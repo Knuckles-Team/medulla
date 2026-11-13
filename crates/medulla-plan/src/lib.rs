@@ -70,6 +70,9 @@ pub mod freshness_router;
 // expansion, hub ranking) and symptom diagnosis kernels.
 #[cfg(feature = "query")]
 pub mod code_context;
+// MEDULLA-FEDERATED-QUERY-R081.101: reusable compressed document state and decoding-free rerank.
+#[cfg(feature = "query")]
+pub mod doc_state;
 // MEDULLA-FEDERATED-QUERY-R081.11 / R081.3: one served retrieval round.
 #[cfg(feature = "query")]
 pub mod retrieval_round;

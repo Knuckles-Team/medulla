@@ -36,6 +36,9 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_decision_types::solve::SolveErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
+        medulla_result_types::retrieval_verdict::RetrievalErrorCode::ALL
+            .iter()
+            .any(|item| item.as_str() == code),
     ]
     .into_iter()
     .any(|known| known)

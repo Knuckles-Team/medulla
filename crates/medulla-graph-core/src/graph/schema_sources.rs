@@ -33,7 +33,7 @@ use super::LegacyIntegrityPolicy;
 /// It is deliberately independent of the dynamic
 /// 32-source tenant quota, and equal to the wire bound
 /// `medulla_catalog_types::graph_schema::MAX_CORE_GRAPH_SCHEMA_SOURCES`.
-pub const MAX_CORE_SCHEMA_SOURCES: usize = 64;
+pub const MAX_CORE_SCHEMA_SOURCES: usize = 96;
 pub const MAX_TOTAL_DYNAMIC_SCHEMA_BYTES: usize = 8 << 20;
 pub const MAX_SCHEMA_DOCUMENT_TRIPLES: usize = 100_000;
 pub const CORE_SOURCE_PREFIX: &str = "core:";

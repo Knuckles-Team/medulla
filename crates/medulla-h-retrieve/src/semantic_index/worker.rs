@@ -212,6 +212,8 @@ async fn complete_sql_source_stage(
         Ok(claim) => claim,
         Err(response) => return response,
     };
+    #[cfg(feature = "query")]
+    let committed = committed_document(&claim);
     let adapter = SemanticIndexServerAdapter::new(Arc::clone(&ctx.service));
     match adapter
         .complete_sql_source_stage(
@@ -228,12 +230,68 @@ async fn complete_sql_source_stage(
         )
         .await
     {
-        Ok(receipt) => typed_payload::<ingestion_results::SemanticIndexCompleteSqlSourceStage, _>(
-            ctx.req_id,
-            &contracts::receipt(receipt),
-        ),
+        Ok(receipt) => {
+            // The document commit stage built the state once for this content digest.
+            #[cfg(feature = "query")]
+            if let (Some(store), Some((id, text))) = (ctx.doc_state.as_ref(), committed) {
+                if let Err(error) = build_and_store_state(store, &id, &text) {
+                    return Response::err(ctx.req_id, error);
+                }
+            }
+            typed_payload::<ingestion_results::SemanticIndexCompleteSqlSourceStage, _>(
+                ctx.req_id,
+                &contracts::receipt(receipt),
+            )
+        }
         Err(response) => response,
     }
+}
+
+/// The document id and text a committed SQL source row carries, when it is a
+/// present row with UTF-8 text.
+#[cfg(feature = "query")]
+fn committed_document(claim: &AuthorizedSqlSourceClaim) -> Option<(String, String)> {
+    use medulla_ann_codes::semantic_index_service::SemanticSqlSourceValue;
+    match &claim.source.value {
+        SemanticSqlSourceValue::Present { source_bytes } => Some((
+            claim.source.source_identity.record_identity_digest.to_hex(),
+            String::from_utf8(source_bytes.clone()).ok()?,
+        )),
+        SemanticSqlSourceValue::Tombstone { .. } => None,
+    }
+}
+
+/// Build the document state with the bound encoder and store it. Runs once per
+/// content digest: a stored row of the same key is not rebuilt.
+#[cfg(feature = "query")]
+pub(super) fn build_and_store_state(
+    store: &medulla_persistence::doc_state_store::DocumentStateStore,
+    document_id: &str,
+    text: &str,
+) -> Result<(), String> {
+    use medulla_plan::doc_state::{
+        build_document_state, content_digest, segment_policy, StateEncoder,
+    };
+    let encoder = medulla_plan::doc_state::HashSegmentsEncoder;
+    let segment_bytes =
+        usize::try_from(medulla_server_api::knob_config::knobs().retrieval_state_segment_bytes)
+            .unwrap_or(usize::MAX);
+    if store
+        .get(
+            document_id,
+            &content_digest(text),
+            &encoder.revision(),
+            &segment_policy(segment_bytes),
+        )?
+        .is_some()
+    {
+        return Ok(());
+    }
+    let state = build_document_state(&encoder, document_id, text, segment_bytes)
+        .map_err(|refusal| format!("{}: {}", refusal.code, refusal.detail))?;
+    store
+        .put(&state)
+        .map_err(|error| format!("RETRIEVAL_STATE_INVALID: {error:?}"))
 }
 
 async fn claim_sql_source(

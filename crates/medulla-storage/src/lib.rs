@@ -44,10 +44,11 @@ pub use owner::blob_shared::{
     BlobSharedWrite, CasChunkRows, CasRefcountRows,
 };
 pub use owner::branch_registry::BRANCH_REGISTRY;
+pub use owner::retrieval_state::DOC_STATE;
 pub use owner::domain::{
     AgentLibraryOwner, BlobOwner, BranchRegistryOwner, ClusterHierarchyOwner, ColdTierOwner,
     GraphShardOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner, OwnerDomain,
-    PathIndexOwner, RbacOwner, RequestReplayOwner, SemanticIndexOwner, SqlOwner, StatechartOwner,
+    PathIndexOwner, RbacOwner, RequestReplayOwner, RetrievalStateOwner, SemanticIndexOwner, SqlOwner, StatechartOwner,
     TenantCatalogOwner, TimeSeriesOwner, VizProvenanceOwner,
 };
 pub use owner::grant::{AuthenticatedScopeGrant, ScopeGrantVerifier};

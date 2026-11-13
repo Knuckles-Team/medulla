@@ -220,6 +220,7 @@ fn every_owner_table_declares_its_partition_boundary() {
                             | OwnerLayout::ClusterHierarchy
                             | OwnerLayout::AgentLibrary
                             | OwnerLayout::BranchRegistry
+                            | OwnerLayout::RetrievalState
                             | OwnerLayout::GraphShard
                     ));
                 }

@@ -39,4 +39,5 @@ owner_domains!(
     GraphShardOwner => GraphShard,
     AgentLibraryOwner => AgentLibrary,
     BranchRegistryOwner => BranchRegistry,
+    RetrievalStateOwner => RetrievalState,
 );

@@ -107,6 +107,12 @@ pub const DURABLE_STORES: &[DurableStore] = &[
          carry no recovery value, so they are deliberately not restored",
     ),
     excluded(
+        "doc_state.redb",
+        "MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval document state is DERIVED from \
+         document content and recomputed by the build job, so a stale or missing row costs \
+         a recompute and nothing else; a restore rebuilds it instead of carrying it",
+    ),
+    excluded(
         "cluster_hierarchy.redb",
         "VIZ-1 Leiden cluster hierarchy is DERIVED from the graph's own nodes and \
          edges and is fully recomputable by ClusterHierarchyRefresh (measured 23.5s \

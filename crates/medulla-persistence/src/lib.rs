@@ -131,6 +131,9 @@ pub mod node_info_store;
 // never a KG node/edge write (see the `Method::ClusterHierarchyRefresh` doc for
 // why membership is deliberately NOT represented as graph edges). Redb-only, like
 // every other own-file side store in this module.
+// MEDULLA-FEDERATED-QUERY-R081.101.1: the derived retrieval document-state owner file.
+#[cfg(feature = "redb")]
+pub mod doc_state_store;
 // MEDULLA-BRANCH-MERGE-R001: the durable branch registry owner file.
 #[cfg(feature = "redb")]
 pub mod branch_registry_store;

@@ -588,6 +588,25 @@ pub fn run_round(
     ctx: &PlanCtx,
     knobs: &RoundKnobs,
 ) -> Result<RoundResult, RoundError> {
+    run_round_with_state(request, ctx, knobs, None)
+}
+
+/// What a `state` part reads: the stored-state source, the bound encoder and the
+/// segment policy the states were built under (MEDULLA-FEDERATED-QUERY-R081.101.3).
+pub struct StateRuntime<'a> {
+    pub source: &'a dyn crate::doc_state::StateSource,
+    pub encoder: &'a dyn crate::doc_state::StateEncoder,
+    pub policy_revision: String,
+}
+
+/// [`run_round`] with the state runtime the server binds. A `state` part with no
+/// runtime refuses `RETRIEVAL_STATE_STALE`: nothing is built at query time.
+pub fn run_round_with_state(
+    request: &RoundRequest,
+    ctx: &PlanCtx,
+    knobs: &RoundKnobs,
+    state_runtime: Option<&StateRuntime<'_>>,
+) -> Result<RoundResult, RoundError> {
     validate(request)?;
     let rows = execute(&request.plan, ctx).map_err(RoundError::Plan)?;
     let mut steps = Steps::default();
@@ -691,7 +710,40 @@ pub fn run_round(
             Some(verdict)
         }
     };
+    let state = match &request.state {
+        None => None,
+        Some(part) => {
+            let _span = tracing::info_span!("medulla.retrieval.state").entered();
+            let Some(runtime) = state_runtime else {
+                return Err(RetrievalRefusal::new(
+                    medulla_result_types::retrieval_verdict::RETRIEVAL_STATE_STALE,
+                    "no document state encoder is bound",
+                )
+                .into());
+            };
+            let texts: Vec<(String, Option<String>)> = rows
+                .rows()
+                .iter()
+                .map(|r| (r.id.clone(), chunk_text(ctx, &r.id)))
+                .collect();
+            let candidates: Vec<crate::doc_state::StateCandidate<'_>> = texts
+                .iter()
+                .map(|(id, text)| crate::doc_state::StateCandidate {
+                    id,
+                    text: text.as_deref(),
+                })
+                .collect();
+            Some(crate::doc_state::rerank_with_state(
+                runtime.encoder,
+                runtime.source,
+                &runtime.policy_revision,
+                &part.query,
+                &candidates,
+            )?)
+        }
+    };
     Ok(RoundResult {
+        state,
         rows: rows
             .rows()
             .iter()
@@ -753,6 +805,7 @@ mod tests {
             selection: None,
             hierarchy: None,
             stop: None,
+            state: None,
         }
     }
 

@@ -36,6 +36,24 @@ pub const RETRIEVAL_STATE_INVALID: &str = "RETRIEVAL_STATE_INVALID";
 /// A contract field is missing, out of bounds or inconsistent.
 pub const RETRIEVAL_CONTRACT_INVALID: &str = "RETRIEVAL_CONTRACT_INVALID";
 
+medulla_types::closed_error_codes! {
+    /// Every typed refusal `Method::RetrievalRound` can answer with; the engine's error
+    /// registry declares these so a refusal keeps its code on the wire.
+    pub enum RetrievalErrorCode {
+        BudgetExceeded => "RETRIEVAL_BUDGET_EXCEEDED",
+        ContractInvalid => "RETRIEVAL_CONTRACT_INVALID",
+        EmbeddingRevisionMismatch => "RETRIEVAL_EMBEDDING_REVISION_MISMATCH",
+        HierarchyInvalid => "RETRIEVAL_HIERARCHY_INVALID",
+        NormalizationInvalid => "RETRIEVAL_NORMALIZATION_INVALID",
+        PolicyUnverified => "RETRIEVAL_POLICY_UNVERIFIED",
+        RoundLimitRequired => "RETRIEVAL_ROUND_LIMIT_REQUIRED",
+        ScorePairRequired => "RETRIEVAL_SCORE_PAIR_REQUIRED",
+        SolverNotConverged => "RETRIEVAL_SOLVER_NOT_CONVERGED",
+        StateInvalid => "RETRIEVAL_STATE_INVALID",
+        StateStale => "RETRIEVAL_STATE_STALE",
+    }
+}
+
 /// A typed retrieval refusal: a stable code and the field or condition it names.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

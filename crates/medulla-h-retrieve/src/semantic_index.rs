@@ -54,6 +54,10 @@ pub(super) struct SemanticIndexContext<'a> {
     pub(super) persist_dir: &'a Path,
     pub(super) service: Arc<SemanticIndexService>,
     pub(super) now_ms: u64,
+    /// The shared retrieval document-state store, resolved for a document commit
+    /// (MEDULLA-FEDERATED-QUERY-R081.101.2).
+    #[cfg(feature = "query")]
+    pub(super) doc_state: Option<Arc<medulla_persistence::doc_state_store::DocumentStateStore>>,
 }
 
 /// Route one semantic-index operation.
@@ -73,12 +77,23 @@ pub async fn handle_semantic_index(
         Err(response) => return response,
     };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    #[cfg(feature = "query")]
+    let doc_state = if matches!(op, SemanticIndexOp::CompleteSqlSourceStage { .. })
+        && medulla_server_api::knob_config::knobs().retrieval_state_builtin_encoder
+    {
+        let guard = state.read().await;
+        medulla_persistence::doc_state_store::shared_doc_state_store(&guard).ok()
+    } else {
+        None
+    };
     let context = SemanticIndexContext {
         req_id,
         authority: &authority,
         persist_dir: &persist_dir,
         service,
         now_ms,
+        #[cfg(feature = "query")]
+        doc_state,
     };
     dispatch::handle(&context, op).await
 }

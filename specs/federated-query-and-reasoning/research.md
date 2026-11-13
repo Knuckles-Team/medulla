@@ -171,3 +171,6 @@ The pack-source read already builds `connector`, `contract_iri`, `mapping_iri`, 
 ## R040.5.1 proof boundary (ROOT-SLICE)
 
 - R040.5.1 is proven by its own L1 test `crates/medulla-ann/src/low_storage.rs::tests::manifest_round_trip_and_sum`. The served `test_selectivity_bound_and_readback` is the proof of the rollup R040.5 and of R040.5.6; the traceability table no longer binds it to R040.5.1.
+## R081.101 compressed document state
+
+Decisions. The state key is one length-prefixed string, so the owner table keeps the single `&str` key shape every other owner table uses and no tuple-key support is added. The encoder is a port with no decode or generate method, so "no decoder call" holds by construction and the result reports `decoder_calls: 0`. The engine ships one deterministic encoder (signed hashed bag of tokens, 32 wide, key and value vectors); it is bound by a bool registry knob because knobs are never strings, and a model-backed encoder is a later implementation of the same port. The build job runs at the document commit that already reads the source text (`complete_sql_source_stage`), once per content digest. Query time reads only: a missing state refuses `RETRIEVAL_STATE_STALE` instead of building. The state part rides on the existing `RetrievalRound` method as an optional part, so no new public operation is added.

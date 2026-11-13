@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const OWNER_LAYOUT_DOMAIN: &[u8] = b"eg/mutation-owner-layout/v1\0";
-const OWNER_LAYOUT_NAMES: [&str; 19] = [
+const OWNER_LAYOUT_NAMES: [&str; 20] = [
     "ledger_only",
     "rbac",
     "jobs",
@@ -26,8 +26,9 @@ const OWNER_LAYOUT_NAMES: [&str; 19] = [
     "graph_shard",
     "agent_library",
     "branch_registry",
+    "retrieval_state",
 ];
-pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 19] = [
+pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 20] = [
     DurabilityDomain::ControlPlane,
     DurabilityDomain::ControlPlane,
     DurabilityDomain::AnalyticsJob,
@@ -49,6 +50,8 @@ pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 19] = [
     // native mutation ledger rather than introducing another durability domain.
     DurabilityDomain::ControlPlane,
     // MEDULLA-BRANCH-MERGE-R001 branch registry: a ControlPlane owner file.
+    DurabilityDomain::ControlPlane,
+    // MEDULLA-FEDERATED-QUERY-R081.101.1 retrieval state: a derived ControlPlane owner file.
     DurabilityDomain::ControlPlane,
 ];
 
@@ -95,6 +98,9 @@ pub enum OwnerLayout {
     /// The durable branch registry rows (`branch_registry.redb`,
     /// MEDULLA-BRANCH-MERGE-R001).
     BranchRegistry,
+    /// The derived retrieval document-state rows (`doc_state.redb`,
+    /// MEDULLA-FEDERATED-QUERY-R081.101.1).
+    RetrievalState,
 }
 
 impl OwnerLayout {

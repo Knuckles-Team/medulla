@@ -678,6 +678,7 @@ The source-backed contracts and precise holds for the mapped FQR rows are in the
 - Preserve parent `MEDULLA-FEDERATED-QUERY-R081` and its existing clauses.
 - Define: Build a document-only state keyed by document id/content digest, encoder revision and compression-policy revision. Store ordered segment boundaries, compressed token representations and the key/value projections required by the scorer. The state must not depend on candidate order or query context. At query time, score queries against stored projections without decoding or generation. Return document digest, state revision, segment policy, score and scorer revision. Measure interaction cost against the declared full-token baseline using the same document/query set and report denominator and result digest.
 - Producer/consumer: Medulla retrieval owns document-state construction and PlanCtx reranking. Query embeddings/context remain query inputs and do not alter the reusable state. Preserve existing FQR R081 tiering and selection bounds.
+- Built: `DocumentState` in `medulla-types`, owner layout `RetrievalState` with `DocumentStateStore` in `medulla-persistence`, `StateEncoder`/`build_document_state`/`rerank_with_state` in `medulla-plan::doc_state`, the build hook in `complete_sql_source_stage`, and the optional `state` part of `RetrievalRound`.
 - Source record SHA256: `deca151180a749cb3784d9946da0de17205eca89c92e5eb4f275859e1d4be165`.
 - Keep status SPECIFIED until each named producer and consumer is separately implemented, served-tested and independently read back.
 

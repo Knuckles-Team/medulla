@@ -9,10 +9,12 @@
 use super::planning::{run_unified_off_lock_with, UnifiedRead};
 use super::*;
 use medulla_exec::exec::{LexicalOverlapReranker, Reranker, LEXICAL_OVERLAP_RERANKER};
-use medulla_plan::retrieval_round::{run_round, RoundError, RoundKnobs};
+use medulla_plan::doc_state::{segment_policy, HashSegmentsEncoder, StateSource};
+use medulla_plan::retrieval_round::{run_round_with_state, RoundError, RoundKnobs, StateRuntime};
 use medulla_protocol_types::result_contract::query::RetrievalRound;
 use medulla_result_types::retrieval_round::{RoundRequest, RoundResult};
 use medulla_result_types::retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED;
+use medulla_types::retrieval_round::DocumentState;
 
 /// The registered knobs one round reads.
 fn round_knobs() -> RoundKnobs {
@@ -78,6 +80,26 @@ fn bound_reranker() -> Option<&'static dyn Reranker> {
     }
 }
 
+/// Reads stored states from the shared durable store.
+struct StoreSource(std::sync::Arc<medulla_persistence::doc_state_store::DocumentStateStore>);
+
+impl StateSource for StoreSource {
+    fn get(
+        &self,
+        document_id: &str,
+        content_digest: &str,
+        encoder_revision: &str,
+        policy_revision: &str,
+    ) -> Result<Option<DocumentState>, String> {
+        self.0.get(
+            document_id,
+            content_digest,
+            encoder_revision,
+            policy_revision,
+        )
+    }
+}
+
 pub(crate) async fn handle_retrieval_round(
     ctx: &QueryHandlerCtx<'_>,
     request: RoundRequest,
@@ -101,6 +123,21 @@ pub(crate) async fn handle_retrieval_round(
     let scope = ReadScope::resolve(ctx.state, ctx.read_authority, ctx.graph_name).await;
     let plan = request.plan.clone();
     let knobs = round_knobs();
+    // The state part reads the shared store with the bound encoder; a build is never run here.
+    let state_source = if request.state.is_some()
+        && medulla_server_api::knob_config::knobs().retrieval_state_builtin_encoder
+    {
+        let guard = ctx.state.read().await;
+        medulla_persistence::doc_state_store::shared_doc_state_store(&guard)
+            .ok()
+            .map(StoreSource)
+    } else {
+        None
+    };
+    let policy_revision = segment_policy(
+        usize::try_from(medulla_server_api::knob_config::knobs().retrieval_state_segment_bytes)
+            .unwrap_or(usize::MAX),
+    );
     let read = UnifiedRead { snap, plan, legs };
     let outcome: Result<Result<Result<RoundResult, RoundError>, String>, Response> =
         run_unified_off_lock_with(
@@ -121,7 +158,17 @@ pub(crate) async fn handle_retrieval_round(
                 if let Some(reranker) = bound_reranker() {
                     round_ctx = round_ctx.with_reranker(reranker);
                 }
-                Ok(run_round(&request, &round_ctx, &knobs))
+                let runtime = state_source.as_ref().map(|source| StateRuntime {
+                    source,
+                    encoder: &HashSegmentsEncoder,
+                    policy_revision: policy_revision.clone(),
+                });
+                Ok(run_round_with_state(
+                    &request,
+                    &round_ctx,
+                    &knobs,
+                    runtime.as_ref(),
+                ))
             },
         )
         .await;

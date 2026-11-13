@@ -229,6 +229,52 @@ pub struct RoundRequest {
     /// Decide whether the loop stops after this round (MEDULLA-FEDERATED-QUERY-R082.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop: Option<StopRequest>,
+    /// Rerank the plan's rows against their stored compressed document state
+    /// (MEDULLA-FEDERATED-QUERY-R081.101.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<StatePart>,
+}
+
+/// The state part of a round: the query scored against stored document state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StatePart {
+    /// The query text. It is an input only: it never alters a stored state.
+    pub query: String,
+}
+
+/// One document's score against its stored state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StateScoreRow {
+    pub document_id: String,
+    /// The digest of the document content the state was built from.
+    pub document_digest: String,
+    /// The digest of the stored state itself.
+    pub state_digest: String,
+    /// The encoder revision of the state.
+    pub state_revision: String,
+    /// The segment policy of the state.
+    pub segment_policy: String,
+    /// Max over segments of the int8 dot product of the query and segment key.
+    pub score: i64,
+    pub scorer_revision: String,
+}
+
+/// What the state part returns: per-document scores and the measured interaction cost.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StateResult {
+    /// Best score first, ties by document id, so candidate order never matters.
+    pub scores: Vec<StateScoreRow>,
+    /// Interaction operations of the full-token baseline.
+    pub baseline_ops: u64,
+    /// Interaction operations scored against the stored state.
+    pub state_ops: u64,
+    /// Decoder or generation calls made: always zero.
+    pub decoder_calls: u32,
+    /// Digest over the ordered score rows.
+    pub result_digest: String,
 }
 
 /// One executed row of the plan.
@@ -263,6 +309,9 @@ pub struct RoundResult {
     pub inference: InferenceCounts,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub premises: Vec<RetrievalPremise>,
+    /// The state rerank, when the request carried a `state` part.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<StateResult>,
 }
 
 /// One completed round's answer, as the caller reports it.

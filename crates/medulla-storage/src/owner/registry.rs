@@ -445,6 +445,7 @@ macro_rules! visit_owner_tables {
                 $visit!(WRITE_BACK_RECEIPT_HEADS);
             }
             OwnerLayout::BranchRegistry => $visit!(crate::owner::branch_registry::BRANCH_REGISTRY),
+            OwnerLayout::RetrievalState => $visit!(crate::owner::retrieval_state::DOC_STATE),
         }
     }};
 }
@@ -866,6 +867,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "write_back_receipt_heads",
         ],
         OwnerLayout::BranchRegistry => &["branch_registry"],
+        OwnerLayout::RetrievalState => &["doc_state"],
     }
 }
 
@@ -965,7 +967,7 @@ where
 }
 
 /// Every layout, in registry order (the lineage module's one list).
-pub(crate) fn owner_layouts() -> [OwnerLayout; 19] {
+pub(crate) fn owner_layouts() -> [OwnerLayout; 20] {
     crate::owner::lineage::ALL_LAYOUTS
 }
 

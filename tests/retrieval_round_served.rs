@@ -84,6 +84,7 @@ fn request(sufficiency: Option<SufficiencyPart>) -> RoundRequest {
         selection: None,
         hierarchy: None,
         stop: None,
+        state: None,
     }
 }
 
@@ -1390,4 +1391,156 @@ async fn joint_selection_prefers_diverse_pair() {
         .await,
     );
     assert!(stuck.contains("RETRIEVAL_SOLVER_NOT_CONVERGED"), "{stuck}");
+}
+
+// ---- MEDULLA-FEDERATED-QUERY-R081.101: reusable compressed document state ----
+
+fn long_text(word: &str, filler: &str) -> String {
+    let mut text = String::new();
+    for _ in 0..60 {
+        text.push_str(word);
+        text.push(' ');
+        text.push_str(filler);
+        text.push(' ');
+    }
+    text
+}
+
+fn state_docs() -> Vec<(&'static str, String)> {
+    vec![
+        ("sdoc-a", long_text("apple", "pie")),
+        ("sdoc-b", long_text("ocean", "wave")),
+        ("sdoc-c", long_text("apple", "apple")),
+    ]
+}
+
+async fn seed_state_docs(
+    state: &Arc<RwLock<ServerState>>,
+    docs: &[(&'static str, String)],
+    build: bool,
+) {
+    for (i, (id, text)) in docs.iter().enumerate() {
+        let response = test_support::dispatch(
+            state,
+            test_support::commons_request(
+                SECRET,
+                i as u64 + 1,
+                Method::AddNode {
+                    node_id: (*id).to_string(),
+                    properties_msgpack: test_support::json_bytes(
+                        serde_json::json!({ "type": "Doc", "text": text }),
+                    ),
+                },
+            ),
+        )
+        .await;
+        assert!(
+            response.error.is_none(),
+            "seed failed: {:?} {:?}",
+            response.error,
+            response.error_detail
+        );
+    }
+    if build {
+        // The build job (run once per content digest at the document commit) fills the store.
+        let guard = state.read().await;
+        let store = medulla_persistence::doc_state_store::shared_doc_state_store(&guard)
+            .expect("state store opens under the persist dir");
+        for (id, text) in docs {
+            let built = medulla_plan::doc_state::build_document_state(
+                &medulla_plan::doc_state::HashSegmentsEncoder,
+                id,
+                text,
+                512,
+            )
+            .expect("state builds");
+            store.put(&built).expect("state stores");
+        }
+    }
+}
+
+fn state_request(query: &str) -> RoundRequest {
+    let mut round = request(None);
+    round.state = Some(medulla_result_types::retrieval_round::StatePart {
+        query: query.to_string(),
+    });
+    round
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.101
+// spec: MEDULLA-FEDERATED-QUERY-R081.101.3
+#[tokio::test(flavor = "multi_thread")]
+async fn compressed_state_rerank_is_order_independent() {
+    let docs = state_docs();
+    let forward = state();
+    seed_state_docs(&forward, &docs, true).await;
+    let mut reversed_docs = docs.clone();
+    reversed_docs.reverse();
+    let reversed = state();
+    seed_state_docs(&reversed, &reversed_docs, true).await;
+
+    let apple = decode(round_as(&forward, None, state_request("apple pie apple")).await);
+    let ocean = decode(round_as(&forward, None, state_request("ocean wave")).await);
+    let apple_rev = decode(round_as(&reversed, None, state_request("apple pie apple")).await);
+    let apple = apple.state.expect("state part answered");
+    let ocean = ocean.state.expect("state part answered");
+    let apple_rev = apple_rev.state.expect("state part answered");
+
+    // The state is identical under two query contexts and under reversed candidate order.
+    let digests = |r: &medulla_result_types::retrieval_round::StateResult| {
+        let mut d: Vec<_> = r
+            .scores
+            .iter()
+            .map(|s| (s.document_id.clone(), s.state_digest.clone()))
+            .collect();
+        d.sort();
+        d
+    };
+    assert_eq!(digests(&apple), digests(&ocean));
+    assert_eq!(digests(&apple), digests(&apple_rev));
+    // Scores stay aligned per document under reversed candidate order.
+    assert_eq!(apple.scores, apple_rev.scores);
+    assert_eq!(apple.result_digest, apple_rev.result_digest);
+    // The two query contexts rank differently, from the same stored state.
+    assert_eq!(ocean.scores[0].document_id, "sdoc-b");
+    assert_ne!(apple.scores[0].document_id, "sdoc-b");
+    // No decoder or generation call, and the state costs less than the full-token baseline.
+    assert_eq!(apple.decoder_calls, 0);
+    assert!(apple.state_ops > 0 && apple.state_ops < apple.baseline_ops);
+    // Revisions are reported with each score.
+    assert!(apple.scores.iter().all(|s| {
+        s.state_revision == medulla_plan::doc_state::BUILTIN_ENCODER_REVISION
+            && s.segment_policy == "segment_bytes=512"
+            && s.scorer_revision == medulla_plan::doc_state::SCORER_REVISION
+    }));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.101.3
+#[tokio::test(flavor = "multi_thread")]
+async fn missing_state_refuses_stale_and_writes_nothing() {
+    let docs = state_docs();
+    let state = state();
+    seed_state_docs(&state, &docs, false).await;
+    let response = round_as(&state, None, state_request("apple")).await;
+    let error = response.error.expect("a missing state refuses");
+    assert!(
+        error.contains("RETRIEVAL_STATE_STALE"),
+        "{error} {:?}",
+        response.error_detail
+    );
+    // The refused read built nothing: the store still has no row for any document.
+    let guard = state.read().await;
+    let store = medulla_persistence::doc_state_store::shared_doc_state_store(&guard).unwrap();
+    for (id, text) in &docs {
+        let digest = medulla_plan::doc_state::content_digest(text);
+        assert!(store
+            .get(
+                id,
+                &digest,
+                medulla_plan::doc_state::BUILTIN_ENCODER_REVISION,
+                "segment_bytes=512"
+            )
+            .unwrap()
+            .is_none());
+    }
 }
