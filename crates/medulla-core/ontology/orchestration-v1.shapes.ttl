@@ -17,6 +17,14 @@
     [ sh:path :summarizationCount ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :turnCount ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :toolCallCount ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :uncachedInputTokens ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :cachedInputTokens ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :outputTokens ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :reasoningOutputTokens ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :completedAtMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :projectId ; sh:datatype xsd:string ; sh:minLength 1 ],
+    [ sh:path :agentId ; sh:datatype xsd:string ; sh:minLength 1 ],
+    [ sh:path :accountingRevision ; sh:datatype xsd:string ; sh:minLength 1 ],
     [ sh:path :costUsd ; sh:datatype xsd:decimal ; sh:minInclusive 0 ] .
 
 # The completed-trace requirement will separately require absent fields.

@@ -130,13 +130,23 @@ pub struct PriceEntry {
     pub unit_price: u64,
 }
 
-/// A versioned declarative price table, `{resource_kind -> unit, unit_price}`.
+/// A versioned declarative price table, `{resource_kind -> unit, unit_price}`,
+/// and the model token rates the `run_trace_usage` statement prices with
+/// (MEDULLA-ORCH-VOCAB-R010.101).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PriceTable {
+    /// The table record's schema version.
+    #[serde(default)]
+    pub schema_version: u16,
     pub version: u32,
     pub currency: String,
     pub minor_unit_exponent: u8,
+    #[serde(default)]
     pub prices: BTreeMap<ResourceKind, PriceEntry>,
+    /// Model token rates: an integer minor-unit numerator per one million tokens,
+    /// keyed by model and token category.
+    #[serde(default)]
+    pub token_rates: BTreeMap<String, BTreeMap<crate::harness_metrics::UsageCategory, u64>>,
 }
 
 impl PriceTable {
@@ -165,7 +175,8 @@ impl PriceTable {
     }
 }
 
-fn round_half_even_div(numerator: u128, denominator: u128) -> u128 {
+/// `numerator / denominator` rounded half to even, once.
+pub fn round_half_even_div(numerator: u128, denominator: u128) -> u128 {
     let quotient = numerator / denominator;
     let twice_rem = (numerator % denominator) * 2;
     if twice_rem > denominator || (twice_rem == denominator && quotient % 2 == 1) {

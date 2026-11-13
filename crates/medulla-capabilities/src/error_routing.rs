@@ -1178,7 +1178,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     ("RbacAdmin", &["IDENTITY_STORE_NAMESPACE"]),
     // MEDULLA-FEDERATED-QUERY-R720.5: the DECAY and CLUSTER BY EMBEDDING stage refusals.
-    ("Uql", &["UQL_E_CLUSTER_NO_VECTOR", "UQL_E_DECAY_NO_TIME"]),
+    (
+        "Uql",
+        &[
+            "UQL_E_CLUSTER_NO_VECTOR",
+            "UQL_E_DECAY_NO_TIME",
+            "USAGE_CURSOR_INVALID",
+            "USAGE_CURSOR_STALE",
+            "USAGE_QUERY_INVALID",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R733: the GROUP stage refusals.
     ("Uql", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),
     ("UnifiedQuery", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),

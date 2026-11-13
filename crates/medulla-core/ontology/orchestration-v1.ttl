@@ -778,6 +778,59 @@
     rdfs:domain :RunTrace ;
     rdfs:range xsd:decimal .
 
+# MEDULLA-ORCH-VOCAB-R010.101: usage attribution and the four disjoint token
+# counters of an immutable trace, read by the `run_trace_usage` statement.
+:projectId a owl:DatatypeProperty ;
+    rdfs:label "projectId" ;
+    rdfs:comment "The project a run is attributed to (MEDULLA-ORCH-VOCAB-R010.101)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
+:agentId a owl:DatatypeProperty ;
+    rdfs:label "agentId" ;
+    rdfs:comment "The agent a run is attributed to (MEDULLA-ORCH-VOCAB-R010.101)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
+:accountingRevision a owl:DatatypeProperty ;
+    rdfs:label "accountingRevision" ;
+    rdfs:comment "The usage accounting revision a run's counters were measured under (MEDULLA-ORCH-VOCAB-R010.101)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
+:completedAtMs a owl:DatatypeProperty ;
+    rdfs:label "completedAtMs" ;
+    rdfs:comment "When a run completed, in Unix milliseconds; the usage window reads it (MEDULLA-ORCH-VOCAB-R010.101)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:uncachedInputTokens a owl:DatatypeProperty ;
+    rdfs:label "uncachedInputTokens" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:cachedInputTokens a owl:DatatypeProperty ;
+    rdfs:label "cachedInputTokens" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:outputTokens a owl:DatatypeProperty ;
+    rdfs:label "outputTokens" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:reasoningOutputTokens a owl:DatatypeProperty ;
+    rdfs:label "reasoningOutputTokens" ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:integer .
+
+:PriceTable a owl:Class ;
+    rdfs:label "PriceTable" ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:comment """One governed revision of model token prices (MEDULLA-ORCH-VOCAB-R010.101): an
+    integer minor-unit numerator per one million tokens, keyed by model and token category, in one
+    currency. A revision is a GovernedSet revision (MEDULLA-DECISION-ENGINE-R805.10).""" .
+
 # MEDULLA-ORCH-VOCAB-R013.5: each stored step of a trace carries its order and
 # the verified principal that wrote it; steps stay properties of the trace node.
 :stepIndex a owl:DatatypeProperty ;

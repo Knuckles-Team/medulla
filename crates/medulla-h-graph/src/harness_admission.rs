@@ -686,14 +686,24 @@ const TERMINATION_REASONS: [&str; 5] = [
     "error",
 ];
 /// The non-negative integer counters of `RunTraceCounterShape`.
-const TRACE_COUNTERS: [&str; 6] = [
+const TRACE_COUNTERS: &[&str] = &[
     "peakContextTokens",
     "contextBudgetTokens",
     "elisionCount",
     "summarizationCount",
     "turnCount",
     "toolCallCount",
+    // MEDULLA-ORCH-VOCAB-R010.101: the four disjoint token counters and the
+    // completion time the usage window reads.
+    "uncachedInputTokens",
+    "cachedInputTokens",
+    "outputTokens",
+    "reasoningOutputTokens",
+    "completedAtMs",
 ];
+
+/// MEDULLA-ORCH-VOCAB-R010.101: the usage attribution of a trace is text.
+const TRACE_ATTRIBUTION: &[&str] = &["projectId", "agentId", "accountingRevision"];
 
 /// The first violated run-trace shape of `orchestration-v1.shapes.ttl`, if any.
 /// Optional measurements stay absent; a recorded zero is valid.
@@ -709,8 +719,18 @@ fn run_trace_violation(props: &Props) -> Option<(&'static str, String)> {
             ));
         }
     }
+    for key in TRACE_ATTRIBUTION {
+        if let Some(value) = props.get(*key) {
+            if !value.as_str().is_some_and(|text| !text.trim().is_empty()) {
+                return Some((
+                    "RunTraceCounterShape",
+                    format!("{key} must be a non-empty string"),
+                ));
+            }
+        }
+    }
     for counter in TRACE_COUNTERS {
-        if let Some(value) = props.get(counter) {
+        if let Some(value) = props.get(*counter) {
             if value.as_u64().is_none() {
                 return Some((
                     "RunTraceCounterShape",

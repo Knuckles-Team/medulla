@@ -95,7 +95,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
 - [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
 - [ ] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join evolution proposals to measured source traces as a read view
-- [ ] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
+- [x] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
 - [ ] T094 [US7] MEDULLA-ORCH-VOCAB-R616.3 Wiring: synthesis proposes and assemble decides
 - [ ] T095 [US7] MEDULLA-ORCH-VOCAB-R616.4 Refusal: a draft that fails its shape
 - [ ] T096 [US7] MEDULLA-ORCH-VOCAB-R616.5 Evidence: capabilities, budget and shape result

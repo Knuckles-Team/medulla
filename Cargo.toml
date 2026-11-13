@@ -2241,6 +2241,13 @@ required-features = ["full"]
 # dispatch boundary; the nightly workflow checks its report against
 # `benches/baselines/decide.json` (MEDULLA-DECISION-ENGINE-R178.2,
 # MEDULLA-DECISION-ENGINE-R178.3).
+# Nightly usage totals (MEDULLA-ORCH-VOCAB-R010.101): 1,000,000 traces, 32 readers,
+# 1,000 queries, p95 within 500 ms.
+[[bench]]
+name = "usage_totals"
+path = "benches/usage_totals.rs"
+harness = false
+
 [[bench]]
 name = "decide_budgets"
 path = "benches/decide_budgets.rs"

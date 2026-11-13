@@ -690,6 +690,8 @@ knobs! {
     view_shadow_tick_ms: u64 = "view.shadow_tick_ms", U64(1_000), [100, 60_000], "ms", Tunable;
     /// Ontology naming convention mode: 0 warns, 1 refuses (MEDULLA-TYPED-PACKS-R651.2).
     ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
+    /// Orchestration statement page size: the ceiling a request's `page_size` is held to (MEDULLA-ORCH-VOCAB-R010.101).
+    orchestration_limits_page_size_max: u64 = "orchestration_limits.page_size_max", U64(100), [1, 1_000], "rows", Tunable;
     /// Fraction of the answer-name tokens a search-task clue may expose (MEDULLA-FEDERATED-QUERY-R702.2).
     search_task_expose_overlap: f64 = "search_task.expose_overlap", F64(0.5), [0.1, 1.0], "ratio", Tunable;
     /// Answer-node degree that trips the prior-knowledge shortcut detector (MEDULLA-FEDERATED-QUERY-R702.2).

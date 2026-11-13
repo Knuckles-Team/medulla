@@ -43,7 +43,9 @@ pub(crate) async fn handle_uql(
     // MEDULLA-ORCH-VOCAB-R010.1: a named harness metric statement.
     if !prepare && foreign_executions.is_empty() {
         if let Some(query) = medulla_types::harness_metrics::harness_query(&text) {
-            return Ok(super::harness_metrics::handle_harness_metric(ctx, query));
+            return Ok(super::harness_metrics::handle_harness_metric(
+                ctx, query, &params,
+            ));
         }
     }
     if prepare && !foreign_executions.is_empty() {
