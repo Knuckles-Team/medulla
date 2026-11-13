@@ -14,13 +14,10 @@ use super::{
     BacktestRun, BacktestRunDraft, BacktestValidation, MarketError, MarketResult, TradeFill,
     UniverseMember, INVALID_REQUEST, LOOK_AHEAD,
 };
-use crate::{
-    // The evaluation kernels are called directly: one implementation, no finance wrapper
-    // (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7..9).
-    medulla_numeric::evaluation::backtest::deflated_sharpe_ratio,
-    medulla_numeric::evaluation::backtest::probability_of_backtest_overfit,
-    medulla_numeric::evaluation::backtest::purged_cpcv_splits,
-    medulla_numeric::evaluation::backtest::CvSplit,
+// The evaluation kernels are called directly: one implementation, no finance wrapper
+// (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7..9).
+use medulla_numeric::evaluation::backtest::{
+    deflated_sharpe_ratio, probability_of_backtest_overfit, purged_cpcv_splits, CvSplit,
 };
 
 const RUN_DOMAIN: &str = "eg/finance/backtest-run/v1";
