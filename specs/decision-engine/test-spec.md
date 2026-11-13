@@ -949,7 +949,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R176`: `tests/decide/test_load_set_s
 
 | Model | `MEDULLA-DECISION-ENGINE-R177.1` | `crates/medulla-decision-outcome-types/src/decision/usage_guidance/tests.rs::guidance_round_trips`: A serde round trip keeps every field and rejects a step without a tool. |
 
-| Behavior | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::steps_ordered_by_outcome`: A fixture connector returns ordered steps, and success rate breaks a tie. |
+| Behavior | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::steps_ordered_by_outcome`: A fixture connector's steps are ordered, and success rate breaks a tie between steps that may swap. `tests::order_is_deterministic` (L2) shuffles the input. |
 
 | Wiring | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::served_decide_reaches_guidance`: A served `Decide` with a guidance question reaches the new arm. |
 
@@ -1673,6 +1673,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R177` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::steps_ordered_by_outcome` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::order_is_deterministic` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::other_tenant_outcomes_never_order_steps` | (planned) |

@@ -350,6 +350,8 @@ knobs! {
     failure_context_steps: u64 = "failure.context_steps", U64(2), [0, 8], "steps", Tunable;
     /// Records a failure pattern needs before it files a gap.
     failure_min_count: u64 = "failure.min_count", U64(3), [2, 1_000], "records", Tunable;
+    /// Fewest outcomes a tool needs before its success rate orders usage guidance steps (MEDULLA-DECISION-ENGINE-R177.2).
+    usage_min_trials: u64 = "usage.min_trials", U64(5), [1, 1_000], "outcomes", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.

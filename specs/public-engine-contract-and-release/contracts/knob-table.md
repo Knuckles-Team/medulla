@@ -63,6 +63,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `adapter.max_per_tenant` | u64 | 64 | [1, 1024] | adapters | Tunable | `MEDULLA_ADAPTER_MAX_PER_TENANT` |
 | `failure.context_steps` | u64 | 2 | [0, 8] | steps | Tunable | `MEDULLA_FAILURE_CONTEXT_STEPS` |
 | `failure.min_count` | u64 | 3 | [2, 1000] | records | Tunable | `MEDULLA_FAILURE_MIN_COUNT` |
+| `usage.min_trials` | u64 | 5 | [1, 1000] | outcomes | Tunable | `MEDULLA_USAGE_MIN_TRIALS` |
 
 ## Wire shape
 

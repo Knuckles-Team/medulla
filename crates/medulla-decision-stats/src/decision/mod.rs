@@ -55,6 +55,7 @@ mod targets;
 pub mod thought_search;
 pub mod track_record;
 pub mod trajectory;
+pub mod usage_guidance;
 pub mod web_fetch_selection;
 pub mod writeback;
 
