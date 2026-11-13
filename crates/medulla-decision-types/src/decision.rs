@@ -51,6 +51,7 @@ pub mod instruction_disclosure;
 pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
+pub mod memory_rewrite;
 pub mod lifecycle;
 pub mod memory_benchmark;
 pub mod numeric;

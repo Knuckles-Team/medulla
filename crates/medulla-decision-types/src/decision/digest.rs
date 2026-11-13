@@ -42,6 +42,14 @@ struct CatalogMember<'a> {
     lifecycle: AgentLibraryLifecycle,
 }
 
+/// `digest_text` without the `sha256:` prefix: 64 lowercase hex characters.
+pub fn digest_text_hex<T: Serialize>(domain: &str, value: &T) -> String {
+    let text = digest_text(domain, value);
+    text.strip_prefix(DIGEST_TEXT_PREFIX)
+        .map(str::to_string)
+        .unwrap_or(text)
+}
+
 /// The digest of one assembly record.
 ///
 /// Computed over the record with its own `record_digest` AND `record_id`

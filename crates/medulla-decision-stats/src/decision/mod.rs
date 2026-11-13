@@ -52,6 +52,7 @@ pub mod insight;
 pub mod ladder;
 pub mod legal_option_filter;
 pub mod memory_benchmark;
+pub mod memory_rewrite;
 pub mod nl;
 pub mod promotion;
 pub mod quant;
