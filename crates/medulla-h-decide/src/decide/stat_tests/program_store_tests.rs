@@ -256,6 +256,7 @@ fn lookup_in(
         now_ms: 1_000,
         server_secret: b"decide-stat-test-secret",
         matched: &[],
+        designation: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

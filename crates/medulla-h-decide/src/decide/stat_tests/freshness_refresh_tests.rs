@@ -128,6 +128,7 @@ fn ctx<'a>(h: &'a Harness, tenant: &'a str) -> ExecutionContext<'a> {
         now_ms: 1,
         server_secret: b"",
         matched: &[],
+        designation: None,
     }
 }
 
