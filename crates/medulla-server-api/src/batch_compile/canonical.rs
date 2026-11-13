@@ -209,6 +209,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CausalEstimate { .. }
         | Method::ExplainBelief { .. }
         | Method::CausalCounterfactual { .. }
+        | Method::CausalVerify { .. }
         | Method::EpistemicStatus { .. }
         | Method::ExplainEvidence { .. }
         | Method::RankByProvenance { .. }

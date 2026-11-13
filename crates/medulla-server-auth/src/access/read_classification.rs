@@ -675,6 +675,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE
     ("CausalCounterfactual", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
     ("CausalEstimate", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
+    ("CausalVerify", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
     // REASON_NATIVE_RESERVATION_READ
     ("QueryWorkItemReservation", REASON_NATIVE_RESERVATION_READ),
     ("ResourceReservationStatus", REASON_NATIVE_RESERVATION_READ),

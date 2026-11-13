@@ -379,6 +379,7 @@ fn is_evidence_causal_method(method: &Method) -> bool {
     if matches!(
         method,
         Method::CausalEstimate { .. }
+            | Method::CausalVerify { .. }
             | Method::CausalCounterfactual { .. }
             | Method::RankByProvenance { .. }
     ) {
@@ -406,6 +407,11 @@ async fn dispatch_evidence_causal_method(
             do_values,
             mode,
         } => handle_causal_estimate(ctx, variables, do_values, mode).await,
+        #[cfg(feature = "epistemic-causal")]
+        Method::CausalVerify {
+            variables,
+            observations,
+        } => handle_causal_verify(ctx, variables, observations).await,
         #[cfg(feature = "epistemic-causal")]
         Method::CausalCounterfactual {
             variables,

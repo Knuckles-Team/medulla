@@ -158,6 +158,7 @@ SEND_BY_METHOD = {
     "CatalogUsage": query.send_catalog_usage,
     "CausalCounterfactual": query.send_causal_counterfactual,
     "CausalEstimate": query.send_causal_estimate,
+    "CausalVerify": query.send_causal_verify,
     "CdcRead": messaging.send_cdc_read,
     "CepPoll": messaging.send_cep_poll,
     "CepSubscribe": messaging.send_cep_subscribe,

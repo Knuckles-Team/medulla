@@ -57,6 +57,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
 const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("ArgumentMap", &["AIF_"]),
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
+    // MEDULLA-FEDERATED-QUERY-R608.4.
+    ("CausalVerify", &["CAUSAL_"]),
     // MEDULLA-FEDERATED-QUERY-R708.4.
     ("StoredQuery", &["STORED_QUERY_"]),
     // MEDULLA-SRC-AUTH-R012.7: a sync passes through the refusal of the foreign read it consumes.

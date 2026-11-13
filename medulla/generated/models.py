@@ -2229,6 +2229,25 @@ class CausalCounterfactualResult(BaseModel):
     values: list[CausalCounterfactualResultValuesItem]
 
 
+CausalVerdictKind = Literal["consistent", "inconsistent"]
+
+
+class VariableFit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    limit: float
+    nrmse: float
+
+
+class CausalVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    per_variable: list[VariableFit]
+    verdict: CausalVerdictKind
+    worst: str | None = None
+
+
 class CausalEstimateResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15440,6 +15459,13 @@ class MethodCausalCounterfactualParams(BaseModel):
     variables: list[StructuralEquationWire]
 
 
+class MethodCausalVerifyParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    observations: list[dict[str, float]]
+    variables: list[StructuralEquationWire]
+
+
 class MethodCausalEstimateParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -22324,11 +22350,15 @@ class RuleProofNode(BaseModel):
 class RuleReasonResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    bound_code: str | None = None
+    complete: bool
     conflicts: list[str]
     consistent: bool
     facts: list[RuleFact]
     registered_rules: list[str]
+    rules_fired: Annotated[int, Field(ge=0)]
     same_as: list[RuleReasonResponseSameAsItem]
+    steps: Annotated[int, Field(ge=0)]
 
 
 class RunCheckpointPublished(BaseModel):
@@ -34043,6 +34073,8 @@ __all__ = [
     "CausalCounterfactualResult",
     "CausalCounterfactualResultValuesItem",
     "CausalEstimateResult",
+    "CausalVerdict",
+    "CausalVerdictKind",
     "CausalEstimateResultEstimatesItem",
     "CausalEstimateWire",
     "CausalEstimateWireInterval",
@@ -35440,6 +35472,7 @@ __all__ = [
     "MethodCausalCounterfactualParams",
     "MethodCausalEstimate",
     "MethodCausalEstimateParams",
+    "MethodCausalVerifyParams",
     "MethodCdcRead",
     "MethodCdcReadParams",
     "MethodCepPoll",

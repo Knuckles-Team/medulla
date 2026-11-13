@@ -256,6 +256,9 @@ closed_error_codes! {
         CalibrationFutureLeak => "CALIBRATION_FUTURE_LEAK",
         CalibrationSamplesLow => "CALIBRATION_SAMPLES_LOW",
         CalibrationPolicyInvalid => "CALIBRATION_POLICY_INVALID",
+        // MEDULLA-FEDERATED-QUERY-R608.4: causal model verification refusals.
+        CausalObservationsInsufficient => "CAUSAL_OBSERVATIONS_INSUFFICIENT",
+        CausalModelInvalid => "CAUSAL_MODEL_INVALID",
         SizingAbstain => "SIZING_ABSTAIN",
         RegimeModelNotFound => "REGIME_MODEL_NOT_FOUND",
         FinanceRecordVersionUnknown => "FINANCE_RECORD_VERSION_UNKNOWN",

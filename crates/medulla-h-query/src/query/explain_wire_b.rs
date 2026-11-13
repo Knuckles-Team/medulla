@@ -451,6 +451,34 @@ pub(crate) fn causal_estimate_wire(
     Ok(medulla_protocol_types::protocol::CausalEstimateResult { estimates: ordered })
 }
 
+/// `Method::CausalVerify` (MEDULLA-FEDERATED-QUERY-R608.3) — build the
+/// `medulla_epistemic::CausalGraph` from the request-carried `variables`, exactly as
+/// `causal_estimate_wire` does, then fit it to the observed rows with
+/// `medulla_epistemic::verify_fit` at `nrmse_max`. The kernel's typed failure maps to
+/// its registered refusal code (`CAUSAL_OBSERVATIONS_INSUFFICIENT`,
+/// `CAUSAL_MODEL_INVALID`); the code leads the message so `classify_refusal` keeps it.
+#[cfg(feature = "epistemic-causal")]
+pub(crate) fn causal_verify_wire(
+    variables: &[medulla_protocol_types::protocol::StructuralEquationWire],
+    observations: &[std::collections::BTreeMap<String, f64>],
+    nrmse_max: f64,
+) -> Result<medulla_query_types::causal_wire::CausalVerdict, String> {
+    let mut g = medulla_epistemic::CausalGraph::new();
+    for v in variables {
+        let parents: Vec<(&str, f64)> = v.parents.iter().map(|(p, w)| (p.as_str(), *w)).collect();
+        g.add_variable(v.id.clone(), parents, v.bias, v.noise_var)
+            .map_err(|why| format!("CAUSAL_MODEL_INVALID: {why}"))?;
+    }
+    medulla_epistemic::verify_fit(&g, observations, nrmse_max).map_err(|failure| match failure {
+        medulla_epistemic::CausalFitError::ObservationsInsufficient { .. } => {
+            format!("CAUSAL_OBSERVATIONS_INSUFFICIENT: {failure}")
+        }
+        medulla_epistemic::CausalFitError::ModelInvalid(_) => {
+            format!("CAUSAL_MODEL_INVALID: {failure}")
+        }
+    })
+}
+
 /// `Method::CausalCounterfactual` (EPI-P3-6) — build an `medulla_epistemic::CausalGraph`
 /// exactly as `causal_estimate_wire` does, then run Pearl's point-counterfactual
 /// recipe (`CausalGraph::counterfactual`) over the request's fully-observed

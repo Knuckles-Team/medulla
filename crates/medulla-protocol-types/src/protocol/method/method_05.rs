@@ -389,6 +389,22 @@ $($variants)*
         do_values: std::collections::BTreeMap<String, f64>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R608.3 — verify a request-carried linear structural
+    /// causal model against observed rows (`medulla_epistemic::verify_fit`, feature
+    /// `epistemic-causal`): each variable is predicted from its parents in every
+    /// row and its normalized RMSE is compared with the `reasoning.causal_nrmse_max`
+    /// knob. Returns a `CausalVerdict` via `ResultPayload::raw`. At least 8
+    /// observations are required (`CAUSAL_OBSERVATIONS_INSUFFICIENT`); a cyclic
+    /// model, a missing parent or an observation row lacking a model variable is
+    /// refused `CAUSAL_MODEL_INVALID`. A pure read over request-carried inputs: no
+    /// graph snapshot is read and nothing is written. Same build-tier fallback
+    /// convention as `CausalEstimate`.
+    #[cfg(feature = "epistemic")]
+    CausalVerify {
+        variables: Vec<StructuralEquationWire>,
+        observations: Vec<std::collections::BTreeMap<String, f64>>,
+    },
+
     /// EPI-P3-3 — provenance-aware retrieval ranking: order request-carried
     /// `candidates` by a weighted blend of similarity AND evidence quality/
     /// provenance (source reliability, corroboration, calibration precision,

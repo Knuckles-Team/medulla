@@ -639,6 +639,36 @@ pub(crate) async fn handle_causal_estimate(
     Ok(resp)
 }
 
+// MEDULLA-FEDERATED-QUERY-R608.3: verify a request-carried SCM against observed
+// rows. A pure read of request inputs plus the `reasoning.causal_nrmse_max` knob;
+// no graph snapshot, nothing written. Gated `epistemic-causal` at the handler.
+#[cfg(feature = "epistemic-causal")]
+pub(crate) async fn handle_causal_verify(
+    ctx: &QueryHandlerCtx<'_>,
+    variables: Vec<medulla_protocol_types::protocol::StructuralEquationWire>,
+    observations: Vec<std::collections::BTreeMap<String, f64>>,
+) -> Result<Response, Method> {
+    let req_id = ctx.req_id;
+    let nrmse_max = medulla_types::scheduler_config::reasoning_knobs().causal_nrmse_max;
+    let resp = match compute_off_lock(req_id, move || {
+        causal_verify_wire(&variables, &observations, nrmse_max)
+    })
+    .await
+    {
+        Ok(Ok(verdict)) => result_response::<query_results::CausalVerify>(req_id, &verdict),
+        Ok(Err(msg)) => Response::err(
+            req_id,
+            medulla_protocol_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "CausalVerify error: ",
+                &msg,
+            ),
+        ),
+        Err(resp) => resp,
+    };
+    Ok(resp)
+}
+
 // EPI-P3-6: Pearl's point-counterfactual recipe over a request-carried SCM +
 // a fully-observed `actual` unit. A pure function over request-carried
 // inputs — no graph snapshot needed. Gated `epistemic-causal` at the

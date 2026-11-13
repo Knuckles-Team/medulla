@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     ExplainEvidenceRequest = _models.MethodExplainEvidenceParams
     CausalEstimateRequest = _models.MethodCausalEstimateParams
     CausalCounterfactualRequest = _models.MethodCausalCounterfactualParams
+    CausalVerifyRequest = _models.MethodCausalVerifyParams
     RankByProvenanceRequest = _models.MethodRankByProvenanceParams
     NlQueryRequest = _models.MethodNlQueryParams
     NlQueryExplainRequest = _models.MethodNlQueryExplainParams
@@ -1295,6 +1296,46 @@ def decode_causal_counterfactual(
     )
 
 
+async def send_causal_verify(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        CausalVerify
+    Authorization:
+        reasoning:run
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CAUSAL_OBSERVATIONS_INSUFFICIENT
+        - CAUSAL_MODEL_INVALID
+    """
+    models().MethodCausalVerifyParams.model_validate(params or {})
+    payload = await client._send(
+        "CausalVerify",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("CausalVerify", payload)
+
+
+def decode_causal_verify(result: OpaqueResult) -> _models.CausalVerdict:
+    """Validate this method's result against its contract model."""
+    return decode_result("CausalVerify", models().CausalVerdict, result)
+
+
 async def send_rank_by_provenance(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -1745,6 +1786,7 @@ _REQUEST_METHODS = frozenset(
         "ExplainEvidence",
         "CausalEstimate",
         "CausalCounterfactual",
+        "CausalVerify",
         "RankByProvenance",
         "NlQuery",
         "NlQueryExplain",

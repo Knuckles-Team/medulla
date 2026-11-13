@@ -12786,6 +12786,32 @@ class QueryClient:
             )
         ).payload
 
+    async def causal_verify(
+        self,
+        variables: list[dict[str, Any]],
+        observations: list[dict[str, float]],
+    ) -> dict[str, Any]:
+        """MEDULLA-FEDERATED-QUERY-R608.3 — verify a linear structural causal model
+        against observed rows.
+
+        ``variables`` is the same shape :meth:`causal_estimate` takes; each entry of
+        ``observations`` maps every model variable to its observed value. Each
+        variable is predicted from its parents in every row; its ``nrmse`` is the
+        RMSE of the residuals over the standard deviation of the observed variable,
+        and it passes when it is at most the engine's ``reasoning.causal_nrmse_max``
+        knob.
+
+        Returns ``{"verdict": "consistent" | "inconsistent", "per_variable":
+        [{"id", "nrmse", "limit"}, ...], "worst": id | None}``. Fewer than 8
+        observations are refused ``CAUSAL_OBSERVATIONS_INSUFFICIENT``; a cyclic
+        model, a missing parent or an observation lacking a model variable is
+        refused ``CAUSAL_MODEL_INVALID``. A pure read of the request: nothing is
+        written."""
+        result = await _gen.query.send_causal_verify(
+            self._client, {"variables": variables, "observations": observations}
+        )
+        return _gen.query.decode_causal_verify(result).model_dump()
+
     async def rank_by_provenance(
         self,
         candidates: list[dict[str, Any]],

@@ -110,6 +110,8 @@ method_results! {
     #[cfg(feature = "epistemic")]
     CausalCounterfactual(CausalCounterfactual) => Raw<CausalCounterfactualResult>;
     #[cfg(feature = "epistemic")]
+    CausalVerify(CausalVerify) => Raw<medulla_query_types::causal_wire::CausalVerdict>;
+    #[cfg(feature = "epistemic")]
     RankByProvenance(RankByProvenance) => Raw<RankByProvenanceResult>;
     NlQuery(NlQuery) => Raw<Vec<(String, Option<f32>)>>;
     // The executed UQL text alongside the same `[node id, score | nil]` rows as `NlQuery`.

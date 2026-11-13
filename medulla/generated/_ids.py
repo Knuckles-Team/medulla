@@ -377,6 +377,7 @@ METHOD_IDS = frozenset(
         "ExplainEvidence",
         "CausalEstimate",
         "CausalCounterfactual",
+        "CausalVerify",
         "RankByProvenance",
         "NlQuery",
         "NlQueryExplain",
