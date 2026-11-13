@@ -87,6 +87,12 @@ pub struct SourceChangeSet {
     pub idempotency_key: String,
     pub expires_at_ms: u64,
     pub reconciliation_procedure: String,
+    /// The engine record class this change set would place or overwrite, when it names
+    /// one. A class of a durable engine store is refused `EXTERNAL_PLACEMENT_FORBIDDEN`
+    /// (MEDULLA-ENGINE-PARITY-R019.2). Absent from the encoding (and the digest) when
+    /// `None`, so a change set without it keeps its digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_class: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -272,7 +278,9 @@ impl SourceChangeSet {
             self.reconciliation_procedure.as_str(),
             self.authorization.authorization_ref.as_str(),
         ];
-        if required.iter().any(|value| value.is_empty()) {
+        if required.iter().any(|value| value.is_empty())
+            || self.target_class.as_deref().is_some_and(str::is_empty)
+        {
             return Err("write-back identity fields must not be empty".to_string());
         }
         if !self.authorization.authorized {
@@ -394,6 +402,7 @@ mod tests {
             idempotency_key: "idempotency-1".to_string(),
             expires_at_ms: 4_000_000_000_000,
             reconciliation_procedure: "read_by_idempotency_and_version".to_string(),
+            target_class: None,
         };
         value.change_set_digest = value.canonical_digest().expect("canonical digest");
         value

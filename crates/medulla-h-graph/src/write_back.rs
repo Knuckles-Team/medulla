@@ -101,6 +101,16 @@ fn create_change_set(
     if now_ms >= change_set.expires_at_ms {
         return Err("write-back change set has expired".to_string());
     }
+    if let Some(class) = change_set.target_class.as_deref() {
+        // An engine record class lives only in the engine (MEDULLA-ENGINE-PARITY-R019.2):
+        // refused before any row is written, naming the class.
+        if medulla_persistence::durable_stores::engine_record_class(class).is_some() {
+            return Err(format!(
+                "{}: record class `{class}` is a durable engine store and is never placed in or written back to an outside source",
+                medulla_storage::EXTERNAL_PLACEMENT_FORBIDDEN
+            ));
+        }
+    }
     store.create_change_set(change_set).and_then(
         ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackCreate>,
     )

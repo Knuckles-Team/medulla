@@ -98,6 +98,37 @@ pub enum BackendSpecRefusal {
     LayoutNotInLineage { layout_digest: String },
     /// The spec is valid but this build cannot open it.
     Unsupported { variant: String },
+    /// The endpoint names an outside database, which is only ever a source
+    /// (MEDULLA-ENGINE-PARITY-R019.2); the engine's records are never placed there.
+    ExternalPlacementForbidden { scheme: String },
+}
+
+/// Endpoint schemes of outside databases. An engine record is never placed in one;
+/// they reach the engine only as attached sources (MEDULLA-ENGINE-PARITY-R019.2).
+pub const EXTERNAL_DATABASE_SCHEMES: [&str; 5] =
+    ["postgres", "postgresql", "mysql", "sqlite", "jdbc"];
+
+/// The wire-stable code of [`BackendSpecRefusal::ExternalPlacementForbidden`].
+pub const EXTERNAL_PLACEMENT_FORBIDDEN: &str = "EXTERNAL_PLACEMENT_FORBIDDEN";
+
+/// The outside-database scheme `endpoint` starts with (`scheme://` or `scheme:`), if any.
+/// JDBC urls are `jdbc:<driver>://`, so the first segment decides.
+fn external_database_scheme(endpoint: &str) -> Option<&'static str> {
+    let head = endpoint.trim().split(':').next()?.to_ascii_lowercase();
+    EXTERNAL_DATABASE_SCHEMES
+        .iter()
+        .copied()
+        .find(|scheme| *scheme == head)
+}
+
+impl BackendSpecRefusal {
+    /// The wire-stable code for this refusal, when it has a dedicated one.
+    pub fn wire_code(&self) -> Option<&'static str> {
+        match self {
+            Self::ExternalPlacementForbidden { .. } => Some(EXTERNAL_PLACEMENT_FORBIDDEN),
+            _ => None,
+        }
+    }
 }
 
 impl StorageBackendSpec {
@@ -136,6 +167,10 @@ impl StorageBackendSpec {
                 }
             }
         }
+        if let Some(SecretRef(reference)) = endpoint {
+            // A reference that carries an outside-database url instead of naming a secret.
+            self.check_endpoint_scheme(reference)?;
+        }
         if durability.is_none() {
             return Err(BackendSpecRefusal::MissingDurabilityClass);
         }
@@ -149,6 +184,18 @@ impl StorageBackendSpec {
             });
         }
         Ok(())
+    }
+
+    /// Refuse an endpoint, once resolved from its secret reference, whose scheme is an
+    /// outside database (`postgres`, `postgresql`, `mysql`, `sqlite`, `jdbc`). Writes
+    /// nothing; the refusal names the scheme (MEDULLA-ENGINE-PARITY-R019.2). Pure.
+    pub fn check_endpoint_scheme(&self, resolved_endpoint: &str) -> Result<(), BackendSpecRefusal> {
+        match external_database_scheme(resolved_endpoint) {
+            Some(scheme) => Err(BackendSpecRefusal::ExternalPlacementForbidden {
+                scheme: scheme.to_string(),
+            }),
+            None => Ok(()),
+        }
     }
 
     /// Admission for opening: validate, then refuse any variant this build
@@ -167,6 +214,38 @@ impl StorageBackendSpec {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-ENGINE-PARITY-R019.2
+    #[test]
+    fn outside_database_endpoint_schemes_refuse_by_name() {
+        let spec = StorageBackendSpec::default();
+        for scheme in EXTERNAL_DATABASE_SCHEMES {
+            let url = format!("{}://host/db", scheme.to_ascii_uppercase());
+            let refusal = spec.check_endpoint_scheme(&url).unwrap_err();
+            assert_eq!(
+                refusal,
+                BackendSpecRefusal::ExternalPlacementForbidden {
+                    scheme: scheme.to_string()
+                }
+            );
+            assert_eq!(refusal.wire_code(), Some(EXTERNAL_PLACEMENT_FORBIDDEN));
+        }
+        assert!(spec
+            .check_endpoint_scheme("jdbc:postgresql://h/db")
+            .is_err());
+        assert!(spec.check_endpoint_scheme("https://s3.example").is_ok());
+        let mut with_url = good();
+        if let StorageBackendSpec::ObjectStore { endpoint, .. } = &mut with_url {
+            *endpoint = Some(SecretRef("postgres://user@host/db".into()));
+        }
+        assert_eq!(
+            with_url.validate().unwrap_err(),
+            BackendSpecRefusal::ExternalPlacementForbidden {
+                scheme: "postgres".into()
+            }
+        );
+        assert!(good().validate().is_ok());
+    }
 
     fn good() -> StorageBackendSpec {
         StorageBackendSpec::ObjectStore {

@@ -226,6 +226,22 @@ pub fn lookup(file_name: &str) -> Option<&'static DurableStore> {
         .find(|store| store.file_name == file_name)
 }
 
+/// The durable engine store a record class names (MEDULLA-ENGINE-PARITY-R019.2): the
+/// class is a registered store's file name (`rbac.redb`), the file name without its
+/// `.redb` extension (`rbac`), or the Agent Library physical store. Engine records of
+/// these classes live only in the engine, so a write-back may never target one.
+pub fn engine_record_class(class: &str) -> Option<&'static DurableStore> {
+    let class = class.trim();
+    if class == AGENT_LIBRARY_PHYSICAL_STORE {
+        return DURABLE_STORES
+            .iter()
+            .find(|store| store.file_name == "agent_library.redb");
+    }
+    DURABLE_STORES.iter().find(|store| {
+        store.file_name == class || store.file_name.strip_suffix(".redb") == Some(class)
+    })
+}
+
 /// Every store that is deliberately not captured, as `file name → reason`. Written into
 /// the manifest so a bundle states its own scope.
 pub fn excluded_store_reasons() -> BTreeMap<String, String> {
@@ -272,6 +288,24 @@ impl BundledStoreSource for RbacBundledStore {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+
+    // Foundation of MEDULLA-ENGINE-PARITY-R019.2 (the row's served L4 test is not yet written).
+    #[test]
+    fn record_class_names_a_durable_store_by_file_or_stem() {
+        for store in DURABLE_STORES {
+            assert_eq!(
+                engine_record_class(store.file_name).map(|s| s.file_name),
+                Some(store.file_name)
+            );
+            let stem = store.file_name.trim_end_matches(".redb");
+            assert_eq!(
+                engine_record_class(stem).map(|s| s.file_name),
+                Some(store.file_name)
+            );
+        }
+        assert!(engine_record_class(AGENT_LIBRARY_PHYSICAL_STORE).is_some());
+        assert!(engine_record_class("tickets").is_none());
+    }
 
     /// Every bundled store must declare the kernel authority a restore adopts it
     /// under. A new bundled file with no entry would be copied and then silently

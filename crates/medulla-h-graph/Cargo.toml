@@ -23,6 +23,7 @@ medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }
+medulla-storage = { path = "../medulla-storage" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-retrieval = { path = "../medulla-retrieval" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }

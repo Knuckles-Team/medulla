@@ -78,6 +78,7 @@ class SourceChangeSet(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     source_instance_id: str
     source_of_truth_rule: str
+    target_class: str | None = None
     tenant_id: str
 
     def canonical_digest(self) -> str:
@@ -104,6 +105,7 @@ class SourceChangeSet(BaseModel):
             "idempotency_key": value["idempotency_key"],
             "expires_at_ms": value["expires_at_ms"],
             "reconciliation_procedure": value["reconciliation_procedure"],
+            "target_class": value["target_class"],
         }
         return framed_named_msgpack_digest(
             b"eg/source-change-set/v1",
@@ -111,7 +113,7 @@ class SourceChangeSet(BaseModel):
             canonical_json_paths={
                 "desired_patch",
             },
-            omit_none_paths={},
+            omit_none_paths={"target_class"},
             named_struct_paths={
                 "authorization": (
                     "mode",

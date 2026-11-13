@@ -741,6 +741,7 @@ pub mod tests {
             idempotency_key: "idempotency-1".to_string(),
             expires_at_ms: 4_000_000_000_000,
             reconciliation_procedure: "read_by_idempotency_and_version".to_string(),
+            target_class: None,
         };
         value.change_set_digest = value.canonical_digest().unwrap();
         value

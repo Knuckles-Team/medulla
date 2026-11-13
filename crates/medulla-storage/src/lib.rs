@@ -25,7 +25,10 @@ mod recovery;
 mod scoped;
 mod tables;
 
-pub use backend_spec::{BackendSpecRefusal, DurabilityClass, SecretRef, StorageBackendSpec};
+pub use backend_spec::{
+    BackendSpecRefusal, DurabilityClass, SecretRef, StorageBackendSpec, EXTERNAL_DATABASE_SCHEMES,
+    EXTERNAL_PLACEMENT_FORBIDDEN,
+};
 pub use capability::{OwnerPayloadRetirement, PhysicalWriteCapability, ScopedRead, ScopedSnapshot};
 pub use codec::{
     decode_batch_record, decode_ledger_record, decode_outbox_record, encode_bounded,

@@ -5519,6 +5519,7 @@ dependencies = [
  "medulla-server-ops",
  "medulla-shacl",
  "medulla-source-types",
+ "medulla-storage",
  "medulla-test-ambient-auth",
  "medulla-tsdb",
  "medulla-types",

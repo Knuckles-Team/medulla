@@ -1067,8 +1067,10 @@ pub fn admit_backend_setting(setting: Option<&str>) -> Result<(), String> {
         Some(json) => serde_json::from_str::<StorageBackendSpec>(json)
             .map_err(|e| format!("STORAGE_BACKEND_UNKNOWN: {e}"))?,
     };
-    spec.admit()
-        .map_err(|r| format!("storage_backend_refused: {r:?}"))
+    spec.admit().map_err(|r| match r.wire_code() {
+        Some(code) => format!("{code}: {r:?}"),
+        None => format!("storage_backend_refused: {r:?}"),
+    })
 }
 
 /// The bootstrap sequence shared by every kernel-owned store this crate opens:
