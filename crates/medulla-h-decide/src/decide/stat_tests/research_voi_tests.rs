@@ -6,11 +6,14 @@
 use super::kernel_family_support::{decide_as_other_tenant, facts};
 use super::path_preference_tests::pins;
 use super::*;
-use medulla_decision_types::decision::research_voi::{ResearchStop, STOP_OPTION_ID};
+use medulla_decision_types::decision::research_voi::{
+    ResearchStop, RESEARCH_DEPTH_EXCEEDED, RESEARCH_NO_BUDGET, STOP_OPTION_ID,
+};
 use medulla_decision_types::decision::statistical::declared::{
     DeclaredNumber, DeclaredOption, DeclaredText,
 };
 use medulla_decision_types::decision::ResolutionKind;
+use medulla_decision_types::decision::{AbstainReason, PremiseClass};
 
 const ONE: i64 = 1 << 32;
 
@@ -45,13 +48,49 @@ fn source(id: &str, subtask: &str, p_pct: i64, gain: i64, cost: i64) -> Declared
     }
 }
 
-/// One million micro-units already spent.
-fn spent(id: &str) -> DeclaredOption {
+/// One million micro-units already spent by `subtask`.
+fn spent(id: &str, subtask: &str) -> DeclaredOption {
+    spent_units(id, subtask, 1)
+}
+
+fn spent_units(id: &str, subtask: &str, units: i64) -> DeclaredOption {
     DeclaredOption {
         option_id: id.to_string(),
         classification: BoundedVec::new(vec!["spent".to_string()]).unwrap(),
-        numbers: numbers(0, 0, ONE, 0),
-        texts: BoundedVec::default(),
+        numbers: numbers(0, 0, units * ONE, 0),
+        texts: BoundedVec::new(vec![DeclaredText {
+            key: "subtask".to_string(),
+            text: subtask.to_string(),
+        }])
+        .unwrap(),
+    }
+}
+
+/// The declared budget of `subtask`, in whole units.
+fn budget(id: &str, subtask: &str, units: i64) -> DeclaredOption {
+    DeclaredOption {
+        option_id: id.to_string(),
+        classification: BoundedVec::new(vec!["subtask".to_string()]).unwrap(),
+        numbers: BoundedVec::new(vec![DeclaredNumber {
+            key: "budget".to_string(),
+            q32: units * ONE,
+        }])
+        .unwrap(),
+        texts: BoundedVec::new(vec![DeclaredText {
+            key: "subtask".to_string(),
+            text: subtask.to_string(),
+        }])
+        .unwrap(),
+    }
+}
+
+fn family_abstention(outcome: &StatisticalOutcome) -> (String, String) {
+    let StatisticalOutcome::Abstained { reasons } = outcome else {
+        panic!("expected an abstention, got {outcome:?}");
+    };
+    match reasons.as_slice() {
+        [AbstainReason::Family { code, detail, .. }] => (code.as_str().to_string(), detail.clone()),
+        other => panic!("expected one family reason, got {other:?}"),
     }
 }
 
@@ -89,7 +128,7 @@ fn frontier() -> Vec<DeclaredOption> {
         source("s-a", "intro", 100, 10, 1),
         source("s-b", "method", 50, 10, 1),
         source("s-c", "method", 10, 1, 1),
-        spent("spent-1"),
+        spent("spent-1", "intro"),
     ]
 }
 
@@ -165,5 +204,98 @@ async fn decide_routes_research_next() {
         .starts_with("PARAMETER_INVALID"));
 
     let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 3_000_000)).await;
+    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R705.4: a subtask with no budget left and
+/// a node past the depth limit each abstain with their registered code, the
+/// first naming the subtask; nothing is written and another tenant is refused.
+// spec: MEDULLA-DECISION-ENGINE-R705.4
+#[tokio::test]
+async fn research_refusals() {
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+
+    // "intro" declared 1 unit and has already spent it.
+    let mut broke = frontier();
+    broke.push(budget("b-intro", "intro", 1));
+    broke.sort_by(|a, b| a.option_id.cmp(&b.option_id));
+    let batch = decide(&h, request(&pins.0, broke, 3_000_000))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+    let (code, detail) = family_abstention(&record.outcome);
+    assert_eq!(code, RESEARCH_NO_BUDGET.as_str());
+    assert!(detail.contains("intro"), "{detail}");
+
+    // A node four links deep is past the default depth limit of three.
+    let mut deep = frontier();
+    deep[0].numbers = numbers(ONE, 10 * ONE, ONE, 4 * ONE);
+    let batch = decide(&h, request(&pins.0, deep, 3_000_000)).await.unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+    let (code, detail) = family_abstention(&record.outcome);
+    assert_eq!(code, RESEARCH_DEPTH_EXCEEDED.as_str());
+    assert!(detail.contains("s-a"), "{detail}");
+
+    // A subtask with budget left is not an abstention.
+    let mut funded = frontier();
+    funded.push(budget("b-intro", "intro", 5));
+    funded.sort_by(|a, b| a.option_id.cmp(&b.option_id));
+    let batch = decide(&h, request(&pins.0, funded, 9_000_000))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+
+    let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 3_000_000)).await;
+    assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R705.5: the sealed record carries one
+/// claim premise per reported spent group with its subtask, the budget limit
+/// and the remaining budget of every declared subtask after the reads.
+// spec: MEDULLA-DECISION-ENGINE-R705.5
+#[tokio::test]
+async fn spent_units_are_recorded_per_subtask() {
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+
+    let mut options = frontier();
+    options.push(spent_units("spent-2", "method", 2));
+    options.push(budget("b-intro", "intro", 4));
+    options.push(budget("b-method", "method", 4));
+    options.sort_by(|a, b| a.option_id.cmp(&b.option_id));
+    let batch = decide(&h, request(&pins.0, options, 9_000_000))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let facts = facts(&record);
+    assert!(
+        facts.contains(&"research:budget_limit=9000000"),
+        "{facts:?}"
+    );
+    assert!(facts.contains(&"research:spent=3000000"), "{facts:?}");
+    assert!(facts.contains(&"spent:intro=1000000"), "{facts:?}");
+    assert!(facts.contains(&"spent:method=2000000"), "{facts:?}");
+    // Reads: s-a (intro, cost 1) and s-b (method, cost 1) fit; s-c is under
+    // the value floor. intro: 4 - 1 - 1; method: 4 - 2 - 1.
+    assert!(facts.contains(&"remaining:intro=2000000"), "{facts:?}");
+    assert!(facts.contains(&"remaining:method=1000000"), "{facts:?}");
+    for premise in record.premises.iter() {
+        assert_eq!(premise.class, PremiseClass::Claim, "{premise:?}");
+    }
+
+    // A spent group that names no subtask is refused.
+    let mut nameless = frontier();
+    nameless[3].texts = BoundedVec::default();
+    assert!(decide(&h, request(&pins.0, nameless, 9_000_000))
+        .await
+        .unwrap_err()
+        .starts_with("PARAMETER_INVALID"));
+
+    let error = decide_as_other_tenant(&h, request(&pins.0, frontier(), 9_000_000)).await;
     assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
 }

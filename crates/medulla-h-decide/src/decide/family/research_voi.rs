@@ -11,6 +11,14 @@
 //! what was spent). The answer is an uncalibrated advisory: one option per read,
 //! scored by its expected value, and one option `stop` at `1 << 32`. Language
 //! model calls stay outside medulla and nothing is written.
+//!
+//! A subtask declares its own budget through an option whose first
+//! classification is `subtask` (text `subtask`, number `budget`); spent options
+//! name the subtask that consumed them. A declared subtask with nothing left
+//! abstains `RESEARCH_NO_BUDGET`, a frontier node deeper than
+//! `research.depth_limit` abstains `RESEARCH_DEPTH_EXCEEDED` (R705.4). The
+//! sealed record carries the spent units and the remaining budget per subtask
+//! as claim premises (R705.5).
 
 use std::collections::BTreeMap;
 
@@ -18,18 +26,20 @@ use medulla_decision_stats::decision::research_voi::{
     expand_frontier, q32_to_micro, FrontierLimits, FrontierStop, SourceNode,
 };
 use medulla_decision_types::decision::research_voi::{
-    ResearchAnswer, ResearchRead, ResearchStop, SPENT_CLASSIFICATION, STOP_OPTION_ID,
+    ResearchAnswer, ResearchRead, ResearchStop, RESEARCH_DEPTH_EXCEEDED, RESEARCH_NO_BUDGET,
+    SPENT_CLASSIFICATION, STOP_OPTION_ID, SUBTASK_CLASSIFICATION,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionSafety, ScoredOption, StatisticalOutcome,
+    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, ScoredOption, StatisticalOutcome,
 };
 use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, QuantScaleTag, QuantisedValue, ResolutionKind,
+    AbstainReason, DecisionPolicy, EvidenceClass, QuantScaleTag, QuantisedValue, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;
@@ -56,8 +66,29 @@ fn number(option: &DeclaredOption, key: &str) -> Result<i64, String> {
         })
 }
 
-fn is_spent(option: &DeclaredOption) -> bool {
-    option.classification.iter().next().map(String::as_str) == Some(SPENT_CLASSIFICATION)
+fn first_class(option: &DeclaredOption) -> Option<&str> {
+    option.classification.iter().next().map(String::as_str)
+}
+
+fn text<'a>(option: &'a DeclaredOption, key: &str) -> Option<&'a str> {
+    option
+        .texts
+        .iter()
+        .find(|t| t.key == key)
+        .map(|t| t.text.as_str())
+}
+
+/// The subtask a spent or budget option names; both must name one.
+fn named_subtask(option: &DeclaredOption) -> Result<String, String> {
+    text(option, "subtask")
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            invalid_parameter(format!(
+                "{KIND} option {} names no subtask",
+                option.option_id
+            ))
+        })
 }
 
 /// The declared options: frontier nodes with their subtask and depth, and the
@@ -68,6 +99,10 @@ struct Parsed {
     depths: BTreeMap<String, u8>,
     spent_micro: u64,
     limit_micro: u64,
+    /// Micro-units spent per subtask, as reported by the caller.
+    spent_by_subtask: BTreeMap<String, u64>,
+    /// Declared per-subtask budgets, micro-units.
+    budgets: BTreeMap<String, u64>,
 }
 
 fn parse(request: &DecideRequest) -> Result<Parsed, String> {
@@ -96,6 +131,8 @@ fn parse(request: &DecideRequest) -> Result<Parsed, String> {
         depths: BTreeMap::new(),
         spent_micro: 0,
         limit_micro,
+        spent_by_subtask: BTreeMap::new(),
+        budgets: BTreeMap::new(),
     };
     for option in options.iter() {
         if option.option_id == STOP_OPTION_ID {
@@ -103,10 +140,24 @@ fn parse(request: &DecideRequest) -> Result<Parsed, String> {
                 "{KIND} reserves the option id {STOP_OPTION_ID}"
             )));
         }
-        if is_spent(option) {
-            parsed.spent_micro = parsed
-                .spent_micro
-                .saturating_add(q32_to_micro(number(option, "cost")?));
+        if first_class(option) == Some(SPENT_CLASSIFICATION) {
+            let units = q32_to_micro(number(option, "cost")?);
+            parsed.spent_micro = parsed.spent_micro.saturating_add(units);
+            let held = parsed
+                .spent_by_subtask
+                .entry(named_subtask(option)?)
+                .or_default();
+            *held = held.saturating_add(units);
+            continue;
+        }
+        if first_class(option) == Some(SUBTASK_CLASSIFICATION) {
+            let name = named_subtask(option)?;
+            let budget = q32_to_micro(number(option, "budget")?);
+            if parsed.budgets.insert(name.clone(), budget).is_some() {
+                return Err(invalid_parameter(format!(
+                    "{KIND} declares the budget of subtask {name} twice"
+                )));
+            }
             continue;
         }
         let depth = u8::try_from((number(option, "depth")? >> 32).clamp(0, i64::from(u8::MAX)))
@@ -114,12 +165,7 @@ fn parse(request: &DecideRequest) -> Result<Parsed, String> {
         parsed.depths.insert(option.option_id.clone(), depth);
         parsed.subtasks.insert(
             option.option_id.clone(),
-            option
-                .texts
-                .iter()
-                .find(|t| t.key == "subtask")
-                .map(|t| t.text.clone())
-                .unwrap_or_default(),
+            text(option, "subtask").unwrap_or_default().to_string(),
         );
         parsed.nodes.insert(
             option.option_id.clone(),
@@ -141,6 +187,20 @@ fn stop_reason(stop: FrontierStop) -> ResearchStop {
         FrontierStop::NodeBudget => ResearchStop::NodeBudget,
         FrontierStop::ValueFloor => ResearchStop::ValueFloor,
     }
+}
+
+/// An abstention of the family: a sealed record with the registered code.
+fn abstained(code: RefusalCode, detail: String) -> Result<Executed, String> {
+    let reasons = BoundedVec::new(vec![AbstainReason::Family {
+        family: QuestionKind::ResearchNext,
+        code,
+        detail,
+    }])
+    .map_err(|detail| invalid_parameter(format!("{KIND}: {detail}")))?;
+    Ok(Executed::from_family(
+        StatisticalOutcome::Abstained { reasons },
+        None,
+    ))
 }
 
 fn q32(value: i64) -> QuantisedValue {
@@ -172,9 +232,38 @@ impl DecisionFamily for ResearchVoiFamily {
                 depth_limit: u8::try_from(knobs.research_depth_limit).unwrap_or(u8::MAX),
                 value_floor_micro: knobs.research_value_floor_micro,
             };
+            if let Some((source_id, depth)) = parsed
+                .depths
+                .iter()
+                .find(|(_, depth)| u64::from(**depth) > knobs.research_depth_limit)
+            {
+                return abstained(
+                    RESEARCH_DEPTH_EXCEEDED,
+                    format!(
+                        "source {source_id} lies {depth} links deep, past the depth limit {}",
+                        knobs.research_depth_limit
+                    ),
+                );
+            }
+            if let Some((subtask, _)) = parsed.budgets.iter().find(|(subtask, budget)| {
+                parsed.spent_by_subtask.get(*subtask).copied().unwrap_or(0) >= **budget
+            }) {
+                return abstained(
+                    RESEARCH_NO_BUDGET,
+                    format!("subtask {subtask} has no remaining budget"),
+                );
+            }
             let seeds: Vec<String> = parsed.nodes.keys().cloned().collect();
             let walk = expand_frontier(&seeds, &parsed.nodes, &limits);
             let mut remaining = parsed.limit_micro.saturating_sub(parsed.spent_micro);
+            let mut subtask_left: BTreeMap<String, u64> = parsed
+                .budgets
+                .iter()
+                .map(|(subtask, budget)| {
+                    let spent = parsed.spent_by_subtask.get(subtask).copied().unwrap_or(0);
+                    (subtask.clone(), budget.saturating_sub(spent))
+                })
+                .collect();
             let mut stop = stop_reason(walk.stop);
             let mut reads = Vec::new();
             for read in walk.reads {
@@ -182,17 +271,24 @@ impl DecisionFamily for ResearchVoiFamily {
                     .nodes
                     .get(&read.source_id)
                     .map_or(0, |n| q32_to_micro(n.cost_q32));
-                if cost_micro > remaining {
+                let subtask = parsed
+                    .subtasks
+                    .get(&read.source_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let subtask_fits = subtask_left
+                    .get(&subtask)
+                    .is_none_or(|left| cost_micro <= *left);
+                if cost_micro > remaining || !subtask_fits {
                     stop = ResearchStop::Budget;
                     break;
                 }
                 remaining -= cost_micro;
+                if let Some(left) = subtask_left.get_mut(&subtask) {
+                    *left -= cost_micro;
+                }
                 reads.push(ResearchRead {
-                    subtask: parsed
-                        .subtasks
-                        .get(&read.source_id)
-                        .cloned()
-                        .unwrap_or_default(),
+                    subtask,
                     depth: parsed.depths.get(&read.source_id).copied().unwrap_or(0),
                     expected_value_q32: read.expected_value_q32,
                     cost_micro,
@@ -215,7 +311,7 @@ impl DecisionFamily for ResearchVoiFamily {
             let scores = BoundedVec::new(scores)
                 .map_err(|detail| invalid_parameter(format!("{KIND}: {detail}")))?;
             let field = "params.budget_limit";
-            let premises = vec![
+            let mut premises = vec![
                 claim(
                     KIND,
                     format!("research:budget_limit={}", parsed.limit_micro),
@@ -227,6 +323,22 @@ impl DecisionFamily for ResearchVoiFamily {
                     "candidates.spent",
                 ),
             ];
+            // The ledger per subtask (R705.5): what each subtask consumed, and
+            // what each declared subtask budget has left after the reads.
+            for (subtask, units) in &parsed.spent_by_subtask {
+                premises.push(claim(
+                    KIND,
+                    format!("spent:{subtask}={units}"),
+                    "candidates.spent",
+                ));
+            }
+            for (subtask, left) in &subtask_left {
+                premises.push(claim(
+                    KIND,
+                    format!("remaining:{subtask}={left}"),
+                    "candidates.subtask",
+                ));
+            }
             Ok(Executed::from_family(
                 StatisticalOutcome::Advisory {
                     scores,
@@ -247,11 +359,17 @@ impl DecisionFamily for ResearchVoiFamily {
         }))
     }
 
-    fn resolution_kind(&self, _outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
-        Some(ResolutionKind::Statistical)
+    fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        match outcome {
+            StatisticalOutcome::Abstained { .. } => Some(ResolutionKind::Abstention),
+            _ => Some(ResolutionKind::Statistical),
+        }
     }
 
-    fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
-        Some(EvidenceClass::Claim)
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        match outcome {
+            StatisticalOutcome::Abstained { .. } => None,
+            _ => Some(EvidenceClass::Claim),
+        }
     }
 }

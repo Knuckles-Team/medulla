@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most subtasks one research plan may carry.
 pub const MAX_RESEARCH_SUBTASKS: usize = 32;
@@ -97,10 +98,26 @@ pub struct ResearchAnswer {
     pub remaining_micro: u64,
 }
 
+/// Abstention: a subtask that declares a budget has none left
+/// (MEDULLA-DECISION-ENGINE-R705.4). The detail names the subtask.
+pub const RESEARCH_NO_BUDGET: RefusalCode = RefusalCode::new("RESEARCH_NO_BUDGET");
+
+/// Abstention: a frontier node lies deeper than `knob research.depth_limit`
+/// (MEDULLA-DECISION-ENGINE-R705.4). The detail names the source.
+pub const RESEARCH_DEPTH_EXCEEDED: RefusalCode = RefusalCode::new("RESEARCH_DEPTH_EXCEEDED");
+
+/// Every refusal code of the `research_next` family; joins
+/// `codes::FAMILY_TABLES` under `QuestionKind::ResearchNext`.
+pub const REFUSALS: &[RefusalCode] = &[RESEARCH_NO_BUDGET, RESEARCH_DEPTH_EXCEEDED];
+
 /// The option id the answer reserves for "stop reading".
 pub const STOP_OPTION_ID: &str = "stop";
 /// The first classification of an option that reports spent units.
 pub const SPENT_CLASSIFICATION: &str = "spent";
+/// The first classification of an option that declares one subtask's budget:
+/// the text `subtask` names it and the number `budget` is its limit (Q32
+/// units, converted to micro-units like `cost`).
+pub const SUBTASK_CLASSIFICATION: &str = "subtask";
 
 #[cfg(test)]
 mod tests {

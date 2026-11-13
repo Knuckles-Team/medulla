@@ -509,6 +509,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::RuntimeQuota, super::run_governance::REFUSALS),
     (QuestionKind::TaskPlan, super::task_plan::TASK_PLAN_REFUSALS),
     (QuestionKind::ToolRelevance, super::tool_relevance::REFUSALS),
+    (QuestionKind::ResearchNext, super::research_voi::REFUSALS),
     (
         QuestionKind::InsightSelection,
         super::program_store::insight::REFUSALS,
