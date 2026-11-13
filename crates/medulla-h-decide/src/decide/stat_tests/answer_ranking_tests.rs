@@ -79,6 +79,7 @@ fn scores(record: &StatisticalDecisionRecord) -> Vec<(String, i64)> {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.106
+// spec: MEDULLA-DECISION-ENGINE-R134.109
 #[tokio::test]
 async fn served_ranking_round_trips_through_readback() {
     let h = Harness::new().await;
@@ -233,4 +234,49 @@ async fn ranking_refusals_are_typed_abstentions_and_declared_must_match() {
         .await
         .unwrap_err();
     assert!(refused.contains("PARAMETER_INVALID"), "{refused}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.108
+#[tokio::test]
+async fn premises_name_pairs_and_order() {
+    let h = Harness::new().await;
+    let request = body();
+    let batch = decide(&h, ranking_request(&h, request.clone(), &ids(&request)))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    let with_prefix = |prefix: &str| {
+        record
+            .premises
+            .iter()
+            .filter(|p| p.fact.starts_with(prefix))
+            .collect::<Vec<_>>()
+    };
+    let pairs = with_prefix("answer_pairwise:");
+    assert_eq!(pairs.len(), 6, "one Claim premise per comparison");
+    assert!(pairs.iter().all(|p| p.class == PremiseClass::Claim));
+    assert!(pairs.iter().any(|p| p.subject == "d|c"));
+    let order = with_prefix("answer_global_order:");
+    assert_eq!(
+        order.len(),
+        1,
+        "one Definition premise for the global order"
+    );
+    assert_eq!(order[0].class, PremiseClass::Definition);
+    assert!(order[0].fact.contains("order=c,a,d,b"), "{}", order[0].fact);
+    let retained = with_prefix("answer_retained:")
+        .iter()
+        .map(|p| p.subject.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(retained, ["c", "a"], "one premise per retained id");
+    let revised = with_prefix("answer_revision:")
+        .iter()
+        .map(|p| p.subject.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(revised, ["d", "b"], "one premise per revision action");
+    // The sealed record digest recomputes from the record.
+    assert_eq!(
+        record.record_digest,
+        medulla_decision_types::decision::digest::statistical_record_digest(&record)
+    );
 }

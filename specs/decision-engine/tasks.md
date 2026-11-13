@@ -336,8 +336,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T325 [US7] MEDULLA-DECISION-ENGINE-R134.105 Behavior
 - [x] T326 [US7] MEDULLA-DECISION-ENGINE-R134.106 Wiring: answer ranking through Decide
 - [ ] T327 [US7] MEDULLA-DECISION-ENGINE-R134.107 Refusal
-- [ ] T328 [US7] MEDULLA-DECISION-ENGINE-R134.108 Evidence: answer-ranking premises
-- [ ] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served
+- [x] T328 [US7] MEDULLA-DECISION-ENGINE-R134.108 Evidence: answer-ranking premises
+- [x] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served
 - [x] T330 [US6] MEDULLA-DECISION-ENGINE-R031.100 Paper relevance admission against platform goals and graph content
 - [ ] T331 [US2] MEDULLA-DECISION-ENGINE-R036.100.1 Primitive types
 - [x] T332 [US2] MEDULLA-DECISION-ENGINE-R036.100.2 Edge type-check and substitution rule

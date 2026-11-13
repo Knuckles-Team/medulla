@@ -299,6 +299,18 @@ pub fn answer_ranking_premises(ranking: &AnswerCandidateRankingV1) -> Vec<Premis
         class: PremiseClass::Definition,
         provenance: request("params.answer_ranking"),
     });
+    out.extend(
+        ranking
+            .retained_ids
+            .iter()
+            .enumerate()
+            .map(|(rank, id)| PremiseRef {
+                subject: id.clone(),
+                fact: format!("answer_retained:rank={}", rank + 1),
+                class: PremiseClass::Definition,
+                provenance: request("params.answer_ranking"),
+            }),
+    );
     out.extend(ranking.revision_actions.iter().map(|action| PremiseRef {
         subject: action.candidate_id.clone(),
         fact: format!(

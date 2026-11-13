@@ -187,6 +187,19 @@ fn premises_record_comparisons_order_retained_set_and_revisions() {
         "answer_global_order:order=c,a,d,b;tie_rule=lowest_candidate_id;retained=c,a;"
     ));
     assert!(order[0].fact.ends_with(&ranking.ranking_digest));
+    let retained: Vec<(&str, &str)> = premises
+        .iter()
+        .filter(|p| p.fact.starts_with("answer_retained:"))
+        .map(|p| (p.subject.as_str(), p.fact.as_str()))
+        .collect();
+    assert_eq!(
+        retained,
+        [
+            ("c", "answer_retained:rank=1"),
+            ("a", "answer_retained:rank=2")
+        ],
+        "one premise per retained id"
+    );
     let revisions: Vec<(&str, &str)> = premises
         .iter()
         .filter(|p| p.fact.starts_with("answer_revision:"))
