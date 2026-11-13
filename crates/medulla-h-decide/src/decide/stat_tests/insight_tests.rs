@@ -146,6 +146,7 @@ async fn seeded() -> (Harness, Insight, Insight) {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R135.12
+// spec: MEDULLA-DECISION-ENGINE-R135.15
 #[tokio::test]
 async fn served_selection_returns_insights_with_source_runs() {
     let (h, first, second) = seeded().await;

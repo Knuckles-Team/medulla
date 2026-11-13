@@ -651,6 +651,84 @@ fn bench_tool_relevance_cap(
     );
 }
 
+/// Insights the `decide/insight_selection` group holds.
+const INSIGHT_ROWS: usize = 200;
+
+/// The `decide/insight_selection` group (MEDULLA-DECISION-ENGINE-R135.15): the
+/// served `Decide` selects among stored insights, each submitted through the
+/// served `DecisionLog` run-record write.
+fn bench_insight_selection(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::decision::program_store::insight::{
+        Insight, INSIGHT_SCHEMA_VERSION,
+    };
+    use medulla_decision_types::decision::program_store::RunRecord;
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+
+    let (h, mut asked) = rt.block_on(fixture(QuestionKind::InsightSelection));
+    for index in 0..INSIGHT_ROWS {
+        let insight = Insight {
+            schema_version: INSIGHT_SCHEMA_VERSION,
+            insight_id: format!("bench-insight-{index:04}"),
+            text: format!("retry step {index} once before escalating"),
+            source_run_ids: BoundedVec::new(vec![format!("bench-run-{index:04}")]).unwrap(),
+            context_signature: format!("export weekly report variant{}", index % 7),
+            success_count: 1 + (index % 5) as u32,
+            selection_revision: 1,
+        };
+        let response = rt.block_on(dispatch(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::RunRecord {
+                    tenant_id: TENANT.to_string(),
+                    record: RunRecord::Insight {
+                        insight: serde_json::to_value(&insight).unwrap(),
+                    },
+                }),
+            },
+        ));
+        assert!(
+            response.error.is_none(),
+            "insight_selection fixture: {response:?}"
+        );
+    }
+    asked.params = BoundedVec::new(vec![TypedParam {
+        name: "context_signature".to_string(),
+        value: TypedValue::Text("export weekly report variant3".to_string()),
+    }])
+    .unwrap();
+    let response = decide(rt, &h, &asked);
+    assert!(
+        response.error.is_none(),
+        "insight_selection fixture: {response:?}"
+    );
+    let group_name = "decide/insight_selection".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(decide(rt, &h, &asked));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// The widest bounded plan: six slots whose widths total 64 agents, at the
 /// round cap, with every slot declaring tokens.
 fn widest_plan() -> TopologyPlan {
@@ -1619,6 +1697,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_retrieval_learning(c, &rt, &mut report);
     bench_load_set(c, &rt, &mut report);
     bench_usage_guidance(c, &rt, &mut report);
+    bench_insight_selection(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
