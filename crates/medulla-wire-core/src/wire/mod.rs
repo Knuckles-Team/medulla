@@ -2156,6 +2156,13 @@ impl WireSession {
                 },
                 WireOutcome::command("DROP SEQUENCE"),
             ),
+            StatementKind::DropTrigger { name, table } => (
+                TxnOp::DropTrigger {
+                    table: table.clone(),
+                    name: name.clone(),
+                },
+                WireOutcome::command("DROP TRIGGER"),
+            ),
             StatementKind::CreateFunction(plan) => (
                 TxnOp::CreateFunction {
                     function: plan.func.clone(),
@@ -2236,6 +2243,23 @@ impl WireSession {
             let (op, tag) = PropertyGraphTxnOp::from_statement(statement, authority.agent_id());
             self.buffer(TxnOp::PropertyGraphDdl(op));
             return Ok(Some(WireOutcome::command(tag)));
+        }
+        if let StatementKind::CreateTrigger(plan) = kind {
+            // The machine is resolved now, so an unknown id refuses
+            // `TRIGGER_MACHINE_INVALID` at the statement; the trigger itself
+            // installs with the transaction (MEDULLA-ENGINE-PARITY-R012.2).
+            let (_, persist_dir) = self.catalog_authority().await?;
+            let spec = medulla_table_store::tables::resolve_trigger_spec(
+                &persist_dir,
+                &plan.table,
+                &plan.name,
+                plan.timing,
+                plan.events.clone(),
+                &plan.machine_id,
+            )
+            .map_err(user_err)?;
+            self.buffer(TxnOp::CreateTrigger { spec });
+            return Ok(Some(WireOutcome::command("CREATE TRIGGER")));
         }
         if let Some(outcome) = self.try_buffer_table_statement(kind)? {
             return Ok(Some(outcome));

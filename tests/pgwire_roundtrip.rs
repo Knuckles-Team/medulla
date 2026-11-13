@@ -2504,3 +2504,119 @@ async fn constraint_violations_return_sqlstate() {
     let _ = client.simple_query("ROLLBACK").await;
     assert_eq!(count_rows(&client, &deferred).await, 0);
 }
+
+/// Serves one fixed trigger machine under its definition id, as the engine's
+/// statechart store does for `CREATE TRIGGER … EXECUTE MACHINE`.
+#[cfg(feature = "statechart")]
+struct StampMachine {
+    id: String,
+    machine: medulla_statechart::StatechartDef,
+}
+
+#[cfg(feature = "statechart")]
+impl medulla_table_store::tables::TriggerMachineSource for StampMachine {
+    fn machine(
+        &self,
+        _persist_dir: &std::path::Path,
+        machine_id: &str,
+    ) -> Result<medulla_statechart::StatechartDef, String> {
+        if machine_id == self.id {
+            Ok(self.machine.clone())
+        } else {
+            Err("no stored definition".to_string())
+        }
+    }
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+/// `CREATE TRIGGER` and `DROP TRIGGER` buffer like the other catalog DDL
+/// inside an explicit pgwire transaction: `BEGIN; CREATE TRIGGER; ROLLBACK`
+/// leaves no trigger, `BEGIN; CREATE TRIGGER; COMMIT` installs it, and
+/// `BEGIN; DROP TRIGGER; ROLLBACK` keeps it.
+#[cfg(feature = "statechart")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn wire_txn_create_and_drop_trigger_follow_the_transaction() {
+    use medulla_statechart::{Action, ActionValue, State, StatechartDef, Transition};
+
+    let machine = StatechartDef {
+        name: "stamp_before_insert".to_string(),
+        schema_version: 1,
+        states: vec![State::new("idle")],
+        alphabet: vec!["before_insert".to_string()],
+        transitions: vec![
+            Transition::new("idle", "before_insert", "idle").with_actions(vec![Action::Assign {
+                key: "new.status".to_string(),
+                value: ActionValue::Const {
+                    value: serde_json::json!("open"),
+                },
+            }]),
+        ],
+        initial: "idle".to_string(),
+        finals: Vec::new(),
+        meta: Default::default(),
+    };
+    let machine_id = machine.def_id();
+    medulla_table_store::tables::install_trigger_machine_source(Arc::new(StampMachine {
+        id: machine_id.clone(),
+        machine,
+    }));
+
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    client
+        .simple_query(&format!("CREATE TABLE {table} (id BIGINT, status TEXT)"))
+        .await
+        .expect("CREATE TABLE");
+
+    let status_after_insert = |id: i64| {
+        let client = &client;
+        let table = table.clone();
+        async move {
+            client
+                .simple_query(&format!(
+                    "INSERT INTO {table} (id, status) VALUES ({id}, 'closed')"
+                ))
+                .await
+                .expect("INSERT");
+            let rows = client
+                .simple_query(&format!("SELECT status FROM {table} WHERE id = {id}"))
+                .await
+                .expect("SELECT");
+            rows.into_iter()
+                .find_map(|message| match message {
+                    tokio_postgres::SimpleQueryMessage::Row(row) => row.get(0).map(str::to_string),
+                    _ => None,
+                })
+                .expect("one row")
+        }
+    };
+    let create =
+        format!("CREATE TRIGGER stamp BEFORE INSERT ON {table} EXECUTE MACHINE {machine_id}");
+
+    // Rolled back: the trigger never installs.
+    client.simple_query("BEGIN").await.expect("BEGIN");
+    client.simple_query(&create).await.expect("CREATE TRIGGER");
+    client.simple_query("ROLLBACK").await.expect("ROLLBACK");
+    assert_eq!(status_after_insert(1).await, "closed");
+
+    // Committed: the trigger installs and stamps the next insert.
+    client.simple_query("BEGIN").await.expect("BEGIN");
+    client.simple_query(&create).await.expect("CREATE TRIGGER");
+    client.simple_query("COMMIT").await.expect("COMMIT");
+    assert_eq!(status_after_insert(2).await, "open");
+
+    // A rolled back DROP keeps the trigger; a committed one removes it.
+    let drop = format!("DROP TRIGGER stamp ON {table}");
+    client.simple_query("BEGIN").await.expect("BEGIN");
+    client.simple_query(&drop).await.expect("DROP TRIGGER");
+    client.simple_query("ROLLBACK").await.expect("ROLLBACK");
+    assert_eq!(status_after_insert(3).await, "open");
+    client.simple_query("BEGIN").await.expect("BEGIN");
+    client.simple_query(&drop).await.expect("DROP TRIGGER");
+    client.simple_query("COMMIT").await.expect("COMMIT");
+    assert_eq!(status_after_insert(4).await, "closed");
+
+    let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
+}
