@@ -647,6 +647,7 @@ pub enum DecisionEvalOp {
     /// job artifact (MEDULLA-DECISION-ENGINE-R157.3).
     DelegationQuality {
         request: Box<DelegationQualityRequest>,
+    },
     /// Evaluate one memory rewrite (R141.100); writes the decision job only.
     MemoryRewriteSubmit {
         request: Box<super::memory_rewrite::MemoryRewriteProposal>,
@@ -660,10 +661,10 @@ pub enum DecisionEvalOp {
 
 impl DecisionEvalOp {
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Submit { .. } | Self::DelegationQuality { .. })
         matches!(
             self,
             Self::Submit { .. }
+                | Self::DelegationQuality { .. }
                 | Self::MemoryRewriteSubmit { .. }
                 | Self::MemoryChangeBenchmarkSubmit { .. }
         )
