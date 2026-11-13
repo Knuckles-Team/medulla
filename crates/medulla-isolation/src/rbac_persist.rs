@@ -1105,15 +1105,11 @@ mod tests {
             &medulla_storage::RBAC_BEFORE_PROFILE_GRANTS,
         )
         .unwrap();
-        let database = redb::Database::open(&path).unwrap();
-        let write = database.begin_write().unwrap();
-        {
-            let mut table = write.open_table(super::RBAC_TABLE).unwrap();
-            for (key, value) in rows {
-                table.insert(key.as_str(), value.as_slice()).unwrap();
-            }
-        }
-        write.commit().unwrap();
+        let seeded: Vec<(&str, &[u8])> = rows
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_slice()))
+            .collect();
+        medulla_storage::write_fixture_rows(&path, super::RBAC_TABLE, &seeded).unwrap();
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R036.106
@@ -1182,16 +1178,12 @@ mod tests {
         let changed = tmp_dir("grant-changed");
         predecessor_with(&changed, &rows);
         let inspected = super::inspect_rbac_layout(&changed, &staging).unwrap();
-        {
-            let database = redb::Database::open(changed.join("rbac.redb")).unwrap();
-            let write = database.begin_write().unwrap();
-            write
-                .open_table(super::RBAC_TABLE)
-                .unwrap()
-                .insert("identities", b"{}".as_slice())
-                .unwrap();
-            write.commit().unwrap();
-        }
+        medulla_storage::write_fixture_rows(
+            &changed.join("rbac.redb"),
+            super::RBAC_TABLE,
+            &[("identities", b"{}".as_slice())],
+        )
+        .unwrap();
         let error = super::upgrade_rbac_layout(inspected)
             .err()
             .expect("refused");

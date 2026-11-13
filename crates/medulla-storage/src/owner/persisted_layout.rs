@@ -125,6 +125,27 @@ pub(crate) fn read_persisted_manifest(path: &Path) -> Result<OwnerManifest, Stri
     read_manifest_slot(&table)
 }
 
+/// Fixture helper: write `rows` into the string-keyed byte table `table` of the owner file at
+/// `path`, inside this crate so the raw write stays within the storage envelope. Used to seed
+/// or alter rows of a closed predecessor file when proving a store's upgrade behaviour.
+#[doc(hidden)]
+pub fn write_fixture_rows(
+    path: &Path,
+    table: redb::TableDefinition<&str, &[u8]>,
+    rows: &[(&str, &[u8])],
+) -> Result<(), String> {
+    let database = redb::Database::open(path).map_err(|error| error.to_string())?;
+    let write = database.begin_write().map_err(|error| error.to_string())?;
+    {
+        let mut open = write.open_table(table).map_err(|error| error.to_string())?;
+        for (key, value) in rows {
+            open.insert(*key, *value)
+                .map_err(|error| error.to_string())?;
+        }
+    }
+    write.commit().map_err(|error| error.to_string())
+}
+
 /// Fixture builder: write a genuine file of `predecessor` at `path` (which must
 /// not exist), so a store's refusal can be proven against a real file rather
 /// than a mock. The file is created current and then reduced to the

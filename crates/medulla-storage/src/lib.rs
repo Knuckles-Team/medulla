@@ -66,7 +66,7 @@ pub use owner::offline_upgrade::{
     OFFLINE_STORE_UPGRADES, OFFLINE_UPGRADE_APPLY_COMMAND, OFFLINE_UPGRADE_INSPECT_COMMAND,
 };
 pub use owner::persisted_layout::{
-    create_predecessor_owner_file, refuse_known_predecessor, LayoutPredecessor,
+    create_predecessor_owner_file, refuse_known_predecessor, write_fixture_rows, LayoutPredecessor,
 };
 pub use owner::registry::{
     declared_table_names, owner_table_names, AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS,
