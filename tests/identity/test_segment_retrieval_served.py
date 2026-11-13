@@ -11,14 +11,18 @@ import os
 
 import pytest
 
-from medulla.client import SyncMedullaClient
+from medulla.client import EngineResponseError, SyncMedullaClient
 
 try:
-    from conftest import request_context
+    from conftest import TEST_TENANT, request_context
 except ModuleNotFoundError:  # package-root import
-    from tests.conftest import request_context
+    from tests.conftest import TEST_TENANT, request_context
 
-TENANT_A = "tenant-a"
+# The engine admits only contexts of its deployment tenant (a context for any
+# other tenant is refused at the door with AUTH_TENANT_MISMATCH), so the
+# in-scope tenant is the deployment tenant and the out-of-scope tenant is a
+# unit owner, never a connected reader.
+TENANT_A = TEST_TENANT
 TENANT_B = "tenant-b"
 OWNER = "usr:a"
 READER_B = "usr:b"
@@ -26,12 +30,16 @@ READER_C = "usr:c"
 
 
 def _unit(
-    share_scope: str, *, version: int = 1, supersedes: str | None = None
+    share_scope: str,
+    *,
+    version: int = 1,
+    supersedes: str | None = None,
+    owner_tenant: str = TENANT_A,
 ) -> dict[str, object]:
     props: dict[str, object] = {
         "node_type": "KnowledgeUnit",
         "owner": OWNER,
-        "owner_tenant": TENANT_A,
+        "owner_tenant": owner_tenant,
         "version": version,
         "share_scope": share_scope,
     }
@@ -110,14 +118,17 @@ def test_shared_unit_visible_only_in_scope(clean_graph):
     """Only in-scope readers see the shared unit; superseding swaps the version."""
     clean_graph.nodes.add("ku-private", _unit("private"))
     clean_graph.nodes.add("ku-shared-v1", _unit("tenant"))
+    # A tenant-shared unit owned by another tenant never reaches this scope.
+    clean_graph.nodes.add("ku-foreign", _unit("tenant", owner_tenant=TENANT_B))
 
     reader_b = _connect(READER_B, TENANT_A)
-    reader_c = _connect(READER_C, TENANT_B)
     try:
-        # Same tenant: only the tenant-shared unit reaches the reader.
+        # Same tenant: only the tenant-shared unit reaches the reader; the
+        # private unit and the other tenant's shared unit stay hidden.
         assert _unit_ids(reader_b) == ["ku-shared-v1"]
-        # Another tenant, same graph name: neither unit reaches the reader.
-        assert _unit_ids(reader_c) == []
+        # A reader of another tenant cannot connect to this deployment.
+        with pytest.raises(EngineResponseError, match="AUTH_TENANT_MISMATCH"):
+            _unit_ids(_connect(READER_C, TENANT_B))
 
         # Supersede the shared unit: only the new version returns.
         clean_graph.nodes.add(
@@ -125,7 +136,5 @@ def test_shared_unit_visible_only_in_scope(clean_graph):
             _unit("tenant", version=2, supersedes="ku-shared-v1"),
         )
         assert _unit_ids(reader_b) == ["ku-shared-v2"]
-        assert _unit_ids(reader_c) == []
     finally:
         reader_b.close()
-        reader_c.close()
