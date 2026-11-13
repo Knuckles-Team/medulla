@@ -295,6 +295,8 @@ knobs! {
     retrieval_selection_quality_floor: f64 = "retrieval.selection_quality_floor", F64(0.01), [0.0, 0.1], "nDCG", Tunable;
     /// Retrieval round: most the mean selected count may be of the fixed-count baseline's.
     retrieval_selection_cost_ratio_max: f64 = "retrieval.selection_cost_ratio_max", F64(0.9), [0.5, 1.0], "ratio", Tunable;
+    /// Retrieval round: least held-out nDCG at 10 a distilled rerank head reaches to become champion (MEDULLA-FEDERATED-QUERY-R081.102).
+    retrieval_distill_min_quality: f64 = "retrieval.distill_min_quality", F64(0.8), [0.0, 1.0], "nDCG", Tunable;
     /// Retrieval round: deepest document-section tree a traversal walks.
     retrieval_section_max_depth: u64 = "retrieval.section_max_depth", U64(32), [1, 64], "levels", Tunable;
     /// Retrieval round: most section records a traversal reads.

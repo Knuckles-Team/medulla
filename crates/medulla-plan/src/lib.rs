@@ -76,6 +76,9 @@ pub mod doc_state;
 // MEDULLA-FEDERATED-QUERY-R081.11 / R081.3: one served retrieval round.
 #[cfg(feature = "query")]
 pub mod retrieval_round;
+// MEDULLA-FEDERATED-QUERY-R081.102: the distilled rerank head scorer and its champion gate.
+#[cfg(feature = "query")]
+pub mod retrieval_head;
 // MEDULLA-FEDERATED-QUERY-R081.9.3 / R081.9.7.3: graph-backed hierarchy sources of a round.
 #[cfg(feature = "query")]
 pub mod hierarchy_source;

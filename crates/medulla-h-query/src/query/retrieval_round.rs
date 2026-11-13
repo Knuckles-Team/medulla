@@ -27,6 +27,7 @@ fn round_knobs() -> RoundKnobs {
         rerank_pool: size(knobs.retrieval_rerank_pool),
         selection_quality_floor: knobs.retrieval_selection_quality_floor,
         selection_cost_ratio_max: knobs.retrieval_selection_cost_ratio_max,
+        distill_min_quality: knobs.retrieval_distill_min_quality,
         section_max_depth: size(knobs.retrieval_section_max_depth),
         section_max_visited: size(knobs.retrieval_section_max_visited),
         token_limit: knobs.retrieval_token_limit,

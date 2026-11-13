@@ -46,6 +46,8 @@ pub struct RoundKnobs {
     pub selection_quality_floor: f64,
     /// `knob retrieval.selection_cost_ratio_max`, the policy's mean count over the baseline's.
     pub selection_cost_ratio_max: f64,
+    /// `knob retrieval.distill_min_quality`, held-out nDCG at 10 a distilled head must reach.
+    pub distill_min_quality: f64,
     /// `knob retrieval.section_max_depth`, levels.
     pub section_max_depth: usize,
     /// `knob retrieval.section_max_visited`, records.
@@ -82,6 +84,7 @@ impl Default for RoundKnobs {
             rerank_pool: 50,
             selection_quality_floor: 0.01,
             selection_cost_ratio_max: 0.9,
+            distill_min_quality: 0.8,
             section_max_depth: 32,
             section_max_visited: 4096,
             token_limit: 32_000,
@@ -987,6 +990,7 @@ mod tests {
         rerank_pool: 50,
         selection_quality_floor: 0.01,
         selection_cost_ratio_max: 0.9,
+        distill_min_quality: 0.8,
         section_max_depth: 32,
         section_max_visited: 4096,
         token_limit: 32_000,
