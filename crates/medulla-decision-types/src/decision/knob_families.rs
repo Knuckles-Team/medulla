@@ -5,6 +5,7 @@
 pub mod memory;
 pub mod participant;
 pub mod profile;
+pub mod task_plan;
 pub mod topology;
 pub mod trajectory;
 
@@ -15,6 +16,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     memory::KNOBS,
     participant::KNOBS,
     profile::KNOBS,
+    task_plan::KNOBS,
     topology::KNOBS,
     trajectory::KNOBS,
     super::ingestion_admission::KNOBS,

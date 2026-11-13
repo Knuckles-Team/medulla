@@ -15,15 +15,106 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::stat_support::invalid_parameter;
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_library::lifecycle::AgentLibraryLifecycle;
+use medulla_decision_stats::decision::skill_plan::{plan_over_skills, SkillDocument};
+use medulla_decision_types::decision::statistical::TypedParam;
+use medulla_decision_types::decision::task_plan::skill_plan::SkillPlanKnobs;
+use medulla_decision_types::decision::task_plan::{
+    decompose_task, DecomposeKnobs, TaskPlanProposal,
+};
+use medulla_decision_types::decision::{DecisionPolicy, LibraryCandidateScope};
 
-pub(super) fn task_plan(request: &DecideRequest) -> Result<Option<TaskPlan>, String> {
+use super::candidates::library_candidates;
+use super::stat_executor::ExecutionContext;
+use super::stat_support::{invalid_parameter, resolve_policy};
+
+/// The proposal a `task_plan` question's one typed parameter names: the
+/// caller's explicit tasks (`task_plan`), the harness's subtasks and specialist
+/// scores (`decomposition`, MEDULLA-DECISION-ENGINE-R134.3) or its atomic
+/// subtasks to cover with library skills (`skill_query`, R134.4). Each reaches
+/// the one canonicalizer, `plan_explicit_tasks`.
+fn proposal_of(
+    ctx: &ExecutionContext,
+    param: &TypedParam,
+    policy: &DecisionPolicy,
+) -> Result<TaskPlanProposal, String> {
+    match (param.name.as_str(), &param.value) {
+        ("task_plan", TypedValue::TaskPlan(proposal)) => Ok((**proposal).clone()),
+        ("decomposition", TypedValue::TaskDecomposition(facts)) => {
+            decompose_task(facts, &DecomposeKnobs::from_policy(policy)).map_err(invalid_parameter)
+        }
+        ("skill_query", TypedValue::SkillPlanQuery(query)) => {
+            let skills = visible_skills(ctx)?;
+            plan_over_skills(query, &skills, &SkillPlanKnobs::from_policy(policy))
+                .map_err(invalid_parameter)
+        }
+        (_, TypedValue::TaskPlan(_)) => Err(invalid_parameter(
+            "task_plan parameter must be named task_plan",
+        )),
+        (_, TypedValue::TaskDecomposition(_)) => Err(invalid_parameter(
+            "decomposition parameter must be named decomposition",
+        )),
+        (_, TypedValue::SkillPlanQuery(_)) => Err(invalid_parameter(
+            "skill_query parameter must be named skill_query",
+        )),
+        _ => Err(invalid_parameter(
+            "task_plan requires a typed task_plan proposal, decomposition or skill_query",
+        )),
+    }
+}
+
+/// The published skills the tenant sees, as the text relevance scores against:
+/// the summary and the declared capabilities, nothing else of the component.
+fn visible_skills(ctx: &ExecutionContext) -> Result<Vec<SkillDocument>, String> {
+    let scope = LibraryCandidateScope {
+        kinds: BoundedVec::new(vec![AgentComponentKind::Skill]).map_err(invalid_parameter)?,
+        classification_under: None,
+    };
+    let read = library_candidates(ctx.store, ctx.tenant_id, &scope)?;
+    Ok(read
+        .entries
+        .iter()
+        .filter(|entry| entry.lifecycle == AgentLibraryLifecycle::Published)
+        .map(|entry| SkillDocument {
+            id: entry.component_id.clone(),
+            text: std::iter::once(entry.summary.as_str())
+                .chain(entry.declared_capabilities.iter().map(String::as_str))
+                .collect::<Vec<_>>()
+                .join(" "),
+        })
+        .collect())
+}
+
+fn is_plan_param(value: &TypedValue) -> bool {
+    matches!(
+        value,
+        TypedValue::TaskPlan(_) | TypedValue::TaskDecomposition(_) | TypedValue::SkillPlanQuery(_)
+    )
+}
+
+/// The plan of a request that carries one, resolving the decision policy its
+/// knobs are read from. Other requests have no plan and read nothing.
+pub(super) fn plan_of_request(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+) -> Result<Option<TaskPlan>, String> {
+    if request.question.kind != QuestionKind::TaskPlan
+        && !request.params.iter().any(|p| is_plan_param(&p.value))
+    {
+        return Ok(None);
+    }
+    let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+    task_plan(ctx, request, &resolved.policy)
+}
+
+pub(super) fn task_plan(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    policy: &DecisionPolicy,
+) -> Result<Option<TaskPlan>, String> {
     if request.question.kind != QuestionKind::TaskPlan {
-        if request
-            .params
-            .iter()
-            .any(|p| matches!(p.value, TypedValue::TaskPlan(_)))
-        {
+        if request.params.iter().any(|p| is_plan_param(&p.value)) {
             return Err(invalid_parameter(
                 "task_plan parameter requires task_plan question",
             ));
@@ -40,16 +131,8 @@ pub(super) fn task_plan(request: &DecideRequest) -> Result<Option<TaskPlan>, Str
         ));
     }
     let param = &request.params.as_slice()[0];
-    let TypedValue::TaskPlan(proposal) = &param.value else {
-        return Err(invalid_parameter(
-            "task_plan requires a typed task_plan proposal",
-        ));
-    };
-    if param.name != "task_plan" {
-        return Err(invalid_parameter(
-            "task_plan parameter must be named task_plan",
-        ));
-    }
+    let proposal = proposal_of(ctx, param, policy)?;
+    let proposal = &proposal;
     let plan = plan_explicit_tasks(proposal).map_err(invalid_parameter)?;
     let CandidateSource::Declared { options } = &request.candidates else {
         return Err(invalid_parameter("task_plan requires declared task ids"));

@@ -90,6 +90,10 @@ Data entities are in [data-model.md](data-model.md). The shortest served proof i
 
 A task plan gains four control step kinds beside prompt and tool steps: branch, join, decision and approval wait. `plan_explicit_tasks` stays the one canonicalizer. It checks arm targets, defaults, joins and approval timeouts. The plan digest covers every control field. Branch choice at run time is a `Decide` question, not harness logic. `BranchSelect` evaluates the arm conditions over bound step outputs. `DecisionTableEval` evaluates a stored DMN table (`MEDULLA-CQ-ORCH-R702.5`) under its hit policy. Expressions use the simple unary test subset; anything else refuses `DMN_EXPRESSION_UNSUPPORTED`. The meristem run loop applies the verdict; the consumer rows are in `../orchestration-competency/contracts/meristem-process-control-steps.md`. Call path: `Method::Decide` → `handle_decide` → `crates/medulla-h-decide/src/decide/family/process_decision.rs` → `evaluate_table` and `select_branch` in `medulla-decision-stats`.
 
+### Decomposition and skill planning (R134.3, R134.4)
+
+Two proposers feed `plan_explicit_tasks` and add no second canonicalizer or cycle check. `decompose_task` (decision-types) routes harness subtasks to specialists by score. `plan_over_skills` (decision-stats, beside the candidate-local BM25) chooses, merges and splits over the tenant's published skills. Both are reached through the typed `decomposition` and `skill_query` parameters of a `task_plan` question, and read their thresholds from decision-policy knobs (`knob_families/task_plan.rs`). Design calls are in research.md.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks of different question families run in parallel. Tasks that edit the shared `decision_plane.rs` dispatch file run in series.

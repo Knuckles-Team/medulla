@@ -966,3 +966,203 @@ fn plan_plan_digest_again() -> String {
         .unwrap()
         .plan_digest
 }
+
+fn specialists(scores: &[(&str, i64)]) -> BoundedVec<SpecialistScore, 64> {
+    BoundedVec::new(
+        scores
+            .iter()
+            .map(|(id, micros)| SpecialistScore {
+                specialist_id: id.to_string(),
+                // Q32 of micros / 1e6.
+                score_q32: ((i128::from(*micros) << 32) / 1_000_000) as i64,
+            })
+            .collect(),
+    )
+    .unwrap()
+}
+
+fn subtask(
+    id: &str,
+    deps: &[&str],
+    schema: Option<&str>,
+    scores: &[(&str, i64)],
+) -> DecomposeSubtask {
+    DecomposeSubtask {
+        id: id.into(),
+        text: format!("Handle {id} with cited evidence"),
+        depends_on: BoundedVec::new(deps.iter().map(|d| d.to_string()).collect()).unwrap(),
+        answer_schema: schema.map(str::to_string),
+        specialists: specialists(scores),
+    }
+}
+
+fn facts(output: &str, subtasks: Vec<DecomposeSubtask>) -> DecomposeFacts {
+    DecomposeFacts {
+        output_task_id: output.into(),
+        subtasks: BoundedVec::new(subtasks).unwrap(),
+    }
+}
+
+fn knobs() -> DecomposeKnobs {
+    DecomposeKnobs::from_policy(&crate::decision::policy::DecisionPolicy::engine_default())
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[test]
+fn independent_subtasks_yield_no_edges_and_operator() {
+    let voting = facts(
+        "out",
+        vec![
+            subtask("a", &[], Some("verdict"), &[("spec-x", 900_000)]),
+            subtask("b", &[], Some("verdict"), &[("spec-x", 800_000)]),
+            subtask("out", &["a", "b"], None, &[("spec-y", 500_000)]),
+        ],
+    );
+    let proposal = decompose_task(&voting, &knobs()).unwrap();
+    let plan = plan_explicit_tasks(&proposal).unwrap();
+    let by_id = |id: &str| plan.tasks.iter().find(|t| t.task_id == id).unwrap();
+    // No edge between the two independent subtasks, and no independence flag.
+    assert!(by_id("a").depends_on.is_empty() && by_id("b").depends_on.is_empty());
+    assert_eq!(by_id("out").depends_on.as_slice(), ["a", "b"]);
+    assert_eq!(independent_count(&proposal), 2);
+    assert_eq!(
+        by_id("out").aggregation,
+        Some(TaskPlanAggregation {
+            op: AggregationOp::MajorityVote,
+            reducer_id: None
+        })
+    );
+    assert_eq!((plan.max_concurrency, plan.max_steps), (2, 3));
+    // Differing or missing schemas fall back to concat.
+    for schemas in [(Some("verdict"), Some("score")), (Some("verdict"), None)] {
+        let mixed = facts(
+            "out",
+            vec![
+                subtask("a", &[], schemas.0, &[("spec-x", 900_000)]),
+                subtask("b", &[], schemas.1, &[("spec-x", 900_000)]),
+                subtask("out", &["a", "b"], None, &[("spec-y", 500_000)]),
+            ],
+        );
+        let plan = plan_explicit_tasks(&decompose_task(&mixed, &knobs()).unwrap()).unwrap();
+        assert_eq!(
+            plan.tasks
+                .iter()
+                .find(|t| t.task_id == "out")
+                .unwrap()
+                .aggregation
+                .as_ref()
+                .map(|a| a.op),
+            Some(AggregationOp::Concat)
+        );
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[test]
+fn independence_is_the_empty_dependency_closure() {
+    let chain = facts(
+        "out",
+        vec![
+            subtask("a", &[], None, &[("s", 900_000)]),
+            subtask("b", &["a"], None, &[("s", 900_000)]),
+            subtask("c", &["b"], None, &[("s", 900_000)]),
+            subtask("out", &["c"], None, &[("s", 900_000)]),
+        ],
+    );
+    let proposal = decompose_task(&chain, &knobs()).unwrap();
+    assert_eq!(independent_count(&proposal), 1);
+    assert_eq!(proposal.max_concurrency, 1);
+    assert_eq!(proposal.max_steps, 4);
+    let wide: Vec<DecomposeSubtask> = (0..12)
+        .map(|n| subtask(&format!("w{n:02}"), &[], None, &[("s", 900_000)]))
+        .collect();
+    let deps: Vec<String> = (0..12).map(|n| format!("w{n:02}")).collect();
+    let mut all = wide;
+    all.push(subtask(
+        "out",
+        &deps.iter().map(String::as_str).collect::<Vec<_>>(),
+        None,
+        &[("s", 900_000)],
+    ));
+    let proposal = decompose_task(&facts("out", all), &knobs()).unwrap();
+    assert_eq!(independent_count(&proposal), 12);
+    // The concurrency ceiling caps the count; the topology question gets the count.
+    assert_eq!(proposal.max_concurrency, MAX_CONCURRENCY);
+    let requirements = topology_requirements(
+        medulla_agent_types::agent_fixtures::topology::requirements(1),
+        &proposal,
+    );
+    assert_eq!(requirements.subtasks, 12);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[test]
+fn specialists_route_by_score_ties_and_the_floor_knob() {
+    let f = facts(
+        "out",
+        vec![
+            subtask(
+                "a",
+                &[],
+                None,
+                &[("zed", 700_000), ("alpha", 700_000), ("low", 100_000)],
+            ),
+            subtask("out", &["a"], None, &[("only", 300_000)]),
+        ],
+    );
+    let plan = plan_explicit_tasks(&decompose_task(&f, &knobs()).unwrap()).unwrap();
+    let assignee = |id: &str| {
+        plan.tasks
+            .iter()
+            .find(|t| t.task_id == id)
+            .unwrap()
+            .assignee
+            .clone()
+    };
+    // The tie goes to the lowest id, and a score below the floor never wins.
+    assert_eq!(assignee("a").as_deref(), Some("alpha"));
+    assert_eq!(assignee("out").as_deref(), Some("only"));
+    // A pinned knob raises the floor: `only` (0.3) no longer qualifies.
+    let mut policy = crate::decision::policy::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        crate::decision::knob_families::task_plan::SPECIALIST_MIN_SCORE.knob_name(),
+        crate::decision::knobs::KnobValue::DecimalMicros(500_000),
+    );
+    assert_eq!(
+        decompose_task(&f, &DecomposeKnobs::from_policy(&policy)).unwrap_err(),
+        "NO_SPECIALIST_FOR_SUBTASK: out"
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[test]
+fn a_subtask_without_a_specialist_names_the_first_such_id() {
+    let f = facts(
+        "out",
+        vec![
+            subtask("m", &[], None, &[]),
+            subtask("b", &[], None, &[("x", 50_000)]),
+            subtask("out", &["b", "m"], None, &[("x", 900_000)]),
+        ],
+    );
+    assert_eq!(
+        decompose_task(&f, &knobs()).unwrap_err(),
+        "NO_SPECIALIST_FOR_SUBTASK: b"
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[test]
+fn a_decomposition_cycle_is_left_to_the_shipped_cycle_check() {
+    let f = facts(
+        "b",
+        vec![
+            subtask("a", &["b"], None, &[("x", 900_000)]),
+            subtask("b", &["a"], None, &[("x", 900_000)]),
+        ],
+    );
+    let proposal = decompose_task(&f, &knobs()).unwrap();
+    assert!(plan_explicit_tasks(&proposal)
+        .unwrap_err()
+        .starts_with("plan_cycle"));
+}

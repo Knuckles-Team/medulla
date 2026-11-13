@@ -53,6 +53,7 @@ pub mod retrieval;
 pub mod research_voi;
 pub mod run_credit;
 pub mod scorer;
+pub mod skill_plan;
 mod targets;
 pub mod thought_search;
 pub mod track_record;

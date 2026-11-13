@@ -182,7 +182,7 @@ pub(super) fn decide_blocking(
     let family = telemetry::family(request.question.kind);
     let (family, tenant) = (family.as_str(), ctx.tenant_id);
     let registry = super::family::for_kind(request.question.kind);
-    let task_plan = super::stat_task_plan::task_plan(request)?;
+    let task_plan = super::stat_task_plan::plan_of_request(ctx, request)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
         read_candidates(
             ctx.store,

@@ -483,3 +483,237 @@ async fn maximum_bounded_plan_is_accepted() {
         "the digest of the maximum plan is stable"
     );
 }
+
+fn declared_ids(ids: &[&str]) -> CandidateSource {
+    let mut sorted: Vec<&str> = ids.to_vec();
+    sorted.sort();
+    CandidateSource::Declared {
+        options: BoundedVec::new(
+            sorted
+                .into_iter()
+                .map(|id| DeclaredOption {
+                    option_id: id.to_string(),
+                    classification: BoundedVec::default(),
+                    numbers: BoundedVec::default(),
+                    texts: BoundedVec::default(),
+                })
+                .collect(),
+        )
+        .unwrap(),
+    }
+}
+
+fn plan_request(
+    pin: &ComponentDependency,
+    name: &str,
+    value: TypedValue,
+    ids: &[&str],
+) -> DecideRequest {
+    DecideRequest {
+        tenant_id: TENANT.into(),
+        question: StatisticalQuestion {
+            question_id: "derived-plan".into(),
+            kind: QuestionKind::TaskPlan,
+            safety: QuestionSafety::Ordinary,
+        },
+        candidates: declared_ids(ids),
+        feature_schema: pin.clone(),
+        head: None,
+        policy: DecisionPolicyRef::Default,
+        params: BoundedVec::new(vec![TypedParam {
+            name: name.into(),
+            value,
+        }])
+        .unwrap(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    }
+}
+
+fn decompose_subtask(
+    id: &str,
+    deps: &[&str],
+    schema: Option<&str>,
+    specialists: &[(&str, i64)],
+) -> medulla_decision_types::decision::task_plan::DecomposeSubtask {
+    use medulla_decision_types::decision::task_plan::{DecomposeSubtask, SpecialistScore};
+    DecomposeSubtask {
+        id: id.into(),
+        text: format!("Handle {id} with cited evidence"),
+        depends_on: BoundedVec::new(deps.iter().map(|d| d.to_string()).collect()).unwrap(),
+        answer_schema: schema.map(str::to_string),
+        specialists: BoundedVec::new(
+            specialists
+                .iter()
+                .map(|(id, micros)| SpecialistScore {
+                    specialist_id: id.to_string(),
+                    score_q32: ((i128::from(*micros) << 32) / 1_000_000) as i64,
+                })
+                .collect(),
+        )
+        .unwrap(),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.3
+#[tokio::test]
+async fn decomposition_parameter_routes_through_decide() {
+    use medulla_decision_types::decision::task_plan::{AggregationOp, DecomposeFacts};
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let facts = DecomposeFacts {
+        output_task_id: "out".into(),
+        subtasks: BoundedVec::new(vec![
+            decompose_subtask(
+                "a",
+                &[],
+                Some("verdict"),
+                &[("zed", 700_000), ("alpha", 700_000)],
+            ),
+            decompose_subtask("b", &[], Some("verdict"), &[("beta", 600_000)]),
+            decompose_subtask("out", &["a", "b"], None, &[("lead", 400_000)]),
+        ])
+        .unwrap(),
+    };
+    let request = plan_request(
+        &pin,
+        "decomposition",
+        TypedValue::TaskDecomposition(Box::new(facts.clone())),
+        &["a", "b", "out"],
+    );
+    let batch = decide(&h, request).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let plan = record.task_plan().unwrap();
+    let task = |id: &str| plan.tasks.iter().find(|t| t.task_id == id).unwrap();
+    assert_eq!(task("a").assignee.as_deref(), Some("alpha"));
+    assert_eq!(task("b").assignee.as_deref(), Some("beta"));
+    assert!(task("a").depends_on.is_empty() && task("b").depends_on.is_empty());
+    assert_eq!(
+        task("out").aggregation.as_ref().map(|a| a.op),
+        Some(AggregationOp::MajorityVote)
+    );
+    assert_eq!((plan.max_concurrency, plan.max_steps), (2, 3));
+    assert_eq!(
+        medulla_decision_types::decision::digest::statistical_record_digest(record),
+        record.record_digest
+    );
+    // A subtask no specialist qualifies for refuses, naming it.
+    let mut weak = facts;
+    weak.subtasks = BoundedVec::new(vec![
+        decompose_subtask("a", &[], None, &[("alpha", 100_000)]),
+        decompose_subtask("out", &["a"], None, &[("lead", 900_000)]),
+    ])
+    .unwrap();
+    let request = plan_request(
+        &pin,
+        "decomposition",
+        TypedValue::TaskDecomposition(Box::new(weak)),
+        &["a", "out"],
+    );
+    assert_invalid(&h, request, "NO_SPECIALIST_FOR_SUBTASK: a").await;
+}
+
+fn publish_skill(h: &Harness, tenant: &str, nonce: u8, id: &str, text: &str) {
+    let mut draft = test_component_draft(tenant, id);
+    draft.kind = AgentComponentKind::Skill;
+    draft.summary = text.to_string();
+    h.store
+        .publish_component(AgentComponentPublishRequest {
+            context: mutation_context(
+                &h.store,
+                tenant,
+                &format!("seed:{id}"),
+                nonce,
+                0,
+                "agent-component:publish",
+            ),
+            component: draft,
+            evaluation_receipt_digest: None,
+        })
+        .unwrap();
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.4
+#[tokio::test]
+async fn skill_query_parameter_plans_over_the_visible_skills() {
+    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    publish_skill(
+        &h,
+        TENANT,
+        41,
+        "skill-search",
+        "search documents archive retrieval index",
+    );
+    publish_skill(
+        &h,
+        TENANT,
+        42,
+        "skill-report",
+        "summarise findings report writing narrative",
+    );
+    // Another tenant's skill covers the physics subtask; this tenant cannot see it.
+    publish_skill(
+        &h,
+        "foreign-tenant",
+        43,
+        "foreign-physics",
+        "quantum chromodynamics lattice physics",
+    );
+    let subtask = |id: &str, text: &str, deps: &[&str]| SkillSubtask {
+        id: id.into(),
+        text: text.into(),
+        depends_on: BoundedVec::new(deps.iter().map(|d| d.to_string()).collect()).unwrap(),
+    };
+    let query = |subtasks: Vec<SkillSubtask>| {
+        TypedValue::SkillPlanQuery(Box::new(SkillPlanQuery {
+            output_task_id: "z".into(),
+            subtasks: BoundedVec::new(subtasks).unwrap(),
+        }))
+    };
+    let request = plan_request(
+        &pin,
+        "skill_query",
+        query(vec![
+            subtask("a", "search documents archive retrieval", &[]),
+            subtask("q", "quantum chromodynamics lattice", &[]),
+            subtask("z", "summarise findings report narrative", &["a", "q"]),
+        ]),
+        &["a", "q", "z"],
+    );
+    assert_invalid(&h, request, "NO_SKILL_FOR_SUBTASK: q").await;
+    let request = plan_request(
+        &pin,
+        "skill_query",
+        query(vec![
+            subtask("a", "search documents archive retrieval", &[]),
+            subtask("z", "summarise findings report narrative", &["a"]),
+        ]),
+        &["a", "z"],
+    );
+    let batch = decide(&h, request).await.unwrap();
+    let plan = batch.records.as_slice()[0].task_plan().unwrap();
+    let assignee = |id: &str| {
+        plan.tasks
+            .iter()
+            .find(|t| t.task_id == id)
+            .and_then(|t| t.assignee.as_deref())
+    };
+    assert_eq!(assignee("a"), Some("skill-search"));
+    assert_eq!(assignee("z"), Some("skill-report"));
+    // A tenant with no published skill abstains with the empty-index code.
+    let empty = Harness::new().await;
+    let (pin, _) = publish_route_schema(&empty);
+    let request = plan_request(
+        &pin,
+        "skill_query",
+        query(vec![subtask(
+            "z",
+            "summarise findings report narrative",
+            &[],
+        )]),
+        &["z"],
+    );
+    assert_invalid(&empty, request, "EMPTY_SKILL_INDEX").await;
+}

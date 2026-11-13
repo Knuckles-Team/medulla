@@ -237,6 +237,11 @@ pub enum TypedValue {
     Rational(UnitRationalWire),
     /// Explicit task claims, never policy or authorization.
     TaskPlan(Box<super::task_plan::TaskPlanProposal>),
+    /// Subtasks and specialist scores the harness produced; medulla derives
+    /// the plan (MEDULLA-DECISION-ENGINE-R134.3).
+    TaskDecomposition(Box<super::task_plan::DecomposeFacts>),
+    /// Atomic subtasks to cover with library skills (MEDULLA-DECISION-ENGINE-R134.4).
+    SkillPlanQuery(Box<super::task_plan::skill_plan::SkillPlanQuery>),
     /// A context-package request (MEDULLA-DECISION-ENGINE-R137.7).
     ContextPackages(Box<super::context_package::ContextPackageRequest>),
     /// A standalone topology question (MEDULLA-DECISION-ENGINE-R111.1).

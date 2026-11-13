@@ -18,12 +18,12 @@ pub struct TaskPlanFamily;
 impl DecisionFamily for TaskPlanFamily {
     fn conclude(
         &self,
-        _ctx: &ExecutionContext,
+        ctx: &ExecutionContext,
         request: &DecideRequest,
-        _policy: &medulla_decision_types::decision::DecisionPolicy,
+        policy: &medulla_decision_types::decision::DecisionPolicy,
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
-        match crate::decide::stat_task_plan::task_plan(request) {
+        match crate::decide::stat_task_plan::task_plan(ctx, request, policy) {
             Err(detail) => Some(Err(detail)),
             Ok(Some(plan)) => Some(Ok(Executed {
                 matrix: None,

@@ -15,12 +15,18 @@ mod aggregation;
 pub mod branch_breadth;
 mod call;
 mod control;
+mod decompose;
 pub mod pairwise;
+pub mod skill_plan;
 pub mod trajectory_budget;
 pub mod trajectory_projection;
 pub mod trajectory_refusal;
 pub use aggregation::{
     AggregationOp, TaskPlanAggregation, PLAN_AGGREGATION_INVALID, PLAN_AGGREGATION_NOT_OUTPUT,
+};
+pub use decompose::{
+    decompose_task, independent_count, independent_ids, topology_requirements, DecomposeFacts,
+    DecomposeKnobs, DecomposeSubtask, SpecialistScore, NO_SPECIALIST_FOR_SUBTASK,
 };
 pub use call::{
     task_bindings, TaskPlanBinding, TaskPlanCall, BINDING_KEY, MAX_BINDINGS_PER_CALL,
