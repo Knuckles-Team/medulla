@@ -52,6 +52,7 @@ async fn commit(
         context,
         record,
         expected_catalog_digest,
+        topology,
     } = request;
     if record.tenant_id != verified.tenant() {
         return Err(
@@ -71,19 +72,40 @@ async fn commit(
         .map_err(|error| format!("decision replay task failed: {error}"))?
         .map_err(|error| error.to_string())?;
     super::shape::check_decision_shape(&record)?;
-    // MEDULLA-DECISION-ENGINE-R113.2.1: the library and capacity ledger have
-    // separate owners. Do not publish a capacity-backed decision until a
-    // shared transaction can also publish its leases and graph evidence.
-    // Inputs alone are advisory; abstentions and zero-demand plans acquire
-    // no capacity and must not be refused by this boundary guard.
-    if record
-        .topology_plan()
-        .is_some_and(|plan| plan.lease.per_cell.iter().any(|cell| cell.amount > 0))
-    {
+    // MEDULLA-DECISION-ENGINE-R113.2.1 and R113.2.5: the library and the capacity ledger have
+    // separate owners. A capacity-backed topology decision (a solved plan with positive lease
+    // demand) is published by the shared-owner path below, which needs a capacity authority:
+    // without one it is refused before any write. Inputs alone are advisory; abstentions and
+    // zero-demand plans acquire no capacity and keep the ordinary commit path.
+    let capacity_backed = !capacity::demands(&record).is_empty();
+    if !capacity_backed && topology.is_some() {
         return Err(format!(
-            "{}: topology capacity acquisition requires shared transaction authority",
+            "{}: topology evidence was sent for a record that leases no capacity",
             DecisionErrorCode::DerivationRejected.as_str()
         ));
+    }
+    if capacity_backed {
+        let capable = state
+            .read()
+            .await
+            .persistence
+            .as_ref()
+            .is_some_and(|backend| backend.supports_native_capacity_leases());
+        if !capable {
+            return Err(format!(
+                "{}: topology capacity acquisition requires shared transaction authority",
+                DecisionErrorCode::DerivationRejected.as_str()
+            ));
+        }
+        if topology.is_none() {
+            return Err(format!(
+                "{}: a capacity-backed topology commit names its capacity graph and evidence graph",
+                DecisionErrorCode::DerivationRejected.as_str()
+            ));
+        }
+        if let Some(asked) = &topology {
+            capacity::check_ledger_access(state, verified, &asked.capacity_graph).await?;
+        }
     }
     let store = state.write().await.ensure_agent_library()?;
     let context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
@@ -94,6 +116,22 @@ async fn commit(
         "decision:commit",
         true,
     )?;
+    // The evidence graph's context is bound to the verified request like the record's: tenant,
+    // principal, nonce and policy come from the authenticated request, never from the body.
+    let mut topology = topology;
+    if let Some(asked) = topology.as_mut() {
+        let mut bound =
+            medulla_persistence_records::agent_library::context::bind_agent_library_context(
+                &store,
+                req_id,
+                verified,
+                asked.evidence.context.clone(),
+                "agent-graph:publish",
+                true,
+            )?;
+        bound.idempotency_key = format!("{}:evidence", bound.idempotency_key);
+        asked.evidence.context = bound;
+    }
     // MEDULLA-DECISION-ENGINE-R036.103/.104/.105: the commit is a transaction over the RBAC image
     // and the Agent Library heads. The coordinator writes its protocol-start marker and the
     // request-bound certificate first; both owners reserve; the vote is taken; the decision is
@@ -133,6 +171,38 @@ async fn commit(
         };
         (admitted, Some(coordinator))
     };
+    let mut leases: Option<capacity::LeaseHold> = None;
+    if let (Some(coordinator), Some(topology), true) =
+        (&coordinator, topology.as_ref(), capacity_backed)
+    {
+        // The lease participant's checked PREPARE: all cells or none. A denial or refusal
+        // decides ABORT, which releases the owners' reservations; nothing is written.
+        let prepared = capacity::LeaseHold::acquire(
+            state,
+            verified,
+            &record,
+            &topology.capacity_graph,
+            coordinator.txn_id(),
+        )
+        .await;
+        match prepared {
+            Ok(capacity::Prepared::Held(hold)) => leases = Some(hold),
+            Ok(capacity::Prepared::Denied(message)) => {
+                let _ = coordinator.decide(false).await;
+                let _ = admitted
+                    .resolve_decided(state, &store, OwnerDecision::Abort)
+                    .await;
+                return Err(message);
+            }
+            Err(error) => {
+                let _ = coordinator.decide(false).await;
+                let _ = admitted
+                    .resolve_decided(state, &store, OwnerDecision::Abort)
+                    .await;
+                return Err(error);
+            }
+        }
+    }
     if let Some(coordinator) = &coordinator {
         // The vote: the commit's own stale-catalog check, taken before the decision so a NO is
         // decided ABORT and both owners resolve from it.
@@ -145,6 +215,9 @@ async fn commit(
         match decided {
             Ok(decision) => {
                 if !vote {
+                    if let Some(held) = leases.take() {
+                        let _ = held.resolve_decided(decision).await;
+                    }
                     let _ = admitted.resolve_decided(state, &store, decision).await;
                     return Err(format!(
                         "{}: the expected catalog is not the record's",
@@ -156,24 +229,60 @@ async fn commit(
                 // CERTIFICATE_EXPIRED (the coordinator recorded ABORT) or a storage refusal:
                 // both owners resolve from the durable decision, the code answers first.
                 if let Ok(decision) = coordinator.recover().await {
+                    if let Some(held) = leases.take() {
+                        let _ = held.resolve_decided(decision).await;
+                    }
                     let _ = admitted.resolve_decided(state, &store, decision).await;
                 }
                 return Err(error);
             }
         }
     }
+    let evidence_graph = topology
+        .as_ref()
+        .map(|asked| asked.evidence.graph.graph_id.clone());
+    let lease_premises: Vec<String> = leases
+        .as_ref()
+        .map(|held| {
+            held.lease_ids()
+                .into_iter()
+                .map(|id| format!("lease:{id}"))
+                .collect()
+        })
+        .unwrap_or_default();
     let written = super::telemetry::stage(
         super::telemetry::Stage::Commit,
         "assembly",
         verified.tenant(),
-        || store.commit_decision_record(context, &record, &expected_catalog_digest),
+        || match topology {
+            // The record and its evidence graph are one Agent Library transaction, after the
+            // durable COMMIT; the lease is the other participant, already held.
+            Some(topology) if capacity_backed => {
+                let txn_id = certified::Coordinator::transaction_id(&record, verified);
+                store
+                    .commit_topology_decision(
+                        context,
+                        &record,
+                        &expected_catalog_digest,
+                        topology.evidence,
+                        &txn_id,
+                    )
+                    .map(|parts| (parts.record, Some(parts.evidence_revision)))
+            }
+            _ => store
+                .commit_decision_record(context, &record, &expected_catalog_digest)
+                .map(|written| (written, None)),
+        },
     );
     if let Some(coordinator) = &coordinator {
         // Both owners resolve from the durable decision, never from the local write result.
         let decision = coordinator.recover().await?;
+        if let Some(held) = leases.take() {
+            held.resolve_decided(decision).await?;
+        }
         admitted.resolve_decided(state, &store, decision).await?;
     }
-    let written = written?;
+    let (written, evidence_revision) = written?;
     if let Some(premise) = premise {
         tracing::info!(%premise, "decision-commit coordinator decision");
     }
@@ -183,6 +292,15 @@ async fn commit(
         record_id: record.record_id,
         component: written.result,
         replayed: written.replayed,
+        topology: evidence_graph
+            .zip(evidence_revision)
+            .map(
+                |(graph, revision)| medulla_decision_types::decision::TopologyCommitOutcome {
+                    evidence_graph_id: graph,
+                    evidence_revision: revision,
+                    premises: lease_premises,
+                },
+            ),
     })
 }
 
@@ -201,6 +319,8 @@ pub async fn handle_decision_commit(
 #[cfg(feature = "decide")]
 pub(in crate::decide) mod admission;
 #[cfg(feature = "decide")]
+pub(in crate::decide) mod capacity;
+#[cfg(feature = "decide")]
 pub(in crate::decide) mod certified;
 #[cfg(all(test, feature = "decide", feature = "redb"))]
-mod tests;
+pub(in crate::decide) mod tests;

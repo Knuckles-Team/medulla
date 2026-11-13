@@ -408,8 +408,7 @@ fn a_policy_component_whose_body_does_not_match_its_digest_is_refused() {
 
 /// The evidence graph of a solved assembly, pinned to the committed record, with its agent
 /// published so the graph's references resolve.
-#[cfg(test)]
-fn evidence_request(
+pub fn evidence_request(
     store: &AgentLibraryStore,
     assembly: &Assembly,
     key: &str,

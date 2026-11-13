@@ -199,6 +199,24 @@ pub struct DecisionCommitRequest {
     pub record: DecisionRecord,
     /// Compare-and-set: the catalog digest the record was decided against.
     pub expected_catalog_digest: String,
+    /// What a capacity-backed topology record publishes beside itself
+    /// (MEDULLA-DECISION-ENGINE-R113.2.5). Required when the solved plan leases
+    /// capacity; absent for every other record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topology: Option<TopologyCommitEvidence>,
+}
+
+/// The ledger graph a topology plan leases from, and the evidence graph that
+/// is committed in the same transaction as its decision record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopologyCommitEvidence {
+    /// The graph whose capacity ledger holds the plan's cells.
+    pub capacity_graph: String,
+    /// The evidence graph: it pins the decision record through
+    /// `synthesis_evidence`, and is written with the record.
+    pub evidence: medulla_agent_types::agent_graph::AgentGraphPublishRequest,
 }
 
 /// The committed record's durable identity.
@@ -212,6 +230,24 @@ pub struct DecisionCommitResult {
     pub component: AgentComponentCommittedResult,
     /// True when an identical commit had already landed.
     pub replayed: bool,
+    /// What a capacity-backed topology commit published beside the record
+    /// (MEDULLA-DECISION-ENGINE-R113.2.2). Absent for every other record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topology: Option<TopologyCommitOutcome>,
+}
+
+/// The lease and evidence a topology commit made visible with its record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopologyCommitOutcome {
+    /// The evidence graph written in the record's transaction.
+    pub evidence_graph_id: String,
+    /// The evidence graph's head revision after the commit.
+    pub evidence_revision: u64,
+    /// One `lease:<id>` premise per lease the capacity ledger granted. Empty
+    /// on a replay of a stored record, which acquires nothing.
+    pub premises: Vec<String>,
 }
 
 /// Format identity (RF-ADR-006) of [`AssemblyResult`].

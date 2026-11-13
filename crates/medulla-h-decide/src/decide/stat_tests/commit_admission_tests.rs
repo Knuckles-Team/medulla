@@ -68,6 +68,7 @@ async fn cross_owner_admission_journey() {
         context: commit_context(&store, key, nonce),
         expected_catalog_digest: catalog.to_string(),
         record: record.clone(),
+        topology: None,
     };
     let rbac_state = |txn_id: &str| {
         rbac.reservations()
@@ -367,4 +368,335 @@ async fn cross_owner_admission_journey() {
         .xshard_certificate_get(&txn("foreign"), "foreign")
         .unwrap()
         .is_none());
+}
+
+/// A served state with a durable backend holding one capacity ledger graph, an Agent Library
+/// and a solved topology assembly whose plan leases from `cell-llm`.
+struct TopologyWorld {
+    _dir: tempfile::TempDir,
+    backend: Arc<RedbBackend>,
+    state: crate::decide::SharedState,
+    store: medulla_persistence_records::agent_library::AgentLibraryStore,
+    assembly: medulla_compute::assemble::Assembly,
+}
+
+const LEDGER: &str = "topology";
+
+async fn topology_world() -> TopologyWorld {
+    use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass};
+    use medulla_work_types::native_control::{
+        CapacityCellUpdateRequest, NativeControlSchemaVersion,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().to_str().unwrap().to_string();
+    let backend = Arc::new(RedbBackend::open_with_shards(path.clone(), 16, 1).unwrap());
+    backend
+        .commit_capacity_lease(
+            LEDGER,
+            medulla_protocol_types::protocol::Method::UpdateCapacityCell {
+                request: CapacityCellUpdateRequest {
+                    schema_version: NativeControlSchemaVersion::V1,
+                    cell: CapacityCell {
+                        cell_id: "cell-llm".into(),
+                        parent_id: None,
+                        resource_class: CapacityResourceClass::LlmGenerator,
+                        capacity: 8,
+                        reserved_floor: 0,
+                        epoch: 1,
+                        policy_digest: "d".repeat(64),
+                        updated_at_ms: 0,
+                        throttle: None,
+                    },
+                    expected_epoch: None,
+                    now_ms: 1,
+                },
+            },
+        )
+        .await
+        .unwrap();
+    let mut server = ServerState::new_for_test("topology-world", IsolationLayer::new());
+    server.persist_dir = Some(path);
+    server.persistence = Some(backend.clone());
+    server
+        .registry
+        .create_graph(
+            LEDGER,
+            medulla_protocol_types::protocol::GraphType::Global,
+            None,
+        )
+        .expect("the ledger graph is registered");
+    let state = Arc::new(RwLock::new(server));
+    let store = state.write().await.ensure_agent_library().unwrap();
+    seed_library(&store);
+    let assembly = crate::decide::commit::tests::topology_assembly(&store);
+    TopologyWorld {
+        _dir: dir,
+        backend,
+        state,
+        store,
+        assembly,
+    }
+}
+
+impl TopologyWorld {
+    fn request(&self, key: &str, nonce: u8, graph_nonce: u8) -> DecisionCommitRequest {
+        let record = self.assembly.record.clone();
+        DecisionCommitRequest {
+            context: commit_context(&self.store, key, nonce),
+            expected_catalog_digest: record.inputs.catalog_digest.clone(),
+            record,
+            topology: Some(medulla_decision_types::decision::TopologyCommitEvidence {
+                capacity_graph: LEDGER.into(),
+                evidence: medulla_persistence_records::decision_record::tests::evidence_request(
+                    &self.store,
+                    &self.assembly,
+                    &format!("{key}-graph"),
+                    graph_nonce,
+                ),
+            }),
+        }
+    }
+
+    async fn leases(&self) -> Vec<medulla_mutation_types::capacity_lease::CapacityLease> {
+        use medulla_work_types::native_control::{
+            CapacityStatusRequest, NativeControlSchemaVersion,
+        };
+        self.backend
+            .read_capacity_status(
+                LEDGER,
+                &CapacityStatusRequest {
+                    schema_version: NativeControlSchemaVersion::V1,
+                    tenant_ref: TENANT.into(),
+                    cell_id: Some("cell-llm".into()),
+                    lease_id: None,
+                    max_count: 50,
+                    cursor: None,
+                },
+            )
+            .await
+            .unwrap()
+            .leases
+    }
+}
+
+fn decode_commit(response: medulla_protocol_types::protocol::Response) -> DecisionCommitResult {
+    assert!(response.error.is_none(), "{:?}", response.error);
+    let Some(ResultPayload::Raw(bytes)) = response.result else {
+        panic!("commit result")
+    };
+    rmp_serde::from_slice(&bytes).unwrap()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.5
+#[tokio::test]
+async fn topology_shared_commit_journey() {
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let world = topology_world().await;
+    let record = world.assembly.record.clone();
+    let demands = crate::decide::commit::capacity::demands(&record);
+    assert!(!demands.is_empty());
+
+    // 1. A capacity-backed plan without its capacity graph and evidence graph is refused before
+    //    any write: no record, no lease.
+    let mut bare = world.request("bare", 1, 61);
+    bare.topology = None;
+    let refused = handle_decision_commit(&world.state, 1, &verified("bare", 1), bare).await;
+    assert_eq!(refused.error.as_deref(), Some("DERIVATION_REJECTED"));
+    assert!(world
+        .store
+        .current_component(TENANT, &record.record_id)
+        .unwrap()
+        .is_none());
+    assert!(world.leases().await.is_empty());
+
+    // 2. The ledger graph is a graph the caller may write: an unknown graph refuses and nothing
+    //    is written.
+    let mut elsewhere = world.request("elsewhere", 2, 63);
+    elsewhere.topology.as_mut().unwrap().capacity_graph = "not-a-graph".into();
+    let refused =
+        handle_decision_commit(&world.state, 2, &verified("elsewhere", 2), elsewhere).await;
+    assert!(refused.error.is_some(), "{:?}", refused.error);
+    assert!(world.leases().await.is_empty());
+
+    // 3. A caller of another tenant is refused before any write.
+    let foreign = VerifiedRequestContext::verified_for_test_in_tenant("caller-a", "foreign");
+    let refused =
+        handle_decision_commit(&world.state, 3, &foreign, world.request("foreign", 3, 65)).await;
+    assert_eq!(refused.error.as_deref(), Some("ACCESS_DENIED"));
+    assert!(world.leases().await.is_empty());
+
+    // 4. The served commit makes the record, the evidence graph and the lease visible together,
+    //    and the coordinator decision is a durable COMMIT.
+    let good = world.request("good", 4, 67);
+    let graph_id = good
+        .topology
+        .as_ref()
+        .unwrap()
+        .evidence
+        .graph
+        .graph_id
+        .clone();
+    let committed = decode_commit(
+        handle_decision_commit(&world.state, 4, &verified("good", 4), good.clone()).await,
+    );
+    assert!(!committed.replayed);
+    assert_eq!(committed.record_id, record.record_id);
+    assert!(world
+        .store
+        .current_component(TENANT, &record.record_id)
+        .unwrap()
+        .is_some());
+    let evidence = world
+        .store
+        .current_graph(TENANT, &graph_id)
+        .unwrap()
+        .expect("the evidence graph is published with the record");
+    let outcome = committed.topology.expect("topology outcome");
+    assert_eq!(outcome.evidence_graph_id, graph_id);
+    assert_eq!(outcome.evidence_revision, evidence.entry_revision);
+    let leases = world.leases().await;
+    assert_eq!(leases.len(), demands.len());
+    assert_eq!(
+        outcome.premises,
+        leases
+            .iter()
+            .map(|lease| format!("lease:{}", lease.lease_id))
+            .collect::<Vec<_>>()
+    );
+    let txn = format!("decision-commit:{}:good", record.record_id);
+    assert_eq!(world.backend.xshard_decision_get(&txn).unwrap(), Some(true));
+
+    // 5. A repeat of the stored commit replays: no second lease, no second evidence revision.
+    let again =
+        decode_commit(handle_decision_commit(&world.state, 5, &verified("good", 4), good).await);
+    assert!(again.replayed);
+    assert_eq!(world.leases().await.len(), demands.len());
+    assert_eq!(
+        world
+            .store
+            .current_graph(TENANT, &graph_id)
+            .unwrap()
+            .unwrap()
+            .entry_revision,
+        evidence.entry_revision
+    );
+
+    // 6. With no capacity authority configured, a capacity-backed record is refused by the
+    //    narrowed R113.2.1 guard, before any owner changes.
+    world.state.write().await.persistence = None;
+    let guarded = handle_decision_commit(
+        &world.state,
+        6,
+        &verified("guarded", 6),
+        world.request("guarded", 6, 69),
+    )
+    .await;
+    assert_eq!(guarded.error.as_deref(), Some("DERIVATION_REJECTED"));
+    assert_eq!(
+        guarded.error_detail.as_deref(),
+        Some("topology capacity acquisition requires shared transaction authority")
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.2
+#[tokio::test]
+async fn topology_commit_publishes_capacity_and_evidence() {
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let world = topology_world().await;
+    let record = world.assembly.record.clone();
+    let demands = crate::decide::commit::capacity::demands(&record);
+
+    // The ledger's own accepting decision builds the typed commit outcome the row names.
+    let request = world.request("accepted", 7, 71);
+    let graph_id = request
+        .topology
+        .as_ref()
+        .unwrap()
+        .evidence
+        .graph
+        .graph_id
+        .clone();
+    let committed = decode_commit(
+        handle_decision_commit(&world.state, 1, &verified("accepted", 7), request.clone()).await,
+    );
+
+    // Record, lease and evidence node are all visible.
+    let stored = world
+        .store
+        .current_component(TENANT, &record.record_id)
+        .unwrap()
+        .expect("the decision record is visible");
+    assert_eq!(stored.component_id, record.record_id);
+    let leases = world.leases().await;
+    assert_eq!(leases.len(), demands.len());
+    for (lease, demand) in leases.iter().zip(demands.iter()) {
+        assert_eq!(lease.cell_id, demand.cell_id);
+        assert_eq!(lease.amount, demand.amount);
+        assert_eq!(lease.tenant_ref, TENANT);
+    }
+    let evidence = world
+        .store
+        .current_graph(TENANT, &graph_id)
+        .unwrap()
+        .expect("the evidence node is visible");
+    assert_eq!(
+        evidence.synthesis_evidence.as_ref().unwrap().component_id,
+        record.record_id
+    );
+
+    // The typed outcome agrees with the three outputs, and the premises name every lease.
+    let lease_ids: Vec<String> = leases.iter().map(|lease| lease.lease_id.clone()).collect();
+    let outcome = medulla_agent_types::agent_topology::capacity_commit::CapacitySynthesisCommit::from_capacity_decision(
+        medulla_work_types::native_control::CapacityDecision::Accepted,
+        lease_ids.clone(),
+        true,
+    )
+    .expect("an accepted decision with leases and evidence commits");
+    assert_eq!(
+        outcome,
+        medulla_agent_types::agent_topology::capacity_commit::CapacitySynthesisCommit::Committed {
+            lease_ids: lease_ids.clone(),
+            synthesis_evidence_published: true,
+        }
+    );
+    let published = committed.topology.expect("topology outcome");
+    assert_eq!(published.evidence_graph_id, graph_id);
+    assert_eq!(
+        published.premises,
+        lease_ids
+            .iter()
+            .map(|id| format!("lease:{id}"))
+            .collect::<Vec<_>>()
+    );
+
+    // A cross-tenant read returns nothing: the other tenant sees no record, no evidence and
+    // no lease.
+    assert!(world
+        .store
+        .current_component("foreign", &record.record_id)
+        .unwrap()
+        .is_none());
+    assert!(world
+        .store
+        .current_graph("foreign", &graph_id)
+        .unwrap()
+        .is_none());
+    let foreign_leases = world
+        .backend
+        .read_capacity_status(
+            LEDGER,
+            &medulla_work_types::native_control::CapacityStatusRequest {
+                schema_version: medulla_work_types::native_control::NativeControlSchemaVersion::V1,
+                tenant_ref: "foreign".into(),
+                cell_id: Some("cell-llm".into()),
+                lease_id: None,
+                max_count: 50,
+                cursor: None,
+            },
+        )
+        .await
+        .unwrap();
+    assert!(foreign_leases.leases.is_empty());
 }

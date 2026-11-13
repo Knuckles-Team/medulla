@@ -343,6 +343,7 @@ pub fn commit_request() -> DecisionCommitRequest {
         context: mutation_context(),
         record: record(solved),
         expected_catalog_digest: digest_text(0x73),
+        topology: None,
     }
 }
 

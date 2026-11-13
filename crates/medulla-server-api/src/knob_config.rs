@@ -310,6 +310,8 @@ knobs! {
     topology_max_rounds: u64 = "topology.max_rounds", U64(8), [1, 8], "count", Tunable;
     /// Topology analogy score floor.
     topology_analogy_min: f64 = "topology.analogy_min", F64(0.6), [0.1, 1.0], "ratio", Tunable;
+    /// How long the capacity leases a committed topology plan acquires live (MEDULLA-DECISION-ENGINE-R113.2.5).
+    topology_lease_ttl_ms: u64 = "topology.lease_ttl_ms", U64(900_000), [1_000, 86_400_000], "ms", Tunable;
     /// Topology candidate-set cap.
     topology_max_candidates: u64 = "topology.max_candidates", U64(1_000), [1, 100_000], "sets", Tunable;
     /// Schema-repair shadow ingest sample.

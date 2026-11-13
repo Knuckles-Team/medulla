@@ -134,7 +134,7 @@ pub use replay::{
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
-    LibraryCandidateScope, SolverBudget, ASSEMBLY_RESULT_SCHEMA_VERSION,
+    LibraryCandidateScope, SolverBudget, TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
     DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
 };
 pub use statistical::{

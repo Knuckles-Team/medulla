@@ -16,7 +16,6 @@ use medulla_agent_types::delegation::AgentGraphEntryRef;
 use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};
 use medulla_decision_types::decision::DecisionCommitRequest;
 use medulla_decision_types::decision::DecisionCommitResult;
-use medulla_decision_types::decision::DecisionRecord;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_types::contract::BoundedVec;
@@ -38,7 +37,9 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
-fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
+pub(in crate::decide) fn topology_assembly(
+    store: &AgentLibraryStore,
+) -> medulla_compute::assemble::Assembly {
     let base = decided(store);
     let mut topology = facts();
     let shape = base.graph.unwrap().shape;
@@ -92,7 +93,7 @@ fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
         }])
         .unwrap(),
     });
-    let record = assemble(
+    let assembly = assemble(
         input,
         RecordIdentity {
             tenant_id: TENANT.into(),
@@ -100,9 +101,9 @@ fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
             created_at_ms: 20,
         },
     )
-    .unwrap()
-    .record;
-    replay_check(&record).expect("genuine topology record replays");
+    .unwrap();
+    let record = &assembly.record;
+    replay_check(record).expect("genuine topology record replays");
     assert!(record
         .topology_plan()
         .unwrap()
@@ -110,7 +111,7 @@ fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
         .per_cell
         .iter()
         .any(|cell| cell.amount > 0));
-    record
+    assembly
 }
 
 fn owner_bytes(dir: &std::path::Path) -> Vec<(std::path::PathBuf, Vec<u8>)> {
@@ -167,15 +168,17 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         medulla_isolation::isolation::IsolationLayer::new(),
     );
     server.persist_dir = Some(path);
-    server.persistence = Some(backend.clone());
+    // No capacity authority is configured on the served state, so the topology guard applies.
+    server.persistence = None;
     let state = Arc::new(RwLock::new(server));
     let store = state.write().await.ensure_agent_library().unwrap();
     seed_library(&store);
-    let record = topology_record(&store);
+    let record = topology_assembly(&store).record;
     let request = DecisionCommitRequest {
         context: commit_context(&store, "topology-commit", 1),
         expected_catalog_digest: record.inputs.catalog_digest.clone(),
         record: record.clone(),
+        topology: None,
     };
     let status = CapacityStatusRequest {
         schema_version: NativeControlSchemaVersion::V1,
@@ -225,7 +228,8 @@ async fn topology_commit_refuses_uncoordinated_owners() {
     assert_eq!(response.error.as_deref(), Some("ACCESS_DENIED"));
     assert_eq!(owner_bytes(dir.path()), before);
 
-    // The same served path still accepts an ordinary, replay-valid record.
+    // With the durable backend configured, the same served path accepts an ordinary record.
+    state.write().await.persistence = Some(backend.clone());
     let plain = decided(&store).record;
     let response = super::handle_decision_commit(
         &state,
@@ -235,6 +239,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
             context: commit_context(&store, "ordinary-commit", 3),
             expected_catalog_digest: plain.inputs.catalog_digest.clone(),
             record: plain.clone(),
+            topology: None,
         },
     )
     .await;
