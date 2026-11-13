@@ -27,6 +27,7 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         cores_per_mille: 1000,
         memory_per_worker_bytes: 1024 * 1024 * 1024,
         max_queue_depth: 64,
+        analytics_workers: 1,
         task_lease_ms: 60_000,
         retry_after_ms: 250,
         worker_ttl_ms: 30_000,

@@ -319,4 +319,124 @@ mod tests {
             PartitionKind::Moving
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.9
+    // spec: MEDULLA-PLACEMENT-R783.8
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &PARTITION_MOVE_MACHINE;
+        let moves = |id: &str| match id {
+            "P01" => (
+                entry(7, 11, PartitionState::Active),
+                PartitionMove::StartMove { target: 9 },
+            ),
+            "P02" => (
+                entry(7, 11, PartitionState::Moving { target: 9 }),
+                PartitionMove::StartMove { target: 9 },
+            ),
+            "P03" => (
+                entry(7, 11, PartitionState::Moving { target: 9 }),
+                PartitionMove::FenceCutover {
+                    target: 9,
+                    epoch: 12,
+                },
+            ),
+            "P04" => (
+                entry(7, 11, PartitionState::Moving { target: 9 }),
+                PartitionMove::AbortMove {
+                    source: 7,
+                    target: 9,
+                    original_epoch: 11,
+                },
+            ),
+            other => panic!("edge {other} has no case"),
+        };
+        for edge in machine.edges {
+            let (from, event) = moves(edge.id);
+            assert_eq!(from.state.kind(), edge.from, "{}", edge.id);
+            let next = from
+                .apply_move(event)
+                .unwrap_or_else(|e| panic!("{}: {e:?}", edge.id));
+            assert_eq!(next.state.kind(), edge.to, "{}", edge.id);
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.9
+    // spec: MEDULLA-PLACEMENT-R783.8
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        // A start to another target while moving is refused.
+        let moving = entry(7, 11, PartitionState::Moving { target: 9 });
+        let refused = moving
+            .apply_move(PartitionMove::StartMove { target: 4 })
+            .unwrap_err();
+        assert_eq!(refused.machine, "PartitionMoveMachine");
+        assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
+        // A cutover or abort from Active has no edge.
+        let active = entry(7, 11, PartitionState::Active);
+        for event in [
+            PartitionMove::FenceCutover {
+                target: 9,
+                epoch: 12,
+            },
+            PartitionMove::AbortMove {
+                source: 7,
+                target: 9,
+                original_epoch: 11,
+            },
+        ] {
+            let name = event.event().name();
+            let refused = active.apply_move(event).unwrap_err();
+            assert_eq!(refused.machine, "PartitionMoveMachine");
+            assert_eq!(refused.from, "active");
+            assert_eq!(refused.event, name);
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.9
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        fn scan(dir: &std::path::Path, hits: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).expect("read source dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    scan(&path, hits);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    let text = std::fs::read_to_string(&path).expect("read source");
+                    let mut previous = "";
+                    for line in text.lines().map(str::trim) {
+                        if previous == "#[cfg(test)]" && line.starts_with("mod tests") {
+                            break;
+                        }
+                        previous = line;
+                        if !line.starts_with("//") && line.contains(".state = PartitionState::") {
+                            hits.push(format!("{}: {line}", path.display()));
+                        }
+                    }
+                }
+            }
+        }
+        let mut hits = Vec::new();
+        scan(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut hits,
+        );
+        // Only the transition function writes the field.
+        assert!(
+            hits.iter().all(|h| h.contains("partition_move.rs")),
+            "direct state writes outside apply_move: {hits:?}"
+        );
+        let apply = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/raft/placement/partition_move.rs"
+        ))
+        .expect("source");
+        let start = apply.find("pub fn apply_move").expect("apply_move");
+        let end = apply.find("#[cfg(test)]").expect("tests module");
+        let inside = apply[start..end]
+            .matches(".state = PartitionState::")
+            .count();
+        assert_eq!(inside, hits.len(), "every write sits inside apply_move");
+    }
 }

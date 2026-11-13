@@ -25,6 +25,51 @@ pub const ENV_HYDRATION_SCOPE_CAP: &str = "MEDULLA_HYDRATION_SCOPE_CAP";
 /// Environment key overriding `hydration_split_target_files` at startup.
 pub const ENV_HYDRATION_SPLIT_TARGET_FILES: &str = "MEDULLA_HYDRATION_SPLIT_TARGET_FILES";
 
+/// Default colocated analytics executor pool size (MEDULLA-PLACEMENT-R002.14).
+pub const DEFAULT_ANALYTICS_WORKERS: u32 = 1;
+/// Inclusive bounds of `analytics_workers`; zero leaves execution to remote
+/// workers (MEDULLA-DURABLE-KERNEL-R082.9).
+pub const ANALYTICS_WORKERS_BOUNDS: (u32, u32) = (0, 32);
+/// Environment key seeding `analytics_workers` once at startup.
+pub const ENV_ANALYTICS_WORKERS: &str = "MEDULLA_ANALYTICS_WORKERS";
+
+fn default_analytics_workers() -> u32 {
+    DEFAULT_ANALYTICS_WORKERS
+}
+
+/// Clamp a requested colocated pool size to [`ANALYTICS_WORKERS_BOUNDS`].
+pub fn clamp_analytics_workers(requested: u32) -> u32 {
+    requested.min(ANALYTICS_WORKERS_BOUNDS.1)
+}
+
+/// The startup value of `analytics_workers`: the default, or the
+/// `MEDULLA_ANALYTICS_WORKERS` override clamped to the bound. A value that is
+/// not an unsigned integer refuses startup.
+pub fn analytics_workers_from(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<u32, InvalidSchedulerConfig> {
+    match lookup(ENV_ANALYTICS_WORKERS) {
+        Some(raw) => raw
+            .trim()
+            .parse::<u64>()
+            .map(|value| clamp_analytics_workers(value.min(u64::from(u32::MAX)) as u32))
+            .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(ENV_ANALYTICS_WORKERS)),
+        None => Ok(DEFAULT_ANALYTICS_WORKERS),
+    }
+}
+
+static ANALYTICS_WORKERS: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+
+/// The process-wide colocated pool size, seeded once from the environment on
+/// first use. `executor_loop` reads only this value.
+pub fn analytics_workers() -> Result<u32, InvalidSchedulerConfig> {
+    if let Some(value) = ANALYTICS_WORKERS.get() {
+        return Ok(*value);
+    }
+    let value = analytics_workers_from(|key| std::env::var(key).ok())?;
+    Ok(*ANALYTICS_WORKERS.get_or_init(|| value))
+}
+
 fn default_hydration_scope_cap() -> u32 {
     DEFAULT_HYDRATION_SCOPE_CAP
 }
@@ -307,6 +352,10 @@ pub struct SchedulerConfig {
     #[serde(default = "default_memory_per_worker_bytes")]
     pub memory_per_worker_bytes: u64,
     pub max_queue_depth: u64,
+    /// Colocated analytics executor pool size, in workers; default 1, range
+    /// [0, 32] where zero means remote-only (MEDULLA-PLACEMENT-R002.14).
+    #[serde(default = "default_analytics_workers")]
+    pub analytics_workers: u32,
     /// Largest baseline-hydration scope admitted, in work items.
     #[serde(default = "default_hydration_scope_cap")]
     pub hydration_scope_cap: u32,
@@ -367,6 +416,7 @@ pub enum InvalidSchedulerConfig {
     AnalyticsSlotsOutOfRange,
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
+    AnalyticsWorkersOutOfRange,
     ArchitectureViewMaxContainersOutOfRange,
     ProcessImportMaxElementsOutOfRange,
     ProcessDocumentBoundOutOfRange(&'static str),
@@ -411,6 +461,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
             Self::ZeroMemoryPerWorker => {
                 write!(f, "scheduler memory_per_worker_bytes must be nonzero")
             }
+            Self::AnalyticsWorkersOutOfRange => write!(
+                f,
+                "scheduler analytics_workers must be within [{}, {}]",
+                ANALYTICS_WORKERS_BOUNDS.0, ANALYTICS_WORKERS_BOUNDS.1
+            ),
             Self::ArchitectureViewMaxContainersOutOfRange => write!(
                 f,
                 "scheduler architecture_view_max_containers must be in [16, 4096]"
@@ -488,6 +543,11 @@ impl SchedulerConfig {
         }
         if !(ANALYTICS_SLOTS_BOUNDS.0..=ANALYTICS_SLOTS_BOUNDS.1).contains(&self.analytics_slots) {
             return Err(InvalidSchedulerConfig::AnalyticsSlotsOutOfRange);
+        }
+        if !(ANALYTICS_WORKERS_BOUNDS.0..=ANALYTICS_WORKERS_BOUNDS.1)
+            .contains(&self.analytics_workers)
+        {
+            return Err(InvalidSchedulerConfig::AnalyticsWorkersOutOfRange);
         }
         if !(HYDRATION_SCOPE_CAP_BOUNDS.0..=HYDRATION_SCOPE_CAP_BOUNDS.1)
             .contains(&self.hydration_scope_cap)
@@ -581,6 +641,9 @@ impl SchedulerConfig {
                     .parse()
                     .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(key))?;
             }
+        }
+        if lookup(ENV_ANALYTICS_WORKERS).is_some() {
+            self.analytics_workers = analytics_workers_from(&lookup)?;
         }
         if lookup(ENV_ENRICH_TIMEOUT_MS).is_some() {
             self.enrich_timeout_ms = enrich_timeout_ms_from(&lookup)?;
@@ -709,6 +772,34 @@ pub fn reasoning_knobs() -> ReasoningKnobs {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // spec: MEDULLA-PLACEMENT-R002.14
+    #[test]
+    fn analytics_workers_default_and_clamp() {
+        assert_eq!(analytics_workers_from(|_| None), Ok(1));
+        let env = |value: &'static str| move |_: &str| Some(value.to_string());
+        assert_eq!(analytics_workers_from(env("0")), Ok(0));
+        assert_eq!(analytics_workers_from(env("32")), Ok(32));
+        assert_eq!(analytics_workers_from(env("33")), Ok(32));
+        assert_eq!(analytics_workers_from(env("99999999999")), Ok(32));
+        assert_eq!(
+            analytics_workers_from(env("many")),
+            Err(InvalidSchedulerConfig::InvalidEnvValue(
+                ENV_ANALYTICS_WORKERS
+            ))
+        );
+        let mut cfg = config();
+        assert_eq!(cfg.analytics_workers, 1);
+        cfg.analytics_workers = 33;
+        assert_eq!(
+            cfg.validate(),
+            Err(InvalidSchedulerConfig::AnalyticsWorkersOutOfRange)
+        );
+        cfg.analytics_workers = 8;
+        cfg.apply_env_overrides(|key| (key == ENV_ANALYTICS_WORKERS).then(|| "40".to_string()))
+            .unwrap();
+        assert_eq!(cfg.analytics_workers, 32);
+    }
 
     fn config() -> SchedulerConfig {
         serde_json::from_value(json!({

@@ -434,6 +434,20 @@ impl MembershipShrinkJournal {
             && evidence.observed_voters.as_slice() == expected_voters.as_slice()
     }
 
+    /// The one writer of `phase`: applies `event` through `MembershipShrinkMachine` and returns
+    /// the journal in the phase it leads to. `advance` and `abort` go through it; none assigns
+    /// the phase directly.
+    fn step(
+        &self,
+        event: MembershipShrinkEvent,
+        guard_holds: impl Fn(&'static str) -> bool,
+    ) -> Result<Self, TransitionRefused> {
+        let to = self.phase.apply(event, guard_holds)?;
+        let mut updated = self.clone();
+        updated.phase = to;
+        Ok(updated)
+    }
+
     /// Validate and persist the next phase. There are no skips: each safety
     /// gate is independently evidenced and a stale term/voter set is rejected.
     pub fn advance(
@@ -467,7 +481,7 @@ impl MembershipShrinkJournal {
                 TransitionRefusalReason::GuardFailed,
             ));
         }
-        let to = self.phase.apply(event, |_| {
+        let mut updated = self.step(event, |_| {
             transition_is_valid(
                 self.phase,
                 next,
@@ -476,15 +490,13 @@ impl MembershipShrinkJournal {
                 &self.remaining_voters,
             )
         })?;
-        if to != next {
+        if updated.phase != next {
             return Err(shrink_refusal(
                 self.phase,
                 event,
                 TransitionRefusalReason::IllegalTransition,
             ));
         }
-        let mut updated = self.clone();
-        updated.phase = to;
         updated.evidence = Some(evidence);
         Ok(updated)
     }
@@ -495,11 +507,7 @@ impl MembershipShrinkJournal {
             && reason.len() <= MAX_EVIDENCE_REF
             && !reason.bytes().any(|byte| byte.is_ascii_control());
         let valid = self.validate();
-        let to = self
-            .phase
-            .apply(MembershipShrinkEvent::Abort, |_| valid && bounded)?;
-        let mut updated = self.clone();
-        updated.phase = to;
+        let mut updated = self.step(MembershipShrinkEvent::Abort, |_| valid && bounded)?;
         updated.abort_reason = Some(reason.to_string());
         Ok(updated)
     }
@@ -714,7 +722,7 @@ fn is_valid_phase_step(phase: MembershipShrinkPhase, next: MembershipShrinkPhase
 mod tests {
     // MEDULLA-PLACEMENT-R783.2 — the membership shrink machine.
     use super::{MembershipShrinkEvent, MembershipShrinkPhase, MEMBERSHIP_SHRINK_MACHINE};
-    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     fn shrink_edge_case(
         id: &str,
@@ -956,6 +964,38 @@ mod tests {
         assert_eq!(refused.from, MembershipShrinkPhase::Proposed.stored());
         assert_eq!(refused.event, "ConfirmDrained");
         assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.6
+
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &MEMBERSHIP_SHRINK_MACHINE;
+        assert!(!machine.edges.is_empty());
+        for edge in machine.edges {
+            // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+            assert_eq!(
+                edge.from.apply(edge.event, |g| Some(g) == edge.guard),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.6
+
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let pairs = shrink_illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            assert_eq!(refused.machine, "MembershipShrinkMachine");
+            assert_eq!(refused.from, state.stored());
+            assert_eq!(refused.event, event.name());
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        }
     }
 
     /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the

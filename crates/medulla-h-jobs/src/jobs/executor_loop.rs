@@ -64,6 +64,8 @@ pub(super) fn ensure_job_workers(
     store: Arc<JobStore>,
 ) -> Result<(), String> {
     let timing = analytics_worker_timing()?;
+    let workers = medulla_types::scheduler_config::analytics_workers()
+        .map_err(|error| error.to_string())? as usize;
     static STARTED: OnceLock<()> = OnceLock::new();
     STARTED.get_or_init(|| {
         // Gauge state must advance when leases expire even if no worker or
@@ -77,11 +79,6 @@ pub(super) fn ensure_job_workers(
             }
         });
         super::schedule_tick::ensure_schedule_tick(state.clone());
-        let workers = std::env::var("MEDULLA_ANALYTICS_WORKERS")
-            .ok()
-            .and_then(|value| value.parse::<usize>().ok())
-            .unwrap_or(1)
-            .min(32);
         for slot in 0..workers {
             tokio::spawn(worker_loop(state.clone(), store.clone(), slot, timing));
         }
@@ -174,6 +171,25 @@ fn program_optimization_capability() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-PLACEMENT-R002.14
+    #[test]
+    fn analytics_workers_default_and_clamp() {
+        use medulla_types::scheduler_config::{
+            analytics_workers_from, InvalidSchedulerConfig, ENV_ANALYTICS_WORKERS,
+        };
+        let env = |value: &'static str| move |_: &str| Some(value.to_string());
+        assert_eq!(analytics_workers_from(|_| None), Ok(1));
+        assert_eq!(analytics_workers_from(env("0")), Ok(0));
+        assert_eq!(analytics_workers_from(env("32")), Ok(32));
+        assert_eq!(analytics_workers_from(env("33")), Ok(32));
+        assert_eq!(
+            analytics_workers_from(env("many")),
+            Err(InvalidSchedulerConfig::InvalidEnvValue(
+                ENV_ANALYTICS_WORKERS
+            ))
+        );
+    }
 
     #[test]
     fn analytics_worker_timing_uses_defaults_and_accepts_range_ends() {

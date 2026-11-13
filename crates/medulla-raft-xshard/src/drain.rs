@@ -588,11 +588,9 @@ impl ShardDrain {
     pub fn recover_after_restart(&mut self) -> DrainPhase {
         // Restart moves only an in-flight phase (DR09 to DR13); every other phase has no
         // Restart edge and stays as it is.
-        if let Ok(next) = self.phase.apply(DrainMachineEvent::Restart, |_| true) {
-            if self.phase == DrainPhase::ShrinkCommitted {
-                self.failure = Some(DrainFailure::PostShrinkApplyFailed);
-            }
-            self.phase = next;
+        let was_committed = self.phase == DrainPhase::ShrinkCommitted;
+        if self.step(DrainMachineEvent::Restart).is_ok() && was_committed {
+            self.failure = Some(DrainFailure::PostShrinkApplyFailed);
         }
         self.phase
     }
@@ -602,11 +600,25 @@ impl ShardDrain {
     fn next_phase(&self, event: DrainMachineEvent) -> Result<DrainPhase, DrainError> {
         self.phase
             .apply(event, |_| true)
-            .map_err(|_refused| match self.phase {
-                DrainPhase::RecoveryRequired => DrainError::RecoveryRequired,
-                DrainPhase::RollbackRequired => DrainError::RollbackRequired,
-                _ => DrainError::UnexpectedPhase,
-            })
+            .map_err(|_refused| self.refusal_error())
+    }
+
+    /// The drain error of an event the current phase refuses.
+    fn refusal_error(&self) -> DrainError {
+        match self.phase {
+            DrainPhase::RecoveryRequired => DrainError::RecoveryRequired,
+            DrainPhase::RollbackRequired => DrainError::RollbackRequired,
+            _ => DrainError::UnexpectedPhase,
+        }
+    }
+
+    /// The one writer of `phase`: applies `event` through `ShardDrainMachine` and stores the
+    /// phase it leads to. Every other function reads the phase or previews it with
+    /// `next_phase`; none assigns it.
+    fn step(&mut self, event: DrainMachineEvent) -> Result<DrainPhase, TransitionRefused> {
+        let next = self.phase.apply(event, |_| true)?;
+        self.phase = next;
+        Ok(next)
     }
 }
 
@@ -618,16 +630,20 @@ impl ShardDrain {
 // to `ShardDrain`'s private fields/methods as a method would.
 
 fn apply_admission_stop_requested(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.phase = drain.next_phase(DrainMachineEvent::RequestAdmissionStop)?;
+    drain
+        .step(DrainMachineEvent::RequestAdmissionStop)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
 fn apply_admission_stopped(drain: &mut ShardDrain, accepting: bool) -> Result<(), DrainError> {
-    let next = drain.next_phase(DrainMachineEvent::ConfirmAdmissionStopped)?;
+    drain.next_phase(DrainMachineEvent::ConfirmAdmissionStopped)?;
     if accepting {
         return Err(DrainError::AdmissionMustBeStopped);
     }
-    drain.phase = next;
+    drain
+        .step(DrainMachineEvent::ConfirmAdmissionStopped)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
@@ -638,7 +654,7 @@ fn apply_drain_observed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    let next = drain.next_phase(DrainMachineEvent::ObserveDrain)?;
+    drain.next_phase(DrainMachineEvent::ObserveDrain)?;
     if !admission_stopped {
         return Err(DrainError::AdmissionMustBeStopped);
     }
@@ -651,12 +667,16 @@ fn apply_drain_observed(
     if healthy_voters < drain.plan.minimum_healthy_voters {
         return Err(DrainError::HealthyVoterFloor);
     }
-    drain.phase = next;
+    drain
+        .step(DrainMachineEvent::ObserveDrain)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
 fn apply_shrink_requested(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.phase = drain.next_phase(DrainMachineEvent::RequestShrink)?;
+    drain
+        .step(DrainMachineEvent::RequestShrink)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
@@ -666,16 +686,20 @@ fn apply_shrink_committed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    let next = drain.next_phase(DrainMachineEvent::CommitShrink)?;
+    drain.next_phase(DrainMachineEvent::CommitShrink)?;
     drain
         .plan
         .validates_voter_observation(&voters_after, authoritative_writer, healthy_voters)?;
-    drain.phase = next;
+    drain
+        .step(DrainMachineEvent::CommitShrink)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
 fn apply_completed(drain: &mut ShardDrain) -> Result<(), DrainError> {
-    drain.phase = drain.next_phase(DrainMachineEvent::Complete)?;
+    drain
+        .step(DrainMachineEvent::Complete)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
@@ -683,12 +707,10 @@ fn apply_post_shrink_failure(
     drain: &mut ShardDrain,
     reason: DrainFailure,
 ) -> Result<(), DrainError> {
-    let next = drain
-        .phase
-        .apply(DrainMachineEvent::ReportPostShrinkFailure, |_| true)
+    drain
+        .step(DrainMachineEvent::ReportPostShrinkFailure)
         .map_err(|_refused| DrainError::UnexpectedPhase)?;
     drain.failure = Some(reason);
-    drain.phase = next;
     Ok(())
 }
 
@@ -698,7 +720,7 @@ fn apply_rollback_committed(
     authoritative_writer: NodeId,
     healthy_voters: usize,
 ) -> Result<(), DrainError> {
-    let next = drain.next_phase(DrainMachineEvent::CommitRollback)?;
+    drain.next_phase(DrainMachineEvent::CommitRollback)?;
     if restored_voters != drain.plan.original_voters {
         return Err(DrainError::VoterSetMismatch);
     }
@@ -713,7 +735,9 @@ fn apply_rollback_committed(
     if healthy_voters < drain.plan.minimum_healthy_voters {
         return Err(DrainError::HealthyVoterFloor);
     }
-    drain.phase = next;
+    drain
+        .step(DrainMachineEvent::CommitRollback)
+        .map_err(|_refused| drain.refusal_error())?;
     Ok(())
 }
 
@@ -764,7 +788,7 @@ impl std::error::Error for DrainError {}
 mod tests {
     // MEDULLA-PLACEMENT-R783.4 — the shard drain machine.
     use super::{DrainMachineEvent, DrainPhase, SHARD_DRAIN_MACHINE};
-    use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     fn drain_edge_case(id: &str, from: DrainPhase, event: DrainMachineEvent, to: DrainPhase) {
         let edge = SHARD_DRAIN_MACHINE
@@ -1007,6 +1031,38 @@ mod tests {
             }
         }
         out
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.10
+
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &SHARD_DRAIN_MACHINE;
+        assert!(!machine.edges.is_empty());
+        for edge in machine.edges {
+            // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+            assert_eq!(
+                edge.from.apply(edge.event, |g| Some(g) == edge.guard),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R783.10
+
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let pairs = drain_illegal_pairs();
+        assert!(!pairs.is_empty());
+        for (state, event) in pairs {
+            let refused = state.apply(event, |_| true).unwrap_err();
+            assert_eq!(refused.machine, "ShardDrainMachine");
+            assert_eq!(refused.from, state.stored());
+            assert_eq!(refused.event, event.name());
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+        }
     }
 
     // spec: MEDULLA-PLACEMENT-R783.4

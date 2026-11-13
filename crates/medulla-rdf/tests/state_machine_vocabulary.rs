@@ -749,6 +749,11 @@ fn resource_reservation_machine_classes_extend_core() {
 fn membership_shrink_machine_matches_transition_is_valid() {
     sm::assert_matches(&medulla_raft::raft::membership_shrink::MEMBERSHIP_SHRINK_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R783.6
+#[test]
+fn membership_shrink_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_raft::raft::membership_shrink::MEMBERSHIP_SHRINK_MACHINE);
+}
 // spec: MEDULLA-PLACEMENT-R783.1
 #[test]
 fn membership_shrink_machine_classes_extend_core() {

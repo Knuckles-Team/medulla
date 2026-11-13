@@ -114,6 +114,9 @@ mod xread_harness;
 #[cfg(feature = "raft")]
 pub mod xshard_modality_harness;
 
+#[cfg(test)]
+mod tests;
+
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
 #[cfg(test)]
 use medulla_test_ambient_auth as _;
