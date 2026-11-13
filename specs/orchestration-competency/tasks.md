@@ -140,3 +140,5 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T132 [US1] MEDULLA-CQ-ORCH-R811.5 AnalyticsJob/JobState state machine: route 28 census findings through JobState::step
 - [ ] T133 [US1] MEDULLA-CQ-ORCH-R810.5 Candidate/BrokerMessageStatus state machine: route 1 census findings through MessageState::apply
 - [ ] T134 [US1] MEDULLA-CQ-ORCH-R811.6 Checkpoint/CheckpointStage state machine: route 4 census findings through CheckpointStage::apply
+- [ ] T135 [US1] MEDULLA-CQ-ORCH-R821 Census debt of the job wire mirrors is closed (rollup)
+- [ ] T136 [US1] MEDULLA-CQ-ORCH-R821.1 Analytics job and worker checkpoint wire mirrors follow their Rust machines: Python mirror follows the Rust machine
