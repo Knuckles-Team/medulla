@@ -400,6 +400,18 @@ pub const DESIGNATION_INDEX_CAPACITY_EXCEEDED: RefusalCode =
 /// No visible candidate meets the filters; an abstention, not a request refusal.
 pub const DESIGNATION_NO_CAPABLE_CANDIDATE: RefusalCode =
     RefusalCode::new("DESIGNATION_NO_CAPABLE_CANDIDATE");
+/// A required capability's closure holds more members than
+/// `designation.closure_max_members` (MEDULLA-DECISION-ENGINE-R650.2.3).
+pub const DESIGNATION_CLOSURE_TOO_LARGE: RefusalCode =
+    RefusalCode::new("DESIGNATION_CLOSURE_TOO_LARGE");
+/// A pack publishes a capability descriptor with no side-effect class
+/// (MEDULLA-DECISION-ENGINE-R650.4).
+pub const DESCRIPTOR_SIDE_EFFECT_MISSING: RefusalCode =
+    RefusalCode::new("DESCRIPTOR_SIDE_EFFECT_MISSING");
+/// A pack publishes a capability descriptor with no approval class
+/// (MEDULLA-DECISION-ENGINE-R650.4).
+pub const DESCRIPTOR_APPROVAL_CLASS_MISSING: RefusalCode =
+    RefusalCode::new("DESCRIPTOR_APPROVAL_CLASS_MISSING");
 
 /// A target class has no record that applies to or executes it.
 pub const DESIGNATION_NO_DESIGNATED_COMPONENT: RefusalCode =
@@ -436,6 +448,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
     DESIGNATION_INDEX_CAPACITY_EXCEEDED,
     DESIGNATION_NO_CAPABLE_CANDIDATE,
+    DESIGNATION_CLOSURE_TOO_LARGE,
+    DESCRIPTOR_SIDE_EFFECT_MISSING,
+    DESCRIPTOR_APPROVAL_CLASS_MISSING,
 ];
 
 /// The `designation.*` knobs (MEDULLA-DECISION-ENGINE-R172.2 to R172.5). The
@@ -553,6 +568,14 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(60_000),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "designation.closure_max_members",
+        unit: "capabilities",
+        default: KnobValue::Integer(4096),
+        min: KnobValue::Integer(64),
+        max: KnobValue::Integer(65_536),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// A decimal-micros knob value on Q32.
@@ -583,6 +606,9 @@ pub struct DesignationKnobs {
     pub feed_lease_ms: u64,
     /// Idle back-off between feed sweeps (`designation.feed_idle_ms`).
     pub feed_idle_ms: u64,
+    /// The largest closure one required capability may project
+    /// (`designation.closure_max_members`).
+    pub closure_max_members: usize,
 }
 
 impl DesignationKnobs {
@@ -611,6 +637,7 @@ impl DesignationKnobs {
             feed_claim_limit: int(11),
             feed_lease_ms: int(12) as u64,
             feed_idle_ms: int(13) as u64,
+            closure_max_members: int(14),
         }
     }
 }
@@ -644,6 +671,15 @@ impl SchemaProjection {
     pub fn with_classes(mut self, classes: impl IntoIterator<Item = ClassIri>) -> Self {
         self.classes.extend(classes);
         self
+    }
+
+    /// Every `(subclass, superclass)` edge, in sorted order.
+    pub fn edges(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.parents.iter().flat_map(|(child, parents)| {
+            parents
+                .iter()
+                .map(move |parent| (child.as_str(), parent.as_str()))
+        })
     }
 
     /// Whether `class` is a class of the composed schema.

@@ -16,6 +16,9 @@ use medulla_agent_types::agent_component::capability_descriptor::{
     derived_reliability, ApprovalClass, CapabilityDescriptor, DataPort, Locality, SideEffectClass,
     CAPABILITY_DESCRIPTOR_VERSION,
 };
+use medulla_decision_types::decision::capability_designation::{
+    DESCRIPTOR_APPROVAL_CLASS_MISSING, DESCRIPTOR_SIDE_EFFECT_MISSING,
+};
 use medulla_rdf::oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::{ResourceId, ScopeKind, TenantId};
 
@@ -138,6 +141,17 @@ fn descriptor_of(
             subject,
             "cp:reliability is derived from the learned reward and is never declared",
         ));
+    }
+    for (predicate, code) in [
+        ("sideEffectClass", DESCRIPTOR_SIDE_EFFECT_MISSING),
+        ("approvalClass", DESCRIPTOR_APPROVAL_CLASS_MISSING),
+    ] {
+        if literals(triples, subject, predicate).next().is_none() {
+            return Err(format!(
+                "{}: capability {subject}: cp:{predicate} is required before a descriptor is published",
+                code.as_str()
+            ));
+        }
     }
     let mut scopes = Vec::new();
     for value in literals(triples, subject, "scope") {
@@ -421,5 +435,24 @@ mod tests {
         bad.retain(|t| t.predicate.as_str() != format!("{CP}cost"));
         let error = persist_descriptors("tenant-a", bad).unwrap_err();
         assert!(error.contains("cp:cost"), "{error}");
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.4
+    #[test]
+    fn a_descriptor_without_a_side_effect_or_approval_class_is_refused() {
+        for (predicate, code) in [
+            ("sideEffectClass", "DESCRIPTOR_SIDE_EFFECT_MISSING"),
+            ("approvalClass", "DESCRIPTOR_APPROVAL_CLASS_MISSING"),
+        ] {
+            let mut triples = declared(&[]);
+            triples.retain(|t| t.predicate.as_str() != format!("{CP}{predicate}"));
+            // The import writes nothing for the descriptor: no triples come
+            // back, only the typed refusal.
+            let error = persist_descriptors("tenant-a", triples).unwrap_err();
+            assert!(error.starts_with(&format!("{code}:")), "{error}");
+            assert!(error.contains(predicate), "{error}");
+        }
+        // A complete descriptor is not refused.
+        assert!(persist_descriptors("tenant-a", declared(&[])).is_ok());
     }
 }

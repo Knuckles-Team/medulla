@@ -155,4 +155,43 @@ impl AgentLibraryStore {
         }
         Ok(rewards)
     }
+
+    /// The registry digest (sorted Agent Library component heads) and the
+    /// ledger digest (the `capability_reward` rows in key order) of one tenant,
+    /// the two inputs of `power_descriptor` (MEDULLA-DECISION-ENGINE-R650.2.2).
+    /// Refuses by name when the tenant holds more than `max_heads` components.
+    pub fn power_digests(
+        &self,
+        tenant_id: &str,
+        max_heads: usize,
+    ) -> Result<(String, String), String> {
+        use medulla_agent_types::agent_component::capability_descriptor::{
+            ledger_digest, registry_digest, LedgerRow, RegistryHead,
+        };
+        let heads = self.component_heads_with_prefix(tenant_id, "", max_heads)?;
+        let rewards = self.capability_rewards(tenant_id)?;
+        let registry = registry_digest(
+            &heads
+                .iter()
+                .map(|head| RegistryHead {
+                    component_id: &head.component_id,
+                    version: &head.version,
+                    content_digest: &head.content_digest,
+                })
+                .collect::<Vec<_>>(),
+        );
+        let ledger = ledger_digest(
+            &rewards
+                .iter()
+                .map(|reward| LedgerRow {
+                    entity_id: reward.entity_id.as_str(),
+                    reward_q32: reward.reward_q32,
+                    outcome_count: reward.outcome_count,
+                    generation: reward.generation,
+                    updated_revision: reward.updated_revision,
+                })
+                .collect::<Vec<_>>(),
+        );
+        Ok((registry, ledger))
+    }
 }

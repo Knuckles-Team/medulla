@@ -1299,3 +1299,135 @@ async fn designation_journey() {
     assert_eq!(ranked_ids(rolled), vec!["agent-n", "agent-p"]);
     assert!(adapter_premises(rolled).is_empty());
 }
+
+/// A runtime whose schema holds `cap:x` with `children` direct subclasses.
+fn wide_runtime(
+    index: std::sync::Arc<medulla_decision_memory::memory::capability_index::CapabilityIndex>,
+    children: usize,
+) -> DesignationRuntime {
+    let digest = format!("sha256:{}", "cd".repeat(32));
+    let edges: Vec<(String, String)> = (0..children)
+        .map(|n| (format!("cap:sub{n:03}"), "cap:x".to_string()))
+        .collect();
+    DesignationRuntime {
+        index,
+        projection: SchemaProjection::new(&digest, edges),
+        schema_digest: digest,
+        schema_error: None,
+        load_set: None,
+        usage_guidance: None,
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R650.2.3
+#[tokio::test]
+async fn closure_projection_is_served_and_bounded_by_its_knob() {
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    seed(&h, fixture_rows()).await;
+    let index = shared_capability_index(&*h.state.read().await);
+    let mut asked = question(&[1.0, 0.0, 0.0], 2, weights(Q32_ONE, 0));
+    asked.required_capabilities = ["cap:x".to_string()].into_iter().collect();
+
+    // The closure of a required capability is the capability and every class
+    // below it, sorted, at the question's schema digest.
+    let request = designation_request(&pin, asked.clone(), DecisionPolicyRef::Default);
+    let sealed = decide_with_runtime(&h, &request, wide_runtime(index.clone(), 70)).unwrap();
+    let closure = &answer_of(&sealed).closures[0];
+    assert_eq!(closure.capability_id.as_str(), "cap:x");
+    assert_eq!(closure.members.len(), 71);
+    assert!(closure.members.windows(2).all(|w| w[0] < w[1]));
+    assert_eq!(
+        closure.ontology_digest,
+        format!("sha256:{}", "cd".repeat(32))
+    );
+
+    // A policy whose `designation.closure_max_members` is below the closure
+    // refuses with the registered code and writes nothing.
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        KnobName::new("designation.closure_max_members"),
+        KnobValue::Integer(64),
+    );
+    let bounded = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-designation-closure", &policy),
+    };
+    let artifacts = || {
+        h.store
+            .decision_artifacts_with_prefix(TENANT, "", 10_000)
+            .unwrap()
+            .len()
+    };
+    let before = artifacts();
+    let request = designation_request(&pin, asked.clone(), bounded.clone());
+    let error = decide_with_runtime(&h, &request, wide_runtime(index.clone(), 70)).unwrap_err();
+    assert!(
+        error.starts_with("DESIGNATION_CLOSURE_TOO_LARGE:"),
+        "{error}"
+    );
+    assert_eq!(artifacts(), before);
+    // A closure at the bound is served.
+    let sealed = decide_with_runtime(
+        &h,
+        &designation_request(&pin, asked, bounded),
+        wide_runtime(index, 63),
+    )
+    .unwrap();
+    assert_eq!(answer_of(&sealed).closures[0].members.len(), 64);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R650.4
+#[tokio::test]
+async fn descriptor_refusals_and_tenant_isolation() {
+    use medulla_decision_types::decision::capability_designation::REFUSALS;
+    // Both publication codes are in the family refusal table.
+    for code in [
+        "DESCRIPTOR_SIDE_EFFECT_MISSING",
+        "DESCRIPTOR_APPROVAL_CLASS_MISSING",
+    ] {
+        assert!(REFUSALS.iter().any(|c| c.as_str() == code), "{code}");
+    }
+    // The publication side (pack projection raising both codes and writing no
+    // descriptor) is proven beside it in the pack projection crate:
+    // `a_descriptor_without_a_side_effect_or_approval_class_is_refused`.
+
+    // Tenant isolation: the index holds only another tenant's records. The
+    // asking tenant gets no designation and nothing names the foreign row.
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    seed(
+        &h,
+        vec![(
+            record(Some(OTHER_TENANT), "agent-foreign", &["cap:x"]),
+            vec![1.0, 0.0, 0.0],
+        )],
+    )
+    .await;
+    let index = shared_capability_index(&*h.state.read().await);
+    for required in [vec![], vec!["cap:x".to_string()]] {
+        let mut asked = question(&[1.0, 0.0, 0.0], 4, weights(Q32_ONE, 0));
+        asked.required_capabilities = required.into_iter().collect();
+        let request = designation_request(&pin, asked, DecisionPolicyRef::Default);
+        let sealed = decide_with_runtime(&h, &request, runtime_of(index.clone())).unwrap();
+        assert!(sealed
+            .answer
+            .as_ref()
+            .and_then(|answer| answer.capability_designation())
+            .is_none_or(|answer| answer.designations.is_empty()));
+        let wire = serde_json::to_string(&sealed).unwrap();
+        assert!(!wire.contains("agent-foreign"), "{wire}");
+    }
+    // A question that names another tenant is refused, never answered.
+    let mut foreign = designation_request(
+        &pin,
+        question(&[1.0, 0.0, 0.0], 4, weights(Q32_ONE, 0)),
+        DecisionPolicyRef::Default,
+    );
+    let mut params = foreign.params.as_slice().to_vec();
+    if let TypedValue::CapabilityDesignation(ask) = &mut params[0].value {
+        ask.question.tenant_id = TenantId::new(OTHER_TENANT).unwrap();
+    }
+    foreign.params = BoundedVec::new(params).unwrap();
+    let error = decide_with_runtime(&h, &foreign, runtime_of(index)).unwrap_err();
+    assert!(error.starts_with("ACCESS_DENIED"), "{error}");
+}

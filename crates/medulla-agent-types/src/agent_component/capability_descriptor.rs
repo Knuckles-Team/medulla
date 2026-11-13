@@ -9,7 +9,10 @@
 //! generating the power descriptor and projecting the OWL closure are later
 //! children (R650.2); the served `CapabilityDesignate` method is R650.3.
 
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use medulla_types::{contract::ResourceId, contract::ScopeKind, contract::TenantId};
 
@@ -241,6 +244,174 @@ impl ClosureProjection {
     }
 }
 
+/// One Agent Library component head, as the registry digest sees it.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RegistryHead<'a> {
+    pub component_id: &'a str,
+    pub version: &'a str,
+    pub content_digest: &'a str,
+}
+
+/// One `capability_reward` row, as the ledger digest sees it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LedgerRow<'a> {
+    pub entity_id: &'a str,
+    pub reward_q32: i64,
+    pub outcome_count: u64,
+    pub generation: u32,
+    pub updated_revision: u64,
+}
+
+/// `sha256:` and 64 lowercase hex characters over length-prefixed fields, so
+/// no two field lists share a byte stream.
+fn digest_of(domain: &str, rows: &[Vec<String>]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(domain.as_bytes());
+    hasher.update([0u8]);
+    for row in rows {
+        for field in row {
+            hasher.update((field.len() as u64).to_be_bytes());
+            hasher.update(field.as_bytes());
+        }
+        hasher.update([0xffu8]);
+    }
+    format!("sha256:{}", hex::encode(hasher.finalize()))
+}
+
+/// The registry digest: SHA-256 of the tenant's Agent Library component
+/// heads, sorted by component id (R650.2.2).
+pub fn registry_digest(heads: &[RegistryHead<'_>]) -> String {
+    let mut sorted: Vec<&RegistryHead<'_>> = heads.iter().collect();
+    sorted.sort();
+    let rows: Vec<Vec<String>> = sorted
+        .iter()
+        .map(|head| {
+            vec![
+                head.component_id.to_owned(),
+                head.version.to_owned(),
+                head.content_digest.to_owned(),
+            ]
+        })
+        .collect();
+    digest_of("eg/capability-registry/v1", &rows)
+}
+
+/// The ledger digest: SHA-256 of the tenant's `capability_reward` rows in
+/// entity (key) order (R650.2.2).
+pub fn ledger_digest(rows: &[LedgerRow<'_>]) -> String {
+    let mut sorted: Vec<&LedgerRow<'_>> = rows.iter().collect();
+    sorted.sort_by(|a, b| a.entity_id.cmp(b.entity_id));
+    let rows: Vec<Vec<String>> = sorted
+        .iter()
+        .map(|row| {
+            vec![
+                row.entity_id.to_owned(),
+                row.reward_q32.to_string(),
+                row.outcome_count.to_string(),
+                row.generation.to_string(),
+                row.updated_revision.to_string(),
+            ]
+        })
+        .collect();
+    digest_of("eg/capability-ledger/v1", &rows)
+}
+
+/// The power descriptor of `descriptor`, generated from the registry and the
+/// capability ledger (R650.2.2). Pure and byte-stable for equal inputs.
+pub fn power_descriptor(
+    descriptor: &CapabilityDescriptor,
+    registry_digest: &str,
+    ledger_digest: &str,
+) -> CapabilityPowerDescriptor {
+    CapabilityPowerDescriptor {
+        version: descriptor.version,
+        tenant: descriptor.tenant.clone(),
+        capability_id: descriptor.capability_id.clone(),
+        registry_digest: registry_digest.to_owned(),
+        ledger_digest: ledger_digest.to_owned(),
+    }
+}
+
+/// What one request-scoped closure projection reads (R650.2.3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClosureRequest {
+    pub tenant: TenantId,
+    pub request_id: ResourceId,
+    /// The capability whose closure is projected.
+    pub capability_id: ResourceId,
+    /// The largest closure served (`designation.closure_max_members`).
+    pub max_members: usize,
+}
+
+/// The `rdfs:subClassOf` edges of the question's schema, indexed downward.
+/// The engine's `OwlReason` derives them at the schema digest; nothing here
+/// reads a schema.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SchemaClosure {
+    /// The ontology digest the classification ran under.
+    pub ontology_digest: String,
+    children: BTreeMap<ResourceId, BTreeSet<ResourceId>>,
+}
+
+impl SchemaClosure {
+    /// A closure from `(subclass, superclass)` edges.
+    pub fn new<'a>(
+        ontology_digest: &str,
+        edges: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Result<Self, String> {
+        let mut children: BTreeMap<ResourceId, BTreeSet<ResourceId>> = BTreeMap::new();
+        for (child, parent) in edges {
+            children
+                .entry(ResourceId::new(parent).map_err(|e| format!("{parent}: {e}"))?)
+                .or_default()
+                .insert(ResourceId::new(child).map_err(|e| format!("{child}: {e}"))?);
+        }
+        Ok(Self {
+            ontology_digest: ontology_digest.to_owned(),
+            children,
+        })
+    }
+}
+
+/// A closure larger than the request allows (`DESIGNATION_CLOSURE_TOO_LARGE`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClosureTooLarge {
+    pub capability_id: ResourceId,
+    pub limit: usize,
+}
+
+/// The classified closure of one capability: the capability and every class
+/// below it, found by following `rdfs:subClassOf` edges downward, in sorted
+/// order. The cost is O(closure size); a closure past `max_members` refuses
+/// before it is complete (R650.2.3).
+pub fn project_closure(
+    request: &ClosureRequest,
+    schema: &SchemaClosure,
+) -> Result<ClosureProjection, ClosureTooLarge> {
+    let mut found: BTreeSet<&ResourceId> = BTreeSet::from([&request.capability_id]);
+    let mut queue: VecDeque<&ResourceId> = VecDeque::from([&request.capability_id]);
+    while let Some(at) = queue.pop_front() {
+        for child in schema.children.get(at).into_iter().flatten() {
+            if found.insert(child) {
+                if found.len() > request.max_members {
+                    return Err(ClosureTooLarge {
+                        capability_id: request.capability_id.clone(),
+                        limit: request.max_members,
+                    });
+                }
+                queue.push_back(child);
+            }
+        }
+    }
+    Ok(ClosureProjection {
+        tenant: request.tenant.clone(),
+        request_id: request.request_id.clone(),
+        capability_id: request.capability_id.clone(),
+        members: found.into_iter().cloned().collect(),
+        ontology_digest: schema.ontology_digest.clone(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,6 +577,142 @@ mod tests {
             r#"{"tenant":"tenant-a","request_id":"designate:1","required_capabilities":[],"as_of_ms":1,"extra":2}"#
         )
         .is_err());
+    }
+
+    fn lines(range: std::ops::Range<usize>) -> Vec<(String, String)> {
+        // A diamond-rich tree: class n has parents n/2 and n/3 (when below n).
+        range
+            .flat_map(|n| {
+                [n / 2, n / 3]
+                    .into_iter()
+                    .filter(move |p| *p >= 1 && *p < n)
+                    .map(move |p| (format!("eg:c/{n}"), format!("eg:c/{p}")))
+            })
+            .collect()
+    }
+
+    fn closure_of(edges: &[(String, String)]) -> SchemaClosure {
+        SchemaClosure::new(DIGEST, edges.iter().map(|(c, p)| (c.as_str(), p.as_str()))).unwrap()
+    }
+
+    fn closure_request(capability: &str, max: usize) -> ClosureRequest {
+        ClosureRequest {
+            tenant: TenantId::new("tenant-a").unwrap(),
+            request_id: ResourceId::new("designate:1").unwrap(),
+            capability_id: ResourceId::new(capability).unwrap(),
+            max_members: max,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.2
+    #[test]
+    fn power_descriptor_is_stable_for_equal_inputs() {
+        let descriptor = descriptor();
+        let heads = [
+            RegistryHead {
+                component_id: "tool:b",
+                version: "1",
+                content_digest: DIGEST,
+            },
+            RegistryHead {
+                component_id: "tool:a",
+                version: "2",
+                content_digest: DIGEST,
+            },
+        ];
+        let reversed = [heads[1].clone(), heads[0].clone()];
+        let row = |reward_q32| LedgerRow {
+            entity_id: "tool:a",
+            reward_q32,
+            outcome_count: 3,
+            generation: 0,
+            updated_revision: 7,
+        };
+        let other = LedgerRow {
+            entity_id: "tool:b",
+            ..row(1 << 31)
+        };
+        let ledger = [row(1 << 30), other];
+        let registry = registry_digest(&heads);
+        let ledger_one = ledger_digest(&ledger);
+        // Equal inputs give byte-equal output, whatever order they arrive in.
+        assert_eq!(registry, registry_digest(&reversed));
+        assert_eq!(ledger_one, ledger_digest(&[ledger[1], ledger[0]]));
+        let power = power_descriptor(&descriptor, &registry, &ledger_one);
+        assert_eq!(power, power_descriptor(&descriptor, &registry, &ledger_one));
+        assert_eq!(
+            serde_json::to_string(&power).unwrap(),
+            serde_json::to_string(&power_descriptor(&descriptor, &registry, &ledger_one)).unwrap()
+        );
+        assert!(power.validate().is_ok());
+        for digest in [&power.registry_digest, &power.ledger_digest] {
+            let hex = digest.strip_prefix("sha256:").unwrap();
+            assert_eq!(hex.len(), 64);
+            assert!(hex
+                .chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+        }
+        // One changed reward row changes the ledger digest and only it.
+        let changed = ledger_digest(&[row((1 << 30) + 1), other]);
+        assert_ne!(changed, ledger_one);
+        let moved = power_descriptor(&descriptor, &registry, &changed);
+        assert_ne!(moved.ledger_digest, power.ledger_digest);
+        assert_eq!(moved.registry_digest, power.registry_digest);
+        // One changed head changes the registry digest.
+        let mut newer = heads.clone();
+        newer[0].version = "9";
+        assert_ne!(registry_digest(&newer), registry);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.3
+    #[test]
+    fn closure_is_deterministic_across_runs_and_threads() {
+        let edges = lines(2..400);
+        let schema = closure_of(&edges);
+        let request = closure_request("eg:c/1", 4096);
+        let reference = project_closure(&request, &schema).unwrap();
+        assert!(reference.members.len() > 100);
+        assert!(reference.members.windows(2).all(|w| w[0] < w[1]));
+        assert_eq!(reference.ontology_digest, DIGEST);
+        assert!(reference.validate().is_ok());
+        // A shuffled edge order builds the same closure.
+        let mut shuffled = edges.clone();
+        shuffled.reverse();
+        assert_eq!(
+            project_closure(&request, &closure_of(&shuffled)).unwrap(),
+            reference
+        );
+        // Repeated runs on one thread, then eight threads at once.
+        for _ in 0..8 {
+            assert_eq!(project_closure(&request, &schema).unwrap(), reference);
+        }
+        let results: Vec<ClosureProjection> = std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|_| scope.spawn(|| project_closure(&request, &schema).unwrap()))
+                .collect();
+            workers.into_iter().map(|w| w.join().unwrap()).collect()
+        });
+        assert!(results.iter().all(|r| *r == reference));
+        // The closure of a leaf is the leaf; the closure of a middle class
+        // holds only classes below it.
+        let leaf = project_closure(&closure_request("eg:c/399", 64), &schema).unwrap();
+        assert_eq!(leaf.members, vec![ResourceId::new("eg:c/399").unwrap()]);
+        let middle = project_closure(&closure_request("eg:c/100", 4096), &schema).unwrap();
+        assert!(middle.members.len() < reference.members.len());
+        assert!(middle.members.iter().all(|m| reference.members.contains(m)));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.3
+    #[test]
+    fn a_closure_past_the_limit_refuses_without_a_partial_result() {
+        let schema = closure_of(&lines(2..400));
+        let whole = project_closure(&closure_request("eg:c/1", 4096), &schema).unwrap();
+        let exact = project_closure(&closure_request("eg:c/1", whole.members.len()), &schema);
+        assert_eq!(exact.unwrap(), whole);
+        let refused = project_closure(&closure_request("eg:c/1", whole.members.len() - 1), &schema)
+            .unwrap_err();
+        assert_eq!(refused.limit, whole.members.len() - 1);
+        assert_eq!(refused.capability_id.as_str(), "eg:c/1");
     }
 
     fn descriptor_power() -> CapabilityPowerDescriptor {

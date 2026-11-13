@@ -119,3 +119,32 @@ fn capability_reward_survives_reopen() {
         Some(reward)
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R650.2.2
+#[test]
+fn power_digests_follow_the_tenant_ledger_and_never_another_tenants() {
+    use medulla_decision_types::decision::capability_designation::CapabilityReward;
+    use medulla_types::contract::{OpaqueId, TenantId};
+    let dir = tempfile::tempdir().unwrap();
+    let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
+    let (registry, empty) = store.power_digests("tenant-a", 1000).unwrap();
+    for digest in [&registry, &empty] {
+        assert_eq!(digest.strip_prefix("sha256:").unwrap().len(), 64);
+    }
+    let mut reward = CapabilityReward::neutral(
+        TenantId::new("tenant-a").unwrap(),
+        OpaqueId::new("agent-1").unwrap(),
+    );
+    reward.updated_revision = 1;
+    store.put_capability_reward(&reward).unwrap();
+    let (_, one) = store.power_digests("tenant-a", 1000).unwrap();
+    assert_ne!(one, empty, "a reward row moves the ledger digest");
+    // Another tenant's reward never moves this tenant's digest.
+    let foreign = CapabilityReward::neutral(
+        TenantId::new("tenant-b").unwrap(),
+        OpaqueId::new("agent-2").unwrap(),
+    );
+    store.put_capability_reward(&foreign).unwrap();
+    assert_eq!(store.power_digests("tenant-a", 1000).unwrap().1, one);
+    assert_eq!(store.power_digests("tenant-a", 1000).unwrap().0, registry);
+}

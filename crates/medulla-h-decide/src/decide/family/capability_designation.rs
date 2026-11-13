@@ -9,7 +9,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_agent_types::agent_component::capability_descriptor::ClosureProjection;
+use medulla_agent_types::agent_component::capability_descriptor::{
+    project_closure, ClosureProjection, ClosureRequest, SchemaClosure,
+};
 use medulla_decision_memory::memory::capability_index::IndexRefusal;
 use medulla_decision_rank::rank::capability_rank::{
     rank_capability_candidates, PoolEntry, RankPolicy,
@@ -17,13 +19,14 @@ use medulla_decision_rank::rank::capability_rank::{
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::capability_designation::{
     compute_capability_eligibility, CapabilityDesignation, CapabilityReward, DesignatedCapability,
-    DesignationAsk, DesignationKnobs, DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
-    DESIGNATION_DIM_MISMATCH, DESIGNATION_EMBEDDING_VERSION_MISMATCH,
-    DESIGNATION_EMPTY_QUERY_VECTOR, DESIGNATION_INDEX_CAPACITY_EXCEEDED,
-    DESIGNATION_MALFORMED_QUERY_VECTOR, DESIGNATION_NO_CAPABLE_CANDIDATE,
-    DESIGNATION_NO_DESIGNATED_COMPONENT, DESIGNATION_STALE_PACK_REVISION,
-    DESIGNATION_TOO_MANY_CANDIDATES, DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES,
-    DESIGNATION_UNKNOWN_TARGET_CLASS, KNOBS as DESIGNATION_KNOBS,
+    DesignationAsk, DesignationKnobs, SchemaProjection, DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+    DESIGNATION_CLOSURE_TOO_LARGE, DESIGNATION_DIM_MISMATCH,
+    DESIGNATION_EMBEDDING_VERSION_MISMATCH, DESIGNATION_EMPTY_QUERY_VECTOR,
+    DESIGNATION_INDEX_CAPACITY_EXCEEDED, DESIGNATION_MALFORMED_QUERY_VECTOR,
+    DESIGNATION_NO_CAPABLE_CANDIDATE, DESIGNATION_NO_DESIGNATED_COMPONENT,
+    DESIGNATION_STALE_PACK_REVISION, DESIGNATION_TOO_MANY_CANDIDATES,
+    DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES, DESIGNATION_UNKNOWN_TARGET_CLASS,
+    KNOBS as DESIGNATION_KNOBS,
 };
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
@@ -226,31 +229,47 @@ fn resource(value: &str) -> Result<ResourceId, String> {
     ResourceId::new(value).map_err(|detail| invalid_parameter(format!("{value}: {detail}")))
 }
 
-/// One closure per required capability: the capability and every class below
-/// it, sorted, at the schema digest the closure was derived at.
+/// One closure per required capability, projected by
+/// `medulla_agent_types::agent_component::capability_descriptor::project_closure`
+/// (MEDULLA-DECISION-ENGINE-R650.2.3): the capability and every class below
+/// it, sorted, at the schema digest the closure was derived at. A closure
+/// larger than `designation.closure_max_members` refuses
+/// `DESIGNATION_CLOSURE_TOO_LARGE`.
 fn closures_of(
     ask: &DesignationAsk,
     question_id: &str,
-    subtypes: &BTreeMap<String, BTreeSet<String>>,
+    projection: &SchemaProjection,
     schema_digest: &str,
+    max_members: usize,
 ) -> Result<Vec<ClosureProjection>, String> {
+    if ask.question.required_capabilities.is_empty() {
+        return Ok(Vec::new());
+    }
     let request_id = resource(question_id)?;
+    let schema = SchemaClosure::new(schema_digest, projection.edges())
+        .map_err(|detail| invalid_parameter(detail))?;
     ask.question
         .required_capabilities
         .iter()
         .map(|capability| {
-            let members = subtypes
-                .get(capability)
-                .into_iter()
-                .flatten()
-                .map(|member| resource(member))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(ClosureProjection {
-                tenant: ask.question.tenant_id.clone(),
-                request_id: request_id.clone(),
-                capability_id: resource(capability)?,
-                members,
-                ontology_digest: schema_digest.to_string(),
+            project_closure(
+                &ClosureRequest {
+                    tenant: ask.question.tenant_id.clone(),
+                    request_id: request_id.clone(),
+                    capability_id: resource(capability)?,
+                    max_members,
+                },
+                &schema,
+            )
+            .map_err(|refused| {
+                coded(
+                    DESIGNATION_CLOSURE_TOO_LARGE,
+                    format!(
+                        "the closure of {} holds more than designation.closure_max_members {}",
+                        refused.capability_id.as_str(),
+                        refused.limit
+                    ),
+                )
             })
         })
         .collect()
@@ -470,13 +489,23 @@ pub(crate) fn designate(
             ),
         ));
     }
-    let subtypes: BTreeMap<String, BTreeSet<String>> = question
-        .required_capabilities
+    let closures = closures_of(
+        ask,
+        question_id,
+        &runtime.projection,
+        &runtime.schema_digest,
+        knobs.closure_max_members,
+    )?;
+    let subtypes: BTreeMap<String, BTreeSet<String>> = closures
         .iter()
-        .map(|capability| {
+        .map(|closure| {
             (
-                capability.clone(),
-                runtime.projection.subtypes_of(capability),
+                closure.capability_id.as_str().to_string(),
+                closure
+                    .members
+                    .iter()
+                    .map(|member| member.as_str().to_string())
+                    .collect(),
             )
         })
         .collect();
@@ -593,7 +622,7 @@ pub(crate) fn designate(
             .clone()
             .unwrap_or_else(|| question.query_vector.embedding_version.clone()),
         schema_digest: runtime.schema_digest.clone(),
-        closures: closures_of(ask, question_id, &subtypes, &runtime.schema_digest)?,
+        closures,
     };
     Ok(Designated::Answer(answer))
 }
