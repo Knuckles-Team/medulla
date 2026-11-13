@@ -1,0 +1,12 @@
+{
+  "as_of": "2026-12-11T00:00:00Z",
+  "currency": "USD",
+  "expected_values": "worked examples typed from the daily-reset formula every leveraged fund prospectus states (one whole-percent up-then-down example per multiple); the fee case is computed in the test by an independent integer oracle",
+  "family": "leveraged_etf",
+  "rounding": "half_up",
+  "scale": 100000000,
+  "session": "regular",
+  "sha256": "928d7e7c9eb19131fd454baba81765871517fe93011002db7a8e6105ab1ba02d",
+  "source_url": "urn:medulla:oracle:leveraged-etf-daily-reset-formula",
+  "version": "1"
+}

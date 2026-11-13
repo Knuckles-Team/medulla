@@ -620,3 +620,191 @@ async fn every_figure_carries_provenance() {
     assert_provenance(&projection);
     assert_eq!(projection["figures"].as_array().unwrap().len(), 5);
 }
+
+/// The marker activity of one leveraged-fund daily-reset path, from fixture strings.
+fn reset_marker(v: &Value, case: &Value) -> Vec<(&'static str, String)> {
+    let mut fields = activity(
+        "LETF",
+        "transfer_out",
+        v["trade_date"].as_str().unwrap(),
+        v["shares"].as_str().unwrap(),
+    );
+    fields.push(("activityPrice", dec(v["initial_nav"].as_str().unwrap())));
+    fields.push((
+        "activityDailyResetLeverage",
+        dec(case["leverage"].as_str().unwrap()),
+    ));
+    fields.push((
+        "activityDailyResetExpenseRatio",
+        dec(case["expense_ratio"].as_str().unwrap()),
+    ));
+    fields.push((
+        "activityDailyResetSessionsPerYear",
+        int(v["sessions_per_year"].as_i64().unwrap()),
+    ));
+    let returns: Vec<&str> = case["returns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r.as_str().unwrap())
+        .collect();
+    fields.push((
+        "activityDailyResetReturns",
+        format!("\"{}\"", returns.join(",")),
+    ));
+    fields
+}
+
+/// An independent integer oracle of the published daily-reset formula: each session's NAV is
+/// `nav * (1 + L r - fee / n)`, every division rounded half away from zero to a tick.
+fn oracle_nav(initial: i128, leverage: i128, ratio: i128, n: i128, returns: &[i128]) -> Vec<i128> {
+    let round = |num: i128, den: i128| {
+        let q = (num.abs() + den / 2) / den;
+        if num < 0 {
+            -q
+        } else {
+            q
+        }
+    };
+    let daily_fee = round(ratio, n);
+    let mut nav = initial;
+    let mut out = Vec::new();
+    for r in returns {
+        let factor = (SCALE + round(leverage * r, SCALE) - daily_fee).max(0);
+        nav = round(nav * factor, SCALE);
+        out.push(nav);
+    }
+    out
+}
+
+async fn served_reset(
+    graph: &str,
+    fields: Vec<(&'static str, String)>,
+    as_of: &str,
+) -> (Response, Value) {
+    let mut served = Served::new(graph).await;
+    served.account(graph, None).await;
+    served
+        .put(graph, FinanceRecordKind::Activity, "reset", fields)
+        .await;
+    let response = served.project(graph, as_of, as_of, "fifo").await;
+    let projection = if response.error.is_none() {
+        body(&response)
+    } else {
+        Value::Null
+    };
+    (response, projection)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R013.2.4
+async fn leveraged_etf_matches_published_reference() {
+    let v = load("leveraged_etf");
+    let as_of = v["as_of"].as_str().unwrap();
+    let shares = ticks(v["shares"].as_str().unwrap());
+    for (index, case) in v["published_worked_examples"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let graph = format!("fin-golden-letf-{index}");
+        let (response, projection) = served_reset(&graph, reset_marker(&v, case), as_of).await;
+        assert!(response.error.is_none(), "{:?}", response.error_detail);
+        assert_provenance(&projection);
+        let typed: Vec<i128> = case["nav"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| ticks(n.as_str().unwrap()))
+            .collect();
+        let expected_nav = *typed.last().unwrap();
+        assert_eq!(value(&projection, "LETF", "daily_reset_nav"), expected_nav);
+        assert_eq!(
+            value(&projection, "LETF", "daily_reset_position_value"),
+            expected_nav * shares / SCALE,
+            "{}",
+            case["name"]
+        );
+        // Every figure compares exactly against the published reference ticks, and a
+        // mutated reference no longer matches.
+        for (name, reference) in [
+            ("daily_reset_nav", expected_nav),
+            ("daily_reset_position_value", expected_nav * shares / SCALE),
+        ] {
+            let f = figure(&projection, "LETF", name);
+            let computed = GoldenFixtureFigure {
+                value_ticks: f["value_ticks"].as_i64().unwrap(),
+                source: f["source"].as_str().unwrap().to_string(),
+                as_of: f["as_of"].as_str().unwrap().to_string(),
+                session: f["session"].as_str().unwrap().to_string(),
+            };
+            assert!(compare_broker_statement_figure(&computed, reference as i64).is_ok());
+            assert!(compare_broker_statement_figure(&computed, reference as i64 + 1).is_err());
+        }
+        // Replays are byte-identical, and the same instant in another zone gives the same
+        // ticks (the host time zone never enters).
+        let (_, replay) =
+            served_reset(&format!("{graph}-again"), reset_marker(&v, case), as_of).await;
+        assert_eq!(projection["figures"], replay["figures"]);
+        assert_eq!(projection["input_digest"], replay["input_digest"]);
+        let (_, shifted) = served_reset(
+            &format!("{graph}-zone"),
+            reset_marker(&v, case),
+            "2026-12-11T05:00:00+05:00",
+        )
+        .await;
+        assert_eq!(
+            value(&shifted, "LETF", "daily_reset_nav"),
+            expected_nav,
+            "{}",
+            case["name"]
+        );
+    }
+
+    // The fee case: expected values from the independent oracle.
+    let fee = &v["fee_case"];
+    let returns: Vec<i128> = fee["returns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| {
+            let text = r.as_str().unwrap();
+            match text.strip_prefix('-') {
+                Some(rest) => -ticks(rest),
+                None => ticks(text),
+            }
+        })
+        .collect();
+    let path = oracle_nav(
+        ticks(v["initial_nav"].as_str().unwrap()),
+        ticks(fee["leverage"].as_str().unwrap()),
+        ticks(fee["expense_ratio"].as_str().unwrap()),
+        v["sessions_per_year"].as_i64().unwrap().into(),
+        &returns,
+    );
+    let (response, projection) =
+        served_reset("fin-golden-letf-fee", reset_marker(&v, fee), as_of).await;
+    assert!(response.error.is_none(), "{:?}", response.error_detail);
+    assert_eq!(
+        value(&projection, "LETF", "daily_reset_nav"),
+        *path.last().unwrap()
+    );
+
+    // Each absent provenance field is refused, never displayed with a gap.
+    let case = &v["published_worked_examples"][0];
+    for (label, drop) in [("source", "recordSource"), ("session", "activitySession")] {
+        let mut fields = reset_marker(&v, case);
+        fields.retain(|(name, _)| *name != drop);
+        let (response, _) =
+            served_reset(&format!("fin-golden-letf-no-{label}"), fields, as_of).await;
+        assert!(response.error.is_some(), "missing {label} must be refused");
+        assert!(
+            format!("{response:?}").contains("FIGURE_PROVENANCE_MISSING"),
+            "missing {label}: {response:?}"
+        );
+    }
+    let (response, _) = served_reset("fin-golden-letf-no-as-of", reset_marker(&v, case), "").await;
+    assert!(response.error.is_some(), "an empty as-of must be refused");
+    assert!(format!("{response:?}").contains("FIGURE_PROVENANCE_MISSING"));
+}

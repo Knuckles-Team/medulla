@@ -83,6 +83,106 @@ pub fn live_order_eligibility(
     Ok(())
 }
 
+/// One whole unit is this many ticks (matches `medulla_finance::golden_fixture::SCALE`).
+const TICKS_PER_UNIT: i128 = 100_000_000;
+
+/// The explicit assumptions of a daily-reset path (MEDULLA-FINANCE-PRIMITIVES-R013.2.4):
+/// the target multiple, the annual expense ratio charged evenly per session, and the number
+/// of sessions that make a year. Rounding is half away from zero after every session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DailyResetAssumptions {
+    /// The daily-reset multiple in ticks (`3 * SCALE` is 3x; negative is inverse).
+    pub leverage_ticks: i64,
+    /// The annual expense ratio in ticks of one whole unit (`0.0095` is 950_000).
+    pub expense_ratio_ticks: i64,
+    /// Sessions per year the annual ratio is spread over; never zero.
+    pub sessions_per_year: u32,
+}
+
+/// Why a daily-reset path was refused.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "reason", rename_all = "snake_case")]
+pub enum DailyResetRefusal {
+    NoSessions,
+    SessionsPerYearZero,
+    InitialNavNotPositive { initial_nav_ticks: i64 },
+    Overflow { session: usize },
+}
+
+impl std::fmt::Display for DailyResetRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoSessions => write!(f, "a daily-reset path needs at least one session"),
+            Self::SessionsPerYearZero => write!(f, "sessions_per_year must be positive"),
+            Self::InitialNavNotPositive { initial_nav_ticks } => {
+                write!(f, "initial NAV {initial_nav_ticks} ticks is not positive")
+            }
+            Self::Overflow { session } => write!(f, "NAV overflowed at session {session}"),
+        }
+    }
+}
+
+/// The NAV after every session of a daily-reset path.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DailyResetPath {
+    /// NAV in ticks after each session, in order.
+    pub nav_ticks: Vec<i64>,
+    /// The last NAV (also the last element of `nav_ticks`).
+    pub final_nav_ticks: i64,
+}
+
+/// Half away from zero division of `numerator` by a positive `divisor`.
+fn half_away(numerator: i128, divisor: i128) -> i128 {
+    if numerator >= 0 {
+        (numerator + divisor / 2) / divisor
+    } else {
+        -((-numerator + divisor / 2) / divisor)
+    }
+}
+
+/// Replay a leveraged fund's daily-reset NAV over the underlying's session returns, in
+/// fixed point (MEDULLA-FINANCE-PRIMITIVES-R013.2.4). Each session the fund earns the
+/// multiple of that session's underlying return less one session of the expense ratio:
+/// `nav = round(nav * (1 + leverage * r - ratio / sessions_per_year))`, rounded half away
+/// from zero to a tick every session. A session factor at or below zero wipes the fund
+/// out (NAV 0, and it stays 0). `returns_ticks` are the underlying's simple session
+/// returns in ticks of one whole unit (`-0.10` is `-10_000_000`).
+pub fn daily_reset_path(
+    initial_nav_ticks: i64,
+    returns_ticks: &[i64],
+    assumptions: &DailyResetAssumptions,
+) -> Result<DailyResetPath, DailyResetRefusal> {
+    if returns_ticks.is_empty() {
+        return Err(DailyResetRefusal::NoSessions);
+    }
+    if assumptions.sessions_per_year == 0 {
+        return Err(DailyResetRefusal::SessionsPerYearZero);
+    }
+    if initial_nav_ticks <= 0 {
+        return Err(DailyResetRefusal::InitialNavNotPositive { initial_nav_ticks });
+    }
+    let fee = half_away(
+        i128::from(assumptions.expense_ratio_ticks),
+        i128::from(assumptions.sessions_per_year),
+    );
+    let mut nav = i128::from(initial_nav_ticks);
+    let mut path = Vec::with_capacity(returns_ticks.len());
+    for (session, r) in returns_ticks.iter().enumerate() {
+        let gross = half_away(
+            i128::from(assumptions.leverage_ticks) * i128::from(*r),
+            TICKS_PER_UNIT,
+        );
+        let factor = (TICKS_PER_UNIT + gross - fee).max(0);
+        nav = half_away(nav * factor, TICKS_PER_UNIT);
+        path.push(i64::try_from(nav).map_err(|_| DailyResetRefusal::Overflow { session })?);
+    }
+    let final_nav_ticks = *path.last().unwrap_or(&0);
+    Ok(DailyResetPath {
+        nav_ticks: path,
+        final_nav_ticks,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +280,53 @@ mod tests {
             Some(&policy()),
         )
         .is_ok());
+    }
+
+    fn assumptions(leverage: i64, ratio: i64) -> DailyResetAssumptions {
+        DailyResetAssumptions {
+            leverage_ticks: leverage * TICKS_PER_UNIT as i64,
+            expense_ratio_ticks: ratio,
+            sessions_per_year: 252,
+        }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R013.2.4
+    #[test]
+    fn a_two_times_fund_loses_to_volatility_decay() {
+        // +10% then -10% on the underlying: 100 -> 120 -> 96 for a 2x fund.
+        let path = daily_reset_path(
+            100 * TICKS_PER_UNIT as i64,
+            &[10_000_000, -10_000_000],
+            &assumptions(2, 0),
+        )
+        .unwrap();
+        assert_eq!(
+            path.nav_ticks,
+            vec![120 * TICKS_PER_UNIT as i64, 96 * TICKS_PER_UNIT as i64]
+        );
+        assert_eq!(path.final_nav_ticks, 96 * TICKS_PER_UNIT as i64);
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R013.2.4
+    #[test]
+    fn a_daily_reset_path_refuses_bad_assumptions_and_wipes_out_below_zero() {
+        let one = 100_000_000;
+        assert_eq!(
+            daily_reset_path(one, &[], &assumptions(2, 0)),
+            Err(DailyResetRefusal::NoSessions)
+        );
+        let mut bad = assumptions(2, 0);
+        bad.sessions_per_year = 0;
+        assert_eq!(
+            daily_reset_path(one, &[1], &bad),
+            Err(DailyResetRefusal::SessionsPerYearZero)
+        );
+        assert!(matches!(
+            daily_reset_path(0, &[1], &assumptions(2, 0)),
+            Err(DailyResetRefusal::InitialNavNotPositive { .. })
+        ));
+        // A 3x fund on a -40% session is wiped out and stays at zero.
+        let wiped = daily_reset_path(one, &[-40_000_000, 10_000_000], &assumptions(3, 0)).unwrap();
+        assert_eq!(wiped.nav_ticks, vec![0, 0]);
     }
 }

@@ -1,0 +1,36 @@
+{
+  "as_of": "2026-12-11T00:00:00Z",
+  "initial_nav": "100",
+  "sessions_per_year": 252,
+  "trade_date": "2026-12-01T15:00:00Z",
+  "shares": "10",
+  "published_worked_examples": [
+    {
+      "name": "2x_up_then_down",
+      "leverage": "2",
+      "expense_ratio": "0",
+      "returns": ["0.10", "-0.10"],
+      "nav": ["120", "96"]
+    },
+    {
+      "name": "3x_whipsaw",
+      "leverage": "3",
+      "expense_ratio": "0",
+      "returns": ["0.05", "-0.05", "0.05", "-0.05"],
+      "nav": ["115", "97.75", "112.4125", "95.550625"]
+    },
+    {
+      "name": "inverse_1x_round_trip",
+      "leverage": "-1",
+      "expense_ratio": "0",
+      "returns": ["0.10", "-0.10"],
+      "nav": ["90", "99"]
+    }
+  ],
+  "fee_case": {
+    "name": "2x_with_expense_ratio",
+    "leverage": "2",
+    "expense_ratio": "0.0095",
+    "returns": ["0.0125", "-0.0210", "0.0070", "0.0310", "-0.0185", "0.0005", "-0.0040", "0.0150"]
+  }
+}

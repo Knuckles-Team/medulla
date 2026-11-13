@@ -32,6 +32,7 @@ use medulla_finance_market::market::corporate_actions::resolve;
 use medulla_finance_market::market::{
     CorporateAction, CorporateActionKind, ExchangeCalendar, TradingCalendar,
 };
+use medulla_finance_quant::leverage::{daily_reset_path, DailyResetAssumptions};
 use medulla_types::finance_accounting::{
     FinanceAccountProjection, ProjectedFigure, BASIS_POLICY_UNSUPPORTED, FIGURE_PROVENANCE_MISSING,
 };
@@ -439,6 +440,65 @@ impl Projector<'_> {
         Ok(())
     }
 
+    /// A leveraged-fund daily-reset path marker (R013.2.4): a `transfer_out` naming the multiple,
+    /// the annual expense ratio, the sessions per year and the underlying's session returns
+    /// (comma-separated decimals); `activityPrice` is the initial NAV per share and
+    /// `activityQuantity` the shares held. Answers the final NAV and the position value.
+    fn daily_reset(&mut self, event: &Event) -> Result<(), String> {
+        let need = |name: &str| {
+            event
+                .ticks(name)
+                .ok_or_else(|| format!("daily reset {} has no {name}", event.record_id))
+        };
+        let returns = event
+            .text("activityDailyResetReturns")
+            .ok_or_else(|| {
+                format!(
+                    "daily reset {} has no activityDailyResetReturns",
+                    event.record_id
+                )
+            })?
+            .split(',')
+            .map(|term| {
+                decimal_ticks(term.trim()).ok_or_else(|| {
+                    format!("daily reset {}: '{term}' is not a decimal", event.record_id)
+                })
+            })
+            .collect::<Result<Vec<i64>, String>>()?;
+        let sessions_per_year = event
+            .whole("activityDailyResetSessionsPerYear")
+            .and_then(|n| u32::try_from(n).ok())
+            .ok_or_else(|| {
+                format!(
+                    "daily reset {} has no activityDailyResetSessionsPerYear",
+                    event.record_id
+                )
+            })?;
+        let assumptions = DailyResetAssumptions {
+            leverage_ticks: need("activityDailyResetLeverage")?,
+            expense_ratio_ticks: need("activityDailyResetExpenseRatio")?,
+            sessions_per_year,
+        };
+        let path = daily_reset_path(need("activityPrice")?, &returns, &assumptions)
+            .map_err(|e| e.to_string())?;
+        let shares = i128::from(need("activityQuantity")?);
+        let value = half_up(i128::from(path.final_nav_ticks) * shares, i128::from(SCALE));
+        let prov = provenance(event, self.calendar.as_ref());
+        self.push(
+            &event.position,
+            "daily_reset_nav",
+            path.final_nav_ticks,
+            &prov,
+        );
+        self.push(
+            &event.position,
+            "daily_reset_position_value",
+            to_i64(value)?,
+            &prov,
+        );
+        Ok(())
+    }
+
     /// A futures roll marker: a `transfer_out` naming its successor contract.
     fn roll(&mut self, event: &Event) -> Result<(), String> {
         let need = |name: &str| {
@@ -541,6 +601,12 @@ fn project(
         digest.update(b"\n");
         if event.kind == "transfer_out" && event.fields.contains_key("activityRollSuccessor") {
             if let Err(detail) = projector.roll(event) {
+                return invalid(ctx.req_id, detail);
+            }
+        } else if event.kind == "transfer_out"
+            && event.fields.contains_key("activityDailyResetLeverage")
+        {
+            if let Err(detail) = projector.daily_reset(event) {
                 return invalid(ctx.req_id, detail);
             }
         } else {
