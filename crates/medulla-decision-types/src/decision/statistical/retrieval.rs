@@ -52,6 +52,10 @@ pub struct ReturnedEvidence {
     /// known; read by the per-class usage aggregate.
     #[serde(default)]
     pub content_class: Option<String>,
+    /// The unit's raw scorer output in parts per million, when the run
+    /// recorded it; read by the rerank calibration fit (R822).
+    #[serde(default)]
+    pub raw_score_ppm: Option<u32>,
 }
 
 /// A fixed-point query vector: component `i` is `q16[i] / 2^16`, in the
@@ -144,6 +148,9 @@ pub struct RetrievalOutcome {
     /// The plan template the run executed, when it was a typed path.
     #[serde(default)]
     pub path: Option<RetrievalPathTemplate>,
+    /// The scorer version whose raw scores `returned` carries (R822).
+    #[serde(default)]
+    pub scorer_version: Option<String>,
 }
 
 fn unique<'a>(ids: impl Iterator<Item = &'a str>) -> bool {
@@ -270,6 +277,9 @@ pub enum PointerRef {
     },
     /// The embedding generation a logical graph resolves to (EH-397).
     Generation { logical: String },
+    /// The rerank calibration curve of one scorer version
+    /// (MEDULLA-DECISION-ENGINE-R822).
+    RerankCalibration { scorer_version: String },
 }
 
 /// How a pointer moves.
@@ -334,6 +344,11 @@ pub enum LearningWrite {
         /// The capacity cell the background analytics lease is drawn from.
         capacity_cell: String,
     },
+    /// Fit the isotonic rerank calibration curve of one scorer version from
+    /// judged outcomes (MEDULLA-DECISION-ENGINE-R822).
+    FitCalibration {
+        request: Box<super::retrieval_calibration::CalibrationFitRequest>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -349,6 +364,7 @@ impl LearningWrite {
             Self::RecordOutcome { .. } | Self::RunOutcome { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
+            | Self::FitCalibration { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
@@ -367,6 +383,7 @@ pub enum LearningRecorded {
     Outcome(Box<StoredRetrievalOutcome>),
     Fitted(Box<AdapterFitted>),
     Monitored(Box<super::retrieval_adapter::AdapterMonitored>),
+    Calibration(Box<super::retrieval_calibration::CalibrationFitted>),
     Generation(Box<GenerationEvaluated>),
     Cycle(Box<super::retrieval_generation::GenerationCycleJob>),
     Pointer(Box<PointerState>),
@@ -390,6 +407,7 @@ mod tests {
                     .map(|id| ReturnedEvidence {
                         evidence_id: id.to_string(),
                         content_class: None,
+                    raw_score_ppm: None,
                     })
                     .collect(),
             )
@@ -397,6 +415,7 @@ mod tests {
             cited: BoundedVec::new(cited.iter().map(|id| id.to_string()).collect()).unwrap(),
             query: None,
             path: None,
+            scorer_version: None,
         }
     }
 

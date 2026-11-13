@@ -41,6 +41,8 @@ mod stat_belief;
 #[cfg(feature = "decide")]
 mod stat_capability_outcome;
 #[cfg(feature = "decide")]
+mod stat_calibration;
+#[cfg(feature = "decide")]
 mod stat_classes;
 #[cfg(feature = "decide")]
 mod stat_concentration;

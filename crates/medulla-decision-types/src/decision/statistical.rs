@@ -28,6 +28,7 @@ pub mod placement;
 pub mod placement_plan;
 pub mod retrieval;
 pub mod retrieval_adapter;
+pub mod retrieval_calibration;
 pub mod retrieval_drift;
 pub mod retrieval_generation;
 pub mod retrieval_plan;

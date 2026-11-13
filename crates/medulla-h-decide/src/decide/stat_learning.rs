@@ -13,6 +13,7 @@ use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval_adapter::{
     AdapterFitRequest, AdapterMonitorRequest, AdapterScope,
 };
+use medulla_decision_types::decision::statistical::retrieval_calibration::CalibrationFitRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::IndexAdapterRef;
@@ -28,6 +29,7 @@ use super::stat_adapter::{
     adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
     scoped_adapter_pointer,
 };
+use super::stat_calibration::{calibration_pointer, fit_calibration, qualified_calibration};
 use super::stat_distilled::upload_scores;
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
@@ -122,6 +124,10 @@ impl Serving<'_> {
         Ok(LearningRecorded::Monitored(Box::new(monitored)))
     }
 
+    fn calibrate(&self, request: &CalibrationFitRequest) -> Result<LearningRecorded, String> {
+        let fitted = fit_calibration(self.ctx, self.reader, request, self.tenant())?;
+        Ok(LearningRecorded::Calibration(Box::new(fitted)))
+    }
     fn cycle(&self, request: &GenerationCycleRequest) -> Result<LearningRecorded, String> {
         let support = self
             .inputs
@@ -231,6 +237,9 @@ impl Serving<'_> {
             PointerRef::Generation { logical } => {
                 qualified_generation(store, self.tenant(), (logical, target), receipt)
             }
+            PointerRef::RerankCalibration { scorer_version } => {
+                qualified_calibration(store, self.tenant(), scorer_version, target, receipt)
+            }
         }
     }
 
@@ -243,6 +252,7 @@ impl Serving<'_> {
             PointerRef::Adapter { graph } => adapter_pointer(graph),
             PointerRef::ScopedAdapter { graph, scope } => scoped_adapter_pointer(graph, scope),
             PointerRef::Generation { logical } => generation_pointer(logical),
+            PointerRef::RerankCalibration { scorer_version } => calibration_pointer(scorer_version),
         };
         let at = PointerMove {
             tenant: self.tenant(),
@@ -287,6 +297,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         LearningWrite::RefreshFreshness { .. }
         | LearningWrite::RecordOutcome { .. }
         | LearningWrite::EvaluateDrift { .. }
+        | LearningWrite::FitCalibration { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
@@ -508,6 +519,7 @@ pub(super) fn dispatch(
         ))),
         LearningWrite::FitAdapter { request } => s.fit(&request),
         LearningWrite::MonitorAdapter { request } => s.monitor(&request),
+        LearningWrite::FitCalibration { request } => s.calibrate(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
         LearningWrite::RefreshFreshness { request } => Ok(LearningRecorded::Refreshed(Box::new(

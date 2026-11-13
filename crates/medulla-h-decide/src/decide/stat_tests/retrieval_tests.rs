@@ -140,6 +140,7 @@ fn returned_unclassed(ids: &[&str]) -> BoundedVec<ReturnedEvidence, 256> {
             .map(|id| ReturnedEvidence {
                 evidence_id: id.to_string(),
                 content_class: None,
+                raw_score_ppm: None,
             })
             .collect(),
     )
@@ -152,6 +153,7 @@ fn returned(ids: &[&str], class: &str) -> BoundedVec<ReturnedEvidence, 256> {
             .map(|id| ReturnedEvidence {
                 evidence_id: id.to_string(),
                 content_class: Some(class.to_string()),
+                raw_score_ppm: None,
             })
             .collect(),
     )
@@ -165,6 +167,7 @@ pub(super) fn outcome(record_id: &str, ids: &[&str], cited: &[&str]) -> Retrieva
         cited: BoundedVec::new(cited.iter().map(|c| c.to_string()).collect()).unwrap(),
         query: None,
         path: None,
+        scorer_version: None,
     }
 }
 

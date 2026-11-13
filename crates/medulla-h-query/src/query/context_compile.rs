@@ -25,7 +25,10 @@ use medulla_plan::context_bundle::{
     bundle_key_of, compile_with, CompileInputs, ContextKnobs, RerankDoc, RerankInputs,
     ResolutionSpan, SourceHit, SourceRanking,
 };
-use medulla_plan::rerank::{ModelBinding, ModelScorer};
+use medulla_plan::rerank::{
+    CalibrationCurve as RerankCurve, LexicalScorer, ModelBinding, ModelScorer, RerankScorer,
+    ScorerId,
+};
 use medulla_protocol_types::result_contract::query::ContextCompile;
 use sha2::{Digest, Sha256};
 
@@ -319,6 +322,7 @@ fn run_compile(
     principal: &str,
     policy_digest: &str,
     access_servers: BTreeMap<String, String>,
+    curve: Option<&RerankCurve>,
 ) -> Result<Compiled, Refusal> {
     let knobs = medulla_server_api::knob_config::knobs();
     let bytes_per_token = knobs.context_facts_bytes_per_token;
@@ -414,7 +418,7 @@ fn run_compile(
     let rerank = (!request.query_text.trim().is_empty()).then(|| RerankInputs {
         query: request.query_text.clone(),
         rerank_k: usize::try_from(knobs.retrieval_rerank_k).unwrap_or(usize::MAX),
-        curve: None,
+        curve: curve.cloned(),
         docs: nodes
             .iter()
             .filter_map(|(id, node)| {
@@ -472,6 +476,68 @@ fn run_compile(
         refuse(code, refusal.detail)
     })?;
     Ok(Compiled { bundle, cacheable })
+}
+
+/// The identity of the scorer the rerank stage will run with: the bound
+/// model's, or the lexical scorer's when none is bound.
+fn effective_scorer() -> ScorerId {
+    match reranker_binding() {
+        RerankerBinding::Bound(model) => ModelScorer::new(model.as_ref()).id(),
+        _ => LexicalScorer::id(),
+    }
+}
+
+/// The champion calibration curve of the effective scorer's version for the
+/// caller's tenant (MEDULLA-FEDERATED-QUERY-R652.3). `None` when no curve is
+/// active or the state cannot be read: the stage then scales min-max and its
+/// receipt says so.
+async fn champion_rerank_curve(ctx: &QueryHandlerCtx<'_>) -> Option<RerankCurve> {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    let tenant =
+        medulla_server_ops::api::admin::served_adapter::carrier_tenant(ctx.read_authority)?
+            .to_string();
+    let store = ctx.state.read().await.agent_library()?;
+    let scorer = effective_scorer();
+    let version = scorer.version.clone();
+    let read = tokio::task::spawn_blocking(move || {
+        medulla_persistence_records::decision_jobs::champion_calibration(&store, &tenant, &version)
+    })
+    .await;
+    let fitted = match read {
+        Ok(Ok(fitted)) => fitted?,
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "rerank calibration state unreadable; scaling min-max");
+            return None;
+        }
+        Err(error) => {
+            tracing::warn!(%error, "rerank calibration load task failed; scaling min-max");
+            return None;
+        }
+    };
+    let scale =
+        f64::from(medulla_decision_types::decision::statistical::retrieval_calibration::PPM);
+    let knots = fitted
+        .curve
+        .knots
+        .iter()
+        .map(|k| {
+            (
+                (f64::from(k.score_ppm) / scale) as f32,
+                (f64::from(k.relevant_ppm) / scale) as f32,
+            )
+        })
+        .collect();
+    let digest = fitted
+        .curve_digest
+        .trim_start_matches("sha256:")
+        .to_string();
+    match RerankCurve::new(scorer, knots, digest) {
+        Ok(curve) => Some(curve),
+        Err(error) => {
+            tracing::warn!(%error, "champion rerank curve is invalid; scaling min-max");
+            None
+        }
+    }
 }
 
 /// The caller-bound part of the cache key, so one caller's bundle never serves
@@ -554,7 +620,14 @@ pub(crate) async fn handle_context_compile(
         }
     }
     let tenant = ctx.graph_name.to_string();
-    let policy = policy_digest(ctx);
+    // The champion curve is part of what the bundle depends on, so it is part
+    // of the key: a promotion or rollback never serves a cached bundle.
+    let curve = champion_rerank_curve(ctx).await;
+    let policy = format!(
+        "{}:{}",
+        policy_digest(ctx),
+        curve.as_ref().map_or("", |c| c.digest.as_str())
+    );
     let key: BundleKey = bundle_key_of(&request, &tenant, revision, &policy);
     #[cfg(feature = "result-cache")]
     let cache_key = Some((
@@ -590,6 +663,7 @@ pub(crate) async fn handle_context_compile(
             &principal,
             &policy,
             access_servers,
+            curve.as_ref(),
         )
     })
     .await;

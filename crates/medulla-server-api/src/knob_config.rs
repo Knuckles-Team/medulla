@@ -263,6 +263,8 @@ knobs! {
     pgwire_startup_timeout_ms: u64 = "pgwire.startup_timeout_ms", U64(60000), [1000, 600000], "ms", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
+    /// Rerank calibration: fewest judged (score, relevant) pairs a fit accepts (MEDULLA-DECISION-ENGINE-R822).
+    retrieval_calibration_min_pairs: u64 = "retrieval.calibration_min_pairs", U64(500), [50, 1_000_000], "pairs", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.
     retrieval_min_evidence: u64 = "retrieval.min_evidence", U64(3), [1, 64], "rows", Tunable;
     /// Retrieval round: most rounds one retrieval loop may run.

@@ -294,6 +294,51 @@ pub fn encode_artifact<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, String
     rmp_serde::to_vec_named(value).map_err(|error| error.to_string())
 }
 
+/// Key of a fitted rerank calibration curve (curve and receipt) by digest.
+pub fn calibration_key(curve_digest: &str) -> String {
+    format!("calibration:{curve_digest}")
+}
+
+/// The fitted calibration curve stored under `tenant` by digest.
+pub fn read_calibration(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    curve_digest: &str,
+) -> Result<
+    Option<medulla_decision_types::decision::statistical::retrieval_calibration::CalibrationFitted>,
+    String,
+> {
+    store
+        .decision_artifact(tenant, &calibration_key(curve_digest))?
+        .map(|bytes| decode_artifact(&bytes, "calibration curve"))
+        .transpose()
+}
+
+/// The champion calibration (curve, receipt and digests) of `scorer_version`
+/// under `tenant`: the
+/// target of its governed pointer, or `None` when no curve is active. The one
+/// read the rerank stage and the fit's qualification share.
+pub fn champion_calibration(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    scorer_version: &str,
+) -> Result<
+    Option<medulla_decision_types::decision::statistical::retrieval_calibration::CalibrationFitted>,
+    String,
+> {
+    use medulla_decision_types::decision::statistical::retrieval_calibration::champion_pointer_key;
+    use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
+    let key = format!("pointer:{}", champion_pointer_key(scorer_version));
+    let Some(bytes) = store.decision_artifact(tenant, &key)? else {
+        return Ok(None);
+    };
+    let state: PointerState = decode_artifact(&bytes, "pointer state")?;
+    let Some(digest) = state.target() else {
+        return Ok(None);
+    };
+    read_calibration(store, tenant, digest)
+}
+
 /// Promotion by publish (EH-040): a `DecisionHead` revision is admitted only
 /// when the receipt it names exists in this tenant, PASSED, and qualified
 /// exactly these bytes (`head_digest` equals the revision's content digest).

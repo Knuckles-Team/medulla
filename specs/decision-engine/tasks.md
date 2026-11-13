@@ -908,7 +908,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T893 [US6] MEDULLA-DECISION-ENGINE-R819 Serving technique activation verdict
 - [ ] T894 [US6] MEDULLA-DECISION-ENGINE-R820 Process remediation verdict
 - [ ] T895 [US6] MEDULLA-DECISION-ENGINE-R821 Retrieval strategy adoption and per-source trust posterior
-- [ ] T896 [US4] MEDULLA-DECISION-ENGINE-R822 Rerank calibration head fitted from outcomes
+- [x] T896 [US4] MEDULLA-DECISION-ENGINE-R822 Rerank calibration head fitted from outcomes
 - [ ] T897 [US6] MEDULLA-DECISION-ENGINE-R823 Reasoning-paradigm choice family
 - [ ] T898 [US6] MEDULLA-DECISION-ENGINE-R824 Capacity adjustment question and verdict
 - [ ] T899 [US6] MEDULLA-DECISION-ENGINE-R825 Model capacity question

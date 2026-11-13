@@ -1143,6 +1143,10 @@ mod retrieval_plan_tests;
 #[cfg(feature = "query")]
 mod learning_tests;
 
+// MEDULLA-DECISION-ENGINE-R822: the rerank calibration head.
+#[cfg(feature = "query")]
+mod calibration_tests;
+
 #[cfg(feature = "query")]
 mod run_adjustment_tests;
 mod run_credit_tests;
