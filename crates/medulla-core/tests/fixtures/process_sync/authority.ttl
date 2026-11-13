@@ -1,0 +1,48 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:  <urn:eg:fixture:process-sync:> .
+
+# MEDULLA-CQ-ORCH-R703.1: where process models and decision logic live. The process engine
+# connection is a federated secondary: graph-held models are the system of record, so the
+# authority rows keep an accelerated copy, sync both ways, and resolve a conflict for the
+# system of record.
+
+ex:process-engine a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-engine ;
+    vg:foreignSourceName "process-engine-mcp" ; vg:sourceRole "live_truth" ;
+    vg:declaredCapability "copy" .
+ex:ep-engine vg:url "https://process-engine.example.invalid/mcp" .
+
+ex:engine-contract a vg:MetadataContract ; vg:contractSource ex:process-engine ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000703" ;
+    vg:discoveredEntity "process-definition", "decision-definition" ;
+    vg:discoveredField "process-definition.id", "process-definition.name",
+        "decision-definition.id", "decision-definition.name" .
+
+ex:process-models a vg:VirtualMapping ; vg:mapsContract ex:engine-contract ;
+    vg:mapsOntologyClass kg:ProcessModel ; vg:mapsEntity "process-definition" ;
+    vg:keyField "process-definition.id" ; vg:approved true ;
+    vg:hasPredicateFieldPair ex:process-model-name .
+ex:process-model-name a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "process-definition.name" .
+
+ex:decision-logic a vg:VirtualMapping ; vg:mapsContract ex:engine-contract ;
+    vg:mapsOntologyClass kg:DecisionLogic ; vg:mapsEntity "decision-definition" ;
+    vg:keyField "decision-definition.id" ; vg:approved true ;
+    vg:hasPredicateFieldPair ex:decision-logic-name .
+ex:decision-logic-name a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "decision-definition.name" .
+
+ex:process-model-location a vg:SourceAuthority ; vg:authoritativeSource ex:process-engine ;
+    vg:authorityFor kg:ProcessModel ; vg:authorityMapping ex:process-models ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" ;
+    vg:recordRole "federated_secondary" ; vg:syncDirection "both" ;
+    vg:conflictRule "system_of_record_wins" ;
+    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ;
+    vg:materialisationReason "Graph-held models are the system of record." .
+
+ex:decision-logic-location a vg:SourceAuthority ; vg:authoritativeSource ex:process-engine ;
+    vg:authorityFor kg:DecisionLogic ; vg:authorityMapping ex:decision-logic ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" ;
+    vg:recordRole "federated_secondary" ; vg:syncDirection "both" ;
+    vg:conflictRule "system_of_record_wins" ;
+    vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ;
+    vg:materialisationReason "Graph-held models are the system of record." .
