@@ -90,7 +90,7 @@ pub(super) async fn handle_put(
                 "map_id": owned_id,
                 "json": json,
             });
-            let _ = core.add_node(map_node(&owned_id), msgpack(&map_props)?);
+            core.add_node(map_node(&owned_id), msgpack(&map_props)?);
             for node in &owned_map.nodes {
                 let props = json!({
                     "type": NODE_LABEL,
@@ -98,7 +98,7 @@ pub(super) async fn handle_put(
                     "kind": node.kind,
                     "text": node.text,
                 });
-                let _ = core.add_node(aif_node(&owned_id, &node.node_id), msgpack(&props)?);
+                core.add_node(aif_node(&owned_id, &node.node_id), msgpack(&props)?);
             }
             for edge in &owned_map.edges {
                 let props = json!({

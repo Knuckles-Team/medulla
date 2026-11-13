@@ -66,6 +66,21 @@ use medulla_work_types::worker_registry::{
     WorkerSizingInput,
 };
 
+/// The inputs of one served `AdmitWorkerTask` call.
+pub struct AdmitWorkerTaskInput<'a> {
+    pub req_id: u64,
+    pub worker_id: &'a str,
+    pub requested_max: u32,
+    pub tenant: &'a str,
+    pub verified_tenant: &'a str,
+    pub now_ms: u64,
+    pub registry: &'a WorkerRegistry,
+    pub config: &'a SchedulerConfig,
+    pub lane_load: &'a BTreeMap<String, LaneLoad>,
+    pub shard_writer_width: u32,
+    pub grant_id: String,
+}
+
 /// Served `AdmitWorkerTask` (MEDULLA-DURABLE-KERNEL-R075): the reserved-worker
 /// admission — a `WorkerGrant` or a typed refusal — from the registry, the
 /// scheduler config, the per-lane load and the R077 shard-writer width,
@@ -73,19 +88,20 @@ use medulla_work_types::worker_registry::{
 /// `scheduler:read` before this handler runs; here the body tenant must equal
 /// the verified carrier tenant. A worker that is not live (unknown or expired)
 /// is refused with `WORKER_UNKNOWN` before any sizing runs.
-pub fn admit_worker_task(
-    req_id: u64,
-    worker_id: &str,
-    requested_max: u32,
-    tenant: &str,
-    verified_tenant: &str,
-    now_ms: u64,
-    registry: &WorkerRegistry,
-    config: &SchedulerConfig,
-    lane_load: &BTreeMap<String, LaneLoad>,
-    shard_writer_width: u32,
-    grant_id: String,
-) -> Response {
+pub fn admit_worker_task(input: AdmitWorkerTaskInput<'_>) -> Response {
+    let AdmitWorkerTaskInput {
+        req_id,
+        worker_id,
+        requested_max,
+        tenant,
+        verified_tenant,
+        now_ms,
+        registry,
+        config,
+        lane_load,
+        shard_writer_width,
+        grant_id,
+    } = input;
     if let Err(denied) =
         super::native_write_authority::require_carrier_tenant(tenant, verified_tenant)
     {
