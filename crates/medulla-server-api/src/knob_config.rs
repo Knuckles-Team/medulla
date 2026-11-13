@@ -249,6 +249,8 @@ knobs! {
     tables_occ_max_retries: u64 = "tables.occ_max_retries", U64(3), [0, 10], "retries", Tunable;
     /// User tables: most deferred foreign keys one transaction may touch; a larger transaction refuses `DEFERRED_FK_PENDING_EXCEEDED` (MEDULLA-ENGINE-PARITY-R011.1).
     tables_deferred_fk_pending_max: u64 = "tables.deferred_fk_pending_max", U64(medulla_tables::DEFERRED_FK_PENDING_MAX_DEFAULT), [1, 10_000_000], "keys", Tunable;
+    /// User tables: deepest chain of triggers one write may nest; a deeper chain refuses `TRIGGER_DEPTH` (MEDULLA-ENGINE-PARITY-R012.2).
+    tables_trigger_depth_max: u64 = "tables.trigger_depth_max", U64(medulla_tables::TRIGGER_DEPTH_MAX_DEFAULT), [1, 64], "levels", Tunable;
     /// Trace critique read: most nodes one page returns (MEDULLA-DECISION-ENGINE-R133.7.3).
     trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
     /// Batch: most operations one served `Batch` carries; a larger batch refuses `BATCH_TOO_LARGE` before any operation runs (MEDULLA-DURABLE-KERNEL-R871).

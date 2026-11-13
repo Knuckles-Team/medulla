@@ -10,11 +10,12 @@ use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
     SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use super::manifest_io::read_manifest_slot;
 use super::registry::{
     sql_predecessor_evidence, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS, SQL_EDGE_INDEXES, SQL_SEQUENCES,
-    SQL_SOURCE_CHECKPOINTS,
+    SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS,
 };
 use super::validate_declared_tables_write;
 use crate::codec::encode_bounded;
@@ -243,6 +244,29 @@ pub fn upgrade_sql_named_sequences(
     upgrade_sql_source_checkpoints(token)
 }
 
+/// Inspect a pinned predecessor before the trigger reaction ledger exists.
+pub fn inspect_sql_trigger_reaction_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: SqlSourceCheckpointInspectionOptions,
+) -> Result<ValidatedSqlSourceCheckpointUpgrade, String> {
+    inspect_sql_source_checkpoint_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+    )
+}
+
+/// Apply the inspected transition, which creates the empty reaction ledger, in
+/// one immediate durable owner commit.
+pub fn upgrade_sql_trigger_reactions(
+    token: ValidatedSqlSourceCheckpointUpgrade,
+) -> Result<(StorageKernel, SqlSourceCheckpointUpgradeReport), String> {
+    upgrade_sql_source_checkpoints(token)
+}
+
 /// Bind the exact descriptor before redb can initialize or repair any bytes.
 /// Keeping the clone lets the exclusive transaction recheck its actual file.
 fn upgrade_opened_predecessor(
@@ -410,6 +434,7 @@ fn predecessor_evidence(
     if owner_tables == SQL_BEFORE_SOURCE_CHECKPOINTS.owner_tables
         || owner_tables == SQL_BEFORE_DURABLE_ANN.owner_tables
         || owner_tables == SQL_BEFORE_NAMED_SEQUENCES.owner_tables
+        || owner_tables == SQL_BEFORE_TRIGGER_REACTIONS.owner_tables
     {
         sql_predecessor_evidence(source, &owner_tables)
     } else {
@@ -633,6 +658,9 @@ fn stage_checkpoint_layout(
         .open_table(SQL_SEQUENCES)
         .map_err(|error| error.to_string())?;
     sequences::seed_named_sequences(write)?;
+    write
+        .open_table(SQL_TRIGGER_REACTIONS)
+        .map_err(|error| error.to_string())?;
     #[cfg(test)]
     tests::crash_at("after_table");
     stage_upgrade_manifest(write, current, "SQL checkpoint upgraded owner manifest")?;

@@ -4,6 +4,7 @@ use super::super::contract::expected_table_contracts;
 use super::super::layout::{layout_digest_over, OwnerLayout};
 use super::super::lineage::{
     SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use crate::physical::incarnation::STORAGE_KERNEL_SCHEMA_VERSION;
 use crate::physical::manifest::{OwnerManifest, TableContract, TableOwnership};
@@ -25,12 +26,17 @@ pub(super) const PRE_NAMED_SEQUENCES: [u8; 32] = [
     0x8f, 0x92, 0x18, 0x9f, 0x09, 0xd5, 0x23, 0xee, 0x7f, 0x8e, 0x08, 0x86, 0x07, 0x92, 0x43, 0x98,
 ];
 
+/// LAYOUT-REGEN needed: the gate fixer replaces this with the printed digest of
+/// the layout before the trigger reaction ledger.
+pub(super) const PRE_TRIGGER_REACTIONS: [u8; 32] = [0; 32];
+
 pub(super) fn contracts_for(manifest: &OwnerManifest) -> Result<Vec<TableContract>, String> {
     let current = expected_table_contracts(OwnerLayout::Sql);
     for (predecessor, pinned) in [
         (SQL_BEFORE_SOURCE_CHECKPOINTS, PRE_SOURCE_CHECKPOINTS),
         (SQL_BEFORE_DURABLE_ANN, PRE_DURABLE_ANN),
         (SQL_BEFORE_NAMED_SEQUENCES, PRE_NAMED_SEQUENCES),
+        (SQL_BEFORE_TRIGGER_REACTIONS, PRE_TRIGGER_REACTIONS),
     ] {
         let contracts: Vec<_> = current
             .iter()

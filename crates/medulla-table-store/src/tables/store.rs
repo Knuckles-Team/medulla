@@ -79,6 +79,7 @@ pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
 pub use occ::{retry_on_conflict, OccLog, TXN_CONFLICT, TXN_RETRY_EXHAUSTED, TXN_SNAPSHOT_EXPIRED};
+pub use trigger::install_trigger_depth_max;
 
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
@@ -6408,6 +6409,26 @@ fn insert_in(
     col_order: &[String],
     rows: &[Vec<Value>],
 ) -> Result<Vec<Vec<Cell>>, String> {
+    insert_in_at(
+        wtx,
+        tenant_scope,
+        trigger::Chain::top(),
+        table,
+        col_order,
+        rows,
+    )
+}
+
+/// [`insert_in`] at a position in a chain of nested trigger writes
+/// (MEDULLA-ENGINE-PARITY-R012.2).
+fn insert_in_at(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    chain: trigger::Chain,
+    table: &str,
+    col_order: &[String],
+    rows: &[Vec<Value>],
+) -> Result<Vec<Vec<Cell>>, String> {
     if rows.len() > MAX_SQL_SCAN_ROWS {
         return Err(format!(
             "INSERT contains {} rows; maximum is {MAX_SQL_SCAN_ROWS}",
@@ -6417,7 +6438,15 @@ fn insert_in(
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
     if trigger::insert_has_triggers(&schema) {
-        return trigger::insert_triggered_in(wtx, tenant_scope, table, col_order, rows, &schema);
+        return trigger::insert_triggered_in(
+            wtx,
+            tenant_scope,
+            chain,
+            table,
+            col_order,
+            rows,
+            &schema,
+        );
     }
     insert_plain_in(wtx, tenant_scope, table, col_order, rows)
 }
@@ -7295,6 +7324,25 @@ fn update_rows_in(
     set: &serde_json::Map<String, Value>,
     selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<(Vec<Cell>, Vec<Cell>)>, String> {
+    update_rows_in_at(
+        wtx,
+        tenant_scope,
+        trigger::Chain::top(),
+        table,
+        set,
+        selector,
+    )
+}
+
+/// [`update_rows_in`] at a position in a chain of nested trigger writes.
+fn update_rows_in_at(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    chain: trigger::Chain,
+    table: &str,
+    set: &serde_json::Map<String, Value>,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
+) -> Result<Vec<(Vec<Cell>, Vec<Cell>)>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
     let assigns = resolve_update_assignments(&schema, table, set)?;
@@ -7329,7 +7377,7 @@ fn update_rows_in(
             for (idx, cell) in &assigns {
                 cells[*idx] = cell.clone();
             }
-            trigger::before_update(&schema, &old_cells, &mut cells)?;
+            trigger::before_update(wtx, tenant_scope, chain, &schema, &old_cells, &mut cells)?;
             validate_updated_row_checks(&schema, &cells)?;
             let blob = rmp_serde::to_vec_named(&cells).map_err(|e| format!("encode row: {e}"))?;
             if blob.len() > MAX_SQL_STORED_VALUE_BYTES {
@@ -7344,7 +7392,7 @@ fn update_rows_in(
     }
     finish_update_pass_in(wtx, tenant_scope, table, &schema, &changed)?;
     for (old_cells, new_cells) in &updated {
-        trigger::after_update(&schema, old_cells, new_cells)?;
+        trigger::after_update(wtx, tenant_scope, chain, &schema, old_cells, new_cells)?;
     }
     Ok(updated)
 }
@@ -7352,6 +7400,17 @@ fn update_rows_in(
 fn delete_in(
     wtx: &SqlWrite<'_>,
     tenant_scope: &str,
+    table: &str,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
+) -> Result<Vec<Vec<Cell>>, String> {
+    delete_in_at(wtx, tenant_scope, trigger::Chain::top(), table, selector)
+}
+
+/// [`delete_in`] at a position in a chain of nested trigger writes.
+fn delete_in_at(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    chain: trigger::Chain,
     table: &str,
     selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
@@ -7381,7 +7440,7 @@ fn delete_in(
         }
     }
     for (_, cells) in &victims {
-        trigger::before_delete(&schema, cells)?;
+        trigger::before_delete(wtx, tenant_scope, chain, &schema, cells)?;
     }
     for (rowid, cells) in &victims {
         rows_t.remove((table, *rowid)).map_err(map_err)?;
@@ -7406,7 +7465,7 @@ fn delete_in(
         )?;
     }
     for cells in &removed {
-        trigger::after_delete(&schema, cells)?;
+        trigger::after_delete(wtx, tenant_scope, chain, &schema, cells)?;
     }
     Ok(removed)
 }

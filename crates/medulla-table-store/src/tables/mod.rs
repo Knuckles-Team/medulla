@@ -60,6 +60,6 @@ pub use property_graph::{
     PROPERTY_GRAPH_SCHEMA_VERSION,
 };
 pub use store::{
-    retry_on_conflict, ConflictAction, IndexCatalogTxnOp, PropertyGraphTxnOp, TableStore, TableTxn,
-    TxnOp, TXN_RETRY_EXHAUSTED,
+    install_trigger_depth_max, retry_on_conflict, ConflictAction, IndexCatalogTxnOp,
+    PropertyGraphTxnOp, TableStore, TableTxn, TxnOp, TXN_RETRY_EXHAUSTED,
 };

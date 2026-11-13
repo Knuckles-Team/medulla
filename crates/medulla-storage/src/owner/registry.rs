@@ -131,6 +131,28 @@ pub(crate) const SQL_SEQ: TableDefinition<'static, &str, u64> = TableDefinition:
 pub const SQL_SEQUENCES: TableDefinition<'static, &str, u64> =
     TableDefinition::new("__sql_sequences__");
 
+/// The trigger reaction ledger (MEDULLA-ENGINE-PARITY-R012.2): append-only
+/// `TriggerReaction` records under [`trigger_reaction_key`], plus one statement
+/// counter per scope under [`trigger_statement_counter_key`].
+pub const SQL_TRIGGER_REACTIONS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("__sql_trigger_reactions__");
+
+/// The key of one reaction: scope, write chain, event and trigger. A second
+/// reaction under the same key is a duplicate.
+pub fn trigger_reaction_key(
+    scope: &str,
+    statement_id: u64,
+    event_id: &str,
+    trigger: &str,
+) -> String {
+    format!("\0react\0{scope}\0{statement_id:020}\0{event_id}\0{trigger}")
+}
+
+/// The key of the per-scope counter that allocates write-chain ids.
+pub fn trigger_statement_counter_key(scope: &str) -> String {
+    format!("\0statement\0{scope}")
+}
+
 /// The sequence a `SERIAL` column of `table` allocates through
 /// (MEDULLA-ENGINE-PARITY-R013.2).
 pub fn serial_sequence_name(table: &str, column: &str) -> String {
@@ -425,6 +447,7 @@ macro_rules! visit_owner_tables {
                 $visit!(SQL_ANN_DIRTY);
                 $visit!(SQL_EDGE_INDEXES);
                 $visit!(SQL_SEQUENCES);
+                $visit!(SQL_TRIGGER_REACTIONS);
             }
             OwnerLayout::Blob => {
                 $visit!(BLOB_CHUNKS);
@@ -856,6 +879,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "__sql_ann_dirty__",
             "__sql_edge_indexes__",
             "__sql_sequences__",
+            "__sql_trigger_reactions__",
         ],
         OwnerLayout::Blob => &[
             "cas_chunks",

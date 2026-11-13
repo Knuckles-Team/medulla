@@ -258,6 +258,44 @@ pub const SQL_BEFORE_NAMED_SEQUENCES: LayoutPredecessor = LayoutPredecessor {
     file_name: "sql.redb",
 };
 
+/// The SQL owner tables of the layout before the trigger reaction ledger:
+/// everything the current layout declares except `__sql_trigger_reactions__`.
+const SQL_TABLES_BEFORE_TRIGGER_REACTIONS: &[&str] = &[
+    "__sql_catalog__",
+    "__sql_functions__",
+    "__sql_ann_indexes__",
+    "__sql_secondary_indexes__",
+    "__sql_secondary_index_entries__",
+    "__sql_hypertables__",
+    "__sql_source_authority__",
+    "__sql_views__",
+    "__sql_extensions__",
+    "__sql_rows__",
+    "__sql_seq__",
+    "__sql_schema_catalog_versions__",
+    "__sql_schema_versions__",
+    "__sql_schema_migrations__",
+    "__sql_schema_migration_order__",
+    "__sql_schema_catalog_order__",
+    "__sql_property_graphs__",
+    "__sql_property_graph_seq__",
+    "__sql_source_checkpoints__",
+    "__sql_ann_generations__",
+    "__sql_ann_dirty__",
+    "__sql_edge_indexes__",
+    "__sql_sequences__",
+];
+
+/// `sql.redb` before the trigger reaction ledger. The offline upgrade creates
+/// the empty ledger table (MEDULLA-ENGINE-PARITY-R012.2).
+pub const SQL_BEFORE_TRIGGER_REACTIONS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Sql,
+    label: "SQL catalog store before the trigger reaction ledger",
+    owner_tables: SQL_TABLES_BEFORE_TRIGGER_REACTIONS,
+    data_lost: SQL_DATA_LOST,
+    file_name: "sql.redb",
+};
+
 const SQL_DATA_LOST: &str = "its SQL catalog and rows require an explicit offline upgrade \
                              before normal open, or re-ingestion after moving the file aside";
 
@@ -506,6 +544,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             SQL_BEFORE_SOURCE_CHECKPOINTS,
             SQL_BEFORE_DURABLE_ANN,
             SQL_BEFORE_NAMED_SEQUENCES,
+            SQL_BEFORE_TRIGGER_REACTIONS,
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::LedgerOnly

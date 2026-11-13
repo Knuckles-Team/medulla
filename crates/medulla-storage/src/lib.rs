@@ -61,7 +61,7 @@ pub use owner::lineage::{
     AGENT_LIBRARY_BEFORE_CONNECTOR_PACKS, AGENT_LIBRARY_BEFORE_MCP_CATALOG, ALL_LAYOUTS,
     BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_NAMED_SEQUENCES,
-    SQL_BEFORE_SOURCE_CHECKPOINTS,
+    SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 pub use owner::offline_upgrade::{
     classify_owner_store_format, offline_upgrades_for, registered_offline_upgrade,
@@ -73,9 +73,10 @@ pub use owner::persisted_layout::{
 };
 pub use owner::registry::{
     declared_table_names, owner_table_names, sequence_row_key, serial_sequence_name,
-    AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS, AGENT_GRAPH_HEADS, AGENT_GRAPH_REVISIONS,
-    AGENT_LIBRARY_HEADS, AGENT_LIBRARY_REVISIONS, AGENT_TEMPLATE_HEADS, AGENT_TEMPLATE_REVISIONS,
-    ANN_CODES, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES, CONNECTOR_PACK_BINDINGS,
+    trigger_reaction_key, trigger_statement_counter_key, AGENT_COMPONENT_HEADS,
+    AGENT_COMPONENT_REVISIONS, AGENT_GRAPH_HEADS, AGENT_GRAPH_REVISIONS, AGENT_LIBRARY_HEADS,
+    AGENT_LIBRARY_REVISIONS, AGENT_TEMPLATE_HEADS, AGENT_TEMPLATE_REVISIONS, ANN_CODES,
+    CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES, CONNECTOR_PACK_BINDINGS,
     CONNECTOR_PACK_BODY_HOLDERS, CONNECTOR_PACK_HEADS, CONNECTOR_PACK_IMPORTS,
     CONNECTOR_PACK_MEMBERS, DECISION_ARTIFACTS, DECISION_RECORDS, MCP_CATALOG_CONFIGS,
     MCP_CATALOG_SCOPES, SEMANTIC_ANN, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_BINDINGS,
@@ -86,8 +87,8 @@ pub use owner::registry::{
     SEMANTIC_STATES, SEMANTIC_TOMBSTONES, SEMANTIC_VECTORS, SERIAL_SEQUENCE_CACHE,
     SERIAL_SEQUENCE_INCREMENT, SERIAL_SEQUENCE_START, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS,
     SQL_BOOTSTRAP_RESOURCE, SQL_EDGE_INDEXES, SQL_SEQUENCES, SQL_SOURCE_AUTHORITY,
-    SQL_SOURCE_CHECKPOINTS, WRITE_BACK_CHANGE_SETS, WRITE_BACK_IDEMPOTENCY, WRITE_BACK_RECEIPTS,
-    WRITE_BACK_RECEIPT_HEADS,
+    SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS, WRITE_BACK_CHANGE_SETS, WRITE_BACK_IDEMPOTENCY,
+    WRITE_BACK_RECEIPTS, WRITE_BACK_RECEIPT_HEADS,
 };
 pub use owner::retrieval_state::DOC_STATE;
 pub use owner::row_key::{
@@ -97,9 +98,10 @@ pub use owner::row_key::{
 pub use owner::sql_checkpoint_upgrade::{
     inspect_sql_ann_dirty_upgrade, inspect_sql_ann_generation_upgrade,
     inspect_sql_named_sequence_upgrade, inspect_sql_source_checkpoint_upgrade,
-    upgrade_sql_ann_dirty, upgrade_sql_ann_generations, upgrade_sql_named_sequences,
-    upgrade_sql_source_checkpoints, SqlSourceCheckpointInspectionOptions,
-    SqlSourceCheckpointUpgradeReport, ValidatedSqlSourceCheckpointUpgrade,
+    inspect_sql_trigger_reaction_upgrade, upgrade_sql_ann_dirty, upgrade_sql_ann_generations,
+    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints, upgrade_sql_trigger_reactions,
+    SqlSourceCheckpointInspectionOptions, SqlSourceCheckpointUpgradeReport,
+    ValidatedSqlSourceCheckpointUpgrade,
 };
 pub use owner::table_api::*;
 pub use payload::private_payload_digest;

@@ -338,3 +338,171 @@ fn after_trigger_cannot_rewrite_but_can_refuse() {
     assert!(error.starts_with("TRIGGER_MACHINE_INVALID: "), "{error}");
     let _ = std::fs::remove_file(&path);
 }
+
+fn serial_table(store: &TableStore, name: &str) {
+    let mut id = Column::new("id", ColumnType::BigInt, false, true);
+    id.serial = true;
+    store
+        .create_table(
+            &TableSchema::new(
+                name,
+                vec![id, Column::new("note", ColumnType::Text, true, false)],
+            ),
+            false,
+        )
+        .unwrap();
+}
+
+/// An after-insert machine on `table` that inserts `{note: <new.note>}` into
+/// `target` (a `Custom` write effect).
+fn copy_into(table: &str, target: &str, name: &str) -> TriggerSpec {
+    TriggerSpec::new(
+        table,
+        name,
+        TriggerTiming::After,
+        vec![TriggerEvent::Insert],
+        chart(
+            "after_insert",
+            None,
+            vec![Action::Custom {
+                name: "insert_row".to_string(),
+                args: json!({"table": target, "row": {"note": {"from": "new.note"}}}),
+            }],
+        ),
+    )
+}
+
+fn row_count(store: &TableStore, table: &str) -> usize {
+    store.scan(table).unwrap().len()
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn depth_bound_refuses() {
+    let path = fresh_path("depth");
+    let store = open(&path);
+    serial_table(&store, "loop_t");
+    // The trigger writes a fresh row into its own table, so each level is a new
+    // event and only the depth bound stops the chain.
+    store
+        .create_trigger(&copy_into("loop_t", "loop_t", "again"))
+        .unwrap();
+    let error = store
+        .insert_rows("loop_t", &["note".to_string()], &[vec![json!("x")]])
+        .unwrap_err();
+    assert!(error.starts_with("TRIGGER_DEPTH: "), "{error}");
+    // The refusal aborts the whole statement and every nested write.
+    assert_eq!(row_count(&store, "loop_t"), 0);
+    let _ = std::fs::remove_file(&path);
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn nested_triggers_run_in_creation_order_and_write_the_ledger() {
+    let path = fresh_path("nested");
+    let store = open(&path);
+    serial_table(&store, "src");
+    serial_table(&store, "mid");
+    serial_table(&store, "dst");
+    store
+        .create_trigger(&copy_into("src", "mid", "t1"))
+        .unwrap();
+    store
+        .create_trigger(&copy_into("mid", "dst", "t2"))
+        .unwrap();
+    store
+        .insert_rows("src", &["note".to_string()], &[vec![json!("hello")]])
+        .unwrap();
+    for table in ["src", "mid", "dst"] {
+        assert_eq!(row_count(&store, table), 1, "{table}");
+    }
+    assert_eq!(
+        store.scan("dst").unwrap()[0][1],
+        Cell::Text("hello".to_string())
+    );
+    let _ = std::fs::remove_file(&path);
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn second_reaction_for_one_event_refuses() {
+    let path = fresh_path("duplicate");
+    let store = open(&path);
+    // Two plain tables: the chain a -> b -> a re-inserts the same content, so the
+    // trigger on `a` would react twice to one event of one write.
+    for name in ["a", "b"] {
+        store
+            .create_table(
+                &TableSchema::new(
+                    name,
+                    vec![Column::new("note", ColumnType::Text, true, false)],
+                ),
+                false,
+            )
+            .unwrap();
+    }
+    store
+        .create_trigger(&copy_into("a", "b", "a_to_b"))
+        .unwrap();
+    store
+        .create_trigger(&copy_into("b", "a", "b_to_a"))
+        .unwrap();
+    let error = store
+        .insert_rows("a", &["note".to_string()], &[vec![json!("x")]])
+        .unwrap_err();
+    assert!(error.starts_with("TRIGGER_REACTION_DUPLICATE: "), "{error}");
+    assert_eq!(row_count(&store, "a"), 0);
+    assert_eq!(row_count(&store, "b"), 0);
+    let _ = std::fs::remove_file(&path);
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn before_trigger_cannot_write_and_a_refusing_nested_trigger_aborts_everything() {
+    let path = fresh_path("nested_refuse");
+    let store = open(&path);
+    serial_table(&store, "src");
+    serial_table(&store, "dst");
+    store
+        .create_trigger(&copy_into("src", "dst", "copy"))
+        .unwrap();
+    store
+        .create_trigger(&TriggerSpec::new(
+            "dst",
+            "no_dst",
+            TriggerTiming::Before,
+            vec![TriggerEvent::Insert],
+            chart("before_insert", None, vec![refuse("dst is closed")]),
+        ))
+        .unwrap();
+    let error = store
+        .insert_rows("src", &["note".to_string()], &[vec![json!("x")]])
+        .unwrap_err();
+    assert!(error.starts_with("TRIGGER_REFUSED: "), "{error}");
+    assert_eq!(row_count(&store, "src"), 0);
+    assert_eq!(row_count(&store, "dst"), 0);
+    // A before trigger that tries to write is not a valid machine.
+    store.drop_trigger("dst", "no_dst").unwrap();
+    store.drop_trigger("src", "copy").unwrap();
+    store
+        .create_trigger(&TriggerSpec::new(
+            "src",
+            "bad_before",
+            TriggerTiming::Before,
+            vec![TriggerEvent::Insert],
+            chart(
+                "before_insert",
+                None,
+                vec![Action::Custom {
+                    name: "insert_row".to_string(),
+                    args: json!({"table": "dst", "row": {"note": "y"}}),
+                }],
+            ),
+        ))
+        .unwrap();
+    let error = store
+        .insert_rows("src", &["note".to_string()], &[vec![json!("x")]])
+        .unwrap_err();
+    assert!(error.starts_with("TRIGGER_MACHINE_INVALID: "), "{error}");
+    let _ = std::fs::remove_file(&path);
+}

@@ -15,6 +15,24 @@ pub const TRIGGER_UNKNOWN: &str = "TRIGGER_UNKNOWN";
 /// invalid chart).
 pub const TRIGGER_MACHINE_INVALID: &str = "TRIGGER_MACHINE_INVALID";
 
+/// A chain of triggers nested deeper than the registry knob `tables.trigger_depth_max`.
+pub const TRIGGER_DEPTH: &str = "TRIGGER_DEPTH";
+/// A trigger would react a second time to one event of one statement.
+pub const TRIGGER_REACTION_DUPLICATE: &str = "TRIGGER_REACTION_DUPLICATE";
+
+/// One reaction of a trigger to a row event, appended to the append-only
+/// reaction ledger in the same transaction as the write it reacted to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TriggerReaction {
+    /// Content digest of the event (table, timing, kind, old and new row).
+    pub event_id: String,
+    /// The trigger that reacted.
+    pub trigger: String,
+    /// The write chain the reaction belongs to: one id per top-level row event,
+    /// allocated from the ledger so it is unique across restarts.
+    pub statement_id: u64,
+}
+
 /// When a trigger reacts relative to the write.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

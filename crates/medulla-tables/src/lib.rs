@@ -12,6 +12,11 @@
 /// a store the composition root has not installed a resolved value on uses it.
 pub const DEFERRED_FK_PENDING_MAX_DEFAULT: u64 = 100_000;
 
+/// Default of the registry knob `tables.trigger_depth_max` (MEDULLA-ENGINE-PARITY-R012.2):
+/// the deepest chain of triggers one write may nest. The knob table in
+/// `medulla-server-api` takes this value as its default, so there is one source.
+pub const TRIGGER_DEPTH_MAX_DEFAULT: u64 = 16;
+
 #[cfg(feature = "sql")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod index;

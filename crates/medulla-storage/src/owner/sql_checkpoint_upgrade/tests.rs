@@ -56,6 +56,10 @@ fn exact_predecessor_contracts_match_the_frozen_historical_digests() {
             contract::PRE_SOURCE_CHECKPOINTS,
         ),
         (SQL_BEFORE_DURABLE_ANN, contract::PRE_DURABLE_ANN),
+        (
+            SQL_BEFORE_TRIGGER_REACTIONS,
+            contract::PRE_TRIGGER_REACTIONS,
+        ),
     ] {
         let contracts: Vec<_> = crate::owner::contract::expected_table_contracts(OwnerLayout::Sql)
             .into_iter()
@@ -153,7 +157,11 @@ fn upgrade_is_atomic_across_each_crash_stage() {
 #[test]
 fn both_declared_sql_predecessors_upgrade_once_and_preserve_rows() {
     let _serial = redb_files();
-    for old in [SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_DURABLE_ANN] {
+    for old in [
+        SQL_BEFORE_SOURCE_CHECKPOINTS,
+        SQL_BEFORE_DURABLE_ANN,
+        SQL_BEFORE_TRIGGER_REACTIONS,
+    ] {
         let directory = private_local_tempdir();
         let path = directory.path().join("sql.redb");
         predecessor(&path, &old);
@@ -468,4 +476,27 @@ fn named_sequence_upgrade_refuses_serial_columns_without_a_served_scope() {
     assert!(refusal.contains("no tenant scope"), "{refusal}");
     // The refused upgrade left the file in its predecessor layout.
     assert!(inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).is_ok());
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn trigger_reaction_upgrade_creates_the_empty_ledger_and_keeps_rows() {
+    use crate::owner::registry::SQL_TRIGGER_REACTIONS;
+    let _serial = redb_files();
+    let directory = private_local_tempdir();
+    let path = directory.path().join("sql.redb");
+    predecessor(&path, &SQL_BEFORE_TRIGGER_REACTIONS);
+    let refusal = StorageKernel::open_owner::<SqlOwner>(&path, identity(), None)
+        .err()
+        .expect("the old layout must refuse a normal open");
+    assert!(refusal.contains("FORMAT_UPGRADE_REQUIRED"), "{refusal}");
+    let before = row(&path);
+    let token =
+        inspect_sql_trigger_reaction_upgrade(&path, identity(), None, options(&path)).unwrap();
+    drop(upgrade_sql_trigger_reactions(token).unwrap());
+    assert_eq!(row(&path), before);
+    let db = Database::open(&path).unwrap();
+    let read = db.begin_read().unwrap();
+    let ledger = read.open_table(SQL_TRIGGER_REACTIONS).unwrap();
+    assert!(ledger.iter().unwrap().next().is_none());
 }
