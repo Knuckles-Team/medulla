@@ -13410,6 +13410,30 @@ class TimeSeriesClient:
         ).payload
         return dict(receipt or {})
 
+    async def define_state_space(
+        self, series_id: str, source: str, model: dict[str, Any]
+    ) -> dict[str, Any]:
+        """MEDULLA-FINANCE-PRIMITIVES-R002.9 — define ``series_id`` as a STATE-SPACE
+        series over ``source``: a versioned model (``profile``, ``model_revision``,
+        ``kernel_revision``, ``state_dim``, ``obs_dim``, row-major ``transition``,
+        ``process_noise``, ``measurement_noise``, ``initial_mean``,
+        ``initial_covariance``, ``noise_policy``, ``symmetry_tol``, ``numeric_policy``
+        - the Rust ``StateSpaceModel``). Every source append advances the shared filter
+        one observation at a time and persists the checkpoint; the series' points are
+        ``[filtered level, 0, known_at_ms]``. Idempotent for the same model (the call
+        catches the series up); another model over the same series is refused with
+        ``STATE_CHECKPOINT_STALE``, a missing or too narrow source with
+        ``STATE_SCHEMA_UNAVAILABLE``, a model over a ceiling with ``KERNEL_STATE_BUDGET``
+        or ``KERNEL_WORK_BUDGET``. Returns the receipt: ``derived_from``, ``digest``,
+        ``appended``, ``caught_up``, ``last_ts``, ``cursor``, ``model_revision`` and
+        ``checkpoint_digest``."""
+        receipt = await self._client._send(
+            "TsDefineStateSpace",
+            {"series_id": series_id, "source": source, "model": model},
+            None,
+        )
+        return dict(receipt or {})
+
 
 def _sparql_rows(result: SparqlResult) -> list[dict[str, str | None]]:
     """One ``{var: value}`` dict per row of a typed ``SparqlResult``."""

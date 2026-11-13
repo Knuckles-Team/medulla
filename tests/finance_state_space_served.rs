@@ -1,6 +1,11 @@
 //! R002.4, R002.9, R002.10: the state-space series through the served dispatch path.
 //! `TsDefineStateSpace`, `TsAppend` and `TsRange` against a real `series.redb`.
-#![cfg(all(feature = "server", feature = "security", feature = "tsdb"))]
+#![cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "tsdb",
+    feature = "query"
+))]
 
 mod common;
 #[path = "common/test_support.rs"]
@@ -14,6 +19,7 @@ use medulla_types::series_expr::{
     DerivedSeriesReceipt, NoisePolicy, StateSpaceModel, StateSpaceProfile,
     STATE_SPACE_KERNEL_REVISION,
 };
+use medulla_types::wire::{Op, Plan};
 
 const SECRET: &str = "medulla-state-space-served-secret";
 
@@ -43,6 +49,14 @@ impl Served {
         test_support::dispatch(&self.state, request).await
     }
 
+    /// The same call from a caller whose verified context carries only `scopes`.
+    async fn call_scoped(&mut self, scopes: &[&str], method: Method) -> Response {
+        self.next_id += 1;
+        let request =
+            common::signed_request_with_scopes(SECRET, self.next_id, "__commons__", scopes, method);
+        test_support::dispatch(&self.state, request).await
+    }
+
     async fn append(&mut self, series: &str, fields: usize, rows: &[(i64, Vec<f64>)]) -> Response {
         self.call(Method::TsAppend {
             series_id: series.into(),
@@ -61,6 +75,24 @@ impl Served {
             model: model.clone(),
         })
         .await
+    }
+
+    /// The structured-query read: a `TsScan` over the series (seconds on the plan axis).
+    async fn scan(&mut self, series: &str) -> Vec<(String, Option<f32>)> {
+        let plan = Plan::new(vec![Op::TsScan {
+            series: vec![series.into()],
+            from: 0.0,
+            to: 1.0,
+        }]);
+        let r = self
+            .call(Method::UnifiedQuery {
+                plan,
+                foreign_execution: None,
+                foreign_executions: Default::default(),
+                code_map: None,
+            })
+            .await;
+        test_support::raw_rows(&r)
     }
 
     async fn range(&mut self, series: &str) -> Vec<(i64, Vec<f64>)> {
@@ -178,6 +210,14 @@ async fn served_filter_wiring() {
     assert!(out
         .iter()
         .all(|(_, v)| v.len() == 3 && v[0].is_finite() && v[1] == 0.0));
+    // The structured query reads every derived point back with the filtered level as its score.
+    let scanned = s.scan("vol").await;
+    assert_eq!(scanned.len(), 40);
+    let mut got: Vec<f32> = scanned.iter().map(|(_, score)| score.unwrap()).collect();
+    let mut want: Vec<f32> = out.iter().map(|(_, v)| v[0] as f32).collect();
+    got.sort_by(f32::total_cmp);
+    want.sort_by(f32::total_cmp);
+    assert_eq!(got, want);
     let again = receipt(
         &s.define("vol", "ret", &model(StateSpaceProfile::Volatility, 1, 1))
             .await,
@@ -209,6 +249,34 @@ async fn served_filter_scope_denied() {
         refusal(&denied)
     );
     assert!(s.range("hedge").await.is_empty());
+
+    // A caller without write scope is refused before the handler runs and nothing is
+    // created, the source stays readable and a scoped re-definition still succeeds.
+    let read_only = s
+        .call_scoped(
+            &["graph:read"],
+            Method::TsDefineStateSpace {
+                series_id: "hedge".into(),
+                source: "pair".into(),
+                model: model(StateSpaceProfile::Hedge, 2, 1),
+            },
+        )
+        .await;
+    assert!(
+        read_only.result.is_none(),
+        "an unscoped caller defined a series"
+    );
+    assert!(
+        refusal(&read_only).contains("ACCESS_DENIED"),
+        "{}",
+        refusal(&read_only)
+    );
+    assert!(s.range("hedge").await.is_empty());
+    let granted = receipt(
+        &s.define("hedge", "pair", &model(StateSpaceProfile::Hedge, 2, 1))
+            .await,
+    );
+    assert_eq!((granted.cursor, granted.appended), (5, 5));
 }
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.9
