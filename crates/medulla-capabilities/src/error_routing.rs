@@ -501,6 +501,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "VIEWPORT_INVALID",
         ],
     ),
+    // MEDULLA-SRC-AUTH-R004.6.1: a request that names no class, too many, or a bad budget.
+    (
+        "SourceCoverage",
+        &[
+            "SOURCE_COVERAGE_HOP_BUDGET_INVALID",
+            "SOURCE_COVERAGE_NO_CLASSES",
+            "SOURCE_COVERAGE_TOO_MANY_CLASSES",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
     (
         "CorpusRetrieve",

@@ -2227,6 +2227,39 @@ impl ForeignSource for NamedUnresolved<'_> {
     }
 }
 
+/// The sources a caller may select (MEDULLA-SRC-AUTH-R004.6): a name is connected
+/// only when it is in the caller's own owner-scoped registry and an approved
+/// mapping of the request graph's schema sources names it. A name another
+/// principal registered is absent from the registry, so it is never connected.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ConnectedSources(std::collections::BTreeSet<String>);
+
+impl ConnectedSources {
+    /// The registry's names that also have an approved mapping in `approved`.
+    pub fn from_registry(
+        registry: &ForeignSourceRegistry,
+        approved: &std::collections::BTreeSet<String>,
+    ) -> Self {
+        Self(
+            registry
+                .names()
+                .into_iter()
+                .filter(|name| approved.contains(name))
+                .collect(),
+        )
+    }
+
+    /// Whether `source` is connected.
+    pub fn contains(&self, source: &str) -> bool {
+        self.0.contains(source)
+    }
+
+    /// The connected names in stable order.
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(String::as_str)
+    }
+}
+
 #[cfg(test)]
 mod symmetric_scan_oracle {
     //! Compose-oracle (CONCEPT:MEDULLA-KG.query.symmetric-foreign-scan): a `ForeignScan` leaf

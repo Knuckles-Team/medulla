@@ -272,6 +272,10 @@ knobs! {
     retrieval_joint_max_iters: u64 = "retrieval.joint_max_iters", U64(1000), [10, 100000], "sweeps", Tunable;
     /// Chunk encoding: most chunks one document may take (MEDULLA-FEDERATED-QUERY-R039.2.6).
     retrieval_encode_budget_chunks: u64 = "retrieval.encode_budget_chunks", U64(4096), [1, 100_000], "chunks", Tunable;
+    /// Source coverage: hops searched from the queried roots when the request names no budget (MEDULLA-SRC-AUTH-R004.6.1).
+    source_coverage_hop_budget: u64 = "source_coverage.hop_budget", U64(3), [0, 8], "hops", Tunable;
+    /// Source coverage: most classes one request may name.
+    source_coverage_max_classes: u64 = "source_coverage.max_classes", U64(64), [1, 512], "classes", Tunable;
     /// RESP listener: compare-and-swap attempts one `INCR` makes before it answers `INCR_CONFLICT` (MEDULLA-DURABLE-KERNEL-R860.3).
     resp_incr_retry_limit: u64 = "resp.incr_retry_limit", U64(8), [1, 64], "attempts", Tunable;
     /// Embedding provider: most items in one call (MEDULLA-FEDERATED-QUERY-R040.5.4).

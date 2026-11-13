@@ -540,3 +540,85 @@ async fn a_graph_cannot_take_a_reserved_foreign_source_resource_name() {
         "nothing was registered"
     );
 }
+
+const AUTHORITY_TEMPLATE: &str =
+    include_str!("../../../medulla-rdf/tests/fixtures/source_authority_incident.ttl");
+const INCIDENT_CLASS: &str = "https://knuckles-team.github.io/ontology/core#Incident";
+
+/// The decoded `SourceCoverage` reply of a served response.
+fn coverage_reply(resp: &Response) -> serde_json::Value {
+    assert_ok(resp);
+    match resp.result.as_ref() {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).expect("a coverage reply"),
+        other => panic!("expected a Raw coverage reply, got {other:?}"),
+    }
+}
+
+fn coverage_request() -> Method {
+    Method::SourceCoverage {
+        classes: vec![INCIDENT_CLASS.to_string()],
+        facets: Vec::new(),
+        hop_budget: Some(0),
+        needs_current_state: false,
+    }
+}
+
+/// MEDULLA-SRC-AUTH-R004.6: a source is connected only for the principal that
+/// registered it. Principal A registers both sources of the shared authority rows, so A
+/// sees the rank-1 source win. Principal B registers neither, so for B every source is
+/// `Unconnected` and no verdict names a registered source.
+// spec: MEDULLA-SRC-AUTH-R004.6
+#[tokio::test]
+async fn connected_sources_exclude_another_owners_source() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let (_remote, remote_addr) = spawn_federation_remote().await;
+    let local = multi_tenant_state().await;
+    let document = AUTHORITY_TEMPLATE
+        .replace("RANK_SERVICENOW", "1")
+        .replace("RANK_PAGERDUTY", "2");
+    let attach = Method::GraphSchema {
+        op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
+            source_id: "authority-incident".into(),
+            shapes_ttl: None,
+            ontology_ttl: Some(document),
+            if_composed_digest: None,
+        }),
+    };
+    assert_ok(&dispatch_on_heap(&local, request(960, "__commons__", None, attach)).await);
+    for (id, name) in [(961, "servicenow-mcp"), (962, "pagerduty-mcp")] {
+        let register = Method::RegisterForeignSource {
+            name: name.into(),
+            source: federation_remote_spec(remote_addr.clone()),
+        };
+        assert_ok(&dispatch_as(&local, id, OWNER_A, register).await);
+    }
+
+    let a = coverage_reply(&dispatch_as(&local, 963, OWNER_A, coverage_request()).await);
+    let covered = a["verdicts"]
+        .as_array()
+        .expect("verdicts")
+        .iter()
+        .find(|v| v["verdict"] == "covered" && v["class"] == INCIDENT_CLASS)
+        .unwrap_or_else(|| panic!("the owner's own sources cover the class: {a}"));
+    assert_eq!(covered["source"], "servicenow-mcp");
+
+    let b_resp = dispatch_as(&local, 964, OTHER_B, coverage_request()).await;
+    let b = coverage_reply(&b_resp);
+    let text = b.to_string();
+    assert!(
+        !b["verdicts"]
+            .as_array()
+            .expect("verdicts")
+            .iter()
+            .any(|v| v["verdict"] == "covered"),
+        "another principal's registration connects nothing: {text}"
+    );
+    assert!(
+        text.contains("unconnected"),
+        "the sources are Unconnected for B: {text}"
+    );
+    assert!(
+        !text.contains("registered"),
+        "the reply never names a source as registered: {text}"
+    );
+}

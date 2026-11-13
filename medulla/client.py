@@ -7089,6 +7089,42 @@ class GraphOperationsClient:
             raise RuntimeError("CorpusRetrieve must answer with an object")
         return result
 
+    async def source_coverage(
+        self,
+        classes: list[str],
+        *,
+        facets: list[tuple[str, str]] | None = None,
+        hop_budget: int | None = None,
+        needs_current_state: bool = False,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask which connected source is authoritative per class
+        (MEDULLA-SRC-AUTH-R004.6.1).
+
+        ``classes`` are the ontology class IRIs to cover; ``facets`` are
+        ``(class, property)`` pairs. Returns ``{"verdicts": [...], "audit": {...}}``:
+        each verdict is ``covered`` (winner, ``alternates``, rendered ``premises``),
+        ``uncovered``, ``disconnected`` or ``abstained`` (closed ``reason``), and the
+        audit lists the sources used and set aside. Only the caller's own registered
+        sources are connected. Refused ``SOURCE_COVERAGE_NO_CLASSES``,
+        ``SOURCE_COVERAGE_TOO_MANY_CLASSES`` or ``SOURCE_COVERAGE_HOP_BUDGET_INVALID``.
+        """
+        body: dict[str, Any] = {
+            "classes": list(classes),
+            "facets": [{"class": c, "property": p} for c, p in (facets or [])],
+            "needs_current_state": needs_current_state,
+        }
+        if hop_budget is not None:
+            body["hop_budget"] = hop_budget
+        result = await self._client._send(
+            "SourceCoverage", body, graph, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("SourceCoverage must answer with an object")
+        return result
+
     async def context_compile(
         self,
         query_text: str,

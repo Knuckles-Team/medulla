@@ -73,6 +73,8 @@ method_results! {
     ViewportQuery(ViewportQuery) => Raw<medulla_types::viewport::ViewportResult>;
     // MEDULLA-FEDERATED-QUERY-R081.103.3: the raw points of one resolved selection token.
     ResolveViewportSelection(ResolveViewportSelection) => Raw<medulla_types::viewport::ResolvedSelection>;
+    // MEDULLA-SRC-AUTH-R004.6.1: the verdicts and audit of one source-coverage read.
+    SourceCoverage(SourceCoverage) => Raw<medulla_identity_types::source_coverage::SourceCoverageReply>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.

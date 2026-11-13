@@ -167,6 +167,8 @@ mod column_lineage;
 mod context_compile;
 #[cfg(feature = "query")]
 mod corpus_retrieve;
+#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
+mod source_coverage;
 #[cfg(feature = "query")]
 mod schema_projections;
 #[cfg(all(feature = "query", feature = "federation-sql"))]
@@ -185,6 +187,8 @@ mod document_encoding;
 mod retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
+#[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
+pub(crate) use source_coverage::handle_source_coverage;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]

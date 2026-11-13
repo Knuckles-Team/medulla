@@ -143,6 +143,22 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative per class.
+    #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
+    let method = match method {
+        Method::SourceCoverage {
+            classes,
+            facets,
+            hop_budget,
+            needs_current_state,
+        } => {
+            return Ok(
+                handle_source_coverage(hctx, classes, facets, hop_budget, needs_current_state)
+                    .await,
+            )
+        }
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;

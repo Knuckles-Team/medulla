@@ -101,6 +101,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "RetrievalRound",
     "EncodedDocumentSearch",
     "CorpusRetrieve",
+    "SourceCoverage",
     "ViewportQuery",
     "ResolveViewportSelection",
     "Discover",

@@ -13,6 +13,8 @@ pub mod authority;
 // MEDULLA-SRC-AUTH-R007.1 — typed audit entries for source selection evidence.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod authority_audit;
+// MEDULLA-SRC-AUTH-R004.6.1 — the wire verdicts and reply of the served SourceCoverage.
+pub mod source_coverage;
 // MEDULLA-UNIFIED-DATA-PLANE-R024.1 — typed one-at-a-time application admission
 // stage machine, refusing to retire an ingest connector before parity is
 // confirmed. Pure data; the admission runner, rollback path, and the

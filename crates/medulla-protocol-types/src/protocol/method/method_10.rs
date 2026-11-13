@@ -237,6 +237,20 @@ $($variants)*
     RecordDeployment {
         deployment: medulla_source_types::lifecycle::DeploymentInput,
     },
+    /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
+    /// class (and facet) within the hop budget, with the premises behind every verdict
+    /// and the authority audit built from them. A read; nothing is committed. Refuses
+    /// `SOURCE_COVERAGE_NO_CLASSES`, `SOURCE_COVERAGE_TOO_MANY_CLASSES` and
+    /// `SOURCE_COVERAGE_HOP_BUDGET_INVALID`.
+    SourceCoverage {
+        classes: Vec<String>,
+        #[serde(default)]
+        facets: Vec<medulla_identity_types::source_coverage::SourceCoverageFacet>,
+        #[serde(default)]
+        hop_budget: Option<u32>,
+        #[serde(default)]
+        needs_current_state: bool,
+    },
         ]);
     };
 }
