@@ -275,6 +275,7 @@ mod obda_pushdown_tests {
             table: "people".into(),
             dialect: ObdaSqlDialect::Postgres,
             executor: mock.clone(),
+            source_key: None,
         };
         let mut reg = medulla_virtual_graph::obda::ObdaSourceRegistry::new();
         reg.register("people", Arc::new(src));

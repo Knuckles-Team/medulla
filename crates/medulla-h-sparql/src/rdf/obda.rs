@@ -289,6 +289,8 @@ pub(super) struct SqlObdaSource {
     pub(super) table: String,
     pub(super) dialect: ObdaSqlDialect,
     pub(super) executor: std::sync::Arc<dyn ObdaSqlExecutor>,
+    /// Equal for two sources that read one database (never the DSN itself).
+    pub(super) source_key: Option<String>,
 }
 
 #[cfg(feature = "obda")]
@@ -308,10 +310,14 @@ impl SqlObdaSource {
         #[cfg(feature = "federation-sql")]
         medulla_federation::federation_ssrf::check_sql_dsn(dsn)?;
         let executor = federation_sql_executor(dsn, share)?;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        dsn.hash(&mut hasher);
         Ok(Self {
             table: table.to_string(),
             dialect,
             executor,
+            source_key: Some(format!("{:016x}", hasher.finish())),
         })
     }
 }
@@ -325,6 +331,26 @@ impl medulla_virtual_graph::obda::ObdaSource for SqlObdaSource {
     ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
         let sql = render_obda_select(&self.table, needed, filters, self.dialect)?;
         self.executor.run_select(&sql)
+    }
+
+    fn identity(&self) -> Option<medulla_virtual_graph::obda::SourceIdentity> {
+        Some(medulla_virtual_graph::obda::SourceIdentity {
+            source_id: self.source_key.clone()?,
+            table: self.table.clone(),
+        })
+    }
+
+    fn scan_join(
+        &self,
+        join: &medulla_virtual_graph::obda::JoinScan,
+        needed: &std::collections::BTreeSet<String>,
+    ) -> Option<Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String>> {
+        self.source_key.as_ref()?;
+        let sql = match render_obda_join(&self.table, join, needed, self.dialect) {
+            Ok(sql) => sql,
+            Err(error) => return Some(Err(error)),
+        };
+        Some(self.executor.run_select(&sql))
     }
 
     fn scan_ordered_distinct(
@@ -571,6 +597,47 @@ pub(super) fn render_obda_select(
         sql.push_str(&where_clause);
     }
     Ok(sql)
+}
+
+/// Render the one statement of a same-database join (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2):
+/// the source table `l` joined with `join.right_table` `r` on the text form of the join
+/// columns. Left columns come back under their own names, right columns as `rhs__<col>`.
+#[cfg(feature = "obda")]
+pub(super) fn render_obda_join(
+    table: &str,
+    join: &medulla_virtual_graph::obda::JoinScan,
+    needed: &std::collections::BTreeSet<String>,
+    dialect: ObdaSqlDialect,
+) -> Result<String, String> {
+    use medulla_virtual_graph::obda::JOIN_RIGHT_PREFIX;
+    if needed.is_empty() {
+        return Err("obda: a join statement needs at least one projected column".into());
+    }
+    let text = |alias: &str, col: &str| -> Result<String, String> {
+        let q = quote(col, dialect)?;
+        Ok(match dialect {
+            ObdaSqlDialect::Postgres => format!("{alias}.{q}::text"),
+            ObdaSqlDialect::MySql => format!("CAST({alias}.{q} AS CHAR)"),
+        })
+    };
+    let items = needed
+        .iter()
+        .map(|name| {
+            let out = quote(name, dialect)?;
+            Ok(match name.strip_prefix(JOIN_RIGHT_PREFIX) {
+                Some(col) => format!("{} AS {out}", text("r", col)?),
+                None => format!("{} AS {out}", text("l", name)?),
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?
+        .join(", ");
+    Ok(format!(
+        "SELECT {items} FROM {} l JOIN {} r ON {} = {}",
+        quote(table, dialect)?,
+        quote(&join.right_table, dialect)?,
+        text("l", &join.on_left)?,
+        text("r", &join.on_right)?,
+    ))
 }
 
 /// A SELECT item that casts the column to text and re-aliases it to its own name, so every
@@ -883,6 +950,7 @@ mod ordered_distinct_tests {
             table: "people".into(),
             dialect: ObdaSqlDialect::Postgres,
             executor: invalid.clone(),
+            source_key: None,
         };
         assert!(source.scan_ordered_distinct(&needed, &[], &order).is_none());
         assert!(source.scan_distinct_count(&needed).is_none());
@@ -923,6 +991,7 @@ mod ordered_distinct_tests {
             table: "people".into(),
             dialect: ObdaSqlDialect::Postgres,
             executor: empty.clone(),
+            source_key: None,
         };
         assert!(source
             .scan_ordered_distinct(&needed, &[], &order)

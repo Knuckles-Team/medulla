@@ -394,6 +394,8 @@ knobs! {
     eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
     /// Longest replay lag at which a declared replica may serve a snapshot read.
     federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
+    /// Deepest variable-length openCypher path a graph view compiles (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2).
+    federation_cypher_max_path_depth: u64 = "federation.cypher_max_path_depth", U64(8), [1, 32], "hops", Tunable;
     /// Longest a web metasearch result is served from the cache (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
     federation_web_cache_ttl_s: u64 = "federation.web_cache_ttl_s", U64(900), [0, 86_400], "s", Tunable;
     /// Bits per character at or above which a name is an opaque token that never merges on the name alone (MEDULLA-UNIFIED-DATA-PLANE-R030.701).

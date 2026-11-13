@@ -4719,6 +4719,7 @@ dependencies = [
  "medulla-text",
  "medulla-transaction",
  "medulla-types",
+ "medulla-virtual-graph",
  "petgraph",
  "redb",
  "rmp-serde",

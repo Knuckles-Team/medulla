@@ -37,3 +37,7 @@ Decisions (owner standard: most correct, long-term, simplest):
 - `CatalogUsage` reads only the usage series of the caller's own tenant and graph key. An asset
   with no series in that scope is `CATALOG_ASSET_NOT_FOUND`, which is also what another tenant
   sees, so the refusal never confirms that an asset exists elsewhere.
+
+## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2)
+
+Decision: `medulla-cypher` cannot depend on `medulla-virtual-graph` (the latter reaches the former), so the compiler emits a plain `ViewPlan` of SPARQL text plus `ViewJoin` records, and `apply_view_joins` in the shared virtual-graph crate turns same-database joins into one derived triples map. Property and relationship predicates follow the namespace-of-class naming rule, so a view needs no extra property table. Unbounded `*` is capped by the parser at 16 hops and therefore refuses against the default knob of 8.

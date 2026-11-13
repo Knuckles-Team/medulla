@@ -297,3 +297,7 @@ Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `
 and filters on the shared parser and appends `asset_usage.*` points. `Method::CatalogUsage` is a
 read-only query-family method answered by `handle_usage` from those series; see research.md for
 the cursor, scope-stamping and refusal decisions.
+
+## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
+
+`virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.

@@ -58,3 +58,4 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
+medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["sparql"] }

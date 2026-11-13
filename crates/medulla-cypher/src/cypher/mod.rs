@@ -33,6 +33,7 @@ mod parser;
 mod plan;
 mod plan_cache;
 mod proc;
+mod virtual_view;
 
 /// A finite `f64` as a Cypher numeric `Value`: an integer when the float is
 /// integral (and inside the exactly-representable i64 range), else a float, else
@@ -59,6 +60,9 @@ pub use exec::{
 pub use exec::{exec_cypher_params_indexed, IndexSource};
 pub use plan::{CypherQuery, Statement, WriteOp, WriteQuery};
 pub use proc::{CypherProcedure, ProcRow, YieldValue};
+pub use virtual_view::{
+    compile_view_query, compile_view_statement, resolve_view_plan, ViewRefusal, ViewResolver,
+};
 
 /// Parser-derived statement classification used by served authorization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

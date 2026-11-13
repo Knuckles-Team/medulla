@@ -75,6 +75,8 @@ mod direct;
 mod eval;
 use self::eval::{bool_result, query_pattern, run_materialized_virtual, wanted_predicates};
 mod pushdown;
+mod view_join;
+pub use self::view_join::{apply_view_joins, JoinScan, SourceIdentity, JOIN_RIGHT_PREFIX};
 
 /// The `rdf:type` predicate IRI (bare — used to emit `subject rdf:type <class>`).
 const RDF_TYPE_IRI: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -209,6 +211,23 @@ pub trait ObdaSource: Send + Sync {
         _needed: &BTreeSet<String>,
         _filters: &[ObdaFilter],
         _order: &ObdaOrder,
+    ) -> Option<Result<Vec<ForeignRow>, String>> {
+        None
+    }
+
+    /// Which database and table this source reads, when it can say. Two sources with
+    /// the same `source_id` read one database, so a join between their tables may be
+    /// shipped as one statement (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2).
+    fn identity(&self) -> Option<SourceIdentity> {
+        None
+    }
+
+    /// Run `join` against this source's table joined with `join.right_table` of the
+    /// same database as ONE statement. `None` declines (a source that cannot join).
+    fn scan_join(
+        &self,
+        _join: &JoinScan,
+        _needed: &BTreeSet<String>,
     ) -> Option<Result<Vec<ForeignRow>, String>> {
         None
     }

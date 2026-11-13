@@ -35,6 +35,32 @@ pub struct GraphView {
     pub relationship_types: Vec<RelationshipTypeMapping>,
 }
 
+/// One relationship pattern of a compiled view query: the join the virtual path
+/// may push to the source as one statement when both endpoint mappings read one
+/// source (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R006). `on_from` and `on_to` are
+/// the join columns of the from and to endpoint tables.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ViewJoin {
+    pub rel_predicate: String,
+    pub from_class: String,
+    pub to_class: String,
+    pub on_from: String,
+    pub on_to: String,
+}
+
+/// A graph-view query compiled to the virtual SPARQL path
+/// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2). `projection` pairs each SPARQL result
+/// variable with the openCypher column it answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ViewPlan {
+    pub sparql: String,
+    pub mapping_digests: Vec<String>,
+    pub joins: Vec<ViewJoin>,
+    pub projection: Vec<(String, String)>,
+}
+
 /// A graph view failed validation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InvalidGraphView {
