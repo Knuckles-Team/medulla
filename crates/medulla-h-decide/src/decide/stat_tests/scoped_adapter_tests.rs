@@ -697,6 +697,15 @@ use medulla_protocol_types::protocol::{Method, ResultPayload};
 
 /// Serve `Discover` through the graph operations and return the verdict's adapter digest.
 async fn verdict_adapter(h: &Harness, core: &Arc<medulla_graph_core::graph::GraphCore>) -> String {
+    discovered(h, core).await.0
+}
+
+/// Serve `Discover` through the graph operations: the verdict's adapter digest
+/// and the hit ids in the order the envelope ranks them.
+async fn discovered(
+    h: &Harness,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
+) -> (String, Vec<String>) {
     let authority = {
         let state = h.state.read().await;
         medulla_server_api::carrier::GraphReadAuthority::from_verified(
@@ -727,11 +736,18 @@ async fn verdict_adapter(h: &Harness, core: &Arc<medulla_graph_core::graph::Grap
     .await;
     assert!(response.error.is_none(), "{:?}", response.error);
     match response.result.expect("a Discover result") {
-        ResultPayload::Json(serde_json::Value::Object(envelope)) => envelope["verdict"]
-            ["adapter_digest"]
-            .as_str()
-            .expect("the verdict names an adapter digest")
-            .to_string(),
+        ResultPayload::Json(serde_json::Value::Object(envelope)) => (
+            envelope["verdict"]["adapter_digest"]
+                .as_str()
+                .expect("the verdict names an adapter digest")
+                .to_string(),
+            envelope["hits"]
+                .as_array()
+                .expect("the envelope carries its hits")
+                .iter()
+                .map(|hit| hit["id"].as_str().expect("a hit id").to_string())
+                .collect(),
+        ),
         other => panic!("expected the Discover envelope, got {other:?}"),
     }
 }
@@ -831,4 +847,72 @@ async fn fit_and_rollback_receipts_and_verdict_field() {
 
     // After the rollback the verdict names the base space again.
     assert_eq!(verdict_adapter(&h, &core).await, "base");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R174.7.6: cited outcomes recorded through
+/// `Learn` fit an adapter whose activation re-orders the served `Discover`
+/// rows and names the adapter digest, and degrading outcomes roll it back.
+// spec: MEDULLA-DECISION-ENGINE-R174.7.6
+#[tokio::test]
+async fn outcome_adapter_lifts_and_reverts() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    assert!(medulla_server_ops::api::admin::install_decide_seam(
+        &h.state.read().await.seams,
+        Arc::new(super::super::DecideSeam),
+    ));
+    let core = embedded_graph(&h).await;
+    let space = core.semantic_store.read().space().unwrap().digest.clone();
+    scoped_runs(&h, &space, "rec", 40, true).await;
+
+    let (base_digest, base_rows) = discovered(&h, &core).await;
+    assert_eq!(base_digest, "base");
+    let first_p = base_rows.iter().position(|id| id.starts_with('p'));
+    let first_n = base_rows.iter().position(|id| id.starts_with('n'));
+    assert!(
+        first_n < first_p,
+        "the base order prefers the negatives: {base_rows:?}"
+    );
+
+    let fitted = fit_scoped_adapter(&h, scoped_request(&space, AdapterScope::Graph))
+        .await
+        .unwrap();
+    assert!(fitted.receipt.passed, "{:?}", fitted.receipt);
+    pointer_state(
+        &h,
+        PointerRef::ScopedAdapter {
+            graph: GRAPH.to_string(),
+            scope: AdapterScope::Graph,
+        },
+        activate(&fitted.adapter_digest, &fitted.receipt_digest),
+    )
+    .await
+    .unwrap();
+    let (lifted_digest, lifted_rows) = discovered(&h, &core).await;
+    assert_eq!(lifted_digest, fitted.adapter_digest);
+    let first_p = lifted_rows.iter().position(|id| id.starts_with('p'));
+    let first_n = lifted_rows.iter().position(|id| id.starts_with('n'));
+    assert!(
+        first_p < first_n,
+        "the adapter lifts the cited rows: {lifted_rows:?}"
+    );
+
+    scoped_runs(&h, &space, "deg", 120, false).await;
+    let write = LearningWrite::MonitorAdapter {
+        request: Box::new(AdapterMonitorRequest {
+            graph: GRAPH.to_string(),
+            scope: AdapterScope::Graph,
+            window: RecordWindow {
+                from_ms: 0,
+                to_ms: u64::MAX,
+            },
+        }),
+    };
+    let monitored = match learn(&h, "decider", write).await.unwrap() {
+        LearningRecorded::Monitored(monitored) => *monitored,
+        other => panic!("monitor: {other:?}"),
+    };
+    assert_eq!(monitored.state, MonitorState::RolledBack, "{monitored:?}");
+    let (reverted_digest, reverted_rows) = discovered(&h, &core).await;
+    assert_eq!(reverted_digest, "base");
+    assert_eq!(reverted_rows, base_rows);
 }

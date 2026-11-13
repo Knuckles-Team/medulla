@@ -195,6 +195,7 @@ async fn pointer_rows(h: &Harness) -> Vec<Vec<serde_json::Value>> {
 /// re-embeds in checkpointed batches, evaluates and activates exactly once.
 // spec: MEDULLA-DECISION-ENGINE-R174.1
 // spec: MEDULLA-DECISION-ENGINE-R174.2
+// spec: MEDULLA-DECISION-ENGINE-R174.6
 #[tokio::test]
 async fn cycle_publishes_reembeds_evaluates_and_activates() {
     #[cfg(any(feature = "security", feature = "raft"))]
