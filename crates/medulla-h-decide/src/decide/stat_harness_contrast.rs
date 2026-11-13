@@ -136,20 +136,41 @@ fn stored_contrast(
         .and_then(|props| decode_harness_contrast_write(&props).ok())
 }
 
+/// The relationship name of the edge from a `:Score` node to the run it scores
+/// (the `scoresRun` object property of the dataplatform ontology).
+const SCORES_RUN: &str = "scoresRun";
+
 /// The independent `:Score` values of one run in the view, in millionths of
-/// each row's range: the rows that name the run through `scoresRun` and whose
-/// grader kind may decide a promotion (MEDULLA-DECISION-ENGINE-R803.7).
+/// each row's range: the `:Score` nodes with a `scoresRun` edge to the run's
+/// node and whose grader kind may decide a promotion
+/// (MEDULLA-DECISION-ENGINE-R803.7). `scoresRun` is an object property, so it is
+/// read as an edge, never as a literal on the score node.
 fn run_scores_ppm(view: &medulla_graph_core::graph::GraphView, run_id: &str) -> Vec<i64> {
     let mut rows: Vec<(&String, i64)> = Vec::new();
-    for (id, blob) in &view.node_properties {
+    for ((score_id, target), blobs) in &view.edge_properties {
+        if target != run_id
+            || !blobs.iter().any(|blob| {
+                medulla_types::msgpack::decode_property_value(blob)
+                    .ok()
+                    .and_then(|v| {
+                        v.get("relationship")
+                            .and_then(|r| r.as_str())
+                            .map(|r| r == SCORES_RUN)
+                    })
+                    .unwrap_or(false)
+            })
+        {
+            continue;
+        }
+        let Some(blob) = view.node_properties.get(score_id) else {
+            continue;
+        };
         let Ok(serde_json::Value::Object(props)) =
             medulla_types::msgpack::decode_property_value(blob)
         else {
             continue;
         };
-        if props.get("node_type").and_then(|v| v.as_str()) != Some("Score")
-            || props.get("scoresRun").and_then(|v| v.as_str()) != Some(run_id)
-        {
+        if props.get("node_type").and_then(|v| v.as_str()) != Some("Score") {
             continue;
         }
         let independent = props
@@ -171,7 +192,7 @@ fn run_scores_ppm(view: &medulla_graph_core::graph::GraphView, run_id: &str) -> 
             continue;
         }
         let ppm = ((value - min) / (max - min) * 1_000_000.0).round() as i64;
-        rows.push((id, ppm.clamp(0, 1_000_000)));
+        rows.push((score_id, ppm.clamp(0, 1_000_000)));
     }
     rows.sort();
     rows.into_iter().map(|(_, ppm)| ppm).collect()

@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use medulla_decision_types::decision::harness_contrast::HarnessContrastAbstainReason;
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
 use medulla_decision_types::decision::statistical::features::{
@@ -83,18 +84,32 @@ pub(super) fn graph_view(
             }),
         );
     }
+    let mut runs: Vec<&str> = scores.iter().map(|(run, _, _)| *run).collect();
+    runs.sort();
+    runs.dedup();
+    for run in runs {
+        put(run, serde_json::json!({ "node_type": "ExperimentRun" }));
+    }
     for (index, (run, value, grader)) in scores.iter().enumerate() {
+        let score = format!("score:{index}");
         put(
-            &format!("score:{index}"),
+            &score,
             serde_json::json!({
                 "node_type": "Score",
-                "scoresRun": run,
                 "value": value,
                 "range_min": 0.0,
                 "range_max": 1.0,
                 "grader_kind": grader,
             }),
         );
+        // `scoresRun` is an object property: an edge from the score to its run.
+        core.add_typed_edge(
+            score,
+            run.to_string(),
+            "scoresRun".to_string(),
+            rmp_serde::to_vec_named(&serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
     }
     core.analysis_snapshot()
 }
@@ -127,14 +142,22 @@ pub(super) fn trace_record(
     }
 }
 
-/// Commit one run's trace through the served `DecisionLog` as `who`.
+/// Commit one run's trace through the served `DecisionLog` as `who` in `TENANT`.
 pub(super) async fn commit_trace(h: &Harness, who: &str, trace: RunTraceRecord) {
+    commit_trace_in(h, TENANT, who, trace).await;
+}
+
+/// Commit one run's trace through the served `DecisionLog` as `who`, whose
+/// verified context names `tenant`.
+async fn commit_trace_in(h: &Harness, tenant: &str, who: &str, trace: RunTraceRecord) {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
     let stored = decode::<RunRecordStored>(
-        super::log_tests::log_op(
-            h,
-            who,
+        super::super::log::handle_decision_log(
+            &h.state,
+            9,
+            &verified,
             DecisionLogOp::RunRecord {
-                tenant_id: TENANT.to_string(),
+                tenant_id: tenant.to_string(),
                 record: RunRecord::Trace { trace },
             },
         )
@@ -483,15 +506,129 @@ async fn contrast_is_measured_from_stored_traces() {
         refused.contains("HARNESS_CONTRAST_TRACE_MISMATCH"),
         "{refused}"
     );
+}
 
-    // Another tenant's ledger and trace of the same run ids count as absent.
-    let other = decide_contrast_in(
+/// `request` with its baseline trace param replaced by `baseline`.
+fn with_baseline(mut request: DecideRequest, baseline: &str) -> DecideRequest {
+    let params: Vec<TypedParam> = request
+        .params
+        .iter()
+        .map(|param| {
+            if param.name == "baseline_trace_id" {
+                text("baseline_trace_id", baseline)
+            } else {
+                param.clone()
+            }
+        })
+        .collect();
+    request.params = BoundedVec::new(params).unwrap();
+    request
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R803.7: two tenants share one store and
+/// each seeds its own traces, `:Score` rows and usage ledger. The verified
+/// tenant is the only tenant the contrast reads, so tenant B asking about
+/// tenant A's run ids gets exactly the answer it gets for ids that exist
+/// nowhere: an `insufficient_evidence` abstention with no measured number.
+// spec: MEDULLA-DECISION-ENGINE-R803.7
+#[tokio::test]
+async fn contrast_never_reads_another_tenants_runs() {
+    const OTHER: &str = "tenant-other";
+    let h = Harness::new().await;
+    let schema_pin = h
+        .publish_test_component(
+            "schema-contrast-tenants",
+            AgentComponentKind::FeatureSchema,
+            "contrast deltas",
+            Some(&contrast_schema()),
+            None,
+        )
+        .unwrap();
+    let (a, b) = ("harness-component:prompt:a", "harness-component:prompt:b");
+    let ok = |action| (StepKind::ToolCall, action, StepOutcome::Ok);
+    let failed = |action| (StepKind::ToolCall, action, StepOutcome::Error);
+
+    // Tenant A: a baseline and a probe run, scored and priced.
+    commit_trace(
         &h,
-        "tenant-other",
-        &request(vec![option(a, "trace:a"), option(b, "trace:a")]),
-        &view,
+        "decider",
+        trace_record(BASELINE, &[failed("t"), ok("t")]),
+    )
+    .await;
+    commit_trace(&h, "decider", trace_record("trace:a", &[ok("t")])).await;
+    ledger(&h, TENANT, &[(BASELINE, 9), ("trace:a", 4)]).await;
+    let view_a = graph_view(
+        &[a, b],
+        &[BASELINE, "trace:a"],
+        &[(BASELINE, 0.5, "human"), ("trace:a", 0.8, "human")],
     );
+
+    // Tenant B: its own baseline and probe run in the same store.
+    let (other_base, other_probe) = ("trace:other-base", "trace:other-a");
+    commit_trace_in(
+        &h,
+        OTHER,
+        "decider",
+        trace_record(other_base, &[failed("t"), ok("t")]),
+    )
+    .await;
+    commit_trace_in(&h, OTHER, "decider", trace_record(other_probe, &[ok("t")])).await;
+    ledger(&h, OTHER, &[(other_base, 7), (other_probe, 2)]).await;
+    let view_b = graph_view(
+        &[a, b],
+        &[other_base, other_probe],
+        &[(other_base, 0.4, "human"), (other_probe, 0.9, "human")],
+    );
+
+    let ask = |baseline: &str, probe: &str| {
+        with_baseline(
+            contrast_request(
+                &schema_pin,
+                DecisionPolicyRef::Default,
+                vec![option(a, probe), option(b, probe)],
+            ),
+            baseline,
+        )
+    };
+
+    // Each tenant reads its own evidence.
+    let own_a = decide_contrast_in(&h, TENANT, &ask(BASELINE, "trace:a"), &view_a).unwrap();
+    assert!(own_a.harness_contrast.is_some());
+    let own_b = decide_contrast_in(&h, OTHER, &ask(other_base, other_probe), &view_b).unwrap();
+    assert!(own_b.harness_contrast.is_some());
+
+    // Ids that exist nowhere abstain insufficient_evidence.
+    let unknown = decide_contrast_in(
+        &h,
+        OTHER,
+        &ask("trace:nowhere-base", "trace:nowhere-a"),
+        &view_b,
+    )
+    .unwrap();
     assert!(
-        other.is_err() || matches!(other.unwrap().outcome, StatisticalOutcome::Abstained { .. })
+        matches!(unknown.outcome, StatisticalOutcome::Abstained { .. }),
+        "unknown ids must abstain: {:?}",
+        unknown.outcome
     );
+    let abstention = |record: &StatisticalDecisionRecord| {
+        let decision = record
+            .harness_contrast
+            .as_ref()
+            .expect("an abstained contrast is sealed with its decision");
+        assert!(
+            decision.probe_trace_ids.iter().all(Option::is_none),
+            "no probe may be counted as measured"
+        );
+        decision.abstain_reason
+    };
+    assert_eq!(
+        abstention(&unknown),
+        Some(HarnessContrastAbstainReason::InsufficientEvidence)
+    );
+
+    // Tenant B asking about tenant A's run ids gets the same answer: nothing
+    // of A's traces, scores or ledger is visible.
+    let foreign = decide_contrast_in(&h, OTHER, &ask(BASELINE, "trace:a"), &view_b).unwrap();
+    assert_eq!(foreign.outcome, unknown.outcome);
+    assert_eq!(abstention(&foreign), abstention(&unknown));
 }

@@ -1155,7 +1155,8 @@ is normalized like the ledger's own keys before it is compared.
 
 ## R803.7 contrast measured from stored evidence
 
-- The contrast request carries trace ids only. The engine measures each delta from stored evidence: the `RunTraceRecord` committed through `DecisionLog` `RunRecord::Trace` (read through `ExecutionContext.reader`, visible only to the committing principal in the caller's tenant), the independent `:Score` rows naming the run through `scoresRun`, and the usage-ledger cost of the run (`AgentLibraryStore::run_cost_micro`).
+- The contrast request carries trace ids only. The engine measures each delta from stored evidence: the `RunTraceRecord` committed through `DecisionLog` `RunRecord::Trace` (read through `ExecutionContext.reader`, visible only to the committing principal in the caller's tenant), the independent `:Score` rows with a `scoresRun` edge to the run's node, and the usage-ledger cost of the run (`AgentLibraryStore::run_cost_micro`).
+- DE-SCORES-RUN-IS-AN-EDGE: `scoresRun` is an object property, so it is read as an edge from the `:Score` node to the run node (whose node id is the run id), never as a literal on the score node. The request carries no tenant; the verified context supplies it, and another tenant's runs are read as unknown ids.
 - A retry is a step repeating the kind and action of an earlier step that ended in an error. `tool_selection_delta` counts `ok` tool-call steps. Deltas are on the Q32 scale (counts shifted by 32, scores from millionths).
 - An absent trace, score row or price leaves the candidate unprobed, so the kernel abstains `insufficient_evidence`; no number is invented. A stored probe run with another conditions digest refuses `HARNESS_CONTRAST_TRACE_MISMATCH`.
 - The reader field on `ExecutionContext` matches the one of the step-verification branch; the two fold into one field when the train lands both.
