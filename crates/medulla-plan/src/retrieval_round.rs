@@ -70,6 +70,8 @@ pub struct RoundKnobs {
     pub feedback_terms: u32,
     /// `knob retrieval.transfer_min_threshold`, score. A transfer receipt's threshold may not be lower.
     pub transfer_min_threshold: f64,
+    /// `knob retrieval.arbitration_margin`, confidence. Two supported candidates need a gap above it.
+    pub arbitration_margin: f64,
 }
 
 impl Default for RoundKnobs {
@@ -92,6 +94,7 @@ impl Default for RoundKnobs {
             feedback_queries: 8,
             feedback_terms: 32,
             transfer_min_threshold: 0.6,
+            arbitration_margin: 0.10,
         }
     }
 }
@@ -133,6 +136,21 @@ fn validate(request: &RoundRequest) -> Result<(), RoundError> {
             ));
         }
     }
+    if let Some(part) = &request.arbitration {
+        use medulla_result_types::retrieval_arbitration::AnswerGrounding;
+        if part.query_digest.trim().is_empty() {
+            return Err(contract_invalid(
+                "an arbitration part names its query digest",
+            ));
+        }
+        if part.prior.grounding != AnswerGrounding::Parametric
+            || part.retrieved.grounding != AnswerGrounding::Retrieved
+        {
+            return Err(contract_invalid(
+                "arbitration prior is grounded parametric and retrieved is grounded retrieved",
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -150,6 +168,33 @@ fn chunk_text(ctx: &PlanCtx, id: &str) -> Option<String> {
         .get("text")?
         .as_str()
         .map(str::to_string)
+}
+
+/// Verifies a citation against the round's snapshot: the cited document must be a node the
+/// caller can read, and the span must lie on character boundaries with a matching digest.
+struct SnapshotSpanVerifier<'a> {
+    ctx: &'a PlanCtx<'a>,
+}
+
+impl crate::retrieval_arbitration::SpanVerifier for SnapshotSpanVerifier<'_> {
+    fn check(
+        &self,
+        citation: &medulla_result_types::retrieval_arbitration::Citation,
+    ) -> crate::retrieval_arbitration::SpanCheck {
+        use crate::retrieval_arbitration::SpanCheck;
+        let Some(text) = chunk_text(self.ctx, &citation.document_id) else {
+            return SpanCheck::OutsideSnapshot;
+        };
+        match medulla_decision_types::decision::indexless_retrieval::verify_span(
+            &text,
+            citation.start_byte,
+            citation.end_byte,
+            &citation.expected_digest,
+        ) {
+            Ok(()) => SpanCheck::Valid,
+            Err(_) => SpanCheck::Invalid,
+        }
+    }
 }
 
 /// The benchmark digest this round accepts as approval, or `None` when the evidence is
@@ -653,6 +698,7 @@ fn exhausted_before_retrieval(
         inference: InferenceCounts::default(),
         premises: vec![premise],
         feedback: None,
+        arbitration: None,
     }))
 }
 
@@ -881,6 +927,20 @@ pub fn run_round_with_state(
             )?)
         }
     };
+    // MEDULLA-FEDERATED-QUERY-R083.3: arbitration is the last block. Both candidates came
+    // from the harness; every citation is verified on this round's snapshot.
+    let arbitration = request.arbitration.as_ref().map(|part| {
+        let _span = tracing::info_span!("medulla.retrieval.arbitration").entered();
+        let verifier = SnapshotSpanVerifier { ctx };
+        crate::retrieval_arbitration::arbitrate(
+            part.prior.clone(),
+            part.retrieved.clone(),
+            knobs.arbitration_margin,
+            &part.query_digest,
+            &request.corpus_revision,
+            &verifier,
+        )
+    });
     Ok(RoundResult {
         state,
         rows: rows
@@ -899,6 +959,7 @@ pub fn run_round_with_state(
         inference: steps.inference,
         premises: steps.premises,
         feedback: feedback_outcome,
+        arbitration,
     })
 }
 
@@ -931,6 +992,7 @@ mod tests {
         feedback_queries: 8,
         feedback_terms: 32,
         transfer_min_threshold: 0.6,
+        arbitration_margin: 0.10,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -950,6 +1012,7 @@ mod tests {
             stop: None,
             state: None,
             feedback: None,
+            arbitration: None,
         }
     }
 

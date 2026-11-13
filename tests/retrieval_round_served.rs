@@ -14,9 +14,12 @@ use tokio::sync::RwLock;
 use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::{HashEmbedder, TextEmbedder};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_result_types::retrieval_arbitration::{
+    AnswerGrounding, ArbitrationChoice, Candidate, Citation, Claim, SupportState,
+};
 use medulla_result_types::retrieval_round::{
-    sha256_hex_of, ActivationBenchmark, BenchmarkResult, HierarchyPart, RoundRequest, RoundResult,
-    SectionRequest, SelectionMode, SelectionPart, SufficiencyPart,
+    sha256_hex_of, ActivationBenchmark, ArbitrationPart, BenchmarkResult, HierarchyPart,
+    RoundRequest, RoundResult, SectionRequest, SelectionMode, SelectionPart, SufficiencyPart,
 };
 use medulla_result_types::retrieval_verdict::{
     FallbackPolicy, HierarchyParentLink, HierarchyRetrievalKind, HierarchyRetrievalPolicy,
@@ -86,6 +89,7 @@ fn request(sufficiency: Option<SufficiencyPart>) -> RoundRequest {
         stop: None,
         state: None,
         feedback: None,
+        arbitration: None,
     }
 }
 
@@ -1989,4 +1993,144 @@ async fn transfer_receipt_gates_strategy_reuse() {
         moved.feedback.expect("continuation").strategy_id.as_deref(),
         Some("strategy-1")
     );
+}
+
+// ---- arbitration part (MEDULLA-FEDERATED-QUERY-R083.3) ----
+
+fn span_citation(document_id: &str, end: usize, digest_of: &str) -> Citation {
+    use sha2::{Digest, Sha256};
+    Citation {
+        document_id: document_id.into(),
+        start_byte: 0,
+        end_byte: end as u64,
+        expected_digest: hex::encode(Sha256::digest(digest_of.as_bytes())),
+    }
+}
+
+fn candidate(grounding: AnswerGrounding, confidence: f64, citation: Option<Citation>) -> Candidate {
+    Candidate {
+        answer: "entry".into(),
+        confidence,
+        grounding,
+        claims: citation
+            .map(|citation| {
+                vec![Claim {
+                    text: "claim".into(),
+                    citation: Some(citation),
+                }]
+            })
+            .unwrap_or_default(),
+        support_state: SupportState::Unknown,
+    }
+}
+
+fn arbitration_request(prior: Candidate, retrieved: Candidate) -> RoundRequest {
+    let mut round = request(None);
+    round.arbitration = Some(ArbitrationPart {
+        prior,
+        retrieved,
+        query_digest: sha256_hex_of(&["what is entry"]),
+    });
+    round
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R083.3
+#[tokio::test(flavor = "multi_thread")]
+async fn arbitration_part_returns_verdict_or_none() {
+    let state = state();
+    seed(&state, 2).await;
+    let good = || span_citation("doc-0", 5, "entry");
+
+    // No arbitration part: no verdict.
+    assert!(decode(round_as(&state, None, request(None)).await)
+        .arbitration
+        .is_none());
+
+    // One supported candidate wins whatever the confidence: the prior has no evidence.
+    let verdict = decode(
+        round_as(
+            &state,
+            None,
+            arbitration_request(
+                candidate(AnswerGrounding::Parametric, 0.99, None),
+                candidate(AnswerGrounding::Retrieved, 0.2, Some(good())),
+            ),
+        )
+        .await,
+    )
+    .arbitration
+    .expect("verdict");
+    assert_eq!(verdict.choice, ArbitrationChoice::Retrieved);
+    assert_eq!(verdict.prior.support_state, SupportState::Unsupported);
+    assert_eq!(verdict.retrieved.support_state, SupportState::Supported);
+    assert_eq!(verdict.supporting_span_ids, vec!["doc-0:0-5".to_string()]);
+    assert_eq!(verdict.graph_snapshot_revision, "corpus-1");
+
+    // A digest that does not match the stored span is unsupported, so both abstain.
+    let stale = span_citation("doc-0", 5, "other");
+    let verdict = decode(
+        round_as(
+            &state,
+            None,
+            arbitration_request(
+                candidate(AnswerGrounding::Parametric, 0.9, None),
+                candidate(AnswerGrounding::Retrieved, 0.9, Some(stale)),
+            ),
+        )
+        .await,
+    )
+    .arbitration
+    .expect("verdict");
+    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
+    assert_eq!(verdict.retrieved.support_state, SupportState::Unsupported);
+
+    // Two supported candidates inside the margin abstain and keep both.
+    let verdict = decode(
+        round_as(
+            &state,
+            None,
+            arbitration_request(
+                candidate(AnswerGrounding::Parametric, 0.80, Some(good())),
+                candidate(AnswerGrounding::Retrieved, 0.85, Some(good())),
+            ),
+        )
+        .await,
+    )
+    .arbitration
+    .expect("verdict");
+    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
+    assert_eq!(verdict.prior.support_state, SupportState::Supported);
+    assert_eq!(verdict.retrieved.support_state, SupportState::Supported);
+
+    // Another graph's caller does not see the document: the citation is outside its snapshot.
+    let verdict = decode(
+        round_as(
+            &state,
+            Some("other-graph"),
+            arbitration_request(
+                candidate(AnswerGrounding::Parametric, 0.9, None),
+                candidate(AnswerGrounding::Retrieved, 0.9, Some(good())),
+            ),
+        )
+        .await,
+    )
+    .arbitration
+    .expect("verdict");
+    assert_eq!(verdict.retrieved.support_state, SupportState::Unknown);
+    assert_eq!(verdict.choice, ArbitrationChoice::Abstain);
+
+    // A candidate grounded the wrong way round refuses, and nothing is returned.
+    let refused = round_as(
+        &state,
+        None,
+        arbitration_request(
+            candidate(AnswerGrounding::Retrieved, 0.5, None),
+            candidate(AnswerGrounding::Retrieved, 0.5, None),
+        ),
+    )
+    .await;
+    assert!(refused
+        .error
+        .unwrap_or_default()
+        .starts_with(RETRIEVAL_CONTRACT_INVALID));
 }

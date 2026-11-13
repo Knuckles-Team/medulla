@@ -115,7 +115,7 @@ These are required acceptance cases, not claims of completed tests.
 
 - `MEDULLA-FEDERATED-QUERY-R083.1`: `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates_and_support` and `tests::candidate_without_grounding_is_refused`.
 - `MEDULLA-FEDERATED-QUERY-R083.2`: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::margin_picks_or_abstains`.
-- `MEDULLA-FEDERATED-QUERY-R083.3`: `crates/medulla-exec/src/exec.rs::tests::execute_returns_arbitration_for_prior_candidate`.
+- `MEDULLA-FEDERATED-QUERY-R083.3`: `tests/retrieval_round_served.rs::arbitration_part_returns_verdict_or_none` (L3; the serving crate hosts the test, the exec crate cannot reach the served round).
 - `MEDULLA-FEDERATED-QUERY-R083.4`: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::abstain_returns_both_candidates`.
 - `MEDULLA-FEDERATED-QUERY-R083.5`: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::arbitration_premise_lists_both_classes`.
 - `MEDULLA-FEDERATED-QUERY-R083.6`: `tests/retrieval/test_arbitration_served.py::test_small_gap_abstains_with_both`.

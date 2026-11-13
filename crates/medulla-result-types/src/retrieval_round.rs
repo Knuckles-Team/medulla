@@ -311,6 +311,24 @@ pub struct RoundRequest {
     /// Revision-bound feedback from the previous round (MEDULLA-FEDERATED-QUERY-R081.8.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub feedback: Option<RoundFeedback>,
+    /// Arbitrate between the model prior and the retrieved answer
+    /// (MEDULLA-FEDERATED-QUERY-R083.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arbitration: Option<ArbitrationPart>,
+}
+
+/// The arbitration part of a round (MEDULLA-FEDERATED-QUERY-R083.3): the harness sends
+/// both candidates and the digest of the query they answer; the engine verifies every
+/// citation on the round's snapshot and returns the verdict.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArbitrationPart {
+    /// The model's own answer, grounded `parametric`.
+    pub prior: crate::retrieval_arbitration::Candidate,
+    /// The answer conditioned on retrieved evidence, grounded `retrieved`.
+    pub retrieved: crate::retrieval_arbitration::Candidate,
+    /// Digest of the query both candidates answer.
+    pub query_digest: String,
 }
 
 /// The state part of a round: the query scored against stored document state.
@@ -399,6 +417,10 @@ pub struct RoundResult {
     /// Absent when the request carried no feedback part or the stop verdict is terminal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub feedback: Option<FeedbackOutcome>,
+    /// The arbitration verdict, when the request carried an `arbitration` part
+    /// (MEDULLA-FEDERATED-QUERY-R083.3). Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arbitration: Option<crate::retrieval_arbitration::ArbitrationVerdict>,
 }
 
 /// One term of the next query and the weight feedback left on it.
