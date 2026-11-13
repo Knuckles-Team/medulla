@@ -276,3 +276,106 @@ cat:CriticalityClassification a owl:Class ;
     rdfs:comment "A business criticality marking attached to a catalogued asset." ;
     rdfs:subClassOf :DataClassification ;
     catn:openMetadataType "Criticality" .
+
+# -- Asset families (MEDULLA-TYPED-PACKS-R108.1) ---------------------------------------------
+# Every family class below is a cat:Asset subclass and extends the core class it describes.
+
+cat:AgentTemplateAsset a owl:Class ;
+    rdfs:label "Agent Template Asset" ;
+    rdfs:comment "An Agent Library template catalogued as an asset; it describes a :AgentTemplate." ;
+    rdfs:subClassOf cat:Asset, :AgentTemplate .
+
+cat:A2AAgentAsset a owl:Class ;
+    rdfs:label "A2A Agent Asset" ;
+    rdfs:comment "An A2A agent card catalogued as an asset; it describes a :Agent." ;
+    rdfs:subClassOf cat:Asset, :Agent .
+
+cat:AgentVersion a owl:Class ;
+    rdfs:label "Agent Version" ;
+    rdfs:comment "One immutable published version of an agent asset." ;
+    rdfs:subClassOf cat:Asset, :Agent .
+
+cat:OrgUnit a owl:Class ;
+    rdfs:label "Organizational Unit" ;
+    rdfs:comment "A business unit catalogued as an asset." ;
+    rdfs:subClassOf cat:Asset, :Organization, org:OrganizationalUnit .
+
+cat:Team a owl:Class ;
+    rdfs:label "Team Asset" ;
+    rdfs:comment "A team catalogued as an asset." ;
+    rdfs:subClassOf cat:Asset, :Team .
+
+cat:Person a owl:Class ;
+    rdfs:label "Person Asset" ;
+    rdfs:comment "A person catalogued as an asset (an owner or a steward)." ;
+    rdfs:subClassOf cat:Asset, :Person .
+
+cat:Role a owl:Class ;
+    rdfs:label "Role Asset" ;
+    rdfs:comment "A business role catalogued as an asset." ;
+    rdfs:subClassOf cat:Asset, :Role .
+
+cat:BusinessDomain a owl:Class ;
+    rdfs:label "Business Domain" ;
+    rdfs:comment "A business domain that groups assets and owners." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:Product a owl:Class ;
+    rdfs:label "Product Asset" ;
+    rdfs:comment "A business product catalogued as an asset." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:Service a owl:Class ;
+    rdfs:label "Service Asset" ;
+    rdfs:comment "A business service catalogued as an asset." ;
+    rdfs:subClassOf cat:Asset, :Service .
+
+cat:WorkflowDefinition a owl:Class ;
+    rdfs:label "Workflow Definition" ;
+    rdfs:comment "A workflow definition catalogued as an asset; it describes a :Workflow." ;
+    rdfs:subClassOf cat:Asset, :Workflow .
+
+cat:WorkflowRun a owl:Class ;
+    rdfs:label "Workflow Run" ;
+    rdfs:comment "One run of a workflow definition." ;
+    rdfs:subClassOf cat:Asset, :DurableExecutionUnit .
+
+cat:WorkflowStep a owl:Class ;
+    rdfs:label "Workflow Step" ;
+    rdfs:comment "One step of a workflow definition." ;
+    rdfs:subClassOf cat:Asset, :WorkflowStep .
+
+cat:KnowledgeGraph a owl:Class ;
+    rdfs:label "Knowledge Graph Asset" ;
+    rdfs:comment "A graph catalogued as an asset, linked to its ontology, contract, source, freshness and steward." ;
+    rdfs:subClassOf cat:Asset, :Dataset .
+
+cat:SpecialistPackage a owl:Class ;
+    rdfs:label "Specialist Package" ;
+    rdfs:comment "A specialist package (a distributable bundle of skills and tools) catalogued as an asset. It carries cp:digest." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:ProviderAsset a owl:Class ;
+    rdfs:label "Provider Asset" ;
+    rdfs:comment "A model or service provider catalogued as an asset. It carries cp:digest." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:hasOntology a owl:ObjectProperty ;
+    rdfs:label "has ontology" ;
+    rdfs:comment "The ontology a graph asset is described by." ;
+    rdfs:domain cat:KnowledgeGraph .
+
+cat:hasContract a owl:ObjectProperty ;
+    rdfs:label "has contract" ;
+    rdfs:comment "The contract (pack release) a graph asset serves." ;
+    rdfs:domain cat:KnowledgeGraph .
+
+cat:hasSource a owl:ObjectProperty ;
+    rdfs:label "has source" ;
+    rdfs:comment "A source a graph asset is built from." ;
+    rdfs:domain cat:KnowledgeGraph .
+
+cat:hasFreshness a owl:ObjectProperty ;
+    rdfs:label "has freshness" ;
+    rdfs:comment "The freshness record of a graph asset." ;
+    rdfs:domain cat:KnowledgeGraph .

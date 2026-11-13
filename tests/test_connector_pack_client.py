@@ -497,6 +497,7 @@ def test_modality_annotations_replay_golden_vector_and_affect_identity() -> None
     )
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R045.8")
 def test_harness_tool_facts_bind_the_annotation_digest_like_rust() -> None:
     """side_effects, declared_by and schema_tokens are framed only when present.
 

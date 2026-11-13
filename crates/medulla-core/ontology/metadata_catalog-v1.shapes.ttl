@@ -58,3 +58,21 @@ cat:GlossaryTermShape a sh:NodeShape ;
 cat:AssetFlagShape a sh:NodeShape ;
     sh:targetClass cat:ToolAsset, cat:PromptAsset, cat:SkillAsset, cat:DataResource, cat:Field ;
     sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ] .
+
+# Each family asset names one owner or carries the owner_missing flag
+# (MEDULLA-TYPED-PACKS-R108.1).
+cat:FamilyAssetOwnerShape a sh:NodeShape ;
+    sh:targetClass cat:AgentTemplateAsset, cat:A2AAgentAsset, cat:AgentVersion, cat:OrgUnit,
+        cat:Team, cat:Person, cat:Role, cat:BusinessDomain, cat:Product, cat:Service,
+        cat:WorkflowDefinition, cat:WorkflowRun, cat:WorkflowStep, cat:KnowledgeGraph,
+        cat:SpecialistPackage, cat:ProviderAsset ;
+    sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ],
+    [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:or ( [ sh:path cat:hasOwner ; sh:minCount 1 ]
+            [ sh:path cat:flag ; sh:hasValue "owner_missing" ] ) .
+
+# Specialist packages and providers carry a SHA-256 digest.
+cat:DigestedAssetShape a sh:NodeShape ;
+    sh:targetClass cat:SpecialistPackage, cat:ProviderAsset ;
+    sh:property [ sh:path cp:digest ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                  sh:pattern "^[0-9a-f]{64}$" ] .

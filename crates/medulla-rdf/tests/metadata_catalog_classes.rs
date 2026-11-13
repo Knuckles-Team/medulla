@@ -303,3 +303,70 @@ fn catalog_shapes_refuse_incomplete_or_open_vocabulary_records() {
         "<urn:a:t> a cat:ToolAsset ; cp:ofConnector <urn:c:a> ; cat:flag \"owner_missing\" ."
     ));
 }
+
+// spec: MEDULLA-TYPED-PACKS-R108.1
+#[test]
+fn six_families_validate_and_share_one_parent_asset_class() {
+    let triples = documents();
+    let sub = format!("{RDFS}subClassOf");
+    // Every family class is a cat:Asset subclass, and each extends its core class.
+    let families: [(&str, Option<&str>); 16] = [
+        ("AgentTemplateAsset", Some("AgentTemplate")),
+        ("A2AAgentAsset", Some("Agent")),
+        ("AgentVersion", Some("Agent")),
+        ("OrgUnit", Some("Organization")),
+        ("Team", Some("Team")),
+        ("Person", Some("Person")),
+        ("Role", Some("Role")),
+        ("BusinessDomain", None),
+        ("Product", None),
+        ("Service", Some("Service")),
+        ("WorkflowDefinition", Some("Workflow")),
+        ("WorkflowRun", Some("DurableExecutionUnit")),
+        ("WorkflowStep", Some("WorkflowStep")),
+        ("KnowledgeGraph", Some("Dataset")),
+        ("SpecialistPackage", None),
+        ("ProviderAsset", None),
+    ];
+    for (family, core) in families {
+        let class = format!("{CAT}{family}");
+        assert!(
+            has_iri(&triples, &class, &sub, &format!("{CAT}Asset")),
+            "{family} must be a cat:Asset subclass"
+        );
+        if let Some(core) = core {
+            assert!(
+                has_iri(&triples, &class, &sub, &format!("{KG}{core}")),
+                "{family} must extend core {core}"
+            );
+        }
+    }
+
+    // A complete asset of each family validates.
+    let owned =
+        |class: &str| format!("<urn:a:{class}> a cat:{class} ; cat:hasOwner <urn:g:owner> .");
+    for (family, _) in families {
+        if matches!(family, "SpecialistPackage" | "ProviderAsset") {
+            continue;
+        }
+        assert!(conforms(&owned(family)), "{family}");
+    }
+    for family in ["SpecialistPackage", "ProviderAsset"] {
+        assert!(conforms(&format!(
+            "<urn:a:{family}> a cat:{family} ; cat:hasOwner <urn:g:owner> ; cp:digest \"{DIGEST}\" ."
+        )));
+        // A digest is required and must be sha256 hex.
+        assert!(!conforms(&owned(family)));
+        assert!(!conforms(&format!(
+            "<urn:a:{family}> a cat:{family} ; cat:hasOwner <urn:g:owner> ; cp:digest \"abc\" ."
+        )));
+    }
+    // An owner is named, or the asset carries owner_missing; neither refuses.
+    assert!(conforms(
+        "<urn:a:p> a cat:Product ; cat:flag \"owner_missing\" ."
+    ));
+    assert!(!conforms("<urn:a:p> a cat:Product ."));
+    assert!(!conforms(
+        "<urn:a:p> a cat:Product ; cat:hasOwner <urn:g:a>, <urn:g:b> ."
+    ));
+}
