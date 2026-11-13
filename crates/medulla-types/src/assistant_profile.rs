@@ -80,6 +80,62 @@ pub struct DocumentSet {
     pub schema_version: u32,
 }
 
+/// One assistant-profile operation (`Method::AssistantProfile`,
+/// MEDULLA-DECISION-ENGINE-R656.2). A put carries the object as the caller
+/// last read it: `revision` is the stored revision it was derived from
+/// (0 for a new profile) and the store writes `revision + 1`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ProfileOp {
+    PutProfile { profile: AssistantProfile },
+    PutDocumentSet { set: DocumentSet },
+    GetProfile { profile_id: String },
+    GetDocumentSet { set_id: String },
+    ListProfiles,
+    ListDocumentSets,
+}
+
+impl ProfileOp {
+    /// Whether this operation changes durable state.
+    pub fn is_mutation(&self) -> bool {
+        matches!(self, Self::PutProfile { .. } | Self::PutDocumentSet { .. })
+    }
+}
+
+/// Graph node id of a stored profile.
+pub fn profile_node_id(profile_id: &str) -> String {
+    format!("assistant_profile:{profile_id}")
+}
+
+/// Graph node id of a stored document set.
+pub fn document_set_node_id(set_id: &str) -> String {
+    format!("document_set:{set_id}")
+}
+
+/// The share resource a profile's [`ProfileShare`]s are evaluated against.
+pub fn profile_resource(profile_id: &str) -> String {
+    format!("assistant_profile:{profile_id}")
+}
+
+/// The share resource a document set's [`ProfileShare`]s are evaluated against.
+pub fn document_set_resource(set_id: &str) -> String {
+    format!("document_set:{set_id}")
+}
+
+/// Each share as the RBAC grant it stands for on `resource`.
+pub fn shares_as_grants(shares: &[ProfileShare], resource: &str) -> Vec<crate::acl::Grant> {
+    shares
+        .iter()
+        .map(|share| crate::acl::Grant {
+            role: share.role.clone(),
+            resource: crate::acl::ResourceSelector::Graph(resource.to_string()),
+            action: share.action,
+            effect: share.effect,
+        })
+        .collect()
+}
+
 impl AssistantProfile {
     /// Structural admission: the schema version, a non-empty id, tenant and
     /// name, and instructions within `max_instructions_chars` characters.

@@ -658,6 +658,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
+    (
+        "AssistantProfile",
+        &[
+            "PROFILE_NOT_FOUND",
+            "PROFILE_NOT_VISIBLE",
+            "PROFILE_REVISION_CONFLICT",
+            "DOCUMENT_SET_NOT_FOUND",
+            "DOCUMENT_SET_QUERY_NOT_READ_ONLY",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R166.3/R166.4: the workflow registry's closed refusals.
     (
         "WorkflowRegistry",

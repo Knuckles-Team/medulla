@@ -5463,6 +5463,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-uql",
  "medulla-work-types",
  "rmp-serde",
  "serde",

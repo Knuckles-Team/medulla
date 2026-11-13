@@ -359,6 +359,9 @@ knobs! {
     /// Cap on the search nodes `ArgumentMapEvaluate` explores under `preferred`
     /// semantics (MEDULLA-FEDERATED-QUERY-R700.3).
     argument_node_budget: u64 = "argument.node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Longest `instructions` text of an assistant profile
+    /// (MEDULLA-DECISION-ENGINE-R656.1).
+    profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
     /// Context facts kept per node.
     context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
     /// Bytes per token in the context facts estimate.

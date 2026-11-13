@@ -221,4 +221,10 @@ method_results! {
     LoopsGet(Loops / "get") => Raw<medulla_types::loops::LoopView>;
     WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
+    AssistantProfilePutProfile(AssistantProfile / "put_profile") => Raw<medulla_types::assistant_profile::AssistantProfile>;
+    AssistantProfilePutDocumentSet(AssistantProfile / "put_document_set") => Raw<medulla_types::assistant_profile::DocumentSet>;
+    AssistantProfileGetProfile(AssistantProfile / "get_profile") => Raw<medulla_types::assistant_profile::AssistantProfile>;
+    AssistantProfileGetDocumentSet(AssistantProfile / "get_document_set") => Raw<medulla_types::assistant_profile::DocumentSet>;
+    AssistantProfileListProfiles(AssistantProfile / "list_profiles") => Raw<Vec<medulla_types::assistant_profile::AssistantProfile>>;
+    AssistantProfileListDocumentSets(AssistantProfile / "list_document_sets") => Raw<Vec<medulla_types::assistant_profile::DocumentSet>>;
 }

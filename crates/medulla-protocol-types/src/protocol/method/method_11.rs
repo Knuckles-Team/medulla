@@ -3,6 +3,12 @@ macro_rules! __eg_method_chunk_11 {
         __eg_method_finish!(@acc [
 $($variants)*
 
+    /// Assistant profiles and document sets: save with a compare-and-set on
+    /// the stored revision, share by role, read back what the caller may read
+    /// (MEDULLA-DECISION-ENGINE-R656.2).
+    AssistantProfile {
+        op: Box<medulla_types::assistant_profile::ProfileOp>,
+    },
     PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 
