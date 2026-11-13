@@ -99,6 +99,7 @@ fn fuse_in(
         tenant_id: tenant,
         now_ms: 1_000,
         server_secret: b"decide-stat-test-secret",
+        matched: &[],
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

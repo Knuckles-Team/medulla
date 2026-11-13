@@ -812,6 +812,7 @@ async fn premises_name_skill_and_flag() {
                 subtask("z", "summarise findings report narrative", &["a"]),
             ])
             .unwrap(),
+            outcome_pins: BoundedVec::default(),
         })),
         &["a", "z"],
     );
@@ -973,6 +974,7 @@ async fn decide_routes_automatic_task_plan() {
         TypedValue::SkillPlanQuery(Box::new(SkillPlanQuery {
             output_task_id: out.into(),
             subtasks: BoundedVec::new(subtasks).unwrap(),
+            outcome_pins: BoundedVec::default(),
         }))
     };
     let request = plan_request(
@@ -987,7 +989,10 @@ async fn decide_routes_automatic_task_plan() {
     let batch = decide(&h, request).await.unwrap();
     let from_skills = &batch.records.as_slice()[0];
     let plan = from_skills.task_plan().unwrap();
-    assert_eq!(plan.tasks[0].assignee.as_deref(), Some("skill-search"));
+    assert_eq!(
+        plan.tasks.as_slice()[0].assignee.as_deref(),
+        Some("skill-search")
+    );
     let caller = decide(&h, task_request(&pin)).await.unwrap();
     let caller = &caller.records.as_slice()[0];
     for record in [from_decomposition, from_skills, caller] {
@@ -1058,6 +1063,7 @@ async fn uncovered_subtask_abstains() {
                 subtask("z", "search documents archive", &["a", "m", "q"]),
             ])
             .unwrap(),
+            outcome_pins: BoundedVec::default(),
         })),
         &["a", "m", "q", "z"],
     );

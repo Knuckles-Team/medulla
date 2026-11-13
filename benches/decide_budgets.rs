@@ -354,6 +354,8 @@ fn maximum_plan_request(asked: &DecideRequest) -> DecideRequest {
             join: None,
             decision: None,
             approval: None,
+            duration_ms: None,
+            priority_weight: None,
         })
         .collect();
     let options = tasks
