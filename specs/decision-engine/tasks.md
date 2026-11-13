@@ -153,7 +153,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T146 [US2] MEDULLA-DECISION-ENGINE-R113.2.2 Accepted transaction fixture
 - [ ] T147 [US2] MEDULLA-DECISION-ENGINE-R113.2.3 Denied transaction fixture
 - [ ] T148 [US2] MEDULLA-DECISION-ENGINE-R113.2.4 Transaction recovery fixture
+- [ ] T921 [US2] MEDULLA-DECISION-ENGINE-R113.2.5 Shared-owner commit path across the Agent Library store, the capacity-lease store and the graph evidence. Size: L, 2 PRs, 8 hours.
 - [ ] T149 [US2] MEDULLA-DECISION-ENGINE-R113.3.1 Consume the typed allowance once
+- [ ] T922 [US2] MEDULLA-DECISION-ENGINE-R113.3.1.1 Durable retry-allowance table. Size: M, 2 PRs, 5 hours.
 - [ ] T150 [US2] MEDULLA-DECISION-ENGINE-R113.3.2 Durable denial allowance consumption
 - [ ] T151 [US2] MEDULLA-DECISION-ENGINE-R113.3.3 Handler retry fixture
 - [ ] T152 [US2] MEDULLA-DECISION-ENGINE-R114 Subagent allowance negotiation reads Medulla's topology facts
@@ -840,6 +842,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T833 [US2] MEDULLA-DECISION-ENGINE-R036.103 Durable RBAC read reservation
 - [ ] T834 [US2] MEDULLA-DECISION-ENGINE-R036.104 Agent Library durable admission participant
 - [ ] T835 [US2] MEDULLA-DECISION-ENGINE-R036.105 Request-bound coordinator decision certificate
+- [ ] T919 [US2] MEDULLA-DECISION-ENGINE-R036.105.1 Coordinator-decision certificate table, lineage row, offline upgrade and sealed type. Size: M, 2 PRs, 6 hours.
+- [ ] T920 [US2] MEDULLA-DECISION-ENGINE-R036.105.2 DecisionCommit writes the durable coordinator decision with the certificate. Size: L, 2 PRs, 8 hours.
 - [ ] T836 [US2] MEDULLA-DECISION-ENGINE-R036.106 Durable profile-use grant records
 - [ ] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
 - [ ] T838 [US6] MEDULLA-DECISION-ENGINE-R038.2 Tool-action admission is a served Decide question

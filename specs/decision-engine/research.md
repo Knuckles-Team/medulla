@@ -100,3 +100,12 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
   second private migration path, so the operator `store-upgrade` command applies it with the same inspection and
   byte-fingerprint rechecks as every other owner file. An ordinary `RbacStore::open` of a predecessor refuses with
   `RBAC_LAYOUT_OUTDATED` and writes nothing.
+
+## Coordinator decision certificate and the shared commit path (R036.105.1, R036.105.2, R113.2.5, R113.3.1.1)
+
+- **Own table, not a reserved key.** The certificate is stored in `xshard_decision_certificate`, a table of its own with its own storage lineage row and an offline-upgrade registry entry. A reserved key under `XSHARD_PREPARE` would leak into the prepare scan, the backup census and shard migration, which all treat that table's keys as `(txn_id, group_id)` prepares. The new table is added to the backup census and the migration copy explicitly instead.
+- **Legacy rows never count.** A terminal `xshard_decision` value without a certificate is legacy evidence. Recovery resolves it as abort and refuses with `CERTIFICATE_LEGACY_ROW`; the upgrade does not invent certificates.
+- **The deadline is a registry knob.** `xshard.decision_deadline_ms` (default 30 s, range 1 s to 10 min, tunable by the operator only through the startup knob loader) bounds how long a prepared reservation may wait for its COMMIT. An expired COMMIT records ABORT with the certificate; an ABORT never expires. The storage writer thread sets `decided_ms` so the clock that decides expiry is the one that serialises the write.
+- **One coordinator decision for every owner.** The Agent Library, the capacity ledger and RBAC are separate owner files, so none can commit the others. The durable coordinator decision is the single commit point; each owner resolves from it, and recovery finishes any owner that stopped between the decision and its own write.
+- **Evidence and record share an owner.** The decision record and the graph evidence are both Agent Library rows, so they commit in one owner transaction; only the capacity lease is a second participant. This keeps the participant count at the minimum and avoids a second capacity authority.
+- **Retry allowance is a table, not a counter.** The tombstone row is retained so a restart never restores the allowance; it is an allowance row, not a decision record, which keeps R113.2.3's rule that a denial leaves no decision record.

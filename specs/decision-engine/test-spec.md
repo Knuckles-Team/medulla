@@ -146,14 +146,16 @@ The request fixture in `.3.3` depends on those operations.
 | Requirement | Intended source or test file | Planned proving test | State |
 |---|---|---|---|
 | MEDULLA-DECISION-ENGINE-R113.2.1 | `crates/medulla-h-decide/src/decide/commit.rs` | `tests::topology_commit_refuses_uncoordinated_owners` | Handler fixture added; native execution pending |
+| MEDULLA-DECISION-ENGINE-R113.2.5 | `crates/medulla-persistence-records/src/decision_record/shared_commit.rs` (new) | `tests::shared_commit_writes_record_and_evidence_in_one_transaction`, `tests::shared_commit_is_blocked_by_an_admission_fence`; L3 `commit_admission_tests.rs::topology_shared_commit_journey` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.2.2 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_commit_publishes_capacity_and_evidence` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.2.3 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_capacity_denial_leaves_no_commit_parts` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.2.4 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_commit_recovery_preserves_atomic_outcome` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.1 | `crates/medulla-agent-types/src/agent_topology/retry_allowance.rs` | `tests::retry_allowance_consumes_once`, `tests::invalid_allowances_fail_without_mutation` | Direct native module tests pass; workspace integration not run |
+| MEDULLA-DECISION-ENGINE-R113.3.1.1 | `crates/medulla-persistence-records/src/decision_record/retry_allowance.rs` (new) | `decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.2 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_denial_allowance_consumption_survives_restart` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.3 | `crates/medulla-h-decide/src/decide/commit.rs` | `tests::topology_denial_accepts_one_followup_request` | SPECIFIED; not run |
 
-R113.2 requires all four transaction tests. R113.3 requires all three retry tests.
+R113.2 requires all five transaction tests (the shared path `.5` and the three fixtures, plus the refusal guard `.1`). R113.3 requires all four retry tests (the table `.1.1`, the model `.1`, durable consumption `.2` and the handler `.3`).
 Neither rollup is runtime acceptance evidence.
 
 ### R090.1 native acceptance receipt
@@ -2010,6 +2012,10 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R036.103` | `crates/medulla-isolation/src/rbac_persist.rs::tests::reservation_blocks_writes_and_survives_reopen`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::cross_owner_admission_journey` |
 | `MEDULLA-DECISION-ENGINE-R036.104` | `crates/medulla-persistence-records/src/agent_library/admission_tests.rs::admission_participant_fences_and_replays`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::cross_owner_admission_journey` |
 | `MEDULLA-DECISION-ENGINE-R036.105` | `crates/medulla-raft-xshard/src/cross_shard_txn/certificate.rs::tests::certificate_binds_request_and_expires`; `commit_admission_tests.rs::cross_owner_admission_journey` |
+| `MEDULLA-DECISION-ENGINE-R036.105.1` | `crates/medulla-persistence/src/redb_backend/xshard_certificate.rs::tests::certificate_seals_verifies_and_rejects_tamper` (L1); `crates/medulla-storage/src/owner/lineage_tests.rs::graph_shard_before_decision_certificates_is_a_frozen_predecessor` (L1); `crates/medulla-storage/src/owner/offline_upgrade/tests.rs::graph_shard_upgrade_creates_empty_decision_certificate_table` (L1); `crates/medulla-persistence-tests/src/backup_tests.rs::backup_census_includes_decision_certificates` (L1); `crates/medulla-persistence-tests/src/shard_migrate_tests.rs::shard_migration_carries_decision_certificates` (L1) |
+| `MEDULLA-DECISION-ENGINE-R036.105.2` | `crates/medulla-raft-xshard/src/cross_shard_txn/certificate.rs::tests::certificate_binds_request_and_expires` (L1); `::tests::crash_between_decision_and_resolve_is_finished_on_restart` (L2); `crates/medulla-server-api/src/knob_config.rs::tests::decision_deadline_knob_bounds` (L1); `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::cross_owner_admission_journey` (L3) |
+| `MEDULLA-DECISION-ENGINE-R113.2.5` | `crates/medulla-persistence-records/src/decision_record/tests.rs::shared_commit_writes_record_and_evidence_in_one_transaction`; `::shared_commit_is_blocked_by_an_admission_fence`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::topology_shared_commit_journey` (L3) |
+| `MEDULLA-DECISION-ENGINE-R113.3.1.1` | `crates/medulla-persistence-records/src/decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once`; `crates/medulla-storage/src/owner/lineage_tests.rs::agent_library_before_retry_allowances_is_a_frozen_predecessor`; `crates/medulla-storage/src/owner/offline_upgrade/tests.rs::agent_library_upgrade_creates_empty_retry_allowance_table` (all L1) |
 | `MEDULLA-DECISION-ENGINE-R036.106` | `crates/medulla-isolation/src/rbac_persist.rs::tests::upgrade_preserves_rows_and_creates_empty_grant_table`; `commit_admission_tests.rs::cross_owner_admission_journey` |
 | `MEDULLA-DECISION-ENGINE-R038.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_action_admission_tests.rs::untrusted_follow_up_is_denied`; `EvidenceClass::Observation` |
 | `MEDULLA-DECISION-ENGINE-R038.3` | `crates/medulla-h-decide/src/decide/stat_tests/held_item_admission_tests.rs::program_needs_independent_verifier_and_passes` |
