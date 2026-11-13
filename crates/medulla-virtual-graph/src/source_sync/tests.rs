@@ -78,6 +78,21 @@ impl SyncAdapter for Tickets {
     fn outbound_payload(&self, _key: &str, record: &Value) -> Value {
         record.clone()
     }
+    fn graph_records(
+        &self,
+        nodes: &super::GraphNodes,
+    ) -> std::collections::BTreeMap<String, Value> {
+        nodes
+            .iter()
+            .filter_map(|(id, props)| {
+                let key = id.strip_prefix("ticket:")?;
+                Some((
+                    key.to_string(),
+                    serde_json::json!({"id": key, "title": props.get("title")?}),
+                ))
+            })
+            .collect()
+    }
 }
 
 fn outcome(key: &str, action: SyncAction, base: Option<&str>, source: Option<&str>) -> SyncOutcome {
@@ -146,4 +161,83 @@ fn state_rides_the_inbound_batch() {
     assert_ne!(other_class[0].node_id, state[0].node_id);
     let other_conn = sync_state_mutations("conn:other", "kg:Ticket", &outcomes[..1], 42);
     assert_ne!(other_conn[0].node_id, state[0].node_id);
+}
+
+fn ticket_node(key: &str, title: &str) -> (String, serde_json::Map<String, Value>) {
+    let mut props = serde_json::Map::new();
+    props.insert("title".to_string(), Value::String(title.to_string()));
+    (format!("ticket:{key}"), props)
+}
+
+// spec: MEDULLA-SRC-AUTH-R012.6
+#[test]
+fn plan_sync_applies_proposes_and_holds_in_one_batch() {
+    let mut nodes = super::GraphNodes::new();
+    // Graph-only change: base "old", graph "new", source "old".
+    nodes.extend([ticket_node("g", "new"), ticket_node("same", "x")]);
+    let state = sync_state_mutations(
+        "conn",
+        "cls",
+        &[
+            outcome("g", SyncAction::ApplyInbound, None, Some("old")),
+            outcome("s", SyncAction::ApplyInbound, None, Some("old")),
+        ],
+        1,
+    );
+    for m in state {
+        nodes.insert(m.node_id, m.properties);
+    }
+    nodes.insert(ticket_node("s", "old").0, ticket_node("s", "old").1);
+    let source = vec![
+        serde_json::json!({"id": "g", "title": "old"}),
+        serde_json::json!({"id": "s", "title": "changed"}),
+        serde_json::json!({"id": "same", "title": "x"}),
+    ];
+    let plan = super::plan_sync(
+        &Tickets,
+        "conn",
+        "cls",
+        ConflictRule::SystemOfRecordWins,
+        "system_of_record_wins",
+        &source,
+        &nodes,
+        2,
+    )
+    .unwrap();
+    assert_eq!(plan.report.unchanged, 1);
+    assert_eq!(plan.report.applied, 1);
+    assert_eq!(plan.report.proposed, 1);
+    assert_eq!(plan.report.outbound[0].record_key, "g");
+    // The inbound change and its state share the one batch.
+    assert!(plan.batch.iter().any(|m| m.node_id == "ticket:s"));
+    assert!(plan
+        .batch
+        .iter()
+        .any(|m| m.properties.get("syncRecordKey") == Some(&Value::String("s".into()))));
+}
+
+// spec: MEDULLA-SRC-AUTH-R012.6
+#[test]
+fn plan_sync_refuses_duplicate_and_keyless_source_records() {
+    let nodes = super::GraphNodes::new();
+    let dup = vec![
+        serde_json::json!({"id": "a", "title": "1"}),
+        serde_json::json!({"id": "a", "title": "2"}),
+    ];
+    let run = |records: &[Value]| {
+        super::plan_sync(
+            &Tickets,
+            "c",
+            "k",
+            ConflictRule::HoldForReview,
+            "hold_for_review",
+            records,
+            &nodes,
+            0,
+        )
+    };
+    assert!(run(&dup).unwrap_err().contains("two records"));
+    assert!(run(&[serde_json::json!({"title": "x"})])
+        .unwrap_err()
+        .contains("no key"));
 }

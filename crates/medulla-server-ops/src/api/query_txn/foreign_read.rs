@@ -366,6 +366,47 @@ impl ForeignReadSessions {
         })
     }
 
+    /// Take the rows of one completed execution for a source sync
+    /// (MEDULLA-SRC-AUTH-R012.6). The execution must belong to the caller, be
+    /// complete, unconsumed and pinned to `request_digest` (the digest the host
+    /// opened it with for this connection and class). It is consumed exactly
+    /// once and its buffer budget is released. Returns the source name the
+    /// approval pinned and every row's id and mapping-approved cells.
+    pub fn take_sync_rows(
+        &self,
+        caller: &CarrierAuthority,
+        execution: ForeignReadExecutionRef,
+        request_digest: Digest256,
+    ) -> Result<(String, Vec<ForeignReadRow>), String> {
+        let handle = self.record_for(caller, execution)?;
+        let (source_name, rows) = {
+            let mut record = lock(&handle)?;
+            if record.plan_digest != request_digest {
+                return Err("FOREIGN_READ_PLAN_MISMATCH: sync request digest differs".into());
+            }
+            if record.state != SessionState::Complete {
+                return Err("FOREIGN_READ_NOT_COMPLETE: source pages are not complete".into());
+            }
+            if record.consumed {
+                return Err("FOREIGN_READ_REPLAY: execution was already consumed".into());
+            }
+            record.consumed = true;
+            let rows = record
+                .rows
+                .iter()
+                .map(|row| ForeignReadRow {
+                    id: row.id.clone(),
+                    score: row.score,
+                    columns: row.columns.clone(),
+                    provenance: row.provenance.clone(),
+                })
+                .collect::<Vec<_>>();
+            (record.source_name.clone(), rows)
+        };
+        self.remove(execution.execution_id);
+        Ok((source_name, rows))
+    }
+
     /// Revalidate the one authoritative approval/catalog and return a registry
     /// whose named source is the completed page buffer.
     pub fn bind_for_query(

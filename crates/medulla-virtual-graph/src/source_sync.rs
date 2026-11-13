@@ -9,10 +9,12 @@
 //! per record and writes one batch holding the inbound changes and the sync
 //! state together.
 
+mod plan;
 mod state;
 
 use serde_json::{Map, Value};
 
+pub use plan::{base_digests, plan_sync, GraphNodes, SyncPlan};
 pub use state::{sync_state_mutations, SyncOutcome, SYNC_STATE_CLASS};
 
 /// What happens when both sides changed a record (`vg:conflictRule`). The set
@@ -95,6 +97,10 @@ pub trait SyncAdapter {
     fn inbound_mutations(&self, key: &str, record: &Value) -> Vec<SyncMutation>;
     /// The payload proposed to the source for a graph record.
     fn outbound_payload(&self, key: &str, record: &Value) -> Value;
+    /// The graph side of the sync: every visible record of the class, keyed
+    /// like `record_key` and shaped like a source record, rebuilt from the
+    /// visible nodes.
+    fn graph_records(&self, nodes: &plan::GraphNodes) -> std::collections::BTreeMap<String, Value>;
 }
 
 /// The three-way rule over `base`, `graph` and `source` digests (`None` is
