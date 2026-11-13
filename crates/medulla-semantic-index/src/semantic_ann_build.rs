@@ -178,6 +178,14 @@ impl SemanticStore {
                 .is_some_and(|g| g.as_ref().is_some_and(AnnIndex::is_stale))
     }
 
+    /// The resident index's drift ratio (ingest spread over training spread), once the
+    /// tracker has seen enough rows; `None` without an index or a tracker.
+    pub fn ann_drift_ratio(&self) -> Option<f64> {
+        self.index
+            .try_read()
+            .and_then(|g| g.as_ref().and_then(AnnIndex::drift_ratio))
+    }
+
     /// True while a rebuild runs and the old index still serves.
     pub fn is_rebuilding(&self) -> bool {
         self.state.load(Ordering::Acquire) == STATE_REBUILDING

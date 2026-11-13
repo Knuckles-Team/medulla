@@ -55,10 +55,12 @@ fn every_refusal_has_a_distinct_code() {
         ClusterRefusal::InputNotFinite { row: 0, col: 0 },
         ClusterRefusal::MemoryBudget { need: 2, budget: 1 },
         ClusterRefusal::Cancelled,
-        ClusterRefusal::StateIllegal {
-            from: "a",
-            event: "b",
-        },
+        ClusterRefusal::StateIllegal(medulla_types::transition_refused::TransitionRefused {
+            machine: "ClusterRunMachine".into(),
+            from: "seeding".into(),
+            event: "BatchDrawn".into(),
+            reason: medulla_types::transition_refused::TransitionRefusalReason::IllegalTransition,
+        }),
     ];
     let mut codes: Vec<_> = all.iter().map(ClusterRefusal::code).collect();
     codes.sort_unstable();
@@ -67,6 +69,7 @@ fn every_refusal_has_a_distinct_code() {
     assert!(codes.iter().all(|c| c.starts_with("CLUSTERING_")));
 }
 
+// spec: MEDULLA-CLUSTER-R002
 // spec: MEDULLA-CLUSTER-R002.3
 
 #[test]
@@ -403,6 +406,7 @@ fn budget_exhaustion_is_a_named_end_state() {
     assert_eq!(out.steps, 5);
 }
 
+// spec: MEDULLA-CLUSTER-R005
 #[test]
 fn no_input_spins() {
     // Every adversarial shape ends within the step budget.
@@ -554,7 +558,10 @@ fn kernel_has_no_ffi_and_no_target_cpu_flags() {
     }
 }
 
+// spec: MEDULLA-CLUSTER-R001
 // spec: MEDULLA-CLUSTER-R001.4
+// spec: MEDULLA-CLUSTER-R008
+// spec: MEDULLA-CLUSTER-R008.8
 #[test]
 fn kernel_is_the_only_trainer() {
     let root = repo_root();
@@ -586,6 +593,20 @@ fn kernel_is_the_only_trainer() {
         ] {
             if src.contains(banned) {
                 findings.push(format!("{}: {banned}", f.display()));
+            }
+        }
+        // No name of a removed copy survives, in code or in a doc comment, and no doc
+        // comment names the removed accelerator module instead of the kernel backend.
+        for leftover in [
+            "lloyd_step",
+            "kmeanspp_init",
+            "kmeans_plus_plus",
+            "update_centroids",
+            "worst_fit_point",
+            "kmeans_gpu",
+        ] {
+            if src.contains(leftover) {
+                findings.push(format!("{}: names {leftover}", f.display()));
             }
         }
         // A function named `kmeans` outside the kernel may only delegate to it.

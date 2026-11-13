@@ -156,6 +156,10 @@ pub struct ServerState {
     pub context: Arc<crate::server_context::ServerContext>,
     /// Explicit local anonymous store mode; never inferred from an empty secret.
     pub local_anonymous: bool,
+    /// The decision policy this engine runs under, pinned by the operator, or `None`
+    /// for the knob defaults. The semantic index build resolves its clustering knobs
+    /// from it once per build (MEDULLA-CLUSTER-R002.6).
+    pub pinned_policy: Option<Arc<medulla_decision_types::decision::DecisionPolicy>>,
     pub persist_dir: Option<String>,
     /// Authoritative durable persistence tier (CONCEPT:MEDULLA-KG.storage.kg-kg).
     /// Served startup supplies this backend and every durable mutation awaits its
@@ -468,6 +472,7 @@ impl ServerState {
             auth_secret: auth_secret.into(),
             context,
             local_anonymous: false,
+            pinned_policy: None,
             write_conflict_strategy: Default::default(),
             persist_dir: None,
             persistence: None,

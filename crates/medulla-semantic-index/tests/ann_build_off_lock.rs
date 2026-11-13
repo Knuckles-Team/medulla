@@ -60,7 +60,9 @@ fn wait_for(flag: &AtomicBool) {
     }
 }
 
+// spec: MEDULLA-CLUSTER-R011
 // spec: MEDULLA-CLUSTER-R011.1
+// spec: MEDULLA-CLUSTER-R011.2
 #[test]
 fn build_held_midway_does_not_block_writers_or_queries() {
     let lock = Arc::new(RwLock::new(clustered_store(5000)));
@@ -157,6 +159,7 @@ fn insert_after_shift_sets_stale_flag() {
     assert!(lock.read().ann_stale());
 }
 
+// spec: MEDULLA-CLUSTER-R009
 // spec: MEDULLA-CLUSTER-R009.4
 #[test]
 fn shifted_ingest_triggers_one_background_rebuild() {

@@ -38,7 +38,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_semantic_index::semantic::{build_off_lock, BuildHooks, BuildOutcome};
+use medulla_semantic_index::semantic::{
+    build_off_lock, BuildHooks, BuildOutcome, ClusterConfig, ProgressSink,
+};
 use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_server_api::state::ServerState;
 
@@ -67,7 +69,35 @@ const SEMANTIC_INDEX_TENANT: &str = "semantic-index";
 ///
 /// Blocking and possibly multi-minute — every caller runs it on a blocking
 /// thread, never on the request path or the async runtime.
-pub fn activate_one(name: &str, core: &GraphCore, persist_dir: Option<&str>) -> bool {
+pub fn activate_one(
+    name: &str,
+    core: &GraphCore,
+    persist_dir: Option<&str>,
+    cluster: &ClusterConfig,
+) -> bool {
+    activate_with(name, core, persist_dir, cluster, None)
+}
+
+/// The kernel configuration one activation trains with, resolved once per build: the
+/// knobs of the engine's pinned decision policy, or the knob defaults when none is
+/// pinned (MEDULLA-CLUSTER-R002.6).
+pub fn cluster_config(state: &ServerState) -> ClusterConfig {
+    state
+        .pinned_policy
+        .as_deref()
+        .map(medulla_decision_stats::decision::cluster_knobs::config_from_policy)
+        .unwrap_or_default()
+}
+
+/// [`activate_one`] with the progress sink of the build named by the caller; `None`
+/// logs progress until the background-task registry of `MEDULLA-OBSERVE` exists.
+pub fn activate_with(
+    name: &str,
+    core: &GraphCore,
+    persist_dir: Option<&str>,
+    cluster: &ClusterConfig,
+    sink: Option<Arc<dyn ProgressSink>>,
+) -> bool {
     #[cfg(not(feature = "ann-redb"))]
     let _ = persist_dir;
     let rebuild = {
@@ -95,11 +125,13 @@ pub fn activate_one(name: &str, core: &GraphCore, persist_dir: Option<&str>) -> 
     //    under one short hold. A racing trigger backs off at the build's claim.
     let token = builds::register(name);
     let hooks = BuildHooks {
+        cluster: cluster.clone(),
         cancel: token,
-        sink: Arc::new(builds::LogSink {
-            graph: name.to_string(),
+        sink: sink.unwrap_or_else(|| {
+            Arc::new(builds::LogSink {
+                graph: name.to_string(),
+            })
         }),
-        ..BuildHooks::default()
     };
     let outcome = build_off_lock(&core.semantic_store, name, rebuild, &hooks);
     builds::unregister(name);
@@ -302,10 +334,16 @@ fn open_code_store(persist_dir: &str, binding: &str) -> Result<SemanticCodeStore
 /// Spawn an off-request-path activation for one graph. Never blocks the caller:
 /// the qualification check inside [`activate_one`] is O(1) and the build runs on
 /// a fresh `spawn_blocking` task.
-fn spawn_activation(name: String, core: Arc<GraphCore>, persist_dir: Option<String>) {
+fn spawn_activation(
+    name: String,
+    core: Arc<GraphCore>,
+    persist_dir: Option<String>,
+    cluster: ClusterConfig,
+    sink: Option<Arc<dyn ProgressSink>>,
+) {
     tokio::spawn(async move {
         let _ = tokio::task::spawn_blocking(move || {
-            activate_one(&name, &core, persist_dir.as_deref());
+            activate_with(&name, &core, persist_dir.as_deref(), &cluster, sink);
         })
         .await;
     });
@@ -327,8 +365,17 @@ pub async fn maybe_activate_after_write(
     if !qualifies {
         return;
     }
-    let persist_dir = state.read().await.persist_dir.clone();
-    spawn_activation(graph_name.to_string(), core.clone(), persist_dir);
+    let (persist_dir, cluster) = {
+        let s = state.read().await;
+        (s.persist_dir.clone(), cluster_config(&s))
+    };
+    spawn_activation(
+        graph_name.to_string(),
+        core.clone(),
+        persist_dir,
+        cluster,
+        None,
+    );
 }
 
 /// Periodic backstop (W0.4 mechanism 2): scan every currently RESIDENT graph
@@ -342,7 +389,17 @@ pub async fn maybe_activate_after_write(
 /// reaches this through the external `medulla::server::` path like
 /// `persistence::cold_offload` already does for the analogous cold-offload sweep.
 pub async fn sweep_resident_graphs(state: &Arc<RwLock<ServerState>>) -> usize {
-    let (candidates, persist_dir) = {
+    sweep_resident_graphs_with(state, None).await
+}
+
+/// [`sweep_resident_graphs`] with the progress sink every spawned build reports to.
+/// It spawns the builds and returns: readiness never waits for a build to end
+/// (MEDULLA-CLUSTER-R011.5), and a graph without a built index answers by exact search.
+pub async fn sweep_resident_graphs_with(
+    state: &Arc<RwLock<ServerState>>,
+    sink: Option<Arc<dyn ProgressSink>>,
+) -> usize {
+    let (candidates, persist_dir, cluster) = {
         let s = state.read().await;
         let candidates: Vec<(String, Arc<GraphCore>)> = s
             .registry
@@ -357,11 +414,17 @@ pub async fn sweep_resident_graphs(state: &Arc<RwLock<ServerState>>) -> usize {
                 needs_warm.then(|| (entry.name.clone(), entry.core.clone()))
             })
             .collect();
-        (candidates, s.persist_dir.clone())
+        (candidates, s.persist_dir.clone(), cluster_config(&s))
     };
     let n = candidates.len();
     for (name, core) in candidates {
-        spawn_activation(name, core, persist_dir.clone());
+        spawn_activation(
+            name,
+            core,
+            persist_dir.clone(),
+            cluster.clone(),
+            sink.clone(),
+        );
     }
     n
 }

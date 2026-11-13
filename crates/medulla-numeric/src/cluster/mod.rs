@@ -26,7 +26,8 @@ pub use plan::{plan, training_bytes, Mode, Plan};
 pub use refusal::ClusterRefusal;
 pub use seed::{seed_centers, seed_indices};
 pub use state::{
-    transition, CancelToken, ClusterRun, Event, NoProgress, Progress, ProgressSink, State,
+    CancelToken, ClusterRun, Event, EventKind, Guard, NoProgress, Progress, ProgressSink, State,
+    CLUSTER_RUN_MACHINE,
 };
 pub use train::{ClusterOutcome, End};
 

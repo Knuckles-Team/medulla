@@ -1668,7 +1668,13 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     #[cfg(feature = "ann")]
     {
         let warm_state = state.clone();
-        let warm_dir = { warm_state.read().await.persist_dir.clone() };
+        let (warm_dir, warm_cluster) = {
+            let s = warm_state.read().await;
+            (
+                s.persist_dir.clone(),
+                medulla_server_graph::semantic_activation::cluster_config(&s),
+            )
+        };
         tokio::spawn(async move {
             // Snapshot (name, core) under a brief read lock; the heavy build runs
             // OFF the async runtime on a blocking thread.
@@ -1687,6 +1693,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                         &name,
                         &core,
                         warm_dir.as_deref(),
+                        &warm_cluster,
                     ) {
                         warmed += 1;
                     }

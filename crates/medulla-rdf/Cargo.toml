@@ -153,4 +153,6 @@ medulla-reasoner = { path = "../medulla-reasoner", features = ["owl", "sparql-st
 # The WorkItem machine edge table the state-machine ontology test compares with
 # (MEDULLA-ORCH-VOCAB-R812.3).
 medulla-work-types = { path = "../medulla-work-types" }
+# The clustering kernel's run machine edge table (MEDULLA-CLUSTER-R004.5).
+medulla-numeric = { path = "../medulla-numeric" }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }

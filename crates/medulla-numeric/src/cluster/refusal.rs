@@ -1,6 +1,7 @@
 //! Typed refusals of the clustering kernel (MEDULLA-CLUSTER-R001.2).
 
 use crate::error::NumericError;
+use medulla_types::transition_refused::TransitionRefused;
 
 /// Why a clustering run refused to start or stopped without centroids.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,11 +20,9 @@ pub enum ClusterRefusal {
     MemoryBudget { need: u64, budget: u64 },
     /// The run was cancelled at a step boundary.
     Cancelled,
-    /// The state machine received an event its table does not allow.
-    StateIllegal {
-        from: &'static str,
-        event: &'static str,
-    },
+    /// The run's state machine refused an event its table does not allow; the record
+    /// names the machine, the state and the event (MEDULLA-CLUSTER-R004.5).
+    StateIllegal(TransitionRefused),
 }
 
 impl ClusterRefusal {
@@ -37,7 +36,7 @@ impl ClusterRefusal {
             Self::InputNotFinite { .. } => "CLUSTERING_INPUT_NOT_FINITE",
             Self::MemoryBudget { .. } => "CLUSTERING_MEMORY_BUDGET",
             Self::Cancelled => "CLUSTERING_CANCELLED",
-            Self::StateIllegal { .. } => "CLUSTERING_STATE_ILLEGAL",
+            Self::StateIllegal(_) => "CLUSTERING_STATE_ILLEGAL",
         }
     }
 }
@@ -57,9 +56,11 @@ impl std::fmt::Display for ClusterRefusal {
                 write!(f, "training needs {need} bytes, budget is {budget}")
             }
             Self::Cancelled => write!(f, "the run was cancelled"),
-            Self::StateIllegal { from, event } => {
-                write!(f, "event {event} is illegal in state {from}")
-            }
+            Self::StateIllegal(refused) => write!(
+                f,
+                "{} refused event {} in state {}",
+                refused.machine, refused.event, refused.from
+            ),
         }
     }
 }

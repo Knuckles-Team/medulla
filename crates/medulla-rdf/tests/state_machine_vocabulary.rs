@@ -844,3 +844,14 @@ fn revision_machine_matches_edge_table() {
 fn revision_machine_classes_extend_core() {
     sm::assert_extends_core("Revision");
 }
+
+// spec: MEDULLA-CLUSTER-R004.5
+#[test]
+fn cluster_run_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_numeric::cluster::CLUSTER_RUN_MACHINE);
+}
+// spec: MEDULLA-CLUSTER-R004.5
+#[test]
+fn cluster_run_machine_classes_extend_core() {
+    sm::assert_extends_core("ClusterRun");
+}

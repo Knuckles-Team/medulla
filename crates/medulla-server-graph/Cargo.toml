@@ -84,7 +84,7 @@ jsonwebtoken = { version = "11.1", optional = true, default-features = false, fe
 
 [features]
 test-support = ["medulla-server-auth/test-support", "medulla-compute/test-support", "medulla-h-ingest/test-support", "medulla-h-query/test-support", "medulla-h-txn/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-source-types/test-support", "medulla-work-types/test-support", "medulla-store-apply/test-support", "medulla-work-store/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]
-ann = ["medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann"]
+ann = ["medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann", "medulla-decision-stats/decision"]
 ann-redb = ["ann", "redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-h-jobs/ann-redb", "medulla-h-query/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
 ast = ["medulla-compute/ast", "medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast"]
 blob = ["redb", "server", "medulla-h-graph/blob", "medulla-h-ingest/blob", "medulla-protocol-types/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob"]

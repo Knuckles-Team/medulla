@@ -2780,3 +2780,144 @@
     :fromState :RevisionMachine_Retired ;
     :toState :RevisionMachine_Champion ;
     :firedBy :RevisionMachine_Event_Reinstate .
+
+# spec: MEDULLA-CLUSTER-R004.5
+# The run state machine of the clustering kernel. The Rust edge table CLUSTER_RUN_MACHINE is
+# the same table; the ontology test asserts equal edge sets.
+
+:ClusterRunState a owl:Class ;
+    rdfs:label "Cluster Run State" ;
+    rdfs:comment "A state of the Cluster Run machine." ;
+    rdfs:subClassOf :State .
+
+:ClusterRunTerminalState a owl:Class ;
+    rdfs:label "Cluster Run Terminal State" ;
+    rdfs:comment "A terminal state of the Cluster Run machine." ;
+    rdfs:subClassOf :TerminalState, :ClusterRunState .
+
+:ClusterRunTransition a owl:Class ;
+    rdfs:label "Cluster Run Transition" ;
+    rdfs:comment "A transition of the Cluster Run machine." ;
+    rdfs:subClassOf :Transition .
+
+:ClusterRunEvent a owl:Class ;
+    rdfs:label "Cluster Run Event" ;
+    rdfs:comment "An event of the Cluster Run machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ClusterRunGuard a owl:Class ;
+    rdfs:label "Cluster Run Guard" ;
+    rdfs:comment "A guard of the Cluster Run machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ClusterRunMachine a :StateMachine ;
+    rdfs:label "Cluster Run machine" ;
+    :initialState :ClusterRunMachine_Seeding ;
+    :hasState :ClusterRunMachine_Seeding, :ClusterRunMachine_Sampling, :ClusterRunMachine_Updating, :ClusterRunMachine_Converged, :ClusterRunMachine_BudgetExhausted, :ClusterRunMachine_Refused .
+
+:ClusterRunMachine_Seeding a :ClusterRunState ;
+    rdfs:label "Cluster Run Seeding" ;
+    :storedForm "seeding" .
+
+:ClusterRunMachine_Sampling a :ClusterRunState ;
+    rdfs:label "Cluster Run Sampling" ;
+    :storedForm "sampling" .
+
+:ClusterRunMachine_Updating a :ClusterRunState ;
+    rdfs:label "Cluster Run Updating" ;
+    :storedForm "updating" .
+
+:ClusterRunMachine_Converged a :ClusterRunTerminalState ;
+    rdfs:label "Cluster Run Converged" ;
+    :storedForm "converged" .
+
+:ClusterRunMachine_BudgetExhausted a :ClusterRunTerminalState ;
+    rdfs:label "Cluster Run BudgetExhausted" ;
+    :storedForm "budget_exhausted" .
+
+:ClusterRunMachine_Refused a :ClusterRunTerminalState ;
+    rdfs:label "Cluster Run Refused" ;
+    :storedForm "refused" .
+
+:ClusterRunMachine_Event_SeedsReady a :ClusterRunEvent ;
+    rdfs:label "Cluster Run SeedsReady" .
+
+:ClusterRunMachine_Event_BatchDrawn a :ClusterRunEvent ;
+    rdfs:label "Cluster Run BatchDrawn" .
+
+:ClusterRunMachine_Event_StepDone a :ClusterRunEvent ;
+    rdfs:label "Cluster Run StepDone" .
+
+:ClusterRunMachine_Event_Refuse a :ClusterRunEvent ;
+    rdfs:label "Cluster Run Refuse" .
+
+:ClusterRunMachine_Guard_Converged a :ClusterRunGuard ;
+    rdfs:label "Cluster Run Converged" ;
+    rdfs:comment "Guard: the step converged." .
+
+:ClusterRunMachine_Guard_BudgetLeft a :ClusterRunGuard ;
+    rdfs:label "Cluster Run BudgetLeft" ;
+    rdfs:comment "Guard: the step did not converge and a step is left." .
+
+:ClusterRunMachine_Guard_BudgetSpent a :ClusterRunGuard ;
+    rdfs:label "Cluster Run BudgetSpent" ;
+    rdfs:comment "Guard: the step did not converge and no step is left." .
+
+:ClusterRunMachine_C01 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C01" ;
+    :edgeId "C01" ;
+    :fromState :ClusterRunMachine_Seeding ;
+    :toState :ClusterRunMachine_Sampling ;
+    :firedBy :ClusterRunMachine_Event_SeedsReady .
+
+:ClusterRunMachine_C02 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C02" ;
+    :edgeId "C02" ;
+    :fromState :ClusterRunMachine_Sampling ;
+    :toState :ClusterRunMachine_Updating ;
+    :firedBy :ClusterRunMachine_Event_BatchDrawn .
+
+:ClusterRunMachine_C03 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C03" ;
+    :edgeId "C03" ;
+    :fromState :ClusterRunMachine_Updating ;
+    :toState :ClusterRunMachine_Converged ;
+    :guardedBy :ClusterRunMachine_Guard_Converged ;
+    :firedBy :ClusterRunMachine_Event_StepDone .
+
+:ClusterRunMachine_C04 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C04" ;
+    :edgeId "C04" ;
+    :fromState :ClusterRunMachine_Updating ;
+    :toState :ClusterRunMachine_Sampling ;
+    :guardedBy :ClusterRunMachine_Guard_BudgetLeft ;
+    :firedBy :ClusterRunMachine_Event_StepDone .
+
+:ClusterRunMachine_C05 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C05" ;
+    :edgeId "C05" ;
+    :fromState :ClusterRunMachine_Updating ;
+    :toState :ClusterRunMachine_BudgetExhausted ;
+    :guardedBy :ClusterRunMachine_Guard_BudgetSpent ;
+    :firedBy :ClusterRunMachine_Event_StepDone .
+
+:ClusterRunMachine_C06 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C06" ;
+    :edgeId "C06" ;
+    :fromState :ClusterRunMachine_Seeding ;
+    :toState :ClusterRunMachine_Refused ;
+    :firedBy :ClusterRunMachine_Event_Refuse .
+
+:ClusterRunMachine_C07 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C07" ;
+    :edgeId "C07" ;
+    :fromState :ClusterRunMachine_Sampling ;
+    :toState :ClusterRunMachine_Refused ;
+    :firedBy :ClusterRunMachine_Event_Refuse .
+
+:ClusterRunMachine_C08 a :ClusterRunTransition ;
+    rdfs:label "Cluster Run C08" ;
+    :edgeId "C08" ;
+    :fromState :ClusterRunMachine_Updating ;
+    :toState :ClusterRunMachine_Refused ;
+    :firedBy :ClusterRunMachine_Event_Refuse .

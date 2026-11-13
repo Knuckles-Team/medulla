@@ -62,16 +62,16 @@ The kernel holds the same defaults as constants in `config.rs`. A test asserts t
 | From | Event | To |
 |---|---|---|
 | `Seeding` | `SeedsReady` | `Sampling` |
-| `Seeding` | `Refuse(r)` | `Refused(r)` |
+| `Seeding` | `Refuse` | `Refused` |
 | `Sampling` | `BatchDrawn` | `Updating` |
-| `Sampling` | `Refuse(r)` | `Refused(r)` |
+| `Sampling` | `Refuse` | `Refused` |
 | `Updating` | `StepDone { converged: true, .. }` | `Converged` |
 | `Updating` | `StepDone { converged: false, budget_left: true }` | `Sampling` |
 | `Updating` | `StepDone { converged: false, budget_left: false }` | `BudgetExhausted` |
-| `Updating` | `Refuse(r)` | `Refused(r)` |
-| `Converged`, `BudgetExhausted`, `Refused(_)` | any | `Err(StateIllegal)` |
+| `Updating` | `Refuse` | `Refused` |
+| `Converged`, `BudgetExhausted`, `Refused` | any | `Err(TransitionRefused)` |
 
-Every other pair returns `StateIllegal`. Exact mode passes through `Sampling` with the whole input as its batch.
+Every other pair returns the core `TransitionRefused` (machine `ClusterRunMachine`, the state, the event); `fit` surfaces it as `ClusterRefusal::StateIllegal`. The edges are C01 to C08 in `CLUSTER_RUN_MACHINE`. Exact mode passes through `Sampling` with the whole input as its batch.
 
 ## Memory formula (R006.1)
 

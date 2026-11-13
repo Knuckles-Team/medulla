@@ -56,9 +56,9 @@ The spec itself lands first as PR 1.
 - [ ] T036 [US3] MEDULLA-CLUSTER-R008.6 Spectral partitions (MEDULLA-FEDERATED-QUERY-R607.2).
 - [ ] T037 [US3] MEDULLA-CLUSTER-R008.7 Mixture-model seeding.
 - [ ] T038 [US3] MEDULLA-CLUSTER-R008 Every caller runs on the kernel (rollup).
-- [ ] T039 [US3] MEDULLA-CLUSTER-R008.8 Sweep for leftovers.
+- [x] T039 [US3] MEDULLA-CLUSTER-R008.8 Sweep for leftovers.
 - [ ] T040 [US1] MEDULLA-CLUSTER-R001.4 Proof: only the kernel trains.
-- [ ] T041 [US1] MEDULLA-CLUSTER-R002.6 Wiring: the engine resolves knobs once per build.
+- [x] T041 [US1] MEDULLA-CLUSTER-R002.6 Wiring: the engine resolves knobs once per build.
 - [ ] T042 [US1] MEDULLA-CLUSTER-R007.2 Runtime-detected wide path.
 
 ## Slice C: online refresh, safe build, benchmark
@@ -71,12 +71,12 @@ The spec itself lands first as PR 1.
 - [ ] T048 [US2] MEDULLA-CLUSTER-R011.1 Build off the store locks.
 - [ ] T049 [US2] MEDULLA-CLUSTER-R011.2 Writer latency bound.
 - [ ] T050 [US2] MEDULLA-CLUSTER-R011.4 Shutdown cancels the build.
-- [ ] T051 [US2] MEDULLA-CLUSTER-R011.5 Readiness does not wait for the build.
+- [x] T051 [US2] MEDULLA-CLUSTER-R011.5 Readiness does not wait for the build.
 - [ ] T052 [US4] MEDULLA-CLUSTER-R009.3 Wiring: ingest feeds the tracker.
 - [ ] T053 [US4] MEDULLA-CLUSTER-R009.4 Background retrain, warm start, swap.
 - [ ] T054 [US1] MEDULLA-CLUSTER-R010 Benchmark against the current full-batch method (rollup).
 - [ ] T055 [US1] MEDULLA-CLUSTER-R010.2 Acceptance thresholds.
-- [ ] T057 [US1] MEDULLA-CLUSTER-R004.5 ClusterRun/State state machine: route 4 census findings through State::apply
+- [x] T057 [US1] MEDULLA-CLUSTER-R004.5 ClusterRun/State state machine: route 4 census findings through State::apply
 
 ## Bindings
 

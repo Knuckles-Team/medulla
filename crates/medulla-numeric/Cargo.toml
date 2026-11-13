@@ -21,7 +21,7 @@ default = []
 # crates/; and this crate keeps pyo3 out of any engine-linked build). Only the
 # wheel build (maturin) turns this on. The boundary accepts/returns Python built-ins;
 # it deliberately has no NumPy runtime dependency.
-python = ["dep:pyo3", "analytics", "dep:medulla-types", "medulla-query-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-decision-types/wire-complete", "medulla-protocol-types/wire-complete"]
+python = ["dep:pyo3", "analytics", "medulla-query-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-decision-types/wire-complete", "medulla-protocol-types/wire-complete"]
 # Analytics stats ops (CONCEPT:MEDULLA-357/MEDULLA-358): spearmanr / ks_2samp / normal
 # ppf+pdf. Pulls `statrs` for the distribution CDFs (Student-t, Normal). Kept OUT
 # of `default` so an engine `pi`/`node`/`full` build that links the medulla-numeric rlib
@@ -58,8 +58,8 @@ complex = ["dep:num-complex"]
 # feature matrices, head reading, the act/abstain ladder, keyed exploration,
 # label admission, deterministic fitting and evaluation. It lives in this crate
 # so the crate `clippy.toml`'s float-transcendental ban covers it. Pulls only
-# `medulla-types`, which the lockfile already lists as an (optional) dependency.
-decision = ["dep:medulla-types"]
+# `medulla-types`, a normal dependency since the run state machine uses its core machine contract.
+decision = []
 # Motif / discord search (EH-529, ANALYTICS-HARVEST AH-09): MASS query-by-example and the
 # SCRIMP++ matrix profile need FFT sliding dot products — the `rustfft` crate
 # (coordinator ruling 2026-09-24: pure Rust, runtime-detected AVX/SSE/NEON with scalar
@@ -70,8 +70,8 @@ decision = ["dep:medulla-types"]
 motif = ["dep:rustfft"]
 # The served numeric kernel evaluation (MEDULLA-FINANCE-PRIMITIVES-R002.2.5): the registry that
 # maps a `NumericEvaluateOp` to its shared kernel, and the stat-arb and regime kernels it
-# serves. Pulls only `medulla-types`, already in the lockfile.
-evaluate = ["dep:medulla-types"]
+# serves. Pulls nothing beyond the normal `medulla-types` dependency.
+evaluate = []
 
 [dependencies]
 # The one engine release version (`KERNEL_REVISION` reports it).
@@ -113,7 +113,8 @@ pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"], optiona
 # unconditional pure types alone; unifying `wire-complete` into every engine build
 # that enables `decision` would add wire variants (e.g. `Op::Probabilistic`) that
 # medulla-plan's own feature set does not handle.
-medulla-types = { path = "../medulla-types", optional = true }
+# The core state-machine contract of the run state machine (MEDULLA-CLUSTER-R004.5).
+medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types", optional = true }
 # Analytics only (feature `analytics`): distribution CDFs/quantiles for the
 # scipy-parity stats ops (Student-t p-value, Normal ppf/pdf). Pure Rust, no BLAS.
