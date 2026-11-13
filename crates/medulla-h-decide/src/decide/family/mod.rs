@@ -53,7 +53,6 @@ mod task_plan;
 mod team_coordination;
 #[cfg(test)]
 mod template;
-#[cfg(test)]
 mod template_choice;
 mod temporal_basis;
 mod thought_search;
