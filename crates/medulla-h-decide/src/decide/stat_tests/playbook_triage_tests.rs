@@ -3,11 +3,15 @@
 //! tenant's playbooks by trigger, the answer is an advisory list of proposed
 //! steps in playbook then step order, a write step is named with its governed
 //! route and never run, and one tenant never sees another tenant's playbooks.
+//! A request to execute is refused, a burst no playbook answers abstains
+//! naming the trigger kind, and a proposal records the playbook id and
+//! revision (MEDULLA-DECISION-ENGINE-R704.4, R704.5).
 
 use super::*;
 use medulla_agent_types::agent_ontology::CAPABILITY_ROOT;
+use medulla_decision_types::decision::playbook::PARAM_EXECUTE;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::PremiseClass;
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 const OTHER_TENANT: &str = "tenant-other";
@@ -176,4 +180,129 @@ async fn decide_routes_playbook_triage() {
         options(&batch),
         vec![("step:playbook:other:o1".to_string(), STEP_SCORE)]
     );
+}
+
+fn execute_param(value: bool) -> Vec<TypedParam> {
+    vec![TypedParam {
+        name: PARAM_EXECUTE.to_string(),
+        value: TypedValue::Bool(value),
+    }]
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R704.4
+#[tokio::test]
+async fn playbook_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    publish_playbook(&h, TENANT, "playbook:flap", "service_flapping", None);
+
+    // A request to execute is refused with the registered code and nothing is
+    // sealed; asking not to execute is the ordinary evaluation.
+    let mut execute = triage_request(&schema, TENANT);
+    execute.params = BoundedVec::new(execute_param(true)).unwrap();
+    let refused = decide(&h, execute).await.unwrap_err();
+    assert!(refused.contains("PLAYBOOK_EVALUATE_ONLY"), "{refused}");
+    let mut evaluate = triage_request(&schema, TENANT);
+    evaluate.params = BoundedVec::new(execute_param(false)).unwrap();
+    let batch = decide(&h, evaluate).await.unwrap();
+    // The write step is named with the typed reason and is never run: the
+    // answer is an advisory list of options.
+    let record = &batch.records.as_slice()[0];
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+    assert!(record.premises.iter().any(|p| {
+        p.fact.starts_with("step:playbook:flap:s2:writes=true:")
+            && p.fact.contains(":reason=EvaluateOnly:")
+    }));
+
+    // A burst whose trigger no playbook answers abstains and names the kind.
+    let mut down = triage_request(&schema, TENANT);
+    down.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![event("e4", "svc-b", "service_down", &[], 2_500)]).unwrap(),
+    };
+    let batch = decide(&h, down).await.unwrap();
+    let StatisticalOutcome::Abstained { reasons } = &batch.records.as_slice()[0].outcome else {
+        panic!("expected an abstention");
+    };
+    let AbstainReason::Family { code, detail, .. } = &reasons.as_slice()[0] else {
+        panic!("expected a family abstention");
+    };
+    assert_eq!(code.as_str(), "PLAYBOOK_NO_TRIGGER");
+    assert!(detail.contains("service_down"), "{detail}");
+
+    // A burst that raises no trigger at all abstains the same way.
+    let mut quiet = triage_request(&schema, TENANT);
+    quiet.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![event("e1", "svc-a", "state_change", &[], 0)]).unwrap(),
+    };
+    let batch = decide(&h, quiet).await.unwrap();
+    let StatisticalOutcome::Abstained { reasons } = &batch.records.as_slice()[0].outcome else {
+        panic!("expected an abstention");
+    };
+    let AbstainReason::Family { code, detail, .. } = &reasons.as_slice()[0] else {
+        panic!("expected a family abstention");
+    };
+    assert_eq!(code.as_str(), "PLAYBOOK_NO_TRIGGER");
+    assert!(detail.contains("no trigger"), "{detail}");
+
+    // Another tenant's playbook never answers this tenant's burst.
+    publish_playbook(&h, OTHER_TENANT, "playbook:other", "service_down", None);
+    let mut down = triage_request(&schema, TENANT);
+    down.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![event("e4", "svc-b", "service_down", &[], 2_500)]).unwrap(),
+    };
+    let batch = decide(&h, down).await.unwrap();
+    assert!(matches!(
+        batch.records.as_slice()[0].outcome,
+        StatisticalOutcome::Abstained { .. }
+    ));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R704.5
+#[tokio::test]
+async fn proposal_records_playbook_id_and_revision() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    publish_playbook(&h, TENANT, "playbook:flap", "service_flapping", None);
+    publish_playbook(&h, TENANT, "playbook:down", "service_down", None);
+
+    let batch = decide(&h, triage_request(&schema, TENANT)).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    // One Definition premise per proposing playbook, bound to its publisher
+    // and carrying the revision it was read at.
+    for id in ["playbook:flap", "playbook:down"] {
+        let premise = record
+            .premises
+            .iter()
+            .find(|p| p.fact.starts_with(&format!("playbook:{id}:revision=")))
+            .unwrap_or_else(|| panic!("no definition premise for {id}"));
+        assert_eq!(premise.class, PremiseClass::Definition);
+        assert!(matches!(
+            &premise.provenance,
+            PremiseProvenance::Publisher { component_id, definition_digest }
+                if component_id == id && !definition_digest.is_empty()
+        ));
+        assert!(premise.fact.ends_with("revision=1"), "{}", premise.fact);
+    }
+    // Each correlated event is a Claim: the three state changes of the
+    // flapping service and the service-down event.
+    for id in ["e1", "e2", "e3", "e4"] {
+        assert!(
+            record
+                .premises
+                .iter()
+                .any(|p| p.class == PremiseClass::Claim
+                    && p.fact.starts_with(&format!("event:{id}:"))),
+            "no claim premise for {id}"
+        );
+    }
+    // An event that raised nothing is not cited.
+    assert!(!record
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("event:e5:")));
+    // The weakest class is the claim.
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
 }

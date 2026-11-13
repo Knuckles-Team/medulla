@@ -330,6 +330,104 @@ async fn candidate_cites_traces_and_library_rows() {
     assert!(bad.contains("PARAMETER_INVALID"), "{bad}");
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R703.6
+#[tokio::test]
+async fn candidates_are_proposals_only() {
+    use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    publish_skill(&h, TENANT, "skill-a", &["cap-1", "cap-2", "cap-3"]);
+    publish_skill(&h, TENANT, "skill-b", &["cap-1", "cap-2", "cap-3", "cap-4"]);
+    publish_acting_skill(&h, TENANT, "skill-w", &["cap-1", "cap-2", "cap-3"]);
+    publish_skill(&h, OTHER_TENANT, "skill-x", &["cap-1", "cap-2", "cap-3"]);
+    super::learning_tests::graph_with(
+        &h,
+        VECTORS,
+        "m1",
+        3,
+        vec![
+            ("skill-a".to_string(), vec![1.0, 0.0, 0.0]),
+            ("skill-b".to_string(), vec![0.99, 0.1, 0.0]),
+        ],
+    )
+    .await;
+    let library = |tenant: &str| {
+        let scope = LibraryCandidateScope {
+            kinds: BoundedVec::new(vec![AgentComponentKind::Skill]).unwrap(),
+            classification_under: None,
+        };
+        super::super::candidates::library_candidates(&h.store, tenant, &scope)
+            .unwrap()
+            .entries
+            .iter()
+            .map(|e| (e.component_id.clone(), e.definition_digest.clone()))
+            .collect::<Vec<_>>()
+    };
+    let before = (library(TENANT), library(OTHER_TENANT));
+
+    // Requested skills and terms in, gaps, neologisms and merges out.
+    let batch = decide(
+        &h,
+        evolution_request(&schema, TENANT, vec![embedding_graph_param()]),
+    )
+    .await
+    .unwrap();
+    let seen = options(&batch);
+    for expected in [
+        "gap:skill-missing",
+        "neologism:frobnicate",
+        "merge:skill-a+skill-b",
+    ] {
+        assert!(seen.iter().any(|(id, _)| id == expected), "{expected}");
+    }
+    // The outcome is advisory and statistical; a proposal rests on claims.
+    let record = &batch.records.as_slice()[0];
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == "unresolved_capability_iri:frobnicate:3"));
+
+    // A refusal changes nothing either: skills of different side-effect
+    // classes never merge.
+    let pair = vec![text(PARAM_PAIR_A, "skill-a"), text(PARAM_PAIR_B, "skill-w")];
+    let refused = decide(&h, evolution_request(&schema, TENANT, pair))
+        .await
+        .unwrap_err();
+    assert!(refused.contains("MERGE_CLASS_MISMATCH"), "{refused}");
+
+    // Cross tenant: the other tenant's skill is neither a candidate nor a
+    // merge partner for this tenant, and this tenant's skills are none for it.
+    assert!(seen
+        .iter()
+        .all(|(id, _)| !id.contains("skill-x") || id == "gap:skill-x"));
+    let other_schema = publish_route_schema_in(&h, OTHER_TENANT);
+    let verified_other =
+        VerifiedRequestContext::verified_for_test_in_tenant("decider", OTHER_TENANT);
+    let other: DecisionBatch = decode(
+        super::super::statistical::handle_decide(
+            &h.state,
+            1,
+            &verified_other,
+            evolution_request(&other_schema, OTHER_TENANT, Vec::new()),
+        )
+        .await,
+    )
+    .unwrap();
+    assert!(options(&other)
+        .iter()
+        .all(|(id, _)| id != "gap:skill-x" && !id.starts_with("merge:")));
+
+    // The library is exactly as published: nothing was created, merged or
+    // retired by asking.
+    assert_eq!(before, (library(TENANT), library(OTHER_TENANT)));
+}
+
 fn skill_draft(
     tenant: &str,
     id: &str,

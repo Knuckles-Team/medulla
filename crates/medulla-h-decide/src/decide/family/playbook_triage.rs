@@ -16,7 +16,16 @@
 //! outcome is `Advisory`: one option `step:<playbook_id>:<step_id>` per
 //! proposed step, in playbook-id then step order, scored `1 << 32`. A step that
 //! writes is only named, with the governed route (`connector_write_back`,
-//! R043) a premise records; the engine never runs it and writes nothing.
+//! R043) a premise records with the typed reason `EvaluateOnly`; the engine
+//! never runs it and writes nothing.
+//!
+//! A request with the parameter `execute` set to true is refused
+//! `PLAYBOOK_EVALUATE_ONLY` (MEDULLA-DECISION-ENGINE-R704.4). A burst whose
+//! raised triggers no playbook answers abstains `PLAYBOOK_NO_TRIGGER`, naming
+//! the trigger kind that has none. Every proposal records a `Definition`
+//! premise per playbook (id and revision, bound to its publisher) and a `Claim`
+//! premise per correlated event; the record states the weakest class
+//! (MEDULLA-DECISION-ENGINE-R704.5).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -24,9 +33,13 @@ use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_stats::decision::playbook::{
     match_playbook, Correlator, CorrelatorLimits, PlaybookEvent, PlaybookIndex,
 };
-use medulla_decision_types::decision::playbook::{Playbook, TriggerKind};
+use medulla_decision_types::decision::playbook::{
+    NoTrigger, Playbook, TriggerKind, PARAM_EXECUTE, PLAYBOOK_EVALUATE_ONLY, REASON_EVALUATE_ONLY,
+};
 use medulla_decision_types::decision::request::LibraryCandidateScope;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::QuestionKind;
+use medulla_decision_types::decision::statistical::TypedValue;
 use medulla_decision_types::decision::statistical::{CandidateSource, DecideRequest};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass};
 use medulla_graph_core::graph::GraphView;
@@ -37,7 +50,7 @@ use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
-use super::support::{advisory_scored, invalid};
+use super::support::{abstained, advisory_scored, invalid, param};
 use super::DecisionFamily;
 
 /// The Q32 score of a proposed step.
@@ -55,6 +68,20 @@ pub struct PlaybookTriageFamily;
 
 impl DecisionFamily for PlaybookTriageFamily {
     fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        match param(request, PARAM_EXECUTE)? {
+            None | Some(TypedValue::Bool(false)) => {}
+            Some(TypedValue::Bool(true)) => {
+                return Err(invalid(format!(
+                    "{}: a playbook question evaluates and never executes",
+                    PLAYBOOK_EVALUATE_ONLY.as_str()
+                )))
+            }
+            Some(_) => {
+                return Err(invalid(format!(
+                    "parameter {PARAM_EXECUTE} is not a boolean"
+                )))
+            }
+        }
         events(request).map(drop)
     }
 
@@ -135,6 +162,9 @@ struct Raised {
     trigger: TriggerKind,
     service: String,
     event_id: String,
+    /// The events the trigger rests on: the burst of a flapping service, or
+    /// the one event of any other trigger.
+    correlated: Vec<String>,
 }
 
 fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, String> {
@@ -183,6 +213,10 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
             trigger: TriggerKind::ServiceFlapping,
             service: service.to_string(),
             event_id: newest,
+            correlated: correlator
+                .events(service)
+                .map(|event| event.event_id.clone())
+                .collect(),
         });
     }
     for item in &declared {
@@ -203,19 +237,28 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
                 trigger,
                 service: item.event.service.clone(),
                 event_id: item.event.event_id.clone(),
+                correlated: vec![item.event.event_id.clone()],
             });
         }
     }
 
     // A playbook proposes once, for the first trigger that selects it.
     let mut proposed: BTreeMap<String, (String, String)> = BTreeMap::new();
+    let mut cited: BTreeSet<String> = BTreeSet::new();
+    let mut unanswered: BTreeSet<&'static str> = BTreeSet::new();
     for item in &raised {
         let classes: Vec<String> = declared
             .iter()
             .find(|d| d.event.event_id == item.event_id)
             .map(|d| d.classes.clone())
             .unwrap_or_default();
-        for found in match_playbook(&index, &item.trigger, &item.event_id, &classes) {
+        let found = match_playbook(&index, &item.trigger, &item.event_id, &classes);
+        if found.is_empty() {
+            unanswered.insert(item.trigger.attribute_value());
+        } else {
+            cited.extend(item.correlated.iter().cloned());
+        }
+        for found in found {
             proposed.entry(found.playbook_id).or_insert_with(|| {
                 (
                     item.trigger.attribute_value().to_string(),
@@ -225,8 +268,30 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
         }
     }
 
+    if proposed.is_empty() {
+        return Ok(abstained(
+            QuestionKind::PlaybookTriage,
+            &NoTrigger {
+                missing: unanswered.into_iter().collect(),
+            },
+        ));
+    }
+
     let mut options: Vec<(String, i64)> = Vec::new();
     let mut premises: Vec<FamilyPremise> = Vec::new();
+    for event_id in &cited {
+        if let Some(item) = declared.iter().find(|d| &d.event.event_id == event_id) {
+            premises.push(FamilyPremise {
+                subject: "playbook_triage",
+                fact: format!(
+                    "event:{event_id}:service={}:kind={}",
+                    item.event.service, item.event.kind
+                ),
+                class: PremiseClass::Claim,
+                source: FamilyPremiseSource::Request("candidates"),
+            });
+        }
+    }
     let mut seen_steps: BTreeSet<String> = BTreeSet::new();
     for (playbook_id, (trigger, service)) in &proposed {
         let Some(playbook) = by_id.get(playbook_id.as_str()) else {
@@ -258,7 +323,7 @@ fn triage(ctx: &ExecutionContext, request: &DecideRequest) -> Result<Executed, S
                 premises.push(FamilyPremise {
                     subject: "playbook_triage",
                     fact: format!(
-                        "{option_id}:writes=true:route={WRITE_ROUTE}:action={}",
+                        "{option_id}:writes=true:route={WRITE_ROUTE}:reason={REASON_EVALUATE_ONLY}:action={}",
                         step.action_ref
                     ),
                     class: PremiseClass::Claim,

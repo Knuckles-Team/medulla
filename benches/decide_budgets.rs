@@ -48,12 +48,14 @@ use medulla_decision_types::decision::population::{DriftRequest, DriftWindow};
 use medulla_decision_types::decision::program_store::{
     compile_program, program_key, ProgramKnobs, MAX_PROGRAM_STEPS,
 };
+use medulla_decision_types::decision::request::LibraryCandidateScope;
 use medulla_decision_types::decision::reward::{
     RewardDecompositionRequest, RewardKnobs, StepSignal, MAX_REWARD_STEPS,
 };
 use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
 };
+use medulla_decision_types::decision::skill_evolution::{PARAM_REQUESTED_SKILLS, PARAM_USED_TERMS};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::writeback::{
@@ -156,7 +158,6 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::TrajectoryJoin,
     QuestionKind::StepVerification,
     QuestionKind::AdversarialAdmission,
-    QuestionKind::SkillEvolution,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
@@ -1837,6 +1838,65 @@ fn bench_group(
     );
 }
 
+/// Skills the `decide/skill_evolution` group publishes, one library block.
+const EVOLUTION_SKILLS: usize = 256;
+
+// spec: MEDULLA-DECISION-ENGINE-R703.6
+/// The `decide/skill_evolution` group (MEDULLA-DECISION-ENGINE-R703.6, R178.1):
+/// one served `Decide` over a library block of 256 skills with requested
+/// skills and used terms, answering gaps and neologisms. The fixture asserts
+/// the answer names a gap and a neologism, so the group times the proposals and
+/// not a refusal. Budgets: `group_budgets` in `benches/baselines/decide.json`.
+fn bench_skill_evolution(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (h, asked) = rt.block_on(fixture(QuestionKind::SkillEvolution));
+    for n in 0..EVOLUTION_SKILLS {
+        h.publish_test_component(
+            &format!("skill-{n}"),
+            AgentComponentKind::Skill,
+            "bench skill",
+            None::<&()>,
+            None,
+        )
+        .unwrap();
+    }
+    let list = |values: &[&str]| {
+        TypedValue::IriList(
+            BoundedVec::new(values.iter().map(|v| (*v).to_string()).collect()).unwrap(),
+        )
+    };
+    let mut ask = asked.clone();
+    ask.question.kind = QuestionKind::SkillEvolution;
+    ask.candidates = CandidateSource::AgentLibrary {
+        scope: LibraryCandidateScope {
+            kinds: BoundedVec::new(vec![AgentComponentKind::Skill]).unwrap(),
+            classification_under: None,
+        },
+    };
+    ask.params = BoundedVec::new(vec![
+        TypedParam {
+            name: PARAM_REQUESTED_SKILLS.to_string(),
+            value: list(&["skill-0", "skill-missing", "skill-missing"]),
+        },
+        TypedParam {
+            name: PARAM_USED_TERMS.to_string(),
+            value: list(&["frobnicate", "frobnicate", "frobnicate"]),
+        },
+    ])
+    .unwrap();
+    let answer = serde_json::to_string(&decide(rt, &h, &ask).result).unwrap();
+    assert!(
+        answer.contains("gap:skill-missing") && answer.contains("neologism:frobnicate"),
+        "skill_evolution fixture must answer proposals: {answer}"
+    );
+    bench_group(c, report, "decide/skill_evolution", &mut || {
+        black_box(decide(rt, &h, &ask));
+    });
+}
+
 /// A kernel family request: one typed body parameter and one declared candidate.
 fn kernel_ask(
     asked: &DecideRequest,
@@ -2035,6 +2095,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_concentration_kernel(c, &mut report);
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);
+    bench_skill_evolution(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 
+use super::record::outcome::{DecisionRefusal, RefusalCode};
+
 /// Most steps one playbook may propose.
 pub const MAX_PLAYBOOK_STEPS: usize = medulla_agent_types::agent_component::PLAYBOOK_MAX_STEPS;
 /// Most events one correlation may group.
@@ -117,6 +119,45 @@ pub struct EventCorrelation {
     pub window_ms: u64,
     /// Event ids in arrival order.
     pub events: BoundedVec<String, MAX_CORRELATED_EVENTS>,
+}
+
+/// The request name that asks the engine to carry a playbook out. A playbook
+/// question only evaluates (MEDULLA-DECISION-ENGINE-R704.4).
+pub const PARAM_EXECUTE: &str = "execute";
+/// A request with `execute` set to true: a playbook is evaluated, never run.
+pub const PLAYBOOK_EVALUATE_ONLY: RefusalCode = RefusalCode::new("PLAYBOOK_EVALUATE_ONLY");
+/// No playbook matches what the event burst raised; the detail names the
+/// trigger kind that has none.
+pub const PLAYBOOK_NO_TRIGGER: RefusalCode = RefusalCode::new("PLAYBOOK_NO_TRIGGER");
+/// The reason a step that writes carries in its premise: the engine names the
+/// governed route and never runs the step.
+pub const REASON_EVALUATE_ONLY: &str = "EvaluateOnly";
+/// The `PlaybookTriage` family's refusal table.
+pub const REFUSALS: &[RefusalCode] = &[PLAYBOOK_EVALUATE_ONLY, PLAYBOOK_NO_TRIGGER];
+
+/// An event burst that no playbook answers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoTrigger {
+    /// The trigger kinds the burst raised that no playbook of the tenant
+    /// answers, sorted; empty when the burst raised none.
+    pub missing: Vec<&'static str>,
+}
+
+impl DecisionRefusal for NoTrigger {
+    fn code(&self) -> RefusalCode {
+        PLAYBOOK_NO_TRIGGER
+    }
+
+    fn detail(&self) -> String {
+        if self.missing.is_empty() {
+            "the events raise no trigger kind".to_string()
+        } else {
+            format!(
+                "no playbook answers trigger kind {}",
+                self.missing.join(", ")
+            )
+        }
+    }
 }
 
 #[cfg(test)]
