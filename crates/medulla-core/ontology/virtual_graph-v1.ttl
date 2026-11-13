@@ -166,6 +166,8 @@ vg:trustMark a owl:DatatypeProperty ;
 
 vg:SourceConnection a owl:Class ;
     rdfs:comment "One attached source: its kind, its endpoint reference and its declared capabilities." .
+vg:NativeGraph a vg:SourceConnection ;
+    rdfs:comment "The native graph as a source: the one authoritativeSource a system_of_record SourceAuthority row may name (MEDULLA-SRC-AUTH-R012.2)." .
 vg:EndpointRef a owl:Class ;
     rdfs:comment "A connection's endpoint address, deliberately shaped to carry no credential." .
 vg:MetadataContract a owl:Class ;

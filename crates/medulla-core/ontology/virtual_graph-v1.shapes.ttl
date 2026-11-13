@@ -256,6 +256,67 @@ vg:SourceAuthorityShape a sh:NodeShape ;
             }
         """ ;
     ] ;
+    sh:property [
+        sh:path vg:recordRole ; sh:maxCount 1 ; sh:in ( "system_of_record" "federated_secondary" ) ;
+        sh:message "recordRole is system_of_record or federated_secondary."
+    ] ;
+    sh:property [
+        sh:path vg:syncDirection ; sh:maxCount 1 ; sh:in ( "inbound" "outbound" "both" ) ;
+        sh:message "syncDirection is inbound, outbound or both."
+    ] ;
+    sh:property [
+        sh:path vg:conflictRule ; sh:maxCount 1 ; sh:in ( "system_of_record_wins" "hold_for_review" ) ;
+        sh:message "conflictRule is system_of_record_wins or hold_for_review."
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "Only the native graph may hold system_of_record: its authoritativeSource must be vg:NativeGraph." ;
+        sh:prefixes vg:VirtualGraphPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this vg:recordRole "system_of_record" ; vg:authoritativeSource ?src .
+                FILTER(?src != vg:NativeGraph)
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A federated_secondary row needs a syncDirection." ;
+        sh:prefixes vg:VirtualGraphPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this vg:recordRole "federated_secondary" .
+                OPTIONAL { $this vg:syncDirection ?direction }
+                FILTER(!BOUND(?direction))
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A federated_secondary row needs a conflictRule." ;
+        sh:prefixes vg:VirtualGraphPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this vg:recordRole "federated_secondary" .
+                OPTIONAL { $this vg:conflictRule ?rule }
+                FILTER(!BOUND(?rule))
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A class has at most one system_of_record per tenant." ;
+        sh:prefixes vg:VirtualGraphPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this vg:recordRole "system_of_record" ; vg:authorityFor ?cls .
+                ?other vg:recordRole "system_of_record" ; vg:authorityFor ?cls .
+                OPTIONAL { $this vg:scopeTenant ?tenant }
+                OPTIONAL { ?other vg:scopeTenant ?otherTenant }
+                FILTER(?other != $this && sameTerm(?tenant, ?otherTenant))
+            }
+        """ ;
+    ] ;
     sh:sparql [
         a sh:SPARQLConstraint ;
         sh:message "Two sources claim one (class, facet, scope) at an equal authorityRank." ;
