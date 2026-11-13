@@ -51,6 +51,7 @@ pub mod skill_upgrade_request;
 pub mod skill_workflow;
 pub mod statistical;
 pub mod task_plan;
+pub mod team_coordination;
 pub mod thought_search;
 pub mod usage;
 

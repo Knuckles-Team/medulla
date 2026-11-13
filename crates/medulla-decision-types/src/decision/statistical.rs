@@ -165,6 +165,9 @@ pub enum QuestionKind {
     /// Whether a new consumer contract still serves the previous one
     /// (MEDULLA-DECISION-ENGINE-R167). See `decision::skill_upgrade_request`.
     SkillUpgrade,
+    /// Which team member or channel takes a task when a channel is unavailable
+    /// (MEDULLA-DECISION-ENGINE-R170). See `decision::team_coordination`.
+    TeamCoordination,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -241,6 +244,8 @@ pub enum TypedValue {
     SkillWorkflowDraft(Box<super::skill_workflow::SkillWorkflowDraft>),
     /// A skill upgrade compatibility question (MEDULLA-DECISION-ENGINE-R167.1).
     SkillUpgrade(Box<super::skill_upgrade_request::SkillUpgradeRequest>),
+    /// What a caller observed about one channel (MEDULLA-DECISION-ENGINE-R170.1).
+    ChannelSignal(super::team_coordination::ChannelSignal),
 }
 
 /// One named parameter of a question.

@@ -78,3 +78,178 @@
     rdfs:subPropertyOf :delegatesTo ;
     rdfs:domain :A2AAgentCard ;
     rdfs:range :A2AAgentCard .
+
+# -- Teams of agents working A2A tasks (MEDULLA-DECISION-ENGINE-R170.1) ---------------------
+# :Team and :hasMember are core. A team member is a core :Agent; a team task is a core :Task
+# a team works on, bound to its team and carrying one status of the TeamTask machine.
+
+:TeamMember a owl:Class ;
+    rdfs:label "Team Member" ;
+    rdfs:comment "An agent that belongs to a Team and takes the team's tasks. BFO:IndependentContinuant." ;
+    rdfs:subClassOf :Agent .
+
+:TeamTask a owl:Class ;
+    rdfs:label "Team Task" ;
+    rdfs:comment "A unit of work a Team works on, with one status of the TeamTask machine. BFO:Process." ;
+    rdfs:subClassOf :Task .
+
+:hasTask a owl:ObjectProperty ;
+    rdfs:label "has task" ;
+    rdfs:comment "Links a Team to a TeamTask it works on." ;
+    rdfs:domain :Team ;
+    rdfs:range :TeamTask .
+
+:boundToTeam a owl:ObjectProperty ;
+    rdfs:label "bound to team" ;
+    rdfs:comment "Links a TeamTask to the Team it is bound to. Inverse of hasTask." ;
+    rdfs:domain :TeamTask ;
+    rdfs:range :Team ;
+    owl:inverseOf :hasTask .
+
+:taskStatus a owl:ObjectProperty ;
+    rdfs:label "task status" ;
+    rdfs:comment "The status of a TeamTask: one of submitted, working, input_required, completed, canceled, failed." ;
+    rdfs:subPropertyOf :currentState ;
+    rdfs:domain :TeamTask ;
+    rdfs:range :TeamTaskState .
+
+# spec: MEDULLA-DECISION-ENGINE-R170.1
+# The TeamTask machine. The Rust edge table TEAM_TASK_EDGES in
+# crates/medulla-decision-types/src/decision/team_coordination.rs is the same table.
+:TeamTaskState a owl:Class ;
+    rdfs:label "TeamTask State" ;
+    rdfs:comment "A state of the TeamTask machine." ;
+    rdfs:subClassOf :State .
+
+:TeamTaskTerminalState a owl:Class ;
+    rdfs:label "TeamTask Terminal State" ;
+    rdfs:comment "A terminal state of the TeamTask machine." ;
+    rdfs:subClassOf :TerminalState, :TeamTaskState .
+
+:TeamTaskTransition a owl:Class ;
+    rdfs:label "TeamTask Transition" ;
+    rdfs:comment "A transition of the TeamTask machine." ;
+    rdfs:subClassOf :Transition .
+
+:TeamTaskEvent a owl:Class ;
+    rdfs:label "TeamTask Event" ;
+    rdfs:comment "An event of the TeamTask machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:TeamTaskMachine a :StateMachine ;
+    rdfs:label "TeamTask machine" ;
+    rdfs:comment "The TeamTask lifecycle: six states, three terminal, edges T01 to T10." ;
+    :initialState :TeamTaskMachine_Submitted ;
+    :hasState :TeamTaskMachine_Submitted, :TeamTaskMachine_Working, :TeamTaskMachine_InputRequired, :TeamTaskMachine_Completed, :TeamTaskMachine_Canceled, :TeamTaskMachine_Failed .
+
+:TeamTaskMachine_Submitted a :TeamTaskState ;
+    rdfs:label "TeamTask Submitted" ;
+    :storedForm "submitted" .
+
+:TeamTaskMachine_Working a :TeamTaskState ;
+    rdfs:label "TeamTask Working" ;
+    :storedForm "working" .
+
+:TeamTaskMachine_InputRequired a :TeamTaskState ;
+    rdfs:label "TeamTask InputRequired" ;
+    :storedForm "input_required" .
+
+:TeamTaskMachine_Completed a :TeamTaskTerminalState ;
+    rdfs:label "TeamTask Completed" ;
+    :storedForm "completed" .
+
+:TeamTaskMachine_Canceled a :TeamTaskTerminalState ;
+    rdfs:label "TeamTask Canceled" ;
+    :storedForm "canceled" .
+
+:TeamTaskMachine_Failed a :TeamTaskTerminalState ;
+    rdfs:label "TeamTask Failed" ;
+    :storedForm "failed" .
+
+:TeamTaskMachine_Event_Accept a :TeamTaskEvent ;
+    rdfs:label "TeamTask event Accept" .
+
+:TeamTaskMachine_Event_RequestInput a :TeamTaskEvent ;
+    rdfs:label "TeamTask event RequestInput" .
+
+:TeamTaskMachine_Event_ProvideInput a :TeamTaskEvent ;
+    rdfs:label "TeamTask event ProvideInput" .
+
+:TeamTaskMachine_Event_Complete a :TeamTaskEvent ;
+    rdfs:label "TeamTask event Complete" .
+
+:TeamTaskMachine_Event_Cancel a :TeamTaskEvent ;
+    rdfs:label "TeamTask event Cancel" .
+
+:TeamTaskMachine_Event_Fail a :TeamTaskEvent ;
+    rdfs:label "TeamTask event Fail" .
+
+:TeamTaskMachine_T01 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T01" ;
+    :edgeId "T01" ;
+    :fromState :TeamTaskMachine_Submitted ;
+    :toState :TeamTaskMachine_Working ;
+    :firedBy :TeamTaskMachine_Event_Accept .
+
+:TeamTaskMachine_T02 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T02" ;
+    :edgeId "T02" ;
+    :fromState :TeamTaskMachine_Submitted ;
+    :toState :TeamTaskMachine_Canceled ;
+    :firedBy :TeamTaskMachine_Event_Cancel .
+
+:TeamTaskMachine_T03 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T03" ;
+    :edgeId "T03" ;
+    :fromState :TeamTaskMachine_Submitted ;
+    :toState :TeamTaskMachine_Failed ;
+    :firedBy :TeamTaskMachine_Event_Fail .
+
+:TeamTaskMachine_T04 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T04" ;
+    :edgeId "T04" ;
+    :fromState :TeamTaskMachine_Working ;
+    :toState :TeamTaskMachine_InputRequired ;
+    :firedBy :TeamTaskMachine_Event_RequestInput .
+
+:TeamTaskMachine_T05 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T05" ;
+    :edgeId "T05" ;
+    :fromState :TeamTaskMachine_Working ;
+    :toState :TeamTaskMachine_Completed ;
+    :firedBy :TeamTaskMachine_Event_Complete .
+
+:TeamTaskMachine_T06 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T06" ;
+    :edgeId "T06" ;
+    :fromState :TeamTaskMachine_Working ;
+    :toState :TeamTaskMachine_Canceled ;
+    :firedBy :TeamTaskMachine_Event_Cancel .
+
+:TeamTaskMachine_T07 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T07" ;
+    :edgeId "T07" ;
+    :fromState :TeamTaskMachine_Working ;
+    :toState :TeamTaskMachine_Failed ;
+    :firedBy :TeamTaskMachine_Event_Fail .
+
+:TeamTaskMachine_T08 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T08" ;
+    :edgeId "T08" ;
+    :fromState :TeamTaskMachine_InputRequired ;
+    :toState :TeamTaskMachine_Working ;
+    :firedBy :TeamTaskMachine_Event_ProvideInput .
+
+:TeamTaskMachine_T09 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T09" ;
+    :edgeId "T09" ;
+    :fromState :TeamTaskMachine_InputRequired ;
+    :toState :TeamTaskMachine_Canceled ;
+    :firedBy :TeamTaskMachine_Event_Cancel .
+
+:TeamTaskMachine_T10 a :TeamTaskTransition ;
+    rdfs:label "TeamTask T10" ;
+    :edgeId "T10" ;
+    :fromState :TeamTaskMachine_InputRequired ;
+    :toState :TeamTaskMachine_Failed ;
+    :firedBy :TeamTaskMachine_Event_Fail .

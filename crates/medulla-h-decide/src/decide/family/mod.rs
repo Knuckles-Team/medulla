@@ -36,6 +36,7 @@ mod task_plan;
 mod template;
 mod skill_upgrade;
 mod skill_workflow;
+mod team_coordination;
 mod template_choice;
 mod thought_search;
 mod tool_subset;
@@ -170,6 +171,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static SKILLWORKFLOWFAMILY: skill_workflow::SkillWorkflowFamily =
         skill_workflow::SkillWorkflowFamily;
     static SKILLUPGRADEFAMILY: skill_upgrade::SkillUpgradeFamily = skill_upgrade::SkillUpgradeFamily;
+    static TEAMCOORDINATIONFAMILY: team_coordination::TeamCoordinationFamily =
+        team_coordination::TeamCoordinationFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
     match kind {
@@ -207,6 +210,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ProgramLookup => &PROGRAMLOOKUPFAMILY,
         QuestionKind::SkillWorkflowCompile => &SKILLWORKFLOWFAMILY,
         QuestionKind::SkillUpgrade => &SKILLUPGRADEFAMILY,
+        QuestionKind::TeamCoordination => &TEAMCOORDINATIONFAMILY,
     }
 }
 
@@ -252,6 +256,7 @@ mod tests {
             QuestionKind::ProgramLookup,
             QuestionKind::SkillWorkflowCompile,
             QuestionKind::SkillUpgrade,
+            QuestionKind::TeamCoordination,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -287,7 +292,8 @@ mod tests {
             | QuestionKind::Topology
             | QuestionKind::ProgramLookup
             | QuestionKind::SkillWorkflowCompile
-            | QuestionKind::SkillUpgrade => true,
+            | QuestionKind::SkillUpgrade
+            | QuestionKind::TeamCoordination => true,
         };
         assert!(exhaustive);
         kinds
@@ -299,7 +305,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            34,
+            35,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {
