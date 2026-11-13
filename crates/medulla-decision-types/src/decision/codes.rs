@@ -317,6 +317,25 @@ pub const GENERATED_CODE_ADMISSION: &[RefusalCode] = &[
     VERIFIER_REVISION_STALE,
 ];
 
+// The `probe_verdict` family's refusals (MEDULLA-DECISION-ENGINE-R138.4).
+/// No scorer of the tenant matches the attack's category.
+pub const NO_SCORER_FOR_CATEGORY: RefusalCode = RefusalCode::new("NO_SCORER_FOR_CATEGORY");
+/// `attack_id` names no visible attack.
+pub const PROBE_ATTACK_UNKNOWN: RefusalCode = RefusalCode::new("PROBE_ATTACK_UNKNOWN");
+/// A probe result names a scorer that is not selected.
+pub const PROBE_RESULT_SCORER_UNKNOWN: RefusalCode =
+    RefusalCode::new("PROBE_RESULT_SCORER_UNKNOWN");
+/// A probe score is above 1000 per mille.
+pub const PROBE_SCORE_OUT_OF_RANGE: RefusalCode = RefusalCode::new("PROBE_SCORE_OUT_OF_RANGE");
+
+/// Every `probe_verdict` family code, in declaration order.
+pub const PROBE_VERDICT: &[RefusalCode] = &[
+    NO_SCORER_FOR_CATEGORY,
+    PROBE_ATTACK_UNKNOWN,
+    PROBE_RESULT_SCORER_UNKNOWN,
+    PROBE_SCORE_OUT_OF_RANGE,
+];
+
 /// Every `round_verdict` family code, in declaration order.
 pub const ROUND_VERDICT: &[RefusalCode] = &[ROUND_NO_PREDICTION];
 
@@ -354,6 +373,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::ContextPackage,
         super::context_package::REFUSALS,
     ),
+    (QuestionKind::ProbeVerdict, PROBE_VERDICT),
     (QuestionKind::RoundVerdict, ROUND_VERDICT),
     (QuestionKind::StageAllocation, STAGE_ALLOCATION),
     (QuestionKind::CriterionReview, CRITERION_REVIEW),

@@ -290,8 +290,8 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_evidence_binds_inputs` (L3): proves package evidence.
 - `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::totals_are_recomputed_not_trusted` (L3): proves package evidence.
 - `MEDULLA-DECISION-ENGINE-R138`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves the engine holds red-team records and returns a verdict for each probe (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict` (planned, L3): proves wiring. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_refusals` (planned, L3): proves refusal. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict` (L3): proves wiring.
+- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_refusals` (L3): proves refusal.
 - `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores` (planned, L3): proves evidence. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R138.6`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves hot-path proof. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-agent-types/src/agent_component/validation.rs::tests::red_team_bodies_validate_and_refuse_unknown_fields` (planned, L1): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
@@ -668,8 +668,8 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 - `MEDULLA-DECISION-ENGINE-R138.1`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::red_team_records_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R138.2`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::one_passing_scorer_compromises`.
-- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::decide_routes_probe_verdict`.
-- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::missing_scorer_abstains`.
+- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict`.
+- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::missing_scorer_abstains`.
 - `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::premises_name_scorers_and_scores`.
 - `MEDULLA-DECISION-ENGINE-R138.6`: `tests/decide/test_red_team_served.py::test_probe_verdict_end_to_end`.
 

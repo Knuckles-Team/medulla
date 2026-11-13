@@ -10,6 +10,7 @@ pub mod participant;
 pub mod placement;
 pub mod profile;
 pub mod resolve_entity;
+pub mod red_team;
 pub mod round_verdict;
 pub mod route;
 pub mod schema_mapping;
@@ -31,6 +32,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     profile::KNOBS,
     task_plan::KNOBS,
     resolve_entity::KNOBS,
+    red_team::KNOBS,
     round_verdict::KNOBS,
     route::KNOBS,
     schema_mapping::KNOBS,

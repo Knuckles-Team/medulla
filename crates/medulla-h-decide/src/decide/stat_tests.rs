@@ -1189,6 +1189,7 @@ mod concentration_tests;
 mod rank_tests;
 mod registry_tests;
 mod task_plan_tests;
+mod probe_verdict_tests;
 
 // MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
 mod telemetry_tests;

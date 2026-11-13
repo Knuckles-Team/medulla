@@ -45,6 +45,65 @@ impl Default for RedTeamPolicy {
     }
 }
 
+impl RedTeamPolicy {
+    /// The defaults the decision policy pins (`red_team.*` knobs).
+    pub fn from_policy(policy: &medulla_decision_types::decision::DecisionPolicy) -> Self {
+        use medulla_decision_types::decision::knob_families::red_team;
+        Self {
+            category_match: red_team::category_match(policy),
+            any_scorer_compromises: red_team::any_scorer_compromises(policy),
+        }
+    }
+}
+
+/// The registered refusal codes of the `probe_verdict` family
+/// (MEDULLA-DECISION-ENGINE-R138.4), in declaration order.
+pub const REFUSALS: &[medulla_decision_types::decision::record::outcome::RefusalCode] =
+    medulla_decision_types::decision::codes::PROBE_VERDICT;
+
+/// Why a probe verdict is refused or abstained (MEDULLA-DECISION-ENGINE-R138.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProbeRefusal {
+    /// No scorer of the tenant matches the attack's category.
+    NoScorerForCategory { category: String },
+    /// `attack_id` names no visible attack.
+    AttackUnknown { attack_id: String },
+    /// A result names a scorer that is not selected.
+    ResultScorerUnknown { scorer_id: String },
+    /// A score is above 1000 per mille.
+    ScoreOutOfRange { scorer_id: String, permille: i64 },
+}
+
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ProbeRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        use medulla_decision_types::decision::codes;
+        match self {
+            Self::NoScorerForCategory { .. } => codes::NO_SCORER_FOR_CATEGORY,
+            Self::AttackUnknown { .. } => codes::PROBE_ATTACK_UNKNOWN,
+            Self::ResultScorerUnknown { .. } => codes::PROBE_RESULT_SCORER_UNKNOWN,
+            Self::ScoreOutOfRange { .. } => codes::PROBE_SCORE_OUT_OF_RANGE,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::NoScorerForCategory { category } => {
+                format!("no scorer matches the attack category {category}")
+            }
+            Self::AttackUnknown { attack_id } => format!("no visible attack {attack_id}"),
+            Self::ResultScorerUnknown { scorer_id } => {
+                format!("result names scorer {scorer_id}, which is not selected")
+            }
+            Self::ScoreOutOfRange {
+                scorer_id,
+                permille,
+            } => {
+                format!("scorer {scorer_id} scored {permille} per mille, above 1000")
+            }
+        }
+    }
+}
+
 pub fn select_scorers<'a>(
     attack: &RedTeamAttack,
     scorers: &'a [RedTeamScorer],
