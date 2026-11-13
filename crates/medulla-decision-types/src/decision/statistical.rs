@@ -255,6 +255,12 @@ pub enum QuestionKind {
     /// (MEDULLA-DECISION-ENGINE-R134.106). Evaluate-only. See
     /// `decision::answer_ranking_request`.
     AnswerRanking,
+    /// Whether a serving technique is activated for a model, from benchmark receipts (MEDULLA-DECISION-ENGINE-R819). See `decision::serving_technique`.
+    ServingTechniqueActivation,
+    /// Whether a run-bound process is a zombie, hung or progressing (MEDULLA-DECISION-ENGINE-R820). See `decision::process_remediation`.
+    ProcessRemediation,
+    /// Which goals the remaining ingest budget funds and which items may be purged (MEDULLA-DECISION-ENGINE-R826). See `decision::ingest_shortfall`.
+    IngestShortfall,
 }
 
 /// What is at stake. Exploration is permitted only for

@@ -1169,6 +1169,11 @@ mod paper_admission_tests;
 // MEDULLA-DECISION-ENGINE-R038.3: the served held-item admission gate.
 mod held_item_admission_tests;
 
+// MEDULLA-DECISION-ENGINE-R819, R820, R826: the serving, process and ingest families.
+mod ingest_shortfall_tests;
+mod process_remediation_tests;
+mod serving_technique_tests;
+
 // MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.
 mod importance_penalty_tests;
 

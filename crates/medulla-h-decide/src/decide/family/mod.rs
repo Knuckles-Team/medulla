@@ -34,6 +34,7 @@ mod graph_intake;
 mod harness_config;
 mod harness_contrast;
 mod held_item_admission;
+mod ingest_shortfall;
 mod ingestion_lane;
 mod insight_selection;
 mod instruction_disclosure;
@@ -46,6 +47,7 @@ mod placement;
 mod planning_admission;
 mod pre_tool_risk;
 mod probe_verdict;
+mod process_remediation;
 mod program_store;
 mod rank;
 mod recursion_mode;
@@ -55,6 +57,7 @@ mod route;
 mod run_adjustment;
 mod runtime_quota;
 mod schema_mapping;
+mod serving_technique;
 mod skill_upgrade;
 mod skill_workflow;
 mod sub_call_admission;
@@ -313,6 +316,12 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         delegation_admission::DelegationAdmissionFamily;
     static ANSWERRANKINGFAMILY: answer_ranking::AnswerRankingFamily =
         answer_ranking::AnswerRankingFamily;
+    static SERVINGTECHNIQUEFAMILY: serving_technique::ServingTechniqueFamily =
+        serving_technique::ServingTechniqueFamily;
+    static PROCESSREMEDIATIONFAMILY: process_remediation::ProcessRemediationFamily =
+        process_remediation::ProcessRemediationFamily;
+    static INGESTSHORTFALLFAMILY: ingest_shortfall::IngestShortfallFamily =
+        ingest_shortfall::IngestShortfallFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -377,6 +386,9 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::FanoutAggregate => &FANOUTAGGREGATEFAMILY,
         QuestionKind::DelegationAdmission => &DELEGATIONADMISSIONFAMILY,
         QuestionKind::AnswerRanking => &ANSWERRANKINGFAMILY,
+        QuestionKind::ServingTechniqueActivation => &SERVINGTECHNIQUEFAMILY,
+        QuestionKind::ProcessRemediation => &PROCESSREMEDIATIONFAMILY,
+        QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
     }
 }
 
@@ -451,6 +463,9 @@ mod tests {
             QuestionKind::FanoutAggregate,
             QuestionKind::DelegationAdmission,
             QuestionKind::AnswerRanking,
+            QuestionKind::ServingTechniqueActivation,
+            QuestionKind::ProcessRemediation,
+            QuestionKind::IngestShortfall,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -516,6 +531,9 @@ mod tests {
             | QuestionKind::FanoutAggregate
             | QuestionKind::DelegationAdmission
             | QuestionKind::AnswerRanking => true,
+            | QuestionKind::ServingTechniqueActivation
+            | QuestionKind::ProcessRemediation
+            | QuestionKind::IngestShortfall => true,
         };
         assert!(exhaustive);
         kinds
@@ -527,7 +545,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            63,
+            66,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {
