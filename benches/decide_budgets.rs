@@ -415,7 +415,7 @@ fn bench_topology_admit(c: &mut Criterion, report: &mut BTreeMap<String, serde_j
     let mut samples: Vec<Duration> = (0..REPORT_SAMPLES * 10)
         .map(|_| {
             let start = Instant::now();
-            admit();
+            let _ = admit();
             start.elapsed()
         })
         .collect();

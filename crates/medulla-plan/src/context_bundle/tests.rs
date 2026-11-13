@@ -1,6 +1,7 @@
 //! L1 and L2 proofs of the bundle model and compile (R650.1, R650.2).
 
 use super::*;
+use medulla_decision_types::decision::context_package::ContextPackageBudget;
 
 const D1: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 const D2: &str = "2222222222222222222222222222222222222222222222222222222222222222";

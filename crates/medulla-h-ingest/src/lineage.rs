@@ -384,7 +384,10 @@ mod tests {
         };
         let refused =
             handle_lineage_ingest(vec![sql_event("b", "SELECT 1")], &|_, _| false, &refusing);
-        assert!(refused.unwrap_err().starts_with("LINEAGE_CATALOG_MISSING"));
+        assert!(refused
+            .err()
+            .expect("the lineage ingest is refused")
+            .starts_with("LINEAGE_CATALOG_MISSING"));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R763.4

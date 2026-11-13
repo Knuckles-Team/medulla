@@ -11,7 +11,7 @@ use medulla_protocol_types::protocol::Method;
 /// the admitted record into `core`, and return the elapsed nanoseconds.
 pub fn admit_and_project(core: &GraphCore, index: usize, method: &Method, tx_now: u64) -> u128 {
     let started = Instant::now();
-    let admitted = direct_add_node(method, core, tx_now)
+    let admitted = direct_add_node(method, core, tx_now, None)
         .unwrap_or_else(|error| panic!("write {index} refused: {error}"));
     let Method::AddNode {
         node_id: stored_id,

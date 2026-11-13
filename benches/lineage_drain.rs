@@ -34,6 +34,9 @@ fn event(id: &str, input: &str, output: &str) -> LineageEvent {
             namespace: "ns".into(),
             name: output.into(),
         }],
+        sql_text: None,
+        dialect: None,
+        catalog_source: None,
     }
 }
 

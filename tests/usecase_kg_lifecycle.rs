@@ -374,6 +374,7 @@ async fn validate_commit_infer_reindex_under_concurrency_eg438() {
                     foreign_execution: None,
 
                     foreign_executions: Default::default(),
+                    code_map: None,
                 },
             ),
         )

@@ -5,7 +5,7 @@
 
 use super::retrieval_tests::{attest, clone_executed, executed_template, learn, outcome};
 use super::*;
-use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
+use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
 use medulla_decision_types::decision::statistical::run_credit::{
     RunCreditReceipt, RunOutcome, StepRecord,
 };
@@ -108,8 +108,8 @@ async fn run_outcome_credits_steps_and_records_hard_negatives() {
     )
     .await
     .unwrap();
-    assert_eq!(later.steps[0].advantage_q16, 0);
-    assert_eq!(later.steps[0].baseline_revision, 2);
+    assert_eq!(later.steps.as_slice()[0].advantage_q16, 0);
+    assert_eq!(later.steps.as_slice()[0].baseline_revision, 2);
     assert_eq!(baseline(&h, "urn:cap:x"), (5_899, 3));
 
     // The same run replayed answers the stored receipt and moves nothing.

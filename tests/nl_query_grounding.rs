@@ -59,6 +59,8 @@ async fn nl(state: &test_support::SharedState, id: u64, uql: &str) -> String {
             text: uql.into(),
             graph: GRAPH.into(),
             history: Vec::new(),
+            dialect: Default::default(),
+            max_steps: None,
         },
     )
     .await;

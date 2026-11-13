@@ -539,6 +539,7 @@ pub async fn unified_query(
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
+                code_map: None,
             },
         ),
     )
