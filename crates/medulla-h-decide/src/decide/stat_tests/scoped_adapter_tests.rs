@@ -293,7 +293,9 @@ async fn monitor_rolls_back_a_degrading_adapter_through_the_pointer() {
     )
     .await
     .unwrap();
-    let monitor = |h: &Harness| {
+    async fn monitor(
+        h: &Harness,
+    ) -> medulla_decision_types::decision::statistical::retrieval_adapter::AdapterMonitored {
         let request = AdapterMonitorRequest {
             graph: GRAPH.to_string(),
             scope: corpus(),
@@ -305,13 +307,11 @@ async fn monitor_rolls_back_a_degrading_adapter_through_the_pointer() {
         let write = LearningWrite::MonitorAdapter {
             request: Box::new(request),
         };
-        async move {
-            match learn(h, "decider", write).await.unwrap() {
-                LearningRecorded::Monitored(monitored) => *monitored,
-                other => panic!("monitor: {other:?}"),
-            }
+        match learn(h, "decider", write).await.unwrap() {
+            LearningRecorded::Monitored(monitored) => *monitored,
+            other => panic!("monitor: {other:?}"),
         }
-    };
+    }
 
     // Too few outcomes: keep watching, the pointer stays.
     let seen = monitor(&h).await;

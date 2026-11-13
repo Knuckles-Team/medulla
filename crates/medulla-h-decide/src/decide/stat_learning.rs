@@ -42,6 +42,7 @@ use super::stat_support::invalid_parameter as invalid;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::Method;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_server_api::authority_context::VerifiedRequestContext;
