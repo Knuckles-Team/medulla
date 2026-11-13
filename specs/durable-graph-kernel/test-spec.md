@@ -524,7 +524,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/adopt_workitem_authenticated_replay.rs::lease_consumption_expiry_through_signed_dispatch` (L3) | `MEDULLA-DURABLE-KERNEL-R039.2` | A signed dispatch consumes a live lease strictly before its expiry. | A consume at or after the expiry refuses and the row is unchanged. |
 | `benches/redb_write_latency_bench.rs::paired_pending_consumption` (L5) | `MEDULLA-DURABLE-KERNEL-R039.4.2` | The group records the configuration and p50 and p99 for 64 KiB preimages. | A commit-phase p99 over 10 ms fails the nightly job. |
 | `tests/operator_command_store_upgrade_cli.rs::v2_store_opens_and_serves_reads` (L4) | `MEDULLA-DURABLE-KERNEL-R063.2` | A stored v2 fixture opens and serves reads through the lifted row. | A row with any other schema version refuses with GRAPH_META_VERSION_UNSUPPORTED. |
-| `benches/shape_validation.rs::shape_validation` (L5) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
+| `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The nightly bench target `shape_validation` (benches/shape_validation.rs, run as a bench, not a test) writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/test_service_layer.py::test_service_channel_group_leave_returns_leave_result` (L4) | `MEDULLA-DURABLE-KERNEL-R068` | A join, leave and rejoin over a served engine return each its own tagged result. | A leave never returns the stored join result. |
 | `crates/medulla-work-types/src/task_queue.rs::tests::each_type_round_trips_and_each_refusal_has_its_code` (L1) | `MEDULLA-DURABLE-KERNEL-R071` | Each type round-trips through serde with its bounds at the limit values. | Each out-of-bound field returns its registered refusal code. |
@@ -632,7 +632,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 
 | Requirements | Planned test |
 |---|---|
-| `MEDULLA-DURABLE-KERNEL-R042.2`, `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench.rs::run_owner_recovery` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
@@ -682,7 +682,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `tests/adopt_workitem_authenticated_replay.rs::served_publish_with_attached_plan` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.100.2` | `tests/bench_claim_cli.rs::each_missing_or_invalid_field_is_refused_with_its_code` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.5` | `tests/bench_claim_cli.rs::one_receipt_per_protocol_with_session_count` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R042.2` | `tests/bench_claim_cli.rs::receipt_carries_configuration_corpus_digest_p50_p99` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.2` | `tests/bench_claim_cli.rs::receipt_carries_configuration_corpus_digest_p50_p99` |
 | `MEDULLA-DURABLE-KERNEL-R042.6` | `tests/bench_claim_cli.rs::regression_over_ten_percent_fails_and_missing_baseline_is_created` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R860.2` | `tests/bolt_roundtrip.rs::run_returns_records` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.750.1` | `tests/dispatch/test_agent_turn_envelope_served.py::test_signed_envelope_carries_subset_and_decision_ref` (planned) |

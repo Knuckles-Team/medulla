@@ -2027,6 +2027,13 @@ name = "attached_mysql_served"
 path = "tests/attached_mysql_served.rs"
 required-features = ["federation-sql"]
 
+# Compiled shape memoization against parsing per write (MEDULLA-DURABLE-KERNEL-R064): nightly.
+[[bench]]
+name = "shape_validation"
+path = "benches/shape_validation.rs"
+harness = false
+required-features = ["shacl"]
+
 # Wire protocol latency at 64 concurrent sessions (MEDULLA-DURABLE-KERNEL-R042.5): nightly budget.
 [[bench]]
 name = "wire_protocols"

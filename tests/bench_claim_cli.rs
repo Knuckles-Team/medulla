@@ -165,6 +165,9 @@ fn each_missing_or_invalid_field_is_refused_with_its_code() {
 #[path = "../benches/common/claim.rs"]
 mod claim;
 #[allow(dead_code)]
+#[path = "../benches/common/latency_receipt.rs"]
+mod latency_receipt;
+#[allow(dead_code)]
 #[path = "../benches/common/wire_receipt.rs"]
 mod wire_receipt;
 
@@ -219,4 +222,118 @@ fn one_receipt_per_protocol_with_session_count() {
         ..case("pgwire", 2.0, 1.0)
     };
     assert!(!empty.within_budget());
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R042.2
+#[test]
+fn receipt_carries_configuration_corpus_digest_p50_p99() {
+    use latency_receipt::{
+        record_target, write_cross_modal_receipt, CrossModalCase, RECEIPT_FIELD_MISSING,
+    };
+
+    let case = |samples: Vec<f64>| CrossModalCase {
+        case: "crossmodal_match_traverse_rank".into(),
+        configuration_digest: sha256_hex(b"1000000/10000000/1000000/384/seed-7"),
+        corpus_digest: sha256_hex(b"corpus"),
+        claims: 1_000_000,
+        edges: 10_000_000,
+        vectors: 1_000_000,
+        dimensions: 384,
+        p50_budget_ms: 150.0,
+        p99_budget_ms: 500.0,
+        // 100 ascending samples: p50 is sample 50, p99 is sample 99.
+        samples_ms: samples,
+    };
+    let ascending = |top: f64| {
+        (1..=100)
+            .map(|i| top * i as f64 / 100.0)
+            .collect::<Vec<_>>()
+    };
+    let root = tempfile::tempdir().unwrap();
+    let held = case(ascending(100.0));
+    let path = write_cross_modal_receipt(root.path(), "3.3.0", &held).expect("write receipt");
+    assert_eq!(
+        path,
+        root.path()
+            .join("3.3.0")
+            .join("crossmodal_match_traverse_rank.json")
+    );
+    let receipt: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(receipt["configuration_digest"], held.configuration_digest);
+    assert_eq!(receipt["corpus_digest"], held.corpus_digest);
+    assert_eq!(receipt["corpus"]["claims"], 1_000_000);
+    assert_eq!(receipt["corpus"]["edges"], 10_000_000);
+    assert_eq!(receipt["corpus"]["vectors"], 1_000_000);
+    assert_eq!(receipt["corpus"]["dimensions"], 384);
+    assert!(receipt["hardware"]["logical_cpus"].is_u64());
+    assert!(receipt["p50_ms"].is_f64() && receipt["p99_ms"].is_f64());
+    assert!(receipt["p50_ms"].as_f64() <= receipt["p99_ms"].as_f64());
+    assert_eq!(receipt["within_budget"], true);
+
+    // A p99 past its budget is reported as missed, never as held.
+    assert!(!case(ascending(900.0)).within_budget());
+
+    // A receipt without a digest or without samples is refused with its code.
+    for bad in [
+        CrossModalCase {
+            corpus_digest: String::new(),
+            ..case(ascending(1.0))
+        },
+        CrossModalCase {
+            configuration_digest: String::new(),
+            ..case(ascending(1.0))
+        },
+        case(vec![]),
+    ] {
+        let err = write_cross_modal_receipt(root.path(), "3.3.0", &bad).unwrap_err();
+        assert!(err.to_string().starts_with(RECEIPT_FIELD_MISSING), "{err}");
+    }
+
+    // The first run sets the target to 1.2 times its p99 and later runs keep it.
+    let targets = record_target(&root.path().join("receipts"), "crossmodal", 100.0).unwrap();
+    record_target(&root.path().join("receipts"), "crossmodal", 999.0).unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(targets).unwrap()).unwrap();
+    assert!((v["crossmodal"].as_f64().unwrap() - 120.0).abs() < 1e-9);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R064
+#[test]
+fn shape_receipt_requires_both_variants() {
+    use latency_receipt::{write_shape_receipt, ShapeBenchCase, SHAPE_RECEIPT_VARIANT_MISSING};
+
+    let case = |memoized: Vec<f64>, parse: Vec<f64>| ShapeBenchCase {
+        writes: 1_000,
+        shapes: 50,
+        profile: "release".into(),
+        memoized_ms: memoized,
+        parse_per_write_ms: parse,
+    };
+    let root = tempfile::tempdir().unwrap();
+
+    // Either variant missing refuses with the variant code and writes nothing.
+    for bad in [case(vec![], vec![1.0]), case(vec![1.0], vec![])] {
+        let err = write_shape_receipt(root.path(), "3.3.0", &bad).unwrap_err();
+        assert!(
+            err.to_string().starts_with(SHAPE_RECEIPT_VARIANT_MISSING),
+            "{err}"
+        );
+    }
+    assert!(!root.path().join("3.3.0").exists());
+
+    // A 30 percent p50 win is adopted; a 10 percent win is not.
+    let win = case(vec![0.7; 10], vec![1.0; 10]);
+    let path = write_shape_receipt(root.path(), "3.3.0", &win).expect("write receipt");
+    let receipt: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    assert_eq!(receipt["case"], "shape_validation");
+    assert_eq!(receipt["writes"], 1_000);
+    assert_eq!(receipt["shapes"], 50);
+    assert_eq!(receipt["profile"], "release");
+    assert!(receipt["hardware"]["arch"].is_string());
+    assert_eq!(receipt["memoized"]["sample_count"], 10);
+    assert_eq!(receipt["parse_per_write"]["sample_count"], 10);
+    assert_eq!(receipt["adopt_memoized"], true);
+    assert!(!case(vec![0.9; 10], vec![1.0; 10]).adopt_memoized());
 }

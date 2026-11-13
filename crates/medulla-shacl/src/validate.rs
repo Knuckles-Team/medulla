@@ -55,6 +55,49 @@ pub fn validate(shapes_graph: &Graph, data_graph: &Graph) -> Result<ValidationRe
     Ok(ValidationReport::from_results(results))
 }
 
+/// A shapes graph whose active root shapes are parsed once and reused across writes
+/// (MEDULLA-DURABLE-KERNEL-R064). [`validate`] re-parses every root shape on each call;
+/// this is the memoized variant the shape-validation bench measures against it. Both
+/// produce the same report for the same inputs.
+pub struct CompiledShapes<'a> {
+    shapes: ShapesGraph<'a>,
+    roots: Vec<Shape>,
+}
+
+impl<'a> CompiledShapes<'a> {
+    /// Parse every active root shape of `shapes_graph` once.
+    pub fn compile(shapes_graph: &'a Graph) -> Self {
+        let shapes = ShapesGraph::new(shapes_graph);
+        let roots = shapes
+            .root_shapes()
+            .iter()
+            .map(|term| shapes.parse_shape(term))
+            .filter(|shape| !shape.deactivated)
+            .collect();
+        CompiledShapes { shapes, roots }
+    }
+
+    /// Number of active root shapes held.
+    pub fn root_count(&self) -> usize {
+        self.roots.len()
+    }
+
+    /// Validate `data_graph` against the compiled shapes. `Err` as for [`validate`].
+    pub fn validate(&self, data_graph: &Graph) -> Result<ValidationReport, String> {
+        let v = Validator {
+            shapes: ShapesGraph::new(self.shapes.graph()),
+            data: data_graph,
+        };
+        let mut results = Vec::new();
+        for shape in &self.roots {
+            for focus in v.focus_nodes(shape) {
+                v.validate_focus(shape, &focus, &mut results, 0)?;
+            }
+        }
+        Ok(ValidationReport::from_results(results))
+    }
+}
+
 struct Validator<'a> {
     shapes: ShapesGraph<'a>,
     data: &'a Graph,

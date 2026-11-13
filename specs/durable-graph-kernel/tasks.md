@@ -95,7 +95,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T088 MEDULLA-DURABLE-KERNEL-R062 Abandoned uploads are reclaimed after an idle TTL
 - [ ] T089 MEDULLA-DURABLE-KERNEL-R063.1 Schema-version fields exist and mismatches are refused, not lifted
 - [ ] T090 MEDULLA-DURABLE-KERNEL-R063.2 A version-2 graph metadata row is lifted to the current representation on read
-- [ ] T091 MEDULLA-DURABLE-KERNEL-R064 Compiled shape memoization is benchmarked against parsing per write
+- [x] T091 MEDULLA-DURABLE-KERNEL-R064 Compiled shape memoization is benchmarked against parsing per write
 - [ ] T092 [US1] MEDULLA-DURABLE-KERNEL-R065.1 The transaction coordinator lane is disjoint from graph lanes
 - [ ] T093 [US1] MEDULLA-DURABLE-KERNEL-R066 Published contract metadata matches BlobRef/BlobUnref idempotent behavior
 - [ ] T094 [US5] MEDULLA-DURABLE-KERNEL-R067 Trace capture isolates each test's events from concurrent noise
@@ -216,7 +216,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
 - [ ] T208 MEDULLA-DURABLE-KERNEL-R083.7 Long-context coherence across tiers
 - [ ] T209 MEDULLA-DURABLE-KERNEL-R083.8 Tier refusals
-- [ ] T210 [US6] MEDULLA-DURABLE-KERNEL-R042.2 Cross-modal query latency benchmark
+- [x] T210 [US6] MEDULLA-DURABLE-KERNEL-R042.2 Cross-modal query latency benchmark
 - [ ] T211 [US6] MEDULLA-DURABLE-KERNEL-R042.3 KV-cache tiering benchmark
 - [ ] T212 [US6] MEDULLA-DURABLE-KERNEL-R042.5 Wire protocol latency benchmark
 - [ ] T213 [US6] MEDULLA-DURABLE-KERNEL-R042.6 Benchmark receipts are compared against the last published release

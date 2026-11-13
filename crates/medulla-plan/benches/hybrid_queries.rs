@@ -25,6 +25,16 @@
 //! (a default `cargo bench -p medulla-plan` SKIPS it — `required-features = ["query"]`, and
 //! the `execute` leg is `query`-gated).
 
+#[allow(dead_code)]
+#[path = "../../../benches/common/claim.rs"]
+mod claim;
+#[allow(dead_code)]
+#[path = "../../../benches/common/latency_receipt.rs"]
+mod latency_receipt;
+#[allow(dead_code)]
+#[path = "../../../benches/common/wire_receipt.rs"]
+mod wire_receipt;
+
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use medulla_exec::{
     algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx,
@@ -38,6 +48,7 @@ use medulla_retrieval::{
 };
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use std::hint::black_box;
 
 // ── deterministic PRNG (LCG) — no rand dep, so the dataset is byte-reproducible ──
@@ -813,6 +824,139 @@ fn bench_leanrag_bounded_topk(c: &mut Criterion) {
     group.finish();
 }
 
+// ── Cross-modal query latency receipt (MEDULLA-DURABLE-KERNEL-R042.2) ──────────────────
+//
+// The nightly corpus: 1 000 000 claims, 10 000 000 edges, 1 000 000 vectors of 384
+// dimensions, built from a fixed seed. The program is the MATCH → TRAVERSE → RANK chain of
+// the cross-source competency queries. One `latency_receipt` is written per run to
+// `benches/receipts/<release>/<case>.json`; the first run records the p99 target
+// (1.2 times its p99) in `benches/receipts/targets.json`, and a later run fails when its
+// p99 exceeds that target.
+
+const XM_CLAIMS: usize = 1_000_000;
+const XM_EDGES_PER_CLAIM: usize = 10;
+const XM_DIM: usize = 384;
+const XM_SEED: u64 = 0x42_0002;
+const XM_QUERIES: usize = 200;
+const XM_P50_BUDGET_MS: f64 = 150.0;
+const XM_P99_BUDGET_MS: f64 = 500.0;
+const XM_CASE: &str = "crossmodal_match_traverse_rank";
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+/// Build the nightly corpus and return it with the SHA-256 of its generated content
+/// (every claim id, every edge endpoint pair and every vector component).
+fn build_crossmodal_corpus() -> (GraphView, SemanticStore, String) {
+    let core = GraphCore::new();
+    let mut rng = Lcg::new(XM_SEED);
+    let mut digest = Sha256::new();
+    let mut semantic = SemanticStore::new();
+    for k in 0..XM_CLAIMS {
+        let id = format!("d{k}");
+        core.add_node(
+            id.clone(),
+            blob(json!({ "type": "Doc", "score": k as i64 })),
+        );
+        let v: Vec<f32> = (0..XM_DIM).map(|_| rng.next_signed()).collect();
+        digest.update(id.as_bytes());
+        for x in &v {
+            digest.update(x.to_le_bytes());
+        }
+        semantic.add_embedding(id, v).unwrap();
+    }
+    for k in 0..XM_CLAIMS {
+        for hop in 1..=XM_EDGES_PER_CLAIM {
+            let to = (k + hop) % XM_CLAIMS;
+            core.add_edge(
+                format!("d{k}"),
+                format!("d{to}"),
+                blob(json!({ "relationship": "CITES" })),
+            )
+            .unwrap();
+            digest.update((k as u64).to_le_bytes());
+            digest.update((to as u64).to_le_bytes());
+        }
+    }
+    let hex: String = digest
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    (core.analysis_snapshot(), semantic, hex)
+}
+
+fn run_crossmodal_receipt() {
+    let (view, semantic, corpus_digest) = build_crossmodal_corpus();
+    let ctx = PlanCtx::new(&view, &semantic);
+    let mut samples_ms = Vec::with_capacity(XM_QUERIES);
+    for q in 0..XM_QUERIES {
+        let plan = Plan::new(vec![
+            Op::Scan {
+                label: "Doc".into(),
+            },
+            Op::Traverse {
+                rel: "CITES".into(),
+                min: 1,
+                max: 2,
+            },
+            Op::Rank {
+                query: query_vec(XM_DIM, QUERY_SEED + q as u64),
+            },
+            Op::Limit { k: 20 },
+        ]);
+        let start = std::time::Instant::now();
+        black_box(execute(&plan, &ctx).unwrap());
+        samples_ms.push(start.elapsed().as_secs_f64() * 1_000.0);
+    }
+    let case = latency_receipt::CrossModalCase {
+        case: XM_CASE.into(),
+        configuration_digest: sha256_hex(
+            format!(
+                "claims={XM_CLAIMS};edges_per_claim={XM_EDGES_PER_CLAIM};dim={XM_DIM};seed={XM_SEED};queries={XM_QUERIES};program=scan,traverse(CITES,1,2),rank,limit(20)"
+            )
+            .as_bytes(),
+        ),
+        corpus_digest,
+        claims: XM_CLAIMS as u64,
+        edges: (XM_CLAIMS * XM_EDGES_PER_CLAIM) as u64,
+        vectors: XM_CLAIMS as u64,
+        dimensions: XM_DIM as u32,
+        p50_budget_ms: XM_P50_BUDGET_MS,
+        p99_budget_ms: XM_P99_BUDGET_MS,
+        samples_ms,
+    };
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../benches/receipts");
+    let release = env!("CARGO_PKG_VERSION");
+    latency_receipt::write_cross_modal_receipt(&root, release, &case).expect("write receipt");
+    let targets = root.join("targets.json");
+    let recorded: serde_json::Map<String, serde_json::Value> = std::fs::read_to_string(&targets)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default();
+    match recorded.get(XM_CASE).and_then(serde_json::Value::as_f64) {
+        None => {
+            latency_receipt::record_target(&root, XM_CASE, case.p99_ms()).expect("record target");
+        }
+        Some(target) if case.p99_ms() > target => {
+            eprintln!(
+                "{XM_CASE}: p99 {:.1} ms exceeds the recorded target {target:.1} ms",
+                case.p99_ms()
+            );
+            std::process::exit(1);
+        }
+        Some(_) => {}
+    }
+    if !case.within_budget() {
+        eprintln!("{XM_CASE}: p50/p99 outside the starting budget");
+        std::process::exit(1);
+    }
+}
+
 fn all_benches(c: &mut Criterion) {
     if run_filter_pushdown_ablation() {
         return; // ablation mode: skip the long criterion sweep
@@ -822,6 +966,7 @@ fn all_benches(c: &mut Criterion) {
     bench_scale_sweep(c);
     bench_recall(c);
     bench_leanrag_bounded_topk(c);
+    run_crossmodal_receipt();
     #[cfg(feature = "owl")]
     bench_reason_rank_traverse(c);
     #[cfg(feature = "timeseries")]
