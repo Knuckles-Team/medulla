@@ -336,6 +336,13 @@ pub const PROBE_VERDICT: &[RefusalCode] = &[
     PROBE_SCORE_OUT_OF_RANGE,
 ];
 
+// The `probe_selection` family's refusal (MEDULLA-DECISION-ENGINE-R818).
+/// A goal selects no legal attack of the tenant's catalog.
+pub const NO_CATALOG_ENTRY_SELECTED: RefusalCode = RefusalCode::new("NO_CATALOG_ENTRY_SELECTED");
+
+/// Every `probe_selection` family code, in declaration order.
+pub const PROBE_SELECTION: &[RefusalCode] = &[NO_CATALOG_ENTRY_SELECTED];
+
 /// Every `round_verdict` family code, in declaration order.
 pub const ROUND_VERDICT: &[RefusalCode] = &[ROUND_NO_PREDICTION];
 
@@ -374,6 +381,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::context_package::REFUSALS,
     ),
     (QuestionKind::ProbeVerdict, PROBE_VERDICT),
+    (QuestionKind::ProbeSelection, PROBE_SELECTION),
     (QuestionKind::RoundVerdict, ROUND_VERDICT),
     (QuestionKind::StageAllocation, STAGE_ALLOCATION),
     (QuestionKind::CriterionReview, CRITERION_REVIEW),

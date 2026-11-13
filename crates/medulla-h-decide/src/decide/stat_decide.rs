@@ -554,7 +554,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::ComparativeAnalysisPlan => {
             medulla_decision_types::decision::comparative_analysis::KNOBS
         }
-        QuestionKind::ProbeVerdict => {
+        QuestionKind::ProbeVerdict | QuestionKind::ProbeSelection => {
             medulla_decision_types::decision::knob_families::red_team::KNOBS
         }
         QuestionKind::CriterionReview => {

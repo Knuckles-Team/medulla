@@ -264,6 +264,8 @@ pub enum QuestionKind {
     IngestShortfall,
     /// Whether a proposed capacity change is allowed against the ledger (MEDULLA-DECISION-ENGINE-R824). See `decision::statistical::capacity`.
     CapacityProposal,
+    /// Which red-team attacks and transforms to run for a stated goal (MEDULLA-DECISION-ENGINE-R818). See `family::probe_selection`.
+    ProbeSelection,
 }
 
 /// What is at stake. Exploration is permitted only for

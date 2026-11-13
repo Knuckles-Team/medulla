@@ -47,6 +47,7 @@ mod path_preference;
 mod placement;
 mod planning_admission;
 mod pre_tool_risk;
+mod probe_selection;
 mod probe_verdict;
 mod process_remediation;
 mod program_store;
@@ -241,6 +242,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         evolution_round::RoundVerdictFamily;
     static STAGEALLOCATIONFAMILY: evolution_round::StageAllocationFamily =
         evolution_round::StageAllocationFamily;
+    static PROBESELECTIONFAMILY: probe_selection::ProbeSelectionFamily =
+        probe_selection::ProbeSelectionFamily;
     static PROBEVERDICTFAMILY: probe_verdict::ProbeVerdictFamily =
         probe_verdict::ProbeVerdictFamily;
     static ITEMRECOMMENDATIONFAMILY: item_recommendation::ItemRecommendationFamily =
@@ -393,6 +396,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ProcessRemediation => &PROCESSREMEDIATIONFAMILY,
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
         QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
+        QuestionKind::ProbeSelection => &PROBESELECTIONFAMILY,
     }
 }
 
@@ -471,6 +475,7 @@ mod tests {
             QuestionKind::ProcessRemediation,
             QuestionKind::IngestShortfall,
             QuestionKind::CapacityProposal,
+            QuestionKind::ProbeSelection,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -539,7 +544,8 @@ mod tests {
             | QuestionKind::ServingTechniqueActivation
             | QuestionKind::ProcessRemediation
             | QuestionKind::IngestShortfall
-            | QuestionKind::CapacityProposal => true,
+            | QuestionKind::CapacityProposal
+            | QuestionKind::ProbeSelection => true,
         };
         assert!(exhaustive);
         kinds
@@ -551,7 +557,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            66,
+            67,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

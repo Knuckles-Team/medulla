@@ -112,6 +112,7 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::ProcessRemediation,
     QuestionKind::IngestShortfall,
     QuestionKind::CapacityProposal,
+    QuestionKind::ProbeSelection,
 ];
 
 /// The samples the budget report takes per group.
@@ -193,6 +194,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ProcessRemediation => "process_remediation",
         QuestionKind::IngestShortfall => "ingest_shortfall",
         QuestionKind::CapacityProposal => "capacity_proposal",
+        QuestionKind::ProbeSelection => "probe_selection",
     }
 }
 

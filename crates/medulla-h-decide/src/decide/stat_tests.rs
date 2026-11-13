@@ -1200,6 +1200,9 @@ mod probe_verdict_tests;
 mod comparative_analysis_tests;
 mod memory_change_tests;
 
+// MEDULLA-DECISION-ENGINE-R818: probe selection, served.
+mod probe_selection_tests;
+
 // MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
 mod telemetry_tests;
 
