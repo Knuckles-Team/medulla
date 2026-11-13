@@ -329,3 +329,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T323 [US8] MEDULLA-TYPED-PACKS-R810.3 Python synthetic fixtures compare the library lifecycle through the contract enum, never through string literals
 - [ ] T324 [US8] MEDULLA-TYPED-PACKS-R810.4 QualityReportRef.status becomes QualityOutcome.outcome (no lifecycle, no machine)
 - [ ] T325 [US8] MEDULLA-TYPED-PACKS-R810.5 SeedGraphState becomes SeedGraphContent (a data snapshot, no machine)
+- [ ] T326 [US8] MEDULLA-TYPED-PACKS-R811 Census debt of the connector pack mirror is closed (rollup)
+- [ ] T327 [US8] MEDULLA-TYPED-PACKS-R811.1 Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine
