@@ -261,6 +261,8 @@ knobs! {
     wire_login_cache_ttl_s: u64 = "wire_login.cache_ttl_s", U64(5), [0, 60], "s", Tunable;
     /// Wire listener: milliseconds a pgwire client may take to finish startup and authentication before the connection is dropped (MEDULLA-ENGINE-PARITY-R006.2).
     pgwire_startup_timeout_ms: u64 = "pgwire.startup_timeout_ms", U64(60000), [1000, 600000], "ms", Tunable;
+    /// Graph node history: how many replaced node images each graph keeps so a row recorded at a graph version can be re-read at that version (MEDULLA-DECISION-ENGINE-R121.2). 0 keeps none.
+    graph_node_history_revisions: u64 = "graph.node_history_revisions", U64(200_000), [0, 100_000_000], "revisions", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Rerank calibration: fewest judged (score, relevant) pairs a fit accepts (MEDULLA-DECISION-ENGINE-R822).
@@ -931,6 +933,15 @@ pub fn install(config: KnobConfig) {
     // The source access gate lives below this crate; it reads the resolved staleness bound.
     medulla_graph_core::rls::install_source_acl_stale_after_s(config.ingest_acl_stale_after_s);
     let _ = INSTALLED.set(config);
+    if INSTALLED.set(config).is_ok() {
+        // The graph cores read the retention bound at write time and cannot see this
+        // crate, so the resolved value is handed to them once, here.
+        medulla_graph_core::graph::install_node_history_limit(
+            INSTALLED.get().map_or(0, |installed| {
+                installed.graph_node_history_revisions as usize
+            }),
+        );
+    }
 }
 
 /// The knobs loaded at startup, or the defaults where no loader ran.

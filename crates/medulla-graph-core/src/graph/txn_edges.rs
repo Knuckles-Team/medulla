@@ -173,6 +173,7 @@ impl<'a> GraphTxn<'a> {
             Err(_) => return false,
         };
         let log = format!("CAS_NODE|{}|{}", node_id, HexLedger(&reenc));
+        self.node_history.record_prior(node_id, Some(bytes.clone()));
         self.node_properties
             .insert(node_id.to_string(), Arc::new(reenc));
         self.push_ledger(log);

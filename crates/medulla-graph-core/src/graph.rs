@@ -42,6 +42,7 @@ mod core_schema_analysis;
 mod core_state;
 mod core_stream_enqueue;
 mod core_trajectory;
+mod node_history;
 mod schema_sources;
 mod snapshot;
 mod txn_edges;
@@ -65,6 +66,9 @@ pub use schema_sources::{
     MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES, VIRTUAL_GRAPH_SHAPES,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
+pub use node_history::{
+    install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
+};
 pub use view::GraphView;
 #[cfg(feature = "result-cache")]
 pub use view::ProjectionScope;
@@ -644,6 +648,9 @@ pub struct GraphCore {
     /// used by every existing redb-backed deployment) than this fix's scope,
     /// and belongs in its own reviewed change.
     schema_refs: DashMap<String, u64>,
+    /// Prior node images by version (MEDULLA-DECISION-ENGINE-R121.2): the one source
+    /// for reading a node as of a recorded graph version.
+    node_history: NodeHistory,
     /// BUG A1 follow-up (2026-08-12): count of ledger entries permanently
     /// dropped from the FRONT of [`Self::ledger`] over this `GraphCore`
     /// instance's lifetime, by [`Self::push_ledger`]'s drop-oldest-half cap.
@@ -740,6 +747,9 @@ pub struct GraphTxn<'a> {
     /// PRODUCTION ledger write goes through `Self::push_ledger`, which applies
     /// the cap + drop-accounting policy via `push_ledger_impl`.
     ledger_dropped_total: &'a std::sync::atomic::AtomicU64,
+    /// Shared with `GraphCore::node_history`: every node replacement or removal
+    /// records its prior image here before it writes.
+    node_history: &'a NodeHistory,
 }
 
 /// Whether any property blob recorded on edge `source_id -> target_id` declares

@@ -959,29 +959,23 @@ fn dispatch(
     }
 }
 
-/// The caller's filtered snapshot of every graph a committed record read rows
-/// from, read before the blocking commit; empty for every other op.
+/// Every graph a committed record read rows from, as it stood at the version
+/// each row was read at, read before the blocking commit; empty for every other
+/// op.
 async fn commit_graphs(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     op: &DecisionLogOp,
 ) -> Result<GraphSnapshots, String> {
-    let mut graphs = GraphSnapshots::new();
     let DecisionLogOp::Commit { record, .. } = op else {
-        return Ok(graphs);
+        return Ok(GraphSnapshots::new());
     };
-    for row in record.inputs.graph_rows.iter() {
-        if !graphs.contains_key(&row.graph) {
-            let snapshot = super::stat_support::filtered_view_versioned(
-                state,
-                verified.agent_id(),
-                &row.graph,
-            )
-            .await?;
-            graphs.insert(row.graph.clone(), snapshot);
-        }
-    }
-    Ok(graphs)
+    super::stat_support::historical_views(
+        state,
+        verified.agent_id(),
+        record.inputs.graph_rows.as_slice(),
+    )
+    .await
 }
 
 async fn serve(

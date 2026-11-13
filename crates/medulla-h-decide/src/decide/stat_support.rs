@@ -62,6 +62,77 @@ pub(super) async fn filtered_view_versioned(
     Ok((view, version))
 }
 
+/// Each graph a record read rows from, as it stood at the version each row was
+/// read at (MEDULLA-DECISION-ENGINE-R121.2). A node's image comes from the
+/// graph's retained history at that version, not from the live map; a node that
+/// did not exist then, or that the caller cannot see in the image it had then,
+/// is absent from the returned view. A version the history no longer reaches
+/// refuses `GRAPH_VERSION_RETIRED`; one the graph never reached refuses
+/// `DECISION_REPLAY_MISMATCH`.
+pub(super) async fn historical_views(
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    agent_id: &str,
+    rows: &[medulla_decision_types::decision::statistical::graph_rows::GraphRowProvenance],
+) -> Result<super::stat_replay::GraphSnapshots, String> {
+    use medulla_graph_core::graph::NodeHistoryError;
+    let mut wanted: std::collections::BTreeMap<(String, u64), Vec<&str>> =
+        std::collections::BTreeMap::new();
+    for row in rows {
+        wanted
+            .entry((row.graph.clone(), row.graph_version))
+            .or_default()
+            .push(row.node_id.as_str());
+    }
+    let mut views = super::stat_replay::GraphSnapshots::new();
+    for ((graph, version), ids) in wanted {
+        let (core, isolation) = readable_graph(
+            state,
+            agent_id,
+            &graph,
+            StatisticalErrorCode::CandidatePlanRefused,
+        )
+        .await?;
+        #[cfg(not(feature = "security"))]
+        let _ = isolation;
+        let mut view = core.analysis_snapshot();
+        for id in ids {
+            let image = core
+                .node_properties_at(id, version)
+                .map_err(|error| match error {
+                    NodeHistoryError::Retired { .. } => {
+                        refusal(StatisticalErrorCode::GraphVersionRetired, error.to_string())
+                    }
+                    NodeHistoryError::Future { .. } => format!(
+                        "{}: {error}",
+                        medulla_decision_types::decision::DecisionErrorCode::DecisionReplayMismatch
+                            .as_str()
+                    ),
+                })?;
+            match image {
+                Some(blob) => {
+                    view.node_properties.insert(id.to_string(), blob);
+                }
+                None => {
+                    view.node_properties.remove(id);
+                }
+            }
+            // The warm visibility index describes the live image; drop the entry so
+            // visibility is derived from the image at the recorded version.
+            #[cfg(feature = "security")]
+            {
+                view.visibility_index.remove(id);
+                if view.node_properties.contains_key(id)
+                    && !isolation.can_see_node(agent_id, &view, id)
+                {
+                    view.node_properties.remove(id);
+                }
+            }
+        }
+        views.insert((graph, version), view);
+    }
+    Ok(views)
+}
+
 /// Open a graph for one caller before exposing its data to a statistical read.
 pub(super) async fn readable_graph(
     state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,

@@ -175,6 +175,7 @@ impl GraphCore {
             ledger: &self.ledger,
             node_bloom: &self.node_bloom,
             ledger_dropped_total: &self.ledger_dropped_total,
+            node_history: &self.node_history,
         }
     }
 }

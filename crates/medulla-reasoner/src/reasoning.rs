@@ -96,6 +96,7 @@ fn update_node_properties(
     node_id: &str,
     edit: impl FnOnce(&mut serde_json::Map<String, serde_json::Value>),
 ) {
+    core.record_prior_image(node_id);
     let Some(mut props_msgpack) = core.node_properties.get_mut(node_id) else {
         return;
     };

@@ -5,6 +5,34 @@ impl GraphCore {
         &self.changes
     }
 
+    /// The node's property blob as of graph `version`, from the retained prior
+    /// images (MEDULLA-DECISION-ENGINE-R121.2). `Ok(None)` is a node that did not
+    /// exist at that version; a version the history no longer reaches, or one the
+    /// graph has not reached, refuses.
+    pub fn node_properties_at(
+        &self,
+        node_id: &str,
+        version: u64,
+    ) -> Result<Option<Arc<Vec<u8>>>, NodeHistoryError> {
+        self.node_history
+            .image_at(node_id, version, self.version(), || {
+                self.node_properties
+                    .get(node_id)
+                    .map(|image| image.value().clone())
+            })
+    }
+
+    /// Record the image of `node_id` before a caller that edits `node_properties`
+    /// in place replaces it, so the history keeps it.
+    pub fn record_prior_image(&self, node_id: &str) {
+        self.node_history.record_prior(
+            node_id,
+            self.node_properties
+                .get(node_id)
+                .map(|image| image.value().clone()),
+        );
+    }
+
     /// Attach a durable read-through (CONCEPT:MEDULLA-KG.storage.read-through-seam-exercised). Called once at startup
     /// so a node evicted from RAM is still
     /// served from redb on a RAM miss. A `GraphCore` with no read-through behaves
@@ -39,6 +67,11 @@ impl GraphCore {
         if self.version() >= durable {
             return false;
         }
+        // Lift the counter to just below the authority first, so the bump below lands
+        // exactly on it and the history stamps its writes with the authoritative
+        // version.
+        self.version
+            .fetch_max(durable - 1, std::sync::atomic::Ordering::AcqRel);
         self.mark_dirty();
         self.version
             .fetch_max(durable, std::sync::atomic::Ordering::AcqRel);
@@ -57,6 +90,9 @@ impl GraphCore {
             .version
             .fetch_add(1, std::sync::atomic::Ordering::AcqRel)
             + 1;
+        // The node images the writes since the last bump replaced become the history
+        // of this version (MEDULLA-DECISION-ENGINE-R121.2).
+        self.node_history.stamp(new_version);
         // Retire the lazy secondary indexes made stale by this write — but only the ones a
         // preceding `maintain_indexes` did NOT already bring current (W1.6/P7,
         // CONCEPT:MEDULLA-KG.storage.incremental-index-stamp). A node add/remove that was incrementally

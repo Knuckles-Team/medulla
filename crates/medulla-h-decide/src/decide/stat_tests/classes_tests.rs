@@ -98,6 +98,9 @@ async fn add_graph_rows(h: &Harness, graph: &str, rows: &[(&str, serde_json::Val
     };
     for (id, props) in rows {
         core.add_node(id.to_string(), rmp_serde::to_vec_named(props).unwrap());
+        // The dispatch marks a graph dirty after every committed write; that bump
+        // is the version the node history stamps the write with.
+        core.mark_dirty();
     }
 }
 
@@ -295,13 +298,20 @@ async fn graph_claim_and_evidence_control_answer_class() {
         guard.registry.get("kg-evidence").unwrap().core.clone()
     };
     let before = core.version();
+    // Later writes: ev-1 is relabelled a claim and ev-2 is removed.
     let relabelled =
         serde_json::json!({"type": "Claim", "score": 0.9, "source": "https://example.org/doc/1"});
     core.add_node(
         "ev-1".to_string(),
         rmp_serde::to_vec_named(&relabelled).unwrap(),
     );
-    assert!(core.version() > before, "the write moved the graph version");
+    core.mark_dirty();
+    core.remove_node("ev-2".to_string());
+    core.mark_dirty();
+    assert!(
+        core.version() > before,
+        "the writes moved the graph version"
+    );
     let fresh_claim = decide(&h, graph_class_request(&h, "kg-claim", "Claim").await)
         .await
         .unwrap()
@@ -311,13 +321,57 @@ async fn graph_claim_and_evidence_control_answer_class() {
     assert!(
         decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&fresh_claim)).await).is_ok()
     );
-    // The row the first record read is now a claim: a record that was never
-    // committed refuses at its commit.
-    let mut stale = evidence.clone();
-    stale.record_id = "decision:stale-rows".to_string();
-    stale.record_digest =
-        medulla_decision_types::decision::digest::statistical_record_digest(&stale);
+    // A record never committed before those writes still replays: its rows are
+    // re-read AT the version they were read at, where ev-1 was evidence and
+    // ev-2 existed, not from the live graph.
+    let mut later = evidence.clone();
+    later.record_id = "decision:after-later-writes".to_string();
+    later.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&later);
+    let replayed: DecisionLogCommitted =
+        decode(log_op(&h, "decider", commit(&later)).await).unwrap();
+    assert!(!replayed.replayed);
+    // A record whose rows differ from what the graph held at that version is
+    // refused: it says ev-1 was a claim at a version where it was evidence.
+    let mut forged = evidence.clone();
+    forged.record_id = "decision:forged-rows".to_string();
+    let mut rows = forged.inputs.graph_rows.as_slice().to_vec();
+    rows[0].node_class = GraphNodeClass::Claim;
+    rows[0].source_iri = None;
+    forged.inputs.graph_rows = BoundedVec::new(rows).unwrap();
+    forged.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&forged);
     let refused =
-        decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&stale)).await).unwrap_err();
+        decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&forged)).await).unwrap_err();
     assert!(refused.starts_with("DECISION_REPLAY_MISMATCH"), "{refused}");
+    // A version the graph's retained history no longer reaches refuses with the
+    // typed retirement code instead of answering from the live graph.
+    let retired_graph = {
+        add_graph_rows(
+            &h,
+            "kg-retired",
+            &[(
+                "ev-r",
+                serde_json::json!({"type": "Evidence", "score": 0.8, "source": "urn:doc:r"}),
+            )],
+        )
+        .await;
+        let guard = h.state.read().await;
+        guard.registry.get("kg-retired").unwrap().core.clone()
+    };
+    let recorded = decide(&h, graph_class_request(&h, "kg-retired", "Evidence").await)
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    retired_graph.add_node(
+        "ev-r2".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({"type": "Claim", "score": 0.1})).unwrap(),
+    );
+    retired_graph.mark_dirty();
+    retired_graph.clear();
+    let retired =
+        decode::<DecisionLogCommitted>(log_op(&h, "decider", commit(&recorded)).await).unwrap_err();
+    assert!(retired.starts_with("GRAPH_VERSION_RETIRED"), "{retired}");
 }

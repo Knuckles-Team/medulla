@@ -53,6 +53,12 @@ impl<'a> GraphTxn<'a> {
             self.topo.node_map.insert(node_id.clone(), new_idx);
         }
         let log = format!("ADD_NODE|{}|{}", node_id, HexLedger(&properties_msgpack));
+        self.node_history.record_prior(
+            &node_id,
+            self.node_properties
+                .get(&node_id)
+                .map(|prior| prior.value().clone()),
+        );
         self.node_properties
             .insert(node_id.clone(), Arc::new(properties_msgpack));
         // CONCEPT:MEDULLA-KG.storage.bloom-negative-lookup-guard — record every id ever
@@ -100,6 +106,12 @@ impl<'a> GraphTxn<'a> {
             // Properties first, then topology: a crash mid-remove can never leave
             // a live node index whose properties already vanished (which on reload
             // would resurrect a half-deleted node). Topology is the source of truth.
+            self.node_history.record_prior(
+                &node_id,
+                self.node_properties
+                    .get(&node_id)
+                    .map(|prior| prior.value().clone()),
+            );
             self.node_properties.remove(&node_id);
             for key in incident {
                 self.edge_properties.remove(&key);

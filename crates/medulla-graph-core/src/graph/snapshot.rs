@@ -366,6 +366,7 @@ impl GraphCore {
         core.replace_snapshot(snapshot)?;
         core.version
             .store(version, std::sync::atomic::Ordering::Release);
+        core.node_history.reset(version);
         core.dirty
             .store(false, std::sync::atomic::Ordering::Release);
         Ok(core)
@@ -402,6 +403,8 @@ impl GraphCore {
             })?;
         self.dirty
             .store(false, std::sync::atomic::Ordering::Release);
+        // The projection was loaded at this version: nothing earlier is retained.
+        self.node_history.reset(authoritative_version);
         Ok(())
     }
 
@@ -424,6 +427,8 @@ impl GraphCore {
         // topology writer barrier, then invalidate derivatives of the old image.
         let mut topo = self.topo.write();
         *topo = topology;
+        // The old image's history describes a different image.
+        self.node_history.reset(self.version());
         self.node_properties.clear();
         for (node_id, properties) in node_properties {
             self.node_properties.insert(node_id, properties);

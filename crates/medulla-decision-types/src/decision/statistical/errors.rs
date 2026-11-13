@@ -119,6 +119,9 @@ closed_error_codes! {
         /// A graph evidence row names a `source` that is not an IRI
         /// (MEDULLA-DECISION-ENGINE-R121.2).
         GraphProvenanceMalformed => "GRAPH_PROVENANCE_MALFORMED",
+        /// A recorded graph version is older than the node history the graph still
+        /// retains, so a row cannot be re-read at it (MEDULLA-DECISION-ENGINE-R121.2).
+        GraphVersionRetired => "GRAPH_VERSION_RETIRED",
         /// A thought has a duplicate id, a missing parent or a depth that
         /// disagrees with its parent (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtNodeInvalid => "THOUGHT_NODE_INVALID",

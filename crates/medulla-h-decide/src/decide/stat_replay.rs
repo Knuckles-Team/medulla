@@ -67,50 +67,53 @@ fn stored_matrix(record: &StatisticalDecisionRecord) -> Result<FeatureMatrix, St
     ))
 }
 
-/// The caller's RLS-filtered snapshot of each graph a record read rows from,
-/// with the graph's write version, keyed by graph name.
+/// The graph rows a record names, each graph as it stood at the version the
+/// rows were read at, keyed by `(graph, graph_version)`. Only the rows the
+/// record names are guaranteed to be present, and only when the caller can see
+/// them in the image they had at that version.
 pub(super) type GraphSnapshots =
-    std::collections::BTreeMap<String, (medulla_graph_core::graph::GraphView, u64)>;
+    std::collections::BTreeMap<(String, u64), medulla_graph_core::graph::GraphView>;
 
-/// Re-read the graph rows a record names and refuse a difference
-/// (MEDULLA-DECISION-ENGINE-R121.2). Rows are read from the caller's filtered
-/// snapshot, so a row the caller can no longer see differs as much as a row
-/// whose class or source changed. The store keeps no historical view, so a
-/// graph that moved on with the recorded rows unchanged still replays; the
-/// recorded `graph_version` stays in the record as the version the rows were
-/// read at.
+/// Re-read the graph rows a record names AT the version each was read at and
+/// refuse a difference (MEDULLA-DECISION-ENGINE-R121.2). The view for a row is
+/// built from the graph's retained node history, so a graph that moved on after
+/// the decision still replays, and a row changed or removed afterwards does not
+/// make the replay differ; a row whose image at that version differs from the
+/// record, or that the caller cannot see in that image, is refused.
 pub(super) fn verify_graph_rows(
     record: &StatisticalDecisionRecord,
     graphs: &GraphSnapshots,
 ) -> Result<(), String> {
     for row in record.inputs.graph_rows.iter() {
-        let (view, _) = graphs.get(&row.graph).ok_or_else(|| {
-            mismatch(&format!(
-                "graph {} was not re-read for row {}",
-                row.graph, row.node_id
-            ))
-        })?;
+        let view = graphs
+            .get(&(row.graph.clone(), row.graph_version))
+            .ok_or_else(|| {
+                mismatch(&format!(
+                    "graph {} was not re-read at version {} for row {}",
+                    row.graph, row.graph_version, row.node_id
+                ))
+            })?;
         let properties = view
             .node_properties
             .get(&row.node_id)
             .and_then(|blob| medulla_types::msgpack::decode_property_value(blob.as_slice()).ok())
             .ok_or_else(|| {
                 mismatch(&format!(
-                    "graph row {} is no longer visible in {}",
-                    row.node_id, row.graph
+                    "graph row {} was not visible in {} at version {}",
+                    row.node_id, row.graph, row.graph_version
                 ))
             })?;
-        let now = super::candidates::graph_row_provenance(
+        let then = super::candidates::graph_row_provenance(
             &row.graph,
             row.graph_version,
             &row.node_id,
             &properties,
         )
         .map_err(|detail| mismatch(&detail))?;
-        if now != *row {
+        if then != *row {
             return Err(mismatch(&format!(
-                "graph row {} no longer has the recorded class and source",
-                row.node_id
+                "graph row {} did not have the recorded class and source at version {}",
+                row.node_id, row.graph_version
             )));
         }
     }

@@ -56,6 +56,7 @@ impl GraphCore {
             #[cfg(feature = "security")]
             visibility_index_rebuilds: std::sync::atomic::AtomicU64::new(0),
             schema_refs: DashMap::new(),
+            node_history: NodeHistory::default(),
             ledger_dropped_total: std::sync::atomic::AtomicU64::new(0),
         }
     }

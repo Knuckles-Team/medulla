@@ -118,6 +118,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | none (registry knob, not an environment variable) |
 | `connector_pack.projection_max_attempts` | u64 | 5 | [1, 50] | attempts | Tunable | `MEDULLA_CONNECTOR_PACK_PROJECTION_MAX_ATTEMPTS` |
 | `connector_pack.projection_backoff_ms` | u64 | 1000 | [10, 600000] | milliseconds | Tunable | `MEDULLA_CONNECTOR_PACK_PROJECTION_BACKOFF_MS` |
+| `graph.node_history_revisions` | u64 | 200000 | [0, 100000000] | revisions | Tunable | `MEDULLA_GRAPH_NODE_HISTORY_REVISIONS` |
 
 ## Wire shape
 
