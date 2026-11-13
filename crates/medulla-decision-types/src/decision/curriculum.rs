@@ -59,7 +59,8 @@ pub fn window_runs(policy: &DecisionPolicy) -> u32 {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CurriculumRequest {
-    pub stage: CurriculumStage,
+    /// The stage being judged: a configuration record, not a lifecycle state.
+    pub judged_stage: CurriculumStage,
     pub policy: PromotionPolicy,
 }
 

@@ -37,10 +37,10 @@ fn parse(request: &DecideRequest) -> Result<&CurriculumRequest, String> {
         )));
     };
     let subject = one_option(options, KIND)?;
-    if subject != curriculum.stage.stage_id {
+    if subject != curriculum.judged_stage.stage_id {
         return Err(invalid_parameter(format!(
             "{KIND} declares the stage {} as its one candidate",
-            curriculum.stage.stage_id
+            curriculum.judged_stage.stage_id
         )));
     }
     Ok(curriculum)
@@ -67,13 +67,13 @@ impl DecisionFamily for CurriculumPromotionFamily {
             let outcomes = recent_evaluations(
                 ctx.store,
                 reader,
-                &curriculum.stage.stage_id,
+                &curriculum.judged_stage.stage_id,
                 window as usize,
             )?;
             let reading =
-                promotion_verdict(&curriculum.stage, &curriculum.policy, &outcomes, window)
+                promotion_verdict(&curriculum.judged_stage, &curriculum.policy, &outcomes, window)
                     .map_err(invalid_parameter)?;
-            let subject = curriculum.stage.stage_id.as_str();
+            let subject = curriculum.judged_stage.stage_id.as_str();
             let field = "params.curriculum_promotion";
             let premises = vec![
                 claim(subject, format!("curriculum:stage={subject}"), field),

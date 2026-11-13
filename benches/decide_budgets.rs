@@ -2018,7 +2018,7 @@ fn bench_served_kernels(
         QuestionKind::CurriculumPromotion,
         "curriculum_promotion",
         TypedValue::CurriculumPromotion(Box::new(CurriculumRequest {
-            stage: CurriculumStage {
+            judged_stage: CurriculumStage {
                 stage_id: "bench-stage".to_string(),
                 horizon_steps: 8,
                 window_runs: 20,
