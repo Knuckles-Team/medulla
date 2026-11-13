@@ -89,13 +89,23 @@ class ReleasePublication(unittest.TestCase):
             for index, step in enumerate(steps)
             if "xtask sdist-completeness" in step.get("run", "")
         )
+        # The archive is validated in build-sdist; it is published last, by
+        # the verifier, once every required wheel exists.
+        self.assertFalse(
+            any(
+                step.get("uses") == "./.github/actions/publish-distribution"
+                for step in steps
+            )
+        )
+        self.assertLess(validate, len(steps))
+        verify = self.workflow["jobs"]["verify-pypi"]
+        self.assertIn("build-sdist", verify["needs"])
         publish = next(
-            index
-            for index, step in enumerate(steps)
+            step
+            for step in verify["steps"]
             if step.get("uses") == "./.github/actions/publish-distribution"
         )
-        self.assertLess(validate, publish)
-        self.assertEqual(steps[publish]["with"]["pattern"], "dist-sdist/*.tar.gz")
+        self.assertEqual(publish["with"]["pattern"], "dist/*.tar.gz")
 
     def test_storage_crash_processes_do_not_overlap_sibling_file_tests(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
