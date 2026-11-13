@@ -26,10 +26,6 @@ use crate::agent_library::AgentLibraryStore;
 use crate::connector_pack::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
 use crate::connector_pack::undecodable::decode_stored;
 
-/// Most direct successors one `Read` returns; a concept with more reports
-/// `truncated` so a caller never mistakes a page for the whole set.
-pub const MAX_CONCEPT_SUCCESSORS_READ: usize = 1_024;
-
 const CLAIM_SCHEMA: &str = "concept-claim-result.v1";
 const EDGE_SCHEMA: &str = "concept-lineage-edge-result.v1";
 
@@ -292,6 +288,13 @@ impl AgentLibraryStore {
             .transpose()?
             .map(|stored| concept_record(&id, &stored));
         let edges = read.open_owner_table(medulla_storage::CONCEPT_LINEAGE_EDGES)?;
+        // Most direct successors one `Read` returns (registry knob
+        // `concept_lineage.read_max_successors`); a concept with more reports
+        // `truncated` so a caller never mistakes a page for the whole set.
+        let max_successors = usize::try_from(
+            medulla_server_api::knob_config::knobs().concept_lineage_read_max_successors,
+        )
+        .unwrap_or(usize::MAX);
         let mut successors = Vec::new();
         let mut truncated = false;
         for row in edges
@@ -303,7 +306,7 @@ impl AgentLibraryStore {
             if row_tenant != tenant_id || from != id.as_str() {
                 break;
             }
-            if successors.len() >= MAX_CONCEPT_SUCCESSORS_READ {
+            if successors.len() >= max_successors {
                 truncated = true;
                 break;
             }

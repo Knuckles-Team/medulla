@@ -77,7 +77,7 @@ Decisions made while building:
   `ConceptIdError`, given codes), instead of failing the wire decode with an untyped error.
 - Authorization reuses `agent:component-write` and `agent:component-read`: the concept store is part
   of the component catalog and no new privilege is introduced.
-- `Read` returns the concept and at most `MAX_CONCEPT_SUCCESSORS_READ` direct successors with a
+- `Read` returns the concept and at most `concept_lineage.read_max_successors` (registry knob, default 1024, range [1, 65536]) direct successors with a
   `truncated` flag, so a page is never mistaken for the whole set.
 - Re-claiming an id by its owner, and re-adding an edge, return the first stored evidence and write
   nothing new.

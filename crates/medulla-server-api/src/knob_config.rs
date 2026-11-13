@@ -304,6 +304,8 @@ knobs! {
     designation_reward_decay: f64 = "designation.reward_decay", F64(0.99), [0.5, 1.0], "factor", Tunable;
     /// Designation required-capability cap.
     designation_max_required_capabilities: u64 = "designation.max_required_capabilities", U64(32), [32, 32], "count", Fixed;
+    /// Concept lineage read: most direct successors one `Read` returns before it reports `truncated` (MEDULLA-DURABLE-KERNEL-R094.7.1).
+    concept_lineage_read_max_successors: u64 = "concept_lineage.read_max_successors", U64(1_024), [1, 65_536], "successors", Tunable;
     /// Time a cross-shard COMMIT decision may wait after its request before it is refused (MEDULLA-DECISION-ENGINE-R036.105.2).
     xshard_decision_deadline_ms: u64 = "xshard.decision_deadline_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Topology slot width cap.
