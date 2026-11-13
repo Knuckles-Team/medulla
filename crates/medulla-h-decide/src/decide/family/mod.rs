@@ -6,6 +6,7 @@
 //! family lives in its own `family/<kind>.rs` file.
 
 mod branch_outcome;
+mod capability_designation;
 mod classify;
 mod comparative_analysis_plan;
 mod connector_event_triage;
@@ -173,6 +174,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static SKILLUPGRADEFAMILY: skill_upgrade::SkillUpgradeFamily = skill_upgrade::SkillUpgradeFamily;
     static TEAMCOORDINATIONFAMILY: team_coordination::TeamCoordinationFamily =
         team_coordination::TeamCoordinationFamily;
+    static CAPABILITYDESIGNATIONFAMILY: capability_designation::CapabilityDesignationFamily =
+        capability_designation::CapabilityDesignationFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
     match kind {
@@ -211,6 +214,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::SkillWorkflowCompile => &SKILLWORKFLOWFAMILY,
         QuestionKind::SkillUpgrade => &SKILLUPGRADEFAMILY,
         QuestionKind::TeamCoordination => &TEAMCOORDINATIONFAMILY,
+        QuestionKind::CapabilityDesignation => &CAPABILITYDESIGNATIONFAMILY,
     }
 }
 
@@ -257,6 +261,7 @@ mod tests {
             QuestionKind::SkillWorkflowCompile,
             QuestionKind::SkillUpgrade,
             QuestionKind::TeamCoordination,
+            QuestionKind::CapabilityDesignation,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -293,7 +298,8 @@ mod tests {
             | QuestionKind::ProgramLookup
             | QuestionKind::SkillWorkflowCompile
             | QuestionKind::SkillUpgrade
-            | QuestionKind::TeamCoordination => true,
+            | QuestionKind::TeamCoordination
+            | QuestionKind::CapabilityDesignation => true,
         };
         assert!(exhaustive);
         kinds
@@ -305,7 +311,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            35,
+            36,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

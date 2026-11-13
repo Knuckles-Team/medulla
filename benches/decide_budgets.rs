@@ -120,6 +120,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::SkillWorkflowCompile => "skill_workflow_compile",
         QuestionKind::SkillUpgrade => "skill_upgrade",
         QuestionKind::TeamCoordination => "team_coordination",
+        QuestionKind::CapabilityDesignation => "capability_designation",
     }
 }
 

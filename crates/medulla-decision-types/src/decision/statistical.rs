@@ -168,6 +168,9 @@ pub enum QuestionKind {
     /// Which team member or channel takes a task when a channel is unavailable
     /// (MEDULLA-DECISION-ENGINE-R170). See `decision::team_coordination`.
     TeamCoordination,
+    /// The agents, tools or skills best able to do a job
+    /// (MEDULLA-DECISION-ENGINE-R172). See `decision::capability_designation`.
+    CapabilityDesignation,
 }
 
 /// What is at stake. Exploration is permitted only for

@@ -22,6 +22,7 @@
 //! lives above this module. These are data types and their bounds.
 
 pub mod codes;
+pub mod capability_designation;
 pub mod comparative_analysis;
 pub mod context_bundle;
 pub mod context_package;
