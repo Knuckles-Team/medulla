@@ -1085,7 +1085,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | Evidence | `MEDULLA-DECISION-ENGINE-R812.5` | Retired; see `MEDULLA-DECISION-ENGINE-R805.5`. |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R812.6` | Retired; see `MEDULLA-DECISION-ENGINE-R805.6`. |
 | Model | `MEDULLA-DECISION-ENGINE-R813.1` | `crates/medulla-program/tests/native_program.rs::example_round_trips_per_grader_kind`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
-| Behavior | `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile`; `tests/program_score_source_served.rs::optimize_submit_refuses_client_examples_with_a_score_source`; `tests/program_score_source_served.rs::optimize_submit_refuses_client_examples_with_a_score_source` |
 | Wiring | `MEDULLA-DECISION-ENGINE-R813.3` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
 | Refusal | `MEDULLA-DECISION-ENGINE-R813.4` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::score_refusals` |
 | Evidence | `MEDULLA-DECISION-ENGINE-R813.5` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::example_names_score_grader_author_and_run` |

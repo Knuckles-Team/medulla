@@ -19,9 +19,10 @@ use std::sync::Arc;
 use medulla_modality::{Classification, OpaqueRef, PolicyEnvelope, PrivacyAttestation};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_program::{
-    AdapterKind, EvaluationSummary, FieldRole, FieldSpec, ModuleKind, OptimizationBudget,
-    OptimizationRequest, OptimizerKind, ProgramModality, ProgramRevision, PromotionPolicy,
-    ScoreSource, SignatureSpec, TrainingCorpus, PROGRAM_SCHEMA_VERSION,
+    AdapterKind, EvaluationSummary, ExampleOutcome, ExampleSplit, FieldRole, FieldSpec, GraderKind,
+    ModuleKind, OptimizationBudget, OptimizationRequest, OptimizerKind, ProgramModality,
+    ProgramRevision, PromotionPolicy, ScoreSource, SignatureSpec, TrainingCorpus, TrainingExample,
+    PROGRAM_SCHEMA_VERSION,
 };
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -272,6 +273,90 @@ fn optimize_submit_builds_its_corpus_from_stored_scores() {
             assert!(
                 staged.error.is_none(),
                 "the stored scores must build a corpus: {}",
+                refusal(&staged)
+            );
+        });
+    })
+    .expect("start engine driver");
+    medulla_server::join_engine_driver(driver).expect("engine driver failed");
+}
+
+/// A client that names a score source and also sends its own examples is
+/// refused with the typed argument error, and no job is staged.
+// spec: MEDULLA-DECISION-ENGINE-R813.2
+#[test]
+fn optimize_submit_refuses_client_examples_with_a_score_source() {
+    let driver = medulla_server::spawn_engine_driver(|| {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        runtime.block_on(async {
+            let directory = tempfile::tempdir().expect("private persistence");
+            let dir = directory.path().to_string_lossy().into_owned();
+            let persistence: Arc<dyn PersistenceBackend> =
+                Arc::new(RedbBackend::open(dir.clone(), 64).expect("open persistence"));
+            let state = test_support::state_with(
+                SECRET,
+                common::current_isolation(),
+                Some(dir),
+                Some(persistence),
+            );
+
+            // A stored score exists, so the refusal is about the client's
+            // examples and not about an empty corpus.
+            put_node(
+                &state,
+                10,
+                "run-a",
+                serde_json::json!({"type": "ExperimentRun"}),
+            )
+            .await;
+            put_node(
+                &state,
+                11,
+                "score-a",
+                serde_json::json!({
+                    "type": "Score", "value": 4.0, "range_min": 1.0,
+                    "range_max": 5.0, "grader_kind": "human",
+                }),
+            )
+            .await;
+            link_run(&state, 12, "score-a", "run-a").await;
+
+            let mut request = score_request();
+            request.corpus.examples.push(TrainingExample {
+                example_ref: opaque("example", "client-example"),
+                input_refs: vec![opaque("content", "client-input")],
+                expected_output_ref: None,
+                observed_output_ref: None,
+                feedback_ref: None,
+                trace_ref: None,
+                split: ExampleSplit::Train,
+                outcome: ExampleOutcome::Failure,
+                grader_kind: GraderKind::Human,
+                score_ref: None,
+                author: None,
+                score: 0.5,
+                weight: 1.0,
+                evidence: Vec::new(),
+            });
+            let refused = Box::pin(test_support::dispatch(&state, submit(20, &request))).await;
+            let text = refusal(&refused);
+            assert!(
+                text.contains("INVALID_ARGUMENT")
+                    && text.contains("a request that names a score source carries no examples"),
+                "client examples beside a score source must be refused as invalid: {text}"
+            );
+
+            // The same request without the client's examples stages the job.
+            let staged =
+                Box::pin(test_support::dispatch(&state, submit(21, &score_request()))).await;
+            assert!(
+                staged.error.is_none(),
+                "the stored score must still build a corpus: {}",
                 refusal(&staged)
             );
         });
