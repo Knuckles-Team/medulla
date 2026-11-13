@@ -49,7 +49,7 @@ fn round_types_round_trip() {
         (1, 2)
     );
     let allocation = StageAllocation {
-        stage: "propose".into(),
+        stage_id: "propose".into(),
         model_ref: "model:large@3".into(),
         impact: 12,
         candidate_slots: 8,
@@ -123,7 +123,7 @@ fn model(model_ref: &str, cost: u64, strength: u32, adequate: bool) -> ModelOpti
 
 fn stage(id: &str, impact: Option<i64>) -> StageInput {
     StageInput {
-        stage: id.into(),
+        stage_id: id.into(),
         impact,
     }
 }
@@ -252,4 +252,21 @@ fn grading_must_cover_the_rubric_and_the_artifact() {
         check_grading(&report("other", &[true, true, true]), &rubric, None),
         Err(CriterionRefusal::RubricMismatch { .. })
     ));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.10
+#[test]
+fn no_writer_sets_stage_outside_apply() {
+    // The census named `stage: String` on both records. A stage id names a stage; it is not a
+    // lifecycle state, so it has no machine. The Rust field is `stage_id`, the wire key is unchanged.
+    let input: StageInput = serde_json::from_value(serde_json::json!({"stage": "a", "impact": 5}))
+        .expect("wire key stage");
+    assert_eq!(input.stage_id, "a");
+    assert_eq!(
+        serde_json::to_value(&input).unwrap(),
+        serde_json::json!({"stage": "a", "impact": 5})
+    );
+    let source = include_str!("../evolution_round.rs");
+    let production = source.split("#[cfg(test)]").next().unwrap();
+    assert!(!production.contains("pub stage: String"));
 }

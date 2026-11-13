@@ -9,7 +9,7 @@ use medulla_decision_outcome_types::{
     policy_evolution::OpenWeightPolicyCapability, policy_evolution::PolicyCapture,
     policy_evolution::PolicyEvaluation, policy_evolution::PolicyEvolutionRecord,
     policy_evolution::PolicyEvolutionRecordBody, policy_evolution::PolicyRefusal,
-    policy_evolution::TrainingRun, policy_evolution::TrainingRunStatus,
+    policy_evolution::TrainingRun, policy_evolution::TrainingRunOutcome,
     policy_evolution::VersionOrigin,
 };
 
@@ -114,7 +114,7 @@ fn admit_version(
         return Ok(());
     };
     let run: TrainingRun = fetch(lookup, training_run_id.as_str(), record_missing)?;
-    let TrainingRunStatus::Succeeded { output } = &run.status else {
+    let TrainingRunOutcome::Succeeded { output } = &run.outcome else {
         return Err(PolicyRefusal::RunNotSucceeded);
     };
     let produced = version.adapter_digest == Some(output.artifact_digest)

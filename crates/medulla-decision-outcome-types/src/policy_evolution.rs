@@ -27,7 +27,7 @@ pub use records::{
     AdapterSpec, ControlSetting, EvaluationMetrics, EvaluationVerdict, KlEstimator, LogprobSupport,
     ModelPolicyVersion, OpenWeightPolicyCapability, PolicyControls, PolicyEvaluation,
     ResourceObservation, SafetyOutcome, TrainingMethod, TrainingOutput, TrainingRun,
-    TrainingRunStatus, VersionOrigin,
+    TrainingRunOutcome, VersionOrigin,
 };
 pub use stored::{
     is_policy_evolution_row, PolicyRecordStored, StoredPolicyRecord, POLICY_RECORD_NODE_TYPE,

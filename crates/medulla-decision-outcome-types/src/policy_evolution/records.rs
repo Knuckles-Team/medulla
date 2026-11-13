@@ -200,12 +200,13 @@ pub struct TrainingOutput {
     pub artifact_ref: OpaqueId,
 }
 
-/// Terminal status. Only a succeeded run carries an output, so a failed or
+/// How the run ended, recorded once when the receipt is written; the receipt has no
+/// lifecycle and never moves between outcomes (MEDULLA-DECISION-ENGINE-R830.11). Only a succeeded run carries an output, so a failed or
 /// cancelled run has nothing a version could name.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum TrainingRunStatus {
+pub enum TrainingRunOutcome {
     Succeeded { output: TrainingOutput },
     Failed,
     Cancelled,
@@ -228,7 +229,9 @@ pub struct TrainingRun {
     pub hyperparameters_digest: Digest256,
     #[serde(default)]
     pub resources: ResourceObservation,
-    pub status: TrainingRunStatus,
+    /// Stored and served under the key `status`, unchanged.
+    #[serde(rename = "status")]
+    pub outcome: TrainingRunOutcome,
     #[serde(default)]
     pub log: Option<HeldBlobRef>,
 }

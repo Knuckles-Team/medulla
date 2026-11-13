@@ -253,11 +253,11 @@ impl DecisionFamily for StageAllocationFamily {
             for stage in &stages {
                 premises.push(match stage.impact {
                     Some(impact) => premise(
-                        format!("allocation.stage_impact:{}={impact}", stage.stage),
+                        format!("allocation.stage_impact:{}={impact}", stage.stage_id),
                         FamilyPremiseSource::Request("params.stages"),
                     ),
                     None => premise(
-                        format!("allocation.impact_missing:{}", stage.stage),
+                        format!("allocation.impact_missing:{}", stage.stage_id),
                         FamilyPremiseSource::Request("params.stages"),
                     ),
                 });
@@ -265,7 +265,7 @@ impl DecisionFamily for StageAllocationFamily {
             let mut executed = advisory(
                 allocations
                     .iter()
-                    .map(|a| format!("{}={}", a.stage, a.model_ref))
+                    .map(|a| format!("{}={}", a.stage_id, a.model_ref))
                     .collect(),
             )?;
             executed.family_premises = premises;

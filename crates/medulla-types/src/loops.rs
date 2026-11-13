@@ -99,8 +99,10 @@ pub struct WorkOffer {
 pub struct StageBeacon {
     /// The loop id.
     pub loop_id: String,
-    /// The stage name.
-    pub stage: String,
+    /// The stage identifier the loop reports. It names a stage, it is not a lifecycle
+    /// state (MEDULLA-DECISION-ENGINE-R830.9); the wire key stays `stage`.
+    #[serde(rename = "stage")]
+    pub stage_id: String,
     /// Beacon time, milliseconds since the epoch.
     pub at_ms: u64,
 }
@@ -340,7 +342,7 @@ mod tests {
         });
         round_trip(&StageBeacon {
             loop_id: "loop-1".into(),
-            stage: "learn".into(),
+            stage_id: "learn".into(),
             at_ms: 3,
         });
         let sample = ImprovementSample {
@@ -392,5 +394,25 @@ mod tests {
         )
         .is_err());
         assert!(serde_json::from_value::<LoopOp>(serde_json::json!({"op": "unknown"})).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.9
+    #[test]
+    fn no_writer_sets_stage_outside_apply() {
+        // The census named `StageBeacon.stage: String`. A beacon is an append-only report of a
+        // stage identifier; it has no lifecycle. The Rust field is `stage_id`, the wire key is
+        // unchanged, and the field is only set where a beacon is constructed.
+        let beacon: StageBeacon = serde_json::from_value(serde_json::json!({
+            "loop_id": "l", "stage": "learn", "at_ms": 1
+        }))
+        .unwrap();
+        assert_eq!(beacon.stage_id, "learn");
+        assert_eq!(
+            serde_json::to_value(&beacon).unwrap(),
+            serde_json::json!({"loop_id": "l", "stage": "learn", "at_ms": 1})
+        );
+        let source = include_str!("loops.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains("pub stage: String"));
     }
 }

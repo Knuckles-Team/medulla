@@ -40,10 +40,12 @@ pub enum SourceReliability {
     },
 }
 
-/// The closed `state` tag of [`SourceReliability`].
+/// The closed tag of [`SourceReliability`]: which of the three read answers a
+/// decoded value is. It names an answer, not a lifecycle, so it has no
+/// transitions (MEDULLA-DECISION-ENGINE-R830.8).
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
-enum SourceReliabilityState {
+enum SourceReliabilityKind {
     Absent,
     InsufficientHistory,
     Estimated,
@@ -54,7 +56,8 @@ enum SourceReliabilityState {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceReliabilityWire {
-    state: SourceReliabilityState,
+    #[serde(rename = "state")]
+    kind: SourceReliabilityKind,
     trials: Option<u64>,
     min_support: Option<u64>,
     mean: Option<f64>,
@@ -67,7 +70,7 @@ impl<'de> Deserialize<'de> for SourceReliability {
         use serde::de::Error;
         let wire = SourceReliabilityWire::deserialize(deserializer)?;
         let SourceReliabilityWire {
-            state,
+            kind,
             trials,
             min_support,
             mean,
@@ -76,8 +79,8 @@ impl<'de> Deserialize<'de> for SourceReliability {
         } = wire;
         let extra = |state: &str| D::Error::custom(format!("unexpected field for state `{state}`"));
         let missing = |field: &'static str| D::Error::missing_field(field);
-        match state {
-            SourceReliabilityState::Absent => {
+        match kind {
+            SourceReliabilityKind::Absent => {
                 if trials.is_some()
                     || min_support.is_some()
                     || mean.is_some()
@@ -88,7 +91,7 @@ impl<'de> Deserialize<'de> for SourceReliability {
                 }
                 Ok(Self::Absent)
             }
-            SourceReliabilityState::InsufficientHistory => {
+            SourceReliabilityKind::InsufficientHistory => {
                 if mean.is_some() || lower.is_some() || upper.is_some() {
                     return Err(extra("insufficient_history"));
                 }
@@ -97,7 +100,7 @@ impl<'de> Deserialize<'de> for SourceReliability {
                     min_support: min_support.ok_or_else(|| missing("min_support"))?,
                 })
             }
-            SourceReliabilityState::Estimated => {
+            SourceReliabilityKind::Estimated => {
                 if min_support.is_some() {
                     return Err(extra("estimated"));
                 }
@@ -161,5 +164,18 @@ mod tests {
         assert!(serde_json::from_str::<SourceReliability>(r#"{"state":"absent","x":1}"#).is_err());
         let codes = super::super::codes::SHARED;
         assert!(REFUSALS.iter().all(|c| !codes.contains(c)));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.8
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        // The census named `SourceReliabilityWire.state`; the value is a read answer built
+        // once at decode, not a lifecycle. The Rust names say so and the wire tag is unchanged.
+        let source = include_str!("reputation.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains("SourceReliabilityState"));
+        assert!(!production.contains(".state ="));
+        let wire = serde_json::to_value(SourceReliability::Absent).unwrap();
+        assert_eq!(wire, serde_json::json!({"state": "absent"}));
     }
 }

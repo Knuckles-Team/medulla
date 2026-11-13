@@ -939,10 +939,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T928 [US6] MEDULLA-DECISION-ENGINE-R830.5 Gap/GapState state machine: route 1 census findings through GapState::apply
 - [ ] T929 [US6] MEDULLA-DECISION-ENGINE-R830.6 LoopInstance/LoopState state machine: route 13 census findings through LoopState::apply
 - [ ] T930 [US6] MEDULLA-DECISION-ENGINE-R830.7 PlanItem/PlanStatus state machine: route 1 census findings through PlanStatus::apply
-- [ ] T931 [US6] MEDULLA-DECISION-ENGINE-R830.8 SourceReliabilityWire/SourceReliabilityState state machine: route 1 census findings through SourceReliabilityState::apply
-- [ ] T932 [US6] MEDULLA-DECISION-ENGINE-R830.9 StageBeacon/LoopStage state machine: route 1 census findings through LoopStage::apply
-- [ ] T933 [US6] MEDULLA-DECISION-ENGINE-R830.10 StageInput/EvolutionStage state machine: route 2 census findings through EvolutionStage::apply
-- [ ] T934 [US6] MEDULLA-DECISION-ENGINE-R830.11 TrainingRun/TrainingRunStatus state machine: route 1 census findings through TrainingRunStatus::apply
+- [x] T931 [US6] MEDULLA-DECISION-ENGINE-R830.8 SourceReliabilityKind rename (not a lifecycle)
+- [x] T932 [US6] MEDULLA-DECISION-ENGINE-R830.9 StageBeacon.stage_id rename (not a lifecycle)
+- [x] T933 [US6] MEDULLA-DECISION-ENGINE-R830.10 StageInput/StageAllocation stage_id rename (not a lifecycle)
+- [x] T934 [US6] MEDULLA-DECISION-ENGINE-R830.11 TrainingRunOutcome rename (not a lifecycle)
 - [ ] T935 [US6] MEDULLA-DECISION-ENGINE-R831 Census debt of the decision engine is closed (rollup)
 - [ ] T936 [US6] MEDULLA-DECISION-ENGINE-R831.1 VerifierCase/VerifierCaseState state machine: new VerifierCaseState::apply, route every writer through it
 - [ ] T937 [US6] MEDULLA-DECISION-ENGINE-R831.2 LedgerEntry/LedgerStatus state machine: holder-level transition delegating to LedgerStatus::apply

@@ -257,7 +257,7 @@ fn every_policy_operation_and_receipt_round_trips() {
             gpu_seconds: 2,
             peak_memory_bytes: 4096,
         },
-        status: TrainingRunStatus::Succeeded {
+        outcome: TrainingRunOutcome::Succeeded {
             output: TrainingOutput {
                 artifact_digest: digest(15),
                 artifact_ref: id("artifacts:policy-v2"),
@@ -468,4 +468,30 @@ fn outcome_refusal_enums_map_to_folded_codes() {
     for refusal in &policy {
         assert_eq!(DecisionRefusal::code(refusal).as_str(), refusal.code());
     }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.11
+#[test]
+fn no_writer_sets_status_outside_apply() {
+    // The census named `TrainingRun.status`. The record is a receipt written once, with its
+    // outcome; it never moves, so it has no machine. The Rust field is `outcome`; the stored
+    // and served key stays `status`, and no code assigns the field after construction.
+    let run: TrainingRun = serde_json::from_value(serde_json::json!({
+        "capability_id": "polcap:1", "work_item_id": "work:1", "base_version_id": "polver:base",
+        "input_capture_ids": ["polcapture:1"],
+        "method": {"method": "klpo", "estimator": {"estimator": "sampled_token"}},
+        "adapter": {"adapter": "lora", "rank": 8},
+        "trainer_image_digest": "0d".repeat(32), "hyperparameters_digest": "0e".repeat(32),
+        "status": {"status": "failed"},
+    }))
+    .expect("wire key status");
+    assert_eq!(run.outcome, TrainingRunOutcome::Failed);
+    assert_eq!(
+        serde_json::to_value(&run).unwrap()["status"],
+        serde_json::json!({"status": "failed"})
+    );
+    let source = include_str!("records.rs");
+    let production = source.split("#[cfg(test)]").next().unwrap();
+    assert!(!production.contains("TrainingRunStatus"));
+    assert!(!production.contains(".outcome ="));
 }

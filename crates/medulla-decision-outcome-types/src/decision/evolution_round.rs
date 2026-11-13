@@ -65,7 +65,10 @@ impl Default for EvolutionDefaults {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StageAllocation {
-    pub stage: String,
+    /// The stage identifier. It names a stage, it is not a lifecycle state
+    /// (MEDULLA-DECISION-ENGINE-R830.10); the wire key stays `stage`.
+    #[serde(rename = "stage")]
+    pub stage_id: String,
     pub model_ref: String,
     pub impact: i64,
     /// The most harness candidates the stage probes
@@ -196,7 +199,9 @@ pub struct ModelOption {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StageInput {
-    pub stage: String,
+    /// The stage identifier; the wire key stays `stage`.
+    #[serde(rename = "stage")]
+    pub stage_id: String,
     pub impact: Option<i64>,
 }
 
@@ -313,7 +318,7 @@ pub fn allocate_stage_models(
     let mut allocations: Vec<StageAllocation> = stages
         .iter()
         .map(|s| StageAllocation {
-            stage: s.stage.clone(),
+            stage_id: s.stage_id.clone(),
             model_ref: base.model_ref.clone(),
             impact: s.impact.unwrap_or(0),
             candidate_slots,
@@ -327,7 +332,7 @@ pub fn allocate_stage_models(
         stages[*b]
             .impact
             .cmp(&stages[*a].impact)
-            .then_with(|| stages[*a].stage.cmp(&stages[*b].stage))
+            .then_with(|| stages[*a].stage_id.cmp(&stages[*b].stage_id))
     });
     if strong.model_ref == base.model_ref {
         return Ok(allocations);

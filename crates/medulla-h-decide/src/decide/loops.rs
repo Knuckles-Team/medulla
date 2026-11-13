@@ -211,7 +211,7 @@ pub(super) mod served {
                     }
                     view.beacons.push(StageBeacon {
                         loop_id: loop_id.clone(),
-                        stage,
+                        stage_id: stage,
                         at_ms: now_ms,
                     });
                     Ok(())
