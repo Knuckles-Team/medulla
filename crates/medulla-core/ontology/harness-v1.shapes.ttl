@@ -64,3 +64,30 @@
         sh:nodeKind sh:IRI ;
         sh:message "A stoppingBehaviour value must cite its evaluationRun."
     ] .
+
+# A proposed HarnessEdit reverts when the shipped edits on its dimension inside
+# the policy window, counting the candidate, reach the policy's minShipped
+# (MEDULLA-DECISION-ENGINE-R173.3). Decide answers the same question through
+# concentration_verdict over the same policy node.
+:EditConcentrationShape a sh:NodeShape ;
+    sh:targetClass :HarnessEdit ;
+    sh:sparql [
+        sh:message "Shipped edits on this dimension in the policy window reach the concentration cap." ;
+        sh:select """
+            PREFIX core: <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this (COUNT(?shipped) AS ?count) WHERE {
+                $this core:editStatus "proposed" ;
+                      core:targetsDimension ?dimension ;
+                      core:editRound ?round .
+                ?policy a core:ConcentrationPolicy ;
+                        core:minShipped ?min ;
+                        core:windowRounds ?window .
+                ?shipped core:editStatus "shipped" ;
+                         core:targetsDimension ?dimension ;
+                         core:editRound ?shippedRound .
+                FILTER (?shippedRound <= ?round && ?shippedRound > ?round - ?window)
+            }
+            GROUP BY $this ?min
+            HAVING (COUNT(?shipped) + 1 >= ?min)
+        """ ;
+    ] .

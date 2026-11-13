@@ -49,6 +49,8 @@ mod stat_generation_cycle;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
+mod stat_concentration;
+#[cfg(feature = "decide")]
 mod stat_jobs;
 #[cfg(feature = "decide")]
 mod stat_learning;

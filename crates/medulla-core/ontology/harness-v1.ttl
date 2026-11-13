@@ -318,6 +318,29 @@ Aligned to ArchiMate 3.2 layers.""" .
     rdfs:comment "A typed evolution edit to a harness (the action in the operational mirror), targeting one HarnessDimension, with a change manifest and verifier evidence." ;
     rdfs:subClassOf :ApplicationLayer .
 
+:ConcentrationPolicy a owl:Class ;
+    rdfs:label "Concentration Policy" ;
+    rdfs:comment "The cap on shipped HarnessEdits per dimension inside a round window: minShipped edits within windowRounds rounds revert the next edit on that dimension (MEDULLA-DECISION-ENGINE-R173.3)." ;
+    rdfs:subClassOf :ApplicationLayer .
+
+:minShipped a owl:DatatypeProperty ;
+    rdfs:label "min shipped" ;
+    rdfs:comment "Shipped edits on one dimension, counting the candidate, at which the candidate reverts." ;
+    rdfs:domain :ConcentrationPolicy ;
+    rdfs:range xsd:integer .
+
+:windowRounds a owl:DatatypeProperty ;
+    rdfs:label "window rounds" ;
+    rdfs:comment "Rounds, ending at the candidate's round, in which shipped edits are counted." ;
+    rdfs:domain :ConcentrationPolicy ;
+    rdfs:range xsd:integer .
+
+:revision a owl:DatatypeProperty ;
+    rdfs:label "revision" ;
+    rdfs:comment "The revision of a ConcentrationPolicy; edits judged under another revision make the question abstain." ;
+    rdfs:domain :ConcentrationPolicy ;
+    rdfs:range xsd:integer .
+
 :HarnessHook a owl:Class ;
     rdfs:label "Harness Hook" ;
     rdfs:comment "One of the eight lifecycle hook points a processor attaches to (task_start, step_start, before_model, after_model, before_tool, after_tool, step_end, task_end). Distinct from the dev-CLI :Hook (CONCEPT:KG-2.109)." ;

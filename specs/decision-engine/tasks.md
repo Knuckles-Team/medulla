@@ -570,7 +570,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T561 [US7] MEDULLA-DECISION-ENGINE-R175.8 Fit the catalog encoder through Learn
 - [ ] T562 [US7] MEDULLA-DECISION-ENGINE-R173.1 Model
 - [ ] T563 [US7] MEDULLA-DECISION-ENGINE-R173.2 Behavior
-- [ ] T564 [US7] MEDULLA-DECISION-ENGINE-R173.3 Concentration family wiring and the matching shape
+- [x] T564 [US7] MEDULLA-DECISION-ENGINE-R173.3 Concentration family wiring and the matching shape
 - [ ] T565 [US7] MEDULLA-DECISION-ENGINE-R173.4 Refusal
 - [ ] T566 [US7] MEDULLA-DECISION-ENGINE-R173.5 Concentration premises
 - [ ] T567 [US7] MEDULLA-DECISION-ENGINE-R173.6 Served proof of the concentration cap

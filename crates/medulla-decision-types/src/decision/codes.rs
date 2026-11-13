@@ -122,6 +122,13 @@ pub const POLICY_RECORD_TAMPERED: RefusalCode = RefusalCode::new("POLICY_RECORD_
 pub const POLICY_NATIVE_AUTHORITY_REQUIRED: RefusalCode =
     RefusalCode::new("POLICY_NATIVE_AUTHORITY_REQUIRED");
 
+/// An edit concentration question whose policy node is missing.
+pub const NO_CONCENTRATION_POLICY: RefusalCode = RefusalCode::new("NO_CONCENTRATION_POLICY");
+/// An edit concentration question whose edits were judged under different policy revisions.
+pub const MIXED_POLICY_REVISION: RefusalCode = RefusalCode::new("MIXED_POLICY_REVISION");
+/// The `edit_concentration` family's refusal table (MEDULLA-DECISION-ENGINE-R173.3).
+pub const CONCENTRATION_REFUSALS: &[RefusalCode] = &[NO_CONCENTRATION_POLICY, MIXED_POLICY_REVISION];
+
 /// Every folded code, in declaration order.
 pub const FOLDED: &[RefusalCode] = &[
     HEAD_KIND_NOT_STATISTICAL,
@@ -219,6 +226,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
     (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
+    (QuestionKind::EditConcentration, CONCENTRATION_REFUSALS),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

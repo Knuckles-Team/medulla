@@ -292,6 +292,10 @@ knobs! {
     embed_cache_bytes: u64 = "embed.cache_bytes", U64(67_108_864), [0, 4_294_967_296], "bytes", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
+    /// Edit concentration: shipped edits on one dimension inside the window that revert a new edit (MEDULLA-DECISION-ENGINE-R173.3); the default when a policy names none.
+    concentration_min_shipped: u64 = "concentration.min_shipped", U64(3), [2, 20], "edits", Tunable;
+    /// Edit concentration: rounds in the window the shipped edits are counted over; the default when a policy names none.
+    concentration_window_rounds: u64 = "concentration.window_rounds", U64(5), [2, 50], "rounds", Tunable;
     /// Designation reward decay.
     designation_reward_decay: f64 = "designation.reward_decay", F64(0.99), [0.5, 1.0], "factor", Tunable;
     /// Designation required-capability cap.

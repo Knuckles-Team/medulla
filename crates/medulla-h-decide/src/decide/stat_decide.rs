@@ -128,6 +128,14 @@ async fn serve(
                 )
                 .await
                 .map(Some)
+            } else if request.question.kind == QuestionKind::EditConcentration {
+                super::stat_concentration::concentration_view(
+                    state,
+                    verified.agent_id(),
+                    &request,
+                )
+                .await
+                .map(Some)
             } else {
                 super::candidates::filtered_graph_view(
                     state,
