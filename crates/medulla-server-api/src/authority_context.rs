@@ -354,6 +354,39 @@ impl VerifiedRequestContext {
         ))
     }
 
+    /// Build the authenticated in-process context for a RESP session after the
+    /// listener has verified the `AUTH` credential and converted the principal to a
+    /// secret-keyed opaque actor reference. The grant is the served key-value
+    /// surface only (`kv:read`, `kv:write`); it never carries `kg:*` or `broker:*`.
+    pub fn authenticated_resp_actor(
+        server: &ServerContext,
+        actor_ref: &str,
+        request_id: u64,
+    ) -> Result<Self, String> {
+        let digest = actor_ref
+            .strip_prefix("broker:actor:hmac-sha256:")
+            .ok_or_else(|| "resp actor reference is invalid".to_string())?;
+        if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("resp actor reference is invalid".to_string());
+        }
+        let policy = server.request_policy()?;
+        Ok(Self::from_verified_claims(
+            RequestContextClaims {
+                principal: actor_ref.to_string(),
+                tenant: policy.expected_tenant.clone(),
+                audience: policy.expected_audience.clone(),
+                agent_id: actor_ref.to_string(),
+                roles: vec!["resp-client".to_string()],
+                scopes: vec!["kv:read".to_string(), "kv:write".to_string()],
+                policy_version: policy.expected_policy_version.clone(),
+                delegation: Vec::new(),
+                node: None,
+                priority: None,
+            },
+            format!("resp-request:{request_id}"),
+        ))
+    }
+
     /// Bind an engine-owned local query adapter to a fixed service identity.
     /// External traffic reaches this path only after its carrier has passed the
     /// adapter's authentication gate; the service identity must also be present

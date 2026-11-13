@@ -161,6 +161,15 @@ pub trait DispatchApi: Send + Sync {
         actor_ref: &'a str,
     ) -> SeamFuture<'a, Response>;
 
+    /// Dispatch a request on behalf of an authenticated RESP session actor.
+    #[cfg(feature = "redis-wire")]
+    fn dispatch_authenticated_resp_actor<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        req: Request,
+        actor_ref: &'a str,
+    ) -> SeamFuture<'a, Response>;
+
     /// Propose a native mutation through the graph's Raft group.
     #[cfg(feature = "raft")]
     #[allow(unused_variables)]
@@ -531,6 +540,23 @@ pub async fn dispatch_authenticated_broker_actor(
     match dispatch_api(state).await {
         Ok(api) => {
             api.dispatch_authenticated_broker_actor(state, req, actor_ref)
+                .await
+        }
+        Err(error) => Response::err(id, error),
+    }
+}
+
+/// Dispatch one request for an authenticated RESP session actor.
+#[cfg(feature = "redis-wire")]
+pub async fn dispatch_authenticated_resp_actor(
+    state: &Arc<RwLock<ServerState>>,
+    req: Request,
+    actor_ref: &str,
+) -> Response {
+    let id = req.id;
+    match dispatch_api(state).await {
+        Ok(api) => {
+            api.dispatch_authenticated_resp_actor(state, req, actor_ref)
                 .await
         }
         Err(error) => Response::err(id, error),

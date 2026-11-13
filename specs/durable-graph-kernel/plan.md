@@ -824,7 +824,7 @@ The KV-cache tier ladder reuses `crates/medulla-kvcache`. `tiered.rs` holds the 
 
 The benchmark rows R042.2 to R042.6 publish each result as the `BenchmarkClaim` of R042.1. Each target is a starting default. A measurement on this platform replaces it.
 
-The four wire listeners already start in `src/main.rs`. R860 binds them to one admission path and to round-trip tests. R035 keeps the PostgreSQL operational parity work.
+The four wire listeners already start in `src/main.rs`. R860 binds them to one admission path and to round-trip tests. R860.3 moves the RESP listener off its own store: its commands enter the served KV methods through the dispatch with a verified request context (decisions in research.md). R035 keeps the PostgreSQL operational parity work.
 
 
 ### Immutable run submission recovery

@@ -116,6 +116,18 @@ impl DispatchApi for DispatchSeam {
         )
     }
 
+    #[cfg(feature = "redis-wire")]
+    fn dispatch_authenticated_resp_actor<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        req: Request,
+        actor_ref: &'a str,
+    ) -> SeamFuture<'a, Response> {
+        Box::pin(super::request_boundary::dispatch_authenticated_resp_actor(
+            state, req, actor_ref,
+        ))
+    }
+
     #[cfg(feature = "raft")]
     fn propose_native_mutation<'a>(
         &'a self,

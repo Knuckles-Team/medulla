@@ -6,14 +6,15 @@
 //!
 //! Like the SQL wire shims (pgwire / mysql-wire, CONCEPT:MEDULLA-KG.compute.subsystems-reference) and the Bolt
 //! adapter (CONCEPT:MEDULLA-KG.query.bolt-wire-protocol), this is an ADAPTER — NOT a re-implemented Redis. The
-//! bytes are stored on the engine's own durable Key→Value substrate
-//! ([`medulla_server::kv::KvStore`], CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface): every Redis key lives as a
-//! single msgpack [`Entry`] envelope in one `redis` namespace, so a `SET` that
-//! returned `OK` survives a `kill -9` exactly like a `KvPut`. The five Redis data
-//! types (string / list / hash / set / zset) are modeled as variants of one
-//! serialized [`RedisData`] value, and every read-modify-write op is serialized
-//! under one coarse process mutex (a serving surface, not a perf-critical inner
-//! loop).
+//! bytes are stored by the engine's own served key-value methods
+//! (`KvGet`/`KvPut`/`KvDelete`/`KvCas`, MEDULLA-DURABLE-KERNEL-R102): the listener
+//! owns no store. `AUTH` verifies the credential and every command enters the
+//! dispatch with the verified request context of that principal, so a `SET`
+//! that returned `OK` is a `KvPut` that survives a `kill -9`, and each principal
+//! reads and writes only its own private KV scope. Only the string commands
+//! `GET`, `SET`, `DEL`, `EXISTS`, `MGET` and `INCR` are served; the hash, list,
+//! set, sorted-set, TTL and transaction commands answer `RESP_COMMAND_UNSUPPORTED`
+//! and change nothing (MEDULLA-DURABLE-KERNEL-R860.3).
 //!
 //! It links NO server-side redis protocol crate — the RESP2 + RESP3 codec is
 //! hand-rolled against the documented RESP spec (the Pi-contract idiom pgwire /
@@ -25,23 +26,19 @@
 //! LANDED: the RESP2 + RESP3 codec (simple strings, errors, integers, bulk
 //! strings, arrays, and the RESP3 map/set/double/boolean/null types) + inline
 //! commands, the `HELLO`/`COMMAND` handshake so `redis-cli` connects, and the core
-//! command set: `PING`, `ECHO`, `GET`/`SET` (`EX`/`PX`/`NX`/`XX`), `DEL`, `EXISTS`,
-//! `EXPIRE`/`TTL`, `INCR`/`DECR`, `MGET`/`MSET`, `HSET`/`HGET`/`HGETALL`/`HDEL`,
-//! `LPUSH`/`RPUSH`/`LRANGE`/`LLEN`, `SADD`/`SMEMBERS`/`SREM`,
-//! `ZADD`/`ZRANGE`/`ZSCORE`, `SCAN`, `TYPE`, plus `AUTH`/`SELECT`/`QUIT`/`CONFIG`/
-//! `CLIENT` niceties.
+//! command set: `PING`, `ECHO`, the served string commands `GET`, `SET`, `DEL`,
+//! `EXISTS`, `MGET` and `INCR`, plus `AUTH`/`SELECT`/`QUIT`/`CONFIG`/`CLIENT`
+//! niceties.
 //!
-//! ## Pub/sub + transactions (CONCEPT:MEDULLA-KG.txn.pubsub-transactions)
+//! ## Pub/sub (CONCEPT:MEDULLA-KG.txn.pubsub-transactions)
 //!
 //! LANDED (MEDULLA-307): the publish/subscribe surface — `SUBSCRIBE`/`UNSUBSCRIBE`,
 //! `PSUBSCRIBE`/`PUNSUBSCRIBE` (glob-pattern channels), and `PUBLISH`, backed by a
 //! per-listener [`PubSub`] registry (an mpsc channel per connection; the connection
 //! driver `select!`s between the socket and its subscriber mailbox so published
-//! messages are pushed out as they arrive). Plus `MULTI`/`EXEC`/`DISCARD`
-//! transactions: commands after `MULTI` are queued (`+QUEUED`) and executed
-//! back-to-back on `EXEC` (no other connection interleaves), returning the array of
-//! replies; `DISCARD` drops the queue; a malformed queued command aborts the whole
-//! transaction with `EXECABORT`. Lua, streams, optimistic locking, and Redis
+//! messages are pushed out as they arrive). `MULTI`/`EXEC`/`DISCARD` are refused:
+//! the served KV methods commit one key at a time, so no atomic multi-command
+//! transaction exists to offer. Lua, streams, optimistic locking, and Redis
 //! cluster commands are outside this adapter's declared protocol and return an
 //! explicit unknown-command error; unsupported operations are never accepted as
 //! successful no-ops.
@@ -50,14 +47,14 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 
+use medulla_protocol_types::protocol::{Method, Request, ResultPayload};
+use medulla_protocol_types::storage_wire::{KvCasOutcome, KvEntry};
 use medulla_server_api::state::ServerState;
-use medulla_server_blob::kv::KvStore;
 use medulla_wire_core::broker_wire;
 use medulla_wire_core::broker_wire::BrokerProtocol;
 
@@ -65,14 +62,6 @@ use medulla_wire_core::broker_wire::BrokerProtocol;
 /// binds this address (documented loopback default `127.0.0.1:6379`, the Redis
 /// default port). Unset ⇒ no listener.
 pub const REDIS_ADDR_ENV: &str = "MEDULLA_REDIS_ADDR";
-/// Physical authority identity for the Redis adapter's private KV file.
-///
-/// Redis and the main namespaced KV surface both use `OwnerLayout::Kv`, but
-/// their files are separate authorities.  A distinct manifest name makes a
-/// copied or misrouted file fail closed at open instead of being adopted as a
-/// different service.
-pub(crate) const REDIS_KV_PHYSICAL_STORE: &str = "epistemic-graph:redis-kv";
-
 /// Derive the Redis credential for a principal from the deployment auth secret.
 /// Clients authenticate with `AUTH <principal> <credential>`; the principal is
 /// pseudonymized before it is used as a durable keyspace or pub/sub scope.
@@ -90,31 +79,6 @@ fn verify_redis_password(secret: &str, principal: &str, password: &[u8]) -> bool
     )
 }
 
-/// Wall-clock milliseconds since the epoch (TTL clock; same tolerance as the
-/// blob/txn TTL sweeps).
-fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}
-
-// ── the stored value model (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round) ─────────────────────────────────────
-
-/// One Redis value, tagged by type. Serialized (msgpack) inside an [`Entry`] and
-/// stored as ONE KV value per key — read-modify-write under the store mutex.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-enum RedisData {
-    Str(Vec<u8>),
-    List(Vec<Vec<u8>>),
-    /// Insertion-ordered `(field, value)` pairs (Redis hashes are unordered; we
-    /// keep insertion order for a stable `HGETALL`).
-    Hash(Vec<(Vec<u8>, Vec<u8>)>),
-    Set(Vec<Vec<u8>>),
-    /// `(member, score)` pairs kept sorted by `(score, member)`.
-    ZSet(Vec<(Vec<u8>, f64)>),
-}
-
 /// Which subscription table a pub/sub registration touches. Both are
 /// accounted against the SAME link and key-byte budgets, which is why one
 /// registrar owns them.
@@ -126,83 +90,10 @@ enum SubscriptionKind {
     Pattern,
 }
 
-impl RedisData {
-    /// The list payload, or `None` when this key holds another type.
-    fn into_list(self) -> Option<Vec<Vec<u8>>> {
-        match self {
-            Self::List(list) => Some(list),
-            _ => None,
-        }
-    }
-
-    /// The hash payload, or `None` when this key holds another type.
-    fn into_hash(self) -> Option<BytePairs> {
-        match self {
-            Self::Hash(hash) => Some(hash),
-            _ => None,
-        }
-    }
-
-    /// The set payload, or `None` when this key holds another type.
-    fn into_set(self) -> Option<Vec<Vec<u8>>> {
-        match self {
-            Self::Set(set) => Some(set),
-            _ => None,
-        }
-    }
-
-    /// The sorted-set payload, or `None` when this key holds another type.
-    fn into_zset(self) -> Option<Vec<(Vec<u8>, f64)>> {
-        match self {
-            Self::ZSet(zset) => Some(zset),
-            _ => None,
-        }
-    }
-
-    /// The Redis `TYPE` name for this value.
-    fn type_name(&self) -> &'static str {
-        match self {
-            RedisData::Str(_) => "string",
-            RedisData::List(_) => "list",
-            RedisData::Hash(_) => "hash",
-            RedisData::Set(_) => "set",
-            RedisData::ZSet(_) => "zset",
-        }
-    }
-}
-
-/// The stored envelope: the value plus an optional absolute expiry (epoch ms).
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct Entry {
-    data: RedisData,
-    expire_at_ms: Option<u64>,
-}
-
-impl Entry {
-    fn expired(&self, now: u64) -> bool {
-        matches!(self.expire_at_ms, Some(t) if now >= t)
-    }
-}
-
-/// A set of `(field, value)` byte pairs (hash entries / bulk arg pairs).
-type BytePairs = Vec<(Vec<u8>, Vec<u8>)>;
-
-/// The value paired with `wanted` in a `(name, value)` collection — the lookup
-/// a hash field and a sorted-set member score are the same operation over.
-fn paired_value<V>(pairs: Vec<(Vec<u8>, V)>, wanted: &[u8]) -> Option<V> {
-    pairs
-        .into_iter()
-        .find(|(name, _)| name == wanted)
-        .map(|(_, value)| value)
-}
 /// The result of parsing one command out of the read buffer: `Ok(None)` ⇒
 /// incomplete (read more), `Ok(Some((args, consumed)))` ⇒ a complete command.
 type CommandParse = Result<Option<(Vec<Vec<u8>>, usize)>, String>;
 
-/// The WRONGTYPE error text (verbatim Redis wording, so clients that match on it
-/// still work).
-const WRONGTYPE: &str = "WRONGTYPE Operation against a key holding the wrong kind of value";
-const NOT_INT: &str = "ERR value is not an integer or out of range";
 const MAX_REDIS_REQUEST_BYTES: usize = 64 * 1024 * 1024;
 const MAX_REDIS_COMMAND_BYTES: usize = 64;
 const MAX_REDIS_KEY_BYTES: usize = 4 * 1024;
@@ -210,33 +101,17 @@ const MAX_RESP_ARGUMENTS: usize = 1_024;
 const MAX_RESP_BULK_BYTES: usize = MAX_REDIS_REQUEST_BYTES;
 const MAX_RESP_LINE_BYTES: usize = 64 * 1024;
 const MAX_REDIS_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
-const MAX_STORED_ENTRY_BYTES: usize = 64 * 1024 * 1024;
-const MAX_STORED_ENTRY_ITEMS: usize = 1_000_000;
 const MAX_REDIS_SUBSCRIPTIONS: usize = 1_024;
 const MAX_REDIS_SUBSCRIPTION_BYTES: usize = 1024 * 1024;
 const MAX_REDIS_PUBSUB_CONNECTIONS: usize = 4_096;
 const MAX_REDIS_PUBSUB_LINKS: usize = 65_536;
 const MAX_REDIS_PUBSUB_KEY_BYTES: usize = 64 * 1024 * 1024;
 const MAX_REDIS_CHANNEL_BYTES: usize = 4 * 1024;
-const MAX_MULTI_COMMANDS: usize = 1_024;
-const MAX_MULTI_BYTES: usize = 64 * 1024 * 1024;
+const MAX_REDIS_RESPONSE_ITEMS: usize = 1_000_000;
 const PUBSUB_MAILBOX_CAPACITY: usize = 1_024;
 
 pub fn invalid_data(message: &'static str) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, message)
-}
-
-fn entry_limits() -> medulla_types::msgpack::MsgpackLimits {
-    medulla_types::msgpack::MsgpackLimits::new(
-        MAX_STORED_ENTRY_BYTES,
-        MAX_STORED_ENTRY_ITEMS,
-        medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-    )
-}
-
-fn decode_entry(bytes: &[u8]) -> Result<Entry, String> {
-    medulla_types::msgpack::decode_bounded(bytes, entry_limits())
-        .map_err(|_| "ERR stored value is invalid or exceeds resource limits".to_string())
 }
 
 fn utf8_argument(bytes: &[u8], max_bytes: usize) -> Result<String, String> {
@@ -246,526 +121,6 @@ fn utf8_argument(bytes: &[u8], max_bytes: usize) -> Result<String, String> {
     std::str::from_utf8(bytes)
         .map(str::to_owned)
         .map_err(|_| "ERR argument must be valid UTF-8".to_string())
-}
-
-// ── the store (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round) — Redis types over the engine KV surface ──────────
-
-/// A Redis keyspace layered over one [`KvStore`] namespace. Durable when the KV
-/// store is (a persist dir), else in-memory scratch — exactly the KV contract.
-struct RedisStore {
-    kv: Arc<KvStore>,
-    /// Serializes read-modify-write ops so multi-step mutations (e.g. `HSET`,
-    /// `INCR`, `ZADD`) are atomic against concurrent connections.
-    lock: Arc<Mutex<()>>,
-    /// Secret-keyed pseudonymous namespace. A served connection receives its own
-    /// scope only after successful authentication, so principals cannot enumerate
-    /// or mutate one another's Redis data.
-    namespace: String,
-}
-
-impl RedisStore {
-    /// Open the Redis keyspace. `Some(dir)` ⇒ durable `{dir}/redis-kv/kv.redb`;
-    /// `None` ⇒ in-memory scratch (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round).
-    fn open(persist_dir: Option<&str>) -> Result<Self, String> {
-        let sub = persist_dir.map(|d| format!("{d}/redis-kv"));
-        let kv = KvStore::open_named(sub.as_deref(), REDIS_KV_PHYSICAL_STORE)?;
-        Ok(Self {
-            kv: Arc::new(kv),
-            lock: Arc::new(Mutex::new(())),
-            namespace: "redis:unbound".to_string(),
-        })
-    }
-
-    fn scoped(&self, actor_ref: &str) -> Self {
-        Self {
-            kv: Arc::clone(&self.kv),
-            lock: Arc::clone(&self.lock),
-            namespace: format!("redis:{actor_ref}"),
-        }
-    }
-
-    /// `true` if writes land durably on disk.
-    fn is_durable(&self) -> bool {
-        self.kv.is_durable()
-    }
-
-    // ── internal (no-lock) primitives ────────────────────────────────────────
-
-    /// Load the live entry for `key`, transparently expiring (and deleting) a
-    /// stale one. MUST be called with the store lock held.
-    fn load(&self, key: &str) -> Result<Option<Entry>, String> {
-        match self.kv.get(&self.namespace, key)? {
-            Some(bytes) => {
-                let entry = decode_entry(&bytes)?;
-                if entry.expired(now_ms()) {
-                    self.kv.delete(&self.namespace, key)?;
-                    Ok(None)
-                } else {
-                    Ok(Some(entry))
-                }
-            }
-            None => Ok(None),
-        }
-    }
-
-    fn store(&self, key: &str, entry: &Entry) -> Result<(), String> {
-        let bytes = rmp_serde::to_vec_named(entry)
-            .map_err(|_| "ERR value could not be encoded".to_string())?;
-        medulla_types::msgpack::validate_single_value(&bytes, entry_limits())
-            .map_err(|_| "ERR value exceeds resource limits".to_string())?;
-        self.kv.put(&self.namespace, key, bytes)
-    }
-
-    // ── string ops ────────────────────────────────────────────────────────────
-
-    /// `SET key value` with optional `EX`/`PX` expiry + `NX`/`XX` conditions.
-    /// Returns `true` if written (a failed `NX`/`XX` returns `false` ⇒ null reply).
-    #[allow(clippy::too_many_arguments)]
-    fn set(
-        &self,
-        key: &str,
-        value: Vec<u8>,
-        expire_ms: Option<u64>,
-        nx: bool,
-        xx: bool,
-    ) -> Result<bool, String> {
-        let _g = self.lock.lock();
-        let existing = self.load(key)?;
-        if nx && existing.is_some() {
-            return Ok(false);
-        }
-        if xx && existing.is_none() {
-            return Ok(false);
-        }
-        let entry = Entry {
-            data: RedisData::Str(value),
-            expire_at_ms: expire_ms.map(|ms| now_ms() + ms),
-        };
-        self.store(key, &entry)?;
-        Ok(true)
-    }
-
-    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Str(v),
-                ..
-            }) => Ok(Some(v)),
-            Some(_) => Err(WRONGTYPE.into()),
-            None => Ok(None),
-        }
-    }
-
-    fn incr_by(&self, key: &str, delta: i64) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let (cur, expire) = match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Str(v),
-                expire_at_ms,
-            }) => {
-                let s = std::str::from_utf8(&v).map_err(|_| NOT_INT.to_string())?;
-                let n: i64 = s.trim().parse().map_err(|_| NOT_INT.to_string())?;
-                (n, expire_at_ms)
-            }
-            Some(_) => return Err(WRONGTYPE.into()),
-            None => (0, None),
-        };
-        let next = cur.checked_add(delta).ok_or_else(|| NOT_INT.to_string())?;
-        let entry = Entry {
-            data: RedisData::Str(next.to_string().into_bytes()),
-            expire_at_ms: expire,
-        };
-        self.store(key, &entry)?;
-        Ok(next)
-    }
-
-    /// Delete `keys`, returning how many existed.
-    fn del(&self, keys: &[&str]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let mut n = 0;
-        for k in keys {
-            // Expire-aware existence: a stale key does not count.
-            if self.load(k)?.is_some() && self.kv.delete(&self.namespace, k)? {
-                n += 1;
-            }
-        }
-        Ok(n)
-    }
-
-    fn exists(&self, keys: &[&str]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let mut n = 0;
-        for k in keys {
-            if self.load(k)?.is_some() {
-                n += 1;
-            }
-        }
-        Ok(n)
-    }
-
-    /// `EXPIRE key seconds` → `true` if the key existed and the TTL was set.
-    fn expire(&self, key: &str, seconds: i64) -> Result<bool, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(mut entry) => {
-                if seconds <= 0 {
-                    self.kv.delete(&self.namespace, key)?;
-                } else {
-                    entry.expire_at_ms = Some(now_ms() + (seconds as u64) * 1000);
-                    self.store(key, &entry)?;
-                }
-                Ok(true)
-            }
-            None => Ok(false),
-        }
-    }
-
-    /// `TTL key` → remaining seconds, `-1` (no expiry), or `-2` (missing).
-    fn ttl(&self, key: &str) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry {
-                expire_at_ms: Some(t),
-                ..
-            }) => {
-                let now = now_ms();
-                Ok(if t > now {
-                    ((t - now) / 1000) as i64
-                } else {
-                    -2
-                })
-            }
-            Some(_) => Ok(-1),
-            None => Ok(-2),
-        }
-    }
-
-    fn type_of(&self, key: &str) -> Result<&'static str, String> {
-        let _g = self.lock.lock();
-        Ok(match self.load(key)? {
-            Some(e) => e.data.type_name(),
-            None => "none",
-        })
-    }
-
-    /// `SCAN` — returns every key in the namespace whose name matches `pattern`
-    /// (glob, `*`/`?` only). One-shot: the returned cursor is always `0`.
-    fn scan(&self, pattern: Option<&str>) -> Result<Vec<String>, String> {
-        let _g = self.lock.lock();
-        let now = now_ms();
-        let mut out = Vec::new();
-        for (k, v) in self.kv.scan(&self.namespace, "", 0)? {
-            // Drop expired entries lazily as we walk.
-            let entry = decode_entry(&v)?;
-            if entry.expired(now) {
-                continue;
-            }
-            if pattern.map(|p| glob_match(p, &k)).unwrap_or(true) {
-                out.push(k);
-            }
-        }
-        Ok(out)
-    }
-
-    // ── hash ops ────────────────────────────────────────────────────────────────
-
-    fn hset(&self, key: &str, pairs: &[(Vec<u8>, Vec<u8>)]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let (mut h, expire) = match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Hash(h),
-                expire_at_ms,
-            }) => (h, expire_at_ms),
-            Some(_) => return Err(WRONGTYPE.into()),
-            None => (Vec::new(), None),
-        };
-        // Preserve the serialized insertion order while using a transient field
-        // directory for batch updates. `entry(...).or_insert(...)` retains the
-        // deterministic first-field behavior if a corrupt value contains a duplicate.
-        let mut positions: HashMap<Vec<u8>, usize> = HashMap::with_capacity(h.len() + pairs.len());
-        for (index, (field, _)) in h.iter().enumerate() {
-            positions.entry(field.clone()).or_insert(index);
-        }
-        let mut added = 0;
-        for (f, val) in pairs {
-            if let Some(index) = positions.get(f.as_slice()).copied() {
-                h[index].1 = val.clone();
-            } else {
-                let index = h.len();
-                h.push((f.clone(), val.clone()));
-                positions.insert(f.clone(), index);
-                added += 1;
-            }
-        }
-        self.store(
-            key,
-            &Entry {
-                data: RedisData::Hash(h),
-                expire_at_ms: expire,
-            },
-        )?;
-        Ok(added)
-    }
-
-    /// Read one key expecting a particular value type. A key holding another
-    /// type is `WRONGTYPE`; a missing key is `None`. Every typed reader below
-    /// goes through here, so the type check and the `WRONGTYPE` wording are
-    /// stated once.
-    fn read_as<T>(
-        &self,
-        key: &str,
-        of_type: impl FnOnce(RedisData) -> Option<T>,
-    ) -> Result<Option<T>, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry { data, .. }) => of_type(data).map(Some).ok_or_else(|| WRONGTYPE.into()),
-            None => Ok(None),
-        }
-    }
-
-    fn hget(&self, key: &str, field: &[u8]) -> Result<Option<Vec<u8>>, String> {
-        Ok(self
-            .read_as(key, RedisData::into_hash)?
-            .and_then(|hash| paired_value(hash, field)))
-    }
-
-    fn hgetall(&self, key: &str) -> Result<BytePairs, String> {
-        Ok(self.read_as(key, RedisData::into_hash)?.unwrap_or_default())
-    }
-
-    fn hdel(&self, key: &str, fields: &[Vec<u8>]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Hash(mut h),
-                expire_at_ms,
-            }) => {
-                let fields: HashSet<&[u8]> = fields.iter().map(Vec::as_slice).collect();
-                let before = h.len();
-                h.retain(|(f, _)| !fields.contains(f.as_slice()));
-                let removed = (before - h.len()) as i64;
-                if h.is_empty() {
-                    self.kv.delete(&self.namespace, key)?;
-                } else {
-                    self.store(
-                        key,
-                        &Entry {
-                            data: RedisData::Hash(h),
-                            expire_at_ms,
-                        },
-                    )?;
-                }
-                Ok(removed)
-            }
-            Some(_) => Err(WRONGTYPE.into()),
-            None => Ok(0),
-        }
-    }
-
-    // ── list ops ──────────────────────────────────────────────────────────────
-
-    /// `LPUSH`/`RPUSH` — push `values` at the head (`left`) or tail; returns the
-    /// new length. `LPUSH a b c` yields `c b a` at the head (Redis order).
-    fn push(&self, key: &str, values: &[Vec<u8>], left: bool) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let (mut list, expire) = match self.load(key)? {
-            Some(Entry {
-                data: RedisData::List(l),
-                expire_at_ms,
-            }) => (l, expire_at_ms),
-            Some(_) => return Err(WRONGTYPE.into()),
-            None => (Vec::new(), None),
-        };
-        if left && !values.is_empty() {
-            // Repeated `insert(0, ...)` shifts the complete tail for every value.
-            // Build the reversed prefix once, then move the old tail once.
-            let new_len = list
-                .len()
-                .checked_add(values.len())
-                .ok_or_else(|| "ERR list exceeds resource limits".to_string())?;
-            let mut prefixed = Vec::with_capacity(new_len);
-            prefixed.extend(values.iter().rev().cloned());
-            prefixed.append(&mut list);
-            list = prefixed;
-        } else {
-            list.extend(values.iter().cloned());
-        }
-        let len = list.len() as i64;
-        self.store(
-            key,
-            &Entry {
-                data: RedisData::List(list),
-                expire_at_ms: expire,
-            },
-        )?;
-        Ok(len)
-    }
-
-    fn lrange(&self, key: &str, start: i64, stop: i64) -> Result<Vec<Vec<u8>>, String> {
-        let list = self.read_as(key, RedisData::into_list)?.unwrap_or_default();
-        Ok(range_slice(&list, start, stop).to_vec())
-    }
-
-    fn llen(&self, key: &str) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry {
-                data: RedisData::List(l),
-                ..
-            }) => Ok(l.len() as i64),
-            Some(_) => Err(WRONGTYPE.into()),
-            None => Ok(0),
-        }
-    }
-
-    // ── set ops ───────────────────────────────────────────────────────────────
-
-    fn sadd(&self, key: &str, members: &[Vec<u8>]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let (mut set, expire) = match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Set(s),
-                expire_at_ms,
-            }) => (s, expire_at_ms),
-            Some(_) => return Err(WRONGTYPE.into()),
-            None => (Vec::new(), None),
-        };
-        let mut present: HashSet<Vec<u8>> = HashSet::with_capacity(set.len() + members.len());
-        present.extend(set.iter().cloned());
-        let mut added = 0;
-        for m in members {
-            if present.insert(m.clone()) {
-                set.push(m.clone());
-                added += 1;
-            }
-        }
-        self.store(
-            key,
-            &Entry {
-                data: RedisData::Set(set),
-                expire_at_ms: expire,
-            },
-        )?;
-        Ok(added)
-    }
-
-    fn smembers(&self, key: &str) -> Result<Vec<Vec<u8>>, String> {
-        Ok(self.read_as(key, RedisData::into_set)?.unwrap_or_default())
-    }
-
-    fn srem(&self, key: &str, members: &[Vec<u8>]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        match self.load(key)? {
-            Some(Entry {
-                data: RedisData::Set(mut s),
-                expire_at_ms,
-            }) => {
-                let members: HashSet<&[u8]> = members.iter().map(Vec::as_slice).collect();
-                let before = s.len();
-                s.retain(|e| !members.contains(e.as_slice()));
-                let removed = (before - s.len()) as i64;
-                if s.is_empty() {
-                    self.kv.delete(&self.namespace, key)?;
-                } else {
-                    self.store(
-                        key,
-                        &Entry {
-                            data: RedisData::Set(s),
-                            expire_at_ms,
-                        },
-                    )?;
-                }
-                Ok(removed)
-            }
-            Some(_) => Err(WRONGTYPE.into()),
-            None => Ok(0),
-        }
-    }
-
-    // ── sorted-set ops ──────────────────────────────────────────────────────────
-
-    /// `ZADD` — insert/update `(member, score)` pairs; returns the count of NEW
-    /// members. The vector is kept sorted by `(score, member)`.
-    fn zadd(&self, key: &str, pairs: &[(f64, Vec<u8>)]) -> Result<i64, String> {
-        let _g = self.lock.lock();
-        let (mut z, expire) = match self.load(key)? {
-            Some(Entry {
-                data: RedisData::ZSet(z),
-                expire_at_ms,
-            }) => (z, expire_at_ms),
-            Some(_) => return Err(WRONGTYPE.into()),
-            None => (Vec::new(), None),
-        };
-        let mut positions: HashMap<Vec<u8>, usize> = HashMap::with_capacity(z.len() + pairs.len());
-        for (index, (member, _)) in z.iter().enumerate() {
-            positions.entry(member.clone()).or_insert(index);
-        }
-        let mut added = 0;
-        for (score, member) in pairs {
-            if let Some(index) = positions.get(member.as_slice()).copied() {
-                z[index].1 = *score;
-            } else {
-                let index = z.len();
-                z.push((member.clone(), *score));
-                positions.insert(member.clone(), index);
-                added += 1;
-            }
-        }
-        z.sort_by(|a, b| {
-            a.1.partial_cmp(&b.1)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .then(a.0.cmp(&b.0))
-        });
-        self.store(
-            key,
-            &Entry {
-                data: RedisData::ZSet(z),
-                expire_at_ms: expire,
-            },
-        )?;
-        Ok(added)
-    }
-
-    /// `ZRANGE key start stop` → members in rank order (already sorted on store).
-    fn zrange(&self, key: &str, start: i64, stop: i64) -> Result<Vec<(Vec<u8>, f64)>, String> {
-        let zset = self.read_as(key, RedisData::into_zset)?.unwrap_or_default();
-        Ok(range_slice(&zset, start, stop).to_vec())
-    }
-
-    fn zscore(&self, key: &str, member: &[u8]) -> Result<Option<f64>, String> {
-        Ok(self
-            .read_as(key, RedisData::into_zset)?
-            .and_then(|zset| paired_value(zset, member)))
-    }
-}
-
-/// Resolve a Redis-style `[start, stop]` (negative = from-the-end, inclusive)
-/// against a slice, returning the sub-slice (empty if the window is empty).
-fn range_slice<T>(items: &[T], start: i64, stop: i64) -> &[T] {
-    let len = items.len() as i64;
-    if len == 0 {
-        return &[];
-    }
-    let norm = |i: i64| -> i64 {
-        if i < 0 {
-            (len + i).max(0)
-        } else {
-            i.min(len)
-        }
-    };
-    let s = norm(start);
-    // `stop` is inclusive: clamp to len-1 then +1 for an exclusive upper bound.
-    let e = if stop < 0 {
-        (len + stop + 1).max(0)
-    } else {
-        (stop + 1).min(len)
-    };
-    if s >= e {
-        &[]
-    } else {
-        &items[s as usize..e as usize]
-    }
 }
 
 /// A minimal glob matcher for `SCAN MATCH` — supports `*` (any run) and `?` (one
@@ -1172,11 +527,11 @@ fn encode_bool(b: bool, proto: u8, out: &mut Vec<u8>) {
 }
 
 /// Conservative pre-encoding budget. It counts retained payload bytes plus fixed
-/// framing/headroom per nested value, preventing a small MULTI request from
+/// framing/headroom per nested value, preventing a small request from
 /// materializing or encoding an arbitrarily large aggregate response.
 fn response_cost(resp: &Resp, total: &mut usize, items: &mut usize) -> bool {
     *items = match (*items).checked_add(1) {
-        Some(value) if value <= MAX_STORED_ENTRY_ITEMS => value,
+        Some(value) if value <= MAX_REDIS_RESPONSE_ITEMS => value,
         _ => return false,
     };
     *total = match (*total).checked_add(32) {
@@ -1421,16 +776,6 @@ struct ConnState {
     sub_patterns: HashSet<String>,
     /// Total retained channel/pattern bytes across both subscription sets.
     sub_bytes: usize,
-    /// `true` between `MULTI` and `EXEC`/`DISCARD`: commands are queued not run.
-    in_multi: bool,
-    /// The queued commands awaiting `EXEC` (CONCEPT:MEDULLA-KG.txn.pubsub-transactions).
-    queued: Vec<Vec<Vec<u8>>>,
-    /// Aggregate bytes retained by `queued`; commands have already left the
-    /// socket buffer, so this independent accounting prevents an unbounded
-    /// transaction from accumulating across otherwise-small requests.
-    queued_bytes: usize,
-    /// Set when a queued command was malformed → `EXEC` aborts with `EXECABORT`.
-    multi_dirty: bool,
 }
 
 impl ConnState {
@@ -1443,10 +788,6 @@ impl ConnState {
             sub_channels: HashSet::new(),
             sub_patterns: HashSet::new(),
             sub_bytes: 0,
-            in_multi: false,
-            queued: Vec::new(),
-            queued_bytes: 0,
-            multi_dirty: false,
         }
     }
 
@@ -1473,9 +814,11 @@ fn upper(b: &[u8]) -> String {
         .unwrap_or_default()
 }
 
-/// Execute ONE parsed command against the store, returning the reply. Handshake /
-/// session commands (`HELLO`/`AUTH`/`QUIT`/`SELECT`) mutate `conn`.
-fn execute(store: &RedisStore, args: &[Vec<u8>], conn: &mut ConnState, auth_secret: &str) -> Resp {
+/// Execute ONE parsed command, returning the reply. Handshake / session commands
+/// (`HELLO`/`AUTH`/`QUIT`/`SELECT`) mutate `conn`; every data command enters the
+/// served key-value methods through the dispatch with the connection's verified
+/// actor ([`KvSeam`]).
+async fn execute(kv: &KvSeam, args: &[Vec<u8>], conn: &mut ConnState, auth_secret: &str) -> Resp {
     if args.is_empty() {
         return Resp::Error("ERR empty command".into());
     }
@@ -1486,7 +829,7 @@ fn execute(store: &RedisStore, args: &[Vec<u8>], conn: &mut ConnState, auth_secr
         return resp;
     }
 
-    let scope = match conn.authenticated_scope() {
+    let actor = match conn.authenticated_scope() {
         Ok(scope) => scope,
         Err(error) => return error,
     };
@@ -1495,8 +838,7 @@ fn execute(store: &RedisStore, args: &[Vec<u8>], conn: &mut ConnState, auth_secr
         return resp;
     }
 
-    let scoped_store = store.scoped(scope);
-    match execute_data(&scoped_store, &cmd, args, conn.proto) {
+    match execute_data(kv, actor, &cmd, args).await {
         Ok(r) => r,
         Err(e) => Resp::Error(e),
     }
@@ -1638,391 +980,323 @@ fn hello(args: &[Vec<u8>], conn: &mut ConnState, auth_secret: &str) -> Resp {
     ])
 }
 
-/// Execute a data command (auth already checked). `Err(msg)` becomes a RESP error.
-// CXA-MEDULLA-03 refactor: `execute_data` was CCN 90 as one `match cmd { .. }`
-// with ~24 arms, several containing their own inner loops/matches. Same
-// technique as the sibling `try_handle`/`apply_txn_op` dispatchers in this
-// lane: a `match` costs lizard ~1 regardless of arm count, so the fix is
-// giving every substantive arm a single tail-call to a named `cmd_*`
-// helper (verbatim original arm body, just moved) and leaving only the
-// handful of already-single-expression arms (TTL/INCR/DECR/LLEN/TYPE)
-// inline. The `key` closure (captured `args`/`cmd`) becomes a bare fn
-// taking both explicitly, since a helper fn can't share its closure.
-fn redis_key(args: &[Vec<u8>], cmd: &str, n: usize) -> Result<String, String> {
-    args.get(n)
-        .map(|bytes| utf8_argument(bytes, MAX_REDIS_KEY_BYTES))
-        .transpose()?
-        .ok_or_else(|| {
-            format!(
-                "ERR wrong number of arguments for '{}'",
-                cmd.to_ascii_lowercase()
-            )
-        })
+/// The reply text of a command outside the served string set.
+const RESP_COMMAND_UNSUPPORTED: &str = "ERR RESP_COMMAND_UNSUPPORTED";
+
+/// Commands the listener names and refuses: the hash, list, set, sorted-set and
+/// TTL families, the transaction verbs and the string variants that need more
+/// than one served KV method. They change nothing.
+const REFUSED_COMMANDS: &[&str] = &[
+    "EXPIRE",
+    "PEXPIRE",
+    "EXPIREAT",
+    "PEXPIREAT",
+    "TTL",
+    "PTTL",
+    "PERSIST",
+    "DECR",
+    "INCRBY",
+    "DECRBY",
+    "MSET",
+    "SETNX",
+    "SETEX",
+    "PSETEX",
+    "GETSET",
+    "APPEND",
+    "STRLEN",
+    "HSET",
+    "HSETNX",
+    "HMSET",
+    "HGET",
+    "HMGET",
+    "HGETALL",
+    "HDEL",
+    "HEXISTS",
+    "HLEN",
+    "HKEYS",
+    "HVALS",
+    "HINCRBY",
+    "LPUSH",
+    "RPUSH",
+    "LPOP",
+    "RPOP",
+    "LRANGE",
+    "LLEN",
+    "LINDEX",
+    "LSET",
+    "LREM",
+    "SADD",
+    "SMEMBERS",
+    "SREM",
+    "SCARD",
+    "SISMEMBER",
+    "SPOP",
+    "ZADD",
+    "ZRANGE",
+    "ZSCORE",
+    "ZREM",
+    "ZCARD",
+    "ZRANK",
+    "ZINCRBY",
+    "SCAN",
+    "TYPE",
+    "KEYS",
+    "MULTI",
+    "EXEC",
+    "DISCARD",
+    "WATCH",
+    "UNWATCH",
+];
+
+/// The namespace every RESP key lives in, inside the principal's private KV scope.
+const RESP_KV_NAMESPACE: &str = "resp";
+
+/// The graph the served KV methods are addressed to.
+const RESP_KV_GRAPH: &str = "__commons__";
+
+/// One RESP listener's handle on the served dispatch. It holds the shared server
+/// state; it owns no store.
+struct KvSeam {
+    state: Arc<RwLock<ServerState>>,
 }
 
-fn cmd_set(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let v = args
-        .get(2)
-        .cloned()
-        .ok_or_else(|| "ERR wrong number of arguments for 'set'".to_string())?;
-    let (mut expire, mut nx, mut xx) = (None, false, false);
-    let mut i = 3;
-    while i < args.len() {
-        match upper(&args[i]).as_str() {
-            "EX" => {
-                let s: u64 = parse_num(args.get(i + 1))?;
-                expire = Some(s * 1000);
-                i += 2;
-            }
-            "PX" => {
-                let ms: u64 = parse_num(args.get(i + 1))?;
-                expire = Some(ms);
-                i += 2;
-            }
-            "NX" => {
-                nx = true;
-                i += 1;
-            }
-            "XX" => {
-                xx = true;
-                i += 1;
-            }
-            other => return Err(format!("ERR syntax error near '{other}'")),
+/// Request ids are unique across restarts: the durable mutation ledger keys on
+/// them, so a counter restarting at zero would replay an earlier operation.
+fn next_request_id() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: std::sync::OnceLock<AtomicU64> = std::sync::OnceLock::new();
+    NEXT.get_or_init(|| {
+        let micros = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_micros() as u64)
+            .unwrap_or(1);
+        AtomicU64::new(micros)
+    })
+    .fetch_add(1, Ordering::Relaxed)
+}
+
+impl KvSeam {
+    fn new(state: Arc<RwLock<ServerState>>) -> Self {
+        Self { state }
+    }
+
+    /// Enter the served dispatch with the verified context of `actor`.
+    async fn call(&self, actor: &str, method: Method) -> Result<ResultPayload, String> {
+        let req = Request {
+            id: next_request_id(),
+            graph: RESP_KV_GRAPH.to_string(),
+            auth_token: String::new(),
+            agent_id: None,
+            method,
+        };
+        let resp = Box::pin(
+            medulla_server_api::api::reentry::dispatch_authenticated_resp_actor(
+                &self.state,
+                req,
+                actor,
+            ),
+        )
+        .await;
+        if let Some(error) = resp.error {
+            return Err(format!("ERR {error}"));
+        }
+        resp.result
+            .ok_or_else(|| "ERR the engine returned no result".to_string())
+    }
+
+    fn decode<T: serde::de::DeserializeOwned>(payload: ResultPayload) -> Result<T, String> {
+        match payload {
+            ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes)
+                .map_err(|_| "ERR the engine returned an unreadable result".to_string()),
+            _ => Err("ERR the engine returned an unexpected result".to_string()),
         }
     }
-    if store.set(&k, v, expire, nx, xx)? {
-        Ok(Resp::Simple("OK".into()))
-    } else {
-        Ok(Resp::Null)
+
+    /// `KvGet`: the value and the version of the write that produced it.
+    async fn get(&self, actor: &str, key: &str) -> Result<Option<KvEntry>, String> {
+        let payload = self
+            .call(
+                actor,
+                Method::KvGet {
+                    namespace: RESP_KV_NAMESPACE.to_string(),
+                    key: key.to_string(),
+                    shared: false,
+                },
+            )
+            .await?;
+        Self::decode(payload)
+    }
+
+    /// `KvPut`: an unconditional write.
+    async fn put(&self, actor: &str, key: &str, value: Vec<u8>) -> Result<(), String> {
+        self.call(
+            actor,
+            Method::KvPut {
+                namespace: RESP_KV_NAMESPACE.to_string(),
+                key: key.to_string(),
+                value,
+                shared: false,
+            },
+        )
+        .await
+        .map(|_| ())
+    }
+
+    /// `KvDelete`: whether the key existed.
+    async fn delete(&self, actor: &str, key: &str) -> Result<bool, String> {
+        match self
+            .call(
+                actor,
+                Method::KvDelete {
+                    namespace: RESP_KV_NAMESPACE.to_string(),
+                    key: key.to_string(),
+                    shared: false,
+                },
+            )
+            .await?
+        {
+            ResultPayload::Bool(existed) => Ok(existed),
+            _ => Err("ERR the engine returned an unexpected result".to_string()),
+        }
+    }
+
+    /// `KvCas` on the read revision (`0` = the key was absent).
+    async fn cas(
+        &self,
+        actor: &str,
+        key: &str,
+        expected_version: u64,
+        new: Vec<u8>,
+    ) -> Result<KvCasOutcome, String> {
+        let payload = self
+            .call(
+                actor,
+                Method::KvCas {
+                    namespace: RESP_KV_NAMESPACE.to_string(),
+                    key: key.to_string(),
+                    expected_version,
+                    new: Some(new),
+                    shared: false,
+                },
+            )
+            .await?;
+        Self::decode(payload)
     }
 }
 
-fn redis_keys_from_args(args: &[Vec<u8>]) -> Result<Vec<String>, String> {
+fn wrong_args(cmd: &str) -> String {
+    format!(
+        "ERR wrong number of arguments for '{}'",
+        cmd.to_ascii_lowercase()
+    )
+}
+
+/// Every key argument after the command name (at least one).
+fn redis_keys(args: &[Vec<u8>], cmd: &str) -> Result<Vec<String>, String> {
+    if args.len() < 2 {
+        return Err(wrong_args(cmd));
+    }
     args[1..]
         .iter()
         .map(|bytes| utf8_argument(bytes, MAX_REDIS_KEY_BYTES))
-        .collect::<Result<_, _>>()
+        .collect()
 }
 
-fn cmd_expire(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let secs: i64 = parse_num(args.get(2))?;
-    Ok(Resp::Int(store.expire(&k, secs)? as i64))
-}
-
-fn cmd_mget(store: &RedisStore, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let mut out = Vec::new();
-    for a in &args[1..] {
-        let k = utf8_argument(a, MAX_REDIS_KEY_BYTES)?;
-        out.push(Resp::Bulk(store.get(&k)?));
-    }
-    Ok(Resp::Array(Some(out)))
-}
-
-fn cmd_mset(store: &RedisStore, args: &[Vec<u8>]) -> Result<Resp, String> {
-    if args.len() < 3 || !(args.len() - 1).is_multiple_of(2) {
-        return Err("ERR wrong number of arguments for 'mset'".into());
-    }
-    let mut i = 1;
-    while i + 1 < args.len() {
-        let k = utf8_argument(&args[i], MAX_REDIS_KEY_BYTES)?;
-        store.set(&k, args[i + 1].clone(), None, false, false)?;
-        i += 2;
-    }
-    Ok(Resp::Simple("OK".into()))
-}
-
-fn cmd_hset(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    if args.len() < 4 || !(args.len() - 2).is_multiple_of(2) {
-        return Err("ERR wrong number of arguments for 'hset'".into());
-    }
-    let mut pairs = Vec::new();
-    let mut i = 2;
-    while i + 1 < args.len() {
-        pairs.push((args[i].clone(), args[i + 1].clone()));
-        i += 2;
-    }
-    Ok(Resp::Int(store.hset(&k, &pairs)?))
-}
-
-fn cmd_hget(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let field = args
-        .get(2)
-        .ok_or_else(|| "ERR wrong number of arguments for 'hget'".to_string())?;
-    Ok(Resp::Bulk(store.hget(&k, field)?))
-}
-
-fn cmd_hgetall(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let pairs = store.hgetall(&redis_key(args, cmd, 1)?)?;
-    let map = pairs
-        .into_iter()
-        .map(|(f, v)| (Resp::Bulk(Some(f)), Resp::Bulk(Some(v))))
-        .collect();
-    Ok(Resp::Map(map))
-}
-
-fn cmd_hdel(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let fields: Vec<Vec<u8>> = args[2..].to_vec();
-    Ok(Resp::Int(store.hdel(&k, &fields)?))
-}
-
-fn cmd_push(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let vals: Vec<Vec<u8>> = args[2..].to_vec();
-    if vals.is_empty() {
-        return Err(format!(
-            "ERR wrong number of arguments for '{}'",
-            cmd.to_ascii_lowercase()
-        ));
-    }
-    Ok(Resp::Int(store.push(&k, &vals, cmd == "LPUSH")?))
-}
-
-fn cmd_lrange(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let start: i64 = parse_num(args.get(2))?;
-    let stop: i64 = parse_num(args.get(3))?;
-    let items = store
-        .lrange(&k, start, stop)?
-        .into_iter()
-        .map(|v| Resp::Bulk(Some(v)))
-        .collect();
-    Ok(Resp::Array(Some(items)))
-}
-
-fn cmd_sadd(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let members: Vec<Vec<u8>> = args[2..].to_vec();
-    if members.is_empty() {
-        return Err("ERR wrong number of arguments for 'sadd'".into());
-    }
-    Ok(Resp::Int(store.sadd(&k, &members)?))
-}
-
-fn cmd_smembers(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let items = store
-        .smembers(&redis_key(args, cmd, 1)?)?
-        .into_iter()
-        .map(|v| Resp::Bulk(Some(v)))
-        .collect();
-    Ok(Resp::Set(items))
-}
-
-fn cmd_srem(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let members: Vec<Vec<u8>> = args[2..].to_vec();
-    Ok(Resp::Int(store.srem(&k, &members)?))
-}
-
-fn cmd_zadd(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    if args.len() < 4 || !(args.len() - 2).is_multiple_of(2) {
-        return Err("ERR wrong number of arguments for 'zadd'".into());
-    }
-    let mut pairs = Vec::new();
-    let mut i = 2;
-    while i + 1 < args.len() {
-        let score: f64 = std::str::from_utf8(&args[i])
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .ok_or_else(|| "ERR value is not a valid float".to_string())?;
-        pairs.push((score, args[i + 1].clone()));
-        i += 2;
-    }
-    Ok(Resp::Int(store.zadd(&k, &pairs)?))
-}
-
-fn zrange_member_resp(score: f64, proto: u8) -> Resp {
-    if proto >= 3 {
-        Resp::Double(score)
-    } else {
-        Resp::bulk_str(fmt_double(score))
-    }
-}
-
-fn cmd_zrange(store: &RedisStore, cmd: &str, args: &[Vec<u8>], proto: u8) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let start: i64 = parse_num(args.get(2))?;
-    let stop: i64 = parse_num(args.get(3))?;
-    let withscores = args
-        .get(4)
-        .map(|b| upper(b) == "WITHSCORES")
-        .unwrap_or(false);
-    let z = store.zrange(&k, start, stop)?;
-    let mut out = Vec::new();
-    for (m, s) in z {
-        out.push(Resp::Bulk(Some(m)));
-        if withscores {
-            out.push(zrange_member_resp(s, proto));
-        }
-    }
-    Ok(Resp::Array(Some(out)))
-}
-
-fn cmd_zscore(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    let k = redis_key(args, cmd, 1)?;
-    let member = args
-        .get(2)
-        .ok_or_else(|| "ERR wrong number of arguments for 'zscore'".to_string())?;
-    match store.zscore(&k, member)? {
-        Some(s) => Ok(Resp::bulk_str(fmt_double(s))),
-        None => Ok(Resp::Null),
-    }
-}
-
-fn cmd_scan(store: &RedisStore, args: &[Vec<u8>]) -> Result<Resp, String> {
-    // SCAN cursor [MATCH pattern] [COUNT n] [TYPE t] — one-shot (cursor 0).
-    let mut pattern = None;
-    let mut i = 2;
-    while i < args.len() {
-        match upper(&args[i]).as_str() {
-            "MATCH" => {
-                pattern = args
-                    .get(i + 1)
-                    .map(|bytes| utf8_argument(bytes, MAX_REDIS_KEY_BYTES))
-                    .transpose()?;
-                i += 2;
+/// `INCR`: a `KvGet`, then a `KvCas` on the read revision. A lost race rereads and
+/// retries up to the `resp.incr_retry_limit` knob, then answers `INCR_CONFLICT`.
+async fn cmd_incr(kv: &KvSeam, actor: &str, key: &str) -> Result<Resp, String> {
+    let attempts = medulla_server_api::knob_config::knobs().resp_incr_retry_limit;
+    for _ in 0..attempts {
+        let (current, version) = match kv.get(actor, key).await? {
+            Some(entry) => {
+                let n = std::str::from_utf8(&entry.value)
+                    .ok()
+                    .and_then(|text| text.trim().parse::<i64>().ok())
+                    .ok_or_else(|| "ERR value is not an integer".to_string())?;
+                (n, entry.version)
             }
-            "COUNT" | "TYPE" => i += 2, // accepted, ignored (one-shot scan)
-            _ => i += 1,
+            None => (0, 0),
+        };
+        let next = current
+            .checked_add(1)
+            .ok_or_else(|| "ERR increment would overflow".to_string())?;
+        if kv
+            .cas(actor, key, version, next.to_string().into_bytes())
+            .await?
+            .swapped
+        {
+            return Ok(Resp::Int(next));
         }
     }
-    let keys = store.scan(pattern.as_deref())?;
-    let items = keys.into_iter().map(Resp::bulk_str).collect();
-    Ok(Resp::Array(Some(vec![
-        Resp::bulk_str("0"),
-        Resp::Array(Some(items)),
-    ])))
+    Err("ERR INCR_CONFLICT".to_string())
 }
 
-fn cmd_get(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    Ok(Resp::Bulk(store.get(&redis_key(args, cmd, 1)?)?))
-}
-
-/// `DEL`/`EXISTS`: apply a multi-key counting store operation to every key argument.
-fn cmd_count_keys(
-    args: &[Vec<u8>],
-    count: impl FnOnce(&[&str]) -> Result<i64, String>,
-) -> Result<Resp, String> {
-    let keys = redis_keys_from_args(args)?;
-    let refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
-    Ok(Resp::Int(count(&refs)?))
-}
-
-fn cmd_ttl(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    Ok(Resp::Int(store.ttl(&redis_key(args, cmd, 1)?)?))
-}
-
-/// `INCR`/`DECR`: add `delta` to the integer at the key.
-fn cmd_incr_by(
-    store: &RedisStore,
+/// Execute a data command (auth already checked). `Err(msg)` becomes a RESP error.
+async fn execute_data(
+    kv: &KvSeam,
+    actor: &str,
     cmd: &str,
     args: &[Vec<u8>],
-    delta: i64,
 ) -> Result<Resp, String> {
-    Ok(Resp::Int(store.incr_by(&redis_key(args, cmd, 1)?, delta)?))
-}
-
-fn cmd_llen(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    Ok(Resp::Int(store.llen(&redis_key(args, cmd, 1)?)?))
-}
-
-fn cmd_type(store: &RedisStore, cmd: &str, args: &[Vec<u8>]) -> Result<Resp, String> {
-    Ok(Resp::Simple(
-        store.type_of(&redis_key(args, cmd, 1)?)?.into(),
-    ))
-}
-
-/// A data-command handler: `(store, upper-cased command, args, RESP protocol version)`.
-type DataCommand = fn(&RedisStore, &str, &[Vec<u8>], u8) -> Result<Resp, String>;
-
-/// Every data command, in one table: [`execute_data`] dispatches through it and
-/// [`is_known_command`] recognizes exactly its names (plus the non-data verbs listed there).
-const DATA_COMMANDS: &[(&str, DataCommand)] = &[
-    ("SET", |store, cmd, args, _| cmd_set(store, cmd, args)),
-    ("GET", |store, cmd, args, _| cmd_get(store, cmd, args)),
-    ("DEL", |store, _, args, _| {
-        cmd_count_keys(args, |keys| store.del(keys))
-    }),
-    ("EXISTS", |store, _, args, _| {
-        cmd_count_keys(args, |keys| store.exists(keys))
-    }),
-    ("EXPIRE", |store, cmd, args, _| cmd_expire(store, cmd, args)),
-    ("TTL", |store, cmd, args, _| cmd_ttl(store, cmd, args)),
-    ("INCR", |store, cmd, args, _| {
-        cmd_incr_by(store, cmd, args, 1)
-    }),
-    ("DECR", |store, cmd, args, _| {
-        cmd_incr_by(store, cmd, args, -1)
-    }),
-    ("MGET", |store, _, args, _| cmd_mget(store, args)),
-    ("MSET", |store, _, args, _| cmd_mset(store, args)),
-    ("HSET", |store, cmd, args, _| cmd_hset(store, cmd, args)),
-    ("HGET", |store, cmd, args, _| cmd_hget(store, cmd, args)),
-    ("HGETALL", |store, cmd, args, _| {
-        cmd_hgetall(store, cmd, args)
-    }),
-    ("HDEL", |store, cmd, args, _| cmd_hdel(store, cmd, args)),
-    ("LPUSH", |store, cmd, args, _| cmd_push(store, cmd, args)),
-    ("RPUSH", |store, cmd, args, _| cmd_push(store, cmd, args)),
-    ("LRANGE", |store, cmd, args, _| cmd_lrange(store, cmd, args)),
-    ("LLEN", |store, cmd, args, _| cmd_llen(store, cmd, args)),
-    ("SADD", |store, cmd, args, _| cmd_sadd(store, cmd, args)),
-    ("SMEMBERS", |store, cmd, args, _| {
-        cmd_smembers(store, cmd, args)
-    }),
-    ("SREM", |store, cmd, args, _| cmd_srem(store, cmd, args)),
-    ("ZADD", |store, cmd, args, _| cmd_zadd(store, cmd, args)),
-    ("ZRANGE", cmd_zrange),
-    ("ZSCORE", |store, cmd, args, _| cmd_zscore(store, cmd, args)),
-    ("SCAN", |store, _, args, _| cmd_scan(store, args)),
-    ("TYPE", |store, cmd, args, _| cmd_type(store, cmd, args)),
-];
-
-fn execute_data(
-    store: &RedisStore,
-    cmd: &str,
-    args: &[Vec<u8>],
-    proto: u8,
-) -> Result<Resp, String> {
-    let Some((_, handler)) = DATA_COMMANDS.iter().find(|(name, _)| *name == cmd) else {
-        return Err(format!(
+    match cmd {
+        "GET" => {
+            let [_, key] = args else {
+                return Err(wrong_args(cmd));
+            };
+            let key = utf8_argument(key, MAX_REDIS_KEY_BYTES)?;
+            Ok(Resp::Bulk(kv.get(actor, &key).await?.map(|e| e.value)))
+        }
+        "SET" => {
+            let [_, key, value] = args else {
+                // `EX`/`PX`/`NX`/`XX` need expiry and condition semantics the
+                // served KV methods do not have; they are refused, never ignored.
+                return Err(if args.len() > 3 {
+                    RESP_COMMAND_UNSUPPORTED.to_string()
+                } else {
+                    wrong_args(cmd)
+                });
+            };
+            let key = utf8_argument(key, MAX_REDIS_KEY_BYTES)?;
+            kv.put(actor, &key, value.clone()).await?;
+            Ok(Resp::Simple("OK".into()))
+        }
+        "DEL" => {
+            let mut removed = 0i64;
+            for key in redis_keys(args, cmd)? {
+                removed += i64::from(kv.delete(actor, &key).await?);
+            }
+            Ok(Resp::Int(removed))
+        }
+        "EXISTS" => {
+            let mut present = 0i64;
+            for key in redis_keys(args, cmd)? {
+                present += i64::from(kv.get(actor, &key).await?.is_some());
+            }
+            Ok(Resp::Int(present))
+        }
+        "MGET" => {
+            let mut values = Vec::new();
+            for key in redis_keys(args, cmd)? {
+                values.push(Resp::Bulk(kv.get(actor, &key).await?.map(|e| e.value)));
+            }
+            Ok(Resp::Array(Some(values)))
+        }
+        "INCR" => {
+            let [_, key] = args else {
+                return Err(wrong_args(cmd));
+            };
+            let key = utf8_argument(key, MAX_REDIS_KEY_BYTES)?;
+            cmd_incr(kv, actor, &key).await
+        }
+        refused if REFUSED_COMMANDS.contains(&refused) => Err(RESP_COMMAND_UNSUPPORTED.to_string()),
+        _ => Err(format!(
             "ERR unknown command '{}'",
             cmd.to_ascii_lowercase()
-        ));
-    };
-    handler(store, cmd, args, proto)
-}
-
-fn parse_num<T: std::str::FromStr>(arg: Option<&Vec<u8>>) -> Result<T, String> {
-    arg.and_then(|b| std::str::from_utf8(b).ok())
-        .and_then(|s| s.trim().parse().ok())
-        .ok_or_else(|| "ERR value is not an integer or out of range".to_string())
+        )),
+    }
 }
 
 // ── pub/sub + transaction dispatch (CONCEPT:MEDULLA-KG.txn.pubsub-transactions) ───────────────────────────────
-
-/// Commands that are ALWAYS run immediately, never queued, even inside a `MULTI`
-/// block (they steer the transaction / session itself).
-fn is_multi_control(cmd: &str) -> bool {
-    matches!(cmd, "MULTI" | "EXEC" | "DISCARD" | "RESET" | "QUIT")
-}
-
-/// Is `cmd` a command this shim recognizes? Used at queue time so an unknown
-/// command taints the transaction and `EXEC` returns `EXECABORT` (Redis semantics).
-fn is_known_command(cmd: &str) -> bool {
-    NON_DATA_KNOWN_COMMANDS
-        .into_iter()
-        .chain(DATA_COMMANDS.iter().map(|(name, _)| *name))
-        .any(|name| name == cmd)
-}
-
-/// Queueable verbs that [`execute_data`] does not serve itself.
-const NON_DATA_KNOWN_COMMANDS: [&str; 3] = ["PING", "ECHO", "PUBLISH"];
 
 /// Commands permitted while a RESP2 connection is in subscriber mode. Everything
 /// else is refused with the exact Redis error until the client unsubscribes.
@@ -2045,8 +1319,8 @@ fn allowed_in_subscribe(cmd: &str) -> bool {
 /// unsubscribe emit one confirmation per channel — and threads the [`PubSub`]
 /// registry plus the connection's transaction/subscription state. Non-pub/sub,
 /// non-transaction commands delegate to [`execute`] for their single reply.
-fn dispatch(
-    store: &RedisStore,
+async fn dispatch(
+    kv: &KvSeam,
     pubsub: &PubSub,
     args: &[Vec<u8>],
     conn: &mut ConnState,
@@ -2060,11 +1334,6 @@ fn dispatch(
         return vec![Resp::Error("NOAUTH Authentication required.".into())];
     }
 
-    // Queue everything (except control verbs) while inside MULTI.
-    if conn.in_multi && !is_multi_control(&cmd) {
-        return queue_in_multi(&cmd, args, conn);
-    }
-
     // Enforce the RESP2 subscriber-mode command gate.
     if conn.proto < 3
         && (!conn.sub_channels.is_empty() || !conn.sub_patterns.is_empty())
@@ -2076,15 +1345,15 @@ fn dispatch(
         ))];
     }
 
-    dispatch_command(store, pubsub, &cmd, args, conn, auth_secret)
+    dispatch_command(kv, pubsub, &cmd, args, conn, auth_secret).await
 }
 
 /// The per-command dispatch table [`dispatch`] falls into once the
 /// auth/MULTI-queue/subscriber-mode gates have all passed. A plain exhaustive
 /// match (not a lookup table) so the compiler keeps proving every handled verb
 /// routes somewhere and an unrecognized one falls through to [`execute`].
-fn dispatch_command(
-    store: &RedisStore,
+async fn dispatch_command(
+    kv: &KvSeam,
     pubsub: &PubSub,
     cmd: &str,
     args: &[Vec<u8>],
@@ -2092,79 +1361,14 @@ fn dispatch_command(
     auth_secret: &str,
 ) -> Vec<Resp> {
     match cmd {
-        "MULTI" => handle_multi_cmd(conn),
-        "DISCARD" => handle_discard_cmd(conn),
-        "EXEC" => exec_transaction(store, conn, auth_secret),
         "SUBSCRIBE" | "PSUBSCRIBE" => subscribe(pubsub, conn, &args[1..], cmd == "PSUBSCRIBE"),
         "UNSUBSCRIBE" | "PUNSUBSCRIBE" => {
             unsubscribe(pubsub, conn, &args[1..], cmd == "PUNSUBSCRIBE")
         }
         "PUBLISH" => handle_publish_cmd(pubsub, conn, args),
         "RESET" => reset_connection(pubsub, conn),
-        _ => vec![execute(store, args, conn, auth_secret)],
+        _ => vec![execute(kv, args, conn, auth_secret).await],
     }
-}
-
-/// Queue one command inside an open `MULTI` block (CONCEPT:MEDULLA-KG.txn.pubsub-transactions), rejecting an
-/// unknown command, a SUBSCRIBE-family command, or a queue that would exceed
-/// resource limits — all of which taint the transaction (`multi_dirty`) so the
-/// eventual `EXEC` aborts.
-fn queue_in_multi(cmd: &str, args: &[Vec<u8>], conn: &mut ConnState) -> Vec<Resp> {
-    if !is_known_command(cmd) && !allowed_in_subscribe(cmd) {
-        conn.multi_dirty = true;
-        return vec![Resp::Error(format!(
-            "ERR unknown command '{}'",
-            cmd.to_ascii_lowercase()
-        ))];
-    }
-    // SUBSCRIBE-family commands are not allowed inside a transaction.
-    if matches!(
-        cmd,
-        "SUBSCRIBE" | "UNSUBSCRIBE" | "PSUBSCRIBE" | "PUNSUBSCRIBE"
-    ) {
-        conn.multi_dirty = true;
-        return vec![Resp::Error(format!(
-            "ERR {} is not allowed in transactions",
-            cmd
-        ))];
-    }
-    let command_bytes = args
-        .iter()
-        .try_fold(0usize, |total, value| total.checked_add(value.len()));
-    let next_bytes = command_bytes.and_then(|size| conn.queued_bytes.checked_add(size));
-    if conn.queued.len() >= MAX_MULTI_COMMANDS
-        || next_bytes.is_none_or(|size| size > MAX_MULTI_BYTES)
-    {
-        conn.multi_dirty = true;
-        return vec![Resp::Error(
-            "ERR transaction exceeds resource limits".into(),
-        )];
-    }
-    conn.queued_bytes = next_bytes.unwrap_or(0);
-    conn.queued.push(args.to_vec());
-    vec![Resp::Simple("QUEUED".into())]
-}
-
-fn handle_multi_cmd(conn: &mut ConnState) -> Vec<Resp> {
-    if conn.in_multi {
-        return vec![Resp::Error("ERR MULTI calls can not be nested".into())];
-    }
-    conn.in_multi = true;
-    conn.queued.clear();
-    conn.queued_bytes = 0;
-    conn.multi_dirty = false;
-    vec![Resp::Simple("OK".into())]
-}
-
-fn handle_discard_cmd(conn: &mut ConnState) -> Vec<Resp> {
-    if !conn.in_multi {
-        return vec![Resp::Error("ERR DISCARD without MULTI".into())];
-    }
-    conn.in_multi = false;
-    conn.queued.clear();
-    conn.queued_bytes = 0;
-    conn.multi_dirty = false;
-    vec![Resp::Simple("OK".into())]
 }
 
 fn handle_publish_cmd(pubsub: &PubSub, conn: &ConnState, args: &[Vec<u8>]) -> Vec<Resp> {
@@ -2192,45 +1396,10 @@ fn reset_connection(pubsub: &PubSub, conn: &mut ConnState) -> Vec<Resp> {
     for p in conn.sub_patterns.drain().collect::<Vec<_>>() {
         pubsub.remove_subscription(SubscriptionKind::Pattern, conn.id, &scope, &p);
     }
-    conn.in_multi = false;
-    conn.queued.clear();
-    conn.queued_bytes = 0;
-    conn.multi_dirty = false;
     conn.sub_bytes = 0;
     conn.proto = 2;
     conn.actor_scope = None;
     vec![Resp::Simple("RESET".into())]
-}
-
-/// Execute a queued `MULTI` transaction atomically (CONCEPT:MEDULLA-KG.txn.pubsub-transactions): run every
-/// queued command in order with no other connection interleaving, returning the
-/// array of their replies. A prior malformed queued command aborts with
-/// `EXECABORT`; `EXEC` outside a transaction is an error.
-fn exec_transaction(store: &RedisStore, conn: &mut ConnState, auth_secret: &str) -> Vec<Resp> {
-    if !conn.in_multi {
-        return vec![Resp::Error("ERR EXEC without MULTI".into())];
-    }
-    conn.in_multi = false;
-    let queued = std::mem::take(&mut conn.queued);
-    conn.queued_bytes = 0;
-    if std::mem::take(&mut conn.multi_dirty) {
-        return vec![Resp::Error(
-            "EXECABORT Transaction discarded because of previous errors.".into(),
-        )];
-    }
-    let mut results = Vec::with_capacity(queued.len());
-    let mut result_bytes = 0usize;
-    let mut result_items = 0usize;
-    for qargs in queued {
-        let result = execute(store, &qargs, conn, auth_secret);
-        if !response_cost(&result, &mut result_bytes, &mut result_items) {
-            return vec![Resp::Error(
-                "ERR transaction response exceeds resource limits".into(),
-            )];
-        }
-        results.push(result);
-    }
-    vec![Resp::Array(Some(results))]
 }
 
 /// `SUBSCRIBE` / `PSUBSCRIBE` (CONCEPT:MEDULLA-KG.txn.pubsub-transactions): add each channel/pattern to the
@@ -2401,7 +1570,7 @@ fn unsubscribe_one(
 /// in-process test can drive it over any duplex transport (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round).
 async fn handle_connection<S>(
     s: &mut S,
-    store: Arc<RedisStore>,
+    kv: Arc<KvSeam>,
     pubsub: Arc<PubSub>,
     auth_secret: String,
 ) -> std::io::Result<()>
@@ -2414,7 +1583,7 @@ where
     conn.id = pubsub
         .register(tx)
         .ok_or_else(|| invalid_data("Redis connection limit exceeded"))?;
-    let result = drive_connection(s, &store, &pubsub, &mut conn, &mut rx, &auth_secret).await;
+    let result = drive_connection(s, &kv, &pubsub, &mut conn, &mut rx, &auth_secret).await;
     // Always release the registry slot + all subscriptions on the way out.
     pubsub.unregister(conn.id);
     result
@@ -2427,7 +1596,7 @@ where
 /// protocol error was already written, or the client sent `QUIT`).
 async fn drain_and_execute<S>(
     s: &mut S,
-    store: &Arc<RedisStore>,
+    kv: &Arc<KvSeam>,
     pubsub: &Arc<PubSub>,
     conn: &mut ConnState,
     buf: &mut Vec<u8>,
@@ -2455,7 +1624,7 @@ where
         if args.is_empty() {
             continue;
         }
-        let replies = dispatch(store, pubsub, &args, conn, auth_secret);
+        let replies = dispatch(kv, pubsub, &args, conn, auth_secret).await;
         let mut out = Vec::new();
         if responses_within_budget(&replies) {
             for reply in &replies {
@@ -2483,7 +1652,7 @@ where
 /// (CONCEPT:MEDULLA-KG.txn.pubsub-transactions).
 async fn drive_connection<S>(
     s: &mut S,
-    store: &Arc<RedisStore>,
+    kv: &Arc<KvSeam>,
     pubsub: &Arc<PubSub>,
     conn: &mut ConnState,
     rx: &mut mpsc::Receiver<PubMessage>,
@@ -2496,7 +1665,7 @@ where
     let mut tmp = [0u8; 8192];
     loop {
         // Drain and execute every complete command already in the buffer.
-        if drain_and_execute(s, store, pubsub, conn, &mut buf, auth_secret).await? {
+        if drain_and_execute(s, kv, pubsub, conn, &mut buf, auth_secret).await? {
             return Ok(());
         }
         // Nothing more to parse: wait for either new bytes or a published message.
@@ -2544,26 +1713,20 @@ pub fn validate_startup_policy(addr: &str, auth_secret: &str) -> std::io::Result
 
 /// Bind `addr` and serve Redis RESP connections until the process exits. Spawned by
 /// `main.rs` only when built `--features redis-wire` AND `MEDULLA_REDIS_ADDR`
-/// is set (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round). The Redis keyspace is durable when a persist dir is
-/// configured on [`ServerState`], else in-memory scratch. The direct listener is
-/// loopback-only and requires a non-empty engine auth secret before bind.
+/// is set (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round). The listener owns no store: every command enters the
+/// served KV methods through the dispatch with the verified context of the
+/// authenticated principal, so the keyspace is the engine's own durable KV. The
+/// direct listener is loopback-only and requires a non-empty engine auth secret
+/// before bind.
 pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Result<()> {
-    let (persist_dir, auth_secret) = {
-        let state = state.read().await;
-        (state.persist_dir.clone(), state.auth_secret.clone())
-    };
+    let auth_secret = state.read().await.auth_secret.clone();
     validate_startup_policy(addr, &auth_secret)?;
-    let store = Arc::new(RedisStore::open(persist_dir.as_deref()).map_err(std::io::Error::other)?);
-    serve_listener(addr, store, auth_secret).await
+    serve_listener(addr, Arc::new(KvSeam::new(state)), auth_secret).await
 }
 
 /// Private authenticated listener seam used by the production boundary and its
 /// socket-level tests. There is no public unowned or unauthenticated server entry.
-async fn serve_listener(
-    addr: &str,
-    store: Arc<RedisStore>,
-    auth_secret: String,
-) -> std::io::Result<()> {
+async fn serve_listener(addr: &str, kv: Arc<KvSeam>, auth_secret: String) -> std::io::Result<()> {
     if auth_secret.is_empty() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
@@ -2575,17 +1738,16 @@ async fn serve_listener(
     // (CONCEPT:MEDULLA-KG.txn.pubsub-transactions).
     let pubsub = Arc::new(PubSub::default());
     tracing::info!(
-        "redis-wire: serving authenticated, principal-scoped Redis RESP protocol on {} (durable={})",
-        addr,
-        store.is_durable()
+        "redis-wire: serving authenticated, principal-scoped Redis RESP protocol on {}",
+        addr
     );
     loop {
         let (mut socket, peer) = listener.accept().await?;
-        let store = store.clone();
+        let kv = kv.clone();
         let pubsub = pubsub.clone();
         let auth_secret = auth_secret.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(&mut socket, store, pubsub, auth_secret).await {
+            if let Err(e) = handle_connection(&mut socket, kv, pubsub, auth_secret).await {
                 tracing::debug!("redis-wire connection from {peer} ended: {e}");
             }
         });
@@ -2604,8 +1766,15 @@ mod tests {
     const TEST_SECRET: &str = "redis-test-auth-secret";
     const TEST_PRINCIPAL: &str = "synthetic-test-principal";
 
-    fn mem_store() -> Arc<RedisStore> {
-        Arc::new(RedisStore::open(None).unwrap())
+    /// A handle on a fresh test engine. The unit tests reach it only for the
+    /// commands that never enter a KV method; the served KV path is proved
+    /// through the real listener in `tests/resp_roundtrip.rs`.
+    fn kv_seam() -> Arc<KvSeam> {
+        let state = medulla_server::seams_install::new_state_for_test(
+            TEST_SECRET,
+            ServerState::test_isolation("resp-unit"),
+        );
+        Arc::new(KvSeam::new(Arc::new(RwLock::new(state))))
     }
 
     fn authenticated_connection(proto: u8, principal: &str) -> ConnState {
@@ -2689,523 +1858,92 @@ mod tests {
     }
 
     #[test]
-    fn stored_entry_preflight_rejects_declared_allocation_bomb() {
-        let allocation_bomb = [0xdd, 0xff, 0xff, 0xff, 0xff];
-        assert!(decode_entry(&allocation_bomb).is_err());
-    }
-
-    #[test]
-    fn eg174_glob_match_and_range_slice() {
+    fn eg174_glob_match() {
         assert!(glob_match("user:*", "user:42"));
         assert!(glob_match("*", "anything"));
         assert!(glob_match("a?c", "abc"));
         assert!(!glob_match("user:*", "post:1"));
-        let v = vec![10, 20, 30, 40];
-        assert_eq!(range_slice(&v, 0, -1), &[10, 20, 30, 40]);
-        assert_eq!(range_slice(&v, 1, 2), &[20, 30]);
-        assert_eq!(range_slice(&v, -2, -1), &[30, 40]);
-        assert_eq!(range_slice(&v, 5, 10), &[] as &[i32]);
     }
 
-    // ── command execution over the KV store ─────────────────────────────────────
+    // ── session gate and refusals (no KV method is entered) ──────────────────
 
-    #[test]
-    fn eg174_set_get_del_incr_expire() {
-        let store = mem_store();
-        let mut c = conn3();
-        assert_eq!(
-            execute(&store, &a(&["SET", "k", "v"]), &mut c, TEST_SECRET),
-            Resp::Simple("OK".into())
-        );
-        assert_eq!(
-            execute(&store, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            Resp::Bulk(Some(b"v".to_vec()))
-        );
-        assert_eq!(
-            execute(&store, &a(&["TYPE", "k"]), &mut c, TEST_SECRET),
-            Resp::Simple("string".into())
-        );
-        assert_eq!(
-            execute(&store, &a(&["EXISTS", "k", "nope"]), &mut c, TEST_SECRET),
-            Resp::Int(1)
-        );
-        // NX on an existing key → null.
-        assert_eq!(
-            execute(&store, &a(&["SET", "k", "v2", "NX"]), &mut c, TEST_SECRET),
-            Resp::Null
-        );
-        // INCR path.
-        assert_eq!(
-            execute(&store, &a(&["SET", "n", "10"]), &mut c, TEST_SECRET),
-            Resp::Simple("OK".into())
-        );
-        assert_eq!(
-            execute(&store, &a(&["INCR", "n"]), &mut c, TEST_SECRET),
-            Resp::Int(11)
-        );
-        assert_eq!(
-            execute(&store, &a(&["DECR", "n"]), &mut c, TEST_SECRET),
-            Resp::Int(10)
-        );
-        // EXPIRE/TTL.
-        assert_eq!(
-            execute(&store, &a(&["EXPIRE", "k", "100"]), &mut c, TEST_SECRET),
-            Resp::Int(1)
-        );
-        assert!(
-            matches!(execute(&store, &a(&["TTL", "k"]), &mut c, TEST_SECRET), Resp::Int(t) if t > 0 && t <= 100)
-        );
-        // DEL.
-        assert_eq!(
-            execute(&store, &a(&["DEL", "k", "n"]), &mut c, TEST_SECRET),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            Resp::Bulk(None)
-        );
-    }
-
-    #[test]
-    fn eg174_hash_list_set_zset_exec() {
-        let store = mem_store();
-        let mut c = conn3();
-        // HSET / HGET / HGETALL.
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["HSET", "h", "f1", "v1", "f2", "v2"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["HGET", "h", "f1"]), &mut c, TEST_SECRET),
-            Resp::Bulk(Some(b"v1".to_vec()))
-        );
-        // Duplicate fields in one batch update in argument order, but count as a
-        // single new field and retain the original field position.
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["HSET", "h", "f1", "v3", "f1", "v4", "f3", "v3"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Int(1)
-        );
-        assert_eq!(
-            execute(&store, &a(&["HGET", "h", "f1"]), &mut c, TEST_SECRET),
-            Resp::Bulk(Some(b"v4".to_vec()))
-        );
-        assert_eq!(
-            execute(&store, &a(&["HGETALL", "h"]), &mut c, TEST_SECRET),
-            Resp::Map(vec![
-                (Resp::bulk_str("f1"), Resp::bulk_str("v4")),
-                (Resp::bulk_str("f2"), Resp::bulk_str("v2")),
-                (Resp::bulk_str("f3"), Resp::bulk_str("v3")),
-            ])
-        );
-        // LPUSH / RPUSH / LRANGE / LLEN. LPUSH a b c → head order c b a.
-        assert_eq!(
-            execute(&store, &a(&["RPUSH", "l", "a", "b"]), &mut c, TEST_SECRET),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["LPUSH", "l", "y", "z"]), &mut c, TEST_SECRET),
-            Resp::Int(4)
-        );
-        assert_eq!(
-            execute(&store, &a(&["LLEN", "l"]), &mut c, TEST_SECRET),
-            Resp::Int(4)
-        );
-        assert_eq!(
-            execute(&store, &a(&["LRANGE", "l", "0", "-1"]), &mut c, TEST_SECRET),
-            Resp::Array(Some(vec![
-                Resp::bulk_str("z"),
-                Resp::bulk_str("y"),
-                Resp::bulk_str("a"),
-                Resp::bulk_str("b")
-            ]))
-        );
-        // SADD / SMEMBERS / SREM (dedup).
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["SADD", "s", "x", "y", "x"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["SREM", "s", "x"]), &mut c, TEST_SECRET),
-            Resp::Int(1)
-        );
-        assert_eq!(
-            execute(&store, &a(&["SMEMBERS", "s"]), &mut c, TEST_SECRET),
-            Resp::Set(vec![Resp::bulk_str("y")])
-        );
-        // ZADD / ZRANGE / ZSCORE (sorted by score).
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["ZADD", "z", "2", "b", "1", "a"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["ZRANGE", "z", "0", "-1"]), &mut c, TEST_SECRET),
-            Resp::Array(Some(vec![Resp::bulk_str("a"), Resp::bulk_str("b")]))
-        );
-        assert_eq!(
-            execute(&store, &a(&["ZSCORE", "z", "b"]), &mut c, TEST_SECRET),
-            Resp::bulk_str("2")
-        );
-        // Duplicate members in one ZADD use the last score and count only a
-        // previously absent member.
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["ZADD", "z", "3", "b", "0", "b", "4", "c"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Int(1)
-        );
-        assert_eq!(
-            execute(&store, &a(&["ZRANGE", "z", "0", "-1"]), &mut c, TEST_SECRET),
-            Resp::Array(Some(vec![
-                Resp::bulk_str("b"),
-                Resp::bulk_str("a"),
-                Resp::bulk_str("c")
-            ]))
-        );
-    }
-
-    /// Pins the recognized-command set and data dispatch: every data verb reaches a
-    /// handler (never the unknown-command fallback), the non-data verbs `MULTI`
-    /// queueing accepts are known but not data commands, and nothing else is known.
-    #[test]
-    fn known_command_set_and_data_dispatch_are_pinned() {
-        const DATA: [&str; 26] = [
-            "SET", "GET", "DEL", "EXISTS", "EXPIRE", "TTL", "INCR", "DECR", "MGET", "MSET", "HSET",
-            "HGET", "HGETALL", "HDEL", "LPUSH", "RPUSH", "LRANGE", "LLEN", "SADD", "SMEMBERS",
-            "SREM", "ZADD", "ZRANGE", "ZSCORE", "SCAN", "TYPE",
-        ];
-        let store = mem_store();
-        let unknown = |cmd: &str| {
-            Err(format!(
-                "ERR unknown command '{}'",
-                cmd.to_ascii_lowercase()
-            ))
-        };
-        for cmd in DATA {
-            assert!(is_known_command(cmd), "{cmd}");
-            let reply = execute_data(&store, cmd, &a(&[cmd]), 3);
-            assert_ne!(reply, unknown(cmd), "{cmd} must dispatch to its handler");
-        }
-        for cmd in ["PING", "ECHO", "PUBLISH"] {
-            assert!(is_known_command(cmd), "{cmd}");
-            assert_eq!(execute_data(&store, cmd, &a(&[cmd]), 3), unknown(cmd));
-        }
-        for cmd in [
-            "SELECT",
-            "COMMAND",
-            "CONFIG",
-            "CLIENT",
-            "AUTH",
-            "HELLO",
-            "QUIT",
-            "MULTI",
-            "EXEC",
-            "DISCARD",
-            "RESET",
-            "SUBSCRIBE",
-            "FLUSHALL",
-            "get",
-            "",
-        ] {
-            assert!(!is_known_command(cmd), "{cmd}");
-            assert_eq!(execute_data(&store, cmd, &a(&[cmd]), 2), unknown(cmd));
-        }
-    }
-
-    // CXA-MEDULLA-03 characterization: `execute_data` (CCN 90) arms not already
-    // exercised above -- MGET/MSET/HDEL/RPUSH/SCAN, the unknown-command
-    // fallback, SET's EX/PX/XX option parsing, ZADD's odd-arg-count error,
-    // ZRANGE WITHSCORES, and a ZSCORE miss -- ahead of decomposing the match.
-
-    #[test]
-    fn eg174_mget_mset() {
-        let store = mem_store();
-        let mut c = conn3();
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["MSET", "k1", "v1", "k2", "v2"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Simple("OK".into())
-        );
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["MGET", "k1", "k2", "nope"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Array(Some(vec![
-                Resp::Bulk(Some(b"v1".to_vec())),
-                Resp::Bulk(Some(b"v2".to_vec())),
-                Resp::Bulk(None),
-            ]))
-        );
-        // Odd argument count is a wrong-number-of-arguments error.
-        assert!(matches!(
-            execute(&store, &a(&["MSET", "k1", "v1", "k2"]), &mut c, TEST_SECRET),
-            Resp::Error(_)
-        ));
-    }
-
-    #[test]
-    fn eg174_hdel_and_rpush() {
-        let store = mem_store();
-        let mut c = conn3();
-        execute(
-            &store,
-            &a(&["HSET", "h", "f1", "v1", "f2", "v2"]),
-            &mut c,
-            TEST_SECRET,
-        );
-        assert_eq!(
-            execute(&store, &a(&["HDEL", "h", "f1"]), &mut c, TEST_SECRET),
-            Resp::Int(1)
-        );
-        assert_eq!(
-            execute(&store, &a(&["RPUSH", "l", "a", "b"]), &mut c, TEST_SECRET),
-            Resp::Int(2)
-        );
-        assert_eq!(
-            execute(&store, &a(&["LRANGE", "l", "0", "-1"]), &mut c, TEST_SECRET),
-            Resp::Array(Some(vec![Resp::bulk_str("a"), Resp::bulk_str("b")]))
-        );
-        // RPUSH/LPUSH with no values is a wrong-number-of-arguments error.
-        assert!(matches!(
-            execute(&store, &a(&["RPUSH", "l"]), &mut c, TEST_SECRET),
-            Resp::Error(_)
-        ));
-    }
-
-    #[test]
-    fn eg174_scan_and_unknown_command() {
-        let store = mem_store();
-        let mut c = conn3();
-        execute(&store, &a(&["SET", "alpha", "1"]), &mut c, TEST_SECRET);
-        execute(&store, &a(&["SET", "beta", "1"]), &mut c, TEST_SECRET);
-        match execute(&store, &a(&["SCAN", "0"]), &mut c, TEST_SECRET) {
-            Resp::Array(Some(items)) => {
-                assert_eq!(items.len(), 2);
-                assert_eq!(items[0], Resp::bulk_str("0"));
-            }
-            other => panic!("unexpected SCAN reply: {other:?}"),
-        }
-        assert!(matches!(
-            execute(
-                &store,
-                &a(&["SCAN", "0", "MATCH", "al*"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Array(Some(_))
-        ));
-        assert!(matches!(
-            execute(&store, &a(&["NOSUCHCOMMAND"]), &mut c, TEST_SECRET),
-            Resp::Error(_)
-        ));
-    }
-
-    #[test]
-    fn eg174_set_with_ex_px_options() {
-        let store = mem_store();
-        let mut c = conn3();
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["SET", "k", "v", "EX", "100"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Simple("OK".into())
-        );
-        assert!(
-            matches!(execute(&store, &a(&["TTL", "k"]), &mut c, TEST_SECRET), Resp::Int(t) if t > 0 && t <= 100)
-        );
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["SET", "k2", "v", "PX", "100000"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Simple("OK".into())
-        );
-        // Unknown SET option is a syntax error.
-        assert!(matches!(
-            execute(
-                &store,
-                &a(&["SET", "k3", "v", "BOGUS"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Error(_)
-        ));
-    }
-
-    #[test]
-    fn durable_set_reopens_and_main_kv_cannot_adopt_redis_index() {
-        let dir = std::env::temp_dir().join(format!(
-            "medulla-redis-durable-{}-{}",
-            std::process::id(),
-            now_ms()
-        ));
-        let dir_string = dir.to_string_lossy().into_owned();
-        {
-            let store = RedisStore::open(Some(&dir_string)).unwrap().scoped("actor");
-            assert!(store
-                .set("key", b"value".to_vec(), None, false, false)
-                .unwrap());
-        }
-        {
-            let store = RedisStore::open(Some(&dir_string)).unwrap().scoped("actor");
-            assert_eq!(store.get("key").unwrap().as_deref(), Some(&b"value"[..]));
-        }
-
-        // The Redis file carries its own physical manifest identity.  Opening
-        // that path through the public/main KV identity is an adoption attempt
-        // and must fail before a logical Redis namespace is bound.
-        let redis_dir = format!("{dir_string}/redis-kv");
-        assert!(
-            KvStore::open(Some(&redis_dir)).is_err(),
-            "main KV must refuse a Redis-owned file"
-        );
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn eg174_zadd_odd_args_and_zrange_withscores_and_zscore_miss() {
-        let store = mem_store();
-        let mut c = conn3();
-        assert!(matches!(
-            execute(
-                &store,
-                &a(&["ZADD", "z", "1", "a", "2"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            Resp::Error(_)
-        ));
-        execute(&store, &a(&["ZADD", "z", "1", "a"]), &mut c, TEST_SECRET);
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["ZRANGE", "z", "0", "-1", "WITHSCORES"]),
-                &mut c,
-                TEST_SECRET
-            ),
-            // `c` (conn3()) is proto 3, so scores come back as native Resp::Double.
-            Resp::Array(Some(vec![Resp::bulk_str("a"), Resp::Double(1.0)]))
-        );
-        assert_eq!(
-            execute(&store, &a(&["ZSCORE", "z", "nope"]), &mut c, TEST_SECRET),
-            Resp::Null
-        );
-    }
-
-    #[test]
-    fn eg174_wrongtype_is_reported() {
-        let store = mem_store();
-        let mut c = conn3();
-        execute(&store, &a(&["SET", "k", "v"]), &mut c, TEST_SECRET);
-        // A hash op against a string key → WRONGTYPE.
-        match execute(&store, &a(&["HGET", "k", "f"]), &mut c, TEST_SECRET) {
-            Resp::Error(e) => assert!(e.starts_with("WRONGTYPE"), "{e}"),
-            other => panic!("expected WRONGTYPE, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn eg174_auth_gate_and_hello_upgrade() {
-        let store = mem_store();
+    #[tokio::test]
+    async fn eg174_auth_gate_and_hello_upgrade() {
+        let kv = kv_seam();
         let mut c = ConnState::new(2);
         // Data command before AUTH → NOAUTH.
-        match execute(&store, &a(&["GET", "k"]), &mut c, TEST_SECRET) {
+        match execute(&kv, &a(&["GET", "k"]), &mut c, TEST_SECRET).await {
             Resp::Error(e) => assert!(e.starts_with("NOAUTH"), "{e}"),
             other => panic!("expected NOAUTH, got {other:?}"),
         }
-        // Wrong password rejected.
+        // Wrong password rejected, and binds nothing.
         assert!(matches!(
             execute(
-                &store,
+                &kv,
                 &a(&["AUTH", TEST_PRINCIPAL, "not-a-valid-credential"]),
                 &mut c,
                 TEST_SECRET
-            ),
-            Resp::Error(_)
+            )
+            .await,
+            Resp::Error(e) if e.starts_with("WRONGPASS")
         ));
+        assert!(c.actor_scope.is_none());
         // Correct password accepted → subsequent command allowed.
         let credential = derive_redis_password(TEST_SECRET, TEST_PRINCIPAL);
         assert_eq!(
             execute(
-                &store,
+                &kv,
                 &a(&["AUTH", TEST_PRINCIPAL, &credential]),
                 &mut c,
                 TEST_SECRET
-            ),
+            )
+            .await,
             Resp::Simple("OK".into())
         );
         assert_eq!(
-            execute(&store, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            Resp::Bulk(None)
+            execute(&kv, &a(&["PING"]), &mut c, TEST_SECRET).await,
+            Resp::Simple("PONG".into())
         );
         // HELLO 3 upgrades the protocol.
         assert!(matches!(
-            execute(&store, &a(&["HELLO", "3"]), &mut c, TEST_SECRET),
+            execute(&kv, &a(&["HELLO", "3"]), &mut c, TEST_SECRET).await,
             Resp::Map(_)
         ));
         assert_eq!(c.proto, 3);
     }
 
-    #[test]
-    fn redis_principals_have_isolated_keys_and_pubsub() {
-        let store = mem_store();
+    #[tokio::test]
+    async fn unsupported_families_are_refused_before_the_engine() {
+        let kv = kv_seam();
+        let mut c = conn3();
+        for command in [
+            &["HSET", "h", "f", "v"][..],
+            &["LPUSH", "l", "v"],
+            &["SADD", "s", "v"],
+            &["ZADD", "z", "1", "v"],
+            &["EXPIRE", "k", "10"],
+            &["TTL", "k"],
+            &["MULTI"],
+            &["SET", "k", "v", "EX", "10"],
+        ] {
+            assert_eq!(
+                execute(&kv, &a(command), &mut c, TEST_SECRET).await,
+                Resp::Error("ERR RESP_COMMAND_UNSUPPORTED".into()),
+                "{command:?}"
+            );
+        }
+        assert!(matches!(
+            execute(&kv, &a(&["FROBNICATE"]), &mut c, TEST_SECRET).await,
+            Resp::Error(e) if e.starts_with("ERR unknown command")
+        ));
+    }
+
+    #[tokio::test]
+    async fn redis_principals_have_isolated_pubsub() {
+        let kv = kv_seam();
         let pubsub = ps();
         let mut first = authenticated_connection(3, "synthetic-principal-one");
         let mut second = authenticated_connection(3, "synthetic-principal-two");
-
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["SET", "shared-name", "first"]),
-                &mut first,
-                TEST_SECRET
-            ),
-            Resp::Simple("OK".into())
-        );
-        assert_eq!(
-            execute(
-                &store,
-                &a(&["GET", "shared-name"]),
-                &mut second,
-                TEST_SECRET
-            ),
-            Resp::Bulk(None)
-        );
-
         first.id = pubsub
             .register(mpsc::channel(PUBSUB_MAILBOX_CAPACITY).0)
             .unwrap();
@@ -3214,23 +1952,25 @@ mod tests {
             .unwrap();
         assert_eq!(
             dispatch(
-                &store,
+                &kv,
                 &pubsub,
                 &a(&["SUBSCRIBE", "events"]),
                 &mut first,
                 TEST_SECRET
             )
+            .await
             .len(),
             1
         );
         assert_eq!(
             dispatch(
-                &store,
+                &kv,
                 &pubsub,
                 &a(&["PUBLISH", "events", "private"]),
                 &mut second,
                 TEST_SECRET
-            ),
+            )
+            .await,
             vec![Resp::Int(0)]
         );
     }
@@ -3259,15 +1999,14 @@ mod tests {
         // PING (inline).
         s.write_all(b"PING\r\n").await.unwrap();
         assert_eq!(read_reply(&mut s).await, b"+PONG\r\n");
-        // SET then GET (array form).
-        s.write_all(b"*3\r\n$3\r\nSET\r\n$1\r\nk\r\n$5\r\nhello\r\n")
+        // A refused family answers without entering the engine (array form).
+        s.write_all(b"*4\r\n$4\r\nHSET\r\n$1\r\nh\r\n$1\r\nf\r\n$1\r\nv\r\n")
             .await
             .unwrap();
-        assert_eq!(read_reply(&mut s).await, b"+OK\r\n");
-        s.write_all(b"*2\r\n$3\r\nGET\r\n$1\r\nk\r\n")
-            .await
-            .unwrap();
-        assert_eq!(read_reply(&mut s).await, b"$5\r\nhello\r\n");
+        assert_eq!(
+            read_reply(&mut s).await,
+            b"-ERR RESP_COMMAND_UNSUPPORTED\r\n"
+        );
     }
 
     // ── pub/sub + transactions (CONCEPT:MEDULLA-KG.txn.pubsub-transactions) ──────────────────────────────────
@@ -3290,7 +2029,7 @@ mod tests {
         drop(probe);
         let serve_addr = addr.clone();
         tokio::spawn(async move {
-            let _ = serve_listener(&serve_addr, mem_store(), TEST_SECRET.to_string()).await;
+            let _ = serve_listener(&serve_addr, kv_seam(), TEST_SECRET.to_string()).await;
         });
         // GOC-70: bounded-retry readiness probe instead of a fixed pre-connect
         // sleep -- a flat wait assumes the listener bound within an arbitrary
@@ -3304,38 +2043,40 @@ mod tests {
         addr
     }
 
-    #[test]
-    fn eg307_publish_with_no_subscribers_returns_zero() {
-        let store = mem_store();
+    #[tokio::test]
+    async fn eg307_publish_with_no_subscribers_returns_zero() {
+        let kv = kv_seam();
         let pubsub = ps();
         let mut c = conn3();
         assert_eq!(
             dispatch(
-                &store,
+                &kv,
                 &pubsub,
                 &a(&["PUBLISH", "ch", "hi"]),
                 &mut c,
                 TEST_SECRET
-            ),
+            )
+            .await,
             vec![Resp::Int(0)]
         );
     }
 
-    #[test]
-    fn eg307_subscribe_confirm_and_count() {
-        let store = mem_store();
+    #[tokio::test]
+    async fn eg307_subscribe_confirm_and_count() {
+        let kv = kv_seam();
         let pubsub = ps();
         let mut c = conn3();
         c.id = pubsub
             .register(mpsc::channel(PUBSUB_MAILBOX_CAPACITY).0)
             .unwrap();
         let replies = dispatch(
-            &store,
+            &kv,
             &pubsub,
             &a(&["SUBSCRIBE", "a", "b"]),
             &mut c,
             TEST_SECRET,
-        );
+        )
+        .await;
         // One confirmation per channel, with a running total count.
         assert_eq!(
             replies,
@@ -3353,7 +2094,7 @@ mod tests {
             ]
         );
         // UNSUBSCRIBE with no args drops all, count falls back to 0.
-        let un = dispatch(&store, &pubsub, &a(&["UNSUBSCRIBE"]), &mut c, TEST_SECRET);
+        let un = dispatch(&kv, &pubsub, &a(&["UNSUBSCRIBE"]), &mut c, TEST_SECRET).await;
         assert_eq!(un.len(), 2);
         assert!(c.sub_channels.is_empty());
     }
@@ -3422,96 +2163,5 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(read_reply_timeout(&mut pubc).await, b":0\r\n");
-    }
-
-    #[test]
-    fn eg307_multi_exec_atomic() {
-        let store = mem_store();
-        let pubsub = ps();
-        let mut c = conn3();
-        // MULTI opens the transaction.
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["MULTI"]), &mut c, TEST_SECRET),
-            vec![Resp::Simple("OK".into())]
-        );
-        // Commands queue rather than execute.
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["SET", "k", "1"]), &mut c, TEST_SECRET),
-            vec![Resp::Simple("QUEUED".into())]
-        );
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["INCR", "k"]), &mut c, TEST_SECRET),
-            vec![Resp::Simple("QUEUED".into())]
-        );
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            vec![Resp::Simple("QUEUED".into())]
-        );
-        // Nothing ran yet.
-        assert!(c.in_multi);
-        // EXEC runs them back-to-back, replies as one array.
-        let out = dispatch(&store, &pubsub, &a(&["EXEC"]), &mut c, TEST_SECRET);
-        assert_eq!(
-            out,
-            vec![Resp::Array(Some(vec![
-                Resp::Simple("OK".into()),
-                Resp::Int(2),
-                Resp::Bulk(Some(b"2".to_vec())),
-            ]))]
-        );
-        assert!(!c.in_multi);
-        // State really changed.
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            vec![Resp::Bulk(Some(b"2".to_vec()))]
-        );
-    }
-
-    #[test]
-    fn eg307_discard_clears_queue() {
-        let store = mem_store();
-        let pubsub = ps();
-        let mut c = conn3();
-        dispatch(&store, &pubsub, &a(&["MULTI"]), &mut c, TEST_SECRET);
-        dispatch(
-            &store,
-            &pubsub,
-            &a(&["SET", "k", "99"]),
-            &mut c,
-            TEST_SECRET,
-        );
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["DISCARD"]), &mut c, TEST_SECRET),
-            vec![Resp::Simple("OK".into())]
-        );
-        assert!(!c.in_multi);
-        // The queued SET never ran.
-        assert_eq!(
-            dispatch(&store, &pubsub, &a(&["GET", "k"]), &mut c, TEST_SECRET),
-            vec![Resp::Bulk(None)]
-        );
-        // EXEC / DISCARD outside a transaction are errors.
-        assert!(matches!(
-            dispatch(&store, &pubsub, &a(&["EXEC"]), &mut c, TEST_SECRET).as_slice(),
-            [Resp::Error(_)]
-        ));
-    }
-
-    #[test]
-    fn eg307_multi_aborts_on_bad_command() {
-        let store = mem_store();
-        let pubsub = ps();
-        let mut c = conn3();
-        dispatch(&store, &pubsub, &a(&["MULTI"]), &mut c, TEST_SECRET);
-        // An unknown command taints the transaction.
-        assert!(matches!(
-            dispatch(&store, &pubsub, &a(&["BOGUS", "x"]), &mut c, TEST_SECRET).as_slice(),
-            [Resp::Error(_)]
-        ));
-        // EXEC then aborts with EXECABORT.
-        match dispatch(&store, &pubsub, &a(&["EXEC"]), &mut c, TEST_SECRET).as_slice() {
-            [Resp::Error(e)] => assert!(e.starts_with("EXECABORT"), "{e}"),
-            other => panic!("expected EXECABORT, got {other:?}"),
-        }
     }
 }

@@ -152,6 +152,32 @@ pub async fn dispatch_authenticated_broker_actor(
     dispatch_with_context(state, req, Some(context)).await
 }
 
+/// Bridge an authenticated RESP session into the served dispatch. The listener
+/// supplies the secret-keyed actor reference of the principal its `AUTH` verified;
+/// the context it receives carries the key-value grant only, so every command
+/// passes the same admission and policy path as a signed request.
+#[cfg(feature = "redis-wire")]
+pub async fn dispatch_authenticated_resp_actor(
+    state: &Arc<RwLock<ServerState>>,
+    req: Request,
+    actor_ref: &str,
+) -> Response {
+    let request_id = req.id;
+    let server = state.read().await.context.clone();
+    let context =
+        match VerifiedRequestContext::authenticated_resp_actor(&server, actor_ref, request_id) {
+            Ok(context) => context,
+            Err(error) => {
+                medulla_kernel::metrics::process().auth_failure();
+                return method_errors::enforce(
+                    (&req.method).into(),
+                    Response::err(request_id, error),
+                );
+            }
+        };
+    dispatch_with_context(state, req, Some(context)).await
+}
+
 /// Dispatch an engine-owned local query adapter under its fixed, read-only
 /// service identity. The caller remains subject to provisioned graph ACL/RBAC.
 pub async fn dispatch_authenticated_local_query(
