@@ -93,7 +93,7 @@ Every row below names a test that does not exist yet. The test file and function
 | T-079 | MEDULLA-CQ-ORCH-R705.4 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::mapping_updates_known_and_proposes_name_matches` | Exchange document to graph mapping proves its row as stated in requirements.md |
 | T-080 | MEDULLA-CQ-ORCH-R705.5 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::write_then_read_keeps_digest` | Open Exchange Format writer proves its row as stated in requirements.md |
 | T-081 | MEDULLA-CQ-ORCH-R705.6 | L3 | `tests/architecture_exchange_served.rs::import_writes_one_batch_and_export_reads_it` | Architecture exchange wiring proves its row as stated in requirements.md |
-| T-082 | MEDULLA-CQ-ORCH-R705.7 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::adapter_keys_elements_by_identifier` | Architecture sync adapter proves its row as stated in requirements.md |
+| T-082 | MEDULLA-CQ-ORCH-R705.7 | L1 | `crates/medulla-virtual-graph/tests/architecture_exchange.rs::adapter_keys_elements_by_identifier` | Architecture sync adapter proves its row as stated in requirements.md |
 | T-083 | MEDULLA-CQ-ORCH-R705.8 | L3 | `tests/architecture_exchange_served.rs::exchange_refusals_leave_state_unchanged` | Architecture exchange refusal proves its row as stated in requirements.md |
 | T-084 | MEDULLA-CQ-ORCH-R705.9 | L3 | `tests/architecture_exchange_served.rs::nodes_keep_identifier_and_document_digest` | Architecture exchange evidence proves its row as stated in requirements.md |
 | T-085 | MEDULLA-CQ-ORCH-R705.10 | L4 | `tests/competency/test_architecture_exchange_served.py::test_export_import_and_sync_round_trip` | Architecture exchange hot-path proof proves its row as stated in requirements.md |

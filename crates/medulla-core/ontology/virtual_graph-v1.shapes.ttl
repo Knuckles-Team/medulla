@@ -339,5 +339,29 @@ vg:SourceAuthorityShape a sh:NodeShape ;
         """ ;
     ] .
 
+# A process source row (MEDULLA-CQ-ORCH-R701.10): a SourceAuthority for the core
+# ProcessModel or DecisionLogic class names exactly one core:processSourceSystem.
+vg:ProcessSourceAuthorityShape a sh:NodeShape ;
+    sh:targetClass vg:SourceAuthority ;
+    sh:property [
+        sh:path <https://knuckles-team.github.io/ontology/core#processSourceSystem> ; sh:maxCount 1 ;
+        sh:in ( "bpmn20" "aris_epc" ) ;
+        sh:message "processSourceSystem is bpmn20 or aris_epc."
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A process source row needs a processSourceSystem." ;
+        sh:prefixes vg:VirtualGraphPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this vg:authorityFor ?cls .
+                FILTER(?cls = <https://knuckles-team.github.io/ontology/core#ProcessModel>
+                    || ?cls = <https://knuckles-team.github.io/ontology/core#DecisionLogic>)
+                OPTIONAL { $this <https://knuckles-team.github.io/ontology/core#processSourceSystem> ?system }
+                FILTER(!BOUND(?system))
+            }
+        """ ;
+    ] .
+
 vg:VirtualGraphPrefixes a owl:Ontology ;
     sh:declare [ sh:prefix "vg" ; sh:namespace "https://knuckles-team.github.io/ontology/virtual-graph#"^^xsd:anyURI ] .

@@ -1,0 +1,34 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/source-record/process-sync#> .
+
+# The ARIS repository as a process source (MEDULLA-CQ-ORCH-R701.10): one
+# federated secondary for :ProcessModel on the aris-mcp connection. The row is
+# valid with no live ARIS instance: the connector serves a read-only repository
+# of AML export files, and an unconfigured connector answers ARIS_NOT_CONFIGURED.
+
+ex:aris a vg:SourceConnection ; rdfs:label "aris-mcp" ;
+    vg:sourceKind "mcp" ; vg:endpointRef ex:aris-endpoint ;
+    vg:declaredCapability "read" .
+ex:aris-endpoint vg:url "mcp://aris-mcp" .
+
+ex:aris-contract a vg:MetadataContract ; vg:contractSource ex:aris ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000000" ;
+    vg:discoveredEntity "Model" ; vg:discoveredField "Model.guid" .
+
+ex:aris-process-model a vg:VirtualMapping ; vg:mapsContract ex:aris-contract ;
+    vg:mapsOntologyClass :ProcessModel ; vg:mapsEntity "Model" ; vg:keyField "Model.guid" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:aris-process-model-key .
+ex:aris-process-model-key a vg:PredicateFieldPair ; vg:predicate ex:modelGuid ; vg:field "Model.guid" .
+
+ex:aris-process-authority a vg:SourceAuthority ;
+    vg:authoritativeSource ex:aris ;
+    vg:authorityFor :ProcessModel ;
+    vg:authorityMapping ex:aris-process-model ;
+    vg:authorityRank 2 ;
+    vg:authorityContract "virtual-graph" ;
+    vg:recordRole "federated_secondary" ;
+    vg:syncDirection "both" ;
+    vg:conflictRule "system_of_record_wins" ;
+    :processSourceSystem "aris_epc" .

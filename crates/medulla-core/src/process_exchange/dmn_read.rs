@@ -98,11 +98,19 @@ fn text_of(element: &XmlElement, child: &str) -> String {
 }
 
 fn clause(element: &XmlElement, expression: String) -> DmnClause {
+    // An input clause states its type on `inputExpression`; an output
+    // clause states it on the clause element itself.
+    let type_ref = element
+        .child("inputExpression")
+        .and_then(|e| e.attr("typeRef"))
+        .or_else(|| element.attr("typeRef"))
+        .unwrap_or_default()
+        .to_owned();
     DmnClause {
         id: id_of(element),
         label: element.attr("label").unwrap_or_default().to_owned(),
         expression,
-        type_ref: element.attr("typeRef").unwrap_or_default().to_owned(),
+        type_ref,
     }
 }
 

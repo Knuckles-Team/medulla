@@ -13,6 +13,7 @@ pub mod bpmn_read;
 pub mod bpmn_write;
 pub mod dmn_graph;
 pub mod dmn_read;
+pub mod dmn_write;
 pub mod workflow_bpmn;
 pub mod xml_tree;
 

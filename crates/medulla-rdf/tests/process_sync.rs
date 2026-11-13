@@ -39,3 +39,45 @@ fn engine_location_row_passes_shapes() {
         refused.results
     );
 }
+
+const ARIS_ROW: &str =
+    include_str!("../../medulla-core/tests/fixtures/process_sync/aris_authority.ttl");
+
+fn report(data: &str) -> medulla_shacl::ValidationReport {
+    medulla_shacl::validate_turtle(SHAPES, data).expect("the authority shapes validate")
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.10
+#[test]
+fn aris_location_row_passes_shapes() {
+    let clean = report(ARIS_ROW);
+    assert!(clean.conforms, "{:?}", clean.results);
+
+    // Without the process source system the row is refused.
+    let missing = ARIS_ROW.replace(" ;\n    :processSourceSystem \"aris_epc\" .", " .");
+    assert_ne!(
+        missing, ARIS_ROW,
+        "the fixture names the process source system"
+    );
+    let refused = report(&missing);
+    assert!(!refused.conforms);
+    assert!(refused.results.iter().any(|r| r
+        .message
+        .as_deref()
+        .unwrap_or("")
+        .contains("needs a processSourceSystem")));
+
+    // A system outside the closed set is refused.
+    let unknown = ARIS_ROW.replace("\"aris_epc\"", "\"visio\"");
+    let refused = report(&unknown);
+    assert!(!refused.conforms);
+    assert!(refused.results.iter().any(|r| r
+        .message
+        .as_deref()
+        .unwrap_or("")
+        .contains("processSourceSystem is bpmn20 or aris_epc")));
+
+    // The row keeps its sync role: a secondary without a direction is refused too.
+    let no_direction = ARIS_ROW.replace("    vg:syncDirection \"both\" ;\n", "");
+    assert!(!report(&no_direction).conforms);
+}

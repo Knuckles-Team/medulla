@@ -407,3 +407,41 @@ fn dmn_mapping_keeps_rule_order() {
         "dmnRequiresDecision"
     )));
 }
+
+// spec: MEDULLA-CQ-ORCH-R702.7
+#[test]
+fn dmn_write_then_read_keeps_digest() {
+    use medulla_core::process_exchange::dmn_read::parse_dmn;
+    use medulla_core::process_exchange::dmn_write::{dmn_model_digest, write_dmn};
+    use medulla_core::process_exchange::xml_tree::XmlLimits;
+
+    let doc = parse_dmn(DMN_FIXTURE.as_bytes(), XmlLimits::default()).unwrap();
+    let written = write_dmn(&doc).unwrap();
+    let back = parse_dmn(&written, XmlLimits::default()).unwrap();
+    assert_eq!(dmn_model_digest(&back), dmn_model_digest(&doc));
+    // Rules keep their declared order and the input clause keeps its type.
+    let table = back.decisions.iter().find(|d| d.id == "tier").unwrap();
+    let table = table.table.as_ref().unwrap();
+    assert_eq!(table.rules[0].id, "r1");
+    assert_eq!(table.rules[1].id, "r2");
+    assert_eq!(table.inputs[0].type_ref, "number");
+    assert_eq!(table.hit_policy, "COLLECT");
+    assert_eq!(table.aggregation.as_deref(), Some("SUM"));
+    // Kept fragments are written back unchanged at their owner.
+    assert_eq!(back.preserved.len(), doc.preserved.len());
+    assert!(back
+        .preserved
+        .iter()
+        .any(|p| p.owner == "tier" && p.xml.contains("kept")));
+    // Writing is canonical: a second write is byte-identical.
+    assert_eq!(write_dmn(&back).unwrap(), written);
+    // A different model has a different digest.
+    let mut changed = doc.clone();
+    changed.decisions[0].table.as_mut().unwrap().rules.reverse();
+    assert_ne!(dmn_model_digest(&changed), dmn_model_digest(&doc));
+    // An empty document is not deployable.
+    assert!(matches!(
+        write_dmn(&Default::default()),
+        Err(ProcessExchangeError::NotDeployable { .. })
+    ));
+}
