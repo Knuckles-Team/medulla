@@ -59,7 +59,7 @@ fn respond(req_id: u64, receipt: medulla_h_ingest::lineage::LineageIngestReceipt
 async fn lower(
     ctx: &GraphOpRouting<'_>,
     events: Vec<medulla_h_ingest::lineage::LineageEvent>,
-    known_edge: &dyn Fn(&str, &str) -> bool,
+    known_edge: &(dyn Fn(&str, &str) -> bool + Sync),
 ) -> Result<
     (
         medulla_h_ingest::repository_index::IndexWriteSet,
