@@ -294,3 +294,10 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T285 MEDULLA-DURABLE-KERNEL-R874.18 SemanticStageIntent/SemanticStage state machine: route 4 census findings through SemanticStage::apply
 - [ ] T286 MEDULLA-DURABLE-KERNEL-R874.19 StoreReport/StoreStatus state machine: route 1 census findings through StoreStatus::apply
 - [ ] T287 MEDULLA-DURABLE-KERNEL-R874.20 TransactionPhaseSubmission/TransactionConsensusPhase state machine: route 1 census findings through TransactionConsensusPhase::apply
+- [ ] T288 MEDULLA-DURABLE-KERNEL-R875 Census debt of the durable kernel wire types is closed (rollup)
+- [ ] T289 MEDULLA-DURABLE-KERNEL-R875.1 SyncState is a sync reading, not a lifecycle: rename, no machine
+- [ ] T290 MEDULLA-DURABLE-KERNEL-R875.2 WorkItemCommitStatus and WorkItemCancelStatus are reply outcomes, not lifecycles: rename, no machine
+- [ ] T291 MEDULLA-DURABLE-KERNEL-R875.3 TerminalEventRead discriminator `status` is an availability tag: rename, no machine
+- [ ] T292 MEDULLA-DURABLE-KERNEL-R875.4 ChangeEnvelopeOutcome discriminator `status` is a result tag: rename, no machine
+- [ ] T293 MEDULLA-DURABLE-KERNEL-R875.5 SemanticIndexOutcome discriminator `status` is a result tag: rename, no machine
+- [ ] T294 MEDULLA-DURABLE-KERNEL-R875.6 Semantic index and audit wire mirrors follow their Rust machines: Python mirror follows the Rust machine
