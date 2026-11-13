@@ -581,7 +581,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T570 [US7] MEDULLA-DECISION-ENGINE-R134.110.3 Wiring: ToolRelevance family
 - [ ] T571 [US7] MEDULLA-DECISION-ENGINE-R134.110.4 Refusal: tool relevance
 - [ ] T572 [US7] MEDULLA-DECISION-ENGINE-R134.110.5 Evidence: tool relevance premises
-- [ ] T573 [US7] MEDULLA-DECISION-ENGINE-R134.110.6 Hot-path proof: one ranking for every search surface
+- [x] T573 [US7] MEDULLA-DECISION-ENGINE-R134.110.6 Hot-path proof: one ranking for every search surface
 - [ ] T574 [US7] MEDULLA-DECISION-ENGINE-R134.110.7 Tool index cache with visibility and generation
 - [ ] T575 [US4] MEDULLA-DECISION-ENGINE-R100.102.1 Run outcome model
 - [ ] T576 [US4] MEDULLA-DECISION-ENGINE-R100.102.2 Run credit kernel

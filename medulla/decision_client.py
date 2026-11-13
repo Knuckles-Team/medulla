@@ -132,6 +132,45 @@ def task_plan_request(
     )
 
 
+def tool_assignment_request(
+    tenant_id: str,
+    question_id: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    task_text: str,
+    agent_role_iri: str = "",
+    top_k: int = 10,
+    context_budget_tokens: int = 1000,
+    required_capabilities: Sequence[str] = (),
+    task_embedding: Sequence[int] | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a ``ToolRelevance`` question over the tenant's published tools.
+
+    The typed ``tool_assignment`` parameter carries the task, the role (empty
+    for the whole catalog), the ``top_k`` and the token budget; the engine
+    ranks the published ``Tool`` components through its tool index. The
+    optional embedding is ``Q32`` integers, never floats.
+    """
+    body = {
+        "schema_version": 1,
+        "task_text": task_text,
+        "task_embedding": None if task_embedding is None else list(task_embedding),
+        "agent_role_iri": agent_role_iri,
+        "top_k": top_k,
+        "context_budget_tokens": context_budget_tokens,
+        "required_capabilities": list(required_capabilities),
+    }
+    return decide_request(
+        tenant_id,
+        (question_id, "tool_relevance", "ordinary"),
+        library(["tool"]),
+        feature_schema,
+        policy=policy,
+        params=[param("tool_assignment", "tool_assignment", body)],
+    )
+
+
 def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
     """One task in Rust declaration order, for the digest.
 

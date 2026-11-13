@@ -660,3 +660,9 @@ The parked chain that carried the run trace, recursive trace read, runtime quota
 
 ## R158.6/R159.6: served proofs of run adjustment and path preference (decision)
 At the default thresholds one errored run in a 20-run window (5%) is above `width.error_hi` (2%), so the widening case of R158.6 pins a decision policy that tolerates it (`width.error_lo` 6%, `width.error_hi` 20%); the pin goes through the same policy-knob path the family reads. Both served tests use the loopback engine, and each seeds under a unique partition or connector so the shared session store never mixes runs. R159.6 needs two callers: the decider commits the exploring decision naming the evaluator's persistence id (`sha256` of its principal), and the evaluator, a second verified agent, records each outcome.
+## R134.110.6 served proof of one tool ranking (design calls)
+
+- The Python wire builder for the typed `tool_assignment` parameter is `tool_assignment_request` in `medulla/decision_client.py`, beside `task_plan_request`. It asks the question over the library candidate source for kind `tool` and carries the request body in the typed param; the embedding is Q32 integers.
+- The served test publishes real `Tool` facts (`schema_tokens`, `effect`) and `name`/`server_id` attributes, because the tool index skips a tool that declares no schema size. The role is a published `Toolset` whose `requires` list names its tools.
+- "Same order for both callers" is proven by two principals of one tenant (the session client and a second client with a different principal). The order is also compared with the `tool_rank` premises sealed in the record, so the answer equals the sealed ranking.
+- The caller on the Arbora side (ARBORA-OPS-R866) is another repository's row; the shared operation is the one this test calls.

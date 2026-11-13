@@ -193,6 +193,7 @@ fn pinned_max_tools(h: &Harness, max: i64) -> DecisionPolicyRef {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.110.3
+// spec: MEDULLA-DECISION-ENGINE-R134.110.6
 #[tokio::test]
 async fn catalog_change_reorders_the_ranking() {
     let h = Harness::new().await;
