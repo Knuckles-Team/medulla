@@ -60,7 +60,7 @@ mod run_adjustment;
 mod runtime_quota;
 mod schema_mapping;
 mod serving_technique;
-mod skill_upgrade;
+pub(super) mod skill_upgrade;
 mod skill_workflow;
 mod sub_call_admission;
 mod support;

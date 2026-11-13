@@ -1203,6 +1203,7 @@ mod memory_change_tests;
 
 // MEDULLA-DECISION-ENGINE-R818: probe selection, served.
 mod probe_selection_tests;
+mod skill_upgrade_tests;
 
 // MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
 mod telemetry_tests;

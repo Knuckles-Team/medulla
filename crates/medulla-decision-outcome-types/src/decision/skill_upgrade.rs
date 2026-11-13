@@ -1,40 +1,11 @@
 //! Skill consumer-contract upgrade receipt (MEDULLA-DECISION-ENGINE-R167.1).
 
-use serde::{Deserialize, Serialize};
-
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::skill_upgrade_request::{
-    ConsumerContractSchema, ContractField, SkillUpgradeRequest,
+    ConsumerContractSchema, ContractField,
 };
-use medulla_types::{contract::Digest256, contract::OpaqueId};
-
-/// Current wire schema version of [`SkillUpgradeReceipt`].
-pub const SKILL_UPGRADE_RECEIPT_SCHEMA_VERSION: u16 = 1;
-
-/// Records the old and new consumer contracts and any declared migration.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SkillUpgradeReceipt {
-    pub schema_version: u16,
-    pub previous_consumer_contract_digest: Digest256,
-    pub new_consumer_contract_digest: Digest256,
-    pub declared_migration_id: Option<OpaqueId>,
-}
-
-impl SkillUpgradeReceipt {
-    /// The receipt of one upgrade request: both contract digests and the
-    /// migration the author declared.
-    pub fn of_request(request: &SkillUpgradeRequest) -> Result<Self, String> {
-        request.validate()?;
-        Ok(Self {
-            schema_version: SKILL_UPGRADE_RECEIPT_SCHEMA_VERSION,
-            previous_consumer_contract_digest: request.previous.digest()?,
-            new_consumer_contract_digest: request.new.digest()?,
-            declared_migration_id: request.declared_migration_id.clone(),
-        })
-    }
-}
+use serde::{Deserialize, Serialize};
 
 /// What changed between two consumer contracts (MEDULLA-DECISION-ENGINE-R167.2).
 /// Every list holds field names, sorted.
@@ -105,6 +76,10 @@ pub fn compare_contracts(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::decision::skill_upgrade_request::{
+        SkillUpgradeReceipt, SKILL_UPGRADE_RECEIPT_SCHEMA_VERSION,
+    };
+    use medulla_types::contract::{Digest256, OpaqueId};
 
     fn receipt(migration: Option<&str>) -> SkillUpgradeReceipt {
         SkillUpgradeReceipt {

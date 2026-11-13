@@ -735,6 +735,30 @@ fn resolution(outcome: &StatisticalOutcome) -> ResolutionKind {
     }
 }
 
+/// The receipt an admitted `skill_upgrade` question seals as its answer
+/// (MEDULLA-DECISION-ENGINE-R167.3); an abstained one carries none.
+fn skill_upgrade_receipt(
+    request: &DecideRequest,
+    outcome: &StatisticalOutcome,
+) -> Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer> {
+    if request.question.kind != QuestionKind::SkillUpgrade
+        || matches!(outcome, StatisticalOutcome::Abstained { .. })
+    {
+        return None;
+    }
+    let upgrade = super::family::skill_upgrade::upgrade_of(request).ok()?;
+    let receipt =
+        medulla_decision_types::decision::skill_upgrade_request::SkillUpgradeReceipt::of_request(
+            upgrade,
+        )
+        .ok()?;
+    Some(
+        medulla_decision_types::decision::statistical::outcome::FamilyAnswer::SkillUpgrade(
+            Box::new(receipt),
+        ),
+    )
+}
+
 fn seal(
     sealing: Sealing,
     executed: &Executed,
@@ -857,6 +881,9 @@ fn seal(
                         Box::new(plan),
                     )
                 })
+            })
+            .or_else(|| {
+                skill_upgrade_receipt(sealing.request, &executed.ladder.outcome)
             })
             .or_else(|| {
                 executed.thought.as_ref().map(|thought| {

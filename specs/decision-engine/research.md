@@ -874,3 +874,9 @@ The team read follows the edit concentration pattern (`stat_team.rs`): the quest
 
 ## R171.2: planning admission comparison (design calls)
 `compare_features` returns only the design differences. A feature whose container is absent from the view is `MissingKind::Edge` (nothing in the view reaches it); a feature whose container exists but whose attach file is not one of its `support` paths is `MissingKind::AttachPoint`. A gap digest that no feature covers is not a feature difference; it is the `ADMISSION_GAP_UNCOVERED` refusal of R171.4. The family wiring that calls the function is R171.3.
+## Skill upgrade admission through Decide (R167.3, R167.4)
+
+- The admitted answer is an advisory score `admit_upgrade`, sealed with `ResolutionKind::Constraint` (the family's `resolution_kind` hook) and the generic `Claim` evidence class, because the caller supplies both schemas. `Decide` writes nothing.
+- `SkillUpgradeReceipt` moves next to the request in `medulla-decision-types`: the record's `FamilyAnswer` lives there and carries the receipt, and the outcome crate depends on that crate, not the reverse. The type was new and narrowly imported, so no re-export is left behind (hard cutover). `compare_contracts` and `ContractDiff` stay in the outcome crate.
+- A breaking upgrade without a declared migration and a claimed digest that differs from the recomputed one are well-formed requests that the evidence does not support, so each is an abstention with its registered code and no receipt (the row text names abstentions). A malformed request (wrong option, missing or invalid `skill_upgrade` param, unsupported schema version) is a request refusal `PARAMETER_INVALID` raised before any store read.
+- The request gains two optional claimed digests so the digest-mismatch refusal has something to compare; absent claims are not checked.

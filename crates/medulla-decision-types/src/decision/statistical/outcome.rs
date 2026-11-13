@@ -158,6 +158,8 @@ pub enum FamilyAnswer {
     /// The ordered steps, prompts and cautions of the `usage_guidance` family
     /// (MEDULLA-DECISION-ENGINE-R177.3).
     UsageGuidance(Box<crate::decision::usage_guidance::UsageGuidance>),
+    /// The receipt of an admitted `skill_upgrade` (MEDULLA-DECISION-ENGINE-R167.3).
+    SkillUpgrade(Box<crate::decision::skill_upgrade_request::SkillUpgradeReceipt>),
 }
 
 impl FamilyAnswer {
@@ -217,6 +219,16 @@ impl FamilyAnswer {
     pub fn usage_guidance(&self) -> Option<&crate::decision::usage_guidance::UsageGuidance> {
         match self {
             Self::UsageGuidance(guidance) => Some(guidance),
+            _ => None,
+        }
+    }
+
+    /// The skill upgrade receipt this answer carries.
+    pub fn skill_upgrade_receipt(
+        &self,
+    ) -> Option<&crate::decision::skill_upgrade_request::SkillUpgradeReceipt> {
+        match self {
+            Self::SkillUpgrade(receipt) => Some(receipt),
             _ => None,
         }
     }
