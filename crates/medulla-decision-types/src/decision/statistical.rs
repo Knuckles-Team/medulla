@@ -162,6 +162,9 @@ pub enum QuestionKind {
     /// Compile a skill document's typed draft into a stored program
     /// (MEDULLA-DECISION-ENGINE-R156). See `decision::skill_workflow`.
     SkillWorkflowCompile,
+    /// Whether a new consumer contract still serves the previous one
+    /// (MEDULLA-DECISION-ENGINE-R167). See `decision::skill_upgrade_request`.
+    SkillUpgrade,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -236,6 +239,8 @@ pub enum TypedValue {
     ThoughtSearch(Box<super::thought_search::ReasoningState>),
     /// A skill workflow draft to compile (MEDULLA-DECISION-ENGINE-R156.1).
     SkillWorkflowDraft(Box<super::skill_workflow::SkillWorkflowDraft>),
+    /// A skill upgrade compatibility question (MEDULLA-DECISION-ENGINE-R167.1).
+    SkillUpgrade(Box<super::skill_upgrade_request::SkillUpgradeRequest>),
 }
 
 /// One named parameter of a question.

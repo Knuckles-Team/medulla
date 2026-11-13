@@ -34,6 +34,7 @@ mod stage_allocation;
 mod task_plan;
 #[cfg(test)]
 mod template;
+mod skill_upgrade;
 mod skill_workflow;
 mod template_choice;
 mod thought_search;
@@ -168,6 +169,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;
     static SKILLWORKFLOWFAMILY: skill_workflow::SkillWorkflowFamily =
         skill_workflow::SkillWorkflowFamily;
+    static SKILLUPGRADEFAMILY: skill_upgrade::SkillUpgradeFamily = skill_upgrade::SkillUpgradeFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
     match kind {
@@ -204,6 +206,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::Topology => &TOPOLOGYFAMILY,
         QuestionKind::ProgramLookup => &PROGRAMLOOKUPFAMILY,
         QuestionKind::SkillWorkflowCompile => &SKILLWORKFLOWFAMILY,
+        QuestionKind::SkillUpgrade => &SKILLUPGRADEFAMILY,
     }
 }
 
@@ -248,6 +251,7 @@ mod tests {
             QuestionKind::Topology,
             QuestionKind::ProgramLookup,
             QuestionKind::SkillWorkflowCompile,
+            QuestionKind::SkillUpgrade,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -282,7 +286,8 @@ mod tests {
             | QuestionKind::ContextPackage
             | QuestionKind::Topology
             | QuestionKind::ProgramLookup
-            | QuestionKind::SkillWorkflowCompile => true,
+            | QuestionKind::SkillWorkflowCompile
+            | QuestionKind::SkillUpgrade => true,
         };
         assert!(exhaustive);
         kinds
@@ -294,7 +299,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            33,
+            34,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {
