@@ -87,3 +87,66 @@ async def test_discover_empty_embedding_keyword_only() -> None:
     assert fake.sent[0][1] is not None
     assert fake.sent[0][1]["query_embedding"] == []
     assert fake.sent[0][1]["k"] == 5
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R090.1
+@pytest.mark.asyncio
+async def test_discover_client_sends_planner_fields_and_reads_plan_vector() -> None:
+    """The client carries the planner fields and the plan vector of the Rust test
+    `discover_plan_round_trips` reads back unchanged."""
+    fake = _FakeClient()
+    gc = GraphOperationsClient(fake)
+    await gc.discover(
+        ["deploy"],
+        [],
+        k=3,
+        query_text="how do I deploy",
+        mode="deep",
+        as_of=1_700_000_000,
+        hops=2,
+    )
+    method, params = fake.sent[0]
+    assert method == "Discover"
+    assert params == {
+        "keywords": ["deploy"],
+        "query_embedding": [],
+        "k": 3,
+        "mode": "deep",
+        "hops": 2,
+        "query_text": "how do I deploy",
+        "as_of": 1_700_000_000,
+    }
+
+    vector = {
+        "hits": [
+            {
+                "id": "a",
+                "name": "a",
+                "description": "",
+                "type": "doc",
+                "score": 1.0,
+                "arm_ranks": [{"arm": "expansion", "rank": 1}],
+                "recency_boost": 1.25,
+                "hop_path": ["s", "a"],
+            }
+        ],
+        "plan": {
+            "expansions": [
+                {
+                    "digest": "0" * 64,
+                    "kind": "sub_query",
+                    "provider_id": "m",
+                    "provider_revision": "r",
+                }
+            ],
+            "degraded": {"state": "provider_failed", "message": "down"},
+        },
+    }
+
+    class _Vector(_FakeClient):
+        async def _send(self, *args: Any, **kwargs: Any) -> Any:
+            return vector
+
+    out = await GraphOperationsClient(_Vector()).discover(["a"], [], k=1)
+    assert out["plan"]["expansions"][0]["digest"] == "0" * 64
+    assert out["hits"][0]["hop_path"] == ["s", "a"]

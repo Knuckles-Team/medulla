@@ -6907,6 +6907,11 @@ class GraphOperationsClient:
         keywords: list[str],
         query_embedding: list[float],
         k: int = 5,
+        *,
+        query_text: str | None = None,
+        mode: str = "standard",
+        as_of: int | None = None,
+        hops: int = 0,
     ) -> dict[str, Any]:
         """One-round-trip hybrid discovery
         (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
@@ -6929,7 +6934,15 @@ class GraphOperationsClient:
         return (
             await _gen.ingestion.send_discover(
                 self._client,
-                {"keywords": keywords, "query_embedding": query_embedding, "k": k},
+                {
+                    "keywords": keywords,
+                    "query_embedding": query_embedding,
+                    "k": k,
+                    **({"mode": mode} if mode != "standard" else {}),
+                    **({"hops": hops} if hops else {}),
+                    **({"query_text": query_text} if query_text is not None else {}),
+                    **({"as_of": as_of} if as_of is not None else {}),
+                },
             )
         ).payload
 
