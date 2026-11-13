@@ -52,6 +52,7 @@ use medulla_sql_lang::sql::classify::AlterTableAction;
 use medulla_sql_lang::sql::classify::AlterTablePlan;
 
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+use medulla_table_store::tables::IndexPlan;
 
 use medulla_tables::schema::Column;
 
@@ -671,12 +672,16 @@ fn authorize_index_catalog_op(
             sql_catalog_acl::authorize_ddl(source, &plan.table, SqlPrivilege::Alter)
                 .map_err(user_err)
         }
+        IndexCatalogTxnOp::PutSecondaryIndex { plan } => {
+            sql_catalog_acl::authorize_ddl(source, &plan.table, SqlPrivilege::Alter)
+                .map_err(user_err)
+        }
         IndexCatalogTxnOp::PutHypertable { plan } => {
             sql_catalog_acl::authorize_ddl(source, &plan.table, SqlPrivilege::Alter)
                 .map_err(user_err)
         }
         IndexCatalogTxnOp::DropAnnIndexesForColumn { table, .. }
-        | IndexCatalogTxnOp::DropAnnIndex { table, .. } => {
+        | IndexCatalogTxnOp::DropIndex { table, .. } => {
             authorize_alter_like(source, authority, table, provisional_creates)
         }
     }
@@ -2151,6 +2156,10 @@ impl WireSession {
                 TxnOp::IndexCatalog(IndexCatalogTxnOp::PutAnnIndex { plan: plan.clone() }),
                 WireOutcome::command("CREATE INDEX"),
             ),
+            StatementKind::CreateIndex(plan) => (
+                TxnOp::IndexCatalog(IndexCatalogTxnOp::PutSecondaryIndex { plan: plan.clone() }),
+                WireOutcome::command("CREATE INDEX"),
+            ),
             StatementKind::CreateHypertable(plan) => (
                 TxnOp::IndexCatalog(IndexCatalogTxnOp::PutHypertable { plan: plan.clone() }),
                 WireOutcome::Rows(single_text_result(
@@ -2289,8 +2298,9 @@ impl WireSession {
             StatementKind::CreateAnnIndex(plan) => {
                 self.run_create_ann_index(graph, sql, plan).await
             }
-            StatementKind::DropAnnIndex { name, if_exists } => {
-                self.run_drop_ann_index(graph, sql, name, if_exists).await
+            StatementKind::CreateIndex(plan) => self.run_create_index(graph, sql, plan).await,
+            StatementKind::DropIndex { name, if_exists } => {
+                self.run_drop_index(graph, sql, name, if_exists).await
             }
             // CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering — TimescaleDB hypertable + continuous aggregate.
             StatementKind::CreateHypertable(plan) => {
@@ -3285,9 +3295,26 @@ impl WireSession {
         Ok(WireOutcome::command("CREATE INDEX"))
     }
 
+    /// `CREATE [UNIQUE] INDEX` over ordinary columns
+    /// (MEDULLA-ENGINE-PARITY-R010.2), through the same authorized catalog
+    /// transaction as the ANN registration.
+    async fn run_create_index(
+        &self,
+        graph: &str,
+        sql: &str,
+        plan: IndexPlan,
+    ) -> WireResult<WireOutcome> {
+        let mut txn = TableTxn::new();
+        txn.push(TxnOp::IndexCatalog(IndexCatalogTxnOp::PutSecondaryIndex {
+            plan,
+        }));
+        self.commit_table_txn(graph, sql, txn).await?;
+        Ok(WireOutcome::command("CREATE INDEX"))
+    }
+
     /// `DROP INDEX [IF EXISTS] name` (EH-352): resolve the index to its table,
     /// then drop it through the same authorized catalog transaction as CREATE.
-    async fn run_drop_ann_index(
+    async fn run_drop_index(
         &self,
         graph: &str,
         sql: &str,
@@ -3295,7 +3322,7 @@ impl WireSession {
         if_exists: bool,
     ) -> WireResult<WireOutcome> {
         let (authority, persist_dir) = self.catalog_authority().await?;
-        let visible = medulla_server_auth::sql_catalog_acl::alterable_ann_index_table(
+        let visible = medulla_server_auth::sql_catalog_acl::alterable_index_table(
             &authority,
             &persist_dir,
             &name,
@@ -3307,7 +3334,7 @@ impl WireSession {
             return Err(user_err(format!("index `{name}` does not exist")));
         };
         let mut txn = TableTxn::new();
-        txn.push(TxnOp::IndexCatalog(IndexCatalogTxnOp::DropAnnIndex {
+        txn.push(TxnOp::IndexCatalog(IndexCatalogTxnOp::DropIndex {
             table,
             name,
         }));

@@ -3,8 +3,11 @@
 //! `TableStore` index catalog and its write-path maintenance.
 #![cfg(feature = "sql")]
 
+use medulla_graph_core::graph::{GraphCore, GraphView};
 use medulla_result_types::row_predicate::RowPredicate;
-use medulla_table_store::tables::TableStore;
+use medulla_sql::sql::exec_sql_typed_with_tables;
+use medulla_sql_lang::sql::classify::{classify, StatementKind};
+use medulla_table_store::tables::{IndexCatalogTxnOp, TableStore, TableTxn, TxnOp};
 use medulla_tables::index::{
     IndexExpr, SecondaryIndexColumn, SecondaryIndexLookup, SecondaryIndexSpec,
     SECONDARY_INDEX_SCHEMA_VERSION,
@@ -216,4 +219,157 @@ fn version_one_specs_are_not_read_without_rebuild() {
     old.schema_version = 1;
     let error = store.create_secondary_index(&old, false).unwrap_err();
     assert!(error.contains("unsupported schema version 1"), "{error}");
+}
+
+/// Drive one `CREATE INDEX` / `DROP INDEX` statement through the classifier and the
+/// store's catalog transaction, the same two steps the served path takes.
+fn apply_index_sql(store: &TableStore, sql: &str) -> Result<usize, String> {
+    let mut txn = TableTxn::new();
+    match classify(sql)? {
+        StatementKind::CreateIndex(plan) => {
+            txn.push(TxnOp::IndexCatalog(IndexCatalogTxnOp::PutSecondaryIndex {
+                plan,
+            }));
+        }
+        StatementKind::DropIndex { name, .. } => {
+            let table = store
+                .secondary_index_table(&name)?
+                .ok_or_else(|| format!("index `{name}` does not exist"))?;
+            txn.push(TxnOp::IndexCatalog(IndexCatalogTxnOp::DropIndex {
+                table,
+                name,
+            }));
+        }
+        other => return Err(format!("not an index statement: {other:?}")),
+    }
+    store.commit_txn(&txn)
+}
+
+fn empty_view() -> GraphView {
+    GraphCore::new().analysis_snapshot()
+}
+
+fn plan_text(store: &TableStore, sql: &str) -> String {
+    let result = exec_sql_typed_with_tables(&empty_view(), store, &format!("EXPLAIN {sql}"))
+        .expect("explain");
+    result
+        .rows
+        .iter()
+        .flat_map(|row| {
+            row.iter()
+                .map(|cell| cell.as_str().unwrap_or_default().to_string())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn ids(store: &TableStore, sql: &str) -> Vec<i64> {
+    let result = exec_sql_typed_with_tables(&empty_view(), store, sql).expect("select");
+    let mut out: Vec<i64> = result
+        .rows
+        .iter()
+        .map(|row| row[0].as_i64().expect("integer id"))
+        .collect();
+    out.sort_unstable();
+    out
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R010.2
+#[test]
+fn planner_uses_partial_index() {
+    let store = scoped_store("planner");
+    store.create_table(&accounts_schema(), false).unwrap();
+    insert(&store, 1, "a@x", "active").unwrap();
+    insert(&store, 2, "b@x", "closed").unwrap();
+    insert(&store, 3, "c@x", "active").unwrap();
+    apply_index_sql(
+        &store,
+        "CREATE UNIQUE INDEX accounts_active_email ON accounts (email) WHERE status = 'active'",
+    )
+    .unwrap();
+    insert(&store, 4, "d@x", "active").unwrap();
+    insert(&store, 5, "e@x", "closed").unwrap();
+
+    // The query's WHERE carries the index predicate as one conjunct: the index serves
+    // it, EXPLAIN names it, and the answer equals what a scan returns.
+    let implied = "SELECT id FROM accounts WHERE status = 'active' AND id > 1";
+    let text = plan_text(&store, implied);
+    assert!(
+        text.contains("IndexScanExec: index=accounts_active_email"),
+        "{text}"
+    );
+    assert_eq!(ids(&store, implied), vec![3, 4]);
+    assert_eq!(
+        ids(&store, "SELECT id FROM accounts WHERE status = 'active'"),
+        vec![1, 3, 4]
+    );
+
+    // A query that does not imply the predicate falls back to the scan: closed rows
+    // are still found, and no index is named.
+    let other = "SELECT id FROM accounts WHERE status = 'closed'";
+    assert!(!plan_text(&store, other).contains("IndexScanExec"));
+    assert_eq!(ids(&store, other), vec![2, 5]);
+    let unfiltered = "SELECT id FROM accounts WHERE id > 1";
+    assert!(!plan_text(&store, unfiltered).contains("IndexScanExec"));
+    assert_eq!(ids(&store, unfiltered), vec![2, 3, 4, 5]);
+
+    // Dropping the index returns every query to the scan.
+    apply_index_sql(&store, "DROP INDEX accounts_active_email").unwrap();
+    assert!(!plan_text(&store, implied).contains("IndexScanExec"));
+    assert_eq!(ids(&store, implied), vec![3, 4]);
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R010.2
+#[test]
+fn create_index_decodes_columns_expressions_and_predicate() {
+    let StatementKind::CreateIndex(plan) = classify(
+        "CREATE UNIQUE INDEX IF NOT EXISTS by_mail ON accounts (lower(email), id DESC) WHERE status = 'active' AND id > 0",
+    )
+    .unwrap() else {
+        panic!("expected CreateIndex");
+    };
+    assert!(plan.unique && plan.if_not_exists);
+    assert_eq!(plan.name.as_deref(), Some("by_mail"));
+    assert_eq!(plan.table, "accounts");
+    assert_eq!(plan.columns.len(), 2);
+    assert_eq!(plan.columns[0].column, "email");
+    assert_eq!(plan.columns[0].expr, Some(IndexExpr::Lower));
+    assert!(plan.columns[1].descending && plan.columns[1].expr.is_none());
+    assert!(matches!(plan.predicate, Some(CheckExpr::And(_, _))));
+
+    let StatementKind::CreateIndex(unnamed) = classify("CREATE INDEX ON accounts (email)").unwrap()
+    else {
+        panic!("expected CreateIndex");
+    };
+    assert_eq!(unnamed.resolved_name(), "accounts_email_idx");
+    // An ANN index is still the ANN registration, not a scalar index.
+    assert!(matches!(
+        classify("CREATE INDEX ON docs USING hnsw (emb vector_l2_ops)").unwrap(),
+        StatementKind::CreateAnnIndex(_)
+    ));
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R010.2
+#[test]
+fn nondeterministic_expression_refuses() {
+    for sql in [
+        "CREATE INDEX i ON accounts (now())",
+        "CREATE INDEX i ON accounts (random())",
+        "CREATE INDEX i ON accounts (nextval('s'))",
+        "CREATE INDEX i ON accounts ((id + 1))",
+        "CREATE INDEX i ON accounts (substr(email, 1, 2))",
+    ] {
+        let error = classify(sql).unwrap_err();
+        assert!(
+            error.starts_with("INDEX_EXPR_NONDETERMINISTIC"),
+            "{sql}: {error}"
+        );
+    }
+    // An allowed function on a column type it does not accept is refused when the
+    // index is created, with the same code.
+    let store = scoped_store("nondeterministic");
+    store.create_table(&accounts_schema(), false).unwrap();
+    let error = apply_index_sql(&store, "CREATE INDEX bad ON accounts (abs(email))").unwrap_err();
+    assert!(error.contains("INDEX_EXPR_NONDETERMINISTIC"), "{error}");
+    assert!(store.list_secondary_indexes(None).unwrap().is_empty());
 }

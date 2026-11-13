@@ -62,9 +62,7 @@ use medulla_server_api::carrier::CarrierAuthority;
 // RF-019: the served projection's maintained-ANN narrowing, with this caller's
 // row-level security applied inside the probe.
 mod ann_projection;
-pub use ann_projection::{
-    alterable_ann_index_table, authorized_read_store_for_query, RequestGraph,
-};
+pub use ann_projection::{alterable_index_table, authorized_read_store_for_query, RequestGraph};
 // EH-066: read-only relations (the decision record views) beside the caller's tables.
 pub mod relations;
 pub use relations::{wants_read_only_relations, ReadOnlyRelations, SharedRelations};

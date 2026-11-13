@@ -67,6 +67,7 @@ mod edge_durable;
 mod occ;
 mod outbox;
 mod row_insert;
+mod secondary_ddl;
 mod sequence;
 mod source_batch;
 mod trigger;
@@ -107,6 +108,7 @@ use medulla_tables::{
 // pushdown consults to choose a real medulla-ann index over the brute-force scan.
 use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::ann_plan::HypertablePlan;
+use crate::tables::index_plan::IndexPlan;
 
 /// One row's index-maintenance delta: `(row id, before cells, after cells)`.
 /// Named rather than spelled inline so the tuple's meaning is stated once
@@ -385,10 +387,14 @@ pub enum IndexCatalogTxnOp {
     PutAnnIndex { plan: AnnIndexPlan },
     /// `create_hypertable(...)` — a Timescale-compatible hypertable.
     PutHypertable { plan: HypertablePlan },
+    /// `CREATE [UNIQUE] INDEX` — an ordinary scalar index, optionally partial and
+    /// over closed-set expressions (MEDULLA-ENGINE-PARITY-R010.2).
+    PutSecondaryIndex { plan: IndexPlan },
     /// Drop every ANN index registered on one column.
     DropAnnIndexesForColumn { table: String, column: String },
-    /// `DROP INDEX name` — the ANN index `name` on `table` (EH-352).
-    DropAnnIndex { table: String, name: String },
+    /// `DROP INDEX name` — the ANN or secondary index `name` on `table` (EH-352,
+    /// MEDULLA-ENGINE-PARITY-R010.2).
+    DropIndex { table: String, name: String },
 }
 
 /// One SQL/PGQ property-graph catalog mutation. A property graph is a catalog
@@ -2766,7 +2772,7 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
         TxnOp::DropFunction { name, if_exists } => {
             apply_txn_op_drop_function(wtx, name, *if_exists)
         }
-        TxnOp::IndexCatalog(index) => apply_txn_op_index_catalog(wtx, index),
+        TxnOp::IndexCatalog(index) => apply_txn_op_index_catalog(wtx, tenant_scope, index),
         // `tenant_scope` here is the STORE's schema-version namespace, not a
         // verified request tenant; the property-graph family carries its own.
         TxnOp::PropertyGraphDdl(graph) => apply_txn_op_property_graph(wtx, tenant_scope, graph),
@@ -2774,14 +2780,23 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
 }
 
 /// The index/hypertable registration family of [`apply_txn_op`].
-fn apply_txn_op_index_catalog(wtx: &SqlWrite<'_>, op: &IndexCatalogTxnOp) -> Result<usize, String> {
+fn apply_txn_op_index_catalog(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    op: &IndexCatalogTxnOp,
+) -> Result<usize, String> {
     match op {
         IndexCatalogTxnOp::PutAnnIndex { plan } => apply_txn_op_put_ann_index(wtx, plan),
         IndexCatalogTxnOp::PutHypertable { plan } => apply_txn_op_put_hypertable(wtx, plan),
         IndexCatalogTxnOp::DropAnnIndexesForColumn { table, column } => {
             drop_ann_indexes_for_column_in(wtx, table, column)
         }
-        IndexCatalogTxnOp::DropAnnIndex { table, name } => drop_ann_index_in(wtx, table, name),
+        IndexCatalogTxnOp::PutSecondaryIndex { plan } => {
+            secondary_ddl::put_secondary_index_in(wtx, tenant_scope, plan)
+        }
+        IndexCatalogTxnOp::DropIndex { table, name } => {
+            secondary_ddl::drop_index_in(wtx, tenant_scope, table, name)
+        }
     }
 }
 

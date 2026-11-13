@@ -71,6 +71,7 @@ pub(crate) mod filter_shape;
 /// Gated `iceberg-federation` (implied by `sql`, see that feature's Cargo.toml comment).
 #[cfg(feature = "iceberg-federation")]
 mod iceberg_federation;
+pub(crate) mod index_scan;
 // `pub(crate)` (not `mod providers;`) so `crate::tables::provider::UserTableProvider`
 // (CONCEPT:MEDULLA-KG.query.register-each-user-table) can reuse `NodesTableProvider`'s generic equality-index
 // pushdown for its own full-scan fallback, instead of duplicating that machinery.

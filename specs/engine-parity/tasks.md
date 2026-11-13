@@ -30,7 +30,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T024 [US2] MEDULLA-ENGINE-PARITY-R009.2 SQL dialect compatibility matrix: wiring and refusal
 - [ ] T025 [P] [US2] MEDULLA-ENGINE-PARITY-R009.3 SQL dialect compatibility matrix: hot-path proof
 - [ ] T026 [US3] MEDULLA-ENGINE-PARITY-R010.1 Partial and expression indexes on user tables: model and behavior
-- [ ] T027 [US3] MEDULLA-ENGINE-PARITY-R010.2 Partial and expression indexes on user tables: wiring and refusal
+- [x] T027 [US3] MEDULLA-ENGINE-PARITY-R010.2 Partial and expression indexes on user tables: wiring and refusal
 - [ ] T028 [P] [US3] MEDULLA-ENGINE-PARITY-R010.3 Partial and expression indexes on user tables: hot-path proof
 - [x] T029 [US3] MEDULLA-ENGINE-PARITY-R011.1 Constraints: unique, foreign key, check and not null: model and behavior
 - [ ] T030 [US3] MEDULLA-ENGINE-PARITY-R011.2 Constraints: unique, foreign key, check and not null: wiring and refusal

@@ -29,6 +29,7 @@
 pub mod ann_authority;
 pub mod ann_plan;
 pub mod embedding_binding;
+pub mod index_plan;
 pub mod property_graph;
 pub mod store;
 
@@ -45,6 +46,7 @@ pub use embedding_binding::{
     EMBEDDING_BINDING_SCHEMA_VERSION, EMBEDDING_TARGET_SUFFIX, MAX_EMBEDDING_BINDINGS_PER_TABLE,
     MAX_EMBEDDING_DIM,
 };
+pub use index_plan::{IndexColumnPlan, IndexPlan};
 pub use property_graph::{
     decode_property_graph, decode_property_graph_catalog_record, AlterElementAction,
     AlterPropertyGraphAction, CanonicalCatalogName, DropBehavior, EdgeEndpoint,

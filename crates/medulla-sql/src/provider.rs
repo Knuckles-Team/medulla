@@ -28,11 +28,13 @@ use datafusion::error::Result as DfResult;
 use datafusion::logical_expr::{Expr, Operator, TableProviderFilterPushDown, TableType};
 
 use crate::sql::filter_shape::{classify_pushdown, column_eq_literal, ScanPlan};
+use crate::sql::index_scan::{predicate_implied, IndexScanExec};
 use crate::sql::providers::NodesTableProvider;
 use medulla_table_store::tables::store::TableStore;
 use medulla_tables::index::SecondaryIndexLookup;
 use medulla_tables::{
-    schema::ArrayElemType, schema::Cell, schema::ColumnType, schema::TableSchema,
+    schema::ArrayElemType, schema::Cell, schema::CheckExpr, schema::CmpOp, schema::ColumnType,
+    schema::TableSchema,
 };
 
 /// The Arrow `DataType` a [`ColumnType`] materializes as. Scalar legacy types keep
@@ -511,9 +513,9 @@ fn scalar_to_json(value: &ScalarValue) -> Option<serde_json::Value> {
 /// each arm group stays within the per-function complexity cap.
 fn text_or_bool_json(value: &ScalarValue) -> Option<serde_json::Value> {
     match value {
-        ScalarValue::Utf8(Some(value)) | ScalarValue::LargeUtf8(Some(value)) => {
-            Some(value.clone().into())
-        }
+        ScalarValue::Utf8(Some(value))
+        | ScalarValue::LargeUtf8(Some(value))
+        | ScalarValue::Utf8View(Some(value)) => Some(value.clone().into()),
         ScalarValue::Boolean(Some(value)) => Some((*value).into()),
         _ => None,
     }
@@ -600,6 +602,68 @@ fn secondary_lookup(expr: &Expr, schema: &TableSchema) -> Option<SecondaryIndexL
     }
 }
 
+/// One query conjunct as a [`CheckExpr`] leaf, for the partial-index planner
+/// (MEDULLA-ENGINE-PARITY-R010.2): `column OP literal`, `column [NOT] IN (...)` and
+/// `column IS [NOT] NULL`. Any other shape is not comparable and returns `None`.
+fn check_leaf(expr: &Expr, schema: &TableSchema) -> Option<CheckExpr> {
+    match expr {
+        Expr::BinaryExpr(binary) => {
+            let (column, literal, op) = match (binary.left.as_ref(), binary.right.as_ref()) {
+                (Expr::Column(column), Expr::Literal(value, _)) => (column, value, binary.op),
+                (Expr::Literal(value, _), Expr::Column(column)) => {
+                    (column, value, reverse_index_operator(binary.op))
+                }
+                _ => return None,
+            };
+            let op = match op {
+                Operator::Eq => CmpOp::Eq,
+                Operator::NotEq => CmpOp::Ne,
+                Operator::Lt => CmpOp::Lt,
+                Operator::LtEq => CmpOp::Le,
+                Operator::Gt => CmpOp::Gt,
+                Operator::GtEq => CmpOp::Ge,
+                _ => return None,
+            };
+            schema.column(&column.name)?;
+            Some(CheckExpr::Cmp {
+                column: column.name.clone(),
+                op,
+                value: scalar_to_json(literal)?,
+            })
+        }
+        Expr::IsNull(inner) | Expr::IsNotNull(inner) => {
+            let Expr::Column(column) = inner.as_ref() else {
+                return None;
+            };
+            schema.column(&column.name)?;
+            Some(CheckExpr::IsNull {
+                column: column.name.clone(),
+                negated: matches!(expr, Expr::IsNotNull(_)),
+            })
+        }
+        Expr::InList(list) => {
+            let Expr::Column(column) = list.expr.as_ref() else {
+                return None;
+            };
+            schema.column(&column.name)?;
+            let values = list
+                .list
+                .iter()
+                .map(|item| match item {
+                    Expr::Literal(value, _) => scalar_to_json(value),
+                    _ => None,
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(CheckExpr::In {
+                column: column.name.clone(),
+                values,
+                negated: list.negated,
+            })
+        }
+        _ => None,
+    }
+}
+
 fn is_secondary_shape(expr: &Expr) -> bool {
     let Expr::BinaryExpr(binary) = expr else {
         return false;
@@ -666,6 +730,47 @@ impl UserTableProvider {
         Ok(Some(batch))
     }
 
+    /// The partial indexes of this table (MEDULLA-ENGINE-PARITY-R010.2). A catalog
+    /// that cannot be read yields none, so the planner falls back to the scan.
+    fn partial_index_specs(&self) -> Vec<medulla_tables::index::SecondaryIndexSpec> {
+        self.store
+            .list_secondary_indexes(Some(&self.schema.name))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|spec| spec.predicate.is_some())
+            .collect()
+    }
+
+    /// The rows of a partial index whose predicate the query's `WHERE` implies,
+    /// with the index name. `None` falls back to the existing scan paths.
+    fn partial_index_rows(
+        &self,
+        filters: &[Expr],
+    ) -> Result<Option<(String, Vec<Vec<Cell>>)>, String> {
+        let leaves: Vec<CheckExpr> = filters
+            .iter()
+            .filter_map(|filter| check_leaf(filter, &self.schema))
+            .collect();
+        if leaves.is_empty() {
+            return Ok(None);
+        }
+        for spec in self.partial_index_specs() {
+            let Some(predicate) = &spec.predicate else {
+                continue;
+            };
+            if !predicate_implied(predicate, &leaves, &self.schema) {
+                continue;
+            }
+            if let Some(rows) = self
+                .store
+                .secondary_index_covered_rows(&self.schema.name, &spec.name)?
+            {
+                return Ok(Some((spec.name, rows)));
+            }
+        }
+        Ok(None)
+    }
+
     /// The full, unfiltered table — [`TableStore::scan`]'s existing O(n) walk,
     /// memoized so a provider shared across repeat calls (`SqlContextCache`'s
     /// reused `BuiltCtx`) doesn't re-pay it per query.
@@ -698,8 +803,11 @@ impl TableProvider for UserTableProvider {
         &self,
         filters: &[&Expr],
     ) -> DfResult<Vec<TableProviderFilterPushDown>> {
+        let partial = self.partial_index_specs();
         Ok(classify_pushdown(filters, |f| {
-            is_equality_shape(f) || is_secondary_shape(f)
+            is_equality_shape(f)
+                || is_secondary_shape(f)
+                || (!partial.is_empty() && check_leaf(f, &self.schema).is_some())
         }))
     }
 
@@ -710,6 +818,16 @@ impl TableProvider for UserTableProvider {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> ScanPlan {
+        if let Some((index, rows)) = self
+            .partial_index_rows(filters)
+            .map_err(datafusion::error::DataFusionError::Execution)?
+        {
+            let (_, batch) = materialize(&self.schema, &rows)
+                .map_err(datafusion::error::DataFusionError::Execution)?;
+            let mem = MemTable::try_new(self.arrow_schema.clone(), vec![vec![batch]])?;
+            let inner = mem.scan(state, projection, filters, limit).await?;
+            return Ok(Arc::new(IndexScanExec::new(index, inner)));
+        }
         if let Some(lookup) = filters
             .iter()
             .find_map(|filter| secondary_lookup(filter, &self.schema))

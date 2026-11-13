@@ -46,7 +46,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 // The Postgres-family extension plan shapes classify routes to.
 use super::pgfamily::ContinuousAggPlan;
-use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan};
+use medulla_table_store::{
+    tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan, tables::IndexPlan,
+};
 // CONCEPT:MEDULLA-KG.compute.json-deep-indexing — the wire predicate the JSON operators lower onto. Surfaced by
 // `medulla-types/query`, which the `sql` feature (this module's gate) always enables.
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
@@ -194,7 +196,11 @@ pub enum StatementKind {
     /// pgvector ANN index so a `ORDER BY col <-> $1 LIMIT k` query pushes down to medulla-ann.
     CreateAnnIndex(AnnIndexPlan),
     /// `DROP INDEX [IF EXISTS] name` (EH-352) — the typed drop of a maintained ANN index.
-    DropAnnIndex { name: String, if_exists: bool },
+    DropIndex { name: String, if_exists: bool },
+    /// `CREATE [UNIQUE] INDEX [IF NOT EXISTS] [name] ON t (cols) [WHERE p]`
+    /// (MEDULLA-ENGINE-PARITY-R010.2) — an ordinary scalar index, optionally
+    /// partial and over closed-set expressions.
+    CreateIndex(IndexPlan),
     /// `SELECT create_hypertable('t','ts')` (CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering) — record TimescaleDB
     /// time-partitioning metadata for a table.
     CreateHypertable(HypertablePlan),
@@ -242,7 +248,8 @@ impl StatementKind {
         "create_extension",
         "drop_extension",
         "create_ann_index",
-        "drop_ann_index",
+        "create_index",
+        "drop_index",
         "create_hypertable",
         "create_continuous_aggregate",
         "create_function",
@@ -280,7 +287,8 @@ impl StatementKind {
             Self::CreateExtension { .. } => "create_extension",
             Self::DropExtension { .. } => "drop_extension",
             Self::CreateAnnIndex(_) => "create_ann_index",
-            Self::DropAnnIndex { .. } => "drop_ann_index",
+            Self::CreateIndex(_) => "create_index",
+            Self::DropIndex { .. } => "drop_index",
             Self::CreateHypertable(_) => "create_hypertable",
             Self::CreateContinuousAggregate(_) => "create_continuous_aggregate",
             Self::CreateFunction(_) => "create_function",
@@ -616,6 +624,7 @@ pub fn classify(sql: &str) -> Result<StatementKind, String> {
 // each group delegates to; see `classify`'s doc comment above for why the
 // dispatch is grouped this way).
 mod dispatch;
+mod index_plan;
 
 /// [`classify`]'s parse step: `COPY … FROM STDIN` is sent over the wire WITHOUT
 /// the inline TSV data block that `sqlparser` insists follows the `;` — so
@@ -706,8 +715,8 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     if let Some(kind) = super::pgvector_ddl::parse_create_ann_index(sql)
         .map(StatementKind::CreateAnnIndex)
         .or_else(|| {
-            super::pgvector_ddl::parse_drop_ann_index(sql)
-                .map(|(name, if_exists)| StatementKind::DropAnnIndex { name, if_exists })
+            super::pgvector_ddl::parse_drop_index(sql)
+                .map(|(name, if_exists)| StatementKind::DropIndex { name, if_exists })
         })
     {
         return Some(Ok(kind));

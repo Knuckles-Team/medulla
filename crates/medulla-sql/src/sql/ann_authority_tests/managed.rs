@@ -189,7 +189,7 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
         medulla_sql_lang::sql::classify::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
     assert!(matches!(
         classified,
-        medulla_sql_lang::sql::classify::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"
+        medulla_sql_lang::sql::classify::StatementKind::DropIndex { ref name, if_exists: true } if name == "docs_emb"
     ));
     assert_eq!(
         store.ann_index_table("docs_emb").unwrap().as_deref(),
@@ -197,7 +197,7 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
     );
     let mut txn = medulla_table_store::tables::TableTxn::new();
     txn.push(medulla_table_store::tables::TxnOp::IndexCatalog(
-        medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex {
+        medulla_table_store::tables::IndexCatalogTxnOp::DropIndex {
             table: "docs".to_string(),
             name: "docs_emb".to_string(),
         },

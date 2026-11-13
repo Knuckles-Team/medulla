@@ -41,6 +41,7 @@ pub(super) fn classify_ddl_stmt(stmt: &Statement) -> Option<Result<StatementKind
         Statement::CreateTable(ct) => {
             Some(super::classify_create_table(ct).map(StatementKind::CreateTable))
         }
+        Statement::CreateIndex(create) => Some(super::index_plan::classify_create_index(create)),
         Statement::CreateExtension(extension) => Some(super::classify_create_extension(
             &extension.name.value,
             extension.if_not_exists,

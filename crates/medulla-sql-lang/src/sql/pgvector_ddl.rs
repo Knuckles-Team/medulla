@@ -113,7 +113,7 @@ pub fn parse_create_ann_index(sql: &str) -> Option<AnnIndexPlan> {
 /// `DROP INDEX [CONCURRENTLY] [IF EXISTS] name [CASCADE | RESTRICT]` — the typed drop
 /// of a maintained ANN index (EH-352). `Some((name, if_exists))`; `None` for any
 /// other statement, including a multi-name `DROP INDEX a, b`.
-pub fn parse_drop_ann_index(sql: &str) -> Option<(String, bool)> {
+pub fn parse_drop_index(sql: &str) -> Option<(String, bool)> {
     let toks = tokenize(sql);
     let mut i = 0;
     if !eat(&toks, &mut i, "drop") || !eat(&toks, &mut i, "index") {
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn drop_index_is_recognized_with_its_options() {
-        let parsed = |sql| parse_drop_ann_index(sql);
+        let parsed = |sql| parse_drop_index(sql);
         assert_eq!(
             parsed("DROP INDEX emb_idx"),
             Some(("emb_idx".into(), false))

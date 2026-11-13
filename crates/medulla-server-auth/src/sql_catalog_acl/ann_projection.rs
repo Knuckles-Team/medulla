@@ -91,14 +91,18 @@ fn adopt_edge_index_status(
 /// table the caller may not alter is reported exactly like a missing one, so
 /// `DROP INDEX [IF EXISTS]` never discloses an index across an authorization
 /// boundary (EH-352).
-pub fn alterable_ann_index_table(
+pub fn alterable_index_table(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     name: &str,
 ) -> Result<Option<String>, String> {
     let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
-    let Some(table) = tenant.ann_index_table(name)? else {
-        return Ok(None);
+    let table = match tenant.ann_index_table(name)? {
+        Some(table) => table,
+        None => match tenant.secondary_index_table(name)? {
+            Some(table) => table,
+            None => return Ok(None),
+        },
     };
     match open_authorized_table(authority, persist_dir, &table, SqlPrivilege::Alter) {
         Ok(_) => Ok(Some(table)),

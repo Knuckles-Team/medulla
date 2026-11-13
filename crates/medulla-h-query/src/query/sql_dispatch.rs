@@ -198,7 +198,7 @@ fn sql_catalog_drop_kind(kind: &medulla_sql_lang::sql::classify::StatementKind) 
             | K::DropView(_)
             | K::DropExtension { .. }
             | K::DropFunction(_)
-            | K::DropAnnIndex { .. }
+            | K::DropIndex { .. }
     )
 }
 
@@ -211,6 +211,7 @@ fn sql_catalog_create_kind(kind: &medulla_sql_lang::sql::classify::StatementKind
             | K::CreateExtension { .. }
             | K::CreateFunction(_)
             | K::CreateAnnIndex(_)
+            | K::CreateIndex(_)
             | K::CreateHypertable(_)
             | K::CreateContinuousAggregate(_)
     )
@@ -399,15 +400,15 @@ async fn exec_sql_catalog_drop(
             )
             .await
         }
-        K::DropAnnIndex { name, if_exists } => {
-            let visible = medulla_server_auth::sql_catalog_acl::alterable_ann_index_table(
+        K::DropIndex { name, if_exists } => {
+            let visible = medulla_server_auth::sql_catalog_acl::alterable_index_table(
                 scope.authority,
                 scope.persist_dir,
                 &name,
             );
             let op = match visible {
                 Ok(Some(table)) => {
-                    medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex { table, name }
+                    medulla_table_store::tables::IndexCatalogTxnOp::DropIndex { table, name }
                 }
                 Ok(None) if if_exists => return sql_write_ack(req_id, "DROP INDEX", Ok(Ok(0))),
                 Ok(None) => {
@@ -482,6 +483,19 @@ async fn exec_sql_catalog_create(
                     or_replace: plan.or_replace,
                 },
                 "CREATE FUNCTION",
+            )
+            .await
+        }
+        K::CreateIndex(plan) => {
+            commit_catalog_op(
+                req_id,
+                scope,
+                sql_method,
+                store,
+                medulla_table_store::tables::TxnOp::IndexCatalog(
+                    medulla_table_store::tables::IndexCatalogTxnOp::PutSecondaryIndex { plan },
+                ),
+                "CREATE INDEX",
             )
             .await
         }
@@ -568,7 +582,8 @@ fn classify_sql_catalog_terminal(
         | K::CreateExtension { .. }
         | K::DropExtension { .. }
         | K::CreateAnnIndex(_)
-        | K::DropAnnIndex { .. }
+        | K::CreateIndex(_)
+        | K::DropIndex { .. }
         | K::CreateHypertable(_)
         | K::CreateContinuousAggregate(_)
         | K::CreateFunction(_)
