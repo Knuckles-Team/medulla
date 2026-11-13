@@ -65,6 +65,7 @@ use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::state::ServerState;
 use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_blob::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::ENGINE_BLOB_OWNER_SCOPE;
 use medulla_server_blob::kv::KvStore;
 
 /// Env var: when set (and built `--features s3-api`) the S3 REST listener binds
@@ -101,6 +102,10 @@ const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15
 
 const BUCKET_NS: &str = "s3:buckets";
 const OBJECT_NS: &str = "s3:objects";
+
+/// The fixed service principal the S3 listener acts as (`service:s3-api-client`).
+const S3_SERVICE_NAME: &str = "s3-api-client";
+const S3_SERVICE_SCOPES: &[&str] = &["kg:read", "kg:write"];
 
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
@@ -212,6 +217,9 @@ struct MultipartUpload {
 pub struct S3Store {
     kv: Arc<KvStore>,
     blob: Arc<dyn ChunkStore>,
+    /// Owner scope of every object manifest: the S3 service principal's carrier scope,
+    /// so the served `BlobFetchBegin` of that principal reads an S3 object by digest.
+    owner_scope: String,
     /// `uploadId` → the in-progress multipart upload state (CONCEPT:MEDULLA-KG.txn.pubsub-transactions).
     uploads: Mutex<HashMap<String, MultipartUpload>>,
 }
@@ -261,8 +269,16 @@ impl S3Store {
         Ok(Self {
             kv,
             blob,
+            owner_scope: ENGINE_BLOB_OWNER_SCOPE.to_string(),
             uploads: Mutex::new(HashMap::new()),
         })
+    }
+
+    /// Own every stored object manifest by `owner_scope` (the S3 service carrier's
+    /// scope at served startup) instead of the reserved engine scope.
+    pub fn with_owner_scope(mut self, owner_scope: String) -> Self {
+        self.owner_scope = owner_scope;
+        self
     }
 
     pub fn is_durable(&self) -> bool {
@@ -316,7 +332,16 @@ impl S3Store {
         if body.len() > MAX_S3_BODY_BYTES {
             return Err("S3 object exceeds resource limits".to_string());
         }
-        let (digest, _) = self.blob.put_chunk(body)?;
+        // The object is a content-addressed blob (manifest + chunks) owned by this
+        // listener's service scope, so the native `BlobFetchBegin`/`BlobChunkGet` of
+        // that principal reads the same bytes; its digest is the manifest digest.
+        let committed = medulla_server_blob::blob::stream::stream_blob_put_owned(
+            self.blob.as_ref(),
+            body,
+            0,
+            &self.owner_scope,
+        )?;
+        let digest = committed.digest;
         let etag = format!("\"{digest}\"");
         let meta = ObjectMeta {
             digest,
@@ -351,10 +376,13 @@ impl S3Store {
     fn get_object(&self, bucket: &str, key: &str) -> Result<Option<(ObjectMeta, Vec<u8>)>, String> {
         match self.object_meta(bucket, key)? {
             Some(meta) => {
-                let bytes = self
-                    .blob
-                    .get_chunk(&meta.digest)?
-                    .ok_or_else(|| "stored S3 object chunk is missing".to_string())?;
+                let mut bytes = Vec::with_capacity(usize::try_from(meta.size).unwrap_or(0));
+                medulla_server_blob::blob::stream::stream_blob_get(
+                    self.blob.as_ref(),
+                    &meta.digest,
+                    &mut bytes,
+                )
+                .map_err(|_| "stored S3 object blob is missing".to_string())?;
                 if bytes.len() as u64 != meta.size {
                     return Err("stored S3 object size does not match metadata".to_string());
                 }
@@ -910,8 +938,8 @@ fn handle(
     let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         server,
         authorized(auth, req),
-        "s3-api-client",
-        &["kg:read", "kg:write"],
+        S3_SERVICE_NAME,
+        S3_SERVICE_SCOPES,
     );
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return S3Response::error("403 Forbidden", "AccessDenied", "Access Denied");
@@ -1133,12 +1161,21 @@ pub async fn serve_with_blob_store(
     selected_blob: Option<Arc<dyn ChunkStore>>,
 ) -> std::io::Result<()> {
     let persist_dir = { state.read().await.persist_dir.clone() };
-    let store = Arc::new(
-        S3Store::open_with_blob_store(persist_dir.as_deref(), selected_blob)
-            .map_err(std::io::Error::other)?,
-    );
     let auth = resolve_auth()?;
     let server = state.read().await.context.clone();
+    let owner_scope = medulla_server_auth::auth::mint_fixed_service_carrier(
+        &server,
+        true,
+        S3_SERVICE_NAME,
+        S3_SERVICE_SCOPES,
+    )
+    .map(|carrier| carrier.owner_scope().to_string())
+    .ok_or_else(|| std::io::Error::other("S3 service carrier could not be minted"))?;
+    let store = Arc::new(
+        S3Store::open_with_blob_store(persist_dir.as_deref(), selected_blob)
+            .map_err(std::io::Error::other)?
+            .with_owner_scope(owner_scope),
+    );
     serve_with_store_inner(addr, store, auth, server).await
 }
 
@@ -1411,8 +1448,14 @@ mod tests {
                 )
                 .expect("put object");
             let digest = etag.trim_matches('"');
+            let manifest = selected
+                .get_manifest(digest)
+                .expect("native manifest read")
+                .expect("object manifest");
             assert_eq!(
-                selected.get_chunk(digest).expect("native CAS read"),
+                selected
+                    .get_chunk(&manifest.chunks[0])
+                    .expect("native CAS read"),
                 Some(b"shared bytes".to_vec())
             );
             assert_eq!(

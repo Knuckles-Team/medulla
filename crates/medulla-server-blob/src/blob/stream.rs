@@ -34,8 +34,20 @@ const READ_BLOCK: usize = 256 * 1024;
 /// dedups, because the boundaries re-synchronise after the edit.
 pub fn stream_blob_put<R: Read>(
     store: &dyn ChunkStore,
+    reader: R,
+    chunk_size: usize,
+) -> Result<CommittedBlob, String> {
+    stream_blob_put_owned(store, reader, chunk_size, ENGINE_BLOB_OWNER_SCOPE)
+}
+
+/// [`stream_blob_put`] with the committed manifest owned by `owner_scope`, so the
+/// served `BlobFetchBegin` of that owner reads it (MEDULLA-DURABLE-KERNEL-R860.4:
+/// the S3 listener stores objects under its service principal's scope).
+pub fn stream_blob_put_owned<R: Read>(
+    store: &dyn ChunkStore,
     mut reader: R,
     chunk_size: usize,
+    owner_scope: &str,
 ) -> Result<CommittedBlob, String> {
     let chunker = if chunk_size == 0 {
         Chunker::default()
@@ -71,7 +83,7 @@ pub fn stream_blob_put<R: Read>(
 
     let manifest = BlobManifest {
         schema_version: BLOB_MANIFEST_VERSION,
-        owner_scope: ENGINE_BLOB_OWNER_SCOPE.to_string(),
+        owner_scope: owner_scope.to_string(),
         chunks,
         chunk_lens,
         len,

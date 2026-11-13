@@ -35,3 +35,20 @@ Consequences, decided from the north star (one engine, no sync; hard cutover):
 - Decision: an event is withheld when none of its images passes the caller's row-level predicate.
   The page cursor advances past withheld events, so a page never reveals how many were withheld.
 - Retention is the retained ring window of the hub; a cursor behind it is `CURSOR_EXPIRED`.
+## S3 objects are blobs the native blob methods read (MEDULLA-DURABLE-KERNEL-R860.6)
+
+Decision: the S3 listener stores each object as a blob manifest (content-defined chunks plus
+manifest) whose owner scope is the carrier scope of its fixed service principal
+`service:s3-api-client`. The object digest and the ETag are the manifest digest. The listener
+keeps its bucket and object listing index in its own durable KV store.
+
+Why: the hot-path proof reads an S3 object back through `BlobFetchBegin` and `BlobChunkGet`,
+which serve only a manifest owned by the caller's scope. A raw chunk digest with no manifest
+was not readable through the served blob methods, so the S3 surface was a second store in
+practice. Owning the manifest by the service principal keeps one blob authority with one
+ownership rule and needs no new method.
+
+Consequences: an ETag is a manifest digest, not the digest of the bytes; identical bytes still
+share one digest. A multipart upload keeps its parts as staged chunks and writes one manifest
+at completion.
+

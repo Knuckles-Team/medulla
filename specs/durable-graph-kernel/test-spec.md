@@ -381,7 +381,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 | RESP listener | `MEDULLA-DURABLE-KERNEL-R860.3` | `tests/resp_roundtrip.rs::set_get_maps_to_kv_methods` |
 | S3-compatible object API | `MEDULLA-DURABLE-KERNEL-R860.4` | `tests/s3_roundtrip.rs::put_get_list_delete` |
 | Listener refusals | `MEDULLA-DURABLE-KERNEL-R860.5` | `tests/wire_listeners_one_store.rs::unauthenticated_sessions_refuse` |
-| Hot-path proof: one store behind four protocols | `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_one_protocol_read_all` |
+| Hot-path proof: one store behind four protocols | `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_each_protocol_read_native` |
 | Lifecycle replay and listing survive a patch upgrade (rollup) | `MEDULLA-DURABLE-KERNEL-R861` | Rollup: satisfied when the test of every child passes. |
 | Lifecycle replay compares the stored identity | `MEDULLA-DURABLE-KERNEL-R861.1` | `crates/medulla-server-store-tests/src/split_tests/mutation_batch_lifecycle.rs::lifecycle_replay_compares_identity_not_recompiled_bytes` |
 | Graph listing survives a restart and a patch upgrade | `MEDULLA-DURABLE-KERNEL-R861.2` | `tests/test_upgrade_store_listing.py::test_reopened_store_lists_graphs_for_the_stored_policy` |
