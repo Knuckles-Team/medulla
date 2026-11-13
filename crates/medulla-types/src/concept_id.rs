@@ -137,6 +137,136 @@ impl ConceptPathSet {
     pub fn is_empty(&self) -> bool {
         self.owners.is_empty()
     }
+
+    /// Whether `id` has been claimed by any repository.
+    pub fn contains(&self, id: &ConceptId) -> bool {
+        self.owners.contains_key(id)
+    }
+}
+
+/// Why a lineage edge was refused (MEDULLA-DURABLE-KERNEL-R094.7).
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum ConceptLineageError {
+    #[error("concept {0} cannot supersede itself")]
+    SelfEdge(String),
+    #[error("concept {0} is not a known concept id")]
+    UnknownId(String),
+    #[error("edge {superseded} -> {successor} would close a lineage cycle")]
+    Cycle {
+        superseded: String,
+        successor: String,
+    },
+}
+
+impl ConceptLineageError {
+    /// The registered refusal code of this error.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::SelfEdge(_) => "CONCEPT_LINEAGE_SELF_EDGE",
+            Self::UnknownId(_) => "CONCEPT_LINEAGE_UNKNOWN_ID",
+            Self::Cycle { .. } => "CONCEPT_LINEAGE_CYCLE",
+        }
+    }
+}
+
+/// One `superseded_by` edge with its evidence.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LineageEdge {
+    pub repository: String,
+    pub admitted_at_ms: u64,
+}
+
+/// The DAG of `superseded_by` edges between known concepts
+/// (MEDULLA-DURABLE-KERNEL-R094.7). Keyed by `(superseded, successor)`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ConceptLineage {
+    edges: BTreeMap<(ConceptId, ConceptId), LineageEdge>,
+}
+
+impl ConceptLineage {
+    /// Add `superseded -> successor`. Both ids must be known to `known`; a self
+    /// edge and an edge that closes a cycle are refused and change nothing.
+    /// Re-adding an existing edge keeps its first evidence. The cycle check is a
+    /// depth-first walk from `successor` over the edges it can reach, so its cost
+    /// is the number of edges touched.
+    pub fn add_edge(
+        &mut self,
+        known: &ConceptPathSet,
+        superseded: &ConceptId,
+        successor: &ConceptId,
+        repository: &str,
+        admitted_at_ms: u64,
+    ) -> Result<(), ConceptLineageError> {
+        for id in [superseded, successor] {
+            if !known.contains(id) {
+                return Err(ConceptLineageError::UnknownId(id.to_string()));
+            }
+        }
+        if superseded == successor {
+            return Err(ConceptLineageError::SelfEdge(superseded.to_string()));
+        }
+        let key = (superseded.clone(), successor.clone());
+        if self.edges.contains_key(&key) {
+            return Ok(());
+        }
+        if self.reaches(successor, superseded) {
+            return Err(ConceptLineageError::Cycle {
+                superseded: superseded.to_string(),
+                successor: successor.to_string(),
+            });
+        }
+        self.edges.insert(
+            key,
+            LineageEdge {
+                repository: repository.to_string(),
+                admitted_at_ms,
+            },
+        );
+        Ok(())
+    }
+
+    /// Whether `target` is reachable from `from` along `superseded_by` edges.
+    fn reaches(&self, from: &ConceptId, target: &ConceptId) -> bool {
+        let mut seen = std::collections::BTreeSet::new();
+        let mut stack = vec![from.clone()];
+        while let Some(node) = stack.pop() {
+            if &node == target {
+                return true;
+            }
+            if !seen.insert(node.clone()) {
+                continue;
+            }
+            let lo = (node.clone(), ConceptId(String::new()));
+            for ((from_id, next), _) in self.edges.range(lo..) {
+                if from_id != &node {
+                    break;
+                }
+                stack.push(next.clone());
+            }
+        }
+        false
+    }
+
+    /// The direct successors of `id`, in id order.
+    pub fn successors(&self, id: &ConceptId) -> Vec<&ConceptId> {
+        self.edges
+            .keys()
+            .filter(|(from, _)| from == id)
+            .map(|(_, next)| next)
+            .collect()
+    }
+
+    pub fn edge(&self, superseded: &ConceptId, successor: &ConceptId) -> Option<&LineageEdge> {
+        self.edges.get(&(superseded.clone(), successor.clone()))
+    }
+
+    pub fn len(&self) -> usize {
+        self.edges.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.edges.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -227,5 +357,39 @@ mod tests {
             .claim(ConceptId::parse("MEDULLA-KG.memory").unwrap(), "meristem")
             .unwrap();
         assert_eq!(paths.len(), 2);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R094.7
+    #[test]
+    fn lineage_edges_refuse_self_unknown_and_cycles() {
+        let id = |s: &str| ConceptId::parse(s).unwrap();
+        let (a, b, c, ghost) = (
+            id("MEDULLA-KG.memory"),
+            id("MEDULLA-KG.recall"),
+            id("MEDULLA-KG.paging"),
+            id("MEDULLA-KG.ghost"),
+        );
+        let mut known = ConceptPathSet::default();
+        for concept in [&a, &b, &c] {
+            known.claim(concept.clone(), "medulla").unwrap();
+        }
+        let mut lineage = ConceptLineage::default();
+        lineage.add_edge(&known, &a, &b, "medulla", 10).unwrap();
+        lineage.add_edge(&known, &b, &c, "medulla", 11).unwrap();
+        lineage.add_edge(&known, &a, &b, "other", 99).unwrap();
+        assert_eq!(lineage.len(), 2);
+        assert_eq!(lineage.edge(&a, &b).unwrap().admitted_at_ms, 10);
+        assert_eq!(lineage.successors(&a), vec![&b]);
+
+        let cycle = lineage.add_edge(&known, &c, &a, "medulla", 12).unwrap_err();
+        assert_eq!(cycle.code(), "CONCEPT_LINEAGE_CYCLE");
+        let selfie = lineage.add_edge(&known, &a, &a, "medulla", 12).unwrap_err();
+        assert_eq!(selfie.code(), "CONCEPT_LINEAGE_SELF_EDGE");
+        let unknown = lineage
+            .add_edge(&known, &a, &ghost, "medulla", 12)
+            .unwrap_err();
+        assert_eq!(unknown, ConceptLineageError::UnknownId(ghost.to_string()));
+        assert_eq!(unknown.code(), "CONCEPT_LINEAGE_UNKNOWN_ID");
+        assert_eq!(lineage.len(), 2);
     }
 }
