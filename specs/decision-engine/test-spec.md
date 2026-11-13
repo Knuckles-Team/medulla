@@ -1688,8 +1688,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R179.5` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::record_lists_every_knob_read` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R179.6` | `tests/decide/test_knob_evolution_served.py::test_promote_and_roll_back_a_knob` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_adapter.rs::tests::scoped_fit_request_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.1` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_adapter.rs::tests::scoped_fit_request_round_trips` | |
 | `MEDULLA-DECISION-ENGINE-R174.7.2` | `crates/medulla-decision-stats/src/decision/adapter.rs::tests::scoped_refit_replays_bit_for_bit` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.2` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.2.1` | `crates/medulla-decision-stats/src/decision/adapter.rs::tests::monitor_rolls_back_on_degrading_outcomes` | (planned) |
@@ -1715,8 +1714,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.8.6` | `tests/decide/test_drift_refresh_served.py::test_vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.6` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_refresh.rs::tests::refresh_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.1` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_refresh.rs::tests::refresh_round_trips` | |
 | `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-decision-types/src/decision/statistical/retrieval_refresh.rs::tests::canonical_urls_and_dedupe_outcomes` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.3` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::refresh_reads_the_virtual_graph_and_marks_one_region` | (planned) |

@@ -118,6 +118,7 @@ mod tests {
         )
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R174.9.1
     #[test]
     fn refresh_round_trips() {
         for trigger in ["drift_signal", "staleness", "job_demand"] {

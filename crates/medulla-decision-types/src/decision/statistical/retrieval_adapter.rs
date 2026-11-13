@@ -257,6 +257,7 @@ mod tests {
         )
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.1
     #[test]
     fn scoped_fit_request_round_trips() {
         for scope in [
