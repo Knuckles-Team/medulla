@@ -83,6 +83,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `match.max_block` | u64 | 256 | [8, 4096] | features | Tunable | `MEDULLA_MATCH_MAX_BLOCK` |
 | `match.score_min` | u64 | 600000 | [0, 1000000] | ppm | Tunable | `MEDULLA_MATCH_SCORE_MIN` |
 | `match.entropy_mbit` | u64 | 3500 | [1000, 6000] | millibits | Tunable | `MEDULLA_MATCH_ENTROPY_MBIT` |
+| `freshness.window` | u64 | 60 | [1, 3600] | seconds | Tunable | `MEDULLA_FRESHNESS_WINDOW` |
 
 ## Wire shape
 

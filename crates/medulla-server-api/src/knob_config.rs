@@ -398,6 +398,8 @@ knobs! {
     match_score_min: u64 = "match.score_min", U64(600_000), [0, 1_000_000], "ppm", Tunable;
     /// Name entropy at which a name alone never merges two features.
     match_entropy_mbit: u64 = "match.entropy_mbit", U64(3_500), [1_000, 6_000], "millibits", Tunable;
+    /// Seconds over which a refresh budget's request allowance refills (MEDULLA-DECISION-ENGINE-R174.9.2).
+    freshness_window: u64 = "freshness.window", U64(60), [1, 3_600], "seconds", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.
