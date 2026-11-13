@@ -1355,6 +1355,7 @@ R656.4 (named profile constrains the run): both entries read the profile through
 - **Nightly budgets.** The report keys are p50/p99/peak, so the row's p95 budgets are held as p99 budgets (tighter). The evidence-codec refusal sub-benchmark reports as `decide/harness_evidence_codec_refusal`.
 
 - **A harness_config decision carries its evidence in `Executed.family`.** The evidence of the three-part configuration is `FamilyAnswer::HarnessConfig` inside the one `FamilyExecuted` (DE-EXECUTED-FAMILY-SHAPE); the seal copies it into the record's `harness_evaluation` input and the replay re-derives and compares it. No harness-specific field exists on `Executed`.
+
 ## R146.6 and R147.6 served proofs
 - Temporal basis (R146.6): the three clocks are node properties (`storage_ms`, `event_ms`, `narrative_ms`) the caller reads; the first pass is a storage-clock window, the fallback runs on the chosen event clock through the served UQL query (`BETWEEN`), which plans through the same operators `UnifiedQuery` runs. A sufficient first pass builds no fallback window, which the test also asserts.
 - Distilled ranking (R147.6): the served test uploads 20 scores through `DecisionLog` `Learn`, ranks the 10 `Tool` nodes with `top_k` 3 and replays the batch to show idempotence. The cross-tenant case is a request naming another tenant, refused by the engine; the stored-score absence for another tenant is held by the Rust L3 `distilled_rank_tests.rs` (the served engine admits only its deployment tenant).
