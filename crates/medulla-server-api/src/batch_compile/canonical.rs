@@ -594,6 +594,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::WalletKeyTrustGet { .. }
         | Method::ContextFacts { .. }
         | Method::ReadSpan { .. }
+        | Method::OpenGraphSnapshot
+        | Method::ReadGraphChanges { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }

@@ -121,6 +121,10 @@ closed_error_codes! {
         SpanOutOfBounds => "SPAN_OUT_OF_BOUNDS",
         SpanTooLarge => "SPAN_TOO_LARGE",
         TocMissing => "TOC_MISSING",
+        // MEDULLA-DURABLE-KERNEL-R043.100.3: the change-feed cursor refusals.
+        CursorExpired => "CURSOR_EXPIRED",
+        AuthorizationChanged => "AUTHORIZATION_CHANGED",
+        GraphIncarnationStale => "GRAPH_INCARNATION_STALE",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
         EditChainBroken => "EDIT_CHAIN_BROKEN",

@@ -1145,3 +1145,11 @@ none
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-DURABLE-KERNEL-R872` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+## Graph change feed served methods (R043.100.2, R043.100.3)
+
+`Method::OpenGraphSnapshot` and `Method::ReadGraphChanges` are handled in
+`crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs` over `CdcHub::feed_position` and
+`CdcHub::read`. The feed types, the cursor and the authorization revision are in
+`crates/medulla-types/src/graph_change_feed.rs`. The served proofs are in
+`tests/graph_change_feed_served.rs`.

@@ -55,6 +55,8 @@ mod gateway_graph;
 mod gateway_mining_ml;
 mod hierarchy;
 mod memory;
+#[cfg(feature = "streaming")]
+mod graph_change_feed;
 mod memory_cursor;
 pub mod memory_snapshot;
 mod nodes;

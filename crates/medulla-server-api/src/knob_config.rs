@@ -303,6 +303,8 @@ knobs! {
     ingest_acl_stale_after_s: u64 = "ingest.acl_stale_after_s", U64(3_600), [60, 604_800], "s", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
+    /// Largest page of `ReadGraphChanges` (MEDULLA-DURABLE-KERNEL-R043.100.3).
+    graph_change_feed_max_page: u64 = "graph_change_feed.max_page", U64(256), [1, 256], "events", Tunable;
     /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.
     writeback_queue_min_tier: u64 = "writeback.queue_min_tier", U64(2), [0, 2], "tier", Fixed;
     /// Nodes re-embedded per generation-cycle batch (MEDULLA-DECISION-ENGINE-R174.2).

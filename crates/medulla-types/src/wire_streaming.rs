@@ -44,6 +44,10 @@ pub struct CdcEvent {
     /// empty for graph changes.
     #[serde(default)]
     pub table: String,
+    /// Wall-clock milliseconds at which the hub accepted the change; zero when
+    /// the producer did not stamp it.
+    #[serde(default)]
+    pub committed_at_ms: u64,
     /// The node id for node changes / the edge source for edge changes.
     pub node_id: String,
     /// The edge target (empty for node changes).

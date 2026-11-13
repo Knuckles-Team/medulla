@@ -25,6 +25,9 @@ method_results! {
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;
+    // MEDULLA-DURABLE-KERNEL-R043.100.2 and .3: the change feed's snapshot and page.
+    OpenGraphSnapshot(OpenGraphSnapshot) => Json<medulla_types::graph_change_feed::GraphSnapshot>;
+    ReadGraphChanges(ReadGraphChanges) => Json<medulla_types::graph_change_feed::GraphChangePage>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;

@@ -385,6 +385,18 @@ $($variants)*
         line_start: u64,
         line_end: u64,
     },
+    // ── Graph change feed (MEDULLA-DURABLE-KERNEL-R043.100) ──
+    /// One consistent snapshot digest of the request graph, with the cursor
+    /// that continues after it (`high_water_cursor`). Reads only, through the
+    /// caller's graph view. See [`medulla_types::graph_change_feed`].
+    OpenGraphSnapshot,
+    /// One page of committed graph changes after `cursor`, at most `limit`
+    /// (1 to 256) scanned events. Delivery is at-least-once under stable ids.
+    /// An expired, stale or revoked cursor is refused with a typed code.
+    ReadGraphChanges {
+        cursor: String,
+        limit: u32,
+    },
     // ── Agent bus roster (MEDULLA-DURABLE-KERNEL-R095.1002) ────────────────
     /// Register (replace) one session's participant row on the request
     /// graph's bus. `participant.last_seen_ms` is the request clock. The engine

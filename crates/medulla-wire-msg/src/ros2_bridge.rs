@@ -453,6 +453,7 @@ mod tests {
             node_id: "n1".to_string(),
             target_id: String::new(),
             table: String::new(),
+            committed_at_ms: 0,
             label: "Sensor".to_string(),
             before: vec![],
             after: vec![],

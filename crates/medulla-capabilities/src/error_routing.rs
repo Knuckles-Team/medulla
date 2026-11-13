@@ -488,7 +488,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R013.2.6: a figure without provenance, an unsupported basis policy.
-    ("FinanceAccountProject", &["FIGURE_PROVENANCE_MISSING", "BASIS_POLICY_UNSUPPORTED"]),
+    (
+        "FinanceAccountProject",
+        &["FIGURE_PROVENANCE_MISSING", "BASIS_POLICY_UNSUPPORTED"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R002.11: regime forecast, calibration gate and sizing input.
     (
         "RegimeForecast",
@@ -587,6 +590,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SPAN_OUT_OF_BOUNDS",
             "SPAN_TOO_LARGE",
             "TOC_MISSING",
+        ],
+    ),
+    // MEDULLA-DURABLE-KERNEL-R043.100.3: a cursor the feed cannot honour.
+    (
+        "ReadGraphChanges",
+        &[
+            "AUTHORIZATION_CHANGED",
+            "CURSOR_EXPIRED",
+            "GRAPH_INCARNATION_STALE",
         ],
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.

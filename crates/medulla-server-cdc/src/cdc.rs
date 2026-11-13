@@ -71,6 +71,10 @@ struct GraphFeed {
     fired_oldest: u64,
     notify: Arc<Notify>,
     cap: usize,
+    /// Identity of this feed's lifetime: fresh at creation and at every reset,
+    /// so a cursor minted before a `ClearGraph` or a restart is provably stale
+    /// (MEDULLA-DURABLE-KERNEL-R043.100.3).
+    incarnation: u64,
 }
 
 impl GraphFeed {
@@ -84,8 +88,20 @@ impl GraphFeed {
             fired_oldest: 0,
             notify: Arc::new(Notify::new()),
             cap,
+            incarnation: rand::random(),
         }
     }
+}
+
+/// One graph feed's identity and retained window (see `CdcHub::feed_position`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FeedPosition {
+    /// Fresh per feed lifetime; changes on reset and restart.
+    pub incarnation: u64,
+    /// Seq of the oldest retained event.
+    pub oldest_seq: u64,
+    /// Next seq to be assigned.
+    pub head_seq: u64,
 }
 
 /// A registered continuous query + its incrementally-maintained value.
@@ -128,7 +144,9 @@ pub trait ExternalCdcSink: Send + Sync {
 
 impl std::fmt::Debug for CdcHub {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CdcHub").field("epoch", &self.epoch).finish()
+        f.debug_struct("CdcHub")
+            .field("epoch", &self.epoch)
+            .finish()
     }
 }
 
@@ -362,6 +380,7 @@ impl CdcHub {
                 node_id,
                 target_id,
                 table,
+                committed_at_ms: medulla_server_api::txn::now_ms(),
                 label,
                 had_before: before.is_some(),
                 had_after: after.is_some(),
@@ -490,6 +509,22 @@ impl CdcHub {
         CdcReadResult::ok(events, feed.oldest_seq, feed.next_seq, self.epoch)
     }
 
+    /// The feed's identity and window for `graph`, read in one lock so the three
+    /// numbers agree (MEDULLA-DURABLE-KERNEL-R043.100.2). The feed is created
+    /// when absent, so an incarnation read on an empty graph stays the one every
+    /// later event carries.
+    pub fn feed_position(&self, graph: &str) -> FeedPosition {
+        let mut feeds = self.feeds.lock();
+        let feed = feeds
+            .entry(graph.to_string())
+            .or_insert_with(|| GraphFeed::new(self.cap));
+        FeedPosition {
+            incarnation: feed.incarnation,
+            oldest_seq: feed.oldest_seq,
+            head_seq: feed.next_seq,
+        }
+    }
+
     /// The current head seq (next to be assigned) for `graph` — `Watch`'s `next_seq`
     /// when no events matched.
     pub fn head_seq(&self, graph: &str) -> u64 {
@@ -516,6 +551,7 @@ impl CdcHub {
                 feed.oldest_seq = 0;
                 feed.next_fire = 0;
                 feed.fired_oldest = 0;
+                feed.incarnation = rand::random();
                 Some(feed.notify.clone())
             } else {
                 None

@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 
 pub const TEST_AGENT: &str = "integration-test-agent";
 const TEST_AUDIENCE: &str = "medulla-integration-tests";
-const TEST_TENANT: &str = "integration-test-tenant";
+pub const TEST_TENANT: &str = "integration-test-tenant";
 const TEST_POLICY_VERSION: &str = "integration-test-policy-v1";
 const TEST_AGENT_SIGNER_KEY: &str = "integration-test-agent-signing-key";
 const ROOT_SIGNER_KEY: &str = "integration-test-root-signing-key";

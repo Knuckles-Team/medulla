@@ -602,6 +602,7 @@ mod tests {
             node_id: node.to_string(),
             target_id: String::new(),
             table: String::new(),
+            committed_at_ms: 0,
             label: label.to_string(),
             before: Vec::new(),
             after: Vec::new(),

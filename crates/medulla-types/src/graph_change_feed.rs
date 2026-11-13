@@ -66,6 +66,17 @@ pub struct GraphChangeEvent {
     pub change: GraphChange,
 }
 
+/// One page of the feed: the changes visible to the caller and the cursor that
+/// continues after the last scanned event. `next_cursor` advances past events
+/// the caller may not see, so a page never reveals how many were withheld.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphChangePage {
+    pub schema_version: u32,
+    pub events: Vec<GraphChangeEvent>,
+    pub next_cursor: String,
+}
+
 /// The scope and position a change-feed cursor binds.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -73,6 +84,8 @@ pub struct GraphChangeCursor {
     pub graph: String,
     pub incarnation: u64,
     pub authorization_revision: u64,
+    /// The position of the next event to deliver: every event below it was
+    /// delivered or withheld already.
     pub last_event: u64,
 }
 
@@ -91,6 +104,22 @@ impl GraphChangeCursor {
         })?;
         serde_json::from_str(&key).map_err(|error| format!("graph change feed cursor: {error}"))
     }
+}
+
+/// The 64-bit authorization revision of a caller: the first eight bytes of the
+/// SHA-256 over the agent and the sorted scopes of its verified token. A grant
+/// or a revocation changes it, so a cursor minted before the change is refused.
+pub fn authorization_revision(agent: &str, scopes: &[String]) -> u64 {
+    let mut body = Vec::new();
+    body.extend_from_slice(agent.as_bytes());
+    for scope in scopes {
+        body.push(0);
+        body.extend_from_slice(scope.as_bytes());
+    }
+    let digest = Sha256::digest(&body);
+    let mut head = [0_u8; 8];
+    head.copy_from_slice(&digest[..8]);
+    u64::from_be_bytes(head)
 }
 
 /// SHA-256 digest of a snapshot body, lowercase hex.

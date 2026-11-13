@@ -21,6 +21,10 @@ pub(super) async fn try_handle_graph_domains(
     method = super::wallet_trust::try_handle_finance(ctx, method).await?;
     method = super::context_facts::try_handle_context_facts(ctx, method).await?;
     method = super::read_span::try_handle_read_span(ctx, method).await?;
+    #[cfg(feature = "streaming")]
+    {
+        method = super::graph_change_feed::try_handle_graph_change_feed(ctx, method).await?;
+    }
     method = super::nodes::try_handle_node_gateway_claims(ctx, method).await?;
     method = super::broker::try_handle_broker_exchange(ctx, method).await?;
     method = super::broker::try_handle_broker_consumption(ctx, method).await?;

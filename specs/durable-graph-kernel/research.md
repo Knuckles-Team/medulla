@@ -20,3 +20,18 @@ Consequences, decided from the north star (one engine, no sync; hard cutover):
 - The `INCR` retry bound is the registry knob `resp.incr_retry_limit`.
 - Request ids start from the process start time in microseconds so the durable mutation
   ledger never sees a repeated idempotency key after a restart.
+
+## Graph change feed over the one CDC feed (R043.100.2, R043.100.3)
+
+- Decision: `OpenGraphSnapshot` and `ReadGraphChanges` read the change feed `CdcHub` already keeps
+  for every committed graph write. A second ledger or store would be a second write path and two
+  orders of the same commits.
+- Decision: a feed's incarnation is minted when the feed is created and again when the graph is
+  cleared. A restart creates new feeds. A cursor of an earlier incarnation is stale, never
+  silently re-read from the same numbers.
+- Decision: the authorization revision is a digest of the agent and the sorted scopes of the
+  verified token. No separate revision counter exists; a grant or revocation changes the token
+  scopes, so the digest is the revision.
+- Decision: an event is withheld when none of its images passes the caller's row-level predicate.
+  The page cursor advances past withheld events, so a page never reveals how many were withheld.
+- Retention is the retained ring window of the hub; a cursor behind it is `CURSOR_EXPIRED`.
