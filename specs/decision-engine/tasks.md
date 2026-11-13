@@ -404,9 +404,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T393 [US7] MEDULLA-DECISION-ENGINE-R142.102 Certification hot-path proof
 - [ ] T394 [US7] MEDULLA-DECISION-ENGINE-R143.1 Model
 - [ ] T395 [US7] MEDULLA-DECISION-ENGINE-R143.2 Behavior
-- [ ] T396 [US7] MEDULLA-DECISION-ENGINE-R143.3 Wiring
-- [ ] T397 [US7] MEDULLA-DECISION-ENGINE-R143.4 Refusal
-- [ ] T398 [US7] MEDULLA-DECISION-ENGINE-R143.5 Evidence
+- [x] T396 [US7] MEDULLA-DECISION-ENGINE-R143.3 Wiring
+- [x] T397 [US7] MEDULLA-DECISION-ENGINE-R143.4 Refusal
+- [x] T398 [US7] MEDULLA-DECISION-ENGINE-R143.5 Evidence
 - [ ] T399 [US7] MEDULLA-DECISION-ENGINE-R143.6 Hot-path proof
 - [ ] T400 [US7] MEDULLA-DECISION-ENGINE-R144.1 Indexless retrieval model
 - [ ] T401 [US7] MEDULLA-DECISION-ENGINE-R144.2 Indexless budget meter

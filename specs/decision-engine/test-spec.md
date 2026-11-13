@@ -1418,13 +1418,13 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R142.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/certification_tests.rs::attests_atomic_and_gates_workflow`.
 - `MEDULLA-DECISION-ENGINE-R142.102`: planned L4 `tests/decide/test_local_skill_certification_served.py::test_certification_journey`.
 - `MEDULLA-DECISION-ENGINE-R143.1`: planned L1 `crates/medulla-decision-types/src/decision/instruction_disclosure.rs::tests::disclosure_events_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R143.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.1`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
 - `MEDULLA-DECISION-ENGINE-R143.2`: planned L2 `crates/medulla-decision-stats/src/decision/instruction_disclosure.rs::tests::triggers_produce_distinct_versions`.
-- `MEDULLA-DECISION-ENGINE-R143.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
-- `MEDULLA-DECISION-ENGINE-R143.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::decide_routes_disclosure_events`.
-- `MEDULLA-DECISION-ENGINE-R143.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::invalid_trigger_or_hash_refuses`.
-- `MEDULLA-DECISION-ENGINE-R143.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_binds_version_and_hash`.
-- `MEDULLA-DECISION-ENGINE-R143.6`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.2`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.3`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::decide_routes_disclosure_events`.
+- `MEDULLA-DECISION-ENGINE-R143.4`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::invalid_trigger_or_hash_refuses`.
+- `MEDULLA-DECISION-ENGINE-R143.5`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_binds_version_and_hash`.
+- `MEDULLA-DECISION-ENGINE-R143.6`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
 - `MEDULLA-DECISION-ENGINE-R144.1`: planned L1 `crates/medulla-decision-types/src/decision/indexless_retrieval.rs::tests::operations_and_budget_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R144.1`: planned L3 `tests/served_indexless_retrieval.rs::indexless_retrieval_reports_cost_and_refuses_over_budget`.
 - `MEDULLA-DECISION-ENGINE-R144.2`: planned L1 `crates/medulla-decision-types/src/decision/indexless_retrieval.rs::tests::budget_enforcement`.

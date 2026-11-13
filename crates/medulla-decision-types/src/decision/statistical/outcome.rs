@@ -182,6 +182,10 @@ pub enum FamilyAnswer {
     StepVerdict(Box<crate::decision::trajectory_verdict::StepVerification>),
     /// Whether a candidate is admitted (MEDULLA-DECISION-ENGINE-R753.755).
     Admission(crate::decision::trajectory_verdict::AdmissionVerdict),
+    /// The typed instruction-disclosure event of the `instruction_disclosure`
+    /// family's event mode (MEDULLA-DECISION-ENGINE-R143.3). The prior-event
+    /// read of the next request finds it here.
+    DisclosureEvent(Box<crate::decision::instruction_disclosure::DisclosureEvent>),
 }
 
 impl FamilyAnswer {
@@ -199,6 +203,16 @@ impl FamilyAnswer {
     ) -> Option<&crate::decision::capability_designation::CapabilityDesignation> {
         match self {
             Self::CapabilityDesignation(designation) => Some(designation),
+            _ => None,
+        }
+    }
+
+    /// The disclosure event this answer carries.
+    pub fn disclosure_event(
+        &self,
+    ) -> Option<&crate::decision::instruction_disclosure::DisclosureEvent> {
+        match self {
+            Self::DisclosureEvent(event) => Some(event),
             _ => None,
         }
     }

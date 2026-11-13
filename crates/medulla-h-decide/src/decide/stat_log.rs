@@ -213,6 +213,38 @@ pub(super) fn matched_trajectories(
     Ok(out)
 }
 
+/// The latest committed disclosure event of `set_id` the reader may see: the
+/// event answer of the newest `scan_limit` visible `InstructionDisclosure`
+/// records of the reader's tenant, highest version winning
+/// (MEDULLA-DECISION-ENGINE-R143.3). Another tenant's or another principal's
+/// private events are never read.
+pub(super) fn latest_disclosure(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    set_id: &str,
+    scan_limit: usize,
+) -> Result<Option<medulla_decision_types::decision::instruction_disclosure::DisclosureEvent>, String>
+{
+    use medulla_decision_types::decision::statistical::QuestionKind;
+    let mut entries: Vec<DecisionLogEntry> = visible_entries(store, reader)?
+        .into_iter()
+        .filter(|entry| entry.record.question.kind == QuestionKind::InstructionDisclosure)
+        .collect();
+    entries.sort_by(|a, b| {
+        b.record
+            .created_at_ms
+            .cmp(&a.record.created_at_ms)
+            .then_with(|| a.record.record_id.cmp(&b.record.record_id))
+    });
+    entries.truncate(scan_limit);
+    Ok(entries
+        .iter()
+        .filter_map(|entry| entry.record.answer.as_ref()?.disclosure_event())
+        .filter(|event| event.set_id == set_id)
+        .max_by_key(|event| event.version)
+        .cloned())
+}
+
 pub(super) fn visible_entry(
     store: &AgentLibraryStore,
     reader: &LogReader,
@@ -264,7 +296,10 @@ fn commit(
             "ACCESS_DENIED: a decision is logged by the principal that made it".to_string(),
         );
     }
-    let logged = replay_with_view(ctx, record, replay_graph)?;
+    let logged = match super::stat_replay::verify_disclosure_event(ctx, reader, record)? {
+        Some(verified) => verified,
+        None => replay_with_view(ctx, record, replay_graph)?,
+    };
     let key = record_key(&logged.record_id);
     let committed = |replayed| DecisionLogCommitted {
         schema_version: DECISION_LOG_SCHEMA_VERSION,

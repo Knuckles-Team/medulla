@@ -134,6 +134,30 @@ closed_error_codes! {
         /// A named instruction set has no version in the caller's tenant
         /// graph (MEDULLA-DECISION-ENGINE-R137.100).
         DisclosureUnauthorized => "DISCLOSURE_UNAUTHORIZED",
+        /// A disclosure event request names no known trigger
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureTriggerMissing => "DISCLOSURE_TRIGGER_MISSING",
+        /// A disclosure event's `expected_hash` differs from the computed hash
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureHashMismatch => "DISCLOSURE_HASH_MISMATCH",
+        /// A disclosure event option carries no `instructions` text
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureSetUndefined => "DISCLOSURE_SET_UNDEFINED",
+        /// A non-initial disclosure trigger found no prior event of its set
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosurePriorMissing => "DISCLOSURE_PRIOR_MISSING",
+        /// The `initial` disclosure came with an event already recorded
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosurePriorUnexpected => "DISCLOSURE_PRIOR_UNEXPECTED",
+        /// The prior event belongs to another instruction set
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureSetMismatch => "DISCLOSURE_SET_MISMATCH",
+        /// A refinement's instructions hash equals the prior hash
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureHashUnchanged => "DISCLOSURE_HASH_UNCHANGED",
+        /// A `timeout` disclosure before `disclosure.timeout` seconds elapsed
+        /// (MEDULLA-DECISION-ENGINE-R143.4).
+        DisclosureTimeoutNotElapsed => "DISCLOSURE_TIMEOUT_NOT_ELAPSED",
         /// A scoped adapter fit names a corpus or capability scope that none
         /// of the tenant's judged retrievals belongs to
         /// (MEDULLA-DECISION-ENGINE-R174.7.4).

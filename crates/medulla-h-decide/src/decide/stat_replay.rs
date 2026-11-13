@@ -79,6 +79,93 @@ fn loggable(outcome: &StatisticalOutcome) -> bool {
     )
 }
 
+/// Verify a record whose answer is a disclosure event before it is logged
+/// (MEDULLA-DECISION-ENGINE-R143.3). The decision is evaluate-only and is not
+/// re-run on a stored matrix; the log commit is its compare-and-set: the digest
+/// must hold, the event and its sealed premise must agree, and the event must
+/// be exactly the one the caller's own log makes next (version 1 for the
+/// initial disclosure, the latest version plus one for a refinement with a
+/// changed hash). A record already logged answers idempotently.
+pub(super) fn verify_disclosure_event(
+    ctx: &ExecutionContext,
+    reader: &super::stat_log::LogReader,
+    record: &StatisticalDecisionRecord,
+) -> Result<Option<StatisticalDecisionRecord>, String> {
+    use medulla_decision_types::decision::instruction_disclosure::{scan_limit, DisclosureTrigger};
+    let Some(event) = record
+        .answer
+        .as_ref()
+        .and_then(|answer| answer.disclosure_event())
+    else {
+        return Ok(None);
+    };
+    if statistical_record_digest(record) != record.record_digest {
+        return Err(mismatch("the record digest does not match its content"));
+    }
+    if record.question.kind != QuestionKind::InstructionDisclosure {
+        return Err(mismatch(
+            "a disclosure event rides only an instruction_disclosure question",
+        ));
+    }
+    event
+        .validate()
+        .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+    let fact = super::family::event_premise_fact(event);
+    if !record.premises.iter().any(|premise| premise.fact == fact) {
+        return Err(mismatch(
+            "the record states no premise for its disclosure event",
+        ));
+    }
+    let key = medulla_persistence_records::decision_jobs::record_key(&record.record_id);
+    if ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some() {
+        return Ok(Some(record.clone()));
+    }
+    let (_, policy) = pinned_and_policy(ctx, record)?;
+    let prior = super::stat_log::latest_disclosure(
+        ctx.store,
+        reader,
+        &event.set_id,
+        scan_limit(&policy.policy),
+    )?;
+    let (expected, code) = match (&prior, event.trigger) {
+        (None, DisclosureTrigger::Initial) => (1, StatisticalErrorCode::DisclosureVersionStale),
+        (None, _) => {
+            return Err(refusal(
+                StatisticalErrorCode::DisclosurePriorMissing,
+                "a refinement needs the prior disclosure event",
+            ))
+        }
+        (Some(_), DisclosureTrigger::Initial) => {
+            return Err(refusal(
+                StatisticalErrorCode::DisclosurePriorUnexpected,
+                "the initial disclosure of this set is already logged",
+            ))
+        }
+        (Some(prior), _) => {
+            if prior.instructions_hash == event.instructions_hash {
+                return Err(refusal(
+                    StatisticalErrorCode::DisclosureHashUnchanged,
+                    "the refinement's instructions hash equals the prior hash",
+                ));
+            }
+            (
+                prior.version.saturating_add(1),
+                StatisticalErrorCode::DisclosureVersionStale,
+            )
+        }
+    };
+    if event.version != expected {
+        return Err(refusal(
+            code,
+            format!(
+                "event version {} is not the next version {expected} of set {}",
+                event.version, event.set_id
+            ),
+        ));
+    }
+    Ok(Some(record.clone()))
+}
+
 /// `derived` says the explanation and the belief slices re-derived equal.
 fn same_answer(record: &StatisticalDecisionRecord, replayed: &Executed, derived: bool) -> bool {
     record.outcome == replayed.ladder.outcome

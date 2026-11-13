@@ -251,9 +251,7 @@ async fn serve(
             } else if request.question.kind == QuestionKind::RuntimeQuota {
                 super::family::quota_view(state, verified.agent_id(), &request).await
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
-                super::family::disclosure_view(state, verified.agent_id(), &request)
-                    .await
-                    .map(Some)
+                super::family::disclosure_view(state, verified.agent_id(), &request).await
             } else if request.question.kind == QuestionKind::ContextPackage {
                 // A `context_package` question declares its candidates and checks
                 // each against its cited source node in the graph named by its

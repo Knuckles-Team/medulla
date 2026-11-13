@@ -21,14 +21,24 @@ pub const INSTRUCTION_DISCLOSURE_DOMAIN: &str = "instruction_disclosure";
 pub const MAX_DISCLOSURE_EVENTS: usize = 64;
 
 /// The `disclosure.*` knobs (MEDULLA-DECISION-ENGINE-R143.2).
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "disclosure.timeout",
-    unit: "seconds",
-    default: KnobValue::Integer(300),
-    min: KnobValue::Integer(30),
-    max: KnobValue::Integer(86_400),
-    safety: KnobSafety::Tunable,
-}];
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "disclosure.timeout",
+        unit: "seconds",
+        default: KnobValue::Integer(300),
+        min: KnobValue::Integer(30),
+        max: KnobValue::Integer(86_400),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "disclosure.scan_limit",
+        unit: "count",
+        default: KnobValue::Integer(256),
+        min: KnobValue::Integer(16),
+        max: KnobValue::Integer(4_096),
+        safety: KnobSafety::Tunable,
+    },
+];
 
 /// Refusal code: a non-initial trigger names no prior event.
 pub const DISCLOSURE_PRIOR_MISSING: RefusalCode = RefusalCode::new("DISCLOSURE_PRIOR_MISSING");
@@ -43,15 +53,26 @@ pub const DISCLOSURE_HASH_UNCHANGED: RefusalCode = RefusalCode::new("DISCLOSURE_
 pub const DISCLOSURE_TIMEOUT_NOT_ELAPSED: RefusalCode =
     RefusalCode::new("DISCLOSURE_TIMEOUT_NOT_ELAPSED");
 
+/// Refusal code: an event request names no known trigger.
+pub const DISCLOSURE_TRIGGER_MISSING: RefusalCode = RefusalCode::new("DISCLOSURE_TRIGGER_MISSING");
+/// Refusal code: the submitted `expected_hash` differs from the computed hash.
+pub const DISCLOSURE_HASH_MISMATCH: RefusalCode = RefusalCode::new("DISCLOSURE_HASH_MISMATCH");
+/// Abstain code: the event option carries no `instructions` text.
+pub const DISCLOSURE_SET_UNDEFINED: RefusalCode = RefusalCode::new("DISCLOSURE_SET_UNDEFINED");
+
 /// The refusal codes the `instruction_disclosure` family declares: the event
-/// computation's (MEDULLA-DECISION-ENGINE-R143.2) and the served question's
-/// (R137.100). The table is registered in `codes::FAMILY_TABLES`.
+/// computation's (MEDULLA-DECISION-ENGINE-R143.2), the event question's
+/// (R143.3-R143.5) and the served question's (R137.100). The table is
+/// registered in `codes::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     DISCLOSURE_PRIOR_MISSING,
     DISCLOSURE_PRIOR_UNEXPECTED,
     DISCLOSURE_SET_MISMATCH,
     DISCLOSURE_HASH_UNCHANGED,
     DISCLOSURE_TIMEOUT_NOT_ELAPSED,
+    DISCLOSURE_TRIGGER_MISSING,
+    DISCLOSURE_HASH_MISMATCH,
+    DISCLOSURE_SET_UNDEFINED,
     DISCLOSURE_VERSION_STALE,
     DISCLOSURE_UNAUTHORIZED,
 ];
@@ -61,6 +82,15 @@ pub fn timeout_s(policy: &DecisionPolicy) -> u64 {
     match policy.knob(&KNOBS[0]) {
         KnobValue::Integer(v) => u64::try_from(v).unwrap_or(300),
         _ => 300,
+    }
+}
+
+/// The resolved `disclosure.scan_limit`: most log records one prior-event
+/// read walks.
+pub fn scan_limit(policy: &DecisionPolicy) -> usize {
+    match policy.knob(&KNOBS[1]) {
+        KnobValue::Integer(v) => usize::try_from(v).unwrap_or(256),
+        _ => 256,
     }
 }
 
@@ -80,6 +110,28 @@ pub enum DisclosureTrigger {
 }
 
 impl DisclosureTrigger {
+    /// The wire word of the trigger.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Initial => "initial",
+            Self::RelevanceUpdate => "relevance_update",
+            Self::ConstraintChange => "constraint_change",
+            Self::Timeout => "timeout",
+        }
+    }
+
+    /// The trigger named by a wire word.
+    pub fn parse(word: &str) -> Option<Self> {
+        [
+            Self::Initial,
+            Self::RelevanceUpdate,
+            Self::ConstraintChange,
+            Self::Timeout,
+        ]
+        .into_iter()
+        .find(|trigger| trigger.as_str() == word)
+    }
+
     /// Whether this trigger is a runtime refinement.
     pub fn is_runtime_refinement(self) -> bool {
         !matches!(self, Self::Initial)

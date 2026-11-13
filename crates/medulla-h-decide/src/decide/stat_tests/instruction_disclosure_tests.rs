@@ -310,3 +310,652 @@ async fn stale_or_foreign_version_refuses() {
         "a foreign set and a missing set answer the same way"
     );
 }
+
+// ---------------------------------------------------------------------------
+// MEDULLA-DECISION-ENGINE-R143.3-R143.5: the disclosure EVENT mode of the same
+// kind. The prior event is read from the caller's own committed log.
+// ---------------------------------------------------------------------------
+
+use medulla_decision_types::decision::instruction_disclosure::{
+    DisclosureEvent, DisclosureTrigger,
+};
+use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+
+const SET: &str = "set-events";
+
+fn event_request(
+    h: &Harness,
+    tenant: &str,
+    trigger: Option<&str>,
+    instructions: Option<&str>,
+    extra: Vec<TypedParam>,
+) -> DecideRequest {
+    let schema = publish_route_schema_in(h, tenant);
+    let mut params = extra;
+    if let Some(trigger) = trigger {
+        params.push(text("trigger", trigger));
+    }
+    let mut request = declared_request(
+        &schema,
+        tenant,
+        QuestionKind::InstructionDisclosure,
+        SET,
+        DecisionPolicyRef::Default,
+        params,
+    );
+    let class = if trigger == Some("initial") {
+        "initial"
+    } else {
+        "runtime_refinement"
+    };
+    request.candidates = CandidateSource::Declared {
+        options: medulla_types::contract::BoundedVec::new(vec![DeclaredOption {
+            option_id: SET.to_string(),
+            classification: medulla_types::contract::BoundedVec::new(vec![class.to_string()])
+                .unwrap(),
+            numbers: medulla_types::contract::BoundedVec::default(),
+            texts: medulla_types::contract::BoundedVec::new(
+                instructions
+                    .map(|body| {
+                        vec![DeclaredText {
+                            key: "instructions".to_string(),
+                            text: body.to_string(),
+                        }]
+                    })
+                    .unwrap_or_default(),
+            )
+            .unwrap(),
+        }])
+        .unwrap(),
+    };
+    request
+}
+
+fn int(name: &str, value: i64) -> TypedParam {
+    TypedParam {
+        name: name.to_string(),
+        value: TypedValue::Int(value),
+    }
+}
+
+fn decide_event(
+    h: &Harness,
+    tenant: &str,
+    now_ms: u64,
+    request: &DecideRequest,
+) -> Result<StatisticalDecisionRecord, String> {
+    let ctx = ExecutionContext {
+        store: h.store.as_ref(),
+        tenant_id: tenant,
+        now_ms,
+        server_secret: b"decide-stat-test-secret",
+        matched: &[],
+        designation: None,
+        reader: None,
+    };
+    super::super::stat_decide::decide_blocking(
+        &ctx,
+        request,
+        None,
+        "decider".to_string(),
+        Instant::now(),
+    )
+    .map(|batch| batch.records.as_slice()[0].clone())
+}
+
+async fn commit_event(h: &Harness, record: &StatisticalDecisionRecord) -> Result<(), String> {
+    decode::<DecisionLogCommitted>(
+        log_tests::log_op(
+            h,
+            "decider",
+            DecisionLogOp::Commit {
+                record: Box::new(record.clone()),
+                evaluator: None,
+            },
+        )
+        .await,
+    )
+    .map(|_| ())
+}
+
+fn event_of(record: &StatisticalDecisionRecord) -> DisclosureEvent {
+    record
+        .answer
+        .as_ref()
+        .and_then(FamilyAnswer::disclosure_event)
+        .expect("the record carries its typed disclosure event")
+        .clone()
+}
+
+fn logged_rows(h: &Harness) -> usize {
+    let reader = super::super::stat_log::LogReader {
+        tenant_id: TENANT.to_string(),
+        principal: "decider".to_string(),
+        roles: Vec::new(),
+        retention: super::super::stat_retention::Retention::none(),
+    };
+    super::super::stat_log::visible_entries(&h.store, &reader)
+        .unwrap()
+        .len()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R143.3
+#[tokio::test]
+async fn decide_routes_disclosure_events() {
+    let h = Harness::new().await;
+
+    let initial = decide_event(
+        &h,
+        TENANT,
+        1_000,
+        &event_request(&h, TENANT, Some("initial"), Some("be brief"), vec![]),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&initial), vec![format!("{SET}@v1")]);
+    assert_eq!(initial.resolution_kind, ResolutionKind::Constraint);
+    let first = event_of(&initial);
+    assert_eq!(
+        (first.version, first.trigger, first.at_ms),
+        (1, DisclosureTrigger::Initial, 1_000)
+    );
+    assert_eq!(first.instructions_hash, instructions_hash("be brief"));
+    commit_event(&h, &initial).await.unwrap();
+
+    // Each refinement reads the committed prior event and yields the next version.
+    let refinement = decide_event(
+        &h,
+        TENANT,
+        2_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("relevance_update"),
+            Some("be brief and cite sources"),
+            vec![int("prior_version", 1)],
+        ),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&refinement), vec![format!("{SET}@v2")]);
+    assert_eq!(
+        event_of(&refinement).trigger,
+        DisclosureTrigger::RelevanceUpdate
+    );
+    commit_event(&h, &refinement).await.unwrap();
+    let timeout = decide_event(
+        &h,
+        TENANT,
+        3_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("timeout"),
+            Some("be brief, cite sources, ask when unsure"),
+            vec![int("prior_version", 2), int("elapsed_s", 300)],
+        ),
+    )
+    .unwrap();
+    assert_eq!(event_of(&timeout).version, 3);
+    assert_ne!(
+        event_of(&timeout).instructions_hash,
+        first.instructions_hash
+    );
+
+    // Tenant B has committed nothing: a refinement finds no prior event.
+    let other = decide_event(
+        &h,
+        OTHER_TENANT,
+        4_000,
+        &event_request(
+            &h,
+            OTHER_TENANT,
+            Some("relevance_update"),
+            Some("be brief and cite sources"),
+            vec![],
+        ),
+    );
+    assert!(
+        other.unwrap_err().starts_with("DISCLOSURE_PRIOR_MISSING"),
+        "tenant B sees no prior event of tenant A"
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R143.4
+#[tokio::test]
+async fn invalid_trigger_or_hash_refuses() {
+    let h = Harness::new().await;
+    let refused = |result: Result<StatisticalDecisionRecord, String>, code: &str| {
+        let error = result.expect_err(code);
+        assert!(error.starts_with(code), "{code}: {error}");
+    };
+    // No known trigger.
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_000,
+            &event_request(&h, TENANT, None, Some("a"), vec![]),
+        ),
+        "DISCLOSURE_TRIGGER_MISSING",
+    );
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_000,
+            &event_request(&h, TENANT, Some("sometime"), Some("a"), vec![]),
+        ),
+        "DISCLOSURE_TRIGGER_MISSING",
+    );
+    // A computed hash the caller did not expect.
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_000,
+            &event_request(
+                &h,
+                TENANT,
+                Some("initial"),
+                Some("a"),
+                vec![text("expected_hash", &instructions_hash("b"))],
+            ),
+        ),
+        "DISCLOSURE_HASH_MISMATCH",
+    );
+    // An instruction set with no text abstains.
+    let undefined = decide_event(
+        &h,
+        TENANT,
+        1_000,
+        &event_request(&h, TENANT, Some("initial"), None, vec![]),
+    )
+    .unwrap();
+    let StatisticalOutcome::Abstained { reasons } = &undefined.outcome else {
+        panic!("expected an abstention: {:?}", undefined.outcome)
+    };
+    assert!(format!("{reasons:?}").contains("DISCLOSURE_SET_UNDEFINED"));
+
+    let initial = decide_event(
+        &h,
+        TENANT,
+        1_000,
+        &event_request(&h, TENANT, Some("initial"), Some("a"), vec![]),
+    )
+    .unwrap();
+    commit_event(&h, &initial).await.unwrap();
+    let rows = logged_rows(&h);
+
+    // The initial disclosure cannot repeat.
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            2_000,
+            &event_request(&h, TENANT, Some("initial"), Some("b"), vec![]),
+        ),
+        "DISCLOSURE_PRIOR_UNEXPECTED",
+    );
+    // A refinement that changes nothing.
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            2_000,
+            &event_request(&h, TENANT, Some("constraint_change"), Some("a"), vec![]),
+        ),
+        "DISCLOSURE_HASH_UNCHANGED",
+    );
+    // A timeout before disclosure.timeout seconds elapsed.
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            2_000,
+            &event_request(
+                &h,
+                TENANT,
+                Some("timeout"),
+                Some("b"),
+                vec![int("elapsed_s", 10)],
+            ),
+        ),
+        "DISCLOSURE_TIMEOUT_NOT_ELAPSED",
+    );
+    // A refinement built on a version older than the latest committed one.
+    let second = decide_event(
+        &h,
+        TENANT,
+        2_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("relevance_update"),
+            Some("b"),
+            vec![int("prior_version", 1)],
+        ),
+    )
+    .unwrap();
+    commit_event(&h, &second).await.unwrap();
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            3_000,
+            &event_request(
+                &h,
+                TENANT,
+                Some("relevance_update"),
+                Some("c"),
+                vec![int("prior_version", 1)],
+            ),
+        ),
+        "DISCLOSURE_VERSION_STALE",
+    );
+    // A stale commit is refused and leaves the log unchanged.
+    let before = logged_rows(&h);
+    assert_eq!(before, rows + 1);
+    let replayed_stale = commit_event(&h, &second).await;
+    assert!(
+        replayed_stale.is_ok(),
+        "an identical re-commit is idempotent"
+    );
+    assert_eq!(logged_rows(&h), before);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R143.5
+#[tokio::test]
+async fn disclosure_binds_version_and_hash() {
+    let h = Harness::new().await;
+    let initial = decide_event(
+        &h,
+        TENANT,
+        1_000,
+        &event_request(&h, TENANT, Some("initial"), Some("be brief"), vec![]),
+    )
+    .unwrap();
+    let hash = instructions_hash("be brief");
+    let premise = fact(
+        &initial,
+        &format!("disclosure_event:{SET}@v1 trigger=initial at_ms=1000 hash={hash}"),
+    )
+    .expect("one Claim premise per event");
+    assert_eq!(premise.class, PremiseClass::Claim);
+    assert_eq!(
+        premise.provenance,
+        PremiseProvenance::Request {
+            field: "candidates".to_string()
+        }
+    );
+    assert_eq!(initial.evidence_class, EvidenceClass::Claim);
+    assert_eq!(event_of(&initial).instructions_hash, hash);
+    commit_event(&h, &initial).await.unwrap();
+
+    // The refinement's event stays separate from the initial one, by trigger.
+    let refinement = decide_event(
+        &h,
+        TENANT,
+        2_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("constraint_change"),
+            Some("be brief, no jargon"),
+            vec![int("prior_version", 1)],
+        ),
+    )
+    .unwrap();
+    let refined_hash = instructions_hash("be brief, no jargon");
+    assert!(fact(
+        &refinement,
+        &format!(
+            "disclosure_event:{SET}@v2 trigger=constraint_change at_ms=2000 hash={refined_hash}"
+        )
+    )
+    .is_some());
+    assert!(fact(
+        &refinement,
+        &format!("disclosure_event:{SET}@v1 trigger=initial at_ms=1000 hash={hash}")
+    )
+    .is_none());
+    assert_eq!(event_of(&refinement).version, 2);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R143.6
+#[tokio::test]
+async fn disclosure_journey() {
+    let h = Harness::new().await;
+    let refused = |result: Result<StatisticalDecisionRecord, String>, code: &str| {
+        let error = result.expect_err(code);
+        assert!(error.starts_with(code), "{code}: {error}");
+    };
+    let hash_of = |body: &str| instructions_hash(body);
+    let event_fact = |version: u64, trigger: &str, at_ms: u64, body: &str| {
+        format!(
+            "disclosure_event:{SET}@v{version} trigger={trigger} at_ms={at_ms} hash={}",
+            hash_of(body)
+        )
+    };
+
+    // 1. The initial disclosure: a Constraint resolution over a Claim, with one
+    //    Claim premise naming version, trigger, time and hash.
+    let initial = decide_event(
+        &h,
+        TENANT,
+        1_000,
+        &event_request(&h, TENANT, Some("initial"), Some("be brief"), vec![]),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&initial), vec![format!("{SET}@v1")]);
+    assert_eq!(initial.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(initial.evidence_class, EvidenceClass::Claim);
+    let premise = fact(&initial, &event_fact(1, "initial", 1_000, "be brief"))
+        .expect("the initial event premise");
+    assert_eq!(premise.class, PremiseClass::Claim);
+    commit_event(&h, &initial).await.unwrap();
+
+    // 2. Every refusal on top of the committed initial event; none of them
+    //    writes a record.
+    let rows = logged_rows(&h);
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_500,
+            &event_request(&h, TENANT, None, Some("be brief"), vec![]),
+        ),
+        "DISCLOSURE_TRIGGER_MISSING",
+    );
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_500,
+            &event_request(
+                &h,
+                TENANT,
+                Some("relevance_update"),
+                Some("x"),
+                vec![text("expected_hash", &hash_of("y"))],
+            ),
+        ),
+        "DISCLOSURE_HASH_MISMATCH",
+    );
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_500,
+            &event_request(&h, TENANT, Some("initial"), Some("again"), vec![]),
+        ),
+        "DISCLOSURE_PRIOR_UNEXPECTED",
+    );
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_500,
+            &event_request(
+                &h,
+                TENANT,
+                Some("constraint_change"),
+                Some("be brief"),
+                vec![],
+            ),
+        ),
+        "DISCLOSURE_HASH_UNCHANGED",
+    );
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            1_500,
+            &event_request(
+                &h,
+                TENANT,
+                Some("timeout"),
+                Some("be brief, again"),
+                vec![int("elapsed_s", 10)],
+            ),
+        ),
+        "DISCLOSURE_TIMEOUT_NOT_ELAPSED",
+    );
+    let undefined = decide_event(
+        &h,
+        TENANT,
+        1_500,
+        &event_request(&h, TENANT, Some("relevance_update"), None, vec![]),
+    )
+    .unwrap();
+    let StatisticalOutcome::Abstained { reasons } = &undefined.outcome else {
+        panic!("expected an abstention: {:?}", undefined.outcome)
+    };
+    assert!(format!("{reasons:?}").contains("DISCLOSURE_SET_UNDEFINED"));
+    assert_eq!(
+        logged_rows(&h),
+        rows,
+        "refusals and abstentions write nothing"
+    );
+
+    // 3. The three runtime refinements, each committed through the DecisionLog
+    //    and read back as the next prior event.
+    let relevance = decide_event(
+        &h,
+        TENANT,
+        2_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("relevance_update"),
+            Some("be brief and cite sources"),
+            vec![int("prior_version", 1)],
+        ),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&relevance), vec![format!("{SET}@v2")]);
+    assert!(fact(
+        &relevance,
+        &event_fact(2, "relevance_update", 2_000, "be brief and cite sources")
+    )
+    .is_some());
+    commit_event(&h, &relevance).await.unwrap();
+    refused(
+        decide_event(
+            &h,
+            TENANT,
+            2_500,
+            &event_request(
+                &h,
+                TENANT,
+                Some("relevance_update"),
+                Some("late"),
+                vec![int("prior_version", 1)],
+            ),
+        ),
+        "DISCLOSURE_VERSION_STALE",
+    );
+
+    let constraint = decide_event(
+        &h,
+        TENANT,
+        3_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("constraint_change"),
+            Some("be brief, cite sources, no jargon"),
+            vec![int("prior_version", 2)],
+        ),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&constraint), vec![format!("{SET}@v3")]);
+    commit_event(&h, &constraint).await.unwrap();
+
+    let timeout = decide_event(
+        &h,
+        TENANT,
+        4_000,
+        &event_request(
+            &h,
+            TENANT,
+            Some("timeout"),
+            Some("be brief, cite sources, no jargon, ask when unsure"),
+            vec![int("prior_version", 3), int("elapsed_s", 300)],
+        ),
+    )
+    .unwrap();
+    assert_eq!(disclosed(&timeout), vec![format!("{SET}@v4")]);
+    for record in [&relevance, &constraint, &timeout] {
+        assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+        assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    }
+    commit_event(&h, &timeout).await.unwrap();
+
+    // 4. Distinct versions and hashes across the four committed events.
+    let events = [&initial, &relevance, &constraint, &timeout].map(|r| event_of(r));
+    let versions: Vec<u64> = events.iter().map(|e| e.version).collect();
+    assert_eq!(versions, vec![1, 2, 3, 4]);
+    let triggers: Vec<DisclosureTrigger> = events.iter().map(|e| e.trigger).collect();
+    assert_eq!(
+        triggers,
+        vec![
+            DisclosureTrigger::Initial,
+            DisclosureTrigger::RelevanceUpdate,
+            DisclosureTrigger::ConstraintChange,
+            DisclosureTrigger::Timeout,
+        ]
+    );
+    let mut hashes: Vec<String> = events.iter().map(|e| e.instructions_hash.clone()).collect();
+    hashes.sort();
+    hashes.dedup();
+    assert_eq!(hashes.len(), 4, "every event carries its own hash");
+    assert_eq!(logged_rows(&h), rows + 3);
+
+    // 5. Cross-tenant negative: tenant B sees none of tenant A's log. A
+    //    refinement finds no prior event, and B's own initial disclosure is
+    //    version 1, not a continuation of A's chain.
+    refused(
+        decide_event(
+            &h,
+            OTHER_TENANT,
+            5_000,
+            &event_request(
+                &h,
+                OTHER_TENANT,
+                Some("timeout"),
+                Some("be brief, cite sources, no jargon, ask when unsure"),
+                vec![int("elapsed_s", 300)],
+            ),
+        ),
+        "DISCLOSURE_PRIOR_MISSING",
+    );
+    let other = decide_event(
+        &h,
+        OTHER_TENANT,
+        5_000,
+        &event_request(&h, OTHER_TENANT, Some("initial"), Some("be brief"), vec![]),
+    )
+    .unwrap();
+    assert_eq!(event_of(&other).version, 1);
+}
