@@ -102,7 +102,7 @@ fn property_u64(node: &serde_json::Map<String, serde_json::Value>, key: &str) ->
 fn facts_of(node_id: &str, properties: &[u8]) -> Result<TargetFacts, String> {
     let invalid = |what: &str| format!("{PLACEMENT_FACTS_INVALID}: {node_id}: {what}");
     let value = medulla_types::msgpack::decode_property_value(properties)
-        .map_err(|error| invalid(&error.to_string()))?;
+        .map_err(|_| invalid("the properties are not a valid property value"))?;
     let node = value
         .as_object()
         .ok_or_else(|| invalid("the node is not an object"))?;
