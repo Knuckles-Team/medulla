@@ -2982,3 +2982,244 @@
     :fromState :ScheduleMachine_Paused ;
     :toState :ScheduleMachine_Enabled ;
     :firedBy :ScheduleMachine_Event_Resume .
+
+
+# spec: MEDULLA-CQ-ORCH-R811.2
+# The AnalyticsJob machine. The Rust edge table ANALYTICS_JOB_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:AnalyticsJobState a owl:Class ;
+    rdfs:label "AnalyticsJob State" ;
+    rdfs:comment "A state of the AnalyticsJob machine." ;
+    rdfs:subClassOf :State .
+
+:AnalyticsJobTerminalState a owl:Class ;
+    rdfs:label "AnalyticsJob Terminal State" ;
+    rdfs:comment "A terminal state of the AnalyticsJob machine." ;
+    rdfs:subClassOf :TerminalState, :AnalyticsJobState .
+
+:AnalyticsJobTransition a owl:Class ;
+    rdfs:label "AnalyticsJob Transition" ;
+    rdfs:comment "A transition of the AnalyticsJob machine." ;
+    rdfs:subClassOf :Transition .
+
+:AnalyticsJobEvent a owl:Class ;
+    rdfs:label "AnalyticsJob Event" ;
+    rdfs:comment "A event of the AnalyticsJob machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AnalyticsJobGuard a owl:Class ;
+    rdfs:label "AnalyticsJob Guard" ;
+    rdfs:comment "A guard of the AnalyticsJob machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AnalyticsJobMachine a :StateMachine ;
+    rdfs:label "AnalyticsJob machine" ;
+    :initialState :AnalyticsJobMachine_Submitted ;
+    :hasState :AnalyticsJobMachine_Submitted, :AnalyticsJobMachine_Running, :AnalyticsJobMachine_Publishing, :AnalyticsJobMachine_CancelRequested, :AnalyticsJobMachine_Backoff, :AnalyticsJobMachine_Succeeded, :AnalyticsJobMachine_Failed, :AnalyticsJobMachine_Cancelled .
+
+:AnalyticsJobMachine_Submitted a :AnalyticsJobState ;
+    rdfs:label "AnalyticsJob Submitted" ;
+    :storedForm "submitted" .
+
+:AnalyticsJobMachine_Running a :AnalyticsJobState ;
+    rdfs:label "AnalyticsJob Running" ;
+    :storedForm "running" .
+
+:AnalyticsJobMachine_Publishing a :AnalyticsJobState ;
+    rdfs:label "AnalyticsJob Publishing" ;
+    :storedForm "publishing" .
+
+:AnalyticsJobMachine_CancelRequested a :AnalyticsJobState ;
+    rdfs:label "AnalyticsJob CancelRequested" ;
+    :storedForm "cancel_requested" .
+
+:AnalyticsJobMachine_Backoff a :AnalyticsJobState ;
+    rdfs:label "AnalyticsJob Backoff" ;
+    :storedForm "backoff" .
+
+:AnalyticsJobMachine_Succeeded a :AnalyticsJobTerminalState ;
+    rdfs:label "AnalyticsJob Succeeded" ;
+    :storedForm "succeeded" .
+
+:AnalyticsJobMachine_Failed a :AnalyticsJobTerminalState ;
+    rdfs:label "AnalyticsJob Failed" ;
+    :storedForm "failed" .
+
+:AnalyticsJobMachine_Cancelled a :AnalyticsJobTerminalState ;
+    rdfs:label "AnalyticsJob Cancelled" ;
+    :storedForm "cancelled" .
+
+:AnalyticsJobMachine_Event_Claim a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Claim" .
+
+:AnalyticsJobMachine_Event_Publish a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Publish" .
+
+:AnalyticsJobMachine_Event_Complete a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Complete" .
+
+:AnalyticsJobMachine_Event_Fail a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Fail" .
+
+:AnalyticsJobMachine_Event_Cancel a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Cancel" .
+
+:AnalyticsJobMachine_Event_RequestCancel a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob RequestCancel" .
+
+:AnalyticsJobMachine_Event_ConfirmCancel a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob ConfirmCancel" .
+
+:AnalyticsJobMachine_Event_Reclaim a :AnalyticsJobEvent ;
+    rdfs:label "AnalyticsJob Reclaim" .
+
+:AnalyticsJobMachine_Guard_WorkerTakesLease a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob WorkerTakesLease" ;
+    rdfs:comment "Guard: a worker takes a lease." .
+
+:AnalyticsJobMachine_Guard_NotBeforePassedWorkerTakesLease a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob NotBeforePassedWorkerTakesLease" ;
+    rdfs:comment "Guard: not_before has passed and a worker takes a lease." .
+
+:AnalyticsJobMachine_Guard_LeaseOwnerMatchesLeaseLive a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob LeaseOwnerMatchesLeaseLive" ;
+    rdfs:comment "Guard: the lease owner matches and the lease is live." .
+
+:AnalyticsJobMachine_Guard_AttemptsBelowMax a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob AttemptsBelowMax" ;
+    rdfs:comment "Guard: attempts are below the maximum." .
+
+:AnalyticsJobMachine_Guard_AttemptsReachedMax a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob AttemptsReachedMax" ;
+    rdfs:comment "Guard: attempts reached the maximum." .
+
+:AnalyticsJobMachine_Guard_LeaseLive a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob LeaseLive" ;
+    rdfs:comment "Guard: the lease is live." .
+
+:AnalyticsJobMachine_Guard_LeaseOwnerMatches a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob LeaseOwnerMatches" ;
+    rdfs:comment "Guard: the lease owner matches." .
+
+:AnalyticsJobMachine_Guard_LeaseLapsed a :AnalyticsJobGuard ;
+    rdfs:label "AnalyticsJob LeaseLapsed" ;
+    rdfs:comment "Guard: the lease has lapsed." .
+
+:AnalyticsJobMachine_J01 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J01" ;
+    :edgeId "J01" ;
+    :fromState :AnalyticsJobMachine_Submitted ;
+    :toState :AnalyticsJobMachine_Running ;
+    :guardedBy :AnalyticsJobMachine_Guard_WorkerTakesLease ;
+    :firedBy :AnalyticsJobMachine_Event_Claim .
+
+:AnalyticsJobMachine_J02 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J02" ;
+    :edgeId "J02" ;
+    :fromState :AnalyticsJobMachine_Backoff ;
+    :toState :AnalyticsJobMachine_Running ;
+    :guardedBy :AnalyticsJobMachine_Guard_NotBeforePassedWorkerTakesLease ;
+    :firedBy :AnalyticsJobMachine_Event_Claim .
+
+:AnalyticsJobMachine_J03 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J03" ;
+    :edgeId "J03" ;
+    :fromState :AnalyticsJobMachine_Running ;
+    :toState :AnalyticsJobMachine_Publishing ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseOwnerMatchesLeaseLive ;
+    :firedBy :AnalyticsJobMachine_Event_Publish .
+
+:AnalyticsJobMachine_J04 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J04" ;
+    :edgeId "J04" ;
+    :fromState :AnalyticsJobMachine_Publishing ;
+    :toState :AnalyticsJobMachine_Succeeded ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseOwnerMatchesLeaseLive ;
+    :firedBy :AnalyticsJobMachine_Event_Complete .
+
+:AnalyticsJobMachine_J05 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J05" ;
+    :edgeId "J05" ;
+    :fromState :AnalyticsJobMachine_Running ;
+    :toState :AnalyticsJobMachine_Backoff ;
+    :guardedBy :AnalyticsJobMachine_Guard_AttemptsBelowMax ;
+    :firedBy :AnalyticsJobMachine_Event_Fail .
+
+:AnalyticsJobMachine_J06 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J06" ;
+    :edgeId "J06" ;
+    :fromState :AnalyticsJobMachine_Running ;
+    :toState :AnalyticsJobMachine_Failed ;
+    :guardedBy :AnalyticsJobMachine_Guard_AttemptsReachedMax ;
+    :firedBy :AnalyticsJobMachine_Event_Fail .
+
+:AnalyticsJobMachine_J07 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J07" ;
+    :edgeId "J07" ;
+    :fromState :AnalyticsJobMachine_Publishing ;
+    :toState :AnalyticsJobMachine_Backoff ;
+    :guardedBy :AnalyticsJobMachine_Guard_AttemptsBelowMax ;
+    :firedBy :AnalyticsJobMachine_Event_Fail .
+
+:AnalyticsJobMachine_J08 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J08" ;
+    :edgeId "J08" ;
+    :fromState :AnalyticsJobMachine_Publishing ;
+    :toState :AnalyticsJobMachine_Failed ;
+    :guardedBy :AnalyticsJobMachine_Guard_AttemptsReachedMax ;
+    :firedBy :AnalyticsJobMachine_Event_Fail .
+
+:AnalyticsJobMachine_J09 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J09" ;
+    :edgeId "J09" ;
+    :fromState :AnalyticsJobMachine_Submitted ;
+    :toState :AnalyticsJobMachine_Cancelled ;
+    :firedBy :AnalyticsJobMachine_Event_Cancel .
+
+:AnalyticsJobMachine_J10 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J10" ;
+    :edgeId "J10" ;
+    :fromState :AnalyticsJobMachine_Backoff ;
+    :toState :AnalyticsJobMachine_Cancelled ;
+    :firedBy :AnalyticsJobMachine_Event_Cancel .
+
+:AnalyticsJobMachine_J11 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J11" ;
+    :edgeId "J11" ;
+    :fromState :AnalyticsJobMachine_Running ;
+    :toState :AnalyticsJobMachine_CancelRequested ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseLive ;
+    :firedBy :AnalyticsJobMachine_Event_RequestCancel .
+
+:AnalyticsJobMachine_J12 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J12" ;
+    :edgeId "J12" ;
+    :fromState :AnalyticsJobMachine_CancelRequested ;
+    :toState :AnalyticsJobMachine_Cancelled ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseOwnerMatches ;
+    :firedBy :AnalyticsJobMachine_Event_ConfirmCancel .
+
+:AnalyticsJobMachine_J13 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J13" ;
+    :edgeId "J13" ;
+    :fromState :AnalyticsJobMachine_Running ;
+    :toState :AnalyticsJobMachine_Submitted ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseLapsed ;
+    :firedBy :AnalyticsJobMachine_Event_Reclaim .
+
+:AnalyticsJobMachine_J14 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J14" ;
+    :edgeId "J14" ;
+    :fromState :AnalyticsJobMachine_Publishing ;
+    :toState :AnalyticsJobMachine_Submitted ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseLapsed ;
+    :firedBy :AnalyticsJobMachine_Event_Reclaim .
+
+:AnalyticsJobMachine_J15 a :AnalyticsJobTransition ;
+    rdfs:label "AnalyticsJob J15" ;
+    :edgeId "J15" ;
+    :fromState :AnalyticsJobMachine_CancelRequested ;
+    :toState :AnalyticsJobMachine_Cancelled ;
+    :guardedBy :AnalyticsJobMachine_Guard_LeaseLapsed ;
+    :firedBy :AnalyticsJobMachine_Event_Reclaim .

@@ -60,6 +60,7 @@
 pub mod claim;
 pub mod downtime;
 pub mod intent;
+pub mod job_machine;
 pub mod model;
 pub mod result;
 // MEDULLA-PLACEMENT-R751 — unified schedule ticks, fenced daemon leadership and
