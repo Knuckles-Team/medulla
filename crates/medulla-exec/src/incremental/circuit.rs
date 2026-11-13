@@ -413,7 +413,7 @@ impl Circuit {
             }
             None if self.limit.is_none() && self.chain_nonempty() => {
                 let ids = touched_ids(delta);
-                let member = ids.iter().map(|id| self.in_result(id)).collect();
+                let member: Vec<bool> = ids.iter().map(|id| self.in_result(id)).collect();
                 Before::Members(ids.into_iter().zip(member).collect())
             }
             _ => Before::Full(self.current_scored()),
