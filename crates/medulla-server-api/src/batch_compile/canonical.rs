@@ -781,7 +781,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ObservationState { .. }
         // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
         // `AddNode` upsert; a list commits nothing.
-        | Method::SchemaProjections { .. } => default_mutation_domain(surface),
+        | Method::SchemaProjections { .. }
+        // MEDULLA-TYPED-PACKS-R097.700: a run commits as one request-graph
+        // `BatchUpdate`; a preview commits nothing.
+        | Method::DomainPack { .. } => default_mutation_domain(surface),
         Method::FinanceSabrImpliedVol { .. }
         | Method::CatalogAssign { .. }
         | Method::EvictBelow { .. }

@@ -145,6 +145,10 @@ closed_error_codes! {
         // MEDULLA-DECISION-ENGINE-R099.2: entity documents lowered to alignment claims.
         AlignmentNoMapping => "ALIGNMENT_NO_MAPPING",
         AlignmentAmbiguous => "ALIGNMENT_AMBIGUOUS",
+        // MEDULLA-TYPED-PACKS-R097.700: the domain pack loader and run refusals.
+        DomainPackIntegrityMismatch => "DOMAIN_PACK_INTEGRITY_MISMATCH",
+        DomainPackInvalid => "DOMAIN_PACK_INVALID",
+        DomainPackCaseFailed => "DOMAIN_PACK_CASE_FAILED",
         EditChainBroken => "EDIT_CHAIN_BROKEN",
         EditSealed => "EDIT_SEALED",
         EcosystemDepthOutOfRange => "ECOSYSTEM_DEPTH_OUT_OF_RANGE",

@@ -118,6 +118,15 @@ $($variants)*
         op: Box<medulla_catalog_types::schema_boundary::SchemaProjectionsOp>,
     },
 
+    /// MEDULLA-TYPED-PACKS-R097.700: evaluate a domain pack manifest's mappings
+    /// over source rows. `preview` returns the proposed entities and
+    /// relationships and writes nothing; `run` commits them as one durable batch
+    /// through the mutation gateway. A manifest whose `integrity_sha256` differs
+    /// from its body refuses `DOMAIN_PACK_INTEGRITY_MISMATCH`.
+    DomainPack {
+        op: Box<medulla_catalog_types::domain_pack::DomainPackOp>,
+    },
+
 
     // ── Placement-catalog wire consumption (CONCEPT:MEDULLA-KG.sharding.placement-route-rpc, DIST-P2-4) ──
     // Exposes the engine's sole placement authority over the wire. The response is

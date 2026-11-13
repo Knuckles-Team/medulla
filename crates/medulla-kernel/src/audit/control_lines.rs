@@ -149,6 +149,7 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::AssistantProfile { op } => {
             op.is_mutation().then(|| "ASSISTANT_PROFILE".to_string())
         }
+        Method::DomainPack { op } => op.is_mutation().then(|| "DOMAIN_PACK_RUN".to_string()),
         Method::FinanceRecordPut { kind, .. } => Some(format!("FINANCE_RECORD_PUT|{kind:?}")),
         Method::FinanceAlertRaise { envelope } => {
             Some(format!("FINANCE_ALERT_RAISE|{}", envelope.event_id))

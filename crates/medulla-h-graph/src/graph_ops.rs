@@ -46,6 +46,7 @@ mod discover_plan;
 mod discover_quality;
 #[cfg(test)]
 mod context_facts_tests;
+pub mod domain_pack;
 mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;

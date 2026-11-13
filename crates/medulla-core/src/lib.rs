@@ -23,6 +23,7 @@ pub mod broker;
 pub mod batch_apply;
 /// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
 pub mod data_product;
+pub mod domain_pack;
 /// Pure document-chunk encoding steps: windows, per-chunk encode calls, mean aggregation
 /// (MEDULLA-FEDERATED-QUERY-R039.2).
 pub mod compute;

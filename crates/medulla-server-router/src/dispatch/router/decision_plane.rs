@@ -354,6 +354,14 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-TYPED-PACKS-R097.700: `Preview` evaluates the manifest and writes
+        // nothing; `Run` continues to the mutation gateway (`Route::DomainPack`).
+        Method::DomainPack { op } if !op.is_mutation() => {
+            dispatch_boxed(async {
+                medulla_h_graph::graph_ops::domain_pack::handle_domain_pack(req.id, *op).await
+            })
+            .await
+        }
         // MEDULLA-DECISION-ENGINE-R166.3: `Read` is a graph read served here and
         // holds no write; `Register` continues to the mutation gateway.
         Method::WorkflowRegistry { op } if !op.is_mutation() => {

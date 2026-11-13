@@ -13,7 +13,15 @@
 use std::collections::BTreeSet;
 
 mod crosswalk;
+mod manifest;
 mod nutrient_crosswalk;
+
+pub use manifest::{
+    DomainPackInput, DomainPackManifest, DomainPackOp, DomainPackPreview, DomainPackRun,
+    ManifestCase, ManifestClass, ManifestError, ManifestMapping, MarkdownSource, ProposedFact,
+    SourceKind, SourceRow, DOMAIN_PACK_MANIFEST_VERSION, MAX_MANIFEST_CASES,
+    MAX_MANIFEST_MAPPINGS, MAX_MARKDOWN_SOURCES, MAX_PACK_ROWS, MAX_PACK_ROW_BYTES,
+};
 
 pub use crosswalk::{
     compute_coverage, validate_crosswalks, CrosswalkContext, PinnedHierarchy,

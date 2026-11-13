@@ -695,6 +695,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "SchemaProjections",
         &["SCHEMA_BOUNDARY_INVALID", "BOUNDARY_MAPPING_UNKNOWN"],
     ),
+    // MEDULLA-TYPED-PACKS-R097.700: the domain pack loader and run refusals.
+    (
+        "DomainPack",
+        &[
+            "DOMAIN_PACK_INTEGRITY_MISMATCH",
+            "DOMAIN_PACK_INVALID",
+            "DOMAIN_PACK_CASE_FAILED",
+        ],
+    ),
     // MEDULLA-BRANCH-MERGE-R001: the five CreateBranch refusals.
     (
         "CreateBranch",

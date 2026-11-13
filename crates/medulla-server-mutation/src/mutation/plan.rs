@@ -132,6 +132,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
     // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
     "SchemaProjections",
+    // MEDULLA-TYPED-PACKS-R097.700: `Run` commits one batch through this gateway;
+    // `Preview` is served by the catalog admin route (see [`is_gateway_routed`]).
+    "DomainPack",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -632,6 +635,10 @@ pub fn is_gateway_routed(m: &Method) -> bool {
     if let Method::ObservationState { op } = m {
         return op.is_mutation();
     }
+    // MEDULLA-TYPED-PACKS-R097.700: a `DomainPack` preview is a read.
+    if let Method::DomainPack { op } = m {
+        return op.is_mutation();
+    }
     GATEWAY_ROUTED.contains(&method_variant_name(m))
 }
 
@@ -751,6 +758,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "ObservationState",
     // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
     "SchemaProjections",
+    // Nor does the domain pack batch (MEDULLA-TYPED-PACKS-R097.700).
+    "DomainPack",
     // The branch registry row commits through the process-local
     // `branch_registry.redb` owner (MEDULLA-BRANCH-MERGE-R001).
     "CreateBranch",
@@ -822,6 +831,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::AssistantProfile { .. } => Some("AssistantProfile"),
         Method::ObservationState { .. } => Some("ObservationState"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),
+        Method::DomainPack { .. } => Some("DomainPack"),
         _ => None,
     }
 }

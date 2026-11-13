@@ -608,3 +608,7 @@ none
 - Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
 - Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
 - Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
+
+## Domain pack run (R097.700)
+
+Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.

@@ -217,6 +217,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "ObservationState",
     // MEDULLA-FEDERATED-QUERY-R724: `put` writes; `list` is a graph read.
     "SchemaProjections",
+    "DomainPack",
     // EH-345: record_discovery/set_override/clear_override write; list/lookup read.
     "FleetCatalog",
     "DecisionLog",
@@ -403,6 +404,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
     // `Method::AddNode` upsert, which carries the durable effect.
     "SchemaProjections",
+    "DomainPack",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",
@@ -668,6 +670,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     "SchemaProjections",
+    "DomainPack",
     // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: committed over the query gateway's
     // staged graph, the same audited commit point as `Sql`.
     "LiveArtifactPut",
@@ -737,6 +740,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "AssistantProfile",
     "ObservationState",
     "SchemaProjections",
+    "DomainPack",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -811,6 +815,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     "SchemaProjections",
+    "DomainPack",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",
@@ -831,6 +836,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "AssistantProfile",
     "ObservationState",
     "SchemaProjections",
+    "DomainPack",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",

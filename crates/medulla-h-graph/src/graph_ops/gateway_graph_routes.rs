@@ -20,6 +20,7 @@ enum Route {
     FinanceRecords,
     WorkflowRegistry,
     SchemaProjections,
+    DomainPack,
     ArgumentMap,
     AssistantProfile,
     ObservationState,
@@ -166,6 +167,9 @@ fn is_observation_state(method: &Method) -> bool {
     matches!(method, Method::ObservationState { op } if op.is_mutation())
 }
 
+fn is_domain_pack(method: &Method) -> bool {
+    matches!(method, Method::DomainPack { .. })
+}
 fn is_argument_map(method: &Method) -> bool {
     matches!(method, Method::ArgumentMapPut { .. })
 }
@@ -192,6 +196,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_finance_record, Route::FinanceRecords),
     (is_workflow_registry, Route::WorkflowRegistry),
     (is_schema_projections, Route::SchemaProjections),
+    (is_domain_pack, Route::DomainPack),
     (is_argument_map, Route::ArgumentMap),
     (is_assistant_profile, Route::AssistantProfile),
     (is_observation_state, Route::ObservationState),
@@ -223,7 +228,8 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::ArchitectureExchange
         | Route::FinanceRecords
         | Route::WorkflowRegistry
-        | Route::SchemaProjections => RouteHandler::Admin,
+        | Route::SchemaProjections
+        | Route::DomainPack => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
@@ -313,6 +319,7 @@ async fn try_handle_admin(
         Route::SchemaProjections => {
             super::super::schema_boundary::handle_boundary_put(ctx, method).await
         }
+        Route::DomainPack => super::super::domain_pack::handle_run(ctx, method).await,
         _ => None,
     }
 }
