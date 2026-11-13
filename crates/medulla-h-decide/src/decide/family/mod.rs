@@ -6,6 +6,8 @@
 //! family lives in its own `family/<kind>.rs` file.
 
 mod a2a_route;
+#[cfg(feature = "decide")]
+pub(super) mod assemble;
 mod branch_outcome;
 mod capability_designation;
 mod changeset_review;

@@ -45,10 +45,15 @@ async fn enrich(
             )
         }
     };
-    let (document, config) = match web::held_document(&request, &properties)
-        .and_then(|document| web::chunking(&request).map(|config| (document, config)))
-    {
-        Ok(pair) => pair,
+    let document = match web::held_document(&request, &properties) {
+        Ok(document) => document,
+        Err(error) => return Response::err(req_id, error),
+    };
+    if document.is_entity_document() {
+        return enrich_alignment(ctx, &request, &doc_id, document).await;
+    }
+    let config = match web::chunking(&request) {
+        Ok(config) => config,
         Err(error) => return Response::err(req_id, error),
     };
     let records = ctx.core.get_nodes_by_label(web::ENRICHMENT_TYPE, 0);
@@ -138,7 +143,7 @@ async fn enrich(
         demoted_classes: demoted_labels,
     };
     match web::lower(plan) {
-        Ok((write_set, receipt)) => commit(ctx, write_set, receipt).await,
+        Ok((write_set, receipt)) => commit(ctx, write_set, &web::LABELS, receipt).await,
         Err(error) => Response::err(req_id, error),
     }
 }
@@ -174,10 +179,84 @@ async fn demoted_classes(
     ))
 }
 
+/// An entity document (`application/json` or `application/ld+json`) lowers to
+/// alignment claims instead of chunks (MEDULLA-DECISION-ENGINE-R099.2). The
+/// mapping is resolved from the caller's imported connector pack, never taken
+/// from the request body; the local entities are the RLS-visible nodes of the
+/// mapping's class and the visible `AlignmentClaim` nodes.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
+async fn enrich_alignment(
+    ctx: GraphOpRouting<'_>,
+    request: &medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest,
+    doc_id: &str,
+    document: medulla_h_ingest::web_ingest::HeldDocument,
+) -> Response {
+    use medulla_h_ingest::web_ingest as web;
+    let req_id = ctx.req_id;
+    let Some(selection) = request.alignment.as_ref() else {
+        return Response::err(
+            req_id,
+            format!(
+                "{}: the entity document names no alignment mapping",
+                web::ALIGNMENT_NO_MAPPING
+            ),
+        );
+    };
+    let mapping = match resolve_alignment_mapping(&ctx, selection).await {
+        Ok(mapping) => mapping,
+        Err(error) => return Response::err(req_id, error),
+    };
+    let local: Vec<web::LocalEntity> = [mapping.ontology_class.as_str(), web::ALIGNMENT_CLAIM_TYPE]
+        .into_iter()
+        .flat_map(|label| ctx.core.get_nodes_by_label(label, 0))
+        .filter(|(id, _)| visible(&ctx, id))
+        .filter_map(|(id, bytes)| web::LocalEntity::decode(id, &bytes))
+        .collect();
+    match web::lower_alignment(doc_id, &document, &mapping, &local) {
+        Ok((Some(write_set), receipt)) => {
+            commit(ctx, write_set, &web::ALIGNMENT_LABELS, receipt).await
+        }
+        Ok((None, receipt)) => respond(req_id, receipt),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(all(feature = "query", feature = "modality-serving", feature = "redb"))]
+async fn resolve_alignment_mapping(
+    ctx: &GraphOpRouting<'_>,
+    selection: &medulla_source_types::source_ingestion::web_document::AlignmentMappingRef,
+) -> Result<medulla_catalog_types::connector_pack::ConnectorSchemaMapping, String> {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    let Some(agent_library) = ctx.state.read().await.agent_library() else {
+        return Err(
+            "CONNECTOR_SCHEMA_MAPPING_UNAVAILABLE: no connector pack is imported for this tenant"
+                .to_string(),
+        );
+    };
+    let pack_tenant =
+        medulla_persistence_records::connector_pack::pack_tenant_key(ctx.verified_context);
+    agent_library
+        .resolve_connector_schema_mapping(
+            pack_tenant,
+            &selection.connector,
+            &selection.mapping_reference,
+        )
+        .map(|resolved| resolved.schema_mapping)
+}
+
+#[cfg(all(feature = "query", feature = "modality-serving", not(feature = "redb")))]
+async fn resolve_alignment_mapping(
+    _ctx: &GraphOpRouting<'_>,
+    _selection: &medulla_source_types::source_ingestion::web_document::AlignmentMappingRef,
+) -> Result<medulla_catalog_types::connector_pack::ConnectorSchemaMapping, String> {
+    Err("ENRICHMENT_UNAVAILABLE: alignment mappings require the redb feature".to_string())
+}
+
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 async fn commit(
     ctx: GraphOpRouting<'_>,
     write_set: medulla_h_ingest::repository_index::IndexWriteSet,
+    labels: &medulla_h_ingest::repository_index::EnvelopeLabels,
     receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
@@ -188,7 +267,7 @@ async fn commit(
     let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
         &commit_ctx,
         write_set,
-        &medulla_h_ingest::web_ingest::LABELS,
+        labels,
     ) {
         Ok(envelope) => envelope,
         Err(error) => return Response::err(ctx.req_id, error),

@@ -20,6 +20,7 @@ fn empty_datatype_map_preserves_legacy_messagepack_identity() {
         ontology_class: "Document".into(),
         fields,
         datatypes: BTreeMap::new(),
+        entity_iri_prefix: None,
     };
     assert_eq!(
         rmp_serde::to_vec_named(&legacy).unwrap(),

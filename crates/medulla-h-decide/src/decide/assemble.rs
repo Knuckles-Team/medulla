@@ -61,6 +61,10 @@ async fn assemble_for(
                 "ACCESS_DENIED: assembly tenant must match the verified request tenant".to_string(),
             );
         }
+        super::family::assemble::admit_graph_size(
+            &request,
+            medulla_server_api::knob_config::knobs().primitive_max_edges,
+        )?;
         let store = state.write().await.ensure_agent_library()?;
         let policy = resolve_policy(&store, &request)?;
         Ok::<_, String>((store, policy))
@@ -76,6 +80,17 @@ async fn assemble_for(
         admit_tool_set(state, graph, verified, &entries),
     )
     .await?;
+    // The profile narrows the candidates only AFTER the tool-set admission
+    // above ran over the whole scope: it never bypasses admission and never
+    // adds a grant (MEDULLA-DECISION-ENGINE-R036.107).
+    let profile = read_profile(state, graph, verified, &request).await?;
+    let (entries, profile_constraint) = match &profile {
+        Some(profile) => {
+            let (kept, constraint) = restrict_to_allowlist(entries, profile)?;
+            (kept, Some(constraint))
+        }
+        None => (entries, None),
+    };
     let (candidates, templates) = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
         let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
         let templates = request
@@ -86,6 +101,10 @@ async fn assemble_for(
         Ok::<_, String>((candidates, templates))
     })?;
     let required_media = request.requirements.required_input_media.clone();
+    let coding_agent = request.coding_agent.clone();
+    let receipt_age_limit_s = coding_agent
+        .as_ref()
+        .map(|_| medulla_server_api::knob_config::knobs().coding_agent_max_receipt_age);
     let topology = telemetry::stage_async(
         Stage::Entailment,
         FAMILY,
@@ -102,6 +121,8 @@ async fn assemble_for(
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| assembly_refusal(&error))?;
     inputs.topology = topology;
+    inputs.profile = profile_constraint;
+    inputs.receipt_age_limit_s = receipt_age_limit_s;
     let identity = RecordIdentity {
         tenant_id: verified.tenant().to_string(),
         caller_principal: verified.principal_persistence_id(),
@@ -118,6 +139,8 @@ async fn assemble_for(
     let (model_revision, model_input) = telemetry::stage(Stage::Rank, FAMILY, tenant, || {
         selected_model(&assembly.record, &entries, required_media.as_slice())
     })?;
+    let coding_agent_plan =
+        coding_agent_plan(&assembly.record, coding_agent.as_ref(), receipt_age_limit_s);
     let result = telemetry::stage(Stage::Record, FAMILY, tenant, || {
         Ok::<_, String>(medulla_decision_types::decision::AssemblyResult {
             schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
@@ -128,6 +151,7 @@ async fn assemble_for(
             model: assembly.model,
             model_revision,
             model_input,
+            coding_agent_plan,
         })
     })?;
     telemetry::stage(Stage::Conclude, FAMILY, tenant, || {
@@ -135,6 +159,97 @@ async fn assemble_for(
         Ok::<_, String>(())
     })?;
     Ok(result)
+}
+
+/// The profile the request names, read as the verified caller: the owner or a
+/// role with a read share. A profile the caller may not read (or another
+/// tenant's) is refused with `PROFILE_NOT_VISIBLE` before anything narrows.
+#[cfg(feature = "decide")]
+async fn read_profile(
+    state: &SharedState,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    request: &AssemblyRequest,
+) -> Result<Option<medulla_types::assistant_profile::AssistantProfile>, String> {
+    let Some(profile_id) = request.assistant_profile_ref.as_deref() else {
+        return Ok(None);
+    };
+    let core = super::topology_read::graph_core(state, graph, verified).await?;
+    let s = state.read().await;
+    medulla_h_graph::graph_ops::assistant_profile::read_visible_profile(
+        &core,
+        &s.isolation,
+        verified.tenant(),
+        verified.agent_id(),
+        profile_id,
+    )
+    .map(Some)
+}
+
+/// Remove every tool candidate outside the profile's `tool_allowlist`
+/// (MEDULLA-DECISION-ENGINE-R036.107). A tool is a candidate of the `Tool`
+/// primitive class; prompts, models, ontologies and the rest are not tools and
+/// stay. The constraint records what was removed and which capabilities those
+/// tools declared, so the pure decision reports an uncoverable requirement
+/// under `PROFILE_TOOL_NOT_ALLOWED`.
+#[cfg(feature = "decide")]
+pub(crate) fn restrict_to_allowlist(
+    entries: Vec<medulla_agent_types::agent_component::AgentComponentEntry>,
+    profile: &medulla_types::assistant_profile::AssistantProfile,
+) -> Result<
+    (
+        Vec<medulla_agent_types::agent_component::AgentComponentEntry>,
+        medulla_decision_types::decision::coding_agent::ProfileConstraint,
+    ),
+    String,
+> {
+    use medulla_decision_types::decision::primitive::PrimitiveKind;
+    use std::collections::BTreeSet;
+    let allowed: BTreeSet<&str> = profile.tool_allowlist.iter().map(String::as_str).collect();
+    let mut removed = Vec::new();
+    let mut blocked = BTreeSet::new();
+    let kept = entries
+        .into_iter()
+        .filter(|entry| {
+            let is_tool = PrimitiveKind::of(entry.kind) == Some(PrimitiveKind::Tool);
+            if !is_tool || allowed.contains(entry.component_id.as_str()) {
+                return true;
+            }
+            removed.push(entry.component_id.clone());
+            blocked.extend(entry.declared_capabilities.iter().cloned());
+            false
+        })
+        .collect();
+    let bounded = |values: Vec<String>, what: &str| {
+        medulla_types::contract::BoundedVec::new(values)
+            .map_err(|error| format!("ASSEMBLY_INPUTS_INVALID: profile {what}: {error}"))
+    };
+    Ok((
+        kept,
+        medulla_decision_types::decision::coding_agent::ProfileConstraint {
+            profile_id: profile.profile_id.clone(),
+            revision: profile.revision,
+            removed: bounded(removed, "removed tools")?,
+            blocked_capabilities: bounded(blocked.into_iter().collect(), "blocked capabilities")?,
+        },
+    ))
+}
+
+/// The composed coding-agent plan of a `Solved` record whose request asked for
+/// one; the pure decision already refused anything that does not compose.
+#[cfg(feature = "decide")]
+fn coding_agent_plan(
+    record: &medulla_decision_types::decision::DecisionRecord,
+    request: Option<&medulla_decision_types::decision::coding_agent::CodingAgentRequest>,
+    limit_s: Option<u64>,
+) -> Option<medulla_decision_types::decision::coding_agent::CodingAgentPlan> {
+    if !matches!(
+        record.outcome,
+        medulla_decision_types::decision::DecisionOutcome::Solved { .. }
+    ) {
+        return None;
+    }
+    medulla_compute::assemble::coding_agent::compose_coding_agent_plan(request?, limit_s?).ok()
 }
 
 /// The wire text of an assembly refusal, folded under the `Assemble` origin

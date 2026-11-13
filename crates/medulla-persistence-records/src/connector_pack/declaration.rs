@@ -27,6 +27,9 @@ struct DeclaredMapping {
     fields: BTreeMap<String, String>,
     #[serde(default)]
     datatypes: BTreeMap<String, String>,
+    /// Entity IRI prefix of an alignment mapping (MEDULLA-DECISION-ENGINE-R099.2).
+    #[serde(default)]
+    entity_iri_prefix: Option<String>,
     /// The key rule (MEDULLA-TYPED-PACKS-R101.2); read by the contract shapes only.
     #[serde(default)]
     #[allow(dead_code)]
@@ -65,6 +68,7 @@ pub fn decode_schema_mappings(
                 ontology_class: mapping.ontology_class.unwrap_or_default(),
                 fields: mapping.fields,
                 datatypes: mapping.datatypes,
+                entity_iri_prefix: mapping.entity_iri_prefix,
             },
         );
     }

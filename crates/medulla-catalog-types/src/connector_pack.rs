@@ -76,6 +76,12 @@ pub struct ConnectorSchemaMapping {
     /// Datatype for a declared source field; target names remain in `fields`.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub datatypes: std::collections::BTreeMap<String, String>,
+    /// Entity IRI prefix of an alignment mapping (MEDULLA-DECISION-ENGINE-R099.2):
+    /// an entity document whose IRI is this prefix followed by its key matches
+    /// the mapping. Omitted when absent, so a stored mapping keeps its bytes and
+    /// digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_iri_prefix: Option<String>,
 }
 
 /// Datatypes supported by authoritative connector source mappings.

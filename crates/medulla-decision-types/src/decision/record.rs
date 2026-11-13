@@ -244,6 +244,15 @@ pub struct DecisionInputs {
     /// digest, the entailed admissibility facts and the capacity headroom.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<medulla_agent_types::agent_topology::TopologyInputs>,
+    /// The assistant-profile constraint the candidates were narrowed under
+    /// (MEDULLA-DECISION-ENGINE-R036.107).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<super::coding_agent::ProfileConstraint>,
+    /// The resolved `coding_agent.max_receipt_age` the plan was checked with
+    /// (MEDULLA-DECISION-ENGINE-R036.101); present exactly when the request
+    /// carries a coding-agent question, so a replay reads the same limit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt_age_limit_s: Option<u64>,
 }
 
 /// The scope a uniqueness proof covers: the model the no-good re-solve

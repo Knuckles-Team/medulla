@@ -26,6 +26,7 @@ pub mod capability_designation;
 pub mod changeset_review;
 pub mod checker_feedback;
 pub mod codes;
+pub mod coding_agent;
 pub mod command_config;
 pub mod comparative_analysis;
 pub mod context_bundle;
@@ -139,9 +140,9 @@ pub use replay::{
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
-    LibraryCandidateScope, SolverBudget, TopologyCommitEvidence, TopologyCommitOutcome,
-    ASSEMBLY_RESULT_SCHEMA_VERSION, DECISION_COMMIT_RESULT_SCHEMA_VERSION,
-    DECISION_COMPONENT_ID_PREFIX,
+    LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, SolverBudget,
+    TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
+    DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
 };
 pub use statistical::{
     CalibrationMethod, CalibrationStatement, CandidateSource, DecideRequest, DecisionBatch,

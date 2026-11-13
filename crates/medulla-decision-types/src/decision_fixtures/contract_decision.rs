@@ -86,6 +86,10 @@ pub fn assembly_request() -> AssemblyRequest {
         templates: bounded(Vec::new()),
         policy: DecisionPolicyRef::Default,
         solver: None,
+        primitive_edges: bounded(Vec::new()),
+        replacements: bounded(Vec::new()),
+        assistant_profile_ref: None,
+        coding_agent: None,
     }
 }
 
@@ -175,6 +179,9 @@ pub fn every_violation() -> Vec<Violation> {
         },
         Violation::UnknownLatencyUnderBudget,
         Violation::InfeasibleWhenForced,
+        Violation::PrimitiveContract {
+            code: "PRIMITIVE_EDGE_MISMATCH".to_string(),
+        },
     ]
 }
 
@@ -264,6 +271,8 @@ fn inputs() -> DecisionInputs {
         },
         templates: bounded(Vec::new()),
         topology: None,
+        profile: None,
+        receipt_age_limit_s: None,
     }
 }
 

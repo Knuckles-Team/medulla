@@ -7,11 +7,11 @@
 use std::collections::BTreeSet;
 use std::time::Instant;
 
-use medulla_rdf::oxrdf::Triple;
+use medulla_rdf::oxrdf::{Term, Triple};
 
 use super::test_support::{
-    assert_core_catalog, assert_shape_targets, kg, object_iri, parse_scoped, unmapped_classes,
-    wired_with_fixture, KG, OWL_IMPORTS,
+    assert_core_catalog, assert_shape_targets, conforms, kg, object_iri, parse_scoped,
+    unmapped_classes, wired_with_fixture, KG, OWL_IMPORTS,
 };
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_server_api::schema_compose::validate_and_compose;
@@ -279,7 +279,7 @@ fn every_world_model_class_is_mapped_and_nothing_external_is_imported() {
 fn world_model_shapes_are_their_own_document() {
     let document = include_str!("../../../medulla-core/ontology/world_model-v1.shapes.ttl");
     let triples = medulla_rdf::mapping::parse_turtle(document).unwrap();
-    assert_eq!(triples.len(), 123);
+    assert_eq!(triples.len(), 139);
     assert_shape_targets(
         &triples,
         &[
@@ -332,7 +332,8 @@ ex:Stage rdfs:subClassOf bfo:0000015,
 ex:ParticipatingProcess rdfs:subClassOf bfo:0000015,
     [ a owl:Restriction ; owl:onProperty :participatedIn ; owl:someValuesFrom :Event ] .
 "#;
-const PROCESS_AS_PARTICIPANT: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
+const PROCESS_AS_PARTICIPANT: &str =
+    "@prefix : <https://knuckles-team.github.io/ontology/core#> . \
      <http://example.org/world#threshing> :participatedIn <http://example.org/world#harvest> .";
 
 /// The foundation plus `documents`, each scoped apart.
@@ -369,4 +370,67 @@ fn a_sub_process_is_accepted_and_a_participating_process_is_refused() {
     let refused = foundation_with(&[PROCESS_COMPOSITION, PROCESS_AS_PARTICIPANT]);
     let dl = medulla_reasoner::tableau::parse_dl_ontology(&refused);
     assert!(!medulla_reasoner::tableau::is_consistent(&dl));
+}
+
+const WIKIDATA_ID: &str = "https://knuckles-team.github.io/ontology/core#wikidataId";
+const WIKIDATA_MAPPINGS: &str = include_str!(
+    "../../../medulla-core/ontology/fixtures/world_model/wikidata_schema_mappings.ttl"
+);
+const ALIGNMENT_PREFIXES: &str = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
+     @prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n\
+     @prefix wd: <http://www.wikidata.org/entity/> .\n\
+     @prefix ex: <http://example.org/world#> .\n";
+
+/// The subjects whose `wikidataId` equals `key`: an exact-key lookup over the fixture.
+fn subjects_with_wikidata_id(triples: &[Triple], key: &str) -> Vec<String> {
+    triples
+        .iter()
+        .filter(|triple| triple.predicate.as_str() == WIKIDATA_ID)
+        .filter(|triple| matches!(&triple.object, Term::Literal(value) if value.value() == key))
+        .map(|triple| triple.subject.to_string())
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R099.1
+#[test]
+fn wikidata_schema_mappings_validate_against_world_model_shapes() {
+    assert!(
+        conforms(WIKIDATA_MAPPINGS),
+        "the alignment fixture must conform to the world-model shapes"
+    );
+    let triples = medulla_rdf::mapping::parse_turtle(WIKIDATA_MAPPINGS).unwrap();
+    let base = "https://knuckles-team.github.io/ontology/fixtures/world-model/wikidata/";
+    for (key, local) in [
+        ("Q8332", "redFox"),
+        ("Q980", "bavaria"),
+        ("Q199678", "vitaminC"),
+        ("Q4421", "temperateForest"),
+    ] {
+        assert_eq!(
+            subjects_with_wikidata_id(&triples, key),
+            vec![format!("<{base}{local}>")],
+            "{key} resolves exactly one fixture entity"
+        );
+    }
+    assert!(subjects_with_wikidata_id(&triples, "Q1").is_empty());
+
+    let refused = [
+        (
+            "two wikidata ids",
+            "ex:a :wikidataId \"Q1\", \"Q2\" ; skos:exactMatch wd:Q1 .",
+        ),
+        (
+            "an exact match without a wikidata id",
+            "ex:a skos:exactMatch wd:Q1 .",
+        ),
+        (
+            "a literal exact-match target",
+            "ex:a :wikidataId \"Q1\" ; skos:exactMatch \"Q1\" .",
+        ),
+        ("a malformed wikidata id", "ex:a :wikidataId \"wd1\" ."),
+    ];
+    for (name, body) in refused {
+        let data = format!("{ALIGNMENT_PREFIXES}{body}");
+        assert!(!conforms(&data), "{name} must not conform");
+    }
 }

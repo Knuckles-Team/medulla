@@ -2032,7 +2032,7 @@ mod tests {
             ),
             (
                 "world-model-shapes",
-                "1e16bbd846b81d6da576974678c1cf98df91a52b5dfa81fe419201947908bbca",
+                "a6de6c949346835a8d14cae17f740f2f5653d1b3517cc7d9f8ee5f41a01030cf",
             ),
             (
                 "swarm-topology",

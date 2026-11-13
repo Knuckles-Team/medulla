@@ -7,6 +7,7 @@ mod fixture;
 mod golden;
 mod oracle;
 mod planted;
+mod primitive;
 mod refusal;
 mod routing;
 mod template;

@@ -12,6 +12,7 @@
 //! a uniform baseline or any other allocator implements.
 
 mod budget;
+mod events;
 mod folds;
 mod head;
 
@@ -20,6 +21,7 @@ use std::collections::BTreeMap;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 pub use budget::{max_drawdown, mean, proportional, sharpe};
+pub use events::{cursor_of, event_digest, order_events, OrderedEvents};
 pub use folds::{walk_forward, Fold};
 pub use head::{gold_steps, head_digest, time_ordered, HeadReplay};
 

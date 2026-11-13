@@ -1,4 +1,7 @@
 use super::*;
+use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
+use medulla_decision_types::decision::replay::ReplayEvent;
+use medulla_types::contract::BoundedVec;
 
 fn spec(train: u32, test: u32, step: u32, purge: u32, embargo: u32) -> WalkForward {
     WalkForward {
@@ -157,4 +160,75 @@ fn replay_is_deterministic_and_refuses_a_bad_cap() {
     let mut uniform = Uniform { steps: &data };
     let mut other = Uniform { steps: &data };
     assert!(replay(&data, &spec(10, 5, 5, 0, 0), 0.0, &mut uniform, &mut other).is_err());
+}
+
+fn event(seq: u64, action: &str) -> ReplayEvent {
+    ReplayEvent {
+        event_id: format!("event-{seq}"),
+        seq,
+        event_time_ms: 1_000 + seq,
+        snapshot: ComponentDependency {
+            component_id: "head-a".to_string(),
+            kind: AgentComponentKind::DecisionHead,
+            definition_digest: "d".repeat(64),
+        },
+        action_id: action.to_string(),
+        outcome_refs: BoundedVec::new(vec![format!("outcome-{seq}")]).unwrap(),
+        source_revision: "rev-1".to_string(),
+    }
+}
+
+fn code_of(events: &[ReplayEvent]) -> &'static str {
+    order_events(events).expect_err("refused").code
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R088.2.1
+#[test]
+fn event_order_refusals() {
+    // In order: applied as given, digests aligned, cursor names the last event.
+    let stream = [event(5, "a"), event(6, "b"), event(7, "c")];
+    let ordered = order_events(&stream).unwrap();
+    assert_eq!(ordered.applied, stream);
+    assert_eq!(ordered.digests.len(), 3);
+    for (applied, digest) in ordered.applied.iter().zip(&ordered.digests) {
+        assert_eq!(&event_digest(applied).unwrap(), digest);
+    }
+    assert_eq!(
+        ordered.cursor,
+        Some(cursor_of(&stream[2]).unwrap()),
+        "the cursor is `<seq>:<event digest>` of the last event"
+    );
+    assert!(ordered.cursor.unwrap().starts_with("7:sha256:"));
+
+    // No events: nothing applied, no cursor.
+    let empty = order_events(&[]).unwrap();
+    assert!(empty.applied.is_empty() && empty.cursor.is_none());
+
+    // An identical duplicate is idempotent, however late it arrives.
+    let repeated = [event(1, "a"), event(2, "b"), event(1, "a"), event(3, "c")];
+    let ordered = order_events(&repeated).unwrap();
+    assert_eq!(ordered.applied.len(), 3);
+    assert_eq!(
+        ordered.applied.iter().map(|e| e.seq).collect::<Vec<_>>(),
+        vec![1, 2, 3]
+    );
+
+    // A skipped number is a gap; one behind the last applied, never applied, is out of order.
+    assert_eq!(
+        code_of(&[event(1, "a"), event(3, "c")]),
+        "REPLAY_SEQUENCE_GAP"
+    );
+    assert_eq!(
+        code_of(&[event(4, "a"), event(5, "b"), event(2, "x")]),
+        "REPLAY_OUT_OF_ORDER"
+    );
+    // The same number with different content conflicts.
+    assert_eq!(
+        code_of(&[event(1, "a"), event(2, "b"), event(2, "other")]),
+        "REPLAY_DUPLICATE_CONFLICT"
+    );
+    assert_eq!(
+        code_of(&[event(1, "a"), event(1, "other")]),
+        "REPLAY_DUPLICATE_CONFLICT"
+    );
 }

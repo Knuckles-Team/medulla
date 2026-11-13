@@ -96,6 +96,7 @@ async fn enrich(
         fetch_backend: Some(backend),
         max_chunk_bytes: Some(600),
         overlap_bytes: Some(80),
+        alignment: None,
     };
     raw(call(
         state,
@@ -434,6 +435,7 @@ async fn refusals() {
         fetch_backend: None,
         max_chunk_bytes: None,
         overlap_bytes: None,
+        alignment: None,
     };
     let missing = test_support::dispatch(
         &state,
@@ -543,6 +545,7 @@ async fn rung_and_overwrite() {
                     fetch_backend: Some(FetchBackend::Webarchiver),
                     max_chunk_bytes: Some(600),
                     overlap_bytes: Some(80),
+                    alignment: None,
                 }),
             },
         ),
@@ -702,6 +705,7 @@ async fn admission_bounds_run() {
         fetch_backend: Some(FetchBackend::Webarchiver),
         max_chunk_bytes: Some(600),
         overlap_bytes: Some(80),
+        alignment: None,
     };
     let receipt: EnrichDocumentReceipt = raw(call(
         &state,
@@ -773,6 +777,7 @@ async fn enrich_wide(
         fetch_backend: Some(FetchBackend::Webarchiver),
         max_chunk_bytes: Some(800),
         overlap_bytes: Some(0),
+        alignment: None,
     };
     raw(call(
         state,

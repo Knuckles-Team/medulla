@@ -449,6 +449,10 @@ impl<'a> Parser<'a> {
             templates: BoundedVec::default(),
             policy: self.policy.clone(),
             solver: None,
+            primitive_edges: BoundedVec::default(),
+            replacements: BoundedVec::default(),
+            assistant_profile_ref: None,
+            coding_agent: None,
         })))
     }
 }

@@ -129,6 +129,12 @@ pub enum Violation {
     UnknownLatencyUnderBudget,
     /// Forcing this component into the assembly leaves no feasible answer.
     InfeasibleWhenForced,
+    /// A primitive edge or replacement the request proposes failed its typed
+    /// contract check; `code` is the registered `PRIMITIVE_*` refusal code
+    /// (MEDULLA-DECISION-ENGINE-R036.100.3).
+    PrimitiveContract {
+        code: String,
+    },
 }
 
 /// One eliminated candidate and the rule that removed it.

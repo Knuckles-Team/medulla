@@ -45,6 +45,18 @@ closed_error_codes! {
         TrialsUnderstated => "TRIALS_UNDERSTATED",
         /// A replay's folds, budget or data cannot be replayed.
         ReplaySpecInvalid => "REPLAY_SPEC_INVALID",
+        /// A replayed event's pinned component snapshot is not the revision
+        /// the component held at the event's time (MEDULLA-DECISION-ENGINE-R088.2.2).
+        ReplaySnapshotChanged => "REPLAY_SNAPSHOT_CHANGED",
+        /// A replay event's sequence number skips ahead of the next expected
+        /// one (MEDULLA-DECISION-ENGINE-R088.2.1).
+        ReplaySequenceGap => "REPLAY_SEQUENCE_GAP",
+        /// A replay event's sequence number is behind the last applied one
+        /// and is not a repeat of an applied event.
+        ReplayOutOfOrder => "REPLAY_OUT_OF_ORDER",
+        /// A replay event repeats an applied sequence number with different
+        /// content.
+        ReplayDuplicateConflict => "REPLAY_DUPLICATE_CONFLICT",
         /// A declared ingestion-lane candidate names a lane outside the
         /// fixed registry (`IngestionLane::ALL`), refused before any
         /// decision runs (MEDULLA-DECISION-ENGINE-R030).

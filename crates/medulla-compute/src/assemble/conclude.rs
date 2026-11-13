@@ -61,13 +61,38 @@ pub(super) struct Ladder<'a> {
     pub currency: Option<String>,
 }
 
+/// Decide, then add what the request's own constraints contribute to the
+/// record: the profile premise (and its attribution of an uncoverable
+/// capability) and the coding-agent claims. A claim premise weakens the
+/// evidence class to the weakest premise, like every other premise.
 pub(super) fn decide(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
+    let mut decided = decide_core(inputs)?;
+    super::profile::attribute(inputs, &mut decided);
+    let mut added: Vec<PremiseRef> = super::profile::premise(inputs).into_iter().collect();
+    added.extend(super::coding_agent::premises(inputs));
+    // `EvidenceClass` orders strongest first, so the weaker of two is the larger.
+    decided.evidence_class = decided
+        .evidence_class
+        .max(weakest(added.iter().map(|premise| premise.class)));
+    decided.premises.extend(added);
+    Ok(decided)
+}
+
+fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
     let budget = inputs.request.requirements.constraints.cost_budget.as_ref();
     let currency = facts::objective_currency(
         inputs.candidates.as_slice(),
         budget.map(|budget| budget.currency.as_str()),
     );
     let screened = eliminate::screen(inputs, currency.as_deref());
+    if let Some(refused) = super::primitive::screen_request(inputs)? {
+        let mut eliminated = screened.eliminated;
+        eliminated.extend(refused.eliminated);
+        return Ok(abstained(&[], eliminated, refused.reasons));
+    }
+    if let Some(reasons) = super::coding_agent::refusals(inputs)? {
+        return Ok(abstained(&[], screened.eliminated, reasons));
+    }
     let required =
         match required_capabilities(&inputs.request.requirements, &inputs.ontology_digest) {
             Ok(required) => required,

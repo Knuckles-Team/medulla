@@ -526,6 +526,15 @@ fn run_eval_job(
     let inputs = eval_inputs(store, reader, request)?;
     match &request.mode {
         EvalMode::OffPolicy => run_eval(&inputs, request),
+        // A policy-dependent environment cannot be replayed; naming an
+        // off-policy estimator asks for the off-policy evaluation instead.
+        EvalMode::Replay { spec }
+            if spec.env
+                == medulla_decision_types::decision::replay::ReplayEnvironment::PolicyDependent
+                && !request.estimators.as_slice().is_empty() =>
+        {
+            run_eval(&inputs, request)
+        }
         EvalMode::Replay { spec } => run_replay(store, &inputs, request, spec),
     }
 }

@@ -21,6 +21,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `topology.max_width` | u64 | 16 | [1, 16] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_WIDTH` |
 | `topology.max_depth` | u64 | 8 | [1, 8] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_DEPTH` |
 | `topology.max_rounds` | u64 | 8 | [1, 8] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_ROUNDS` |
+| `coding_agent.max_receipt_age` | u64 | 3600 | [3600, 3600] | seconds | Fixed | `MEDULLA_CODING_AGENT_MAX_RECEIPT_AGE` |
+| `primitive.max_edges` | u64 | 256 | [16, 1024] | edges | Tunable | `MEDULLA_PRIMITIVE_MAX_EDGES` |
 | `topology.analogy_min` | f64 | 0.6 | [0.1, 1.0] | ratio | Tunable | `MEDULLA_TOPOLOGY_ANALOGY_MIN` |
 | `topology.lease_ttl_ms` | u64 | 900000 | [1000, 86400000] | ms | Tunable | `MEDULLA_TOPOLOGY_LEASE_TTL_MS` |
 | `topology.max_candidates` | u64 | 1000 | [1, 100000] | sets | Tunable | `MEDULLA_TOPOLOGY_MAX_CANDIDATES` |

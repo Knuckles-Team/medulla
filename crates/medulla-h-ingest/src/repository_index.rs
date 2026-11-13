@@ -53,6 +53,7 @@ const MAX_WRITE_SET_ITEMS: usize = 900_000;
 const RECORD_ITEMS_PER_OPERATION: usize = 10;
 
 /// The lowered, digest-keyed write-set of one scoped result.
+#[derive(Debug)]
 pub struct IndexWriteSet {
     pub envelope_id: String,
     digest: Digest256,

@@ -27,11 +27,14 @@
 //! what [`replay_check`] asserts before a record may be committed.
 
 mod agent;
+pub mod coding_agent;
 mod conclude;
 mod eliminate;
 mod facts;
 mod model;
 mod objective;
+pub mod primitive;
+mod profile;
 pub mod prompt;
 mod seal;
 mod search;
@@ -131,6 +134,8 @@ pub fn inputs(
         templates: medulla_types::contract::BoundedVec::new(templates)
             .map_err(|error| AssembleError::new(DecisionErrorCode::AssemblyInputsInvalid, error))?,
         topology: None,
+        profile: None,
+        receipt_age_limit_s: None,
     })
 }
 

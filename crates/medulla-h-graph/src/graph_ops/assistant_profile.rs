@@ -461,6 +461,26 @@ pub(super) fn read_op(
     }
 }
 
+/// The profile `profile_id` as `agent_id` may read it: the caller-facing read
+/// other decision surfaces use (MEDULLA-DECISION-ENGINE-R036.107). A missing
+/// profile, another tenant's and one the caller may not read all answer with
+/// the one `PROFILE_NOT_VISIBLE` envelope.
+pub fn read_visible_profile(
+    core: &GraphCore,
+    isolation: &IsolationLayer,
+    tenant_scope: &str,
+    agent_id: &str,
+    profile_id: &str,
+) -> Result<AssistantProfile, String> {
+    let op = ProfileOp::GetProfile {
+        profile_id: profile_id.to_string(),
+    };
+    match read_op(core, isolation, tenant_scope, agent_id, &op)? {
+        ReadOut::Profile(profile) => Ok(profile),
+        _ => Err(profile_unavailable(profile_id)),
+    }
+}
+
 fn serve_read(
     req_id: u64,
     core: &GraphCore,

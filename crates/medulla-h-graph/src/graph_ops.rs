@@ -28,7 +28,7 @@ use medulla_server_mutation::{
 mod algorithms;
 pub(crate) mod architecture_exchange;
 mod argument_map;
-mod assistant_profile;
+pub mod assistant_profile;
 #[cfg(test)]
 mod participant_memory_tests;
 // MEDULLA-BRANCH-MERGE-R001 — served branch registry.

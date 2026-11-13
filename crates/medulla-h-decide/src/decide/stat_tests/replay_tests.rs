@@ -3,11 +3,17 @@
 //! cannot answer honestly.
 
 use super::*;
-use medulla_decision_types::decision::replay::{
-    AllocationRule, EvalMode, EvaluationRun, RefitSpec, ReplayEnvironment, ReplaySpec, SharedCap,
-    TrialLog, WalkForward,
+use medulla_agent_types::agent_component::{
+    AgentComponentKind, AgentComponentPublishRequest, ComponentDependency,
 };
-use medulla_persistence_records::decision_jobs::evaluation_run_key;
+use medulla_decision_stats::decision::replay::cursor_of;
+use medulla_decision_types::decision::replay::{
+    AllocationRule, EvalMode, EvaluationRun, RefitSpec, ReplayEnvironment, ReplayEvent, ReplaySpec,
+    SharedCap, TrialLog, WalkForward,
+};
+use medulla_persistence_records::agent_component::test_component_draft;
+use medulla_persistence_records::agent_fixtures::mutation_context;
+use medulla_persistence_records::decision_jobs::{evaluation_run_key, replay_cursor_key};
 
 const Q32_ONE: i64 = 1 << 32;
 
@@ -146,6 +152,8 @@ fn spec() -> ReplaySpec {
         },
         incumbent: None,
         supersedes: None,
+        events: Default::default(),
+        resume_cursor: None,
     }
 }
 
@@ -290,4 +298,287 @@ async fn replay_refuses_what_it_cannot_answer() {
     look_ahead.gold_set_digest = Some(gold);
     let job = submit(&h, look_ahead).await;
     assert!(failed(&job).starts_with("LOOK_AHEAD"), "{}", failed(&job));
+}
+
+/// An instant after every component revision the test publishes.
+const LATER_MS: u64 = u64::MAX / 4;
+
+/// Six events of forty outcome references each over the fitted gold set.
+fn event_stream(fitted: &Fitted, snapshot: &ComponentDependency, count: usize) -> Vec<ReplayEvent> {
+    let ids: Vec<String> = fitted
+        .data
+        .items
+        .iter()
+        .map(|item| item.item_id.clone())
+        .collect();
+    (0..count)
+        .map(|k| ReplayEvent {
+            event_id: format!("ev-{k}"),
+            seq: 10 + k as u64,
+            event_time_ms: LATER_MS,
+            snapshot: snapshot.clone(),
+            action_id: "tool-a-search".to_string(),
+            outcome_refs: BoundedVec::new(ids[k * 40..(k + 1) * 40].to_vec()).unwrap(),
+            source_revision: "rev-1".to_string(),
+        })
+        .collect()
+}
+
+fn event_spec(events: Vec<ReplayEvent>, resume: Option<String>) -> ReplaySpec {
+    let mut spec = spec();
+    spec.events = BoundedVec::new(events).unwrap();
+    spec.resume_cursor = resume;
+    spec
+}
+
+fn republish(h: &Harness, id: &str, summary: &str, expected_revision: u64) -> ComponentDependency {
+    let mut draft = test_component_draft(TENANT, id);
+    draft.kind = AgentComponentKind::Tool;
+    draft.summary = summary.to_string();
+    draft.classification = vec!["eg:capability/retrieval/web-search".to_string()];
+    let committed = h
+        .store
+        .publish_component(AgentComponentPublishRequest {
+            context: mutation_context(
+                &h.store,
+                TENANT,
+                &format!("republish-{id}"),
+                200,
+                expected_revision,
+                "agent-component:publish",
+            ),
+            component: draft,
+            evaluation_receipt_digest: None,
+        })
+        .unwrap();
+    ComponentDependency {
+        component_id: id.to_string(),
+        kind: AgentComponentKind::Tool,
+        definition_digest: committed.result.component.definition_digest,
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R088.2.2
+#[tokio::test]
+async fn event_replay_resumes_from_its_cursor_with_the_same_digest() {
+    let h = Harness::new().await;
+    let fitted = fitted(&h).await;
+    let head = h
+        .store
+        .current_component(TENANT, "tool-a-search")
+        .unwrap()
+        .unwrap();
+    let snapshot = ComponentDependency {
+        component_id: head.component_id.clone(),
+        kind: head.kind,
+        definition_digest: head.definition_digest.clone(),
+    };
+    let run_events = |count| event_stream(&fitted, &snapshot, count);
+
+    // The whole stream, replayed once: the receipt binds every event digest in
+    // order, the cursor of the last event, the policy and the result digest.
+    let whole = sealed(
+        &submit(
+            &h,
+            replay_request(&fitted, "ev-whole", event_spec(run_events(6), None)),
+        )
+        .await,
+    );
+    let receipt = whole.event_receipt.clone().expect("event receipt");
+    assert_eq!(receipt.event_digests.len(), 6);
+    assert_eq!(whole.path.len(), 120);
+    assert_eq!(
+        receipt.cursor,
+        cursor_of(run_events(6).last().unwrap()).unwrap()
+    );
+    assert_eq!(receipt.policy, DecisionPolicyRef::Default);
+    assert!(receipt.result_digest.starts_with("sha256:"));
+
+    // A shorter stream reaches its own cursor; the replay is stored under it.
+    let prefix = sealed(
+        &submit(
+            &h,
+            replay_request(&fitted, "ev-prefix", event_spec(run_events(5), None)),
+        )
+        .await,
+    );
+    let prefix_receipt = prefix.event_receipt.clone().expect("prefix receipt");
+    assert_eq!(prefix_receipt.event_digests.len(), 5);
+    assert_eq!(
+        prefix_receipt.event_digests.as_slice(),
+        &receipt.event_digests.as_slice()[..5]
+    );
+    assert!(h
+        .store
+        .decision_artifact(TENANT, &replay_cursor_key(&prefix_receipt.cursor))
+        .unwrap()
+        .is_some());
+
+    // Resumed from that cursor over the whole stream: same events, cursor and
+    // result digest as the whole replay.
+    let resumed = sealed(
+        &submit(
+            &h,
+            replay_request(
+                &fitted,
+                "ev-resume",
+                event_spec(run_events(6), Some(prefix_receipt.cursor.clone())),
+            ),
+        )
+        .await,
+    );
+    let resumed_receipt = resumed.event_receipt.clone().expect("resumed receipt");
+    assert_eq!(resumed_receipt.event_digests, receipt.event_digests);
+    assert_eq!(resumed_receipt.cursor, receipt.cursor);
+    assert_eq!(resumed_receipt.result_digest, receipt.result_digest);
+    assert_eq!(resumed.path, whole.path);
+    assert_ne!(resumed.run_digest, whole.run_digest);
+
+    // A cursor that names no event, or that no earlier replay reached.
+    let unknown = format!("99:sha256:{}", "1".repeat(64));
+    let job = submit(
+        &h,
+        replay_request(
+            &fitted,
+            "ev-unknown",
+            event_spec(run_events(6), Some(unknown)),
+        ),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SPEC_INVALID"),
+        "{}",
+        failed(&job)
+    );
+    let unreached = cursor_of(&run_events(6)[2]).unwrap();
+    let job = submit(
+        &h,
+        replay_request(
+            &fitted,
+            "ev-unreached",
+            event_spec(run_events(6), Some(unreached)),
+        ),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SPEC_INVALID"),
+        "{}",
+        failed(&job)
+    );
+    let job = submit(
+        &h,
+        replay_request(
+            &fitted,
+            "ev-cursor-only",
+            event_spec(Vec::new(), Some(prefix_receipt.cursor.clone())),
+        ),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SPEC_INVALID"),
+        "{}",
+        failed(&job)
+    );
+
+    // Ordering refusals, served.
+    let mut gap = run_events(3);
+    gap[2].seq = 13;
+    let job = submit(&h, replay_request(&fitted, "ev-gap", event_spec(gap, None))).await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SEQUENCE_GAP"),
+        "{}",
+        failed(&job)
+    );
+    let mut behind = run_events(2);
+    behind.swap(0, 1);
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-behind", event_spec(behind, None)),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_OUT_OF_ORDER"),
+        "{}",
+        failed(&job)
+    );
+    let mut conflict = run_events(2);
+    let mut repeated = conflict[0].clone();
+    repeated.action_id = "tool-b-files".to_string();
+    conflict.push(repeated);
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-conflict", event_spec(conflict, None)),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_DUPLICATE_CONFLICT"),
+        "{}",
+        failed(&job)
+    );
+
+    // An outcome reference that names no admitted item.
+    let mut dangling = run_events(6);
+    dangling[0].outcome_refs = BoundedVec::new(vec!["no-such-item".to_string()]).unwrap();
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-dangling", event_spec(dangling, None)),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SPEC_INVALID"),
+        "{}",
+        failed(&job)
+    );
+
+    // A policy-dependent environment refuses; naming an off-policy estimator
+    // asks for the off-policy evaluation instead.
+    let mut dependent = event_spec(run_events(6), None);
+    dependent.env = ReplayEnvironment::PolicyDependent;
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-dependent", dependent.clone()),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_POLICY_DEPENDENT"),
+        "{}",
+        failed(&job)
+    );
+    let mut offpolicy = replay_request(&fitted, "ev-offpolicy", dependent);
+    offpolicy.estimators = BoundedVec::new(vec![OpeEstimatorKind::Ips]).unwrap();
+    let job = submit(&h, offpolicy).await;
+    assert!(matches!(succeeded(&job), DecisionJobOutput::Eval { .. }));
+
+    // A snapshot that no longer is the revision the component held at the
+    // event's time refuses; so does one with no revision at that time.
+    republish(
+        &h,
+        "tool-a-search",
+        "web search engine, revised",
+        head.entry_revision,
+    );
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-changed", event_spec(run_events(6), None)),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SNAPSHOT_CHANGED"),
+        "{}",
+        failed(&job)
+    );
+    let mut before = run_events(6);
+    for event in &mut before {
+        event.event_time_ms = 1;
+    }
+    let job = submit(
+        &h,
+        replay_request(&fitted, "ev-before", event_spec(before, None)),
+    )
+    .await;
+    assert!(
+        failed(&job).starts_with("REPLAY_SNAPSHOT_CHANGED"),
+        "{}",
+        failed(&job)
+    );
 }

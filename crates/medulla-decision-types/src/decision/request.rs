@@ -141,6 +141,27 @@ pub struct SolverBudget {
     pub max_why_not_per_slot: u8,
 }
 
+/// One typed edge of the proposed primitive wiring: the output of `producer`
+/// feeds the input of `consumer`. Both name candidate component ids
+/// (MEDULLA-DECISION-ENGINE-R036.100.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PrimitiveEdge {
+    pub producer: String,
+    pub consumer: String,
+}
+
+/// One replacement the request proposes: candidate `new` takes the place of
+/// candidate `old` in a graph (MEDULLA-DECISION-ENGINE-R036.100.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PrimitiveReplacement {
+    pub old: String,
+    pub new: String,
+}
+
 /// One assembly question.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -155,6 +176,22 @@ pub struct AssemblyRequest {
     pub policy: DecisionPolicyRef,
     #[serde(default)]
     pub solver: Option<SolverBudget>,
+    /// The typed edges of the proposed primitive wiring. Each must type-check
+    /// (producer output schema equals consumer input schema). Absent when
+    /// empty, so a request without them keeps its bytes.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub primitive_edges: BoundedVec<PrimitiveEdge, 1024>,
+    /// The replacements the request proposes; each must be safe to substitute.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub replacements: BoundedVec<PrimitiveReplacement, 64>,
+    /// A saved assistant profile whose tool allowlist narrows the candidates
+    /// (MEDULLA-DECISION-ENGINE-R036.107). Absent when none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assistant_profile_ref: Option<String>,
+    /// Verified coding-agent facts and the skills to compose on them
+    /// (MEDULLA-DECISION-ENGINE-R036.101). Absent when none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coding_agent: Option<super::coding_agent::CodingAgentRequest>,
 }
 
 /// The answer: always a record, and a graph draft only when one was proved.
@@ -187,6 +224,10 @@ pub struct AssemblyResult {
     /// outcome is not `Solved` or the profile declares nothing (unknown).
     #[serde(default)]
     pub model_input: Option<ModelInputCapabilities>,
+    /// The composed coding-agent plan; `Some` exactly when the request asked
+    /// for one and the outcome is `Solved` (MEDULLA-DECISION-ENGINE-R036.101).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coding_agent_plan: Option<super::coding_agent::CodingAgentPlan>,
 }
 
 /// Commit one assembly record as a durable `DecisionRecord` component.

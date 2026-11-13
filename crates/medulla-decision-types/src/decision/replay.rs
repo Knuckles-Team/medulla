@@ -16,7 +16,9 @@ use serde::{Deserialize, Serialize};
 
 use super::jobs::{EvalCandidate, OptimiserSpec};
 use super::numeric::QuantisedValue;
+use super::request::DecisionPolicyRef;
 use super::statistical::head::HeadKind;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 
 /// Most folds one replay may cut.
@@ -25,6 +27,41 @@ pub const MAX_REPLAY_FOLDS: usize = 256;
 pub const MAX_REPLAY_CONTRIBUTIONS: usize = 256;
 /// Most replayed steps one run carries on its utility path.
 pub const MAX_REPLAY_STEPS: usize = 4_096;
+/// Most events one event replay applies.
+pub const MAX_REPLAY_EVENTS: usize = 4_096;
+/// Most outcome references one event carries.
+pub const MAX_EVENT_OUTCOME_REFS: usize = 64;
+
+/// One recorded decision event an event replay applies in sequence
+/// (MEDULLA-DECISION-ENGINE-R088.2.1): the pinned snapshot the decision read,
+/// the action taken, and the outcomes it later joined.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReplayEvent {
+    pub event_id: String,
+    /// Position in the stream; sequence numbers increase by one.
+    pub seq: u64,
+    pub event_time_ms: u64,
+    /// The component revision the decision read.
+    pub snapshot: ComponentDependency,
+    pub action_id: String,
+    pub outcome_refs: BoundedVec<String, MAX_EVENT_OUTCOME_REFS>,
+    pub source_revision: String,
+}
+
+/// What one event replay answers: the digest of every applied event in order,
+/// the cursor a later replay resumes from (`<seq>:<event digest>` of the last
+/// applied event), the policy it ran under and the digest of its result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReplayReceipt {
+    pub event_digests: BoundedVec<String, MAX_REPLAY_EVENTS>,
+    pub cursor: String,
+    pub policy: DecisionPolicyRef,
+    pub result_digest: String,
+}
 
 /// Walk-forward folds, in admitted items. Fold `k` tests the `test` items
 /// starting at `train + purge + k * step`; it trains on the `train` items that
@@ -94,6 +131,10 @@ pub struct TrialLog {
     pub searched: u32,
 }
 
+fn no_events(events: &BoundedVec<ReplayEvent, MAX_REPLAY_EVENTS>) -> bool {
+    events.as_slice().is_empty()
+}
+
 /// A replay evaluation's parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -113,6 +154,15 @@ pub struct ReplaySpec {
     /// The digest of the run this one revises.
     #[serde(default)]
     pub supersedes: Option<String>,
+    /// The recorded events the replay applies, in sequence order
+    /// (MEDULLA-DECISION-ENGINE-R088.2.2). The replayed steps are the admitted
+    /// items the events' `outcome_refs` name. Empty replays every admitted item.
+    #[serde(default, skip_serializing_if = "no_events")]
+    pub events: BoundedVec<ReplayEvent, MAX_REPLAY_EVENTS>,
+    /// The cursor of an earlier run over the same stream's prefix: the events
+    /// up to it are not re-checked against their snapshots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resume_cursor: Option<String>,
 }
 
 /// How a `DecisionEval` job evaluates its candidate.
@@ -193,6 +243,9 @@ pub struct EvaluationRun {
     pub contributions: BoundedVec<OptionContribution, MAX_REPLAY_CONTRIBUTIONS>,
     pub validation: ReplayValidation,
     pub synthetic: bool,
+    /// Binds the applied events, cursor, policy and result of an event replay.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_receipt: Option<ReplayReceipt>,
 }
 
 /// Most lags one feature-power decay curve reports (`knob eval.ic_max_lag`).

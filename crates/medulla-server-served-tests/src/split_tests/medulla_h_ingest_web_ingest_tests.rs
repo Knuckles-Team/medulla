@@ -17,6 +17,7 @@ fn request() -> EnrichDocumentRequest {
         fetch_backend: None,
         max_chunk_bytes: Some(200),
         overlap_bytes: Some(40),
+        alignment: None,
     }
 }
 

@@ -4,7 +4,7 @@
 //! components a receipt qualifies, so the `DecisionHead` publish check reads a
 //! receipt from the same authority that commits the head. One table with
 //! `job:`, `receipt:`, `receipt-threshold:`, `receipt-time:`, `draft:`, and
-//! `evaluation-run:` key families, every row
+//! `evaluation-run:`, and `replay-cursor:` key families, every row
 //! written once: a job runs to its terminal state inside its submit, so there
 //! is nothing to update. The `receipt-time:` family indexes only non-synthetic
 //! full-label receipts written after this index was introduced; older receipts
@@ -49,6 +49,12 @@ pub fn evaluation_key(record_id: &str, evaluation_id: &str) -> String {
 /// Key of a sealed replay evaluation run (EH-528).
 pub fn evaluation_run_key(run_digest: &str) -> String {
     format!("evaluation-run:{run_digest}")
+}
+
+/// Key naming the sealed run that first reached an event-replay cursor
+/// (MEDULLA-DECISION-ENGINE-R088.2.2); its value is that run's digest.
+pub fn replay_cursor_key(cursor: &str) -> String {
+    format!("replay-cursor:{cursor}")
 }
 
 /// Key of a fit draft.

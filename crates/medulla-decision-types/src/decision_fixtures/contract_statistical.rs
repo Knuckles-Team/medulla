@@ -320,6 +320,8 @@ fn replay_request() -> DecisionEvalRequest {
                 },
                 incumbent: Some(published_head_candidate()),
                 supersedes: Some(digest_text(0xb6)),
+                events: Default::default(),
+                resume_cursor: None,
             }),
         },
         gold_guarantee: None,

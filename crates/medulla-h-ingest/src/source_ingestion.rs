@@ -3255,6 +3255,7 @@ mod tests {
                         ontology_class: "Document".into(),
                         fields: BTreeMap::new(),
                         datatypes: BTreeMap::new(),
+                        entity_iri_prefix: None,
                     },
                     body_sha256: Digest256::from_bytes([8; 32]),
                     entry_revision: 1,

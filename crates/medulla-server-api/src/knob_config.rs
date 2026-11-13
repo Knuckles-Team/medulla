@@ -312,6 +312,10 @@ knobs! {
     topology_analogy_min: f64 = "topology.analogy_min", F64(0.6), [0.1, 1.0], "ratio", Tunable;
     /// How long the capacity leases a committed topology plan acquires live (MEDULLA-DECISION-ENGINE-R113.2.5).
     topology_lease_ttl_ms: u64 = "topology.lease_ttl_ms", U64(900_000), [1_000, 86_400_000], "ms", Tunable;
+    /// Primitive graph edge cap (MEDULLA-DECISION-ENGINE-R036.100.2).
+    primitive_max_edges: u64 = "primitive.max_edges", U64(256), [16, 1_024], "edges", Tunable;
+    /// Oldest coding-agent discovery receipt a plan accepts (MEDULLA-DECISION-ENGINE-R036.101).
+    coding_agent_max_receipt_age: u64 = "coding_agent.max_receipt_age", U64(3_600), [3_600, 3_600], "seconds", Fixed;
     /// Topology candidate-set cap.
     topology_max_candidates: u64 = "topology.max_candidates", U64(1_000), [1, 100_000], "sets", Tunable;
     /// Schema-repair shadow ingest sample.

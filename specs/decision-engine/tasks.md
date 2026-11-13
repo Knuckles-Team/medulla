@@ -137,7 +137,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T128 [US5] MEDULLA-DECISION-ENGINE-R097 Replay-nonce rejection and blob GC grace period behave correctly
 - [ ] T129 [US1] MEDULLA-DECISION-ENGINE-R098 Decide ladder excludes generative free-text models by design
 - [ ] T130 [US6] MEDULLA-DECISION-ENGINE-R099.1 Alignment mapping data validated against world-model shapes
-- [ ] T131 [US6] MEDULLA-DECISION-ENGINE-R099.2 Entity documents become alignment claims
+- [x] T131 [US6] MEDULLA-DECISION-ENGINE-R099.2 Entity documents become alignment claims
 - [ ] T132 [US3] MEDULLA-DECISION-ENGINE-R101 Query-side embedding adapter head promoted via DecisionEval
 - [ ] T133 [US4] MEDULLA-DECISION-ENGINE-R102.1 Typed schema-repair activation gate (producer-first split of R102)
 - [ ] T134 [US4] MEDULLA-DECISION-ENGINE-R102.2 Served shadow ingest before schema activation
@@ -340,7 +340,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served
 - [x] T330 [US6] MEDULLA-DECISION-ENGINE-R031.100 Paper relevance admission against platform goals and graph content
 - [ ] T331 [US2] MEDULLA-DECISION-ENGINE-R036.100.1 Primitive types
-- [ ] T332 [US2] MEDULLA-DECISION-ENGINE-R036.100.2 Edge type-check and substitution rule
+- [x] T332 [US2] MEDULLA-DECISION-ENGINE-R036.100.2 Edge type-check and substitution rule
 - [ ] T333 [US2] MEDULLA-DECISION-ENGINE-R036.100.3 Wire primitive checks into AgentAssemble
 - [ ] T334 [US2] MEDULLA-DECISION-ENGINE-R036.100.4 Primitive evidence and proposal path
 - [ ] T335 [US4] MEDULLA-DECISION-ENGINE-R136.101 Criterion review: per-criterion nonregression
@@ -351,7 +351,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T340 [US4] MEDULLA-DECISION-ENGINE-R136.103 Criterion review: judge and outcome divergence
 - [ ] T341 [US7] MEDULLA-DECISION-ENGINE-R138.101.1 Finding model and impact filter kernel
 - [ ] T342 [US7] MEDULLA-DECISION-ENGINE-R138.101.2 Family wiring, refusals and evidence
-- [ ] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
+- [x] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
 - [ ] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
 - [ ] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
 - [ ] T346 [US4] MEDULLA-DECISION-ENGINE-R147.1 Distilled score model
@@ -848,7 +848,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T919 [US2] MEDULLA-DECISION-ENGINE-R036.105.1 Coordinator-decision certificate table, lineage row, offline upgrade and sealed type. Size: M, 2 PRs, 6 hours.
 - [x] T920 [US2] MEDULLA-DECISION-ENGINE-R036.105.2 DecisionCommit writes the durable coordinator decision with the certificate. Size: L, 2 PRs, 8 hours.
 - [ ] T836 [US2] MEDULLA-DECISION-ENGINE-R036.106 Durable profile-use grant records
-- [ ] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
+- [x] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
 - [ ] T838 [US6] MEDULLA-DECISION-ENGINE-R038.2 Tool-action admission is a served Decide question
 - [x] T839 [US6] MEDULLA-DECISION-ENGINE-R038.3 Held-item admission is a served Decide question
 - [ ] T840 [US6] MEDULLA-DECISION-ENGINE-R039.3 The Route question honours a caller-preferred option when it is legal

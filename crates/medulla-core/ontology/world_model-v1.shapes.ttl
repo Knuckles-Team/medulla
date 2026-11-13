@@ -1,5 +1,6 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # World-model ABox shapes (ruling 2026-09-22, night): the records connectors ingest
@@ -116,3 +117,18 @@
             sh:minCount 1 ;
             sh:path :unitCode ] ;
     sh:targetClass :NutrientAmount .
+
+:AlignedEntityShape a sh:NodeShape ;
+    sh:description "An entity aligned to a world-model reference carries exactly one Wikidata id and its exact-match targets are IRIs." ;
+    sh:name "Aligned Entity Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Aligned entity must carry exactly one wikidataId (a Q-number)." ;
+            sh:minCount 1 ;
+            sh:path :wikidataId ;
+            sh:pattern "^Q[0-9]+$" ],
+        [ sh:message "Aligned entity exactMatch targets must be IRIs." ;
+            sh:nodeKind sh:IRI ;
+            sh:path skos:exactMatch ] ;
+    sh:targetSubjectsOf :wikidataId,
+        skos:exactMatch .

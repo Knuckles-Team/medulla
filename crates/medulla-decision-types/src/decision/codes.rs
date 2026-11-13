@@ -122,6 +122,29 @@ pub const POLICY_RECORD_TAMPERED: RefusalCode = RefusalCode::new("POLICY_RECORD_
 pub const POLICY_NATIVE_AUTHORITY_REQUIRED: RefusalCode =
     RefusalCode::new("POLICY_NATIVE_AUTHORITY_REQUIRED");
 
+/// A typed edge whose producer output schema is not the consumer input schema.
+pub const PRIMITIVE_EDGE_MISMATCH: RefusalCode = RefusalCode::new("PRIMITIVE_EDGE_MISMATCH");
+/// A replacement of another primitive kind.
+pub const PRIMITIVE_KIND_MISMATCH: RefusalCode = RefusalCode::new("PRIMITIVE_KIND_MISMATCH");
+/// A replacement that changes the input or output schema digest.
+pub const PRIMITIVE_SCHEMA_CHANGED: RefusalCode = RefusalCode::new("PRIMITIVE_SCHEMA_CHANGED");
+/// A replacement that drops a capability the old primitive had.
+pub const PRIMITIVE_CAPABILITY_LOST: RefusalCode = RefusalCode::new("PRIMITIVE_CAPABILITY_LOST");
+/// A replacement with an effect the old primitive did not have.
+pub const PRIMITIVE_EFFECT_WIDENED: RefusalCode = RefusalCode::new("PRIMITIVE_EFFECT_WIDENED");
+/// A primitive graph with more edges than the primitive.max_edges knob admits.
+pub const PRIMITIVE_GRAPH_TOO_LARGE: RefusalCode = RefusalCode::new("PRIMITIVE_GRAPH_TOO_LARGE");
+
+/// A coding agent offered without a discovery receipt.
+pub const DISCOVERY_RECEIPT_MISSING: RefusalCode = RefusalCode::new("DISCOVERY_RECEIPT_MISSING");
+/// A discovery receipt older than the coding_agent.max_receipt_age knob.
+pub const DISCOVERY_RECEIPT_STALE: RefusalCode = RefusalCode::new("DISCOVERY_RECEIPT_STALE");
+/// Adjacent skill transformations whose output and input schemas differ.
+pub const TRANSFORMATION_SCHEMA_MISMATCH: RefusalCode =
+    RefusalCode::new("TRANSFORMATION_SCHEMA_MISMATCH");
+/// The last skill does not produce the artifact contract the plan binds.
+pub const ARTIFACT_DIGEST_CHANGED: RefusalCode = RefusalCode::new("ARTIFACT_DIGEST_CHANGED");
+
 /// An edit concentration question whose policy node is missing.
 pub const NO_CONCENTRATION_POLICY: RefusalCode = RefusalCode::new("NO_CONCENTRATION_POLICY");
 /// An edit concentration question whose edits were judged under different policy revisions.
@@ -171,6 +194,16 @@ pub const FOLDED: &[RefusalCode] = &[
     POLICY_CAPTURE_INELIGIBLE,
     POLICY_RECORD_TAMPERED,
     POLICY_NATIVE_AUTHORITY_REQUIRED,
+    PRIMITIVE_EDGE_MISMATCH,
+    PRIMITIVE_KIND_MISMATCH,
+    PRIMITIVE_SCHEMA_CHANGED,
+    PRIMITIVE_CAPABILITY_LOST,
+    PRIMITIVE_EFFECT_WIDENED,
+    PRIMITIVE_GRAPH_TOO_LARGE,
+    DISCOVERY_RECEIPT_MISSING,
+    DISCOVERY_RECEIPT_STALE,
+    TRANSFORMATION_SCHEMA_MISMATCH,
+    ARTIFACT_DIGEST_CHANGED,
 ];
 
 // Promotion and calibration refusals (MEDULLA-DECISION-ENGINE-R812.2, R805.11,

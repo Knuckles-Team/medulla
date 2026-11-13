@@ -328,7 +328,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "EnrichDocument",
         &[
+            "ALIGNMENT_AMBIGUOUS",
+            "ALIGNMENT_NO_MAPPING",
             "CHUNK_CONFIG_INVALID",
+            "CONNECTOR_SCHEMA_MAPPING_AMBIGUOUS",
+            "CONNECTOR_SCHEMA_MAPPING_INVALID",
+            "CONNECTOR_SCHEMA_MAPPING_UNAVAILABLE",
             "DOCUMENT_NOT_FOUND",
             "DOCUMENT_PROPERTIES_INVALID",
             "DOCUMENT_TEXT_MISSING",
@@ -336,6 +341,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBEDDING_UNAVAILABLE",
             "ENRICHMENT_UNAVAILABLE",
             "RUNG_OUTRANKED",
+            "STALE_MAPPING_REFERENCE",
+            "UNKNOWN_MAPPING_REFERENCE",
             "WEB_BACKEND_INVALID",
         ],
     ),

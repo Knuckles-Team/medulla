@@ -56,6 +56,21 @@ pub struct EnrichDocumentRequest {
     /// Absent is 150.
     #[serde(default)]
     pub overlap_bytes: Option<u32>,
+    /// The connector mapping that selects the entity IRI pattern and mapped
+    /// properties of an entity document (`application/json` or
+    /// `application/ld+json`). Required for such a document; ignored for text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alignment: Option<AlignmentMappingRef>,
+}
+
+/// An exact mapping reference of an imported connector pack
+/// (`connector:<connector>#mappings/<key>`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AlignmentMappingRef {
+    pub connector: medulla_types::contract::ResourceId,
+    pub mapping_reference: String,
 }
 
 /// Result body of `EnrichDocument`.
@@ -97,6 +112,10 @@ pub struct EnrichDocumentReceipt {
     /// ran (MEDULLA-DECISION-ENGINE-R079.5).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub demoted_classes: Vec<String>,
+    /// Alignment claim node ids an entity document produced
+    /// (MEDULLA-DECISION-ENGINE-R099.2); empty for a text Document.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alignment_claims: Vec<String>,
 }
 
 /// What admission decided for one span before any embedding call.
@@ -148,6 +167,7 @@ mod tests {
             fetch_backend: Some(FetchBackend::Archivebox),
             max_chunk_bytes: Some(800),
             overlap_bytes: Some(100),
+            alignment: None,
         };
         let bytes = rmp_serde::to_vec_named(&request).unwrap();
         assert_eq!(

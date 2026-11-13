@@ -1,0 +1,30 @@
+# Alignment mapping fixture (MEDULLA-DECISION-ENGINE-R099.1): schema mappings from
+# connector records to world-model properties. Each mapped entity carries exactly one
+# wikidataId (the entity-resolution key) and skos:exactMatch edges to IRIs. The data is
+# validated by the world-model shapes document; it never merges entities.
+
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ex: <https://knuckles-team.github.io/ontology/fixtures/world-model/wikidata/> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix obo: <http://purl.obolibrary.org/obo/> .
+
+ex:redFox a :Taxon ;
+    :scientificName "Vulpes vulpes" ;
+    :termCurie "NCBITaxon:9627" ;
+    :wikidataId "Q8332" ;
+    skos:exactMatch wd:Q8332, obo:NCBITaxon_9627 .
+
+ex:bavaria a :Region ;
+    :wikidataId "Q980" ;
+    skos:exactMatch wd:Q980 .
+
+ex:vitaminC a :Nutrient ;
+    :termCurie "CHEBI:29073" ;
+    :wikidataId "Q199678" ;
+    skos:exactMatch wd:Q199678, obo:CHEBI_29073 .
+
+ex:temperateForest a :EnvironmentTerm ;
+    :termCurie "ENVO:01000174" ;
+    :wikidataId "Q4421" ;
+    skos:exactMatch wd:Q4421 .

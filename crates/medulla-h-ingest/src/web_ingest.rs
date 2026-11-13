@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_catalog_types::connector_pack::ConnectorSchemaMapping;
 use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
 use medulla_decision_types::decision::ingestion_admission::{
     classify_unit, AdmissionKnobs, ContentClass,
@@ -47,11 +48,22 @@ pub struct HeldDocument {
     pub digest_hex: String,
     pub backend: Option<FetchBackend>,
     pub citation: Map<String, Value>,
+    /// The stored media type, lowercased and without parameters.
+    pub media_type: Option<String>,
 }
 
 impl HeldDocument {
     pub fn content_digest(&self) -> String {
         format!("sha256:{}", self.digest_hex)
+    }
+
+    /// Whether the Document is a JSON entity document that lowers to alignment
+    /// claims rather than chunks (MEDULLA-DECISION-ENGINE-R099.2).
+    pub fn is_entity_document(&self) -> bool {
+        matches!(
+            self.media_type.as_deref(),
+            Some("application/json" | "application/ld+json")
+        )
     }
 }
 
@@ -87,11 +99,18 @@ pub fn held_document(
         .iter()
         .filter_map(|name| Some((name.to_string(), value.get(*name)?.clone())))
         .collect();
+    let media_type = ["media_type", "content_type"]
+        .iter()
+        .find_map(|name| value.get(*name).and_then(Value::as_str))
+        .and_then(|raw| raw.split(';').next())
+        .map(|media| media.trim().to_ascii_lowercase())
+        .filter(|media| !media.is_empty());
     Ok(HeldDocument {
         digest_hex: hex::encode(Sha256::digest(text.as_bytes())),
         text,
         backend,
         citation,
+        media_type,
     })
 }
 
@@ -234,6 +253,7 @@ pub fn replay_receipt(
         admissions: serde_json::from_value(record["admissions"].clone()).unwrap_or_default(),
         embedded_units: record["embedded_units"].as_u64().unwrap_or(0) as u32,
         demoted_classes: string_list(&record["demoted_classes"]),
+        alignment_claims: Vec::new(),
     }
 }
 
@@ -392,8 +412,246 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         admissions: plan.admissions,
         embedded_units: plan.embedded_units,
         demoted_classes: plan.demoted_classes,
+        alignment_claims: Vec::new(),
     };
     Ok((write_set, receipt))
+}
+
+// ── Entity documents become alignment claims (MEDULLA-DECISION-ENGINE-R099.2) ────
+
+/// No mapping matches the entity document's IRI.
+pub const ALIGNMENT_NO_MAPPING: &str = "ALIGNMENT_NO_MAPPING";
+/// Two local entities claim one key.
+pub const ALIGNMENT_AMBIGUOUS: &str = "ALIGNMENT_AMBIGUOUS";
+/// The alignment claim node type.
+pub const ALIGNMENT_CLAIM_TYPE: &str = "AlignmentClaim";
+/// The type of a node standing for an external entity IRI.
+pub const EXTERNAL_ENTITY_TYPE: &str = "ExternalEntity";
+/// The edge from a local entity to the external entity it is claimed to match.
+pub const EXACT_MATCH: &str = "skos:exactMatch";
+/// The edge from a local entity to one of its alignment claims.
+pub const HAS_ALIGNMENT_CLAIM: &str = "hasAlignmentClaim";
+/// The evidence class every alignment fact carries.
+pub const ALIGNMENT_EVIDENCE_CLASS: &str = "claim";
+const ALIGNMENT_PREFIX: &str = "document-alignment:";
+pub const ALIGNMENT_LABELS: EnvelopeLabels = EnvelopeLabels {
+    version_type: "document-alignment-sha256",
+    policy_version: "document-alignment",
+};
+/// Reserved mapping targets: the source field holding the entity IRI, the
+/// entity-resolution key, and the exact-match IRIs. Every other target is a
+/// property of the local entity that selects which entity the document is about.
+const TARGET_IRI: &str = "@id";
+const TARGET_KEY: &str = "wikidataId";
+
+/// One visible local node the alignment branch may attach a claim to or find a
+/// claim on: a node of the mapping's ontology class, or an `AlignmentClaim`.
+pub struct LocalEntity {
+    pub node_id: String,
+    pub properties: Value,
+}
+
+impl LocalEntity {
+    /// Decode a stored node row; a row that does not decode is not a candidate.
+    pub fn decode(node_id: String, bytes: &[u8]) -> Option<Self> {
+        Some(Self {
+            node_id,
+            properties: medulla_types::msgpack::decode_property_value(bytes).ok()?,
+        })
+    }
+}
+
+fn refusal(code: &str, detail: impl std::fmt::Display) -> String {
+    format!("{code}: {detail}")
+}
+
+fn source_for<'a>(mapping: &'a ConnectorSchemaMapping, target: &str) -> Option<&'a str> {
+    mapping
+        .fields
+        .iter()
+        .find(|(_, mapped)| mapped.as_str() == target)
+        .map(|(source, _)| source.as_str())
+}
+
+fn iri_list(value: Option<&Value>) -> Vec<&str> {
+    match value {
+        Some(Value::String(one)) => vec![one.as_str()],
+        Some(Value::Array(many)) => many.iter().filter_map(Value::as_str).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn claim_edge(
+    source: &str,
+    target: &str,
+    relationship: &str,
+    digest: &str,
+) -> Result<Method, String> {
+    Ok(Method::AddEdge {
+        source_id: source.to_string(),
+        target_id: target.to_string(),
+        properties_msgpack: encode(&json!({
+            "relationship": relationship,
+            "evidence_class": ALIGNMENT_EVIDENCE_CLASS,
+            "content_digest": digest,
+        }))?,
+    })
+}
+
+/// Lower a fetched entity document to alignment claims. The mapping selects the
+/// entity IRI pattern (`entity_iri_prefix`), the source fields of the IRI, the
+/// key and the exact-match IRIs, and the properties that identify the local
+/// entity the document is about. One `wikidataId` claim node and one
+/// `skos:exactMatch` edge per exact-match IRI are written for that entity, each
+/// with evidence class `claim` and the document `content_digest`. Nothing is
+/// merged or removed: entity resolution (R032) decides every merge.
+///
+/// Refuses `ALIGNMENT_NO_MAPPING` when the mapping does not match the document's
+/// IRI and `ALIGNMENT_AMBIGUOUS` when more than one local entity claims the key.
+/// A document that matches no local entity writes nothing (`None`).
+pub fn lower_alignment(
+    document_id: &str,
+    document: &HeldDocument,
+    mapping: &ConnectorSchemaMapping,
+    local: &[LocalEntity],
+) -> Result<(Option<IndexWriteSet>, EnrichDocumentReceipt), String> {
+    let no_mapping = |detail: &str| refusal(ALIGNMENT_NO_MAPPING, detail);
+    let body: Value = serde_json::from_str(&document.text)
+        .ok()
+        .filter(Value::is_object)
+        .ok_or_else(|| no_mapping("the entity document is not a JSON object"))?;
+    let prefix = mapping
+        .entity_iri_prefix
+        .as_deref()
+        .filter(|prefix| !prefix.is_empty())
+        .ok_or_else(|| no_mapping("the mapping declares no entity IRI pattern"))?;
+    let (Some(iri_field), Some(key_field)) = (
+        source_for(mapping, TARGET_IRI),
+        source_for(mapping, TARGET_KEY),
+    ) else {
+        return Err(no_mapping("the mapping names no IRI or key field"));
+    };
+    let iri = body[iri_field]
+        .as_str()
+        .ok_or_else(|| no_mapping("the entity document has no IRI"))?;
+    let key = body[key_field]
+        .as_str()
+        .filter(|key| !key.is_empty())
+        .ok_or_else(|| no_mapping("the entity document has no key"))?;
+    if iri.strip_prefix(prefix) != Some(key) {
+        return Err(no_mapping(&format!(
+            "IRI '{iri}' is not the pattern '{prefix}' followed by key '{key}'"
+        )));
+    }
+    let mut exact: BTreeSet<&str> = BTreeSet::from([iri]);
+    if let Some(field) = source_for(mapping, EXACT_MATCH) {
+        for target in iri_list(body.get(field)) {
+            if !target.contains("://") {
+                return Err(no_mapping(&format!(
+                    "exact-match target '{target}' is not an IRI"
+                )));
+            }
+            exact.insert(target);
+        }
+    }
+    // The properties that identify the local entity: every other mapped field.
+    let identifying: Vec<(&str, &Value)> = mapping
+        .fields
+        .iter()
+        .filter(|(_, target)| !matches!(target.as_str(), TARGET_IRI | TARGET_KEY | EXACT_MATCH))
+        .filter_map(|(source, target)| Some((target.as_str(), body.get(source)?)))
+        .filter(|(_, value)| !value.is_null())
+        .collect();
+    if identifying.is_empty() {
+        return Err(no_mapping(
+            "the mapping or document carries no property that identifies a local entity",
+        ));
+    }
+    let class = mapping.ontology_class.as_str();
+    let is_class = |entity: &LocalEntity| entity.properties["type"].as_str() == Some(class);
+    let candidates: BTreeSet<&str> = local
+        .iter()
+        .filter(|entity| is_class(entity))
+        .filter(|entity| {
+            identifying
+                .iter()
+                .all(|(property, value)| entity.properties.get(*property) == Some(*value))
+        })
+        .map(|entity| entity.node_id.as_str())
+        .collect();
+    // Entities that already hold this key: by their own property, or by a claim.
+    let mut claimants = candidates.clone();
+    for entity in local {
+        if entity.properties[TARGET_KEY].as_str() != Some(key) {
+            continue;
+        }
+        if is_class(entity) {
+            claimants.insert(entity.node_id.as_str());
+        } else if entity.properties["type"].as_str() == Some(ALIGNMENT_CLAIM_TYPE) {
+            if let Some(held) = entity.properties["entity_id"].as_str() {
+                claimants.insert(held);
+            }
+        }
+    }
+    if claimants.len() > 1 {
+        return Err(refusal(
+            ALIGNMENT_AMBIGUOUS,
+            format!(
+                "{} local entities claim key '{key}': {}",
+                claimants.len(),
+                claimants.iter().copied().collect::<Vec<_>>().join(", ")
+            ),
+        ));
+    }
+    let digest = document.content_digest();
+    let short = &document.digest_hex[..16];
+    let mut receipt = EnrichDocumentReceipt {
+        document_id: document_id.to_string(),
+        enrichment_id: format!("alignment:{document_id}:{short}"),
+        content_digest: digest.clone(),
+        fetch_backend: document.backend,
+        embedder: "none".to_string(),
+        embedding_model: None,
+        dimensions: 0,
+        chunker: "alignment".to_string(),
+        chunk_count: 0,
+        vector_count: 0,
+        superseded_chunks: 0,
+        replayed: false,
+        chunk_ids: Vec::new(),
+        admissions: Vec::new(),
+        embedded_units: 0,
+        demoted_classes: Vec::new(),
+        alignment_claims: Vec::new(),
+    };
+    let Some(entity) = candidates.iter().next().copied() else {
+        return Ok((None, receipt));
+    };
+    let claim_id = format!("alignment-claim:{entity}:{short}");
+    let mut methods = vec![node(
+        claim_id.clone(),
+        json!({
+            "type": ALIGNMENT_CLAIM_TYPE,
+            "entity_id": entity,
+            "wikidataId": key,
+            "document_id": document_id,
+            "evidence_class": ALIGNMENT_EVIDENCE_CLASS,
+            "content_digest": digest,
+        }),
+    )?];
+    methods.push(claim_edge(entity, &claim_id, HAS_ALIGNMENT_CLAIM, &digest)?);
+    for target in exact {
+        let external = format!("external-entity:{target}");
+        methods.push(node(
+            external.clone(),
+            json!({ "type": EXTERNAL_ENTITY_TYPE, "iri": target }),
+        )?);
+        methods.push(claim_edge(entity, &external, EXACT_MATCH, &digest)?);
+    }
+    let write_set =
+        IndexWriteSet::from_methods(ALIGNMENT_PREFIX, b"eg/document-alignment", methods)?;
+    receipt.alignment_claims = vec![claim_id];
+    Ok((Some(write_set), receipt))
 }
 
 /// The source path or URL a held Document came from, for content-class
@@ -567,6 +825,9 @@ pub fn held_pages(
     }
     (held, digests)
 }
+
+#[cfg(test)]
+mod tests;
 
 pub fn query_digest(query: &str) -> String {
     format!(

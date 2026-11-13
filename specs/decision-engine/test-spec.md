@@ -1326,7 +1326,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R134.109`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/answer_ranking_tests.rs::served_ranking_round_trips_through_readback`.
 - `MEDULLA-DECISION-ENGINE-R031.100`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/paper_admission_tests.rs::only_relevant_papers_are_admitted_with_claims`.
 - `MEDULLA-DECISION-ENGINE-R036.100.1`: planned L1 `crates/medulla-decision-types/src/decision/primitive.rs::tests::primitive_contract_round_trips_and_kind_map_is_exhaustive`.
-- `MEDULLA-DECISION-ENGINE-R036.100.2`: planned L2 `crates/medulla-compute/src/assemble/tests/primitive.rs::substitution_rules_cover_every_refusal`.
+- `MEDULLA-DECISION-ENGINE-R036.100.2`: L2 `crates/medulla-compute/src/assemble/tests/primitive.rs::substitution_rules_cover_every_refusal` and `::edges_type_check_on_the_schema_digest_and_graphs_are_bounded`.
 - `MEDULLA-DECISION-ENGINE-R036.100.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::primitive_refusals_abstain_with_stable_codes`.
 - `MEDULLA-DECISION-ENGINE-R036.100.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::primitive_premises_and_inactive_proposals`.
 - `MEDULLA-DECISION-ENGINE-R136.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::criterion_regression_holds_the_revision`.

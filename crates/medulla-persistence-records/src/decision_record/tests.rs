@@ -139,6 +139,10 @@ fn request() -> AssemblyRequest {
         templates: BoundedVec::default(),
         policy: DecisionPolicyRef::Default,
         solver: None,
+        primitive_edges: BoundedVec::default(),
+        replacements: BoundedVec::default(),
+        assistant_profile_ref: None,
+        coding_agent: None,
     }
 }
 
