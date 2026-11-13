@@ -842,6 +842,14 @@ impl EngineBackend {
         let user = user
             .filter(|value| !value.trim().is_empty())
             .ok_or_else(|| user_err("authenticated SQL identity is required"))?;
+        // A registered, active wire login acts as the principal it maps to; every
+        // other login (engine agents) acts as itself.
+        let user = <medulla_wire_core::sql_wire_auth::WireLoginRegistry as medulla_wire_core::sql_wire_auth::WireLoginSource>::find(
+            &medulla_wire_core::sql_wire_auth::wire_login_registry(),
+            &user,
+        )
+            .filter(|record| record.is_active())
+            .map_or(user, |record| record.principal);
         self.session
             .bind_authenticated_sql_actor("pgwire", &user)
             .await
@@ -1901,6 +1909,21 @@ impl EngineBackendFactory {
     }
 }
 
+/// The wire-login lookup every connection's startup shares: the process
+/// registry behind a cache of `wire_login.cache_ttl_s` seconds.
+fn wire_login_cache() -> Arc<dyn medulla_wire_core::sql_wire_auth::WireLoginSource> {
+    static CACHE: std::sync::OnceLock<Arc<medulla_wire_core::sql_wire_auth::CachedWireLogins>> =
+        std::sync::OnceLock::new();
+    CACHE
+        .get_or_init(|| {
+            Arc::new(medulla_wire_core::sql_wire_auth::CachedWireLogins::new(
+                medulla_wire_core::sql_wire_auth::wire_login_registry(),
+                medulla_server_api::knob_config::KnobConfig::default().wire_login_cache_ttl_s,
+            ))
+        })
+        .clone()
+}
+
 impl PgWireServerHandlers for EngineBackendFactory {
     fn simple_query_handler(&self) -> Arc<impl SimpleQueryHandler> {
         self.backend.clone()
@@ -1922,6 +1945,7 @@ impl PgWireServerHandlers for EngineBackendFactory {
             self.tls_certificate_pem
                 .as_ref()
                 .map(|certificate| certificate.as_slice()),
+            wire_login_cache(),
         ))
     }
 

@@ -36,14 +36,23 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use pgwire::api::auth::finish_authentication;
 use pgwire::api::auth::sasl::scram::{gen_salted_password, ScramAuth, SCRAM_ITERATIONS};
 use pgwire::api::auth::sasl::SASLAuthStartupHandler;
 use pgwire::api::auth::{
     AuthSource, DefaultServerParameterProvider, LoginInfo, Password, StartupHandler,
 };
-use pgwire::api::ClientInfo;
-use pgwire::error::PgWireResult;
+use pgwire::api::{
+    ClientInfo, PgWireConnectionState, PidSecretKeyGenerator, RandomPidSecretKeyGenerator,
+};
+use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
+use pgwire::messages::startup::Authentication;
 use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
+
+use medulla_identity_types::identity::{sha256_verifier, WireLoginKind, WireLoginRecord};
+use medulla_wire_core::sql_wire_auth::{
+    resolve_wire_login, InvalidLogin, WireLoginSource, WireProof, INVALID_LOGIN_SQLSTATE,
+};
 
 /// Env var selecting the pgwire auth mode. Only `scram` is accepted; unset also
 /// selects SCRAM.
@@ -105,6 +114,29 @@ fn derive_salt(secret: &str, user: &str) -> Vec<u8> {
 #[derive(Debug)]
 struct EngineAuthSource {
     secret: String,
+    logins: Arc<dyn WireLoginSource>,
+}
+
+/// The `verifier` of a `Password` wire login: `<salt hex>:<SCRAM salted password
+/// hex>`, the form the SCRAM handler checks a proof against. The plaintext is
+/// never stored.
+pub fn password_verifier(password: &str, salt: &[u8]) -> String {
+    let salted = gen_salted_password(password, salt, SCRAM_ITERATIONS);
+    format!("{}:{}", hex::encode(salt), hex::encode(salted))
+}
+
+fn decode_password_verifier(verifier: &str) -> Option<(Vec<u8>, Vec<u8>)> {
+    let (salt, salted) = verifier.split_once(':')?;
+    Some((hex::decode(salt).ok()?, hex::decode(salted).ok()?))
+}
+
+/// The refusal a failed wire login raises: SQLSTATE `28000`.
+fn invalid_login_error(refused: &InvalidLogin) -> PgWireError {
+    PgWireError::UserError(Box::new(ErrorInfo::new(
+        "FATAL".to_string(),
+        INVALID_LOGIN_SQLSTATE.to_string(),
+        refused.to_string(),
+    )))
 }
 
 #[async_trait]
@@ -113,6 +145,17 @@ impl AuthSource for EngineAuthSource {
         // A missing user can never match a derived password — return a salted form
         // of an empty user so the proof check fails cleanly (no panic, no bypass).
         let user = login.user().unwrap_or("");
+        // A registered wire login answers from its stored verifier. A record that
+        // is revoked or of another kind never matches a proof.
+        if let Some(record) = self.logins.find(user) {
+            let stored = (record.is_active() && record.kind == WireLoginKind::Password)
+                .then(|| decode_password_verifier(&record.verifier))
+                .flatten();
+            return Ok(match stored {
+                Some((salt, salted)) => Password::new(Some(salt), salted),
+                None => Password::new(Some(derive_salt(&self.secret, user)), Vec::new()),
+            });
+        }
         let salt = derive_salt(&self.secret, user);
         let derived = derive_pg_password(&self.secret, user);
         let salted = gen_salted_password(&derived, &salt, SCRAM_ITERATIONS);
@@ -120,17 +163,26 @@ impl AuthSource for EngineAuthSource {
     }
 }
 
-/// The per-connection SCRAM startup handler. One wrapper keeps the
-/// `PgWireServerHandlers::startup_handler`
-/// return type (`Arc<impl StartupHandler>`) is a single concrete type that dispatches
-/// internally — pgwire builds a fresh SASL state machine per connection, so the SCRAM
-/// variant is constructed per accepted connection (see `EngineBackendFactory`).
-pub enum EngineStartupHandler {
-    Scram(Box<SASLAuthStartupHandler<DefaultServerParameterProvider>>),
+/// Which exchange a connection's login uses, decided at its startup message.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LoginRoute {
+    Scram,
+    Token,
+    Certificate,
+}
+
+/// The per-connection startup handler. A login registered as `Token` or
+/// `Certificate` authenticates through [`resolve_wire_login`]; every other login
+/// (engine agents and `Password` records) runs SCRAM-SHA-256. pgwire builds a
+/// fresh handler per connection, so the route is per-connection state.
+pub struct EngineStartupHandler {
+    scram: Box<SASLAuthStartupHandler<DefaultServerParameterProvider>>,
+    logins: Arc<dyn WireLoginSource>,
+    route: tokio::sync::Mutex<LoginRoute>,
 }
 
 impl EngineStartupHandler {
-    /// Build the SCRAM startup handler over the engine key material.
+    /// Build the startup handler over the engine key material.
     ///
     /// `certificate_pem` is optional for loopback/plain deployments. When it is
     /// supplied, the handler advertises SCRAM channel binding and verifies the
@@ -138,11 +190,17 @@ impl EngineStartupHandler {
     /// Startup validates the PEM before a listener is opened; the `expect` below
     /// therefore protects an already-validated invariant rather than accepting
     /// malformed operator input at connection time.
-    pub fn new(mode: PgWireAuthMode, auth_secret: &str, certificate_pem: Option<&[u8]>) -> Self {
+    pub fn new(
+        mode: PgWireAuthMode,
+        auth_secret: &str,
+        certificate_pem: Option<&[u8]>,
+        logins: Arc<dyn WireLoginSource>,
+    ) -> Self {
         match mode {
             PgWireAuthMode::Scram => {
                 let source = Arc::new(EngineAuthSource {
                     secret: auth_secret.to_string(),
+                    logins: logins.clone(),
                 });
                 let mut scram = ScramAuth::new(source);
                 if let Some(certificate_pem) = certificate_pem {
@@ -154,10 +212,36 @@ impl EngineStartupHandler {
                     DefaultServerParameterProvider::default(),
                 ))
                 .with_scram(scram);
-                EngineStartupHandler::Scram(Box::new(handler))
+                Self {
+                    scram: Box::new(handler),
+                    logins,
+                    route: tokio::sync::Mutex::new(LoginRoute::Scram),
+                }
             }
         }
     }
+
+    fn route_for(&self, user: &str) -> LoginRoute {
+        match self.logins.find(user) {
+            Some(record) if record.is_active() => match record.kind {
+                WireLoginKind::Token => LoginRoute::Token,
+                WireLoginKind::Certificate => LoginRoute::Certificate,
+                WireLoginKind::Password => LoginRoute::Scram,
+            },
+            _ => LoginRoute::Scram,
+        }
+    }
+}
+
+async fn complete_login<C>(client: &mut C) -> PgWireResult<()>
+where
+    C: ClientInfo + futures::Sink<PgWireBackendMessage> + Unpin + Send + Sync,
+    C::Error: std::fmt::Debug,
+    PgWireError: From<<C as futures::Sink<PgWireBackendMessage>>::Error>,
+{
+    let (pid, secret_key) = RandomPidSecretKeyGenerator::default().generate(client);
+    client.set_pid_and_secret_key(pid, secret_key);
+    finish_authentication(client, &DefaultServerParameterProvider::default()).await
 }
 
 /// Validate the exact certificate bytes used by native TLS before a listener is
@@ -166,6 +250,7 @@ impl EngineStartupHandler {
 pub fn validate_certificate(certificate_pem: &[u8]) -> PgWireResult<()> {
     let source = Arc::new(EngineAuthSource {
         secret: ["pgwire", "tls", "validation"].join("-"),
+        logins: medulla_wire_core::sql_wire_auth::wire_login_registry(),
     });
     let mut scram = ScramAuth::new(source);
     scram.configure_certificate(certificate_pem)
@@ -183,15 +268,153 @@ impl StartupHandler for EngineStartupHandler {
         C::Error: std::fmt::Debug,
         pgwire::error::PgWireError: From<<C as futures::Sink<PgWireBackendMessage>>::Error>,
     {
-        match self {
-            EngineStartupHandler::Scram(h) => h.on_startup(client, message).await,
+        if let PgWireFrontendMessage::Startup(ref startup) = message {
+            let user = startup.parameters.get("user").cloned().unwrap_or_default();
+            let route = self.route_for(&user);
+            *self.route.lock().await = route;
+            if route != LoginRoute::Scram {
+                pgwire::api::auth::protocol_negotiation(client, startup).await?;
+                pgwire::api::auth::save_startup_parameters_to_metadata(client, startup);
+                client.set_state(PgWireConnectionState::AuthenticationInProgress);
+                if route == LoginRoute::Token {
+                    client
+                        .send(PgWireBackendMessage::Authentication(
+                            Authentication::CleartextPassword,
+                        ))
+                        .await?;
+                    return Ok(());
+                }
+                // Certificate: the mTLS handshake already accepted the chain; the
+                // leaf's fingerprint must match the record.
+                let leaf = client
+                    .client_certificates()
+                    .and_then(|chain| chain.first().map(|c| c.as_ref().to_vec()))
+                    .unwrap_or_default();
+                resolve_wire_login(
+                    self.logins.as_ref(),
+                    &user,
+                    WireProof::Certificate {
+                        certificate_der: &leaf,
+                    },
+                )
+                .map_err(|refused| invalid_login_error(&refused))?;
+                return complete_login(client).await;
+            }
         }
+        let route = *self.route.lock().await;
+        if route == LoginRoute::Token {
+            if let PgWireFrontendMessage::PasswordMessageFamily(pwd) = message {
+                let token = pwd.into_password()?.password;
+                let user = client
+                    .metadata()
+                    .get(pgwire::api::METADATA_USER)
+                    .cloned()
+                    .unwrap_or_default();
+                resolve_wire_login(self.logins.as_ref(), &user, WireProof::Token(&token))
+                    .map_err(|refused| invalid_login_error(&refused))?;
+                return complete_login(client).await;
+            }
+            return Ok(());
+        }
+        self.scram.on_startup(client, message).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_wire_core::sql_wire_auth::{CachedWireLogins, WireLoginRegistry};
+
+    fn record(kind: WireLoginKind, verifier: &str) -> WireLoginRecord {
+        WireLoginRecord::new("bi", kind, verifier, "agent:analyst", "tenant-a", 1)
+    }
+
+    fn one(rec: WireLoginRecord) -> WireLoginRegistry {
+        let registry = WireLoginRegistry::default();
+        registry.put(rec).expect("put");
+        registry
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R007.1
+    #[test]
+    fn three_login_kinds_resolve_one_principal() {
+        let salt = [7u8; 16];
+        let (cert, token) = (b"client-cert-der".to_vec(), "tok-123");
+        let password = one(record(
+            WireLoginKind::Password,
+            &password_verifier("pw", &salt),
+        ));
+        let stored = password.find("bi").expect("record");
+        assert_eq!(
+            decode_password_verifier(&stored.verifier).map(|(salt, _)| salt),
+            Some(salt.to_vec()),
+            "a password login answers SCRAM from its verifier"
+        );
+        let ok = resolve_wire_login(&password, "bi", WireProof::ScramVerified).expect("password");
+        let by_cert = one(record(WireLoginKind::Certificate, &sha256_verifier(&cert)));
+        let c = resolve_wire_login(
+            &by_cert,
+            "bi",
+            WireProof::Certificate {
+                certificate_der: &cert,
+            },
+        )
+        .expect("certificate");
+        let by_token = one(record(
+            WireLoginKind::Token,
+            &sha256_verifier(token.as_bytes()),
+        ));
+        let t = resolve_wire_login(&by_token, "bi", WireProof::Token(token)).expect("token");
+        for resolved in [&ok, &c, &t] {
+            assert_eq!(resolved.principal, "agent:analyst");
+            assert_eq!(resolved.tenant, "tenant-a");
+        }
+        assert_eq!(
+            [ok.kind, c.kind, t.kind],
+            [
+                WireLoginKind::Password,
+                WireLoginKind::Certificate,
+                WireLoginKind::Token
+            ]
+        );
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R007.1
+    #[test]
+    fn unknown_revoked_mismatched_and_wrong_kind_logins_refuse() {
+        let token = "tok-123";
+        let mut rec = record(WireLoginKind::Token, &sha256_verifier(token.as_bytes()));
+        let source = one(rec.clone());
+        for refused in [
+            resolve_wire_login(&source, "nobody", WireProof::Token(token)),
+            resolve_wire_login(&source, "bi", WireProof::Token("wrong")),
+            resolve_wire_login(&source, "bi", WireProof::ScramVerified),
+        ] {
+            let err = refused.expect_err("must refuse");
+            assert!(err.to_string().starts_with("INVALID_LOGIN"));
+        }
+        rec.apply(medulla_identity_types::identity::WireLoginEvent::Revoke { now_ms: 5 })
+            .expect("revoke");
+        let revoked = one(rec);
+        assert!(resolve_wire_login(&revoked, "bi", WireProof::Token(token)).is_err());
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R007.1
+    #[test]
+    fn cache_serves_a_login_until_its_ttl_and_zero_never_caches() {
+        let registry = Arc::new(WireLoginRegistry::default());
+        let cached = CachedWireLogins::new(registry.clone(), 60);
+        assert!(cached.find("bi").is_none());
+        registry
+            .put(record(WireLoginKind::Token, "ab"))
+            .expect("put");
+        assert!(
+            cached.find("bi").is_none(),
+            "the miss is cached within the ttl"
+        );
+        let uncached = CachedWireLogins::new(registry, 0);
+        assert!(uncached.find("bi").is_some(), "ttl 0 reads through");
+    }
 
     #[test]
     fn derived_password_is_stable_and_secret_dependent() {

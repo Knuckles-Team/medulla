@@ -50,6 +50,7 @@ mod stamp;
 mod store;
 mod text;
 mod views;
+mod wire_login;
 
 pub use access::{GroupRecord, IdpConfig, IdpKind, JitPolicy, MappingRule, RoleRecord};
 pub use approval_key::{
@@ -123,6 +124,9 @@ pub use text::{
 pub use views::{
     AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionLiveness,
     SessionView, UserView, WebauthnCredentialView,
+};
+pub use wire_login::{
+    sha256_verifier, WireLoginError, WireLoginEvent, WireLoginKind, WireLoginRecord, WireLoginState,
 };
 
 /// The principal id of the built-in bootstrap user (§2.2.3).

@@ -11,10 +11,18 @@
 //! * W4 `bulk_load`: 1,000,000 rows through the COPY IN commit path (>= 100,000 rows/s).
 //! * W5 `conflict_heavy`: 32 sessions on 16 keys (>= 2,000 successful commits/s).
 //!
+//! Two budget groups ride beside them, each a record of its own:
+//!
+//! * `occ_validate` (R002.3): footprint validation of 100 keys, p99 <= 50 us.
+//! * `disjoint_writers` (R004.3): 32 sessions on disjoint row ranges, commit
+//!   p99 <= 200 us of validation wait, no `TXN_CONFLICT`.
+//!
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
 // spec: MEDULLA-ENGINE-PARITY-R005.1
+// spec: MEDULLA-ENGINE-PARITY-R002.3
+// spec: MEDULLA-ENGINE-PARITY-R004.3
 //!
 //! Run: cargo bench --features full --bench engine_parity
 
@@ -31,8 +39,10 @@ use std::time::{Duration, Instant};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_table_store::tables::store::OccLog;
 use medulla_table_store::tables::{TableStore, TableTxn, TxnOp};
 use medulla_tables::schema::{Column, ColumnType, TableSchema};
+use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::contract::Digest256;
 use serde_json::json;
 
@@ -47,6 +57,12 @@ const W4_BATCH: usize = 10_000;
 const W5_SESSIONS: usize = 32;
 const W5_KEYS: i64 = 16;
 const W5_WINDOW: Duration = Duration::from_secs(5);
+const OCC_FOOTPRINT_KEYS: usize = 100;
+const OCC_VALIDATE_SAMPLES: usize = 20_000;
+const OCC_VALIDATE_P99_BUDGET_US: u64 = 50;
+const DISJOINT_SESSIONS: usize = 32;
+const DISJOINT_ROUNDS: usize = 200;
+const DISJOINT_WAIT_P99_BUDGET_US: u64 = 200;
 
 /// One workload result line.
 struct Record {
@@ -348,7 +364,136 @@ fn w5_conflict_heavy() -> Record {
     }
 }
 
-/// Run W1 to W5 and print one record per workload.
+/// Footprint validation of 100 keys against a full history ring (R002.3).
+fn occ_validate() -> Record {
+    let log = OccLog::with_history(1024);
+    for seq in 0..512u32 {
+        log.record(vec![KeyRange::point(
+            "occ_hist",
+            format!("h{seq:08}").as_bytes(),
+        )]);
+    }
+    let footprint = TxnFootprint {
+        snapshot_seq: log.commit_seq(),
+        reads: (0..OCC_FOOTPRINT_KEYS / 2)
+            .map(|k| KeyRange::point("occ_bench", format!("r{k:08}").as_bytes()))
+            .collect(),
+        writes: (0..OCC_FOOTPRINT_KEYS / 2)
+            .map(|k| KeyRange::point("occ_bench", format!("w{k:08}").as_bytes()))
+            .collect(),
+    };
+    let mut samples = Vec::with_capacity(OCC_VALIDATE_SAMPLES);
+    let started = Instant::now();
+    for _ in 0..OCC_VALIDATE_SAMPLES {
+        let attempt = Instant::now();
+        log.validate(&footprint)
+            .expect("disjoint footprint validates");
+        samples.push(attempt.elapsed());
+    }
+    let elapsed = started.elapsed().as_secs_f64();
+    samples.sort();
+    let p99 = percentile(&samples, 99);
+    assert!(
+        p99 <= OCC_VALIDATE_P99_BUDGET_US,
+        "occ_validate p99 {p99} us exceeds {OCC_VALIDATE_P99_BUDGET_US} us"
+    );
+    Record {
+        workload: "occ_validate",
+        parameters: format!("keys={OCC_FOOTPRINT_KEYS} history=512 samples={OCC_VALIDATE_SAMPLES}"),
+        p50_us: percentile(&samples, 50),
+        p99_us: p99,
+        throughput: OCC_VALIDATE_SAMPLES as f64 / elapsed,
+    }
+}
+
+/// 32 sessions, each on its own row range of one table: every commit succeeds
+/// and the time spent in footprint validation stays under budget (R004.3).
+fn disjoint_writers() -> Record {
+    let store = open_table_store("disjoint");
+    store
+        .create_table(
+            &TableSchema::new(
+                "lanes",
+                vec![
+                    Column::new("id", ColumnType::BigInt, false, true),
+                    Column::new("n", ColumnType::BigInt, false, false),
+                ],
+            ),
+            false,
+        )
+        .expect("create lanes");
+    let mut seed = TableTxn::new();
+    seed.push(TxnOp::Insert {
+        table: "lanes".into(),
+        col_order: vec!["id".into(), "n".into()],
+        rows: (0..DISJOINT_SESSIONS as i64)
+            .map(|k| vec![k.into(), 0i64.into()])
+            .collect(),
+    });
+    commit(&store, &seed).expect("seed lanes");
+    // The shared footprint log the sessions validate against: its lock is the
+    // only place disjoint writers could wait on each other.
+    let log = Arc::new(OccLog::with_history(1024));
+    let started = Instant::now();
+    let handles: Vec<_> = (0..DISJOINT_SESSIONS)
+        .map(|session| {
+            let (store, log) = (store.clone(), log.clone());
+            std::thread::spawn(move || {
+                let mut samples = Vec::with_capacity(DISJOINT_ROUNDS);
+                for round in 0..DISJOINT_ROUNDS {
+                    let mut set = serde_json::Map::new();
+                    set.insert("n".into(), json!(round as i64 + 1));
+                    let mut txn = TableTxn::new();
+                    txn.pin(store.commit_seq());
+                    txn.push(TxnOp::Update {
+                        table: "lanes".into(),
+                        set,
+                        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                            col: "id".into(),
+                            op: medulla_result_types::row_predicate::CmpOp::Eq,
+                            value: json!(session as i64),
+                        },
+                    });
+                    commit(&store, &txn).expect("a disjoint commit never conflicts");
+                    let footprint = TxnFootprint {
+                        snapshot_seq: log.commit_seq(),
+                        reads: Vec::new(),
+                        writes: vec![KeyRange::point(
+                            "lanes",
+                            format!("s{session:04}r{round:06}").as_bytes(),
+                        )],
+                    };
+                    let attempt = Instant::now();
+                    log.validate(&footprint)
+                        .expect("disjoint footprints never conflict");
+                    samples.push(attempt.elapsed());
+                    log.record(footprint.writes);
+                }
+                samples
+            })
+        })
+        .collect();
+    let mut samples: Vec<Duration> = handles
+        .into_iter()
+        .flat_map(|h| h.join().expect("session thread"))
+        .collect();
+    let elapsed = started.elapsed().as_secs_f64();
+    samples.sort();
+    let p99 = percentile(&samples, 99);
+    assert!(
+        p99 <= DISJOINT_WAIT_P99_BUDGET_US,
+        "disjoint_writers validation wait p99 {p99} us exceeds {DISJOINT_WAIT_P99_BUDGET_US} us"
+    );
+    Record {
+        workload: "disjoint_writers",
+        parameters: format!("sessions={DISJOINT_SESSIONS} rounds={DISJOINT_ROUNDS}"),
+        p50_us: percentile(&samples, 50),
+        p99_us: p99,
+        throughput: (DISJOINT_SESSIONS * DISJOINT_ROUNDS) as f64 / elapsed,
+    }
+}
+
+/// Run W1 to W5 and the two OCC budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(8)
@@ -366,6 +511,8 @@ fn emit_workload_records() {
     emit(&w3);
     emit(&w4_bulk_load());
     emit(&w5_conflict_heavy());
+    emit(&occ_validate());
+    emit(&disjoint_writers());
 }
 
 fn main() {

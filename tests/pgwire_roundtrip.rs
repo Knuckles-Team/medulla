@@ -1577,6 +1577,7 @@ async fn wire_uql_is_deterministic() {
 /// commit refuses with SQLSTATE 40001 and the code `TXN_CONFLICT`, and the
 /// first writer's value stays. Sessions on disjoint rows both commit.
 // spec: MEDULLA-ENGINE-PARITY-R002.2
+// spec: MEDULLA-ENGINE-PARITY-R002.3
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn occ_conflict_over_wire() {
     let state = seeded_state();
@@ -1751,5 +1752,74 @@ async fn matview_status_catalog_reports_mode_and_reason() {
                 Some("MATVIEW_NOT_INCREMENTAL".to_string())
             ),
         ]
+    );
+}
+
+/// 32 sessions each update their own row range of one table: all 32 commits
+/// succeed, none returns SQLSTATE 40001, and every row holds its own value.
+// spec: MEDULLA-ENGINE-PARITY-R004.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn disjoint_sessions_commit_in_parallel() {
+    const SESSIONS: i64 = 32;
+    const ROWS_PER_SESSION: i64 = 4;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let setup = connect(&addr).await;
+    let table = unique_table();
+    setup
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, owner BIGINT NOT NULL, bal BIGINT NOT NULL)"
+        ))
+        .await
+        .expect("CREATE TABLE");
+    let values: Vec<String> = (0..SESSIONS * ROWS_PER_SESSION)
+        .map(|id| format!("({id}, {}, 0)", id / ROWS_PER_SESSION))
+        .collect();
+    setup
+        .simple_query(&format!("INSERT INTO {table} VALUES {}", values.join(", ")))
+        .await
+        .expect("seed rows");
+
+    let mut sessions = Vec::new();
+    for _ in 0..SESSIONS {
+        sessions.push(connect(&addr).await);
+    }
+    // Every session pins the same snapshot before any of them commits.
+    for session in &sessions {
+        session.simple_query("BEGIN").await.expect("BEGIN");
+    }
+    let mut tasks = Vec::new();
+    for (owner, session) in sessions.into_iter().enumerate() {
+        let table = table.clone();
+        tasks.push(tokio::spawn(async move {
+            session
+                .simple_query(&format!(
+                    "UPDATE {table} SET bal = {} WHERE owner = {owner}",
+                    owner as i64 + 1
+                ))
+                .await
+                .map_err(|e| error_chain(&e))?;
+            session
+                .simple_query("COMMIT")
+                .await
+                .map_err(|e| error_chain(&e))
+        }));
+    }
+    for task in tasks {
+        let outcome = task.await.expect("session task");
+        assert!(
+            outcome.is_ok(),
+            "a disjoint commit must succeed, got {outcome:?}"
+        );
+    }
+    let rows = setup
+        .simple_query(&format!(
+            "SELECT owner, bal FROM {table} WHERE bal <> owner + 1"
+        ))
+        .await
+        .expect("verify");
+    assert!(
+        simple_ids(rows).is_empty(),
+        "every row holds its own session's value"
     );
 }

@@ -251,6 +251,8 @@ knobs! {
     trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
     /// Batch: most operations one served `Batch` carries; a larger batch refuses `BATCH_TOO_LARGE` before any operation runs (MEDULLA-DURABLE-KERNEL-R871).
     batch_max_operations: u64 = "batch.max_operations", U64(64), [1, 1024], "operations", Tunable;
+    /// Wire logins: seconds a resolved wire-login record stays cached (MEDULLA-ENGINE-PARITY-R007.1).
+    wire_login_cache_ttl_s: u64 = "wire_login.cache_ttl_s", U64(5), [0, 60], "s", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.
