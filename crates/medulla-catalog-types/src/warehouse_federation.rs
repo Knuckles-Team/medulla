@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 /// A read-only federated warehouse/lake source kind. Closed — an unlisted
 /// kind is refused at parse time rather than admitted as a catch-all.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum WarehouseSourceKind {
     Snowflake,
@@ -42,6 +43,7 @@ impl WarehouseSourceKind {
 /// A federated warehouse source's connection configuration: its kind plus
 /// the opaque field map a connector reads by name. Pure data — no I/O.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct WarehouseSourceConfig {
     pub kind: Option<WarehouseSourceKind>,
     pub fields: std::collections::BTreeMap<String, String>,

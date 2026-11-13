@@ -77,6 +77,7 @@ impl Identity {
             ForeignSourceSpec::HttpJson { .. } => "http-json",
             ForeignSourceSpec::Sql { .. } => "sql",
             ForeignSourceSpec::SqliteFile { .. } => "sqlite-file",
+            ForeignSourceSpec::Warehouse { .. } => "warehouse",
             ForeignSourceSpec::Trino { .. }
             | ForeignSourceSpec::Cypher { .. }
             | ForeignSourceSpec::SparkBatch { .. }

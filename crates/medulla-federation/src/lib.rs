@@ -89,6 +89,9 @@ pub mod mirror_target;
 /// reader (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3).
 #[cfg(feature = "federation")]
 pub mod sqlite_foreign;
+/// Warehouse and lake sources read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
+#[cfg(feature = "federation")]
+pub mod warehouse_foreign;
 #[cfg(all(any(test, feature = "test-support"), feature = "federation"))]
 pub mod test_guard;
 // The federation foreign-scan + compose-join-with-local proofs (CONCEPT:MEDULLA-KG.query.query-federation):

@@ -523,6 +523,27 @@ pub enum ForeignSourceSpec {
         /// Secret reference for the metastore credential.
         auth_ref: String,
     },
+    /// One table of a read-only warehouse or lake source (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2):
+    /// `config` names the kind (`iceberg`, `duck_db`, or a connector-served `snowflake` /
+    /// `big_query`, which the engine refuses `CAPABILITY_UNSUPPORTED`) and its connection fields.
+    /// A `duck_db` `database_path` must lie under `foreign.duckdb.allowed_roots`
+    /// (`DUCKDB_FILE_DENIED`). `columns` is the mapped-column set a column read may expose and
+    /// `id_column` names the column carrying the row id (empty: the row ordinal).
+    Warehouse {
+        config: crate::warehouse_federation::WarehouseSourceConfig,
+        /// The table to read (`namespace.table` for Iceberg).
+        table: String,
+        #[serde(default)]
+        columns: Vec<String>,
+        #[serde(default)]
+        id_column: String,
+        /// Ask for Arrow Flight SQL where the kind offers it; a kind that does not is refused.
+        #[serde(default)]
+        prefer_flight_sql: bool,
+        /// Pin an Iceberg read to one committed snapshot.
+        #[serde(default)]
+        snapshot_id: Option<i64>,
+    },
     /// A brain-guarded source (MEDULLA-DURABLE-KERNEL-R024.6): an inner query that
     /// MUST pass a named semantic/policy guard check (the "brain") before any
     /// row crosses the federation boundary. `guard_policy` names the guard a

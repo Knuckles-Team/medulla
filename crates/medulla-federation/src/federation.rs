@@ -188,6 +188,21 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
             table,
             columns,
         }),
+        ForeignSourceSpec::Warehouse {
+            config,
+            table,
+            columns,
+            id_column,
+            prefer_flight_sql,
+            snapshot_id,
+        } => Box::new(crate::warehouse_foreign::WarehouseSource {
+            config,
+            table,
+            columns,
+            id_column,
+            prefer_flight_sql: *prefer_flight_sql,
+            snapshot_id: *snapshot_id,
+        }),
         ForeignSourceSpec::Trino { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::SparkBatch { .. }
@@ -2340,6 +2355,13 @@ impl ForeignSourceRegistry {
             ForeignSourceSpec::SqliteFile { columns, .. } if !columns.is_empty() => {
                 columns.iter().cloned().collect()
             }
+            ForeignSourceSpec::Warehouse {
+                columns, id_column, ..
+            } if !columns.is_empty() => columns
+                .iter()
+                .chain(std::iter::once(id_column).filter(|id| !id.is_empty()))
+                .cloned()
+                .collect(),
             _ => return Err("federation: this source has no column mapping".to_string()),
         };
         let (projection_supported, filter_support): (
@@ -2356,6 +2378,7 @@ impl ForeignSourceRegistry {
             ForeignSourceSpec::SqliteFile { .. } => (false, |_| {
                 crate::federation_opt::PushdownSupport::Unsupported
             }),
+            ForeignSourceSpec::Warehouse { .. } => (true, crate::warehouse_foreign::filter_support),
             _ => unreachable!("only mapped source kinds reach column planning"),
         };
         let plan = ColumnPlan::new(
