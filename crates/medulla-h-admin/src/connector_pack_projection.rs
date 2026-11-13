@@ -39,6 +39,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
     feature = "shacl",
     feature = "security"
 ))]
+pub(crate) mod blueprint;
 mod grant;
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]

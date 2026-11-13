@@ -378,6 +378,7 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::NutrientIdUnmapped,
         PackViolationCode::ContractShaclViolation,
         PackViolationCode::OntologyCoreConflict,
+        PackViolationCode::PromptBlueprintInvalid,
     ]
 }
 

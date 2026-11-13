@@ -127,6 +127,8 @@ struct IndexValidator<'a> {
     shapes: Vec<String>,
     ontology_iris: BTreeSet<&'a str>,
     shape_owners: BTreeMap<String, String>,
+    /// Every Prompt entry's URI: what a blueprint's `extends` may name.
+    prompt_uris: BTreeSet<String>,
 }
 
 impl<'a> IndexValidator<'a> {
@@ -153,6 +155,11 @@ impl<'a> IndexValidator<'a> {
                 .map(|entry| entry.uri.as_str())
                 .collect(),
             shape_owners: BTreeMap::new(),
+            prompt_uris: all
+                .iter()
+                .filter(|entry| entry.kind == PackEntryKind::Prompt)
+                .map(|entry| entry.uri.clone())
+                .collect(),
         }
     }
 
@@ -296,13 +303,42 @@ impl<'a> IndexValidator<'a> {
     }
 
     fn validate_json_body(&mut self, entry: &PackEntry, body: &[u8]) {
-        if json_kind(entry.kind) && parse_bounded_json(body).is_err() {
+        if !json_kind(entry.kind) {
+            return;
+        }
+        let Ok(document) = parse_bounded_json(body) else {
             self.reject(
                 PackViolationCode::MalformedBody,
                 Some(&entry.uri),
                 "entry body is not bounded JSON",
             );
+            return;
+        };
+        if entry.kind == PackEntryKind::Prompt {
+            self.validate_prompt_blueprint_body(entry, &document);
         }
+    }
+
+    /// MEDULLA-DECISION-ENGINE-R814.8: a packaged prompt is refused unless it
+    /// matches the canonical blueprint. The detail names field paths only.
+    fn validate_prompt_blueprint_body(&mut self, entry: &PackEntry, document: &serde_json::Value) {
+        let found = crate::connector_pack_projection::blueprint::validate_prompt_blueprint(
+            document,
+            &self.prompt_uris,
+        );
+        if found.is_empty() {
+            return;
+        }
+        let detail = found
+            .iter()
+            .map(|violation| format!("{} ({})", violation.path, violation.rule))
+            .collect::<Vec<_>>()
+            .join("; ");
+        self.reject(
+            PackViolationCode::PromptBlueprintInvalid,
+            Some(&entry.uri),
+            &detail,
+        );
     }
 
     fn validate_declaration_body(&mut self, entry: &PackEntry, body: &[u8]) {

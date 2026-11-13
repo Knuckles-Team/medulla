@@ -104,7 +104,13 @@ def skill(
 
 def prompt(connector: str, index: int) -> EntrySpec:
     name = f"prompt_{index:02d}"
-    rendered = {"messages": [{"content": f"Synthetic prompt {index}.", "role": "user"}]}
+    rendered = {
+        "schema_version": "1.0",
+        "task": f"synthetic-task-{index:02d}",
+        "type": "prompt",
+        "source": connector,
+        "instructions": {"core_directive": f"Synthetic prompt {index}."},
+    }
     return EntrySpec(
         kind="prompt",
         uri=f"prompt://{connector}/{name}",

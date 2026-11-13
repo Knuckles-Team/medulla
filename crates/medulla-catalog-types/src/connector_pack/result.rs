@@ -68,6 +68,9 @@ pub enum PackViolationCode {
     // A pack ontology states an axiom about a core class it should only reuse
     // by IRI (MEDULLA-TYPED-PACKS-R102.3).
     OntologyCoreConflict,
+    // A packaged prompt does not match the canonical blueprint
+    // (MEDULLA-DECISION-ENGINE-R814.8).
+    PromptBlueprintInvalid,
 }
 
 /// Something worth saying that did not stop the import.

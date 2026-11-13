@@ -752,3 +752,9 @@ The rewrite proposal names the graph that holds the record's snapshot head (`gra
 - `prompt_candidate.min_match_ratio` is a decision-policy knob (DE-R059.1-KNOBS), so it sits in the decision-types knob families and the selector takes its resolved value as a parameter; the selector reads no policy itself.
 - The legality test is exact integer arithmetic (`matched * 1_000_000 >= min * required`), never a rounded Q32 ratio, so a boundary ratio is never lost to rounding. Only the score uses Q32.
 - Only system-role candidates are considered; task and template prompts stay tool guidance. The served L3 journey through `AgentAssemble` is the root slice test of the R814 rollup.
+
+## Packaged prompt blueprint (R814.8)
+
+- The check runs in the pack import validator for every Prompt entry whose body is bounded JSON, and reports through the pack's own violation list as `PROMPT_BLUEPRINT_INVALID` (a `PackViolationCode`). The detail lists `path (rule)` pairs and never a value.
+- `extends` resolves against the Prompt entries of the same pack, so import stays a pure function of the archive; a later row may widen it to registered candidates when R814.1 stores them.
+- Hard cutover: the synthetic pack generator's prompt body is now blueprint-shaped, so pack digests pinned in synthetic-pack tests need the wire-vector refresh (WIRE-REGEN).
