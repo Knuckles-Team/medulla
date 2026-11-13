@@ -1350,7 +1350,8 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R036.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::coding_agent_plan_orders_skills_and_refuses_stale_receipts`.
 - `MEDULLA-DECISION-ENGINE-R014.100.1`: planned L1 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::inadequate_and_unknown_adequacy_are_eliminated`.
 - `MEDULLA-DECISION-ENGINE-R014.100.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
-- `MEDULLA-DECISION-ENGINE-R014.100.2`: planned L2 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::lexicographic_size_then_cost_matches_brute_force`.
+- `MEDULLA-DECISION-ENGINE-R014.100.2`: L2 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::objective_levels::lexicographic_size_then_cost_matches_brute_force`.
+- `MEDULLA-DECISION-ENGINE-R014.100.2`: L2 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::objective_levels::unknown_size_follows_the_unknown_cost_rule`.
 - `MEDULLA-DECISION-ENGINE-R014.100.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
 - `MEDULLA-DECISION-ENGINE-R147.1`: planned L1 `crates/medulla-decision-types/src/decision/statistical/distilled.rs::tests::distilled_scores_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R147.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.

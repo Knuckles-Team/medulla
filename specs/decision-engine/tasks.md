@@ -355,7 +355,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
 - [ ] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
 - [x] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
-- [ ] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
+- [x] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
 - [ ] T346 [US4] MEDULLA-DECISION-ENGINE-R147.1 Distilled score model
 - [ ] T347 [US4] MEDULLA-DECISION-ENGINE-R147.2 Stored-score ranking kernel
 - [ ] T348 [US4] MEDULLA-DECISION-ENGINE-R147.3 Distilled score upload and Rank wiring

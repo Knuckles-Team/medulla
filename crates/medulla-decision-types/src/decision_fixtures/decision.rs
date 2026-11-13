@@ -37,6 +37,7 @@ pub fn published_candidate(
         primitive: None,
         size: None,
         adequacy: None,
+        observed_run_cost: None,
     }
 }
 

@@ -259,6 +259,7 @@ fn candidate_facts() -> CandidateFacts {
         primitive: None,
         size: None,
         adequacy: None,
+        observed_run_cost: None,
     }
 }
 

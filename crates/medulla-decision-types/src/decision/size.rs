@@ -23,6 +23,12 @@ pub const ADEQUATE_ATTRIBUTE: &str = "adequacy.adequate";
 /// Attribute carrying the id of the evaluation that judged adequacy.
 pub const ADEQUACY_EVALUATION_ATTRIBUTE: &str = "adequacy.evaluation_id";
 
+/// Attribute carrying the observed cost of one run, in micros, read from the
+/// usage ledger (MEDULLA-DECISION-ENGINE-R014.100.2).
+pub const RUN_COST_MICROS_ATTRIBUTE: &str = "ledger.run_cost_micros";
+/// Attribute carrying the ledger revision the run cost was read at.
+pub const RUN_COST_REVISION_ATTRIBUTE: &str = "ledger.measured_revision";
+
 /// How large a component's source artifact is, at a measured revision.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -42,6 +48,16 @@ pub struct Adequacy {
     pub evaluation_id: String,
 }
 
+/// What one run of the component cost, as the usage ledger recorded it
+/// (MEDULLA-DECISION-ENGINE-R014.100.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ObservedRunCost {
+    pub micros: u64,
+    pub measured_revision: u64,
+}
+
 /// A malformed size or adequacy declaration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SizeFactError {
@@ -49,6 +65,8 @@ pub enum SizeFactError {
     SizeIncomplete,
     /// An adequacy attribute is present without its companion, or unparsable.
     AdequacyIncomplete,
+    /// A ledger cost attribute is present without its companion, or unparsable.
+    RunCostIncomplete,
 }
 
 /// The size the entry declares: `None` when it declares no size attribute.
@@ -90,5 +108,26 @@ pub fn adequacy_from_entry(entry: &AgentComponentEntry) -> Result<Option<Adequac
     Ok(Some(Adequacy {
         adequate,
         evaluation_id: evaluation.clone(),
+    }))
+}
+
+/// The ledger run cost the entry declares: `None` when it declares none.
+pub fn run_cost_from_entry(
+    entry: &AgentComponentEntry,
+) -> Result<Option<ObservedRunCost>, SizeFactError> {
+    let micros = entry.attributes.get(RUN_COST_MICROS_ATTRIBUTE);
+    let revision = entry.attributes.get(RUN_COST_REVISION_ATTRIBUTE);
+    let (micros, revision) = match (micros, revision) {
+        (None, None) => return Ok(None),
+        (Some(micros), Some(revision)) => (micros, revision),
+        _ => return Err(SizeFactError::RunCostIncomplete),
+    };
+    Ok(Some(ObservedRunCost {
+        micros: micros
+            .parse()
+            .map_err(|_| SizeFactError::RunCostIncomplete)?,
+        measured_revision: revision
+            .parse()
+            .map_err(|_| SizeFactError::RunCostIncomplete)?,
     }))
 }

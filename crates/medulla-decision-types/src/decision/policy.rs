@@ -32,6 +32,13 @@ pub enum ObjectiveLevelKind {
     DeclaredCost,
     /// Declared p95 latency of the selection.
     DeclaredP95Latency,
+    /// Source artifact size in bytes (MEDULLA-DECISION-ENGINE-R014.100.2).
+    ArtifactBytes,
+    /// Source artifact line count (MEDULLA-DECISION-ENGINE-R014.100.2).
+    LineCount,
+    /// The cost of one run, as the usage ledger recorded it
+    /// (MEDULLA-DECISION-ENGINE-R014.100.2).
+    ObservedRunCost,
 }
 
 /// One weighted objective level.

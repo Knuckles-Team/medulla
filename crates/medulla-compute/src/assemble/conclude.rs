@@ -14,7 +14,8 @@ use medulla_decision_types::{
     decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
     decision::Elimination, decision::EvidenceClass, decision::PremiseRef, decision::ResolutionKind,
     decision::SlotAssignment, decision::TemplateFacts, decision::UniquenessProof,
-    decision::Violation, decision::WhyNot, decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
+    decision::UnknownCostRule, decision::Violation, decision::WhyNot,
+    decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
 };
 use medulla_types::contract::BoundedVec;
 
@@ -106,6 +107,17 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
     }
     if let Some(reasons) = pinned_ineligible(inputs, &screened.eliminated) {
         return Ok(abstained(&required, screened.eliminated, reasons));
+    }
+    if inputs.policy.unknown_cost == UnknownCostRule::ExcludeWhenStrict {
+        if let Some((component_id, field)) =
+            super::objective::first_unknown_size_or_cost(inputs, &screened.legal)
+        {
+            let reason = AbstainReason::UnknownFact {
+                component_id,
+                field: field.to_string(),
+            };
+            return Ok(abstained(&required, screened.eliminated, vec![reason]));
+        }
     }
     let ladder = Ladder {
         inputs,
@@ -280,6 +292,7 @@ fn solved(
         context.inputs.request.evidence_streams.as_slice(),
     ));
     premises.extend(uniqueness.premises.iter().cloned());
+    premises.extend(super::objective::premises(context.inputs, &components));
     let topology = question.map(|question| {
         let offset = context.built.vars.len();
         let plan = question.plan(&context.built.shape, &answer.selected, offset);

@@ -1056,6 +1056,9 @@ class ObjectiveLevelKind(str, Enum):
     COMPONENTS = "components"
     DECLARED_COST = "declared_cost"
     DECLARED_P95_LATENCY = "declared_p95_latency"
+    ARTIFACT_BYTES = "artifact_bytes"
+    LINE_COUNT = "line_count"
+    OBSERVED_RUN_COST = "observed_run_cost"
 
 
 class ObjectiveLevelSpec(BaseModel):

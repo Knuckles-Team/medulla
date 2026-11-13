@@ -1287,3 +1287,11 @@ The `premises` hook derives each source's premises from the request's pinned sou
 - An advantage over fewer than two steps, or over rewards with no deviation, is `REWARD_ADVANTAGE_UNDEFINED` instead of a silent zero.
 - A step verification states the trace digest it binds to in the request; the verdict is accepted only when it equals the recomputed digest. A wire vector refresh is needed for `VerifyRequest.trace_digest` (WIRE-REGEN).
 - An empty join is refused through the family's `precheck_declared`, because the generic declared-set check would otherwise answer `PARAMETER_INVALID` first.
+
+## R014.100.2: size and ledger-cost objective levels
+
+- The ledger run cost is a candidate fact (`observed_run_cost`) read by the one `CandidateFacts::from_entry` constructor from entry attributes, like size and adequacy, so a commit rebuilds the same facts the assembly read. A fact with no declared value is unknown, never zero.
+- `UnknownCostRule::ExcludeWhenStrict` abstains the whole decision with `UnknownFact` naming the first legal candidate with an unknown value on a ranked size or ledger level; `RankBelowKnown` puts the unknown in the solver's unknown tier. The check runs only for the three new levels, so existing objectives and record bytes are unchanged.
+- Equal candidates resolve by a last `component_id` level (coefficient 2^rank over the id-sorted distinct placed candidates), added only when a size or ledger level is ranked. Beyond 40 distinct placed candidates the coefficient range is exhausted and the solver's own deterministic order decides.
+- Evidence premises read `objective:<level>=<value>` (class Observation, naming the revision that measured it), only for known values.
+- Wire: `ObjectiveLevelKind` gains three variants (hand-edited in `medulla/generated/_shared.py`); WIRE-REGEN needed for the wire vectors.

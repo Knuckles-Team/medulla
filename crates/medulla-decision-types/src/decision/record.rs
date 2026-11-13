@@ -15,7 +15,7 @@ use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
 use super::primitive::PrimitiveContract;
 use super::request::AssemblyRequest;
-use super::size::{Adequacy, SourceSize};
+use super::size::{Adequacy, ObservedRunCost, SourceSize};
 use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
@@ -131,6 +131,11 @@ pub struct CandidateFacts {
     /// did. Absent bytes stay unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adequacy: Option<Adequacy>,
+    /// What one run cost, as the usage ledger recorded it, when the component
+    /// declares it (MEDULLA-DECISION-ENGINE-R014.100.2). Absent bytes stay
+    /// unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_run_cost: Option<ObservedRunCost>,
 }
 
 impl CandidateFacts {
@@ -150,6 +155,8 @@ impl CandidateFacts {
             .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
         let adequacy = super::size::adequacy_from_entry(entry)
             .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
+        let observed_run_cost = super::size::run_cost_from_entry(entry)
+            .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
         Ok(Self {
             component_id: entry.component_id.clone(),
             kind: entry.kind,
@@ -163,12 +170,18 @@ impl CandidateFacts {
                 .map_err(bounded)?,
             requires: BoundedVec::new(sorted(&entry.requires)).map_err(bounded)?,
             facts: entry.facts.clone(),
-            fact_premises: BoundedVec::new(fact_premises(entry, &size, &adequacy))
-                .map_err(bounded)?,
+            fact_premises: BoundedVec::new(fact_premises(
+                entry,
+                &size,
+                &adequacy,
+                &observed_run_cost,
+            ))
+            .map_err(bounded)?,
             primitive: PrimitiveContract::from_entry(entry)
                 .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?,
             size,
             adequacy,
+            observed_run_cost,
         })
     }
 
@@ -196,6 +209,7 @@ fn fact_premises(
     entry: &AgentComponentEntry,
     size: &Option<SourceSize>,
     adequacy: &Option<Adequacy>,
+    observed_run_cost: &Option<ObservedRunCost>,
 ) -> Vec<PremiseRef> {
     let mut premises = publisher_premises(entry);
     let observation = |fact: &str, evaluation_id: String| PremiseRef {
@@ -212,6 +226,12 @@ fn fact_premises(
     }
     if let Some(adequacy) = adequacy {
         premises.push(observation("adequacy", adequacy.evaluation_id.clone()));
+    }
+    if let Some(cost) = observed_run_cost {
+        premises.push(observation(
+            "observed_run_cost",
+            format!("ledger:{}", cost.measured_revision),
+        ));
     }
     premises
 }

@@ -75,6 +75,31 @@ pub(super) fn p95_latency(candidate: &CandidateFacts) -> Declared {
     })
 }
 
+/// The source artifact size in bytes. Every kind can declare a size, so an
+/// undeclared one is unknown, never zero (MEDULLA-DECISION-ENGINE-R014.100.2).
+pub(super) fn artifact_bytes(candidate: &CandidateFacts) -> Declared {
+    candidate
+        .size
+        .as_ref()
+        .map_or(Declared::Unknown, |size| representable(size.artifact_bytes))
+}
+
+/// The source artifact line count; unknown when no size is declared.
+pub(super) fn line_count(candidate: &CandidateFacts) -> Declared {
+    candidate.size.as_ref().map_or(Declared::Unknown, |size| {
+        representable(u64::from(size.line_count))
+    })
+}
+
+/// The cost of one run, in micros, from the usage ledger; unknown when the
+/// ledger declared none.
+pub(super) fn observed_run_cost(candidate: &CandidateFacts) -> Declared {
+    candidate
+        .observed_run_cost
+        .as_ref()
+        .map_or(Declared::Unknown, |cost| representable(cost.micros))
+}
+
 /// The one currency the cost level is measured in: the budget's when there is
 /// one, otherwise the smallest currency any candidate declares, so the choice
 /// is a function of the inputs alone. Costs in any other currency are unknown.
