@@ -53,6 +53,8 @@ pub mod agent_turn;
 // `plans/graph-os-completion-program/lanes/GOC-19-atomic-workitem-command-log.md`.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_command_log;
+// MEDULLA-UNIFIED-DATA-PLANE-R766 — the closed registry of admitted work-item kinds.
+pub mod work_item_kind;
 // EH-219 — typed, tenant-bound WorkItem reads (`GetWorkItem`/`ListWorkItems`):
 // the caller's row view, its three-bound page scan, and its cursor family.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

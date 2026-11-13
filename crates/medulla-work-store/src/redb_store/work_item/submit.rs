@@ -7,11 +7,11 @@ use super::*;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R766).
 pub fn check_work_item_kind(
     kind: &str,
-) -> Result<medulla_work_types::native_control::WorkItemKind, String> {
-    medulla_work_types::native_control::WorkItemKind::from_wire(kind).ok_or_else(|| {
+) -> Result<medulla_work_types::work_item_kind::WorkItemKind, String> {
+    medulla_work_types::work_item_kind::WorkItemKind::from_wire(kind).ok_or_else(|| {
         format!(
             "{}: work item kind '{}' is not in the registry",
-            medulla_types::contract::server_error_code::ServerErrorCode::WorkItemKindUnknown,
+            medulla_types::contract::ServerErrorCode::WorkItemKindUnknown,
             kind.chars().take(64).collect::<String>()
         )
     })
@@ -627,7 +627,6 @@ pub struct SubmitWorkItemWrite<'args, 'table, 'crypto> {
     pub dependency_rows: &'args [(String, bool)],
     pub command_sequence: u64,
     pub now_s: f64,
-    pub status: &'args str,
     pub pending_dependencies: usize,
     pub owner: Option<serde_json::Value>,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
@@ -651,13 +650,13 @@ pub fn write_submit_work_item_node_and_edges(
         dependency_rows,
         command_sequence,
         now_s,
-        status,
         pending_dependencies,
         owner,
         nodes,
         edges,
         crypto,
     } = input;
+    let status = submit_work_item_status(pending_dependencies);
     let mut props = build_submit_work_item_props(
         context_tenant,
         request,
@@ -689,7 +688,6 @@ pub fn write_submit_work_item_node_and_edges(
 
 pub struct SubmitWorkItemResultInput<'a> {
     pub work_item_id: String,
-    pub status: &'a str,
     pub command_sequence: u64,
     pub request: &'a medulla_work_types::native_control::SubmitWorkItemRequest,
     pub dependencies: &'a [String],
@@ -704,7 +702,6 @@ pub fn build_submit_work_item_result(
 ) -> medulla_work_types::native_control::SubmitWorkItemResult {
     let SubmitWorkItemResultInput {
         work_item_id,
-        status,
         command_sequence,
         request,
         dependencies,
@@ -713,6 +710,10 @@ pub fn build_submit_work_item_result(
         max_inflight,
         outbox_id,
     } = input;
+    let pending_dependencies = dependency_rows
+        .iter()
+        .filter(|(_, pending)| *pending)
+        .count();
     let mut changed_work_item_ids = Vec::with_capacity(1 + dependency_rows.len());
     changed_work_item_ids.push(work_item_id.clone());
     changed_work_item_ids.extend(
@@ -724,7 +725,7 @@ pub fn build_submit_work_item_result(
     medulla_work_types::native_control::SubmitWorkItemResult {
         schema_version: medulla_work_types::native_control::NativeControlSchemaVersion::V1,
         work_item_id,
-        status: status.to_string(),
+        status: submit_work_item_status(pending_dependencies).to_string(),
         created: true,
         replayed: false,
         command_sequence,
@@ -785,8 +786,6 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
         .iter()
         .filter(|(_, pending)| *pending)
         .count();
-    let status = submit_work_item_status(pending_dependencies);
-
     write_submit_work_item_node_and_edges(SubmitWorkItemWrite {
         graph,
         work_item_id: &work_item_id,
@@ -796,7 +795,6 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
         dependency_rows: &dependency_rows,
         command_sequence,
         now_s,
-        status,
         pending_dependencies,
         owner,
         nodes: &mut *nodes,
@@ -806,7 +804,6 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
 
     let mut result = build_submit_work_item_result(SubmitWorkItemResultInput {
         work_item_id,
-        status,
         command_sequence,
         request,
         dependencies: &dependencies,
@@ -937,7 +934,8 @@ mod tests {
     use medulla_result_types::epistemic_operations::{
         ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
     };
-    use medulla_work_types::native_control::{SubmitWorkItemResult, WorkItemKind};
+    use medulla_work_types::native_control::SubmitWorkItemResult;
+    use medulla_work_types::work_item_kind::WorkItemKind;
 
     fn request_of(
         kind: &str,

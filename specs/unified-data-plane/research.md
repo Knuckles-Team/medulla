@@ -73,3 +73,4 @@ an unknown source (`SCHEMA_CONTEXT_SOURCE_UNKNOWN`), so the refusal never confir
 WIRE-REGEN needed: the new method and result type change the wire contract vectors.
 ## Work-item kind registry (R766)
 The closed `WorkItemKind` registry holds seven kinds, not six: `agent.execute` is submitted by the delegation path (`DelegationRequest.kind` is forwarded into `SubmitWorkItemRequest`), so a closed registry without it would refuse a production caller. Wire strings are unchanged. The registry is the single admission check; fixtures that used an arbitrary kind use a registry kind.
+The enum lives in its own module `medulla-work-types::work_item_kind`, beside rather than inside `native_control.rs`; the submit result and write inputs derive the initial status from the pending-dependency count through `submit_work_item_status` instead of carrying it as a second, string-typed copy.

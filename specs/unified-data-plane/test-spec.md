@@ -391,7 +391,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.7:** `tests/data_plane/test_catalog_search_served.py::test_source_query_log_feeds_usage` (planned). Proves the row: Usage from attached-source query logs.
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.8:** `tests/data_plane/test_catalog_search_served.py::test_frequent_users_and_join_suggestions` (planned). Proves the row: Frequent users and usage suggestions.
 - **MEDULLA-UNIFIED-DATA-PLANE-R765:** `tests/federation/test_foreign_source_catalog_served.py::test_visibility_probe_and_revocation` (planned). Proves the row: Serve the foreign source catalog: list, get, probe, share and unshare.
-- **MEDULLA-UNIFIED-DATA-PLANE-R766:** `crates/medulla-work-store/src/redb_store/work_item/submit.rs::tests::research_web_kind_submits_and_unknown_kind_refuses` (planned). Proves the row: Engine work item kind for web research.
+- **MEDULLA-UNIFIED-DATA-PLANE-R766:** `crates/medulla-work-store/src/redb_store/work_item/submit.rs::tests::research_web_kind_submits_and_unknown_kind_refuses`. Proves the row: Engine work item kind for web research.
 - **MEDULLA-UNIFIED-DATA-PLANE-R767:** `tests/served_query_completeness.rs::tenant_context_view_scopes_two_tenants_without_copying` (planned). Proves the row: Tenant context view over approved sources.
 
 - `MEDULLA-UNIFIED-DATA-PLANE-R002.1`: `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs::an_inline_secret_dsn_is_refused_and_never_persisted` (planned). A `Sql` spec whose DSN carries `user:password@` returns `CONNECTION_SECRET_INLINE` and leaves the catalog empty; a secret-reference DSN registers.
