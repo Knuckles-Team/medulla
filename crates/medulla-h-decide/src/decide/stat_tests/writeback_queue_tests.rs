@@ -233,7 +233,7 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
 
     // Release before every approval refuses and builds no change set.
     let early = writeback(&h, release()).await.unwrap_err();
-    assert!(early.starts_with("WRITEBACK_NOT_FULLY_APPROVED"), "{early}");
+    assert!(early.starts_with("PROPOSAL_UNAPPROVED"), "{early}");
     let first = writeback_as(&h, "approver-1", approve("wp:1"))
         .await
         .unwrap();
@@ -257,7 +257,7 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
     assert!(writeback(&h, release())
         .await
         .unwrap_err()
-        .starts_with("WRITEBACK_NOT_FULLY_APPROVED"));
+        .starts_with("PROPOSAL_UNAPPROVED"));
 
     // A repeated approval keeps the first approver and instant.
     let repeat = writeback_as(&h, "approver-2", approve("wp:1"))
@@ -314,4 +314,97 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
     };
     let response = super::super::log::handle_decision_log(&h.state, 9, &verified, foreign).await;
     assert!(response.error.unwrap().contains("ACCESS_DENIED"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R615.4
+#[tokio::test]
+async fn unapproved_release_refuses_without_partial_write() {
+    use medulla_decision_types::decision::codes::{
+        self, CONNECTOR_WRITE_BACK, PROPOSAL_UNAPPROVED, WRITEBACK_SOURCE_CONFLICT,
+    };
+    // Both codes are registered in the connector_write_back family table.
+    assert!(CONNECTOR_WRITE_BACK.contains(&PROPOSAL_UNAPPROVED));
+    assert!(CONNECTOR_WRITE_BACK.contains(&WRITEBACK_SOURCE_CONFLICT));
+    assert_eq!(
+        codes::resolve("PROPOSAL_UNAPPROVED"),
+        Some(PROPOSAL_UNAPPROVED)
+    );
+
+    let h = Harness::new().await;
+    let queue_id = "q:unapproved";
+    let stored_rows = || {
+        h.store
+            .decision_artifacts_with_prefix(TENANT, "", 100_000)
+            .unwrap()
+    };
+    writeback(
+        &h,
+        WritebackOp::Queue {
+            queue_id: queue_id.to_string(),
+            proposals: vec![
+                queued("wp:1", "ext:1", RiskTier::High),
+                queued("wp:2", "ext:2", RiskTier::High),
+            ],
+        },
+    )
+    .await
+    .unwrap();
+    writeback_as(
+        &h,
+        "approver-1",
+        WritebackOp::Approve {
+            queue_id: queue_id.to_string(),
+            proposal_id: "wp:1".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    let before = stored_rows();
+
+    // One proposal holds no approval: the whole release refuses.
+    let release = || WritebackOp::Release {
+        queue_id: queue_id.to_string(),
+    };
+    let error = writeback(&h, release()).await.unwrap_err();
+    assert!(error.starts_with(PROPOSAL_UNAPPROVED.as_str()), "{error}");
+
+    // Nothing was written: the stored rows are byte-for-byte unchanged and no
+    // change set was stored.
+    let after = stored_rows();
+    assert_eq!(before, after);
+    assert!(after.iter().all(|(key, _)| !key.contains("changeset")));
+
+    // The refused release left the queue pending: the last approval releases.
+    writeback_as(
+        &h,
+        "approver-2",
+        WritebackOp::Approve {
+            queue_id: queue_id.to_string(),
+            proposal_id: "wp:2".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    let WritebackOutcome::Released { change_set } = writeback(&h, release()).await.unwrap() else {
+        panic!("released change set expected")
+    };
+    assert_eq!(change_set.approvals.len(), 2);
+
+    // A source conflict refuses at queue time with its registered code.
+    let mut conflicting = queued("wp:c", "ext:c", RiskTier::High);
+    conflicting.source_values = values(&[("a", "d1"), ("b", "d2")]);
+    let conflict = writeback(
+        &h,
+        WritebackOp::Queue {
+            queue_id: "q:conflict".to_string(),
+            proposals: vec![conflicting],
+        },
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        conflict.starts_with(WRITEBACK_SOURCE_CONFLICT.as_str()),
+        "{conflict}"
+    );
+    assert_eq!(stored_rows().len(), after.len());
 }

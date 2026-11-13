@@ -21,7 +21,8 @@ pub const WRITEBACK_DUPLICATE_EXTERNAL_ID: &str = "WRITEBACK_DUPLICATE_EXTERNAL_
 /// The stable code of a queue holding another tenant's proposal.
 pub const WRITEBACK_TENANT_MISMATCH: &str = "WRITEBACK_TENANT_MISMATCH";
 /// The stable code of a proposal whose sources disagree on its value.
-pub const WRITEBACK_SOURCE_CONFLICT: &str = "WRITEBACK_SOURCE_CONFLICT";
+pub const WRITEBACK_SOURCE_CONFLICT: &str =
+    medulla_decision_types::decision::codes::WRITEBACK_SOURCE_CONFLICT.as_str();
 
 /// A refused write-back model value, with its stable code.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,7 +170,8 @@ impl ProposalQueue {
 /// The stable code of an approval-queue transition the machine refuses.
 pub const WRITEBACK_QUEUE_TRANSITION_REFUSED: &str = "WRITEBACK_QUEUE_TRANSITION_REFUSED";
 /// The stable code of a release before every proposal holds an approval.
-pub const WRITEBACK_NOT_FULLY_APPROVED: &str = "WRITEBACK_NOT_FULLY_APPROVED";
+pub const PROPOSAL_UNAPPROVED: &str =
+    medulla_decision_types::decision::codes::PROPOSAL_UNAPPROVED.as_str();
 /// The stable code of a queue the tenant does not hold.
 pub const WRITEBACK_QUEUE_UNKNOWN: &str = "WRITEBACK_QUEUE_UNKNOWN";
 /// The stable code of a queue id that is already stored.
@@ -243,7 +245,7 @@ pub fn queue_transition(
                 fully_approved: false,
             },
         ) => Err(WritebackError::new(
-            WRITEBACK_NOT_FULLY_APPROVED,
+            PROPOSAL_UNAPPROVED,
             "machine proposal_queue, state pending, event release: a queued proposal \
                  holds no approval yet",
         )),
@@ -706,7 +708,7 @@ mod tests {
         assert_eq!(queue_transition(Released, full).unwrap(), Released);
         assert_eq!(queue_transition(Released, partial).unwrap(), Released);
         let early = queue_transition(Pending, partial).unwrap_err();
-        assert_eq!(early.code, WRITEBACK_NOT_FULLY_APPROVED);
+        assert_eq!(early.code, PROPOSAL_UNAPPROVED);
         assert!(early.detail.contains("proposal_queue") && early.detail.contains("pending"));
         let late = queue_transition(Released, Approve).unwrap_err();
         assert_eq!(late.code, WRITEBACK_QUEUE_TRANSITION_REFUSED);

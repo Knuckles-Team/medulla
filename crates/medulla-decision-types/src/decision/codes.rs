@@ -387,10 +387,20 @@ pub const RECURSION_SIGNALS: &[RefusalCode] = &[
     SIGNAL_INVALID,
 ];
 
+// The `connector_write_back` family's refusals (MEDULLA-DECISION-ENGINE-R615.4).
+/// A release of a queue holding a proposal that has no approval.
+pub const PROPOSAL_UNAPPROVED: RefusalCode = RefusalCode::new("PROPOSAL_UNAPPROVED");
+/// Two sources disagree on the value a write-back proposal would change.
+pub const WRITEBACK_SOURCE_CONFLICT: RefusalCode = RefusalCode::new("WRITEBACK_SOURCE_CONFLICT");
+
+/// Every `connector_write_back` family code, in declaration order.
+pub const CONNECTOR_WRITE_BACK: &[RefusalCode] = &[PROPOSAL_UNAPPROVED, WRITEBACK_SOURCE_CONFLICT];
+
 /// The `REFUSALS` table of every registered family, keyed by its question
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::Rank, RANK),
+    (QuestionKind::ConnectorWriteBack, CONNECTOR_WRITE_BACK),
     (QuestionKind::ResolveEntity, RESOLVE_ENTITY),
     (
         QuestionKind::ContextPackage,
