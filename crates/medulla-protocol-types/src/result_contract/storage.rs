@@ -19,6 +19,7 @@ use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
 use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_agent_types::agent_template::AgentTemplateCommittedResult;
 use medulla_agent_types::agent_template::AgentTemplateEntry;
+use medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence;
 use medulla_catalog_types::connector_pack::ConnectorPackStatus as ConnectorPackStatusBody;
 use medulla_catalog_types::{
     connector_pack::ConnectorPackBindingResult, connector_pack::ConnectorPackSourceApprovalResult,
@@ -118,6 +119,8 @@ method_results! {
     ConnectorPackCatalogOwnerPrincipal(ConnectorPack / "catalog_owner_principal") => Raw<String>;
     ConnectorPackCatalogBindingStatus(ConnectorPack / "catalog_binding_status") => Raw<Option<McpCatalogSnapshotBinding>>;
     ConnectorPackCatalogRequestOwnerPrincipal(ConnectorPack / "catalog_request_owner_principal") => Raw<String>;
+    ConnectorPackConformanceEvidence(ConnectorPack / "conformance_evidence") => Raw<ConformanceEvidence>;
+    ConnectorPackRevokeConformanceEvidence(ConnectorPack / "revoke_conformance_evidence") => Raw<ConformanceEvidence>;
     DataProductRegister(DataProductRegister) => Raw<medulla_types::data_product::DataProductRegistered>;
     AccessRequestOpen(AccessRequestOpen) => Raw<medulla_types::data_product::AccessRequest>;
     AccessRequestDecide(AccessRequestDecide) => Raw<medulla_types::data_product::AccessRequest>;

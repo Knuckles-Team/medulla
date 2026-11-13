@@ -3481,3 +3481,58 @@
     :toState :AgentLibraryMachine_Withdrawn ;
     :guardedBy :AgentLibraryMachine_Guard_PackMember ;
     :firedBy :AgentLibraryMachine_Event_Withdraw .
+
+# spec: MEDULLA-TYPED-PACKS-R807
+# The ConformanceEvidence machine: the lifecycle of one connector conformance evidence record.
+# The Rust edge table CONFORMANCE_EVIDENCE_MACHINE is the same table. Expiry is not a state:
+# it is the stored deadline compared with the read time.
+
+:ConformanceEvidenceState a owl:Class ;
+    rdfs:label "ConformanceEvidence State" ;
+    rdfs:comment "A state of the ConformanceEvidence machine." ;
+    rdfs:subClassOf :State .
+
+:ConformanceEvidenceTerminalState a owl:Class ;
+    rdfs:label "ConformanceEvidence Terminal State" ;
+    rdfs:comment "A terminal state of the ConformanceEvidence machine." ;
+    rdfs:subClassOf :TerminalState, :ConformanceEvidenceState .
+
+:ConformanceEvidenceTransition a owl:Class ;
+    rdfs:label "ConformanceEvidence Transition" ;
+    rdfs:comment "A transition of the ConformanceEvidence machine." ;
+    rdfs:subClassOf :Transition .
+
+:ConformanceEvidenceEvent a owl:Class ;
+    rdfs:label "ConformanceEvidence Event" ;
+    rdfs:comment "An event of the ConformanceEvidence machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ConformanceEvidenceGuard a owl:Class ;
+    rdfs:label "ConformanceEvidence Guard" ;
+    rdfs:comment "A guard of the ConformanceEvidence machine; the machine declares none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ConformanceEvidenceMachine a :StateMachine ;
+    rdfs:label "ConformanceEvidence machine" ;
+    :initialState :ConformanceEvidenceMachine_Active ;
+    :hasState :ConformanceEvidenceMachine_Active, :ConformanceEvidenceMachine_Revoked .
+
+:ConformanceEvidenceMachine_Active a :ConformanceEvidenceState ;
+    rdfs:label "ConformanceEvidence Active" ;
+    rdfs:comment "The evidence stands until its deadline passes or an operator revokes it." ;
+    :storedForm "active" .
+
+:ConformanceEvidenceMachine_Revoked a :ConformanceEvidenceTerminalState ;
+    rdfs:label "ConformanceEvidence Revoked" ;
+    rdfs:comment "An operator withdrew the evidence; the revocation time is kept on the record." ;
+    :storedForm "revoked" .
+
+:ConformanceEvidenceMachine_Event_Revoke a :ConformanceEvidenceEvent ;
+    rdfs:label "ConformanceEvidence Revoke" .
+
+:ConformanceEvidenceMachine_C01 a :ConformanceEvidenceTransition ;
+    rdfs:label "ConformanceEvidence C01" ;
+    :edgeId "C01" ;
+    :fromState :ConformanceEvidenceMachine_Active ;
+    :toState :ConformanceEvidenceMachine_Revoked ;
+    :firedBy :ConformanceEvidenceMachine_Event_Revoke .

@@ -899,3 +899,16 @@ fn agent_library_machine_matches_edge_table() {
 fn agent_library_machine_classes_extend_core() {
     sm::assert_extends_core("AgentLibrary");
 }
+
+// spec: MEDULLA-TYPED-PACKS-R807
+#[test]
+fn conformance_evidence_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_catalog_types::connector_pack::conformance_evidence::CONFORMANCE_EVIDENCE_MACHINE,
+    );
+}
+// spec: MEDULLA-TYPED-PACKS-R807
+#[test]
+fn conformance_evidence_machine_classes_extend_core() {
+    sm::assert_extends_core("ConformanceEvidence");
+}

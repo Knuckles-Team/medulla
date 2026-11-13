@@ -159,6 +159,20 @@ class ConnectorPackOpCatalogRequestOwnerPrincipal(BaseModel):
     request: McpCatalogAuthorityStatusRequest
 
 
+class ConnectorPackOpConformanceEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["conformance_evidence"]
+    request: ConnectorPackConformanceEvidenceRequest
+
+
+class ConnectorPackOpRevokeConformanceEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["revoke_conformance_evidence"]
+    request: ConnectorPackRevokeEvidenceRequest
+
+
 ConnectorPackOp = Annotated[
     ConnectorPackOpStatus
     | ConnectorPackOpImport
@@ -173,9 +187,44 @@ ConnectorPackOp = Annotated[
     | ConnectorPackOpCatalogAuthorityStatus
     | ConnectorPackOpCatalogOwnerPrincipal
     | ConnectorPackOpCatalogBindingStatus
-    | ConnectorPackOpCatalogRequestOwnerPrincipal,
+    | ConnectorPackOpCatalogRequestOwnerPrincipal
+    | ConnectorPackOpConformanceEvidence
+    | ConnectorPackOpRevokeConformanceEvidence,
     Field(discriminator="op"),
 ]
+
+
+class ConformanceEvidenceState(str, Enum):
+    ACTIVE = "active"
+    REVOKED = "revoked"
+
+
+class ConformanceEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    expires_at: Annotated[int, Field(ge=0)]
+    issued_at: Annotated[int, Field(ge=0)]
+    pack_digest: Digest256
+    revision: Annotated[int, Field(ge=0)]
+    revoked_at: Annotated[int, Field(ge=0)] | None = None
+    state: ConformanceEvidenceState
+    tenant_id: str
+    tool_fingerprints: dict[str, Digest256]
+
+
+class ConnectorPackConformanceEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    tenant_id: str
+
+
+class ConnectorPackRevokeEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    context: AgentLibraryMutationContext
 
 
 class ConnectorPackReconcileRequest(BaseModel):
@@ -623,6 +672,16 @@ ConnectorPackOpCatalogBindingStatus.model_rebuild()
 
 ConnectorPackOpCatalogRequestOwnerPrincipal.model_rebuild()
 
+ConnectorPackOpConformanceEvidence.model_rebuild()
+
+ConnectorPackOpRevokeConformanceEvidence.model_rebuild()
+
+ConformanceEvidence.model_rebuild()
+
+ConnectorPackConformanceEvidenceRequest.model_rebuild()
+
+ConnectorPackRevokeEvidenceRequest.model_rebuild()
+
 ConnectorPackReconcileRequest.model_rebuild()
 
 ConnectorPackReprojectRequest.model_rebuild()
@@ -707,6 +766,12 @@ __all__ = [
     "ConnectorPackOpCatalogBindingStatus",
     "ConnectorPackOpCatalogOwnerPrincipal",
     "ConnectorPackOpCatalogRequestOwnerPrincipal",
+    "ConnectorPackOpConformanceEvidence",
+    "ConnectorPackOpRevokeConformanceEvidence",
+    "ConformanceEvidence",
+    "ConformanceEvidenceState",
+    "ConnectorPackConformanceEvidenceRequest",
+    "ConnectorPackRevokeEvidenceRequest",
     "ConnectorPackOpImport",
     "ConnectorPackOpReconcileBodies",
     "ConnectorPackOpReconcileCatalog",

@@ -364,6 +364,8 @@ knobs! {
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
     /// Schema drift gate: most records of one stream sampled to infer a delivery shape.
     drift_sample_max: u64 = "drift.sample_max", U64(1000), [10, 10_000], "records", Tunable;
+    /// Connector conformance evidence: how long one onboarding import's evidence stands.
+    conformance_evidence_ttl_ms: u64 = "conformance.evidence_ttl_ms", U64(2_592_000_000), [60_000, 31_536_000_000], "ms", Tunable;
     /// Regime forecast: largest horizon a request may ask for.
     finance_regime_forecast_max_horizon: u64 = "finance.regime_forecast.max_horizon", U64(10_000), [1, 1_000_000], "steps", Tunable;
     /// Regime forecast: tolerance on every probability vector and matrix row sum.

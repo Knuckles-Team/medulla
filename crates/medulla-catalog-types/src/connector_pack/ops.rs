@@ -36,6 +36,24 @@ pub struct ConnectorPackStatusRequest {
     pub connector: ResourceId,
 }
 
+/// Read one connector's current conformance evidence (MEDULLA-TYPED-PACKS-R807).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ConnectorPackConformanceEvidenceRequest {
+    pub tenant_id: String,
+    pub connector: ResourceId,
+}
+
+/// Revoke one connector's current conformance evidence (MEDULLA-TYPED-PACKS-R807).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ConnectorPackRevokeEvidenceRequest {
+    pub context: AgentLibraryMutationContext,
+    pub connector: ResourceId,
+}
+
 /// Import one pack atomically.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -177,6 +195,16 @@ pub enum ConnectorPackOp {
     CatalogRequestOwnerPrincipal {
         request: McpCatalogAuthorityStatusRequest,
     },
+    /// Read the connector's current conformance evidence, or refuse
+    /// `CONFORMANCE_EVIDENCE_ABSENT` (MEDULLA-TYPED-PACKS-R807). Arbora's
+    /// `require_current_evidence` is the caller; the import writes the record.
+    ConformanceEvidence {
+        request: ConnectorPackConformanceEvidenceRequest,
+    },
+    /// Revoke the connector's current conformance evidence.
+    RevokeConformanceEvidence {
+        request: ConnectorPackRevokeEvidenceRequest,
+    },
 }
 
 impl ConnectorPackOp {
@@ -189,6 +217,7 @@ impl ConnectorPackOp {
                 | Self::CatalogOwnerPrincipal { .. }
                 | Self::CatalogBindingStatus { .. }
                 | Self::CatalogRequestOwnerPrincipal { .. }
+                | Self::ConformanceEvidence { .. }
         )
     }
 
@@ -200,7 +229,7 @@ impl ConnectorPackOp {
     /// connector IS ALLOWED to publish, which is an operator decision.
     pub fn authz_action(&self) -> &'static str {
         match self {
-            Self::Status { .. } => "agent:pack-read",
+            Self::Status { .. } | Self::ConformanceEvidence { .. } => "agent:pack-read",
             Self::Import { request } if !request.allow_mass_withdrawal => "agent:pack-control",
             Self::ApproveSource { .. } => "agent:pack-control",
             Self::Import { .. }
@@ -208,6 +237,7 @@ impl ConnectorPackOp {
             | Self::Unbind { .. }
             | Self::Retire { .. }
             | Self::Reproject { .. }
+            | Self::RevokeConformanceEvidence { .. }
             | Self::ReconcileBodies { .. } => "admin:connector-pack",
             Self::ReconcileCatalog { .. } | Self::AttestSelfServedCatalog { .. } => {
                 "admin:connector-pack"
@@ -237,6 +267,8 @@ impl ConnectorPackOp {
             Self::CatalogOwnerPrincipal { request } => &request.tenant_id,
             Self::CatalogBindingStatus { request } => &request.tenant_id,
             Self::CatalogRequestOwnerPrincipal { request } => &request.tenant_id,
+            Self::ConformanceEvidence { request } => &request.tenant_id,
+            Self::RevokeConformanceEvidence { request } => &request.context.tenant_id,
         }
     }
 
@@ -258,6 +290,8 @@ impl ConnectorPackOp {
             Self::CatalogOwnerPrincipal { .. } => None,
             Self::CatalogBindingStatus { .. } => None,
             Self::CatalogRequestOwnerPrincipal { .. } => None,
+            Self::ConformanceEvidence { request } => Some(&request.connector),
+            Self::RevokeConformanceEvidence { request } => Some(&request.connector),
         }
     }
 }
@@ -280,7 +314,7 @@ mod tests {
 
     /// The committed operation descriptors: wire tag, whether it commits
     /// durable state, and the authorization action it needs.
-    const DESCRIPTORS: [(&str, bool, &str); 14] = [
+    const DESCRIPTORS: [(&str, bool, &str); 16] = [
         ("approve_source", true, "agent:pack-control"),
         ("attest_self_served_catalog", true, "admin:connector-pack"),
         ("bind", true, "admin:connector-pack"),
@@ -296,11 +330,13 @@ mod tests {
             false,
             "agent:pack-control",
         ),
+        ("conformance_evidence", false, "agent:pack-read"),
         ("import", true, "agent:pack-control"),
         ("reconcile_bodies", true, "admin:connector-pack"),
         ("reconcile_catalog", true, "admin:connector-pack"),
         ("reproject", true, "admin:connector-pack"),
         ("retire", true, "admin:connector-pack"),
+        ("revoke_conformance_evidence", true, "admin:connector-pack"),
         ("status", false, "agent:pack-read"),
         ("unbind", true, "admin:connector-pack"),
     ];

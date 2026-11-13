@@ -712,6 +712,7 @@ pub(super) async fn seed_server_only_import(
             kind: AgentComponentMutationKind::Publish,
             entry: server,
         }],
+        evidence_ttl_ms: 3_600_000,
     };
     match store.commit_connector_pack(plan).unwrap() {
         PackImportResult::Imported { receipt } => *receipt,

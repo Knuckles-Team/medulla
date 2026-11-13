@@ -1,8 +1,9 @@
 //! Valid sample values for the connector pack surface.
 
 use crate::connector_pack::{
-    ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp,
-    ConnectorPackReconcileRequest, ConnectorPackReprojectRequest, ConnectorPackRetireRequest,
+    ConnectorPackBindRequest, ConnectorPackConformanceEvidenceRequest, ConnectorPackImportRequest,
+    ConnectorPackIndex, ConnectorPackOp, ConnectorPackReconcileRequest,
+    ConnectorPackReprojectRequest, ConnectorPackRetireRequest, ConnectorPackRevokeEvidenceRequest,
     ConnectorPackSourceApprovalRequest, ConnectorPackStatusRequest, ConnectorPackUnbindRequest,
     McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest, McpCatalogSnapshotBinding,
     McpSelfServedCatalogAttestRequest, PackAnnotations, PackArchiveRef, PackCost, PackDisposition,
@@ -298,6 +299,24 @@ pub fn ops() -> Vec<(&'static str, ConnectorPackOp)> {
                 request: McpCatalogAuthorityStatusRequest {
                     tenant_id: "tenant-a".to_string(),
                     server_name: "connector-a".to_string(),
+                },
+            },
+        ),
+        (
+            "ConnectorPack.conformance_evidence",
+            ConnectorPackOp::ConformanceEvidence {
+                request: ConnectorPackConformanceEvidenceRequest {
+                    tenant_id: "tenant-a".to_string(),
+                    connector: ResourceId::new("connector-a").expect("connector id"),
+                },
+            },
+        ),
+        (
+            "ConnectorPack.revoke_conformance_evidence",
+            ConnectorPackOp::RevokeConformanceEvidence {
+                request: ConnectorPackRevokeEvidenceRequest {
+                    context: mutation_context(),
+                    connector: ResourceId::new("connector-a").expect("connector id"),
                 },
             },
         ),

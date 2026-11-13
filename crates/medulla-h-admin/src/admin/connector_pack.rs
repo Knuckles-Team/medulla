@@ -25,6 +25,7 @@ use medulla_server_api::state::ServerState;
 pub(crate) mod admin;
 mod approval;
 mod catalog_authority;
+mod conformance;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub(crate) mod import;
 pub(crate) mod reconcile;
@@ -86,6 +87,12 @@ pub async fn handle_connector_pack(
         }
         ConnectorPackOp::CatalogRequestOwnerPrincipal { request } => {
             catalog_authority::serve_request_owner_principal(state, req_id, verified, request).await
+        }
+        ConnectorPackOp::ConformanceEvidence { request } => {
+            conformance::serve_read(state, req_id, verified, request).await
+        }
+        ConnectorPackOp::RevokeConformanceEvidence { request } => {
+            conformance::serve_revoke(state, req_id, verified, request).await
         }
     }
 }

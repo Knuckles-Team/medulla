@@ -20,6 +20,7 @@
 pub mod annotations;
 pub mod catalog_authority;
 pub mod concept_path;
+pub mod conformance_evidence;
 pub mod contract_version;
 pub mod digest;
 pub mod ids;
@@ -121,8 +122,9 @@ pub use index::{
     PackProducer, PackRef, PackSection,
 };
 pub use ops::{
-    ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackOp,
-    ConnectorPackReconcileRequest, ConnectorPackReprojectRequest, ConnectorPackRetireRequest,
+    ConnectorPackBindRequest, ConnectorPackConformanceEvidenceRequest, ConnectorPackImportRequest,
+    ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackReprojectRequest,
+    ConnectorPackRetireRequest, ConnectorPackRevokeEvidenceRequest,
     ConnectorPackSourceApprovalRequest, ConnectorPackStatusRequest, ConnectorPackUnbindRequest,
     PackHeadRef,
 };

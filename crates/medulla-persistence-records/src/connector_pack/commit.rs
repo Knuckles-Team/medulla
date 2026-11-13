@@ -51,6 +51,9 @@ pub struct ConnectorPackCommitPlan {
     pub components: Vec<ConnectorPackComponentCommit>,
     pub members: Vec<ConnectorPackMemberRow>,
     pub holders: Vec<ConnectorPackHolderCommit>,
+    /// How long the conformance evidence this import issues stands, in milliseconds: the
+    /// resolved `conformance.evidence_ttl_ms` knob, read by the caller.
+    pub evidence_ttl_ms: u64,
 }
 
 impl AgentLibraryStore {
@@ -433,6 +436,7 @@ fn apply_head(
             committed_at_ms: plan.record.committed_at_ms,
         },
         receipt: receipt.clone(),
+        conformance_evidence: Some(issue_conformance_evidence(plan)),
     };
     let bytes = medulla_storage::encode_bounded(&head, "connector pack head")?;
     write
@@ -440,6 +444,33 @@ fn apply_head(
         .insert((tenant, connector), bytes.as_slice())
         .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+/// The evidence the import issues: one fingerprint per tool the committed pack serves (a
+/// withdrawn tool is not served), at the import's commit time.
+fn issue_conformance_evidence(
+    plan: &ConnectorPackCommitPlan,
+) -> medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence {
+    let tool_fingerprints = plan
+        .record
+        .entries
+        .iter()
+        .filter(|entry| {
+            entry.kind == medulla_catalog_types::connector_pack::PackEntryKind::Tool
+                && entry.disposition
+                    != medulla_catalog_types::connector_pack::PackDisposition::Withdrawn
+        })
+        .map(|entry| (entry.uri.clone(), entry.entry_digest))
+        .collect();
+    medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence::issue(
+        plan.record.tenant_id.clone(),
+        plan.record.connector.clone(),
+        plan.record.binding_revision,
+        plan.record.pack_digest,
+        tool_fingerprints,
+        plan.record.committed_at_ms,
+        plan.evidence_ttl_ms,
+    )
 }
 
 fn compare_head(

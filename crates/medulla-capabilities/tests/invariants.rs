@@ -428,6 +428,7 @@ fn contract_wave_op_policies_follow_their_ops() {
         "ConnectorPack.catalog_owner_principal",
         "ConnectorPack.catalog_binding_status",
         "ConnectorPack.catalog_request_owner_principal",
+        "ConnectorPack.conformance_evidence",
         "DecisionFit.status",
         "DecisionEval.status",
         "DecisionLog.get",

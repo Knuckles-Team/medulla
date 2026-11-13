@@ -91,6 +91,7 @@ impl ReadyPlan {
             components: self.components,
             members: self.members,
             holders,
+            evidence_ttl_ms: medulla_server_api::knob_config::knobs().conformance_evidence_ttl_ms,
         })
     }
 }

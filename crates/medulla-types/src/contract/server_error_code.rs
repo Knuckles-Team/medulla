@@ -146,6 +146,8 @@ closed_error_codes! {
         ConnectorPackProjectionSweepFailed => "CONNECTOR_PACK_PROJECTION_SWEEP_FAILED",
         ConnectorPackReconcileFailed => "CONNECTOR_PACK_RECONCILE_FAILED",
         ConnectorPackUnbound => "CONNECTOR_PACK_UNBOUND",
+        /// A connector has no current conformance evidence: missing, expired, revoked or another tenant's (MEDULLA-TYPED-PACKS-R807).
+        ConformanceEvidenceAbsent => "CONFORMANCE_EVIDENCE_ABSENT",
         ConnectorRelationshipUnavailable => "CONNECTOR_RELATIONSHIP_UNAVAILABLE",
         ConnectorSchemaMappingAmbiguous => "CONNECTOR_SCHEMA_MAPPING_AMBIGUOUS",
         ConnectorSchemaMappingInvalid => "CONNECTOR_SCHEMA_MAPPING_INVALID",

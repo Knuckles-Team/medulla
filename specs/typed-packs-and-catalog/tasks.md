@@ -311,7 +311,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T302 [US7] MEDULLA-TYPED-PACKS-R805.6 Hot-path proof
 - [ ] T303 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
 - [ ] T304 [US7] MEDULLA-TYPED-PACKS-R806 Serve schema drift records and repair approval as methods
-- [ ] T305 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
+- [x] T305 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
 - [ ] T306 [US7] MEDULLA-TYPED-PACKS-R808 Operator-selected schema import with digest check and readback
 - [ ] T307 [US7] MEDULLA-TYPED-PACKS-R809 Served canonical hash of a Turtle payload
 - [ ] T308 [US8] MEDULLA-TYPED-PACKS-R110.1 Open metadata type mapping

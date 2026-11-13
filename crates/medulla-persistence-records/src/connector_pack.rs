@@ -36,6 +36,7 @@ pub mod admitted;
 pub(crate) mod approval;
 pub mod catalog_authority;
 pub mod commit;
+mod conformance;
 mod declaration;
 pub(crate) mod outbox;
 mod pins;
@@ -52,6 +53,12 @@ pub use declaration::{
 pub(crate) struct ConnectorPackHeadRow {
     pub head: PackHeadView,
     pub receipt: PackImportReceipt,
+    /// The current revision's conformance evidence (MEDULLA-TYPED-PACKS-R807), written by the
+    /// import commit that wrote this head and changed only by the evidence machine. Rows
+    /// written before the evidence existed carry none and read as absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conformance_evidence:
+        Option<medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

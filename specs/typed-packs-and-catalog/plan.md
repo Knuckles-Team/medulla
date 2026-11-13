@@ -604,7 +604,7 @@ none
 - Skill graph packs: `SCION-CONNECTOR-CONTROL-R071.1` provides, `MEDULLA-TYPED-PACKS-R700.8` consumes. Contract: [skill-graph-pack.md](contracts/skill-graph-pack.md).
 - Connector onboarding and seed graphs: `MEDULLA-TYPED-PACKS-R104.3` provides, `ARBORA-FLEET-R036.3` consumes. Contract: [arbora-connector-onboarding.md](contracts/arbora-connector-onboarding.md).
 - Glossary and dashboard operations: `MEDULLA-TYPED-PACKS-R801` provides, `ARBORA-OPS-R855` consumes. Contract: [arbora-catalog-operations.md](contracts/arbora-catalog-operations.md).
-- Connector conformance evidence: `MEDULLA-TYPED-PACKS-R807` provides, `ARBORA-OPS-R067.10` consumes. Contract: [arbora-conformance-evidence.md](contracts/arbora-conformance-evidence.md).
+- Connector conformance evidence: `MEDULLA-TYPED-PACKS-R807` provides (a field of the head row, `ConformanceEvidenceMachine`; see research.md), `ARBORA-OPS-R067.10` consumes. Contract: [arbora-conformance-evidence.md](contracts/arbora-conformance-evidence.md).
 - Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
 - Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
 - Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
