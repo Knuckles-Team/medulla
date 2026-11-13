@@ -913,6 +913,8 @@ fn conformance_evidence_machine_matches_edge_table() {
 #[test]
 fn conformance_evidence_machine_classes_extend_core() {
     sm::assert_extends_core("ConformanceEvidence");
+}
+
 // spec: MEDULLA-FINANCE-PRIMITIVES-R905.1
 #[test]
 fn bar_machine_matches_edge_table() {

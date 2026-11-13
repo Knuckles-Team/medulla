@@ -39,6 +39,7 @@ mod tests {
         adf_test, kalman_beta, kalman_filter_1d, kalman_volatility, ou_calibrate,
         ou_optimal_thresholds,
     };
+    use medulla_types::numeric_kernel::OuParams;
 
     #[test]
     fn test_kalman_filter_1d_tracks_constant() {

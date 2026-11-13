@@ -52,10 +52,11 @@ pub use surveillance::{kyle_lambda, surveillance_risk, SurveillanceRisk};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_finance_market::market::validation::*;
     use medulla_numeric::evaluation::backtest::{
-        deflated_sharpe_ratio, probability_of_backtest_overfit,
+        deflated_sharpe_ratio, diebold_mariano, probability_of_backtest_overfit, purged_cpcv_splits,
     };
-    use medulla_numeric::evaluation::skill::effective_independent_n;
+    use medulla_numeric::evaluation::skill::{effective_independent_n, information_ratio};
 
     #[test]
     fn test_avellaneda_stoikov_inventory_skew() {
