@@ -1255,3 +1255,7 @@ Order: R733, then R734 and R735 in parallel.
 Chunk encoding (R039.2.2 to R039.2.4): `crates/medulla-core/src/compute/chunk_windows.rs` holds `split_windows`, `ChunkEncoder`/`encode_chunks` and `aggregate_mean_chunks` as pure functions; the window knobs are registry knobs in `knob_config.rs` and the refusal codes are `ServerErrorCode` variants routed to `SemanticIndex` (decision recorded in research.md).
 
 Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/document_encoding.rs` serves `EncodeDocument` (durable write, staged gateway) and `EncodedDocumentSearch` (read). `encode` runs `split_windows`, `encode_chunks` and `aggregate_mean_chunks`, builds the `EncodingReceipt` (`crates/medulla-types/src/retrieval.rs`) and writes one `EncodedDocument` node and one per-policy `EncodedIndexHead` node. `retrieval.encode_budget_chunks` is a registry knob; `ENCODE_BUDGET_EXHAUSTED` and `ENCODE_POLICY_STALE` are `ServerErrorCode` variants routed to `SemanticIndex`. The served tests are `tests/retrieval/test_chunk_encoding_served.py`.
+
+## Low-storage ANN layering
+
+`medulla-ann::low_storage` holds the manifest, checked accounting, the compact artifact (`HnswIndex::to_compact`, `LowStorageArtifact::{encode,decode,candidates}`) and `prune_hubs`. Regeneration, the bounded provider and the served path (R040.5.3, R040.5.4, R040.5.6) layer on top and own the L4 proof of the slice.

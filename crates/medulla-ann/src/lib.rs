@@ -26,14 +26,17 @@
 //! accelerator. The default build links no GPU, no faiss, no native-ML deps.
 
 mod codec;
+/// CUDA backend of the clustering kernel's assignment step (MEDULLA-CLUSTER-R008.3).
+#[cfg(feature = "gpu-cuda")]
+pub mod cuda_assign;
 pub mod distance;
 pub mod flat;
 pub mod hnsw;
 pub mod ivfpq;
-/// CUDA backend of the clustering kernel's assignment step (MEDULLA-CLUSTER-R008.3).
-#[cfg(feature = "gpu-cuda")]
-pub mod cuda_assign;
 pub mod linalg;
+/// Low-storage ANN manifest, byte accounting, compact artifact and hub pruning
+/// (MEDULLA-FEDERATED-QUERY-R040.5.1, R040.5.2, R040.5.5).
+pub mod low_storage;
 pub mod persist;
 pub mod recall;
 pub mod scatter;

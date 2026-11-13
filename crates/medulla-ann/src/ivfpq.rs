@@ -707,7 +707,7 @@ fn pq_reconstruct(v: &[f32], pq: &[f32], m: usize, dsub: usize) -> Vec<f32> {
 }
 
 /// SQ8-encode a vector: per-row min/scale, each dim → u8. Returns `(codes,min,scale)`.
-fn sq8_encode(v: &[f32]) -> (Vec<u8>, f32, f32) {
+pub(crate) fn sq8_encode(v: &[f32]) -> (Vec<u8>, f32, f32) {
     let mut mn = f32::MAX;
     let mut mx = f32::MIN;
     for &x in v {

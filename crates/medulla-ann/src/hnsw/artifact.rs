@@ -409,6 +409,12 @@ pub fn encode_compact_without_vectors(index: &HnswIndex) -> Result<Vec<u8>> {
     encode_compact_image_with_magic(&compact, VECTORLESS_COMPACT_MAGIC, false)
 }
 
+/// Encode an already-built vectorless compact graph (used by the low-storage
+/// artifact, which re-encodes the graph it validated).
+pub(crate) fn encode_compact_image_of(compact: &CompactHnswIndex) -> Result<Vec<u8>> {
+    encode_compact_image_with_magic(compact, VECTORLESS_COMPACT_MAGIC, false)
+}
+
 fn encode_compact_image(compact: &CompactHnswIndex) -> Result<Vec<u8>> {
     encode_compact_image_with_magic(compact, COMPACT_MAGIC, true)
 }

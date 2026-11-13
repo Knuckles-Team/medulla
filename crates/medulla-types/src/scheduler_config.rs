@@ -55,6 +55,28 @@ pub const DEFAULT_CHANGESET_MAX_BLOB_BYTES: u64 = 134_217_728;
 /// Inclusive bounds of `changeset_max_blob_bytes`.
 pub const CHANGESET_MAX_BLOB_BYTES_BOUNDS: (u64, u64) = (1_048_576, 4_294_967_296);
 
+/// Default byte ceiling of one low-storage ANN artifact, peak included
+/// (MEDULLA-FEDERATED-QUERY-R040.5.1).
+pub const DEFAULT_ANN_STORAGE_CEILING_BYTES: u64 = 2_147_483_648;
+/// Inclusive bounds of `ann_storage_ceiling_bytes`.
+pub const ANN_STORAGE_CEILING_BYTES_BOUNDS: (u64, u64) = (1_048_576, 1_099_511_627_776);
+
+/// Whether hub-preserving pruning runs on compact ANN artifacts
+/// (MEDULLA-FEDERATED-QUERY-R040.5.5). A closed switch; the policy itself is
+/// recorded in the artifact manifest.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum AnnHubPruning {
+    #[default]
+    Disabled,
+    Enabled,
+}
+
+fn default_ann_storage_ceiling_bytes() -> u64 {
+    DEFAULT_ANN_STORAGE_CEILING_BYTES
+}
+
 fn default_enrich_timeout_ms() -> u64 {
     DEFAULT_ENRICH_TIMEOUT_MS
 }
@@ -299,6 +321,14 @@ pub struct SchedulerConfig {
     /// Largest bytes of one submitted changeset blob (MEDULLA-SCM-R001).
     #[serde(default = "default_changeset_max_blob_bytes")]
     pub changeset_max_blob_bytes: u64,
+    /// Byte ceiling of one low-storage ANN artifact, persisted and peak
+    /// (MEDULLA-FEDERATED-QUERY-R040.5.1).
+    #[serde(default = "default_ann_storage_ceiling_bytes")]
+    pub ann_storage_ceiling_bytes: u64,
+    /// Hub-preserving pruning of compact ANN artifacts; default `disabled`
+    /// (MEDULLA-FEDERATED-QUERY-R040.5.5).
+    #[serde(default)]
+    pub ann_hub_pruning: AnnHubPruning,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -316,6 +346,7 @@ pub enum InvalidSchedulerConfig {
     EnrichTimeoutOutOfRange,
     IndexMaxWorkingBytesOutOfRange,
     ChangesetMaxBlobBytesOutOfRange,
+    AnnStorageCeilingBytesOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
@@ -366,6 +397,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler index_max_working_bytes must be within [{}, {}]",
                 INDEX_MAX_WORKING_BYTES_BOUNDS.0, INDEX_MAX_WORKING_BYTES_BOUNDS.1
+            ),
+            Self::AnnStorageCeilingBytesOutOfRange => write!(
+                f,
+                "scheduler ann_storage_ceiling_bytes must be within [{}, {}]",
+                ANN_STORAGE_CEILING_BYTES_BOUNDS.0, ANN_STORAGE_CEILING_BYTES_BOUNDS.1
             ),
             Self::ChangesetMaxBlobBytesOutOfRange => write!(
                 f,
@@ -432,6 +468,11 @@ impl SchedulerConfig {
             .contains(&self.changeset_max_blob_bytes)
         {
             return Err(InvalidSchedulerConfig::ChangesetMaxBlobBytesOutOfRange);
+        }
+        if !(ANN_STORAGE_CEILING_BYTES_BOUNDS.0..=ANN_STORAGE_CEILING_BYTES_BOUNDS.1)
+            .contains(&self.ann_storage_ceiling_bytes)
+        {
+            return Err(InvalidSchedulerConfig::AnnStorageCeilingBytesOutOfRange);
         }
         let history = [
             self.history_max_commits,
@@ -652,6 +693,34 @@ mod tests {
             candidate.changeset_max_blob_bytes = value;
             assert_eq!(candidate.validate(), expected, "bound {value}");
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.5.1
+    #[test]
+    fn ann_knobs_default_and_bounds() {
+        assert_eq!(config().ann_storage_ceiling_bytes, 2_147_483_648);
+        assert_eq!(config().ann_hub_pruning, AnnHubPruning::Disabled);
+        for (value, expected) in [
+            (1_048_576u64, Ok(())),
+            (1_099_511_627_776u64, Ok(())),
+            (
+                1_048_575u64,
+                Err(InvalidSchedulerConfig::AnnStorageCeilingBytesOutOfRange),
+            ),
+            (
+                1_099_511_627_777u64,
+                Err(InvalidSchedulerConfig::AnnStorageCeilingBytesOutOfRange),
+            ),
+        ] {
+            let mut candidate = config();
+            candidate.ann_storage_ceiling_bytes = value;
+            assert_eq!(candidate.validate(), expected, "bound {value}");
+        }
+        let enabled: SchedulerConfig = serde_json::from_value(json!({
+            "total_workers": 4, "max_queue_depth": 100, "ann_hub_pruning": "enabled"
+        }))
+        .unwrap();
+        assert_eq!(enabled.ann_hub_pruning, AnnHubPruning::Enabled);
     }
 
     // spec: MEDULLA-PLACEMENT-R002.2

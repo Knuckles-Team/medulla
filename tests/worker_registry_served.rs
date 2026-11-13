@@ -42,6 +42,9 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         process_document_max_depth: 64,
         changeset_max_blob_bytes: medulla_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
         index_max_working_bytes: medulla_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
+        ann_storage_ceiling_bytes:
+            medulla_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
+        ann_hub_pruning: medulla_types::scheduler_config::AnnHubPruning::Disabled,
     }
 }
 
