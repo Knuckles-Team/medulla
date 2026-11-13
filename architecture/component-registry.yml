@@ -4097,6 +4097,7 @@ components:
       - "tests/ontology/test_canonical_hash_served.py"
       - "tests/test_rdf_client.py"
       - "tests/test_reasoning.py"
+      - "tests/reasoning/test_aif_dung_served.py"
       - "tests/test_reasoning_client.py"
       - "tests/test_release_publication_recovery.py"
       - "tests/test_capability_coverage_client.py"
