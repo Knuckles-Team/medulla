@@ -11,8 +11,17 @@
 
 use std::collections::HashMap;
 
-use medulla_ann::HnswIndex;
-use medulla_decision_types::decision::entity_resolution::{ReviewOutcome, TenantScopedEmbedding};
+use medulla_ann::{HnswIndex, Metric};
+use medulla_decision_types::decision::entity_resolution::{
+    ResolutionTier, ReviewOutcome, TenantScopedEmbedding, TierEvaluation,
+};
+
+/// Links per node of the candidate index graph.
+const INDEX_M: usize = 16;
+/// Build-time beam width of the candidate index.
+const INDEX_EF_CONSTRUCTION: usize = 200;
+/// Seed of the candidate index build, so one corpus always builds one index.
+const INDEX_SEED: u64 = 0x00E6_0706;
 
 /// Most neighbours one node may ask for (the ceiling of `er.candidate_k`).
 pub const MAX_CANDIDATE_K: usize = 64;
@@ -111,6 +120,105 @@ pub fn generate_candidates(
         })
         .take(k)
         .collect()
+}
+
+/// One node of a corpus: its owning tenant, its id and its stored vector.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexedNode {
+    pub tenant: String,
+    pub node: String,
+    pub vector: Vec<f32>,
+}
+
+/// An ANN index over a corpus together with the table naming each slot's
+/// owning `(tenant, node)`.
+pub struct CandidateIndex {
+    index: HnswIndex,
+    slots: SlotTable,
+}
+
+impl CandidateIndex {
+    /// Index `nodes` (each of width `dimensions`, cosine metric). The corpus
+    /// may hold several tenants' nodes; [`CandidateIndex::neighbours`] only ever
+    /// visits the asking tenant's.
+    pub fn build(dimensions: usize, nodes: &[IndexedNode]) -> Self {
+        let mut index = HnswIndex::new(
+            dimensions,
+            Metric::Cosine,
+            INDEX_M,
+            INDEX_EF_CONSTRUCTION,
+            INDEX_SEED,
+        );
+        let mut slots = SlotTable::default();
+        for node in nodes.iter().filter(|n| n.vector.len() == dimensions) {
+            let id = slots.assign(&node.tenant, &node.node);
+            index.insert(id, node.vector.clone());
+        }
+        Self { index, slots }
+    }
+
+    /// The nearest `candidate_k` nodes of `tenant` to `query`, not counting `node`.
+    pub fn neighbours(
+        &self,
+        tenant: &str,
+        node: &str,
+        query: &[f32],
+        candidate_k: usize,
+    ) -> Vec<NeighbourCandidate> {
+        generate_candidates(&self.index, &self.slots, tenant, node, query, candidate_k)
+    }
+}
+
+/// The token of a tier in an option id.
+pub fn tier_token(tier: ResolutionTier) -> &'static str {
+    match tier {
+        ResolutionTier::Exact => "exact",
+        ResolutionTier::Embedding => "embedding",
+        ResolutionTier::Probabilistic => "probabilistic",
+    }
+}
+
+const PROPOSAL_PREFIX: &str = "er:";
+
+/// The option id of a proposal of `tier` for the pair `left` and `right`:
+/// `er:<tier>:<left>|<right>`. A review of a decision that executed this option
+/// is a review of that tier.
+pub fn proposal_option_id(tier: ResolutionTier, left: &str, right: &str) -> String {
+    format!("{PROPOSAL_PREFIX}{}:{left}|{right}", tier_token(tier))
+}
+
+/// The tier an option id names, or `None` when it is not a proposal id.
+pub fn tier_of_option(option_id: &str) -> Option<ResolutionTier> {
+    let rest = option_id.strip_prefix(PROPOSAL_PREFIX)?;
+    [
+        ResolutionTier::Exact,
+        ResolutionTier::Embedding,
+        ResolutionTier::Probabilistic,
+    ]
+    .into_iter()
+    .find(|tier| {
+        rest.strip_prefix(tier_token(*tier))
+            .is_some_and(|tail| tail.starts_with(':'))
+    })
+}
+
+/// The accept and reject counts of `tier` over `reviews` (each paired with the
+/// option id of the reviewed decision).
+pub fn tier_evaluation(
+    tier: ResolutionTier,
+    reviews: &[(String, ReviewOutcome)],
+) -> TierEvaluation {
+    let count = |wanted: ReviewOutcome| {
+        reviews
+            .iter()
+            .filter(|(option, outcome)| *outcome == wanted && tier_of_option(option) == Some(tier))
+            .count() as u32
+    };
+    TierEvaluation::new(
+        tier,
+        count(ReviewOutcome::Accepted),
+        count(ReviewOutcome::Rejected),
+    )
 }
 
 /// What the accept-rate comparison found.
@@ -298,5 +406,72 @@ mod tests {
             accept_rate_drift(&edge, 20, 150_001),
             AcceptDrift::Stable { .. }
         ));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R706.3
+    #[test]
+    fn candidate_index_is_tenant_scoped_and_options_name_their_tier() {
+        let nodes: Vec<IndexedNode> = (0..40)
+            .map(|i| IndexedNode {
+                tenant: format!("t{}", i % 2),
+                node: format!("n{i}"),
+                vector: vec![1.0, 0.01 * i as f32],
+            })
+            .collect();
+        let index = CandidateIndex::build(2, &nodes);
+        let found = index.neighbours("t0", "n0", &[1.0, 0.0], 8);
+        assert_eq!(found.len(), 8);
+        for hit in &found {
+            let i: usize = hit.node[1..].parse().unwrap();
+            assert_eq!(i % 2, 0, "{} belongs to another tenant", hit.node);
+            assert_ne!(hit.node, "n0");
+        }
+        assert!(index.neighbours("nobody", "n0", &[1.0, 0.0], 8).is_empty());
+        // A node of another width is never indexed.
+        let skipped = CandidateIndex::build(
+            3,
+            &[IndexedNode {
+                tenant: "t0".into(),
+                node: "a".into(),
+                vector: vec![1.0, 0.0],
+            }],
+        );
+        assert!(skipped
+            .neighbours("t0", "b", &[1.0, 0.0, 0.0], 4)
+            .is_empty());
+
+        for tier in [
+            ResolutionTier::Exact,
+            ResolutionTier::Embedding,
+            ResolutionTier::Probabilistic,
+        ] {
+            let id = proposal_option_id(tier, "https://e/a", "https://e/b");
+            assert_eq!(tier_of_option(&id), Some(tier), "{id}");
+        }
+        assert_eq!(tier_of_option("pair-a"), None);
+        assert_eq!(tier_of_option("er:other:a|b"), None);
+        let embedding = |side: &str| proposal_option_id(ResolutionTier::Embedding, side, "z");
+        let reviews = vec![
+            (embedding("a"), ReviewOutcome::Accepted),
+            (embedding("b"), ReviewOutcome::Accepted),
+            (embedding("c"), ReviewOutcome::Rejected),
+            (
+                proposal_option_id(ResolutionTier::Exact, "a", "z"),
+                ReviewOutcome::Rejected,
+            ),
+            ("pair-a".to_string(), ReviewOutcome::Accepted),
+        ];
+        assert_eq!(
+            tier_evaluation(ResolutionTier::Embedding, &reviews),
+            TierEvaluation::new(ResolutionTier::Embedding, 2, 1)
+        );
+        assert_eq!(
+            tier_evaluation(ResolutionTier::Exact, &reviews),
+            TierEvaluation::new(ResolutionTier::Exact, 0, 1)
+        );
+        assert_eq!(
+            tier_evaluation(ResolutionTier::Probabilistic, &reviews).accept_rate_ppm,
+            0
+        );
     }
 }

@@ -450,6 +450,8 @@ knobs! {
     er_drift_window: u64 = "er.drift_window", U64(200), [20, 5_000], "reviews", Tunable;
     /// Absolute accept-rate change between two windows that reports drift.
     er_drift_max_ppm: u64 = "er.drift_max_ppm", U64(150_000), [10_000, 500_000], "ppm", Tunable;
+    /// Most nodes one entity-resolution candidate index is built over (MEDULLA-DECISION-ENGINE-R706.3).
+    er_index_max_nodes: u64 = "er.index_max_nodes", U64(50_000), [100, 1_000_000], "nodes", Tunable;
     /// Seconds over which a refresh budget's request allowance refills (MEDULLA-DECISION-ENGINE-R174.9.2).
     freshness_window: u64 = "freshness.window", U64(60), [1, 3_600], "seconds", Tunable;
     /// Team signal maximum age.

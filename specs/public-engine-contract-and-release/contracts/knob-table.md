@@ -97,6 +97,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `er.candidate_k` | u64 | 16 | [1, 64] | neighbours | Tunable | `MEDULLA_ER_CANDIDATE_K` |
 | `er.drift_window` | u64 | 200 | [20, 5000] | reviews | Tunable | `MEDULLA_ER_DRIFT_WINDOW` |
 | `er.drift_max_ppm` | u64 | 150000 | [10000, 500000] | ppm | Tunable | `MEDULLA_ER_DRIFT_MAX_PPM` |
+| `er.index_max_nodes` | u64 | 50000 | [100, 1000000] | nodes | Tunable | `MEDULLA_ER_INDEX_MAX_NODES` |
 | `freshness.window` | u64 | 60 | [1, 3600] | seconds | Tunable | `MEDULLA_FRESHNESS_WINDOW` |
 | `concept_lineage.read_max_successors` | u64 | 1024 | [1, 65536] | successors | Tunable | `MEDULLA_CONCEPT_LINEAGE_READ_MAX_SUCCESSORS` |
 | `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | none (registry knob, not an environment variable) |

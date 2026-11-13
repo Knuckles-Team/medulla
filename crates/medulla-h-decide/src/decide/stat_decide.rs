@@ -159,6 +159,18 @@ async fn serve(
             super::family::with_similarity(state, store.as_ref(), verified, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::ResolveEntity {
+        // A `resolve_entity` question grows its candidate pairs from the
+        // tenant's own embedded neighbours and reads the reviews of earlier
+        // proposals here, where the graph and the log are reachable
+        // (MEDULLA-DECISION-ENGINE-R706.3).
+        telemetry::stage_async(
+            telemetry::Stage::Candidates,
+            &family,
+            verified.tenant(),
+            super::family::with_candidates(state, store.as_ref(), verified, request),
+        )
+        .await?
     } else if request.question.kind == QuestionKind::CapacityProposal {
         // A `capacity_proposal` question reads the cell's headroom and epoch
         // from the capacity ledger here and records them in its own parameter

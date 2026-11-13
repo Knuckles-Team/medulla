@@ -1986,6 +1986,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-decision-stats/src/decision/entity_resolution.rs::tests::unchanged_nodes_skip_embedding_and_drift_is_detected` | L2 |
 | `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-decision-stats/src/decision/entity_resolution.rs::tests::candidate_index_is_tenant_scoped_and_options_name_their_tier` | L2 |
 | `MEDULLA-DECISION-ENGINE-R706.4` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::er_refusals_and_hypothesis_marking` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.5` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::proposal_records_model_hash_and_tier` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.6` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |

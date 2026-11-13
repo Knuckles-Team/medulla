@@ -481,6 +481,8 @@ pub(super) fn recent_evaluations(
 /// One outcome that counts as a label: when it was recorded, which evaluation
 /// recorded it and whether it succeeded.
 pub(super) struct OutcomeLabel {
+    /// The option the reviewed decision executed.
+    pub(super) option_id: String,
     pub(super) recorded_at_ms: u64,
     pub(super) evaluation_id: String,
     pub(super) success: bool,
@@ -494,17 +496,32 @@ pub(super) fn recent_labels(
     option_id: &str,
     n: usize,
 ) -> Result<Vec<OutcomeLabel>, String> {
+    recent_labels_where(store, reader, |executed| executed == option_id, n)
+}
+
+/// The latest `n` labels of every option `wanted` accepts, newest first, under
+/// the one label rule (MEDULLA-DECISION-ENGINE-R706.3).
+pub(super) fn recent_labels_where(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    wanted: impl Fn(&str) -> bool,
+    n: usize,
+) -> Result<Vec<OutcomeLabel>, String> {
     use medulla_decision_stats::decision::aggregate::{label_use, LabelUse};
     let floor = default_statistical_policy().min_outcome_fidelity;
     let mut labels: Vec<OutcomeLabel> = Vec::new();
     for (entry, evaluations) in joined(store, reader, None, None)? {
         let record = &entry.record;
-        if record.synthetic_evidence || executed_option(&record.outcome) != Some(option_id) {
+        let Some(option_id) = executed_option(&record.outcome).filter(|id| wanted(id)) else {
+            continue;
+        };
+        if record.synthetic_evidence {
             continue;
         }
         for stored in &evaluations {
             if let LabelUse::Label(success) = label_use(stored, &record.caller_principal, floor) {
                 labels.push(OutcomeLabel {
+                    option_id: option_id.to_string(),
                     recorded_at_ms: stored.recorded_at_ms,
                     evaluation_id: stored.evaluation.evaluation_id.clone(),
                     success,

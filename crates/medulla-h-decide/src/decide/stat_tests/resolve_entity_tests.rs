@@ -23,7 +23,7 @@ use medulla_decision_types::decision::statistical::{RiskMethod, RiskStatement};
 use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key};
 
-const ONE: i64 = 1 << 32;
+pub(super) const ONE: i64 = 1 << 32;
 
 fn q(value: i64) -> QuantisedValue {
     QuantisedValue {
@@ -32,7 +32,7 @@ fn q(value: i64) -> QuantisedValue {
     }
 }
 
-fn entity(name: &str) -> String {
+pub(super) fn entity(name: &str) -> String {
     format!("https://example.test/entity/{name}")
 }
 
@@ -84,7 +84,7 @@ fn acting_head_body(schema_digest: &str, set_threshold: f64) -> DecisionHeadBody
 }
 
 /// Publish the pair feature schema once.
-fn publish_schema(h: &Harness) -> (ComponentDependency, String) {
+pub(super) fn publish_schema(h: &Harness) -> (ComponentDependency, String) {
     let schema = schema_body();
     let pin = h
         .publish_test_component(
@@ -100,7 +100,7 @@ fn publish_schema(h: &Harness) -> (ComponentDependency, String) {
 
 /// Publish an acting head with the given prediction-set threshold, behind a
 /// passed receipt written for exactly the head's bytes.
-fn publish_acting_head(
+pub(super) fn publish_acting_head(
     h: &Harness,
     schema_digest: &str,
     id: &str,
@@ -149,7 +149,7 @@ fn publish_acting_head(
 }
 
 /// One pair option: its two entity IRIs and the feature `signal`.
-fn pair_option(id: &str, left: &str, right: &str, signal: i64) -> DeclaredOption {
+pub(super) fn pair_option(id: &str, left: &str, right: &str, signal: i64) -> DeclaredOption {
     DeclaredOption {
         option_id: id.to_string(),
         classification: BoundedVec::default(),
@@ -173,14 +173,14 @@ fn pair_option(id: &str, left: &str, right: &str, signal: i64) -> DeclaredOption
 }
 
 /// The two pairs every decision here weighs: `pair-a` scores high, `pair-b` low.
-fn two_pairs() -> Vec<DeclaredOption> {
+pub(super) fn two_pairs() -> Vec<DeclaredOption> {
     vec![
         pair_option("pair-a", &entity("a-left"), &entity("a-right"), 3 * ONE),
         pair_option("pair-b", &entity("b-left"), &entity("b-right"), 0),
     ]
 }
 
-fn pair_request(
+pub(super) fn pair_request(
     schema: &ComponentDependency,
     head: Option<&ComponentDependency>,
     policy: DecisionPolicyRef,

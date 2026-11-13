@@ -275,9 +275,17 @@ pub const ENTITY_PAIR_SELF: RefusalCode = RefusalCode::new("ENTITY_PAIR_SELF");
 /// the spelling is `ApprovalRefusal::ApproverRequired.code()`.
 pub const LINK_APPROVER_MISSING: RefusalCode = RefusalCode::new("LINK_APPROVER_MISSING");
 
+/// The graph named for candidate generation holds more embedded nodes than
+/// `er.index_max_nodes` allows an index to be built over.
+pub const ER_INDEX_TOO_LARGE: RefusalCode = RefusalCode::new("ER_INDEX_TOO_LARGE");
+
 /// Every `resolve_entity` family code, in declaration order.
-pub const RESOLVE_ENTITY: &[RefusalCode] =
-    &[ENTITY_PAIR_INVALID, ENTITY_PAIR_SELF, LINK_APPROVER_MISSING];
+pub const RESOLVE_ENTITY: &[RefusalCode] = &[
+    ENTITY_PAIR_INVALID,
+    ENTITY_PAIR_SELF,
+    LINK_APPROVER_MISSING,
+    ER_INDEX_TOO_LARGE,
+];
 
 // The `round_verdict` and `stage_allocation` families' refusals
 // (MEDULLA-DECISION-ENGINE-R136.5).

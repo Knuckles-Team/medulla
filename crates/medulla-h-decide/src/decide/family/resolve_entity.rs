@@ -12,6 +12,17 @@
 //! approval (`approve_link`) without a named `approver` refuses with
 //! `LINK_APPROVER_MISSING`.
 //!
+//! Candidate stage (MEDULLA-DECISION-ENGINE-R706.3): a question that names a
+//! graph in the param `er.graph` also weighs the nearest neighbours of each
+//! declared pair side. [`with_candidates`] reads that graph as the caller may
+//! see it, indexes the embedded nodes the caller's tenant owns (the node
+//! property `tenant_id`), asks the index for `er.candidate_k` neighbours with
+//! the tenant predicate inside the search, and adds every unseen pair as one
+//! more declared option `er:embedding:<left>|<right>`. The same prelude reads
+//! the reviews the decision log holds for proposal options, records the
+//! per-tier accept and reject counts and the drift of the accept rate in
+//! engine params the caller may not supply, and feeds the `head_drift` gauge.
+//!
 //! The served pair decision (MEDULLA-DECISION-ENGINE-R032.2.2): every option
 //! is one entity pair, its two sides the texts `entity.left` and
 //! `entity.right`, each an IRI (`ENTITY_PAIR_INVALID` when one is missing or
@@ -22,9 +33,17 @@
 //! abstains with `AbstainReason::InsufficientConfidence`. The answer proposes
 //! a link and never writes `owl:sameAs`.
 
+use medulla_decision_stats::decision::adapter::to_q16;
 use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::decision::entity_resolution::{
+    accept_rate_drift, proposal_option_id, tier_evaluation, tier_of_option, tier_token,
+    AcceptDrift, CandidateIndex, IndexedNode,
+};
+use medulla_decision_types::decision::entity_resolution::{ResolutionTier, ReviewOutcome};
 use medulla_decision_types::decision::knob_families::resolve_entity as resolve_entity_knobs;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::declared::{
+    DeclaredNumber, DeclaredOption, DeclaredText, MAX_DECLARED_OPTIONS,
+};
 use medulla_decision_types::decision::statistical::StatisticalOutcome;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, TypedParam, TypedValue,
@@ -35,10 +54,17 @@ use medulla_decision_types::decision::{
 use medulla_index_types::entity_resolution::{
     decide_merge, identity_evidence, ApprovalRefusal, IdentityEvidence, MergeDecision,
 };
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use tokio::sync::RwLock;
 
+use super::support::{invalid, text_param};
 use super::DecisionFamily;
 use crate::decide::stat_executor::{Executed, Pinned};
+use crate::decide::stat_log::{recent_labels_where, LogReader, MAX_LOG_ROWS};
+use crate::decide::stat_vectors::graph_vectors;
 
 /// Most identity premises one decision records.
 const MAX_IDENTITY_PREMISES: usize = 512;
@@ -64,6 +90,29 @@ fn is_iri(value: &str) -> bool {
             .chars()
             .any(|c| c.is_whitespace() || c == '<' || c == '>')
 }
+
+/// The param naming the graph whose embedded nodes are the candidate corpus.
+pub const PARAM_GRAPH: &str = "er.graph";
+/// Prefix of the engine params the prelude records; a caller may not supply one.
+const ENGINE_PARAM_PREFIX: &str = "er.review.";
+/// Accepted reviews of a tier (suffix `:<tier>`).
+const PARAM_ACCEPTED: &str = "er.review.accepted";
+/// Rejected reviews of a tier (suffix `:<tier>`).
+const PARAM_REJECTED: &str = "er.review.rejected";
+/// The evaluation id of the newest review counted.
+const PARAM_LATEST: &str = "er.review.latest";
+/// The drift state of the accept rate: `stable` or `drifted`.
+const PARAM_DRIFT: &str = "er.review.drift";
+/// The absolute accept-rate change between the two windows, in ppm.
+const PARAM_DRIFT_CHANGE: &str = "er.review.drift_change_ppm";
+/// Property of a graph node naming the tenant that owns it.
+const TENANT_PROPERTY: &str = "tenant_id";
+
+const TIERS: [ResolutionTier; 3] = [
+    ResolutionTier::Exact,
+    ResolutionTier::Embedding,
+    ResolutionTier::Probabilistic,
+];
 
 /// The family of the `resolve_entity` question kind.
 pub struct ResolveEntityFamily;
@@ -178,6 +227,291 @@ fn calibrated_within(pinned: &Pinned, alpha_micros: i64) -> bool {
         })
 }
 
+fn tier_param(base: &str, tier: ResolutionTier) -> String {
+    format!("{base}:{}", tier_token(tier))
+}
+
+fn count_param(name: String, count: u32) -> TypedParam {
+    TypedParam {
+        name,
+        value: TypedValue::Int(i64::from(count)),
+    }
+}
+
+/// The review premises of the engine params the prelude recorded: one per tier
+/// with reviews (`er:tier_evaluation:<tier>=<accepted>/<rejected>/<rate_ppm>`)
+/// and the drift state.
+fn review_premises(request: &DecideRequest) -> Vec<PremiseRef> {
+    let count = |name: &str| match param(request, name).map(|p| &p.value) {
+        Some(TypedValue::Int(n)) => u32::try_from(*n).ok(),
+        _ => None,
+    };
+    let Some(TypedValue::Text(latest)) = param(request, PARAM_LATEST).map(|p| &p.value) else {
+        return Vec::new();
+    };
+    let observed = |fact: String| PremiseRef {
+        subject: "reviews".to_string(),
+        fact,
+        class: PremiseClass::Observation,
+        provenance: PremiseProvenance::Observation {
+            evaluation_id: latest.clone(),
+        },
+    };
+    let mut out = Vec::new();
+    for tier in TIERS {
+        let (Some(accepted), Some(rejected)) = (
+            count(&tier_param(PARAM_ACCEPTED, tier)),
+            count(&tier_param(PARAM_REJECTED, tier)),
+        ) else {
+            continue;
+        };
+        let evaluation = medulla_decision_types::decision::entity_resolution::TierEvaluation::new(
+            tier, accepted, rejected,
+        );
+        out.push(observed(format!(
+            "er:tier_evaluation:{}={accepted}/{rejected}/{}",
+            tier_token(tier),
+            evaluation.accept_rate_ppm
+        )));
+    }
+    if let (Some(TypedValue::Text(state)), Some(change)) = (
+        param(request, PARAM_DRIFT).map(|p| &p.value),
+        count(PARAM_DRIFT_CHANGE),
+    ) {
+        out.push(observed(format!("er:drift:{state}={change}")));
+    }
+    out
+}
+
+/// The pair `(left, right)` in canonical order.
+fn ordered<'a>(a: &'a str, b: &'a str) -> (&'a str, &'a str) {
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
+/// The anchor's declared numbers weighed by the similarity of the neighbour to
+/// the anchor's side: the cosine `1 - distance`, floored at zero. A neighbour
+/// pair therefore never outranks the pair it grew from on declared evidence.
+fn discounted<const N: usize>(
+    numbers: &BoundedVec<DeclaredNumber, N>,
+    distance: f32,
+) -> Result<BoundedVec<DeclaredNumber, N>, String> {
+    let similarity = f64::from(1.0 - distance).clamp(0.0, 1.0);
+    BoundedVec::new(
+        numbers
+            .iter()
+            .map(|n| DeclaredNumber {
+                key: n.key.clone(),
+                q32: (n.q32 as f64 * similarity).round() as i64,
+            })
+            .collect(),
+    )
+}
+
+/// The neighbour pairs of the declared pair sides, as options.
+fn neighbour_options(
+    declared: &[DeclaredOption],
+    view: &crate::decide::stat_vectors::GraphVectors,
+    tenant: &str,
+    candidate_k: usize,
+    max_nodes: usize,
+) -> Result<Vec<DeclaredOption>, String> {
+    let mut nodes = Vec::new();
+    for id in view.node_ids() {
+        let (Some(vector), Some(properties)) =
+            (view.stored_vector(&id), view.visible_properties(&id))
+        else {
+            continue;
+        };
+        let Some(owner) = properties.get(TENANT_PROPERTY).and_then(|v| v.as_str()) else {
+            continue;
+        };
+        nodes.push(IndexedNode {
+            tenant: owner.to_string(),
+            node: id,
+            vector,
+        });
+        if nodes.len() > max_nodes {
+            return Err(format!(
+                "{}: the candidate graph holds more than {max_nodes} embedded nodes",
+                medulla_decision_types::decision::codes::ER_INDEX_TOO_LARGE.as_str()
+            ));
+        }
+    }
+    let index = CandidateIndex::build(view.dimensions(), &nodes);
+    let mut seen: std::collections::BTreeSet<(String, String)> = declared
+        .iter()
+        .filter_map(pair_of)
+        .map(|(l, r)| {
+            let (l, r) = ordered(l, r);
+            (l.to_string(), r.to_string())
+        })
+        .collect();
+    let taken: std::collections::BTreeSet<&str> =
+        declared.iter().map(|o| o.option_id.as_str()).collect();
+    let mut added: Vec<DeclaredOption> = Vec::new();
+    'anchors: for anchor in declared {
+        let Some((left, right)) = pair_of(anchor) else {
+            continue;
+        };
+        for side in [left, right] {
+            let Some(query) = view.stored_vector(side) else {
+                continue;
+            };
+            for hit in index.neighbours(tenant, side, &query, candidate_k) {
+                if !is_iri(&hit.node) {
+                    continue;
+                }
+                let (l, r) = ordered(side, &hit.node);
+                let id = proposal_option_id(ResolutionTier::Embedding, l, r);
+                if declared.len() + added.len() >= MAX_DECLARED_OPTIONS {
+                    break 'anchors;
+                }
+                if taken.contains(id.as_str()) || !seen.insert((l.to_string(), r.to_string())) {
+                    continue;
+                }
+                let mut texts = vec![
+                    DeclaredText {
+                        key: LEFT_KEY.to_string(),
+                        text: l.to_string(),
+                    },
+                    DeclaredText {
+                        key: RIGHT_KEY.to_string(),
+                        text: r.to_string(),
+                    },
+                ];
+                texts.sort_by(|a, b| a.key.cmp(&b.key));
+                added.push(DeclaredOption {
+                    option_id: id,
+                    classification: anchor.classification.clone(),
+                    numbers: discounted(&anchor.numbers, hit.distance)?,
+                    texts: BoundedVec::new(texts)?,
+                });
+            }
+        }
+    }
+    Ok(added)
+}
+
+/// The reviews the decision log holds for proposal options: the per-tier counts
+/// and the accept-rate drift, recorded as engine params, and the drift fed to
+/// the `head_drift` gauge (MEDULLA-DECISION-ENGINE-R706.3). Reads the caller's
+/// own tenant's log through the one label rule.
+fn review_params(
+    store: &AgentLibraryStore,
+    verified: &VerifiedRequestContext,
+) -> Result<Vec<TypedParam>, String> {
+    let reader = LogReader::of(verified);
+    let labels = recent_labels_where(
+        store,
+        &reader,
+        |option| tier_of_option(option).is_some(),
+        MAX_LOG_ROWS,
+    )?;
+    let Some(newest) = labels.first() else {
+        return Ok(Vec::new());
+    };
+    let mut params = vec![TypedParam {
+        name: PARAM_LATEST.to_string(),
+        value: TypedValue::Text(newest.evaluation_id.clone()),
+    }];
+    // Oldest first: the arrival order the drift windows read.
+    let reviews: Vec<(String, ReviewOutcome)> = labels
+        .iter()
+        .rev()
+        .map(|label| {
+            let outcome = if label.success {
+                ReviewOutcome::Accepted
+            } else {
+                ReviewOutcome::Rejected
+            };
+            (label.option_id.clone(), outcome)
+        })
+        .collect();
+    for tier in TIERS {
+        let evaluation = tier_evaluation(tier, &reviews);
+        if evaluation.accepted + evaluation.rejected == 0 {
+            continue;
+        }
+        params.push(count_param(
+            tier_param(PARAM_ACCEPTED, tier),
+            evaluation.accepted,
+        ));
+        params.push(count_param(
+            tier_param(PARAM_REJECTED, tier),
+            evaluation.rejected,
+        ));
+    }
+    let knobs = medulla_server_api::knob_config::knobs();
+    let outcomes: Vec<ReviewOutcome> = reviews.iter().map(|(_, outcome)| *outcome).collect();
+    let window = usize::try_from(knobs.er_drift_window).map_err(|e| invalid(e))?;
+    let max_ppm = u32::try_from(knobs.er_drift_max_ppm).map_err(|e| invalid(e))?;
+    let (state, change_ppm) = match accept_rate_drift(&outcomes, window, max_ppm) {
+        AcceptDrift::Insufficient { .. } => return Ok(params),
+        AcceptDrift::Stable { change_ppm, .. } => ("stable", change_ppm),
+        AcceptDrift::Drifted { change_ppm, .. } => ("drifted", change_ppm),
+    };
+    medulla_kernel::metrics::process().head_drift(
+        "entity_resolution",
+        to_q16(f64::from(change_ppm) / 1_000_000.0),
+    );
+    params.push(TypedParam {
+        name: PARAM_DRIFT.to_string(),
+        value: TypedValue::Text(state.to_string()),
+    });
+    params.push(count_param(PARAM_DRIFT_CHANGE.to_string(), change_ppm));
+    Ok(params)
+}
+
+/// The candidate stage of a `resolve_entity` question, before the matrix is
+/// computed (MEDULLA-DECISION-ENGINE-R706.3). Adds the tenant-scoped
+/// neighbours of the declared pair sides as options when the question names a
+/// graph, and records the review counts and drift as engine params.
+pub(in crate::decide) async fn with_candidates(
+    state: &Arc<RwLock<ServerState>>,
+    store: &AgentLibraryStore,
+    verified: &VerifiedRequestContext,
+    mut request: DecideRequest,
+) -> Result<DecideRequest, String> {
+    if let Some(reserved) = request
+        .params
+        .iter()
+        .find(|p| p.name.starts_with(ENGINE_PARAM_PREFIX))
+    {
+        return Err(invalid(format!(
+            "parameter {} is recorded by the engine and cannot be supplied",
+            reserved.name
+        )));
+    }
+    let mut params = request.params.as_slice().to_vec();
+    if let Some(graph) = text_param(&request, PARAM_GRAPH)? {
+        let CandidateSource::Declared { options } = &request.candidates else {
+            return Err(invalid(
+                "a resolve_entity question declares the pairs its candidates grow from",
+            ));
+        };
+        let view = graph_vectors(state, verified.agent_id(), graph).await?;
+        let knobs = medulla_server_api::knob_config::knobs();
+        let k = usize::try_from(knobs.er_candidate_k).map_err(|e| invalid(e))?;
+        let max_nodes = usize::try_from(knobs.er_index_max_nodes).map_err(|e| invalid(e))?;
+        let added = neighbour_options(options.as_slice(), &view, verified.tenant(), k, max_nodes)?;
+        if !added.is_empty() {
+            let mut all = options.as_slice().to_vec();
+            all.extend(added);
+            all.sort_by(|a, b| a.option_id.cmp(&b.option_id));
+            request.candidates = CandidateSource::Declared {
+                options: BoundedVec::new(all).map_err(|e| invalid(e))?,
+            };
+        }
+    }
+    params.extend(review_params(store, verified)?);
+    request.params = BoundedVec::new(params).map_err(|e| invalid(e))?;
+    Ok(request)
+}
+
 impl DecisionFamily for ResolveEntityFamily {
     fn validate_candidates(
         &self,
@@ -275,6 +609,7 @@ impl DecisionFamily for ResolveEntityFamily {
                 }
             }
         }
+        out.extend(review_premises(request));
         out.push(PremiseRef {
             subject: "head".to_string(),
             fact: "calibration".to_string(),

@@ -1060,6 +1060,7 @@ mod classes_tests;
 mod route_tests;
 mod tool_subset_tests;
 
+mod er_proposals_tests;
 mod resolve_entity_tests;
 // MEDULLA-DECISION-ENGINE-R157.3, R157.4: the served delegation quality gate.
 mod delegation_quality_tests;

@@ -784,7 +784,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T771 [US8] MEDULLA-DECISION-ENGINE-R705.6 Hot-path proof
 - [ ] T772 [US6] MEDULLA-DECISION-ENGINE-R706.1 Model
 - [ ] T773 [US6] MEDULLA-DECISION-ENGINE-R706.2 Behavior
-- [ ] T774 [US6] MEDULLA-DECISION-ENGINE-R706.3 Wiring
+- [x] T774 [US6] MEDULLA-DECISION-ENGINE-R706.3 Wiring
 - [ ] T775 [US6] MEDULLA-DECISION-ENGINE-R706.4 Refusal
 - [ ] T776 [US6] MEDULLA-DECISION-ENGINE-R706.5 Evidence
 - [ ] T777 [US6] MEDULLA-DECISION-ENGINE-R706.6 Hot-path proof
