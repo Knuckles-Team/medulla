@@ -67,6 +67,7 @@ impl RedbBackend {
                 txn_id,
                 commit,
                 retain_for_parent: false,
+                certificate: None,
                 done,
             })
             .map_err(|_| ())
@@ -76,16 +77,23 @@ impl RedbBackend {
         .map_err(|_| "redb writer thread is gone".to_string())?;
         rx.await
             .map_err(|_| "redb writer dropped xshard_decision_put completion".to_string())?
+            .map(|_| ())
     }
 
     /// Durably write an exact decision that must remain until a separate parent
-    /// receipt has committed.
+    /// receipt has committed. With a `certificate` the terminal value and the
+    /// sealed certificate become durable in one owner transaction, the storage
+    /// writer sets `decided_ms`, and a COMMIT at or after the deadline refuses
+    /// with `CERTIFICATE_EXPIRED` without a terminal write. Returns the outcome
+    /// that is durable afterwards: a replay of a decided transaction returns the
+    /// original outcome.
     #[cfg(feature = "raft")]
     pub async fn xshard_recoverable_decision_put(
         &self,
         txn_id: &str,
         commit: bool,
-    ) -> Result<(), String> {
+        certificate: Option<xshard_certificate::DecisionCertificate>,
+    ) -> Result<bool, String> {
         let (done, rx) = oneshot::channel();
         let txn_id = txn_id.to_string();
         let tx = self.shard0().tx.clone();
@@ -94,6 +102,7 @@ impl RedbBackend {
                 txn_id,
                 commit,
                 retain_for_parent: true,
+                certificate,
                 done,
             })
             .map_err(|_| ())
@@ -105,21 +114,51 @@ impl RedbBackend {
             .map_err(|_| "redb writer dropped recoverable decision completion".to_string())?
     }
 
-    /// Persist the parent-recoverable protocol-start marker before phase 1.
+    /// Persist the parent-recoverable protocol-start marker before phase 1, with
+    /// the certificate request in the same owner transaction when one is given.
     #[cfg(feature = "raft")]
-    pub async fn xshard_recoverable_pending_put(&self, txn_id: &str) -> Result<(), String> {
+    pub async fn xshard_recoverable_pending_put(
+        &self,
+        txn_id: &str,
+        certificate: Option<xshard_certificate::DecisionCertificate>,
+    ) -> Result<(), String> {
         let (done, rx) = oneshot::channel();
         let txn_id = txn_id.to_string();
         let tx = self.shard0().tx.clone();
         tokio::task::spawn_blocking(move || {
-            tx.send(Cmd::XshardRecoverablePendingPut { txn_id, done })
-                .map_err(|_| ())
+            tx.send(Cmd::XshardRecoverablePendingPut {
+                txn_id,
+                certificate,
+                done,
+            })
+            .map_err(|_| ())
         })
         .await
         .map_err(|e| format!("xshard recoverable pending join error: {e}"))?
         .map_err(|_| "redb writer thread is gone".to_string())?;
         rx.await
             .map_err(|_| "redb writer dropped recoverable pending completion".to_string())?
+    }
+
+    /// Read the verified certificate of one transaction (`None` when nothing was
+    /// certified). A terminal decision row with no certificate refuses with
+    /// `CERTIFICATE_LEGACY_ROW`: it is never certified evidence.
+    #[cfg(feature = "raft")]
+    pub fn xshard_certificate_get(
+        &self,
+        txn_id: &str,
+        tenant: &str,
+    ) -> Result<Option<xshard_certificate::DecisionCertificate>, String> {
+        let (reply, rx) = std::sync::mpsc::sync_channel(1);
+        self.shard0()
+            .tx
+            .send(Cmd::XshardCertificateGet {
+                txn_id: txn_id.to_string(),
+                tenant: tenant.to_string(),
+                reply,
+            })
+            .map_err(|_| "redb writer thread is gone".to_string())?;
+        await_writer_reply(&rx, "xshard_certificate_get")?
     }
 
     /// Clear one participant's prepare record after it is resolved.

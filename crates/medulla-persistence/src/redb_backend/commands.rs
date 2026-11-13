@@ -433,16 +433,31 @@ pub enum Cmd {
     },
     /// Durably write the coordinator's DECISION for a cross-shard txn (the atomic
     /// commit point), optionally retained until a separate parent is terminal.
+    /// `certificate` is the request being decided: the writer thread stamps `decided_ms`
+    /// from its own clock, refuses a COMMIT at or after the deadline, and stores the
+    /// sealed certificate with the terminal value in one control write. The reply is
+    /// the outcome that is durable afterwards (a replay returns the original one).
     XshardDecisionPut {
         txn_id: String,
         commit: bool,
         retain_for_parent: bool,
-        done: oneshot::Sender<Result<(), String>>,
+        certificate: Option<super::xshard_certificate::DecisionCertificate>,
+        done: oneshot::Sender<Result<bool, String>>,
     },
-    /// Durably mark the start of a parent-recoverable protocol before phase 1.
+    /// Durably mark the start of a parent-recoverable protocol before phase 1, with the
+    /// certificate request (`decided_ms = 0`) in the same control write.
     XshardRecoverablePendingPut {
         txn_id: String,
+        certificate: Option<super::xshard_certificate::DecisionCertificate>,
         done: oneshot::Sender<Result<(), String>>,
+    },
+    /// Read one transaction's verified decision certificate for `tenant`.
+    XshardCertificateGet {
+        txn_id: String,
+        tenant: String,
+        reply: std::sync::mpsc::SyncSender<
+            Result<Option<super::xshard_certificate::DecisionCertificate>, String>,
+        >,
     },
     /// Clear ONE participant's prepare record after the txn is resolved.
     XshardPrepareClear {

@@ -26,6 +26,7 @@ const MAX_FIELD_BYTES: usize = 4096;
 /// Every refusal code of this module.
 pub const REFUSALS: &[&str] = &[
     "CERTIFICATE_SEAL_INVALID",
+    "CERTIFICATE_EXPIRED",
     "CERTIFICATE_INTENT_CHANGED",
     "CERTIFICATE_LEGACY_ROW",
 ];
@@ -33,10 +34,15 @@ pub const REFUSALS: &[&str] = &[
 /// The request a cross-shard transaction was decided for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecisionCertificate {
+    /// The transaction this certificate belongs to.
     pub txn_id: String,
+    /// The tenant of the verified request.
     pub tenant: String,
+    /// The scope of the coordinator that decides the transaction.
     pub coordinator_scope: String,
+    /// SHA-256 over the request the transaction was decided for.
     pub request_digest: String,
+    /// The time a COMMIT must be decided by (milliseconds since the Unix epoch).
     pub deadline_ms: u64,
     /// Set by the storage writer when the terminal outcome is written; zero
     /// while the transaction is pending.
@@ -110,6 +116,19 @@ impl DecisionCertificate {
         expected_txn_id: &str,
         expected_tenant: &str,
     ) -> Result<DecisionCertificate, String> {
+        let certificate = Self::open(sealed, crypto)?;
+        if certificate.txn_id != expected_txn_id || certificate.tenant != expected_tenant {
+            return Err(invalid(
+                "the certificate belongs to another transaction or tenant",
+            ));
+        }
+        Ok(certificate)
+    }
+
+    /// Unseal and decode `sealed` without naming the transaction or tenant. Recovery
+    /// uses it when it finishes a transaction knowing only its id; the integrity
+    /// digest is still checked.
+    pub fn open(sealed: &[u8], crypto: DurableCrypto<'_>) -> Result<DecisionCertificate, String> {
         let plain = crypto
             .unseal(sealed)
             .map_err(|cause| invalid(&format!("unseal failed: {cause}")))?;
@@ -134,11 +153,6 @@ impl DecisionCertificate {
         };
         if !cursor.bytes.is_empty() {
             return Err(invalid("trailing bytes"));
-        }
-        if certificate.txn_id != expected_txn_id || certificate.tenant != expected_tenant {
-            return Err(invalid(
-                "the certificate belongs to another transaction or tenant",
-            ));
         }
         Ok(certificate)
     }
@@ -203,6 +217,133 @@ pub fn certified_decision(
             )),
         },
     }
+}
+
+/// Milliseconds since the Unix epoch on the storage writer's own clock.
+pub fn writer_now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn existing_certificate(
+    shard: &Shard,
+    crypto: DurableCrypto<'_>,
+    txn_id: &str,
+) -> Result<Option<DecisionCertificate>, String> {
+    medulla_store_apply::redb_store::control::get_xshard_decision_certificate(shard, txn_id)?
+        .map(|sealed| DecisionCertificate::open(&sealed, crypto))
+        .transpose()
+}
+
+fn require_same_request(
+    existing: &DecisionCertificate,
+    wanted: &DecisionCertificate,
+) -> Result<(), String> {
+    if existing.tenant != wanted.tenant || existing.request_digest != wanted.request_digest {
+        return Err(format!(
+            "CERTIFICATE_INTENT_CHANGED: transaction {} was certified for request {}, not {}",
+            wanted.txn_id, existing.request_digest, wanted.request_digest
+        ));
+    }
+    Ok(())
+}
+
+/// Write the protocol-start marker together with the certificate request
+/// (`decided_ms = 0`) in one control write. A transaction that already has a
+/// certificate for the same request keeps it (and its `decided_ms`); another
+/// request refuses with `CERTIFICATE_INTENT_CHANGED` and nothing is written.
+pub fn write_pending(
+    shard: &Shard,
+    crypto: DurableCrypto<'_>,
+    txn_id: &str,
+    certificate: Option<&DecisionCertificate>,
+) -> Result<(), String> {
+    use medulla_store_apply::redb_store::control::put_xshard_recoverable_pending_certified;
+    let Some(wanted) = certificate else {
+        return put_xshard_recoverable_pending_certified(shard, txn_id, None);
+    };
+    match existing_certificate(shard, crypto, txn_id)? {
+        Some(existing) => {
+            require_same_request(&existing, wanted)?;
+            put_xshard_recoverable_pending_certified(shard, txn_id, None)
+        }
+        None => {
+            let pending = DecisionCertificate {
+                decided_ms: 0,
+                ..wanted.clone()
+            };
+            put_xshard_recoverable_pending_certified(shard, txn_id, Some(&pending.seal(crypto)))
+        }
+    }
+}
+
+/// Write the terminal outcome and the certificate in one control write, and
+/// return the outcome that is durable afterwards.
+///
+/// The storage writer sets `decided_ms` from `now_ms`. `certificate` is the
+/// request being decided; `None` adopts the certificate already stored for the
+/// transaction (a recovery that knows only the id) or, with none stored, writes
+/// an ordinary uncertified decision row. A decided transaction is a replay: the
+/// original outcome is returned and nothing changes. A COMMIT at or after the
+/// deadline refuses with `CERTIFICATE_EXPIRED` and writes nothing; an ABORT
+/// never expires. A terminal row with no certificate refuses a certified write
+/// with `CERTIFICATE_LEGACY_ROW`.
+pub fn write_decision(
+    shard: &Shard,
+    crypto: DurableCrypto<'_>,
+    txn_id: &str,
+    commit: bool,
+    retain_for_parent: bool,
+    certificate: Option<&DecisionCertificate>,
+    now_ms: u64,
+) -> Result<bool, String> {
+    use medulla_store_apply::redb_store::control::{
+        get_xshard_decision, put_xshard_decision_certified,
+    };
+    let stored = existing_certificate(shard, crypto, txn_id)?;
+    let decided = get_xshard_decision(shard, txn_id)?;
+    let wanted = match (certificate, &stored) {
+        (Some(wanted), Some(existing)) => {
+            require_same_request(existing, wanted)?;
+            Some(wanted.clone())
+        }
+        (Some(wanted), None) => {
+            if decided.is_some() {
+                return Err(format!(
+                    "CERTIFICATE_LEGACY_ROW: transaction {txn_id} has a terminal decision row \
+                     but no certificate, so it cannot be certified now"
+                ));
+            }
+            Some(wanted.clone())
+        }
+        (None, Some(existing)) => Some(existing.clone()),
+        (None, None) => None,
+    };
+    let Some(wanted) = wanted else {
+        put_xshard_decision_certified(shard, txn_id, commit, retain_for_parent, None)?;
+        return Ok(commit);
+    };
+    if let (Some(outcome), Some(existing)) = (decided, &stored) {
+        if existing.decided_ms != 0 {
+            return Ok(outcome);
+        }
+    }
+    if commit && now_ms >= wanted.deadline_ms {
+        return Err(format!(
+            "CERTIFICATE_EXPIRED: transaction {txn_id} reached COMMIT at {now_ms} ms, at or \
+             after its deadline {} ms",
+            wanted.deadline_ms
+        ));
+    }
+    let sealed = DecisionCertificate {
+        decided_ms: now_ms,
+        ..wanted
+    }
+    .seal(crypto);
+    put_xshard_decision_certified(shard, txn_id, commit, retain_for_parent, Some(&sealed))?;
+    Ok(commit)
 }
 
 #[cfg(test)]
@@ -315,6 +456,7 @@ mod tests {
     fn every_refusal_code_is_registered() {
         for code in [
             "CERTIFICATE_SEAL_INVALID",
+            "CERTIFICATE_EXPIRED",
             "CERTIFICATE_INTENT_CHANGED",
             "CERTIFICATE_LEGACY_ROW",
         ] {

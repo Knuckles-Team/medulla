@@ -119,6 +119,19 @@ pub fn put_xshard_decision(
     commit: bool,
     retain_for_parent: bool,
 ) -> Result<(), String> {
+    put_xshard_decision_certified(shard, txn_id, commit, retain_for_parent, None)
+}
+
+/// [`put_xshard_decision`] that also stores the sealed decision certificate in
+/// the same control write, so the terminal value and its certificate become
+/// durable together or not at all (MEDULLA-DECISION-ENGINE-R036.105.2).
+pub fn put_xshard_decision_certified(
+    shard: &Shard,
+    txn_id: &str,
+    commit: bool,
+    retain_for_parent: bool,
+    sealed_certificate: Option<&[u8]>,
+) -> Result<(), String> {
     let op_id = format!("xshard/decision/{txn_id}");
     control_write!(shard, &op_id, |control| {
         let mut table = control
@@ -136,6 +149,15 @@ pub fn put_xshard_decision(
             .map(|row| row.value());
         let encoded = medulla_transaction::merge_coordinator_decision(current, encoded)?;
         table.insert(txn_id, encoded).map_err(|e| e.to_string())?;
+        drop(table);
+        if let Some(sealed) = sealed_certificate {
+            let mut certificates = control
+                .open_table::<&str, &[u8]>(XSHARD_DECISION_CERTIFICATE)
+                .map_err(|e| e.to_string())?;
+            certificates
+                .insert(txn_id, sealed)
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
     })
 }
@@ -144,6 +166,17 @@ pub fn put_xshard_decision(
 /// 4 is deliberately not COMMIT/ABORT; recovery resolves it by presumed abort
 /// while retaining that outcome until the MutationBatch parent is terminal.
 pub fn put_xshard_recoverable_pending(shard: &Shard, txn_id: &str) -> Result<(), String> {
+    put_xshard_recoverable_pending_certified(shard, txn_id, None)
+}
+
+/// [`put_xshard_recoverable_pending`] that also stores the sealed certificate
+/// request (with `decided_ms = 0`) in the same control write
+/// (MEDULLA-DECISION-ENGINE-R036.105.2).
+pub fn put_xshard_recoverable_pending_certified(
+    shard: &Shard,
+    txn_id: &str,
+    sealed_certificate: Option<&[u8]>,
+) -> Result<(), String> {
     let op_id = format!("xshard/pending/{txn_id}");
     control_write!(shard, &op_id, |control| {
         let mut table = control
@@ -155,6 +188,15 @@ pub fn put_xshard_recoverable_pending(shard: &Shard, txn_id: &str) -> Result<(),
             .map(|row| row.value());
         let encoded = medulla_transaction::merge_coordinator_decision(current, 4)?;
         table.insert(txn_id, encoded).map_err(|e| e.to_string())?;
+        drop(table);
+        if let Some(sealed) = sealed_certificate {
+            let mut certificates = control
+                .open_table::<&str, &[u8]>(XSHARD_DECISION_CERTIFICATE)
+                .map_err(|e| e.to_string())?;
+            certificates
+                .insert(txn_id, sealed)
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
     })
 }

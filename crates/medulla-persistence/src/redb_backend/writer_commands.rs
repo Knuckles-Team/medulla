@@ -600,20 +600,44 @@ macro_rules! writer_command_arms {
             txn_id,
             commit,
             retain_for_parent,
+            certificate,
             done,
         } => {
             flush(pending);
-            let _ = done.send(put_xshard_decision(
+            let _ = done.send(super::xshard_certificate::write_decision(
                 shard,
+                crypto,
                 &txn_id,
                 commit,
                 retain_for_parent,
+                certificate.as_ref(),
+                super::xshard_certificate::writer_now_ms(),
             ));
             false
         }
-        Cmd::XshardRecoverablePendingPut { txn_id, done } => {
+        Cmd::XshardRecoverablePendingPut {
+            txn_id,
+            certificate,
+            done,
+        } => {
             flush(pending);
-            let _ = done.send(put_xshard_recoverable_pending(shard, &txn_id));
+            let _ = done.send(super::xshard_certificate::write_pending(
+                shard,
+                crypto,
+                &txn_id,
+                certificate.as_ref(),
+            ));
+            false
+        }
+        Cmd::XshardCertificateGet {
+            txn_id,
+            tenant,
+            reply,
+        } => {
+            flush(pending);
+            let _ = reply.send(super::xshard_certificate::certified_decision(
+                shard, &txn_id, &tenant, crypto,
+            ));
             false
         }
         Cmd::XshardPrepareClear {

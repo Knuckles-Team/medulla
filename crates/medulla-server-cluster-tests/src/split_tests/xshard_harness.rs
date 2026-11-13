@@ -266,6 +266,8 @@ async fn shutdown_releases_accepted_connection_and_backend_fds_before_reopen() {
 /// A two-graph cross-shard txn inserting `a_node` into shardA and `b_node` into shardB.
 fn two_shard_txn(txn_id: &str, a_node: &str, b_node: &str) -> CrossShardTxn {
     CrossShardTxn {
+        owners: Vec::new(),
+        certificate: None,
         txn_id: txn_id.to_string(),
         slices: vec![
             fixture::add_node_slice(GRAPH_A, a_node, 0, None),
@@ -287,6 +289,8 @@ fn writer_plus_readonly_txn(txn_id: &str, a_node: &str) -> CrossShardTxn {
         fencing_token: None,
     };
     CrossShardTxn {
+        owners: Vec::new(),
+        certificate: None,
         txn_id: txn_id.to_string(),
         slices: vec![writer, read_only],
     }
@@ -319,6 +323,8 @@ async fn span_detection_routes_single_group_to_fast_path() {
 
     // A single-group "cross-shard" call is rejected (use the single-group path).
     let one_group = CrossShardTxn {
+        owners: Vec::new(),
+        certificate: None,
         txn_id: "t-one".into(),
         slices: vec![two_shard_txn("x", "a", "b").slices[0].clone()],
     };
@@ -860,6 +866,8 @@ async fn add_third_group(multi: &Arc<MultiRaft>) {
 /// WRITING participants, so PHASE 1 joins three prepare futures.
 fn three_writer_txn(txn_id: &str, a: &str, b: &str, c: &str) -> CrossShardTxn {
     CrossShardTxn {
+        owners: Vec::new(),
+        certificate: None,
         txn_id: txn_id.to_string(),
         slices: [(GRAPH_A, a), (GRAPH_B, b), (GRAPH_C, c)]
             .into_iter()

@@ -197,6 +197,7 @@ use serde::{Deserialize, Serialize};
 // replicated decision-graph and recovery helpers the commit strategies share, live
 // in this submodule rather than as further items in this already-oversized file --
 // see `commit.rs`'s module doc for why.
+pub mod certificate;
 mod commit;
 mod prepare_record;
 use prepare_record::{decode_prepared_slices, encode_prepared_slices};
@@ -339,6 +340,13 @@ impl GraphSlice {
 pub struct CrossShardTxn {
     pub txn_id: String,
     pub slices: Vec<GraphSlice>,
+    /// Non-graph owners (RBAC, Agent Library) that reserved under this transaction id
+    /// and are resolved with its durable decision (MEDULLA-DECISION-ENGINE-R036.105.2).
+    #[serde(default)]
+    pub owners: Vec<certificate::OwnerParticipant>,
+    /// The request the decision is certified for; required when `owners` is not empty.
+    #[serde(default)]
+    pub certificate: Option<certificate::DecisionCertificateRequest>,
 }
 
 /// The outcome of running the 2PC commit.
@@ -421,6 +429,9 @@ impl CrossShardCoordinator {
         txn: &CrossShardTxn,
     ) -> Result<TxnOutcome, String> {
         let redb = self.redb()?;
+        if let Some(request) = &txn.certificate {
+            certificate::verify_existing(redb, request)?;
+        }
         let mut prepared: BTreeMap<GroupId, Vec<GraphSlice>> = BTreeMap::new();
         for (existing_txn, gid, blob) in redb.xshard_scan_prepares()? {
             if existing_txn == txn.txn_id {
@@ -445,7 +456,7 @@ impl CrossShardCoordinator {
         // before clearing the encrypted prepares so a subsequent parent retry
         // cannot turn it into COMMIT.
         if redb.xshard_decision_retain_get(&txn.txn_id)? || !prepared.is_empty() {
-            redb.xshard_recoverable_decision_put(&txn.txn_id, false)
+            redb.xshard_recoverable_decision_put(&txn.txn_id, false, None)
                 .await?;
             let gids = prepared.keys().copied().collect::<Vec<_>>();
             self.apply_abort(redb, &txn.txn_id, &gids, false).await?;
@@ -466,16 +477,30 @@ impl CrossShardCoordinator {
     ) -> Result<TxnOutcome, String> {
         let redb = self.redb()?;
         let participants = self.participants(txn);
-        if participants.len() < 2 {
+        // An owner participant (RBAC, Agent Library) counts beside the graph groups, so a
+        // transaction with one graph slice and one owner is admitted.
+        if participants.len() + txn.owners.len() < 2 {
             return Err(format!(
                 "commit_cross_shard called for a {}-group txn (use the single-group path)",
                 participants.len()
             ));
         }
+        if !txn.owners.is_empty() && (txn.certificate.is_none() || !retain_decision) {
+            return Err(
+                "a transaction with owner participants needs a decision certificate and the \
+                 recoverable protocol"
+                    .to_string(),
+            );
+        }
+        let certificate = txn
+            .certificate
+            .as_ref()
+            .map(|request| request.certificate());
         if retain_decision {
             // This marker precedes every vote/result.  If the process dies before a
             // decision, restart deterministically converts it to retained ABORT.
-            redb.xshard_recoverable_pending_put(&txn.txn_id).await?;
+            redb.xshard_recoverable_pending_put(&txn.txn_id, certificate.clone())
+                .await?;
         }
 
         // ── MEDULLA-081 READ-ONLY-PARTICIPANT FAST PATH ──────────────────────────────
@@ -509,8 +534,18 @@ impl CrossShardCoordinator {
         // to recover, since no participant applies anything.
         if writing.is_empty() {
             if retain_decision {
-                redb.xshard_recoverable_decision_put(&txn.txn_id, true)
-                    .await?;
+                // An expired COMMIT records ABORT and refuses (R036.105.2).
+                return match certificate::decide_recoverable(
+                    redb,
+                    &txn.txn_id,
+                    true,
+                    certificate.clone(),
+                )
+                .await?
+                {
+                    true => Ok(TxnOutcome::Committed),
+                    false => Ok(TxnOutcome::Aborted),
+                };
             }
             return Ok(TxnOutcome::Committed);
         }
@@ -520,12 +555,22 @@ impl CrossShardCoordinator {
 
         // ── THE ATOMIC COMMIT POINT: durably record the decision ────────────────
         let commit = all_yes && prepared_groups.len() == writing.len();
-        if retain_decision {
-            redb.xshard_recoverable_decision_put(&txn.txn_id, commit)
-                .await?;
+        let commit = if retain_decision {
+            match certificate::decide_recoverable(redb, &txn.txn_id, commit, certificate.clone())
+                .await
+            {
+                Ok(durable) => durable,
+                Err(error) => {
+                    // The expired COMMIT already recorded ABORT: roll the prepares back.
+                    self.apply_abort(redb, &txn.txn_id, &prepared_groups, false)
+                        .await?;
+                    return Err(error);
+                }
+            }
         } else {
             redb.xshard_decision_put(&txn.txn_id, commit).await?;
-        }
+            commit
+        };
 
         // ── PHASE 2: apply the decision (writing participants only) ─────────────
         if commit {
@@ -739,7 +784,8 @@ impl CrossShardCoordinator {
                 None => {
                     tracing::info!("xshard recovery: {txn_id} → ABORT (presumed, no decision)");
                     if retain_for_parent {
-                        redb.xshard_recoverable_decision_put(&txn_id, false).await?;
+                        redb.xshard_recoverable_decision_put(&txn_id, false, None)
+                            .await?;
                     }
                     let gids: Vec<GroupId> = participants.keys().copied().collect();
                     self.apply_abort(redb, &txn_id, &gids, !retain_for_parent)
@@ -2158,6 +2204,8 @@ mod calvin_tests {
         CrossShardTxn {
             txn_id: id.to_string(),
             slices: vec![],
+            owners: Vec::new(),
+            certificate: None,
         }
     }
 

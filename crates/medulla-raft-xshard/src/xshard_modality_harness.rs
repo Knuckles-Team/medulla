@@ -169,6 +169,8 @@ fn fenced_modality_txn(
         fencing_token: None,
     };
     CrossShardTxn {
+        owners: Vec::new(),
+        certificate: None,
         txn_id: txn_id.to_string(),
         slices: vec![graph_slice, rdf_slice],
     }

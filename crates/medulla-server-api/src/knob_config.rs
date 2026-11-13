@@ -300,6 +300,8 @@ knobs! {
     designation_reward_decay: f64 = "designation.reward_decay", F64(0.99), [0.5, 1.0], "factor", Tunable;
     /// Designation required-capability cap.
     designation_max_required_capabilities: u64 = "designation.max_required_capabilities", U64(32), [32, 32], "count", Fixed;
+    /// Time a cross-shard COMMIT decision may wait after its request before it is refused (MEDULLA-DECISION-ENGINE-R036.105.2).
+    xshard_decision_deadline_ms: u64 = "xshard.decision_deadline_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Topology slot width cap.
     topology_max_width: u64 = "topology.max_width", U64(16), [1, 16], "count", Tunable;
     /// Topology depth cap.
@@ -726,4 +728,45 @@ pub fn install(config: KnobConfig) {
 /// The knobs loaded at startup, or the defaults where no loader ran.
 pub fn knobs() -> &'static KnobConfig {
     INSTALLED.get_or_init(KnobConfig::default)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R036.105.2
+    #[test]
+    fn decision_deadline_knob_bounds() {
+        let spec = KNOB_TABLE
+            .iter()
+            .find(|spec| spec.name == "xshard.decision_deadline_ms")
+            .expect("the decision deadline is a registry knob");
+        assert_eq!(spec.default, KnobValue::U64(30_000));
+        assert_eq!(spec.min, KnobValue::U64(1_000));
+        assert_eq!(spec.max, KnobValue::U64(600_000));
+        assert_eq!(spec.unit, "ms");
+        assert_eq!(spec.class, KnobClass::Tunable);
+        let none = |_: &str| None;
+        assert_eq!(
+            load_knobs(&[], none).unwrap().xshard_decision_deadline_ms,
+            30_000
+        );
+        for (value, expected) in [("1000", 1_000), ("600000", 600_000), ("45000", 45_000)] {
+            let args = vec![format!("xshard.decision_deadline_ms={value}")];
+            assert_eq!(
+                load_knobs(&args, none).unwrap().xshard_decision_deadline_ms,
+                expected
+            );
+        }
+        // A value outside the range refuses at startup, naming the knob.
+        for value in ["999", "600001", "0"] {
+            let args = vec![format!("xshard.decision_deadline_ms={value}")];
+            let refusal = load_knobs(&args, none).unwrap_err();
+            assert_eq!(refusal.code, ServerErrorCode::KnobOutOfRange);
+            assert_eq!(refusal.knob, "xshard.decision_deadline_ms");
+        }
+        let refusal =
+            load_knobs(&["xshard.decision_deadline_ms=soon".to_string()], none).unwrap_err();
+        assert_eq!(refusal.code, ServerErrorCode::KnobInvalid);
+    }
 }

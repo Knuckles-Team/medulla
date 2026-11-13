@@ -191,7 +191,7 @@ pub async fn apply_consensus_transaction_decision(
         }
         return Ok(existing);
     }
-    redb.xshard_recoverable_decision_put(coordinator_id, commit)
+    redb.xshard_recoverable_decision_put(coordinator_id, commit, None)
         .await?;
     Ok(commit)
 }

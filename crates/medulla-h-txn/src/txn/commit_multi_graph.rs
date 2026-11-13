@@ -234,6 +234,8 @@ pub(super) async fn commit_cross_shard(
     let xtxn = CrossShardTxn {
         txn_id: cross_shard_transaction_id(coordinator_id),
         slices: x_slices,
+        owners: Vec::new(),
+        certificate: None,
     };
     let result = match coord.commit_cross_shard_recoverable(&xtxn).await {
         Ok(TxnOutcome::Committed) => ResultPayload::Bool(true),

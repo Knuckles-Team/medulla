@@ -42,7 +42,8 @@ impl CrossShardCoordinator {
         for (gid, slices) in read_only {
             if !self.validate_read_only_participant(*gid, slices).await? {
                 if retain_decision {
-                    redb.xshard_recoverable_decision_put(txn_id, false).await?;
+                    redb.xshard_recoverable_decision_put(txn_id, false, None)
+                        .await?;
                 }
                 return Ok(Some(TxnOutcome::Aborted));
             }
