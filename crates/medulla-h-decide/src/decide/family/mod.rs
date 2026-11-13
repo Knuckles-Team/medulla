@@ -83,6 +83,7 @@ mod template;
 mod template_choice;
 mod temporal_basis;
 mod thought_search;
+mod tool_action_admission;
 mod tool_necessity;
 mod tool_relevance;
 mod tool_subset;
@@ -100,6 +101,7 @@ pub(in crate::decide) use resolve_entity::with_candidates;
 pub(in crate::decide) use runtime_quota::quota_view;
 pub(in crate::decide) use skill_evolution::with_skill_embeddings;
 pub(in crate::decide) use support::advisory;
+pub(in crate::decide) use tool_action_admission::admission_view;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -312,6 +314,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         runtime_quota::RuntimeQuotaFamily;
     static PLANNINGADMISSIONFAMILY: planning_admission::PlanningAdmissionFamily =
         planning_admission::PlanningAdmissionFamily;
+    static TOOLACTIONADMISSIONFAMILY: tool_action_admission::ToolActionAdmissionFamily =
+        tool_action_admission::ToolActionAdmissionFamily;
     static A2AROUTEFAMILY: a2a_route::A2aRouteFamily = a2a_route::A2aRouteFamily;
     static PAPERADMISSIONFAMILY: paper_admission::PaperAdmissionFamily =
         paper_admission::PaperAdmissionFamily;
@@ -417,6 +421,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ToolNecessity => &TOOLNECESSITYFAMILY,
         QuestionKind::FeedbackLoop => &FEEDBACKLOOPFAMILY,
         QuestionKind::PlanningAdmission => &PLANNINGADMISSIONFAMILY,
+        QuestionKind::ToolActionAdmission => &TOOLACTIONADMISSIONFAMILY,
         QuestionKind::A2aRoute => &A2AROUTEFAMILY,
         QuestionKind::PaperAdmission => &PAPERADMISSIONFAMILY,
         QuestionKind::HeldItemAdmission => &HELDITEMADMISSIONFAMILY,
@@ -508,6 +513,7 @@ mod tests {
             QuestionKind::ToolNecessity,
             QuestionKind::FeedbackLoop,
             QuestionKind::PlanningAdmission,
+            QuestionKind::ToolActionAdmission,
             QuestionKind::A2aRoute,
             QuestionKind::PaperAdmission,
             QuestionKind::HeldItemAdmission,
@@ -617,7 +623,8 @@ mod tests {
             | QuestionKind::StepVerification
             | QuestionKind::AdversarialAdmission
             | QuestionKind::SkillEvolution
-            | QuestionKind::PlaybookTriage => true,
+            | QuestionKind::PlaybookTriage
+            | QuestionKind::ToolActionAdmission => true,
         };
         assert!(exhaustive);
         kinds

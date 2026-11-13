@@ -225,6 +225,8 @@ pub enum QuestionKind {
     FeedbackLoop,
     /// Whether a plan's features are wired in the architecture (MEDULLA-DECISION-ENGINE-R171). See `decision::planning_admission`.
     PlanningAdmission,
+    /// Whether a tool action that follows content of a recorded trust mark is admitted (MEDULLA-DECISION-ENGINE-R038.2). See `decision::tool_action`.
+    ToolActionAdmission,
     /// The tenant's agent graph an inbound A2A task routes to (MEDULLA-DECISION-ENGINE-R044.2.2). See `decision::a2a_route`.
     A2aRoute,
     /// Staged papers admitted by calibrated relevance to platform goals and graph content (MEDULLA-DECISION-ENGINE-R031.100). See `decision::paper_admission`.

@@ -92,6 +92,7 @@ pub mod task_plan;
 pub mod team_coordination;
 pub mod temporal_query;
 pub mod thought_search;
+pub mod tool_action;
 pub mod tool_necessity;
 pub mod tool_relevance;
 pub mod trace_fix_binding;

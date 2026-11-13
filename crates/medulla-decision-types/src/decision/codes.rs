@@ -516,6 +516,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::process_remediation::REFUSALS,
     ),
     (
+        QuestionKind::ToolActionAdmission,
+        super::tool_action::REFUSALS,
+    ),
+    (
         QuestionKind::InstructionDisclosure,
         super::instruction_disclosure::REFUSALS,
     ),

@@ -164,6 +164,7 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::ResearchNext,
     QuestionKind::FeatureMatch,
     QuestionKind::PlaybookTriage,
+    QuestionKind::ToolActionAdmission,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
@@ -269,6 +270,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ProbeSelection => "probe_selection",
         QuestionKind::SkillEvolution => "skill_evolution",
         QuestionKind::PlaybookTriage => "playbook_triage",
+        QuestionKind::ToolActionAdmission => "tool_action_admission",
     }
 }
 

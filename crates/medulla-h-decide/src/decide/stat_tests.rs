@@ -1087,6 +1087,9 @@ mod context_replacement_tests;
 // MEDULLA-DECISION-ENGINE-R044.2.2: the served A2A routing family.
 mod a2a_route_tests;
 
+// MEDULLA-DECISION-ENGINE-R038.2: the served tool-action admission gate.
+mod tool_action_admission_tests;
+
 // MEDULLA-DECISION-ENGINE-R137.100: relevance-triggered instruction disclosure.
 mod instruction_disclosure_tests;
 
