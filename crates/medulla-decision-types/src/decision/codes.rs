@@ -658,6 +658,7 @@ pub fn registered() -> impl Iterator<Item = RefusalCode> {
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
         .chain(super::transfer::REFUSALS.iter())
+        .chain(super::evidence_stream::REFUSALS.iter())
         .chain(super::importance_penalty::REFUSALS.iter())
         .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
         .chain(super::memory_rewrite::REFUSALS.iter())

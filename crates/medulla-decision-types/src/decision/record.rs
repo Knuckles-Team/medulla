@@ -15,6 +15,7 @@ use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
 use super::primitive::PrimitiveContract;
 use super::request::AssemblyRequest;
+use super::size::{Adequacy, SourceSize};
 use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
@@ -122,6 +123,14 @@ pub struct CandidateFacts {
     /// (MEDULLA-DECISION-ENGINE-R036.100.1). Absent bytes stay unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primitive: Option<PrimitiveContract>,
+    /// How large the component's source artifact is, when it declares a size
+    /// (MEDULLA-DECISION-ENGINE-R014.100.1). Absent bytes stay unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<SourceSize>,
+    /// Whether a recorded evaluation found the component adequate, when one
+    /// did. Absent bytes stay unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adequacy: Option<Adequacy>,
 }
 
 impl CandidateFacts {
@@ -137,6 +146,10 @@ impl CandidateFacts {
     /// premise here is a CLAIM pinned to the exact revision that asserted it.
     pub fn from_entry(entry: &AgentComponentEntry) -> Result<Self, DecisionErrorCode> {
         let bounded = |_| DecisionErrorCode::RecordTooLarge;
+        let size = super::size::size_from_entry(entry)
+            .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
+        let adequacy = super::size::adequacy_from_entry(entry)
+            .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
         Ok(Self {
             component_id: entry.component_id.clone(),
             kind: entry.kind,
@@ -150,9 +163,12 @@ impl CandidateFacts {
                 .map_err(bounded)?,
             requires: BoundedVec::new(sorted(&entry.requires)).map_err(bounded)?,
             facts: entry.facts.clone(),
-            fact_premises: BoundedVec::new(publisher_premises(entry)).map_err(bounded)?,
+            fact_premises: BoundedVec::new(fact_premises(entry, &size, &adequacy))
+                .map_err(bounded)?,
             primitive: PrimitiveContract::from_entry(entry)
                 .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?,
+            size,
+            adequacy,
         })
     }
 
@@ -173,6 +189,33 @@ fn sorted<T: Clone + Ord>(values: &[T]) -> Vec<T> {
 }
 
 /// The claims a component revision makes, each pinned to that revision.
+/// The publisher claims plus the two observations a size or adequacy
+/// declaration rests on (MEDULLA-DECISION-ENGINE-R014.100.1): `source_size` and
+/// `adequacy`, class `Observation`, each naming what measured it.
+fn fact_premises(
+    entry: &AgentComponentEntry,
+    size: &Option<SourceSize>,
+    adequacy: &Option<Adequacy>,
+) -> Vec<PremiseRef> {
+    let mut premises = publisher_premises(entry);
+    let observation = |fact: &str, evaluation_id: String| PremiseRef {
+        subject: entry.component_id.clone(),
+        fact: fact.to_string(),
+        class: PremiseClass::Observation,
+        provenance: PremiseProvenance::Observation { evaluation_id },
+    };
+    if let Some(size) = size {
+        premises.push(observation(
+            "source_size",
+            format!("revision:{}", size.measured_revision),
+        ));
+    }
+    if let Some(adequacy) = adequacy {
+        premises.push(observation("adequacy", adequacy.evaluation_id.clone()));
+    }
+    premises
+}
+
 fn publisher_premises(entry: &AgentComponentEntry) -> Vec<PremiseRef> {
     let asserted = [
         ("classification", !entry.classification.is_empty()),

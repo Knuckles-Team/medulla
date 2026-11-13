@@ -11,6 +11,7 @@ mod primitive;
 mod prompt;
 mod refusal;
 mod routing;
+mod smallest_adequate;
 mod template;
 mod topology;
 mod uniqueness;

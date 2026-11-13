@@ -228,6 +228,7 @@ mod tests {
         all.extend(
             crate::decision::usage::REFUSALS
                 .iter()
+                .chain(crate::decision::evidence_stream::REFUSALS.iter())
                 .chain(crate::decision::reputation::REFUSALS.iter())
                 .chain(crate::decision::transfer::REFUSALS.iter())
                 .chain(crate::decision::importance_penalty::REFUSALS.iter())

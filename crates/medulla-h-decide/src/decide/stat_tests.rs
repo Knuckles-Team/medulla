@@ -1051,6 +1051,8 @@ pub(in crate::decide) mod commit_admission_tests;
 mod retention_tests;
 
 mod log_tests;
+
+mod commit_tests;
 use log_tests::{decision_log_round_trip, fit_from_the_engine_log, log_op};
 #[cfg(all(feature = "blob", feature = "query"))]
 use log_tests::{retention_compacts_and_verifies, retention_retires};

@@ -283,7 +283,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T272 [US4] MEDULLA-DECISION-ENGINE-R100.101.1 Grounded topic coverage
 - [ ] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score
 - [ ] T274 [US4] MEDULLA-DECISION-ENGINE-R100.101.3 Grounded evaluation wiring, scorer isolation and evidence
-- [ ] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
+- [x] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
 - [ ] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
 - [x] T277 [US1] MEDULLA-DECISION-ENGINE-R001.101.1 DecisionFamily trait and registry
 - [ ] T278 [US1] MEDULLA-DECISION-ENGINE-R001.101.2 Route decide_blocking through the registry
@@ -353,6 +353,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T342 [US7] MEDULLA-DECISION-ENGINE-R138.101.2 Family wiring, refusals and evidence
 - [x] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
 - [ ] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
+- [ ] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
+- [x] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
 - [ ] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
 - [ ] T346 [US4] MEDULLA-DECISION-ENGINE-R147.1 Distilled score model
 - [ ] T347 [US4] MEDULLA-DECISION-ENGINE-R147.2 Stored-score ranking kernel
@@ -385,7 +387,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T374 [US4] MEDULLA-DECISION-ENGINE-R151.5 Evidence
 - [x] T375 [US4] MEDULLA-DECISION-ENGINE-R151.6 Hot-path proof
 - [ ] T376 [US7] MEDULLA-DECISION-ENGINE-R139.100 Graph-backed comparative sources with exact revision provenance
-- [ ] T377 [US2] MEDULLA-DECISION-ENGINE-R019.100.1 Evidence-stream references sealed into records
+- [x] T377 [US2] MEDULLA-DECISION-ENGINE-R019.100.1 Evidence-stream references sealed into records
 - [ ] T378 [US2] MEDULLA-DECISION-ENGINE-R019.100.2 Approval receipt checked before commit
 - [ ] T379 [US6] MEDULLA-DECISION-ENGINE-R029.100 Retrieval command config and inference-mode digest binding
 - [ ] T380 [US7] MEDULLA-DECISION-ENGINE-R140.100 Complexity-gated K-trajectory decision

@@ -65,6 +65,10 @@ async fn assemble_for(
             &request,
             medulla_server_api::knob_config::knobs().primitive_max_edges,
         )?;
+        medulla_decision_types::decision::evidence_stream::validate(
+            request.evidence_streams.as_slice(),
+        )
+        .map_err(|refused| refused.message())?;
         let store = state.write().await.ensure_agent_library()?;
         let policy = resolve_policy(&store, &request)?;
         Ok::<_, String>((store, policy))

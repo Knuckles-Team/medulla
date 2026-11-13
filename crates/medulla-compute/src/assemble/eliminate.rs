@@ -43,6 +43,7 @@ const RULES: &[Rule] = &[
     prompt_budget,
     cost_budget,
     latency_budget,
+    adequacy,
 ];
 
 pub(super) fn screen(inputs: &DecisionInputs, currency: Option<&str>) -> Screened {
@@ -165,5 +166,19 @@ fn latency_budget(candidate: &CandidateFacts, rules: &Rules<'_>) -> Option<Viola
             level: ObjectiveLevelKind::DeclaredP95Latency,
         }),
         Declared::Unknown => Some(Violation::UnknownLatencyUnderBudget),
+    }
+}
+
+/// A component an evaluation judged inadequate is never legal; one no
+/// evaluation judged is eliminated only when the request requires adequacy
+/// (MEDULLA-DECISION-ENGINE-R014.100.1).
+fn adequacy(candidate: &CandidateFacts, rules: &Rules<'_>) -> Option<Violation> {
+    match &candidate.adequacy {
+        Some(found) if !found.adequate => Some(Violation::Inadequate),
+        Some(_) => None,
+        None => rules
+            .constraints
+            .require_adequacy
+            .then_some(Violation::UnknownAdequacy),
     }
 }

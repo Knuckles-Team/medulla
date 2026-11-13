@@ -419,6 +419,7 @@ impl<'a> Parser<'a> {
             params: self.typed_params()?,
             max_records: q.max_records,
             belief_as_of: Default::default(),
+            evidence_streams: Default::default(),
         })))
     }
 
@@ -453,6 +454,7 @@ impl<'a> Parser<'a> {
             replacements: BoundedVec::default(),
             assistant_profile_ref: None,
             coding_agent: None,
+            evidence_streams: Default::default(),
         })))
     }
 }

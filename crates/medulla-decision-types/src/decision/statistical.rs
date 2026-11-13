@@ -487,6 +487,10 @@ pub struct DecideRequest {
     /// when empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub belief_as_of: BoundedVec<u64, 8>,
+    /// Evidence streams the decision rests on, referenced and never read
+    /// (MEDULLA-DECISION-ENGINE-R019.100.1). Omitted when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
 }
 
 /// How the feature matrix the decision read is pinned.
@@ -596,6 +600,10 @@ pub struct StatisticalInputs {
     /// The belief slices' stored inputs (EH-297); omitted when none.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub belief_slices: BoundedVec<belief::BeliefSliceInputs, 8>,
+    /// The evidence streams the request referenced; omitted when none, so
+    /// older record bytes and digests are unchanged.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
 }
 
 /// One statistical decision, recorded. Record version 2.

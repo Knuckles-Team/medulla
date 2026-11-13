@@ -87,6 +87,10 @@ async fn serve(
             );
         }
         require_supported_question_kind(request.question.kind)?;
+        medulla_decision_types::decision::evidence_stream::validate(
+            request.evidence_streams.as_slice(),
+        )
+        .map_err(|refused| refused.message())?;
         if request.max_records == Some(0) {
             return Err(refusal(
                 StatisticalErrorCode::ParameterInvalid,
@@ -951,6 +955,7 @@ fn seal(
         },
         exploration: exploration(&sealing, executed),
         belief_slices: bounded(sealing.slices.inputs.clone())?,
+        evidence_streams: sealing.request.evidence_streams.clone(),
     };
     let inputs_digest = digest_text(
         STATISTICAL_INPUTS_DOMAIN,
@@ -978,6 +983,9 @@ fn seal(
         sealing.request,
         executed,
         &sealing.policy.digest,
+    ));
+    premise_list.extend(medulla_decision_types::decision::evidence_stream::premises(
+        sealing.request.evidence_streams.as_slice(),
     ));
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing

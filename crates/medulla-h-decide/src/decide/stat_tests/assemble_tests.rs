@@ -171,6 +171,7 @@ pub(super) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
         replacements: BoundedVec::default(),
         assistant_profile_ref: None,
         coding_agent: None,
+        evidence_streams: Default::default(),
     }
 }
 

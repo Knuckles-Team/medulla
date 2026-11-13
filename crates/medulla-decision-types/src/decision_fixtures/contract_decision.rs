@@ -90,6 +90,7 @@ pub fn assembly_request() -> AssemblyRequest {
         replacements: bounded(Vec::new()),
         assistant_profile_ref: None,
         coding_agent: None,
+        evidence_streams: Default::default(),
     }
 }
 
@@ -182,6 +183,8 @@ pub fn every_violation() -> Vec<Violation> {
         Violation::PrimitiveContract {
             code: "PRIMITIVE_EDGE_MISMATCH".to_string(),
         },
+        Violation::Inadequate,
+        Violation::UnknownAdequacy,
     ]
 }
 
@@ -254,6 +257,8 @@ fn candidate_facts() -> CandidateFacts {
         facts: AgentComponentFacts::Opaque,
         fact_premises: bounded(premises()),
         primitive: None,
+        size: None,
+        adequacy: None,
     }
 }
 

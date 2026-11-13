@@ -84,6 +84,10 @@ pub struct AssemblyConstraints {
     pub modalities_in: BoundedVec<String, 16>,
     #[serde(default)]
     pub modalities_out: BoundedVec<String, 16>,
+    /// A candidate with no adequacy evaluation is eliminated rather than
+    /// assumed adequate (MEDULLA-DECISION-ENGINE-R014.100.1).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_adequacy: bool,
 }
 
 /// What the assembled agent has to be able to do.
@@ -192,6 +196,10 @@ pub struct AssemblyRequest {
     /// (MEDULLA-DECISION-ENGINE-R036.101). Absent when none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coding_agent: Option<super::coding_agent::CodingAgentRequest>,
+    /// Evidence streams the decision rests on, referenced and never read
+    /// (MEDULLA-DECISION-ENGINE-R019.100.1). Omitted when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
 }
 
 /// The answer: always a record, and a graph draft only when one was proved.

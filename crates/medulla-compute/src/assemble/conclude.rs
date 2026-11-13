@@ -276,6 +276,9 @@ fn solved(
             .flat_map(|candidate| candidate.fact_premises.iter().cloned()),
     );
     premises.extend(question.map(Question::premises).unwrap_or_default());
+    premises.extend(medulla_decision_types::decision::evidence_stream::premises(
+        context.inputs.request.evidence_streams.as_slice(),
+    ));
     premises.extend(uniqueness.premises.iter().cloned());
     let topology = question.map(|question| {
         let offset = context.built.vars.len();

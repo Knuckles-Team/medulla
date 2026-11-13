@@ -142,6 +142,11 @@ pub enum Violation {
     PrimitiveContract {
         code: String,
     },
+    /// An evaluation found the component inadequate
+    /// (MEDULLA-DECISION-ENGINE-R014.100.1).
+    Inadequate,
+    /// The request requires adequacy and no evaluation judged this component.
+    UnknownAdequacy,
 }
 
 /// One eliminated candidate and the rule that removed it.

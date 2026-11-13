@@ -70,6 +70,7 @@ fn declared_request(
         params: BoundedVec::new(params).unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 
@@ -166,6 +167,7 @@ pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
         .unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
+        evidence_streams: Default::default(),
     }
 }
 

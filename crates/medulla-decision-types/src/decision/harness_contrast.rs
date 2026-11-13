@@ -1120,6 +1120,7 @@ mod tests {
             exploration: None,
             belief_slices: BoundedVec::new(Vec::new()).unwrap(),
             harness_contrast: Some(decision.clone()),
+            evidence_streams: Default::default(),
         };
         let inputs_digest = digest_text(INPUTS_DOMAIN, &(question.clone(), &inputs));
         let outcome = match &decision.adopted_version_ref {

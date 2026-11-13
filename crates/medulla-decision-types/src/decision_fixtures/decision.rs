@@ -35,6 +35,8 @@ pub fn published_candidate(
         facts: AgentComponentFacts::Opaque,
         fact_premises: BoundedVec::default(),
         primitive: None,
+        size: None,
+        adequacy: None,
     }
 }
 
