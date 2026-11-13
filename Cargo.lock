@@ -5408,6 +5408,7 @@ dependencies = [
  "medulla-persistence",
  "medulla-persistence-records",
  "medulla-plan",
+ "medulla-program",
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-raft-xshard",

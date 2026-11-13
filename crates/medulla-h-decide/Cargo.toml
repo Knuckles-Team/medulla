@@ -129,5 +129,6 @@ medulla-server-blob = { path = "../medulla-server-blob", features = ["test-suppo
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-program = { path = "../medulla-program" }
 medulla-uql = { path = "../medulla-uql", features = ["query"] }
 tempfile = "3"

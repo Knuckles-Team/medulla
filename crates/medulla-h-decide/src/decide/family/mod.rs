@@ -14,7 +14,7 @@ mod capability_designation;
 mod changeset_review;
 mod classify;
 mod command_config;
-mod comparative_analysis_plan;
+pub(in crate::decide) mod comparative_analysis;
 mod connector_event_triage;
 mod connector_tool_choice;
 mod connector_write_back;
@@ -250,8 +250,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         edit_concentration::EditConcentrationFamily;
     static THOUGHTSEARCHFAMILY: thought_search::ThoughtSearchFamily =
         thought_search::ThoughtSearchFamily;
-    static COMPARATIVEANALYSISPLANFAMILY: comparative_analysis_plan::ComparativeAnalysisPlanFamily =
-        comparative_analysis_plan::ComparativeAnalysisPlanFamily;
+    static COMPARATIVEANALYSISPLANFAMILY: comparative_analysis::ComparativeAnalysisPlanFamily =
+        comparative_analysis::ComparativeAnalysisPlanFamily;
     static CONTEXTPACKAGEFAMILY: context_package::ContextPackageFamily =
         context_package::ContextPackageFamily;
     static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;

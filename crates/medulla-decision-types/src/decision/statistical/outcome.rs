@@ -146,6 +146,9 @@ pub enum FamilyAnswer {
     /// The expansion choice or stop of the `thought_search` family
     /// (MEDULLA-DECISION-ENGINE-R750.754).
     ThoughtSearch(Box<crate::decision::thought_search::ThoughtSearchAnswer>),
+    /// The budgeted plan of the `comparative_analysis_plan` family
+    /// (MEDULLA-DECISION-ENGINE-R139.3).
+    ComparativeAnalysis(Box<crate::decision::comparative_analysis::ComparativeAnalysisPlan>),
 }
 
 impl FamilyAnswer {
@@ -153,7 +156,7 @@ impl FamilyAnswer {
     pub fn task_plan(&self) -> Option<&crate::decision::task_plan::TaskPlan> {
         match self {
             Self::TaskPlan(plan) => Some(plan),
-            Self::Topology(_) | Self::ThoughtSearch(_) => None,
+            Self::Topology(_) | Self::ThoughtSearch(_) | Self::ComparativeAnalysis(_) => None,
         }
     }
 
@@ -161,7 +164,7 @@ impl FamilyAnswer {
     pub fn topology_plan(&self) -> Option<&medulla_agent_types::agent_topology::TopologyPlan> {
         match self {
             Self::Topology(plan) => Some(plan),
-            Self::TaskPlan(_) | Self::ThoughtSearch(_) => None,
+            Self::TaskPlan(_) | Self::ThoughtSearch(_) | Self::ComparativeAnalysis(_) => None,
         }
     }
 
@@ -169,7 +172,17 @@ impl FamilyAnswer {
     pub fn thought_search(&self) -> Option<&crate::decision::thought_search::ThoughtSearchAnswer> {
         match self {
             Self::ThoughtSearch(answer) => Some(answer),
-            Self::TaskPlan(_) | Self::Topology(_) => None,
+            Self::TaskPlan(_) | Self::Topology(_) | Self::ComparativeAnalysis(_) => None,
+        }
+    }
+
+    /// The comparative-analysis plan this answer carries.
+    pub fn comparative_analysis_plan(
+        &self,
+    ) -> Option<&crate::decision::comparative_analysis::ComparativeAnalysisPlan> {
+        match self {
+            Self::ComparativeAnalysis(plan) => Some(plan),
+            Self::TaskPlan(_) | Self::Topology(_) | Self::ThoughtSearch(_) => None,
         }
     }
 }

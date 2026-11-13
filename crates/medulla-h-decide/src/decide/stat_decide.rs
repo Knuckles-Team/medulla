@@ -258,6 +258,13 @@ pub(super) fn decide_blocking(
         let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
         Ok::<_, String>((pinned, policy))
     })?;
+    let comparative = super::family::comparative_analysis::plan(
+        request,
+        &candidates.entries,
+        ctx.tenant_id,
+        &policy.policy,
+        &policy.digest,
+    )?;
     let reader = LogReader {
         tenant_id: ctx.tenant_id.to_string(),
         principal: principal.clone(),
@@ -330,6 +337,7 @@ pub(super) fn decide_blocking(
             &executed,
             nl,
             task_plan,
+            comparative,
         )
     })?;
     let batch = telemetry::stage(Stage::Conclude, family, tenant, || {
@@ -670,6 +678,9 @@ fn seal(
     executed: &Executed,
     nl: Option<NlBinding>,
     task_plan: Option<super::stat_task_plan::Planned>,
+    comparative: Option<
+        medulla_decision_types::decision::comparative_analysis::ComparativeAnalysisPlan,
+    >,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
         harness_evaluation: None,
@@ -758,6 +769,13 @@ fn seal(
                 medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
                     Box::new(plan),
                 )
+            })
+            .or_else(|| {
+                comparative.map(|plan| {
+                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ComparativeAnalysis(
+                        Box::new(plan),
+                    )
+                })
             })
             .or_else(|| {
                 executed.thought.as_ref().map(|thought| {

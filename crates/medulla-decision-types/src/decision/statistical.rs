@@ -367,6 +367,9 @@ pub enum TypedValue {
     DelegationAdmission(super::delegation::DelegationAdmissionRequest),
     /// Pairwise caller claims over answer candidates (MEDULLA-DECISION-ENGINE-R134.106).
     AnswerRanking(Box<super::answer_ranking_request::AnswerRankingRequest>),
+    /// The ranked candidates of one unified query to budget a comparative
+    /// analysis over (MEDULLA-DECISION-ENGINE-R139.3).
+    ComparativeAnalysis(Box<super::comparative_analysis::ComparativeAnalysisRequest>),
 }
 
 /// One named parameter of a question.
@@ -549,6 +552,16 @@ impl StatisticalDecisionRecord {
         self.answer
             .as_ref()
             .and_then(outcome::FamilyAnswer::task_plan)
+    }
+
+    /// The comparative-analysis plan the `comparative_analysis_plan` family
+    /// answered, if any.
+    pub fn comparative_analysis_plan(
+        &self,
+    ) -> Option<&super::comparative_analysis::ComparativeAnalysisPlan> {
+        self.answer
+            .as_ref()
+            .and_then(outcome::FamilyAnswer::comparative_analysis_plan)
     }
 
     /// The validating constructor; see [`super::DecisionRecord::checked`].
