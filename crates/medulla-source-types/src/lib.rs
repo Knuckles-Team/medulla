@@ -28,6 +28,9 @@ pub mod standards_drift;
 // planned query's rows and premises.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod supply_chain_report;
+// MEDULLA-CQ-XSRC-R008.4 — the typed report of the three cross-source questions.
+#[allow(missing_docs)]
+pub mod cross_source_report;
 // MEDULLA-DURABLE-KERNEL-R011 — the required pre-merge test-module category
 // (raft/backup/persistence) and a validated declaration within one.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

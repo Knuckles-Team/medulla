@@ -583,6 +583,9 @@ closed_error_codes! {
         SchemaIncompatible => "SCHEMA_INCOMPATIBLE",
         UnsupportedTableLayout => "UNSUPPORTED_TABLE_LAYOUT",
         TurtleInvalid => "TURTLE_INVALID",
+        // MEDULLA-CQ-XSRC-R008.4: the CrossSourceQuestion refusals.
+        CqXsrcItemWithoutSource => "CQ_XSRC_ITEM_WITHOUT_SOURCE",
+        CqXsrcUnknownQuestion => "CQ_XSRC_UNKNOWN_QUESTION",
         ReadbackDenied => "READBACK_DENIED",
         ReadbackMismatch => "READBACK_MISMATCH",
         ReadbackPartial => "READBACK_PARTIAL",

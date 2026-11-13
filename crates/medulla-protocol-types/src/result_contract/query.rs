@@ -74,6 +74,8 @@ method_results! {
     ResolveViewportSelection(ResolveViewportSelection) => Raw<medulla_types::viewport::ResolvedSelection>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
+    // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.
+    CrossSourceQuestion(CrossSourceQuestion) => Raw<medulla_source_types::cross_source_report::CrossSourceReport>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
     CatalogUsage(CatalogUsage) => Raw<medulla_types::asset_usage::CatalogUsageAnswer>;
     #[cfg(feature = "query")]

@@ -80,6 +80,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `Impact` reads the stored `Column` edges of the core `read_authority.project_core`
     // projected (MEDULLA-UNIFIED-DATA-PLANE-R763.3); the other two ops read no graph row.
     "ColumnLineage",
+    // MEDULLA-CQ-XSRC-R008.4: `cross_source_question::items_of` keeps only the nodes
+    // `read_authority.node_visible` admits; the authority rows are schema sources, not rows.
+    "CrossSourceQuestion",
     "ComputeSimilarityEdges",
     "ConnectedComponents",
     "ContextFacts",

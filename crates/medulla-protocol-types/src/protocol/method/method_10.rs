@@ -207,6 +207,13 @@ $($variants)*
     ColumnLineage {
         op: Box<medulla_catalog_types::lineage::ColumnLineageOp>,
     },
+    /// MEDULLA-CQ-XSRC-R008.4: answer one cross-source competency question
+    /// (`exposed_services`, `host_limit_capabilities`, `contract_incidents`).
+    /// Sources come only from the graph's `vg:SourceAuthority` rows. An unknown
+    /// question name refuses `CQ_XSRC_UNKNOWN_QUESTION`. Reads, commits nothing.
+    CrossSourceQuestion {
+        question: String,
+    },
     /// MEDULLA-UNIFIED-DATA-PLANE-R764.8: the frequent users of one asset and the joins and
     /// filters common on it, from usage the engine recorded itself. Read only. Refuses
     /// `CATALOG_ASSET_NOT_FOUND` (also for an asset the caller cannot read) and

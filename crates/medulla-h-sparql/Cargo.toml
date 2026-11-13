@@ -32,6 +32,8 @@ medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-reasoner = { path = "../medulla-reasoner", features = ["owl"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-source-types = { path = "../medulla-source-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }

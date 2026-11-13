@@ -322,6 +322,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ExplainProvenance { .. }
         | Method::ExplainPlan { .. }
         | Method::ColumnLineage { .. }
+        | Method::CrossSourceQuestion { .. }
         | Method::CatalogUsage { .. }
         | Method::ExplainPolicy { .. } => default_mutation_domain(surface),
         // Wire-unconditional, same reason as `datascience` above: `full` does not

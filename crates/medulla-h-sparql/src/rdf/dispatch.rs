@@ -25,6 +25,15 @@ pub async fn try_handle(
         caller,
     } = ctx;
 
+    // MEDULLA-CQ-XSRC-R008.4: plans over the graph's authority rows; writes nothing.
+    if let Method::CrossSourceQuestion { question } = &method {
+        return Ok(crate::cross_source_question::handle(
+            req_id,
+            &core,
+            read_authority,
+            question,
+        ));
+    }
     if let Some(response) =
         try_handle_rdf(state, req_id, graph_name, read_authority, &core, &method).await
     {

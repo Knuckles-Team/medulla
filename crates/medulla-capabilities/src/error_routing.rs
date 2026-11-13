@@ -302,6 +302,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "DataPrepDeclarationRead",
         &["DATA_PREP_DECLARATION_INVALID", "INGEST_TENANT_MISMATCH"],
     ),
+    // MEDULLA-CQ-XSRC-R008.4.
+    (
+        "CrossSourceQuestion",
+        &["CQ_XSRC_ITEM_WITHOUT_SOURCE", "CQ_XSRC_UNKNOWN_QUESTION"],
+    ),
     // MEDULLA-REPO-INGEST-R002.100.
     (
         "VerifyIngestReadback",
