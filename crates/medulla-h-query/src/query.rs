@@ -170,6 +170,10 @@ pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]
 pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]
+mod retrieval_round;
+#[cfg(feature = "query")]
+pub(crate) use retrieval_round::handle_retrieval_round;
+#[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;
 pub(crate) use explain_handlers::*;

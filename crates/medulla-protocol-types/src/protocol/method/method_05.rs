@@ -619,6 +619,14 @@ $($variants)*
     ContextCompile {
         request: Box<medulla_decision_types::decision::context_bundle::ContextBundleRequest>,
     },
+
+    /// MEDULLA-FEDERATED-QUERY-R081.11: run one retrieval round. Executes the
+    /// request's plan over the caller's row-projected snapshot, then the decision
+    /// parts the request carries; a read, nothing is committed.
+    #[cfg(feature = "query")]
+    RetrievalRound {
+        request: Box<medulla_result_types::retrieval_round::RoundRequest>,
+    },
         ]);
     };
 }

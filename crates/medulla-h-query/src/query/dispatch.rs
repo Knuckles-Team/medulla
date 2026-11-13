@@ -104,6 +104,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R081.11: one retrieval round over the caller's projected snapshot.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::RetrievalRound { request } => {
+            return Ok(handle_retrieval_round(hctx, *request).await)
+        }
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;

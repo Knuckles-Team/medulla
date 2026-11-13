@@ -70,6 +70,12 @@ pub mod freshness_router;
 // expansion, hub ranking) and symptom diagnosis kernels.
 #[cfg(feature = "query")]
 pub mod code_context;
+// MEDULLA-FEDERATED-QUERY-R081.11 / R081.3: one served retrieval round.
+#[cfg(feature = "query")]
+pub mod retrieval_round;
+// MEDULLA-FEDERATED-QUERY-R082.2: the retrieval stop rule.
+#[cfg(feature = "query")]
+pub mod retrieval_stop;
 // MEDULLA-FEDERATED-QUERY-R650.1: context bundle model and certified compile.
 pub mod context_bundle;
 // MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.

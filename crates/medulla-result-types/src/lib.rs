@@ -56,6 +56,10 @@ pub mod argument_map;
 // hierarchy contracts (incl. the R081.9.7.1 section hierarchy policy); the deciding functions live in `medulla_plan::retrieval_verdict`.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retrieval_verdict;
+// MEDULLA-FEDERATED-QUERY-R081.11 / R082.1 — the served retrieval round's request and result.
+#[cfg(feature = "query")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod retrieval_round;
 // MEDULLA-FEDERATED-QUERY-R085.1 — approved, read-only source query records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_query;

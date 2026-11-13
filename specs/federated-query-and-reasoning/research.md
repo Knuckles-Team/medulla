@@ -83,3 +83,11 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - `as_of` is accepted only at the served revision; the engine keeps no older read view, so any other value is `INVALID_ARGUMENT` rather than a silent read of the current state.
 - A hit whose node declares `access_mode = checked_at_read` goes through `filter_hits` before any fusion. With no registered port the check is unavailable and the hit is dropped, listed in `evidence.unchecked_dropped` and excluded as `denied`. A bundle that needed any such check is never cached.
 - The served answer is cached under the caller-scoped hash of the `BundleKey`, invalidated by graph version; the policy digest in the key is the caller-scoped hash, so two callers with different visibility never share a bundle.
+
+## Served retrieval round decisions (R081.11, R081.3, R082.1, R082.2)
+
+- The round's request and result records live in `medulla-result-types`, not `medulla-types`: the parts embed `CalibrationTable`, `SufficiencyVerdict` and the other decision contracts, which sit above `medulla-types`. One definition, no mirror.
+- A part joins `RoundRequest` with the row that serves it. The sufficiency part ships with R081.3; the other parts join with their wiring rows. No part exists in the request before something runs it, so no part can be accepted and ignored.
+- `run_round` takes the `PlanCtx` the handler binds, so the plan runs on the same row-level-security snapshot, tenant narrowing and legs as `UnifiedQuery`. The method writes and caches nothing.
+- A caller's round limit may lower the knob value and never raise it, for sufficiency as for stop.
+- `decide_stop` stays pure: the two progress checks arrive as a measured `RoundProgress` built by `round_progress`, and apply only when the context says the round supplied measured evidence. A confidence below the calibrated baseline reports margin 0 so the verdict stays in [0, 1].

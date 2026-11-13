@@ -60,6 +60,9 @@ method_results! {
     Uql(Uql) => Raw<medulla_types::wire::UqlResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R763.2: column edges and gaps of one SQL query.
     // MEDULLA-FEDERATED-QUERY-R650.3: the compiled context bundle with its certificate.
+    // MEDULLA-FEDERATED-QUERY-R081.11: the rows and verdicts of one retrieval round.
+    #[cfg(feature = "query")]
+    RetrievalRound(RetrievalRound) => Json<medulla_result_types::retrieval_round::RoundResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     #[cfg(feature = "query")]

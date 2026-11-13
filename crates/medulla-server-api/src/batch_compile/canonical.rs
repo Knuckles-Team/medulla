@@ -614,6 +614,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FindCycle
         | Method::Discover { .. }
         | Method::ContextCompile { .. }
+        | Method::RetrievalRound { .. }
         | Method::CompactNodesByType { .. }
         | Method::CreateChannel { .. }
         | Method::FinanceKyleLambda { .. }

@@ -405,6 +405,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CONTEXT_SCOPE_FOREIGN",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R081.11: a round refuses a malformed part and the
+    // sufficiency step refuses a missing round limit with its typed code.
+    (
+        "RetrievalRound",
+        &["RETRIEVAL_CONTRACT_INVALID", "RETRIEVAL_ROUND_LIMIT_REQUIRED"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: an empty provenance list or an unresolved key.

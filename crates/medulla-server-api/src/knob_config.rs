@@ -219,6 +219,18 @@ knobs! {
     context_value_floor_micro_per_token: u64 = "context.value_floor_micro_per_token", U64(0), [0, 1_000_000], "micro-units", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
+    /// Retrieval round: fewest rows a sufficiency verdict accepts.
+    retrieval_min_evidence: u64 = "retrieval.min_evidence", U64(3), [1, 64], "rows", Tunable;
+    /// Retrieval round: most rounds one retrieval loop may run.
+    retrieval_round_limit: u64 = "retrieval.round_limit", U64(4), [1, 16], "rounds", Tunable;
+    /// Retrieval round: most tokens one retrieval loop may use.
+    retrieval_token_limit: u64 = "retrieval.token_limit", U64(32_000), [1000, 1_000_000], "tokens", Tunable;
+    /// Retrieval round: most inference calls one retrieval loop may make.
+    retrieval_inference_limit: u64 = "retrieval.inference_limit", U64(8), [1, 64], "calls", Tunable;
+    /// Retrieval round: most cost one retrieval loop may incur.
+    retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
+    /// Retrieval round: score change below which quality has saturated.
+    retrieval_saturation_epsilon: f64 = "retrieval.saturation_epsilon", F64(0.01), [0.0, 0.2], "score", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

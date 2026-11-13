@@ -7006,6 +7006,39 @@ class GraphOperationsClient:
             raise RuntimeError("ContextCompile must answer with an object")
         return result
 
+    async def retrieval_round(
+        self,
+        plan: dict[str, Any],
+        *,
+        corpus_revision: str,
+        model_revision: str,
+        sufficiency: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Run one retrieval round (MEDULLA-FEDERATED-QUERY-R081.11).
+
+        ``plan`` is the plan object the ``UnifiedQuery`` method takes. Returns
+        ``{rows, sufficiency?}``: the executed rows and one verdict per requested
+        part. ``sufficiency`` is ``{round, round_limit, k, fallback_mode,
+        fallback}``; without ``round_limit`` the part is refused
+        ``RETRIEVAL_ROUND_LIMIT_REQUIRED``, and an empty revision is refused
+        ``RETRIEVAL_CONTRACT_INVALID``. The method writes nothing.
+        """
+        request: dict[str, Any] = {
+            "plan": plan,
+            "corpus_revision": corpus_revision,
+            "model_revision": model_revision,
+        }
+        if sufficiency is not None:
+            request["sufficiency"] = sufficiency
+        result = await self._client._send(
+            "RetrievalRound", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("RetrievalRound must answer with an object")
+        return result
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.
