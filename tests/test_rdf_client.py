@@ -78,7 +78,9 @@ async def test_validate_committed_sends_typed_triples_without_shapes() -> None:
     [(method, params)] = fake.sent
     assert method == "ShaclValidate"
     assert "shapes" not in (params or {})
-    assert (params or {})["data_triples"][0]["subject"] == "https://knuckles-team.github.io/ontology/core#a"
+    assert (params or {})["data_triples"][0][
+        "subject"
+    ] == "https://knuckles-team.github.io/ontology/core#a"
 
 
 @pytest.mark.asyncio

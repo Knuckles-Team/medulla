@@ -119,7 +119,7 @@ mod tests {
         assert!(matches!(two, Err(LineageError::Parse(_))));
         let none = parse_one_statement("", SqlDialect::MySql);
         assert!(matches!(none, Err(LineageError::Parse(_))));
-        let junk = parse_one_statement("SELEKT nope", SqlDialect::MySql);
+        let junk = parse_one_statement("FROBNICATE nope", SqlDialect::MySql);
         assert!(matches!(junk, Err(LineageError::Parse(_))));
     }
 

@@ -162,6 +162,7 @@ mod tests {
     const DIRECT: &str = "\nfn seed(db: &redb::Database) {\n    let write = db.begin_write().unwrap();\n    // write.open_table(COMMENTED) is not a call\n    write.open_table(TABLE).unwrap();\n}\n";
     const READER: &str = "fn r(db: &redb::Database) {\n    let read = db.begin_read().unwrap();\n    read.open_table(T);\n}\n";
 
+    // spec: MEDULLA-DURABLE-KERNEL-R043.102
     #[test]
     fn direct_write_is_reported_and_allowlist_needs_reason() {
         let tree = Tree::new(&[

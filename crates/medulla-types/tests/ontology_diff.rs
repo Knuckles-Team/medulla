@@ -2,6 +2,7 @@ use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
 use medulla_types::contract::ResourceId;
 use medulla_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiff};
 
+// spec: MEDULLA-TYPED-PACKS-R804.1
 #[test]
 fn diff_round_trips() {
     let diff = OntologyDiff {

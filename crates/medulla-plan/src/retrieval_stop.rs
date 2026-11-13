@@ -164,6 +164,7 @@ mod tests {
         quality_saturated: false,
     };
 
+    // spec: MEDULLA-FEDERATED-QUERY-R082.2
     #[test]
     fn repeat_and_margin_stops() {
         let t = table();

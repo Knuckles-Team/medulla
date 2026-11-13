@@ -2141,6 +2141,7 @@ components:
       - "crates/medulla-jobs/benches"
       - "crates/medulla-jobs/tests"
       - "crates/medulla-statechart/tests"
+      - "tests/jobs/test_schedule_ownership_served.py"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -2784,6 +2785,18 @@ components:
       - "crates/medulla-plan/benches"
       - "tests/nl_query_bounded_steps.rs"
       - "tests/plan_scope_tenant.rs"
+      - "tests/nl_query_grounding.rs"
+      - "tests/retrieval/_round_served.py"
+      - "tests/retrieval/test_adaptive_selection_served.py"
+      - "tests/retrieval/test_chunk_encoding_served.py"
+      - "tests/retrieval/test_context_compile_served.py"
+      - "tests/retrieval/test_corpus_retrieve_served.py"
+      - "tests/retrieval/test_discover_planning_served.py"
+      - "tests/retrieval/test_hierarchy_served.py"
+      - "tests/retrieval/test_rerank_served.py"
+      - "tests/retrieval/test_round_client.py"
+      - "tests/retrieval/test_section_tree_served.py"
+      - "tests/retrieval_round_served.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -2941,6 +2954,7 @@ components:
       - "crates/medulla-rdf/tests"
       - "crates/medulla-shacl/tests"
       - "crates/medulla-shex/tests"
+      - "tests/reasoning/test_aif_dung_served.py"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -3320,6 +3334,9 @@ components:
     test_roots:
       - "crates/medulla-viz-kernels/tests"
       - "crates/medulla-viz-kernels/benches"
+      - "tests/served_viewport_bins.rs"
+      - "tests/test_viewport_client.py"
+      - "tests/viewport_served.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -4211,6 +4228,18 @@ components:
       - "tests/worker_registry_served.rs"
       - "benches"
       - "examples"
+      - "tests/attached_mysql_served.rs"
+      - "tests/bench_claim_cli.rs"
+      - "tests/finance_numeric_evaluate_served.rs"
+      - "tests/identity/test_credential_observe_served.py"
+      - "tests/identity/test_tenant_scope_served.py"
+      - "tests/identity/test_typed_metadata_served.py"
+      - "tests/orchestration/test_harness_metrics_served.py"
+      - "tests/test_code_map_served.py"
+      - "tests/test_ingest_readback_served.py"
+      - "tests/test_sdlc_release_served.py"
+      - "tests/test_sql_compat_conformance.py"
+      - "tests/typed_packs/test_connector_surface_rdf_served.py"
     generated_roots: []
     shared_roots: []
     shared_files: []

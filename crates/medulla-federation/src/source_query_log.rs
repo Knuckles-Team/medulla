@@ -442,7 +442,7 @@ mod tests {
              WHERE o.status = $1 AND c.region = $2",
         );
         let plain = entry("bob", "SELECT id FROM public.orders WHERE total > $1");
-        let junk = entry("bob", "SELEKT nope");
+        let junk = entry("bob", "FROBNICATE nope");
         let ddl = entry("bob", "CREATE TABLE public.t (id int)");
         let catalog = entry("bob", "SELECT * FROM pg_stat_statements");
         let all = [

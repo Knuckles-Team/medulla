@@ -82,6 +82,7 @@ def _live_postgres() -> tuple[str, Any]:
         pytest.skip(
             "MEDULLA_TEST_PG_DSN is not set: the nightly lane runs the live source"
         )
+    assert dsn is not None  # pytest.skip above never returns
     return dsn, psycopg
 
 

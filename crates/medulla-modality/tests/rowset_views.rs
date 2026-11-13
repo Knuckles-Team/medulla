@@ -46,6 +46,7 @@ fn sample(modality: PlanModality) -> Box<dyn ModalityContract> {
     }
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R721.1
 #[test]
 fn seven_modalities_implement_contract() {
     assert_eq!(

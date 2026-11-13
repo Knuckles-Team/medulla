@@ -20,6 +20,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -162,7 +163,7 @@ def web_gateway() -> Iterator[WebGateway]:
             known = body.get("server") == WEB_SERVER and body.get("tool") == WEB_TOOL
             op = body["op"]
             if op == "declared_arguments":
-                reply = {
+                reply: dict[str, Any] = {
                     "arguments": (
                         ["query", "categories", "engines", "language", "pageno"]
                         if known

@@ -509,6 +509,7 @@ mod tests {
         .unwrap()
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R652.2
     #[test]
     fn bm25_order_and_interpolation() {
         let docs = [
@@ -547,6 +548,7 @@ mod tests {
         assert_eq!(hits[0].node_id, "a");
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R652.2
     #[test]
     fn calibration_is_monotone() {
         let curve = curve();

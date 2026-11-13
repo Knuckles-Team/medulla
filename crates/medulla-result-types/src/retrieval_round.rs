@@ -395,6 +395,7 @@ mod tests {
         cost_limit: 1_000_000,
     };
 
+    // spec: MEDULLA-FEDERATED-QUERY-R082.1
     #[test]
     fn stop_request_round_trips_and_caller_cannot_raise_limits() {
         let mut stop = request();

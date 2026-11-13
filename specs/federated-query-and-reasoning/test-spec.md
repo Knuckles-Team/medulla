@@ -722,7 +722,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R081.9.6` | `tests/retrieval/test_hierarchy_served.py::test_descent_and_budget_refusals` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.9.6` | `tests/retrieval_round_served.rs::community_descent_returns_entities_with_receipt` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R082` | `tests/retrieval_round_served.rs::stop_precedence_follows_the_declared_order` | L3 |
-| `MEDULLA-FEDERATED-QUERY-R082.1` | `crates/medulla-types/src/retrieval_round.rs::tests::stop_request_round_trips_and_caller_cannot_raise_limits` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R082.1` | `crates/medulla-result-types/src/retrieval_round.rs::tests::stop_request_round_trips_and_caller_cannot_raise_limits` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R082.2` | `crates/medulla-plan/src/retrieval_stop.rs::tests::repeat_and_margin_stops` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R082.3` | `tests/retrieval_round_served.rs::stop_precedence_follows_the_declared_order` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R082.4` | `tests/retrieval_round_served.rs::uncalibrated_rounds_keep_the_refusal_marker` | L3 |
@@ -886,8 +886,8 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R608.5:** `tests/reasoning/test_rules_causal_served.py::test_evidence_after_success_and_bound` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R608.6:** `tests/reasoning/test_rules_causal_served.py::test_bounded_rules_and_causal_verdict` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-reasoner --bench rule_fixpoint meets the key.
 - **MEDULLA-FEDERATED-QUERY-R650:** `tests/retrieval/test_context_compile_served.py::test_bundle_end_to_end` (planned). Context bundle compilation under a certified token budget (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R650.1:** `crates/medulla-plan/src/context_bundle.rs::tests::bundle_types_round_trip_and_reject_unknown_reason` (planned). Model. The Python client passes the same Rust vector.
-- **MEDULLA-FEDERATED-QUERY-R650.2:** `crates/medulla-plan/src/context_bundle.rs::tests::cut_select_and_exclusion_reasons` (planned), `crates/medulla-plan/src/context_bundle.rs::tests::result_is_deterministic_across_thread_counts` (planned). Behavior: fuse, cut and select. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R650.1:** `crates/medulla-plan/src/context_bundle/tests.rs::bundle_types_round_trip_and_reject_unknown_reason` (planned). Model. The Python client passes the same Rust vector.
+- **MEDULLA-FEDERATED-QUERY-R650.2:** `crates/medulla-plan/src/context_bundle/tests.rs::cut_select_and_exclusion_reasons` (planned), `crates/medulla-plan/src/context_bundle/tests.rs::result_is_deterministic_across_thread_counts` (planned). Behavior: fuse, cut and select. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R650.3:** `tests/retrieval/test_context_compile_served.py::test_method_is_served_and_no_second_implementation` (planned). Wiring and the new-method recipe. Asserts the served bundle equals compile output, and a source scan finds no other knapsack.
 - **MEDULLA-FEDERATED-QUERY-R650.4:** `tests/retrieval/test_context_compile_served.py::test_context_refusals` (planned). Refusal. Asserts each code, an empty result and a cross-tenant negative case.
 - **MEDULLA-FEDERATED-QUERY-R650.5:** `tests/retrieval/test_context_compile_served.py::test_evidence_matches_inputs` (planned). Evidence. Recomputes the key and compares every field. A second tenant gets a different key.

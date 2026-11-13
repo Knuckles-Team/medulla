@@ -239,6 +239,7 @@ mod tests {
         end_ms: 0,
     };
 
+    // spec: MEDULLA-DURABLE-KERNEL-R101.1
     #[test]
     fn job_type_round_trips() {
         let t = jt("dw:a", 7, &["ASK { true }"]);
@@ -264,6 +265,7 @@ mod tests {
         assert!(big.validate(|_| true).is_err());
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R101.2
     #[test]
     fn priority_then_budget_fit() {
         let types = vec![

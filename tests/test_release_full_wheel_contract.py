@@ -105,9 +105,7 @@ def test_agent_skills_have_one_canonical_owner() -> None:
 
     project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     entry_points = project["project"].get("entry-points", {})
-    assert entry_points["scion_sdk.skill_providers"] == {
-        "medulla": "medulla.skills"
-    }
+    assert entry_points["scion_sdk.skill_providers"] == {"medulla": "medulla.skills"}
     skills = REPO / "medulla" / "skills"
     assert (skills / "__init__.py").is_file()
     try:

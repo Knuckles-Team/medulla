@@ -182,6 +182,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R036.100.1
     /// MEDULLA-DECISION-ENGINE-R036.100.1
     #[test]
     fn primitive_contract_round_trips_and_kind_map_is_exhaustive() {

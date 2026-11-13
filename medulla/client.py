@@ -6954,13 +6954,14 @@ class GraphOperationsClient:
     ) -> dict[str, Any]:
         """Bin one indexed series for a viewport (MEDULLA-FEDERATED-QUERY-R081.103.1).
 
-        ``request`` carries ``source_id``, ``kind`` (``scatter`` or ``line``), ``x_axis``,
-        ``y_axis``, ``domain`` (``x_min``, ``x_max``, ``y_min``, ``y_max``),
-        ``pixel_width``, ``pixel_height``, ``binning_revision`` (1) and ``byte_ceiling``;
-        ``source_revision`` pins a revision. The answer is a bounded bin set whatever
-        the source size: ``{bins, source_revision, viewport, binning_revision,
-        source_cardinality, query_digest}``. A scatter bin is ``[id, count, x_min, x_max,
-        y_min, y_max]`` and a line bin ``[col, first, last, min, max, count, gap_before]``.
+        ``request`` carries ``source_id``, ``kind`` (``scatter`` or ``line``),
+        ``x_axis``, ``y_axis``, ``domain`` (``x_min``, ``x_max``, ``y_min``,
+        ``y_max``), ``pixel_width``, ``pixel_height``, ``binning_revision`` (1)
+        and ``byte_ceiling``; ``source_revision`` pins a revision. The answer is
+        a bounded bin set whatever the source size: ``{bins, source_revision,
+        viewport, binning_revision, source_cardinality, query_digest}``. A
+        scatter bin is ``[id, count, x_min, x_max, y_min, y_max]`` and a line
+        bin ``[col, first, last, min, max, count, gap_before]``.
         A moved pinned revision is refused ``STALE_SOURCE_REVISION``.
         """
         result = await self._client._send(
@@ -7062,15 +7063,17 @@ class GraphOperationsClient:
         and an agent of another tenant ``CONTEXT_SCOPE_FOREIGN``. ``budget`` adds
         the optional caller, money and latency ceilings.
         """
-        ceilings = {
-            "window_tokens": window_tokens,
-            "reserved_output_tokens": reserved_output_tokens,
-            "caller_ceiling_tokens": None,
-            "money_ceiling_micro": None,
-            "price_micro_per_token": None,
-            "latency_ceiling_ms": None,
-            "tokens_per_second": None,
-        }
+        ceilings: dict[str, Any] = dict.fromkeys(
+            (
+                "caller_ceiling_tokens",
+                "money_ceiling_micro",
+                "price_micro_per_token",
+                "latency_ceiling_ms",
+                "tokens_per_second",
+            )
+        )
+        ceilings["window_tokens"] = window_tokens
+        ceilings["reserved_output_tokens"] = reserved_output_tokens
         ceilings.update(budget or {})
         request: dict[str, Any] = {
             "query_text": query_text,

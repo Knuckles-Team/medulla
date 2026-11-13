@@ -262,6 +262,7 @@ mod tests {
         kinds
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R001.101.1
     #[test]
     fn every_question_kind_has_a_family() {
         let kinds = all_kinds();
@@ -278,6 +279,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R001.101.4
     /// The family template (`TEMPLATE.md`) embeds `template.rs` verbatim, and
     /// that file compiles against the live trait and applies its refusal
     /// table (MEDULLA-DECISION-ENGINE-R001.101.4).

@@ -397,6 +397,7 @@ fn widest_plan() -> TopologyPlan {
     }
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R046.751
 /// The `decide/topology_admit` group (MEDULLA-DECISION-ENGINE-R046.751):
 /// `admit_topology` alone over the widest bounded plan, the 64-agent plan
 /// held to the engine caps. Its budget is `group_budgets` in

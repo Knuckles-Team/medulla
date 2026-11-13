@@ -176,7 +176,8 @@ def test_crosswalk_refusals_leave_state_unchanged() -> None:
                         "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
                         "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
                         "<http://example.test/pack#Local> a owl:Class ;\n"
-                        "    rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Person> .\n",
+                        "    rdfs:subClassOf "
+                        "<https://knuckles-team.github.io/ontology/core#Person> .\n",
                     ),
                     crosswalk_entry(
                         connector,

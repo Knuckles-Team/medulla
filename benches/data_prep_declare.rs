@@ -6,7 +6,7 @@
 //! p99 below 10 ms; peak resident memory (`VmHWM`) below 128 MiB. The run exits
 //! non-zero when a budget is exceeded. A service level, not a pull request gate.
 //!
-//! spec: MEDULLA-INGEST-WORKER-R001.1011
+// spec: MEDULLA-INGEST-WORKER-R001.1011
 //!
 //! Run: cargo bench --bench data_prep_declare
 

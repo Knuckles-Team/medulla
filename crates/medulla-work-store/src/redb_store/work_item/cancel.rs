@@ -452,6 +452,7 @@ mod tests {
         assert!(props["lease_expires_at"].is_null());
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R750.751
     #[test]
     fn in_flight_cancel_stamps_request_and_renew_reports_it() {
         let mut props = leased_props(2, 2);

@@ -130,6 +130,7 @@ fn percentile(sorted: &[Duration], quantile: f64) -> Duration {
     sorted[((last as f64) * quantile).ceil() as usize]
 }
 
+// spec: MEDULLA-REPO-INGEST-R600.6
 fn enrich_served(c: &mut Criterion) {
     let rows = rows();
     let envelope = index_envelope(&rows);

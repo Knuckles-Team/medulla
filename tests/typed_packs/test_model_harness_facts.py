@@ -263,7 +263,8 @@ def test_shapes_reject_missing_run() -> None:
             refused = await rdf.validate_shacl(_HARNESS_SHAPES, missing_run)
             assert not refused["conforms"], refused
             assert any(
-                result.get("path") == "<https://knuckles-team.github.io/ontology/core#evaluationRun>"
+                result.get("path")
+                == "<https://knuckles-team.github.io/ontology/core#evaluationRun>"
                 or "evaluationRun" in (result.get("message") or "")
                 for result in refused["results"]
             ), refused

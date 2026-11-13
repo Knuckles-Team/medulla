@@ -28,11 +28,13 @@ from medulla.generated.connector_pack import (
     PackAnnotations,
     PackEntryKind,
 )
-from medulla.generated.ingestion import send_source_ingest_status
+from medulla.generated.ingestion import (
+    SourceIngestStatusRequest,
+    send_source_ingest_status,
+)
 from medulla.generated.source_ingestion import (
     SourceIngestionDisposition,
     SourceIngestionReceipt,
-    SourceIngestStatusRequest,
 )
 
 STREAM = "items"

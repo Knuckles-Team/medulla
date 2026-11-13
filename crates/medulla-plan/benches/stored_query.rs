@@ -6,6 +6,7 @@
 //! `thresholds.json` caps p99 at 3 ms.
 //!
 //! Run: `cargo bench -p medulla-plan --bench stored_query`.
+// spec: MEDULLA-FEDERATED-QUERY-R708.6
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_source_types::stored_query::{serve_materialized, RefreshPolicy, StoredResult};

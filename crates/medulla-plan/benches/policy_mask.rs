@@ -8,6 +8,7 @@
 //! capped in `thresholds.json`.
 //!
 //! Run: `cargo bench -p medulla-plan --features query --bench policy_mask`
+// spec: MEDULLA-FEDERATED-QUERY-R706.6
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_exec::policy_mask::{MaskMethod, MaskPolicy, PolicySet};

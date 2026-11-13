@@ -103,6 +103,7 @@ fn inputs() -> CompileInputs {
     }
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R650.1
 #[test]
 fn bundle_types_round_trip_and_reject_unknown_reason() {
     let bundle = compile(&request(500), &inputs()).unwrap();
@@ -149,6 +150,7 @@ fn bundle_types_round_trip_and_reject_unknown_reason() {
     assert_ne!(bundle_key(&request(500), &other), bundle.key);
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R650.2
 #[test]
 fn cut_select_and_exclusion_reasons() {
     // A wide window keeps the widest resolution of each kept item.
@@ -213,6 +215,7 @@ fn cut_select_and_exclusion_reasons() {
     let _ = D2;
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R650.2
 #[test]
 fn result_is_deterministic_across_thread_counts() {
     let baseline = compile(&request(100), &inputs()).unwrap();

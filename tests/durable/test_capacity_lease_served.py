@@ -181,11 +181,7 @@ def test_background_lease_cannot_spend_reserved_floor(tmp_path):
 
         # A live lease renews and releases; the released spare is spendable again.
         renewed = _value(
-            ok(
-                _mutate(
-                    rpc, sock, "RenewCapacity", lease, now_ms=NOW_MS + 10
-                )
-            )
+            ok(_mutate(rpc, sock, "RenewCapacity", lease, now_ms=NOW_MS + 10))
         )
         assert renewed["decision"] == "renewed"
         released = _value(

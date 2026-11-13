@@ -6,7 +6,7 @@
 //! node. Budget per batch: p50 below 2 ms and p99 below 5 ms. The run exits
 //! non-zero when a budget is exceeded. A service level, not a pull request gate.
 //!
-//! spec: MEDULLA-INGEST-WORKER-R900.6
+// spec: MEDULLA-INGEST-WORKER-R900.6
 //!
 //! Run: cargo bench --bench ingest_source_governance
 

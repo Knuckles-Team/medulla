@@ -6,6 +6,8 @@ counts governed, refused and marked records; a refused record writes nothing.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from .test_source_stream_versions_served import (
@@ -25,7 +27,7 @@ def _governed(connector: str, page: int, previous: int | None, records: list) ->
 
 def _record(connector: str, record_id: str, governance: dict | None) -> dict:
     base = _batch(connector, 1, None, record_id)["records"][0]
-    payload = {"id": record_id, "name": record_id}
+    payload: dict[str, Any] = {"id": record_id, "name": record_id}
     if governance is not None:
         payload["_governance"] = governance
     return {**base, "record_id": record_id, "payload": payload}

@@ -958,6 +958,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R081.9.7.2
     /// MEDULLA-FEDERATED-QUERY-R081.9.7.2: the traversal agrees with an independent
     /// oracle on a tree three levels deep: records of the requested granularity, in
     /// (depth, child-index path) order, each with its root-to-record path.

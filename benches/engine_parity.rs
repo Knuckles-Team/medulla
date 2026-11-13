@@ -14,7 +14,7 @@
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
-//! spec: MEDULLA-ENGINE-PARITY-R005.1
+// spec: MEDULLA-ENGINE-PARITY-R005.1
 //!
 //! Run: cargo bench --features full --bench engine_parity
 
