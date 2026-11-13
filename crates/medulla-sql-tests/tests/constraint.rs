@@ -9,15 +9,21 @@ use medulla_table_store::tables::{TableStore, TableTxn, TxnOp};
 use medulla_tables::schema::{Column, ColumnType, RefAction, TableConstraint, TableSchema};
 use serde_json::json;
 
+/// The pending bound the composition root installs from the registry knob
+/// `tables.deferred_fk_pending_max`.
+const PENDING_MAX: usize = 8;
+
 fn open(path: &Path) -> TableStore {
-    TableStore::open_scoped(
+    let store = TableStore::open_scoped(
         path,
         "tenant-a",
         medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
         medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
         medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
-    .unwrap()
+    .unwrap();
+    store.install_deferred_fk_pending_max(PENDING_MAX);
+    store
 }
 
 fn fresh_path(tag: &str) -> PathBuf {
@@ -230,4 +236,92 @@ fn classify_parses_deferrable_initially_deferred() {
          FOREIGN KEY (p) REFERENCES parents(id) NOT DEFERRABLE INITIALLY DEFERRED)"
     )
     .is_err());
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R011.1
+#[test]
+fn deferred_check_touches_only_the_keys_the_transaction_wrote() {
+    let path = fresh_path("probe");
+    let store = open(&path);
+    parent_and_child(&store, true, true);
+    let cols: Vec<String> = ["id".to_string(), "parent_id".to_string()].to_vec();
+    // A large child table: every row already resolved, written in batches the
+    // pending bound allows.
+    store
+        .insert_rows("parents", &["id".to_string()], &[vec![json!(1)]])
+        .unwrap();
+    for batch in 0..20 {
+        let rows: Vec<Vec<serde_json::Value>> = (0..PENDING_MAX)
+            .map(|i| vec![json!(batch * 100 + i as i64 + 10), json!(1)])
+            .collect();
+        store.insert_rows("children", &cols, &rows).unwrap();
+    }
+    let before = store.deferred_fk_keys_checked();
+
+    // One new child row of the large table: one key checked, not the table.
+    let mut txn = TableTxn::new();
+    txn.push(insert(
+        "children",
+        &["id", "parent_id"],
+        vec![json!(5000), json!(1)],
+    ));
+    store.commit_txn(&txn).unwrap();
+    assert_eq!(store.deferred_fk_keys_checked() - before, 1);
+
+    // Updating a child row that does not touch its key checks nothing.
+    let before = store.deferred_fk_keys_checked();
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::Update {
+        table: "children".to_string(),
+        set: serde_json::from_value(json!({"id": 5001})).unwrap(),
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+            col: "id".to_string(),
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
+            value: json!(5000),
+        },
+    });
+    store.commit_txn(&txn).unwrap();
+    assert_eq!(store.deferred_fk_keys_checked() - before, 0);
+
+    // Deleting one referenced parent key checks that one key; a child row that
+    // still references it refuses.
+    let before = store.deferred_fk_keys_checked();
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::Delete {
+        table: "parents".to_string(),
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+            col: "id".to_string(),
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
+            value: json!(1),
+        },
+    });
+    let error = store.commit_txn(&txn).unwrap_err();
+    assert!(error.starts_with("FOREIGN_KEY_VIOLATION: "), "{error}");
+    assert_eq!(store.deferred_fk_keys_checked() - before, 1);
+    let _ = std::fs::remove_file(&path);
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R011.1
+#[test]
+fn deferred_pending_set_is_bounded_by_the_knob() {
+    let path = fresh_path("bound");
+    let store = open(&path);
+    parent_and_child(&store, true, true);
+    let parents: Vec<Vec<serde_json::Value>> =
+        (0..=PENDING_MAX as i64).map(|i| vec![json!(i)]).collect();
+    store
+        .insert_rows("parents", &["id".to_string()], &parents)
+        .unwrap();
+    let cols: Vec<String> = ["id".to_string(), "parent_id".to_string()].to_vec();
+    // One distinct parent key per child row: one more than the bound.
+    let rows: Vec<Vec<serde_json::Value>> = (0..=PENDING_MAX as i64)
+        .map(|i| vec![json!(i + 100), json!(i)])
+        .collect();
+    let error = store.insert_rows("children", &cols, &rows).unwrap_err();
+    assert!(
+        error.starts_with("DEFERRED_FK_PENDING_EXCEEDED: "),
+        "{error}"
+    );
+    assert!(store.scan("children").unwrap().is_empty());
+    let _ = std::fs::remove_file(&path);
 }

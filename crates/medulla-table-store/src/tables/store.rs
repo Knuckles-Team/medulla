@@ -60,6 +60,7 @@ use serde_json::Value;
 mod ann_durable;
 mod ann_source;
 mod authority;
+mod deferred_fk;
 #[cfg(any(test, feature = "dev-scope-grant"))]
 pub mod dev_scope_grant;
 mod edge_durable;
@@ -602,6 +603,9 @@ pub struct TableStore {
     /// Where the row changes of each durable commit go (R015.1); set once by
     /// the server, shared by every clone.
     row_sink: Arc<std::sync::OnceLock<Arc<dyn RowChangeSink>>>,
+    /// The pending bound and the metric of the deferred foreign-key pass
+    /// (MEDULLA-ENGINE-PARITY-R011.1), shared by every clone.
+    deferred_fk: Arc<deferred_fk::DeferredFkState>,
 }
 
 /// One row from an immutable redb read snapshot. The physical id is an ordering
@@ -706,6 +710,7 @@ impl TableStore {
             sequence_blocks: Arc::default(),
             occ: Arc::default(),
             row_sink: Arc::default(),
+            deferred_fk: Arc::default(),
         };
         store.verify_schema_migrations()?;
         store.restore_ann_generations()?;
@@ -1535,7 +1540,9 @@ impl TableStore {
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("insert-rows", table, |wtx| {
             let inserted = insert_in(wtx, self.index_scope(), table, col_order, rows)?;
-            check_deferred_fks_for_tables_in(wtx, &[table])?;
+            let mut pending = deferred_fk::DeferredFkPending::default();
+            pending.record_insert(&self.deferred_fk, wtx, table, &inserted)?;
+            pending.finish(&self.deferred_fk, wtx, self.index_scope())?;
             Ok(inserted)
         })
     }
@@ -1553,7 +1560,9 @@ impl TableStore {
             .maintain("insert-rows-on-conflict", table, |wtx| {
                 let written =
                     insert_on_conflict_in(wtx, self.index_scope(), table, col_order, rows, action)?;
-                check_deferred_fks_for_tables_in(wtx, &[table])?;
+                let mut pending = deferred_fk::DeferredFkPending::default();
+                pending.record_insert(&self.deferred_fk, wtx, table, &written)?;
+                pending.finish(&self.deferred_fk, wtx, self.index_scope())?;
                 Ok(written)
             })
     }
@@ -1577,9 +1586,11 @@ impl TableStore {
         selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("update-rows", table, |wtx| {
-            let updated = update_in(wtx, self.index_scope(), table, set, selector)?;
-            check_deferred_fks_for_tables_in(wtx, &[table])?;
-            Ok(updated)
+            let changes = update_rows_in(wtx, self.index_scope(), table, set, selector)?;
+            let mut pending = deferred_fk::DeferredFkPending::default();
+            pending.record_update(&self.deferred_fk, wtx, table, &changes)?;
+            pending.finish(&self.deferred_fk, wtx, self.index_scope())?;
+            Ok(changes.into_iter().map(|(_, new)| new).collect())
         })
     }
 
@@ -1601,7 +1612,9 @@ impl TableStore {
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("delete-rows", table, |wtx| {
             let removed = delete_in(wtx, self.index_scope(), table, selector)?;
-            check_deferred_fks_for_tables_in(wtx, &[table])?;
+            let mut pending = deferred_fk::DeferredFkPending::default();
+            pending.record_delete(&self.deferred_fk, wtx, table, &removed)?;
+            pending.finish(&self.deferred_fk, wtx, self.index_scope())?;
             Ok(removed)
         })
     }
@@ -2073,10 +2086,17 @@ impl TableStore {
         self.authority
             .maintain("commit-txn", self.index_scope(), |wtx| {
                 let mut affected = 0usize;
+                let mut pending = deferred_fk::DeferredFkPending::default();
                 for op in &txn.ops {
-                    affected = affected.saturating_add(apply_txn_op(wtx, self.index_scope(), op)?);
+                    affected = affected.saturating_add(apply_txn_op_recording(
+                        wtx,
+                        self.index_scope(),
+                        op,
+                        &self.deferred_fk,
+                        &mut pending,
+                    )?);
                 }
-                check_deferred_fks_in(wtx, &txn.ops)?;
+                pending.finish(&self.deferred_fk, wtx, self.index_scope())?;
                 Ok(affected)
             })
     }
@@ -2150,6 +2170,20 @@ impl TableStore {
             self.commit_with_changes(txn, batch, committed_at_ms, None, Some(result_msgpack))?;
         self.publish_row_changes(batch, &changes);
         Ok((commit, changes))
+    }
+
+    /// Install the bound on the deferred foreign keys one transaction may touch
+    /// (registry knob `tables.deferred_fk_pending_max`, MEDULLA-ENGINE-PARITY-R011.1).
+    /// Set once by the composition root; a second install is ignored.
+    pub fn install_deferred_fk_pending_max(&self, max: usize) {
+        self.deferred_fk.install_max_pending(max);
+    }
+
+    /// Deferred foreign keys the end-of-transaction pass has checked since this
+    /// store opened (MEDULLA-ENGINE-PARITY-R011.1). An engine metric: a commit
+    /// that touches one key of a large table advances it by one.
+    pub fn deferred_fk_keys_checked(&self) -> u64 {
+        self.deferred_fk.keys_checked()
     }
 
     /// Install the sink that receives the row changes of every durable commit.
@@ -2280,6 +2314,7 @@ impl TableStore {
                 batch,
                 crashpoint,
                 &mut accum,
+                &self.deferred_fk,
             )?;
             // Validate inside the write transaction, after the ops are staged
             // and before the commit point: a conflict returns here, the caller
@@ -2471,6 +2506,7 @@ fn apply_mutation_txn_ops_with_crashpoints(
     batch: &MutationBatch,
     crashpoint: Option<SqlMutationCrashpoint>,
     accum: &mut occ::FootprintAccum,
+    deferred_fk: &deferred_fk::DeferredFkState,
 ) -> Result<usize, String> {
     if crashpoint == Some(SqlMutationCrashpoint::BeforeRows) {
         return Err("injected crash before SQL mutation rows".to_string());
@@ -2481,10 +2517,18 @@ fn apply_mutation_txn_ops_with_crashpoints(
     )?;
 
     let mut affected = 0usize;
+    let mut pending = deferred_fk::DeferredFkPending::default();
     for op in &txn.ops {
-        affected = affected.saturating_add(apply_txn_op_tracked(wtx, index_scope, op, accum)?);
+        affected = affected.saturating_add(apply_txn_op_tracked(
+            wtx,
+            index_scope,
+            op,
+            accum,
+            deferred_fk,
+            &mut pending,
+        )?);
     }
-    check_deferred_fks_in(wtx, &txn.ops)?;
+    pending.finish(deferred_fk, wtx, index_scope)?;
 
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
         return Err("injected crash after SQL mutation rows".to_string());
@@ -2552,6 +2596,8 @@ fn apply_txn_op_tracked(
     tenant_scope: &str,
     op: &TxnOp,
     accum: &mut occ::FootprintAccum,
+    deferred_fk: &deferred_fk::DeferredFkState,
+    pending: &mut deferred_fk::DeferredFkPending,
 ) -> Result<usize, String> {
     match op {
         TxnOp::Insert {
@@ -2560,6 +2606,7 @@ fn apply_txn_op_tracked(
             rows,
         } => {
             let inserted = insert_in(wtx, tenant_scope, table, col_order, rows)?;
+            pending.record_insert(deferred_fk, wtx, table, &inserted)?;
             if let Some(schema) = get_schema_in(wtx, table)? {
                 accum.inserted(table, &schema, &inserted);
             }
@@ -2571,6 +2618,7 @@ fn apply_txn_op_tracked(
             selector,
         } => {
             let changes = update_rows_in(wtx, tenant_scope, table, set, selector)?;
+            pending.record_update(deferred_fk, wtx, table, &changes)?;
             if let Some(schema) = get_schema_in(wtx, table)? {
                 accum.updated(table, &schema, &changes);
             }
@@ -2578,6 +2626,7 @@ fn apply_txn_op_tracked(
         }
         TxnOp::Delete { table, selector } => {
             let removed = delete_in(wtx, tenant_scope, table, selector)?;
+            pending.record_delete(deferred_fk, wtx, table, &removed)?;
             if let Some(schema) = get_schema_in(wtx, table)? {
                 accum.deleted(table, &schema, &removed);
             }
@@ -2590,6 +2639,43 @@ fn apply_txn_op_tracked(
             }
             Ok(affected)
         }
+    }
+}
+
+/// [`apply_txn_op`] that also records the deferred foreign keys the op touched
+/// (MEDULLA-ENGINE-PARITY-R011.1).
+fn apply_txn_op_recording(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    op: &TxnOp,
+    deferred_fk: &deferred_fk::DeferredFkState,
+    pending: &mut deferred_fk::DeferredFkPending,
+) -> Result<usize, String> {
+    match op {
+        TxnOp::Insert {
+            table,
+            col_order,
+            rows,
+        } => {
+            let inserted = insert_in(wtx, tenant_scope, table, col_order, rows)?;
+            pending.record_insert(deferred_fk, wtx, table, &inserted)?;
+            Ok(inserted.len())
+        }
+        TxnOp::Update {
+            table,
+            set,
+            selector,
+        } => {
+            let changes = update_rows_in(wtx, tenant_scope, table, set, selector)?;
+            pending.record_update(deferred_fk, wtx, table, &changes)?;
+            Ok(changes.len())
+        }
+        TxnOp::Delete { table, selector } => {
+            let removed = delete_in(wtx, tenant_scope, table, selector)?;
+            pending.record_delete(deferred_fk, wtx, table, &removed)?;
+            Ok(removed.len())
+        }
+        other => apply_txn_op(wtx, tenant_scope, other),
     }
 }
 
@@ -5091,51 +5177,6 @@ fn validate_table_checks_over_existing_in(
             cells.resize(width, Cell::Null);
         }
         eval_table_checks(table, checks, &row_map(schema, &cells))?;
-    }
-    Ok(())
-}
-
-/// The end-of-transaction pass for deferred foreign keys
-/// (MEDULLA-ENGINE-PARITY-R011.1). Runs after the last op of a transaction and
-/// before the commit point. A table is checked when the transaction wrote it or
-/// wrote a table one of its deferred keys references; every row of such a table
-/// is held to each of its deferred keys, so every reference left unresolved by
-/// the transaction is found once. A refusal aborts the transaction.
-fn check_deferred_fks_in(wtx: &SqlWrite<'_>, ops: &[TxnOp]) -> Result<(), String> {
-    let mut touched: Vec<&str> = Vec::new();
-    for op in ops {
-        match op {
-            TxnOp::Insert { table, .. }
-            | TxnOp::Update { table, .. }
-            | TxnOp::Delete { table, .. } => touched.push(table.as_str()),
-            _ => {}
-        }
-    }
-    check_deferred_fks_for_tables_in(wtx, &touched)
-}
-
-/// [`check_deferred_fks_in`] for a statement that wrote `touched` tables (the
-/// one-shot DML paths are single-statement transactions).
-fn check_deferred_fks_for_tables_in(wtx: &SqlWrite<'_>, touched: &[&str]) -> Result<(), String> {
-    let touched: HashSet<&str> = touched.iter().copied().collect();
-    if touched.is_empty() {
-        return Ok(());
-    }
-    for table in list_tables_in(wtx)? {
-        let Some(schema) = get_schema_in(wtx, &table)? else {
-            continue;
-        };
-        for constraint in schema.constraints() {
-            let TableConstraint::ForeignKey { ref_table, .. } = constraint else {
-                continue;
-            };
-            if !constraint.is_deferred_foreign_key() {
-                continue;
-            }
-            if touched.contains(table.as_str()) || touched.contains(ref_table.as_str()) {
-                validate_existing_fk_children_in(wtx, &table, &schema, constraint)?;
-            }
-        }
     }
     Ok(())
 }

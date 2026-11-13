@@ -207,6 +207,9 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
         &authority.proof(),
     )
     .map_err(|_| "owner-scoped SQL catalog could not be opened".to_string())?;
+    store.install_deferred_fk_pending_max(
+        medulla_server_api::knob_config::knobs().tables_deferred_fk_pending_max as usize,
+    );
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
