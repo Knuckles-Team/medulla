@@ -87,6 +87,9 @@ mod stat_support;
 mod stat_placement;
 #[cfg(feature = "decide")]
 mod stat_task_plan;
+// MEDULLA-DECISION-ENGINE-R174.9.3: fresh data through the search source.
+#[cfg(feature = "decide")]
+pub mod stat_freshness;
 #[cfg(feature = "decide")]
 mod stat_thought_search;
 #[cfg(feature = "decide")]

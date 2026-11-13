@@ -66,6 +66,52 @@ pub struct FreshResult {
     pub refresh_id: String,
 }
 
+/// One result row as the refresh holds it, keyed by graph and canonical URL.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StoredFreshRow {
+    pub schema_version: u16,
+    pub logical_graph: String,
+    pub canonical_url: String,
+    pub result: FreshResult,
+    /// The digest of the row this one superseded, when it superseded one.
+    pub supersedes: Option<String>,
+}
+
+/// One region a refresh marked changed in the drift bitmap.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RegionMark {
+    pub shard_id: u32,
+    pub node_type: String,
+    /// The refresh revision the mark was written at.
+    pub revision: u64,
+}
+
+/// What one refresh did: the evidence `DecisionLog` writes for it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FreshnessReceipt {
+    pub schema_version: u16,
+    pub refresh_id: String,
+    pub logical_graph: String,
+    pub source_connection_iri: String,
+    pub trigger: RefreshTrigger,
+    pub new_count: u32,
+    pub unchanged_count: u32,
+    pub superseded_count: u32,
+    pub requests_spent: u32,
+    pub cost_units_spent: u64,
+    pub regions: Vec<RegionMark>,
+    /// The rows stored (new and superseding), in read order.
+    pub stored: Vec<FreshResult>,
+    /// Epoch milliseconds the refresh ran at.
+    pub completed_at_ms: u64,
+}
+
 fn is_sha256_hex(text: &str) -> bool {
     text.len() == 64
         && text
@@ -289,6 +335,12 @@ impl RefreshSpend {
         self.refilled_at_ms = self.refilled_at_ms.max(now_ms);
         self.cost_spent = spent;
         Ok(())
+    }
+
+    /// Whether this spending was opened for `budget`: a changed budget starts
+    /// a new bucket.
+    pub fn same_budget(&self, budget: &RefreshBudget) -> bool {
+        self.capacity == budget.max_requests && self.max_cost_units == budget.max_cost_units
     }
 
     /// Cost units spent so far.

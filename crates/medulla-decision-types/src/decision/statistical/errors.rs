@@ -138,6 +138,21 @@ closed_error_codes! {
         /// Activating would leave more active adapters than
         /// `adapter.max_per_tenant` (MEDULLA-DECISION-ENGINE-R174.7.4).
         AdapterTooMany => "ADAPTER_TOO_MANY",
+        /// A freshness refresh names no ACL policy
+        /// (MEDULLA-DECISION-ENGINE-R174.9.4).
+        RefreshAclPolicyMissing => "REFRESH_ACL_POLICY_MISSING",
+        /// A freshness refresh names no privacy policy
+        /// (MEDULLA-DECISION-ENGINE-R174.9.4).
+        RefreshPrivacyPolicyMissing => "REFRESH_PRIVACY_POLICY_MISSING",
+        /// A freshness refresh asks for more requests than its budget allows
+        /// in the window (MEDULLA-DECISION-ENGINE-R174.9.4).
+        RefreshRateBudgetExceeded => "REFRESH_RATE_BUDGET_EXCEEDED",
+        /// A freshness refresh would spend more cost units than its budget
+        /// (MEDULLA-DECISION-ENGINE-R174.9.4).
+        RefreshCostBudgetExceeded => "REFRESH_COST_BUDGET_EXCEEDED",
+        /// The logical graph has no registered search source
+        /// (MEDULLA-DECISION-ENGINE-R174.9.4).
+        SearchSourceUnregistered => "SEARCH_SOURCE_UNREGISTERED",
     }
 }
 

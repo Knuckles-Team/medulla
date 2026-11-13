@@ -632,6 +632,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T621 [US8] MEDULLA-DECISION-ENGINE-R174.9.1 Model
 - [ ] T622 [US8] MEDULLA-DECISION-ENGINE-R174.9.2 Behavior
 - [ ] T623 [US8] MEDULLA-DECISION-ENGINE-R174.9.3 Wiring
+- [ ] T623a [US8] MEDULLA-DECISION-ENGINE-R174.9.3.1 Wiring: production search source port
 - [ ] T624 [US8] MEDULLA-DECISION-ENGINE-R174.9.4 Refusal
 - [ ] T625 [US8] MEDULLA-DECISION-ENGINE-R174.9.5 Evidence
 - [ ] T626 [US8] MEDULLA-DECISION-ENGINE-R174.9.6 Hot-path proof

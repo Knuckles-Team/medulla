@@ -357,6 +357,7 @@ pub enum LearningRecorded {
     Cycle(Box<super::retrieval_generation::GenerationCycleJob>),
     Pointer(Box<PointerState>),
     Run(Box<super::run_credit::RunCreditReceipt>),
+    Refreshed(Box<super::retrieval_refresh::FreshnessReceipt>),
 }
 
 #[cfg(test)]

@@ -994,6 +994,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174.8`: `tests/decide/test_drift_re
 | Model | `MEDULLA-DECISION-ENGINE-R174.9.1` | A serde round trip keeps every field and rejects 33 queries. |
 | Behavior | `MEDULLA-DECISION-ENGINE-R174.9.2` | Unit tests cover canonical URLs, each dedupe outcome, the region mark and both budgets. |
 | Wiring | `MEDULLA-DECISION-ENGINE-R174.9.3` | A dispatch test observes one virtual-graph read and one region mark. |
+| Wiring | `MEDULLA-DECISION-ENGINE-R174.9.3.1` | A test reads a refresh through the federation web source with a recorded connector port. |
 | Refusal | `MEDULLA-DECISION-ENGINE-R174.9.4` | Each case returns its code and writes no row and no region mark. |
 | Evidence | `MEDULLA-DECISION-ENGINE-R174.9.5` | A test reads the result provenance and the receipt. |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R174.9.6` | The served test passes, and the measured overhead meets the budget. |
@@ -1719,6 +1720,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-decision-types/src/decision/statistical/retrieval_refresh.rs::tests::canonical_urls_and_dedupe_outcomes` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.3` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::refresh_reads_the_virtual_graph_and_marks_one_region` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.3.1` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::registered_web_source_serves_a_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.4` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::freshness_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.5` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::result_provenance_and_receipt` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.6` | `tests/decide/test_freshness_refresh_served.py::test_search_refresh_dedupes_and_feeds_refresh` | (planned) |

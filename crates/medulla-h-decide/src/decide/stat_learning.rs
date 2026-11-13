@@ -38,7 +38,6 @@ use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
-use super::stat_support::invalid_parameter as invalid;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
@@ -376,12 +375,9 @@ pub(super) fn dispatch(
         LearningWrite::MonitorAdapter { request } => s.monitor(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
-        LearningWrite::RefreshFreshness { request } => {
-            request.check().map_err(|detail| invalid(&detail))?;
-            Err(invalid(
-                "freshness refresh is not served until MEDULLA-DECISION-ENGINE-R174.9.3",
-            ))
-        }
+        LearningWrite::RefreshFreshness { request } => Ok(LearningRecorded::Refreshed(Box::new(
+            super::stat_freshness::refresh(ctx, &request)?,
+        ))),
         LearningWrite::RunOutcome { outcome } => Ok(LearningRecorded::Run(Box::new(record_run(
             ctx, reader, *outcome,
         )?))),

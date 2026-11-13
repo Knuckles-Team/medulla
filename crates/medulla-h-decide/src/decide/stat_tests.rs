@@ -1165,6 +1165,8 @@ mod run_observation_tests;
 
 // MEDULLA-DECISION-ENGINE-R174.8: drift monitors select the shards a refresh covers.
 mod drift_refresh_tests;
+// MEDULLA-DECISION-ENGINE-R174.9: fresh data through the search source.
+mod freshness_refresh_tests;
 #[cfg(all(feature = "query", feature = "ann"))]
 mod generation_cycle_tests;
 
