@@ -125,3 +125,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T119 [US5] MEDULLA-INGEST-WORKER-R911.2 EnrichmentCandidate/EnrichmentStage state machine: route 1 census findings through EnrichmentStage::apply
 - [ ] T120 [US5] MEDULLA-INGEST-WORKER-R911.3 StageReceipt/IngestStage state machine: route 2 census findings through IngestStage::apply
 - [ ] T121 [US5] MEDULLA-INGEST-WORKER-R911.4 ThroughputWindow/ThroughputState state machine: route 1 census findings through ThroughputState::apply
+- [ ] T122 [US5] MEDULLA-INGEST-WORKER-R912 Census debt of the ingest worker is closed (rollup)
+- [ ] T123 [US5] MEDULLA-INGEST-WORKER-R912.1 StagedRun/EnumerationRunState state machine: holder-level transition delegating to EnumerationRunState::apply
