@@ -120,3 +120,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T114 [US5] MEDULLA-INGEST-WORKER-R910.4 Refusal
 - [ ] T115 [US5] MEDULLA-INGEST-WORKER-R910.5 Evidence
 - [ ] T116 [US5] MEDULLA-INGEST-WORKER-R910.6 Hot-path proof
+- [ ] T117 [US5] MEDULLA-INGEST-WORKER-R911 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T118 [US5] MEDULLA-INGEST-WORKER-R911.1 EligibleUnit/EnrichmentWorkStage state machine: route 1 census findings through EnrichmentWorkStage::apply
+- [ ] T119 [US5] MEDULLA-INGEST-WORKER-R911.2 EnrichmentCandidate/EnrichmentStage state machine: route 1 census findings through EnrichmentStage::apply
+- [ ] T120 [US5] MEDULLA-INGEST-WORKER-R911.3 StageReceipt/IngestStage state machine: route 2 census findings through IngestStage::apply
+- [ ] T121 [US5] MEDULLA-INGEST-WORKER-R911.4 ThroughputWindow/ThroughputState state machine: route 1 census findings through ThroughputState::apply
