@@ -2163,3 +2163,52 @@ async fn certificate_login_maps_to_principal() {
         "got {chain}"
     );
 }
+
+/// A statement form outside the compatibility matrix is refused with SQLSTATE `0A000`
+/// and the form's name, on both the simple and the extended protocol, and the
+/// connection stays usable afterwards.
+// spec: MEDULLA-ENGINE-PARITY-R009.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn refused_form_returns_0a000() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+
+    for (sql, form) in [
+        (
+            "CREATE TRIGGER t BEFORE INSERT ON nodes FOR EACH ROW EXECUTE FUNCTION f()",
+            "create_trigger",
+        ),
+        ("CREATE POLICY p ON nodes USING (true)", "create_policy"),
+    ] {
+        let simple = client
+            .simple_query(sql)
+            .await
+            .expect_err("a refused form must not run");
+        let db = simple.as_db_error().expect("a database error");
+        assert_eq!(
+            db.code(),
+            &tokio_postgres::error::SqlState::FEATURE_NOT_SUPPORTED
+        );
+        assert!(db.message().contains(form), "{}", db.message());
+
+        let extended = match client.prepare(sql).await {
+            Ok(statement) => client
+                .execute(&statement, &[])
+                .await
+                .expect_err("a refused form must not run"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            extended.code(),
+            Some(&tokio_postgres::error::SqlState::FEATURE_NOT_SUPPORTED),
+            "{extended:?}"
+        );
+    }
+
+    let rows = client
+        .simple_query("SELECT id FROM nodes WHERE rank >= 2 ORDER BY id")
+        .await
+        .expect("the connection still serves supported forms");
+    assert_eq!(simple_ids(rows), vec!["n2".to_string(), "n3".to_string()]);
+}

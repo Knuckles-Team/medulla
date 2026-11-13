@@ -245,6 +245,7 @@ impl StatementKind {
         "commit",
         "rollback",
         "copy_in",
+        "copy_out",
         "create_extension",
         "drop_extension",
         "create_ann_index",
@@ -616,7 +617,52 @@ pub fn classify(sql: &str) -> Result<StatementKind, String> {
     dispatch::classify_dml_or_query(stmt)
         .or_else(|| dispatch::classify_ddl_stmt(stmt))
         .or_else(|| dispatch::classify_tcl_or_copy_stmt(stmt))
-        .unwrap_or_else(|| Err(format!("unsupported statement: {stmt}")))
+        .unwrap_or_else(|| Err(refuse_form(&statement_form_name(stmt), &stmt.to_string())))
+}
+
+/// The matrix name of a statement no classifier arm serves: its leading
+/// keywords, lower-case and `_`-joined (`CREATE TRIGGER ...` is `create_trigger`).
+fn statement_form_name(stmt: &Statement) -> String {
+    const MODIFIERS: &[&str] = &[
+        "or",
+        "replace",
+        "temp",
+        "temporary",
+        "unlogged",
+        "global",
+        "local",
+        "unique",
+        "concurrently",
+    ];
+    stmt.to_string()
+        .split(|c: char| !c.is_ascii_alphabetic())
+        .filter(|word| !word.is_empty())
+        .map(str::to_ascii_lowercase)
+        .filter(|word| !MODIFIERS.contains(&word.as_str()))
+        .take(2)
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+/// The refusal for a statement form the classifier does not serve
+/// (MEDULLA-ENGINE-PARITY-R009.2): `FEATURE_NOT_SUPPORTED` (SQLSTATE `0A000`)
+/// naming the matrix entry. The closed compatibility matrix decides the wording: a
+/// form absent from it, or listed `Refused`, is not served at all; a served form
+/// whose particular shape no arm decodes keeps the detail.
+fn refuse_form(form: &str, detail: &str) -> String {
+    static MATRIX: std::sync::OnceLock<
+        medulla_types::pg_operational_surface::PgCompatibilityMatrix,
+    > = std::sync::OnceLock::new();
+    let state = MATRIX
+        .get_or_init(
+            medulla_types::pg_operational_surface::PgCompatibilityMatrix::with_served_forms,
+        )
+        .resolve_form(form);
+    if state == medulla_types::pg_operational_surface::SqlFormState::Refused {
+        format!("FEATURE_NOT_SUPPORTED: {form} is not supported")
+    } else {
+        format!("FEATURE_NOT_SUPPORTED: {form}: unsupported statement shape: {detail}")
+    }
 }
 
 // The three grouping matches `classify` chains through — split into their own
@@ -2344,7 +2390,13 @@ fn classify_drop(
             Ok(StatementKind::DropTable(DropTablePlan { name, if_exists }))
         }
         ObjectType::View => Ok(StatementKind::DropView(DropViewPlan { name, if_exists })),
-        other => Err(format!("DROP {other} is not supported (only TABLE/VIEW)")),
+        other => Err(refuse_form(
+            &format!(
+                "drop_{}",
+                other.to_string().to_ascii_lowercase().replace(' ', "_")
+            ),
+            "only TABLE and VIEW",
+        )),
     }
 }
 

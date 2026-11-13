@@ -27,7 +27,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: wiring and refusal
 - [ ] T022 [P] [US2] MEDULLA-ENGINE-PARITY-R008.3 Catalog views for outside tools: hot-path proof
 - [ ] T023 [US2] MEDULLA-ENGINE-PARITY-R009.1 SQL dialect compatibility matrix: model and behavior
-- [ ] T024 [US2] MEDULLA-ENGINE-PARITY-R009.2 SQL dialect compatibility matrix: wiring and refusal
+- [x] T024 [US2] MEDULLA-ENGINE-PARITY-R009.2 SQL dialect compatibility matrix: wiring and refusal
 - [ ] T025 [P] [US2] MEDULLA-ENGINE-PARITY-R009.3 SQL dialect compatibility matrix: hot-path proof
 - [ ] T026 [US3] MEDULLA-ENGINE-PARITY-R010.1 Partial and expression indexes on user tables: model and behavior
 - [x] T027 [US3] MEDULLA-ENGINE-PARITY-R010.2 Partial and expression indexes on user tables: wiring and refusal

@@ -104,6 +104,7 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("commit", SqlFormState::Supported),
     ("rollback", SqlFormState::Supported),
     ("copy_in", SqlFormState::Supported),
+    ("copy_out", SqlFormState::Supported),
     ("create_extension", SqlFormState::Partial),
     ("drop_extension", SqlFormState::Partial),
     ("create_ann_index", SqlFormState::Supported),
