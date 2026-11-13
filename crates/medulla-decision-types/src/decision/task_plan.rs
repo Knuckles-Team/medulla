@@ -12,8 +12,13 @@ use medulla_types::contract::BoundedVec;
 use medulla_query_types::solve_scalar::digest_text;
 
 mod aggregation;
+pub mod branch_breadth;
 mod call;
 mod control;
+pub mod pairwise;
+pub mod trajectory_budget;
+pub mod trajectory_projection;
+pub mod trajectory_refusal;
 pub use aggregation::{
     AggregationOp, TaskPlanAggregation, PLAN_AGGREGATION_INVALID, PLAN_AGGREGATION_NOT_OUTPUT,
 };

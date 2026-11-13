@@ -205,6 +205,19 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::statistical::run_credit::REFUSALS,
     ),
     (QuestionKind::ThoughtSearch, super::thought_search::REFUSALS),
+    (
+        QuestionKind::TaskPlan,
+        super::task_plan::trajectory_budget::REFUSALS,
+    ),
+    (
+        QuestionKind::TaskPlan,
+        super::task_plan::trajectory_projection::REFUSALS,
+    ),
+    (
+        QuestionKind::TaskPlan,
+        super::task_plan::branch_breadth::REFUSALS,
+    ),
+    (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

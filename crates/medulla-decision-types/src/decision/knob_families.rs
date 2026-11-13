@@ -6,6 +6,7 @@ pub mod memory;
 pub mod participant;
 pub mod profile;
 pub mod topology;
+pub mod trajectory;
 
 use super::knobs::KnobSpec;
 
@@ -15,6 +16,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     participant::KNOBS,
     profile::KNOBS,
     topology::KNOBS,
+    trajectory::KNOBS,
     super::ingestion_admission::KNOBS,
     super::statistical::run_credit::KNOBS,
     super::thought_search::KNOBS,

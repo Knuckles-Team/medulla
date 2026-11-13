@@ -4810,6 +4810,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "rand_chacha 0.3.1",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
