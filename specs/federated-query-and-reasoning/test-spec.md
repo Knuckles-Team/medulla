@@ -1017,7 +1017,6 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.5` | `tests/federated/test_pack_source_served.py::test_rows_carry_contract_provenance_and_nothing_is_copied` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.6` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R040.5.1` | `crates/medulla-ann/src/low_storage.rs::tests::manifest_round_trip_and_sum` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.1` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R040.5.2` | `crates/medulla-ann/src/low_storage.rs::tests::compact_decode_and_refusals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R040.5.3` | `tests/retrieval/test_low_storage_ann_served.py::test_selective_regeneration_and_rescore` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R040.5.4` | `crates/medulla-semantic-index/src/semantic_embedding_batch.rs::tests::budgets_keys_and_duplicates` |

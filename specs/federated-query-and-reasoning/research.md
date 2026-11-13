@@ -167,3 +167,7 @@ Decision: the compact artifact is one container in `medulla-ann` (version byte 2
 ## R722.5 answer provenance surface (decision)
 
 The pack-source read already builds `connector`, `contract_iri`, `mapping_iri`, `fetch_time_ms` and `provenance` cells per row in `PageBackedSource::fetch_columns`, but the served `UqlResult::Rows` row (`UqlRow`) carries only id and score channels, so no answer row can show them. Decision: surface a source row's text channels (the `texts` of `RowSet`) as a named `provenance` map on `UqlRow`, defaulted empty so existing answers are unchanged; the web and search sources already fill the same channel. The usage counter is the existing `asset_usage` series (R764.3.1) with `ForeignScan` source names added to `query_assets`; freshness age is read at query time from the source watermark (R106.5), never copied onto the node.
+
+## R040.5.1 proof boundary (ROOT-SLICE)
+
+- R040.5.1 is proven by its own L1 test `crates/medulla-ann/src/low_storage.rs::tests::manifest_round_trip_and_sum`. The served `test_selectivity_bound_and_readback` is the proof of the rollup R040.5 and of R040.5.6; the traceability table no longer binds it to R040.5.1.
