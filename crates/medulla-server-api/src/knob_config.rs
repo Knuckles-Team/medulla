@@ -696,6 +696,8 @@ static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();
 /// Hand the startup-loaded knobs to the listeners and served handlers; the
 /// first install wins.
 pub fn install(config: KnobConfig) {
+    // The source access gate lives below this crate; it reads the resolved staleness bound.
+    medulla_graph_core::rls::install_source_acl_stale_after_s(config.ingest_acl_stale_after_s);
     let _ = INSTALLED.set(config);
 }
 

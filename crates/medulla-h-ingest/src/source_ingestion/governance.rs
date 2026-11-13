@@ -28,7 +28,7 @@ pub struct AdmittedGovernance {
     /// SHA-256 over the public flag, sorted roles and sorted markings.
     pub subject_set_digest: String,
     /// Reserved node properties `source_access_*`.
-    pub properties: [(&'static str, serde_json::Value); 3],
+    pub properties: [(&'static str, serde_json::Value); 4],
     /// The record carries at least one marking.
     pub marked: bool,
 }
@@ -91,6 +91,10 @@ pub fn admit_record_governance(
             (
                 "source_access_markings",
                 serde_json::json!(governance.access_markings),
+            ),
+            (
+                "source_classification",
+                serde_json::Value::String(classification_name(governance.classification).into()),
             ),
         ],
         marked,

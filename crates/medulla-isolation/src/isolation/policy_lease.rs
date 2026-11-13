@@ -143,6 +143,7 @@ fn can_see_node_for_identities(
     agent_id: &str,
     view: &medulla_graph_core::graph::GraphView,
     id: &str,
+    groups: &super::access_policy::SourceGroupMemo,
 ) -> bool {
     let mut vis = match view.visibility_index.get(id) {
         Some(vis) => vis.clone(),
@@ -153,7 +154,13 @@ fn can_see_node_for_identities(
             .unwrap_or_else(RowVisibility::default_public),
     };
     vis.schema = view.schema_node_ids.contains(id);
-    can_see_row_for_identities(identities, agent_id, &vis)
+    if !can_see_row_for_identities(identities, agent_id, &vis) {
+        return false;
+    }
+    let identity = identities.get(agent_id);
+    let is_system = identity.is_some_and(|identity| identity.role == AgentRole::System);
+    let roles: &[String] = identity.map_or(&[], |identity| identity.roles.as_slice());
+    super::access_policy::source_gate(agent_id, is_system, roles, view, id, groups)
 }
 
 /// Fail-closed mint-time error (contract §8, items 2/13/14).
@@ -474,6 +481,7 @@ impl PolicyDecisionLease {
             // (contract §2.2) — not a new privilege, see that section.
             return Ok(());
         }
+        let groups = super::access_policy::SourceGroupMemo::new();
         let hidden: HashSet<String> = view
             .node_map
             .keys()
@@ -483,6 +491,7 @@ impl PolicyDecisionLease {
                     self.effective_actor.as_str(),
                     view,
                     id,
+                    &groups,
                 ) {
                     None
                 } else {

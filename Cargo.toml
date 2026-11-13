@@ -2040,6 +2040,12 @@ name = "data_prep_declare"
 path = "benches/data_prep_declare.rs"
 harness = false
 
+# Source group expansion on the read gate (MEDULLA-IDENTITY-R706): nightly budget.
+[[bench]]
+name = "ingest_group_expansion"
+path = "benches/ingest_group_expansion.rs"
+harness = false
+
 # Source record governance parsing at batch size (MEDULLA-INGEST-WORKER-R900.6): nightly budget.
 [[bench]]
 name = "ingest_source_governance"

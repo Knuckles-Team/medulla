@@ -329,3 +329,314 @@ impl RowVisibility {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Source access gate (MEDULLA-IDENTITY-R706)
+// ---------------------------------------------------------------------------
+
+/// Node property: whether a source record is readable by everyone the row-level rules admit.
+pub const SOURCE_ACCESS_PUBLIC_KEY: &str = "source_access_public";
+/// Node property: principals, role names and `group:<id>` references that may read the record.
+pub const SOURCE_ACCESS_READ_ROLES_KEY: &str = "source_access_read_roles";
+/// Node property: the record's classification (`public`, `internal`, `confidential`, `restricted`).
+pub const SOURCE_CLASSIFICATION_KEY: &str = "source_classification";
+/// Node property: when the record's access was last synced, in milliseconds.
+pub const SOURCE_ACL_SYNCED_KEY: &str = "acl_synced_at_ms";
+/// Prefix that marks a group reference inside `source_access_read_roles`.
+pub const SOURCE_GROUP_REF_PREFIX: &str = "group:";
+/// Prefix of the node id of a source group.
+pub const SOURCE_GROUP_NODE_PREFIX: &str = "source_group:";
+
+/// The registry default of knob `ingest.acl_stale_after_s`, used only where no loader ran.
+const DEFAULT_SOURCE_ACL_STALE_AFTER_S: u64 = 3_600;
+
+static SOURCE_ACL_STALE_AFTER_S: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+
+/// Hand the startup-resolved value of knob `ingest.acl_stale_after_s` to the read gate;
+/// the first install wins.
+pub fn install_source_acl_stale_after_s(seconds: u64) {
+    let _ = SOURCE_ACL_STALE_AFTER_S.set(seconds);
+}
+
+/// The resolved staleness bound in seconds.
+pub fn source_acl_stale_after_s() -> u64 {
+    SOURCE_ACL_STALE_AFTER_S
+        .get()
+        .copied()
+        .unwrap_or(DEFAULT_SOURCE_ACL_STALE_AFTER_S)
+}
+
+/// The source access properties of one record node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceAccess {
+    pub public: bool,
+    pub read_roles: Vec<String>,
+    /// The classification is `restricted` or `confidential`: a stale ACL fails closed.
+    pub fail_closed_when_stale: bool,
+    pub acl_synced_at_ms: Option<u64>,
+}
+
+/// Decode the source access properties of a node; `None` when the node is not a governed
+/// source record (it carries no `source_access_public`).
+pub fn source_access(blob: &[u8]) -> Option<SourceAccess> {
+    use serde_json::Value;
+    let map: std::collections::BTreeMap<String, Value> = medulla_types::msgpack::decode_bounded(
+        blob,
+        medulla_types::msgpack::MsgpackLimits::new(
+            medulla_types::msgpack::MAX_PROPERTY_BYTES,
+            medulla_types::msgpack::MAX_PROPERTY_ITEMS,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
+    )
+    .ok()?;
+    let public = map.get(SOURCE_ACCESS_PUBLIC_KEY)?.as_bool()?;
+    let read_roles = map
+        .get(SOURCE_ACCESS_READ_ROLES_KEY)
+        .and_then(Value::as_array)
+        .map(|roles| {
+            roles
+                .iter()
+                .filter_map(|role| role.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let fail_closed_when_stale = map
+        .get(SOURCE_CLASSIFICATION_KEY)
+        .and_then(Value::as_str)
+        .is_some_and(|name| name == "restricted" || name == "confidential");
+    Some(SourceAccess {
+        public,
+        read_roles,
+        fail_closed_when_stale,
+        acl_synced_at_ms: map.get(SOURCE_ACL_SYNCED_KEY).and_then(Value::as_u64),
+    })
+}
+
+/// The member sets of the source groups held by one graph view, keyed by group id.
+#[derive(Debug, Default, Clone)]
+pub struct SourceGroups {
+    members: std::collections::HashMap<String, std::collections::HashSet<String>>,
+}
+
+impl SourceGroups {
+    /// Read every `source_group:` node of the view.
+    pub fn from_view(view: &crate::graph::GraphView) -> Self {
+        Self::from_nodes(
+            view.node_properties
+                .iter()
+                .filter(|(id, _)| id.starts_with(SOURCE_GROUP_NODE_PREFIX))
+                .map(|(_, blob)| blob.as_slice()),
+        )
+    }
+
+    /// Build the index from group node blobs.
+    pub fn from_nodes<'a>(blobs: impl IntoIterator<Item = &'a [u8]>) -> Self {
+        use serde_json::Value;
+        let mut groups = Self::default();
+        for blob in blobs {
+            let Ok(map) = medulla_types::msgpack::decode_bounded::<
+                std::collections::BTreeMap<String, Value>,
+            >(
+                blob,
+                medulla_types::msgpack::MsgpackLimits::new(
+                    medulla_types::msgpack::MAX_PROPERTY_BYTES,
+                    medulla_types::msgpack::MAX_PROPERTY_ITEMS,
+                    medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+                ),
+            ) else {
+                continue;
+            };
+            let Some(group_id) = map.get("group_id").and_then(Value::as_str) else {
+                continue;
+            };
+            let members = map
+                .get("members")
+                .and_then(Value::as_array)
+                .map(|members| {
+                    members
+                        .iter()
+                        .filter_map(|member| member.as_str().map(str::to_string))
+                        .collect::<std::collections::HashSet<_>>()
+                })
+                .unwrap_or_default();
+            groups
+                .members
+                .entry(group_id.to_string())
+                .or_default()
+                .extend(members);
+        }
+        groups
+    }
+
+    /// Whether `principal` belongs to group `group_id`.
+    pub fn is_member(&self, group_id: &str, principal: &str) -> bool {
+        self.members
+            .get(group_id)
+            .is_some_and(|members| members.contains(principal))
+    }
+}
+
+/// The outcome of the source access gate for one record and one caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceAccessVerdict {
+    Allowed,
+    /// The record is not public and the caller matches none of its read entries.
+    NotListed,
+    /// A restricted or confidential record whose ACL sync is older than the bound.
+    AclStale,
+}
+
+impl SourceAccessVerdict {
+    pub fn allows(self) -> bool {
+        self == Self::Allowed
+    }
+}
+
+/// Whether the record's ACL sync is older than `stale_after_s` at `now_ms`.
+pub fn source_acl_is_stale(access: &SourceAccess, now_ms: u64, stale_after_s: u64) -> bool {
+    access
+        .acl_synced_at_ms
+        .is_some_and(|synced| now_ms.saturating_sub(synced) > stale_after_s.saturating_mul(1_000))
+}
+
+/// Decide one record for one caller. A caller matches by principal, role or group.
+/// `groups` is consulted only when a `group:` reference has to be expanded.
+pub fn source_access_verdict(
+    access: &SourceAccess,
+    principal: &str,
+    roles: &[String],
+    groups: &mut dyn FnMut() -> std::sync::Arc<SourceGroups>,
+    now_ms: u64,
+    stale_after_s: u64,
+) -> SourceAccessVerdict {
+    if access.fail_closed_when_stale && source_acl_is_stale(access, now_ms, stale_after_s) {
+        return SourceAccessVerdict::AclStale;
+    }
+    if access.public {
+        return SourceAccessVerdict::Allowed;
+    }
+    let mut expanded: Option<std::sync::Arc<SourceGroups>> = None;
+    for entry in &access.read_roles {
+        if entry == principal || roles.iter().any(|role| role == entry) {
+            return SourceAccessVerdict::Allowed;
+        }
+        if let Some(group_id) = entry.strip_prefix(SOURCE_GROUP_REF_PREFIX) {
+            let index = expanded.get_or_insert_with(|| groups());
+            if index.is_member(group_id, principal) {
+                return SourceAccessVerdict::Allowed;
+            }
+        }
+    }
+    SourceAccessVerdict::NotListed
+}
+
+#[cfg(all(test, feature = "security"))]
+mod source_access_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn blob(value: serde_json::Value) -> Vec<u8> {
+        rmp_serde::to_vec_named(&value).unwrap()
+    }
+
+    fn no_groups() -> std::sync::Arc<SourceGroups> {
+        std::sync::Arc::new(SourceGroups::default())
+    }
+
+    fn verdict(
+        access: &SourceAccess,
+        principal: &str,
+        roles: &[&str],
+        groups: &SourceGroups,
+        now_ms: u64,
+    ) -> SourceAccessVerdict {
+        let roles: Vec<String> = roles.iter().map(|r| r.to_string()).collect();
+        let shared = std::sync::Arc::new(groups.clone());
+        source_access_verdict(
+            access,
+            principal,
+            &roles,
+            &mut || shared.clone(),
+            now_ms,
+            3_600,
+        )
+    }
+
+    #[test]
+    fn non_source_nodes_carry_no_access() {
+        assert!(source_access(&blob(json!({"name": "x"}))).is_none());
+    }
+
+    #[test]
+    fn principal_role_and_group_match_and_others_do_not() {
+        let access = source_access(&blob(json!({
+            "source_access_public": false,
+            "source_access_read_roles": ["alice", "auditor", "group:eng"],
+        })))
+        .unwrap();
+        let groups = SourceGroups::from_nodes(
+            [blob(json!({"group_id": "eng", "members": ["carol"]}))]
+                .iter()
+                .map(Vec::as_slice),
+        );
+        assert!(verdict(&access, "alice", &[], &groups, 0).allows());
+        assert!(verdict(&access, "bob", &["auditor"], &groups, 0).allows());
+        assert!(verdict(&access, "carol", &[], &groups, 0).allows());
+        assert_eq!(
+            verdict(&access, "dave", &["reader"], &groups, 0),
+            SourceAccessVerdict::NotListed
+        );
+        // A member removed from the group is denied on the next read.
+        let emptied = SourceGroups::from_nodes(
+            [blob(json!({"group_id": "eng", "members": []}))]
+                .iter()
+                .map(Vec::as_slice),
+        );
+        assert!(!verdict(&access, "carol", &[], &emptied, 0).allows());
+    }
+
+    #[test]
+    fn public_record_allows_and_group_index_is_built_only_on_demand() {
+        let access = source_access(&blob(json!({"source_access_public": true}))).unwrap();
+        let mut built = false;
+        let verdict = source_access_verdict(
+            &access,
+            "anyone",
+            &[],
+            &mut || {
+                built = true;
+                no_groups()
+            },
+            0,
+            3_600,
+        );
+        assert!(verdict.allows());
+        assert!(!built);
+    }
+
+    #[test]
+    fn stale_restricted_record_fails_closed_but_stale_internal_does_not() {
+        let restricted = source_access(&blob(json!({
+            "source_access_public": false,
+            "source_access_read_roles": ["alice"],
+            "source_classification": "restricted",
+            "acl_synced_at_ms": 1_000,
+        })))
+        .unwrap();
+        let groups = SourceGroups::default();
+        let now = 1_000 + 3_601_000;
+        assert_eq!(
+            verdict(&restricted, "alice", &[], &groups, now),
+            SourceAccessVerdict::AclStale
+        );
+        assert!(verdict(&restricted, "alice", &[], &groups, 1_000 + 3_600_000).allows());
+        let internal = source_access(&blob(json!({
+            "source_access_public": false,
+            "source_access_read_roles": ["alice"],
+            "source_classification": "internal",
+            "acl_synced_at_ms": 1_000,
+        })))
+        .unwrap();
+        assert!(verdict(&internal, "alice", &[], &groups, now).allows());
+    }
+}

@@ -173,14 +173,16 @@ pub async fn prepare(
     )
 }
 
-/// `prepare` dispatches on the batch kind; only `Records` has an admission
-/// path until the owning rows add theirs.
+/// `prepare` dispatches on the batch kind: `Records` has the record admission path,
+/// `Access` and `Groups` the permission path (MEDULLA-INGEST-WORKER-R902.3); the other
+/// kinds have no admission path until their owning rows add one.
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_kind(
     kind: medulla_source_types::source_ingestion::batch_kind::SourceBatchKind,
 ) -> Result<(), String> {
+    use medulla_source_types::source_ingestion::batch_kind::SourceBatchKind;
     match kind {
-        medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Records => Ok(()),
+        SourceBatchKind::Records | SourceBatchKind::Access | SourceBatchKind::Groups => Ok(()),
         _ => Err(format!(
             "{}: batch kind {kind:?} has no admission path",
             medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
@@ -196,6 +198,13 @@ pub async fn prepare(
     authorize_ingestion(&ctx)?;
     let batch = request.as_batch();
     admit_kind(batch.kind)?;
+    if matches!(
+        batch.kind,
+        medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Access
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
+    ) {
+        return prepare_permissions(ctx, &request).await;
+    }
     let batch_digest = request.batch_digest()?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
     let authority = CarrierAuthority::from_verified(ctx.verified)?;
@@ -333,6 +342,256 @@ pub async fn prepare(
         governance: admitted.governance,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         drift,
+    })
+}
+
+/// The permission path of `prepare` for `access` and `groups` batches
+/// (MEDULLA-INGEST-WORKER-R902.3): the pure admission of
+/// [`permissions::admit_access`] and [`permissions::admit_groups`] run against the
+/// records and groups the engine holds, and the accepted methods commit in one change
+/// envelope. The envelope advances the stream's permission object, never the record
+/// stream's cursor, so a permission sync cannot reorder record ingestion.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn prepare_permissions(
+    ctx: PrepareContext<'_>,
+    request: &SourceIngestionRequest,
+) -> Result<PreparedSourceIngestion, String> {
+    use medulla_source_types::source_ingestion::batch_kind::SourceBatchExtension;
+    let batch = request.as_batch();
+    let batch_digest = request.batch_digest()?;
+    let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
+    let persistence = load_persistence(&ctx).await?;
+    let graph_fname = medulla_kernel::persist::sanitize(ctx.graph_name);
+    if let Some(record) = persistence
+        .read_change_envelope(&graph_fname, &batch_id)
+        .await?
+    {
+        return prepared_replay(ctx, batch, batch_digest, record.envelope);
+    }
+    let policy_subject = policy_subject(ctx.tenant_scope)?;
+    let connector = batch.connector.as_str();
+    let stream = batch.provider_checkpoint.stream.as_str();
+    let mut methods = Vec::new();
+    let mut policies = Vec::new();
+    match batch.extension.as_ref() {
+        Some(SourceBatchExtension::Access(items)) => {
+            let snapshots = decode_permission_items::<
+                medulla_types::source_governance::AccessSnapshot,
+            >(items.as_slice(), |snapshot| {
+                snapshot.validate().map_err(|error| error.to_string())
+            })?;
+            let node_id_of = |snapshot: &medulla_types::source_governance::AccessSnapshot| {
+                source_node_id(ctx.tenant_scope, connector, stream, &snapshot.record_ref)
+            };
+            let held =
+                read_held_records(persistence.as_ref(), &graph_fname, &snapshots, &node_id_of)
+                    .await?;
+            let admission = permissions::admit_access(
+                &snapshots,
+                &held,
+                node_id_of,
+                permission_clock_ms(),
+                medulla_server_api::knob_config::knobs().ingest_acl_stale_after_s,
+            )?;
+            for update in admission.updates {
+                policies.push(policy(
+                    &update.node_id,
+                    ctx.tenant_scope,
+                    &update.subject_set_digest,
+                    0,
+                ));
+                methods.push(update.method);
+            }
+        }
+        Some(SourceBatchExtension::Groups(items)) => {
+            let groups = decode_permission_items::<medulla_types::source_governance::SourceGroup>(
+                items.as_slice(),
+                |group| group.validate().map_err(|error| error.to_string()),
+            )?;
+            let admission = permissions::admit_groups(&groups, |group| {
+                source_scoped_id(
+                    "source_group",
+                    b"eg/source-group-identity/v1",
+                    [ctx.tenant_scope, connector, &group.source, &group.group_id],
+                )
+            })?;
+            for update in admission.updates {
+                policies.push(policy(
+                    &update.node_id,
+                    ctx.tenant_scope,
+                    &policy_subject,
+                    0,
+                ));
+                methods.push(update.method);
+            }
+        }
+        _ => {
+            return Err(format!(
+                "{}: permission batch carries no matching extension",
+                medulla_types::contract::ServerErrorCode::SourceBatchKindMismatch.as_str()
+            ));
+        }
+    }
+    let applied = methods.len() as u64;
+    let stream_object_id = source_scoped_id(
+        "source-permissions",
+        b"eg/source-permission-stream/v1",
+        [ctx.tenant_scope, connector, stream, ""],
+    )?;
+    policies.push(policy(
+        &stream_object_id,
+        ctx.tenant_scope,
+        &policy_subject,
+        0,
+    ));
+    methods.push(permission_receipt_method(batch, &batch_id, applied)?);
+    policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
+    let mutation = compile_mutation(&ctx, &batch_id, methods)?;
+    let previous_stream_digest = stream_content_digest(
+        persistence.as_ref(),
+        &graph_fname,
+        &mutation,
+        &stream_object_id,
+    )
+    .await?;
+    let mut envelope = build_envelope(
+        batch,
+        &batch_id,
+        EnvelopeContents {
+            batch_digest,
+            mutation,
+            blobs: BTreeMap::new(),
+            policies,
+            lineage: Vec::new(),
+            mapping_revision: 0,
+            stream_object_id,
+            previous_stream_digest,
+        },
+    )?;
+    envelope.cursor = None;
+    Ok(PreparedSourceIngestion {
+        envelope,
+        batch_digest,
+        mode: batch.mode,
+        mappings: Vec::new(),
+        raw_admissions: Vec::new(),
+        relationship_raw_admissions: Vec::new(),
+        tombstones: Vec::new(),
+        relationship_tombstones: Vec::new(),
+        accepted_checkpoint: batch.provider_checkpoint.clone(),
+        live_set_digest: None,
+        relationship_live_set_digest: None,
+        affected_count: applied,
+        relationship_count: 0,
+        tombstoned_count: 0,
+        relationship_tombstoned_count: 0,
+        governance: Default::default(),
+        drift: Vec::new(),
+        committed_graph_version: ctx.graph_version.saturating_add(1),
+    })
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn decode_permission_items<T: serde::de::DeserializeOwned>(
+    items: &[medulla_source_types::source_ingestion::SourceJson],
+    validate: impl Fn(&T) -> Result<(), String>,
+) -> Result<Vec<T>, String> {
+    items
+        .iter()
+        .map(|item| {
+            let value = item.value()?;
+            let decoded: T = serde_json::from_value(value)
+                .map_err(|error| format!("SOURCE_PERMISSION_INVALID: {error}"))?;
+            validate(&decoded).map_err(|error| format!("SOURCE_PERMISSION_INVALID: {error}"))?;
+            Ok(decoded)
+        })
+        .collect()
+}
+
+/// What the engine holds about each record an access batch names.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_records(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    snapshots: &[medulla_types::source_governance::AccessSnapshot],
+    node_id_of: &impl Fn(&medulla_types::source_governance::AccessSnapshot) -> Result<String, String>,
+) -> Result<BTreeMap<String, permissions::HeldRecord>, String> {
+    let mut held = BTreeMap::new();
+    for snapshot in snapshots {
+        let node_id = node_id_of(snapshot)?;
+        let Some(bytes) = persistence.read_node(graph_fname, &node_id).await? else {
+            continue;
+        };
+        let properties: serde_json::Map<String, serde_json::Value> = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("SOURCE_PERMISSION_INVALID: held record: {error}"))?;
+        held.insert(
+            snapshot.record_ref.clone(),
+            permissions::HeldRecord {
+                acl_version: properties
+                    .get(permissions::ACL_VERSION_PROPERTY)
+                    .and_then(serde_json::Value::as_u64),
+                acl_synced_at_ms: properties
+                    .get(permissions::ACL_SYNCED_PROPERTY)
+                    .and_then(serde_json::Value::as_u64),
+                markings: properties
+                    .get("source_access_markings")
+                    .and_then(serde_json::Value::as_array)
+                    .map(|markings| {
+                        markings
+                            .iter()
+                            .filter_map(|marking| marking.as_str().map(str::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            },
+        );
+    }
+    Ok(held)
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn permission_clock_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| {
+            u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)
+        })
+}
+
+/// The receipt node of a permission batch; it carries the replay fields of a record
+/// receipt with empty record sections.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn permission_receipt_method(
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    batch_id: &str,
+    applied: u64,
+) -> Result<Method, String> {
+    let properties = serde_json::json!({
+        "type": "SourceIngestionReceipt",
+        "connector": batch.connector.as_str(),
+        "mode": batch.mode,
+        "kind": batch.kind,
+        "mappings": [],
+        "raw_admissions": [],
+        "relationship_raw_admissions": [],
+        "checkpoint": batch.provider_checkpoint,
+        "checkpoint_digest": batch.provider_checkpoint.digest()?.to_hex(),
+        "content_hash": batch.provider_checkpoint.content_hash,
+        "live_set_digest": null,
+        "relationship_live_set_digest": null,
+        "withdrawals": [],
+        "relationship_tombstones": [],
+        "governance": medulla_types::source_governance::GovernanceReport::default(),
+        "record_count": 0,
+        "relationship_count": 0,
+        "tombstoned_count": 0,
+        "relationship_tombstoned_count": 0,
+        "affected_count": applied,
+    });
+    Ok(Method::AddNode {
+        node_id: batch_id.into(),
+        properties_msgpack: rmp_serde::to_vec_named(&properties)
+            .map_err(|error| format!("permission receipt encoding failed: {error}"))?,
     })
 }
 

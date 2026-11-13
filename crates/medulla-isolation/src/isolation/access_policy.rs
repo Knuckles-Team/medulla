@@ -43,6 +43,52 @@ pub fn access_clock_ms() -> u64 {
         })
 }
 
+/// The source-group member sets of one view, built once per filtering pass.
+#[cfg(feature = "security")]
+pub(crate) type SourceGroupMemo =
+    std::cell::OnceCell<std::sync::Arc<medulla_graph_core::rls::SourceGroups>>;
+
+/// The one source access decision (MEDULLA-IDENTITY-R706), shared by the layer's own
+/// filter and the policy lease's mirror of it.
+#[cfg(feature = "security")]
+pub(crate) fn source_gate(
+    agent_id: &str,
+    is_system: bool,
+    roles: &[String],
+    view: &medulla_graph_core::graph::GraphView,
+    id: &str,
+    groups: &SourceGroupMemo,
+) -> bool {
+    use medulla_graph_core::rls;
+    let Some(blob) = view.node_properties.get(id) else {
+        return true;
+    };
+    // Cheap byte probe so ungoverned nodes never pay a property decode.
+    let key = rls::SOURCE_ACCESS_PUBLIC_KEY.as_bytes();
+    if !blob.windows(key.len()).any(|window| window == key) {
+        return true;
+    }
+    let Some(access) = rls::source_access(blob) else {
+        return true;
+    };
+    if is_system {
+        return true;
+    }
+    rls::source_access_verdict(
+        &access,
+        agent_id,
+        roles,
+        &mut || {
+            groups
+                .get_or_init(|| std::sync::Arc::new(rls::SourceGroups::from_view(view)))
+                .clone()
+        },
+        access_clock_ms(),
+        rls::source_acl_stale_after_s(),
+    )
+    .allows()
+}
+
 impl IsolationLayer {
     pub fn check_access(
         &self,
@@ -201,6 +247,19 @@ impl IsolationLayer {
         view: &medulla_graph_core::graph::GraphView,
         id: &str,
     ) -> bool {
+        self.can_see_node_with_groups(agent_id, view, id, &std::cell::OnceCell::new())
+    }
+
+    /// The row decision followed by the source access gate (MEDULLA-IDENTITY-R706).
+    /// `groups` memoizes the view's source-group member sets for one filtering pass.
+    #[cfg(feature = "security")]
+    fn can_see_node_with_groups(
+        &self,
+        agent_id: &str,
+        view: &medulla_graph_core::graph::GraphView,
+        id: &str,
+        groups: &SourceGroupMemo,
+    ) -> bool {
         let mut visibility = view
             .visibility_index
             .get(id)
@@ -212,15 +271,37 @@ impl IsolationLayer {
             })
             .unwrap_or_else(RowVisibility::default_public);
         visibility.schema = view.schema_node_ids.contains(id);
-        self.can_see_row(agent_id, &visibility)
+        if !self.can_see_row(agent_id, &visibility) {
+            return false;
+        }
+        self.source_gate_allows(agent_id, view, id, groups)
+    }
+
+    /// The source access gate: a governed source record is visible only to a caller its
+    /// access properties admit; group references expand through the view's `source_group`
+    /// nodes. A System caller bypasses it, as it bypasses every row rule.
+    #[cfg(feature = "security")]
+    fn source_gate_allows(
+        &self,
+        agent_id: &str,
+        view: &medulla_graph_core::graph::GraphView,
+        id: &str,
+        groups: &SourceGroupMemo,
+    ) -> bool {
+        let roles: &[String] = self
+            .agents
+            .get(agent_id)
+            .map_or(&[], |identity| identity.roles.as_slice());
+        source_gate(agent_id, self.is_system(agent_id), roles, view, id, groups)
     }
 
     #[cfg(feature = "security")]
     pub fn filter_view(&self, agent_id: &str, view: &mut medulla_graph_core::graph::GraphView) {
+        let groups = std::cell::OnceCell::new();
         let hidden: HashSet<String> = view
             .node_map
             .keys()
-            .filter(|id| !self.can_see_node(agent_id, view, id))
+            .filter(|id| !self.can_see_node_with_groups(agent_id, view, id, &groups))
             .cloned()
             .collect();
         for id in &hidden {
