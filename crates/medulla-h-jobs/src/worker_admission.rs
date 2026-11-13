@@ -68,16 +68,27 @@ use medulla_work_types::worker_registry::{
 
 /// The inputs of one served `AdmitWorkerTask` call.
 pub struct AdmitWorkerTaskInput<'a> {
+    /// The request id echoed in the response.
     pub req_id: u64,
+    /// The reserved worker asking for a task grant.
     pub worker_id: &'a str,
+    /// The most slots the worker asks for.
     pub requested_max: u32,
+    /// The tenant named in the request body.
     pub tenant: &'a str,
+    /// The tenant of the verified carrier; must equal `tenant`.
     pub verified_tenant: &'a str,
+    /// Engine time of the admission, in milliseconds.
     pub now_ms: u64,
+    /// The live worker registry.
     pub registry: &'a WorkerRegistry,
+    /// The scheduler configuration used for sizing.
     pub config: &'a SchedulerConfig,
+    /// The current load per lane.
     pub lane_load: &'a BTreeMap<String, LaneLoad>,
+    /// The shard-writer width (MEDULLA-DURABLE-KERNEL-R077).
     pub shard_writer_width: u32,
+    /// The id given to the grant when admission succeeds.
     pub grant_id: String,
 }
 
