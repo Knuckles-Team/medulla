@@ -595,6 +595,10 @@ knobs! {
     federation_cypher_max_path_depth: u64 = "federation.cypher_max_path_depth", U64(8), [1, 32], "hops", Tunable;
     /// Longest a web metasearch result is served from the cache (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
     federation_web_cache_ttl_s: u64 = "federation.web_cache_ttl_s", U64(900), [0, 86_400], "s", Tunable;
+    /// Most plan observations one query shape keeps; the oldest is dropped first (MEDULLA-FEDERATED-QUERY-R091.1).
+    federation_observations_per_shape: u64 = "federation.observations_per_shape", U64(4_096), [256, 65_536], "items", Tunable;
+    /// Most query shapes one tenant keeps observations for; the least recently seen is evicted (MEDULLA-FEDERATED-QUERY-R091.1).
+    federation_shapes_per_tenant: u64 = "federation.shapes_per_tenant", U64(1_024), [64, 16_384], "shapes", Tunable;
     /// Bits per character at or above which a name is an opaque token that never merges on the name alone (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
     entity_link_entropy_bits: f64 = "entity_link.entropy_bits", F64(3.5), [2.0, 6.0], "bits per character", Tunable;
     /// Calibrated probability at or above which an entity pair is a Match (MEDULLA-UNIFIED-DATA-PLANE-R030).

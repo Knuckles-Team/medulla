@@ -9,6 +9,7 @@
 //! pass, a confidence at or below it (or no hit at all) is `low_relevance_topk`. The
 //! other modes are measured here from counters the caller already holds. Cost is O(k).
 
+use medulla_graph_core::graph::GraphCore;
 use medulla_plan::retrieval_stop::{decide_stop, round_progress};
 use medulla_result_types::retrieval_round::{sha256_hex_of, RoundAnswer};
 use medulla_result_types::retrieval_stop::{
@@ -59,6 +60,55 @@ impl QualityKnobs {
     }
 }
 
+/// The `policy_revision` of a verdict judged by the registry knobs alone.
+pub(crate) const DEFAULT_POLICY_REVISION: &str = "default";
+
+/// The node type of a stored retrieval-quality policy (MEDULLA-FEDERATED-QUERY-R089.3).
+const POLICY_NODE_TYPE: &str = "RetrievalQualityPolicy";
+
+/// Resolve the thresholds one `Discover` call is judged by. With no reference the registry
+/// knobs apply and the revision is `default`. A reference names a `RetrievalQualityPolicy`
+/// node read from the caller's row-level-security core (`core` is already the caller's
+/// projection), whose `min_composite_quality` and `min_population_ratio` replace the knob
+/// values and whose `revision` is reported. A reference that names no visible node of that
+/// type, or a policy with a missing or out-of-range property, is an error naming the
+/// reference (the caller refuses it as `INVALID_ARGUMENT`).
+pub(crate) fn resolve_policy(
+    core: &GraphCore,
+    policy_ref: Option<&str>,
+    mut knobs: QualityKnobs,
+) -> Result<(QualityKnobs, String), String> {
+    let Some(node_id) = policy_ref else {
+        return Ok((knobs, DEFAULT_POLICY_REVISION.to_string()));
+    };
+    let unknown = || format!("unknown retrieval quality policy `{node_id}`");
+    let blob = core.get_node_properties(node_id).ok_or_else(unknown)?;
+    let props = super::gateway_graph::decode_json_object(&blob);
+    let node_type = props
+        .get("type")
+        .or_else(|| props.get("node_type"))
+        .and_then(serde_json::Value::as_str);
+    if node_type != Some(POLICY_NODE_TYPE) {
+        return Err(unknown());
+    }
+    let revision = props
+        .get("revision")
+        .and_then(serde_json::Value::as_str)
+        .filter(|r| !r.is_empty())
+        .ok_or_else(|| format!("retrieval quality policy `{node_id}` has no revision"))?
+        .to_string();
+    let ratio = |key: &str| -> Result<f64, String> {
+        props
+            .get(key)
+            .and_then(serde_json::Value::as_f64)
+            .filter(|v| (0.0..=1.0).contains(v))
+            .ok_or_else(|| format!("retrieval quality policy `{node_id}` needs `{key}` in [0, 1]"))
+    };
+    knobs.min_composite_quality = ratio("min_composite_quality")?;
+    knobs.min_population_ratio = ratio("min_population_ratio")?;
+    Ok((knobs, revision))
+}
+
 /// What the verdict is measured from.
 #[derive(Debug, Clone)]
 pub(crate) struct QualityInputs<'a> {
@@ -84,7 +134,11 @@ fn q16(x: f64) -> u16 {
 }
 
 /// Judge one `Discover` answer.
-pub(crate) fn quality_verdict(input: &QualityInputs<'_>, knobs: &QualityKnobs) -> RetrievalVerdict {
+pub(crate) fn quality_verdict(
+    input: &QualityInputs<'_>,
+    knobs: &QualityKnobs,
+    policy_revision: &str,
+) -> RetrievalVerdict {
     let thresholds = DiscoverThresholds {
         min_composite_quality_q16: q16(knobs.min_composite_quality),
         min_population_ratio_q16: q16(knobs.min_population_ratio),
@@ -156,7 +210,7 @@ pub(crate) fn quality_verdict(input: &QualityInputs<'_>, knobs: &QualityKnobs) -
         composite_quality_q16: q16(quality),
         index_population_ratio_q16: q16(population),
         total_candidates: input.hits.len(),
-        policy_revision: "discover-quality".to_string(),
+        policy_revision: policy_revision.to_string(),
         index_generation: input.index_generation,
         thresholds,
         adapter_digest: Some(
@@ -225,14 +279,14 @@ mod tests {
     }
 
     fn modes(input: &QualityInputs<'_>) -> Vec<RetrievalFailureMode> {
-        quality_verdict(input, &KNOBS).failure_modes
+        quality_verdict(input, &KNOBS, DEFAULT_POLICY_REVISION).failure_modes
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R089.2
     #[test]
     fn each_mode_fires_on_its_trigger() {
         let good = [hit("a", 0.9), hit("b", 0.7)];
-        let v = quality_verdict(&healthy(&good), &KNOBS);
+        let v = quality_verdict(&healthy(&good), &KNOBS, DEFAULT_POLICY_REVISION);
         assert!(v.gate_passed && v.failure_modes.is_empty());
         assert_eq!(v.adapter_digest.as_deref(), Some("base"));
         assert_eq!(v.index_generation, 7);
@@ -281,7 +335,7 @@ mod tests {
             shard_generations: vec![("s1".into(), 3), ("s2".into(), 5)],
             adapter_digest: Some("ab".repeat(32)),
         };
-        let v = quality_verdict(&input, &KNOBS);
+        let v = quality_verdict(&input, &KNOBS, DEFAULT_POLICY_REVISION);
         assert_eq!(v.failure_modes, vec![RetrievalFailureMode::Drift]);
         assert!(!v.gate_passed);
         assert_eq!(v.adapter_digest, Some("ab".repeat(32)));

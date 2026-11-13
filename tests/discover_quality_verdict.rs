@@ -57,6 +57,14 @@ async fn write(state: &test_support::SharedState, n: u64, name: &str) {
 }
 
 async fn verdict(state: &test_support::SharedState, id: u64) -> serde_json::Value {
+    verdict_under(state, id, None).await
+}
+
+async fn verdict_under(
+    state: &test_support::SharedState,
+    id: u64,
+    policy: Option<&str>,
+) -> serde_json::Value {
     let result = send(
         state,
         id,
@@ -64,7 +72,7 @@ async fn verdict(state: &test_support::SharedState, id: u64) -> serde_json::Valu
             keywords: vec!["known".into()],
             query_embedding: vec![1.0, 1.0, 2.0],
             k: 5,
-            quality_policy_ref: None,
+            quality_policy_ref: policy.map(str::to_string),
             hops: 0,
             query_text: None,
             mode: Default::default(),
@@ -78,6 +86,60 @@ async fn verdict(state: &test_support::SharedState, id: u64) -> serde_json::Valu
         ResultPayload::Json(serde_json::Value::Object(envelope)) => envelope["verdict"].clone(),
         other => panic!("expected the Discover envelope, got {other:?}"),
     }
+}
+
+/// Verifies MEDULLA-FEDERATED-QUERY-R089.3: a `RetrievalQualityPolicy` node named by
+/// `quality_policy_ref` replaces the knob thresholds and its revision rides the verdict.
+// spec: MEDULLA-FEDERATED-QUERY-R089.3
+#[tokio::test]
+async fn policy_node_overrides_defaults() {
+    let (persist_dir, persistence) = common::tempdir_persistence();
+    let state = test_support::state_with(
+        SECRET,
+        common::current_isolation(),
+        persist_dir,
+        persistence,
+    );
+    for n in 0..8 {
+        write(&state, n, "known term").await;
+    }
+    // A policy no answer can clear: the quality floor is the top of the scale.
+    send(
+        &state,
+        500,
+        Method::AddNode {
+            node_id: "policy-strict".into(),
+            properties_msgpack: pack(json!({
+                "type": "RetrievalQualityPolicy",
+                "revision": "strict-7",
+                "min_composite_quality": 1.0,
+                "min_population_ratio": 0.25,
+            })),
+        },
+    )
+    .await;
+
+    let default = verdict_under(&state, 600, None).await;
+    assert_eq!(default["policy_revision"], "default", "{default}");
+    let knobs = medulla_server_api::knob_config::knobs();
+    assert_eq!(
+        default["thresholds"]["min_composite_quality_q16"],
+        (knobs.discover_min_composite_quality.clamp(0.0, 1.0) * 65_535.0).round()
+    );
+
+    let strict = verdict_under(&state, 601, Some("policy-strict")).await;
+    assert_eq!(strict["policy_revision"], "strict-7", "{strict}");
+    assert_eq!(strict["thresholds"]["min_composite_quality_q16"], 65_535);
+    assert_eq!(
+        strict["thresholds"]["min_population_ratio_q16"],
+        (0.25_f64 * 65_535.0).round()
+    );
+    assert_eq!(strict["above_threshold"], false, "{strict}");
+    assert!(strict["failure_modes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m == "low_relevance_topk"));
 }
 
 /// Verifies MEDULLA-FEDERATED-QUERY-R089.7: Behavior: drift mode.

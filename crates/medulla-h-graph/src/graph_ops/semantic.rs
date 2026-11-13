@@ -177,6 +177,8 @@ struct DiscoverCall<'a> {
     tenant: Option<&'a str>,
     /// Digest of the adapter that re-aimed this query, `None` for the base space.
     adapter_digest: Option<&'a str>,
+    /// The `RetrievalQualityPolicy` node the verdict is judged by (R089.3).
+    quality_policy_ref: Option<&'a str>,
 }
 
 #[cfg(feature = "query")]
@@ -191,6 +193,14 @@ fn discover(
 
     let k = call.k;
     let knobs = medulla_server_api::knob_config::knobs();
+    let (quality_knobs, policy_revision) = match super::discover_quality::resolve_policy(
+        core,
+        call.quality_policy_ref,
+        super::discover_quality::QualityKnobs::from_registry(),
+    ) {
+        Ok(resolved) => resolved,
+        Err(message) => return Response::err(req_id, format!("INVALID_ARGUMENT: {message}")),
+    };
     let kws = normalized_keywords(call.keywords);
     let has_emb = !call.query_embedding.is_empty();
     let has_kw = !kws.is_empty();
@@ -359,7 +369,8 @@ fn discover(
             index_generation,
             signals,
         },
-        &super::discover_quality::QualityKnobs::from_registry(),
+        &quality_knobs,
+        &policy_revision,
     );
     Response::ok(
         req_id,
@@ -422,6 +433,7 @@ async fn handle_discover(
     as_of: Option<i64>,
     perspectives: Option<u32>,
     served: (Option<String>, Option<String>),
+    quality_policy_ref: Option<String>,
 ) -> Response {
     let (tenant, adapter_digest) = served;
     let request = medulla_types::ingestion_wire::DiscoverPlanRequest {
@@ -454,6 +466,7 @@ async fn handle_discover(
             graph_name,
             tenant: tenant.as_deref(),
             adapter_digest: adapter_digest.as_deref(),
+            quality_policy_ref: quality_policy_ref.as_deref(),
         },
         deep,
         req_id,
@@ -604,13 +617,13 @@ pub(super) async fn try_handle_semantic_compute(
             keywords,
             query_embedding,
             k,
+            quality_policy_ref,
             hops,
             query_text,
             mode,
             as_of,
             perspectives,
             capability,
-            ..
         } => {
             let served = discover_served(&ctx, capability.as_deref()).await;
             handle_discover(
@@ -626,6 +639,7 @@ pub(super) async fn try_handle_semantic_compute(
                 as_of,
                 perspectives,
                 served,
+                quality_policy_ref,
             )
             .await
         }

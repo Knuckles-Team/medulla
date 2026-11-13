@@ -32,6 +32,7 @@ pub mod mcp;
 #[cfg(feature = "federation-sql")]
 mod obda_snapshot;
 pub(crate) mod oq2;
+pub mod plan_evolution;
 pub mod remote;
 mod run;
 mod search;

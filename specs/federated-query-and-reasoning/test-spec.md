@@ -860,7 +860,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R088.3:** `tests/uql_governed_summary.rs::rows_and_header_share_one_snapshot` (planned). Wiring. Writes between two reads and asserts the header matches the rows.
 - **MEDULLA-FEDERATED-QUERY-R088.6:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). Hot-path proof. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.2:** `crates/medulla-h-graph/src/graph_ops/discover_quality.rs::tests::each_mode_fires_on_its_trigger` (planned). Behavior: failure modes. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R089.3:** `tests/discover_quality_verdict.rs::policy_node_overrides_defaults` (planned). Wiring and policy node. Reads the policy node and returns the verdict.
+- **MEDULLA-FEDERATED-QUERY-R089.3:** `tests/discover_quality_verdict.rs::policy_node_overrides_defaults`. Wiring and policy node. Reads the policy node and returns the verdict.
 - **MEDULLA-FEDERATED-QUERY-R089.4:** `tests/discover_quality_verdict.rs::unknown_policy_refuses_and_failed_verdict_keeps_rows` (planned). Refusal. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.5:** `tests/discover_quality_verdict.rs::verdict_carries_revision_generation_and_thresholds` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.6:** `tests/test_discover.py::test_discover_returns_verdict` (planned). Hot-path proof. The fixture and expected result are stated in the row's Test cell.
