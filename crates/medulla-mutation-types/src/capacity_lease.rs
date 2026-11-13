@@ -86,6 +86,8 @@ pub enum CapacityResourceClass {
     Cpu,
     /// Message-broker/engine dispatch admission slots.
     Broker,
+    /// Resident memory in bytes (placement headroom, MEDULLA-PLACEMENT-R001.8).
+    Memory,
 }
 
 /// The same four priority tiers `resource_priority.py::PriorityClass` defines,

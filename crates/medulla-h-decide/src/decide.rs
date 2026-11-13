@@ -83,6 +83,8 @@ mod stat_support;
 // MEDULLA-DECISION-ENGINE-R045: the smallest covering tool subset within a
 // context-token budget.
 #[cfg(feature = "decide")]
+mod stat_placement;
+#[cfg(feature = "decide")]
 mod stat_task_plan;
 #[cfg(feature = "decide")]
 mod stat_thought_search;

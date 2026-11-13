@@ -211,3 +211,6 @@ Order: R781.1, R781.3, R781.4. The served wire type changes with R781.3, so the 
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-PLACEMENT-R780`, `MEDULLA-PLACEMENT-R781`, `MEDULLA-PLACEMENT-R782`, `MEDULLA-PLACEMENT-R783` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+## Placement decide wiring (R001.7)
+`serve` calls `stat_placement::with_read` for `QuestionKind::Placement` (graph read under the caller's ACL, ledger headroom read at the request priority), then `decide_blocking` reaches `PlacementFamily::conclude` → `placement_outcome` → `place`. Premises `lease:<cell>:<class>=<available>` (observation, capacity-cell provenance) and one declared-facts premise per target come from `PlacementFamily::premises`. Policy caps come from `knob_families::placement`.

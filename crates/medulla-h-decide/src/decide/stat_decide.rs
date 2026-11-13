@@ -112,6 +112,20 @@ async fn serve(
     } else {
         request
     };
+    // A `placement` question reads the declared facts of its targets and the
+    // capacity headroom of its cells here, and records them in its parameter
+    // (MEDULLA-PLACEMENT-R001.7).
+    let request = if request.question.kind == QuestionKind::Placement {
+        telemetry::stage_async(
+            telemetry::Stage::Entailment,
+            &family,
+            verified.tenant(),
+            super::stat_placement::with_read(state, verified, request),
+        )
+        .await?
+    } else {
+        request
+    };
     // A `harness_contrast` question declares its candidates but still reads
     // its evidence (held versions, probe runs, stored contrasts) from the
     // graph named by its `graph` param, under the same RLS filter.

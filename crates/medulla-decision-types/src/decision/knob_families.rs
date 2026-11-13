@@ -4,6 +4,7 @@
 
 pub mod memory;
 pub mod participant;
+pub mod placement;
 pub mod profile;
 pub mod task_plan;
 pub mod topology;
@@ -15,6 +16,7 @@ use super::knobs::KnobSpec;
 pub const REGISTRY: &[&[KnobSpec]] = &[
     memory::KNOBS,
     participant::KNOBS,
+    placement::KNOBS,
     profile::KNOBS,
     task_plan::KNOBS,
     topology::KNOBS,

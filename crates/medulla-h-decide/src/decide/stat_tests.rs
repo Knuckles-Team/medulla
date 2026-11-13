@@ -1067,6 +1067,10 @@ mod knob_tests;
 #[cfg(feature = "redb")]
 mod topology_tests;
 
+// MEDULLA-PLACEMENT-R001.7: the served placement question.
+#[cfg(all(feature = "decide", feature = "redb"))]
+mod placement_tests;
+
 #[cfg(feature = "query")]
 mod retrieval_tests;
 

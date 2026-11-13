@@ -261,6 +261,95 @@ pub fn place(
     Ok(verdict)
 }
 
+/// The name of the one parameter a placement question carries.
+pub const PLACEMENT_PARAM: &str = "placement";
+
+/// The capacity cell that holds the CPU headroom (millicores) of `target`.
+pub fn cpu_cell(target: PlacementTarget) -> String {
+    format!("{}:cpu", target.option_id())
+}
+
+/// The capacity cell that holds the memory headroom (bytes) of `target`.
+pub fn memory_cell(target: PlacementTarget) -> String {
+    format!("{}:memory", target.option_id())
+}
+
+/// One target and its declared facts, as the engine read them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TargetFactsEntry {
+    pub target: PlacementTarget,
+    pub facts: TargetFacts,
+}
+
+/// Everything the engine reads for one placement question, recorded in the
+/// question's own parameter so the pure decision and its replay read the same
+/// facts: the declared target facts and the capacity headroom. The policy caps
+/// come from the pinned policy's `placement.*` knobs, whose digest the record
+/// already carries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementRead {
+    pub targets: Vec<TargetFactsEntry>,
+    pub headroom: Vec<medulla_agent_types::agent_topology::CapacityHeadroom>,
+}
+
+impl PlacementRead {
+    /// The facts under `policy` in the shape [`place`] takes.
+    pub fn facts(&self, policy: PlacementPolicy) -> PlacementFacts {
+        PlacementFacts {
+            targets: self
+                .targets
+                .iter()
+                .map(|entry| (entry.target, entry.facts))
+                .collect(),
+            policy,
+        }
+    }
+
+    /// Free `(cpu, memory)` per target from the cells read: a cell the
+    /// request did not name, or the ledger does not hold, is zero headroom.
+    pub fn headroom_by_target(&self) -> PlacementHeadroom {
+        let available = |cell: String| {
+            self.headroom
+                .iter()
+                .find(|row| row.cell_id == cell)
+                .map_or(0, |row| row.available)
+        };
+        PlacementHeadroom {
+            by_target: PlacementTarget::ALL
+                .iter()
+                .map(|target| {
+                    (
+                        *target,
+                        (
+                            available(cpu_cell(*target)),
+                            available(memory_cell(*target)),
+                        ),
+                    )
+                })
+                .collect(),
+        }
+    }
+}
+
+/// The typed question of a `Placement` request: what is placed and where the
+/// facts are read from. `read` is engine-filled; a caller-supplied value is
+/// refused, because observed headroom is not a caller claim.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementQuestion {
+    /// The graph holding the `placement:Target` nodes and the capacity cells,
+    /// read under the caller's access.
+    pub graph: String,
+    pub body: PlacementRequestBody,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read: Option<PlacementRead>,
+}
+
 /// The closed capability set a host may declare (MEDULLA-PLACEMENT-R004.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
