@@ -22,7 +22,11 @@
 //! `MineAssociate` mines only caller-supplied `transactions`; `ProgramOptimize`
 //! submits an opaque request a REMOTE WORKER later claims and executes under
 //! its OWN independently authenticated session (see "Distributed execution
-//! contract" below) — this handler never touches the worker's read path.
+//! contract" below) — this handler never touches the worker's read path. The one
+//! exception is a `ProgramOptimize` request that names a score source: its
+//! `:Score` rows are read at submit by `score_source::program_score_rows`, which
+//! always goes through `GraphReadAuthority::project_core`, never the raw core
+//! (MEDULLA-DECISION-ENGINE-R813.3).
 //! `handle_submit` also runtime-checks this classification (fail-closed, not a
 //! debug-only assert) before ever destructuring `kind`, so a FUTURE
 //! graph-reading `JobKind` that is marked `true` here but not yet wired
@@ -104,10 +108,12 @@ mod prelude_std;
 mod program_validation;
 mod publication;
 mod results_association;
+#[cfg(feature = "program-optimization")]
+mod results_program;
 mod schedule_tick;
 mod schedules;
 #[cfg(feature = "program-optimization")]
-mod results_program;
+mod score_source;
 mod submit;
 mod worker_publish;
 mod worker_requests;
@@ -134,9 +140,9 @@ use core::{
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
-use executor_query_log::*;
 #[cfg(feature = "program-optimization")]
 use executor_program::*;
+use executor_query_log::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
 use native_validation::*;
@@ -213,7 +219,15 @@ pub async fn handle(
     };
     let response = match op {
         JobOp::Submit(spec) => {
-            handle_submit_op(state, &store, req_id, authority, attempt_nonce, spec).await
+            handle_submit_op(
+                state,
+                &store,
+                req_id,
+                (authority, verified_context),
+                attempt_nonce,
+                spec,
+            )
+            .await
         }
         JobOp::Status { job_id } => handle_status_op(&store, req_id, authority, &job_id),
         JobOp::Cancel { job_id } => {
@@ -340,9 +354,7 @@ pub async fn handle(
             };
             schedules::create(schedule_call(), graph, name, spec, task_kind, policy).await
         }
-        JobOp::ScheduleGet { graph, name } => {
-            schedules::get(schedule_call(), graph, name).await
-        }
+        JobOp::ScheduleGet { graph, name } => schedules::get(schedule_call(), graph, name).await,
         JobOp::ScheduleUpdate {
             graph,
             name,
@@ -518,7 +530,9 @@ mod jobs_read_rls_architecture;
 ///   in the request — each item is opaque-ref-hashed under the caller's own
 ///   `owner_scope` before it ever reaches durable storage (see this file's
 ///   `handle_submit`, the `JobKind::MineAssociate` arm).
-/// - `ProgramOptimize` submits an opaque `OptimizationRequest`; the actual
+/// - `ProgramOptimize` submits an `OptimizationRequest` (its only row read is the
+///   projected `:Score` read of `score_source::program_score_rows`, which this
+///   classification does not govern); the actual
 ///   optimization work is claimed and executed later by a remote worker under
 ///   its OWN independently authenticated session (see the module doc's
 ///   "Distributed execution contract") — this handler never reads graph rows
@@ -543,11 +557,12 @@ async fn handle_submit(
     state: &Arc<RwLock<ServerState>>,
     store: &Arc<JobStore>,
     req_id: u64,
-    authority: &CarrierAuthority,
+    caller: (&CarrierAuthority, &VerifiedRequestContext),
     spec: SubmitJobSpec,
     batch: MutationBatch,
     committed_at_ms: u64,
 ) -> Response {
+    let (authority, verified) = caller;
     let core = match resolve_submit_graph_core(state, req_id, authority, &spec.graph).await {
         Ok(core) => core,
         Err(response) => return response,
@@ -589,6 +604,19 @@ async fn handle_submit(
     // graph's OCC version, never accepted from the caller (CONCEPT:INT-P2-1: a
     // client cannot forge which graph-version a job ran against).
     let snapshot_version = core.version();
+    // A program optimization request that names a score source reads the
+    // caller's visible `:Score` rows here, through the row-level-security
+    // projection, before the kind is governed (MEDULLA-DECISION-ENGINE-R813.3).
+    #[cfg(feature = "program-optimization")]
+    let score_rows = match score_source::program_score_rows(state, req_id, verified, &kind).await {
+        Ok(rows) => rows,
+        Err(response) => return response,
+    };
+    #[cfg(not(feature = "program-optimization"))]
+    let score_rows: Option<medulla_program::corpus::StoredScoreSet> = {
+        let _ = verified;
+        None
+    };
     finalize_submit(
         store,
         req_id,
@@ -596,7 +624,7 @@ async fn handle_submit(
         batch,
         committed_at_ms,
         snapshot_version,
-        spec,
+        (spec, score_rows),
     )
     .await
 }
@@ -684,6 +712,9 @@ fn staged_program_identity(
 pub struct JobGovernance<'a> {
     pub policy_fingerprint: &'a str,
     pub purpose: &'a str,
+    /// The caller's visible `:Score` rows, read server-side when a program
+    /// optimization request names a score source (MEDULLA-DECISION-ENGINE-R813.3).
+    pub score_rows: Option<&'a medulla_program::corpus::StoredScoreSet>,
     pub required_capabilities: &'a mut Vec<String>,
 }
 
@@ -717,6 +748,7 @@ pub fn govern_job_kind(
             governance.policy_fingerprint,
             governance.purpose,
             request_msgpack,
+            governance.score_rows,
             governance.required_capabilities,
         ),
         // `jobs` always compiles the variant in; without this crate's
@@ -743,7 +775,10 @@ async fn finalize_submit(
     batch: MutationBatch,
     committed_at_ms: u64,
     snapshot_version: u64,
-    spec: SubmitJobSpec,
+    (spec, score_rows): (
+        SubmitJobSpec,
+        Option<medulla_program::corpus::StoredScoreSet>,
+    ),
 ) -> Response {
     let mut spec = spec;
     // The policy this job was admitted under. The envelope carries the real
@@ -760,6 +795,7 @@ async fn finalize_submit(
         JobGovernance {
             policy_fingerprint: &policy_fingerprint,
             purpose: &spec.purpose,
+            score_rows: score_rows.as_ref(),
             required_capabilities: &mut spec.required_capabilities,
         },
     ) {

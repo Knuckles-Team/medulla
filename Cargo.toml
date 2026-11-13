@@ -377,7 +377,7 @@ statechart = ["medulla-work-store/statechart", "medulla-store-apply/statechart",
 # Graph-native, provider-neutral LM programs and governed self-improvement. This
 # extends the one analytics-job authority; it does not introduce another network,
 # cache, provider, or graph-mutation path.
-program-optimization = ["medulla-server-store-tests/program-optimization", "medulla-h-jobs/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "jobs", "dep:medulla-program", "medulla-types/program-optimization", "medulla-agent-types/program-optimization", "medulla-work-types/program-optimization"]
+program-optimization = ["medulla-server-store-tests/program-optimization", "medulla-h-jobs/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "jobs", "dep:medulla-program", "dep:medulla-modality", "medulla-types/program-optimization", "medulla-agent-types/program-optimization", "medulla-work-types/program-optimization"]
 # D-VZ-1 (lane V0, `plans/au-medulla-program/deferred/lane-viz-native.md`) -- native
 # visualization contracts. `viz` links `medulla-viz-core` alone (ViewSpec IR, ViewResult
 # metadata, capability matrix, tier-selection rules, trait boundaries only -- no

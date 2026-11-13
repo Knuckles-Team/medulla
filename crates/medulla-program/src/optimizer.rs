@@ -299,6 +299,18 @@ pub struct OptimizationRequest {
     pub optimizer_artifacts: Vec<OptimizerArtifact>,
     #[serde(default)]
     pub candidate_evaluations: Vec<EvaluationSummary>,
+    /// Where the server reads the corpus from (MEDULLA-DECISION-ENGINE-R813.3):
+    /// the caller's visible `:Score` nodes of that graph. When set, the request
+    /// carries no examples and the server fills them at submit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score_source: Option<ScoreSource>,
+}
+
+/// The graph whose `:Score` nodes become the training corpus.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScoreSource {
+    pub graph: String,
 }
 
 impl OptimizationRequest {

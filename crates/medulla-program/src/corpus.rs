@@ -27,6 +27,32 @@ pub struct ScoreRow {
     pub evidence: Vec<EvidenceBinding>,
 }
 
+/// One `:Score` node as the engine stored it, before refs are minted: ids are
+/// the stored node ids. The server reads these through the caller's own
+/// projection (MEDULLA-DECISION-ENGINE-R813.3); a client never supplies them.
+#[derive(Clone, Debug, PartialEq)]
+pub struct StoredScore {
+    pub node_id: String,
+    /// The node linked by `:scoresRun`; `None` leaves the score out.
+    pub run_id: Option<String>,
+    pub value: f64,
+    pub range_min: f64,
+    pub range_max: f64,
+    pub grader_kind: GraderKind,
+    pub author: Option<String>,
+    pub split: Option<ExampleSplit>,
+    pub input_ids: Vec<String>,
+    pub observed_output_id: Option<String>,
+}
+
+/// The `:Score` nodes a caller can see in one graph, with the graph version
+/// they were read at (the corpus snapshot version).
+#[derive(Clone, Debug, PartialEq)]
+pub struct StoredScoreSet {
+    pub snapshot_version: u64,
+    pub scores: Vec<StoredScore>,
+}
+
 /// The caller-bound corpus identity and policy every example is built under.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CorpusPolicy {

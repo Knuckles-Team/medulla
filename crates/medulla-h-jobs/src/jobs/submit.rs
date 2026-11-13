@@ -115,10 +115,11 @@ pub(super) async fn handle_submit_op(
     state: &Arc<RwLock<ServerState>>,
     store: &Arc<JobStore>,
     req_id: u64,
-    authority: &CarrierAuthority,
+    caller: (&CarrierAuthority, &VerifiedRequestContext),
     attempt_nonce: Option<Nonce>,
     spec: SubmitJobSpec,
 ) -> Response {
+    let authority = caller.0;
     let method = Method::AnalyticsJob {
         op: JobOp::Submit(spec.clone()),
     };
@@ -126,7 +127,7 @@ pub(super) async fn handle_submit_op(
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
-    handle_submit(state, store, req_id, authority, spec, batch, now).await
+    handle_submit(state, store, req_id, caller, spec, batch, now).await
 }
 
 /// The `JobOp::Cancel` arm of [`handle`]: verify ownership, compile the
@@ -390,6 +391,58 @@ pub(super) fn submit_job_source_query_log(
     ))
 }
 
+/// Bounded-decode one program optimization request.
+#[cfg(feature = "program-optimization")]
+pub(super) fn decode_optimization_request(request_msgpack: &[u8]) -> Option<OptimizationRequest> {
+    medulla_types::msgpack::decode_bounded(
+        request_msgpack,
+        medulla_types::msgpack::MsgpackLimits::new(
+            MAX_JOB_INPUT_BYTES,
+            MAX_JOB_INPUT_ITEMS,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
+    )
+    .ok()
+}
+
+/// MEDULLA-DECISION-ENGINE-R813.2/R813.3: when the request names a score source,
+/// its corpus is built from the score rows the server read for the caller, through
+/// `corpus_from_scores`. The client carries the corpus header only (reference
+/// and privacy attestation); examples it supplies are refused, and the snapshot
+/// version is the one the rows were read at.
+#[cfg(feature = "program-optimization")]
+fn fill_corpus_from_scores(
+    request: &mut OptimizationRequest,
+    score_rows: Option<&medulla_program::corpus::StoredScoreSet>,
+    envelope: &PolicyEnvelope,
+) -> Result<(), String> {
+    if request.score_source.is_none() {
+        return Ok(());
+    }
+    let Some(set) = score_rows else {
+        return Err("INTERNAL: a score source was named but no score rows were read".to_string());
+    };
+    if !request.corpus.examples.is_empty() {
+        return Err(
+            "INVALID_ARGUMENT: a request that names a score source carries no examples".to_string(),
+        );
+    }
+    let rows = super::score_source::corpus_rows(set, envelope)
+        .map_err(|error| format!("INVALID_ARGUMENT: {error}"))?;
+    let built = medulla_program::corpus::corpus_from_scores(
+        &rows,
+        &medulla_program::corpus::CorpusPolicy {
+            corpus_ref: request.corpus.corpus_ref.clone(),
+            snapshot_version: set.snapshot_version,
+            privacy: request.corpus.privacy.clone(),
+            envelope: envelope.clone(),
+        },
+    )
+    .map_err(|error| format!("program optimization request is invalid: {error}"))?;
+    request.corpus = built.corpus;
+    Ok(())
+}
+
 /// The `JobKind::ProgramOptimize` arm of [`handle_submit`]'s kind-governance
 /// match: bounded-decode the request, rebind its policy to the verified
 /// caller, re-encode it, and ensure the native capability is required.
@@ -400,28 +453,22 @@ pub(super) fn submit_job_program_optimize(
     policy_fingerprint: &str,
     purpose: &str,
     request_msgpack: Vec<u8>,
+    score_rows: Option<&medulla_program::corpus::StoredScoreSet>,
     required_capabilities: &mut Vec<String>,
 ) -> Result<(JobKind, String, String, serde_json::Value), Response> {
-    let request: OptimizationRequest = match medulla_types::msgpack::decode_bounded(
-        &request_msgpack,
-        medulla_types::msgpack::MsgpackLimits::new(
-            MAX_JOB_INPUT_BYTES,
-            MAX_JOB_INPUT_ITEMS,
-            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-        ),
-    ) {
-        Ok(request) => request,
-        Err(_) => {
-            return Err(Response::err(
-                req_id,
-                "program optimization request failed bounded decoding",
-            ));
-        }
+    let Some(mut request) = decode_optimization_request(&request_msgpack) else {
+        return Err(Response::err(
+            req_id,
+            "program optimization request failed bounded decoding",
+        ));
     };
     let verified_policy = match verified_program_policy(authority, policy_fingerprint, purpose) {
         Ok(policy) => policy,
         Err(error) => return Err(Response::err(req_id, error)),
     };
+    if let Err(error) = fill_corpus_from_scores(&mut request, score_rows, &verified_policy) {
+        return Err(Response::err(req_id, error));
+    }
     let request = match request.rebind_program_policy(verified_policy) {
         Ok(request) => request,
         Err(error) => {
@@ -449,6 +496,7 @@ pub(super) fn submit_job_program_optimize(
         "request_ref": request.request_ref.as_str(),
         "corpus_ref": request.corpus.corpus_ref.as_str(),
         "snapshot_version": request.corpus.snapshot_version,
+        "examples": request.corpus.examples.len(),
     });
     Ok((
         JobKind::ProgramOptimize { request_msgpack },

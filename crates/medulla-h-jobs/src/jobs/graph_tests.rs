@@ -138,6 +138,7 @@ mod mine_associate_submission_tests {
             JobGovernance {
                 policy_fingerprint: "policy:test",
                 purpose: "",
+                score_rows: None,
                 required_capabilities: &mut Vec::new(),
             },
         )

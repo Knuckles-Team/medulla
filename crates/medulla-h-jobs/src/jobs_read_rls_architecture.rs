@@ -69,11 +69,15 @@ const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
     ),
     (
         "ProgramOptimize",
-        "submits an opaque OptimizationRequest; the actual optimization work \
+        "submits an OptimizationRequest; the actual optimization work \
          is claimed and executed later by a REMOTE worker under its OWN \
          independently authenticated session (see this file's module doc, \
          \"Distributed execution contract\") -- this handler never reads a \
-         graph row on that worker's behalf",
+         graph row on that worker's behalf. Its only row read is the `:Score` \
+         read of a named score source, which \
+         `score_source::program_score_rows` performs on the caller's \
+         `project_core` projection (guarded by \
+         `score_source_reads_only_the_projection` below)",
     ),
 ];
 
@@ -232,6 +236,37 @@ fn handle_submit_fails_closed_before_using_kind() {
         guard_block.contains("return Response::err("),
         "a tripped reads_graph_rows_server_side guard must return an error \
          Response (fail closed), not silently continue"
+    );
+}
+
+/// The one row read a `ProgramOptimize` submit makes -- its named score source --
+/// must go through the caller's projection and run before the kind is governed
+/// (MEDULLA-DECISION-ENGINE-R813.3).
+#[test]
+fn score_source_reads_only_the_projection() {
+    const SCORE_SOURCE: &str = include_str!("jobs/score_source.rs");
+    assert!(
+        SCORE_SOURCE.contains("authority.project_core(&core)"),
+        "program_score_rows must read through GraphReadAuthority::project_core"
+    );
+    assert!(
+        SCORE_SOURCE.contains("read_stored_scores(&projected)")
+            && !SCORE_SOURCE.contains("read_stored_scores(&core)"),
+        "the score read must run on the projection, never the raw core"
+    );
+    let submit_at = JOBS_SOURCE
+        .find("async fn handle_submit(")
+        .expect("handle_submit must exist in jobs.rs");
+    let after_submit = &JOBS_SOURCE[submit_at..];
+    let read_at = after_submit
+        .find("score_source::program_score_rows(")
+        .expect("handle_submit must read the score source");
+    let finalize_at = after_submit
+        .find("finalize_submit(")
+        .expect("handle_submit must finalize the submit");
+    assert!(
+        read_at < finalize_at,
+        "the score read must precede finalize_submit"
     );
 }
 

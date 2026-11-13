@@ -211,6 +211,7 @@ fn request(optimizer: OptimizerKind) -> OptimizationRequest {
         },
         optimizer_artifacts: Vec::new(),
         candidate_evaluations: Vec::new(),
+        score_source: None,
     }
 }
 

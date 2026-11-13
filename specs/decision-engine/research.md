@@ -758,3 +758,8 @@ The rewrite proposal names the graph that holds the record's snapshot head (`gra
 - The check runs in the pack import validator for every Prompt entry whose body is bounded JSON, and reports through the pack's own violation list as `PROMPT_BLUEPRINT_INVALID` (a `PackViolationCode`). The detail lists `path (rule)` pairs and never a value.
 - `extends` resolves against the Prompt entries of the same pack, so import stays a pure function of the archive; a later row may widen it to registered candidates when R814.1 stores them.
 - Hard cutover: the synthetic pack generator's prompt body is now blueprint-shaped, so pack digests pinned in synthetic-pack tests need the wire-vector refresh (WIRE-REGEN).
+
+## R813.2 score rows are read by the engine at submit
+
+`OptimizationRequest.score_source` names a graph only. At submit the engine reads the verified caller's visible `:Score` nodes (label `Score`, edge `scoresRun` to the run, properties `value`, `range_min`, `range_max`, `grader_kind`, `author`, `split`, `observed_output`) on the caller's `project_core` projection, stamps the corpus snapshot version from the graph version, and builds the corpus through `corpus_from_scores`. A request that names a source carries no examples. An unknown graph and a graph the caller cannot read refuse with the same text. A graph holding more scores than a corpus carries refuses rather than truncating. R813.3 still owns the ontology property declarations for `:Score` and its ingest-then-submit proof; R813.4 owns the registered refusal codes (the read uses `SCORE_*` text prefixes until then).
+
