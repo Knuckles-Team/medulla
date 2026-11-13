@@ -122,3 +122,13 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Cell and column formulas multiply before they divide (`(v - lo) * n / (hi - lo)`), which keeps integer-valued sources exact; line columns use integer arithmetic on nanosecond timestamps.
 - `filter_digest` is part of the viewport identity and is not applied by the engine: a caller filters by choosing the source it reads.
 - Block aggregates for the 1,000,000,000-point nightly are a separate row (R081.103.5): the range scan serves the 1,000,000-point proof, and the nightly needs a store change.
+
+## Model scorer of the rerank stage (R652.7)
+
+- Decision: rerank runs in one place, the `ContextCompile` pipeline, in the order fuse, `rerank_top`, calibrate, boost. `Discover` is a cheap navigation read and never reranks.
+- Decision: `ModelScorer` adapts the `Reranker` the server already binds by `retrieval.reranker_model`. There is one binding and one provider seam; a second model loader would be a second path. Its scorer id version is the bound artifact revision, so a score from another artifact is never mistaken for it.
+- Decision: a model that is configured but absent, or that returns no usable score for every candidate, falls back to the lexical scorer with `fallback = scorer_unavailable`. A server with the key unset runs the lexical scorer as its scorer and reports no fallback, because nothing was lost.
+- Decision: a calibration curve pinned for another scorer is not applied; the scores scale min-max and the receipt carries `no_calibration`. Scores from different scorers are never mixed on one curve.
+- Decision: the receipt is carried in the bundle evidence as `RerankEvidence` beside the other inline evidence; nothing is stored. Candidates past `retrieval.rerank_k` are not scored and leave the bundle as `below_gap`.
+- The champion-pointer read of the calibration curve (`MEDULLA-FEDERATED-QUERY-R652.3`) waits on the pointer read of `MEDULLA-DECISION-ENGINE-R805.13`; until then the stage runs with no pinned curve.
+

@@ -386,6 +386,11 @@ def start_medulla_server(request, tmp_path_factory):
         os.environ.get("MEDULLA_ENCRYPTION_KEY", "test-medulla-encryption-key"),
     )
 
+    # The rerank seam binds its model from server configuration once per process:
+    # the deterministic lexical-overlap model, which scores a query against each
+    # candidate's text without a semantic artifact.
+    server_env.setdefault("MEDULLA_RETRIEVAL_RERANKER_MODEL", "builtin:lexical-overlap")
+
     if os.path.exists(socket_path):
         os.remove(socket_path)
 

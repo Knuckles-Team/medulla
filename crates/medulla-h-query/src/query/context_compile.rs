@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::retrieval_round::{reranker_binding, RerankerBinding};
 use super::*;
 use medulla_decision_types::decision::context_bundle::{
     BundleKey, Citation, ContextBundle, ContextBundleRequest, ContextMode, DroppedReason,
@@ -21,8 +22,10 @@ use medulla_exec::access_check::{
     AccessMode, DropReason, MAX_CACHE_TTL_MS,
 };
 use medulla_plan::context_bundle::{
-    bundle_key_of, compile, CompileInputs, ContextKnobs, ResolutionSpan, SourceHit, SourceRanking,
+    bundle_key_of, compile_with, CompileInputs, ContextKnobs, RerankDoc, RerankInputs,
+    ResolutionSpan, SourceHit, SourceRanking,
 };
+use medulla_plan::rerank::{ModelBinding, ModelScorer};
 use medulla_protocol_types::result_contract::query::ContextCompile;
 use sha2::{Digest, Sha256};
 
@@ -113,6 +116,7 @@ fn text_field(object: &serde_json::Map<String, serde_json::Value>, key: &str) ->
 struct NodeText {
     name: String,
     description: String,
+    text: String,
     node_type: String,
     source: String,
     mode: AccessMode,
@@ -133,6 +137,7 @@ fn node_text(core: &GraphCore, id: &str) -> Option<NodeText> {
             name
         },
         description: text_field(&object, "description"),
+        text: text_field(&object, "text"),
         node_type,
         source: if source.is_empty() {
             GRAPH_SOURCE.to_string()
@@ -398,6 +403,28 @@ fn run_compile(
         })
         .collect();
 
+    // The rerank stage scores the query against each hit's text; a semantic-only
+    // request has no query text, so it skips the stage.
+    let rerank = (!request.query_text.trim().is_empty()).then(|| RerankInputs {
+        query: request.query_text.clone(),
+        rerank_k: usize::try_from(knobs.retrieval_rerank_k).unwrap_or(usize::MAX),
+        curve: None,
+        docs: nodes
+            .iter()
+            .filter_map(|(id, node)| {
+                node.as_ref().map(|n| {
+                    (
+                        id.clone(),
+                        RerankDoc {
+                            name: n.name.clone(),
+                            description: n.description.clone(),
+                            text: n.text.clone(),
+                        },
+                    )
+                })
+            })
+            .collect(),
+    });
     let inputs = CompileInputs {
         tenant: tenant.to_string(),
         graph_revision: revision,
@@ -412,8 +439,20 @@ fn run_compile(
             proof_edges_per_item: u32::try_from(knobs.context_proof_edges_per_item).unwrap_or(3),
             value_floor_micro_per_token: knobs.context_value_floor_micro_per_token,
         },
+        rerank,
     };
-    let bundle = compile(request, &inputs).map_err(|refusal| {
+    // The model the server bound for reranking: absent, loaded, or configured but
+    // with no provider (MEDULLA-FEDERATED-QUERY-R652.7).
+    let model_scorer = match reranker_binding() {
+        RerankerBinding::Bound(model) => Some(ModelScorer::new(model.as_ref())),
+        _ => None,
+    };
+    let binding = match (reranker_binding(), &model_scorer) {
+        (RerankerBinding::Unset, _) => ModelBinding::Unset,
+        (RerankerBinding::Bound(_), Some(scorer)) => ModelBinding::Bound(scorer),
+        _ => ModelBinding::Unavailable,
+    };
+    let bundle = compile_with(request, &inputs, binding).map_err(|refusal| {
         let code = refusal.code.as_str();
         // The package codes are registered strings; the router needs a static.
         let code: &'static str = match code {

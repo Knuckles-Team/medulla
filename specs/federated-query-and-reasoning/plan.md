@@ -1241,3 +1241,8 @@ Order: R733, then R734 and R735 in parallel.
 ### Selection and hierarchy parts of the served round (R081.7.3 to R081.9.7.5)
 
 `RoundRequest` gains the `selection` and `hierarchy` parts and `RoundResult` gains `selection`, `hierarchy_selected`, `inference` and `premises`. `run_round` runs hierarchy, then sufficiency over the plan rows joined with the hierarchy's selected ids, then selection. The `Reranker` port sits beside `TextEmbedder` in `medulla-exec` and is bound from `retrieval.reranker_model`. `GraphHierarchySource` and `GraphSectionTopology` live in `crates/medulla-plan/src/hierarchy_source.rs` and read the caller's narrowed snapshot, so tenant isolation needs no second filter. Each step appends one premise (`retrieval.selection`, `retrieval.hierarchy`, `retrieval.sections`) that carries its receipt and measured counters. Decisions are in research.md.
+
+### Model scorer of the rerank stage (R652.7)
+
+`compile_with` takes a `ModelBinding` (`Unset`, `Bound`, `Unavailable`). After reciprocal-rank fusion, `rerank_fused` scores the first `retrieval.rerank_k` fused candidates through `rerank_with`, replaces their fused scores with the calibrated rerank scores, and the cut and package solver run on that order. `handle_context_compile` supplies each hit's name, description and `text`, and the binding read by `reranker_binding`. The receipt is `BundleEvidence.rerank`. A request with no query text skips the stage.
+

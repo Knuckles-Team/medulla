@@ -16,7 +16,9 @@ use medulla_decision_types::decision::context_package::{
 };
 use medulla_types::contract::{BoundedVec, Digest256};
 
-use crate::rerank::{calibrate, CalibrationCurve};
+use crate::rerank::{
+    calibrate, rerank_with, CalibrationCurve, LexicalDoc, ModelBinding, RerankReceipt,
+};
 pub use medulla_decision_types::decision::context_bundle::*;
 
 /// The registered knobs the compile reads (`context.*`).
@@ -72,6 +74,24 @@ pub struct SourceRanking {
     pub hits: Vec<SourceHit>,
 }
 
+/// The text a candidate is scored on by the rerank stage.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RerankDoc {
+    pub name: String,
+    pub description: String,
+    pub text: String,
+}
+
+/// What the rerank stage needs: the query, the candidates' text and the
+/// pinned curve. `rerank_k` is `knob retrieval.rerank_k`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RerankInputs {
+    pub query: String,
+    pub rerank_k: usize,
+    pub curve: Option<CalibrationCurve>,
+    pub docs: BTreeMap<String, RerankDoc>,
+}
+
 /// What the handler hands `compile` after scope, rerank and access check.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompileInputs {
@@ -83,6 +103,8 @@ pub struct CompileInputs {
     pub pre_excluded: Vec<ExcludedItem>,
     pub unchecked_dropped: Vec<DroppedRecord>,
     pub knobs: ContextKnobs,
+    /// The rerank stage; `None` skips it (no query text to score against).
+    pub rerank: Option<RerankInputs>,
 }
 
 /// The cache key of a request under its inputs.
@@ -170,10 +192,58 @@ fn cut_at_gap(fused: &[(String, f32)], min_items: usize) -> usize {
     keep
 }
 
-/// Compile one bundle. Deterministic: equal inputs give equal bundles.
+/// Rerank the head of the fused list: the first `rerank_k` candidates are
+/// scored, calibrated and reordered; the rest are returned as not scored.
+fn rerank_fused(
+    fused: Vec<(String, f32)>,
+    rerank: &RerankInputs,
+    model: ModelBinding<'_>,
+) -> (Vec<(String, f32)>, Vec<String>, RerankReceipt) {
+    let empty = RerankDoc::default();
+    let head = fused.len().min(rerank.rerank_k);
+    let docs: Vec<LexicalDoc<'_>> = fused[..head]
+        .iter()
+        .map(|(id, _)| {
+            let doc = rerank.docs.get(id).unwrap_or(&empty);
+            LexicalDoc {
+                node_id: id,
+                name: &doc.name,
+                description: &doc.description,
+                text: &doc.text,
+            }
+        })
+        .collect();
+    let run = rerank_with(
+        &rerank.query,
+        &docs,
+        rerank.rerank_k,
+        rerank.curve.as_ref(),
+        model,
+    );
+    let reordered = run
+        .hits
+        .iter()
+        .map(|h| (h.node_id.clone(), h.calibrated))
+        .collect();
+    let unscored = fused[head..].iter().map(|(id, _)| id.clone()).collect();
+    (reordered, unscored, run.receipt)
+}
+
+/// Compile one bundle with the lexical scorer. Deterministic: equal inputs
+/// give equal bundles.
 pub fn compile(
     request: &ContextBundleRequest,
     inputs: &CompileInputs,
+) -> Result<ContextBundle, PackageRefusal> {
+    compile_with(request, inputs, ModelBinding::Unset)
+}
+
+/// [`compile`] with the model binding the server holds for the rerank stage
+/// (MEDULLA-FEDERATED-QUERY-R652.7).
+pub fn compile_with(
+    request: &ContextBundleRequest,
+    inputs: &CompileInputs,
+    model: ModelBinding<'_>,
 ) -> Result<ContextBundle, PackageRefusal> {
     let knobs = inputs.knobs;
     let mut evidence = BundleEvidence {
@@ -191,6 +261,7 @@ pub fn compile(
             policy_digest: inputs.policy_digest.clone(),
         },
         unchecked_dropped: inputs.unchecked_dropped.clone(),
+        rerank: None,
     };
     let key = bundle_key(request, inputs);
 
@@ -207,10 +278,32 @@ pub fn compile(
         }
     }
     let refs: Vec<&[String]> = lists.iter().map(Vec::as_slice).collect();
-    let fused = medulla_text::rrf_fuse(&refs, knobs.rrf_k as f32);
+    let mut fused = medulla_text::rrf_fuse(&refs, knobs.rrf_k as f32);
+    // Fuse, then rerank the head, then cut (MEDULLA-FEDERATED-QUERY-R650,
+    // MEDULLA-FEDERATED-QUERY-R652.7).
+    let mut unscored: Vec<String> = Vec::new();
+    if let Some(rerank) = &inputs.rerank {
+        let (reordered, rest, receipt) = rerank_fused(fused, rerank, model);
+        fused = reordered;
+        unscored = rest;
+        evidence.rerank = Some(RerankEvidence {
+            scorer_name: receipt.scorer.name,
+            scorer_version: receipt.scorer.version,
+            calibration_digest: receipt.calibration_digest,
+            input_ranks: receipt.input_ranks,
+            output_ranks: receipt.output_ranks,
+            fallback: receipt.fallback,
+        });
+    }
     let keep = cut_at_gap(&fused, knobs.min_items as usize);
 
     let mut excluded: Vec<ExcludedItem> = inputs.pre_excluded.clone();
+    for node in unscored {
+        excluded.push(ExcludedItem {
+            item_id: node,
+            reason: ExclusionReason::BelowGap,
+        });
+    }
     for (node, _) in &fused[keep..] {
         excluded.push(ExcludedItem {
             item_id: node.clone(),

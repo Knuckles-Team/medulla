@@ -99,6 +99,7 @@ fn inputs() -> CompileInputs {
             reason: DroppedReason::Timeout,
         }],
         knobs: ContextKnobs::default(),
+        rerank: None,
     }
 }
 
@@ -230,4 +231,75 @@ fn result_is_deterministic_across_thread_counts() {
     let mut reversed = inputs();
     reversed.rankings.reverse();
     assert_eq!(compile(&request(100), &reversed).unwrap(), baseline);
+}
+
+struct PrefersGarden;
+
+impl medulla_exec::exec::Reranker for PrefersGarden {
+    fn score(&self, _query: &str, texts: &[&str]) -> Vec<f32> {
+        texts
+            .iter()
+            .map(|t| if t.contains("garden") { 1.0 } else { 0.0 })
+            .collect()
+    }
+    fn revision(&self) -> String {
+        "garden-encoder@sha256:aa".to_string()
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R652.7
+#[test]
+fn rerank_runs_after_fuse_and_names_the_model() {
+    use crate::rerank::{ModelBinding, ModelScorer};
+    let mut base = inputs();
+    let docs = ["n1", "n2", "n3", "n4", "n5"]
+        .iter()
+        .map(|id| {
+            let name = if *id == "n3" { "garden" } else { "ledger" };
+            (
+                (*id).to_string(),
+                RerankDoc {
+                    name: name.to_string(),
+                    ..RerankDoc::default()
+                },
+            )
+        })
+        .collect();
+    base.rerank = Some(RerankInputs {
+        query: "garden".to_string(),
+        rerank_k: 3,
+        curve: None,
+        docs,
+    });
+    // Lexical only: the receipt names the lexical scorer; the two candidates past
+    // rerank_k are excluded as not scored.
+    let lexical = compile(&request(1_000), &base).unwrap();
+    let receipt = lexical.evidence.rerank.as_ref().unwrap();
+    assert_eq!(receipt.scorer_name, "lexical_bm25");
+    assert_eq!(receipt.input_ranks.len(), 3);
+    // A bound model decides the order and its revision is the scorer version.
+    let model = PrefersGarden;
+    let scorer = ModelScorer::new(&model);
+    let modelled = compile_with(&request(1_000), &base, ModelBinding::Bound(&scorer)).unwrap();
+    let receipt = modelled.evidence.rerank.as_ref().unwrap();
+    assert_eq!(receipt.scorer_version, "garden-encoder@sha256:aa");
+    assert_eq!(
+        modelled.evidence.selected.first().map(String::as_str),
+        Some("n3")
+    );
+    // A configured model that is not loaded falls back and says so.
+    let missing = compile_with(&request(1_000), &base, ModelBinding::Unavailable).unwrap();
+    let receipt = missing.evidence.rerank.as_ref().unwrap();
+    assert_eq!(receipt.scorer_name, "lexical_bm25");
+    assert_eq!(
+        receipt.fallback,
+        Some(medulla_decision_types::decision::context_bundle::FallbackReason::ScorerUnavailable)
+    );
+    // No rerank inputs, no receipt.
+    base.rerank = None;
+    assert!(compile(&request(1_000), &base)
+        .unwrap()
+        .evidence
+        .rerank
+        .is_none());
 }

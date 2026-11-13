@@ -199,6 +199,29 @@ pub struct BundleEvidence {
     pub certificate_bound_tokens: u64,
     pub key_inputs: KeyInputs,
     pub unchecked_dropped: Vec<DroppedRecord>,
+    /// What the rerank stage did; absent when the compile ran no rerank
+    /// (no query text to score against).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rerank: Option<RerankEvidence>,
+}
+
+/// What one rerank did, inline in the bundle evidence
+/// (MEDULLA-FEDERATED-QUERY-R652.5, R652.7). `scorer_*` name the scorer that
+/// produced the raw scores; for a model scorer the version is the pinned
+/// artifact revision. `input_ranks[i]` is the fused rank of the i-th scored
+/// candidate and `output_ranks[i]` the rank it holds after the rerank.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct RerankEvidence {
+    pub scorer_name: String,
+    pub scorer_version: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calibration_digest: Option<String>,
+    pub input_ranks: Vec<u32>,
+    pub output_ranks: Vec<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback: Option<FallbackReason>,
 }
 
 /// The compiled bundle. `certificate` is `None` only when no candidate

@@ -5,6 +5,7 @@
 //! that records what the rerank did. Plain serde types; [`CalibrationCurve`]
 //! and [`ScorerId`] are validated on construction.
 
+use medulla_exec::exec::Reranker;
 use serde::{Deserialize, Serialize};
 
 /// Most knots a calibration curve may carry.
@@ -226,21 +227,11 @@ pub struct RerankedHit {
     pub calibrated: f32,
 }
 
-/// Score only the first `rerank_k` candidates (the knob `retrieval.rerank_k`,
-/// default 64, [8, 256]), calibrate, and order by calibrated score descending
-/// with ties broken by node id. Candidates past `rerank_k` are not returned.
-pub fn rerank_top(
-    query: &str,
-    docs: &[LexicalDoc<'_>],
-    rerank_k: usize,
-    curve: Option<&CalibrationCurve>,
-) -> (Vec<RerankedHit>, Option<FallbackReason>) {
-    let scored = &docs[..docs.len().min(rerank_k)];
-    let raw = LexicalScorer.score(query, scored);
-    let (calibrated, fallback) = calibrate(&raw, curve);
-    let mut hits: Vec<RerankedHit> = scored
+/// Order scored candidates by calibrated score descending, ties by node id.
+fn order_hits(docs: &[LexicalDoc<'_>], raw: &[f32], calibrated: &[f32]) -> Vec<RerankedHit> {
+    let mut hits: Vec<RerankedHit> = docs
         .iter()
-        .zip(raw.iter().zip(&calibrated))
+        .zip(raw.iter().zip(calibrated))
         .map(|(d, (r, c))| RerankedHit {
             node_id: d.node_id.to_string(),
             raw: *r,
@@ -253,7 +244,132 @@ pub fn rerank_top(
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| a.node_id.cmp(&b.node_id))
     });
-    (hits, fallback)
+    hits
+}
+
+/// Score only the first `rerank_k` candidates (the knob `retrieval.rerank_k`,
+/// default 64, [8, 256]), calibrate, and order by calibrated score descending
+/// with ties broken by node id. Candidates past `rerank_k` are not returned.
+pub fn rerank_top(
+    query: &str,
+    docs: &[LexicalDoc<'_>],
+    rerank_k: usize,
+    curve: Option<&CalibrationCurve>,
+) -> (Vec<RerankedHit>, Option<FallbackReason>) {
+    let scored = &docs[..docs.len().min(rerank_k)];
+    let raw = LexicalScorer.score(query, scored);
+    let (calibrated, fallback) = calibrate(&raw, curve);
+    (order_hits(scored, &raw, &calibrated), fallback)
+}
+
+/// The cross-encoder scorer of MEDULLA-FEDERATED-QUERY-R652.7: it scores
+/// through the model bound by config key `retrieval.reranker_model` (the
+/// [`Reranker`] of MEDULLA-FEDERATED-QUERY-R081.7.3). Its id carries the bound
+/// artifact revision as the version, so a score from another artifact is never
+/// mistaken for this one.
+pub struct ModelScorer<'a> {
+    model: &'a dyn Reranker,
+}
+
+impl<'a> ModelScorer<'a> {
+    pub fn new(model: &'a dyn Reranker) -> Self {
+        Self { model }
+    }
+}
+
+impl RerankScorer for ModelScorer<'_> {
+    fn id(&self) -> ScorerId {
+        ScorerId {
+            name: "model_cross_encoder".to_string(),
+            version: self.model.revision(),
+        }
+    }
+
+    fn score(&self, query: &str, docs: &[&str]) -> Result<Vec<f32>, RerankError> {
+        self.id()
+            .validate()
+            .map_err(|_| RerankError::ScorerUnavailable {
+                detail: "the bound artifact names no revision".to_string(),
+            })?;
+        let scores = self.model.score(query, docs);
+        if scores.len() != docs.len() || scores.iter().any(|s| !s.is_finite()) {
+            return Err(RerankError::ScorerUnavailable {
+                detail: "the bound artifact returned no usable score for every candidate"
+                    .to_string(),
+            });
+        }
+        Ok(scores)
+    }
+}
+
+/// Which model the server has bound for the rerank stage.
+#[derive(Clone, Copy)]
+pub enum ModelBinding<'a> {
+    /// No model is configured: the lexical scorer is the scorer, not a fallback.
+    Unset,
+    /// A model is configured and loaded.
+    Bound(&'a dyn RerankScorer),
+    /// A model is configured but absent or failed to load.
+    Unavailable,
+}
+
+/// One rerank: the ordered hits and the receipt of what happened.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RerankRun {
+    pub hits: Vec<RerankedHit>,
+    pub receipt: RerankReceipt,
+}
+
+/// [`rerank_top`] with a model scorer. A model that is configured but absent,
+/// or that fails to score, falls back to the lexical scorer and the receipt
+/// carries `scorer_unavailable`. A curve pinned for another scorer is not
+/// applied (versions are never mixed); the scores then scale min-max.
+pub fn rerank_with(
+    query: &str,
+    docs: &[LexicalDoc<'_>],
+    rerank_k: usize,
+    curve: Option<&CalibrationCurve>,
+    model: ModelBinding<'_>,
+) -> RerankRun {
+    let scored = &docs[..docs.len().min(rerank_k)];
+    let mut unavailable = matches!(model, ModelBinding::Unavailable);
+    let mut scorer = LexicalScorer::id();
+    let mut raw = None;
+    if let ModelBinding::Bound(model) = model {
+        let texts: Vec<String> = scored
+            .iter()
+            .map(|d| format!("{}\n{}\n{}", d.name, d.description, d.text))
+            .collect();
+        let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+        match model.score(query, &refs) {
+            Ok(scores) => {
+                scorer = model.id();
+                raw = Some(scores);
+            }
+            Err(_) => unavailable = true,
+        }
+    }
+    let raw = raw.unwrap_or_else(|| LexicalScorer.score(query, scored));
+    let curve = curve.filter(|c| c.scorer == scorer);
+    let (calibrated, calibration_fallback) = calibrate(&raw, curve);
+    let hits = order_hits(scored, &raw, &calibrated);
+    let rank_of: std::collections::BTreeMap<&str, u32> = hits
+        .iter()
+        .enumerate()
+        .map(|(rank, h)| (h.node_id.as_str(), rank as u32))
+        .collect();
+    let receipt = RerankReceipt {
+        scorer,
+        calibration_digest: curve.map(|c| c.digest.clone()),
+        input_ranks: (0..scored.len() as u32).collect(),
+        output_ranks: scored.iter().map(|d| rank_of[d.node_id]).collect(),
+        fallback: if unavailable {
+            Some(FallbackReason::ScorerUnavailable)
+        } else {
+            calibration_fallback
+        },
+    };
+    RerankRun { hits, receipt }
 }
 
 pub use medulla_decision_types::decision::context_bundle::FallbackReason;
@@ -450,5 +566,73 @@ mod tests {
             }
         }
         assert!(scaled.iter().all(|v| (0.0..=1.0).contains(v)));
+    }
+
+    struct Fixed(Vec<f32>, &'static str);
+    impl Reranker for Fixed {
+        fn score(&self, _query: &str, _texts: &[&str]) -> Vec<f32> {
+            self.0.clone()
+        }
+        fn revision(&self) -> String {
+            self.1.to_string()
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R652.7
+    #[test]
+    fn model_scorer_unavailable_falls_back() {
+        let docs = [
+            doc("n1", "invoice", "monthly invoice total", "invoice paid"),
+            doc("n2", "gardening", "plants", "soil and water"),
+        ];
+        // Bound and healthy: the model orders the candidates and its revision is the id.
+        let good = Fixed(vec![0.1, 0.9], "xenc@sha256:abc");
+        let scorer = ModelScorer::new(&good);
+        let run = rerank_with("invoice", &docs, 64, None, ModelBinding::Bound(&scorer));
+        assert_eq!(run.hits[0].node_id, "n2");
+        assert_eq!(run.receipt.scorer.version, "xenc@sha256:abc");
+        assert_eq!(run.receipt.fallback, Some(FallbackReason::NoCalibration));
+        assert_eq!(run.receipt.output_ranks, vec![1, 0]);
+        // Configured but not loaded: lexical order, scorer_unavailable.
+        let run = rerank_with("invoice", &docs, 64, None, ModelBinding::Unavailable);
+        assert_eq!(run.hits[0].node_id, "n1");
+        assert_eq!(run.receipt.scorer, LexicalScorer::id());
+        assert_eq!(
+            run.receipt.fallback,
+            Some(FallbackReason::ScorerUnavailable)
+        );
+        // Loaded but returns the wrong number of scores, or a non-finite one.
+        for bad in [Fixed(vec![0.5], "m@1"), Fixed(vec![f32::NAN, 0.2], "m@1")] {
+            let scorer = ModelScorer::new(&bad);
+            assert!(matches!(
+                scorer.score("invoice", &["a", "b"]),
+                Err(RerankError::ScorerUnavailable { .. })
+            ));
+            let run = rerank_with("invoice", &docs, 64, None, ModelBinding::Bound(&scorer));
+            assert_eq!(run.hits[0].node_id, "n1");
+            assert_eq!(
+                run.receipt.fallback,
+                Some(FallbackReason::ScorerUnavailable)
+            );
+        }
+        // A blank revision names no artifact.
+        let blank = Fixed(vec![0.1, 0.2], " ");
+        assert!(ModelScorer::new(&blank).score("q", &["a", "b"]).is_err());
+        // No model configured: lexical is the scorer, not a fallback.
+        let run = rerank_with("invoice", &docs, 64, None, ModelBinding::Unset);
+        assert_eq!(run.receipt.fallback, Some(FallbackReason::NoCalibration));
+        // A curve pinned for another scorer is not applied.
+        let foreign = CalibrationCurve::new(
+            ScorerId::new("other", "1").unwrap(),
+            vec![(0.0, 0.0), (1.0, 1.0)],
+            DIGEST,
+        )
+        .unwrap();
+        let run = rerank_with("invoice", &docs, 64, Some(&foreign), ModelBinding::Unset);
+        assert_eq!(run.receipt.calibration_digest, None);
+        let own = curve();
+        let run = rerank_with("invoice", &docs, 64, Some(&own), ModelBinding::Unset);
+        assert_eq!(run.receipt.calibration_digest.as_deref(), Some(DIGEST));
+        assert_eq!(run.receipt.fallback, None);
     }
 }

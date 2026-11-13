@@ -28,28 +28,46 @@ fn round_knobs() -> RoundKnobs {
     }
 }
 
-/// The process-wide reranker named by the server config key `retrieval.reranker_model`
-/// (environment `MEDULLA_RETRIEVAL_RERANKER_MODEL`), or `None` when it is unset
-/// (MEDULLA-FEDERATED-QUERY-R081.7.3). `builtin:lexical-overlap` binds the deterministic
-/// [`LexicalOverlapReranker`]; any other value names a model artifact and binds nothing
-/// until that cross-encoder provider is registered, so a selection request refuses
+/// What the server config key `retrieval.reranker_model` (environment
+/// `MEDULLA_RETRIEVAL_RERANKER_MODEL`) binds, read once per process.
+pub(super) enum RerankerBinding {
+    /// The key is unset.
+    Unset,
+    /// The key names a model that is loaded.
+    Bound(Box<dyn Reranker>),
+    /// The key names a model artifact no provider is registered for.
+    Unavailable,
+}
+
+pub(super) fn reranker_binding() -> &'static RerankerBinding {
+    use std::sync::OnceLock;
+    static RERANKER: OnceLock<RerankerBinding> = OnceLock::new();
+    RERANKER.get_or_init(|| {
+        match std::env::var("MEDULLA_RETRIEVAL_RERANKER_MODEL")
+            .ok()
+            .as_deref()
+        {
+            None | Some("") => RerankerBinding::Unset,
+            Some(LEXICAL_OVERLAP_RERANKER) => {
+                RerankerBinding::Bound(Box::new(LexicalOverlapReranker))
+            }
+            Some(_) => RerankerBinding::Unavailable,
+        }
+    })
+}
+
+/// The process-wide reranker named by the server config key
+/// `retrieval.reranker_model`, or `None` when it is unset or names an artifact
+/// with no registered provider (MEDULLA-FEDERATED-QUERY-R081.7.3).
+/// `builtin:lexical-overlap` binds the deterministic [`LexicalOverlapReranker`];
+/// any other value names a model artifact and binds nothing until that
+/// cross-encoder provider is registered, so a selection request refuses
 /// `RETRIEVAL_SCORE_PAIR_REQUIRED` rather than scoring with a stand-in.
 fn bound_reranker() -> Option<&'static dyn Reranker> {
-    use std::sync::OnceLock;
-    static RERANKER: OnceLock<Option<Box<dyn Reranker>>> = OnceLock::new();
-    RERANKER
-        .get_or_init(|| {
-            match std::env::var("MEDULLA_RETRIEVAL_RERANKER_MODEL")
-                .ok()
-                .as_deref()
-            {
-                Some(LEXICAL_OVERLAP_RERANKER) => {
-                    Some(Box::new(LexicalOverlapReranker) as Box<dyn Reranker>)
-                }
-                _ => None,
-            }
-        })
-        .as_deref()
+    match reranker_binding() {
+        RerankerBinding::Bound(reranker) => Some(reranker.as_ref()),
+        _ => None,
+    }
 }
 
 pub(crate) async fn handle_retrieval_round(

@@ -81,6 +81,7 @@ fn bench_compile(c: &mut Criterion) {
         pre_excluded: Vec::new(),
         unchecked_dropped: Vec::new(),
         knobs: ContextKnobs::default(),
+        rerank: None,
     };
     c.bench_function("context_bundle_compile", |b| {
         b.iter(|| {
