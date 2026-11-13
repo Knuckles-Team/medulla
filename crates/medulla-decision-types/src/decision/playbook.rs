@@ -12,7 +12,7 @@ use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 
 /// Most steps one playbook may propose.
-pub const MAX_PLAYBOOK_STEPS: usize = 32;
+pub const MAX_PLAYBOOK_STEPS: usize = medulla_agent_types::agent_component::PLAYBOOK_MAX_STEPS;
 /// Most events one correlation may group.
 pub const MAX_CORRELATED_EVENTS: usize = 1024;
 
@@ -60,6 +60,52 @@ pub struct Playbook {
     pub trigger: TriggerKind,
     pub steps: BoundedVec<ProposedStep, MAX_PLAYBOOK_STEPS>,
     pub evidence_class: EvidenceClass,
+}
+
+impl Playbook {
+    /// Decode a stored `Playbook` component: attributes `trigger` (and
+    /// `ticket_class`), the optional `steps` and the optional `evidence_class`.
+    /// Publish validated the attributes, so a failure here is corrupt data.
+    pub fn from_attributes(
+        id: &str,
+        revision: u64,
+        attributes: &std::collections::BTreeMap<String, String>,
+    ) -> Result<Self, String> {
+        use medulla_agent_types::agent_component::{
+            PLAYBOOK_EVIDENCE_CLASS_ATTRIBUTE, PLAYBOOK_STEPS_ATTRIBUTE,
+            PLAYBOOK_TICKET_CLASS_ATTRIBUTE, PLAYBOOK_TRIGGER_ATTRIBUTE,
+        };
+        let get = |name: &str| attributes.get(name).map(|v| v.trim());
+        let corrupt = |why: String| format!("MALFORMED_PLAYBOOK: playbook '{id}' {why}");
+        let trigger = match get(PLAYBOOK_TRIGGER_ATTRIBUTE) {
+            Some("service_down") => TriggerKind::ServiceDown,
+            Some("service_flapping") => TriggerKind::ServiceFlapping,
+            Some("resource_pressure") => TriggerKind::ResourcePressure,
+            Some("ticket_class") => TriggerKind::TicketClass {
+                name: get(PLAYBOOK_TICKET_CLASS_ATTRIBUTE)
+                    .filter(|name| !name.is_empty())
+                    .ok_or_else(|| corrupt("has no ticket class".to_string()))?
+                    .to_string(),
+            },
+            _ => return Err(corrupt("has no known trigger".to_string())),
+        };
+        let steps: Vec<ProposedStep> = match get(PLAYBOOK_STEPS_ATTRIBUTE) {
+            None => Vec::new(),
+            Some(text) => serde_json::from_str(text).map_err(|e| corrupt(format!("steps: {e}")))?,
+        };
+        let evidence_class = match get(PLAYBOOK_EVIDENCE_CLASS_ATTRIBUTE) {
+            None => EvidenceClass::Claim,
+            Some(name) => serde_json::from_value(serde_json::Value::String(name.to_string()))
+                .map_err(|e| corrupt(format!("evidence class: {e}")))?,
+        };
+        Ok(Self {
+            id: id.to_string(),
+            revision: u32::try_from(revision).unwrap_or(u32::MAX),
+            trigger,
+            steps: BoundedVec::new(steps).map_err(|e| corrupt(format!("steps: {e}")))?,
+            evidence_class,
+        })
+    }
 }
 
 /// Inbound events grouped by one correlation `key` inside a `window_ms` window.

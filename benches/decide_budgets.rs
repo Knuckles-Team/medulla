@@ -259,6 +259,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::CapacityProposal => "capacity_proposal",
         QuestionKind::ProbeSelection => "probe_selection",
         QuestionKind::SkillEvolution => "skill_evolution",
+        // Needs published playbooks and an event burst, so it has its own bench fixture.
+        QuestionKind::PlaybookTriage => "playbook_triage",
     }
 }
 

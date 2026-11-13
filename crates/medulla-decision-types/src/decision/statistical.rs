@@ -303,6 +303,10 @@ pub enum QuestionKind {
     /// publishing a change uses the guarded promotion. See
     /// `decision::skill_evolution`.
     SkillEvolution,
+    /// Which playbook steps an inbound event burst calls for, proposed and
+    /// never run (MEDULLA-DECISION-ENGINE-R704.3). Advisory only. See
+    /// `decision::playbook`.
+    PlaybookTriage,
 }
 
 /// What is at stake. Exploration is permitted only for

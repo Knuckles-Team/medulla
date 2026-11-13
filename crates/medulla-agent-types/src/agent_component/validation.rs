@@ -71,6 +71,7 @@ fn validate_playbook_attributes(draft: &AgentComponentDraft) -> Result<(), Strin
             "MALFORMED_PLAYBOOK: playbook '{id}' trigger '{trigger}' is not one of {PLAYBOOK_TRIGGERS:?}"
         ));
     }
+    validate_playbook_steps(id, attribute(super::PLAYBOOK_STEPS_ATTRIBUTE))?;
     let class = attribute(PLAYBOOK_TICKET_CLASS_ATTRIBUTE);
     match (trigger == "ticket_class", class) {
         (true, None) => Err(format!(
@@ -83,6 +84,44 @@ fn validate_playbook_attributes(draft: &AgentComponentDraft) -> Result<(), Strin
         )),
         _ => Ok(()),
     }
+}
+
+/// The `steps` attribute of a `Playbook`, when present, is a JSON array of at
+/// most `PLAYBOOK_MAX_STEPS` objects with a non-empty `step_id` and
+/// `action_ref` and a boolean `writes`, and nothing else.
+fn validate_playbook_steps(id: &str, steps: Option<&str>) -> Result<(), String> {
+    let Some(text) = steps else { return Ok(()) };
+    let bad = |why: &str| {
+        Err(format!(
+            "MALFORMED_PLAYBOOK: playbook '{id}' attribute '{}' {why}",
+            super::PLAYBOOK_STEPS_ATTRIBUTE
+        ))
+    };
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(text)
+    else {
+        return bad("is not a JSON array");
+    };
+    if items.len() > super::PLAYBOOK_MAX_STEPS {
+        return bad("holds more steps than a playbook may propose");
+    }
+    for item in &items {
+        let serde_json::Value::Object(fields) = item else {
+            return bad("holds a step that is not an object");
+        };
+        let text_of = |name: &str| {
+            fields
+                .get(name)
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|value| !value.trim().is_empty())
+        };
+        let writes = fields
+            .get("writes")
+            .is_some_and(serde_json::Value::is_boolean);
+        if fields.len() != 3 || !text_of("step_id") || !text_of("action_ref") || !writes {
+            return bad("holds a step without step_id, action_ref and writes");
+        }
+    }
+    Ok(())
 }
 
 fn validate_draft_identity(draft: &AgentComponentDraft) -> Result<(), String> {

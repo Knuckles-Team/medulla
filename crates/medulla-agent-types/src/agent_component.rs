@@ -221,6 +221,14 @@ pub const PLAYBOOK_TRIGGERS: [&str; 4] = [
 pub const PLAYBOOK_TRIGGER_ATTRIBUTE: &str = "trigger";
 /// The attribute a `ticket_class` `Playbook` carries its ticket class in.
 pub const PLAYBOOK_TICKET_CLASS_ATTRIBUTE: &str = "ticket_class";
+/// The optional attribute a `Playbook` carries its steps in: a JSON array of
+/// `{step_id, action_ref, writes}` objects (MEDULLA-DECISION-ENGINE-R704.3).
+pub const PLAYBOOK_STEPS_ATTRIBUTE: &str = "steps";
+/// The optional attribute a `Playbook` carries the evidence class of its
+/// steps in (`claim`, `observation`, ...); a playbook that names none is a claim.
+pub const PLAYBOOK_EVIDENCE_CLASS_ATTRIBUTE: &str = "evidence_class";
+/// Most steps one playbook may propose.
+pub const PLAYBOOK_MAX_STEPS: usize = 32;
 
 impl AgentComponentKind {
     pub fn as_str(self) -> &'static str {

@@ -1283,6 +1283,9 @@ mod trajectory_join_tests;
 // MEDULLA-DECISION-ENGINE-R703.3: skill gaps, neologisms and merges, served.
 mod skill_evolution_tests;
 
+// MEDULLA-DECISION-ENGINE-R704.3: playbook triage, served.
+mod playbook_triage_tests;
+
 // MEDULLA-DECISION-ENGINE-R177.3 to R177.5: usage guidance served through Decide.
 #[cfg(feature = "redb")]
 mod usage_guidance_tests;
