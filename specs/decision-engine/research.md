@@ -1367,3 +1367,7 @@ R656.4 (named profile constrains the run): both entries read the profile through
 - **Tenant isolation never leaks existence.** The reader sees only its own tenant's rows, so another tenant's outcome is absent and refuses `BREADTH_HISTORY_INCOMPLETE` (breadth) or `PROJECTION_SOURCE_UNKNOWN` (projection). `BREADTH_HISTORY_FORBIDDEN` stays reachable for a visible row whose record claims another tenant.
 - **Evidence is the weakest premise.** A plan with a trajectory decision takes the weakest class among all its premises; the task claims keep it `Claim`.
 - **Sealed premises.** The kernel premises are appended to the record beside the plan premises; the decide stage hands them to `seal` as a parameter, not through `Executed`, which the family-hook merge owns.
+
+## R140.105 trajectory journey
+- The journey enters `Decide` through `handle_decide`, the handler the `Method::Decide` dispatch calls, with tenant and principal context (the h-decide crate has no router dependency; the router adds only admission, which the served Python proofs cover). "Read back" is the sealed record the call returns: its record digest recomputes, its decision digest is the answer's own, and deciding the same request again seals the same decision digest.
+- Every refusal code of the four decisions is submitted once, and the cross-tenant negatives are another tenant's outcome record (invisible, refused as unknown or incomplete).

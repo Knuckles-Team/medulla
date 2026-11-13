@@ -707,3 +707,299 @@ async fn decide_returns_pinned_trajectory_decisions() {
     request.params = BoundedVec::new(params).unwrap();
     assert_eq!(decide(&h, request).await.unwrap_err(), "PARAMETER_INVALID");
 }
+
+/// Decide `query` on the plan and return the sealed record, checking what every
+/// decision shares: the record digest recomputes, the decision digest is the
+/// answer's own, the policy digest is the record's and the kind is a constraint
+/// over claims; the same request decided again seals the same digests.
+async fn sealed(
+    h: &Harness,
+    pin: &ComponentDependency,
+    query: TrajectoryQuery,
+    answer_digest: impl Fn(&TrajectoryAnswer) -> String,
+) -> StatisticalDecisionRecord {
+    let first = decide(h, with_query(pin, query.clone())).await.unwrap();
+    let record = first.records.as_slice()[0].clone();
+    assert_eq!(
+        medulla_decision_types::decision::digest::statistical_record_digest(&record),
+        record.record_digest
+    );
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    let decision = record.task_plan().unwrap().trajectory.as_ref().unwrap();
+    assert_eq!(decision.decision_digest, answer_digest(&decision.answer));
+    assert_eq!(decision.policy_digest, record.inputs.policy_digest);
+    let again = decide(h, with_query(pin, query)).await.unwrap();
+    let replay = &again.records.as_slice()[0];
+    assert_eq!(
+        replay
+            .task_plan()
+            .unwrap()
+            .trajectory
+            .as_ref()
+            .unwrap()
+            .decision_digest,
+        decision.decision_digest,
+        "the same inputs seal the same decision"
+    );
+    record
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R140.105: the budget, projection, breadth
+/// and pairwise decisions run in sequence through `Decide` with tenant and
+/// principal context; each returned decision is read back and checked (record
+/// digest, decision digest, `ResolutionKind`, `EvidenceClass`, replay); then
+/// every refusal code is submitted and asserted, with a cross-tenant negative.
+// spec: MEDULLA-DECISION-ENGINE-R140.105
+#[tokio::test]
+async fn trajectory_decisions_journey() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let template = decide(&h, task_request(&pin))
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    for (id, digest, verdicts, tenant) in [
+        ("run-a", "sha256:trace-a", vec![Some(true)], TENANT),
+        (
+            "run-b",
+            "sha256:trace-b",
+            vec![Some(true), Some(false)],
+            TENANT,
+        ),
+        ("run-fail", "sha256:trace-f", vec![Some(false)], TENANT),
+        ("run-open", "sha256:trace-o", vec![], TENANT),
+        (
+            "run-moved",
+            "sha256:trace-m",
+            vec![Some(true)],
+            OTHER_TENANT,
+        ),
+    ] {
+        write_outcome(&h, TENANT, &template, id, digest, &verdicts, tenant);
+    }
+    write_outcome(
+        &h,
+        OTHER_TENANT,
+        &template,
+        "run-foreign",
+        "sha256:trace-x",
+        &[Some(true)],
+        OTHER_TENANT,
+    );
+
+    // Budget, then projection, breadth and pairwise, each sealed and replayed.
+    let record = sealed(
+        &h,
+        &pin,
+        TrajectoryQuery::Budget(budget(2_000_000, now_ms(), None)),
+        |a| match a {
+            TrajectoryAnswer::Budget(b) => b.decision_digest.clone(),
+            other => panic!("a budget answer, got {other:?}"),
+        },
+    )
+    .await;
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.subject == "trajectory:score"));
+    let record = sealed(
+        &h,
+        &pin,
+        TrajectoryQuery::Projection(projection(vec![
+            source("run-a", "sha256:trace-a", 1),
+            source("run-b", "sha256:trace-b", 2),
+        ])),
+        |a| match a {
+            TrajectoryAnswer::Projection(p) => p.decision_digest.clone(),
+            other => panic!("a projection answer, got {other:?}"),
+        },
+    )
+    .await;
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.subject == "projection:source:run-a"));
+    let record = sealed(
+        &h,
+        &pin,
+        TrajectoryQuery::Breadth(breadth(vec![cited(
+            "run-a",
+            "sha256:trace-a",
+            1,
+            ResultClass::Success,
+        )])),
+        |a| match a {
+            TrajectoryAnswer::Breadth(b) => b.decision_digest.clone(),
+            other => panic!("a breadth answer, got {other:?}"),
+        },
+    )
+    .await;
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.subject == "breadth:selected"));
+    let round = vec![
+        judged("a", "b", Verdict::WinA),
+        judged("a", "c", Verdict::WinA),
+        judged("b", "c", Verdict::WinB),
+    ];
+    let record = sealed(
+        &h,
+        &pin,
+        TrajectoryQuery::Pairwise(pairwise(round.clone(), true)),
+        |a| match a {
+            TrajectoryAnswer::Pairwise(p) => p.decision_digest.clone(),
+            other => panic!("a pairwise answer, got {other:?}"),
+        },
+    )
+    .await;
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.subject == "pairwise:score:a"));
+
+    // Every refusal code, one case each.
+    let fresh = now_ms();
+    let mut unpinned = budget(2_000_000, fresh, None);
+    unpinned.scorer.as_mut().unwrap().digest = "sha256:forged".into();
+    let mut absent = budget(2_000_000, fresh, None);
+    absent.scorer = None;
+    let mut missing = budget(2_000_000, fresh, None);
+    missing.features.clear();
+    let mut wrong_digest = projection(vec![source("run-a", "sha256:other", 1)]);
+    wrong_digest.shuffle_seed = 1;
+    let mut out_of_range = source("run-a", "sha256:trace-a", 1);
+    out_of_range.retained = vec![TokenRange {
+        start: 90,
+        end: 120,
+    }];
+    let mut overlapping = source("run-a", "sha256:trace-a", 1);
+    overlapping.retained = vec![TokenRange { start: 5, end: 20 }];
+    let mut no_policy = projection(vec![source("run-a", "sha256:trace-a", 1)]);
+    no_policy.tokenizer = None;
+    let mut conflicting = round.clone();
+    conflicting.push(judged("b", "c", Verdict::WinA));
+    let mut mismatched = round.clone();
+    mismatched[0].digest_a = "sha256:changed".into();
+    let cases: Vec<(&str, TrajectoryQuery)> = vec![
+        (
+            "TRAJECTORY_FEATURE_STALE",
+            TrajectoryQuery::Budget(budget(2_000_000, 1, None)),
+        ),
+        (
+            "TRAJECTORY_K_INVALID",
+            TrajectoryQuery::Budget(budget(2_000_000, fresh, Some(99))),
+        ),
+        (
+            "TRAJECTORY_SCORER_UNPINNED",
+            TrajectoryQuery::Budget(unpinned),
+        ),
+        ("TRAJECTORY_POLICY_ABSENT", TrajectoryQuery::Budget(absent)),
+        (
+            "TRAJECTORY_FEATURE_MISSING",
+            TrajectoryQuery::Budget(missing),
+        ),
+        (
+            "PROJECTION_SOURCE_UNKNOWN",
+            TrajectoryQuery::Projection(projection(vec![source("run-nobody", "sha256:t", 1)])),
+        ),
+        (
+            "PROJECTION_SOURCE_STALE",
+            TrajectoryQuery::Projection(projection(vec![source("run-a", "sha256:trace-a", 5)])),
+        ),
+        (
+            "PROJECTION_SOURCE_STALE",
+            TrajectoryQuery::Projection(wrong_digest),
+        ),
+        (
+            "PROJECTION_RANGE_INVALID",
+            TrajectoryQuery::Projection(projection(vec![out_of_range])),
+        ),
+        (
+            "PROJECTION_RANGE_OVERLAP",
+            TrajectoryQuery::Projection(projection(vec![overlapping])),
+        ),
+        (
+            "PROJECTION_POLICY_UNPINNED",
+            TrajectoryQuery::Projection(no_policy),
+        ),
+        (
+            "PROJECTION_PARENT_INCOMPLETE",
+            TrajectoryQuery::Projection(projection(Vec::new())),
+        ),
+        (
+            "BREADTH_HISTORY_STALE",
+            TrajectoryQuery::Breadth(breadth(vec![cited(
+                "run-a",
+                "sha256:trace-a",
+                1,
+                ResultClass::Failure,
+            )])),
+        ),
+        (
+            "BREADTH_HISTORY_INCOMPLETE",
+            TrajectoryQuery::Breadth(breadth(Vec::new())),
+        ),
+        (
+            "BREADTH_HISTORY_FORBIDDEN",
+            TrajectoryQuery::Breadth(breadth(vec![cited(
+                "run-moved",
+                "sha256:trace-m",
+                1,
+                ResultClass::Success,
+            )])),
+        ),
+        (
+            "PAIRWISE_POLICY_UNPINNED",
+            TrajectoryQuery::Pairwise(pairwise(round.clone(), false)),
+        ),
+        (
+            "PAIRWISE_PAIR_MISSING",
+            TrajectoryQuery::Pairwise(pairwise(round[..2].to_vec(), true)),
+        ),
+        (
+            "PAIRWISE_PAIR_CONFLICT",
+            TrajectoryQuery::Pairwise(pairwise(conflicting, true)),
+        ),
+        (
+            "PAIRWISE_DIGEST_MISMATCH",
+            TrajectoryQuery::Pairwise(pairwise(mismatched, true)),
+        ),
+    ];
+    for (code, query) in cases {
+        assert_eq!(refused(&h, &pin, query).await, code);
+    }
+
+    // Cross-tenant negatives: another tenant's outcome record is invisible, so
+    // the projection and breadth readers refuse as if it never existed.
+    assert_eq!(
+        refused(
+            &h,
+            &pin,
+            TrajectoryQuery::Projection(projection(vec![source(
+                "run-foreign",
+                "sha256:trace-x",
+                1
+            )]))
+        )
+        .await,
+        "PROJECTION_SOURCE_UNKNOWN"
+    );
+    assert_eq!(
+        refused(
+            &h,
+            &pin,
+            TrajectoryQuery::Breadth(breadth(vec![cited(
+                "run-foreign",
+                "sha256:trace-x",
+                1,
+                ResultClass::Success
+            )]))
+        )
+        .await,
+        "BREADTH_HISTORY_INCOMPLETE"
+    );
+}
