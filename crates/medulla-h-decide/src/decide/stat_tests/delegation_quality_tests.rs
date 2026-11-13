@@ -10,6 +10,7 @@ use medulla_decision_types::decision::delegation_quality::{
     QualityObservation, QualityThreshold, StoredDelegation, REFUSALS,
 };
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::contract::Digest256;
 

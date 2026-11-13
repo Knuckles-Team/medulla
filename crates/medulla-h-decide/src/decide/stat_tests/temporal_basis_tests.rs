@@ -83,7 +83,7 @@ fn chosen(record: &StatisticalDecisionRecord) -> String {
     scores.as_slice()[0].option_id.clone()
 }
 
-fn facts(record: &StatisticalDecisionRecord) -> Vec<&str> {
+fn fact_list(record: &StatisticalDecisionRecord) -> Vec<&str> {
     record.premises.iter().map(|p| p.fact.as_str()).collect()
 }
 
@@ -103,7 +103,7 @@ async fn three_clock_confusion_selects_a_basis_and_builds_a_fallback() {
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert_eq!(chosen(record), "event");
-    let facts = facts(record);
+    let facts = fact_list(record);
     assert!(facts.contains(&"temporal:basis=event"));
     assert!(facts.contains(&"temporal:confusion=true"));
     assert!(facts.contains(&"temporal:fallback_built=true"));
@@ -126,7 +126,7 @@ async fn three_clock_confusion_selects_a_basis_and_builds_a_fallback() {
         .await
         .unwrap();
     let record = &batch.records.as_slice()[0];
-    let facts = facts(record);
+    let facts = fact_list(record);
     assert!(facts.contains(&"temporal:fallback_built=false"));
     assert!(!facts
         .iter()
@@ -252,7 +252,7 @@ async fn temporal_confusion_evidence() {
         .await
         .unwrap();
     let record = &batch.records.as_slice()[0];
-    let facts = facts(record);
+    let facts = fact_list(record);
     for expected in [
         format!("temporal:query={digest}"),
         "temporal:basis=event".to_string(),
@@ -290,7 +290,7 @@ async fn temporal_confusion_evidence() {
     let batch = decide(&h, request(&schema, &BASES, Some(input(5, calm))))
         .await
         .unwrap();
-    let facts = facts(&batch.records.as_slice()[0]);
+    let facts = fact_list(&batch.records.as_slice()[0]);
     assert!(facts.contains(&"temporal:confusion=false"));
     assert!(facts.contains(&"temporal:fallback_built=false"));
     assert!(facts.contains(&"temporal:first_pass_rows=5"));

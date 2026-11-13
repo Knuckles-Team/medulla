@@ -188,7 +188,8 @@ mod tests {
         let same_window = episode("e:5", "t1", "s1", 100, 200, &["r5"]);
         // Sharing only an endpoint, or overlapping across sessions, is allowed.
         assert!(first_session_overlap(&[a.clone(), touching.clone(), other_session]).is_none());
-        let found = first_session_overlap(&[touching.clone(), a.clone(), overlapping]).unwrap();
+        let crossing = [touching.clone(), a.clone(), overlapping];
+        let found = first_session_overlap(&crossing).unwrap();
         assert_eq!(found.0.session_id, found.1.session_id);
         assert!(first_session_overlap(&[a, same_window]).is_some());
     }

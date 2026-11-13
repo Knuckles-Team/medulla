@@ -78,7 +78,7 @@ pub(super) fn single_option(options: &[DeclaredOption], id: &str) -> Result<(), 
 }
 
 /// An advisory answer naming each of `ids` as chosen. Nothing is written.
-pub(super) fn advisory(ids: Vec<String>) -> Result<Executed, String> {
+pub(in crate::decide) fn advisory(ids: Vec<String>) -> Result<Executed, String> {
     let scores: Vec<ScoredOption> = ids
         .into_iter()
         .map(|option_id| ScoredOption {
