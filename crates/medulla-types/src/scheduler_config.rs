@@ -248,6 +248,25 @@ pub const DEFAULT_RETRY_AFTER_MS: u64 = 250;
 /// Inclusive bounds of `retry_after_ms`.
 pub const RETRY_AFTER_MS_BOUNDS: (u64, u64) = (50, 30_000);
 
+/// Default time a worker may stay silent before it expires, in milliseconds
+/// (MEDULLA-DURABLE-KERNEL-R076.2).
+pub const DEFAULT_WORKER_TTL_MS: u64 = 30_000;
+/// Inclusive bounds of `worker_ttl_ms`.
+pub const WORKER_TTL_MS_BOUNDS: (u64, u64) = (1_000, 600_000);
+/// Default number of slots reserved for the analytics pool
+/// (MEDULLA-DURABLE-KERNEL-R076.2).
+pub const DEFAULT_ANALYTICS_SLOTS: u32 = 1;
+/// Inclusive bounds of `analytics_slots`.
+pub const ANALYTICS_SLOTS_BOUNDS: (u32, u32) = (0, 32);
+
+fn default_worker_ttl_ms() -> u64 {
+    DEFAULT_WORKER_TTL_MS
+}
+
+fn default_analytics_slots() -> u32 {
+    DEFAULT_ANALYTICS_SLOTS
+}
+
 fn default_task_lease_ms() -> u64 {
     DEFAULT_TASK_LEASE_MS
 }
@@ -276,6 +295,13 @@ pub struct SchedulerConfig {
     /// R076.2).
     #[serde(default = "default_retry_after_ms")]
     pub retry_after_ms: u64,
+    /// A worker whose last heartbeat is older than this expires, in
+    /// milliseconds (MEDULLA-DURABLE-KERNEL-R074.2, R076.2).
+    #[serde(default = "default_worker_ttl_ms")]
+    pub worker_ttl_ms: u64,
+    /// Slots the analytics pool may hold (MEDULLA-DURABLE-KERNEL-R076.2).
+    #[serde(default = "default_analytics_slots")]
+    pub analytics_slots: u32,
     #[serde(default = "default_cores_per_mille")]
     pub cores_per_mille: u16,
     #[serde(default = "default_memory_per_worker_bytes")]
@@ -335,6 +361,10 @@ pub struct SchedulerConfig {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InvalidSchedulerConfig {
     BlankLane,
+    TaskLeaseOutOfRange,
+    RetryAfterOutOfRange,
+    WorkerTtlOutOfRange,
+    AnalyticsSlotsOutOfRange,
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
     ArchitectureViewMaxContainersOutOfRange,
@@ -355,6 +385,26 @@ impl std::fmt::Display for InvalidSchedulerConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::BlankLane => write!(f, "scheduler lane must not be blank"),
+            Self::TaskLeaseOutOfRange => write!(
+                f,
+                "scheduler task_lease_ms must be within [{}, {}]",
+                TASK_LEASE_MS_BOUNDS.0, TASK_LEASE_MS_BOUNDS.1
+            ),
+            Self::RetryAfterOutOfRange => write!(
+                f,
+                "scheduler retry_after_ms must be within [{}, {}]",
+                RETRY_AFTER_MS_BOUNDS.0, RETRY_AFTER_MS_BOUNDS.1
+            ),
+            Self::WorkerTtlOutOfRange => write!(
+                f,
+                "scheduler worker_ttl_ms must be within [{}, {}]",
+                WORKER_TTL_MS_BOUNDS.0, WORKER_TTL_MS_BOUNDS.1
+            ),
+            Self::AnalyticsSlotsOutOfRange => write!(
+                f,
+                "scheduler analytics_slots must be within [{}, {}]",
+                ANALYTICS_SLOTS_BOUNDS.0, ANALYTICS_SLOTS_BOUNDS.1
+            ),
             Self::CoresPerMilleOutOfRange => {
                 write!(f, "scheduler cores_per_mille must be at most 1000")
             }
@@ -426,6 +476,18 @@ impl SchedulerConfig {
         }
         if self.memory_per_worker_bytes == 0 {
             return Err(InvalidSchedulerConfig::ZeroMemoryPerWorker);
+        }
+        if !(TASK_LEASE_MS_BOUNDS.0..=TASK_LEASE_MS_BOUNDS.1).contains(&self.task_lease_ms) {
+            return Err(InvalidSchedulerConfig::TaskLeaseOutOfRange);
+        }
+        if !(RETRY_AFTER_MS_BOUNDS.0..=RETRY_AFTER_MS_BOUNDS.1).contains(&self.retry_after_ms) {
+            return Err(InvalidSchedulerConfig::RetryAfterOutOfRange);
+        }
+        if !(WORKER_TTL_MS_BOUNDS.0..=WORKER_TTL_MS_BOUNDS.1).contains(&self.worker_ttl_ms) {
+            return Err(InvalidSchedulerConfig::WorkerTtlOutOfRange);
+        }
+        if !(ANALYTICS_SLOTS_BOUNDS.0..=ANALYTICS_SLOTS_BOUNDS.1).contains(&self.analytics_slots) {
+            return Err(InvalidSchedulerConfig::AnalyticsSlotsOutOfRange);
         }
         if !(HYDRATION_SCOPE_CAP_BOUNDS.0..=HYDRATION_SCOPE_CAP_BOUNDS.1)
             .contains(&self.hydration_scope_cap)
@@ -670,6 +732,56 @@ mod tests {
             serde_json::from_str::<SchedulerConfig>(&encoded).unwrap(),
             config
         );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R076.2
+    #[test]
+    fn served_settings_have_defaults_and_bounds() {
+        let config = config();
+        assert_eq!(config.worker_ttl_ms, 30_000);
+        assert_eq!(config.task_lease_ms, 60_000);
+        assert_eq!(config.retry_after_ms, 250);
+        assert_eq!(config.analytics_slots, 1);
+        assert_eq!(config.validate(), Ok(()));
+        type Set = fn(&mut SchedulerConfig, u64);
+        let cases: [(Set, [u64; 2], [u64; 2], InvalidSchedulerConfig); 4] = [
+            (
+                |c, v| c.worker_ttl_ms = v,
+                [1_000, 600_000],
+                [999, 600_001],
+                InvalidSchedulerConfig::WorkerTtlOutOfRange,
+            ),
+            (
+                |c, v| c.task_lease_ms = v,
+                [5_000, 300_000],
+                [4_999, 300_001],
+                InvalidSchedulerConfig::TaskLeaseOutOfRange,
+            ),
+            (
+                |c, v| c.retry_after_ms = v,
+                [50, 30_000],
+                [49, 30_001],
+                InvalidSchedulerConfig::RetryAfterOutOfRange,
+            ),
+            (
+                |c, v| c.analytics_slots = v as u32,
+                [0, 32],
+                [33, 1_000],
+                InvalidSchedulerConfig::AnalyticsSlotsOutOfRange,
+            ),
+        ];
+        for (set, inside, outside, refusal) in cases {
+            for value in inside {
+                let mut c = config.clone();
+                set(&mut c, value);
+                assert_eq!(c.validate(), Ok(()), "{value} is accepted");
+            }
+            for value in outside {
+                let mut c = config.clone();
+                set(&mut c, value);
+                assert_eq!(c.validate(), Err(refusal.clone()), "{value} is refused");
+            }
+        }
     }
 
     // spec: MEDULLA-SCM-R001

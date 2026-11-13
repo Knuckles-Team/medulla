@@ -29,6 +29,8 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         max_queue_depth: 64,
         task_lease_ms: 60_000,
         retry_after_ms: 250,
+        worker_ttl_ms: 30_000,
+        analytics_slots: 1,
         hydration_scope_cap: 10_000,
         hydration_split_target_files: 2_000,
         architecture_view_max_containers: 512,
