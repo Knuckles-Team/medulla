@@ -19,6 +19,7 @@ use medulla_h_decide::decide::capability_feed::{shared_capability_index, sweep, 
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_types::contract::{BoundedVec, Digest256, OpaqueId, ResourceId, TenantId};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
