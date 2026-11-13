@@ -511,7 +511,7 @@ def test_real_exhaustive_dispatcher_is_accepted_and_catch_all_fails(tmp_path):
     NEW function, yields zero findings by rule; the same function with a
     catch-all arm leaves the class and fails."""
     mod = _module()
-    source = (ROOT / "crates/medulla-types/src/agent_component.rs").read_text(
+    source = (ROOT / "crates/medulla-agent-types/src/agent_component.rs").read_text(
         encoding="utf-8"
     )
     start = source.index("    pub fn as_str(self) -> &'static str {")
