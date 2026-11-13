@@ -33,6 +33,9 @@ use medulla_agent_types::agent_topology::{
     LeasePlan, SlotPlan, StopRule, TopologyPlan, TopologyPolicy,
 };
 use medulla_compute::assemble::admit_topology;
+use medulla_decision_outcome_types::decision::concentration::{
+    concentration_verdict, ConcentrationPolicy, EditFact, EditStatus,
+};
 use medulla_decision_types::decision::program_store::{
     compile_program, program_key, ProgramKnobs, MAX_PROGRAM_STEPS,
 };
@@ -825,6 +828,72 @@ fn bench_agent_loop(
     measure("agent_loop_batch", &mut batch);
 }
 
+/// Edit facts the `decide/edit_concentration/kernel` group holds
+/// (MEDULLA-DECISION-ENGINE-R173.6).
+const CONCENTRATION_FACTS: u32 = 10_000;
+
+/// The `decide/edit_concentration/kernel` group: `concentration_verdict` over
+/// 10,000 shipped edit facts on one dimension, the candidate at the last round.
+fn bench_concentration_kernel(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
+    let dimension = "dimension:tool-selection";
+    let fact = |n: u32, status: EditStatus| EditFact {
+        edit_id: format!("edit:{n}"),
+        dimension_iri: dimension.to_string(),
+        round: n % 50 + 1,
+        status,
+        policy_revision: 1,
+    };
+    let facts: Vec<EditFact> = (0..CONCENTRATION_FACTS)
+        .map(|n| fact(n, EditStatus::Shipped))
+        .collect();
+    let candidate = EditFact {
+        edit_id: "edit:candidate".to_string(),
+        dimension_iri: dimension.to_string(),
+        round: 50,
+        status: EditStatus::Proposed,
+        policy_revision: 1,
+    };
+    let policy = ConcentrationPolicy {
+        policy_iri: "policy:concentration".to_string(),
+        min_shipped: 3,
+        window_rounds: 5,
+        revision: 1,
+    };
+    let verdict = || {
+        black_box(concentration_verdict(
+            black_box(&facts),
+            black_box(&candidate),
+            black_box(Some(&policy)),
+        ))
+    };
+    assert!(
+        verdict().is_ok(),
+        "concentration bench fixture must conclude"
+    );
+    let group_name = "decide/edit_concentration/kernel".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("concentration_verdict", |b| b.iter(verdict));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES * 10)
+        .map(|_| {
+            let start = Instant::now();
+            let _ = verdict();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -861,6 +930,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_program_lookup(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
+    bench_concentration_kernel(c, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");
