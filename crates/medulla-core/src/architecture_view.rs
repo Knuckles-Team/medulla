@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_catalog_types::architecture_view::{
     ArchitectureView, ViewAbstained, ViewContainer, ViewEdge, ViewScope,
 };
-use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::{GraphCore, GraphView};
 use medulla_types::scheduler_config::DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS;
 
 /// Rule (1)+(2): manifest file name -> technology of the package it roots.
@@ -141,9 +141,47 @@ pub fn derive_architecture_view_with(
     scope: &ViewScope,
     rules: &ViewRules,
 ) -> Result<ArchitectureView, ViewAbstained> {
+    derive_from_parts(core.get_nodes(), core.get_edges(), scope, rules)
+}
+
+/// Derive the view over a point-in-time snapshot, such as the caller's
+/// RLS-filtered graph view a served question reads. The same derivation as
+/// [`derive_architecture_view_with`]: one function, two read handles. Only
+/// nodes whose decoded properties satisfy `visible` are read, so a caller keeps
+/// another tenant's nodes out of its view.
+pub fn derive_architecture_view_of_snapshot(
+    view: &GraphView,
+    scope: &ViewScope,
+    rules: &ViewRules,
+    visible: &dyn Fn(&serde_json::Map<String, serde_json::Value>) -> bool,
+) -> Result<ArchitectureView, ViewAbstained> {
+    let nodes = view
+        .node_properties
+        .iter()
+        .filter(|(_, properties)| visible(&decode(properties)))
+        .map(|(id, properties)| (id.clone(), (**properties).clone()))
+        .collect();
+    let edges = view
+        .edge_properties
+        .iter()
+        .flat_map(|((source, target), entries)| {
+            entries
+                .iter()
+                .map(move |entry| (source.clone(), target.clone(), (**entry).clone()))
+        })
+        .collect();
+    derive_from_parts(nodes, edges, scope, rules)
+}
+
+fn derive_from_parts(
+    nodes: Vec<(String, Vec<u8>)>,
+    edges: Vec<(String, String, Vec<u8>)>,
+    scope: &ViewScope,
+    rules: &ViewRules,
+) -> Result<ArchitectureView, ViewAbstained> {
     let mut seen_repository = false;
     let mut in_scope: Vec<(String, Props)> = Vec::new();
-    for (id, properties) in core.get_nodes() {
+    for (id, properties) in nodes {
         let props = decode(&properties);
         match text(&props, "repository_id") {
             Some(repo) if repo == scope.repository_id => {
@@ -209,7 +247,7 @@ pub fn derive_architecture_view_with(
 
     // (3): cross-package call edges with counts.
     let mut counts: BTreeMap<(String, String), u64> = BTreeMap::new();
-    for (source, target, properties) in core.get_edges() {
+    for (source, target, properties) in edges {
         let props = decode(&properties);
         if text(&props, "relationship") != Some(rules.edge.relationship.as_str()) {
             continue;

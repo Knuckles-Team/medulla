@@ -1,5 +1,5 @@
 //! The `skill_upgrade` family through the actual Decide path
-//! (MEDULLA-DECISION-ENGINE-R167.3, R167.4): additive upgrades and breaking
+//! (MEDULLA-DECISION-ENGINE-R167.3, R167.4, R167.5, R167.6): additive upgrades and breaking
 //! upgrades with a declared migration admit as a constraint with a receipt; a
 //! breaking upgrade without a migration and a digest that does not match
 //! abstain with their registered codes and write nothing.
@@ -12,7 +12,7 @@ use medulla_decision_types::decision::skill_upgrade_request::{
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_types::contract::{Digest256, OpaqueId};
 
 fn contract(fields: &[(&str, &str, bool)]) -> ConsumerContractSchema {
@@ -205,4 +205,109 @@ async fn breaking_upgrade_without_migration_refuses() {
     assert_eq!(response.error.as_deref(), Some("PARAMETER_INVALID"));
 
     assert_eq!(artifact_count(&h), before, "a refusal writes nothing");
+}
+
+fn upgrade_facts(record: &StatisticalDecisionRecord) -> Vec<String> {
+    record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("upgrade:"))
+        .map(|p| p.fact.clone())
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R167.5
+#[tokio::test]
+async fn upgrade_evidence_names_digests_and_migration() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let previous = contract(&[("a", "int", true)]);
+    let new = contract(&[("a", "int", true), ("c", "int", false)]);
+    let breaking = contract(&[("a", "text", true)]);
+    for (target, migration, diff) in [
+        (new.clone(), None, "additive"),
+        (breaking, Some("migration:skill-v2"), "breaking"),
+        (previous.clone(), None, "identical"),
+    ] {
+        let request = upgrade(previous.clone(), target.clone(), migration);
+        let batch = decide(&h, upgrade_request(&pin, request)).await.unwrap();
+        let record = &batch.records.as_slice()[0];
+        let facts = upgrade_facts(record);
+        assert_eq!(
+            facts,
+            vec![
+                format!(
+                    "upgrade:contract_comparison previous={} new={} diff={diff}",
+                    previous.digest().unwrap().to_hex(),
+                    target.digest().unwrap().to_hex()
+                ),
+                format!("upgrade:migration={}", migration.unwrap_or("none")),
+            ]
+        );
+        assert!(record
+            .premises
+            .iter()
+            .filter(|p| p.fact.starts_with("upgrade:"))
+            .all(|p| p.class == PremiseClass::Claim));
+        assert_eq!(record.evidence_class, EvidenceClass::Claim);
+        // The premises are sealed into the record digest.
+        assert_eq!(
+            medulla_decision_types::decision::digest::statistical_record_digest(record),
+            record.record_digest
+        );
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R167.6
+#[tokio::test]
+async fn upgrade_admission_journey() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let previous = contract(&[("a", "int", true), ("b", "text", false)]);
+    let before = artifact_count(&h);
+    // (new contract, migration, admitted)
+    let cases = [
+        (
+            contract(&[
+                ("a", "int", true),
+                ("b", "text", false),
+                ("c", "int", false),
+            ]),
+            None,
+            true,
+        ),
+        (contract(&[("a", "int", true)]), None, false),
+        (
+            contract(&[("a", "int", true)]),
+            Some("migration:drop-b"),
+            true,
+        ),
+    ];
+    for (new, migration, admitted) in cases {
+        let request = upgrade(previous.clone(), new, migration);
+        let batch = decide(&h, upgrade_request(&pin, request)).await.unwrap();
+        let record = &batch.records.as_slice()[0];
+        if admitted {
+            assert!(matches!(
+                record.outcome,
+                StatisticalOutcome::Advisory { .. }
+            ));
+            assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+            assert!(matches!(record.answer, Some(FamilyAnswer::SkillUpgrade(_))));
+        } else {
+            assert_eq!(
+                abstain_code(record),
+                SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION.as_str()
+            );
+            assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+            assert!(record.answer.is_none());
+        }
+        assert_eq!(record.evidence_class, EvidenceClass::Claim);
+        assert_eq!(
+            upgrade_facts(record).len(),
+            2,
+            "every case seals its evidence"
+        );
+    }
+    assert_eq!(artifact_count(&h), before, "Decide writes nothing");
 }

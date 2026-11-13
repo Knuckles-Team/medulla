@@ -16,6 +16,10 @@ use crate::decide::stat_team;
 
 use super::DecisionFamily;
 
+/// The refusal table of the family (MEDULLA-DECISION-ENGINE-R170.4), declared
+/// beside the codes so the uniqueness test of the registry collects it.
+pub use medulla_decision_types::decision::codes::TEAM_REFUSALS as REFUSALS;
+
 /// The family of the `team_coordination` question kind.
 pub struct TeamCoordinationFamily;
 

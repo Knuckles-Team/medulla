@@ -19,7 +19,9 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, ResolutionKind};
+use medulla_decision_types::decision::{
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
+};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
@@ -159,6 +161,50 @@ impl DecisionFamily for SkillUpgradeFamily {
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(upgrade_of(request).and_then(admission))
+    }
+
+    /// The record's evidence (MEDULLA-DECISION-ENGINE-R167.5): the comparison
+    /// of the two contracts with both digests and the diff class, and the
+    /// declared migration or `none`. Both are `Claim` premises, because the
+    /// caller supplies both schemas.
+    fn premises(
+        &self,
+        request: &DecideRequest,
+        _graph_view: Option<&GraphView>,
+    ) -> Vec<PremiseRef> {
+        let Ok(upgrade) = upgrade_of(request) else {
+            return Vec::new();
+        };
+        let (Ok(previous), Ok(new)) = (upgrade.previous.digest(), upgrade.new.digest()) else {
+            return Vec::new();
+        };
+        let class = if previous == new {
+            "identical"
+        } else if compare_contracts(&upgrade.previous, &upgrade.new).is_compatible() {
+            "additive"
+        } else {
+            "breaking"
+        };
+        let claim = |fact: String| PremiseRef {
+            subject: upgrade.subject_id.as_str().to_string(),
+            fact,
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: PARAM_SKILL_UPGRADE.to_string(),
+            },
+        };
+        let migration = upgrade
+            .declared_migration_id
+            .as_ref()
+            .map_or("none", |id| id.as_str());
+        vec![
+            claim(format!(
+                "upgrade:contract_comparison previous={} new={} diff={class}",
+                previous.to_hex(),
+                new.to_hex()
+            )),
+            claim(format!("upgrade:migration={migration}")),
+        ]
     }
 
     /// An admitted upgrade is a constraint; an abstention keeps its own kind.

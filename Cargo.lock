@@ -5397,6 +5397,7 @@ dependencies = [
  "medulla-cypher",
  "medulla-decision-memory",
  "medulla-decision-outcome-types",
+ "medulla-decision-plan",
  "medulla-decision-policy",
  "medulla-decision-rank",
  "medulla-decision-stats",

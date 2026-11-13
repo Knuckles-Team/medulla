@@ -26,11 +26,18 @@ impl DecisionFamily for TaskPlanFamily {
         ctx: &ExecutionContext,
         request: &DecideRequest,
         policy: &medulla_decision_types::decision::DecisionPolicy,
-        _graph_view: Option<&GraphView>,
+        graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         match crate::decide::stat_task_plan::task_plan(ctx, request, policy) {
             Err(detail) => Some(Err(detail)),
+            // A plan that carries a `planning_admission` param is returned only
+            // when the architecture view wires it (MEDULLA-DECISION-ENGINE-R171.3).
             Ok(Some(Planned::Plan(plan, _))) => {
+                if let Err(detail) =
+                    super::planning_admission::require_admitted(request, ctx.tenant_id, graph_view)
+                {
+                    return Some(Err(detail));
+                }
                 Some(Ok(executed(crate::decide::stat_task_plan::outcome(&plan))))
             }
             Ok(Some(Planned::Abstain { code, detail, .. })) => {

@@ -20,7 +20,9 @@ hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-ann = { path = "../medulla-ann", optional = true }
 medulla-compute = { path = "../medulla-compute" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-plan = { path = "../medulla-decision-plan" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-kernel = { path = "../medulla-kernel" }

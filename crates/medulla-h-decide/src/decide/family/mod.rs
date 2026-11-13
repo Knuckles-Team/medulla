@@ -45,7 +45,7 @@ mod over_window_plan;
 mod paper_admission;
 mod path_preference;
 mod placement;
-mod planning_admission;
+pub(super) mod planning_admission;
 mod pre_tool_risk;
 mod probe_selection;
 mod probe_verdict;

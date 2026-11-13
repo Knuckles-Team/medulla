@@ -160,6 +160,8 @@ pub enum FamilyAnswer {
     UsageGuidance(Box<crate::decision::usage_guidance::UsageGuidance>),
     /// The receipt of an admitted `skill_upgrade` (MEDULLA-DECISION-ENGINE-R167.3).
     SkillUpgrade(Box<crate::decision::skill_upgrade_request::SkillUpgradeReceipt>),
+    /// An admitted plan of the `planning_admission` family (MEDULLA-DECISION-ENGINE-R171.3).
+    PlanningAdmission(Box<crate::decision::planning_admission::PlanningAdmissionAnswer>),
 }
 
 impl FamilyAnswer {
@@ -229,6 +231,16 @@ impl FamilyAnswer {
     ) -> Option<&crate::decision::skill_upgrade_request::SkillUpgradeReceipt> {
         match self {
             Self::SkillUpgrade(receipt) => Some(receipt),
+            _ => None,
+        }
+    }
+
+    /// The planning admission answer this answer carries.
+    pub fn planning_admission(
+        &self,
+    ) -> Option<&crate::decision::planning_admission::PlanningAdmissionAnswer> {
+        match self {
+            Self::PlanningAdmission(value) => Some(value),
             _ => None,
         }
     }

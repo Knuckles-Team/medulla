@@ -20,7 +20,9 @@ use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalDecisionRecord, StatisticalOutcome,
     TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
+use medulla_decision_types::decision::{
+    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
+};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_types::contract::{BoundedVec, Digest256};
@@ -215,6 +217,39 @@ impl DecisionFamily for FeedbackLoopFamily {
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(conclude(ctx, request, policy))
+    }
+
+    /// The record's evidence (MEDULLA-DECISION-ENGINE-R169.5): the findings
+    /// digest and count, the next-instruction digest and the round. All are
+    /// `Claim` premises, because the caller supplies the findings.
+    fn premises(
+        &self,
+        request: &DecideRequest,
+        _graph_view: Option<&GraphView>,
+    ) -> Vec<PremiseRef> {
+        let Ok(record) = record_of(request.params.as_slice()) else {
+            return Vec::new();
+        };
+        let claim = |fact: String| PremiseRef {
+            subject: record.loop_id.clone(),
+            fact,
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: PARAM_FEEDBACK.to_string(),
+            },
+        };
+        vec![
+            claim(format!(
+                "feedback:findings digest={} count={}",
+                record.findings_digest.to_hex(),
+                record.finding_count
+            )),
+            claim(format!(
+                "feedback:instruction digest={}",
+                record.next_instruction_digest.to_hex()
+            )),
+            claim(format!("feedback:round={}", record.round)),
+        ]
     }
 
     /// A continue or stop answer is a constraint.

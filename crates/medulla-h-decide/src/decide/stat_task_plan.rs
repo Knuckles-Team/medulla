@@ -409,6 +409,12 @@ pub(super) fn plan_of_request(
     }
 }
 
+/// The params a plan-producing question carries beyond the plan itself when it
+/// asks for admission: the `planning_admission` plan and its `graph`.
+fn has_admission_inputs(request: &DecideRequest) -> bool {
+    super::family::planning_admission::plan_of(request).is_some()
+}
+
 pub(super) fn task_plan(
     ctx: &ExecutionContext,
     request: &DecideRequest,
@@ -441,12 +447,16 @@ pub(super) fn task_plan(
              decomposition or skill_query, got {proposers}"
         )));
     }
-    if request.params.len() != 1 {
+    if request.params.len() != 1 + 2 * usize::from(has_admission_inputs(request)) {
         return Err(invalid_parameter(
-            "task_plan takes its one proposer parameter and no other",
+            "task_plan takes its one proposer parameter and no other, besides a plan to admit and its graph",
         ));
     }
-    let param = &request.params.as_slice()[0];
+    let param = request
+        .params
+        .iter()
+        .find(|p| is_plan_param(&p.value))
+        .ok_or_else(|| invalid_parameter("task_plan carries no proposer parameter"))?;
     let proposal = match proposal_of(ctx, param, policy)? {
         Proposal::Plan(proposal, notes) => (proposal, notes),
         Proposal::Abstain(planned) => return Ok(Some(planned)),

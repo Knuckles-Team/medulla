@@ -385,6 +385,8 @@ pub enum TypedValue {
     CapabilityDesignation(Box<super::capability_designation::DesignationAsk>),
     /// A job-scoped load set question (MEDULLA-DECISION-ENGINE-R176.3).
     LoadSet(Box<super::load_set::LoadSetQuestion>),
+    /// A plan to admit against the architecture view (MEDULLA-DECISION-ENGINE-R171.3).
+    PlanningAdmission(Box<super::planning_admission::PlanningAdmissionRequest>),
 }
 
 /// One named parameter of a question.

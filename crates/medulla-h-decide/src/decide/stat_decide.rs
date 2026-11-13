@@ -238,6 +238,14 @@ async fn serve(
                 super::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(Some)
+            } else if super::family::planning_admission::reads_repository_graph(&request) {
+                super::family::planning_admission::planning_view(
+                    state,
+                    verified.agent_id(),
+                    &request,
+                )
+                .await
+                .map(Some)
             } else if request.question.kind == QuestionKind::TeamCoordination {
                 super::stat_team::team_view(state, verified.agent_id(), &request)
                     .await
@@ -766,6 +774,28 @@ fn skill_upgrade_receipt(
     )
 }
 
+/// What an admitted `planning_admission` question seals as its answer
+/// (MEDULLA-DECISION-ENGINE-R171.3): the view digest compared and no
+/// differences. A held plan carries none.
+fn planning_admission_answer(
+    request: &DecideRequest,
+    outcome: &StatisticalOutcome,
+) -> Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer> {
+    if request.question.kind != QuestionKind::PlanningAdmission
+        || matches!(outcome, StatisticalOutcome::Abstained { .. })
+    {
+        return None;
+    }
+    let plan = super::family::planning_admission::plan_of(request)?;
+    Some(
+        medulla_decision_types::decision::statistical::outcome::FamilyAnswer::PlanningAdmission(
+            Box::new(
+                medulla_decision_types::decision::planning_admission::PlanningAdmissionAnswer::admitted(plan),
+            ),
+        ),
+    )
+}
+
 fn seal(
     sealing: Sealing,
     executed: &Executed,
@@ -892,6 +922,7 @@ fn seal(
             .or_else(|| {
                 skill_upgrade_receipt(sealing.request, &executed.ladder.outcome)
             })
+            .or_else(|| planning_admission_answer(sealing.request, &executed.ladder.outcome))
             .or_else(|| {
                 executed.thought.as_ref().map(|thought| {
                     medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ThoughtSearch(

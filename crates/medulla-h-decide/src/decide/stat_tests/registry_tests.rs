@@ -86,7 +86,7 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::ComparativeAnalysisPlan,
 ];
 
-fn task_request(pin: &ComponentDependency) -> DecideRequest {
+pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
     let tasks: Vec<TaskPlanTask> = [("a", Vec::new()), ("b", vec!["a".to_string()])]
         .into_iter()
         .map(|(id, deps)| TaskPlanTask {

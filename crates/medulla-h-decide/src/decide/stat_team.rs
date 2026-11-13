@@ -8,7 +8,9 @@
 //! skipped. `Decide` is evaluate-only: nothing is written.
 
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::codes::{TEAM_NO_BOUND_MEMBER, TEAM_SIGNAL_STALE};
+use medulla_decision_types::decision::codes::{
+    TEAM_MEMBER_UNBOUND, TEAM_NO_FALLBACK_AVAILABLE, TEAM_SIGNAL_MISSING, TEAM_SIGNAL_STALE,
+};
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -21,7 +23,7 @@ use medulla_decision_types::decision::{
     AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_graph_core::graph::GraphView;
-use medulla_types::contract::BoundedVec;
+use medulla_types::contract::{BoundedVec, Digest256};
 
 use super::stat_executor::Executed;
 use super::stat_support::{filtered_view, invalid_parameter};
@@ -68,7 +70,10 @@ fn signal_param(request: &DecideRequest) -> Result<&ChannelSignal, String> {
             _ => None,
         })
         .ok_or_else(|| {
-            invalid_parameter("a team_coordination question requires a typed channel_signal param")
+            format!(
+                "{}: a team_coordination question requires a typed channel_signal param",
+                TEAM_SIGNAL_MISSING.as_str()
+            )
         })
 }
 
@@ -140,6 +145,24 @@ fn bound_members(view: &GraphView, team: &str, tenant: &str) -> Option<Vec<Strin
     Some(members)
 }
 
+/// The first visible member node that names no team at all. A member is bound
+/// only by an explicit `boundToTeam`; an unbound member is never read as
+/// belonging to the asked team (MEDULLA-DECISION-ENGINE-R170.4).
+fn unbound_member(view: &GraphView, tenant: &str) -> Option<String> {
+    let mut ids: Vec<&String> = view.node_properties.keys().collect();
+    ids.sort();
+    ids.into_iter().find_map(|id| {
+        let row = view.node_row_object(id)?;
+        (marked(&row, MEMBER_MARKER)
+            && visible(&row, tenant)
+            && row
+                .get(BOUND_TO_TEAM)
+                .and_then(serde_json::Value::as_str)
+                .is_none_or(|team| team.trim().is_empty()))
+        .then(|| id.clone())
+    })
+}
+
 fn q32(value: i64) -> QuantisedValue {
     QuantisedValue {
         scale: QuantScaleTag::Q32,
@@ -200,6 +223,12 @@ pub(super) fn conclude(
     })?;
     let signal = signal_param(request)?;
     let team = text_param(request, PARAM_TEAM)?;
+    if let Some(member) = unbound_member(view, tenant) {
+        return Err(format!(
+            "{}: member {member} names no team in boundToTeam",
+            TEAM_MEMBER_UNBOUND.as_str()
+        ));
+    }
     let max_age_ms = signal_max_age_s(policy).saturating_mul(1000);
     let age_ms = now_ms.saturating_sub(signal.observed_at_ms);
     let fresh = age_ms <= max_age_ms;
@@ -220,7 +249,7 @@ pub(super) fn conclude(
         }
         _ => {
             return Ok(abstained(
-                TEAM_NO_BOUND_MEMBER,
+                TEAM_NO_FALLBACK_AVAILABLE,
                 format!("team {team} has no visible member bound to it"),
             ))
         }
@@ -237,8 +266,9 @@ pub(super) fn conclude(
     }))
 }
 
-/// The Observation premises of a team decision: the channel signal, the
-/// freshness limit and the team's bound members.
+/// The premises of a team decision (MEDULLA-DECISION-ENGINE-R170.5): the
+/// channel signal with its time (`Claim`, the caller observed it) and the digest
+/// of the team's bound member ids (`Observation`, read from the graph).
 pub(super) fn premises(
     request: &DecideRequest,
     tenant: &str,
@@ -252,25 +282,29 @@ pub(super) fn premises(
         return Vec::new();
     };
     let members = bound_members(view, team, tenant).unwrap_or_default();
-    let observed = |fact: String| PremiseRef {
-        subject: team.to_string(),
-        fact,
-        class: PremiseClass::Observation,
-        provenance: PremiseProvenance::Observation {
-            evaluation_id: signal.channel_id.as_str().to_string(),
+    let channel = signal.channel_id.as_str();
+    vec![
+        PremiseRef {
+            subject: team.to_string(),
+            fact: format!(
+                "team:channel:{channel} available={} observed_at_ms={}",
+                signal.available, signal.observed_at_ms
+            ),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: PARAM_SIGNAL.to_string(),
+            },
         },
-    };
-    let mut out = vec![
-        observed(format!("team.channel_available={}", signal.available)),
-        observed(format!(
-            "team.signal_observed_at_ms={}",
-            signal.observed_at_ms
-        )),
-    ];
-    out.extend(
-        members
-            .iter()
-            .map(|member| observed(format!("team.bound_member:{member}"))),
-    );
-    out
+        PremiseRef {
+            subject: team.to_string(),
+            fact: format!(
+                "team:members:{team} digest={}",
+                Digest256::sha256(members.join("\n").as_bytes()).to_hex()
+            ),
+            class: PremiseClass::Observation,
+            provenance: PremiseProvenance::Observation {
+                evaluation_id: channel.to_string(),
+            },
+        },
+    ]
 }

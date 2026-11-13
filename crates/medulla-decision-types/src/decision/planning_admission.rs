@@ -8,6 +8,25 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::{BoundedVec, Digest256};
+use medulla_types::refusal_code::RefusalCode;
+
+/// The request carries no gap digests or no architecture view digest.
+pub const ADMISSION_NO_COMPARISON: RefusalCode = RefusalCode::new("ADMISSION_NO_COMPARISON");
+/// The request's view digest differs from the digest of the view derived at admission.
+pub const ADMISSION_STALE_VIEW: RefusalCode = RefusalCode::new("ADMISSION_STALE_VIEW");
+/// A feature has no attach point, or its attach point is not a support path of its container.
+pub const ADMISSION_FEATURE_UNWIRED: RefusalCode = RefusalCode::new("ADMISSION_FEATURE_UNWIRED");
+/// A gap digest of the request appears in no feature.
+pub const ADMISSION_GAP_UNCOVERED: RefusalCode = RefusalCode::new("ADMISSION_GAP_UNCOVERED");
+
+/// The `planning_admission` family refusal table (MEDULLA-DECISION-ENGINE-R171.4),
+/// collected by `codes_are_unique_and_stable`.
+pub const REFUSALS: &[RefusalCode] = &[
+    ADMISSION_NO_COMPARISON,
+    ADMISSION_STALE_VIEW,
+    ADMISSION_FEATURE_UNWIRED,
+    ADMISSION_GAP_UNCOVERED,
+];
 
 /// Most gap digests and most features one request carries.
 pub const MAX_PLANNING_ITEMS: usize = 64;
@@ -63,6 +82,32 @@ pub struct DesignDifference {
     pub feature_id: String,
     pub container: String,
     pub missing: MissingKind,
+}
+
+/// What an admitted plan seals as its answer (MEDULLA-DECISION-ENGINE-R171.3):
+/// the repository and revision read, the digest of the view compared against
+/// and the design differences, which are empty exactly when the plan is
+/// admitted. A plan with differences is held and carries no answer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlanningAdmissionAnswer {
+    pub repository_id: String,
+    pub repository_revision: String,
+    pub architecture_view_digest: Digest256,
+    pub differences: BoundedVec<DesignDifference, MAX_PLANNING_ITEMS>,
+}
+
+impl PlanningAdmissionAnswer {
+    /// The answer of an admitted request: its view digest and no differences.
+    pub fn admitted(request: &PlanningAdmissionRequest) -> Self {
+        Self {
+            repository_id: request.repository_id.clone(),
+            repository_revision: request.repository_revision.clone(),
+            architecture_view_digest: request.architecture_view_digest,
+            differences: BoundedVec::default(),
+        }
+    }
 }
 
 #[cfg(test)]

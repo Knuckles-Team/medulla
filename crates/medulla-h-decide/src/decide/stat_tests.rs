@@ -1195,6 +1195,7 @@ mod replay_tests;
 mod concentration_tests;
 mod rank_tests;
 mod team_coordination_tests;
+mod planning_admission_tests;
 mod registry_tests;
 mod task_plan_tests;
 mod probe_verdict_tests;

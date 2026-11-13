@@ -1,5 +1,5 @@
 //! The `team_coordination` family through the actual Decide path
-//! (MEDULLA-DECISION-ENGINE-R170.2): an available fresh channel selects the
+//! (MEDULLA-DECISION-ENGINE-R170.2, R170.4, R170.5): an available fresh channel selects the
 //! primary channel, an unavailable one selects the team when a member is
 //! explicitly bound, and a stale signal or an unbound team abstains.
 
@@ -103,6 +103,7 @@ fn decide_team(
         now_ms: NOW_MS,
         server_secret: b"decide-stat-test-secret",
         designation: None,
+        reader: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
@@ -200,23 +201,18 @@ async fn unavailable_channel_selects_team() {
     ] {
         let view = graph_view(None, &members);
         let record = decide_team(&h, &request(&pin, false, 5), &view).unwrap();
-        assert_eq!(abstention_code(&record), "TEAM_NO_BOUND_MEMBER");
+        assert_eq!(abstention_code(&record), "TEAM_NO_FALLBACK_AVAILABLE");
     }
     // A team node of another tenant is not visible.
     let foreign = graph_view(Some("tenant-other"), &[("member:a", TEAM, None)]);
     let record = decide_team(&h, &request(&pin, false, 5), &foreign).unwrap();
-    assert_eq!(abstention_code(&record), "TEAM_NO_BOUND_MEMBER");
+    assert_eq!(abstention_code(&record), "TEAM_NO_FALLBACK_AVAILABLE");
 
-    // The record seals the observation premises.
+    // The record seals the channel and member premises (R170.5).
     let facts: Vec<&str> = down.premises.iter().map(|p| p.fact.as_str()).collect();
-    assert!(facts.contains(&"team.channel_available=false"));
     assert!(facts.contains(&"knob:team.signal_max_age=30"));
-    assert!(facts.contains(&"team.bound_member:member:a"));
-    assert!(down
-        .premises
-        .iter()
-        .filter(|p| p.fact.starts_with("team."))
-        .all(|p| p.class == PremiseClass::Observation));
+    assert!(facts.iter().any(|f| f.starts_with("team:channel:")));
+    assert!(facts.iter().any(|f| f.starts_with("team:members:")));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R170.2
@@ -239,4 +235,126 @@ async fn malformed_team_questions_are_refused() {
     assert!(decide_team(&h, &missing, &view)
         .unwrap_err()
         .contains("channel_signal"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R170.4
+#[tokio::test]
+async fn team_refusals() {
+    use medulla_decision_types::decision::codes::{
+        TEAM_MEMBER_UNBOUND, TEAM_NO_FALLBACK_AVAILABLE, TEAM_SIGNAL_MISSING, TEAM_SIGNAL_STALE,
+    };
+    let h = Harness::new().await;
+    let pin = publish_route_schema(&h).0;
+    let bound = graph_view(None, &[("member:a", TEAM, None)]);
+    let nodes = |view: &medulla_graph_core::graph::GraphView| view.node_properties.len();
+    let artifacts = || {
+        h.store
+            .decision_artifacts_with_prefix(TENANT, "", 100_000)
+            .unwrap()
+            .len()
+    };
+    let (nodes_before, stored) = (nodes(&bound), artifacts());
+
+    // TEAM_SIGNAL_MISSING: a request with no channel signal is refused.
+    let mut missing = request(&pin, true, 1);
+    missing.params = BoundedVec::new(missing.params.as_slice()[..2].to_vec()).unwrap();
+    let error = decide_team(&h, &missing, &bound).unwrap_err();
+    assert!(error.starts_with(TEAM_SIGNAL_MISSING.as_str()), "{error}");
+
+    // TEAM_MEMBER_UNBOUND: a visible member that names no team is refused and
+    // named; a member of another tenant is not visible and does not refuse.
+    let core = medulla_graph_core::graph::GraphCore::new();
+    let put = |id: &str, props: serde_json::Value| {
+        core.add_node(id.to_string(), rmp_serde::to_vec_named(&props).unwrap());
+    };
+    put(TEAM, serde_json::json!({ "_team": true }));
+    put(
+        "member:a",
+        serde_json::json!({ "_team_member": true, "boundToTeam": TEAM }),
+    );
+    put("member:loose", serde_json::json!({ "_team_member": true }));
+    let loose = core.analysis_snapshot();
+    let error = decide_team(&h, &request(&pin, false, 1), &loose).unwrap_err();
+    assert!(error.starts_with(TEAM_MEMBER_UNBOUND.as_str()), "{error}");
+    assert!(error.contains("member:loose"), "{error}");
+    let core = medulla_graph_core::graph::GraphCore::new();
+    core.add_node(
+        TEAM.to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({ "_team": true })).unwrap(),
+    );
+    core.add_node(
+        "member:a".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({ "_team_member": true, "boundToTeam": TEAM }))
+            .unwrap(),
+    );
+    core.add_node(
+        "member:foreign".to_string(),
+        rmp_serde::to_vec_named(
+            &serde_json::json!({ "_team_member": true, "tenant_id": "tenant-other" }),
+        )
+        .unwrap(),
+    );
+    let hidden = core.analysis_snapshot();
+    assert_eq!(
+        chosen(&decide_team(&h, &request(&pin, false, 1), &hidden).unwrap()),
+        "team_coordination"
+    );
+
+    // TEAM_SIGNAL_STALE and TEAM_NO_FALLBACK_AVAILABLE abstain with their codes.
+    let stale = decide_team(&h, &request(&pin, true, 31), &bound).unwrap();
+    assert_eq!(abstention_code(&stale), TEAM_SIGNAL_STALE.as_str());
+    let no_team = graph_view(None, &[("member:a", "team:other", None)]);
+    let none = decide_team(&h, &request(&pin, false, 1), &no_team).unwrap();
+    assert_eq!(abstention_code(&none), TEAM_NO_FALLBACK_AVAILABLE.as_str());
+
+    // The family never selects the team while the channel reads available,
+    // however fresh the signal and however many members are bound.
+    for age in [0, 5, 30] {
+        let record = decide_team(&h, &request(&pin, true, age), &bound).unwrap();
+        assert_eq!(chosen(&record), "primary_channel");
+    }
+
+    // No refusal wrote a team node or an artifact.
+    assert_eq!(nodes(&bound), nodes_before);
+    assert_eq!(artifacts(), stored);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R170.5
+#[tokio::test]
+async fn team_evidence_names_signal_and_members() {
+    let h = Harness::new().await;
+    let pin = publish_route_schema(&h).0;
+    let view = graph_view(None, &[("member:b", TEAM, None), ("member:a", TEAM, None)]);
+    let record = decide_team(&h, &request(&pin, false, 5), &view).unwrap();
+    let channel = record
+        .premises
+        .iter()
+        .find(|p| p.fact.starts_with("team:channel:channel:slack-ops"))
+        .expect("the channel premise");
+    assert_eq!(
+        channel.fact,
+        format!(
+            "team:channel:channel:slack-ops available=false observed_at_ms={}",
+            NOW_MS - 5_000
+        )
+    );
+    assert_eq!(channel.class, PremiseClass::Claim);
+    let members = record
+        .premises
+        .iter()
+        .find(|p| p.fact.starts_with(&format!("team:members:{TEAM}")))
+        .expect("the members premise");
+    assert_eq!(
+        members.fact,
+        format!(
+            "team:members:{TEAM} digest={}",
+            medulla_types::contract::Digest256::sha256(b"member:a\nmember:b").to_hex()
+        )
+    );
+    assert_eq!(members.class, PremiseClass::Observation);
+    // The record class is the weakest premise.
+    assert_eq!(
+        record.evidence_class,
+        medulla_decision_types::decision::EvidenceClass::Claim
+    );
 }

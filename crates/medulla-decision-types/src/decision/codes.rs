@@ -156,9 +156,18 @@ pub const CONCENTRATION_REFUSALS: &[RefusalCode] =
 /// A team coordination question whose channel reads available but whose signal is older than `team.signal_max_age`.
 pub const TEAM_SIGNAL_STALE: RefusalCode = RefusalCode::new("TEAM_SIGNAL_STALE");
 /// A team coordination question whose channel is unavailable and whose team has no explicitly bound member.
-pub const TEAM_NO_BOUND_MEMBER: RefusalCode = RefusalCode::new("TEAM_NO_BOUND_MEMBER");
-/// The `team_coordination` family's refusal table (MEDULLA-DECISION-ENGINE-R170.2).
-pub const TEAM_REFUSALS: &[RefusalCode] = &[TEAM_SIGNAL_STALE, TEAM_NO_BOUND_MEMBER];
+pub const TEAM_NO_FALLBACK_AVAILABLE: RefusalCode = RefusalCode::new("TEAM_NO_FALLBACK_AVAILABLE");
+/// A team coordination question over a graph holding a visible library member with no explicit team binding.
+pub const TEAM_MEMBER_UNBOUND: RefusalCode = RefusalCode::new("TEAM_MEMBER_UNBOUND");
+/// A team coordination question that carries no typed channel signal.
+pub const TEAM_SIGNAL_MISSING: RefusalCode = RefusalCode::new("TEAM_SIGNAL_MISSING");
+/// The `team_coordination` family's refusal table (MEDULLA-DECISION-ENGINE-R170.4).
+pub const TEAM_REFUSALS: &[RefusalCode] = &[
+    TEAM_MEMBER_UNBOUND,
+    TEAM_SIGNAL_MISSING,
+    TEAM_SIGNAL_STALE,
+    TEAM_NO_FALLBACK_AVAILABLE,
+];
 
 /// Every folded code, in declaration order.
 pub const FOLDED: &[RefusalCode] = &[
@@ -435,6 +444,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (
         QuestionKind::SkillUpgrade,
         super::skill_upgrade_request::REFUSALS,
+    ),
+    (
+        QuestionKind::PlanningAdmission,
+        super::planning_admission::REFUSALS,
     ),
     (QuestionKind::EditConcentration, CONCENTRATION_REFUSALS),
     (QuestionKind::ContextBudget, super::context_source::REFUSALS),
