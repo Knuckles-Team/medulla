@@ -1646,3 +1646,110 @@ async fn occ_conflict_over_wire() {
         .await
         .expect("disjoint commit succeeds");
 }
+
+/// Define one plan view over `__commons__` through the served dispatch path.
+#[cfg(feature = "matview")]
+async fn define_plan_view(
+    state: &test_support::SharedState,
+    id: u64,
+    name: &str,
+    ops: Vec<medulla_types::wire::Op>,
+) {
+    let reply = test_support::dispatch(
+        state,
+        test_support::commons_request(
+            "test",
+            id,
+            medulla_protocol_types::protocol::Method::PlanMatViewDefine {
+                name: name.to_string(),
+                graph: "__commons__".to_string(),
+                plan: medulla_types::wire::Plan::new(ops),
+            },
+        ),
+    )
+    .await;
+    assert!(
+        reply.error.is_none(),
+        "define {name} failed: {:?}, detail: {:?}",
+        reply.error,
+        reply.error_detail
+    );
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R005.5
+#[cfg(feature = "matview")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn matview_status_catalog_reports_mode_and_reason() {
+    use medulla_types::wire::{Op, Pred};
+
+    let state = test_support::seeded_wire_state(
+        "test",
+        common::TEST_AGENT,
+        Some(sql_test_persist_dir()),
+        default_persistence(),
+    );
+    let scan = || Op::Scan {
+        label: "Doc".into(),
+    };
+    define_plan_view(
+        &state,
+        2,
+        "r005_5_supported",
+        vec![
+            scan(),
+            Op::Filter {
+                preds: vec![Pred::GtNum {
+                    prop: "year".into(),
+                    n: 2000.0,
+                }],
+            },
+        ],
+    )
+    .await;
+    define_plan_view(
+        &state,
+        3,
+        "r005_5_traverse",
+        vec![
+            scan(),
+            Op::Traverse {
+                rel: "CITES".into(),
+                min: 1,
+                max: 2,
+            },
+        ],
+    )
+    .await;
+
+    let addr = spawn_listener(state).await;
+    let client = test_support::connect_pgwire(&addr, "test", common::TEST_AGENT, "__commons__")
+        .await
+        .expect("pgwire connect");
+    let rows = client
+        .query(
+            "SELECT name, mode, reason_code FROM medulla_catalog.matviews \
+             WHERE name LIKE 'r005_5_%' ORDER BY name",
+            &[],
+        )
+        .await
+        .expect("select medulla_catalog.matviews");
+    let seen: Vec<(String, String, Option<String>)> = rows
+        .iter()
+        .map(|r| (r.get(0), r.get(1), r.get(2)))
+        .collect();
+    assert_eq!(
+        seen,
+        vec![
+            (
+                "r005_5_supported".to_string(),
+                "incremental".to_string(),
+                None
+            ),
+            (
+                "r005_5_traverse".to_string(),
+                "recompute".to_string(),
+                Some("MATVIEW_NOT_INCREMENTAL".to_string())
+            ),
+        ]
+    );
+}

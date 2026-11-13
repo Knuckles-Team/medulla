@@ -7629,6 +7629,7 @@ dependencies = [
  "medulla-capabilities",
  "medulla-catalog-types",
  "medulla-compute",
+ "medulla-core",
  "medulla-decision-types",
  "medulla-document",
  "medulla-exec",

@@ -314,6 +314,41 @@ impl CdcHub {
         )
     }
 
+    /// Publish the output delta of plan view `view` to its feed, key `view:<name>`
+    /// (MEDULLA-INCREMENTAL-VIEWS-R010.1). Each `+1` row becomes one `InsertRow` and each
+    /// `-1` row one `DeleteRow`, with `table` set to the view name, through the same ring
+    /// and cursor as graph changes. Returns the assigned seqs.
+    #[cfg(feature = "matview")]
+    pub fn publish_view_rows(&self, view: &str, output: &medulla_types::delta::Delta) -> Vec<u64> {
+        let feed = view_feed_key(view);
+        output
+            .rows
+            .iter()
+            .filter(|row| row.weight != 0)
+            .map(|row| {
+                let image = rmp_serde::to_vec_named(&serde_json::json!({
+                    "id": row.id,
+                    "score": row.score,
+                }))
+                .ok();
+                let (kind, before, after) = if row.weight > 0 {
+                    (CdcKind::InsertRow, None, image)
+                } else {
+                    (CdcKind::DeleteRow, image, None)
+                };
+                self.emit_in(
+                    &feed,
+                    view.to_string(),
+                    kind,
+                    row.id.clone(),
+                    String::new(),
+                    before,
+                    after,
+                )
+            })
+            .collect()
+    }
+
     /// Append the row changes of one durable user-table commit to `graph`'s
     /// feed, in commit order (MEDULLA-ENGINE-PARITY-R015.1). Returns the
     /// assigned seqs. The same feed, ring and cursor as graph changes.
@@ -431,7 +466,12 @@ impl CdcHub {
             // — fold this exact before/after image through the compiled circuit so the
             // view's `current` stays fresh WITHOUT a full recompute. One is a no-op per
             // view depending on its mode.
-            crate::matview::apply_delta(graph, &emitted_event);
+            let (_, outputs) = crate::matview::apply_delta_with_output(graph, &emitted_event);
+            // Each view's output rows reach its own feed, after the manager lock dropped
+            // (MEDULLA-INCREMENTAL-VIEWS-R010.1).
+            for (view, output) in &outputs {
+                self.publish_view_rows(view, output);
+            }
         }
         // Reasoning auto-cascade (W3.6/E16, CONCEPT: opt-in `REASON_ON_WRITE`): note
         // the write for the debounced OWL/RL closure refresh. THE COST GATE lives
@@ -984,6 +1024,12 @@ fn field_num(blob: &[u8], field: &str) -> f64 {
         .unwrap_or(0.0)
 }
 
+/// The feed key of plan view `name` (MEDULLA-INCREMENTAL-VIEWS-R010.1).
+#[cfg(feature = "matview")]
+pub fn view_feed_key(name: &str) -> String {
+    format!("view:{name}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1487,6 +1533,69 @@ mod tests {
         );
         assert_eq!(seq, 0);
         assert_eq!(hub.read_query("cnt").unwrap().value, 1.0);
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R010.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R010.1: the output rows of a plan view reach its
+    /// own feed as insert and delete row events, and a change that leaves the result as it
+    /// was publishes nothing.
+    #[cfg(feature = "matview")]
+    #[test]
+    fn view_output_rows_reach_their_feed() {
+        use medulla_types::wire::{Op, Plan};
+
+        let (graph, view) = ("r010_1_graph", "r010_1_view");
+        let plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let circuit = medulla_exec::incremental::Circuit::compile(&plan).unwrap();
+        let def = crate::matview::PlanMatView {
+            name: view.into(),
+            graph: graph.into(),
+            plan,
+        };
+        crate::matview::manager().install_incremental(def, circuit, 0);
+
+        let hub = CdcHub::new();
+        let doc = props(serde_json::json!({"type": "Doc"}));
+        let other = props(serde_json::json!({"type": "Other"}));
+        for (id, image) in [("a", &doc), ("b", &doc), ("c", &other)] {
+            hub.emit(
+                graph,
+                CdcKind::AddNode,
+                id.into(),
+                String::new(),
+                None,
+                Some(image.clone()),
+            );
+        }
+        hub.emit(
+            graph,
+            CdcKind::RemoveNode,
+            "a".into(),
+            String::new(),
+            Some(doc.clone()),
+            None,
+        );
+
+        let feed = hub.read(&view_feed_key(view), 0, 0);
+        assert!(!feed.gap);
+        let seen: Vec<(CdcKind, &str, &str)> = feed
+            .events
+            .iter()
+            .map(|e| (e.kind.clone(), e.node_id.as_str(), e.table.as_str()))
+            .collect();
+        assert_eq!(
+            seen,
+            vec![
+                (CdcKind::InsertRow, "a", view),
+                (CdcKind::InsertRow, "b", view),
+                (CdcKind::DeleteRow, "a", view),
+            ],
+            "the filtered-out node publishes nothing"
+        );
+        assert!(feed.events[2].had_before && !feed.events[2].had_after);
+        crate::matview::manager().drop_view(view);
     }
 }
 

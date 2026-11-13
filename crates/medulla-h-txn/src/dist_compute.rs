@@ -487,7 +487,12 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
                 reason = %unsupported.reason,
                 "plan matview falls back to full recompute (op not incrementally maintainable)",
             );
-            matview::manager().note_fallback(def, unsupported.to_string());
+            matview::manager().note_fallback(
+                def,
+                medulla_types::contract::ServerErrorCode::MatviewNotIncremental
+                    .as_str()
+                    .to_string(),
+            );
             return;
         }
     };

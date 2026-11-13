@@ -337,3 +337,224 @@ async fn plan_view_served_define_write_get_equals_recompute() {
     let dropped = Method::PlanMatViewDrop { name: VIEW.into() };
     send(&state, 10_000, dropped).await;
 }
+
+/// Per-view ceiling and process budget the budget proof runs under (registry knobs
+/// `view.state_bytes` and `views.memory_bytes`). The budget is the knob's minimum; the
+/// ceiling sits between one view's size and the size of the largest.
+#[cfg(all(feature = "matview", feature = "redb"))]
+const BUDGET_VIEW_CEILING: u64 = 12 * 1024 * 1024;
+#[cfg(all(feature = "matview", feature = "redb"))]
+const BUDGET_MEMORY: u64 = 16 * 1024 * 1024;
+/// Every node id is this long, so one maintained entry costs `48 + ID_LEN` bytes.
+#[cfg(all(feature = "matview", feature = "redb"))]
+const ID_LEN: usize = 3000;
+/// Nodes each graph holds before its view is defined: two of the first two views together
+/// pass the budget, the third alone passes the ceiling.
+#[cfg(all(feature = "matview", feature = "redb"))]
+const BUDGET_SEED: [(&str, &str, usize); 3] = [
+    ("r007_5_graph_a", "r007_5_view_a", 3000),
+    ("r007_5_graph_b", "r007_5_view_b", 3000),
+    ("r007_5_graph_c", "r007_5_view_c", 4200),
+];
+
+#[cfg(all(feature = "matview", feature = "redb"))]
+fn budget_node_id(graph: &str, i: usize) -> String {
+    let mut id = format!("{graph}-{i:06}-");
+    id.extend(std::iter::repeat('x').take(ID_LEN - id.len()));
+    id
+}
+
+#[cfg(all(feature = "matview", feature = "redb"))]
+fn scan_plan() -> medulla_types::wire::Plan {
+    medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
+        label: "Doc".into(),
+    }])
+}
+
+/// One served request on `graph`; the reply must be a success.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn send_in(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    id: u64,
+    method: Method,
+) -> medulla_protocol_types::protocol::Response {
+    let reply = crate::tests::dispatch_on_heap(state, request(id, graph, method)).await;
+    assert!(
+        reply.error.is_none(),
+        "request {id} on {graph} failed: {:?}, detail: {:?}",
+        reply.error,
+        reply.error_detail
+    );
+    reply
+}
+
+/// The rows `view` serves, and the rows a full recompute over `graph` gives, both sorted.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn served_and_recomputed(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    view: &str,
+    id: u64,
+) -> (Vec<(String, Option<f32>)>, Vec<(String, Option<f32>)>) {
+    let reply = send_in(
+        state,
+        graph,
+        id,
+        Method::PlanMatViewGet { name: view.into() },
+    )
+    .await;
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = reply.result else {
+        panic!("PlanMatViewGet returned a non-raw payload");
+    };
+    let mut served: Vec<(String, Option<f32>)> = rmp_serde::from_slice(&bytes).expect("view rows");
+    served.sort_by(|a, b| a.0.cmp(&b.0));
+    let core = state
+        .read()
+        .await
+        .registry
+        .get(graph)
+        .expect("graph exists")
+        .core
+        .clone();
+    let def = medulla_server_cdc::matview::PlanMatView {
+        name: view.into(),
+        graph: graph.into(),
+        plan: scan_plan(),
+    };
+    let (snapshot, _) = core.analysis_snapshot_versioned();
+    let semantic = core.semantic_store.read().clone();
+    // The recompute drives DataFusion through its own runtime; run it off-reactor.
+    let mut recomputed = tokio::task::spawn_blocking(move || {
+        medulla_server_cdc::matview::materialize(&def, &snapshot, &semantic)
+    })
+    .await
+    .expect("recompute task")
+    .expect("recompute");
+    recomputed.sort_by(|a, b| a.0.cmp(&b.0));
+    (served, recomputed)
+}
+
+/// Verifies MEDULLA-INCREMENTAL-VIEWS-R007.5: three views over three graphs run under a
+/// tight memory budget and per-view ceiling; one spills, one demotes with
+/// `STATE_BUDGET_EXCEEDED`, and every read equals a recompute.
+// spec: MEDULLA-INCREMENTAL-VIEWS-R007.5
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn state_budget_spills_then_demotes_and_answers_stay_correct() {
+    use medulla_core::view_status::{snapshot, ViewMode};
+    use medulla_server_api::knob_config;
+    use medulla_server_cdc::matview::{manager, Mode};
+
+    // The knobs are read once per process, so they are installed before the first
+    // manager call; this test runs in its own process.
+    let loaded = knob_config::load_knobs(
+        &[
+            format!("view.state_bytes={BUDGET_VIEW_CEILING}"),
+            format!("views.memory_bytes={BUDGET_MEMORY}"),
+        ],
+        |_| None,
+    )
+    .expect("budget knobs load");
+    knob_config::install(loaded);
+    assert_eq!(knob_config::knobs().views_memory_bytes, BUDGET_MEMORY);
+    assert_eq!(knob_config::knobs().view_state_bytes, BUDGET_VIEW_CEILING);
+
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state(&[CREATOR]);
+    let props = rmp_serde::to_vec_named(&serde_json::json!({ "type": "Doc" })).expect("props");
+    for (n, (graph, _, count)) in BUDGET_SEED.iter().enumerate() {
+        create_test_graph(&state, graph, 1 + n as u64).await;
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(graph)
+            .expect("graph exists")
+            .core
+            .clone();
+        for i in 0..*count {
+            core.add_node(budget_node_id(graph, i), props.clone());
+        }
+    }
+
+    // The store backs the spill once the transaction seam has reloaded the views.
+    let txn = medulla_server_ops::api::query_txn::txn_seam(&state)
+        .await
+        .expect("transaction seam installed");
+    txn.reload_matviews(&state).await.expect("reload");
+    for (n, (graph, view, _)) in BUDGET_SEED.iter().enumerate() {
+        let define = Method::PlanMatViewDefine {
+            name: (*view).into(),
+            graph: (*graph).into(),
+            plan: scan_plan(),
+        };
+        send_in(&state, graph, 10 + n as u64, define).await;
+    }
+
+    // Write to each graph in turn; read and check every view after every write.
+    let mut request_id = 100;
+    for round in 0..3usize {
+        for (graph, _, count) in BUDGET_SEED.iter() {
+            request_id += 1;
+            let write = Method::AddNode {
+                node_id: budget_node_id(graph, count + round),
+                properties_msgpack: props.clone(),
+            };
+            send_in(&state, graph, request_id, write).await;
+            for (read_graph, view, _) in BUDGET_SEED.iter() {
+                request_id += 1;
+                let (served, recomputed) =
+                    served_and_recomputed(&state, read_graph, view, request_id).await;
+                assert_eq!(
+                    served, recomputed,
+                    "view {view} after a write to {graph} (round {round})"
+                );
+            }
+        }
+    }
+
+    let modes: Vec<Option<Mode>> = BUDGET_SEED
+        .iter()
+        .map(|(_, v, _)| manager().mode(v))
+        .collect();
+    let spilled = modes.iter().filter(|m| **m == Some(Mode::Spilled)).count();
+    let recompute: Vec<&str> = BUDGET_SEED
+        .iter()
+        .filter(|(_, v, _)| manager().mode(v) == Some(Mode::Recompute))
+        .map(|(_, v, _)| *v)
+        .collect();
+    assert_eq!(spilled, 1, "one view is spilled: {modes:?}");
+    assert_eq!(
+        recompute,
+        vec!["r007_5_view_c"],
+        "one view demoted: {modes:?}"
+    );
+    assert_eq!(
+        manager().fallback_reason("r007_5_view_c").as_deref(),
+        Some("STATE_BUDGET_EXCEEDED")
+    );
+
+    // The status board agrees with the manager.
+    let board: Vec<_> = snapshot()
+        .into_iter()
+        .filter(|s| s.name.starts_with("r007_5_view_"))
+        .collect();
+    assert_eq!(
+        board.iter().filter(|s| s.mode == ViewMode::Spilled).count(),
+        1
+    );
+    let demoted: Vec<_> = board
+        .iter()
+        .filter(|s| s.reason_code.as_deref() == Some("STATE_BUDGET_EXCEEDED"))
+        .collect();
+    assert_eq!(demoted.len(), 1);
+    assert_eq!(demoted[0].mode, ViewMode::Recompute);
+
+    for (_, view, _) in BUDGET_SEED.iter() {
+        let dropped = Method::PlanMatViewDrop {
+            name: (*view).into(),
+        };
+        send_in(&state, "r007_5_graph_a", 10_000, dropped).await;
+    }
+}

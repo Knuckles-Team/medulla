@@ -113,6 +113,8 @@ closed_error_codes! {
         MemsyncRetentionExhausted => "MEMSYNC_RETENTION_EXHAUSTED",
         MemsyncStorageUnavailable => "MEMSYNC_STORAGE_UNAVAILABLE",
         MemsyncVersionMalformed => "MEMSYNC_VERSION_MALFORMED",
+        /// A plan view has an op with no incremental form, so it recomputes (MEDULLA-INCREMENTAL-VIEWS-R005.5).
+        MatviewNotIncremental => "MATVIEW_NOT_INCREMENTAL",
         DelegationUnknown => "DELEGATION_UNKNOWN",
         // MEDULLA-UNIFIED-DATA-PLANE-R651.4: the DocumentDelete refusals.
         CascadeTooLarge => "CASCADE_TOO_LARGE",

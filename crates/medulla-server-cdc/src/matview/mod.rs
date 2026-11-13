@@ -38,3 +38,13 @@ pub fn note_change(graph: &str) -> usize {
 pub fn apply_delta(graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
     manager().apply_delta(graph, event)
 }
+
+/// [`apply_delta`], also returning the output delta of each view the change moved as
+/// `(view, output)` pairs (MEDULLA-INCREMENTAL-VIEWS-R010.1). The caller publishes them to
+/// the view feeds once no matview lock is held.
+pub fn apply_delta_with_output(
+    graph: &str,
+    event: &medulla_types::wire::CdcEvent,
+) -> (usize, Vec<(String, medulla_types::delta::Delta)>) {
+    manager().apply_delta_with_output(graph, event)
+}

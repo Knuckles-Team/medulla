@@ -21,6 +21,8 @@ pub(crate) struct StoreCatalog {
     pub(crate) property_graphs: Vec<PropertyGraphCatalogRecord>,
     pub(crate) ann_indexes: Vec<AnnIndexPlan>,
     pub(crate) index_status: Vec<ManagedIndexStatus>,
+    /// The graph the statement runs over; scopes `medulla_catalog.matviews`.
+    pub(crate) statement_graph: Option<String>,
 }
 
 impl StoreCatalog {
@@ -32,8 +34,19 @@ impl StoreCatalog {
             property_graphs: store.list_property_graph_records(graph_scope)?,
             ann_indexes: store.list_ann_indexes()?,
             index_status: store.managed_index_status()?,
+            statement_graph: None,
         })
     }
+}
+
+/// The schema of the view status relation, `medulla_catalog.matviews`.
+pub(crate) const VIEW_STATUS_SCHEMA: &str = "medulla_catalog";
+
+/// Whether `sql` may read the view status relation. View status moves without a
+/// catalog write, so such a statement never uses a cached context. Over-approximates
+/// on purpose: a false positive only skips the cache.
+pub(crate) fn reads_view_status(sql: &str) -> bool {
+    sql.to_ascii_lowercase().contains(VIEW_STATUS_SCHEMA)
 }
 
 /// Whether `sql` may read the managed-index status relation. Index state moves

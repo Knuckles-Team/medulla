@@ -81,7 +81,7 @@ fn maintenance_cost_is_o_delta_not_o_view() {
                 ZRow::retract("n0", doc_props(2000)),
                 ZRow::insert("n0", doc_props(2001)),
             ]);
-            let touched = c.apply(&delta).expect("apply");
+            let touched = c.apply(&delta).expect("apply").touched;
             let view_size = c.current().len();
             let ratio = touched as f64 / view_size as f64;
             println!(
@@ -125,14 +125,16 @@ fn single_insert_touches_one_stage_regardless_of_size() {
         let mut c = seed(&scan_only(), n);
         assert_eq!(
             c.apply(&Delta::from(vec![ZRow::insert("fresh", doc_props(2010))]))
-                .expect("apply"),
+                .expect("apply")
+                .touched,
             1,
             "a single matching insert touches exactly one stage (view_size={n})"
         );
         let non_doc = json!({ "type": "Other" }).as_object().unwrap().clone();
         assert_eq!(
             c.apply(&Delta::from(vec![ZRow::insert("skip", non_doc)]))
-                .expect("apply"),
+                .expect("apply")
+                .touched,
             0,
             "a non-matching row touches nothing (view_size={n})"
         );

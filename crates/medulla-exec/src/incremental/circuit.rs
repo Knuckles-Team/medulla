@@ -245,6 +245,81 @@ fn apply_to_stages(stages: &mut [Stage], delta: &Delta, bytes: &mut u64) -> usiz
 mod build;
 use build::CircuitBuild;
 
+/// What one [`Circuit::apply`] did (MEDULLA-INCREMENTAL-VIEWS-R010.1).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ApplyOutcome {
+    /// State entries the delta touched: the O(Δ) instrument.
+    pub touched: usize,
+    /// The consolidated change of the result rows: `+1` for a row that entered the result
+    /// (or whose score changed to this one), `-1` for a row that left it. Rows carry the id
+    /// and score, with empty properties.
+    pub output: Delta,
+}
+
+/// The part of the result a delta's output is computed against.
+enum Before {
+    /// Window mode: the score of each touched bucket (`None` when absent).
+    Buckets(Vec<(i64, Option<Option<f32>>)>),
+    /// Set mode with a non-empty shared prefix: whether each touched id was a member.
+    Members(Vec<(String, bool)>),
+    /// Anything else: the whole result.
+    Full(Vec<(String, Option<f32>)>),
+}
+
+/// The distinct ids a delta names, in order.
+fn touched_ids(delta: &Delta) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    delta
+        .rows
+        .iter()
+        .filter(|r| r.weight != 0)
+        .filter(|r| seen.insert(r.id.as_str()))
+        .map(|r| r.id.clone())
+        .collect()
+}
+
+/// One output row: `weight` of `id` with `score`.
+fn output_row(id: &str, score: Option<f32>, weight: i64) -> ZRow {
+    ZRow {
+        id: id.to_string(),
+        score,
+        props: Map::new(),
+        weight,
+    }
+}
+
+/// Push the change of one result row from `was` to `now` (`None` = absent): a retract of
+/// the old row and an insert of the new one, or nothing when they are equal.
+fn push_change(out: &mut Vec<ZRow>, id: &str, was: Option<Option<f32>>, now: Option<Option<f32>>) {
+    if was == now {
+        return;
+    }
+    if let Some(score) = was {
+        out.push(output_row(id, score, -1));
+    }
+    if let Some(score) = now {
+        out.push(output_row(id, score, 1));
+    }
+}
+
+/// Push the change between two full results.
+fn diff_results(
+    out: &mut Vec<ZRow>,
+    before: Vec<(String, Option<f32>)>,
+    after: Vec<(String, Option<f32>)>,
+) {
+    let old: BTreeMap<String, Option<f32>> = before.into_iter().collect();
+    let new: BTreeMap<String, Option<f32>> = after.into_iter().collect();
+    for (id, score) in &old {
+        push_change(out, id, Some(*score), new.get(id).copied());
+    }
+    for (id, score) in &new {
+        if !old.contains_key(id) {
+            push_change(out, id, None, Some(*score));
+        }
+    }
+}
+
 /// A compiled incremental circuit for one supported plan. Serializable so its maintained
 /// state (stage membership maps / bucket accumulators) persists in the
 /// `matview_operator_state` redb table — the analogue of turso's `dbsp_state` btree.
@@ -303,19 +378,140 @@ impl Circuit {
 
     /// INCREMENTAL maintenance: fold one delta into the maintained state, returning HOW
     /// MANY state entries it touched (the O(Δ) instrument — bounded by
-    /// `stages · delta.len()`, independent of view size). A row applies its signed weight
-    /// to every membership stage whose predicate it satisfies (set mode), or to its
-    /// time-bucket accumulator (window mode).
+    /// `stages · delta.len()`, independent of view size) and the OUTPUT delta: the
+    /// consolidated change of the result rows (MEDULLA-INCREMENTAL-VIEWS-R010.1). A row
+    /// applies its signed weight to every membership stage whose predicate it satisfies
+    /// (set mode), or to its time-bucket accumulator (window mode).
     ///
     /// The delta is cloned and consolidated first (MEDULLA-INCREMENTAL-VIEWS-R002.3); a
     /// [`DeltaError`] returns `Err` and leaves the maintained state untouched.
-    pub fn apply(&mut self, delta: &Delta) -> Result<usize, DeltaError> {
+    ///
+    /// The output is found from the rows the delta names whenever the result is local to
+    /// them (no `Limit`, and every membership prefix non-empty so a stage never sources
+    /// its own predicate). Otherwise it is the difference of the full result before and
+    /// after, which costs O(view); that is the same cost a read already pays.
+    pub fn apply(&mut self, delta: &Delta) -> Result<ApplyOutcome, DeltaError> {
         let mut delta = delta.clone();
         delta.consolidate()?;
-        Ok(match &mut self.window {
+        let before = self.snapshot_before(&delta);
+        let touched = match &mut self.window {
             Some(w) => apply_to_buckets(w, &delta, &mut self.state_bytes),
             None => apply_to_stages(&mut self.stages, &delta, &mut self.state_bytes),
-        })
+        };
+        let output = self.output_since(before);
+        Ok(ApplyOutcome { touched, output })
+    }
+
+    /// What the result looked like before `delta`, as much of it as the output needs.
+    fn snapshot_before(&self, delta: &Delta) -> Before {
+        match &self.window {
+            Some(_) if self.limit.is_none() => {
+                let starts = self.bucket_starts(delta);
+                let scores: Vec<Option<Option<f32>>> =
+                    starts.iter().map(|s| self.bucket_score(*s)).collect();
+                Before::Buckets(starts.into_iter().zip(scores).collect())
+            }
+            None if self.limit.is_none() && self.chain_nonempty() => {
+                let ids = touched_ids(delta);
+                let member = ids.iter().map(|id| self.in_result(id)).collect();
+                Before::Members(ids.into_iter().zip(member).collect())
+            }
+            _ => Before::Full(self.current_scored()),
+        }
+    }
+
+    /// The output delta from `before` to the state `delta` left behind.
+    fn output_since(&self, before: Before) -> Delta {
+        let mut out = Vec::new();
+        match before {
+            Before::Buckets(old) => {
+                for (start, was) in old {
+                    push_change(&mut out, &start.to_string(), was, self.bucket_score(start));
+                }
+            }
+            Before::Members(old) if self.chain_nonempty() => {
+                for (id, was) in old {
+                    let now = self.in_result(&id);
+                    push_change(&mut out, &id, was.then_some(None), now.then_some(None));
+                }
+            }
+            Before::Members(old) => {
+                // The delta emptied the shared prefix, so the old result is exactly the
+                // touched ids that were members: no untouched id was in every stage.
+                let was: Vec<(String, Option<f32>)> = old
+                    .into_iter()
+                    .filter(|(_, member)| *member)
+                    .map(|(id, _)| (id, None))
+                    .collect();
+                diff_results(&mut out, was, self.current_scored());
+            }
+            Before::Full(old) => diff_results(&mut out, old, self.current_scored()),
+        }
+        Delta::from(out)
+    }
+
+    /// The aligned bucket starts a delta touches (window mode).
+    fn bucket_starts(&self, delta: &Delta) -> Vec<i64> {
+        let Some(w) = &self.window else {
+            return Vec::new();
+        };
+        let mut starts = BTreeSet::new();
+        for row in delta.rows.iter().filter(|r| r.weight != 0) {
+            if !label_matches(&row.props, &w.label) {
+                continue;
+            }
+            let Some(ts) = int_field(&row.props, TS_FIELD) else {
+                continue;
+            };
+            if let Some(start) = w.bucket_start(ts) {
+                starts.insert(start);
+            }
+        }
+        starts.into_iter().collect()
+    }
+
+    /// The score of the bucket starting at `start`, if it is in the result (window mode).
+    fn bucket_score(&self, start: i64) -> Option<Option<f32>> {
+        let w = self.window.as_ref()?;
+        let b = w.buckets.get(&start).filter(|b| b.count > 0)?;
+        let agg = match w.agg {
+            Agg::Count => b.count as f64,
+            Agg::Sum => b.sum,
+            Agg::Mean => b.sum / b.count as f64,
+        };
+        Some(Some(agg as f32))
+    }
+
+    /// Whether `id` is in the result, assuming the shared prefix is non-empty: it is in
+    /// every membership stage.
+    fn in_result(&self, id: &str) -> bool {
+        self.stages.iter().all(|s| s.members.contains_key(id))
+    }
+
+    /// Whether every membership prefix before the last stage is non-empty, so the result
+    /// is the plain intersection of the stages. True for a single stage; otherwise true
+    /// when some id is in each of the first `n - 1` stages. Scans the smallest of them and
+    /// stops at the first common id.
+    fn chain_nonempty(&self) -> bool {
+        let Some(prefix) = self.stages.len().checked_sub(1).map(|n| &self.stages[..n]) else {
+            return true;
+        };
+        let Some(smallest) = prefix.iter().min_by_key(|s| s.members.len()) else {
+            return true;
+        };
+        smallest
+            .members
+            .keys()
+            .any(|id| prefix.iter().all(|s| s.members.contains_key(id)))
+    }
+
+    /// The full result as `(id, score)` pairs.
+    fn current_scored(&self) -> Vec<(String, Option<f32>)> {
+        self.current()
+            .rows()
+            .iter()
+            .map(|r| (r.id.clone(), r.score))
+            .collect()
     }
 
     /// The maintained state in bytes: per stage, members times `48 + id length`; in window
@@ -829,13 +1025,15 @@ mod tests {
         // One more single-row delta into a 1000-row view touches exactly 1 stage entry.
         assert_eq!(
             c.apply(&insert("z", json!({"type": "Doc"})))
-                .expect("apply"),
+                .expect("apply")
+                .touched,
             1
         );
         // A filtered-out row (type != Doc) touches nothing.
         assert_eq!(
             c.apply(&insert("q", json!({"type": "Other"})))
-                .expect("apply"),
+                .expect("apply")
+                .touched,
             0
         );
     }
@@ -1045,5 +1243,77 @@ mod tests {
         }
         assert_eq!(c.current().ids(), vec!["a", "b"]);
         assert_eq!(c.current(), c.recompute(&model));
+    }
+
+    /// Apply an output delta to a result held as `id -> score`.
+    fn fold_output(result: &mut BTreeMap<String, Option<f32>>, output: &Delta) {
+        for row in &output.rows {
+            if row.weight > 0 {
+                assert!(
+                    result.insert(row.id.clone(), row.score).is_none(),
+                    "insert of a row already present: {}",
+                    row.id
+                );
+            } else {
+                assert_eq!(
+                    result.remove(&row.id),
+                    Some(row.score),
+                    "retract of a row not present: {}",
+                    row.id
+                );
+            }
+        }
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R010.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R010.1: the output of every `apply` is exactly
+    /// the change of the result, in the local regime and in the regime where a stage
+    /// sources its own predicate.
+    #[test]
+    fn output_delta_is_the_change_of_the_result() {
+        use medulla_types::delta::ZRow;
+        let plan = Plan::new(vec![
+            Op::Scan {
+                label: "Doc".into(),
+            },
+            Op::Filter {
+                preds: vec![Pred::GtNum {
+                    prop: "year".into(),
+                    n: 2000.0,
+                }],
+            },
+        ]);
+        let mut c = Circuit::compile(&plan).unwrap();
+        let doc = |year: i64| json!({"type": "Doc", "year": year});
+        let other = |year: i64| json!({"type": "Other", "year": year});
+        let steps: Vec<Delta> = vec![
+            // No Doc yet: the filter sources itself, so a non-Doc node is the result.
+            insert("x", other(2010)),
+            insert("a", doc(2005)),
+            insert("b", doc(1990)),
+            insert("c", doc(2020)),
+            // An update that leaves the result, then one that enters it.
+            Delta::from(vec![
+                ZRow::retract("a", props(doc(2005))),
+                ZRow::insert("a", props(doc(1980))),
+            ]),
+            Delta::from(vec![
+                ZRow::retract("b", props(doc(1990))),
+                ZRow::insert("b", props(doc(2030))),
+            ]),
+            // The last Doc leaves: the result jumps back to the sourced set.
+            Delta::from(vec![ZRow::retract("a", props(doc(1980)))]),
+            Delta::from(vec![ZRow::retract("b", props(doc(2030)))]),
+            Delta::from(vec![ZRow::retract("c", props(doc(2020)))]),
+            // A write that changes nothing in the result.
+            insert("y", other(1900)),
+        ];
+        let mut result: BTreeMap<String, Option<f32>> = BTreeMap::new();
+        for (n, step) in steps.iter().enumerate() {
+            let outcome = c.apply(step).expect("apply");
+            fold_output(&mut result, &outcome.output);
+            let now: BTreeMap<String, Option<f32>> = c.current_scored().into_iter().collect();
+            assert_eq!(result, now, "after step {n}");
+        }
     }
 }

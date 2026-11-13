@@ -23,4 +23,4 @@ pub mod circuit;
 #[cfg(any(test, feature = "test-support"))]
 pub mod oracle;
 
-pub use circuit::{Circuit, UnsupportedOp};
+pub use circuit::{ApplyOutcome, Circuit, UnsupportedOp};

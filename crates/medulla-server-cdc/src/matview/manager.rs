@@ -10,7 +10,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_core::view_status;
-use medulla_exec::incremental::Circuit;
+use medulla_exec::incremental::{ApplyOutcome, Circuit};
 use medulla_server_api::knob_config;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::delta::Delta;
@@ -91,6 +91,11 @@ struct Tracked {
     /// CDC changes folded into this view's circuit — advanced ONCE per
     /// `apply_delta` call, not per row (MEDULLA-INCREMENTAL-VIEWS-R005.2).
     applied_changes: u64,
+    /// Changes folded since the last shadow check (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    since_check: u64,
+    /// Set when `since_check` reaches `view.shadow_every`; cleared by
+    /// [`PlanMatViewManager::take_due_checks`].
+    check_due: bool,
 }
 
 impl Tracked {
@@ -215,6 +220,8 @@ impl PlanMatViewManager {
                     through_seq: 0,
                     last_change_ms: 0,
                     applied_changes: 0,
+                    since_check: 0,
+                    check_due: false,
                 },
             );
             status_of(views.get(&name).expect("just-inserted view present"))
@@ -242,6 +249,8 @@ impl PlanMatViewManager {
                     through_seq,
                     last_change_ms: now_ms(),
                     applied_changes: 0,
+                    since_check: 0,
+                    check_due: false,
                 },
             );
             status_of(views.get(&name).expect("just-inserted view present"))
@@ -291,6 +300,8 @@ impl PlanMatViewManager {
         match blob.map(|b| decode_operator_state(&b)) {
             Some(Ok(circuit)) => {
                 t.circuit = Some(CircuitSlot::Resident(circuit));
+                // The board stops advertising `Spilled` the moment the state is back.
+                view_status::publish(status_of(t));
                 true
             }
             other => {
@@ -344,6 +355,8 @@ impl PlanMatViewManager {
             t.circuit = Some(CircuitSlot::Spilled {
                 pending: Some(bytes.clone()),
             });
+            // A spill is a mode change the board must show (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+            view_status::publish(status_of(t));
             out.push((name, bytes));
         }
         out
@@ -412,6 +425,17 @@ impl PlanMatViewManager {
     /// output updates `current` and the watermark advances. Returns how many views it
     /// maintained. `Mode::Recompute` views are UNTOUCHED here (they ride `note_change`).
     pub fn apply_delta(&self, graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
+        self.apply_delta_with_output(graph, event).0
+    }
+
+    /// [`Self::apply_delta`], also returning the output delta of every view the change
+    /// moved as `(view, output)` pairs, for the hub to publish after this lock is released
+    /// (MEDULLA-INCREMENTAL-VIEWS-R010.1). A view whose result did not change has no pair.
+    pub fn apply_delta_with_output(
+        &self,
+        graph: &str,
+        event: &medulla_types::wire::CdcEvent,
+    ) -> (usize, Vec<(String, Delta)>) {
         let delta = super::incremental::event_to_delta(event);
         self.apply_signed(graph, event.seq, &delta)
     }
@@ -421,29 +445,48 @@ impl PlanMatViewManager {
     /// (MEDULLA-INCREMENTAL-VIEWS-R002.3) is demoted to `Mode::Recompute` with the typed
     /// reason code (`DELTA_WEIGHT_OVERFLOW`) and marked stale, so the next read
     /// recomputes it.
-    fn apply_signed(&self, graph: &str, seq: u64, delta: &Delta) -> usize {
+    fn apply_signed(&self, graph: &str, seq: u64, delta: &Delta) -> (usize, Vec<(String, Delta)>) {
         let knobs = knob_config::knobs();
         self.apply_limited(
             graph,
             seq,
             delta,
-            (knobs.view_state_bytes, knobs.views_memory_bytes),
+            (
+                knobs.view_state_bytes,
+                knobs.views_memory_bytes,
+                knobs.view_shadow_every,
+            ),
         )
     }
 
-    /// [`Self::apply_signed`] under explicit `(per-view ceiling, resident budget)` limits.
-    fn apply_limited(&self, graph: &str, seq: u64, delta: &Delta, limits: (u64, u64)) -> usize {
-        let (ceiling, budget) = limits;
+    /// [`Self::apply_signed`] under explicit `(per-view ceiling, resident budget, changes
+    /// between shadow checks)` limits.
+    fn apply_limited(
+        &self,
+        graph: &str,
+        seq: u64,
+        delta: &Delta,
+        limits: (u64, u64, u64),
+    ) -> (usize, Vec<(String, Delta)>) {
+        let (ceiling, budget, shadow_every) = limits;
         let mut changed = Vec::new();
+        let mut outputs = Vec::new();
         let puts = {
             let mut views = self.views.lock();
             for t in views.values_mut() {
                 if t.mode != Mode::Incremental || t.def.graph != graph || seq < t.through_seq {
                     continue;
                 }
-                if self.fold_one(t, seq, delta, ceiling) {
+                if let Some(output) = self.fold_one(t, seq, delta, ceiling) {
+                    if !output.is_empty() {
+                        outputs.push((t.def.name.clone(), output));
+                    }
                     // MEDULLA-INCREMENTAL-VIEWS-R005.2: one increment per call, not per row.
                     t.applied_changes = t.applied_changes.saturating_add(1);
+                    t.since_check = t.since_check.saturating_add(1);
+                    if t.since_check >= shadow_every {
+                        t.check_due = true;
+                    }
                     changed.push(t.def.name.clone());
                 }
             }
@@ -458,32 +501,37 @@ impl PlanMatViewManager {
             puts
         };
         self.flush_spills(puts);
-        changed.len()
+        (changed.len(), outputs)
     }
 
     /// Fold `delta` into one view's circuit. A refused delta or an over-ceiling state
-    /// demotes the view. Returns whether the view was maintained.
-    fn fold_one(&self, t: &mut Tracked, seq: u64, delta: &Delta, ceiling: u64) -> bool {
+    /// demotes the view. Returns the view's output delta when it was maintained, `None`
+    /// when it was not.
+    fn fold_one(&self, t: &mut Tracked, seq: u64, delta: &Delta, ceiling: u64) -> Option<Delta> {
         if !self.ensure_resident(t) {
-            return false;
+            return None;
         }
         let Some(CircuitSlot::Resident(circuit)) = t.circuit.as_mut() else {
-            return false;
+            return None;
         };
         // O(delta) maintenance: fold the signed delta into the circuit's state ONLY (no
         // O(view) result projection here: `Get` projects `current()` lazily). `touched` is
         // the rows-touched instrument (bounded by the delta size, independent of view size).
-        let touched = if delta.is_empty() {
-            0
+        let outcome = if delta.is_empty() {
+            ApplyOutcome {
+                touched: 0,
+                output: Delta::new(),
+            }
         } else {
             match circuit.apply(delta) {
-                Ok(touched) => touched,
+                Ok(outcome) => outcome,
                 Err(err) => {
                     t.demote(err.code().as_str().to_string());
-                    return false;
+                    return None;
                 }
             }
         };
+        let touched = outcome.touched;
         t.through_seq = seq + 1;
         t.last_change_ms = now_ms();
         tracing::trace!(
@@ -496,7 +544,29 @@ impl PlanMatViewManager {
             "incremental matview maintained one CDC delta",
         );
         enforce_view_ceiling(t, ceiling);
-        true
+        Some(outcome.output)
+    }
+
+    /// Up to `limit` incremental views whose shadow check is due, oldest name first. Each
+    /// returned view starts a new check interval: its `since_check` is zero and `check_due`
+    /// is clear (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    pub fn take_due_checks(&self, limit: usize) -> Vec<PlanMatView> {
+        let mut views = self.views.lock();
+        let mut due: Vec<String> = views
+            .values()
+            .filter(|t| t.check_due && t.mode == Mode::Incremental)
+            .map(|t| t.def.name.clone())
+            .collect();
+        due.sort();
+        due.truncate(limit);
+        due.iter()
+            .filter_map(|name| views.get_mut(name))
+            .map(|t| {
+                t.check_due = false;
+                t.since_check = 0;
+                t.def.clone()
+            })
+            .collect()
     }
 
     /// The stored definition for `name`, if any.
@@ -647,7 +717,7 @@ mod tests {
         let mut big = ZRow::insert("a", props.clone());
         big.weight = i64::MAX;
         let delta = Delta::from(vec![big, ZRow::insert("a", props)]);
-        assert_eq!(m.apply_signed("g", 0, &delta), 0);
+        assert_eq!(m.apply_signed("g", 0, &delta).0, 0);
         assert_eq!(m.mode("v"), Some(Mode::Recompute));
         assert_eq!(
             m.fallback_reason("v").as_deref(),
@@ -849,7 +919,7 @@ mod tests {
         let m = PlanMatViewManager::default();
         scan_view(&m, "big", "g", "Doc");
         scan_view(&m, "small", "g", "Other");
-        m.apply_limited("g", 0, &docs("d", 100), (1_000, u64::MAX));
+        m.apply_limited("g", 0, &docs("d", 100), (1_000, u64::MAX, u64::MAX));
         assert_eq!(m.mode("big"), Some(Mode::Recompute));
         assert_eq!(
             m.fallback_reason("big").as_deref(),
@@ -884,7 +954,7 @@ mod tests {
         m.install_spill(sink.clone());
         scan_view(&m, "va", "ga", "Doc");
         scan_view(&m, "vb", "gb", "Doc");
-        let limits = (u64::MAX, 700);
+        let limits = (u64::MAX, 700, u64::MAX);
         m.apply_limited("ga", 0, &docs("a", 10), limits);
         let before = m.incremental_rows("va").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(3));
@@ -961,5 +1031,42 @@ mod tests {
         assert!(m.drop_view(name));
         assert!(find().is_none());
         view_status::remove(f);
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R008.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R008.1: a view becomes due after the knob's
+    /// number of applied changes, and at most `limit` due views are handed out.
+    #[test]
+    fn check_becomes_due_after_knob_changes() {
+        let m = PlanMatViewManager::default();
+        scan_view(&m, "va", "g", "Doc");
+        scan_view(&m, "vb", "g", "Doc");
+        scan_view(&m, "vc", "other", "Doc");
+        let limits = (u64::MAX, u64::MAX, 3);
+        m.apply_limited("g", 0, &docs("a", 1), limits);
+        m.apply_limited("g", 1, &docs("b", 1), limits);
+        assert!(m.take_due_checks(4).is_empty(), "two changes are not three");
+        m.apply_limited("g", 2, &docs("c", 1), limits);
+        let due: Vec<String> = m.take_due_checks(1).into_iter().map(|d| d.name).collect();
+        assert_eq!(due, vec!["va".to_string()], "limit caps the batch");
+        let rest: Vec<String> = m.take_due_checks(4).into_iter().map(|d| d.name).collect();
+        assert_eq!(
+            rest,
+            vec!["vb".to_string()],
+            "a view over another graph never"
+        );
+        assert!(
+            m.take_due_checks(4).is_empty(),
+            "taking restarts the interval"
+        );
+        for seq in 3..5 {
+            m.apply_limited("g", seq, &docs("d", 1), limits);
+        }
+        assert!(
+            m.take_due_checks(4).is_empty(),
+            "two changes since the take"
+        );
+        m.apply_limited("g", 5, &docs("e", 1), limits);
+        assert_eq!(m.take_due_checks(4).len(), 2);
     }
 }

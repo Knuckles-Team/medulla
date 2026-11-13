@@ -27,7 +27,7 @@ use super::ann_pushdown::{
 use super::catalog::register_system_catalogs;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
-use super::store_catalog::{reads_index_status, StoreCatalog};
+use super::store_catalog::{reads_index_status, reads_view_status, StoreCatalog};
 use medulla_sql_lang::{
     sql::typed_result::PgColType, sql::typed_result::TypedColumn,
     sql::typed_result::TypedQueryResult,
@@ -335,11 +335,25 @@ pub fn exec_sql_typed_with_tables_cancellable(
     sql: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
+    exec_sql_typed_with_tables_in_graph(view, store, None, sql, cancel)
+}
+
+/// As [`exec_sql_typed_with_tables_cancellable`], for a statement that runs over
+/// `graph`: `medulla_catalog.matviews` lists the views over that graph
+/// (MEDULLA-INCREMENTAL-VIEWS-R005.3). With `None` it lists none.
+pub fn exec_sql_typed_with_tables_in_graph(
+    view: &GraphView,
+    store: &TableStore,
+    graph: Option<&str>,
+    sql: &str,
+    cancel: &CancellationToken,
+) -> Result<TypedQueryResult, String> {
     // The store's catalog objects: stored functions (CONCEPT:MEDULLA-KG.query.create-drop-function,
     // expanded into the query text before planning), durable views, property graphs, the
     // pgvector ANN registrations (CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313) and the
     // managed-index status rows (EH-352).
-    let catalog = StoreCatalog::read(store, store.index_scope())?;
+    let mut catalog = StoreCatalog::read(store, store.index_scope())?;
+    catalog.statement_graph = graph.map(str::to_string);
     // CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body: a bare top-level `SELECT plfn(args)` / `CALL plproc(args)` naming a
     // `LANGUAGE plpgsql` function runs the procedural interpreter instead of DataFusion.
     // Its embedded SQL (expression eval, `SELECT … INTO`) runs back through THIS read path
@@ -348,7 +362,7 @@ pub fn exec_sql_typed_with_tables_cancellable(
     // The recursive call reuses the SAME `cancel` token, so a cancelled outer request also
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
-        let run_sql = |q: &str| exec_sql_typed_with_tables_cancellable(view, store, q, cancel);
+        let run_sql = |q: &str| exec_sql_typed_with_tables_in_graph(view, store, graph, q, cancel);
         if let Some(res) =
             medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)?
         {
@@ -648,6 +662,7 @@ impl SqlContextCache {
             &catalog.views,
             &catalog.functions,
             &catalog.property_graphs,
+            Some(&epoch.graph),
         )
         .await?;
         super::index_status::register(&built.ctx, &catalog.index_status)?;
@@ -740,7 +755,7 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
     // which this delegates to unchanged.
     let functions = store.list_functions()?;
     if functions.iter().any(|f| f.is_plpgsql()) {
-        return exec_sql_typed_with_tables_cancellable(view, store, sql, cancel);
+        return exec_sql_typed_with_tables_in_graph(view, store, Some(graph), sql, cancel);
     }
     // A durable ANN index covering this exact query shape narrows `nodes`/a user
     // table to a query-specific top-k slice — per-query, never cacheable. Delegate
@@ -748,8 +763,12 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
     // So does the managed-index status relation: index state moves without a
     // catalog write, so a cached context would serve it stale.
     let ann_indexes = store.list_ann_indexes()?;
-    if ann_pushdown_may_apply(sql, &ann_indexes) || reads_index_status(sql) {
-        return exec_sql_typed_with_tables_cancellable(view, store, sql, cancel);
+    // And the view status relation, for the same reason.
+    if ann_pushdown_may_apply(sql, &ann_indexes)
+        || reads_index_status(sql)
+        || reads_view_status(sql)
+    {
+        return exec_sql_typed_with_tables_in_graph(view, store, Some(graph), sql, cancel);
     }
 
     let epoch = SqlContextEpoch {
@@ -1027,6 +1046,7 @@ fn collect_sql_batches(
             &catalog.views,
             &catalog.functions,
             &catalog.property_graphs,
+            catalog.statement_graph.as_deref(),
         )
         .await?;
         super::index_status::register(&ctx, &catalog.index_status)?;

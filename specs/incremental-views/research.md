@@ -81,3 +81,9 @@ Each entry states a decision, its rationale and the alternatives considered. All
 ### D12. Stages not filed
 
 - Decision: event-time lateness and state collection by lateness are not filed. No consumer runs unbounded stream joins today. Incremental graph algorithms are not filed either; they are warm restarts, not view maintenance.
+
+## Plan view output delta and the catalog scope (R005.3, R005.5, R010.1)
+
+- Output delta: `Circuit::apply` finds the change of the result from the rows the delta names whenever the result is local to them, and by a full before/after diff otherwise (a `Limit`, or a stage that sources its own predicate because the prefix is empty). One rule, no second result computation; exact in both regimes.
+- `medulla_catalog.matviews` shows the views over the graph the statement runs over. The request boundary has already admitted the caller to that graph and filtered its rows, so no second access check lives in the SQL crate. A statement with no graph shows none. Statements that read `medulla_catalog` bypass the cached SQL context because view status moves without a catalog write.
+- Budget proof knobs: resident state is bounded by the sum of the per-view ceilings, so the proof sets the ceiling between one view's size and the largest view's size, above half of the 16 MiB budget minimum.

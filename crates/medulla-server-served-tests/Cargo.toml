@@ -23,6 +23,7 @@ hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-h-admin = { path = "../medulla-h-admin" }

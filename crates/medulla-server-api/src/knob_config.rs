@@ -663,6 +663,10 @@ knobs! {
     view_state_bytes: u64 = "view.state_bytes", U64(268_435_456), [1_048_576, 17_179_869_184], "bytes", Tunable;
     /// Resident maintained state of all incremental views; past it the least recently changed view spills (MEDULLA-INCREMENTAL-VIEWS-R007.3).
     views_memory_bytes: u64 = "views.memory_bytes", U64(1_073_741_824), [16_777_216, 68_719_476_736], "bytes", Tunable;
+    /// Applied changes between two shadow checks of one incremental view; there is no off value (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    view_shadow_every: u64 = "view.shadow_every", U64(1_000), [10, 1_000_000], "changes", Tunable;
+    /// Period of the task that runs due shadow checks (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    view_shadow_tick_ms: u64 = "view.shadow_tick_ms", U64(1_000), [100, 60_000], "ms", Tunable;
     /// Ontology naming convention mode: 0 warns, 1 refuses (MEDULLA-TYPED-PACKS-R651.2).
     ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
     /// Fraction of the answer-name tokens a search-task clue may expose (MEDULLA-FEDERATED-QUERY-R702.2).

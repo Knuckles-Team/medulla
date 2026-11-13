@@ -1173,24 +1173,6 @@ fn register_syscat_table(
     Ok(())
 }
 
-/// The graph names the caller may read, in every spelling the catalog knows
-/// (MEDULLA-INCREMENTAL-VIEWS-R005.3): the bare object name, schema-qualified, and
-/// fully qualified. The `property_graphs` records are this caller's own catalog, so
-/// membership is the read boundary.
-fn readable_graph_names(records: &[PropertyGraphCatalogRecord]) -> Vec<String> {
-    let mut out = Vec::new();
-    for record in records {
-        let object = record.name.object.value().to_string();
-        let schema = record.name.schema.value();
-        out.push(object.clone());
-        out.push(format!("{schema}.{object}"));
-        if let Some(catalog) = record.name.catalog.as_ref() {
-            out.push(format!("{}.{}.{}", catalog.value(), schema, object));
-        }
-    }
-    out
-}
-
 /// Register the synthetic `pg_catalog` + `information_schema` system views and the
 /// catalog scalar functions into `ctx` (CONCEPT:MEDULLA-KG.query.route-create-view-create, extending CONCEPT:MEDULLA-KG.query.datafusion),
 /// synthesized from the live relations (`nodes`/`edges`/user tables), the durable views,
@@ -1205,6 +1187,7 @@ pub(crate) async fn register_system_catalogs(
     views: &[(String, String)],
     functions: &[StoredFunction],
     property_graphs: &[PropertyGraphCatalogRecord],
+    statement_graph: Option<&str>,
 ) -> Result<(), String> {
     let rels = collect_relations(ctx, nodes_schema, edges_schema, user_relations, views).await;
 
@@ -1268,13 +1251,13 @@ pub(crate) async fn register_system_catalogs(
         .map_err(|e| format!("register information_schema schema: {e}"))?;
 
     // medulla_catalog.matviews — the published view status board
-    // (MEDULLA-INCREMENTAL-VIEWS-R005.3). The caller sees only views of graphs it may
-    // read: the `property_graphs` records are this caller's own catalog, so a view over
-    // a graph absent from them is hidden.
-    let readable = readable_graph_names(property_graphs);
+    // (MEDULLA-INCREMENTAL-VIEWS-R005.3). A statement runs over one graph the caller was
+    // already admitted to read (the request boundary authorizes it and row-level security
+    // filtered the view), so the caller sees only the views over that graph. A statement
+    // with no graph sees none: it fails closed.
     let statuses = medulla_core::view_status::snapshot()
         .into_iter()
-        .filter(|s| readable.contains(&s.graph))
+        .filter(|s| statement_graph == Some(s.graph.as_str()))
         .collect::<Vec<_>>();
     let matviews_schema = Arc::new(MemorySchemaProvider::new());
     register_syscat_table(

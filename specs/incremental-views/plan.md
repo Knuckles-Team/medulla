@@ -169,3 +169,5 @@ Obsolete paths to delete: `crates/medulla-exec/src/incremental/zset.rs` (R002.1)
 ## Cross-repo seams
 
 - `ARBORA-OPS-R018` serves `CdcRead` on `view:<name>` feeds and the SQL entry as generated operations. Provider row: `MEDULLA-INCREMENTAL-VIEWS-R010.4`. Contract: [contracts/view-change-feed.md](contracts/view-change-feed.md).
+
+Decisions recorded in research.md: output delta regimes (R010.1), catalog scope (R005.3), budget proof knob values (R007.5).
