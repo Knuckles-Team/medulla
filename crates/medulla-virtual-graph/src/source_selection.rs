@@ -553,6 +553,35 @@ impl CoverageFixture {
         self
     }
 
+    /// The sources that declared a watermark-bound cache (MEDULLA-CQ-CONN-R067.6), with
+    /// the freshness bound each declared in seconds. A source qualifies only through an
+    /// effective `accelerated` row that carries a reason and a freshness bound, on a
+    /// connection that declares the `copy` capability. A source with no such row is
+    /// `virtual` and keeps no cache; the smallest bound wins when several rows declare one.
+    pub fn declared_caches(&self) -> BTreeMap<String, u64> {
+        let mut declared: BTreeMap<String, u64> = BTreeMap::new();
+        for row in self.rows() {
+            let Materialisation::Accelerated { reason } = &row.materialisation else {
+                continue;
+            };
+            let Some(max_age) = row.freshness_max_age_seconds else {
+                continue;
+            };
+            if reason.is_empty()
+                || !row.declared
+                || !row_is_effective(AuthorityOrigin::parse(&row.origin), row)
+                || !self.copy_capable.contains(&row.source)
+            {
+                continue;
+            }
+            declared
+                .entry(row.source.clone())
+                .and_modify(|bound| *bound = (*bound).min(max_age))
+                .or_insert(max_age);
+        }
+        declared
+    }
+
     /// Every authority row, in class order.
     pub fn rows(&self) -> impl Iterator<Item = &AuthorityRow> {
         self.mappings.values().flatten()

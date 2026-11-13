@@ -49,3 +49,12 @@ Question: a write stage?
 
 Decision: UQL has no write stage in its grammar, so a statement with one fails to parse before the
 text digest check and before any execution is bound; no source is called.
+Question: what makes a foreign source keep a cache (MEDULLA-CQ-CONN-R067.6)?
+
+Decision: the fragment cache was keyed only on a fresh connector checkpoint, so any checkpointed source
+was cached whether or not anyone declared it. It now serves a named source only when an effective
+`vg:SourceAuthority` row with `vg:materialisation "accelerated"`, a reason and a freshness bound sits on a
+connection that declares the `copy` capability (`CoverageFixture::declared_caches`; a pack or ingestion
+row is not effective, SRC-AUTH-R003.4). The declared `vg:freshnessMaxAgeSeconds` caps how long an entry
+serves. An undeclared source is virtual and disables fragment caching for that query. The served test
+observes the cache by changing a row at the source between two reads, so no new read of the cache exists.

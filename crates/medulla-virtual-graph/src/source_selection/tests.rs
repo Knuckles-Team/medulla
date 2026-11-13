@@ -823,3 +823,23 @@ k:c a vg:SourceConnection ; dc:identifier "c" .
     let connected = connected_sources_from_turtle(&[document]).unwrap();
     assert_eq!(connected, BTreeSet::from(["a".to_string()]));
 }
+
+// spec: MEDULLA-CQ-CONN-R067.6
+#[test]
+fn only_an_effective_accelerated_row_on_a_copy_connection_declares_a_cache() {
+    let fixture = CoverageFixture::new()
+        .with_row(AuthorityRow::new("A", "m", "kept", 1, 1).accelerated("hot subset", 300))
+        .with_row(AuthorityRow::new("B", "m", "kept", 1, 2).accelerated("hot subset", 60))
+        .with_copy_capability("kept", true)
+        // No copy capability on the connection.
+        .with_row(AuthorityRow::new("C", "m", "no-copy", 1, 1).accelerated("hot subset", 300))
+        // No reason.
+        .with_row(AuthorityRow::new("D", "m", "no-reason", 1, 1).accelerated("", 300))
+        .with_copy_capability("no-reason", true)
+        // Virtual row.
+        .with_row(AuthorityRow::new("E", "m", "virtual", 1, 1))
+        .with_copy_capability("virtual", true);
+    let declared = fixture.declared_caches();
+    assert_eq!(declared.len(), 1, "{declared:?}");
+    assert_eq!(declared.get("kept"), Some(&60), "the smallest bound wins");
+}

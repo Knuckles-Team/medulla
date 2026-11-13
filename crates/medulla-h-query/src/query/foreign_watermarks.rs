@@ -51,6 +51,7 @@ impl ForeignWatermarks {
         core: &GraphCore,
         ops: &[medulla_exec::algebra::Op],
         web_ttl_ms: &dyn Fn(&str) -> Option<u64>,
+        declared_cache_s: &dyn Fn(&str) -> Option<u64>,
     ) -> Option<HashMap<String, medulla_federation::federation_opt::SourceWatermark>> {
         let mut sources = BTreeSet::new();
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) || sources.is_empty() {
@@ -72,6 +73,9 @@ impl ForeignWatermarks {
                         },
                     ));
                 }
+                // A copy is kept only for a source whose authority row declared it
+                // (MEDULLA-CQ-CONN-R067.6); an undeclared source is virtual and stores nothing.
+                let declared_ms = declared_cache_s(&name)?.saturating_mul(1000);
                 let status = medulla_core::freshness::foreign_source_freshness(core, &name, now_ms);
                 let watermark = status.watermark.filter(|_| !status.stale)?;
                 // An unbounded EH-400 watermark is still fresh, but keep resident
@@ -79,7 +83,8 @@ impl ForeignWatermarks {
                 let remaining = status
                     .max_staleness_ms
                     .map(|bound| bound.saturating_sub(status.age_ms.unwrap_or(bound)))
-                    .unwrap_or(60_000);
+                    .unwrap_or(60_000)
+                    .min(declared_ms);
                 Some((
                     name,
                     medulla_federation::federation_opt::SourceWatermark {
@@ -180,7 +185,12 @@ mod tests {
         assert_eq!(decided, ForeignWatermarks::Unfresh);
         assert!(!decided.cacheable());
         #[cfg(feature = "federation")]
-        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None).is_none());
+        assert!(
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None, &|_| Some(
+                300
+            ))
+            .is_none()
+        );
     }
 
     #[test]
@@ -192,11 +202,13 @@ mod tests {
         assert!(first.cacheable());
         #[cfg(feature = "federation")]
         assert_eq!(
-            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None)
-                .unwrap()
-                .get("crm")
-                .unwrap()
-                .watermark,
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None, &|_| Some(
+                300
+            ))
+            .unwrap()
+            .get("crm")
+            .unwrap()
+            .watermark,
             "lsn-1"
         );
         watermark(&core, "crm", "lsn-2", now);
@@ -214,7 +226,32 @@ mod tests {
         watermark(&core, "crm", "lsn-1", 1);
         assert!(!ForeignWatermarks::for_ops(&core, &[foreign("crm")]).cacheable());
         #[cfg(feature = "federation")]
-        assert!(ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None).is_none());
+        assert!(
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None, &|_| Some(
+                300
+            ))
+            .is_none()
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R067.6
+    #[cfg(feature = "federation")]
+    #[test]
+    fn a_source_with_no_declared_cache_keeps_no_fragment() {
+        let core = GraphCore::new();
+        let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        watermark(&core, "crm", "lsn-1", now);
+        // Fresh watermark, but no accelerated authority row: virtual, nothing cached.
+        assert!(
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None, &|_| None)
+                .is_none()
+        );
+        // Declared with a 5 second bound: the cache is bounded by the declaration.
+        let sources =
+            ForeignWatermarks::fragment_sources(&core, &[foreign("crm")], &|_| None, &|_| Some(5))
+                .unwrap();
+        let valid = sources.get("crm").unwrap().valid_through_ms;
+        assert!(valid <= now.saturating_add(5_000) + 1_000);
     }
 
     #[test]

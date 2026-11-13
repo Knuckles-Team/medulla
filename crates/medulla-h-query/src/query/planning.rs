@@ -692,7 +692,23 @@ impl ServedPlanLegs {
                 let spec = foreign.registry().spec(name)?;
                 medulla_federation::federation_opt::web_entry_ttl_ms(spec, ttl_s)
             };
-            if let Some(sources) = ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms)
+            // The declared caches are read from the graph's authority rows, once and only
+            // when a named non-web source is read.
+            let declared = std::cell::OnceCell::new();
+            let declared_cache_s = |name: &str| {
+                declared
+                    .get_or_init(|| {
+                        medulla_virtual_graph::source_selection::fixture_from_schema_sources(
+                            &core.schema_sources(),
+                        )
+                        .map(|fixture| fixture.declared_caches())
+                        .unwrap_or_default()
+                    })
+                    .get(name)
+                    .copied()
+            };
+            if let Some(sources) =
+                ForeignWatermarks::fragment_sources(core, &plan.ops, &web_ttl_ms, &declared_cache_s)
             {
                 foreign.install_fragment_cache(sources);
             }

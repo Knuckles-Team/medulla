@@ -508,3 +508,161 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
             VG_QUERY, VG_MAPPING, [], external_sources=external
         )
     assert _named_refusal(503) == UNAVAILABLE_REFUSAL, refused.value
+
+
+MAT_TABLE = "cc_materialised"
+MAT_SOURCE = "cc-materialised"
+MAT_VG = "https://knuckles-team.github.io/ontology/virtual-graph#"
+MAT_CORE = "https://knuckles-team.github.io/ontology/core#"
+
+
+def _materialisation_document(declaration: str, capability: bool = True) -> str:
+    """One fixture authority row for the SQL source, with the stated declaration."""
+    copy = ' ; vg:declaredCapability "copy"' if capability else ""
+    return f"""
+@prefix vg: <{MAT_VG}> .
+@prefix kg: <{MAT_CORE}> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex: <urn:cc:materialisation:> .
+ex:conn a vg:SourceConnection ; vg:sourceKind "sql" ; vg:endpointRef ex:ep ;
+    vg:foreignSourceName "{MAT_SOURCE}" ; vg:sourceRole "live_truth"{copy} .
+ex:ep vg:url "postgres://source.example.invalid/db" .
+ex:contract a vg:MetadataContract ; vg:contractSource ex:conn ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:00000000000000000000000000000000000000000000000000000000000067a6" ;
+    vg:discoveredEntity "items" ; vg:discoveredField "items.id", "items.label" .
+ex:mapping a vg:VirtualMapping ; vg:mapsContract ex:contract ;
+    vg:mapsOntologyClass kg:Incident ; vg:mapsEntity "items" ; vg:keyField "items.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:pair .
+ex:pair a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "items.label" .
+ex:row a vg:SourceAuthority ; vg:authoritativeSource ex:conn ;
+    vg:authorityFor kg:Incident ; vg:authorityMapping ex:mapping ;
+    vg:authorityRank 1 ; vg:authorityContract "virtual-graph" {declaration} .
+"""
+
+
+ACCELERATED = (
+    '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300 ; '
+    'vg:materialisationReason "the table is slow and read often"'
+)
+
+
+def _attach_materialisation(client: SyncMedullaClient, document: str) -> None:
+    client._send(
+        "GraphSchema",
+        {"op": {"op": "attach", "source_id": "r067-6", "ontology_ttl": document}},
+        None,
+        idempotency_key=f"r067-6-attach-{hash(document)}",
+    )
+
+
+def _watermark(client: SyncMedullaClient, mark: str) -> None:
+    """The connector's checkpoint node for the source, fresh as of now."""
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+
+    async def write() -> None:
+        aclient = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(),
+        )
+        try:
+            txn = await aclient.txn.begin()
+            await aclient.txn.add_node(
+                txn,
+                f"eg:foreign-source:{MAT_SOURCE}",
+                {
+                    "type": "ForeignSourceWatermark",
+                    "eg:foreignSource": MAT_SOURCE,
+                    "eg:watermark": mark,
+                    "eg:watermarkAtMs": now_ms,
+                    "eg:maxStaleness": 600,
+                },
+            )
+            assert await aclient.txn.commit(txn, idempotency_key=f"r067-6-{mark}")
+        finally:
+            await aclient.close()
+
+    asyncio.run(write())
+
+
+def _scan_labels(client: SyncMedullaClient) -> list[str]:
+    result = client.query.uql(f"FOREIGN SCAN '{MAT_SOURCE}'")
+    rows = result["rows"] if isinstance(result, dict) else result
+    return sorted(str(row.get("label")) for row in rows)
+
+
+def _materialisation_journey(
+    clean_graph: SyncMedullaClient, pg_source, declaration: str
+) -> tuple[list[str], list[str]]:
+    """Read the source, change a row at the source, read again."""
+    pg_source.execute(f"DROP TABLE IF EXISTS {MAT_TABLE}")
+    pg_source.execute(f"CREATE TABLE {MAT_TABLE} (id text primary key, label text)")
+    pg_source.execute(f"INSERT INTO {MAT_TABLE} VALUES ('item-1', 'Alpha')")
+    before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    clean_graph._send(
+        "RegisterForeignSource",
+        {
+            "name": MAT_SOURCE,
+            "source": {
+                "Sql": {
+                    "dsn": pg_source.dsn,
+                    "query": f"SELECT id, label FROM {MAT_TABLE} ORDER BY id",
+                    "id_field": "id",
+                }
+            },
+        },
+        None,
+        idempotency_key=f"r067-6-register-{hash(declaration)}",
+    )
+    _attach_materialisation(clean_graph, _materialisation_document(declaration))
+    _watermark(clean_graph, "lsn-1")
+    first = _scan_labels(clean_graph)
+    pg_source.execute(f"UPDATE {MAT_TABLE} SET label = 'Beta' WHERE id = 'item-1'")
+    second = _scan_labels(clean_graph)
+    # Either way the engine stores no source row: the cache is not the record.
+    stored = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    assert [row for row in stored if "item-1" in str(row)] == [], stored
+    assert len(stored) <= len(before) + 1, "only the watermark node may be stored"
+    return first, second
+
+
+@pytest.mark.spec("MEDULLA-CQ-CONN-R067.6")
+def test_6_materialisation(clean_graph, pg_source) -> None:
+    """A source is virtual unless its row declares an accelerated, bounded cache."""
+    # Without the statement the source is virtual: a change at the source shows at once.
+    first, second = _materialisation_journey(clean_graph, pg_source, "")
+    assert first == ["Alpha"], first
+    assert second == ["Beta"], (
+        f"an undeclared source must never be served from a copy: {second}"
+    )
+
+    # With the statement a watermark-bound cache serves the second read.
+    clean_graph.graph.clear()
+    first, second = _materialisation_journey(clean_graph, pg_source, ACCELERATED)
+    assert first == ["Alpha"], first
+    assert second == ["Alpha"], (
+        f"the declared cache must serve the repeat read: {second}"
+    )
+
+    # A new checkpoint retires the cached entry: the read is live again.
+    _watermark(clean_graph, "lsn-2")
+    assert _scan_labels(clean_graph) == ["Beta"]
+
+    # Refusals: an accelerated row without its reason, its bound or the copy capability.
+    for bad, capability, message in [
+        (
+            '; vg:materialisation "accelerated" ; vg:freshnessMaxAgeSeconds 300',
+            True,
+            "materialisationReason",
+        ),
+        (
+            '; vg:materialisation "accelerated" ; vg:materialisationReason "slow"',
+            True,
+            "freshnessMaxAgeSeconds",
+        ),
+        (ACCELERATED, False, "copy capability"),
+    ]:
+        with pytest.raises(Exception) as refused:
+            _attach_materialisation(
+                clean_graph, _materialisation_document(bad, capability)
+            )
+        assert message in str(refused.value), refused.value
