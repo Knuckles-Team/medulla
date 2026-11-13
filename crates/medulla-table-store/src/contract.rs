@@ -1,6 +1,8 @@
 //! `ModalityContract` for [`TableSnapshotRow`] (MEDULLA-FEDERATED-QUERY-R721.1): the SQL modality.
 
-use medulla_modality::{encode_staged, ModalityContract, RowSetShape, StagedWrite};
+use medulla_modality::{
+    encode_staged, ConformanceTestable, ModalityContract, RowSetShape, StagedWrite,
+};
 
 use crate::tables::store::TableSnapshotRow;
 
@@ -23,3 +25,14 @@ impl ModalityContract for TableSnapshotRow {
         None
     }
 }
+
+impl ConformanceTestable for TableSnapshotRow {
+    fn conformance_sample() -> Self {
+        TableSnapshotRow {
+            row_id: 1,
+            cells: Vec::new(),
+        }
+    }
+}
+
+medulla_modality::modality_conformance_tests!(TableSnapshotRow);

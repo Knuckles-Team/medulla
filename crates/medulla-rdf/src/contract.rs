@@ -3,7 +3,9 @@
 //! A SPARQL binding is the value an RDF query contributes to a cross-modal result; a
 //! node binding names the row it contributes, so the row id is the caller-supplied id.
 
-use medulla_modality::{encode_staged, ModalityContract, RowSetShape, StagedWrite};
+use medulla_modality::{
+    encode_staged, ConformanceTestable, ModalityContract, RowSetShape, StagedWrite,
+};
 
 use crate::sparql::Binding;
 
@@ -25,3 +27,11 @@ impl ModalityContract for Binding {
         None
     }
 }
+
+impl ConformanceTestable for Binding {
+    fn conformance_sample() -> Self {
+        Binding::Node("<urn:a>".to_string())
+    }
+}
+
+medulla_modality::modality_conformance_tests!(Binding);

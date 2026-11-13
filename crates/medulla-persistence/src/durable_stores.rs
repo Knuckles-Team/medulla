@@ -30,6 +30,8 @@
 //! workspace it is opened — cannot be silently forgotten by a future change.
 
 use std::collections::BTreeMap;
+
+use medulla_plan::modality::PlanModality;
 #[cfg(any(feature = "security", test))]
 use std::path::Path;
 
@@ -219,6 +221,32 @@ pub fn bundled_store_authority(
     }
 }
 
+/// Where one [`PlanModality`]'s committed data is authoritative
+/// (MEDULLA-FEDERATED-QUERY-R721.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModalityAuthority {
+    /// The tenant graph shards (`graph-<n>.redb`, discovered by index and always
+    /// bundled). Graph facts and RDF statements are committed here, and the vector
+    /// modality is the embedding projection the committed stream feeds.
+    GraphShards,
+    /// One store registered in [`DURABLE_STORES`], by file name.
+    Store(&'static str),
+}
+
+/// The one authority for each plan modality. The match is exhaustive, so a new
+/// `PlanModality` variant fails to compile until it names its store.
+pub fn modality_authority(modality: PlanModality) -> ModalityAuthority {
+    match modality {
+        PlanModality::Graph | PlanModality::Rdf | PlanModality::Vector => {
+            ModalityAuthority::GraphShards
+        }
+        PlanModality::Sql => ModalityAuthority::Store("sql_tables.redb"),
+        PlanModality::TimeSeries => ModalityAuthority::Store("series.redb"),
+        PlanModality::KeyValue => ModalityAuthority::Store("kv.redb"),
+        PlanModality::Blob => ModalityAuthority::Store("blob.redb"),
+    }
+}
+
 /// The registry entry for `file_name`, or `None` when it is not a known durable store.
 pub fn lookup(file_name: &str) -> Option<&'static DurableStore> {
     DURABLE_STORES
@@ -323,6 +351,40 @@ pub mod tests {
                 store.file_name
             );
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R721.2
+    /// MEDULLA-FEDERATED-QUERY-R721.2: every plan modality names one authority; a named
+    /// store is registered in `DURABLE_STORES` and is not a retired file, and no two
+    /// modalities share a store.
+    #[test]
+    fn each_plan_modality_maps_to_one_store() {
+        let mut stores = Vec::new();
+        for modality in PlanModality::ALL {
+            match modality_authority(modality) {
+                ModalityAuthority::GraphShards => {}
+                ModalityAuthority::Store(file) => {
+                    let entry = lookup(file).unwrap_or_else(|| {
+                        panic!("{} maps to unregistered store {file}", modality.name())
+                    });
+                    assert!(
+                        !matches!(entry.scope, BackupScope::Retired(_)),
+                        "{} maps to retired store {file}",
+                        modality.name()
+                    );
+                    stores.push(file);
+                }
+            }
+        }
+        let distinct = stores
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len();
+        assert_eq!(distinct, stores.len(), "no two modalities share a store");
+        assert!(
+            !stores.is_empty(),
+            "the non-graph modalities each own a registered store"
+        );
     }
 
     /// `*.redb` file names that appear in this crate's sources but are NOT durable

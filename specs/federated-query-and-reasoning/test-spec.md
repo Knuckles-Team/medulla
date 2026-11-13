@@ -485,7 +485,8 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | Hot-path proof | `MEDULLA-FEDERATED-QUERY-R720.6` | `tests/uql_single_plan_all_modalities.rs::five_stage_kinds_one_plan` |
 | Modalities are views over one RowSet algebra in one store (rollup) | `MEDULLA-FEDERATED-QUERY-R721` | Rollup: satisfied when the test of every child passes. |
 | Each modality implements the modality contract | `MEDULLA-FEDERATED-QUERY-R721.1` | `crates/medulla-modality/tests/rowset_views.rs::seven_modalities_implement_contract` |
-| Wiring and store authority | `MEDULLA-FEDERATED-QUERY-R721.2` | `tests/test_store_registry_modalities.py::test_every_modality_has_one_redb_authority` |
+| Wiring and store authority | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
+| Wiring and store authority (bootstrap registration) | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-server/src/plan_modalities.rs::tests::bootstrap_registers_every_plan_modality` |
 | Refusal | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::unknown_modality_refuses` |
 | Hot-path proof: cross-modal queries with default configuration | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
 

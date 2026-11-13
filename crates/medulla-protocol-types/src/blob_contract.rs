@@ -1,8 +1,10 @@
 //! `ModalityContract` for [`BlobReference`] (MEDULLA-FEDERATED-QUERY-R721.1): the blob modality.
 
-use medulla_modality::{encode_staged, ModalityContract, RowSetShape, StagedWrite};
+use medulla_modality::{
+    encode_staged, ConformanceTestable, ModalityContract, RowSetShape, StagedWrite,
+};
 
-use crate::change_envelope::BlobReference;
+use crate::change_envelope::{BlobReference, MaterialOperation};
 
 impl ModalityContract for BlobReference {
     fn storage_kind(&self) -> &'static str {
@@ -22,3 +24,18 @@ impl ModalityContract for BlobReference {
         None
     }
 }
+
+impl ConformanceTestable for BlobReference {
+    fn conformance_sample() -> Self {
+        BlobReference {
+            blob_id: "b1".to_string(),
+            operation: MaterialOperation::Upsert,
+            digest_algorithm: "sha256".to_string(),
+            digest: "00".to_string(),
+            media_type: "application/octet-stream".to_string(),
+            length: 4,
+        }
+    }
+}
+
+medulla_modality::modality_conformance_tests!(BlobReference);

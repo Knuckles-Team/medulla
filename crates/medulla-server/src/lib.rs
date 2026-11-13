@@ -22,6 +22,8 @@ use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod issuer_trust;
+#[cfg(feature = "plan-modalities")]
+pub mod plan_modalities;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod seams_install;
 
