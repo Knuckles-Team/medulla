@@ -166,7 +166,7 @@ mod forecast_served {
     use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
     #[allow(unused_imports)]
     use medulla_server_blob::blob::store::{ChunkStore, RedbChunkStore};
-    use medulla_server_blob::blob::BlobCursors;
+    use medulla_server_blob::blob::{BlobCursors, BlobStateExt};
     use medulla_source_types::source_ingestion::{SourceIngestionReceipt, SourceIngestionRequest};
     use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
@@ -459,7 +459,9 @@ mod forecast_served {
                 state,
                 &format!("ingest:{record_id}"),
                 GRAPH,
-                Method::SourceIngest { request },
+                Method::SourceIngest {
+                    request: Box::new(request),
+                },
             )
             .await,
         )
@@ -645,7 +647,15 @@ async fn probabilistic_forecast_flow() {
         "expected_previous_checkpoint": {"stream": FORECAST_STREAM, "position": {"page": 1}},
     }))
     .unwrap();
-    let refused = call(&state, "bad", GRAPH, Method::SourceIngest { request: bad }).await;
+    let refused = call(
+        &state,
+        "bad",
+        GRAPH,
+        Method::SourceIngest {
+            request: Box::new(bad),
+        },
+    )
+    .await;
     assert!(
         format!("{refused:?}").contains("FORECAST_SAMPLE_INVALID"),
         "{refused:?}"
