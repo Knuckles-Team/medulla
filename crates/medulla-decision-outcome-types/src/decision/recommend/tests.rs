@@ -1,9 +1,10 @@
 use super::*;
 
-// spec: MEDULLA-DECISION-ENGINE-R175.1
+// spec: MEDULLA-DECISION-ENGINE-R175.1, MEDULLA-DECISION-ENGINE-R175.7
 #[test]
-fn request_round_trips() {
-    let request = RecommendRequestV1 {
+fn request_and_answer_round_trip() {
+    let request = RecommendRequest {
+        schema_version: RECOMMEND_SCHEMA_VERSION,
         catalog_ref: "catalog:books@7".into(),
         query_embedding: vec![0.5, -0.25, 0.125],
         history_item_ids: vec!["item:1".into(), "item:2".into()],
@@ -13,18 +14,22 @@ fn request_round_trips() {
     };
     let value = serde_json::to_value(&request).unwrap();
     assert_eq!(
-        serde_json::from_value::<RecommendRequestV1>(value.clone()).unwrap(),
+        serde_json::from_value::<RecommendRequest>(value.clone()).unwrap(),
         request
     );
+    let mut stale = value.clone();
+    stale["schema_version"] = serde_json::json!(2);
+    assert!(serde_json::from_value::<RecommendRequest>(stale).is_err());
     let mut pause = value.clone();
     pause["pause_steps"] = serde_json::json!(9);
-    assert!(serde_json::from_value::<RecommendRequestV1>(pause).is_err());
+    assert!(serde_json::from_value::<RecommendRequest>(pause).is_err());
     for bad in [0, 101] {
         let mut k = value.clone();
         k["top_k"] = serde_json::json!(bad);
-        assert!(serde_json::from_value::<RecommendRequestV1>(k).is_err());
+        assert!(serde_json::from_value::<RecommendRequest>(k).is_err());
     }
-    let answer = RecommendAnswerV1 {
+    let answer = RecommendAnswer {
+        schema_version: RECOMMEND_SCHEMA_VERSION,
         catalog_ref: request.catalog_ref.clone(),
         as_of: request.as_of,
         items: vec![RecommendedItem {
@@ -42,7 +47,7 @@ fn request_round_trips() {
         serde_json::json!([1, 2, 3, 255])
     );
     assert_eq!(
-        serde_json::from_value::<RecommendAnswerV1>(value).unwrap(),
+        serde_json::from_value::<RecommendAnswer>(value).unwrap(),
         answer
     );
     assert_eq!(

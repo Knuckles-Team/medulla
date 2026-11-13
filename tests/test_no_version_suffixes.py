@@ -116,12 +116,11 @@ FALSE_POSITIVE_LINE_PATTERNS: list[tuple[re.Pattern, str]] = [
     ),
     # -- Spec-named decision-engine request and answer types. ----------------
     #
-    # MEDULLA-DECISION-ENGINE-R134 names `RecommendRequestV1`,
-    # `RecommendAnswerV1` and `AnswerCandidateRankingV1` as the typed records
-    # of the answer-ranking and recommendation questions.
+    # MEDULLA-DECISION-ENGINE-R134 names `AnswerCandidateRankingV1` as the typed
+    # record of the answer-ranking question.
     (
         re.compile(
-            r"\b(?:AnswerCandidateRanking|RecommendRequest|RecommendAnswer)V1\b"
+            r"\bAnswerCandidateRankingV1\b"
         ),
         "spec-named decision-engine record type (MEDULLA-DECISION-ENGINE-R134), "
         "not a versioned component",

@@ -322,6 +322,8 @@ knobs! {
     graph_change_feed_max_page: u64 = "graph_change_feed.max_page", U64(256), [1, 256], "events", Tunable;
     /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.
     writeback_queue_min_tier: u64 = "writeback.queue_min_tier", U64(2), [0, 2], "tier", Fixed;
+    /// Most proposals one approval queue may hold (MEDULLA-DECISION-ENGINE-R615.3).
+    writeback_queue_max_proposals: u64 = "writeback.queue_max_proposals", U64(256), [1, 4_096], "proposals", Tunable;
     /// Nodes re-embedded per generation-cycle batch (MEDULLA-DECISION-ENGINE-R174.2).
     generation_batch_nodes: u64 = "generation.batch_nodes", U64(256), [16, 4_096], "nodes", Tunable;
     /// Team signal maximum age.

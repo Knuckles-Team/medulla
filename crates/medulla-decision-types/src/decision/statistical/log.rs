@@ -408,8 +408,9 @@ pub enum DecisionLogOp {
         rule: GuardrailRule,
         resolution_ids: BoundedVec<String, 64>,
     },
-    /// Compute a write-back preflight or the creation and ticket proposals
-    /// (MEDULLA-DECISION-ENGINE-R615.2). Computes only; nothing is stored.
+    /// A write-back operation (MEDULLA-DECISION-ENGINE-R615.2, R615.3).
+    /// Preflight and proposals compute only; queue, approve and release store
+    /// the approval queue, so the class follows the computation.
     Writeback {
         tenant_id: String,
         computation: super::writeback::WritebackOp,
@@ -464,10 +465,15 @@ impl DecisionLogOp {
             Self::Commit { .. } => LogOpClass::Write,
             Self::Evaluate { .. } | Self::Resolve { .. } => LogOpClass::Evaluate,
             Self::Compact { .. } => LogOpClass::Admin,
-            Self::Get { .. }
-            | Self::Aggregate { .. }
-            | Self::Verify { .. }
-            | Self::Writeback { .. } => LogOpClass::Read,
+            Self::Get { .. } | Self::Aggregate { .. } | Self::Verify { .. } => LogOpClass::Read,
+            Self::Writeback { computation, .. } => {
+                use super::writeback::WritebackOp as W;
+                match computation {
+                    W::Preflight { .. } | W::Propose { .. } => LogOpClass::Read,
+                    W::Queue { .. } | W::Release { .. } => LogOpClass::Write,
+                    W::Approve { .. } => LogOpClass::Govern,
+                }
+            }
             Self::Learn { write, .. } => write.class(),
             Self::PromoteRule { .. } => LogOpClass::Govern,
         }

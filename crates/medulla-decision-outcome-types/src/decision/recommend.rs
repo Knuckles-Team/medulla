@@ -5,6 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 pub const MAX_PAUSE_STEPS: u8 = 8;
 pub const MAX_RECOMMEND_TOP_K: u16 = 100;
+/// The wire schema version both recommend records carry.
+pub const RECOMMEND_SCHEMA_VERSION: u16 = 1;
 
 /// A time bucket followed by four residual-quantization codes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -23,6 +25,14 @@ fn pause_steps<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u8, D::Erro
     Ok(value)
 }
 
+fn schema_version<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u16, D::Error> {
+    let value = u16::deserialize(deserializer)?;
+    if value != RECOMMEND_SCHEMA_VERSION {
+        return Err(serde::de::Error::custom("unsupported schema_version"));
+    }
+    Ok(value)
+}
+
 fn top_k<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u16, D::Error> {
     let value = u16::deserialize(deserializer)?;
     if value == 0 || value > MAX_RECOMMEND_TOP_K {
@@ -34,7 +44,9 @@ fn top_k<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u16, D::Error> {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RecommendRequestV1 {
+pub struct RecommendRequest {
+    #[serde(deserialize_with = "schema_version")]
+    pub schema_version: u16,
     pub catalog_ref: String,
     pub query_embedding: Vec<f32>,
     pub history_item_ids: Vec<String>,
@@ -58,7 +70,9 @@ pub struct RecommendedItem {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RecommendAnswerV1 {
+pub struct RecommendAnswer {
+    #[serde(deserialize_with = "schema_version")]
+    pub schema_version: u16,
     pub catalog_ref: String,
     pub as_of: i64,
     pub items: Vec<RecommendedItem>,

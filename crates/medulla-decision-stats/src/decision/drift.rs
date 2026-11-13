@@ -11,7 +11,11 @@
 //! ban on transcendental functions holds, and nothing here reads a clock.
 
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_decision_types::decision::statistical::retrieval_drift::DriftKind;
+use std::collections::VecDeque;
+
+use medulla_decision_types::decision::statistical::retrieval_drift::{
+    DriftKind, RegionRef, MAX_REFRESH_REGIONS,
+};
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionPolicy;
 
@@ -44,6 +48,30 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(50),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "drift.quality_decay_pct",
+        unit: "percent",
+        default: KnobValue::Integer(10),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(90),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "drift.quality_window",
+        unit: "outcomes",
+        default: KnobValue::Integer(256),
+        min: KnobValue::Integer(8),
+        max: KnobValue::Integer(65_536),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "discover.max_version_lag",
+        unit: "versions",
+        default: KnobValue::Integer(1000),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(1_000_000_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The thresholds one evaluation compares against.
@@ -53,6 +81,12 @@ pub struct DriftThresholds {
     pub shift: f64,
     /// Percentage points of unseen tokens above which the vocabulary grew.
     pub vocabulary_points: u64,
+    /// Percent the rolling MRR may fall below the activation baseline.
+    pub quality_decay_pct: u64,
+    /// Rolling window of cited outcomes the MRR is taken over.
+    pub quality_window: usize,
+    /// Versions the index may trail the graph before it is stale.
+    pub max_version_lag: u64,
 }
 
 impl DriftThresholds {
@@ -66,9 +100,16 @@ impl DriftThresholds {
             KnobValue::Integer(points) => points.max(0) as u64,
             _ => 5,
         };
+        let integer = |index: usize, fallback: i64| match policy.knob(&KNOBS[index]) {
+            KnobValue::Integer(value) => value.max(0),
+            _ => fallback,
+        };
         Self {
             shift,
             vocabulary_points,
+            quality_decay_pct: integer(2, 10) as u64,
+            quality_window: integer(3, 256) as usize,
+            max_version_lag: integer(4, 1000) as u64,
         }
     }
 }
@@ -187,6 +228,8 @@ impl VocabBloom {
 struct Streaks {
     shift: u8,
     vocabulary: u8,
+    quality: u8,
+    staleness: u8,
 }
 
 /// One more evaluation: the streak grows when `exceeded`, else resets.
@@ -198,6 +241,95 @@ fn step(streak: &mut u8, exceeded: bool) {
     };
 }
 
+/// A compressed bitmap of the revisions written since the generation
+/// watermark: sorted, disjoint, non-adjacent inclusive runs, so memory is
+/// proportional to the number of contiguous changed ranges.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChangedRevisions {
+    runs: Vec<(u64, u64)>,
+}
+
+impl ChangedRevisions {
+    /// Mark `revision` changed, merging with neighbouring runs.
+    pub fn mark(&mut self, revision: u64) {
+        let at = self
+            .runs
+            .partition_point(|&(_, to)| to.saturating_add(1) < revision);
+        match self.runs.get_mut(at) {
+            Some((from, to)) if *from <= revision.saturating_add(1) => {
+                *from = (*from).min(revision);
+                *to = (*to).max(revision);
+                let merged_to = *to;
+                while self
+                    .runs
+                    .get(at + 1)
+                    .is_some_and(|&(next, _)| next <= merged_to.saturating_add(1))
+                {
+                    let (_, next_to) = self.runs.remove(at + 1);
+                    self.runs[at].1 = self.runs[at].1.max(next_to);
+                }
+            }
+            _ => self.runs.insert(at, (revision, revision)),
+        }
+    }
+
+    /// Whether `revision` is marked.
+    pub fn contains(&self, revision: u64) -> bool {
+        let at = self.runs.partition_point(|&(_, to)| to < revision);
+        self.runs.get(at).is_some_and(|&(from, _)| from <= revision)
+    }
+
+    /// The changed runs, ascending.
+    pub fn runs(&self) -> &[(u64, u64)] {
+        &self.runs
+    }
+
+    /// The runs coalesced to at most `cap` by joining the smallest gaps first.
+    fn coalesced(&self, cap: usize) -> Vec<(u64, u64)> {
+        let mut runs = self.runs.clone();
+        if runs.len() <= cap.max(1) {
+            return runs;
+        }
+        let excess = runs.len() - cap.max(1);
+        let mut gaps: Vec<(u64, usize)> = runs
+            .windows(2)
+            .enumerate()
+            .map(|(i, w)| (w[1].0 - w[0].1, i))
+            .collect();
+        gaps.sort_unstable();
+        let mut join: Vec<usize> = gaps.into_iter().take(excess).map(|(_, i)| i).collect();
+        join.sort_unstable_by(|a, b| b.cmp(a));
+        for i in join {
+            let (_, next_to) = runs.remove(i + 1);
+            runs[i].1 = next_to;
+        }
+        runs
+    }
+}
+
+/// Mean reciprocal rank of the last `window` cited outcomes.
+#[derive(Debug, Clone, Default, PartialEq)]
+struct RollingMrr {
+    ranks: VecDeque<f64>,
+    sum: f64,
+}
+
+impl RollingMrr {
+    fn push(&mut self, reciprocal_rank: f64, window: usize) {
+        self.ranks.push_back(reciprocal_rank);
+        self.sum += reciprocal_rank;
+        while self.ranks.len() > window.max(1) {
+            if let Some(old) = self.ranks.pop_front() {
+                self.sum -= old;
+            }
+        }
+    }
+
+    fn mean(&self) -> Option<f64> {
+        (!self.ranks.is_empty()).then(|| self.sum / self.ranks.len() as f64)
+    }
+}
+
 /// The per-shard monitor, built when a generation is activated.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DriftMonitor {
@@ -207,6 +339,12 @@ pub struct DriftMonitor {
     tokens: u64,
     unseen: u64,
     streaks: Streaks,
+    /// Activation MRR of cited outcomes; quality decay needs one.
+    baseline_mrr: Option<f64>,
+    rolling: RollingMrr,
+    graph_version: u64,
+    embedded_through: u64,
+    changed: ChangedRevisions,
 }
 
 impl DriftMonitor {
@@ -220,7 +358,52 @@ impl DriftMonitor {
             tokens: 0,
             unseen: 0,
             streaks: Streaks::default(),
+            baseline_mrr: None,
+            rolling: RollingMrr::default(),
+            graph_version: 0,
+            embedded_through: 0,
+            changed: ChangedRevisions::default(),
         }
+    }
+
+    /// Set the activation MRR of cited outcomes the rolling MRR is held to.
+    pub fn with_quality_baseline(mut self, mrr: f64) -> Self {
+        self.baseline_mrr = Some(mrr);
+        self
+    }
+
+    /// Record one cited outcome as its reciprocal rank (0 when not returned).
+    pub fn observe_outcome(&mut self, reciprocal_rank: f64, thresholds: &DriftThresholds) {
+        self.rolling
+            .push(reciprocal_rank, thresholds.quality_window);
+    }
+
+    /// Record the graph version and the version the index is embedded through.
+    pub fn observe_versions(&mut self, graph_version: u64, embedded_through: u64) {
+        self.graph_version = graph_version;
+        self.embedded_through = embedded_through;
+    }
+
+    /// Record a node change at `revision`, after the generation watermark.
+    pub fn record_change(&mut self, revision: u64) {
+        self.changed.mark(revision);
+    }
+
+    /// The revisions changed since the generation watermark.
+    pub fn changed(&self) -> &ChangedRevisions {
+        &self.changed
+    }
+
+    /// Percent the rolling MRR fell below the activation baseline, if both exist.
+    pub fn quality_decay_pct(&self) -> Option<f64> {
+        let baseline = self.baseline_mrr.filter(|b| *b > 0.0)?;
+        let rolling = self.rolling.mean()?;
+        Some((baseline - rolling) / baseline * 100.0)
+    }
+
+    /// Versions the index trails the graph by (the `stale_index` test).
+    pub fn version_lag(&self) -> u64 {
+        self.graph_version.saturating_sub(self.embedded_through)
     }
 
     /// Record one write: its vector and the tokens it carries.
@@ -250,6 +433,12 @@ impl DriftMonitor {
         step(&mut self.streaks.shift, shifted);
         let grown = self.vocabulary_points() > thresholds.vocabulary_points;
         step(&mut self.streaks.vocabulary, grown);
+        let decayed = self
+            .quality_decay_pct()
+            .is_some_and(|pct| pct > thresholds.quality_decay_pct as f64);
+        step(&mut self.streaks.quality, decayed);
+        let stale = self.version_lag() > thresholds.max_version_lag;
+        step(&mut self.streaks.staleness, stale);
         self.firing()
     }
 
@@ -259,6 +448,8 @@ impl DriftMonitor {
         [
             (DriftKind::DistributionShift, self.streaks.shift),
             (DriftKind::VocabularyGrowth, self.streaks.vocabulary),
+            (DriftKind::QualityDecay, self.streaks.quality),
+            (DriftKind::Staleness, self.streaks.staleness),
         ]
         .into_iter()
         .filter(|&(_, streak)| fired(streak))
@@ -268,8 +459,35 @@ impl DriftMonitor {
 
     /// Heap bytes of the running vectors, excluding the filter.
     pub fn memory_bytes(&self) -> usize {
-        self.reference.memory_bytes() + self.current.memory_bytes()
+        self.reference.memory_bytes()
+            + self.current.memory_bytes()
+            + self.rolling.ranks.capacity() * std::mem::size_of::<f64>()
     }
+}
+
+/// The regions a refresh covers: for every shard with a firing signal, one
+/// region per changed revision run of that shard (at most
+/// [`MAX_REFRESH_REGIONS`] in all, smallest gaps joined first). A shard with
+/// no firing signal contributes nothing, however much changed in it.
+pub fn select_refresh_regions(shards: &[(u32, &str, &DriftMonitor)]) -> Vec<RegionRef> {
+    let firing: Vec<_> = shards
+        .iter()
+        .filter(|(_, _, monitor)| !monitor.firing().is_empty())
+        .collect();
+    let per_shard_cap = MAX_REFRESH_REGIONS / firing.len().max(1);
+    firing
+        .into_iter()
+        .flat_map(|&(shard_id, node_type, monitor)| {
+            monitor.changed.coalesced(per_shard_cap).into_iter().map(
+                move |(revision_from, revision_to)| RegionRef {
+                    shard_id,
+                    node_type: node_type.to_string(),
+                    revision_from,
+                    revision_to,
+                },
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -282,6 +500,9 @@ mod tests {
         DriftThresholds {
             shift: 0.2,
             vocabulary_points: 5,
+            quality_decay_pct: 10,
+            quality_window: 256,
+            max_version_lag: 1000,
         }
     }
 
@@ -356,6 +577,90 @@ mod tests {
             vec![DriftKind::VocabularyGrowth]
         );
         assert!(bloom(&["x"]).contains("x") && !VocabBloom::default().contains("x"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.8.2.1
+    #[test]
+    fn quality_decay_and_staleness_fire() {
+        let t = thresholds();
+        let mut monitor =
+            DriftMonitor::activate(reference(), VocabBloom::default()).with_quality_baseline(0.8);
+        // Rolling MRR 0.74 is a 7.5% decay: below the 10% threshold.
+        for _ in 0..10 {
+            monitor.observe_outcome(0.74, &t);
+        }
+        monitor.observe_versions(1500, 1000);
+        assert!(monitor.evaluate(&t).is_empty());
+        // The window now holds only 0.5: a 37.5% decay, firing on the 2nd evaluation.
+        for _ in 0..256 {
+            monitor.observe_outcome(0.5, &t);
+        }
+        assert!((monitor.quality_decay_pct().unwrap() - 37.5).abs() < 1e-9);
+        assert!(monitor.evaluate(&t).is_empty());
+        assert_eq!(monitor.evaluate(&t), vec![DriftKind::QualityDecay]);
+        // A lag of exactly the knob does not fire; one more version does, twice.
+        monitor.observe_versions(2000, 1000);
+        assert_eq!(monitor.version_lag(), 1000);
+        monitor.evaluate(&t);
+        assert!(!monitor.firing().contains(&DriftKind::Staleness));
+        monitor.observe_versions(2001, 1000);
+        monitor.evaluate(&t);
+        assert_eq!(
+            monitor.evaluate(&t),
+            vec![DriftKind::QualityDecay, DriftKind::Staleness]
+        );
+        // Recovery resets the streak.
+        monitor.observe_versions(2001, 2001);
+        assert_eq!(monitor.evaluate(&t), vec![DriftKind::QualityDecay]);
+        // No baseline or no outcomes: no quality signal.
+        let none = DriftMonitor::activate(reference(), VocabBloom::default());
+        assert_eq!(none.quality_decay_pct(), None);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.8.2.1
+    #[test]
+    fn plan_selects_only_changed_regions() {
+        let t = thresholds();
+        let fire = |changes: &[u64], unseen: bool| {
+            let mut monitor = DriftMonitor::activate(reference(), bloom(&["known"]));
+            for seed in 0..40 {
+                let token = if unseen { "novel" } else { "known" };
+                monitor.observe(&vector(seed, 0.0), &[token]).unwrap();
+            }
+            changes.iter().for_each(|&r| monitor.record_change(r));
+            monitor.evaluate(&t);
+            monitor.evaluate(&t);
+            monitor
+        };
+        let hot = fire(&[5, 6, 7, 20, 4, 21], true);
+        let quiet = fire(&[1, 2, 3], false);
+        assert_eq!(hot.changed().runs(), &[(4, 7), (20, 21)]);
+        assert!(hot.changed().contains(6) && !hot.changed().contains(8));
+        let regions = select_refresh_regions(&[(0, "Document", &quiet), (1, "Document", &hot)]);
+        let spans: Vec<_> = regions
+            .iter()
+            .map(|r| (r.shard_id, r.revision_from, r.revision_to))
+            .collect();
+        assert_eq!(spans, vec![(1, 4, 7), (1, 20, 21)]);
+        assert!(select_refresh_regions(&[(0, "Document", &quiet)]).is_empty());
+        // A shard with many runs coalesces to the cap, joining the smallest gaps.
+        let mut many = DriftMonitor::activate(reference(), bloom(&["known"]));
+        (0..10_000_u64).for_each(|r| many.record_change(r * 3));
+        assert_eq!(many.changed().runs().len(), 10_000);
+        for _ in 0..2 {
+            many.observe_versions(5000, 0);
+            many.evaluate(&t);
+        }
+        let capped = select_refresh_regions(&[(9, "Document", &many)]);
+        assert_eq!(capped.len(), MAX_REFRESH_REGIONS);
+        assert_eq!(capped.first().unwrap().revision_from, 0);
+        assert_eq!(capped.last().unwrap().revision_to, 29_997);
+        // Adjacent marks merge and out-of-order marks keep runs sorted.
+        let mut bitmap = ChangedRevisions::default();
+        for r in [9, 1, 3, 2, 8, 10] {
+            bitmap.mark(r);
+        }
+        assert_eq!(bitmap.runs(), &[(1, 3), (8, 10)]);
     }
 
     #[test]

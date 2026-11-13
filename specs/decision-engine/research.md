@@ -117,3 +117,8 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
 - **A budget stop abstains.** The answer still carries `Stop{certified_gap}`; the outcome is `Abstained` with `BudgetExhausted` naming the best node, resolution `Optimization`, evidence `Claim` (scores are caller claims).
 - **A missing strategy is unknown.** A task class absent from `DecisionPolicy.reasoning` refuses `THOUGHT_STRATEGY_UNKNOWN`; there is no silent default strategy.
 
+## Drift quality, staleness and region selection (R174.8.2.1)
+
+- **Quality decay is a rolling MRR against an activation baseline.** The monitor keeps the last `drift.quality_window` reciprocal ranks of cited outcomes and compares their mean with the MRR measured at activation. A decay above `drift.quality_decay_pct` percent fires after two consecutive evaluations, like every other signal. With no baseline or no outcome the signal is simply absent.
+- **Staleness is the `stale_index` rule, declared once.** The lag of the graph version over the version the index is embedded through is compared with `discover.max_version_lag`. The knob is declared beside the monitor; the discover quality verdict (R089.2) reads the same knob rather than declaring a second one.
+- **The changed-node bitmap is run-length compressed over revisions.** Marks keep sorted, disjoint, non-adjacent inclusive runs, so memory grows with the number of contiguous ranges, not with writes. A plan names only firing shards; a shard with changes but no firing signal contributes nothing. Beyond 4096 regions the smallest gaps are joined first, so the plan stays a superset of every change and never drops one.

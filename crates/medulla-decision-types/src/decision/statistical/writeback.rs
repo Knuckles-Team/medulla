@@ -89,6 +89,56 @@ pub enum WritebackOp {
         #[serde(default)]
         findings: Vec<RiskFindingInput>,
     },
+    /// Store a [`ProposalQueue`](crate) of preflighted high-stakes proposals
+    /// under `queue_id` (MEDULLA-DECISION-ENGINE-R615.3). Every proposal must
+    /// preflight to `Queue`.
+    Queue {
+        queue_id: String,
+        proposals: Vec<QueuedProposalInput>,
+    },
+    /// Approve one queued proposal. The approver is the verified principal of
+    /// the request, never a caller-supplied name.
+    Approve {
+        queue_id: String,
+        proposal_id: String,
+    },
+    /// Release the queue as one governed change set once every queued proposal
+    /// holds an approval. Releasing a released queue returns the same set.
+    Release { queue_id: String },
+}
+
+/// One proposal to queue and the per-source value digests its preflight reads.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QueuedProposalInput {
+    pub proposal: ProposalInput,
+    #[serde(default)]
+    pub source_values: BTreeMap<String, String>,
+}
+
+/// One approval of a queued proposal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WritebackApproval {
+    pub proposal_id: String,
+    /// The verified principal that approved.
+    pub approver: String,
+    pub approved_at_ms: i64,
+}
+
+/// The proposals of one fully approved queue, released together. The only
+/// production value that carries proposals to a vendor sink.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GovernedChangeSet {
+    pub change_set_id: String,
+    /// The proposals in enqueue order.
+    pub proposals: Vec<ProposalInput>,
+    /// Every approval that released the set, in approval order.
+    pub approvals: Vec<WritebackApproval>,
 }
 
 /// The preflight verdict.
@@ -131,6 +181,20 @@ pub struct ProposalRow {
 #[serde(tag = "result", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum WritebackOutcome {
-    Preflight { verdict: PreflightVerdict },
-    Proposals { proposals: Vec<ProposalRow> },
+    Preflight {
+        verdict: PreflightVerdict,
+    },
+    Proposals {
+        proposals: Vec<ProposalRow>,
+    },
+    Queued {
+        queue_id: String,
+        proposal_ids: Vec<String>,
+    },
+    Approved {
+        approval: WritebackApproval,
+    },
+    Released {
+        change_set: GovernedChangeSet,
+    },
 }

@@ -166,6 +166,107 @@ impl ProposalQueue {
     }
 }
 
+/// The stable code of an approval-queue transition the machine refuses.
+pub const WRITEBACK_QUEUE_TRANSITION_REFUSED: &str = "WRITEBACK_QUEUE_TRANSITION_REFUSED";
+/// The stable code of a release before every proposal holds an approval.
+pub const WRITEBACK_NOT_FULLY_APPROVED: &str = "WRITEBACK_NOT_FULLY_APPROVED";
+/// The stable code of a queue the tenant does not hold.
+pub const WRITEBACK_QUEUE_UNKNOWN: &str = "WRITEBACK_QUEUE_UNKNOWN";
+/// The stable code of a queue id that is already stored.
+pub const WRITEBACK_QUEUE_EXISTS: &str = "WRITEBACK_QUEUE_EXISTS";
+/// The stable code of an approval naming a proposal the queue does not hold.
+pub const WRITEBACK_PROPOSAL_UNKNOWN: &str = "WRITEBACK_PROPOSAL_UNKNOWN";
+/// The stable code of a proposal whose tier does not need approval.
+pub const WRITEBACK_BELOW_QUEUE_TIER: &str = "WRITEBACK_BELOW_QUEUE_TIER";
+/// The stable code of a queue beyond `writeback.queue_max_proposals`.
+pub const WRITEBACK_QUEUE_TOO_LARGE: &str = "WRITEBACK_QUEUE_TOO_LARGE";
+
+/// The states of one approval queue: the machine `proposal_queue`. The state
+/// is persisted as this one field; `Released` is terminal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QueueState {
+    /// Stored, waiting for approvals.
+    Pending,
+    /// Released as one governed change set.
+    Released,
+}
+
+/// The closed set of events of the machine `proposal_queue`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QueueEvent {
+    /// A proposal of the queue was approved.
+    Approve,
+    /// A release was requested; `fully_approved` says every proposal holds an
+    /// approval.
+    Release { fully_approved: bool },
+}
+
+impl QueueState {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Released => "released",
+        }
+    }
+}
+
+impl QueueEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Approve => "approve",
+            Self::Release { .. } => "release",
+        }
+    }
+}
+
+/// The one transition function of `proposal_queue`, and the only writer of
+/// [`QueueState`]. Approving keeps `Pending`; releasing a fully approved
+/// pending queue reaches `Released`; releasing a released queue is an
+/// idempotent replay; approving a released queue and releasing an unapproved
+/// one are refused, naming the machine, the state and the event.
+pub fn queue_transition(
+    state: QueueState,
+    event: QueueEvent,
+) -> Result<QueueState, WritebackError> {
+    match (state, event) {
+        (QueueState::Pending, QueueEvent::Approve) => Ok(QueueState::Pending),
+        (
+            QueueState::Pending,
+            QueueEvent::Release {
+                fully_approved: true,
+            },
+        ) => Ok(QueueState::Released),
+        (
+            QueueState::Pending,
+            QueueEvent::Release {
+                fully_approved: false,
+            },
+        ) => Err(WritebackError::new(
+            WRITEBACK_NOT_FULLY_APPROVED,
+            "machine proposal_queue, state pending, event release: a queued proposal \
+                 holds no approval yet",
+        )),
+        (QueueState::Released, QueueEvent::Release { .. }) => Ok(QueueState::Released),
+        (QueueState::Released, QueueEvent::Approve) => Err(WritebackError::new(
+            WRITEBACK_QUEUE_TRANSITION_REFUSED,
+            format!(
+                "machine proposal_queue, state {}, event {}: a released queue takes no \
+                 further approval",
+                state.name(),
+                event.name()
+            ),
+        )),
+    }
+}
+
+impl WritebackError {
+    /// A refusal of one of this module's stable codes, for the served handler.
+    pub fn refusal(code: &'static str, detail: impl Into<String>) -> Self {
+        Self::new(code, detail)
+    }
+}
+
 /// Reconciled inventory becoming a creation proposal for one enabled system
 /// of record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -587,5 +688,33 @@ mod tests {
             vec![("ext:a", RiskTier::Medium, 7), ("ext:z", RiskTier::High, 6)]
         );
         assert!(creation_proposals(&[item("bad id", &[], 1)], &systems).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R615.3
+    #[test]
+    fn proposal_queue_machine_takes_every_legal_move_and_refuses_the_rest() {
+        use QueueEvent::{Approve, Release};
+        use QueueState::{Pending, Released};
+        let full = Release {
+            fully_approved: true,
+        };
+        let partial = Release {
+            fully_approved: false,
+        };
+        assert_eq!(queue_transition(Pending, Approve).unwrap(), Pending);
+        assert_eq!(queue_transition(Pending, full).unwrap(), Released);
+        assert_eq!(queue_transition(Released, full).unwrap(), Released);
+        assert_eq!(queue_transition(Released, partial).unwrap(), Released);
+        let early = queue_transition(Pending, partial).unwrap_err();
+        assert_eq!(early.code, WRITEBACK_NOT_FULLY_APPROVED);
+        assert!(early.detail.contains("proposal_queue") && early.detail.contains("pending"));
+        let late = queue_transition(Released, Approve).unwrap_err();
+        assert_eq!(late.code, WRITEBACK_QUEUE_TRANSITION_REFUSED);
+        assert!(late.detail.contains("proposal_queue"));
+        assert!(late.detail.contains("released") && late.detail.contains("approve"));
+        assert_eq!(
+            serde_json::to_string(&QueueState::Pending).unwrap(),
+            "\"pending\""
+        );
     }
 }
