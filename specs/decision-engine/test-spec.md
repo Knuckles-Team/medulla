@@ -1009,6 +1009,9 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174.9`: `tests/decide/test_freshnes
 | Case | Row | Proving test and observation |
 |---|---|---|
 | Refresh | `MEDULLA-DECISION-ENGINE-R174.9.7` | `tests/decide/test_freshness_refresh_served.py::test_stale_web_document_refetches_on_digest_change`: An equal digest writes nothing; a changed digest supersedes and marks the region. |
+| Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
+| Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::every_legal_transition_moves_and_every_other_is_refused` | |
+| Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::generation_cycle_machine_matches_edge_table` | |
 | Model | `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips`: A serde round trip keeps every field and rejects 33 fetches. |
 | Behavior | `MEDULLA-DECISION-ENGINE-R802.2` | `crates/medulla-decision-stats/src/decision/web_fetch_selection.rs::tests::ranks_dedupes_and_skips_fresh`: Unit tests cover each skip reason, the order and the budget. |
 | Wiring | `MEDULLA-DECISION-ENGINE-R802.3` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: A served `SelectWebPages` skips the held and duplicate pages. |
@@ -1729,6 +1732,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.9.6` | `tests/decide/test_freshness_refresh_served.py::test_search_refresh_dedupes_and_feeds_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.6` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.7` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::stale_web_document_refetches_on_digest_change` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
+| `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::every_legal_transition_moves_and_every_other_is_refused` | |
+| `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::generation_cycle_machine_matches_edge_table` | |
 | `MEDULLA-DECISION-ENGINE-R174.9.7` | `tests/decide/test_freshness_refresh_served.py::test_stale_web_document_refetches_on_digest_change` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R614` | `tests/decide/test_semantic_enrichment_served.py::test_card_rank_classify_project_journey` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R614.2` | `tests/decide/test_semantic_enrichment_served.py::test_card_rank_classify_project_journey` | (planned) |

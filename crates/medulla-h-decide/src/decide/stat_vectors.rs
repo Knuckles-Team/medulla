@@ -62,6 +62,15 @@ impl GraphVectors {
             .is_none_or(|space| space.digest == space_digest)
     }
 
+    /// The digest of the declared space, if the store declares one.
+    pub(super) fn space_digest(&self) -> Option<String> {
+        self.core
+            .semantic_store
+            .read()
+            .space()
+            .map(|space| space.digest.clone())
+    }
+
     /// Declare `space` when the store declares none. A store that already
     /// declares a space keeps it: the evaluation then admits only that one.
     pub(super) fn ensure_space(

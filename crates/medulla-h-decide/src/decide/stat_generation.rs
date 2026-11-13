@@ -18,6 +18,7 @@ use medulla_decision_types::{
     decision::statistical::body::content_digest_of,
 };
 use medulla_decision_types::{
+    decision::statistical::retrieval_generation::GenerationBootstrapReceipt,
     decision::statistical::retrieval_generation::GenerationEvalItem,
     decision::statistical::retrieval_generation::GenerationEvalRequest,
     decision::statistical::retrieval_generation::GenerationEvaluated,
@@ -245,6 +246,60 @@ pub(super) fn stored_evaluation(
             )
         })?;
     decode_artifact(&bytes, "generation receipt")
+}
+
+fn bootstrap_key(receipt_digest: &str) -> String {
+    format!("generation-bootstrap:{receipt_digest}")
+}
+
+/// Store the receipt that qualifies the first generation of a logical graph
+/// (DECISIONS GEN-BOOTSTRAP) and return its digest.
+pub(super) fn store_bootstrap(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    receipt: &GenerationBootstrapReceipt,
+) -> Result<String, String> {
+    let digest = content_digest_of(&canonical_body_bytes(receipt)?);
+    store.put_decision_artifacts(
+        tenant,
+        &[(bootstrap_key(&digest), encode_artifact(receipt)?)],
+    )?;
+    Ok(digest)
+}
+
+/// The first generation `receipt_digest` qualifies, when it is a bootstrap
+/// receipt for exactly this logical graph and shadow and the logical graph
+/// still has no incumbent. `None` when the digest names no bootstrap receipt.
+pub(super) fn bootstrap_qualified(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    (logical, shadow_graph): (&str, &str),
+    receipt_digest: &str,
+) -> Result<Option<Qualified>, String> {
+    let Some(bytes) = store.decision_artifact(tenant, &bootstrap_key(receipt_digest))? else {
+        return Ok(None);
+    };
+    let receipt: GenerationBootstrapReceipt = decode_artifact(&bytes, "generation bootstrap")?;
+    if receipt.logical != logical || receipt.shadow_graph != shadow_graph {
+        return Err(refusal(
+            StatisticalErrorCode::EvaluationReceiptMismatch,
+            "the bootstrap receipt measured another generation",
+        ));
+    }
+    let (_, pointer) = read_pointer(store, tenant, &generation_pointer(logical))?;
+    if pointer
+        .target()
+        .is_some_and(|target| target != shadow_graph)
+    {
+        return Err(refusal(
+            StatisticalErrorCode::EvaluationReceiptMismatch,
+            "the logical graph already has an incumbent generation",
+        ));
+    }
+    Ok(Some(Qualified {
+        target: shadow_graph.to_string(),
+        receipt_digest: receipt_digest.to_string(),
+    }))
 }
 
 /// The move this receipt already made is the active one: re-activating it is a replay

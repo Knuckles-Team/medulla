@@ -15,8 +15,9 @@ use medulla_decision_types::decision::statistical::body::canonical_body_bytes;
 use medulla_decision_types::decision::statistical::body::content_digest_of;
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
 use medulla_decision_types::decision::statistical::retrieval_generation::{
-    GenerationCycle, GenerationCycleEvent, GenerationCycleJob, GenerationCycleReceipt,
-    GenerationCycleRequest, GenerationCycleState, GENERATION_CYCLE_SCHEMA_VERSION,
+    GenerationBootstrapReceipt, GenerationCycle, GenerationCycleEvent, GenerationCycleJob,
+    GenerationCycleReceipt, GenerationCycleRequest, GenerationCycleState,
+    GENERATION_BOOTSTRAP_VERDICT, GENERATION_CYCLE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::decode_artifact;
@@ -25,7 +26,8 @@ use medulla_query_types::solve_scalar::digest_text;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
-    evaluate_generation, generation_pointer, qualified_generation, stored_evaluation, Generations,
+    bootstrap_qualified, evaluate_generation, generation_pointer, qualified_generation,
+    store_bootstrap, stored_evaluation, Generations,
 };
 use super::stat_generation_space::model_space;
 use super::stat_log::LogReader;
@@ -134,7 +136,10 @@ fn check_request(run: &CycleRun, request: &GenerationCycleRequest) -> Result<(),
             "a generation cycle names a model, a logical graph, a capacity cell and at least one batch",
         ));
     }
-    if model.dimension as usize != run.gens.shadow.dimensions() {
+    // A shadow store that holds no vector and declares no space has no width
+    // yet: the cycle declares the model's space on it (DECISIONS GEN-BOOTSTRAP).
+    let width = run.gens.shadow.dimensions();
+    if width != 0 && model.dimension as usize != width {
         return Err(refusal(
             StatisticalErrorCode::GenerationDimensionMismatch,
             "the model dimension is not the dimension of the shadow generation",
@@ -319,16 +324,48 @@ pub(super) fn run_cycle(
             reembed_batch(run, request, &mut record, &ids)?;
             ran += 1;
         }
-        let evaluated = evaluate_generation(run.ctx, run.reader, eval, run.gens, run.tenant)?;
-        let event = if evaluated.receipt.passed {
-            GenerationCycleEvent::EvaluationPassed
+        // A logical graph with no incumbent generation (no pointer target and no
+        // declared space on the graph it resolves to) has nothing to regress
+        // against: its first generation takes the bootstrap edge, without an
+        // evaluation (DECISIONS GEN-BOOTSTRAP).
+        let incumbent = before.target().is_some() || run.gens.active.space_digest().is_some();
+        if incumbent {
+            let evaluated = evaluate_generation(run.ctx, run.reader, eval, run.gens, run.tenant)?;
+            let event = if evaluated.receipt.passed {
+                GenerationCycleEvent::EvaluationPassed
+            } else {
+                GenerationCycleEvent::EvaluationFailed
+            };
+            if !evaluated.receipt.passed {
+                record.job.rejection =
+                    Some(StatisticalErrorCode::GenerationReceiptFailed.to_string());
+            }
+            fire(&mut record.job, event, Some(evaluated.receipt_digest))?;
         } else {
-            GenerationCycleEvent::EvaluationFailed
-        };
-        if !evaluated.receipt.passed {
-            record.job.rejection = Some(StatisticalErrorCode::GenerationReceiptFailed.to_string());
+            let space_digest = run
+                .gens
+                .shadow
+                .space_digest()
+                .ok_or("the shadow generation declares no embedding space")?;
+            let digest = store_bootstrap(
+                run.ctx.store,
+                run.tenant,
+                &GenerationBootstrapReceipt {
+                    schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
+                    verdict: GENERATION_BOOTSTRAP_VERDICT.to_string(),
+                    logical: eval.logical.clone(),
+                    shadow_graph: eval.shadow_graph.clone(),
+                    model_ref: request.model_ref.clone(),
+                    space_digest,
+                    items: record.job.reembedded_nodes,
+                },
+            )?;
+            fire(
+                &mut record.job,
+                GenerationCycleEvent::Bootstrapped,
+                Some(digest),
+            )?;
         }
-        fire(&mut record.job, event, Some(evaluated.receipt_digest))?;
         record.save(run)?;
     }
     if record.job.cycle.state() == GenerationCycleState::Evaluated {
@@ -344,12 +381,13 @@ pub(super) fn run_cycle(
         if now_bytes != before_bytes && now.target() != Some(eval.shadow_graph.as_str()) {
             return Err(pointer_conflict());
         }
-        let qualified = qualified_generation(
-            run.ctx.store,
-            run.tenant,
-            (&eval.logical, &eval.shadow_graph),
-            &digest,
-        )?;
+        let names = (eval.logical.as_str(), eval.shadow_graph.as_str());
+        let bootstrap = bootstrap_qualified(run.ctx.store, run.tenant, names, &digest)?;
+        let bootstrap_is_none = bootstrap.is_none();
+        let qualified = match bootstrap {
+            Some(qualified) => qualified,
+            None => qualified_generation(run.ctx.store, run.tenant, names, &digest)?,
+        };
         let at = PointerMove {
             tenant: run.tenant,
             key: pointer_key,
@@ -363,14 +401,18 @@ pub(super) fn run_cycle(
                 error
             }
         })?;
-        record.job.receipt = Some(GenerationCycleReceipt {
-            schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
-            model_ref: request.model_ref.clone(),
-            reembedded_nodes: record.job.reembedded_nodes,
-            evaluation: stored_evaluation(run.ctx.store, run.tenant, &digest)?,
-            pointer_before: before.target().map(str::to_string),
-            pointer_after: after.target().map(str::to_string),
-        });
+        // A bootstrapped cycle holds no comparison: its bootstrap receipt is
+        // named by the cycle's receipt digest and the pointer event.
+        if bootstrap_is_none {
+            record.job.receipt = Some(GenerationCycleReceipt {
+                schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
+                model_ref: request.model_ref.clone(),
+                reembedded_nodes: record.job.reembedded_nodes,
+                evaluation: stored_evaluation(run.ctx.store, run.tenant, &digest)?,
+                pointer_before: before.target().map(str::to_string),
+                pointer_after: after.target().map(str::to_string),
+            });
+        }
         fire(&mut record.job, GenerationCycleEvent::PointerMoved, None)?;
         record.save(run)?;
     }

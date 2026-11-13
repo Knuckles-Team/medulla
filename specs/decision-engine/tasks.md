@@ -560,7 +560,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
 - [ ] T550 [US8] MEDULLA-DECISION-ENGINE-R172.12.4 Pack target refusals
 - [ ] T551 [US8] MEDULLA-DECISION-ENGINE-R172.12.5 Pack designation evidence
-- [ ] T552 [US8] MEDULLA-DECISION-ENGINE-R172.12.6 Pack designation served journey
+- [x] T552 [US8] MEDULLA-DECISION-ENGINE-R172.12.6 Pack designation served journey
 - [ ] T553 [US8] MEDULLA-DECISION-ENGINE-R172.13 Adapter applies before rank
 - [ ] T554 [US7] MEDULLA-DECISION-ENGINE-R175.1 Model
 - [ ] T555 [US7] MEDULLA-DECISION-ENGINE-R175.2 Behavior: residual quantization and refinement
@@ -637,6 +637,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T625 [US8] MEDULLA-DECISION-ENGINE-R174.9.5 Evidence
 - [ ] T626 [US8] MEDULLA-DECISION-ENGINE-R174.9.6 Hot-path proof
 - [ ] T627 [US8] MEDULLA-DECISION-ENGINE-R174.9.7 Held web Documents refresh by drift
+- [x] T935 [US8] MEDULLA-DECISION-ENGINE-R174.10 The first generation bootstraps without an evaluation
 - [ ] T628 [US6] MEDULLA-DECISION-ENGINE-R614.1 Model
 - [ ] T629 [US6] MEDULLA-DECISION-ENGINE-R614.2.1 Store a grounded capability card
 - [ ] T630 [US6] MEDULLA-DECISION-ENGINE-R614.2.2 Rank research concepts into proposals

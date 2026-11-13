@@ -2351,6 +2351,9 @@
 :GenerationCycleMachine_Event_PointerMoved a :GenerationCycleEvent ;
     rdfs:label "GenerationCycle PointerMoved" .
 
+:GenerationCycleMachine_Event_Bootstrapped a :GenerationCycleEvent ;
+    rdfs:label "GenerationCycle Bootstrapped" .
+
 :GenerationCycleMachine_G01 a :GenerationCycleTransition ;
     rdfs:label "GenerationCycle G01" ;
     :edgeId "G01" ;
@@ -2378,6 +2381,13 @@
     :fromState :GenerationCycleMachine_Evaluated ;
     :toState :GenerationCycleMachine_Activated ;
     :firedBy :GenerationCycleMachine_Event_PointerMoved .
+
+:GenerationCycleMachine_G05 a :GenerationCycleTransition ;
+    rdfs:label "GenerationCycle G05" ;
+    :edgeId "G05" ;
+    :fromState :GenerationCycleMachine_Reembedding ;
+    :toState :GenerationCycleMachine_Evaluated ;
+    :firedBy :GenerationCycleMachine_Event_Bootstrapped .
 # spec: MEDULLA-DECISION-ENGINE-R036.103
 # spec: MEDULLA-DECISION-ENGINE-R036.104
 # The Reservation machine: the lifecycle of the RBAC read reservation and the Agent Library

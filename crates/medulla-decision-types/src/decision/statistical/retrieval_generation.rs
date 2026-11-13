@@ -117,6 +117,27 @@ pub struct GenerationReceipt {
     pub passed: bool,
 }
 
+/// The verdict a bootstrap receipt records.
+pub const GENERATION_BOOTSTRAP_VERDICT: &str = "bootstrap";
+
+/// What the first generation of a logical graph is qualified by: there is
+/// nothing to regress against, so no comparison ran (DECISIONS GEN-BOOTSTRAP).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationBootstrapReceipt {
+    pub schema_version: u16,
+    /// Always [`GENERATION_BOOTSTRAP_VERDICT`].
+    pub verdict: String,
+    pub logical: String,
+    pub shadow_graph: String,
+    pub model_ref: ModelRef,
+    /// The digest every vector of the first generation is pinned to.
+    pub space_digest: String,
+    /// Nodes the generation embeds.
+    pub items: u64,
+}
+
 /// A stored receipt and the digest it is pinned by.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -201,6 +222,10 @@ pub enum GenerationCycleEvent {
     EvaluationFailed,
     /// The generation pointer moved to the shadow graph.
     PointerMoved,
+    /// Every node is re-embedded and the logical graph has no incumbent
+    /// generation to compare against, so the first generation qualifies without
+    /// an evaluation (DECISIONS GEN-BOOTSTRAP).
+    Bootstrapped,
 }
 
 impl MachineEvent for GenerationCycleEvent {
@@ -210,6 +235,7 @@ impl MachineEvent for GenerationCycleEvent {
             Self::EvaluationPassed => "EvaluationPassed",
             Self::EvaluationFailed => "EvaluationFailed",
             Self::PointerMoved => "PointerMoved",
+            Self::Bootstrapped => "Bootstrapped",
         }
     }
 }
@@ -239,6 +265,7 @@ pub static GENERATION_CYCLE_MACHINE: MachineDef<
         GenerationCycleEvent::EvaluationPassed,
         GenerationCycleEvent::EvaluationFailed,
         GenerationCycleEvent::PointerMoved,
+        GenerationCycleEvent::Bootstrapped,
     ],
     guards: &[],
     edges: &[
@@ -269,6 +296,13 @@ pub static GENERATION_CYCLE_MACHINE: MachineDef<
             event: GenerationCycleEvent::PointerMoved,
             guard: None,
             to: GenerationCycleState::Activated,
+        },
+        Edge {
+            id: "G05",
+            from: GenerationCycleState::Reembedding,
+            event: GenerationCycleEvent::Bootstrapped,
+            guard: None,
+            to: GenerationCycleState::Evaluated,
         },
     ],
 };
@@ -449,6 +483,24 @@ mod tests {
 
     // spec: MEDULLA-DECISION-ENGINE-R174.1
     #[test]
+    fn bootstrap_receipt_round_trips_and_names_its_verdict() {
+        let receipt = GenerationBootstrapReceipt {
+            schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
+            verdict: GENERATION_BOOTSTRAP_VERDICT.to_string(),
+            logical: "kg".into(),
+            shadow_graph: "kg-2".into(),
+            model_ref: model(),
+            space_digest: "sha256:abc".into(),
+            items: 3,
+        };
+        let json = serde_json::to_string(&receipt).unwrap();
+        assert!(json.contains("\"verdict\":\"bootstrap\""));
+        let back: GenerationBootstrapReceipt = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, receipt);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.1
+    #[test]
     fn every_legal_transition_moves_and_every_other_is_refused() {
         use GenerationCycleEvent as E;
         use GenerationCycleState as S;
@@ -457,12 +509,14 @@ mod tests {
             (S::Reembedding, E::EvaluationPassed, S::Evaluated),
             (S::Reembedding, E::EvaluationFailed, S::Rejected),
             (S::Evaluated, E::PointerMoved, S::Activated),
+            (S::Reembedding, E::Bootstrapped, S::Evaluated),
         ];
         let events = [
             E::ReembedBegun,
             E::EvaluationPassed,
             E::EvaluationFailed,
             E::PointerMoved,
+            E::Bootstrapped,
         ];
         for state in GENERATION_CYCLE_MACHINE.states {
             for event in events {

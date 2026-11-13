@@ -520,3 +520,65 @@ async fn refusal_codes() {
     .unwrap();
     assert_eq!(pointer.target(), Some("kg-other"));
 }
+
+/// Verifies DECISIONS GEN-BOOTSTRAP: a logical graph with no incumbent
+/// generation takes the bootstrap edge. The first generation activates without
+/// an evaluation, the receipt records verdict `bootstrap` with the model, the
+/// space digest and the item count, and a request that asks for an evaluation
+/// is not refused.
+// spec: MEDULLA-DECISION-ENGINE-R174.1
+#[tokio::test]
+async fn first_generation_bootstraps_without_an_evaluation() {
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let ledger = tempfile::tempdir().unwrap();
+    with_ledger(&h, ledger.path()).await;
+    h.state
+        .write()
+        .await
+        .registry
+        .create_graph(
+            ACTIVE,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
+        .unwrap();
+    let core = graph_with(&h, SHADOW, "2", SHADOW_DIMS, Vec::new()).await;
+    for index in 0..SHADOW_NODES {
+        let id = text_of(index);
+        let props = json!({"type": "Doc", "text": id});
+        core.add_node(id, rmp_serde::to_vec_named(&props).unwrap());
+    }
+    // The request still asks for an evaluation (`min_eval_items` of 5, no items).
+    let done = cycle(&h, &request(Vec::new(), None)).await.unwrap();
+    assert_eq!(done.cycle.state(), GenerationCycleState::Activated);
+    assert_eq!(done.reembedded_nodes, SHADOW_NODES as u64);
+    assert!(
+        done.receipt.is_none(),
+        "no comparison ran, so no evaluation is held"
+    );
+    let digest = done.cycle.receipt_digest.clone().unwrap();
+    let bytes = h
+        .store
+        .decision_artifact(TENANT, &format!("generation-bootstrap:{digest}"))
+        .unwrap()
+        .expect("the bootstrap receipt is stored under its digest");
+    let receipt: medulla_decision_types::decision::statistical::retrieval_generation::GenerationBootstrapReceipt =
+        medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "bootstrap").unwrap();
+    assert_eq!(receipt.verdict, "bootstrap");
+    assert_eq!(receipt.items, SHADOW_NODES as u64);
+    assert_eq!(receipt.model_ref.revision, "2");
+    assert_eq!(receipt.space_digest, space_of("2", SHADOW_DIMS));
+    assert_eq!(
+        pointer_rows(&h).await,
+        vec![vec![json!("activated"), json!(true)]]
+    );
+    let (_, pointer) = super::super::stat_pointer::read_pointer(
+        &h.store,
+        TENANT,
+        &super::super::stat_generation::generation_pointer(ACTIVE),
+    )
+    .unwrap();
+    assert_eq!(pointer.target(), Some(SHADOW));
+}
