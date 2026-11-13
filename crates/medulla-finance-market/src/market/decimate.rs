@@ -99,11 +99,8 @@ fn fold_bars(part: &[BarRecord]) -> MarketResult<BarRecord> {
         low: part.iter().map(|bar| bar.low).min().unwrap_or(first.low),
         close: last.close,
         volume,
-        status: if all_final {
-            BarStatus::Final
-        } else {
-            BarStatus::Provisional
-        },
+        status: BarStatus::of_settled(all_final)
+            .map_err(|refused| refuse(format!("bar status transition refused: {refused:?}")))?,
         revision: part.iter().map(|bar| bar.revision).max().unwrap_or(0),
         known_at: part
             .iter()

@@ -196,8 +196,10 @@ mod tests {
         let error =
             resolve(&[first.clone(), rewrite], None, FinalityFilter::FinalOnly).unwrap_err();
         assert_eq!(error.code, CONFLICTING_REVISION);
-        let mut back_to_provisional = bar(0, 101, 1, 2 * HOUR);
-        back_to_provisional.status = BarStatus::Provisional;
+        let back_to_provisional = BarRecord {
+            status: BarStatus::Provisional,
+            ..bar(0, 101, 1, 2 * HOUR)
+        };
         let error = resolve(
             &[first, back_to_provisional],
             None,
@@ -211,8 +213,10 @@ mod tests {
     fn invalid_and_look_ahead_bars_are_refused() {
         let early = bar(0, 101, 0, HOUR - 1);
         assert_eq!(validate_record(&early).unwrap_err().code, INVALID_BAR);
-        let mut provisional = early.clone();
-        provisional.status = BarStatus::Provisional;
+        let provisional = BarRecord {
+            status: BarStatus::Provisional,
+            ..early.clone()
+        };
         assert!(validate_record(&provisional).is_ok());
         let mut inverted = bar(0, 101, 0, HOUR);
         inverted.low = 200;
@@ -229,8 +233,10 @@ mod tests {
 
     #[test]
     fn provisional_bars_are_kept_only_on_request() {
-        let mut open_bar = bar(1, 101, 0, HOUR + 1);
-        open_bar.status = BarStatus::Provisional;
+        let open_bar = BarRecord {
+            status: BarStatus::Provisional,
+            ..bar(1, 101, 0, HOUR + 1)
+        };
         let records = [bar(0, 100, 0, HOUR), open_bar];
         assert_eq!(
             resolve(&records, None, FinalityFilter::FinalOnly)

@@ -3536,3 +3536,50 @@
     :fromState :ConformanceEvidenceMachine_Active ;
     :toState :ConformanceEvidenceMachine_Revoked ;
     :firedBy :ConformanceEvidenceMachine_Event_Revoke .
+
+# spec: MEDULLA-FINANCE-PRIMITIVES-R905.1
+# The Bar machine: the finality of one bar version. The Rust edge table BAR_MACHINE is the
+# same table.
+
+:BarState a owl:Class ;
+    rdfs:label "Bar State" ;
+    rdfs:comment "A state of the Bar machine." ;
+    rdfs:subClassOf :State .
+
+:BarTerminalState a owl:Class ;
+    rdfs:label "Bar Terminal State" ;
+    rdfs:comment "A terminal state of the Bar machine." ;
+    rdfs:subClassOf :TerminalState, :BarState .
+
+:BarTransition a owl:Class ;
+    rdfs:label "Bar Transition" ;
+    rdfs:comment "A transition of the Bar machine." ;
+    rdfs:subClassOf :Transition .
+
+:BarEvent a owl:Class ;
+    rdfs:label "Bar Event" ;
+    rdfs:comment "An event of the Bar machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:BarMachine a :StateMachine ;
+    rdfs:label "Bar machine" ;
+    :initialState :BarMachine_Provisional ;
+    :hasState :BarMachine_Provisional, :BarMachine_Final .
+
+:BarMachine_Provisional a :BarState ;
+    rdfs:label "Bar Provisional" ;
+    :storedForm "provisional" .
+
+:BarMachine_Final a :BarTerminalState ;
+    rdfs:label "Bar Final" ;
+    :storedForm "final" .
+
+:BarMachine_Event_Settle a :BarEvent ;
+    rdfs:label "Bar Settle" .
+
+:BarMachine_B01 a :BarTransition ;
+    rdfs:label "Bar B01" ;
+    :edgeId "B01" ;
+    :fromState :BarMachine_Provisional ;
+    :toState :BarMachine_Final ;
+    :firedBy :BarMachine_Event_Settle .

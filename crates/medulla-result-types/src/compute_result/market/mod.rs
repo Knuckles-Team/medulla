@@ -9,6 +9,7 @@
 //! bit-identical on every build target. Everything here is informational only:
 //! no value in this module authorises an order.
 
+pub mod bar_machine;
 pub mod bars;
 pub mod chart;
 pub mod corporate_action;
