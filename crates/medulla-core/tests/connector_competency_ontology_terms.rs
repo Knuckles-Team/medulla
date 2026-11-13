@@ -1780,3 +1780,47 @@ fn changes_resource_declared() {
         &format!("{KG}WebResource")
     ));
 }
+
+mod ontology_audit_finance_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:finance@1", "finance");
+        parse_turtle(&ontology).expect("the registered finance ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.3
+    #[test]
+    fn Budget_declared() {
+        let triples = triples();
+        let class = format!("{KG}Budget");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            "http://purl.obolibrary.org/obo/BFO_0000031"
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.5
+    #[test]
+    fn LedgerTransaction_declared() {
+        let triples = triples();
+        let class = format!("{KG}LedgerTransaction");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            "http://purl.obolibrary.org/obo/BFO_0000031"
+        ));
+        // Not position-bound: it must not be the :Activity class.
+        assert!(!has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Activity")
+        ));
+    }
+}

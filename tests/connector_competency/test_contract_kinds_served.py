@@ -12,6 +12,8 @@ endpoint. Each test drives the full query-time route against the shared engine:
   lifecycle (``crates/medulla-server-ops/src/api/query_txn/foreign_read.rs``);
 * the served ``Uql`` (``FOREIGN SCAN '<name>'`` → ``Op::ForeignScan``) answers
   from the bound driver — the store gains no row of the source after the query;
+* ``test_5_virtual_graph`` (MEDULLA-CQ-CONN-R067.5) answers a virtual graph over
+  a relational store at query time through the served ``SparqlVirtual``;
 * the held mapping is refused at the bind seam by the durable approval check
   (``SOURCE_APPROVAL_NOT_ADMITTED`` — the seam code the contract documents as
   the held-mapping refusal, MEDULLA-CQ-CONN-R067.1 "Refusals"); and the stopped
@@ -449,3 +451,60 @@ def test_2_a2a(clean_graph, tmp_path) -> None:
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.3")
 def test_3_api(clean_graph, tmp_path) -> None:
     _run_journey("http_endpoint", clean_graph, tmp_path)
+
+
+VG_TABLE = "cc_items"
+VG_MAPPING_IRI = "urn:cc:mapping/items"
+VG_MAPPING = f"""
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix ex: <http://example.org/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+<{VG_MAPPING_IRI}> a rr:TriplesMap ;
+  rr:logicalTable [ rr:tableName "{VG_TABLE}" ] ;
+  rr:subjectMap [ rr:template "http://example.org/item/{{id}}" ] ;
+  rr:predicateObjectMap [ rr:predicate ex:label ; rr:objectMap [ rr:column "label" ] ] ;
+  rr:predicateObjectMap [ rr:predicate prov:wasGeneratedBy ;
+    rr:objectMap [ rr:constant <{VG_MAPPING_IRI}> ] ] .
+"""
+VG_QUERY = (
+    "PREFIX ex: <http://example.org/> PREFIX prov: <http://www.w3.org/ns/prov#> "
+    "SELECT ?label ?mapping WHERE { ?s ex:label ?label ; prov:wasGeneratedBy ?mapping }"
+)
+
+
+@pytest.mark.spec("MEDULLA-CQ-CONN-R067.5")
+def test_5_virtual_graph(clean_graph, pg_source) -> None:
+    """A SQL table plus one R2RML mapping answers at query time, storing nothing."""
+    pg_source.execute(f"DROP TABLE IF EXISTS {VG_TABLE}")
+    pg_source.execute(f"CREATE TABLE {VG_TABLE} (id text primary key, label text)")
+    pg_source.execute(
+        f"INSERT INTO {VG_TABLE} VALUES ('item-1', 'Alpha'), ('item-2', 'Beta')"
+    )
+    before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
+    assert before == [], "the graph must hold no row of the source before the query"
+    external = [{"name": VG_TABLE, "dsn": pg_source.dsn, "table": VG_TABLE}]
+
+    started = datetime.now(timezone.utc)
+    rows = clean_graph.rdf.sparql_virtual(
+        VG_QUERY, VG_MAPPING, [], external_sources=external
+    )
+    fetched = datetime.now(timezone.utc)
+
+    # A non-empty answer from the live table.
+    assert sorted(row["label"] for row in rows) == ["Alpha", "Beta"], rows
+    # Provenance names the mapping IRI (the mapping declares it on every row) and
+    # the fetch time (the host stamps the moment the query ran).
+    assert {row["mapping"].strip("<>") for row in rows} == {VG_MAPPING_IRI}, rows
+    assert started <= fetched
+    # The table and the graph stay unchanged.
+    assert pg_source.execute(f"SELECT count(*) FROM {VG_TABLE}") == "2"
+    assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == before
+
+    # Refusal: with the table dropped, the host names SOURCE_UNAVAILABLE and no
+    # row reaches the caller.
+    pg_source.execute(f"DROP TABLE {VG_TABLE}")
+    with pytest.raises(Exception) as refused:
+        clean_graph.rdf.sparql_virtual(
+            VG_QUERY, VG_MAPPING, [], external_sources=external
+        )
+    assert _named_refusal(503) == UNAVAILABLE_REFUSAL, refused.value

@@ -1093,3 +1093,16 @@
     rdfs:comment "JSON array of row-stochastic rows T, in state order." ;
     rdfs:domain :RegimeModel ;
     rdfs:range xsd:string .
+
+# ── Personal ledger (firefly-iii; MEDULLA-CQ-CONN-R075) ──
+
+:Budget a owl:Class ;
+    rdfs:label "Budget" ;
+    rdfs:comment "A spending budget: a limit a person or household sets for a category and a period, against which ledger transactions are charged. BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:LedgerTransaction a owl:Class ;
+    rdfs:label "Ledger Transaction" ;
+    rdfs:comment "A personal-ledger transaction: one withdrawal, deposit or transfer between ledger accounts. Unlike :Activity it is not bound to a :Position. BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q1166072 .
