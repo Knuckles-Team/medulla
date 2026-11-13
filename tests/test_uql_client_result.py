@@ -87,7 +87,7 @@ def test_uql_rejects_invalid_parameters_through_python_client(
 
 @pytest.mark.no_engine
 def test_rows_carry_channels_and_only_the_requested_annotations() -> None:
-    proof = {"coverage": "partial", "steps": [{"Unproved": {"stage": "MATCH ()"}}]}
+    proof = {"coverage": "partial", "steps": [{"Unproved": {"clause": "MATCH ()"}}]}
     knowledge = {"kind": "", "confidence": 1.0, "projection": {"year": 2021}}
     wire = {
         "Rows": {

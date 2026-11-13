@@ -4273,3 +4273,75 @@
     :fromState :StatechartInstanceMachine_Final ;
     :toState :StatechartInstanceMachine_Final ;
     :firedBy :StatechartInstanceMachine_Event_RemainFinal .
+# spec: MEDULLA-FEDERATED-QUERY-R739.1
+# The per-shard drift monitor machine. The Rust edge table SHARD_MONITOR_MACHINE is the same
+# table; the ontology test asserts equal edge sets.
+
+:ShardMonitorState a owl:Class ;
+    rdfs:label "Shard Monitor State" ;
+    rdfs:comment "A state of the Shard Monitor machine." ;
+    rdfs:subClassOf :State .
+
+:ShardMonitorTerminalState a owl:Class ;
+    rdfs:label "Shard Monitor Terminal State" ;
+    rdfs:comment "A terminal state of the Shard Monitor machine." ;
+    rdfs:subClassOf :TerminalState, :ShardMonitorState .
+
+:ShardMonitorTransition a owl:Class ;
+    rdfs:label "Shard Monitor Transition" ;
+    rdfs:comment "A transition of the Shard Monitor machine." ;
+    rdfs:subClassOf :Transition .
+
+:ShardMonitorEvent a owl:Class ;
+    rdfs:label "Shard Monitor Event" ;
+    rdfs:comment "An event of the Shard Monitor machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ShardMonitorGuard a owl:Class ;
+    rdfs:label "Shard Monitor Guard" ;
+    rdfs:comment "A guard of the Shard Monitor machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ShardMonitorMachine a :StateMachine ;
+    rdfs:label "Shard Monitor machine" ;
+    :initialState :ShardMonitorMachine_Warming ;
+    :hasState :ShardMonitorMachine_Warming, :ShardMonitorMachine_Monitoring .
+
+:ShardMonitorMachine_Warming a :ShardMonitorState ;
+    rdfs:label "Shard Monitor Warming" ;
+    :storedForm "warming" .
+
+:ShardMonitorMachine_Monitoring a :ShardMonitorState ;
+    rdfs:label "Shard Monitor Monitoring" ;
+    :storedForm "monitoring" .
+
+:ShardMonitorMachine_Event_Write a :ShardMonitorEvent ;
+    rdfs:label "Shard Monitor Write" .
+
+:ShardMonitorMachine_Event_SealReference a :ShardMonitorEvent ;
+    rdfs:label "Shard Monitor SealReference" .
+
+:ShardMonitorMachine_Guard_ReferenceComplete a :ShardMonitorGuard ;
+    rdfs:label "Shard Monitor guard ReferenceComplete" .
+
+:ShardMonitorMachine_S01 a :ShardMonitorTransition ;
+    rdfs:label "Shard Monitor S01" ;
+    :edgeId "S01" ;
+    :fromState :ShardMonitorMachine_Warming ;
+    :toState :ShardMonitorMachine_Warming ;
+    :firedBy :ShardMonitorMachine_Event_Write .
+
+:ShardMonitorMachine_S02 a :ShardMonitorTransition ;
+    rdfs:label "Shard Monitor S02" ;
+    :edgeId "S02" ;
+    :fromState :ShardMonitorMachine_Warming ;
+    :toState :ShardMonitorMachine_Monitoring ;
+    :firedBy :ShardMonitorMachine_Event_SealReference ;
+    :guardedBy :ShardMonitorMachine_Guard_ReferenceComplete .
+
+:ShardMonitorMachine_S03 a :ShardMonitorTransition ;
+    rdfs:label "Shard Monitor S03" ;
+    :edgeId "S03" ;
+    :fromState :ShardMonitorMachine_Monitoring ;
+    :toState :ShardMonitorMachine_Monitoring ;
+    :firedBy :ShardMonitorMachine_Event_Write .

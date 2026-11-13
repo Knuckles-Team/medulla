@@ -35,6 +35,8 @@ pub mod retrieval_pointer;
 pub mod retrieval_refresh;
 pub mod run_credit;
 pub mod scorer;
+// MEDULLA-FEDERATED-QUERY-R739.1: the shard drift monitor machine.
+pub mod shard_monitor;
 pub mod tool_subset;
 pub mod topology;
 pub mod writeback;

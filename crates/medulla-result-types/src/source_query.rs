@@ -41,11 +41,13 @@ pub enum SourceQueryError {
     VerificationUnavailable,
 }
 
-/// The step of a source query a failure happened in. Closed.
+/// The step of a source query a failure happened in. Closed. A position, not a
+/// lifecycle: a failure records it once and nothing moves it
+/// (MEDULLA-FEDERATED-QUERY-R739.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum SourceQueryStage {
+pub enum SourceQueryStep {
     Validation,
     Approval,
     Verification,
@@ -55,18 +57,18 @@ pub enum SourceQueryStage {
 
 /// A failed source query as it appears in an error reply (MEDULLA-FEDERATED-QUERY-R085.7).
 ///
-/// It names the closed kind, the stage, the query by its digest and the last chunk
+/// It names the closed kind, the failed step, the query by its digest and the last chunk
 /// delivered before the failure. It never carries SQL text, a parameter value or a
 /// credential: the identity is a 64-hex digest, and the formatted message is built
 /// from the closed tokens and numbers only.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
-#[error("{kind} (query {query_identity}, stage {stage:?}, last chunk {last_chunk:?})")]
+#[error("{kind} (query {query_identity}, failed step {failed_step:?}, last chunk {last_chunk:?})")]
 pub struct SourceQueryFailure {
     pub kind: SourceQueryError,
     pub query_identity: String,
-    pub stage: SourceQueryStage,
+    pub failed_step: SourceQueryStep,
     /// Zero-based index of the last chunk delivered; `None` when none was.
     pub last_chunk: Option<u64>,
 }
@@ -77,13 +79,13 @@ impl SourceQueryFailure {
     pub fn new(
         kind: SourceQueryError,
         query_identity: &str,
-        stage: SourceQueryStage,
+        failed_step: SourceQueryStep,
         last_chunk: Option<u64>,
     ) -> Result<Self, SourceQueryError> {
         let failure = Self {
             kind,
             query_identity: query_identity.to_string(),
-            stage,
+            failed_step,
             last_chunk,
         };
         failure.validate()?;
@@ -554,7 +556,7 @@ mod tests {
             );
             assert_eq!(kind.to_string(), token);
             let failure =
-                SourceQueryFailure::new(kind, &identity, SourceQueryStage::Execution, Some(3))
+                SourceQueryFailure::new(kind, &identity, SourceQueryStep::Execution, Some(3))
                     .expect("a digest identity is accepted");
             let bytes = rmp_serde::to_vec_named(&failure).expect("encodes");
             let decoded: SourceQueryFailure = rmp_serde::from_slice(&bytes).expect("decodes");
@@ -568,7 +570,7 @@ mod tests {
         let early = SourceQueryFailure::new(
             SourceQueryError::Cancelled,
             &identity,
-            SourceQueryStage::Delivery,
+            SourceQueryStep::Delivery,
             None,
         )
         .expect("identity ok");
@@ -586,7 +588,7 @@ mod tests {
                 SourceQueryFailure::new(
                     SourceQueryError::QueryFailed,
                     literal,
-                    SourceQueryStage::Execution,
+                    SourceQueryStep::Execution,
                     None
                 ),
                 Err(SourceQueryError::InvalidQuery),
@@ -596,9 +598,42 @@ mod tests {
         // Unknown kinds and unknown fields refuse.
         assert!(serde_json::from_str::<SourceQueryError>("\"boom\"").is_err());
         let extra = serde_json::json!({
-            "kind": "query_failed", "query_identity": identity, "stage": "execution",
+            "kind": "query_failed", "query_identity": identity, "failed_step": "execution",
             "last_chunk": null, "sql": "SELECT 1"
         });
         assert!(serde_json::from_value::<SourceQueryFailure>(extra).is_err());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R739.2
+    #[test]
+    fn source_query_failure_step_is_not_a_lifecycle_field() {
+        let identity = "cd".repeat(32);
+        let failure = SourceQueryFailure::new(
+            SourceQueryError::StaleSource,
+            &identity,
+            SourceQueryStep::Approval,
+            Some(1),
+        )
+        .expect("a digest identity is accepted");
+        // The position is the `failed_step` key; the step words are unchanged.
+        let wire = serde_json::to_value(&failure).expect("encodes");
+        assert_eq!(wire["failed_step"], "approval");
+        assert!(wire.get("stage").is_none());
+        for (step, word) in [
+            (SourceQueryStep::Validation, "validation"),
+            (SourceQueryStep::Approval, "approval"),
+            (SourceQueryStep::Verification, "verification"),
+            (SourceQueryStep::Execution, "execution"),
+            (SourceQueryStep::Delivery, "delivery"),
+        ] {
+            assert_eq!(serde_json::to_value(step).expect("encodes"), word);
+        }
+        // The old key is refused: there is no alias.
+        let old = serde_json::json!({
+            "kind": "stale_source", "query_identity": identity, "stage": "approval",
+            "last_chunk": 1
+        });
+        assert!(serde_json::from_value::<SourceQueryFailure>(old).is_err());
+        assert!(failure.to_string().contains("failed step Approval"));
     }
 }

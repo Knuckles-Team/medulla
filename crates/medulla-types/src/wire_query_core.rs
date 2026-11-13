@@ -1038,7 +1038,9 @@ pub enum UqlProofCoverage {
     Partial,
 }
 
-/// One stage's contribution to a row proof (EH-448). `stage` is the stage in canonical UQL.
+/// One stage's contribution to a row proof (EH-448). `clause` is the admitting stage in
+/// canonical UQL. The variant names the kind of step; the field is the clause text, not a
+/// lifecycle position (MEDULLA-FEDERATED-QUERY-R739.3).
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -1047,18 +1049,18 @@ pub enum UqlProofStep {
     /// ground triples instantiating the query's patterns (EH-197).
     #[cfg(feature = "owl")]
     Sparql {
-        stage: String,
+        clause: String,
         proof: crate::rdf_report::SparqlRowProof,
     },
     /// A `REASON` stage: the OWL proof that the row is a member of the target class — an
     /// asserted type fact plus the TBox subsumption chain (EH-197's OWL side).
     #[cfg(feature = "owl")]
     Reason {
-        stage: String,
+        clause: String,
         proof: crate::rdf_report::ProofNodeWire,
     },
     /// A stage that admitted or produced rows without carrying a proof.
-    Unproved { stage: String },
+    Unproved { clause: String },
 }
 
 /// Why a row is in a `WITH PROOF` result (EH-448): one step per admitting stage, in

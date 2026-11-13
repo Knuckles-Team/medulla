@@ -98,25 +98,25 @@ impl Prover {
         // Only a proof-carrying stage reads the row id; a build without one has none.
         #[cfg(not(feature = "owl"))]
         let _ = id;
-        let stage = stage_text(op);
-        let unproved = |stage| (UqlProofStep::Unproved { stage }, false);
+        let clause = stage_text(op);
+        let unproved = |clause| (UqlProofStep::Unproved { clause }, false);
         match self {
             Prover::Neutral => None,
-            Prover::Unproved => Some(unproved(stage)),
+            Prover::Unproved => Some(unproved(clause)),
             #[cfg(feature = "owl")]
             Prover::Sparql(by_id) => Some(match by_id.get(id) {
                 Some(proof) => {
                     let complete =
                         proof.coverage == medulla_types::rdf_report::SparqlProofCoverage::Complete;
                     let proof = proof.clone();
-                    (UqlProofStep::Sparql { stage, proof }, complete)
+                    (UqlProofStep::Sparql { clause, proof }, complete)
                 }
-                None => unproved(stage),
+                None => unproved(clause),
             }),
             #[cfg(feature = "owl")]
             Prover::Reason(membership) => Some(match membership.explain(id) {
-                Some(proof) => (UqlProofStep::Reason { stage, proof }, true),
-                None => unproved(stage),
+                Some(proof) => (UqlProofStep::Reason { clause, proof }, true),
+                None => unproved(clause),
             }),
         }
     }

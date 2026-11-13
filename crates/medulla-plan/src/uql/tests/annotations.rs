@@ -59,7 +59,7 @@ fn an_unprovable_admission_makes_the_proof_partial() {
         assert_eq!(
             proof.steps,
             vec![UqlProofStep::Unproved {
-                stage: "MATCH (:Doc)".into()
+                clause: "MATCH (:Doc)".into()
             }]
         );
         assert!(row.knowledge.is_some());

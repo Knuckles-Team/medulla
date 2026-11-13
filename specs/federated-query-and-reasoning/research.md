@@ -236,3 +236,10 @@ needs a refresh (WIRE-REGEN).
 ## R721.2 modality fold, registration and store authority
 
 `fold_modality` lives in `medulla-exec` and takes the modality's storage kind, because `medulla-plan` depends on `medulla-exec` and `medulla-exec` cannot name `PlanModality`; the one production caller is the SPARQL source (`sparql_source`), which folds its node bindings. It refuses a value whose storage kind is not the modality's, so one modality contributes only its own rows. Registration into `ModalityRegistry` happens once from `compose_server_state` (feature `plan-modalities`, part of `full`), with each of the seven value types `ConformanceTestable`. The store map is `modality_authority`, checked at boot by `verify_modality_authority` (an inconsistent map refuses to boot): graph, RDF and vector are authoritative in the graph shards (RDF statements are graph facts; the vector modality is the embedding projection the committed stream feeds); SQL, time series, key-value and blob each own one registered, non-retired store, and no two modalities share one.
+
+## R739 census closure (w1-federated-query-4-9ff2f5)
+
+- R739.1: the shard monitor machine moved to `medulla-decision-types` (`statistical::shard_monitor::SHARD_MONITOR_MACHINE`, edges S01-S03) so the ontology test reads the same table; `ShardMonitor::transition` is the only writer of `state` and refuses with the shared `TransitionRefused`. Vector refusals (width, non-finite) stay a separate typed variant (`ShardMonitorFailure::Vector`) because they are input rejections, not edges.
+- R739.2: `SourceQueryStage` renamed `SourceQueryStep`, field `failed_step`.
+- R739.3: decision: the `UqlProofStep` field is named `clause`, not `kind`, because the value is the canonical UQL clause text the step proves, not a variant tag. The Python mirror in `medulla/generated/models.py` was edited by hand (WIRE-REGEN).
+- Rebatched to continue: R721.3 (no UQL syntax names a modality yet; the parser cannot see the encoder registry), R721.4, R736.2, R737.

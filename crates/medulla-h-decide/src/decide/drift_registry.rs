@@ -9,54 +9,49 @@
 //! Each shard entry is an explicit state machine, [`ShardMonitor`]: it is `Warming` while it
 //! collects the reference window (the first `drift.reference_vectors` writes after
 //! activation), and `Monitoring` once the reference is sealed into a [`DriftMonitor`].
-//! [`ShardMonitor::apply`] is the only writer of the state.
+//! [`ShardMonitor::transition`] is the only writer of the state; it delegates to
+//! [`ShardMonitorState::apply`] over the shared machine table (MEDULLA-FEDERATED-QUERY-R739.1).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 
 use medulla_decision_stats::decision::drift::{DriftMonitor, DriftThresholds, Moments, VocabBloom};
+use medulla_decision_stats::decision::refusal::Refusal;
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_decision_types::decision::statistical::retrieval_drift::{DriftKind, RegionRef};
+use medulla_decision_types::decision::statistical::shard_monitor::{
+    ShardMonitorEvent, ShardMonitorFacts, ShardMonitorState,
+};
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_retrieval::discover_signals::{
     set_discover_signals, DiscoverSignals, SignalsReading, WrittenVector,
 };
+use medulla_types::transition_refused::TransitionRefused;
 use parking_lot::Mutex;
 
-/// The closed states of a shard monitor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShardMonitorState {
-    /// Collecting the reference window.
-    Warming,
-    /// Comparing writes against the sealed reference.
-    Monitoring,
+/// Why a shard monitor did not take a written vector: the machine refused the event, or
+/// the vector does not fit the monitor (its width, or a non-finite component).
+#[derive(Debug, Clone, PartialEq)]
+pub enum ShardMonitorFailure {
+    /// The machine refused the event in its current state.
+    Transition(TransitionRefused),
+    /// The written vector was refused before any transition.
+    Vector(Refusal),
 }
 
-/// The closed events of a shard monitor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShardMonitorEvent {
-    /// A written vector reached the shard.
-    Write,
-    /// The reference window is complete.
-    SealReference,
-}
-
-/// An event the machine refuses in its current state.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ShardMonitorError {
-    pub machine: &'static str,
-    pub state: ShardMonitorState,
-    pub event: ShardMonitorEvent,
-    pub detail: String,
-}
-
-impl std::fmt::Display for ShardMonitorError {
+impl std::fmt::Display for ShardMonitorFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: event {:?} refused in state {:?}: {}",
-            self.machine, self.event, self.state, self.detail
-        )
+        match self {
+            Self::Transition(refused) => write!(f, "{refused}"),
+            Self::Vector(refusal) => write!(f, "{refusal:?}"),
+        }
+    }
+}
+
+impl From<TransitionRefused> for ShardMonitorFailure {
+    fn from(refused: TransitionRefused) -> Self {
+        Self::Transition(refused)
     }
 }
 
@@ -102,83 +97,83 @@ impl ShardMonitor {
         self.state
     }
 
-    fn refuse(&self, event: ShardMonitorEvent, detail: impl Into<String>) -> ShardMonitorError {
-        ShardMonitorError {
-            machine: "drift.shard_monitor",
-            state: self.state,
-            event,
-            detail: detail.into(),
+    /// The facts the machine's guards read.
+    fn facts(&self, reference_vectors: u64) -> ShardMonitorFacts {
+        let reference_count = match &self.body {
+            Body::Warming { reference, .. } => reference.count(),
+            Body::Monitoring(_) => reference_vectors,
+        };
+        ShardMonitorFacts {
+            reference_count,
+            reference_vectors,
         }
     }
 
-    /// The one transition function: the only writer of `state`.
-    pub fn apply(
+    /// The one transition function: the only writer of `state`. It delegates to
+    /// [`ShardMonitorState::apply`]; a refused event leaves the monitor unchanged.
+    pub fn transition(
         &mut self,
         event: ShardMonitorEvent,
-        write: Option<(&[f64], &[&str])>,
         reference_vectors: u64,
-    ) -> Result<ShardMonitorState, ShardMonitorError> {
-        match (self.state, event) {
-            (ShardMonitorState::Warming, ShardMonitorEvent::Write) => {
-                let (vector, tokens) = write.ok_or_else(|| self.refuse(event, "no vector"))?;
-                let Body::Warming {
-                    reference,
-                    vocabulary,
-                } = &mut self.body
-                else {
-                    return Err(self.refuse(event, "warming state without a warming body"));
-                };
-                let state = self.state;
-                reference.push(vector).map_err(|r| ShardMonitorError {
-                    machine: "drift.shard_monitor",
-                    state,
-                    event,
-                    detail: format!("{r:?}"),
-                })?;
+    ) -> Result<(), TransitionRefused> {
+        let next = self.state.apply(event, &self.facts(reference_vectors))?;
+        if let (ShardMonitorState::Warming, ShardMonitorState::Monitoring) = (self.state, next) {
+            let Body::Warming {
+                reference,
+                vocabulary,
+            } = &self.body
+            else {
+                unreachable!("a warming monitor holds a warming body");
+            };
+            self.body = Body::Monitoring(Box::new(DriftMonitor::activate(
+                reference.clone(),
+                vocabulary.clone(),
+            )));
+            self.generation += 1;
+        }
+        self.state = next;
+        Ok(())
+    }
+
+    /// Fold one written vector in: the machine must accept `Write` in the current state,
+    /// then the vector joins the reference window (warming) or the sealed monitor.
+    pub fn observe(
+        &mut self,
+        vector: &[f64],
+        tokens: &[&str],
+        reference_vectors: u64,
+    ) -> Result<(), ShardMonitorFailure> {
+        if vector.len() != self.dimension {
+            return Err(ShardMonitorFailure::Vector(Refusal::new(
+                StatisticalErrorCode::ParameterInvalid,
+                format!(
+                    "vector has {} dimensions, the monitor has {}",
+                    vector.len(),
+                    self.dimension
+                ),
+            )));
+        }
+        // The edge is checked first, so a refused event never folds a vector in.
+        self.state
+            .apply(ShardMonitorEvent::Write, &self.facts(reference_vectors))?;
+        match &mut self.body {
+            Body::Warming {
+                reference,
+                vocabulary,
+            } => {
+                reference
+                    .push(vector)
+                    .map_err(ShardMonitorFailure::Vector)?;
                 for token in tokens {
                     vocabulary.insert(token);
                 }
-                Ok(self.state)
             }
-            (ShardMonitorState::Monitoring, ShardMonitorEvent::Write) => {
-                let (vector, tokens) = write.ok_or_else(|| self.refuse(event, "no vector"))?;
-                let Body::Monitoring(monitor) = &mut self.body else {
-                    return Err(self.refuse(event, "monitoring state without a monitor"));
-                };
-                monitor
-                    .observe(vector, tokens)
-                    .map_err(|r| self.refuse(event, format!("{r:?}")))?;
-                Ok(self.state)
-            }
-            (ShardMonitorState::Warming, ShardMonitorEvent::SealReference) => {
-                let Body::Warming {
-                    reference,
-                    vocabulary,
-                } = &self.body
-                else {
-                    return Err(self.refuse(event, "warming state without a warming body"));
-                };
-                if reference.count() < reference_vectors {
-                    return Err(self.refuse(
-                        event,
-                        format!(
-                            "{} of {reference_vectors} reference vectors",
-                            reference.count()
-                        ),
-                    ));
-                }
-                self.body = Body::Monitoring(Box::new(DriftMonitor::activate(
-                    reference.clone(),
-                    vocabulary.clone(),
-                )));
-                self.generation += 1;
-                self.state = ShardMonitorState::Monitoring;
-                Ok(self.state)
-            }
-            (ShardMonitorState::Monitoring, ShardMonitorEvent::SealReference) => {
-                Err(self.refuse(event, "the reference is already sealed"))
-            }
+            Body::Monitoring(monitor) => monitor
+                .observe(vector, tokens)
+                .map_err(ShardMonitorFailure::Vector)?,
         }
+        self.transition(ShardMonitorEvent::Write, reference_vectors)?;
+        Ok(())
     }
 
     fn monitor(&self) -> Option<&DriftMonitor> {
@@ -212,7 +207,7 @@ pub fn reference_vectors(policy: &DecisionPolicy) -> u64 {
 impl DriftRegistry {
     /// Fold one committed write into its shard's monitor, creating the monitor on the first
     /// write and sealing the reference when the window is complete.
-    pub fn observe(&self, write: &WrittenVector<'_>) -> Result<(), ShardMonitorError> {
+    pub fn observe(&self, write: &WrittenVector<'_>) -> Result<(), ShardMonitorFailure> {
         let policy = DecisionPolicy::engine_default();
         let window = reference_vectors(&policy);
         let vector: Vec<f64> = write.vector.iter().map(|&x| f64::from(x)).collect();
@@ -226,25 +221,14 @@ impl DriftRegistry {
         let entry = shards
             .entry(key)
             .or_insert_with(|| ShardMonitor::new(vector.len(), write.version));
-        if entry.dimension != vector.len() {
-            return Err(entry.refuse(
-                ShardMonitorEvent::Write,
-                format!(
-                    "vector has {} dimensions, the monitor has {}",
-                    vector.len(),
-                    entry.dimension
-                ),
-            ));
-        }
-        entry.apply(ShardMonitorEvent::Write, Some((&vector, &tokens)), window)?;
+        entry.observe(&vector, &tokens, window)?;
         entry.node_types.insert(write.node_type.to_string());
         entry.last_version = write.version;
-        if entry.state == ShardMonitorState::Warming {
-            let sealed = matches!(&entry.body, Body::Warming { reference, .. } if reference.count() >= window);
-            if sealed {
-                entry.apply(ShardMonitorEvent::SealReference, None, window)?;
-                entry.first_version = write.version;
-            }
+        if entry.state == ShardMonitorState::Warming
+            && entry.facts(window).reference_count >= window
+        {
+            entry.transition(ShardMonitorEvent::SealReference, window)?;
+            entry.first_version = write.version;
         }
         Ok(())
     }
@@ -340,6 +324,8 @@ pub fn install() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE;
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     const DIM: usize = 2;
 
@@ -347,46 +333,88 @@ mod tests {
         let mut shard = ShardMonitor::new(DIM, 0);
         for seed in 0..window {
             let v = [seed as f64, 1.0];
-            shard
-                .apply(ShardMonitorEvent::Write, Some((&v, &["a"])), window)
-                .unwrap();
+            shard.observe(&v, &["a"], window).unwrap();
         }
         shard
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R174.8.3
+    // spec: MEDULLA-FEDERATED-QUERY-R739.1
     #[test]
-    fn shard_monitor_legal_transitions() {
+    fn every_legal_transition_applies() {
+        // S01: a write while warming stays warming.
         let mut shard = warm(4);
         assert_eq!(shard.state(), ShardMonitorState::Warming);
-        let sealed = shard.apply(ShardMonitorEvent::SealReference, None, 4);
-        assert_eq!(sealed, Ok(ShardMonitorState::Monitoring));
-        let v = [1.0, 1.0];
-        let after = shard.apply(ShardMonitorEvent::Write, Some((&v, &["a"])), 4);
-        assert_eq!(after, Ok(ShardMonitorState::Monitoring));
+        // S02: the complete reference seals.
+        shard
+            .transition(ShardMonitorEvent::SealReference, 4)
+            .unwrap();
+        assert_eq!(shard.state(), ShardMonitorState::Monitoring);
         assert_eq!(shard.generation, 1);
+        // S03: a write while monitoring stays monitoring.
+        shard.observe(&[1.0, 1.0], &["a"], 4).unwrap();
+        assert_eq!(shard.state(), ShardMonitorState::Monitoring);
+        // Every edge of the table was exercised above.
+        assert_eq!(
+            SHARD_MONITOR_MACHINE.edges.len(),
+            ["S01", "S02", "S03"].len()
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R174.8.3
+    // spec: MEDULLA-FEDERATED-QUERY-R739.1
     #[test]
-    fn shard_monitor_illegal_transitions_are_typed() {
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        // Warming + SealReference with an incomplete window: the guard fails.
         let mut shard = warm(2);
         let early = shard
-            .apply(ShardMonitorEvent::SealReference, None, 3)
+            .transition(ShardMonitorEvent::SealReference, 3)
             .unwrap_err();
-        assert_eq!(early.machine, "drift.shard_monitor");
-        assert_eq!(early.state, ShardMonitorState::Warming);
-        assert_eq!(early.event, ShardMonitorEvent::SealReference);
+        assert_eq!(early.machine, "ShardMonitorMachine");
+        assert_eq!(early.from, ShardMonitorState::Warming.stored());
+        assert_eq!(early.event, ShardMonitorEvent::SealReference.name());
+        assert_eq!(early.reason, TransitionRefusalReason::GuardFailed);
+        assert_eq!(shard.state(), ShardMonitorState::Warming);
+        // Monitoring + SealReference: no edge leaves Monitoring on this event.
         shard
-            .apply(ShardMonitorEvent::SealReference, None, 2)
+            .transition(ShardMonitorEvent::SealReference, 2)
             .unwrap();
         let twice = shard
-            .apply(ShardMonitorEvent::SealReference, None, 2)
+            .transition(ShardMonitorEvent::SealReference, 2)
             .unwrap_err();
-        assert_eq!(twice.state, ShardMonitorState::Monitoring);
-        let wrong_dim = shard
-            .apply(ShardMonitorEvent::Write, Some((&[1.0], &["a"])), 2)
-            .unwrap_err();
-        assert_eq!(wrong_dim.event, ShardMonitorEvent::Write);
+        assert_eq!(twice.from, ShardMonitorState::Monitoring.stored());
+        assert_eq!(twice.reason, TransitionRefusalReason::IllegalTransition);
+        assert_eq!(shard.generation, 1);
+        // A vector of the wrong width is refused before any transition.
+        let wrong_dim = shard.observe(&[1.0], &["a"], 2).unwrap_err();
+        assert!(matches!(wrong_dim, ShardMonitorFailure::Vector(_)));
+        assert_eq!(shard.state(), ShardMonitorState::Monitoring);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R739.1
+    #[test]
+    fn no_writer_sets_state_outside_transition() {
+        let source = include_str!("drift_registry.rs");
+        let production = &source[..source
+            .find("#[cfg(test)]")
+            .expect("the test module follows the code")];
+        let transition_fn = production
+            .find("pub fn transition(")
+            .expect("the one transition function");
+        let transition_end = transition_fn
+            + production[transition_fn..]
+                .find("\n    }\n")
+                .expect("the transition function ends");
+        for (at, _) in production.match_indices("state = ") {
+            let line_start = production[..at].rfind('\n').map_or(0, |i| i + 1);
+            let line = production[line_start..].lines().next().unwrap_or_default();
+            if !line.contains(".state = ") {
+                continue;
+            }
+            assert!(
+                (transition_fn..transition_end).contains(&at),
+                "a write of `state` outside `transition`: {line}"
+            );
+        }
     }
 }

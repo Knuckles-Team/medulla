@@ -850,6 +850,19 @@ fn catalog_probe_machine_classes_extend_core() {
     sm::assert_extends_core("CatalogProbe");
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R739.1
+#[test]
+fn shard_monitor_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_decision_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE,
+    );
+}
+// spec: MEDULLA-FEDERATED-QUERY-R739.1
+#[test]
+fn shard_monitor_machine_classes_extend_core() {
+    sm::assert_extends_core("ShardMonitor");
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R805.7
 #[test]
 fn revision_machine_matches_edge_table() {

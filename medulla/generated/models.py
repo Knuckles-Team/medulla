@@ -27353,8 +27353,8 @@ class UqlProofStepReason(BaseModel):
 class UqlProofStepReasonBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    clause: str
     proof: ProofNodeWire
-    stage: str
 
 
 class UqlProofStepSparql(BaseModel):
@@ -27366,8 +27366,8 @@ class UqlProofStepSparql(BaseModel):
 class UqlProofStepSparqlBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    clause: str
     proof: SparqlRowProof
-    stage: str
 
 
 class UqlProofStepUnproved(BaseModel):
@@ -27379,7 +27379,7 @@ class UqlProofStepUnproved(BaseModel):
 class UqlProofStepUnprovedBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    stage: str
+    clause: str
 
 
 class UqlResultExplain(BaseModel):
