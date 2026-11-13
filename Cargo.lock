@@ -5142,6 +5142,7 @@ dependencies = [
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-mining",
+ "medulla-modality",
  "medulla-numeric",
  "medulla-rdf",
  "medulla-reasoner",

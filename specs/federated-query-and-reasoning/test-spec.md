@@ -487,6 +487,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | Each modality implements the modality contract | `MEDULLA-FEDERATED-QUERY-R721.1` | `crates/medulla-modality/tests/rowset_views.rs::seven_modalities_implement_contract` |
 | Wiring and store authority | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
 | Wiring and store authority (bootstrap registration) | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-server/src/plan_modalities.rs::tests::bootstrap_registers_every_plan_modality` |
+| Wiring and store authority (fold) | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-exec/src/modality_fold.rs::tests::fold_modality_keeps_contract_rows_and_refuses_foreign_kinds` |
 | Refusal | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::unknown_modality_refuses` |
 | Hot-path proof: cross-modal queries with default configuration | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
 

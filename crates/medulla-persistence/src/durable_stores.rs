@@ -247,6 +247,37 @@ pub fn modality_authority(modality: PlanModality) -> ModalityAuthority {
     }
 }
 
+/// Check that every plan modality names one authority: a named store is registered in
+/// [`DURABLE_STORES`], is not a retired file, and no two modalities share a store
+/// (MEDULLA-FEDERATED-QUERY-R721.2). Server composition runs this at bootstrap.
+pub fn verify_modality_authority() -> Result<(), String> {
+    let mut owners: BTreeMap<&'static str, &'static str> = BTreeMap::new();
+    for modality in PlanModality::ALL {
+        let ModalityAuthority::Store(file) = modality_authority(modality) else {
+            continue;
+        };
+        let entry = lookup(file).ok_or_else(|| {
+            format!(
+                "MODALITY_STORE_UNREGISTERED: {} maps to unregistered store {file}",
+                modality.name()
+            )
+        })?;
+        if matches!(entry.scope, BackupScope::Retired(_)) {
+            return Err(format!(
+                "MODALITY_STORE_RETIRED: {} maps to retired store {file}",
+                modality.name()
+            ));
+        }
+        if let Some(other) = owners.insert(file, modality.name()) {
+            return Err(format!(
+                "MODALITY_STORE_SHARED: {other} and {} share store {file}",
+                modality.name()
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// The registry entry for `file_name`, or `None` when it is not a known durable store.
 pub fn lookup(file_name: &str) -> Option<&'static DurableStore> {
     DURABLE_STORES
@@ -359,28 +390,14 @@ pub mod tests {
     /// modalities share a store.
     #[test]
     fn each_plan_modality_maps_to_one_store() {
-        let mut stores = Vec::new();
-        for modality in PlanModality::ALL {
-            match modality_authority(modality) {
-                ModalityAuthority::GraphShards => {}
-                ModalityAuthority::Store(file) => {
-                    let entry = lookup(file).unwrap_or_else(|| {
-                        panic!("{} maps to unregistered store {file}", modality.name())
-                    });
-                    assert!(
-                        !matches!(entry.scope, BackupScope::Retired(_)),
-                        "{} maps to retired store {file}",
-                        modality.name()
-                    );
-                    stores.push(file);
-                }
-            }
-        }
-        let distinct = stores
+        verify_modality_authority().expect("every plan modality has one registered store");
+        let stores: Vec<&str> = PlanModality::ALL
             .iter()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len();
-        assert_eq!(distinct, stores.len(), "no two modalities share a store");
+            .filter_map(|m| match modality_authority(*m) {
+                ModalityAuthority::Store(file) => Some(file),
+                ModalityAuthority::GraphShards => None,
+            })
+            .collect();
         assert!(
             !stores.is_empty(),
             "the non-graph modalities each own a registered store"

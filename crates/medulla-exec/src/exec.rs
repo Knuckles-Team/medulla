@@ -1055,14 +1055,26 @@ fn sparql_source(view: &GraphView, query: &str, var: &str) -> Result<RowSet, Str
         None,
     )?
     .into_table();
-    let ids = res.solutions.iter().filter_map(|sol| {
-        sol.get(var).and_then(|b| match b {
-            medulla_rdf::sparql::Binding::Node(n) => Some(n.clone()),
-            medulla_rdf::sparql::Binding::Literal(_) => None,
+    // MEDULLA-FEDERATED-QUERY-R721.2: the RDF modality's output folds into the RowSet
+    // through its `ModalityContract`; only resource bindings are rows.
+    let nodes: Vec<(&str, &medulla_rdf::sparql::Binding)> = res
+        .solutions
+        .iter()
+        .filter_map(|sol| match sol.get(var) {
+            Some(b @ medulla_rdf::sparql::Binding::Node(n)) => Some((n.as_str(), b)),
+            _ => None,
         })
-    });
-    Ok(RowSet::from_ids(ids))
+        .collect();
+    let values: Vec<(&str, &dyn medulla_modality::ModalityContract)> = nodes
+        .iter()
+        .map(|(id, b)| (*id, *b as &dyn medulla_modality::ModalityContract))
+        .collect();
+    crate::modality_fold::fold_modality(RDF_STORAGE_KIND, &values).map_err(|e| e.to_string())
 }
+
+/// The `ModalityContract::storage_kind` of the RDF modality (`PlanModality::Rdf`).
+#[cfg(feature = "owl")]
+const RDF_STORAGE_KIND: &str = "rdf";
 
 /// Every node in `view` that carries `label` (see [`scan_label`]), paired with its
 /// decoded property object. The one label filter every label/layer source shares.

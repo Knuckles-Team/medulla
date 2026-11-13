@@ -33,11 +33,15 @@ pub fn plan_modality_descriptor(modality: PlanModality) -> ModalityDescriptor {
     }
 }
 
-/// Register every plan modality. Idempotent by name.
-pub fn register_plan_modalities() {
+/// Register every plan modality and check that each names one durable-store authority
+/// (MEDULLA-FEDERATED-QUERY-R721.2). Registration is idempotent by name; an inconsistent
+/// authority map is a refusal to boot, not a warning.
+pub fn register_plan_modalities() -> Result<(), String> {
+    medulla_persistence::durable_stores::verify_modality_authority()?;
     for modality in PlanModality::ALL {
         register_modality(plan_modality_descriptor(modality));
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -47,7 +51,7 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R721.2
     #[test]
     fn bootstrap_registers_every_plan_modality() {
-        register_plan_modalities();
+        register_plan_modalities().expect("modality authority map is consistent");
         let registered = medulla_modality::registered_modalities();
         for modality in PlanModality::ALL {
             assert!(

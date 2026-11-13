@@ -672,7 +672,8 @@ pub fn compose_server_state(
 ) -> ServerState {
     crate::seams_install::install_seams(&state);
     #[cfg(feature = "plan-modalities")]
-    crate::plan_modalities::register_plan_modalities();
+    crate::plan_modalities::register_plan_modalities()
+        .expect("plan modality registration and store authority are consistent");
     #[cfg(all(feature = "streaming", feature = "cdc-kafka"))]
     if let Some(hub) = state.cdc_hub() {
         // CA-11 (DEC-CA-03): install the optional Kafka sink exactly once,

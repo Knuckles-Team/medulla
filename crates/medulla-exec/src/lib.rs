@@ -60,6 +60,7 @@ pub mod incremental;
 #[cfg(feature = "learned-cost")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod learned_cost;
+pub mod modality_fold;
 /// The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — Lane A's
 /// rule engine over the logical `Vec<Op>` that [`exec::plan_optimize`] calls to reorder
 /// operators across modalities into a cheaper-but-equivalent plan. Compiled under `query`;
