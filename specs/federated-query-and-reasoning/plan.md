@@ -1237,4 +1237,3 @@ Order: R733, then R734 and R735 in parallel.
 ### Served corpus retrieve (R653.2, R653.3, R653.8 to R653.10)
 
 `Method::CorpusRetrieve { request }` follows the seven-step recipe (variant in `method_05.rs`, policy `query:retrieval`, result `Raw<CorpusResult>`, read class, routed code `CORPUS_REGEX_TOO_COMPLEX`, client `corpus_retrieve`). `handle_corpus_retrieve` fills a `CorpusView` from the projected core and calls `medulla_plan::corpus_retrieval::dispatch`, which calls `grep_corpus`, `entity_context`, `session_hits` or `lineage_path`. `expand_hops` now lives in `medulla-graph-core`.
-

@@ -100,4 +100,3 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - A transcript turn is a graph node of type `TranscriptTurn` with `session_id`, `ordinal`, `role` and `content`.
 - Grep scans the string properties of each node (optionally only one `type`), line by line; `start` and `end` are byte offsets within the line.
 - R703.5 and R722.5 are not in this change: the denied and timeout reads of R703.5 need the registered access port of R703.3, and R722.5 needs the foreign provenance columns; both stay queued.
-
