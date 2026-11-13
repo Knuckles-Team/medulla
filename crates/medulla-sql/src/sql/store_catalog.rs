@@ -8,7 +8,8 @@ use medulla_graph_core::index::ManagedIndexStatus;
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_table_store::tables::PropertyGraphCatalogRecord;
 use medulla_table_store::tables::TableStore;
-use medulla_tables::schema::StoredFunction;
+use medulla_tables::index::SecondaryIndexSpec;
+use medulla_tables::schema::{StoredFunction, TableSchema};
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.
 pub(crate) const INDEX_STATUS_RELATION: &str = "medulla_index_status";
@@ -23,11 +24,21 @@ pub(crate) struct StoreCatalog {
     pub(crate) index_status: Vec<ManagedIndexStatus>,
     /// The graph the statement runs over; scopes `medulla_catalog.matviews`.
     pub(crate) statement_graph: Option<String>,
+    /// The schema of every user table, for the constraint catalogs.
+    pub(crate) tables: Vec<TableSchema>,
+    /// Every ordinary secondary index, for `pg_index`.
+    pub(crate) secondary_indexes: Vec<SecondaryIndexSpec>,
 }
 
 impl StoreCatalog {
     /// Every catalog object of `store`; property graphs under `graph_scope`.
     pub(crate) fn read(store: &TableStore, graph_scope: &str) -> Result<Self, String> {
+        let mut tables = Vec::new();
+        for name in store.list_tables()? {
+            if let Some(schema) = store.get_schema(&name)? {
+                tables.push(schema);
+            }
+        }
         Ok(Self {
             views: store.list_views()?,
             functions: store.list_functions()?,
@@ -35,6 +46,8 @@ impl StoreCatalog {
             ann_indexes: store.list_ann_indexes()?,
             index_status: store.managed_index_status()?,
             statement_graph: None,
+            tables,
+            secondary_indexes: store.list_secondary_indexes(None)?,
         })
     }
 }

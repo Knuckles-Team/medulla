@@ -663,6 +663,8 @@ impl SqlContextCache {
             &catalog.functions,
             &catalog.property_graphs,
             Some(&epoch.graph),
+            &catalog.tables,
+            &catalog.secondary_indexes,
         )
         .await?;
         super::index_status::register(&built.ctx, &catalog.index_status)?;
@@ -1047,6 +1049,8 @@ fn collect_sql_batches(
             &catalog.functions,
             &catalog.property_graphs,
             catalog.statement_graph.as_deref(),
+            &catalog.tables,
+            &catalog.secondary_indexes,
         )
         .await?;
         super::index_status::register(&ctx, &catalog.index_status)?;

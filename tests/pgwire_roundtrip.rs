@@ -2213,6 +2213,204 @@ async fn refused_form_returns_0a000() {
     assert_eq!(simple_ids(rows), vec!["n2".to_string(), "n3".to_string()]);
 }
 
+/// One frontend frame: the tag byte, an `int32` length that counts itself, the body.
+fn raw_frame(tag: u8, body: &[u8]) -> Vec<u8> {
+    let mut frame = vec![tag];
+    frame.extend_from_slice(&(body.len() as i32 + 4).to_be_bytes());
+    frame.extend_from_slice(body);
+    frame
+}
+
+/// The `(field code, text)` pairs of an `ErrorResponse` body.
+fn error_fields(body: &[u8]) -> std::collections::HashMap<u8, String> {
+    let mut fields = std::collections::HashMap::new();
+    let mut rest = body;
+    while let Some((&code, tail)) = rest.split_first() {
+        if code == 0 {
+            break;
+        }
+        let end = tail.iter().position(|b| *b == 0).expect("field terminator");
+        fields.insert(code, String::from_utf8_lossy(&tail[..end]).into_owned());
+        rest = &tail[end + 1..];
+    }
+    fields
+}
+
+/// A TCP relay between a client library and the listener that can put a raw frontend
+/// frame on the server side at a frame boundary and capture the server's answer up to
+/// its `ReadyForQuery`, so a test can send a message no client library emits. The
+/// client never sees that exchange, so its own session stays in step.
+struct RawFrameProxy {
+    addr: String,
+    to_server: Arc<tokio::sync::Mutex<tokio::net::tcp::OwnedWriteHalf>>,
+    capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>>,
+    answered: Arc<tokio::sync::Notify>,
+}
+
+impl RawFrameProxy {
+    async fn start(server_addr: &str) -> Self {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind the relay");
+        let addr = listener.local_addr().expect("relay address").to_string();
+        let server = tokio::net::TcpStream::connect(server_addr)
+            .await
+            .expect("connect to the listener");
+        let (from_server, to_server) = server.into_split();
+        let to_server = Arc::new(tokio::sync::Mutex::new(to_server));
+        let capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>> = Arc::default();
+        let answered = Arc::new(tokio::sync::Notify::new());
+        tokio::spawn(Self::relay(
+            listener,
+            from_server,
+            to_server.clone(),
+            capture.clone(),
+            answered.clone(),
+        ));
+        Self {
+            addr,
+            to_server,
+            capture,
+            answered,
+        }
+    }
+
+    /// Accept the one client, copy its bytes to the listener, and relay the listener's
+    /// frames back, holding back the frames of a captured exchange.
+    async fn relay(
+        listener: tokio::net::TcpListener,
+        mut from_server: tokio::net::tcp::OwnedReadHalf,
+        to_server: Arc<tokio::sync::Mutex<tokio::net::tcp::OwnedWriteHalf>>,
+        capture: Arc<std::sync::Mutex<Option<Vec<(u8, Vec<u8>)>>>>,
+        answered: Arc<tokio::sync::Notify>,
+    ) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let (client, _) = listener.accept().await.expect("accept the client");
+        let (mut from_client, mut to_client) = client.into_split();
+        tokio::spawn(async move {
+            let mut buf = vec![0u8; 8192];
+            loop {
+                let read = from_client.read(&mut buf).await.unwrap_or(0);
+                if read == 0 {
+                    break;
+                }
+                if to_server
+                    .lock()
+                    .await
+                    .write_all(&buf[..read])
+                    .await
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+        loop {
+            let mut tag = [0u8; 1];
+            let mut length = [0u8; 4];
+            if from_server.read_exact(&mut tag).await.is_err()
+                || from_server.read_exact(&mut length).await.is_err()
+            {
+                break;
+            }
+            let mut body = vec![0u8; (i32::from_be_bytes(length) - 4) as usize];
+            if from_server.read_exact(&mut body).await.is_err() {
+                break;
+            }
+            let held_back = {
+                let mut guard = capture.lock().unwrap();
+                match guard.as_mut() {
+                    Some(frames) => {
+                        frames.push((tag[0], body.clone()));
+                        true
+                    }
+                    None => false,
+                }
+            };
+            if held_back {
+                if tag[0] == b'Z' {
+                    answered.notify_one();
+                }
+                continue;
+            }
+            let mut frame = tag.to_vec();
+            frame.extend_from_slice(&length);
+            frame.extend_from_slice(&body);
+            if to_client.write_all(&frame).await.is_err() {
+                break;
+            }
+        }
+    }
+
+    /// Send `frame` to the listener and return every frame it answers with, through
+    /// the first `ReadyForQuery`. The client must be idle.
+    async fn exchange(&self, frame: Vec<u8>) -> Vec<(u8, Vec<u8>)> {
+        use tokio::io::AsyncWriteExt;
+        *self.capture.lock().unwrap() = Some(Vec::new());
+        self.to_server
+            .lock()
+            .await
+            .write_all(&frame)
+            .await
+            .expect("write the frame");
+        tokio::time::timeout(std::time::Duration::from_secs(30), self.answered.notified())
+            .await
+            .expect("the listener answers the frame");
+        self.capture
+            .lock()
+            .unwrap()
+            .take()
+            .expect("captured answer")
+    }
+}
+
+/// A `FunctionCall` and a `CopyBoth` frame are refused with SQLSTATE `0A000` naming the
+/// message, and a refused statement form is refused the same way; the connection keeps
+/// serving supported statements after each.
+// spec: MEDULLA-ENGINE-PARITY-R006.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn unsupported_message_refuses_0a000() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let proxy = RawFrameProxy::start(&addr).await;
+    let client = test_support::connect_pgwire(&proxy.addr, "test", "tester", "__commons__")
+        .await
+        .expect("connect through the relay");
+
+    // FunctionCall: object id, no format codes, no arguments, text result.
+    let function_call = raw_frame(b'F', &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    let copy_both = raw_frame(b'W', &[]);
+    for (frame, name) in [(function_call, "FunctionCall"), (copy_both, "CopyBoth")] {
+        let answer = proxy.exchange(frame).await;
+        let kinds: Vec<u8> = answer.iter().map(|(tag, _)| *tag).collect();
+        assert_eq!(kinds, vec![b'E', b'Z'], "{name}: an error, then ready");
+        let fields = error_fields(&answer[0].1);
+        assert_eq!(
+            fields.get(&b'C').map(String::as_str),
+            Some("0A000"),
+            "{name}"
+        );
+        let message = fields.get(&b'M').expect("a message");
+        assert!(message.contains("FEATURE_NOT_SUPPORTED"), "{message}");
+        assert!(message.contains(name), "{message}");
+
+        let rows = client
+            .simple_query("SELECT id FROM nodes WHERE rank >= 2 ORDER BY id")
+            .await
+            .expect("the connection still serves supported forms");
+        assert_eq!(simple_ids(rows), vec!["n2".to_string(), "n3".to_string()]);
+    }
+
+    let refused = client
+        .simple_query("CREATE POLICY p ON nodes USING (true)")
+        .await
+        .expect_err("a refused form must not run");
+    assert_eq!(
+        refused.as_db_error().expect("a database error").code(),
+        &tokio_postgres::error::SqlState::FEATURE_NOT_SUPPORTED
+    );
+}
+
 /// Every text cell of a simple-query answer joined with newlines (an `EXPLAIN` plan is
 /// one row per plan line).
 fn simple_text(msgs: &[tokio_postgres::SimpleQueryMessage]) -> String {

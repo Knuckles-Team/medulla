@@ -21,13 +21,13 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R005.2` | `tests/test_engine_bench_gate.py::test_missing_workload_fails`; `tests/test_engine_bench_gate.py::test_regression_over_ten_percent_fails` | planned |
 | `MEDULLA-ENGINE-PARITY-R005.3` | `tests/test_engine_bench_gate.py::test_baseline_file_matches_records_schema` | existing |
 | `MEDULLA-ENGINE-PARITY-R006.1` | `crates/medulla-wire-core/src/wire/sqlstate.rs::tests::table_is_closed_and_unique`; `tests/pgwire_roundtrip.rs::extended_query_prepared_and_copy` | planned |
-| `MEDULLA-ENGINE-PARITY-R006.2` | `tests/pgwire_roundtrip.rs::unsupported_message_refuses_0a000` | planned |
+| `MEDULLA-ENGINE-PARITY-R006.2` | `tests/pgwire_roundtrip.rs::unsupported_message_refuses_0a000` | bound |
 | `MEDULLA-ENGINE-PARITY-R006.3` | `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits`; bench group `engine_parity/pgwire_prepared_read` | planned |
 | `MEDULLA-ENGINE-PARITY-R007.1` | `crates/medulla-wire/src/pgwire/auth.rs::tests::three_login_kinds_resolve_one_principal`; `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls` | planned |
 | `MEDULLA-ENGINE-PARITY-R007.2` | `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls`; `Method::Uql` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.3` | `tests/pgwire_roundtrip.rs::login_maps_to_principal`; `tests/pgwire_roundtrip.rs::certificate_login_maps_to_principal`; bench group `engine_parity/pgwire_login` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.4` | `tests/identity/test_wire_login_served.py::test_grant_login_revoke` | planned |
-| `MEDULLA-ENGINE-PARITY-R008.1` | `crates/medulla-sql-tests/tests/user_tables.rs::catalog_lists_constraints_and_indexes`; `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` | planned |
+| `MEDULLA-ENGINE-PARITY-R008.1` | `crates/medulla-sql-tests/tests/user_tables.rs::catalog_lists_constraints_and_indexes`; `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` | bound |
 | `MEDULLA-ENGINE-PARITY-R008.2` | `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` | planned |
 | `MEDULLA-ENGINE-PARITY-R008.3` | `tests/pgwire_roundtrip.rs::introspection_fixture_total_latency`; bench group `engine_parity/introspection` | planned |
 | `MEDULLA-ENGINE-PARITY-R009.1` | `crates/medulla-sql-tests/tests/compat.rs::matrix_loads_and_is_closed`; `tests/test_sql_compat_conformance.py::test_supported_entries_pass` | planned |

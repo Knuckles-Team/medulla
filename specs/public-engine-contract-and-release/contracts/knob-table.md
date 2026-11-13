@@ -78,6 +78,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `sync.max_records` | u64 | 50000 | [1, 1000000] | records | Tunable | `MEDULLA_SYNC_MAX_RECORDS` |
 | `tables.deferred_fk_pending_max` | u64 | 100000 | [1, 10000000] | keys | Tunable | `MEDULLA_TABLES_DEFERRED_FK_PENDING_MAX` |
 | `tables.trigger_depth_max` | u64 | 16 | [1, 64] | levels | Tunable | - |
+| `pgwire.startup_timeout_ms` | u64 | 60000 | [1000, 600000] | ms | Tunable | - |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
 | `context_budget.relevance_min` | f64 | 0.5 | [0.0, 1.0] | ratio | Tunable | - |
 | `trace.critique_page_limit` | u64 | 64 | [1, 256] | rows | Tunable | `MEDULLA_TRACE_CRITIQUE_PAGE_LIMIT` |

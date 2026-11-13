@@ -17,13 +17,13 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T011 [US1] MEDULLA-ENGINE-PARITY-R005.2 Write throughput benchmark suite and targets: wiring and refusal
 - [ ] T012 [P] [US1] MEDULLA-ENGINE-PARITY-R005.3 Write throughput benchmark suite and targets: hot-path proof
 - [ ] T013 [US2] MEDULLA-ENGINE-PARITY-R006.1 PostgreSQL wire protocol front end: model and behavior
-- [ ] T014 [US2] MEDULLA-ENGINE-PARITY-R006.2 PostgreSQL wire protocol front end: wiring and refusal
+- [x] T014 [US2] MEDULLA-ENGINE-PARITY-R006.2 PostgreSQL wire protocol front end: wiring and refusal
 - [ ] T015 [P] [US2] MEDULLA-ENGINE-PARITY-R006.3 PostgreSQL wire protocol front end: hot-path proof
 - [ ] T016 [US2] MEDULLA-ENGINE-PARITY-R007.1 Wire authentication mapped to engine principals and row security: model and behavior
 - [ ] T017 [US2] MEDULLA-ENGINE-PARITY-R007.2 Wire authentication mapped to engine principals and row security: wiring and refusal
 - [x] T018 [P] [US2] MEDULLA-ENGINE-PARITY-R007.3 Wire authentication mapped to engine principals and row security: hot-path proof
 - [ ] T019 [US2] MEDULLA-ENGINE-PARITY-R007.4 Wire authentication mapped to engine principals and row security: wiring: grant and revoke wire logins
-- [ ] T020 [US2] MEDULLA-ENGINE-PARITY-R008.1 Catalog views for outside tools: model and behavior
+- [x] T020 [US2] MEDULLA-ENGINE-PARITY-R008.1 Catalog views for outside tools: model and behavior
 - [ ] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: wiring and refusal
 - [ ] T022 [P] [US2] MEDULLA-ENGINE-PARITY-R008.3 Catalog views for outside tools: hot-path proof
 - [ ] T023 [US2] MEDULLA-ENGINE-PARITY-R009.1 SQL dialect compatibility matrix: model and behavior

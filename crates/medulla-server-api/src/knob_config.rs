@@ -257,6 +257,8 @@ knobs! {
     batch_max_operations: u64 = "batch.max_operations", U64(64), [1, 1024], "operations", Tunable;
     /// Wire logins: seconds a resolved wire-login record stays cached (MEDULLA-ENGINE-PARITY-R007.1).
     wire_login_cache_ttl_s: u64 = "wire_login.cache_ttl_s", U64(5), [0, 60], "s", Tunable;
+    /// Wire listener: milliseconds a pgwire client may take to finish startup and authentication before the connection is dropped (MEDULLA-ENGINE-PARITY-R006.2).
+    pgwire_startup_timeout_ms: u64 = "pgwire.startup_timeout_ms", U64(60000), [1000, 600000], "ms", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.

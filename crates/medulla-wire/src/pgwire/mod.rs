@@ -67,7 +67,6 @@ use pgwire::api::stmt::{QueryParser, StoredStatement};
 use pgwire::api::{ClientInfo, PgWireServerHandlers, Type};
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::data::DataRow;
-use pgwire::tokio::process_socket;
 
 use medulla_sql_lang::{
     sql::classify::CopyFormat, sql::classify::DeleteNodes, sql::classify::InsertNodes,
@@ -84,6 +83,7 @@ use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
 
 mod auth;
+mod message_loop;
 
 pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
 
@@ -2049,6 +2049,9 @@ pub async fn serve_prepared(
         default_graph,
         auth_mode.as_str()
     );
+    let startup_timeout = Duration::from_millis(
+        medulla_server_api::knob_config::KnobConfig::default().pgwire_startup_timeout_ms,
+    );
     loop {
         let (socket, peer) = listener.accept().await?;
         // A FRESH factory (and thus a fresh shared `EngineBackend`) per connection,
@@ -2079,7 +2082,9 @@ pub async fn serve_prepared(
                     }
                 }
             }
-            if let Err(e) = process_socket(socket, tls_acceptor, factory).await {
+            if let Err(e) =
+                message_loop::serve_connection(socket, tls_acceptor, factory, startup_timeout).await
+            {
                 tracing::warn!("pgwire connection from {peer} ended with error: {e}");
             }
         });

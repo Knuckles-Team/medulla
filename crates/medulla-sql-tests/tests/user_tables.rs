@@ -1810,6 +1810,8 @@ fn cyclic_foreign_key_across_two_tables_does_not_deadlock_or_infinitely_recurse(
                 ref_columns: vec!["id".into()],
                 on_delete: RefAction::Cascade,
                 on_update: RefAction::NoAction,
+                deferrable: false,
+                initially_deferred: false,
             },
         )
         .unwrap();
@@ -2131,4 +2133,153 @@ fn retry_bound_refuses() {
         .commit_txn_batch_retrying(&explicit, &commit_batch::batch(&store, "e", "idem-e"), 8, 3)
         .expect_err("explicit transaction never retries");
     assert!(refused.starts_with("TXN_CONFLICT"), "{refused}");
+}
+
+/// A scoped store, so an ordinary secondary index can be defined on it.
+fn scoped_catalog_store(tag: &str) -> TableStore {
+    let path = std::env::temp_dir().join(format!(
+        "medulla_user_tables_{tag}_{}_{}.redb",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    TableStore::open_scoped(
+        &path,
+        "tenant-a",
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
+    )
+    .unwrap()
+}
+
+/// Rows of a catalog query as one string per row, cells joined with `|`.
+fn catalog_rows(store: &TableStore, view: &GraphView, sql: &str) -> Vec<String> {
+    let res = exec_sql_typed_with_tables(view, store, sql).expect("catalog select");
+    res.rows
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|cell| match cell {
+                    Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join("|")
+        })
+        .collect()
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R008.1
+#[test]
+fn catalog_lists_constraints_and_indexes() {
+    let store = scoped_catalog_store("catalog");
+    let view = graph_with_stocks();
+    create_via_sql(
+        &store,
+        "CREATE TABLE owners (id INT PRIMARY KEY, name TEXT)",
+    )
+    .unwrap();
+    create_via_sql(
+        &store,
+        "CREATE TABLE pets (id INT PRIMARY KEY, owner_id INT, nick TEXT, \
+         FOREIGN KEY (owner_id) REFERENCES owners(id) ON DELETE CASCADE)",
+    )
+    .unwrap();
+    let pets = store.get_schema("pets").unwrap().unwrap();
+    let spec = store
+        .secondary_index_spec(
+            "pets",
+            "pets_nick_idx",
+            vec![medulla_tables::index::SecondaryIndexColumn::ascending(
+                "nick",
+            )],
+            &pets,
+        )
+        .unwrap();
+    assert!(store.create_secondary_index(&spec, false).unwrap());
+
+    // pg_constraint: the primary keys and the foreign key, with the referenced table
+    // and the cascade action.
+    let constraints = catalog_rows(
+        &store,
+        &view,
+        "SELECT c.conname, c.contype, r.relname, f.relname, c.confdeltype, c.conkey, c.confkey \
+         FROM pg_catalog.pg_constraint c \
+         JOIN pg_catalog.pg_class r ON r.oid = c.conrelid \
+         LEFT JOIN pg_catalog.pg_class f ON f.oid = c.confrelid \
+         ORDER BY c.conname",
+    );
+    assert_eq!(
+        constraints,
+        vec![
+            "owners_pkey|p|owners|null|\u{20}|{1}|{}",
+            "pets_owner_id_fkey|f|pets|owners|c|{2}|{1}",
+            "pets_pkey|p|pets|null|\u{20}|{1}|{}",
+        ]
+    );
+
+    // pg_index: the secondary index on pets(nick), column number 3.
+    let indexes = catalog_rows(
+        &store,
+        &view,
+        "SELECT r.relname, i.indnatts, i.indisunique, i.indisprimary, i.indkey \
+         FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class r ON r.oid = i.indrelid",
+    );
+    assert_eq!(indexes, vec!["pets|1|false|false|3"]);
+
+    // information_schema: the constraint list, then the key columns in order.
+    let listed = catalog_rows(
+        &store,
+        &view,
+        "SELECT table_name, constraint_name, constraint_type \
+         FROM information_schema.table_constraints ORDER BY constraint_name",
+    );
+    assert_eq!(
+        listed,
+        vec![
+            "owners|owners_pkey|PRIMARY KEY",
+            "pets|pets_owner_id_fkey|FOREIGN KEY",
+            "pets|pets_pkey|PRIMARY KEY",
+        ]
+    );
+    let key_columns = catalog_rows(
+        &store,
+        &view,
+        "SELECT table_name, constraint_name, column_name, ordinal_position \
+         FROM information_schema.key_column_usage ORDER BY constraint_name, ordinal_position",
+    );
+    assert_eq!(
+        key_columns,
+        vec![
+            "owners|owners_pkey|id|1",
+            "pets|pets_owner_id_fkey|owner_id|1",
+            "pets|pets_pkey|id|1",
+        ]
+    );
+
+    // The shaped-empty relations answer with no rows; an absent relation keeps 42P01.
+    for relation in [
+        "pg_roles",
+        "pg_extension",
+        "pg_collation",
+        "pg_description",
+        "pg_depend",
+        "pg_enum",
+        "pg_range",
+        "pg_am",
+        "pg_tablespace",
+        "pg_stat_activity",
+    ] {
+        let rows = catalog_rows(
+            &store,
+            &view,
+            &format!("SELECT * FROM pg_catalog.{relation}"),
+        );
+        assert!(rows.is_empty(), "{relation} is shaped and empty");
+    }
+    let absent = exec_sql_typed_with_tables(&view, &store, "SELECT * FROM pg_catalog.pg_no_such");
+    assert!(absent.is_err(), "an unlisted catalog relation still errors");
 }

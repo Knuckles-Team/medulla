@@ -48,6 +48,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha1 = { version = "0.10", optional = true }
 sha2 = "0.10"
+tokio-util = { version = "0.7", optional = true, default-features = false, features = ["codec"] }
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
@@ -87,7 +88,7 @@ mssql-wire = ["query", "server", "medulla-server-api/mssql-wire", "medulla-wire-
 mysql-wire = ["dep:sha1", "query", "server", "medulla-wire-core/mysql-wire"]
 obs = ["server", "tsdb", "text", "medulla-server-api/obs"]
 owl = ["sparql", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-server-cdc/owl", "medulla-server-ops/owl", "medulla-types/owl", "medulla-uql/owl", "server"]
-pgwire = ["dep:rustix", "dep:windows-sys", "dep:pgwire", "dep:futures", "query", "server", "medulla-wire-core/pgwire"]
+pgwire = ["dep:rustix", "dep:windows-sys", "dep:pgwire", "dep:tokio-util", "dep:futures", "query", "server", "medulla-wire-core/pgwire"]
 policy_export = ["security"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-uql/query", "medulla-wire-core/query"]
 raft = ["dep:futures", "server", "redb", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft"]

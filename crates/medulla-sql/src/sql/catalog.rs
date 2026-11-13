@@ -54,7 +54,10 @@ use datafusion::prelude::SessionContext;
 
 use medulla_table_store::tables::PropertyGraphCatalogRecord;
 use medulla_table_store::tables::SqlName;
-use medulla_tables::schema::StoredFunction;
+use medulla_tables::index::SecondaryIndexSpec;
+use medulla_tables::schema::{StoredFunction, TableSchema};
+
+use super::catalog_constraints::{constraint_rows, ConstraintKind, ConstraintRow};
 
 /// The OID we synthesize for the single user schema (`public`). Drivers only use OIDs
 /// to JOIN catalog rows together, so a stable arbitrary value is sufficient.
@@ -307,43 +310,403 @@ pub(crate) fn strip_pg_catalog_fn_qualifier(sql: &str) -> String {
     out
 }
 
-/// `pg_index`: shaped but empty (CONCEPT:MEDULLA-KG.query.route-create-view-create). The engine's secondary indexes are
-/// implicit (index-pushdown providers), not first-class `pg_index` rows; an empty table
-/// is the faithful "no user-visible indexes" answer and keeps a `\d`-style join running.
-static PG_INDEX_COLUMNS: [(&str, DataType); 7] = [
-    ("indexrelid", DataType::Int32),
-    ("indrelid", DataType::Int32),
-    ("indnatts", DataType::Int32),
-    ("indisunique", DataType::Boolean),
-    ("indisprimary", DataType::Boolean),
-    ("indisclustered", DataType::Boolean),
-    ("indkey", DataType::Utf8),
-];
+/// Base OID for `pg_constraint` rows; each constraint gets `BASE + index`.
+const CONSTRAINT_OID_BASE: i32 = 32768;
+/// Base OID for `pg_index` rows (`indexrelid`); each index gets `BASE + index`.
+const INDEX_OID_BASE: i32 = 40960;
+/// The synthetic database name `information_schema` rows report.
+const CATALOG_NAME: &str = "medulla";
 
-/// `information_schema.key_column_usage`: shaped but empty (minimal, CONCEPT:MEDULLA-KG.query.route-create-view-create).
-/// PK/UNIQUE constraint metadata lives in the redb table store (not threaded into the
-/// per-query catalog build); an empty-but-shaped table keeps a reflect query running.
-static INFO_KEY_COLUMN_USAGE_COLUMNS: [(&str, DataType); 8] = [
-    ("constraint_catalog", DataType::Utf8),
-    ("constraint_schema", DataType::Utf8),
-    ("constraint_name", DataType::Utf8),
-    ("table_catalog", DataType::Utf8),
-    ("table_schema", DataType::Utf8),
-    ("table_name", DataType::Utf8),
-    ("column_name", DataType::Utf8),
-    ("ordinal_position", DataType::Int32),
-];
+/// The OID of the relation named `name`, `0` (pg's "none") when it is not listed.
+fn relation_oid(rels: &[CatalogRelation], name: &str) -> i32 {
+    rels.iter().find(|r| r.name == name).map_or(0, |r| r.oid)
+}
 
-/// `information_schema.table_constraints`: shaped but empty (minimal, CONCEPT:MEDULLA-KG.query.route-create-view-create).
-static INFO_TABLE_CONSTRAINTS_COLUMNS: [(&str, DataType); 7] = [
-    ("constraint_catalog", DataType::Utf8),
-    ("constraint_schema", DataType::Utf8),
-    ("constraint_name", DataType::Utf8),
-    ("table_catalog", DataType::Utf8),
-    ("table_schema", DataType::Utf8),
-    ("table_name", DataType::Utf8),
-    ("constraint_type", DataType::Utf8),
-];
+/// The 1-based `attnum` of `column` in relation `table`, `0` when it is not a column.
+fn attribute_number(rels: &[CatalogRelation], table: &str, column: &str) -> i32 {
+    rels.iter()
+        .find(|r| r.name == table)
+        .and_then(|r| r.columns.iter().find(|c| c.name == column))
+        .map_or(0, |c| c.ordinal)
+}
+
+/// A pg `int2[]` literal (`{1,2}`), the text form of `conkey` / `confkey`.
+fn int_array_literal(values: &[i32]) -> String {
+    let inner: Vec<String> = values.iter().map(i32::to_string).collect();
+    format!("{{{}}}", inner.join(","))
+}
+
+/// `pg_constraint`: one row per constraint of a user table, from the stored
+/// `TableConstraint`s and column flags (MEDULLA-ENGINE-PARITY-R008.1).
+fn pg_constraint_batch(
+    rels: &[CatalogRelation],
+    constraints: &[ConstraintRow],
+) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("oid", DataType::Int32, false),
+        Field::new("conname", DataType::Utf8, false),
+        Field::new("connamespace", DataType::Int32, false),
+        Field::new("contype", DataType::Utf8, false),
+        Field::new("condeferrable", DataType::Boolean, false),
+        Field::new("condeferred", DataType::Boolean, false),
+        Field::new("conrelid", DataType::Int32, false),
+        Field::new("contypid", DataType::Int32, false),
+        Field::new("conindid", DataType::Int32, false),
+        Field::new("confrelid", DataType::Int32, false),
+        Field::new("confupdtype", DataType::Utf8, false),
+        Field::new("confdeltype", DataType::Utf8, false),
+        Field::new("confmatchtype", DataType::Utf8, false),
+        Field::new("conkey", DataType::Utf8, false),
+        Field::new("confkey", DataType::Utf8, false),
+    ]));
+    let n = constraints.len();
+    let oids: Vec<i32> = (0..n as i32).map(|i| CONSTRAINT_OID_BASE + i).collect();
+    let names: Vec<&str> = constraints.iter().map(|c| c.name.as_str()).collect();
+    let kinds: Vec<&str> = constraints.iter().map(|c| c.kind.contype()).collect();
+    let deferrable: Vec<bool> = constraints.iter().map(|c| c.deferrable).collect();
+    let deferred: Vec<bool> = constraints.iter().map(|c| c.initially_deferred).collect();
+    let rel_oids: Vec<i32> = constraints
+        .iter()
+        .map(|c| relation_oid(rels, &c.table))
+        .collect();
+    let foreign_oids: Vec<i32> = constraints
+        .iter()
+        .map(|c| {
+            c.target
+                .as_ref()
+                .map_or(0, |t| relation_oid(rels, &t.table))
+        })
+        .collect();
+    let update_types: Vec<&str> = constraints
+        .iter()
+        .map(|c| c.target.as_ref().map_or(" ", |t| t.on_update))
+        .collect();
+    let delete_types: Vec<&str> = constraints
+        .iter()
+        .map(|c| c.target.as_ref().map_or(" ", |t| t.on_delete))
+        .collect();
+    let match_types: Vec<&str> = constraints
+        .iter()
+        .map(|c| if c.target.is_some() { "s" } else { " " })
+        .collect();
+    let keys: Vec<String> = constraints
+        .iter()
+        .map(|c| {
+            let numbers: Vec<i32> = c
+                .columns
+                .iter()
+                .map(|col| attribute_number(rels, &c.table, col))
+                .collect();
+            int_array_literal(&numbers)
+        })
+        .collect();
+    let foreign_keys: Vec<String> = constraints
+        .iter()
+        .map(|c| match &c.target {
+            Some(t) => {
+                let numbers: Vec<i32> = t
+                    .columns
+                    .iter()
+                    .map(|col| attribute_number(rels, &t.table, col))
+                    .collect();
+                int_array_literal(&numbers)
+            }
+            None => int_array_literal(&[]),
+        })
+        .collect();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int32Array::from(oids)),
+            Arc::new(StringArray::from(names)),
+            Arc::new(Int32Array::from(vec![PUBLIC_NAMESPACE_OID; n])),
+            Arc::new(StringArray::from(kinds)),
+            Arc::new(BooleanArray::from(deferrable)),
+            Arc::new(BooleanArray::from(deferred)),
+            Arc::new(Int32Array::from(rel_oids)),
+            Arc::new(Int32Array::from(vec![0; n])),
+            Arc::new(Int32Array::from(vec![0; n])),
+            Arc::new(Int32Array::from(foreign_oids)),
+            Arc::new(StringArray::from(update_types)),
+            Arc::new(StringArray::from(delete_types)),
+            Arc::new(StringArray::from(match_types)),
+            Arc::new(StringArray::from(keys)),
+            Arc::new(StringArray::from(foreign_keys)),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("pg_constraint batch: {e}"))
+}
+
+/// `pg_index`: one row per ordinary secondary index (`SecondaryIndexSpec`) of a user
+/// table (MEDULLA-ENGINE-PARITY-R008.1). `indkey` lists the 1-based column numbers,
+/// `0` for an expression column, as pg does. An index whose table is not a listed
+/// relation has no row.
+fn pg_index_batch(
+    rels: &[CatalogRelation],
+    indexes: &[SecondaryIndexSpec],
+) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("indexrelid", DataType::Int32, false),
+        Field::new("indrelid", DataType::Int32, false),
+        Field::new("indnatts", DataType::Int32, false),
+        Field::new("indisunique", DataType::Boolean, false),
+        Field::new("indisprimary", DataType::Boolean, false),
+        Field::new("indisclustered", DataType::Boolean, false),
+        Field::new("indkey", DataType::Utf8, false),
+    ]));
+    let listed: Vec<&SecondaryIndexSpec> = indexes
+        .iter()
+        .filter(|i| relation_oid(rels, &i.table) != 0)
+        .collect();
+    let n = listed.len();
+    let index_oids: Vec<i32> = (0..n as i32).map(|i| INDEX_OID_BASE + i).collect();
+    let rel_oids: Vec<i32> = listed
+        .iter()
+        .map(|i| relation_oid(rels, &i.table))
+        .collect();
+    let natts: Vec<i32> = listed.iter().map(|i| i.columns.len() as i32).collect();
+    let unique: Vec<bool> = listed.iter().map(|i| i.unique).collect();
+    let keys: Vec<String> = listed
+        .iter()
+        .map(|i| {
+            let numbers: Vec<String> = i
+                .columns
+                .iter()
+                .map(|c| {
+                    let number = if c.expr.is_some() {
+                        0
+                    } else {
+                        attribute_number(rels, &i.table, &c.name)
+                    };
+                    number.to_string()
+                })
+                .collect();
+            numbers.join(" ")
+        })
+        .collect();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int32Array::from(index_oids)),
+            Arc::new(Int32Array::from(rel_oids)),
+            Arc::new(Int32Array::from(natts)),
+            Arc::new(BooleanArray::from(unique)),
+            Arc::new(BooleanArray::from(vec![false; n])),
+            Arc::new(BooleanArray::from(vec![false; n])),
+            Arc::new(StringArray::from(keys)),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("pg_index batch: {e}"))
+}
+
+/// `information_schema.table_constraints`: one row per constraint of a user table.
+fn info_table_constraints_batch(
+    constraints: &[ConstraintRow],
+) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("constraint_catalog", DataType::Utf8, false),
+        Field::new("constraint_schema", DataType::Utf8, false),
+        Field::new("constraint_name", DataType::Utf8, false),
+        Field::new("table_catalog", DataType::Utf8, false),
+        Field::new("table_schema", DataType::Utf8, false),
+        Field::new("table_name", DataType::Utf8, false),
+        Field::new("constraint_type", DataType::Utf8, false),
+    ]));
+    let n = constraints.len();
+    let names: Vec<&str> = constraints.iter().map(|c| c.name.as_str()).collect();
+    let tables: Vec<&str> = constraints.iter().map(|c| c.table.as_str()).collect();
+    let kinds: Vec<&str> = constraints
+        .iter()
+        .map(|c| c.kind.constraint_type())
+        .collect();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(StringArray::from(vec![CATALOG_NAME; n])),
+            Arc::new(StringArray::from(vec!["public"; n])),
+            Arc::new(StringArray::from(names)),
+            Arc::new(StringArray::from(vec![CATALOG_NAME; n])),
+            Arc::new(StringArray::from(vec!["public"; n])),
+            Arc::new(StringArray::from(tables)),
+            Arc::new(StringArray::from(kinds)),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("information_schema.table_constraints batch: {e}"))
+}
+
+/// `information_schema.key_column_usage`: one row per key column of a primary key,
+/// unique or foreign-key constraint, `ordinal_position` counted from 1. A `CHECK`
+/// constraint has no key columns and no row.
+fn info_key_column_usage_batch(
+    constraints: &[ConstraintRow],
+) -> Result<(SchemaRef, RecordBatch), String> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("constraint_catalog", DataType::Utf8, false),
+        Field::new("constraint_schema", DataType::Utf8, false),
+        Field::new("constraint_name", DataType::Utf8, false),
+        Field::new("table_catalog", DataType::Utf8, false),
+        Field::new("table_schema", DataType::Utf8, false),
+        Field::new("table_name", DataType::Utf8, false),
+        Field::new("column_name", DataType::Utf8, false),
+        Field::new("ordinal_position", DataType::Int32, false),
+    ]));
+    let mut names: Vec<&str> = Vec::new();
+    let mut tables: Vec<&str> = Vec::new();
+    let mut columns: Vec<&str> = Vec::new();
+    let mut positions: Vec<i32> = Vec::new();
+    for constraint in constraints
+        .iter()
+        .filter(|c| c.kind != ConstraintKind::Check)
+    {
+        for (i, column) in constraint.columns.iter().enumerate() {
+            names.push(constraint.name.as_str());
+            tables.push(constraint.table.as_str());
+            columns.push(column.as_str());
+            positions.push(i as i32 + 1);
+        }
+    }
+    let n = names.len();
+    RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(StringArray::from(vec![CATALOG_NAME; n])),
+            Arc::new(StringArray::from(vec!["public"; n])),
+            Arc::new(StringArray::from(names)),
+            Arc::new(StringArray::from(vec![CATALOG_NAME; n])),
+            Arc::new(StringArray::from(vec!["public"; n])),
+            Arc::new(StringArray::from(tables)),
+            Arc::new(StringArray::from(columns)),
+            Arc::new(Int32Array::from(positions)),
+        ],
+    )
+    .map(|b| (schema, b))
+    .map_err(|e| format!("information_schema.key_column_usage batch: {e}"))
+}
+
+/// The `pg_catalog` relations that are SHAPED but always empty: the engine has no
+/// roles, extensions-as-catalog-rows, collations, descriptions, dependencies, enums,
+/// range types, access methods, tablespaces or backend activity to list, but a tool
+/// that introspects them must get a result set, not `42P01`. Any other absent catalog
+/// relation keeps the normal `42P01` error.
+fn shaped_empty_pg_catalog() -> Vec<(&'static str, Vec<(&'static str, DataType)>)> {
+    vec![
+        (
+            "pg_roles",
+            vec![
+                ("oid", DataType::Int32),
+                ("rolname", DataType::Utf8),
+                ("rolsuper", DataType::Boolean),
+                ("rolinherit", DataType::Boolean),
+                ("rolcreaterole", DataType::Boolean),
+                ("rolcreatedb", DataType::Boolean),
+                ("rolcanlogin", DataType::Boolean),
+                ("rolreplication", DataType::Boolean),
+                ("rolconnlimit", DataType::Int32),
+                ("rolbypassrls", DataType::Boolean),
+            ],
+        ),
+        (
+            "pg_extension",
+            vec![
+                ("oid", DataType::Int32),
+                ("extname", DataType::Utf8),
+                ("extowner", DataType::Int32),
+                ("extnamespace", DataType::Int32),
+                ("extrelocatable", DataType::Boolean),
+                ("extversion", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_collation",
+            vec![
+                ("oid", DataType::Int32),
+                ("collname", DataType::Utf8),
+                ("collnamespace", DataType::Int32),
+                ("collowner", DataType::Int32),
+                ("collprovider", DataType::Utf8),
+                ("collencoding", DataType::Int32),
+                ("collcollate", DataType::Utf8),
+                ("collctype", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_description",
+            vec![
+                ("objoid", DataType::Int32),
+                ("classoid", DataType::Int32),
+                ("objsubid", DataType::Int32),
+                ("description", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_depend",
+            vec![
+                ("classid", DataType::Int32),
+                ("objid", DataType::Int32),
+                ("objsubid", DataType::Int32),
+                ("refclassid", DataType::Int32),
+                ("refobjid", DataType::Int32),
+                ("refobjsubid", DataType::Int32),
+                ("deptype", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_enum",
+            vec![
+                ("oid", DataType::Int32),
+                ("enumtypid", DataType::Int32),
+                ("enumsortorder", DataType::Float64),
+                ("enumlabel", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_range",
+            vec![
+                ("rngtypid", DataType::Int32),
+                ("rngsubtype", DataType::Int32),
+                ("rngmultitypid", DataType::Int32),
+                ("rngcollation", DataType::Int32),
+                ("rngsubopc", DataType::Int32),
+            ],
+        ),
+        (
+            "pg_am",
+            vec![
+                ("oid", DataType::Int32),
+                ("amname", DataType::Utf8),
+                ("amhandler", DataType::Utf8),
+                ("amtype", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_tablespace",
+            vec![
+                ("oid", DataType::Int32),
+                ("spcname", DataType::Utf8),
+                ("spcowner", DataType::Int32),
+                ("spcacl", DataType::Utf8),
+                ("spcoptions", DataType::Utf8),
+            ],
+        ),
+        (
+            "pg_stat_activity",
+            vec![
+                ("datid", DataType::Int32),
+                ("datname", DataType::Utf8),
+                ("pid", DataType::Int32),
+                ("usename", DataType::Utf8),
+                ("application_name", DataType::Utf8),
+                ("client_addr", DataType::Utf8),
+                ("backend_start", DataType::Utf8),
+                ("state", DataType::Utf8),
+                ("query", DataType::Utf8),
+            ],
+        ),
+    ]
+}
 
 /// A catalog relation that is SHAPED but always empty: the column list is the whole
 /// payload, and the zero-row batch is the same construction for every one of them.
@@ -1188,8 +1551,12 @@ pub(crate) async fn register_system_catalogs(
     functions: &[StoredFunction],
     property_graphs: &[PropertyGraphCatalogRecord],
     statement_graph: Option<&str>,
+    tables: &[TableSchema],
+    secondary_indexes: &[SecondaryIndexSpec],
 ) -> Result<(), String> {
     let rels = collect_relations(ctx, nodes_schema, edges_schema, user_relations, views).await;
+
+    let constraints = constraint_rows(tables);
 
     let catalog = ctx
         .catalog("datafusion")
@@ -1204,8 +1571,16 @@ pub(crate) async fn register_system_catalogs(
     register_syscat_table(
         &pg_schema,
         "pg_index",
-        empty_catalog_batch("pg_index", &PG_INDEX_COLUMNS)?,
+        pg_index_batch(&rels, secondary_indexes)?,
     )?;
+    register_syscat_table(
+        &pg_schema,
+        "pg_constraint",
+        pg_constraint_batch(&rels, &constraints)?,
+    )?;
+    for (name, columns) in shaped_empty_pg_catalog() {
+        register_syscat_table(&pg_schema, name, empty_catalog_batch(name, &columns)?)?;
+    }
     register_syscat_table(&pg_schema, "pg_proc", pg_proc_batch(functions)?)?;
     register_syscat_table(&pg_schema, "pg_database", pg_database_batch()?)?;
     register_syscat_table(&pg_schema, "pg_settings", pg_settings_batch()?)?;
@@ -1233,18 +1608,12 @@ pub(crate) async fn register_system_catalogs(
     register_syscat_table(
         &info_schema,
         "key_column_usage",
-        empty_catalog_batch(
-            "information_schema.key_column_usage",
-            &INFO_KEY_COLUMN_USAGE_COLUMNS,
-        )?,
+        info_key_column_usage_batch(&constraints)?,
     )?;
     register_syscat_table(
         &info_schema,
         "table_constraints",
-        empty_catalog_batch(
-            "information_schema.table_constraints",
-            &INFO_TABLE_CONSTRAINTS_COLUMNS,
-        )?,
+        info_table_constraints_batch(&constraints)?,
     )?;
     catalog
         .register_schema("information_schema", info_schema)
