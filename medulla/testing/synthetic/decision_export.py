@@ -42,7 +42,7 @@ from typing import Any
 
 from ... import decision_stat as ds
 from . import vocabulary as vocab
-from .assembly import Candidate, GoldSet, PlanItem, Solved
+from .assembly import Candidate, GoldSet, Lifecycle, PlanItem, Solved
 from .assembly_generate import generate_gold_set
 from .outcomes import OutcomeRecord, OutcomeStream
 
@@ -139,7 +139,7 @@ def _coverage(classification: Sequence[str], required: Sequence[str]) -> int:
 def _published_options(item: PlanItem) -> list[Candidate]:
     """The item's published candidates, in component-id byte order."""
     return sorted(
-        (c for c in item.candidates if c.lifecycle == "published"),
+        (c for c in item.candidates if c.lifecycle is Lifecycle.PUBLISHED),
         key=lambda c: c.component_id.encode(),
     )
 

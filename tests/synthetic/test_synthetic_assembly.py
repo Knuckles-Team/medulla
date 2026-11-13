@@ -12,6 +12,7 @@ from medulla.testing.synthetic.assembly import (
     Abstained,
     Constraints,
     GoldSet,
+    Lifecycle,
     PlanItem,
     Solved,
 )
@@ -119,7 +120,7 @@ def test_retiring_a_gold_member_changes_the_answer(gold_set: GoldSet) -> None:
         candidates = tuple(
             c.model_dump()
             | (
-                {"lifecycle": "retired"}
+                {"lifecycle": Lifecycle.RETIRED}
                 if c.component_id in gold and c.kind == "tool"
                 else {}
             )

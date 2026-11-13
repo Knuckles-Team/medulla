@@ -193,7 +193,9 @@ def _super_cover(builder: _Builder, gold: _Gold, constraints: Constraints) -> No
             cost_micros=constraints.cost_budget_micros + 1,
         )
         return
-    lifecycle: Lifecycle = builder.stream.choice(("retired", "withdrawn"))
+    lifecycle: Lifecycle = builder.stream.choice(
+        (Lifecycle.RETIRED, Lifecycle.WITHDRAWN)
+    )
     builder.add("super_cover", classification=cover, cost_micros=1, lifecycle=lifecycle)
 
 
@@ -288,7 +290,7 @@ def uncovered_item(stream: SeededStream, item_id: str) -> PlanItem:
             builder.add("gold", classification=(capability,), cost_micros=1_000)
             continue
         name = capability.rsplit("/", 1)[-1]
-        inactive: Lifecycle = stream.choice(("retired", "withdrawn"))
+        inactive: Lifecycle = stream.choice((Lifecycle.RETIRED, Lifecycle.WITHDRAWN))
         builder.add("inactive", classification=(capability,), lifecycle=inactive)
         builder.add("broader_only", classification=(vocab.ancestors(capability)[0],))
         builder.add("foreign_claim", declared_capabilities=(FOREIGN_NAMESPACE + name,))

@@ -15,6 +15,7 @@ below every declared cost (it is never treated as zero).
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -26,7 +27,20 @@ GENERATOR = "assembly"
 GENERATOR_VERSION = 1
 MAX_CANDIDATES = 24
 
-Lifecycle = Literal["published", "retired", "withdrawn"]
+
+class Lifecycle(StrEnum):
+    """The closed Agent Library lifecycle set (MEDULLA-TYPED-PACKS-R810.3).
+
+    The members are the contract enum's: the Rust machine `AgentLibraryMachine` owns
+    every transition and Python owns none; a test compares these members with the
+    enum generated from the Rust variant list at wheel build.
+    """
+
+    PUBLISHED = "published"
+    RETIRED = "retired"
+    WITHDRAWN = "withdrawn"
+
+
 ItemKind = Literal[
     "deterministic",
     "acceptability",
@@ -59,7 +73,7 @@ class Candidate(ComponentFields):
     cost_micros: int | None = Field(default=None, ge=0)
     p95_ms: int = Field(ge=0)
     supports_tools: bool | None = None
-    lifecycle: Lifecycle = "published"
+    lifecycle: Lifecycle = Lifecycle.PUBLISHED
     role: Distractor
 
     @field_validator("classification", "required_capabilities", "requires")

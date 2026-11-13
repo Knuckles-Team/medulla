@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from itertools import combinations
 
 from . import vocabulary as vocab
-from .assembly import Candidate, Constraints, PlanItem
+from .assembly import Candidate, Constraints, Lifecycle, PlanItem
 
 ObjectiveKey = tuple[int, int, int, int]
 
@@ -67,7 +67,7 @@ def objective(members: Sequence[Candidate]) -> ObjectiveKey:
 
 
 def universe(item: PlanItem) -> tuple[Candidate, ...]:
-    return tuple(c for c in item.candidates if c.lifecycle == "published")
+    return tuple(c for c in item.candidates if c.lifecycle is Lifecycle.PUBLISHED)
 
 
 def _ranked_feasible_subsets(
