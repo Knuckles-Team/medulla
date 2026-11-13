@@ -36,13 +36,14 @@ impl DecisionFamily for TeamCoordinationFamily {
         &self,
         ctx: &ExecutionContext,
         request: &DecideRequest,
-        _policy: &DecisionPolicy,
+        policy: &DecisionPolicy,
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(stat_team::conclude(
             request,
             ctx.tenant_id,
             ctx.now_ms,
+            policy,
             graph_view,
         ))
     }

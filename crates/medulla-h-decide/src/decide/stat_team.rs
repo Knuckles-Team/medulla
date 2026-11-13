@@ -9,12 +9,14 @@
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::codes::{TEAM_NO_BOUND_MEMBER, TEAM_SIGNAL_STALE};
+use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::team_coordination::ChannelSignal;
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::{
     AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
 };
@@ -174,6 +176,15 @@ fn abstained(code: medulla_types::refusal_code::RefusalCode, detail: String) -> 
     })
 }
 
+/// The freshness limit the pinned policy sets, in seconds (the
+/// `team.signal_max_age` decision-policy knob, DECISIONS DE-R059.1-KNOBS).
+fn signal_max_age_s(policy: &DecisionPolicy) -> u64 {
+    match policy.knob(&medulla_decision_types::decision::team_coordination::KNOBS[0]) {
+        KnobValue::Integer(seconds) => u64::try_from(seconds).unwrap_or(0),
+        _ => 0,
+    }
+}
+
 /// Answer one team coordination question at `now_ms` over the caller's
 /// filtered graph view. Exactly one legal option concludes; an unreadable
 /// request is refused, a well-formed one with no legal option abstains.
@@ -181,6 +192,7 @@ pub(super) fn conclude(
     request: &DecideRequest,
     tenant: &str,
     now_ms: u64,
+    policy: &DecisionPolicy,
     graph_view: Option<&GraphView>,
 ) -> Result<Executed, String> {
     let view = graph_view.ok_or_else(|| {
@@ -188,9 +200,7 @@ pub(super) fn conclude(
     })?;
     let signal = signal_param(request)?;
     let team = text_param(request, PARAM_TEAM)?;
-    let max_age_ms = medulla_server_api::knob_config::knobs()
-        .team_signal_max_age
-        .saturating_mul(1000);
+    let max_age_ms = signal_max_age_s(policy).saturating_mul(1000);
     let age_ms = now_ms.saturating_sub(signal.observed_at_ms);
     let fresh = age_ms <= max_age_ms;
     let members = bound_members(view, team, tenant).unwrap_or_default();
@@ -255,10 +265,6 @@ pub(super) fn premises(
         observed(format!(
             "team.signal_observed_at_ms={}",
             signal.observed_at_ms
-        )),
-        observed(format!(
-            "team.signal_max_age_s={}",
-            medulla_server_api::knob_config::knobs().team_signal_max_age
         )),
     ];
     out.extend(

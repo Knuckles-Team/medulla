@@ -302,8 +302,6 @@ knobs! {
     concentration_min_shipped: u64 = "concentration.min_shipped", U64(3), [2, 20], "edits", Tunable;
     /// Edit concentration: rounds in the window the shipped edits are counted over; the default when a policy names none.
     concentration_window_rounds: u64 = "concentration.window_rounds", U64(5), [2, 50], "rounds", Tunable;
-    /// Team coordination: the oldest a channel signal may be and still count as fresh (MEDULLA-DECISION-ENGINE-R170.2).
-    team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3600], "seconds", Tunable;
     /// Designation reward decay.
     designation_reward_decay: f64 = "designation.reward_decay", F64(0.99), [0.5, 1.0], "factor", Tunable;
     /// Designation required-capability cap.

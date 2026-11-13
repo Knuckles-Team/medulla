@@ -7,11 +7,24 @@
 //! ontology half is `:TeamTaskMachine` in `crates/medulla-core/ontology/a2a-v1.ttl`.
 //! Nothing here reads a clock or a store.
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::OpaqueId;
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, StateMachineApply, TransitionRefused,
 };
 use serde::{Deserialize, Serialize};
+
+/// The `team.*` decision-policy knobs (MEDULLA-DECISION-ENGINE-R170.2): the
+/// oldest a channel signal may be and still count as fresh, in seconds. The
+/// fallback choice reads it from the pinned policy.
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "team.signal_max_age",
+    unit: "seconds",
+    default: KnobValue::Integer(30),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(3600),
+    safety: KnobSafety::Tunable,
+}];
 
 /// What a caller observed about one channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

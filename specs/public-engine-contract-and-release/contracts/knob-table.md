@@ -40,7 +40,6 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `memory_sync.cursor_ttl_s` | u64 | 900 | [60, 86400] | seconds | Tunable | `MEDULLA_MEMORY_SYNC_CURSOR_TTL_S` |
 | `memory.search_state_max_bytes` | u64 | 1048576 | [65536, 1048576] | bytes | Tunable | `MEDULLA_MEMORY_SEARCH_STATE_MAX_BYTES` |
 | `toc.line_index_stride` | u64 | 64 | [16, 1024] | lines | Tunable | `MEDULLA_TOC_LINE_INDEX_STRIDE` |
-| `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | `MEDULLA_TEAM_SIGNAL_MAX_AGE` |
 | `held_item.min_passes` | u64 | 2 | [1, 20] | passes | Tunable | `MEDULLA_HELD_ITEM_MIN_PASSES` |
 | `measured_fact.min_cases` | u64 | 30 | [1, 100000] | cases | Tunable | `MEDULLA_MEASURED_FACT_MIN_CASES` |
 | `red_team.max_probes` | u64 | 50 | [1, 500] | probes | Tunable | `MEDULLA_RED_TEAM_MAX_PROBES` |

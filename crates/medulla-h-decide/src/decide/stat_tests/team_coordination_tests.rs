@@ -5,6 +5,7 @@
 
 use std::time::Instant;
 
+use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalDecisionRecord,
@@ -12,7 +13,7 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::team_coordination::ChannelSignal;
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicyRef, PremiseClass, ResolutionKind,
+    AbstainReason, DecisionPolicy, DecisionPolicyRef, PremiseClass, ResolutionKind,
 };
 use medulla_types::contract::{BoundedVec, OpaqueId};
 
@@ -164,6 +165,32 @@ async fn unavailable_channel_selects_team() {
     let edge = decide_team(&h, &request(&pin, true, 30), &bound).unwrap();
     assert_eq!(chosen(&edge), "primary_channel");
 
+    // The freshness limit is a decision-policy knob: a pinned policy that
+    // raises it to 60 s makes the 31 s signal fresh, and one that lowers it to
+    // 10 s makes a 20 s signal stale; the sealed premise names the pinned value.
+    let pinned = |name: &str, seconds: i64| {
+        let mut policy = DecisionPolicy::engine_default();
+        policy.knobs.insert(
+            KnobName::new("team.signal_max_age"),
+            KnobValue::Integer(seconds),
+        );
+        DecisionPolicyRef::Pinned {
+            component: h.publish_policy(name, &policy),
+        }
+    };
+    let mut relaxed = request(&pin, true, 31);
+    relaxed.policy = pinned("team-relaxed", 60);
+    let relaxed = decide_team(&h, &relaxed, &bound).unwrap();
+    assert_eq!(chosen(&relaxed), "primary_channel");
+    assert!(relaxed
+        .premises
+        .iter()
+        .any(|p| p.fact == "knob:team.signal_max_age=60"));
+    let mut strict = request(&pin, true, 20);
+    strict.policy = pinned("team-strict", 10);
+    let strict = decide_team(&h, &strict, &bound).unwrap();
+    assert_eq!(abstention_code(&strict), "TEAM_SIGNAL_STALE");
+
     // The team needs one explicitly bound, visible member: a member naming
     // another team, a member of another tenant, and no member all abstain.
     for members in [
@@ -183,7 +210,7 @@ async fn unavailable_channel_selects_team() {
     // The record seals the observation premises.
     let facts: Vec<&str> = down.premises.iter().map(|p| p.fact.as_str()).collect();
     assert!(facts.contains(&"team.channel_available=false"));
-    assert!(facts.contains(&"team.signal_max_age_s=30"));
+    assert!(facts.contains(&"knob:team.signal_max_age=30"));
     assert!(facts.contains(&"team.bound_member:member:a"));
     assert!(down
         .premises

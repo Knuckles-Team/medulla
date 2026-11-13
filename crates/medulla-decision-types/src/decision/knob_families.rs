@@ -70,4 +70,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::memory_benchmark::KNOBS,
     super::load_set_knobs::KNOBS,
     super::checker_feedback::KNOBS,
+    super::team_coordination::KNOBS,
 ];
