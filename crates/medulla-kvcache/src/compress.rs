@@ -48,6 +48,33 @@ pub enum Codec {
     Lz4,
 }
 
+impl Codec {
+    /// The one-byte tag a cold row carries for this codec (MEDULLA-DURABLE-KERNEL-R083.5).
+    pub const fn tag(self) -> u8 {
+        match self {
+            Self::Raw => 0,
+            Self::Rle => 1,
+            #[cfg(feature = "compression")]
+            Self::Zstd => 2,
+            #[cfg(feature = "lz4")]
+            Self::Lz4 => 3,
+        }
+    }
+
+    /// The codec a cold-row tag names; `None` for an unknown tag or a codec this build lacks.
+    pub const fn from_tag(tag: u8) -> Option<Self> {
+        match tag {
+            0 => Some(Self::Raw),
+            1 => Some(Self::Rle),
+            #[cfg(feature = "compression")]
+            2 => Some(Self::Zstd),
+            #[cfg(feature = "lz4")]
+            3 => Some(Self::Lz4),
+            _ => None,
+        }
+    }
+}
+
 /// A block resident in the WARM (or COLD) tier: possibly-compressed bytes plus the
 /// metadata needed to reconstruct the original block (CONCEPT:MEDULLA-KG.memory.byte-bounded-tiers, CONCEPT:MEDULLA-KG.storage.rle-codec-default).
 #[derive(Clone, Debug, PartialEq, Eq)]

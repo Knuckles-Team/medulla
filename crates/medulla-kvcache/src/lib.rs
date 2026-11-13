@@ -47,6 +47,7 @@
 //! HTTP endpoint exposes both — none of which this leaf crate depends on.
 
 pub mod cold;
+pub mod cold_frame;
 pub mod compress;
 pub mod hash;
 pub mod policy;
@@ -59,6 +60,7 @@ pub mod version;
 // ModalityContract retrofit (CONCEPT:E4) behind the opt-in `contract` feature.
 pub mod contract;
 
+pub use cold_frame::{decode_cold_frame, encode_cold_frame, ColdFrame};
 pub use compress::{Codec, StoredBlock};
 pub use contract::KvTierError;
 pub use hash::content_hash;

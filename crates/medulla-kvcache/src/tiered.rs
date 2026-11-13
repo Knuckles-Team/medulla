@@ -45,6 +45,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 use crate::cold::{ColdStore, MemoryColdStore};
+use crate::cold_frame::{decode_cold_frame, encode_cold_frame, ColdFrame};
 use crate::compress::{Codec, StoredBlock};
 use crate::contract::KvTierError;
 use crate::hash::content_hash;
@@ -66,12 +67,10 @@ struct WarmEntry {
     last: u64,
 }
 
-/// COLD-tier per-key metadata (the bytes live in the [`ColdStore`]).
+/// COLD-tier per-key metadata. The bytes live in the [`ColdStore`] as a self-describing
+/// [`ColdFrame`] (codec, original length, version and digest travel with the row), so
+/// only the accounting size and the scores stay here.
 struct ColdMeta {
-    /// The codec the spilled bytes were produced with (CONCEPT:MEDULLA-KG.storage.rle-codec-default) — the tag a
-    /// promote reconstructs the block by.
-    codec: Codec,
-    orig_len: usize,
     stored_len: usize,
     score: f64,
     last: u64,
@@ -466,12 +465,7 @@ where
             self.cold_bytes -= m.stored_len;
             let blob = self.cold_store.get(key).ok().flatten();
             let _ = self.cold_store.remove(key);
-            if let Some(raw) = blob {
-                let sb = StoredBlock {
-                    data: raw,
-                    codec: m.codec,
-                    orig_len: m.orig_len,
-                };
+            if let Some(sb) = blob.as_deref().and_then(decode_cold_block) {
                 let bytes = sb.decode();
                 self.verify_digest(key, &bytes)?;
                 let value = V::from_bytes(&bytes);
@@ -508,6 +502,49 @@ where
         self.versions.remove(key);
         self.importance.remove(key);
         self.digests.remove(key);
+    }
+
+    /// Adopt the row the cold device holds under `key` as a COLD resident
+    /// (MEDULLA-DURABLE-KERNEL-R083.5). A cold row outlives the process that wrote it; the
+    /// next process has no in-memory metadata for it, and this rebuilds that metadata from
+    /// the row's own frame (codec, length, version, digest) without reading the block into
+    /// RAM. Returns `true` when `key` is a COLD resident afterwards. A key already resident
+    /// in any tier, an absent row, a malformed row, or a row derived at a version the cache
+    /// has moved past (the stale row is removed) adopts nothing.
+    pub fn adopt_cold(&mut self, key: &K) -> bool {
+        if self.hot.contains_key(key) || self.warm.contains_key(key) {
+            return false;
+        }
+        if self.cold_meta.contains_key(key) {
+            return true;
+        }
+        let Some(raw) = self.cold_store.get(key).ok().flatten() else {
+            return false;
+        };
+        let Some(frame) = decode_cold_frame(&raw) else {
+            return false;
+        };
+        if !frame.version.is_fresh(self.current_version) {
+            let _ = self.cold_store.remove(key);
+            return false;
+        }
+        let clk = self.tick();
+        let stored_len = frame.data.len();
+        self.versions.insert(key.clone(), frame.version);
+        if !frame.digest.is_empty() {
+            self.digests.insert(key.clone(), frame.digest);
+        }
+        self.cold_bytes += stored_len;
+        self.cold_meta.insert(
+            key.clone(),
+            ColdMeta {
+                stored_len,
+                score: 0.0,
+                last: clk,
+            },
+        );
+        self.enforce_cold();
+        self.cold_meta.contains_key(key)
     }
 
     /// Look up `key` and, on a hit, promote its currently-COLD graph neighbours
@@ -569,13 +606,9 @@ where
                 self.insert_hot(key.clone(), value, w.score, clk);
             } else if let Some(m) = self.cold_meta.remove(key) {
                 self.cold_bytes -= m.stored_len;
-                if let Some(raw) = self.cold_store.get(key).ok().flatten() {
+                let blob = self.cold_store.get(key).ok().flatten();
+                if let Some(sb) = blob.as_deref().and_then(decode_cold_block) {
                     let _ = self.cold_store.remove(key);
-                    let sb = StoredBlock {
-                        data: raw,
-                        codec: m.codec,
-                        orig_len: m.orig_len,
-                    };
                     let value = V::from_bytes(&sb.decode());
                     self.insert_hot(key.clone(), value, m.score, clk);
                 }
@@ -741,7 +774,21 @@ where
         while self.warm_bytes > self.warm_cap {
             let Some(k) = self.lowest_warm() else { break };
             // Demote WARM → COLD: spill the compressed bytes to the cold device.
-            if self.cold_store.put(&k, &self.warm[&k].block.data).is_err() {
+            let frame = {
+                let block = &self.warm[&k].block;
+                encode_cold_frame(&ColdFrame {
+                    codec: block.codec,
+                    orig_len: block.orig_len,
+                    version: self
+                        .versions
+                        .get(&k)
+                        .copied()
+                        .unwrap_or(DataVersion::Agnostic),
+                    digest: self.digests.get(&k).cloned().unwrap_or_default(),
+                    data: block.data.clone(),
+                })
+            };
+            if self.cold_store.put(&k, &frame).is_err() {
                 // MEDULLA-DURABLE-KERNEL-R083.8: a failed durable write keeps the block
                 // in WARM (a demotion never drops bytes) and refuses the put that caused
                 // the pressure. Stop rebalancing: the device is refusing writes.
@@ -755,8 +802,6 @@ where
             self.cold_meta.insert(
                 k,
                 ColdMeta {
-                    codec: w.block.codec,
-                    orig_len: w.block.orig_len,
                     stored_len,
                     score: w.score,
                     last: w.last,
@@ -779,6 +824,15 @@ where
             self.drops += 1;
         }
     }
+}
+
+/// The stored block a cold row carries; `None` when the row is not a well-formed frame.
+fn decode_cold_block(raw: &[u8]) -> Option<StoredBlock> {
+    decode_cold_frame(raw).map(|frame| StoredBlock {
+        data: frame.data,
+        codec: frame.codec,
+        orig_len: frame.orig_len,
+    })
 }
 
 #[cfg(test)]
@@ -1255,5 +1309,72 @@ mod tests {
         c.set_data_version(DataVersion::At(1));
         assert_eq!(c.get(&1), None, "stale cold block invalidated");
         assert!(c.stats().invalidations >= 1);
+    }
+
+    /// A cold device two caches share, as two processes share one durable namespace.
+    #[derive(Clone, Default)]
+    struct SharedCold(std::sync::Arc<std::sync::Mutex<std::collections::HashMap<u64, Vec<u8>>>>);
+
+    impl ColdStore<u64> for SharedCold {
+        fn put(&mut self, key: &u64, bytes: &[u8]) -> std::io::Result<()> {
+            self.0.lock().unwrap().insert(*key, bytes.to_vec());
+            Ok(())
+        }
+        fn get(&self, key: &u64) -> std::io::Result<Option<Vec<u8>>> {
+            Ok(self.0.lock().unwrap().get(key).cloned())
+        }
+        fn remove(&mut self, key: &u64) -> std::io::Result<()> {
+            self.0.lock().unwrap().remove(key);
+            Ok(())
+        }
+        fn kind(&self) -> &'static str {
+            "shared-test"
+        }
+    }
+
+    /// MEDULLA-DURABLE-KERNEL-R083.5: a cache that never saw a block adopts the cold row a
+    /// previous cache left and serves it byte-exact (codec, length and digest come from the row).
+    #[test]
+    fn dk_r083_5_adopt_cold_serves_a_row_another_cache_wrote() {
+        let device = SharedCold::default();
+        let mut first: TieredCache<u64, Block> =
+            TieredCache::with_cold_store(50, 30, 1_000_000, Box::new(device.clone()));
+        let pages: Vec<Block> = (0..10u64).map(|k| compressible_page(40, k as u8)).collect();
+        for (k, p) in pages.iter().enumerate() {
+            first.put(k as u64, p.clone());
+        }
+        let spilled: Vec<u64> = (0..10u64)
+            .filter(|k| first.tier_of(k) == Some(Tier::Cold))
+            .collect();
+        assert!(!spilled.is_empty(), "pressure spilled blocks to the device");
+        let mut second: TieredCache<u64, Block> =
+            TieredCache::with_cold_store(50, 30, 1_000_000, Box::new(device));
+        for k in spilled {
+            assert_eq!(second.tier_of(&k), None, "the new cache knows nothing yet");
+            assert!(second.adopt_cold(&k));
+            assert_eq!(second.tier_of(&k), Some(Tier::Cold));
+            assert_eq!(second.get(&k), Some(pages[k as usize].clone()));
+        }
+        assert!(!second.adopt_cold(&999), "an absent row adopts nothing");
+    }
+
+    /// MEDULLA-DURABLE-KERNEL-R083.5: a row derived at a version the cache moved past is not
+    /// adopted and is removed from the device.
+    #[test]
+    fn dk_r083_5_adopt_cold_refuses_and_removes_a_stale_row() {
+        let device = SharedCold::default();
+        let mut first: TieredCache<u64, Block> =
+            TieredCache::with_cold_store(50, 30, 1_000_000, Box::new(device.clone()));
+        first.set_data_version(DataVersion::At(0));
+        first.put_versioned(1, page(40, 1), DataVersion::At(0));
+        for k in 10..30u64 {
+            first.put(k, page(40, k as u8));
+        }
+        assert_eq!(first.tier_of(&1), Some(Tier::Cold));
+        let mut second: TieredCache<u64, Block> =
+            TieredCache::with_cold_store(50, 30, 1_000_000, Box::new(device.clone()));
+        second.set_data_version(DataVersion::At(1));
+        assert!(!second.adopt_cold(&1));
+        assert_eq!(device.get(&1).unwrap(), None, "the stale row is gone");
     }
 }
