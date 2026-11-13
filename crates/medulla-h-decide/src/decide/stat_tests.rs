@@ -1115,6 +1115,9 @@ mod consumer_tests;
 
 mod harness_contrast_tests;
 
+// MEDULLA-DECISION-ENGINE-R803.8: adoption, contrast and lesson stored in one write, served.
+mod harness_adoption_tests;
+
 mod knob_tests;
 
 #[cfg(feature = "redb")]

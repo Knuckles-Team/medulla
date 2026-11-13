@@ -467,6 +467,57 @@ pub enum DecisionLogOp {
         tenant_id: String,
         change_set_id: String,
     },
+    /// Store one harness adoption with its contrast and lesson
+    /// (MEDULLA-DECISION-ENGINE-R803.8): the one write authority for
+    /// `AdoptedHarness`, `HarnessContrast` and `HarnessLesson`.
+    HarnessAdoption {
+        tenant_id: String,
+        write: HarnessAdoptionWrite,
+    },
+}
+
+/// What a `HarnessAdoption` op carries: the identity of the adoption, the
+/// committed contrast decision it names, and the lesson fields. The contrast
+/// deltas are never sent; the handler reads them from the committed decision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HarnessAdoptionWrite {
+    pub task_ref: String,
+    pub task_class: String,
+    /// The agent the harness belongs to.
+    pub agent_ref: String,
+    /// The record digest of the committed `HarnessContrast` decision.
+    pub decision_record_digest: String,
+    /// The digest of the identical probe conditions of the contrast.
+    pub conditions_digest: String,
+    /// The candidate version the decision adopted.
+    pub adopted_version_ref: String,
+    pub deficiency: String,
+    pub situation: String,
+    pub changed_component_kind: medulla_work_types::orchestration::HarnessComponentKind,
+    pub what_changed: String,
+    #[serde(default)]
+    pub applicability: BoundedVec<String, 64>,
+    /// The lesson's confidence in parts per million (0 to 1000000).
+    pub confidence_ppm: u32,
+    /// The evidence runs of the lesson, by trace id.
+    #[serde(default)]
+    pub evidence_run_ids: BoundedVec<String, 32>,
+}
+
+/// The stored refs of one `HarnessAdoption` write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HarnessAdoptionStored {
+    pub adopted_harness_ref: String,
+    pub contrast_ref: String,
+    pub lesson_ref: String,
+    /// The adoption this one superseded, when the agent and task class held one.
+    pub supersedes_ref: Option<String>,
+    /// Whether this answer is a repeat of an earlier identical write.
+    pub replayed: bool,
 }
 
 /// The result of a `PromoteRule` op.
@@ -532,7 +583,7 @@ impl DecisionLogOp {
             }
             Self::Learn { write, .. } => write.class(),
             Self::PromoteRule { .. } => LogOpClass::Govern,
-            Self::RunRecord { .. } => LogOpClass::Write,
+            Self::RunRecord { .. } | Self::HarnessAdoption { .. } => LogOpClass::Write,
         }
     }
 
@@ -561,7 +612,8 @@ impl DecisionLogOp {
             | Self::RunRecord { tenant_id, .. }
             | Self::CapabilityOutcome { tenant_id, .. }
             | Self::GenerationSpace { tenant_id, .. }
-            | Self::WritebackAudit { tenant_id, .. } => tenant_id,
+            | Self::WritebackAudit { tenant_id, .. }
+            | Self::HarnessAdoption { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

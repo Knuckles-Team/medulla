@@ -826,6 +826,9 @@ fn dispatch(
             &tenant_id,
             &change_set_id,
         )?),
+        DecisionLogOp::HarnessAdoption { write, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogHarnessAdoption,
+        >(super::stat_harness_adoption::adopt(ctx, reader, &write)?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,

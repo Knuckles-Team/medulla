@@ -1029,3 +1029,7 @@ Candidate demonstrations come from the train split only (`eligible_examples`). S
 ## R811.2 held-out isolation: where the overlap check reads
 
 `PolicyEvaluation.held_out_trajectory_ids` is `BoundedVec<OpaqueId, 4096>`, serialized only when non-empty so existing evaluation record ids are unchanged. `admit_evaluation` resolves the evaluated version (never the baseline), follows a `VersionOrigin::Trained` run to its `input_capture_ids` and compares each capture's `trajectory_id` with the held-out list; the first match refuses with `POLICY_EVALUATION_OVERLAPS_TRAINING` naming the trajectory. A base version has no run, so nothing can overlap. Wire note: WIRE-REGEN needed (models.py edited by hand; wire vectors refresh at the gate).
+
+## R803.8 harness adoption: where the three records live
+
+The adopted harness, contrast and lesson are decision artifacts of the tenant (rows `harness-adopted:`, `harness-contrast:`, `harness-lesson:`, edges `harness-supersession:adoption:` / `:lesson:`), written by `put_decision_artifacts` as one atomic owner write together with the idempotency row `harness-adoption-write:<task_ref>:<digest>`. Admission is `register_adoption` / `register_lesson` of the improvement library, so supersession and immutability are the vocabulary's own rules. The contrast deltas come from the committed `HarnessContrast` decision the digest names (visible to the caller only); the request carries no delta. The lesson confidence is parts per million so the op stays `Eq`. Wire note: WIRE-REGEN needed for the new op and result.

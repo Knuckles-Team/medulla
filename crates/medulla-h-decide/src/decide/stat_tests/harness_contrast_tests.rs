@@ -21,15 +21,15 @@ use medulla_types::contract::BoundedVec;
 use super::super::stat_executor::ExecutionContext;
 use super::*;
 
-const CONDITIONS: &str = "sha256:conditions";
-const BASELINE: &str = "trace:baseline";
-const GRAPH: &str = "contrast-knobs";
+pub(super) const CONDITIONS: &str = "sha256:conditions";
+pub(super) const BASELINE: &str = "trace:baseline";
+pub(super) const GRAPH: &str = "contrast-knobs";
 
 fn q32(fraction: f64) -> i64 {
     (fraction * (1u64 << 32) as f64) as i64
 }
 
-fn contrast_schema() -> FeatureSchemaBody {
+pub(super) fn contrast_schema() -> FeatureSchemaBody {
     FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(
@@ -47,7 +47,7 @@ fn contrast_schema() -> FeatureSchemaBody {
     }
 }
 
-fn option(version: &str, trace: &str, eval: f64, cost: i64) -> DeclaredOption {
+pub(super) fn option(version: &str, trace: &str, eval: f64, cost: i64) -> DeclaredOption {
     let number = |key: &str, q32: i64| DeclaredNumber {
         key: key.to_string(),
         q32,
@@ -70,7 +70,10 @@ fn option(version: &str, trace: &str, eval: f64, cost: i64) -> DeclaredOption {
     }
 }
 
-fn graph_view(versions: &[&str], traces: &[&str]) -> medulla_graph_core::graph::GraphView {
+pub(super) fn graph_view(
+    versions: &[&str],
+    traces: &[&str],
+) -> medulla_graph_core::graph::GraphView {
     let core = medulla_graph_core::graph::GraphCore::new();
     let put = |id: &str, props: serde_json::Value| {
         core.add_node(id.to_string(), rmp_serde::to_vec_named(&props).unwrap());
@@ -98,7 +101,7 @@ fn text(name: &str, value: &str) -> TypedParam {
     }
 }
 
-fn contrast_request(
+pub(super) fn contrast_request(
     schema_pin: &ComponentDependency,
     policy: DecisionPolicyRef,
     options: Vec<DeclaredOption>,
@@ -132,7 +135,7 @@ fn contrast_request(
     }
 }
 
-fn decide_contrast(
+pub(super) fn decide_contrast(
     h: &Harness,
     request: &DecideRequest,
     view: &medulla_graph_core::graph::GraphView,
