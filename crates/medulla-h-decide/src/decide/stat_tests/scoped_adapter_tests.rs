@@ -656,6 +656,7 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
         server_secret: b"cycle-test-secret",
         matched: &[],
         designation: None,
+        reader: None,
     };
     let endpoint = EndpointCalls(AtomicUsize::new(0));
     let run = CycleRun {

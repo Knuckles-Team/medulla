@@ -263,6 +263,12 @@ async fn serve(
     tokio::task::spawn_blocking(move || {
         tracing::dispatcher::with_default(&dispatch, || {
             parent.in_scope(|| {
+                let reader = LogReader {
+                    tenant_id: request.tenant_id.clone(),
+                    principal: principal.clone(),
+                    roles: Vec::new(),
+                    retention: super::stat_retention::Retention::none(),
+                };
                 let ctx = ExecutionContext {
                     store: store.as_ref(),
                     tenant_id: &request.tenant_id,
@@ -270,6 +276,7 @@ async fn serve(
                     server_secret: secret.as_bytes(),
                     matched: &[],
                     designation: designation.as_ref(),
+                    reader: Some(&reader),
                 };
                 decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
             })

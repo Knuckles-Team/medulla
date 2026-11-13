@@ -28,7 +28,7 @@ mod edit_concentration;
 mod enrichment_schedule;
 mod evolution_round;
 mod fanout_aggregate;
-mod feedback_loop;
+pub(super) mod feedback_loop;
 mod field_shielding;
 mod generated_code_admission;
 mod graph_intake;

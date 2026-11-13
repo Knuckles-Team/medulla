@@ -254,6 +254,7 @@ pub(in crate::decide) async fn with_similarity(
         server_secret: b"",
         matched: &[],
         designation: None,
+        reader: None,
     };
     let pinned = pinned_inputs(&ctx, &request.feature_schema, None)?;
     let staged = graph_vectors(state, verified.agent_id(), &source).await?;

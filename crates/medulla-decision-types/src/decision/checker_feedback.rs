@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 
@@ -19,6 +20,23 @@ pub const KNOBS: &[KnobSpec] = &[KnobSpec {
     max: KnobValue::Integer(20),
     safety: KnobSafety::Tunable,
 }];
+
+/// A request bound outside `[1, feedback.max_rounds]` (MEDULLA-DECISION-ENGINE-R169.4).
+pub const FEEDBACK_BOUND_INVALID: RefusalCode = RefusalCode::new("FEEDBACK_BOUND_INVALID");
+/// The round carries no checker report digest: the output was never graded
+/// (MEDULLA-DECISION-ENGINE-R169.4).
+pub const FEEDBACK_UNGRADED_OUTPUT: RefusalCode = RefusalCode::new("FEEDBACK_UNGRADED_OUTPUT");
+/// The loop id and round already hold a committed record with different
+/// content (MEDULLA-DECISION-ENGINE-R169.4).
+pub const FEEDBACK_REPLAYED_KEY: RefusalCode = RefusalCode::new("FEEDBACK_REPLAYED_KEY");
+
+/// The `feedback_loop` family refusal table (MEDULLA-DECISION-ENGINE-R169.4),
+/// collected by `codes_are_unique_and_stable`.
+pub const REFUSALS: &[RefusalCode] = &[
+    FEEDBACK_BOUND_INVALID,
+    FEEDBACK_UNGRADED_OUTPUT,
+    FEEDBACK_REPLAYED_KEY,
+];
 
 /// Why a feedback loop stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

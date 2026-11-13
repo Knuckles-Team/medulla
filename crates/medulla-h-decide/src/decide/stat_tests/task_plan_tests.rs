@@ -223,6 +223,7 @@ async fn task_plan_cannot_use_score_replay() {
         server_secret: b"fixture",
         matched: &[],
         designation: None,
+        reader: None,
     };
     assert!(super::super::stat_replay::replay(&ctx, &record)
         .unwrap_err()

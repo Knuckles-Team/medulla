@@ -733,6 +733,7 @@ mod topology_question {
             server_secret: b"decide-stat-test-secret",
             matched: &[],
             designation: None,
+            reader: None,
         };
         crate::decide::stat_decide::decide_blocking(
             &ctx,

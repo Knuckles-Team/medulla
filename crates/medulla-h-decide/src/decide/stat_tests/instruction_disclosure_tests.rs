@@ -123,6 +123,7 @@ fn decide_view(
         server_secret: b"decide-stat-test-secret",
         matched: &[],
         designation: None,
+        reader: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

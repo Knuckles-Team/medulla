@@ -163,6 +163,31 @@ fn pinned_and_policy(
     Ok((pinned, policy))
 }
 
+/// The verify-replay of a `FeedbackLoop` record (MEDULLA-DECISION-ENGINE-R169.3):
+/// the pinned policy still carries the recorded digest, and the continue-or-stop
+/// rule re-run over the sealed round and bound gives the recorded outcome. The
+/// record carries no answer: the round is its own evidence.
+fn replay_feedback_loop(
+    ctx: &ExecutionContext,
+    record: &StatisticalDecisionRecord,
+) -> Result<StatisticalDecisionRecord, String> {
+    if record.answer.is_some() {
+        return Err(mismatch("a feedback round carries no family answer"));
+    }
+    let (_, policy) = pinned_and_policy(ctx, record)?;
+    let outcome = super::family::feedback_loop::round_outcome(
+        record.inputs.params.as_slice(),
+        &policy.policy,
+    )
+    .map_err(|detail| mismatch(&detail))?;
+    if outcome != record.outcome {
+        return Err(mismatch(
+            "re-running the round on its stored inputs gives another answer",
+        ));
+    }
+    Ok(record.clone())
+}
+
 /// Re-derive `record` and return the copy to log, with its seed revealed.
 pub(super) fn replay(
     ctx: &ExecutionContext,
@@ -170,6 +195,9 @@ pub(super) fn replay(
 ) -> Result<StatisticalDecisionRecord, String> {
     if statistical_record_digest(record) != record.record_digest {
         return Err(mismatch("the record digest does not match its content"));
+    }
+    if record.question.kind == QuestionKind::FeedbackLoop {
+        return replay_feedback_loop(ctx, record);
     }
     require_supported_replay(record)?;
     if !loggable(&record.outcome) {

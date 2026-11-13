@@ -54,6 +54,10 @@ pub(super) struct ExecutionContext<'a> {
     /// What a `capability_designation` question read beside the library: the
     /// resident index and the schema closure (MEDULLA-DECISION-ENGINE-R172.7).
     pub(super) designation: Option<&'a super::stat_designation::DesignationRuntime>,
+    /// The caller's reader over the decision log, for a family that reads the
+    /// caller's own earlier records (the same visibility rule as the log).
+    /// `None` where a decision runs without a served caller.
+    pub(super) reader: Option<&'a super::stat_log::LogReader>,
 }
 
 /// The pinned inputs of one decision.

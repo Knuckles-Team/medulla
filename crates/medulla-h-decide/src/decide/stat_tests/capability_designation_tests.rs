@@ -298,6 +298,7 @@ fn decide_with_runtime(
         server_secret: b"decide-stat-test-secret",
         matched: &[],
         designation: Some(&runtime),
+        reader: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

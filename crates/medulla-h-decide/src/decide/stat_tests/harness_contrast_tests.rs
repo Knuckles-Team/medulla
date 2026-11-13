@@ -144,6 +144,7 @@ fn decide_contrast(
         server_secret: b"decide-stat-test-secret",
         matched: &[],
         designation: None,
+        reader: None,
     };
     let batch = super::super::stat_decide::decide_blocking(
         &ctx,

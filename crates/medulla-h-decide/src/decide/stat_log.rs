@@ -866,6 +866,7 @@ async fn serve(
             server_secret: secret.as_bytes(),
             matched: &[],
             designation: None,
+            reader: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(

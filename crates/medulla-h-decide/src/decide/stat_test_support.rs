@@ -47,7 +47,24 @@ impl Harness {
     }
 
     pub async fn with_isolation(isolation: medulla_isolation::isolation::IsolationLayer) -> Self {
-        let dir = tempfile::tempdir().unwrap();
+        Self::open(tempfile::tempdir().unwrap(), isolation).await
+    }
+
+    /// Close this harness and open a fresh one over the same persisted store,
+    /// as a restarted server would see it.
+    pub async fn reopened(self) -> Self {
+        let Self {
+            _dir, state, store, ..
+        } = self;
+        drop(store);
+        drop(state);
+        Self::open(_dir, medulla_isolation::isolation::IsolationLayer::new()).await
+    }
+
+    async fn open(
+        dir: tempfile::TempDir,
+        isolation: medulla_isolation::isolation::IsolationLayer,
+    ) -> Self {
         let mut server = ServerState::new_for_test("decide-stat-test-secret", isolation);
         server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         #[cfg(feature = "blob")]
