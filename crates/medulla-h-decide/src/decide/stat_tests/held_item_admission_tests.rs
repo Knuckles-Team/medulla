@@ -49,7 +49,7 @@ fn held_request(
 
 fn answer(batch: &DecisionBatch) -> String {
     match &batch.records.as_slice()[0].outcome {
-        StatisticalOutcome::Advisory { scores, .. } => scores[0].option_id.clone(),
+        StatisticalOutcome::Advisory { scores, .. } => scores.as_slice()[0].option_id.clone(),
         StatisticalOutcome::Abstained { reasons } => match &reasons.as_slice()[0] {
             AbstainReason::Family { code, .. } => format!("abstained:{}", code.as_str()),
             other => panic!("unexpected abstention {other:?}"),
