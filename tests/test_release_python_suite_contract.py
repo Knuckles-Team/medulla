@@ -577,7 +577,7 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
             (
                 "python3 scripts/cargo_test_rescue.py cargo test --locked -p "
                 "medulla-federation --features federation --lib "
-                "federation_cypher_unbound::tests::key_quoting_fixtures -- --exact"
+                "federation_cypher_keys::tests::key_quoting_fixtures -- --exact"
             ),
         ),
         ("Test (canonical capability policy)"): (

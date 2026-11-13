@@ -56,8 +56,8 @@ const COMPLETED_BATCH: Oq2TargetCapabilities = Oq2TargetCapabilities {
     statistics_probe: false,
 };
 
-/// Return the target row for an OQ-2 spec. AGE/Neo4j/FalkorDB share the
-/// Cypher design row, while their transports remain explicit in the wire spec.
+/// Return the target row for an OQ-2 spec. The Cypher
+/// source (AGE) shares the interactive design row.
 pub fn target_capabilities(spec: &ForeignSourceSpec) -> Option<Oq2TargetCapabilities> {
     match spec {
         ForeignSourceSpec::Trino { .. } | ForeignSourceSpec::Cypher { .. } => Some(INTERACTIVE),
@@ -71,17 +71,9 @@ pub(crate) fn kind(spec: &ForeignSourceSpec) -> Option<&'static str> {
     match spec {
         ForeignSourceSpec::Trino { .. } => Some("trino"),
         ForeignSourceSpec::Cypher {
-            backend: ForeignCypherBackend::Neo4j,
-            ..
-        } => Some("neo4j"),
-        ForeignSourceSpec::Cypher {
             backend: ForeignCypherBackend::Age,
             ..
         } => Some("age"),
-        ForeignSourceSpec::Cypher {
-            backend: ForeignCypherBackend::FalkorDb,
-            ..
-        } => Some("falkordb"),
         ForeignSourceSpec::SparkBatch { .. } => Some("spark-batch"),
         ForeignSourceSpec::Api { .. } => Some("api"),
         ForeignSourceSpec::Mcp { .. } => Some("mcp"),
@@ -119,9 +111,7 @@ mod tests {
         };
         vec![
             (trino, "trino"),
-            (cypher(ForeignCypherBackend::Neo4j), "neo4j"),
             (cypher(ForeignCypherBackend::Age), "age"),
-            (cypher(ForeignCypherBackend::FalkorDb), "falkordb"),
             (
                 ForeignSourceSpec::SparkBatch {
                     artifact_ref: "sealed:fixture:1".into(),

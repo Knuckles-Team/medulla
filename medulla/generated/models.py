@@ -6717,9 +6717,7 @@ class ForeignColumnRow(BaseModel):
 
 
 class ForeignCypherBackend(str, Enum):
-    NEO4J = "Neo4j"
     AGE = "Age"
-    FALKORDB = "FalkorDb"
 
 
 class ForeignOperationCapabilities(BaseModel):

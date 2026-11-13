@@ -2,7 +2,7 @@
 //! present in this repository as a `ForeignSourceSpec` federation source or a
 //! `MirrorTargetSpec` mirror target, and each entry point is exercised with a
 //! representative OFFLINE operation: the typed explicit refusal the unbound
-//! drivers (Neo4j/FalkorDb Cypher, Spark batch, brain-guarded) must return,
+//! drivers (Spark batch, brain-guarded) must return,
 //! the bound AGE binding's endpoint-match refusal (under `federation-sql`),
 //! and fail-closed mirror sends through the `MirrorTargetRegistry`.
 //!
@@ -14,20 +14,68 @@
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_federation::federation_brain_guarded::register_brain_guarded;
 use medulla_federation::federation_spark::register_spark;
-use medulla_federation::{
-    federation_cypher_unbound::register_falkordb, federation_cypher_unbound::register_neo4j,
-};
 use medulla_federation::{mirror_target::target_for, mirror_target::MirrorTargetRegistry};
 use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
 
-fn rollup_cypher_spec(backend: ForeignCypherBackend) -> ForeignSourceSpec {
-    ForeignSourceSpec::Cypher {
-        backend,
-        endpoint: "bolt://rollup.example.invalid:7687".into(),
+// Verifies MEDULLA-DURABLE-KERNEL-R024.3: the Cypher source binds the AGE backend only.
+// spec: MEDULLA-DURABLE-KERNEL-R024.3
+#[cfg(feature = "federation-sql")]
+#[test]
+fn age_cypher_registers_and_removed_backend_is_refused() {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    let spec = ForeignSourceSpec::Cypher {
+        backend: ForeignCypherBackend::Age,
+        endpoint: "postgres://rollup.example.invalid:5432/age_graph".into(),
         graph: "rollup_graph".into(),
         query: "MATCH (r) RETURN r.key AS id".into(),
         id_field: "id".into(),
         score_field: None,
+    };
+    let reader: Arc<
+        dyn Fn(&str, &str) -> Result<Vec<HashMap<String, String>>, String> + Send + Sync,
+    > = Arc::new(|_, sql| {
+        if sql.contains("ag_catalog.ag_graph") {
+            return Ok(vec![HashMap::from([(
+                "medulla_name".into(),
+                "rollup_graph".into(),
+            )])]);
+        }
+        Ok(vec![HashMap::from([(
+            "medulla_id".into(),
+            "\"k1\"".into(),
+        )])])
+    });
+    let mut registry = ForeignSourceRegistry::new();
+    medulla_federation::federation_age::register_age_with_test_reader(
+        &mut registry,
+        "rollup-age",
+        &spec,
+        "postgres://svc:private@rollup.example.invalid:5432/age_graph".into(),
+        reader,
+    )
+    .unwrap();
+    assert_eq!(
+        registry.resolve("rollup-age").unwrap().ids(),
+        vec!["k1".to_string()]
+    );
+    // A removed backend no longer deserializes: the closed enum names Age only.
+    for removed in ["Neo4j", "FalkorDb"] {
+        let wire = serde_json::json!({
+            "Cypher": {
+                "backend": removed,
+                "endpoint": "bolt://rollup.example.invalid:7687",
+                "graph": "rollup_graph",
+                "query": "MATCH (r) RETURN r.key AS id",
+                "id_field": "id"
+            }
+        });
+        let err = serde_json::from_value::<ForeignSourceSpec>(wire).unwrap_err();
+        assert!(
+            err.to_string().contains("FOREIGN_CYPHER_BACKEND_UNKNOWN"),
+            "{removed}: {err}"
+        );
     }
 }
 

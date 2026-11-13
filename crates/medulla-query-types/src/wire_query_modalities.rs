@@ -432,9 +432,9 @@ pub enum ForeignSourceSpec {
         #[serde(default)]
         score_field: Option<String>,
     },
-    /// A Cypher-capable external graph. AGE uses a PostgreSQL transport; Neo4j
-    /// uses Bolt; FalkorDB uses its own protocol. The dialect is explicit so a
-    /// generic Cypher claim cannot accidentally select the wrong driver.
+    /// A Cypher-capable external graph. AGE is bound through a PostgreSQL
+    /// transport; the dialect is explicit so a generic Cypher claim cannot
+    /// accidentally select the wrong driver.
     Cypher {
         backend: ForeignCypherBackend,
         endpoint: String,
@@ -659,14 +659,28 @@ impl std::fmt::Display for MirrorTargetSpecError {
 #[cfg(feature = "federation")]
 impl std::error::Error for MirrorTargetSpecError {}
 
-/// External Cypher dialect and transport are a single explicit choice.
+/// External Cypher dialect and transport are a single explicit choice. AGE is
+/// the only bound backend; Neo4j and FalkorDB are external stores that reach
+/// medulla as connector sources (MEDULLA-DURABLE-KERNEL-R024.3). A spec naming
+/// any other backend fails to deserialize with `FOREIGN_CYPHER_BACKEND_UNKNOWN`.
 #[cfg(feature = "federation")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ForeignCypherBackend {
-    Neo4j,
     Age,
-    FalkorDb,
+}
+
+#[cfg(feature = "federation")]
+impl<'de> Deserialize<'de> for ForeignCypherBackend {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        match name.as_str() {
+            "Age" => Ok(Self::Age),
+            other => Err(serde::de::Error::custom(format!(
+                "FOREIGN_CYPHER_BACKEND_UNKNOWN: `{other}` is not a bound Cypher backend (only `Age`)"
+            ))),
+        }
+    }
 }
 
 /// Which JSON element fields become a RowSet row's id / score (for

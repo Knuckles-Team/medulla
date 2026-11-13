@@ -5,7 +5,7 @@
 //! live semantic/policy engine (the "brain") before any row from `query`
 //! crosses the federation boundary. No guard-evaluation driver exists in this
 //! workspace yet, so this slice is the typed validation half only (same
-//! CONTRACT [`crate::federation_cypher_unbound`] follows: ship the typed
+//! CONTRACT the removed unbound Cypher stub follows: ship the typed
 //! model plus refusal test when the bound driver is a later child). A
 //! well-formed spec is validated and then explicitly REFUSED with a named,
 //! typed reason -- never silently run unguarded, and never a generic/opaque
@@ -35,7 +35,7 @@ pub fn register_brain_guarded(
 }
 
 /// Shared shape validation for the not-yet-bound brain-guarded source.
-/// Mirrors `federation_cypher_unbound::validate_cypher_shape`'s field checks.
+/// Mirrors `federation_age::AgeSource::new`'s field checks.
 fn validate_brain_guarded_shape(spec: &ForeignSourceSpec) -> Result<(), String> {
     let ForeignSourceSpec::BrainGuarded {
         endpoint,

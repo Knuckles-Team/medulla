@@ -35,6 +35,19 @@ pub fn register_age(
     register_age_with_reader(registry, name, spec, dsn, Arc::new(fetch_sql_columns))
 }
 
+/// Test seam (test builds only): bind an AGE source through a caller-supplied
+/// reader instead of a live PostgreSQL connection.
+#[cfg(feature = "test-support")]
+pub fn register_age_with_test_reader(
+    registry: &mut ForeignSourceRegistry,
+    name: impl Into<String>,
+    spec: &ForeignSourceSpec,
+    dsn: String,
+    reader: Arc<dyn Fn(&str, &str) -> Result<Vec<HashMap<String, String>>, String> + Send + Sync>,
+) -> Result<(), String> {
+    register_age_with_reader(registry, name, spec, dsn, reader)
+}
+
 fn register_age_with_reader(
     registry: &mut ForeignSourceRegistry,
     name: impl Into<String>,

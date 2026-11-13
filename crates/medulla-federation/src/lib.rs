@@ -42,14 +42,12 @@ pub mod federation_age;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod federation_brain_guarded;
-/// The Neo4j/FalkorDb halves of the Cypher transpiler source
-/// (MEDULLA-DURABLE-KERNEL-R024.3): typed shape validation plus an explicit,
-/// named refusal, since no bound Bolt/RESP driver exists yet. AGE (the
-/// third Cypher dialect) is bound in `federation_age` behind
-/// `federation-sql`.
+/// The one quoting rule for generated `Cypher` property keys
+/// (MEDULLA-FEDERATED-QUERY-R053.100). The Cypher source is bound for the AGE
+/// backend only (MEDULLA-DURABLE-KERNEL-R024.3, `federation_age`).
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod federation_cypher_unbound;
+pub mod federation_cypher_keys;
 /// The federation optimizer (EH-563): capability-driven pushdown of keys, limits and pages
 /// into foreign sources, bind joins, the per-query network budget and the fragment trace.
 #[cfg(feature = "federation")]
