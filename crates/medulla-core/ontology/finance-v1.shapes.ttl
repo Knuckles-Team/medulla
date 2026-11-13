@@ -797,3 +797,49 @@
             sh:minCount 1 ;
             sh:path :icKernelVersion ] ;
     sh:targetClass :Factor .
+
+# MEDULLA-FINANCE-PRIMITIVES-R902: a forecast sample names its series, model revision, seed
+# and controls, and is always probabilistic.
+:ForecastSampleShape a sh:NodeShape ;
+    sh:description "A forecast sample has one series id, one model revision, one seed, one temperature, one top-p, one sample count, its values, and probabilistic true." ;
+    sh:name "Forecast Sample Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastSeriesId." ;
+            sh:minCount 1 ;
+            sh:path :forecastSeriesId ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastModelRevision." ;
+            sh:minCount 1 ;
+            sh:path :forecastModelRevision ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastSeed." ;
+            sh:minCount 1 ;
+            sh:path :forecastSeed ],
+        [ sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastTemperature." ;
+            sh:minCount 1 ;
+            sh:path :forecastTemperature ],
+        [ sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastTopP." ;
+            sh:minCount 1 ;
+            sh:path :forecastTopP ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastSampleCount." ;
+            sh:minCount 1 ;
+            sh:path :forecastSampleCount ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must have exactly one forecastValues." ;
+            sh:minCount 1 ;
+            sh:path :forecastValues ],
+        [ sh:datatype xsd:boolean ;
+            sh:hasValue true ;
+            sh:maxCount 1 ;
+            sh:message "ForecastSample must be probabilistic." ;
+            sh:minCount 1 ;
+            sh:path :probabilistic ] ;
+    sh:targetClass :ForecastSample .

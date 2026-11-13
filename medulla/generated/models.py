@@ -15162,6 +15162,7 @@ class MethodFinancePositionSizeParams(BaseModel):
     accuracy: float
     fraction: float | None = None
     max_risk: float | None = None
+    series_revision: str | None = None
     win_loss_ratio: float
 
 

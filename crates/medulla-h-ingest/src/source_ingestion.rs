@@ -2611,6 +2611,17 @@ fn mapped_properties(
             ),
         );
     }
+    if ontology_class.trim_start_matches(':')
+        == medulla_types::finance_forecast::FORECAST_SAMPLE_CLASS
+    {
+        // MEDULLA-FINANCE-PRIMITIVES-R902: a forecast is validated and stored from the
+        // typed sample, always with `probabilistic = true`; the mapped payload cannot
+        // override the flag or the controls.
+        let sample = medulla_types::finance_forecast::ForecastSample::from_source(source)?;
+        for (name, value) in sample.stored_properties() {
+            mapped.insert(name.into(), value);
+        }
+    }
     insert_source_metadata(&mut mapped, record, mapping_reference, raw_digest)?;
     Ok(mapped)
 }
@@ -2842,6 +2853,17 @@ fn insert_source_metadata(
         mapped.insert("source_updated_at".into(), updated_at.clone().into());
     }
     Ok(())
+}
+
+/// The node id a source record of this tenant, connector and stream is stored under.
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub fn source_record_node_id(
+    tenant: &str,
+    connector: &str,
+    stream: &str,
+    record_id: &str,
+) -> Result<String, String> {
+    source_node_id(tenant, connector, stream, record_id)
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]

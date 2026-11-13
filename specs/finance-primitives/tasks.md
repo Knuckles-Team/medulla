@@ -167,7 +167,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T159 [US5] MEDULLA-FINANCE-PRIMITIVES-R901.4 Banking risk calculations: refusal
 - [ ] T160 [US5] MEDULLA-FINANCE-PRIMITIVES-R901.5 Banking risk calculations: evidence
 - [ ] T161 [US5] MEDULLA-FINANCE-PRIMITIVES-R901.6 Banking risk calculations: hot-path proof
-- [ ] T162 [US5] MEDULLA-FINANCE-PRIMITIVES-R902 Probabilistic forecast evidence is never a deterministic input
+- [x] T162 [US5] MEDULLA-FINANCE-PRIMITIVES-R902 Probabilistic forecast evidence is never a deterministic input
 - [ ] T163 [US3] MEDULLA-FINANCE-PRIMITIVES-R903 Typed OHLCV bar-series contract
 - [ ] T164 [US1] MEDULLA-FINANCE-PRIMITIVES-R904 Wallet key trust record and read method
 - [ ] T167 [US1] MEDULLA-FINANCE-PRIMITIVES-R905 Remaining lifecycles are explicit state machines (rollup)

@@ -1106,3 +1106,61 @@
     rdfs:comment "A personal-ledger transaction: one withdrawal, deposit or transfer between ledger accounts. Unlike :Activity it is not bound to a :Position. BFO:GenericallyDependentContinuant." ;
     rdfs:subClassOf bfo:0000031 ;
     skos:relatedMatch wd:Q1166072 .
+
+# MEDULLA-FINANCE-PRIMITIVES-R902: a drawn forecast sample. It is a draw, never a
+# measurement: it is always stored with probabilistic true and the deterministic sizing
+# and backtest kernels refuse it as an input.
+
+:ForecastSample a owl:Class ;
+    rdfs:label "Forecast Sample" ;
+    rdfs:comment "One sampled path of a model forecast with the seed and sampling controls that produced it. Always probabilistic: it may enter a decision only as a claim with the premise forecast:seed=<n>, and sizing and backtest kernels refuse it (R902). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
+
+:forecastSeriesId a owl:DatatypeProperty ;
+    rdfs:label "forecast series id" ;
+    rdfs:comment "The series the forecast sample is about." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:string .
+
+:forecastModelRevision a owl:DatatypeProperty ;
+    rdfs:label "forecast model revision" ;
+    rdfs:comment "The revision of the model that drew the sample." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:string .
+
+:forecastSeed a owl:DatatypeProperty ;
+    rdfs:label "forecast seed" ;
+    rdfs:comment "The sampler seed; it names the premise forecast:seed=<n> when the sample enters a decision." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:integer .
+
+:forecastTemperature a owl:DatatypeProperty ;
+    rdfs:label "forecast temperature" ;
+    rdfs:comment "The sampling temperature." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:decimal .
+
+:forecastTopP a owl:DatatypeProperty ;
+    rdfs:label "forecast top p" ;
+    rdfs:comment "The nucleus-sampling probability mass, in (0, 1]." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:decimal .
+
+:forecastSampleCount a owl:DatatypeProperty ;
+    rdfs:label "forecast sample count" ;
+    rdfs:comment "How many paths the draw sampled." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:integer .
+
+:forecastValues a owl:DatatypeProperty ;
+    rdfs:label "forecast values" ;
+    rdfs:comment "JSON array of the drawn values." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:string .
+
+:probabilistic a owl:DatatypeProperty ;
+    rdfs:label "probabilistic" ;
+    rdfs:comment "True when the record is a draw from a distribution rather than a measurement. Always true on a ForecastSample." ;
+    rdfs:domain :ForecastSample ;
+    rdfs:range xsd:boolean .

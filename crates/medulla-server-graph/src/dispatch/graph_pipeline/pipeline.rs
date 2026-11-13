@@ -94,6 +94,18 @@ pub async fn route_gateway_and_stateless_domains(
     // graph-op match below. (CONCEPT:MEDULLA-KG.query.dispatch-routing — thin routing; logic in handlers/.)
     // Feature-gated: in a slim build the line is absent and the method flows
     // straight through to graph_ops (whose catch-all reports "not available").
+    // The sizing and backtest kernels take a deterministic series revision only
+    // (MEDULLA-FINANCE-PRIMITIVES-R902): a revision stored as a ForecastSample is
+    // refused before the pure kernel runs.
+    #[cfg(feature = "finance")]
+    if let Some(refusal) = medulla_h_graph::graph_ops::finance_forecast_gate::refuse_probabilistic_input(
+        req_id,
+        core,
+        read_authority.as_ref(),
+        &method,
+    ) {
+        return Ok(refusal);
+    }
     #[cfg(feature = "finance")]
     let method = match medulla_h_compute::finance::try_handle(req_id, tenant_id, method) {
         Ok(r) => return Ok(r),

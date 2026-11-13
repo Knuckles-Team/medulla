@@ -45,6 +45,8 @@ mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;
 #[cfg(feature = "finance")]
+pub mod finance_forecast_gate;
+#[cfg(feature = "finance")]
 mod finance_regime;
 #[cfg(feature = "finance")]
 mod finance_regime_gate;

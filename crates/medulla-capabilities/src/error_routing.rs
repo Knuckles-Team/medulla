@@ -571,6 +571,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SIZING_ABSTAIN",
         ],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R902: a probabilistic forecast sample named as a kernel input.
+    ("FinancePositionSize", &["PROBABILISTIC_INPUT_REFUSED"]),
+    ("FinanceMarket", &["PROBABILISTIC_INPUT_REFUSED"]),
+    ("SourceIngest", &["FORECAST_SAMPLE_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     // MEDULLA-FEDERATED-QUERY-R724: a put with bad bounds, an unregistered scope or

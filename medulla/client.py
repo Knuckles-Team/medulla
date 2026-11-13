@@ -9849,10 +9849,13 @@ class FinanceClient:
         win_loss_ratio: float,
         fraction: float | None = None,
         max_risk: float | None = None,
+        series_revision: str | None = None,
     ) -> float:
         """Fractional-Kelly stake clamped to [0, max_risk].
 
-        The default is half Kelly with a 0.02 cap.
+        The default is half Kelly with a 0.02 cap. `series_revision` names the stored
+        series revision the inputs came from; a probabilistic forecast sample is
+        refused with PROBABILISTIC_INPUT_REFUSED.
         """
         return await _gen.compute.send_finance_position_size(
             self._client,
@@ -9861,6 +9864,7 @@ class FinanceClient:
                 "win_loss_ratio": win_loss_ratio,
                 "fraction": fraction,
                 "max_risk": max_risk,
+                "series_revision": series_revision,
             },
         )
 

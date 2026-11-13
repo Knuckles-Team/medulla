@@ -63,6 +63,7 @@ async fn sizing_and_shift_spans_carry_digest_cap_and_outcome() {
         win_loss_ratio: 2.0,
         fraction: Some(0.25),
         max_risk: Some(0.05),
+        series_revision: None,
     };
     assert!(call(capped.clone()).await.error.is_none());
     let span = one_span("medulla.finance.position_size", &capped);
@@ -87,6 +88,7 @@ async fn sizing_and_shift_spans_carry_digest_cap_and_outcome() {
         win_loss_ratio: 2.0,
         fraction: None,
         max_risk: None,
+        series_revision: None,
     };
     assert!(call(bad.clone()).await.result.is_none());
     let span = one_span("medulla.finance.position_size", &bad);

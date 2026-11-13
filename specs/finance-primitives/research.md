@@ -73,3 +73,9 @@ The matrix recurrence, the four profile constructors, the innovation-shift detec
 
 ## State-space series storage and refusals (R002.4, R002.9)
 A state-space series keeps its model, checkpoint, last observation and cursor in the series metadata as one `StateSpaceState` blob behind the magic `MSS1`; ordinary derived states keep their layout, so no stored layout changes. Source fields carry the measurement then, for every profile but volatility, the design row. A late or changed point before the cursor is refused `STATE_RETRY_CONFLICT`; a different model over a held checkpoint is `STATE_CHECKPOINT_STALE`; a source too narrow or missing is `STATE_SCHEMA_UNAVAILABLE`. An append that would consume more than the retained window refuses whole (`KERNEL_STATE_BUDGET`) and keeps the prior checkpoint; re-defining the series catches up one window per call.
+
+## Forecast samples are never kernel input (R902)
+- Decision: the revision check runs router-side, before the pure finance arm, because the stateless handler has no graph. It lives in `medulla-h-graph` beside the other finance graph handlers and reads through the caller's read authority: a revision the caller cannot see is treated as absent, so the refusal never confirms a node's class to a caller who cannot read it.
+- Decision: the check keys on the stored `type` property, the one field every source-ingested node carries, so no second flag or registry exists. Admission writes `probabilistic = true` from the typed sample, never from the mapped payload, so a source cannot store a forecast as deterministic.
+- Decision: the sizing request names its revision with `series_revision`; a backtest names its revisions in the draft it already carries (`data_revisions[].source_revision`), so no backtest field is added.
+- Decision: a forecast enters decisions only through `ForecastSample::decision_evidence`, which is evidence class `Claim` with the premise `forecast:seed=<n>`.

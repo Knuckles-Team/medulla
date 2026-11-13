@@ -82,6 +82,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
         ("StrategyCard", "0000031"),
         ("DebateRound", "0000015"),
         ("RegimeModel", "0000031"),
+        ("ForecastSample", "0000031"),
     ];
     for (class, category) in placed {
         assert!(
@@ -97,7 +98,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
 fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
     let triples = medulla_rdf::mapping::parse_turtle(FINANCE).unwrap();
     let declared = declared_classes(&triples);
-    assert_eq!(declared.len(), 37);
+    assert_eq!(declared.len(), 38);
     let unmapped = unmapped_classes(&triples);
     assert!(unmapped.is_empty(), "unmapped classes {unmapped:?}");
     let imports: BTreeSet<&str> = triples

@@ -113,3 +113,5 @@ none
 - Numeric kernel evaluation for connector analyses: `MEDULLA-FINANCE-PRIMITIVES-R002.2.5` provides, `SCION-FINANCE-SOURCES-R902` and `EMERALD-OPS-R007` consume. Contract: [numeric-evaluate-clients.md](contracts/numeric-evaluate-clients.md).
 - Order proposal staging and promotion: `MEDULLA-FINANCE-PRIMITIVES-R015.1` provides, `ARBORA-DATA-MARKET-R007` and `SCION-GOVERNED-WRITEBACK-R001` consume. Contract: [order-proposal-admission.md](contracts/order-proposal-admission.md).
 - Banking risk calculations: `MEDULLA-FINANCE-PRIMITIVES-R901` provides, `ARBORA-DATA-MARKET-R003.14`, `SCION-FINANCE-SOURCES-R904` and `EMERALD-OPS-R013` consume. Contract: [banking-risk-operations.md](contracts/banking-risk-operations.md).
+
+- Forecast samples (R902): `ForecastSample` is ingested through `SourceIngest` and stored with `probabilistic = true`. `FinancePositionSize.series_revision` and a backtest draft's data revisions are checked by `finance_forecast_gate::refuse_probabilistic_input` before the pure kernels; a forecast revision is refused with `PROBABILISTIC_INPUT_REFUSED`.

@@ -277,6 +277,8 @@ pub mod finance_event_envelope;
 // MEDULLA-FINANCE-PRIMITIVES-R751.750 — the strategy research record types.
 #[cfg(feature = "finance")]
 pub mod finance_research;
+// MEDULLA-FINANCE-PRIMITIVES-R902 — probabilistic forecast samples, never a kernel input.
+pub mod finance_forecast;
 // MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
 // `Method::WalletKeyTrustGet`.
 pub mod finance_wallet_trust;

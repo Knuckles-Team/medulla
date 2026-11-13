@@ -219,6 +219,9 @@ closed_error_codes! {
         ForecastHorizonInvalid => "FORECAST_HORIZON_INVALID",
         ForecastMatrixInvalid => "FORECAST_MATRIX_INVALID",
         ForecastInputSupplied => "FORECAST_INPUT_SUPPLIED",
+        // MEDULLA-FINANCE-PRIMITIVES-R902: forecast samples are never deterministic kernel input.
+        ForecastSampleInvalid => "FORECAST_SAMPLE_INVALID",
+        ProbabilisticInputRefused => "PROBABILISTIC_INPUT_REFUSED",
         CalibrationRowDuplicate => "CALIBRATION_ROW_DUPLICATE",
         CalibrationRowMissing => "CALIBRATION_ROW_MISSING",
         CalibrationRowMismatch => "CALIBRATION_ROW_MISMATCH",

@@ -468,6 +468,9 @@ pub(super) fn handle_sizing(req_id: u64, tenant: &str, method: Method) -> Result
             win_loss_ratio,
             fraction,
             max_risk,
+            // The stored-revision check needs the graph and runs router-side, before this
+            // pure handler (`finance_forecast_gate`).
+            series_revision: _,
         } => {
             use medulla_finance_quant::sizing::kelly_fraction;
             use medulla_finance_quant::sizing::KellyInput;

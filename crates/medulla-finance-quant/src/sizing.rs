@@ -22,6 +22,9 @@ pub enum SizingError {
     InputInvalid { field: &'static str },
     /// A shift-detection sample was empty.
     SampleEmpty,
+    /// The input is a probabilistic forecast sample, not a deterministic series revision
+    /// (MEDULLA-FINANCE-PRIMITIVES-R902).
+    ProbabilisticInput,
 }
 
 impl SizingError {
@@ -30,6 +33,7 @@ impl SizingError {
         match self {
             SizingError::InputInvalid { .. } => "SIZING_INPUT_INVALID",
             SizingError::SampleEmpty => "SHIFT_SAMPLE_EMPTY",
+            SizingError::ProbabilisticInput => "PROBABILISTIC_INPUT_REFUSED",
         }
     }
 }
@@ -41,6 +45,11 @@ impl fmt::Display for SizingError {
                 write!(f, "{}: {field} is not a finite in-range value", self.code())
             }
             SizingError::SampleEmpty => write!(f, "{}: sample is empty", self.code()),
+            SizingError::ProbabilisticInput => write!(
+                f,
+                "{}: a probabilistic forecast sample is not a deterministic series revision",
+                self.code()
+            ),
         }
     }
 }
@@ -159,6 +168,16 @@ mod tests {
 
     fn full_kelly(accuracy: f64, ratio: f64) -> KellyInput {
         KellyInput::new(accuracy, ratio, 1.0, 1.0).unwrap()
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R902
+    #[test]
+    fn a_probabilistic_input_has_the_refusal_code_and_renders_it_first() {
+        let error = SizingError::ProbabilisticInput;
+        assert_eq!(error.code(), "PROBABILISTIC_INPUT_REFUSED");
+        assert!(error
+            .to_string()
+            .starts_with("PROBABILISTIC_INPUT_REFUSED:"));
     }
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R900.1
