@@ -2,6 +2,10 @@
 //! `Cypher` property key. The Cypher source itself is bound for the AGE
 //! backend only (MEDULLA-DURABLE-KERNEL-R024.3, `federation_age`).
 
+/// The longest property key the quoting rule renders, in bytes: the same field
+/// bound every federation adapter applies to a caller-named identifier.
+const MAX_FIELD_BYTES: usize = 1024;
+
 /// MEDULLA-FEDERATED-QUERY-R053.100: the one quoting rule for every generated
 /// `Cypher` property key. A key is always rendered as a backtick-quoted
 /// (escaped symbolic name) identifier; an embedded backtick doubles. Values never
