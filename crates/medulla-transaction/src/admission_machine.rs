@@ -392,6 +392,7 @@ mod tests {
     }
 
     // spec: MEDULLA-TYPED-PACKS-R810.1
+    // spec: MEDULLA-TYPED-PACKS-R810
     #[test]
     fn every_legal_transition_applies() {
         for edge in ADMISSION_MACHINE.edges {
