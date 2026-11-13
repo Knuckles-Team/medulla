@@ -80,6 +80,41 @@ pub struct Citation {
     pub cited_end: u64,
     pub source_revision: u64,
     pub content_digest: String,
+    /// Source URL of a web Document (MEDULLA-FEDERATED-QUERY-R653.7); absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// Unix seconds at which the web Document was retrieved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retrieved_at: Option<i64>,
+    /// The search or fetch backend that produced the web Document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backend: Option<String>,
+    /// SHA-256 of the query that found the web Document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query_digest: Option<String>,
+}
+
+impl Citation {
+    /// A citation with no web provenance.
+    pub fn local(
+        source_id: String,
+        cited_start: u64,
+        cited_end: u64,
+        source_revision: u64,
+        content_digest: String,
+    ) -> Self {
+        Self {
+            source_id,
+            cited_start,
+            cited_end,
+            source_revision,
+            content_digest,
+            url: None,
+            retrieved_at: None,
+            backend: None,
+            query_digest: None,
+        }
+    }
 }
 
 /// One proof edge from an item to the evidence it rests on.

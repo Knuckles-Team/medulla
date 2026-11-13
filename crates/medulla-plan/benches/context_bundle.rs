@@ -25,13 +25,13 @@ fn hit(n: usize, score: f32) -> SourceHit {
         .map(|resolution| ResolutionSpan {
             resolution,
             tokens: 40 + 80 * u64::from(resolution) + (n % 7) as u64,
-            citation: Citation {
-                source_id: format!("doc-{n}"),
-                cited_start: 0,
-                cited_end: 100 + u64::from(resolution),
-                source_revision: 1,
-                content_digest: digest(n * 2 + usize::from(resolution)),
-            },
+            citation: Citation::local(
+                format!("doc-{n}"),
+                0,
+                100 + u64::from(resolution),
+                1,
+                digest(n * 2 + usize::from(resolution)),
+            ),
         })
         .collect();
     SourceHit {

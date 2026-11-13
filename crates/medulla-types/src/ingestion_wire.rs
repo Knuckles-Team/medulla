@@ -340,4 +340,16 @@ pub struct DiscoverHit {
     /// (MEDULLA-FEDERATED-QUERY-R090.8); empty for a fused seed hit.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub path: Vec<String>,
+    /// Source URL when the hit is a web Document (MEDULLA-FEDERATED-QUERY-R653.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// Unix seconds at which the web Document was retrieved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retrieved_at: Option<i64>,
+    /// The backend that produced the web Document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backend: Option<String>,
+    /// SHA-256 of the query that found the web Document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query_digest: Option<String>,
 }

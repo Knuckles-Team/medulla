@@ -42,6 +42,17 @@ fn node_text(core: &GraphCore, node_id: &str) -> (String, String, String) {
     (name, get("description"), ntype)
 }
 
+/// The web provenance of a node (MEDULLA-FEDERATED-QUERY-R653.7); empty unless the node has a URL.
+fn web_provenance(core: &GraphCore, node_id: &str) -> medulla_types::web_source::WebProvenance {
+    core.get_node_properties(node_id)
+        .map(|blob| {
+            medulla_types::web_source::WebProvenance::from_properties(
+                &super::gateway_graph::decode_json_object(&blob),
+            )
+        })
+        .unwrap_or_default()
+}
+
 /// Fraction of the distinct query keywords that appear (as a substring, case-insensitively)
 /// anywhere in a candidate's `name`/`description`/`type` — a `[0.0, 1.0]` lexical score.
 fn keyword_overlap(kws: &[String], name: &str, description: &str, ntype: &str) -> f32 {
@@ -161,7 +172,12 @@ fn discover(
         .into_iter()
         .map(|hit| {
             let (name, description, node_type) = node_text(core, &hit.id);
+            let web = web_provenance(core, &hit.id);
             medulla_types::ingestion_wire::DiscoverHit {
+                url: web.url,
+                retrieved_at: web.retrieved_at,
+                backend: web.backend,
+                query_digest: web.query_digest,
                 path: if hit.path.len() > 1 {
                     hit.path
                 } else {

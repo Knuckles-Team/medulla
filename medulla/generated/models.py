@@ -4642,11 +4642,15 @@ class DisclosureLevelWire(str, Enum):
 class DiscoverHit(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    backend: str | None = None
     description: str
     id: str
     name: str
+    query_digest: str | None = None
+    retrieved_at: int | None = None
     score: float
     type: str
+    url: str | None = None
 
 
 class DiscoveryAuthBinding(BaseModel):

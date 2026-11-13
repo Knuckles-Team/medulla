@@ -120,6 +120,7 @@ struct NodeText {
     node_type: String,
     source: String,
     mode: AccessMode,
+    web: medulla_types::web_source::WebProvenance,
 }
 
 fn node_text(core: &GraphCore, id: &str) -> Option<NodeText> {
@@ -130,7 +131,9 @@ fn node_text(core: &GraphCore, id: &str) -> Option<NodeText> {
         t => t,
     };
     let source = text_field(&object, "source");
+    let web = medulla_types::web_source::WebProvenance::from_properties(&object);
     Some(NodeText {
+        web,
         name: if name.is_empty() {
             id.to_string()
         } else {
@@ -213,11 +216,17 @@ fn spans_of(id: &str, node: &NodeText, revision: u64, bytes_per_token: u64) -> V
             resolution: resolution as u8,
             tokens: (text.len() as u64).div_ceil(bytes_per_token.max(1)).max(1),
             citation: Citation {
-                source_id: id.to_string(),
-                cited_start: 0,
-                cited_end: text.len() as u64,
-                source_revision: revision,
-                content_digest: digest_hex(&text),
+                url: node.web.url.clone(),
+                retrieved_at: node.web.retrieved_at,
+                backend: node.web.backend.clone(),
+                query_digest: node.web.query_digest.clone(),
+                ..Citation::local(
+                    id.to_string(),
+                    0,
+                    text.len() as u64,
+                    revision,
+                    digest_hex(&text),
+                )
             },
         })
         .collect()

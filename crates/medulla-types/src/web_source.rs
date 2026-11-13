@@ -77,6 +77,48 @@ impl WebCandidateSet {
     }
 }
 
+/// The web provenance of a stored web Document node (MEDULLA-FEDERATED-QUERY-R653.7).
+///
+/// A node is a web Document when it carries a non-empty `url`. The other fields come from the
+/// web result record ([`WebResult`], [`WebCandidateSet`]) the node was ingested from. A node
+/// without a URL has no web provenance and every field is `None`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct WebProvenance {
+    /// The source URL.
+    pub url: Option<String>,
+    /// Unix seconds at which the page was retrieved.
+    pub retrieved_at: Option<i64>,
+    /// The engine or fetch backend (`backend`, else `engine`).
+    pub backend: Option<String>,
+    /// SHA-256 of the originating query.
+    pub query_digest: Option<String>,
+}
+
+impl WebProvenance {
+    /// Read the provenance off a decoded node property object.
+    pub fn from_properties(object: &serde_json::Map<String, serde_json::Value>) -> Self {
+        let text = |key: &str| {
+            object
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        };
+        let Some(url) = text("url") else {
+            return Self::default();
+        };
+        Self {
+            url: Some(url),
+            retrieved_at: object
+                .get("retrieved_at")
+                .and_then(serde_json::Value::as_i64),
+            backend: text("backend").or_else(|| text("engine")),
+            query_digest: text("query_digest"),
+        }
+    }
+}
+
 /// A refused web result.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WebResultRefusal {
@@ -116,6 +158,29 @@ impl WebResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Verifies MEDULLA-FEDERATED-QUERY-R653.7: a node with a URL yields web provenance and one
+    /// without yields none.
+    // spec: MEDULLA-FEDERATED-QUERY-R653.7
+    #[test]
+    fn web_provenance_reads_only_web_documents() {
+        let web = serde_json::json!({
+            "url": "https://example.com/story",
+            "retrieved_at": 1_700_000_000_i64,
+            "engine": "duckduckgo",
+            "query_digest": "ab",
+        });
+        let read = WebProvenance::from_properties(web.as_object().unwrap());
+        assert_eq!(read.url.as_deref(), Some("https://example.com/story"));
+        assert_eq!(read.retrieved_at, Some(1_700_000_000));
+        assert_eq!(read.backend.as_deref(), Some("duckduckgo"));
+        assert_eq!(read.query_digest.as_deref(), Some("ab"));
+        let local = serde_json::json!({"retrieved_at": 5, "backend": "x"});
+        assert_eq!(
+            WebProvenance::from_properties(local.as_object().unwrap()),
+            WebProvenance::default()
+        );
+    }
 
     fn result() -> WebResult {
         WebResult {

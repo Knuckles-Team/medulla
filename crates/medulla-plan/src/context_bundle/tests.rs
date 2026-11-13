@@ -7,13 +7,7 @@ const D1: &str = "11111111111111111111111111111111111111111111111111111111111111
 const D2: &str = "2222222222222222222222222222222222222222222222222222222222222222";
 
 fn citation(source: &str, digest: &str) -> Citation {
-    Citation {
-        source_id: source.into(),
-        cited_start: 0,
-        cited_end: 100,
-        source_revision: 1,
-        content_digest: digest.into(),
-    }
+    Citation::local(source.into(), 0, 100, 1, digest.into())
 }
 
 fn span(resolution: u8, tokens: u64, digest: &str) -> ResolutionSpan {
