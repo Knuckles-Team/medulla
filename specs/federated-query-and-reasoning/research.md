@@ -134,3 +134,12 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Decision: the receipt is carried in the bundle evidence as `RerankEvidence` beside the other inline evidence; nothing is stored. Candidates past `retrieval.rerank_k` are not scored and leave the bundle as `below_gap`.
 - The champion-pointer read of the calibration curve (`MEDULLA-FEDERATED-QUERY-R652.3`) waits on the pointer read of `MEDULLA-DECISION-ENGINE-R805.13`; until then the stage runs with no pinned curve.
 
+
+## Stop part wiring and corpus refusals (R082.3, R082.4, R653.4, R653.5)
+
+- Decision: the stop block is the last step of `run_round`. The completed round is the last answer in the history, else the sufficiency part's round, else 1; progress counts as measured only when the request carries prior row ids or a prior quality, so a first round never stops for "no new evidence" by vacuity.
+- Decision: a terminal verdict sets the sufficiency repair step to `Stop`. That is the whole of "no continuation": the harness has no next-round description left to apply.
+- Decision: an exhausted limit answers with `RETRIEVAL_BUDGET_EXCEEDED` and the serialized terminal verdict as its detail, so the dimension and the calibration marker travel with the refusal. The other terminal reasons are normal results with `stop: true`.
+- Decision: an entity or session the projected core does not hold answers `CORPUS_SCOPE_DENIED`. The projected core cannot tell a row the caller may not read from a row that does not exist, and the refusal must not either.
+- Decision: a lineage walk with an unseen source past `knob retrieval.lineage_depth` refuses `CORPUS_LINEAGE_TOO_DEEP` instead of returning a silently shortened set.
+- Decision: corpus evidence is built in `dispatch` from the mode's own counts; the handler only names the row-level projection (`caller-row-projection`), because the handler owns the projected core.

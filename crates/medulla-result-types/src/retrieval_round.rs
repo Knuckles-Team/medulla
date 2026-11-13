@@ -151,6 +151,9 @@ pub struct RoundRequest {
     /// Descend a stored community or document-section hierarchy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hierarchy: Option<HierarchyPart>,
+    /// Decide whether the loop stops after this round (MEDULLA-FEDERATED-QUERY-R082.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop: Option<StopRequest>,
 }
 
 /// One executed row of the plan.
@@ -175,6 +178,10 @@ pub struct RoundResult {
     /// part counts.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hierarchy_selected: Vec<String>,
+    /// The stop verdict, when the request carried a `stop` part. A terminal verdict
+    /// leaves the sufficiency repair at `Stop`, so no next round is described.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop: Option<crate::retrieval_stop::StopVerdict>,
     pub inference: InferenceCounts,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub premises: Vec<RetrievalPremise>,

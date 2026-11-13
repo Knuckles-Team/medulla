@@ -83,6 +83,7 @@ fn request(sufficiency: Option<SufficiencyPart>) -> RoundRequest {
         sufficiency,
         selection: None,
         hierarchy: None,
+        stop: None,
     }
 }
 
@@ -1082,4 +1083,194 @@ async fn section_receipt_reconstructs_all_paths() {
     let digests: Vec<String> = order.iter().map(|id| format!("{id}:sum-{id}")).collect();
     assert_eq!(receipt["summary_digest"], sha256_hex_of(&digests));
     assert!(!receipt.to_string().contains("summary of"));
+}
+
+// ---- R082.3 / R082.4: the stop part ----
+
+use medulla_result_types::retrieval_round::{BudgetUsage, CallerLimits, RoundAnswer, StopRequest};
+use medulla_result_types::retrieval_stop::{
+    CalibrationRefusal, CalibrationTable, RoundCalibration, StopReason,
+};
+use medulla_types::contract::BoundedVec;
+
+fn calibration(rounds: &[u32]) -> CalibrationTable {
+    CalibrationTable {
+        rows: BoundedVec::new(
+            rounds
+                .iter()
+                .map(|&round| RoundCalibration {
+                    round,
+                    baseline_confidence: 0.5,
+                    margin_threshold: 0.25,
+                })
+                .collect(),
+        )
+        .expect("rows fit"),
+    }
+}
+
+fn answer(round: u32, digest: &str, confidence: f64) -> RoundAnswer {
+    RoundAnswer {
+        round,
+        answer_digest: digest.into(),
+        confidence,
+    }
+}
+
+fn stop_part(table: CalibrationTable, history: Vec<RoundAnswer>) -> StopRequest {
+    StopRequest {
+        calibration: table,
+        history: BoundedVec::new(history).expect("history fits"),
+        prior_row_ids: BoundedVec::default(),
+        prior_quality: None,
+        usage: BudgetUsage::default(),
+        limits: CallerLimits::default(),
+    }
+}
+
+fn stop_request(round: u32, stop: StopRequest) -> RoundRequest {
+    let mut request = request(Some(part(Some(4))));
+    request.sufficiency.as_mut().expect("part").round = round;
+    request.stop = Some(stop);
+    request
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R082.3
+#[tokio::test(flavor = "multi_thread")]
+async fn stop_precedence_follows_the_declared_order() {
+    let state = state();
+    // Two documents are below the evidence floor: the sufficiency repair is a boost.
+    seed(&state, 2).await;
+
+    // No stop part: no stop verdict.
+    let bare = decode(round_as(&state, None, request(Some(part(Some(4))))).await);
+    assert!(bare.stop.is_none());
+
+    // Hook 1, limits first: a continuation with no answer history still stops at the
+    // round limit, and the response names the dimension. Round and token limits are
+    // both spent: the round limit wins.
+    let mut spent = stop_part(calibration(&[4]), vec![]);
+    spent.usage.tokens_used = 5;
+    spent.limits.token_limit = Some(5);
+    let refused = error_of(round_as(&state, None, stop_request(4, spent)).await);
+    assert!(
+        refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
+        "{refused}"
+    );
+    assert!(refused.contains("round_limit") && refused.contains("\"round\""));
+
+    // Another exhausted budget: a caller lowers a limit, never raises it.
+    let mut tokens = stop_part(calibration(&[1]), vec![]);
+    tokens.usage.tokens_used = 7;
+    tokens.limits.token_limit = Some(7);
+    let refused = error_of(round_as(&state, None, stop_request(1, tokens)).await);
+    assert!(
+        refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
+        "{refused}"
+    );
+    assert!(refused.contains("budget_exhausted") && refused.contains("tokens"));
+    let mut raised = stop_part(calibration(&[1]), vec![]);
+    raised.usage.tokens_used = 32_000;
+    raised.limits.token_limit = Some(10_000_000);
+    let refused = error_of(round_as(&state, None, stop_request(1, raised)).await);
+    assert!(
+        refused.contains("tokens"),
+        "the knob caps the caller: {refused}"
+    );
+
+    // Hook 2, a terminal verdict leaves no continuation: no new evidence after a
+    // measured round turns the boost into a stop.
+    let mut stale = stop_part(calibration(&[1]), vec![]);
+    stale.prior_row_ids =
+        BoundedVec::new(vec!["doc-0".to_string(), "doc-1".to_string()]).expect("ids fit");
+    let result = decode(round_as(&state, None, stop_request(1, stale)).await);
+    let verdict = result.stop.expect("stop verdict");
+    assert!(verdict.stop && verdict.reason == StopReason::NoNewEvidence);
+    assert_eq!(
+        result.sufficiency.expect("sufficiency").repair,
+        medulla_result_types::retrieval_verdict::RepairStep::Stop
+    );
+
+    // Calibrated confidence: the same answer twice, margin above the threshold.
+    let repeated = stop_part(
+        calibration(&[2]),
+        vec![answer(1, "d", 0.6), answer(2, "d", 0.9)],
+    );
+    let verdict = decode(round_as(&state, None, stop_request(2, repeated)).await)
+        .stop
+        .expect("stop verdict");
+    assert!(verdict.stop && verdict.reason == StopReason::AnswerRepeatedMarginMet);
+    assert_eq!(verdict.threshold, Some(0.25));
+
+    // A continuing round keeps the harness's next step.
+    let changed = stop_part(
+        calibration(&[2]),
+        vec![answer(1, "a", 0.6), answer(2, "b", 0.9)],
+    );
+    let result = decode(round_as(&state, None, stop_request(2, changed)).await);
+    assert_eq!(
+        result.stop.expect("stop verdict").reason,
+        StopReason::ContinueAnswerChanged
+    );
+    assert!(matches!(
+        result.sufficiency.expect("sufficiency").repair,
+        medulla_result_types::retrieval_verdict::RepairStep::BoostK { .. }
+    ));
+    // A round past the limit is a malformed continuation, not a quiet stop.
+    let beyond = stop_part(calibration(&[9]), vec![]);
+    let refused = error_of(round_as(&state, None, stop_request(9, beyond)).await);
+    assert!(
+        refused.starts_with("RETRIEVAL_CONTRACT_INVALID"),
+        "{refused}"
+    );
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R082.4
+#[tokio::test(flavor = "multi_thread")]
+async fn uncalibrated_rounds_keep_the_refusal_marker() {
+    let state = state();
+    seed(&state, 2).await;
+
+    // Continuing: the round has no calibration row, so a confidence stop is forbidden
+    // even for an answer repeated with a wide margin.
+    let repeated = stop_part(
+        calibration(&[7]),
+        vec![answer(1, "d", 0.99), answer(2, "d", 0.99)],
+    );
+    let result = decode(round_as(&state, None, stop_request(2, repeated)).await);
+    let verdict = result.stop.expect("stop verdict");
+    assert!(!verdict.stop && verdict.reason == StopReason::ContinueUncalibrated);
+    assert_eq!(
+        verdict.calibration_refusal,
+        Some(CalibrationRefusal::RoundNotCalibrated)
+    );
+    assert!(verdict.margin.is_none() && verdict.threshold.is_none());
+
+    // Terminal: no new evidence still wins and keeps the marker.
+    let mut stale = stop_part(
+        calibration(&[]),
+        vec![answer(1, "d", 0.9), answer(2, "d", 0.9)],
+    );
+    stale.prior_row_ids =
+        BoundedVec::new(vec!["doc-0".to_string(), "doc-1".to_string()]).expect("ids fit");
+    let verdict = decode(round_as(&state, None, stop_request(2, stale)).await)
+        .stop
+        .expect("stop verdict");
+    assert!(verdict.stop && verdict.reason == StopReason::NoNewEvidence);
+    assert_eq!(
+        verdict.calibration_refusal,
+        Some(CalibrationRefusal::RoundNotCalibrated)
+    );
+
+    // Exhausted limit: the budget code carries the terminal verdict, the dimension and
+    // the calibration marker; no fallback calibration or budget reset appears.
+    let mut spent = stop_part(calibration(&[]), vec![]);
+    spent.usage.inference_calls_used = 3;
+    spent.limits.inference_limit = Some(3);
+    let refused = error_of(round_as(&state, None, stop_request(1, spent)).await);
+    assert!(
+        refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
+        "{refused}"
+    );
+    assert!(refused.contains("inference_calls") && refused.contains("ROUND_NOT_CALIBRATED"));
 }

@@ -142,6 +142,10 @@ impl CorpusView for CoreView<'_> {
             .collect()
     }
 
+    fn contains(&self, node_id: &str) -> bool {
+        self.core.get_node_properties(node_id).is_some()
+    }
+
     fn sources(&self, node_id: &str) -> Vec<LineageHop> {
         let mut out = Vec::new();
         for (from, neighbours) in self.core.get_neighbors_batch(vec![node_id.to_string()]) {
@@ -172,8 +176,18 @@ fn refusal(error: CorpusError) -> String {
             format!("INVALID_ARGUMENT: this mode needs `{field}`")
         }
         CorpusError::RegexTooComplex(detail) => format!("CORPUS_REGEX_TOO_COMPLEX: {detail}"),
+        CorpusError::ScopeDenied(what) => {
+            format!("CORPUS_SCOPE_DENIED: {what} is not readable by the caller")
+        }
+        CorpusError::LineageTooDeep { depth } => {
+            format!("CORPUS_LINEAGE_TOO_DEEP: sources remain past the {depth}-hop limit")
+        }
     }
 }
+
+/// The row-level projection every corpus mode reads through: the handler's
+/// core is the caller's projected core, so the evidence names that projection.
+const VISIBILITY_FILTER: &str = "caller-row-projection";
 
 /// Serve one `CorpusRetrieve`.
 pub(crate) async fn handle_corpus_retrieve(
@@ -191,14 +205,19 @@ pub(crate) async fn handle_corpus_retrieve(
     match outcome {
         Err(response) => response,
         Ok(Err(error)) => Response::err(req_id, refusal(error)),
-        Ok(Ok(result)) => served_response::<CorpusRetrieve>(
-            req_id,
-            Ok(Ok(result)),
-            "CorpusRetrieve",
-            #[cfg(feature = "result-cache")]
-            ctx.core,
-            #[cfg(feature = "result-cache")]
-            None,
-        ),
+        Ok(Ok(mut result)) => {
+            if let Some(evidence) = result.evidence.as_mut() {
+                evidence.visibility_filter = VISIBILITY_FILTER.to_string();
+            }
+            served_response::<CorpusRetrieve>(
+                req_id,
+                Ok(Ok(result)),
+                "CorpusRetrieve",
+                #[cfg(feature = "result-cache")]
+                ctx.core,
+                #[cfg(feature = "result-cache")]
+                None,
+            )
+        }
     }
 }

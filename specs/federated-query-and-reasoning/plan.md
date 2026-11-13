@@ -1246,3 +1246,7 @@ Order: R733, then R734 and R735 in parallel.
 
 `compile_with` takes a `ModelBinding` (`Unset`, `Bound`, `Unavailable`). After reciprocal-rank fusion, `rerank_fused` scores the first `retrieval.rerank_k` fused candidates through `rerank_with`, replaces their fused scores with the calibrated rerank scores, and the cut and package solver run on that order. `handle_context_compile` supplies each hit's name, description and `text`, and the binding read by `reranker_binding`. The receipt is `BundleEvidence.rerank`. A request with no query text skips the stage.
 
+
+## Stop part, corpus refusals and evidence (R082.3, R082.4, R653.4, R653.5)
+
+`RoundRequest.stop` carries `StopRequest`; `run_round` builds the `StopContext` with `StopRequest::context` (knobs from `RoundKnobs`), measures progress with `round_progress`, calls `decide_stop` and sets `RoundResult.stop`. A terminal verdict sets the sufficiency repair to `Stop`; `handle_retrieval_round` answers an exhausted dimension with `RETRIEVAL_BUDGET_EXCEEDED` carrying the verdict. `dispatch` in `crates/medulla-plan/src/corpus_retrieval.rs` refuses an unreadable entity or session (`CORPUS_SCOPE_DENIED`), a too-deep lineage walk (`CORPUS_LINEAGE_TOO_DEEP`) and fills `CorpusEvidence`; `handle_corpus_retrieve` names the visibility filter.

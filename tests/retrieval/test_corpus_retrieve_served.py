@@ -212,3 +212,79 @@ def test_method_reaches_each_mode(start_medulla_server) -> None:
     assert not re.search(
         r"fn\s+(grep_corpus|entity_context|session_hits|lineage_path)", handler
     )
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R653.4")
+def test_corpus_refusals(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R653.4: each code, no rows, tenant scoped."""
+    other = f"corpus-other-{uuid.uuid4().hex[:8]}"
+
+    def body(client: Any, graph: str) -> None:
+        with pytest.raises(Exception, match="CORPUS_REGEX_TOO_COMPLEX"):
+            _retrieve(client, graph, mode="grep", pattern="a" * 1025)
+        with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+            _retrieve(client, graph, mode="guess")
+        # A chain longer than `retrieval.lineage_depth` (default 8 hops).
+        for n in range(12):
+            _node(client, graph, f"chain-{n}", {"type": "Artifact", "name": f"c{n}"})
+        for n in range(11):
+            _edge(client, graph, f"chain-{n}", f"chain-{n + 1}", "DERIVED_FROM")
+        with pytest.raises(Exception, match="CORPUS_LINEAGE_TOO_DEEP"):
+            _retrieve(client, graph, mode="lineage", answer_ref="chain-0")
+        # The other tenant's rows are not in this caller's core.
+        client.tenants.create(other)
+        try:
+            _node(client, other, "secret", {"type": "Entity", "name": "secret"})
+            _node(
+                client,
+                other,
+                "secret-turn",
+                {
+                    "type": "TranscriptTurn",
+                    "session_id": "sess-secret",
+                    "ordinal": 1,
+                    "role": "user",
+                    "content": "hidden",
+                },
+            )
+            with pytest.raises(Exception, match="CORPUS_SCOPE_DENIED"):
+                _retrieve(client, graph, mode="entity", entity="secret")
+            with pytest.raises(Exception, match="CORPUS_SCOPE_DENIED"):
+                _retrieve(client, graph, mode="session", session_id="sess-secret")
+        finally:
+            client.tenants.delete(other)
+        # Nothing was written: the fixture reads as before.
+        assert len(_retrieve(client, graph, mode="grep", pattern="fn")["matches"]) == 3
+
+    _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R653.5")
+def test_corpus_evidence(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R653.5: every evidence field, per mode."""
+
+    def body(client: Any, graph: str) -> None:
+        grep = _retrieve(client, graph, mode="grep", pattern="fn")
+        evidence = grep["evidence"]
+        assert evidence["mode"] == "grep"
+        assert evidence["matches"] == len(grep["matches"]) == 3
+        assert evidence["scanned_nodes"] >= 3
+        assert evidence["visibility_filter"] == "caller-row-projection"
+        assert evidence["visited_entities"] == 0 and evidence["lineage_hops"] == 0
+
+        entity = _retrieve(client, graph, mode="entity", entity="hub")
+        assert entity["evidence"]["mode"] == "entity"
+        assert entity["evidence"]["visited_entities"] == len(
+            entity["entity"]["neighbours"]
+        )
+
+        lineage = _retrieve(client, graph, mode="lineage", answer_ref="answer")
+        assert lineage["evidence"]["mode"] == "lineage"
+        assert lineage["evidence"]["lineage_hops"] == 2
+        assert lineage["evidence"]["matches"] == len(lineage["lineage"])
+
+        session = _retrieve(client, graph, mode="session", session_id="sess-1")
+        assert session["evidence"]["scanned_nodes"] == 2
+        assert session["evidence"]["matches"] == 2
+
+    _with_graph(body)

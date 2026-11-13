@@ -958,6 +958,103 @@ mod tests {
         );
     }
 
+    /// MEDULLA-FEDERATED-QUERY-R081.9.7.2: the traversal agrees with an independent
+    /// oracle on a tree three levels deep: records of the requested granularity, in
+    /// (depth, child-index path) order, each with its root-to-record path.
+    #[test]
+    fn vector_free_matches_tree_oracle() {
+        // The tree: the root has 3 sections; section `s<i>` has `i + 1` spans.
+        let mut fixture = SectionFixture::default();
+        let section_ids: Vec<String> = (0..3).map(|i| format!("s{i}")).collect();
+        let section_refs: Vec<&str> = section_ids.iter().map(String::as_str).collect();
+        fixture.add(section_record(
+            "doc-1",
+            None,
+            &section_refs,
+            SectionGranularity::Document,
+            0,
+            3000,
+            "rev-1",
+        ));
+        // Oracle input: (id, parent, child index path), recorded as the tree is built.
+        let mut oracle: Vec<(String, Vec<String>, Vec<usize>, SectionGranularity)> = vec![(
+            "doc-1".into(),
+            vec!["doc-1".into()],
+            vec![],
+            SectionGranularity::Document,
+        )];
+        for (i, section) in section_ids.iter().enumerate() {
+            let spans: Vec<String> = (0..=i).map(|j| format!("{section}-p{j}")).collect();
+            let span_refs: Vec<&str> = spans.iter().map(String::as_str).collect();
+            let base = (i as u64) * 1000;
+            fixture.add(section_record(
+                section,
+                Some("doc-1"),
+                &span_refs,
+                SectionGranularity::Section,
+                base,
+                base + 1000,
+                "rev-1",
+            ));
+            oracle.push((
+                section.clone(),
+                vec!["doc-1".into(), section.clone()],
+                vec![i],
+                SectionGranularity::Section,
+            ));
+            for (j, span) in spans.iter().enumerate() {
+                let start = base + (j as u64) * 100;
+                fixture.add(section_record(
+                    span,
+                    Some(section),
+                    &[],
+                    SectionGranularity::SourceSpan,
+                    start,
+                    start + 100,
+                    "rev-1",
+                ));
+                oracle.push((
+                    span.clone(),
+                    vec!["doc-1".into(), section.clone(), span.clone()],
+                    vec![i, j],
+                    SectionGranularity::SourceSpan,
+                ));
+            }
+        }
+        let limits = VectorFreeLimits {
+            max_depth: 4,
+            max_visited: 64,
+        };
+        for granularity in [
+            SectionGranularity::Document,
+            SectionGranularity::Section,
+            SectionGranularity::SourceSpan,
+        ] {
+            let mut expected: Vec<_> = oracle
+                .iter()
+                .filter(|(_, _, _, g)| *g == granularity)
+                .collect();
+            expected.sort_by(|a, b| (a.1.len(), &a.2).cmp(&(b.1.len(), &b.2)));
+            let walked = retrieve_vector_free(&fixture, "doc-1", "rev-1", granularity, limits)
+                .expect("the oracle tree walks");
+            let ids: Vec<&str> = walked
+                .selected
+                .iter()
+                .map(|r| r.section_id.as_str())
+                .collect();
+            assert_eq!(
+                ids,
+                expected.iter().map(|e| e.0.as_str()).collect::<Vec<_>>(),
+                "{granularity:?} selection"
+            );
+            assert_eq!(
+                walked.paths,
+                expected.iter().map(|e| e.1.clone()).collect::<Vec<_>>(),
+                "{granularity:?} paths"
+            );
+        }
+    }
+
     #[test]
     fn vector_free_walk_refuses_stale_revision_and_outside_span() {
         let mut stale = nested_section_fixture();

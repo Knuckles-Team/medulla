@@ -7,12 +7,14 @@
 //! and tenant scope are applied by the handler before the `PlanCtx` is built, so the plan
 //! and every part can only see what the caller may read.
 
+use crate::retrieval_stop::{decide_stop, round_progress};
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
 use medulla_result_types::retrieval_round::{
     selection_policy_digest, sha256_hex_of, ActivationBenchmark, HierarchyPart, InferenceCounts,
-    RetrievalPremise, RoundRequest, RoundResult, RoundRow, SelectionPart,
+    RetrievalPremise, RoundRequest, RoundResult, RoundRow, SelectionPart, StopKnobs,
 };
+use medulla_result_types::retrieval_verdict::RepairStep;
 use medulla_result_types::retrieval_verdict::{
     ChunkScorePair, DescentPolicy, HierarchyRetrievalKind, HierarchyStage, HierarchyStageReceipt,
     RetrievalRefusal, SectionGranularity as WireGranularity, RETRIEVAL_CONTRACT_INVALID,
@@ -45,6 +47,14 @@ pub struct RoundKnobs {
     pub section_max_depth: usize,
     /// `knob retrieval.section_max_visited`, records.
     pub section_max_visited: usize,
+    /// `knob retrieval.token_limit`, tokens. A caller may lower it, never raise it.
+    pub token_limit: u64,
+    /// `knob retrieval.inference_limit`, calls. A caller may lower it, never raise it.
+    pub inference_limit: u32,
+    /// `knob retrieval.cost_limit`, micro-units. A caller may lower it, never raise it.
+    pub cost_limit: u64,
+    /// `knob retrieval.saturation_epsilon`, score.
+    pub saturation_epsilon: f64,
 }
 
 impl Default for RoundKnobs {
@@ -57,6 +67,10 @@ impl Default for RoundKnobs {
             selection_cost_ratio_max: 0.9,
             section_max_depth: 32,
             section_max_visited: 4096,
+            token_limit: 32_000,
+            inference_limit: 8,
+            cost_limit: 1_000_000,
+            saturation_epsilon: 0.01,
         }
     }
 }
@@ -412,7 +426,7 @@ fn run_sections(
 }
 
 /// Execute the plan, then run the requested parts in order: hierarchy, sufficiency,
-/// selection (feedback, stop and arbitration join with their own rows). The selected
+/// selection, then stop (feedback and arbitration join with their own rows). The selected
 /// hierarchy ids join the evidence set the sufficiency part counts.
 pub fn run_round(
     request: &RoundRequest,
@@ -460,6 +474,60 @@ pub fn run_round(
             Some(run_selection(request, part, &rows, ctx, knobs, &mut steps)?)
         }
     };
+    let mut sufficiency = sufficiency;
+    let stop = match &request.stop {
+        None => None,
+        Some(part) => {
+            let _span = tracing::info_span!("medulla.retrieval.stop").entered();
+            let round = part
+                .history
+                .as_slice()
+                .last()
+                .map(|answer| answer.round)
+                .or_else(|| request.sufficiency.as_ref().map(|s| s.round))
+                .unwrap_or(1);
+            // Progress is measured only when an earlier round left evidence to compare.
+            let measured =
+                !part.prior_row_ids.as_slice().is_empty() || part.prior_quality.is_some();
+            let stop_knobs = StopKnobs {
+                round_limit: knobs.round_limit,
+                token_limit: knobs.token_limit,
+                inference_limit: knobs.inference_limit,
+                cost_limit: knobs.cost_limit,
+            };
+            let policy = format!("{}:{}", request.corpus_revision, request.model_revision);
+            let context = part
+                .context(&stop_knobs, round, measured, &policy)
+                .map_err(|detail| contract_invalid(&detail))?;
+            let returned: Vec<&str> = rows.rows().iter().map(|r| r.id.as_str()).collect();
+            let scores: Vec<f64> = rows
+                .rows()
+                .iter()
+                .filter_map(|r| r.score.map(f64::from))
+                .collect();
+            let quality =
+                (!scores.is_empty()).then(|| scores.iter().sum::<f64>() / scores.len() as f64);
+            let progress = round_progress(
+                &returned,
+                part.prior_row_ids.as_slice(),
+                quality,
+                part.prior_quality,
+                knobs.saturation_epsilon,
+            );
+            let verdict = decide_stop(
+                &part.calibration,
+                part.history.as_slice(),
+                &context,
+                &progress,
+            );
+            if verdict.stop {
+                if let Some(s) = sufficiency.as_mut() {
+                    s.repair = RepairStep::Stop;
+                }
+            }
+            Some(verdict)
+        }
+    };
     Ok(RoundResult {
         rows: rows
             .rows()
@@ -472,6 +540,7 @@ pub fn run_round(
         sufficiency,
         selection,
         hierarchy_selected,
+        stop,
         inference: steps.inference,
         premises: steps.premises,
     })
@@ -496,6 +565,10 @@ mod tests {
         selection_cost_ratio_max: 0.9,
         section_max_depth: 32,
         section_max_visited: 4096,
+        token_limit: 32_000,
+        inference_limit: 8,
+        cost_limit: 1_000_000,
+        saturation_epsilon: 0.01,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -512,6 +585,7 @@ mod tests {
             sufficiency,
             selection: None,
             hierarchy: None,
+            stop: None,
         }
     }
 

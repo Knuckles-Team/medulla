@@ -390,6 +390,8 @@ def start_medulla_server(request, tmp_path_factory):
     # the deterministic lexical-overlap model, which scores a query against each
     # candidate's text without a semantic artifact.
     server_env.setdefault("MEDULLA_RETRIEVAL_RERANKER_MODEL", "builtin:lexical-overlap")
+    # Stored summaries and the query text share one deterministic embedding space.
+    server_env.setdefault("MEDULLA_UQL_TEXT_EMBEDDER", "hash")
 
     if os.path.exists(socket_path):
         os.remove(socket_path)

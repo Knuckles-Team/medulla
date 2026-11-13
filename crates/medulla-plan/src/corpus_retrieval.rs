@@ -34,6 +34,13 @@ pub enum CorpusError {
     MissingArgument(&'static str),
     /// The pattern does not compile within the size limits.
     RegexTooComplex(String),
+    /// The entity or session is not in the caller's projected core
+    /// (MEDULLA-FEDERATED-QUERY-R653.4). An absent and an unreadable row answer
+    /// alike, so the refusal discloses nothing.
+    ScopeDenied(String),
+    /// The lineage walk has sources past the depth knob
+    /// (MEDULLA-FEDERATED-QUERY-R653.4).
+    LineageTooDeep { depth: u32 },
 }
 
 /// The text fields of one node, in field-name order.
@@ -69,6 +76,8 @@ pub trait CorpusView {
     fn neighbours(&self, entity: &str, hops: u32) -> Vec<WeightedNeighbour>;
     /// `TranscriptTurn` nodes of `session_id`, any order.
     fn session_turns(&self, session_id: &str) -> Vec<TurnRecord>;
+    /// Whether `node_id` is a row of the caller's projected core.
+    fn contains(&self, node_id: &str) -> bool;
     /// Edges leaving `node_id` over [`LINEAGE_RELATIONSHIPS`]; `node_id` of the
     /// hop is the target.
     fn sources(&self, node_id: &str) -> Vec<LineageHop>;
@@ -213,16 +222,20 @@ pub fn lineage_path(
     depth: u32,
     limit: usize,
     view: &dyn CorpusView,
-) -> Vec<LineagePath> {
+) -> Result<Vec<LineagePath>, CorpusError> {
     let mut seen: BTreeSet<String> = BTreeSet::from([answer_ref.to_string()]);
     let mut queue: VecDeque<(String, Vec<LineageHop>)> =
         VecDeque::from([(answer_ref.to_string(), Vec::new())]);
     let mut out = Vec::new();
     while let Some((node, path)) = queue.pop_front() {
-        if path.len() as u32 >= depth {
+        let at_limit = path.len() as u32 >= depth;
+        let mut edges = view.sources(&node);
+        if at_limit {
+            if edges.iter().any(|e| !seen.contains(&e.node_id)) {
+                return Err(CorpusError::LineageTooDeep { depth });
+            }
             continue;
         }
-        let mut edges = view.sources(&node);
         edges.sort_by(|a, b| {
             a.node_id
                 .cmp(&b.node_id)
@@ -239,12 +252,21 @@ pub fn lineage_path(
                 hops: hops.clone(),
             });
             if out.len() >= limit {
-                return out;
+                return Ok(out);
             }
             queue.push_back((edge.node_id, hops));
         }
     }
-    out
+    Ok(out)
+}
+
+fn mode_name(mode: CorpusMode) -> &'static str {
+    match mode {
+        CorpusMode::Grep => "grep",
+        CorpusMode::Entity => "entity",
+        CorpusMode::Session => "session",
+        CorpusMode::Lineage => "lineage",
+    }
 }
 
 /// Run one request: validate it, then call the one function of its mode.
@@ -257,6 +279,7 @@ pub fn dispatch(
     request.validate().map_err(CorpusError::Request)?;
     let limit = request.limit as usize;
     let mut result = CorpusResult::default();
+    let (mut scanned, mut visited, mut hops) = (0usize, 0usize, 0usize);
     match request.mode {
         CorpusMode::Grep => {
             let pattern = request
@@ -264,6 +287,7 @@ pub fn dispatch(
                 .as_deref()
                 .ok_or(CorpusError::MissingArgument("pattern"))?;
             let nodes = view.text_nodes(request.label.as_deref());
+            scanned = nodes.len();
             result.matches = grep_corpus(pattern, &nodes, limit)?;
         }
         CorpusMode::Entity => {
@@ -271,7 +295,13 @@ pub fn dispatch(
                 .entity
                 .as_deref()
                 .ok_or(CorpusError::MissingArgument("entity"))?;
-            result.entity = Some(entity_context(entity, ENTITY_HOPS, view, limit));
+            if !view.contains(entity) {
+                return Err(CorpusError::ScopeDenied(format!("entity `{entity}`")));
+            }
+            let context = entity_context(entity, ENTITY_HOPS, view, limit);
+            scanned = context.neighbours.len();
+            visited = context.neighbours.len();
+            result.entity = Some(context);
         }
         CorpusMode::Session => {
             let session = request
@@ -279,6 +309,10 @@ pub fn dispatch(
                 .as_deref()
                 .ok_or(CorpusError::MissingArgument("session_id"))?;
             let turns = view.session_turns(session);
+            if turns.is_empty() {
+                return Err(CorpusError::ScopeDenied(format!("session `{session}`")));
+            }
+            scanned = turns.len();
             result.session = session_hits(session, request.pattern.as_deref(), &turns, limit);
         }
         CorpusMode::Lineage => {
@@ -286,9 +320,28 @@ pub fn dispatch(
                 .answer_ref
                 .as_deref()
                 .ok_or(CorpusError::MissingArgument("answer_ref"))?;
-            result.lineage = lineage_path(answer, lineage_depth, limit, view);
+            result.lineage = lineage_path(answer, lineage_depth, limit, view)?;
+            scanned = result.lineage.len();
+            hops = result
+                .lineage
+                .iter()
+                .map(|p| p.hops.len())
+                .max()
+                .unwrap_or(0);
         }
     }
+    let rows = result.matches.len()
+        + usize::from(result.entity.is_some())
+        + result.session.len()
+        + result.lineage.len();
+    result.evidence = Some(CorpusEvidence {
+        mode: mode_name(request.mode).to_string(),
+        scanned_nodes: scanned as u32,
+        matches: rows as u32,
+        visited_entities: visited as u32,
+        lineage_hops: hops as u32,
+        visibility_filter: String::new(),
+    });
     Ok(result)
 }
 
@@ -410,6 +463,9 @@ mod mode_tests {
         }
         fn session_turns(&self, _session_id: &str) -> Vec<TurnRecord> {
             self.turns.clone()
+        }
+        fn contains(&self, node_id: &str) -> bool {
+            node_id != "hidden"
         }
         fn sources(&self, node_id: &str) -> Vec<LineageHop> {
             self.edges
@@ -550,7 +606,7 @@ mod mode_tests {
     #[test]
     fn lineage_depth_and_cycles() {
         let view = fixture();
-        let paths = lineage_path("ans", 8, 50, &view);
+        let paths = lineage_path("ans", 8, 50, &view).unwrap();
         let reached: Vec<&str> = paths
             .iter()
             .map(|p| p.hops.last().unwrap().node_id.as_str())
@@ -559,9 +615,63 @@ mod mode_tests {
         assert_eq!(reached, vec!["src1", "src2", "deep", "deeper"]);
         assert_eq!(paths[2].hops.len(), 2, "shortest hop list");
         assert_eq!(paths[2].hops[1].relationship, "GENERATED_BY");
-        let shallow = lineage_path("ans", 1, 50, &view);
-        assert_eq!(shallow.len(), 2);
-        assert_eq!(lineage_path("ans", 8, 3, &view).len(), 3);
+        // MEDULLA-FEDERATED-QUERY-R653.4: sources past the depth are refused, not cut.
+        assert_eq!(
+            lineage_path("ans", 1, 50, &view),
+            Err(CorpusError::LineageTooDeep { depth: 1 })
+        );
+        assert_eq!(lineage_path("ans", 8, 3, &view).unwrap().len(), 3);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R653.4
+    // spec: MEDULLA-FEDERATED-QUERY-R653.5
+    #[test]
+    fn scope_refusals_and_evidence_counts() {
+        let view = fixture();
+        let ask = |mode, f: fn(&mut CorpusRequest)| {
+            let mut r = CorpusRequest {
+                mode,
+                pattern: None,
+                label: None,
+                entity: None,
+                session_id: None,
+                answer_ref: None,
+                limit: 50,
+            };
+            f(&mut r);
+            dispatch(&r, &view, 8)
+        };
+        assert!(matches!(
+            ask(CorpusMode::Entity, |r| r.entity = Some("hidden".into())),
+            Err(CorpusError::ScopeDenied(_))
+        ));
+        let empty = Fixture {
+            turns: Vec::new(),
+            ..fixture()
+        };
+        let session = CorpusRequest {
+            mode: CorpusMode::Session,
+            pattern: None,
+            label: None,
+            entity: None,
+            session_id: Some("s".into()),
+            answer_ref: None,
+            limit: 50,
+        };
+        assert!(matches!(
+            dispatch(&session, &empty, 8),
+            Err(CorpusError::ScopeDenied(_))
+        ));
+        let lineage = ask(CorpusMode::Lineage, |r| r.answer_ref = Some("ans".into())).unwrap();
+        let evidence = lineage.evidence.unwrap();
+        assert_eq!(evidence.mode, "lineage");
+        assert_eq!(evidence.matches as usize, lineage.lineage.len());
+        assert_eq!(evidence.lineage_hops, 3);
+        let grep = ask(CorpusMode::Grep, |r| r.pattern = Some("foo".into())).unwrap();
+        assert_eq!(
+            grep.evidence.unwrap().scanned_nodes as usize,
+            view.nodes.len()
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R653.3
@@ -599,7 +709,7 @@ mod mode_tests {
         let lineage = request(CorpusMode::Lineage, |r| r.answer_ref = Some("ans".into()));
         assert_eq!(
             dispatch(&lineage, &view, 8).unwrap().lineage,
-            lineage_path("ans", 8, 50, &view)
+            lineage_path("ans", 8, 50, &view).unwrap()
         );
         let bare = request(CorpusMode::Grep, |_| {});
         assert_eq!(

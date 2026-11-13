@@ -12,6 +12,7 @@ use medulla_exec::exec::{LexicalOverlapReranker, Reranker, LEXICAL_OVERLAP_RERAN
 use medulla_plan::retrieval_round::{run_round, RoundError, RoundKnobs};
 use medulla_protocol_types::result_contract::query::RetrievalRound;
 use medulla_result_types::retrieval_round::{RoundRequest, RoundResult};
+use medulla_result_types::retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED;
 
 /// The registered knobs one round reads.
 fn round_knobs() -> RoundKnobs {
@@ -25,6 +26,10 @@ fn round_knobs() -> RoundKnobs {
         selection_cost_ratio_max: knobs.retrieval_selection_cost_ratio_max,
         section_max_depth: size(knobs.retrieval_section_max_depth),
         section_max_visited: size(knobs.retrieval_section_max_visited),
+        token_limit: knobs.retrieval_token_limit,
+        inference_limit: u32::try_from(knobs.retrieval_inference_limit).unwrap_or(u32::MAX),
+        cost_limit: knobs.retrieval_cost_limit,
+        saturation_epsilon: knobs.retrieval_saturation_epsilon,
     }
 }
 
@@ -123,6 +128,17 @@ pub(crate) async fn handle_retrieval_round(
         Ok(Ok(Err(RoundError::Plan(message)))) => Response::err(req_id, message),
         Ok(Ok(Err(RoundError::Refusal(refusal)))) => {
             Response::err(req_id, format!("{}: {}", refusal.code, refusal.detail))
+        }
+        // MEDULLA-FEDERATED-QUERY-R082.4: an exhausted limit answers with the budget code
+        // and the terminal verdict (reason, round, exhausted dimension, calibration marker).
+        Ok(Ok(Ok(result)))
+            if result
+                .stop
+                .as_ref()
+                .is_some_and(|stop| stop.exhausted_dimension.is_some()) =>
+        {
+            let verdict = serde_json::to_string(&result.stop).unwrap_or_default();
+            Response::err(req_id, format!("{RETRIEVAL_BUDGET_EXCEEDED}: {verdict}"))
         }
         Ok(Ok(Ok(result))) => match ResultPayload::of::<RetrievalRound>(result) {
             Ok(payload) => Response::ok(req_id, payload),

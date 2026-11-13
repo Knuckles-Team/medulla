@@ -137,4 +137,27 @@ pub struct CorpusResult {
     pub session: Vec<SessionHit>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub lineage: Vec<LineagePath>,
+    /// What the read covered (MEDULLA-FEDERATED-QUERY-R653.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<CorpusEvidence>,
+}
+
+/// Inline evidence of one corpus read (MEDULLA-FEDERATED-QUERY-R653.5).
+///
+/// It is computed per request and stored nowhere. `visibility_filter` names the
+/// row-level projection the handler applied before any mode ran.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CorpusEvidence {
+    pub mode: String,
+    /// Nodes the mode read: text nodes for grep, turns for session, the
+    /// neighbourhood for entity, nodes reached for lineage.
+    pub scanned_nodes: u32,
+    /// Rows returned.
+    pub matches: u32,
+    /// Entities the neighbour walk reached (entity mode, else 0).
+    pub visited_entities: u32,
+    /// Longest lineage path returned, in hops (lineage mode, else 0).
+    pub lineage_hops: u32,
+    pub visibility_filter: String,
 }
