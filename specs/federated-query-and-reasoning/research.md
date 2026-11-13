@@ -143,3 +143,11 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Decision: an entity or session the projected core does not hold answers `CORPUS_SCOPE_DENIED`. The projected core cannot tell a row the caller may not read from a row that does not exist, and the refusal must not either.
 - Decision: a lineage walk with an unseen source past `knob retrieval.lineage_depth` refuses `CORPUS_LINEAGE_TOO_DEEP` instead of returning a silently shortened set.
 - Decision: corpus evidence is built in `dispatch` from the mode's own counts; the handler only names the row-level projection (`caller-row-projection`), because the handler owns the projected core.
+## Chunk-encoding steps are pure functions with registry knobs (R039.2.2 to R039.2.4)
+Decision: window splitting, per-window encoder calls and `mean_chunks` aggregation are pure functions in
+`crates/medulla-core/src/compute/chunk_windows.rs`. Window size and overlap are registry knobs
+(`retrieval.encode_window_tokens`, `retrieval.encode_window_overlap`), never environment variables or
+scheduler fields; the semantic index worker reads them and passes them in. Chunk refusal codes are
+`ServerErrorCode` variants so they join the one published refusal registry, routed to `SemanticIndex`.
+Dimension mismatch and non-finite components are refused with `ENCODE_DIM_MISMATCH` and `ENCODE_NON_FINITE`
+inside the aggregation, so a malformed chunk can never silently reach a document vector.

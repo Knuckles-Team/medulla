@@ -216,7 +216,20 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("Loops", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
-    ("SemanticIndex", &["PROMOTION_BLOCKED"]),
+    // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
+    // worker runs refuses an unsupported position mode, an invalid overlap and
+    // an empty or zero-norm aggregate.
+    (
+        "SemanticIndex",
+        &[
+            "PROMOTION_BLOCKED",
+            "ENCODE_POSITION_MODE_UNSUPPORTED",
+            "ENCODE_OVERLAP_INVALID",
+            "NO_EMBEDDING",
+            "ENCODE_DIM_MISMATCH",
+            "ENCODE_NON_FINITE",
+        ],
+    ),
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
     ("SqlSourceBatch", &["CLUSTER_MUTATION_UNAVAILABLE"]),

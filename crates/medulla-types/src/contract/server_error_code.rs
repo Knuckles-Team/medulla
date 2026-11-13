@@ -308,6 +308,16 @@ closed_error_codes! {
         PatternWindowShort => "PATTERN_WINDOW_SHORT",
         PresetUnavailable => "PRESET_UNAVAILABLE",
         PromotionBlocked => "PROMOTION_BLOCKED",
+        /// A chunk-encoding position mode the encoder does not serve (MEDULLA-FEDERATED-QUERY-R039.2.2).
+        EncodePositionModeUnsupported => "ENCODE_POSITION_MODE_UNSUPPORTED",
+        /// A chunk-encoding overlap that is not strictly below the window size (MEDULLA-FEDERATED-QUERY-R039.2.2).
+        EncodeOverlapInvalid => "ENCODE_OVERLAP_INVALID",
+        /// An empty chunk set or a zero-norm aggregate has no document vector (MEDULLA-FEDERATED-QUERY-R039.2.4).
+        NoEmbedding => "NO_EMBEDDING",
+        /// A chunk vector whose dimension differs from its siblings (MEDULLA-FEDERATED-QUERY-R039.2.4).
+        EncodeDimMismatch => "ENCODE_DIM_MISMATCH",
+        /// A chunk vector with a NaN or infinite component (MEDULLA-FEDERATED-QUERY-R039.2.4).
+        EncodeNonFinite => "ENCODE_NON_FINITE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
