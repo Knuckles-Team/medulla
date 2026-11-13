@@ -161,7 +161,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
                         return Response::err(req_id, message);
                     }
                     let mut s = timed_write(state).await;
-                    let identity = medulla_types::acl::AgentIdentity {
+                    let identity = medulla_identity_types::acl::AgentIdentity {
                         agent_id: agent_id.clone(),
                         role,
                         teams,
@@ -198,7 +198,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
 async fn dispatch_check_access(
     ctx: DispatchCtx<'_>,
     agent_id: String,
-    access: medulla_types::acl::AccessCheck,
+    access: medulla_identity_types::acl::AccessCheck,
 ) -> Response {
     let (req_id, graph) = (ctx.req.id, ctx.req.graph.clone());
     let s = timed_read(ctx.state).await;
@@ -226,7 +226,7 @@ async fn dispatch_check_access(
         access,
     );
     drop(s);
-    let decision = medulla_types::acl::AccessDecision {
+    let decision = medulla_identity_types::acl::AccessDecision {
         agent_id,
         graph,
         access,
@@ -249,7 +249,7 @@ struct IdentityRegistrationMode<'a> {
 
 fn register_identity(
     state: &mut ServerState,
-    identity: medulla_types::acl::AgentIdentity,
+    identity: medulla_identity_types::acl::AgentIdentity,
     mode: IdentityRegistrationMode<'_>,
 ) -> Result<(), String> {
     if mode.bootstrap

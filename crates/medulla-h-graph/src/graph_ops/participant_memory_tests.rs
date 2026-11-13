@@ -8,8 +8,8 @@ use super::assistant_profile::{admit_put, read_op, Admitted, ReadOut};
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_mutation::mutation::apply_coalescable_write;
-use medulla_types::acl::{AgentIdentity, AgentRole, GrantEffect, RbacAction};
-use medulla_types::assistant_profile::{
+use medulla_identity_types::acl::{AgentIdentity, AgentRole, GrantEffect, RbacAction};
+use medulla_identity_types::assistant_profile::{
     AssistantProfile, DocumentSet, DocumentSetKind, ModelHints, ProfileOp, ProfileShare,
     ASSISTANT_PROFILE_SCHEMA_VERSION,
 };

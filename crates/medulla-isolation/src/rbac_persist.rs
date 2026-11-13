@@ -32,7 +32,7 @@ use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
 use crate::rbac::RbacPolicy;
-use medulla_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentIdentity;
 
 /// `key → serde_json bytes`. One table, three well-known keys (`policy`,
 /// `identities`, `bootstrap`) written in a single durable transaction
@@ -245,8 +245,8 @@ impl RbacAuthoritySnapshot {
 pub(crate) fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistError> {
     #[derive(serde::Serialize)]
     struct CanonicalPolicy<'a> {
-        roles: BTreeMap<&'a str, &'a medulla_types::acl::Role>,
-        grants: &'a [medulla_types::acl::Grant],
+        roles: BTreeMap<&'a str, &'a medulla_identity_types::acl::Role>,
+        grants: &'a [medulla_identity_types::acl::Grant],
         // EH-404: an elevation transition (above all a revocation) moves the
         // digest, so a policy decision lease minted before it fails closed.
         // Omitted while empty, so an image without elevations keeps its digest.
@@ -786,7 +786,7 @@ mod tests {
         IdentityBootstrapState, MemoryRbacStore, RbacPersistError, RbacPolicyStore, IDENTITIES_KEY,
     };
     use crate::rbac::RbacPolicy;
-    use medulla_types::acl::{
+    use medulla_identity_types::acl::{
         AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceContext,
         ResourceSelector, Role,
     };

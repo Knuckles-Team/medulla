@@ -1,7 +1,7 @@
 use super::*;
 
-fn node_binding_fixture_claims() -> medulla_types::acl::RequestContextClaims {
-    medulla_types::acl::RequestContextClaims {
+fn node_binding_fixture_claims() -> medulla_identity_types::acl::RequestContextClaims {
+    medulla_identity_types::acl::RequestContextClaims {
         principal: "p".into(),
         tenant: "t".into(),
         audience: "a".into(),
@@ -32,7 +32,7 @@ fn envelope_v2_bytes_are_unchanged_when_node_claim_is_absent() {
         graph: &str,
         method_name: &str,
         body_hash: &str,
-        claims: &medulla_types::acl::RequestContextClaims,
+        claims: &medulla_identity_types::acl::RequestContextClaims,
         timestamp: u64,
         nonce: &str,
         idempotency_key: &str,

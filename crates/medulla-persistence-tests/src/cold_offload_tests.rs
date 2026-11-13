@@ -137,6 +137,9 @@ mod admission_tests {
     //! backend (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog, DIST-P2-3) — the durable tier a lazily-opened
     //! graph rehydrates from, and the tier that makes eviction loss-free.
     use super::*;
+    #[cfg(feature = "security")]
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_persistence::read_through::BackendGraphMaterializer;
     use medulla_persistence::read_through::BackendReadThroughFactory;
@@ -148,9 +151,6 @@ mod admission_tests {
     use medulla_server_api::state::ServerState;
     use medulla_server_auth::auth::build_current_test_request;
     use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
-    #[cfg(feature = "security")]
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
     use tokio::sync::{RwLock, Semaphore};
@@ -165,11 +165,11 @@ mod admission_tests {
 
     #[cfg(feature = "security")]
     fn rls_isolation() -> IsolationLayer {
-        use medulla_types::acl::Grant;
-        use medulla_types::acl::GrantEffect;
-        use medulla_types::acl::RbacAction;
-        use medulla_types::acl::ResourceSelector;
-        use medulla_types::acl::Role;
+        use medulla_identity_types::acl::Grant;
+        use medulla_identity_types::acl::GrantEffect;
+        use medulla_identity_types::acl::RbacAction;
+        use medulla_identity_types::acl::ResourceSelector;
+        use medulla_identity_types::acl::Role;
 
         let mut isolation = ServerState::test_isolation(TEST_AGENT);
         isolation.register_agent(AgentIdentity {

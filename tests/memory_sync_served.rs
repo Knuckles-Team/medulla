@@ -119,9 +119,9 @@ fn error_of(response: &Response) -> String {
 #[tokio::test(flavor = "multi_thread")]
 async fn authorized_read_list_and_cursor_isolation() {
     let mut isolation = common::current_isolation();
-    isolation.register_agent(medulla_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
         agent_id: "root".to_string(),
-        role: medulla_types::acl::AgentRole::System,
+        role: medulla_identity_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     });

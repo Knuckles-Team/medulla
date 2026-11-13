@@ -15,6 +15,7 @@ medulla-cypher = { path = "../medulla-cypher" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
@@ -57,6 +58,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 tokio = { version = "1.53", features = ["full", "test-util"] }
 tracing-subscriber = "0.3"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 
 # Each feature carries the facade feature of the same name: the moved modules keep
 # their original `cfg(feature = ...)` gates, and the facade forwards to these.

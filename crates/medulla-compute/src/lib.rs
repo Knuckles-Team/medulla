@@ -10,10 +10,11 @@
 //! bodies (`crate::graph::`, `crate::types::`, `crate::wire::`) resolve unchanged.
 pub use medulla_core::registry;
 pub use medulla_graph_core::graph;
+pub use medulla_identity_types::acl;
 pub use medulla_isolation::isolation;
 pub use medulla_protocol_types::protocol;
 pub use medulla_query_types::wire;
-pub use medulla_types::{acl, types};
+pub use medulla_types::types;
 
 /// Find a disjoint-set root while halving each traversed path. Both entity
 /// resolution clusters and impact polytree detection use this exact rule.

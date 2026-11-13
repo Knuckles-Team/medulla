@@ -119,6 +119,7 @@ ast-extended = [
 [dependencies]
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
@@ -275,6 +276,7 @@ criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used
 # by medulla-types' own derivation tests.
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 # Deterministic RNG for the reasoning-closure differential/parity tests (the runtime
 # `rand_chacha` dep is optional under `datascience`; tests need it unconditionally).
 rand_chacha = "0.3"

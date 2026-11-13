@@ -46,12 +46,15 @@ pub fn share_role(owner_agent: &str, name: &str) -> String {
 }
 
 #[cfg(feature = "security")]
-fn share_grant(owner_agent: &str, name: &str) -> medulla_types::acl::Grant {
-    medulla_types::acl::Grant {
+fn share_grant(owner_agent: &str, name: &str) -> medulla_identity_types::acl::Grant {
+    medulla_identity_types::acl::Grant {
         role: share_role(owner_agent, name),
-        resource: medulla_types::acl::ResourceSelector::Graph(share_resource(owner_agent, name)),
-        action: medulla_types::acl::RbacAction::Read,
-        effect: medulla_types::acl::GrantEffect::Allow,
+        resource: medulla_identity_types::acl::ResourceSelector::Graph(share_resource(
+            owner_agent,
+            name,
+        )),
+        action: medulla_identity_types::acl::RbacAction::Read,
+        effect: medulla_identity_types::acl::GrantEffect::Allow,
     }
 }
 
@@ -75,7 +78,10 @@ pub fn provision_share_role(
     if isolation.rbac().grants().contains(&grant) {
         return Ok(());
     }
-    isolation.try_add_role(medulla_types::acl::Role::new(share_role(owner_agent, name)))?;
+    isolation.try_add_role(medulla_identity_types::acl::Role::new(share_role(
+        owner_agent,
+        name,
+    )))?;
     isolation.try_add_grant(grant)
 }
 
@@ -98,18 +104,18 @@ pub fn may_use_shared(isolation: &IsolationLayer, caller_agent: &str, resource: 
     };
     let policy = isolation.rbac();
     let roles = policy.expand_roles(&identity.roles);
-    let exact = medulla_types::acl::ResourceSelector::Graph(resource.to_string());
+    let exact = medulla_identity_types::acl::ResourceSelector::Graph(resource.to_string());
     let granted = policy.grants().iter().any(|grant| {
         grant.resource == exact
-            && grant.action == medulla_types::acl::RbacAction::Read
-            && grant.effect == medulla_types::acl::GrantEffect::Allow
+            && grant.action == medulla_identity_types::acl::RbacAction::Read
+            && grant.effect == medulla_identity_types::acl::GrantEffect::Allow
             && roles.contains(&grant.role)
     });
     granted
         && policy.is_allowed(
             &identity.roles,
-            &medulla_types::acl::ResourceContext::graph(resource),
-            medulla_types::acl::RbacAction::Read,
+            &medulla_identity_types::acl::ResourceContext::graph(resource),
+            medulla_identity_types::acl::RbacAction::Read,
         )
 }
 
@@ -124,10 +130,10 @@ mod tests {
     //! `medulla_server::tests::foreign_tenancy::shared_source_needs_an_explicit_grant`.
     use super::*;
     use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::AgentRole;
     use medulla_query_types::wire::ForeignSourceSpec;
     use medulla_server_api::carrier::CarrierAuthority;
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
 
     fn carrier(agent: &str) -> CarrierAuthority {
         CarrierAuthority::verified_for_test(agent)
@@ -191,14 +197,14 @@ mod tests {
 
         // A broad wildcard reader role never conveys use of a credential.
         isolation
-            .try_add_role(medulla_types::acl::Role::new("reader"))
+            .try_add_role(medulla_identity_types::acl::Role::new("reader"))
             .unwrap();
         isolation
-            .try_add_grant(medulla_types::acl::Grant {
+            .try_add_grant(medulla_identity_types::acl::Grant {
                 role: "reader".into(),
-                resource: medulla_types::acl::ResourceSelector::All,
-                action: medulla_types::acl::RbacAction::Read,
-                effect: medulla_types::acl::GrantEffect::Allow,
+                resource: medulla_identity_types::acl::ResourceSelector::All,
+                action: medulla_identity_types::acl::RbacAction::Read,
+                effect: medulla_identity_types::acl::GrantEffect::Allow,
             })
             .unwrap();
         set_roles(&mut isolation, "agent-b", vec!["reader".into()]);

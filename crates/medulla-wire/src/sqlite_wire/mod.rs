@@ -257,12 +257,12 @@ fn sqlite_type_name(t: PgColType) -> &'static str {
 mod tests {
     use super::*;
 
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     #[cfg(feature = "redb")]
     use medulla_persistence::redb_backend::RedbBackend;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
 
     /// A minimal `ServerState` with a pre-created `__commons__` graph (the registry
     /// creates it), mirroring `tests/pgwire_roundtrip.rs::state_with`. Feature-gated

@@ -292,7 +292,7 @@ async fn compute_identity_bootstrap(
                 &req.method,
                 Method::RegisterIdentity {
                     agent_id,
-                    role: medulla_types::acl::AgentRole::System,
+                    role: medulla_identity_types::acl::AgentRole::System,
                     teams,
                     roles,
                     ..

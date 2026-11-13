@@ -749,9 +749,9 @@ pub fn open_isolation_layer(
     });
     if anonymous {
         isolation
-            .try_register_agent(medulla_types::acl::AgentIdentity {
+            .try_register_agent(medulla_identity_types::acl::AgentIdentity {
                 agent_id: "anonymous".into(),
-                role: medulla_types::acl::AgentRole::System,
+                role: medulla_identity_types::acl::AgentRole::System,
                 teams: Vec::new(),
                 roles: Vec::new(),
             })

@@ -248,15 +248,15 @@ mod tests {
         let mut isolation = IsolationLayer::new();
         // Registering ANY identity flips `has_rules()` on, switching graph-
         // targeted dispatch into enforcing mode.
-        isolation.register_agent(medulla_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
             agent_id: "owner".to_string(),
-            role: medulla_types::acl::AgentRole::Agent,
+            role: medulla_identity_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        isolation.register_agent(medulla_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
             agent_id: "intruder".to_string(),
-            role: medulla_types::acl::AgentRole::Agent,
+            role: medulla_identity_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: Vec::new(),
         });

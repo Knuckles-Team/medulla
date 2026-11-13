@@ -4,11 +4,11 @@
 //! goes through the full signed dispatch.
 
 use super::*;
+use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentRole;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_auth::auth::sign_current_test_request;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
 
 const SECRET: &str = "refusal-contract-test-secret";
 

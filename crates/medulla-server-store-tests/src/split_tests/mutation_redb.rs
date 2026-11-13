@@ -24,9 +24,9 @@ use medulla_server_mutation::mutation::*;
 /// registered identities) instead of an insufficient no-rules layer.
 fn isolation_with_system_agent() -> IsolationLayer {
     let mut isolation = IsolationLayer::new();
-    isolation.register_agent(medulla_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
         agent_id: "system-agent".to_string(),
-        role: medulla_types::acl::AgentRole::System,
+        role: medulla_identity_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     });

@@ -65,6 +65,7 @@ test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-sup
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

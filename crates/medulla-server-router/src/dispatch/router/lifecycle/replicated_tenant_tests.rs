@@ -9,6 +9,8 @@ use tokio::sync::RwLock;
 
 use crate::dispatch::test_support::send;
 use crate::dispatch::test_support::verified;
+use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentRole;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_persistence::redb_backend::RedbBackend;
@@ -23,8 +25,6 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_consensus::dispatch::consensus::apply_replicated_native;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
 
 const GRAPH: &str = "tenant__subjectbinding__default";
 const SECRET: &str = "synthetic-replicated-tenant-test-secret";

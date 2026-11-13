@@ -1,5 +1,6 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_identity_types::{
     identity::ApiKeyUse, identity::ObjectRef, identity::Secret, identity::SessionTouch,
     identity::UserKind, identity::UserStatus, identity::IDENTITY_AUTHENTICATE_SCOPE,
@@ -16,7 +17,6 @@ use medulla_server_api::server_context::ServerContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
 use medulla_server_identity::dispatch::identity_store::resolution_context::*;
-use medulla_types::acl::RequestContextClaims;
 use serde_json::json;
 
 fn policy() -> RequestContextPolicy {

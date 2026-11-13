@@ -6,6 +6,13 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+// The access-control vocabulary: roles, grants, resource selectors and request context claims
+// (MEDULLA-SDLC-R021.4 moved it here from `medulla-types`).
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod acl;
+// MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod assistant_profile;
 // RF-RULING-004 — canonical serializable authority/replay evidence for the future
 // medulla-transaction admission boundary. This module grants no executable capability.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

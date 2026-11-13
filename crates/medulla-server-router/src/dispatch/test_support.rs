@@ -6,12 +6,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_types::acl::RequestContextClaims;
 
 /// A verified context for `principal` (also the effective agent unless a
 /// delegation chain is given).
@@ -83,9 +83,9 @@ pub fn state() -> Arc<RwLock<ServerState>> {
 pub fn bootstrapped_state() -> Arc<RwLock<ServerState>> {
     let mut layer = medulla_isolation::isolation::IsolationLayer::new();
     layer
-        .try_bootstrap_system_identity(medulla_types::acl::AgentIdentity {
+        .try_bootstrap_system_identity(medulla_identity_types::acl::AgentIdentity {
             agent_id: "engine-root".to_string(),
-            role: medulla_types::acl::AgentRole::System,
+            role: medulla_identity_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         })

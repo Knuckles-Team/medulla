@@ -449,6 +449,9 @@ mod nested_payload_security_tests {
 #[cfg(all(test, feature = "redb"))]
 mod eg318_dispatch_tests {
     use super::*;
+    #[cfg(feature = "tsdb")]
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::AgentRole;
     use medulla_persistence::redb_backend::RedbBackend;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
@@ -457,9 +460,6 @@ mod eg318_dispatch_tests {
     use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     #[cfg(feature = "tsdb")]
     use medulla_server_auth::auth::sign_current_test_request;
-    #[cfg(feature = "tsdb")]
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
     use std::ops::Deref;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -527,11 +527,11 @@ mod eg318_dispatch_tests {
     fn register_ts_tenants(state: &mut ServerState) {
         #[cfg(feature = "security")]
         {
-            use medulla_types::acl::Grant;
-            use medulla_types::acl::GrantEffect;
-            use medulla_types::acl::RbacAction;
-            use medulla_types::acl::ResourceSelector;
-            use medulla_types::acl::Role;
+            use medulla_identity_types::acl::Grant;
+            use medulla_identity_types::acl::GrantEffect;
+            use medulla_identity_types::acl::RbacAction;
+            use medulla_identity_types::acl::ResourceSelector;
+            use medulla_identity_types::acl::Role;
             state.isolation.add_role(Role::new("owner-acme-private"));
             state.isolation.add_role(Role::new("owner-other-private"));
             let grant = |role: &str, graph: &str, action: RbacAction| Grant {
@@ -1112,11 +1112,11 @@ mod eg318_dispatch_tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::acl::Grant;
-        use medulla_types::acl::GrantEffect;
-        use medulla_types::acl::RbacAction;
-        use medulla_types::acl::ResourceSelector;
-        use medulla_types::acl::Role;
+        use medulla_identity_types::acl::Grant;
+        use medulla_identity_types::acl::GrantEffect;
+        use medulla_identity_types::acl::RbacAction;
+        use medulla_identity_types::acl::ResourceSelector;
+        use medulla_identity_types::acl::Role;
 
         let (state, path) = ts_test_state("medulla-ts-retention-acl").await;
         {

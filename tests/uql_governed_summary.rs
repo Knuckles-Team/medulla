@@ -14,8 +14,8 @@ mod test_support;
 
 use serde_json::json;
 
+use medulla_identity_types::acl::AgentRole;
 use medulla_protocol_types::protocol::{Method, Request};
-use medulla_types::acl::AgentRole;
 
 const SECRET: &str = "uql-governed-summary-secret";
 
@@ -38,7 +38,7 @@ async fn state() -> test_support::SharedState {
 /// row-level RLS is ever reached.
 fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
-    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
     isolation.add_role(Role::new(COMMONS_USER_ROLE));
     let grant = |action: RbacAction| Grant {
         role: COMMONS_USER_ROLE.to_string(),

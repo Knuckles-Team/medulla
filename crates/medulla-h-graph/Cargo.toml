@@ -34,6 +34,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-query-types = { path = "../medulla-query-types" }
 rmp-serde = "1.3"

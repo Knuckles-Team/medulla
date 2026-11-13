@@ -13,6 +13,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use sha2::Sha256;
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_kernel::crypto::ValueCipher;
 use medulla_modality::{
     tck_report, ApplyDisposition, ApplyOutcome, ArtifactBundle, Classification,
@@ -21,7 +22,6 @@ use medulla_modality::{
     ServedNativeQuery, ServedPolicyScope, ServedQuery, ServedRecord,
 };
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_types::acl::RequestContextClaims;
 use medulla_types::{
     ServedModalityIngestItem, ServedModalityKind, ServedModalityOp, ServedNativePredicate,
     ServedSegmentKind,

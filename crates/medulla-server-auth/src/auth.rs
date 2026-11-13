@@ -35,6 +35,8 @@
 //! defaults into that downgrade; an operator must type it.
 
 use hmac::{Hmac, Mac};
+use medulla_identity_types::acl::AgentRole;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use medulla_protocol_types::protocol::build_context_operation_signature_bytes;
 use medulla_protocol_types::protocol::build_envelope_v2_bytes;
@@ -46,8 +48,6 @@ use medulla_server_api::{
     authority_context::RequestContextPolicy, authority_context::VerifiedRequestContext,
     server_context::ServerContext,
 };
-use medulla_types::acl::AgentRole;
-use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::Nonce;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

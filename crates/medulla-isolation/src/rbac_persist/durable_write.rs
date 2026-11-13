@@ -6,7 +6,7 @@ use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 
 use crate::rbac::RbacPolicy;
-use medulla_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentIdentity;
 
 use super::{
     IdentityBootstrapState, RbacPersistError, RbacStore, BOOTSTRAP_KEY, IDENTITIES_KEY, POLICY_KEY,

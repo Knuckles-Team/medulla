@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::{acl::AccessDecision, acl::AgentIdentity, acl::Grant, acl::Role};
+use medulla_identity_types::{acl::AccessDecision, acl::AgentIdentity, acl::Grant, acl::Role};
 
 /// Outcome of walking a graph's tamper-evident hash-chained audit log
 /// (CONCEPT:MEDULLA-KG.sharding.row-level-security, `Method::AuditVerify`). `ok` is true when every entry's stored
@@ -245,7 +245,7 @@ method_results! {
     CheckAccess(CheckAccess) => Json<AccessDecision>;
     // Every identity op answers one tagged reply; no reply variant can
     // carry a hash, token or sealed secret.
-    Identity(Identity) => Json<medulla_identity_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>>;
+    Identity(Identity) => Json<medulla_identity_types::identity::IdentityReply<medulla_identity_types::acl::RequestContextClaims>>;
     // EH-560: every write answers the governed change as it now stands.
     GovernedPropose(GovernedChange / "propose") => Json<medulla_mutation_types::governed_change::GovernedChange>;
     GovernedApprove(GovernedChange / "approve") => Json<medulla_mutation_types::governed_change::GovernedChange>;

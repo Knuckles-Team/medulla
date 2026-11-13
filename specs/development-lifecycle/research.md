@@ -197,3 +197,15 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `validate_cccc_census.py` | pipelines mode | .config/pre-commit.yaml, docs/quality-gate-terms.md, tests/test_scanner_distribution.py | 12971 |
 | `verify_release_tag.py` | xtask (build/release/bench tooling) | .github/actions/publish-distribution/action.yml, docs/development/pypi-tombstones.md, tests/test_normal_releas | 1614 |
 | `wheel_privacy_gate.sh` | xtask (wheel/sdist) | .config/pre-commit.yaml, Cargo.toml | 4567 |
+
+## Decision: where the triage kernel lives (MEDULLA-SDLC-R004.8)
+
+The triage kernel (`keep_frames`, `rank_suspects`, `pick_owner`, `decide_triage`) stays in
+`crates/medulla-decision-outcome-types/src/decision/defect_triage.rs`, beside `TriageKnobs` and the
+knob table. It is pure integer code (the Jaccard bound compares in millionths), so it needs nothing
+from a numeric crate, and moving it would split one small module across two crates for no gain.
+The functions that apply a bound take `&TriageKnobs`; `pick_owner` applies none. A duplicate is the
+lowest-id open defect of the same repository whose suspect set reaches the overlap knob; blame
+times are epoch milliseconds so the window compares against `as_of_ms` directly.
+## Access control moves with its only dependant in medulla-types (R021.4)
+Decision: `acl` and `assistant_profile` move together into `medulla-identity-types`. `assistant_profile` reads the grant vocabulary of `acl` and has no other dependency, so leaving it behind would make `medulla-types` depend on the crate that depends on it. `medulla-identity-types` no longer names `medulla-query-types`; the dependency runs from the query slice to the identity slice, which is declared first in the `contract` layer.

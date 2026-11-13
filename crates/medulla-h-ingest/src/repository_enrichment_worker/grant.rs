@@ -64,7 +64,7 @@ fn caller_has_authority(
             &proposal.graph,
             graph_type,
             graph_owner,
-            medulla_types::acl::AccessCheck::Write,
+            medulla_identity_types::acl::AccessCheck::Write,
         )
         && verified.tenant() == proposal.tenant_id
         && verified.principal_persistence_id() == proposal.caller_subject
@@ -127,15 +127,15 @@ pub(super) fn bind_top_up_identity(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_types::acl::Grant;
+    use medulla_identity_types::acl::GrantEffect;
+    use medulla_identity_types::acl::RbacAction;
+    use medulla_identity_types::acl::ResourceSelector;
+    use medulla_identity_types::acl::Role;
     use medulla_isolation::isolation::AccessLevel;
     use medulla_protocol_types::protocol::GraphType;
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
-    use medulla_types::acl::Grant;
-    use medulla_types::acl::GrantEffect;
-    use medulla_types::acl::RbacAction;
-    use medulla_types::acl::ResourceSelector;
-    use medulla_types::acl::Role;
 
     #[test]
     fn top_up_identity_requires_exact_verified_scope_subject_and_key() {

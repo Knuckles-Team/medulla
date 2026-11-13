@@ -362,3 +362,5 @@ The decisions this spec consumes stay inside medulla: `MEDULLA-DECISION-ENGINE-R
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-SDLC-R030` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+The R021.4 move carries `assistant_profile` with `acl` and reverses the old `medulla-identity-types` to `medulla-query-types` edge, so the query slice depends on the identity slice and never the reverse.

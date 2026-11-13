@@ -36,6 +36,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 rmp-serde = "1.3"
@@ -130,6 +131,7 @@ medulla-persistence = { path = "../medulla-persistence", features = ["test-suppo
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }

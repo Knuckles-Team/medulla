@@ -25,8 +25,8 @@ use medulla_protocol_types::result_contract::coordination::{
     AssistantProfileListProfiles, AssistantProfilePutDocumentSet, AssistantProfilePutProfile,
 };
 use medulla_server_api::knob_config::knobs;
-use medulla_types::acl::{GrantEffect, RbacAction, ResourceContext};
-use medulla_types::assistant_profile::{
+use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceContext};
+use medulla_identity_types::assistant_profile::{
     document_set_node_id, document_set_resource, profile_node_id, profile_resource,
     shares_as_grants, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
 };

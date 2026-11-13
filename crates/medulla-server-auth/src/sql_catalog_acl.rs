@@ -143,7 +143,7 @@ fn run_snapshot_before_read_lock_hook() {
 }
 
 /// The five independently grantable/revocable SQL privileges (item 2). Deliberately
-/// NOT `medulla_types::acl::RbacAction` (Read/Write/Admin) — that three-way split would
+/// NOT `medulla_identity_types::acl::RbacAction` (Read/Write/Admin) — that three-way split would
 /// collapse INSERT/UPDATE/DELETE into one bucket, making them impossible to grant
 /// or revoke independently, which the spec explicitly requires. The default-deny /
 /// owner-or-admin-bypass / generic-denial CONVENTIONS below still follow

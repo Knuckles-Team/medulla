@@ -31,7 +31,6 @@ STAY_SET = frozenset(
     }
 )
 REMAINING = (
-    "acl",
     "agent_bus",
     "asset_usage",
     "atomic_primitive",
@@ -200,3 +199,33 @@ def test_query_modules_live_only_in_the_query_slice() -> None:
     assert _modules("medulla-query-types") >= set(QUERY_MODULES)
     for crate in ("medulla-types", *SLICES[1:]):
         assert _modules(crate) & set(QUERY_MODULES) == set(), crate
+
+
+def _dependencies(crate: str) -> set[str]:
+    """Every `medulla-*` crate a slice names in its manifest (any section)."""
+    manifest = (CRATES / crate / "Cargo.toml").read_text(encoding="utf-8")
+    names = set()
+    for line in manifest.splitlines():
+        head = line.split("=", 1)[0].strip()
+        if head.startswith("medulla-") and "path" in line:
+            names.add(head)
+    return names
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R021.4")
+def test_acl_lives_in_the_identity_slice() -> None:
+    assert "acl" in _modules("medulla-identity-types")
+    for crate in ("medulla-types", *SLICES):
+        if crate != "medulla-identity-types":
+            assert "acl" not in _modules(crate), crate
+    # The wire family reads the grant vocabulary: the dependency runs query -> identity
+    # and never back; identity may not name the query slice.
+    assert "medulla-identity-types" in _dependencies("medulla-query-types")
+    assert "medulla-query-types" not in _dependencies("medulla-identity-types")
+    stale = [
+        str(path.relative_to(ROOT))
+        for path in CRATES.rglob("*.rs")
+        if "target" not in path.parts
+        and "medulla_identity_types::acl" in path.read_text(encoding="utf-8", errors="ignore")
+    ]
+    assert stale == []

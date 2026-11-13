@@ -26,7 +26,7 @@ hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
 
 [features]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-identity-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-identity-types/contract-schema"]
 test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support"]
 
 [dev-dependencies]

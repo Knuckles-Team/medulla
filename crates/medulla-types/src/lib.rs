@@ -3,15 +3,13 @@
 //! `medulla-server`, the `medulla` facade) depends on it, never the reverse.
 //!
 //! It also owns the pure-data types that the protocol enum embeds but whose
-//! behavior lives upstream: `wire_finance` (finance DTOs) and `acl`
-//! (`AgentRole`/`AgentIdentity`). The upstream modules re-export these
+//! behavior lives upstream: `wire_finance` (finance DTOs); the access-control
+//! vocabulary (`AgentRole`/`AgentIdentity`) lives in `medulla-identity-types`. The upstream modules re-export these
 //! (`pub use medulla_types::wire_finance::Order;`) so their algorithm code is unchanged —
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
-pub mod acl;
 pub mod row_change;
 // MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
-pub mod assistant_profile;
 pub mod semantic_enrichment;
 // MEDULLA-FINANCE-PRIMITIVES-R002.2.5 — served numeric kernel evaluation wire types.
 pub mod numeric_kernel;

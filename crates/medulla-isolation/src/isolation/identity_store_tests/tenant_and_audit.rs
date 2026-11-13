@@ -154,8 +154,8 @@ fn failed_managed_tenant_save_rolls_back_binding_and_projection() {
     assert!(!tenant_access(&layer));
 }
 
-fn absent_grant() -> medulla_types::acl::Grant {
-    medulla_types::acl::Grant {
+fn absent_grant() -> medulla_identity_types::acl::Grant {
+    medulla_identity_types::acl::Grant {
         role: "absent".to_string(),
         resource: ResourceSelector::Graph("absent".to_string()),
         action: RbacAction::Read,
@@ -435,7 +435,7 @@ fn assert_exact_saved_tenant_grants(store: &IdentityStore, slug: &str, role_id: 
     for action in [RbacAction::Read, RbacAction::Write] {
         assert!(saved_projection
             .grants
-            .contains(&medulla_types::acl::Grant {
+            .contains(&medulla_identity_types::acl::Grant {
                 role: format!("idm:{role_id}"),
                 resource: ResourceSelector::Pattern(format!("tenant__{slug}__*")),
                 action,

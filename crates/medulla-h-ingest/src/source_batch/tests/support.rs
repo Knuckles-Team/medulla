@@ -1,4 +1,5 @@
 use super::*;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol_fixtures::sql_source::SqlSourceTarget;
 use medulla_protocol_types::storage_wire::SqlSourceJson;
 use medulla_protocol_types::storage_wire::SqlSourceText;
@@ -8,7 +9,6 @@ use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
 use medulla_tables::schema::Column;
 use medulla_tables::schema::ColumnType;
 use medulla_tables::schema::TableSchema;
-use medulla_types::acl::RequestContextClaims;
 
 pub(super) struct Fixture {
     pub(super) directory: PathBuf,

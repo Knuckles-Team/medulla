@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 thiserror = "2.0"
@@ -24,7 +25,7 @@ schemars = { version = "1.2.3", optional = true }
 [features]
 # The wire-family gates moved here with their modules (MEDULLA-SDLC-R021.3); every
 # crate that forwarded `medulla-types/<gate>` forwards `medulla-query-types/<gate>` too.
-test-support = ["medulla-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-identity-types/test-support"]
 datascience = []
 mining = []
 graphlearn = ["datascience"]
@@ -48,10 +49,10 @@ viz = []
 wire-contract = [
     "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "text",
     "streaming", "owl", "owl-plan", "wasm-udf", "federation", "geo", "tensor", "stream",
-    "medulla-types/wire-contract",
+    "medulla-types/wire-contract", "medulla-identity-types/wire-contract",
 ]
-wire-complete = ["wire-contract", "timeseries", "probabilistic", "quantum", "asr-native", "viz", "medulla-types/jobs", "medulla-types/statechart", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
+wire-complete = ["wire-contract", "medulla-identity-types/wire-complete", "timeseries", "probabilistic", "quantum", "asr-native", "viz", "medulla-types/jobs", "medulla-types/statechart", "medulla-types/program-optimization", "medulla-types/knowledge-batch", "medulla-types/modality-serving"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

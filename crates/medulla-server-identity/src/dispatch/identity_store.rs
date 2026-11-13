@@ -119,7 +119,9 @@ pub fn respond(
     op: &IdentityOp,
     stamp: &IdentityStamp,
     outcome: Result<
-        medulla_identity_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>,
+        medulla_identity_types::identity::IdentityReply<
+            medulla_identity_types::acl::RequestContextClaims,
+        >,
         String,
     >,
 ) -> Response {

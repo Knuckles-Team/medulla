@@ -142,7 +142,7 @@ pub fn build_envelope_v2_bytes(
     graph: &str,
     method_name: &str,
     body_hash: &str,
-    claims: &medulla_types::acl::RequestContextClaims,
+    claims: &medulla_identity_types::acl::RequestContextClaims,
     timestamp: u64,
     nonce: &str,
     idempotency_key: &str,
@@ -210,7 +210,7 @@ pub fn build_envelope_v2_bytes(
 /// parameter without recursively signing itself.
 pub fn build_context_operation_signature_bytes(
     domain: &str,
-    claims: &medulla_types::acl::RequestContextClaims,
+    claims: &medulla_identity_types::acl::RequestContextClaims,
     idempotency_key: &str,
     graph: &str,
     body: &[u8],

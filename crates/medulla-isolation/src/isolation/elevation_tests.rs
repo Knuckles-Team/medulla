@@ -4,6 +4,7 @@ use super::{
     access_clock_ms, AccessBasis, AccessLevel, AccessQuery, AgentIdentity, AgentRole,
     ElevationError, IsolationLayer,
 };
+use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,
     rbac_elevation::ElevationApproval, rbac_elevation::ElevationDelegation,
@@ -12,7 +13,6 @@ use medulla_identity_types::{
     rbac_elevation::ElevationStanding,
 };
 use medulla_protocol_types::protocol::GraphType;
-use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 
 const GRAPH: &str = "tenant__acme__default";
 const MINUTE: u64 = 60 * 1000;

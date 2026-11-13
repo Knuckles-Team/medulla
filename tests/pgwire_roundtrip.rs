@@ -25,9 +25,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_core::registry::GraphRegistry;
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_types::acl::{AgentIdentity, AgentRole};
 use medulla_wire::pgwire;
 
 fn sql_test_persist_dir() -> String {
@@ -813,7 +813,7 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     // graph while still being denied `peer`'s.
     #[cfg(feature = "security")]
     {
-        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
         for (owner, graph) in [("worker", "agent:worker"), ("peer", "agent:peer")] {
             let role = format!("owner-{owner}");
             isolation.add_role(Role::new(role.clone()));

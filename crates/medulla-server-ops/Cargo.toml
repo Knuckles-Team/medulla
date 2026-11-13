@@ -26,6 +26,7 @@ medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 rmp-serde = "1.3"
@@ -92,6 +93,7 @@ wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf
 [dev-dependencies]
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

@@ -116,7 +116,7 @@ pub async fn prepare(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
-            medulla_types::acl::AccessCheck::Write,
+            medulla_identity_types::acl::AccessCheck::Write,
         ) {
             return Err("ACCESS_DENIED: repository enrichment graph Write grant is absent".into());
         }

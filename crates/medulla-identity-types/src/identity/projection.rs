@@ -16,7 +16,7 @@ use super::model::{UserKind, UserStatus};
 use super::scope::ScopeClassifier;
 use super::store::IdentityStore;
 use super::{IdentityRefusal, RBAC_ROLE_PREFIX};
-use medulla_types::{acl::AgentIdentity, acl::AgentRole, acl::Grant, acl::Role};
+use medulla_identity_types::{acl::AgentIdentity, acl::AgentRole, acl::Grant, acl::Role};
 
 /// Durable session facts, not a credential or an admission verdict.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

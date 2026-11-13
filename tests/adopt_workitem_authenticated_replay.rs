@@ -20,6 +20,7 @@ use std::sync::{
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_core::registry::GraphRegistry;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_result_types::epistemic_operations::{
@@ -29,7 +30,6 @@ use medulla_result_types::epistemic_operations::{
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_types::acl::RequestContextClaims;
 use medulla_work_types::{
     native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
     native_control::SubmitWorkItemResult,
@@ -413,7 +413,7 @@ async fn run_state_with(
     backend: Arc<dyn PersistenceBackend>,
     dir: String,
 ) -> test_support::SharedState {
-    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
+    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
 
     let state = state_with(backend, dir);
     let mut isolation = test_support::wire_isolation(&[

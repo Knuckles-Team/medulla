@@ -170,7 +170,7 @@ async fn read_profile(
     graph: &str,
     verified: &VerifiedRequestContext,
     request: &AssemblyRequest,
-) -> Result<Option<medulla_types::assistant_profile::AssistantProfile>, String> {
+) -> Result<Option<medulla_identity_types::assistant_profile::AssistantProfile>, String> {
     let Some(profile_id) = request.assistant_profile_ref.as_deref() else {
         return Ok(None);
     };
@@ -195,7 +195,7 @@ async fn read_profile(
 #[cfg(feature = "decide")]
 pub(crate) fn restrict_to_allowlist(
     entries: Vec<medulla_agent_types::agent_component::AgentComponentEntry>,
-    profile: &medulla_types::assistant_profile::AssistantProfile,
+    profile: &medulla_identity_types::assistant_profile::AssistantProfile,
 ) -> Result<
     (
         Vec<medulla_agent_types::agent_component::AgentComponentEntry>,

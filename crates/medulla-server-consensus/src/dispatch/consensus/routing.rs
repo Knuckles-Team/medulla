@@ -187,7 +187,7 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_and_rbac_commands_share_the_commons_consensus_order() {
         let method = Method::RbacAdmin {
-            op: medulla_types::acl::RbacAdminOp::List,
+            op: medulla_identity_types::acl::RbacAdminOp::List,
         };
         let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             method.clone(),

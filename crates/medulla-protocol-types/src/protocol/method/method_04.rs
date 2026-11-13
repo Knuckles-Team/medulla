@@ -422,7 +422,7 @@ $($variants)*
     // ── Zero-Trust Consensus ─────────────────────────────────────────
     RegisterIdentity {
         agent_id: String,
-        role: medulla_types::acl::AgentRole,
+        role: medulla_identity_types::acl::AgentRole,
         teams: Vec<String>,
         signature: String,
         /// RBAC role names this agent holds (CONCEPT:MEDULLA-KG.compute.feature).
@@ -433,7 +433,7 @@ $($variants)*
     /// `RegisterIdentity` REPLACES an agent's whole role set on every call -- there is no
     /// merge -- so a caller that wants to ADD a role without silently dropping one already
     /// granted by a prior admission pass must read the current set back first; this closes
-    /// that gap. The handler returns `Option<AgentIdentity>` (`medulla_types::acl::AgentIdentity`):
+    /// that gap. The handler returns `Option<AgentIdentity>` (`medulla_identity_types::acl::AgentIdentity`):
     /// `None` means "no identity registered for `agent_id`" (unknown), which callers MUST
     /// keep distinct from `Some(identity)` carrying an empty `roles` Vec (registered,
     /// CONFIRMED to hold no roles) -- conflating the two would reintroduce the exact
@@ -462,7 +462,7 @@ $($variants)*
     /// never the identity or policy. See [`crate::acl::AccessDecision`].
     CheckAccess {
         agent_id: String,
-        access: medulla_types::acl::AccessCheck,
+        access: medulla_identity_types::acl::AccessCheck,
     },
 
     /// Administer the RBAC role/grant policy (CONCEPT:MEDULLA-KG.compute.feature). Unconditional in the
@@ -470,7 +470,7 @@ $($variants)*
     /// falls to the dispatch "not available in this build" catch-all, like MEDULLA-090's
     /// backup/restore on a non-redb build).
     RbacAdmin {
-        op: medulla_types::acl::RbacAdminOp,
+        op: medulla_identity_types::acl::RbacAdminOp,
     },
 
     /// Just-in-time RBAC elevation (EH-404): request, approve (two-person),

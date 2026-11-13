@@ -309,7 +309,7 @@ pub fn explain_belief_redacted_capped(
 mod tests {
     use super::*;
     use crate::model::EdgeKind;
-    use medulla_types::acl::{AgentIdentity, AgentRole};
+    use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 
     fn owned_private(owner: &str) -> RowVisibility {
         RowVisibility {

@@ -129,11 +129,11 @@ pub fn grant_commons_user(isolation: &mut medulla_isolation::isolation::Isolatio
     let _ = &isolation;
     #[cfg(feature = "security")]
     {
-        use medulla_types::acl::Grant;
-        use medulla_types::acl::GrantEffect;
-        use medulla_types::acl::RbacAction;
-        use medulla_types::acl::ResourceSelector;
-        use medulla_types::acl::Role;
+        use medulla_identity_types::acl::Grant;
+        use medulla_identity_types::acl::GrantEffect;
+        use medulla_identity_types::acl::RbacAction;
+        use medulla_identity_types::acl::ResourceSelector;
+        use medulla_identity_types::acl::Role;
         isolation.add_role(Role::new("commons-user"));
         let commons_graph = ResourceSelector::Graph("__commons__".to_string());
         for action in [RbacAction::Read, RbacAction::Write] {
@@ -155,9 +155,9 @@ pub fn register_commons_agent(
     isolation: &mut medulla_isolation::isolation::IsolationLayer,
     agent_id: &str,
 ) {
-    isolation.register_agent(medulla_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
         agent_id: agent_id.to_string(),
-        role: medulla_types::acl::AgentRole::Agent,
+        role: medulla_identity_types::acl::AgentRole::Agent,
         teams: Vec::new(),
         #[cfg(feature = "security")]
         roles: vec!["commons-user".to_string()],

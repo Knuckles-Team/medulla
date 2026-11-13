@@ -199,7 +199,7 @@ impl std::error::Error for MintLeaseError {}
 
 // ── Mint authorization (GRAPH-POLICY-LEASE-CONTRACT.md §3 hardening) ────────
 //
-// `RequestContextClaims` (`medulla_types::acl`) is a `pub` struct with every field
+// `RequestContextClaims` (`medulla_identity_types::acl`) is a `pub` struct with every field
 // `pub` — it must be, since it is the wire type the server deserializes an
 // envelope's claims into. That means any of the 17 crates depending on
 // `medulla-core` can freely build a `RequestContextClaims` naming an arbitrary
@@ -274,13 +274,15 @@ impl std::fmt::Display for MintAuthorizationError {
 #[cfg(feature = "security")]
 impl std::error::Error for MintAuthorizationError {}
 
-/// Canonical (deterministic) encoding of a [`medulla_types::acl::RequestContextClaims`]
+/// Canonical (deterministic) encoding of a [`medulla_identity_types::acl::RequestContextClaims`]
 /// used ONLY to compute the [`MintAuthorization`] HMAC. Uses a purpose-built,
 /// explicit-field-order structure fed through `serde_json::to_vec` rather than
 /// hashing `RequestContextClaims` itself, whose derive/field order is a
 /// source-code detail, not a contract this MAC should be brittle to.
 #[cfg(feature = "security")]
-fn mint_authorization_claims_bytes(claims: &medulla_types::acl::RequestContextClaims) -> Vec<u8> {
+fn mint_authorization_claims_bytes(
+    claims: &medulla_identity_types::acl::RequestContextClaims,
+) -> Vec<u8> {
     #[derive(serde::Serialize)]
     struct CanonicalClaims<'a> {
         principal: &'a str,
@@ -312,7 +314,7 @@ fn mint_authorization_claims_bytes(claims: &medulla_types::acl::RequestContextCl
 #[cfg(feature = "security")]
 fn mint_authorization_mac(
     auth_secret: &str,
-    claims: &medulla_types::acl::RequestContextClaims,
+    claims: &medulla_identity_types::acl::RequestContextClaims,
 ) -> Result<MintAuthorizationMac, MintAuthorizationError> {
     let mut mac = MintAuthorizationMac::new_from_slice(auth_secret.as_bytes())
         .map_err(|_| MintAuthorizationError::InvalidSecret)?;
@@ -331,7 +333,7 @@ fn mint_authorization_mac(
 /// exactly what this control does and does not prevent.
 #[cfg(feature = "security")]
 pub struct MintAuthorization {
-    claims: medulla_types::acl::RequestContextClaims,
+    claims: medulla_identity_types::acl::RequestContextClaims,
 }
 
 #[cfg(feature = "security")]
@@ -343,7 +345,7 @@ impl MintAuthorization {
     /// presented bytes as ground truth.
     pub fn compute_mac(
         auth_secret: &str,
-        claims: &medulla_types::acl::RequestContextClaims,
+        claims: &medulla_identity_types::acl::RequestContextClaims,
     ) -> Result<Vec<u8>, MintAuthorizationError> {
         if auth_secret.is_empty() {
             return Err(MintAuthorizationError::EmptySecret);
@@ -363,7 +365,7 @@ impl MintAuthorization {
     /// always passes through this cryptographic check.
     pub fn new(
         auth_secret: &str,
-        claims: &medulla_types::acl::RequestContextClaims,
+        claims: &medulla_identity_types::acl::RequestContextClaims,
         mac: &[u8],
     ) -> Result<Self, MintAuthorizationError> {
         if auth_secret.is_empty() {
@@ -378,7 +380,7 @@ impl MintAuthorization {
     }
 
     /// The verified claims this token carries.
-    pub fn claims(&self) -> &medulla_types::acl::RequestContextClaims {
+    pub fn claims(&self) -> &medulla_identity_types::acl::RequestContextClaims {
         &self.claims
     }
 }
@@ -600,14 +602,14 @@ impl IsolationLayer {
         let decision_basis = if identity.role == AgentRole::System {
             PolicyDecisionBasis::System
         } else {
-            let ctx = medulla_types::acl::ResourceContext::graph(resource);
+            let ctx = medulla_identity_types::acl::ResourceContext::graph(resource);
             let allowed = matches!(
                 authority.policy().evaluate(
                     &identity.roles,
                     &ctx,
-                    medulla_types::acl::RbacAction::Read
+                    medulla_identity_types::acl::RbacAction::Read
                 ),
-                Some(medulla_types::acl::GrantEffect::Allow)
+                Some(medulla_identity_types::acl::GrantEffect::Allow)
             );
             if !allowed {
                 return Err(MintLeaseError::AccessDenied);

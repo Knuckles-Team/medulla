@@ -416,7 +416,7 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    wire_isolation_with_role(users, medulla_types::acl::AgentRole::Agent)
+    wire_isolation_with_role(users, medulla_identity_types::acl::AgentRole::Agent)
 }
 
 /// The wire fixture's isolation with every user registered under `role`. A `System`
@@ -424,10 +424,10 @@ pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
 #[cfg(feature = "security")]
 pub fn wire_isolation_with_role(
     users: &[&str],
-    role: medulla_types::acl::AgentRole,
+    role: medulla_identity_types::acl::AgentRole,
 ) -> IsolationLayer {
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_identity_types::acl::AgentIdentity;
+    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));

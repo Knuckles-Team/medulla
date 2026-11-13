@@ -23,6 +23,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Barrier, RwLock};
 
+use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentRole;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
@@ -56,9 +59,6 @@ use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 use medulla_result_types::epistemic_operations::ResourceReservationSummaryState;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
-use medulla_types::acl::RequestContextClaims;
 
 const SECRET: &str = "harness";
 // `cfg(test)` request-context verification deliberately pins the shared harness

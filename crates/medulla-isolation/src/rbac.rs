@@ -17,10 +17,10 @@
 
 use std::collections::{HashMap, HashSet};
 
+use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
 use medulla_identity_types::identity::IdentityStore;
 use medulla_identity_types::rbac_elevation::ElevationLedger;
 use medulla_mutation_types::governed_change::GovernedLedger;
-use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
 use serde::{Deserialize, Serialize};
 
 /// The durable RBAC policy: named roles (with parents) + a flat list of grants.
@@ -203,7 +203,7 @@ impl RbacPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::acl::ResourceSelector;
+    use medulla_identity_types::acl::ResourceSelector;
 
     fn grant(role: &str, sel: ResourceSelector, action: RbacAction, effect: GrantEffect) -> Grant {
         Grant {

@@ -12,7 +12,7 @@ mod mine_associate_wire_tests {
 
     fn authority() -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(
-            medulla_types::acl::RequestContextClaims {
+            medulla_identity_types::acl::RequestContextClaims {
                 principal: "analytics-test".into(),
                 agent_id: "analytics-test".into(),
                 tenant: "analytics-test-tenant".into(),

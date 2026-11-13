@@ -6,12 +6,12 @@ const COMMONS_GRAPH: &str = "__commons__";
 
 impl IsolationLayer {
     #[cfg(feature = "security")]
-    pub fn add_role(&mut self, role: medulla_types::acl::Role) {
+    pub fn add_role(&mut self, role: medulla_identity_types::acl::Role) {
         let _ = self.try_add_role(role);
     }
 
     #[cfg(feature = "security")]
-    pub fn try_add_role(&mut self, role: medulla_types::acl::Role) -> Result<(), String> {
+    pub fn try_add_role(&mut self, role: medulla_identity_types::acl::Role) -> Result<(), String> {
         let previous = self.rbac.clone();
         let previous_bootstrap = self.identity_bootstrap;
         self.rbac.add_role(role);
@@ -44,12 +44,15 @@ impl IsolationLayer {
     }
 
     #[cfg(feature = "security")]
-    pub fn add_grant(&mut self, grant: medulla_types::acl::Grant) {
+    pub fn add_grant(&mut self, grant: medulla_identity_types::acl::Grant) {
         let _ = self.try_add_grant(grant);
     }
 
     #[cfg(feature = "security")]
-    pub fn try_add_grant(&mut self, grant: medulla_types::acl::Grant) -> Result<(), String> {
+    pub fn try_add_grant(
+        &mut self,
+        grant: medulla_identity_types::acl::Grant,
+    ) -> Result<(), String> {
         let previous = self.rbac.clone();
         let previous_bootstrap = self.identity_bootstrap;
         self.rbac.add_grant(grant);
@@ -110,24 +113,26 @@ impl IsolationLayer {
     ) -> Result<(), String> {
         let role_name = format!("tenant:{tenant_slug}");
         let pattern = format!("tenant__{tenant_slug}__*");
-        self.try_add_role(medulla_types::acl::Role::new(role_name.clone()))?;
-        self.try_add_grant(medulla_types::acl::Grant {
+        self.try_add_role(medulla_identity_types::acl::Role::new(role_name.clone()))?;
+        self.try_add_grant(medulla_identity_types::acl::Grant {
             role: role_name.clone(),
-            resource: medulla_types::acl::ResourceSelector::Pattern(pattern.clone()),
-            action: medulla_types::acl::RbacAction::Read,
-            effect: medulla_types::acl::GrantEffect::Allow,
+            resource: medulla_identity_types::acl::ResourceSelector::Pattern(pattern.clone()),
+            action: medulla_identity_types::acl::RbacAction::Read,
+            effect: medulla_identity_types::acl::GrantEffect::Allow,
         })?;
-        self.try_add_grant(medulla_types::acl::Grant {
+        self.try_add_grant(medulla_identity_types::acl::Grant {
             role: role_name.clone(),
-            resource: medulla_types::acl::ResourceSelector::Pattern(pattern),
-            action: medulla_types::acl::RbacAction::Write,
-            effect: medulla_types::acl::GrantEffect::Allow,
+            resource: medulla_identity_types::acl::ResourceSelector::Pattern(pattern),
+            action: medulla_identity_types::acl::RbacAction::Write,
+            effect: medulla_identity_types::acl::GrantEffect::Allow,
         })?;
-        self.try_add_grant(medulla_types::acl::Grant {
+        self.try_add_grant(medulla_identity_types::acl::Grant {
             role: role_name.clone(),
-            resource: medulla_types::acl::ResourceSelector::Graph(COMMONS_GRAPH.to_string()),
-            action: medulla_types::acl::RbacAction::Read,
-            effect: medulla_types::acl::GrantEffect::Allow,
+            resource: medulla_identity_types::acl::ResourceSelector::Graph(
+                COMMONS_GRAPH.to_string(),
+            ),
+            action: medulla_identity_types::acl::RbacAction::Read,
+            effect: medulla_identity_types::acl::GrantEffect::Allow,
         })?;
         if let Some(identity) = creator_agent_id.and_then(|id| self.agents.get(id)) {
             if !identity.roles.contains(&role_name) {
@@ -140,12 +145,15 @@ impl IsolationLayer {
     }
 
     #[cfg(feature = "security")]
-    pub fn remove_grant(&mut self, grant: &medulla_types::acl::Grant) -> bool {
+    pub fn remove_grant(&mut self, grant: &medulla_identity_types::acl::Grant) -> bool {
         self.try_remove_grant(grant).unwrap_or(false)
     }
 
     #[cfg(feature = "security")]
-    pub fn try_remove_grant(&mut self, grant: &medulla_types::acl::Grant) -> Result<bool, String> {
+    pub fn try_remove_grant(
+        &mut self,
+        grant: &medulla_identity_types::acl::Grant,
+    ) -> Result<bool, String> {
         let previous = self.rbac.clone();
         let previous_bootstrap = self.identity_bootstrap;
         let removed = self.rbac.remove_grant(grant);

@@ -54,7 +54,7 @@ async fn send(state: &test_support::SharedState, id: u64, method: Method) -> Res
 async fn send_as(
     state: &test_support::SharedState,
     id: u64,
-    context: medulla_types::acl::RequestContextClaims,
+    context: medulla_identity_types::acl::RequestContextClaims,
     method: Method,
 ) -> Response {
     test_support::dispatch(
@@ -99,9 +99,9 @@ async fn roster(state: &test_support::SharedState, id: u64, now_ms: u64) -> BusR
 /// heartbeat reaches the bus handler instead of the graph ACL.
 fn isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
-    isolation.register_agent(medulla_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
         agent_id: "root".to_string(),
-        role: medulla_types::acl::AgentRole::System,
+        role: medulla_identity_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     });

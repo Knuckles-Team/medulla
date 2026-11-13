@@ -4,6 +4,7 @@
 //! (which depends on this crate) downcasts to; a unit test would link a second copy of the crate.
 #![cfg(feature = "kv")]
 
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -15,7 +16,6 @@ use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use medulla_server_blob::kv::KvStateExt;
 use medulla_test_ambient_auth as _;
-use medulla_types::acl::RequestContextClaims;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

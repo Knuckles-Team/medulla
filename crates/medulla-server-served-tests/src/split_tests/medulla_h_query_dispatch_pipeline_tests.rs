@@ -21,6 +21,7 @@ use tokio::sync::RwLock;
 use super::medulla_h_query_sql_source_read_tests::{
     binding_draft, commit_sql_change, dispatch_table_fixture, selector,
 };
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
@@ -35,7 +36,6 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_types::acl::RequestContextClaims;
 
 /// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
 /// nothing outside this process and is never a live credential.

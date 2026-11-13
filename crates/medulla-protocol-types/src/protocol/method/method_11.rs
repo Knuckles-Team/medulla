@@ -7,7 +7,7 @@ $($variants)*
     /// the stored revision, share by role, read back what the caller may read
     /// (MEDULLA-DECISION-ENGINE-R656.2).
     AssistantProfile {
-        op: Box<medulla_types::assistant_profile::ProfileOp>,
+        op: Box<medulla_identity_types::assistant_profile::ProfileOp>,
     },
     /// Run-bound observation state: store the digest a run observed at one
     /// frame of one source, read it back while it is live

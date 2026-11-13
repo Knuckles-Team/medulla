@@ -6,15 +6,15 @@ use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "federation")]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 
+use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentRole;
+use medulla_identity_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::compute::weight_semantic_results;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
-use medulla_types::acl::RequestContextClaims;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(feature = "redb")]
@@ -97,11 +97,11 @@ async fn multi_tenant_state() -> Arc<RwLock<ServerState>> {
         let mut s = state.write().await;
         #[cfg(feature = "security")]
         {
-            use medulla_types::acl::Grant;
-            use medulla_types::acl::GrantEffect;
-            use medulla_types::acl::RbacAction;
-            use medulla_types::acl::ResourceSelector;
-            use medulla_types::acl::Role;
+            use medulla_identity_types::acl::Grant;
+            use medulla_identity_types::acl::GrantEffect;
+            use medulla_identity_types::acl::RbacAction;
+            use medulla_identity_types::acl::ResourceSelector;
+            use medulla_identity_types::acl::Role;
             s.isolation.add_role(Role::new("owner-worker1"));
             s.isolation.add_role(Role::new("owner-worker2"));
             s.isolation.add_role(Role::new("manager-of-alpha"));
@@ -232,11 +232,11 @@ async fn multi_tenant_state() -> Arc<RwLock<ServerState>> {
         // now-mandatory RBAC path instead of failing closed on an empty policy.
         #[cfg(feature = "security")]
         {
-            use medulla_types::acl::Grant;
-            use medulla_types::acl::GrantEffect;
-            use medulla_types::acl::RbacAction;
-            use medulla_types::acl::ResourceSelector;
-            use medulla_types::acl::Role;
+            use medulla_identity_types::acl::Grant;
+            use medulla_identity_types::acl::GrantEffect;
+            use medulla_identity_types::acl::RbacAction;
+            use medulla_identity_types::acl::ResourceSelector;
+            use medulla_identity_types::acl::Role;
             let mut grant = |role: &str, resource: ResourceSelector, action: RbacAction| {
                 s.isolation.add_role(Role::new(role));
                 s.isolation.add_grant(Grant {
@@ -1303,11 +1303,11 @@ async fn spawn_federation_remote() -> (Arc<RwLock<ServerState>>, String) {
         });
         #[cfg(feature = "security")]
         {
-            use medulla_types::acl::Grant;
-            use medulla_types::acl::GrantEffect;
-            use medulla_types::acl::RbacAction;
-            use medulla_types::acl::ResourceSelector;
-            use medulla_types::acl::Role;
+            use medulla_identity_types::acl::Grant;
+            use medulla_identity_types::acl::GrantEffect;
+            use medulla_identity_types::acl::RbacAction;
+            use medulla_identity_types::acl::ResourceSelector;
+            use medulla_identity_types::acl::Role;
             s.isolation.add_role(Role::new("federation-reader"));
             s.isolation.add_grant(Grant {
                 role: "federation-reader".into(),
@@ -1350,7 +1350,7 @@ fn federation_remote_spec(endpoint: String) -> medulla_query_types::wire::Foreig
         endpoint,
         graph: "__commons__".into(),
         secret: SECRET.into(),
-        context: Box::new(medulla_types::acl::RequestContextClaims {
+        context: Box::new(medulla_identity_types::acl::RequestContextClaims {
             principal: "agent:federation-test".into(),
             tenant: "tenant-shared".into(),
             audience: "medulla-test".into(),
