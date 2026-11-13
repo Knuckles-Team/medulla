@@ -1708,8 +1708,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.7.3.2` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::index_adapter_materializes_without_an_endpoint_call` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.4` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::scoped_adapter_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.5` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::fit_and_rollback_receipts_and_verdict_field` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.6` | `tests/decide/test_scoped_adapter_served.py::test_outcome_adapter_lifts_and_reverts` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.6` | `tests/decide/test_scoped_adapter_served.py::test_outcome_adapter_lifts_and_reverts` | |
+| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | |
+| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::capability_outcome_adapter_lifts_and_reverts` | |
 | `MEDULLA-DECISION-ENGINE-R174.8` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_drift.rs::tests::refresh_plan_round_trips` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.1` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |

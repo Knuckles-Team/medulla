@@ -14,7 +14,9 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import msgpack
 from _decision_resident_fixture import publication, schema_body
+from _harness_envelope import draft_envelope, op
 from conftest import (
     TEST_AGENT_ID,
     TEST_SIGNER_KEY,
@@ -36,18 +38,25 @@ COMMONS = "__commons__"
 DIM = 384
 
 
-def connect(graph: str | None = None, *, engine: Engine | None = None):
-    """An authenticated client of the shared session engine, or of ``engine``."""
+def connect(
+    graph: str | None = None,
+    *,
+    engine: Engine | None = None,
+    context: dict[str, Any] | None = None,
+):
+    """An authenticated client of the shared session engine, or of ``engine``,
+    acting under ``context`` (the default test principal when ``None``)."""
+    verified = context if context is not None else request_context()
     if engine is None:
         return MedullaClient.connect(
             socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-            verified_context=request_context(),
+            verified_context=verified,
             graph_name=graph,
         )
     return MedullaClient.connect(
         socket_path=engine.socket,
         auth_secret=engine.secret,
-        verified_context=request_context(),
+        verified_context=verified,
         graph_name=graph,
         timeout=server_timeout(),
     )
@@ -201,3 +210,24 @@ async def publish_schema(client: MedullaClient) -> dict[str, Any]:
         "kind": "feature_schema",
         "definition_digest": result["component"]["definition_digest"],
     }
+
+
+async def write_docs(client: MedullaClient, graph: str, count: int, key: str) -> None:
+    """``count`` unembedded ``Doc`` nodes in ``graph``, through the served
+    change-envelope write (the generation cycle embeds them)."""
+    operations = [
+        op(
+            ordinal,
+            "AddNode",
+            {
+                "node_id": f"doc-{ordinal}",
+                "properties_msgpack": msgpack.packb(
+                    {"type": "Doc", "text": f"document number {ordinal} of {key}"}
+                ),
+            },
+        )
+        for ordinal in range(count)
+    ]
+    envelope = draft_envelope(graph, key, key, 1, operations)
+    results = await client.changes.apply_batch([envelope])
+    assert [result["status"] for result in results] == ["applied"], results

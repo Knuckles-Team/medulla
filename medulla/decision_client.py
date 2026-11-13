@@ -587,10 +587,16 @@ def record_outcome_op(
     record_id: str,
     returned: Iterable[tuple[str, str | None]],
     cited: Iterable[str],
+    *,
+    query: Mapping[str, Any] | None = None,
+    path: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Attest what a committed retrieval-plan run returned (``(id, content
-    class)`` in rank order) and which returned units the answer cited."""
-    outcome = {
+    class)`` in rank order) and which returned units the answer cited.
+    ``query`` (``space_digest`` and ``q16``) is the vector the run ranked with
+    and ``path`` the typed plan template it executed; adapter fitting reads
+    both."""
+    outcome: dict[str, Any] = {
         "record_id": record_id,
         "returned": [
             {"evidence_id": evidence_id, "content_class": content_class}
@@ -598,6 +604,10 @@ def record_outcome_op(
         ],
         "cited": list(cited),
     }
+    if query is not None:
+        outcome["query"] = dict(query)
+    if path is not None:
+        outcome["path"] = dict(path)
     return learn_op(tenant_id, "record_outcome", outcome=outcome)
 
 

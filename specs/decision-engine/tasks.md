@@ -622,7 +622,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T611 [US8] MEDULLA-DECISION-ENGINE-R174.7.3.2 Wiring: capability index and index-side adapters
 - [ ] T612 [US8] MEDULLA-DECISION-ENGINE-R174.7.4 Refusal
 - [ ] T613 [US8] MEDULLA-DECISION-ENGINE-R174.7.5 Evidence
-- [ ] T614 [US8] MEDULLA-DECISION-ENGINE-R174.7.6 Hot-path proof
+- [x] T614 [US8] MEDULLA-DECISION-ENGINE-R174.7.6 Hot-path proof
 - [ ] T615 [US8] MEDULLA-DECISION-ENGINE-R174.8.1 Model
 - [ ] T616 [US8] MEDULLA-DECISION-ENGINE-R174.8.2.1 Behavior: quality decay, staleness and region selection
 - [ ] T617 [US8] MEDULLA-DECISION-ENGINE-R174.8.3.1 Wiring: per-shard generation pin and swap
