@@ -58,3 +58,28 @@ connection that declares the `copy` capability (`CoverageFixture::declared_cache
 row is not effective, SRC-AUTH-R003.4). The declared `vg:freshnessMaxAgeSeconds` caps how long an entry
 serves. An undeclared source is virtual and disables fragment caching for that query. The served test
 observes the cache by changing a row at the source between two reads, so no new read of the cache exists.
+# Research: connector competency (current decisions)
+
+## R090: one federated read over two virtual graphs and engine facts
+
+- **Result shape.** The served `UnifiedQuery` answers `UnifiedQueryAnswer`: rows (id, score, and the
+  named provenance channels a source attached) plus a coverage block (`used`, `not_used`). A row
+  of the engine's own graph carries no provenance. This is the same projection `Method::Uql` uses,
+  so there is one way a row cites its source.
+- **Union of sources.** A fused plan (`FuseRrf`) keeps the text channels of every branch that
+  returned a row. Execution pins are matched against every source the plan names, including
+  sources inside a fused branch.
+- **Per-source access.** The caller's owner-scoped registry is the one place that decides what is
+  readable. A named source it does not hold is left out and reported in `coverage.not_used` with
+  reason `unconnected`: another owner's source and a missing source look the same (no existence
+  leak). Its reads become empty reads, so it is never called and adds no rows; a joined read
+  narrows to nothing. The query is not refused.
+- **Write stage.** The plan algebra has no write operator. A source statement is the only place a
+  write can enter, so an inline SQL source whose statement is not exactly one read refuses with
+  `UNIFIED_QUERY_WRITE_STAGE`, before any leg binds and before any source is called.
+- **Plan pin.** The query digest of a unified execution is the plan digest `ExplainPlan` reports.
+## R084.6: question 1 through Decide, in a fresh graph
+
+Question: how does the closing served proof run question 1 through `Decide` kind `capability_designation` without disturbing the shared graph?
+
+Decision: the same case imports the finance pack a second time under a derived connector name into a fresh graph, attaches it there, and asks the served designation for the target class `:Position` (the class the pack's risk tools operate on). It reuses the commons generation and schema helpers of the R172.12.6 served test, so there is one way to establish the commons embedding space. The answer must name exactly the two tools that operate on `:Position`, each with a `target_designation` premise that cites the pack, and never the tool that operates on `:FinancialInstrument`. The missing-pack abstention for question 1 is asserted in the same test before the pack is imported (`PACK_NOT_IMPORTED`, naming the connector), using the served `requires_packs` check of R084.7.

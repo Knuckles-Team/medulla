@@ -14,15 +14,31 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 import pytest
-from ontology_pack_support import connect, import_entries, ontology_entry
+from ontology_pack_support import (
+    attach_pack,
+    connect,
+    import_entries,
+    ontology_entry,
+)
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "decide"))
+
+from test_capability_designation_pack_served import (
+    _ask,
+    _connect,
+    _establish_commons_generation,
+    _publish_schema,
+)
 
 from medulla import ConnectorPackEntryContent
+from medulla import decision_client as dc
 from medulla.client import EngineResponseError
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 
@@ -301,17 +317,78 @@ async def _answer(client, question: str, connector: str) -> list[str]:
         await asyncio.sleep(0.5)
 
 
+async def _designate_position_tools(connector: str) -> None:
+    """Question 1 through ``Decide`` kind ``capability_designation``.
+
+    The finance pack's risk tools operate on ``:Position``; the served
+    designation of that target class names exactly those tools, each with a
+    ``target_designation`` premise citing the pack, and not the tool that
+    operates on a different class. The pack is imported and attached in a fresh
+    graph so the shared graph's composed schema is left alone.
+    """
+    client = await _connect()
+    try:
+        space = await _establish_commons_generation(client)
+        schema = await _publish_schema(client)
+        graph = f"pack-q1-{uuid.uuid4().hex[:8]}"
+        await client.tenants.create(graph)
+    finally:
+        await client.close()
+    client = await _connect(graph)
+    decision = dc.DecisionClient(client=client, graph=graph)
+    try:
+        imported = await import_entries(
+            client, connector, _pack(connector, "q1_finance_algorithms")
+        )
+        assert imported["result"] == "imported", imported
+        await attach_pack(client, connector)
+        wanted = {
+            f"mcp:{connector}/tool/var_historical",
+            f"mcp:{connector}/tool/stress_portfolio",
+        }
+        deadline = time.monotonic() + 180
+        while True:
+            record = await _ask(decision, schema, graph, space, f"{CORE}Position")
+            answer = (record.get("answer") or {}).get("value") or {}
+            designated = {d["entity_id"] for d in answer.get("designations", [])}
+            if designated == wanted:
+                break
+            assert time.monotonic() < deadline, (designated, record)
+            await asyncio.sleep(0.5)
+        assert f"mcp:{connector}/tool/price_option" not in json.dumps(record), record
+        facts = [p["fact"] for p in record["premises"]]
+        for tool in wanted:
+            assert any(
+                fact.startswith(f"target_designation:component={tool};path=")
+                and f"{CORE}Position" in fact
+                for fact in facts
+            ), (tool, facts)
+    finally:
+        await client.close()
+
+
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.1")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.2")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.3")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.4")
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
+@pytest.mark.spec("MEDULLA-CQ-CONN-R084.6")
 @pytest.mark.parametrize("question", QUESTIONS)
 def test_pack_questions_end_to_end(question: str) -> None:
     async def exercise() -> None:
         client = await connect()
         try:
             connector = f"cq-{uuid.uuid4().hex[:8]}"
+            if question == "q1_finance_algorithms":
+                # Without the finance pack the question abstains and names it.
+                with pytest.raises(
+                    EngineResponseError, match="PACK_NOT_IMPORTED"
+                ) as no:
+                    await client.rdf.sparql(
+                        _fixture(question, "query.rq", connector=connector),
+                        requires_packs=_requires(question, connector),
+                    )
+                assert connector in str(no.value), no.value
             imported = await import_entries(
                 client, connector, _pack(connector, question)
             )
@@ -320,6 +397,8 @@ def test_pack_questions_end_to_end(question: str) -> None:
             if records:
                 await _ingest(client, connector, records)
             await _answer(client, question, connector)
+            if question == "q1_finance_algorithms":
+                await _designate_position_tools(f"{connector}d")
         finally:
             await client.close()
 
