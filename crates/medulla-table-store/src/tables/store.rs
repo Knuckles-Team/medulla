@@ -68,6 +68,7 @@ mod outbox;
 mod row_insert;
 mod sequence;
 mod source_batch;
+mod trigger;
 
 use ann_durable::{drop_ann_index_in, drop_ann_indexes_for_column_in, put_ann_index_in};
 pub use ann_durable::{GenerationWrite, StoredGeneration};
@@ -6115,6 +6116,29 @@ fn insert_in(
     }
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
+    if trigger::insert_has_triggers(&schema) {
+        return trigger::insert_triggered_in(wtx, tenant_scope, table, col_order, rows, &schema);
+    }
+    insert_plain_in(wtx, tenant_scope, table, col_order, rows)
+}
+
+/// `INSERT` without trigger handling (MEDULLA-ENGINE-PARITY-R012.1 runs triggers
+/// around it row by row).
+fn insert_plain_in(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+    col_order: &[String],
+    rows: &[Vec<Value>],
+) -> Result<Vec<Vec<Cell>>, String> {
+    if rows.len() > MAX_SQL_SCAN_ROWS {
+        return Err(format!(
+            "INSERT contains {} rows; maximum is {MAX_SQL_SCAN_ROWS}",
+            rows.len()
+        ));
+    }
+    let schema =
+        get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
 
     // Resolve each named insert column to a schema index.
     let targets = resolve_targets(&schema, table, col_order)?;
@@ -6975,6 +6999,7 @@ fn update_rows_in(
             for (idx, cell) in &assigns {
                 cells[*idx] = cell.clone();
             }
+            trigger::before_update(&schema, &old_cells, &mut cells)?;
             validate_updated_row_checks(&schema, &cells)?;
             let blob = rmp_serde::to_vec_named(&cells).map_err(|e| format!("encode row: {e}"))?;
             if blob.len() > MAX_SQL_STORED_VALUE_BYTES {
@@ -6988,6 +7013,9 @@ fn update_rows_in(
         }
     }
     finish_update_pass_in(wtx, tenant_scope, table, &schema, &changed)?;
+    for (old_cells, new_cells) in &updated {
+        trigger::after_update(&schema, old_cells, new_cells)?;
+    }
     Ok(updated)
 }
 
@@ -7022,6 +7050,9 @@ fn delete_in(
             victims.push((k.value().1, cells));
         }
     }
+    for (_, cells) in &victims {
+        trigger::before_delete(&schema, cells)?;
+    }
     for (rowid, cells) in &victims {
         rows_t.remove((table, *rowid)).map_err(map_err)?;
         removed.push(cells.clone());
@@ -7043,6 +7074,9 @@ fn delete_in(
             None,
             &mut visited,
         )?;
+    }
+    for cells in &removed {
+        trigger::after_delete(&schema, cells)?;
     }
     Ok(removed)
 }

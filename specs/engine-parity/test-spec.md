@@ -39,7 +39,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R011.1` | `crates/medulla-sql-tests/tests/constraint.rs::deferred_foreign_key_checks_at_commit`; `tests/pgwire_roundtrip.rs::constraint_violations_return_sqlstate` | planned |
 | `MEDULLA-ENGINE-PARITY-R011.2` | `tests/pgwire_roundtrip.rs::constraint_violations_return_sqlstate` | planned |
 | `MEDULLA-ENGINE-PARITY-R011.3` | `tests/pgwire_roundtrip.rs::constraints_hold_under_concurrent_sessions`; bench group `engine_parity/constraints` | planned |
-| `MEDULLA-ENGINE-PARITY-R012.1` | `crates/medulla-sql-tests/tests/trigger.rs::before_insert_rewrites_row`; `tests/pgwire_roundtrip.rs::before_insert_trigger_rewrites_row` | planned |
+| `MEDULLA-ENGINE-PARITY-R012.1` | `crates/medulla-sql-tests/tests/trigger.rs::before_insert_rewrites_row`; `crates/medulla-sql-tests/tests/trigger.rs::refuse_aborts_the_statement`; `crates/medulla-sql-tests/tests/trigger.rs::update_and_delete_triggers_see_old_and_new`; `crates/medulla-sql-tests/tests/trigger.rs::after_trigger_cannot_rewrite_but_can_refuse` | existing |
 | `MEDULLA-ENGINE-PARITY-R012.2` | `crates/medulla-sql-tests/tests/trigger.rs::depth_bound_refuses` | planned |
 | `MEDULLA-ENGINE-PARITY-R012.3` | `tests/pgwire_roundtrip.rs::after_insert_trigger_runs_once_per_row`; bench group `engine_parity/trigger_after_insert` | planned |
 | `MEDULLA-ENGINE-PARITY-R013.1` | `crates/medulla-sql-tests/tests/sequence.rs::values_never_repeat_after_crash`; `tests/pgwire_roundtrip.rs::serial_column_uses_sequence` | planned |

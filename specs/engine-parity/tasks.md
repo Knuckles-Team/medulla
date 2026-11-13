@@ -35,7 +35,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T029 [US3] MEDULLA-ENGINE-PARITY-R011.1 Constraints: unique, foreign key, check and not null: model and behavior
 - [ ] T030 [US3] MEDULLA-ENGINE-PARITY-R011.2 Constraints: unique, foreign key, check and not null: wiring and refusal
 - [ ] T031 [P] [US3] MEDULLA-ENGINE-PARITY-R011.3 Constraints: unique, foreign key, check and not null: hot-path proof
-- [ ] T032 [US3] MEDULLA-ENGINE-PARITY-R012.1 Triggers as statechart rules: model and behavior
+- [x] T032 [US3] MEDULLA-ENGINE-PARITY-R012.1 Triggers as statechart rules: model and behavior
 - [ ] T033 [US3] MEDULLA-ENGINE-PARITY-R012.2 Triggers as statechart rules: wiring and refusal
 - [ ] T034 [P] [US3] MEDULLA-ENGINE-PARITY-R012.3 Triggers as statechart rules: hot-path proof
 - [ ] T035 [US3] MEDULLA-ENGINE-PARITY-R013.1 Named sequences: model and behavior

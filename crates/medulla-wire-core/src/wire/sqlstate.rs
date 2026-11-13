@@ -26,6 +26,10 @@ const TABLE: &[(&str, &str)] = &[
     ("SEQUENCE_UNKNOWN", "42P01"),
     ("SEQUENCE_INVALID", "22023"),
     ("TRIGGER_DEPTH", "54001"),
+    ("TRIGGER_REFUSED", "P0001"),
+    ("TRIGGER_MACHINE_INVALID", "XX000"),
+    ("TRIGGER_EXISTS", "42710"),
+    ("TRIGGER_UNKNOWN", "42704"),
 ];
 
 /// The SQLSTATE for an engine code, or `None` when the code is not in the table.

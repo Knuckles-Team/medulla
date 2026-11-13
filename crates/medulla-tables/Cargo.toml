@@ -21,6 +21,7 @@ medulla-ann = { path = "../medulla-ann", optional = true }
 medulla-text = { path = "../medulla-text", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-statechart = { path = "../medulla-statechart", optional = true }
 redb = { workspace = true, optional = true }
 async-trait = { version = "0.1", optional = true }
 tracing = { version = "0.1", optional = true }
@@ -36,4 +37,4 @@ sha2 = { version = "0.10", optional = true }
 hex = { version = "0.4", optional = true }
 
 [features]
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:medulla-statechart", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet"]

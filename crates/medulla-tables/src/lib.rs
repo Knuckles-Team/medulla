@@ -17,3 +17,5 @@ pub mod migration;
 pub mod schema;
 #[cfg(feature = "sql")]
 pub mod sequence;
+#[cfg(feature = "sql")]
+pub mod trigger;

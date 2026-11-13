@@ -705,6 +705,11 @@ pub struct TableSchema {
     /// before this field existed still deserializes (round-trips to an empty vec).
     #[serde(default)]
     constraints: Vec<TableConstraint>,
+    /// Row-event triggers (MEDULLA-ENGINE-PARITY-R012.1), versioned with the table's
+    /// DDL and dropped with it. Omitted from the stored record when empty so a table
+    /// without triggers keeps its stored bytes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    triggers: Vec<crate::trigger::TriggerSpec>,
     /// Derived name directory. It is rebuilt after deserialization and deliberately
     /// excluded from the durable schema so persistence has one canonical source of
     /// truth: the ordered `columns` vector.
@@ -718,6 +723,7 @@ impl Clone for TableSchema {
         // cache state observable through clone/equality and duplicates derived data.
         Self::new(self.name.clone(), self.columns.clone())
             .with_constraints(self.constraints.clone())
+            .with_triggers(self.triggers.clone())
     }
 }
 
@@ -726,6 +732,7 @@ impl PartialEq for TableSchema {
         self.name == other.name
             && self.columns == other.columns
             && self.constraints == other.constraints
+            && self.triggers == other.triggers
     }
 }
 
@@ -735,8 +742,25 @@ impl TableSchema {
             name: name.into(),
             columns,
             constraints: Vec::new(),
+            triggers: Vec::new(),
             column_offsets: OnceLock::new(),
         }
+    }
+
+    /// Attach the table's triggers (MEDULLA-ENGINE-PARITY-R012.1).
+    pub fn with_triggers(mut self, triggers: Vec<crate::trigger::TriggerSpec>) -> Self {
+        self.triggers = triggers;
+        self
+    }
+
+    /// The table's triggers in creation order.
+    pub fn triggers(&self) -> &[crate::trigger::TriggerSpec] {
+        &self.triggers
+    }
+
+    /// Mutable access for the DDL path that creates and drops triggers.
+    pub fn triggers_mut(&mut self) -> &mut Vec<crate::trigger::TriggerSpec> {
+        &mut self.triggers
     }
 
     /// Attach table-level constraints (CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001) to an already-built
@@ -823,6 +847,16 @@ impl TableSchema {
                 self.name,
                 self.constraints.len()
             ));
+        }
+        let mut trigger_names = std::collections::HashSet::new();
+        for trigger in &self.triggers {
+            trigger.validate()?;
+            if !trigger_names.insert(trigger.name.as_str()) {
+                return Err(format!(
+                    "table `{}` declares trigger `{}` twice",
+                    self.name, trigger.name
+                ));
+            }
         }
         for column in &self.columns {
             validate_column_type(column.ty)?;
