@@ -626,6 +626,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CorpusRetrieve { .. }
         | Method::SourceCoverage { .. }
         | Method::EncodedDocumentSearch { .. }
+        | Method::ProjectionRead { .. }
         | Method::ViewportQuery { .. }
         | Method::ResolveViewportSelection { .. }
         | Method::CompactNodesByType { .. }

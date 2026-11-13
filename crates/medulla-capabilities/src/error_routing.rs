@@ -805,6 +805,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "TOC_MISSING",
         ],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R026.4.1: a projection read of an unapproved or stale mapping,
+    // or one the verified caller may not make.
+    (
+        "ProjectionRead",
+        &[
+            "PROJECTION_MAPPING_UNAPPROVED",
+            "PROJECTION_MAPPING_STALE",
+            "PROJECTION_ACCESS_DENIED",
+        ],
+    ),
     // MEDULLA-DURABLE-KERNEL-R043.100.3: a cursor the feed cannot honour.
     (
         "ReadGraphChanges",

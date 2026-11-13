@@ -126,6 +126,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-UNIFIED-DATA-PLANE-R026.4.1: one projected-table read over the caller's graph.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::ProjectionRead { request } => {
+            return Ok(super::projection::handle_projection_read(hctx, *request))
+        }
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R653.3: one corpus read over the caller's projected core.
     #[cfg(feature = "query")]
     let method = match method {

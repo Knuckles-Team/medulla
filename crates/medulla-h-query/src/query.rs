@@ -184,6 +184,8 @@ pub(crate) use viewport::{handle_resolve_viewport_selection, handle_viewport_que
 #[cfg(feature = "query")]
 mod document_encoding;
 #[cfg(feature = "query")]
+mod projection;
+#[cfg(feature = "query")]
 mod retrieval_round;
 #[cfg(all(feature = "query", feature = "nl-query"))]
 pub mod expansion;

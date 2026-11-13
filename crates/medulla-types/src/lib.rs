@@ -317,6 +317,7 @@ pub mod tenant_cursor;
 pub mod keyset_page;
 // MEDULLA-DURABLE-KERNEL-R043.100.1 — graph change-feed types and snapshot digest.
 pub mod graph_change_feed;
+pub mod projection_read;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;

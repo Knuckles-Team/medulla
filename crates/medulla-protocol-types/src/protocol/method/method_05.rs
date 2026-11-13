@@ -699,6 +699,15 @@ $($variants)*
     EncodedDocumentSearch {
         request: Box<medulla_types::retrieval::EncodedSearchRequest>,
     },
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R026.4.1: read one table of a graph-backed relational
+    /// projection through an approved, versioned mapping. The answer binds the mapping
+    /// revision, the graph revision, the column types and a result digest. A read; writes
+    /// nothing. Refusals `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`,
+    /// `PROJECTION_ACCESS_DENIED`.
+    ProjectionRead {
+        request: Box<medulla_types::projection_read::ProjectionReadRequest>,
+    },
         ]);
     };
 }

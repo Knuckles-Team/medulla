@@ -140,6 +140,15 @@ closed_error_codes! {
         CursorExpired => "CURSOR_EXPIRED",
         AuthorizationChanged => "AUTHORIZATION_CHANGED",
         GraphIncarnationStale => "GRAPH_INCARNATION_STALE",
+        // MEDULLA-UNIFIED-DATA-PLANE-R026.4: graph-backed relational projections.
+        /// A projection read names a mapping revision that is not approved, or no mapping at all.
+        ProjectionMappingUnapproved => "PROJECTION_MAPPING_UNAPPROVED",
+        /// A projection read names a mapping revision a newer revision has replaced.
+        ProjectionMappingStale => "PROJECTION_MAPPING_STALE",
+        /// A projection read is not the verified caller's own, or reads a mapping it cannot see.
+        ProjectionAccessDenied => "PROJECTION_ACCESS_DENIED",
+        /// A write statement on a projected table; projections are read only.
+        ProjectionReadOnly => "PROJECTION_READ_ONLY",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
         // MEDULLA-DECISION-ENGINE-R099.2: entity documents lowered to alignment claims.
