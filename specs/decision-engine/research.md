@@ -1372,3 +1372,8 @@ R656.4 (named profile constrains the run): both entries read the profile through
 ## R140.105 trajectory journey
 - The journey enters `Decide` through `handle_decide`, the handler the `Method::Decide` dispatch calls, with tenant and principal context (the h-decide crate has no router dependency; the router adds only admission, which the served Python proofs cover). "Read back" is the sealed record the call returns: its record digest recomputes, its decision digest is the answer's own, and deciding the same request again seals the same decision digest.
 - Every refusal code of the four decisions is submitted once, and the cross-tenant negatives are another tenant's outcome record (invisible, refused as unknown or incomplete).
+
+## R118.1.2.4: one dense value, not anchored at any prior
+
+- The served agreement proof varies the graph prior and the caller retrieval weight and requires no reader to move. `learned_reliability` used to anchor the dense estimate at the caller's prior (`anchored_reliability`), so the value changed with the graph. It now returns the log's materialized estimate (the same mean and interval the `reputation` relation reports); `DecisionSource::learned_reliability` takes only the subject. The graph prior still stands for `Absent`, where the log holds nothing.
+- The test lives in `medulla-h-decide` (where the decision-log harness is) and reaches the two `Query` handlers by dev-depending on `medulla-h-query` (no cycle: `medulla-h-query` reaches the decide handler only through the server seam, which the test installs). The foreign tenant's history is written straight to that tenant's own rows; the engine's tenant-scoped store is what keeps it from the readers.

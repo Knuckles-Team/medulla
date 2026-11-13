@@ -518,7 +518,7 @@ async fn assert_reputation_origin(
     let StatisticalOutcome::Explored { option_id, .. } = &record.outcome else {
         panic!("executed exploration")
     };
-    let learned = views.learned_reliability(option_id, 0.5, 2.0).unwrap();
+    let learned = views.learned_reliability(option_id).unwrap();
     if real.is_some() {
         let medulla_decision_types::decision::reputation::SourceReliability::Estimated {
             mean,

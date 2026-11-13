@@ -21,17 +21,13 @@ pub trait DecisionSource: Send + Sync {
     /// Every visible record, or why the log cannot be read.
     fn decision_rows(&self) -> Result<Vec<Map<String, Value>>, String>;
 
-    /// `subject`'s reliability learned from the visible log's `reputation` rows, anchored
-    /// at `prior_mean` held with `prior_strength` pseudo-counts (MEDULLA-DECISION-ENGINE-R118.1.2.1):
-    /// `Absent` when the log holds no independent outcome of `subject`, `InsufficientHistory`
-    /// below `reputation.min_support`. A source with no reputation view answers `Absent`.
-    fn learned_reliability(
-        &self,
-        subject: &str,
-        prior_mean: f64,
-        prior_strength: f64,
-    ) -> Result<SourceReliability, String> {
-        let _ = (subject, prior_mean, prior_strength);
+    /// `subject`'s reliability learned from the visible log's `reputation` rows
+    /// (MEDULLA-DECISION-ENGINE-R118.1.2.1): the log's own materialized estimate, never
+    /// shifted by a caller's or the graph's prior. `Absent` when the log holds no independent
+    /// outcome of `subject`, `InsufficientHistory` below `reputation.min_support`. A source
+    /// with no reputation view answers `Absent`.
+    fn learned_reliability(&self, subject: &str) -> Result<SourceReliability, String> {
+        let _ = subject;
         Ok(SourceReliability::Absent)
     }
 }

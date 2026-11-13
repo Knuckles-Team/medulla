@@ -43,8 +43,8 @@ use medulla_decision_types::{
 use medulla_numeric::calibration::ProperScores;
 use medulla_numeric::detkernel::Level;
 use medulla_numeric::risk::{
-    anchored_reliability, learn_reputation, ConcentrationBounds, Estimate, Observation, Reputation,
-    ReputationRules, SampleGate, SubjectReputation,
+    learn_reputation, ConcentrationBounds, Estimate, Observation, Reputation, ReputationRules,
+    SampleGate, SubjectReputation,
 };
 use medulla_tables::schema::ColumnType;
 use serde_json::Value;
@@ -385,15 +385,15 @@ pub(super) fn reputation_relation(
     ))
 }
 
-/// `subject`'s learned reliability (an option first, then an agent), anchored at the
-/// caller's prior (MEDULLA-DECISION-ENGINE-R118.1.2.1). A visible subject below the
+/// `subject`'s learned reliability (an option first, then an agent): the log's materialized
+/// estimate, the same one the `reputation` relation reports, never anchored at a caller's or
+/// the graph's prior (MEDULLA-DECISION-ENGINE-R118.1.2.1). A visible subject below the
 /// `reputation.min_support` knob is `InsufficientHistory`, never `Absent`; `Absent`
 /// means the visible log holds no outcome of it at all.
 pub(super) fn learned_reliability(
     store: &AgentLibraryStore,
     reader: &LogReader,
     subject: &str,
-    prior: (f64, f64),
 ) -> Result<SourceReliability, String> {
     let evidence = gather(store, reader)?;
     let rules = rules(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())?;
@@ -406,9 +406,7 @@ pub(super) fn learned_reliability(
             continue;
         };
         match row.reputation {
-            Reputation::Estimated(_) => {
-                let estimate = anchored_reliability(prior.0, prior.1, &row, rules.delta)
-                    .map_err(|e| e.to_string())?;
+            Reputation::Estimated(estimate) => {
                 return Ok(SourceReliability::Estimated {
                     mean: estimate.mean,
                     lower: estimate.lower,

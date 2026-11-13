@@ -594,12 +594,7 @@ mod tests {
             Ok(Vec::new())
         }
 
-        fn learned_reliability(
-            &self,
-            subject: &str,
-            _prior_mean: f64,
-            _prior_strength: f64,
-        ) -> Result<SourceReliability, String> {
+        fn learned_reliability(&self, subject: &str) -> Result<SourceReliability, String> {
             Ok(match subject {
                 "dense" => SourceReliability::Estimated {
                     mean: 0.9,

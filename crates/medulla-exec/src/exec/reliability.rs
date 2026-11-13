@@ -1,10 +1,10 @@
 //! `SOURCE RELIABILITY <id>` (EH-525): re-weight every row by how reliable a source is.
 //!
 //! The PRIOR is the source's propagated belief confidence in the graph
-//! (`medulla_epistemic::propagate_confidence` under the plan's `AuthorityPolicy`), held with
-//! the policy's `prior_strength` pseudo-counts. When the plan has the caller's decision
-//! log bound and that log holds independently evaluated outcomes of the source, the
-//! reliability is LEARNED: the prior updated with those (discounted) outcomes, read
+//! (`medulla_epistemic::propagate_confidence` under the plan's `AuthorityPolicy`). When the
+//! plan has the caller's decision log bound and that log holds independently evaluated
+//! outcomes of the source, the reliability is LEARNED: the log's own materialized estimate
+//! (discounted outcomes pooled across the subject kind), never shifted by the prior, read
 //! from the log's `reputation` view — visibility is the log's, so an outcome the caller
 //! cannot see never moves the number. Without a log, or with no outcome of the source,
 //! the prior is used unchanged (the pre-EH-525 behaviour). A source with outcomes but fewer
@@ -95,7 +95,7 @@ pub fn resolve(
 ) -> Result<Reliability, String> {
     let prior = medulla_epistemic::propagate_confidence(graph, source_id, policy).confidence;
     let learned = match decisions {
-        Some(log) => log.learned_reliability(source_id, prior, policy.prior_strength)?,
+        Some(log) => log.learned_reliability(source_id)?,
         None => SourceReliability::Absent,
     };
     Ok(from_learned(prior, learned))
@@ -140,12 +140,7 @@ mod tests {
             Ok(Vec::new())
         }
 
-        fn learned_reliability(
-            &self,
-            _subject: &str,
-            _prior_mean: f64,
-            _prior_strength: f64,
-        ) -> Result<SourceReliability, String> {
+        fn learned_reliability(&self, _subject: &str) -> Result<SourceReliability, String> {
             Ok(self.0)
         }
     }
