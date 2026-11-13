@@ -9,9 +9,9 @@ use super::domain::{AgentLibraryOwner, GraphShardOwner, RbacOwner, SemanticIndex
 use super::identity::PhysicalStoreIdentity;
 use super::layout::{layout_digest_over, OwnerLayout};
 use super::lineage::{
-    AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
-    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS,
-    SEMANTIC_INDEX_BEFORE_PROMOTION,
+    AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE, AGENT_LIBRARY_BEFORE_MCP_CATALOG,
+    GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
 };
 use super::persisted_layout::LayoutPredecessor;
 use super::registry::predecessor_evidence;
@@ -41,6 +41,8 @@ mod commit;
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum UpgradeTarget {
     AgentLibrary,
+    /// The Agent Library before the known concept ids and lineage edges.
+    AgentLibraryConceptLineage,
     GraphShard(GraphShardSource),
     /// The semantic index before the promotion-gate records.
     SemanticIndex,
@@ -108,7 +110,7 @@ impl GraphShardSource {
 impl UpgradeTarget {
     fn layout(self) -> OwnerLayout {
         match self {
-            Self::AgentLibrary => OwnerLayout::AgentLibrary,
+            Self::AgentLibrary | Self::AgentLibraryConceptLineage => OwnerLayout::AgentLibrary,
             Self::GraphShard(_) => OwnerLayout::GraphShard,
             Self::SemanticIndex => OwnerLayout::SemanticIndex,
             Self::Rbac => OwnerLayout::Rbac,
@@ -118,6 +120,7 @@ impl UpgradeTarget {
     fn predecessor(self) -> &'static LayoutPredecessor {
         match self {
             Self::AgentLibrary => &AGENT_LIBRARY_BEFORE_MCP_CATALOG,
+            Self::AgentLibraryConceptLineage => &AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
             Self::GraphShard(source) => source.declared_generation(),
             Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
             Self::Rbac => &RBAC_BEFORE_PROFILE_GRANTS,
@@ -127,6 +130,9 @@ impl UpgradeTarget {
     fn pinned(self) -> [u8; 32] {
         match self {
             Self::AgentLibrary => super::lineage::AGENT_LIBRARY_PRE_MCP_CATALOG_DIGEST,
+            Self::AgentLibraryConceptLineage => {
+                super::lineage::AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST
+            }
             Self::GraphShard(source) => source.frozen_digest(),
             Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
             Self::Rbac => super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
@@ -152,6 +158,23 @@ pub struct OwnerLayoutUpgradeReport {
 }
 pub type AgentLibraryUpgradeReport = OwnerLayoutUpgradeReport;
 pub type GraphShardUpgradeReport = OwnerLayoutUpgradeReport;
+
+/// Inspect an Agent Library owner file from before the known concept ids and
+/// the concept lineage edge store (MEDULLA-DURABLE-KERNEL-R094.7.1).
+pub fn inspect_agent_library_concept_lineage_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: AgentLibraryInspectionOptions,
+) -> Result<ValidatedAgentLibraryUpgrade, String> {
+    inspect_layout_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+        UpgradeTarget::AgentLibraryConceptLineage,
+    )
+}
 
 pub fn inspect_agent_library_mcp_catalog_upgrade(
     path: &Path,
@@ -266,6 +289,15 @@ pub fn upgrade_agent_library_mcp_catalog(
     upgrade_layout(token, UpgradeTarget::AgentLibrary)
 }
 
+/// Bring an inspected Agent Library to the current layout in one durable
+/// commit: every row is kept and the concept id and lineage edge tables are
+/// created empty.
+pub fn upgrade_agent_library_concept_lineage(
+    token: ValidatedAgentLibraryUpgrade,
+) -> Result<(StorageKernel, AgentLibraryUpgradeReport), String> {
+    upgrade_layout(token, UpgradeTarget::AgentLibraryConceptLineage)
+}
+
 /// Bring an inspected graph shard to the current layout in one durable
 /// commit: every existing row is kept and each table its generation lacked is
 /// created empty. The token carries the generation it was inspected as.
@@ -336,12 +368,14 @@ fn upgrade_layout(
     drop(opened_file);
     let options = StoreOpenOptions::default().with_cache_bytes(UPGRADE_CACHE_BYTES)?;
     let kernel = match target {
-        UpgradeTarget::AgentLibrary => StorageKernel::open_owner_with::<AgentLibraryOwner>(
-            &token.source.path,
-            current.physical_identity,
-            token.source.private_integrity,
-            options,
-        )?,
+        UpgradeTarget::AgentLibrary | UpgradeTarget::AgentLibraryConceptLineage => {
+            StorageKernel::open_owner_with::<AgentLibraryOwner>(
+                &token.source.path,
+                current.physical_identity,
+                token.source.private_integrity,
+                options,
+            )?
+        }
         UpgradeTarget::GraphShard(_) => StorageKernel::open_owner_with::<GraphShardOwner>(
             &token.source.path,
             current.physical_identity,

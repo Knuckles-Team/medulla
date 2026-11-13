@@ -9,17 +9,18 @@
 //! the classification and the operator document all follow from the row.
 
 use super::agent_library_upgrade::{
-    inspect_agent_library_mcp_catalog_upgrade, inspect_graph_shard_upgrade,
-    inspect_rbac_profile_grant_upgrade, inspect_semantic_index_promotion_upgrade,
+    inspect_agent_library_concept_lineage_upgrade, inspect_agent_library_mcp_catalog_upgrade,
+    inspect_graph_shard_upgrade, inspect_rbac_profile_grant_upgrade,
+    inspect_semantic_index_promotion_upgrade, upgrade_agent_library_concept_lineage,
     upgrade_agent_library_mcp_catalog, upgrade_graph_shard, upgrade_rbac_profile_grants,
     upgrade_semantic_index_promotion, GraphShardSource, OwnerLayoutUpgradeReport,
 };
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
-    layout_predecessors, AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
-    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
-    GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+    layout_predecessors, AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE, AGENT_LIBRARY_BEFORE_MCP_CATALOG,
+    GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
+    GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
     GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, RBAC_BEFORE_PROFILE_GRANTS,
     SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
@@ -187,6 +188,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         AGENT_LIBRARY_BEFORE_MCP_CATALOG,
         inspect_agent_library_mcp_catalog_upgrade,
         upgrade_agent_library_mcp_catalog
+    ),
+    offline_upgrade!(
+        AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
+        inspect_agent_library_concept_lineage_upgrade,
+        upgrade_agent_library_concept_lineage
     ),
     offline_upgrade!(
         GRAPH_SHARD_BEFORE_ENRICHMENT,

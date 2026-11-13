@@ -34,7 +34,8 @@ pub use codec::{
 pub use kernel::{MutationOwnerAuthority, StorageKernel, StoreOpenOptions};
 pub use owner::agent_library_upgrade::OwnerLayoutUpgradeReport;
 pub use owner::agent_library_upgrade::{
-    inspect_agent_library_mcp_catalog_upgrade, inspect_graph_shard_upgrade,
+    inspect_agent_library_concept_lineage_upgrade, inspect_agent_library_mcp_catalog_upgrade,
+    inspect_graph_shard_upgrade, upgrade_agent_library_concept_lineage,
     upgrade_agent_library_mcp_catalog, upgrade_graph_shard, AgentLibraryInspectionOptions,
     AgentLibraryUpgradeReport, GraphShardInspectionOptions, GraphShardSource,
     GraphShardUpgradeReport, ValidatedAgentLibraryUpgrade, ValidatedGraphShardUpgrade,
@@ -44,12 +45,11 @@ pub use owner::blob_shared::{
     BlobSharedWrite, CasChunkRows, CasRefcountRows,
 };
 pub use owner::branch_registry::BRANCH_REGISTRY;
-pub use owner::retrieval_state::DOC_STATE;
 pub use owner::domain::{
     AgentLibraryOwner, BlobOwner, BranchRegistryOwner, ClusterHierarchyOwner, ColdTierOwner,
     GraphShardOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner, OwnerDomain,
-    PathIndexOwner, RbacOwner, RequestReplayOwner, RetrievalStateOwner, SemanticIndexOwner, SqlOwner, StatechartOwner,
-    TenantCatalogOwner, TimeSeriesOwner, VizProvenanceOwner,
+    PathIndexOwner, RbacOwner, RequestReplayOwner, RetrievalStateOwner, SemanticIndexOwner,
+    SqlOwner, StatechartOwner, TenantCatalogOwner, TimeSeriesOwner, VizProvenanceOwner,
 };
 pub use owner::grant::{AuthenticatedScopeGrant, ScopeGrantVerifier};
 pub use owner::handle::OwnedStoreHandle;
@@ -57,9 +57,10 @@ pub use owner::identity::PhysicalStoreIdentity;
 pub use owner::layout::OwnerLayout;
 pub use owner::lineage::{
     layout_digest_hex, layout_predecessors, pinned_layout_digest, render_owner_store_formats,
-    AGENT_LIBRARY_BEFORE_CONNECTOR_PACKS, AGENT_LIBRARY_BEFORE_MCP_CATALOG, ALL_LAYOUTS,
-    BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
-    RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE, AGENT_LIBRARY_BEFORE_CONNECTOR_PACKS,
+    AGENT_LIBRARY_BEFORE_MCP_CATALOG, ALL_LAYOUTS, BLOB_BEFORE_HOLDERS,
+    GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS,
+    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
 pub use owner::offline_upgrade::{
     classify_owner_store_format, offline_upgrades_for, registered_offline_upgrade,
@@ -72,11 +73,11 @@ pub use owner::persisted_layout::{
 pub use owner::registry::{
     declared_table_names, owner_table_names, AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS,
     AGENT_GRAPH_HEADS, AGENT_GRAPH_REVISIONS, AGENT_LIBRARY_HEADS, AGENT_LIBRARY_REVISIONS,
-    AGENT_TEMPLATE_HEADS, AGENT_TEMPLATE_REVISIONS, ANN_CODES, CONNECTOR_PACK_BINDINGS,
-    CONNECTOR_PACK_BODY_HOLDERS, CONNECTOR_PACK_HEADS, CONNECTOR_PACK_IMPORTS,
-    CONNECTOR_PACK_MEMBERS, DECISION_ARTIFACTS, DECISION_RECORDS, MCP_CATALOG_CONFIGS,
-    MCP_CATALOG_SCOPES, SEMANTIC_ANN, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_BINDINGS,
-    SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
+    AGENT_TEMPLATE_HEADS, AGENT_TEMPLATE_REVISIONS, ANN_CODES, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
+    CONNECTOR_PACK_BINDINGS, CONNECTOR_PACK_BODY_HOLDERS, CONNECTOR_PACK_HEADS,
+    CONNECTOR_PACK_IMPORTS, CONNECTOR_PACK_MEMBERS, DECISION_ARTIFACTS, DECISION_RECORDS,
+    MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, SEMANTIC_ANN, SEMANTIC_AUTH_RECEIPTS,
+    SEMANTIC_BINDINGS, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
     SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_GRAPH_PROJECTIONS, SEMANTIC_HEADS, SEMANTIC_LEXICAL,
     SEMANTIC_MODALITY_CHECKS, SEMANTIC_POINTERS, SEMANTIC_PROMOTION_VERDICTS,
     SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_STAGE_RECEIPTS,
@@ -84,6 +85,7 @@ pub use owner::registry::{
     SQL_EDGE_INDEXES, SQL_SOURCE_AUTHORITY, SQL_SOURCE_CHECKPOINTS, WRITE_BACK_CHANGE_SETS,
     WRITE_BACK_IDEMPOTENCY, WRITE_BACK_RECEIPTS, WRITE_BACK_RECEIPT_HEADS,
 };
+pub use owner::retrieval_state::DOC_STATE;
 pub use owner::row_key::{
     is_control_scope, owner_row_key, reserved_control_graph, OwnerRowScope, OwnerRowScopeStart,
     RowKey, GRAPH_SHARD_CONTROL_GRAPH, GRAPH_SHARD_TENANT,

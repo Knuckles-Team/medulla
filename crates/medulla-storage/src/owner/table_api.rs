@@ -108,6 +108,8 @@ declared_owner_tables!(
     ConnectorPackBindingRows: AgentLibraryOwner => ((String, String), Vec<u8>, "connector_pack_bindings"),
     McpCatalogConfigRows: AgentLibraryOwner => ((String, String), Vec<u8>, "mcp_catalog_configs"),
     McpCatalogScopeRows: AgentLibraryOwner => ((String, String, String), Vec<u8>, "mcp_catalog_scopes"),
+    ConceptIdRows: AgentLibraryOwner => ((String, String), Vec<u8>, "concept_ids"),
+    ConceptLineageEdgeRows: AgentLibraryOwner => ((String, String, String), Vec<u8>, "concept_lineage_edges"),
     DecisionArtifactRows: AgentLibraryOwner => ((String, String), Vec<u8>, "decision_artifacts"),
     DecisionRecordRows: AgentLibraryOwner => ((String, String), Vec<u8>, "decision_records"),
     WriteBackChangeSetRows: AgentLibraryOwner => ((String, String), Vec<u8>, "write_back_change_sets"),
@@ -197,6 +199,8 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "connector_pack_bindings"
         | "mcp_catalog_configs"
         | "mcp_catalog_scopes"
+        | "concept_ids"
+        | "concept_lineage_edges"
         | "decision_artifacts"
         | "decision_records"
         | "write_back_change_sets"

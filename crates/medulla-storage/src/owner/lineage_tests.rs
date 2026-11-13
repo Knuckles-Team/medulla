@@ -402,3 +402,23 @@ fn graph_shard_before_decision_certificates_is_a_frozen_predecessor() {
     );
     assert_eq!(before, file_digest(&path), "a refused open writes nothing");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R094.7.1
+#[test]
+fn agent_library_before_concept_lineage_matches_the_previous_pin() {
+    let predecessor = &AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE;
+    let contracts: Vec<_> =
+        crate::owner::contract::expected_table_contracts(OwnerLayout::AgentLibrary)
+            .into_iter()
+            .filter(|contract| {
+                contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                    || predecessor
+                        .owner_tables
+                        .contains(&contract.table_id.as_str())
+            })
+            .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::AgentLibrary, &contracts),
+        AGENT_LIBRARY_PRE_CONCEPT_LINEAGE_DIGEST
+    );
+}

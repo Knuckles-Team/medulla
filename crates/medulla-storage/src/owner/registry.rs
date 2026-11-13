@@ -293,6 +293,14 @@ pub const MCP_CATALOG_CONFIGS: TableDefinition<'static, (&str, &str), &[u8]> =
 /// One durable catalog generation per tenant, server and authorization scope.
 pub const MCP_CATALOG_SCOPES: TableDefinition<'static, (&str, &str, &str), &[u8]> =
     TableDefinition::new("mcp_catalog_scopes");
+/// MEDULLA-DURABLE-KERNEL-R094.7.1: the known concept ids, one row per
+/// `(tenant, concept id)`, valued with the claiming repository and admission time.
+pub const CONCEPT_IDS: TableDefinition<'static, (&str, &str), &[u8]> =
+    TableDefinition::new("concept_ids");
+/// MEDULLA-DURABLE-KERNEL-R094.7.1: one `superseded_by` edge per
+/// `(tenant, superseded id, successor id)`, valued with repository and admission time.
+pub const CONCEPT_LINEAGE_EDGES: TableDefinition<'static, (&str, &str, &str), &[u8]> =
+    TableDefinition::new("concept_lineage_edges");
 /// Decide-layer job rows, evaluation receipts and fit drafts, keyed
 /// `(tenant, "job:<id>" | "receipt:<digest>" | "draft:<sha256>")`. Written once,
 /// never updated: a job runs to a terminal state inside its submit.
@@ -437,6 +445,8 @@ macro_rules! visit_owner_tables {
                 $visit!(CONNECTOR_PACK_BINDINGS);
                 $visit!(MCP_CATALOG_CONFIGS);
                 $visit!(MCP_CATALOG_SCOPES);
+                $visit!(CONCEPT_IDS);
+                $visit!(CONCEPT_LINEAGE_EDGES);
                 $visit!(DECISION_ARTIFACTS);
                 $visit!(DECISION_RECORDS);
                 $visit!(WRITE_BACK_CHANGE_SETS);
@@ -859,6 +869,8 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "connector_pack_bindings",
             "mcp_catalog_configs",
             "mcp_catalog_scopes",
+            "concept_ids",
+            "concept_lineage_edges",
             "decision_artifacts",
             "decision_records",
             "write_back_change_sets",

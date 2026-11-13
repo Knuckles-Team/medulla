@@ -4,7 +4,6 @@
 pub(crate) mod agent_library_upgrade;
 pub(crate) mod blob_shared;
 pub(crate) mod branch_registry;
-pub(crate) mod retrieval_state;
 pub(crate) mod contract;
 pub(crate) mod domain;
 pub(crate) mod grant;
@@ -17,6 +16,7 @@ pub(crate) mod manifest_io;
 pub(crate) mod offline_upgrade;
 pub(crate) mod persisted_layout;
 pub(crate) mod registry;
+pub(crate) mod retrieval_state;
 pub(crate) mod row_key;
 pub(crate) mod sql_checkpoint_upgrade;
 pub(crate) mod table_api;
