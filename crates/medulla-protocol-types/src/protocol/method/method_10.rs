@@ -61,6 +61,12 @@ $($variants)*
     CapabilityCoverage {
         request: Box<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest>,
     },
+    /// The verified tenant's revision challengers, paged in creation order
+    /// (MEDULLA-DECISION-ENGINE-R817). Reads the revision rows of the governed
+    /// pointer store; writes nothing.
+    RevisionProposalList {
+        request: Box<medulla_decision_outcome_types::decision::revision_list::RevisionProposalListRequest>,
+    },
     /// Advisory guardrail entailment over the verified tenant's published
     /// Agent Library rules (MEDULLA-DECISION-ENGINE-R127.2.2). Returns subclass
     /// paths and source generations; commits nothing and grants no authority.

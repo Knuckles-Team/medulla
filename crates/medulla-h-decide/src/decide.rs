@@ -67,6 +67,7 @@ mod stat_nl;
 mod stat_penalty;
 #[cfg(feature = "decide")]
 mod stat_pointer;
+mod stat_proposals;
 #[cfg(feature = "decide")]
 mod stat_replay;
 #[cfg(feature = "decide")]
@@ -153,6 +154,7 @@ pub use belief_revise::handle_belief_revise;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
+pub use stat_proposals::handle_revision_proposal_list;
 pub use guardrail::handle_guardrail_entailment;
 pub use jobs::{handle_decision_eval, handle_decision_fit};
 pub use log::handle_decision_log;

@@ -28,6 +28,7 @@ pub mod limit_guard;
 pub mod load_set;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod promotion;
+pub mod revision_list;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod prompt_candidate;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

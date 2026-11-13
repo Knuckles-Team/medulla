@@ -104,6 +104,7 @@ method_results! {
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;
     CapabilityCoverage(CapabilityCoverage) => Raw<CapabilityCoverageResult>;
+    RevisionProposalList(RevisionProposalList) => Raw<medulla_decision_outcome_types::decision::revision_list::RevisionProposalPage>;
     GuardrailEntailment(GuardrailEntailment) => Raw<GuardrailEntailmentResult>;
     DecisionCommit(DecisionCommit) => Raw<DecisionCommitResult>;
     ConnectorPackStatus(ConnectorPack / "status") => Raw<ConnectorPackStatusBody>;

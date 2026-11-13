@@ -232,6 +232,18 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::RevisionProposalList { request } => {
+            dispatch_boxed(async {
+                medulla_h_decide::decide::handle_revision_proposal_list(
+                    state,
+                    req.id,
+                    verified_context,
+                    *request,
+                )
+                .await
+            })
+            .await
+        }
         Method::GuardrailEntailment { request } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_guardrail_entailment(

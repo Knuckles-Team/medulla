@@ -720,6 +720,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R817: the revision proposal list's refusal.
+    ("RevisionProposalList", &["PROPOSAL_CURSOR_INVALID"]),
     // MEDULLA-DECISION-ENGINE-R816: the observation state store's refusals.
     (
         "ObservationState",

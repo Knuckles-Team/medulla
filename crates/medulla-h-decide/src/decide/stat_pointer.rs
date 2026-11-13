@@ -4,6 +4,8 @@
 //! rollback pops it; both append an audited event. A pointer that moved since
 //! it was read is refused, never overwritten.
 
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::statistical::retrieval_pointer::PointerEvent,
@@ -109,7 +111,33 @@ pub(super) fn activate(
         history: bounded_push(&state.history, activated)?,
     };
     write(store, at, expected, &next)?;
+    record_champion(store, at, to)?;
     Ok(next)
+}
+
+/// The revision row of a champion move (R817): subjects of `champion:` keys
+/// list their revisions; other pointers are not revisions.
+fn record_champion(
+    store: &AgentLibraryStore,
+    at: &PointerMove,
+    to: &Qualified,
+) -> Result<(), String> {
+    let Some((subject_kind, subject_ref)) = RevisionRow::subject_of(&at.key) else {
+        return Ok(());
+    };
+    super::stat_proposals::record_revision(
+        store,
+        at.tenant,
+        &RevisionRow {
+            id: to.target.clone(),
+            subject_kind,
+            subject_ref,
+            stage: RevisionStage::Champion,
+            digest: to.receipt_digest.clone(),
+            evaluation_receipt_id: Some(to.receipt_digest.clone()),
+            created_ms: at.now_ms,
+        },
+    )
 }
 
 /// Return to the target active before the current one (or to the default
