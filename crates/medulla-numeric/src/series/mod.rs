@@ -24,6 +24,7 @@ pub mod distance;
 #[cfg(feature = "motif")]
 mod fft;
 pub mod kalman;
+mod state_space;
 mod kernel;
 #[cfg(feature = "motif")]
 pub mod mass;
