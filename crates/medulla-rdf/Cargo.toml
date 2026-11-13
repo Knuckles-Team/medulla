@@ -136,8 +136,6 @@ medulla-raft = { path = "../medulla-raft", features = ["raft"] }
 medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["raft"] }
 medulla-h-retrieve = { path = "../medulla-h-retrieve", features = ["ann-redb"] }
 medulla-core = { path = "../medulla-core", features = ["broker"] }
-# AnalyticsJobMachine edge-table vocabulary test (MEDULLA-CQ-ORCH-R811.2).
-medulla-jobs = { path = "../medulla-jobs" }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 # GeoSPARQL kernel parity test (MEDULLA-FEDERATED-QUERY-R709.2).
@@ -158,6 +156,6 @@ medulla-work-types = { path = "../medulla-work-types" }
 # The clustering kernel's run machine edge table (MEDULLA-CLUSTER-R004.5).
 medulla-numeric = { path = "../medulla-numeric" }
 # The Schedule machine edge table the state-machine ontology test compares with
-# (MEDULLA-PLACEMENT-R751.756).
+# (MEDULLA-PLACEMENT-R751.756) and the AnalyticsJobMachine edge table (MEDULLA-CQ-ORCH-R811.2).
 medulla-jobs = { path = "../medulla-jobs" }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }
