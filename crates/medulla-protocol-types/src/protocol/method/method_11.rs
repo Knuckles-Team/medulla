@@ -357,7 +357,7 @@ $($variants)*
     /// request names them by digest. The changeset is the payload of the
     /// branch commit that carries it, appended with the head advance in one
     /// registry transaction. Refusals: `CHANGESET_EMPTY`, `CHANGESET_INVALID`,
-    /// `CHANGESET_PARENT_NOT_ON_BRANCH`, `BLOB_NOT_FOUND` (and
+    /// `CHANGESET_PARENT_NOT_ON_BRANCH`, `SOURCE_CONFLICT`, `MERGE_BLOB_UNREADABLE`, `BLOB_NOT_FOUND` (and
     /// `BLOB_TOO_LARGE`, `BLOB_DIGEST_MISMATCH`), plus the branch refusals of
     /// `BranchWrite`; every refusal leaves the chain unchanged.
     SubmitChangeset {

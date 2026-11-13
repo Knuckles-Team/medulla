@@ -7,6 +7,8 @@
 
 // MEDULLA-BRANCH-MERGE-R004 — entity-level three-way merge.
 pub mod merge;
+// MEDULLA-BRANCH-MERGE-R010 — line-granularity file merge for source changesets.
+pub mod line_merge;
 
 use std::sync::Arc;
 

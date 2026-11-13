@@ -52,9 +52,14 @@ pub enum ChangesetRefusal {
     ChangesetEmpty,
     /// A bound or pairing of the request is broken (MEDULLA-SCM-R002).
     ChangesetInvalid,
-    /// The writer's base is not a changeset of the branch, or it is behind the
-    /// head with overlapping paths (MEDULLA-SCM-R002).
+    /// The writer's base is not a changeset of the branch (MEDULLA-SCM-R002).
     ChangesetParentNotOnBranch,
+    /// An overlapping path whose three-way line merge does not merge cleanly
+    /// (MEDULLA-BRANCH-MERGE-R010); the detail lists every conflicting path.
+    SourceConflict,
+    /// A blob of an overlapping path could not be read for the merge
+    /// (MEDULLA-BRANCH-MERGE-R010).
+    MergeBlobUnreadable,
 }
 
 impl ChangesetRefusal {
@@ -67,9 +72,22 @@ impl ChangesetRefusal {
             Self::ChangesetEmpty => "CHANGESET_EMPTY",
             Self::ChangesetInvalid => "CHANGESET_INVALID",
             Self::ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
+            Self::SourceConflict => "SOURCE_CONFLICT",
+            Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
         }
     }
 }
+
+/// Why a three-way file merge produced no merged blob (MEDULLA-BRANCH-MERGE-R010).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FileMergeRefusal {
+    /// The hunks overlap, or a blob is binary: the writer must resolve it.
+    Conflict,
+}
+
+/// The three-way file merge `accept` calls on an overlapping path:
+/// `(base, ours, theirs)` blob bytes to the merged bytes.
+pub type FileMerger = fn(&[u8], &[u8], &[u8]) -> Result<Vec<u8>, FileMergeRefusal>;
 
 /// The structured form of the `Spec:`, `Fixes:` and `Spec-Withdraw:` trailers.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -387,5 +405,10 @@ mod tests {
         );
         assert_eq!(ChangesetRefusal::BlobTooLarge.code(), "BLOB_TOO_LARGE");
         assert_eq!(ChangesetRefusal::BlobNotFound.code(), "BLOB_NOT_FOUND");
+        assert_eq!(ChangesetRefusal::SourceConflict.code(), "SOURCE_CONFLICT");
+        assert_eq!(
+            ChangesetRefusal::MergeBlobUnreadable.code(),
+            "MERGE_BLOB_UNREADABLE"
+        );
     }
 }

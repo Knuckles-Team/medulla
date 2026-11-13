@@ -579,6 +579,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CHANGESET_EMPTY",
             "CHANGESET_INVALID",
             "CHANGESET_PARENT_NOT_ON_BRANCH",
+            "MERGE_BLOB_UNREADABLE",
+            "SOURCE_CONFLICT",
         ],
     ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.

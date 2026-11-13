@@ -31,11 +31,11 @@
 use std::io::Write;
 
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
-use medulla_server_blob::blob::stream::stream_blob_get;
+use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put};
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::source_changeset::{
-    ChangedPath, Changeset, ChangesetRefusal, PathOp, SubmitChangesetRequest, SubmitRefusal,
-    SubmittedBlobRef, Trailers,
+    ChangedPath, Changeset, ChangesetRefusal, FileMerger, PathOp, SubmitChangesetRequest,
+    SubmitRefusal, SubmittedBlobRef, SubmittedPath, Trailers,
 };
 use sha2::{Digest, Sha256};
 
@@ -249,21 +249,135 @@ impl From<SubmitRefusal> for AcceptError {
     }
 }
 
+/// Blob bytes as the overlap merge reads and lands them
+/// (MEDULLA-BRANCH-MERGE-R010): the content-addressed store, behind a seam so
+/// `accept` holds no store type.
+pub trait BlobIo {
+    /// The bytes stored under `digest`.
+    fn read(&self, digest: &str) -> Result<Vec<u8>, String>;
+    /// Store `bytes` and return the ref that names them.
+    fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String>;
+}
+
+/// [`BlobIo`] over the chunk store the upload protocol writes through.
+pub struct ChunkStoreBlobs<'a>(pub &'a dyn ChunkStore);
+
+impl BlobIo for ChunkStoreBlobs<'_> {
+    fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
+        let mut bytes = Vec::new();
+        stream_blob_get(self.0, digest, &mut bytes)?;
+        Ok(bytes)
+    }
+
+    fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
+        let blob = stream_blob_put(self.0, std::io::Cursor::new(bytes.to_vec()), 0)?;
+        Ok(SubmittedBlobRef {
+            digest: blob.digest,
+            size: blob.manifest.len,
+        })
+    }
+}
+
 /// The server-side facts of one accept: never read from the request.
 pub struct AcceptContext<'a> {
     /// The verified author principal.
     pub author_principal: &'a str,
     /// Server time of the accept, epoch milliseconds.
     pub created_at_ms: u64,
+    /// The blob store the overlap merge reads and lands bytes through.
+    pub blobs: &'a dyn BlobIo,
+    /// The three-way file merge for an overlapping path
+    /// (`merge_file` of MEDULLA-BRANCH-MERGE-R010).
+    pub merge: FileMerger,
+}
+
+/// Three-way merge of the overlapping paths of a stale-base submission
+/// (MEDULLA-SCM-R003, MEDULLA-BRANCH-MERGE-R010).
+///
+/// `newer` is the changesets after the writer's base (newest first) and
+/// `older` the chain from the base down. A path merges only when it is a
+/// modify on both sides: base bytes from `older`, theirs from `newer`, ours
+/// from the submission. Every other overlap (add, delete, rename on either
+/// side) and every unclean merge is a conflict; all conflicting paths are
+/// listed in one `SOURCE_CONFLICT`. Nothing is stored unless every path
+/// merges. Returns the submitted paths with merged blobs substituted.
+fn merge_overlaps(
+    paths: &[SubmittedPath],
+    newer: &[(String, Changeset)],
+    older: &[(String, Changeset)],
+    ctx: &AcceptContext<'_>,
+) -> Result<Vec<SubmittedPath>, AcceptError> {
+    let blob_in = |chain: &[(String, Changeset)], path: &str| -> Option<Option<String>> {
+        chain
+            .iter()
+            .find_map(|(_, c)| c.changed_paths.iter().find(|p| p.path == path))
+            .map(|p| p.new_blob.clone())
+    };
+    let mut conflicts: Vec<String> = Vec::new();
+    let mut merged: Vec<(usize, Vec<u8>)> = Vec::new();
+    for (index, entry) in paths.iter().enumerate() {
+        let moved = blob_in(newer, &entry.path).is_some()
+            || entry
+                .renamed_from
+                .as_deref()
+                .is_some_and(|from| blob_in(newer, from).is_some());
+        if !moved {
+            continue;
+        }
+        let unreadable = |detail: String| -> AcceptError {
+            AcceptError::Refused(SubmitRefusal::new(
+                ChangesetRefusal::MergeBlobUnreadable,
+                format!("{}: {detail}", entry.path),
+            ))
+        };
+        let base = blob_in(older, &entry.path).flatten();
+        let theirs = blob_in(newer, &entry.path).flatten();
+        let ours = entry.blob.as_ref().map(|b| b.digest.clone());
+        let (Some(base), Some(theirs), Some(ours), PathOp::Modify, None) =
+            (base, theirs, ours, entry.op, &entry.renamed_from)
+        else {
+            conflicts.push(entry.path.clone());
+            continue;
+        };
+        if ours == theirs {
+            // Both sides wrote the same bytes: nothing to merge.
+            continue;
+        }
+        let read = |digest: &str| ctx.blobs.read(digest).map_err(&unreadable);
+        let (base, ours, theirs) = (read(&base)?, read(&ours)?, read(&theirs)?);
+        match (ctx.merge)(&base, &ours, &theirs) {
+            Ok(bytes) => merged.push((index, bytes)),
+            Err(_) => conflicts.push(entry.path.clone()),
+        }
+    }
+    if !conflicts.is_empty() {
+        return Err(AcceptError::Refused(SubmitRefusal::new(
+            ChangesetRefusal::SourceConflict,
+            format!("paths=[{}]", conflicts.join(", ")),
+        )));
+    }
+    let mut out = paths.to_vec();
+    for (index, bytes) in merged {
+        let landed = ctx.blobs.store(&bytes).map_err(|detail| {
+            AcceptError::Refused(SubmitRefusal::new(
+                ChangesetRefusal::MergeBlobUnreadable,
+                format!("{}: {detail}", out[index].path),
+            ))
+        })?;
+        out[index].blob = Some(landed);
+    }
+    Ok(out)
 }
 
 /// Stage two of `SubmitChangeset` (MEDULLA-SCM-R002): extend the changeset
 /// chain. Walks the chain from the head, checks the writer's base, fills
 /// `old_blob` of every path from the first parent, and seals the record.
 ///
-/// A base behind the head lands only when the submission shares no path with
-/// the changesets after it (`path_set_disjoint`, MEDULLA-SCM-R003.1); an
-/// overlap refuses, because the engine never rebases silently.
+/// A base behind the head lands as is when the submission shares no path with
+/// the changesets after it (`path_set_disjoint`, MEDULLA-SCM-R003.1). An
+/// overlap is rebased per path through the three-way line merge
+/// (`merge_overlaps`, MEDULLA-BRANCH-MERGE-R010); an unclean overlap refuses
+/// with `SOURCE_CONFLICT{paths}`, because the engine never rebases silently.
 pub fn accept(
     chain: &dyn ChainView,
     request: &SubmitChangesetRequest,
@@ -301,15 +415,15 @@ pub fn accept(
         touched.push(entry.path.clone());
         touched.extend(entry.renamed_from.clone());
     }
+    let mut submitted_paths = request.paths.clone();
     if behind > 0 {
         let since: Vec<Vec<String>> = walked[..behind]
             .iter()
             .map(|(_, c)| c.changed_paths.iter().map(|p| p.path.clone()).collect())
             .collect();
         if !path_set_disjoint(&touched, &since) {
-            return Err(not_on_branch(
-                "base_head is behind the head and the path sets overlap",
-            ));
+            submitted_paths =
+                merge_overlaps(&request.paths, &walked[..behind], &walked[behind..], ctx)?;
         }
     }
     // The blob a path holds at the head: the newest entry naming it.
@@ -319,8 +433,8 @@ pub fn accept(
             .find_map(|(_, c)| c.changed_paths.iter().find(|p| p.path == path))
             .and_then(|p| p.new_blob.clone())
     };
-    let mut changed_paths = Vec::with_capacity(request.paths.len());
-    for entry in &request.paths {
+    let mut changed_paths = Vec::with_capacity(submitted_paths.len());
+    for entry in &submitted_paths {
         let new_blob = entry.blob.as_ref().map(|b| b.digest.clone());
         match (&entry.op, &entry.renamed_from) {
             (PathOp::Rename, Some(from)) => {
@@ -647,9 +761,31 @@ mod tests {
         }
     }
 
+    /// A blob seam for tests that never reach the overlap merge.
+    struct NoBlobs;
+
+    impl BlobIo for NoBlobs {
+        fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
+            Err(format!("no blob {digest}"))
+        }
+        fn store(&self, _bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
+            Err("no store".into())
+        }
+    }
+
+    fn no_merge(
+        _base: &[u8],
+        _ours: &[u8],
+        _theirs: &[u8],
+    ) -> Result<Vec<u8>, medulla_types::source_changeset::FileMergeRefusal> {
+        Err(medulla_types::source_changeset::FileMergeRefusal::Conflict)
+    }
+
     const CTX: AcceptContext<'static> = AcceptContext {
         author_principal: "p",
         created_at_ms: 9,
+        blobs: &NoBlobs,
+        merge: no_merge,
     };
 
     // spec: MEDULLA-SCM-R002
@@ -737,7 +873,8 @@ mod tests {
         let off = ChangesetRefusal::ChangesetParentNotOnBranch;
         assert_eq!(refused(Some(hex_id('9')), "n.rs"), off);
         assert_eq!(refused(None, "n.rs"), off);
-        // Behind the head but disjoint: lands. Overlapping: refused.
+        // Behind the head but disjoint: lands. Overlapping add on both sides:
+        // an unmergeable overlap, refused as a source conflict.
         assert!(accept(
             &chain,
             &request(
@@ -747,7 +884,10 @@ mod tests {
             &CTX
         )
         .is_ok());
-        assert_eq!(refused(Some(hex_id('1')), "z.rs"), off);
+        assert_eq!(
+            refused(Some(hex_id('1')), "z.rs"),
+            ChangesetRefusal::SourceConflict
+        );
     }
 
     // spec: MEDULLA-SCM-R002

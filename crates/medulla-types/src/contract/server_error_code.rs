@@ -61,6 +61,8 @@ closed_error_codes! {
         ChangesetEmpty => "CHANGESET_EMPTY",
         ChangesetInvalid => "CHANGESET_INVALID",
         ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
+        MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
+        SourceConflict => "SOURCE_CONFLICT",
         Busy => "BUSY",
         BusFieldTooLarge => "BUS_FIELD_TOO_LARGE",
         BusRosterFull => "BUS_ROSTER_FULL",

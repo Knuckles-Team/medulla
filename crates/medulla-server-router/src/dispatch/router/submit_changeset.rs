@@ -10,7 +10,9 @@
 //! first parent and seals the record. The changeset is stored as the payload
 //! of the one branch commit that carries it; the commit row, the payload row
 //! and the head advance are one transaction. Every refusal leaves the chain
-//! unchanged.
+//! unchanged. A stale base whose paths overlap the changesets after it is
+//! rebased per path through `merge_file` (MEDULLA-BRANCH-MERGE-R010) or
+//! refused with `SOURCE_CONFLICT`.
 
 use super::*;
 
@@ -24,7 +26,7 @@ mod served {
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_changeset::{
-        accept, verify_submission, AcceptContext, AcceptError, ChainView,
+        accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
     use medulla_persistence::branch_registry_store::{AppendError, CommitPlan, PayloadReader};
     use medulla_server_blob::blob::BlobStateExt;
@@ -125,6 +127,7 @@ mod served {
                 }
             }
         };
+        let merge_store = Arc::clone(&store);
         let checked = {
             let request = Arc::clone(&request);
             tokio::task::spawn_blocking(move || {
@@ -152,9 +155,13 @@ mod served {
         let appended = target
             .append_with(verified.tenant(), &batch_id, move |head, read| {
                 let chain = RegistryChain { head, read };
+                let blobs = ChunkStoreBlobs(merge_store.as_ref());
                 let ctx = AcceptContext {
                     author_principal: &author,
                     created_at_ms,
+                    blobs: &blobs,
+                    // MEDULLA-BRANCH-MERGE-R010: an overlapping path merges by line.
+                    merge: ops::line_merge::FILE_MERGER,
                 };
                 let changeset = match accept(&chain, &build_request, &ctx) {
                     Ok(changeset) => changeset,
