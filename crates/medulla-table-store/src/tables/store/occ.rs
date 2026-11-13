@@ -16,6 +16,42 @@ use medulla_transaction::occ::{CommittedWrites, KeyRange, TxnFootprint};
 
 /// Refusal when a conflicting later commit wrote a footprint key.
 pub const TXN_CONFLICT: &str = "TXN_CONFLICT";
+/// Refusal when an auto-commit statement lost `TXN_CONFLICT` on every attempt.
+pub const TXN_RETRY_EXHAUSTED: &str = "TXN_RETRY_EXHAUSTED";
+
+/// Run `attempt` until it stops refusing `TXN_CONFLICT` (MEDULLA-ENGINE-PARITY-R004.2).
+/// Retry `n` (from 0) waits `min(2^n, 8)` ms plus under 1 ms of jitter. After
+/// `max_retries` retries the last conflict becomes `TXN_RETRY_EXHAUSTED`; any
+/// other result returns at once.
+pub fn retry_on_conflict<T>(
+    max_retries: u32,
+    mut attempt: impl FnMut() -> Result<T, String>,
+) -> Result<T, String> {
+    let mut retries = 0u32;
+    loop {
+        match attempt() {
+            Err(error) if error.starts_with(TXN_CONFLICT) => {
+                if retries >= max_retries {
+                    return Err(format!(
+                        "{TXN_RETRY_EXHAUSTED}: {} attempts lost to a conflicting commit: {error}",
+                        retries + 1
+                    ));
+                }
+                let base_ms = (1u64 << retries.min(3)).min(8);
+                let jitter_us = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| u64::from(d.subsec_nanos()) % 1000);
+                std::thread::sleep(
+                    std::time::Duration::from_millis(base_ms)
+                        + std::time::Duration::from_micros(jitter_us),
+                );
+                retries += 1;
+            }
+            other => return other,
+        }
+    }
+}
+
 /// Refusal when the snapshot is older than the retained history.
 pub const TXN_SNAPSHOT_EXPIRED: &str = "TXN_SNAPSHOT_EXPIRED";
 

@@ -2038,3 +2038,97 @@ fn stale_snapshot_commit_refuses() {
         )
         .expect("unpinned commit");
 }
+
+// spec: MEDULLA-ENGINE-PARITY-R004.2
+#[test]
+fn retry_bound_refuses() {
+    use medulla_table_store::tables::{retry_on_conflict, TableTxn, TxnOp};
+    let (store, _path) = TableStore::open_temp().expect("temporary table store");
+    store.create_table(&occ_accounts(), false).expect("create");
+    let mut seed = TableTxn::new();
+    seed.push(TxnOp::Insert {
+        table: "acct".into(),
+        col_order: vec!["id".into(), "bal".into()],
+        rows: vec![vec![1i64.into(), 10i64.into()]],
+    });
+    store
+        .commit_txn_batch(&seed, &commit_batch::batch(&store, "seed", "idem-seed"), 1)
+        .expect("seed");
+
+    // Every attempt pins a snapshot, then a rival commits the same row before
+    // the attempt commits: four conflicts in a row, one more than 3 retries.
+    let mut attempts = 0u32;
+    let mut rival = 100i64;
+    let err = retry_on_conflict(3, || {
+        attempts += 1;
+        let mut mine = occ_update(1, 11);
+        mine.pin(store.commit_seq());
+        rival += 1;
+        store
+            .commit_txn_batch(
+                &occ_update(1, rival),
+                &commit_batch::batch(&store, "r", &format!("idem-rival-{rival}")),
+                2,
+            )
+            .expect("rival commits");
+        store.commit_txn_batch(
+            &mine,
+            &commit_batch::batch(&store, "m", &format!("idem-mine-{attempts}")),
+            3,
+        )
+    })
+    .expect_err("four conflicts exhaust three retries");
+    assert_eq!(attempts, 4, "one attempt plus three retries");
+    assert!(err.starts_with("TXN_RETRY_EXHAUSTED"), "{err}");
+    assert!(err.contains("TXN_CONFLICT"), "{err}");
+
+    // A conflict that clears within the bound commits on a fresh snapshot.
+    let mut tries = 0u32;
+    retry_on_conflict(3, || {
+        tries += 1;
+        let mut mine = occ_update(1, 50);
+        mine.pin(store.commit_seq());
+        if tries < 3 {
+            rival += 1;
+            store
+                .commit_txn_batch(
+                    &occ_update(1, rival),
+                    &commit_batch::batch(&store, "r2", &format!("idem-r2-{rival}")),
+                    4,
+                )
+                .expect("rival commits");
+        }
+        store.commit_txn_batch(
+            &mine,
+            &commit_batch::batch(&store, "m2", &format!("idem-m2-{tries}")),
+            5,
+        )
+    })
+    .expect("third attempt commits");
+    assert_eq!(tries, 3);
+
+    // The store entry point retries only an auto-commit UPDATE or DELETE: it
+    // commits an unpinned update, and a pinned (explicit) one refuses at once.
+    store
+        .commit_txn_batch_retrying(
+            &occ_update(1, 60),
+            &commit_batch::batch(&store, "auto", "idem-auto"),
+            6,
+            3,
+        )
+        .expect("auto-commit update commits");
+    let pinned_stale = store.commit_seq();
+    let mut explicit = occ_update(1, 70);
+    explicit.pin(pinned_stale);
+    store
+        .commit_txn_batch(
+            &occ_update(1, 61),
+            &commit_batch::batch(&store, "x", "idem-x"),
+            7,
+        )
+        .expect("rival commits");
+    let refused = store
+        .commit_txn_batch_retrying(&explicit, &commit_batch::batch(&store, "e", "idem-e"), 8, 3)
+        .expect_err("explicit transaction never retries");
+    assert!(refused.starts_with("TXN_CONFLICT"), "{refused}");
+}

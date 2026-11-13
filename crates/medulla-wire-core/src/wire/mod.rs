@@ -1020,7 +1020,8 @@ fn commit_table_txn_under_source(
         committed_sql_replay_receipt(store, source.authority(), &batch)?.is_some();
     let created_tables =
         authorize_table_txn(source, store, txn, committed_replay).map_err(|error| error.message)?;
-    let committed = match store.commit_txn_batch(txn, &batch, created_at_ms) {
+    let max_retries = medulla_server_api::knob_config::knobs().tables_occ_max_retries as u32;
+    let committed = match store.commit_txn_batch_retrying(txn, &batch, created_at_ms, max_retries) {
         Ok(committed) => committed.record,
         Err(message) if message.contains("IDEMPOTENCY_CONFLICT") => {
             committed_sql_replay_receipt(store, source.authority(), &batch)?.ok_or(message)?

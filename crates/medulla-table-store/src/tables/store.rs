@@ -52,8 +52,8 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
-use medulla_types::row_change::{RowChange, RowChangeSink};
 use medulla_transaction::Begin;
+use medulla_types::row_change::{RowChange, RowChangeSink};
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
 
@@ -74,7 +74,7 @@ pub use ann_durable::{GenerationWrite, StoredGeneration};
 pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
-pub use occ::{OccLog, TXN_CONFLICT, TXN_SNAPSHOT_EXPIRED};
+pub use occ::{retry_on_conflict, OccLog, TXN_CONFLICT, TXN_RETRY_EXHAUSTED, TXN_SNAPSHOT_EXPIRED};
 
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
@@ -2082,6 +2082,35 @@ impl TableStore {
         committed_at_ms: u64,
     ) -> Result<MutationBatchCommit, String> {
         self.commit_txn_batch_inner(txn, batch, committed_at_ms, None, None)
+    }
+
+    /// Commit one statement, retrying an auto-commit `UPDATE` or `DELETE` that
+    /// loses a `TXN_CONFLICT` (MEDULLA-ENGINE-PARITY-R004.2). Each attempt pins
+    /// a fresh snapshot and re-applies the statement; after `max_retries`
+    /// retries it refuses `TXN_RETRY_EXHAUSTED`. A transaction that carries a
+    /// pinned snapshot (an explicit client transaction) and any statement that
+    /// is not an `UPDATE` or `DELETE` commit once and never retry.
+    pub fn commit_txn_batch_retrying(
+        &self,
+        txn: &TableTxn,
+        batch: &MutationBatch,
+        committed_at_ms: u64,
+        max_retries: u32,
+    ) -> Result<MutationBatchCommit, String> {
+        let auto_dml = txn.footprint.is_none()
+            && !txn.ops.is_empty()
+            && txn
+                .ops
+                .iter()
+                .all(|op| matches!(op, TxnOp::Update { .. } | TxnOp::Delete { .. }));
+        if !auto_dml {
+            return self.commit_txn_batch(txn, batch, committed_at_ms);
+        }
+        retry_on_conflict(max_retries, || {
+            let mut attempt = txn.clone();
+            attempt.pin(self.commit_seq());
+            self.commit_txn_batch(&attempt, batch, committed_at_ms)
+        })
     }
 
     /// Variant for native adapters whose terminal result is richer than the SQL
