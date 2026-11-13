@@ -8,6 +8,18 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::Digest256;
 
+use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+
+/// The `feedback.*` knobs: the most rounds a feedback loop may run.
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "feedback.max_rounds",
+    unit: "rounds",
+    default: KnobValue::Integer(5),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(20),
+    safety: KnobSafety::Tunable,
+}];
+
 /// Why a feedback loop stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -40,6 +52,32 @@ pub struct Continuation {
     pub round: u32,
     #[serde(default)]
     pub stop: Option<StopReason>,
+}
+
+/// The round bound in force: the request's bound, never above the resolved
+/// `feedback.max_rounds` knob (MEDULLA-DECISION-ENGINE-R169.2).
+pub fn effective_bound(request_bound: u32, knob_max_rounds: u32) -> u32 {
+    request_bound.min(knob_max_rounds)
+}
+
+/// Whether the loop goes on after `round` (MEDULLA-DECISION-ENGINE-R169.2).
+///
+/// Zero findings stops with `NoFindings`. Otherwise a round at or above
+/// `bound` stops with `RoundBound`. Otherwise the loop continues. `bound` is
+/// [`effective_bound`] of the request and the knob.
+pub fn next_round(loop_id: &str, finding_count: u32, round: u32, bound: u32) -> Continuation {
+    let stop = if finding_count == 0 {
+        Some(StopReason::NoFindings)
+    } else if round >= bound {
+        Some(StopReason::RoundBound)
+    } else {
+        None
+    };
+    Continuation {
+        loop_id: loop_id.to_string(),
+        round,
+        stop,
+    }
 }
 
 #[cfg(test)]
@@ -82,5 +120,42 @@ mod tests {
         let text = serde_json::to_string(&StopReason::RoundBound).unwrap();
         assert_eq!(text, "\"round_bound\"");
         assert!(serde_json::from_str::<FeedbackRecord>(r#"{"loop_id":"l","round":-1}"#).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R169.2
+    #[test]
+    fn next_round_rule() {
+        // No findings stops, even at round zero and even past the bound.
+        for round in [0, 1, 5, 9] {
+            assert_eq!(
+                next_round("loop:1", 0, round, 5).stop,
+                Some(StopReason::NoFindings)
+            );
+        }
+        // The bound edge: one below continues, at and above stop.
+        assert_eq!(next_round("loop:1", 2, 4, 5).stop, None);
+        assert_eq!(
+            next_round("loop:1", 2, 5, 5).stop,
+            Some(StopReason::RoundBound)
+        );
+        assert_eq!(
+            next_round("loop:1", 2, 6, 5).stop,
+            Some(StopReason::RoundBound)
+        );
+        // A continue keeps the loop and the round.
+        let go = next_round("loop:7", 3, 1, 5);
+        assert_eq!(
+            (go.loop_id.as_str(), go.round, go.stop),
+            ("loop:7", 1, None)
+        );
+        // The bound is the smaller of the request and the knob, and the knob
+        // table admits its default and edges.
+        assert_eq!(effective_bound(9, 5), 5);
+        assert_eq!(effective_bound(3, 5), 3);
+        let knob = &KNOBS[0];
+        assert_eq!(knob.name, "feedback.max_rounds");
+        assert!(knob.admits(&KnobValue::Integer(1)) && knob.admits(&KnobValue::Integer(20)));
+        assert!(!knob.admits(&KnobValue::Integer(0)) && !knob.admits(&KnobValue::Integer(21)));
+        assert!(knob.admits(&knob.default));
     }
 }
