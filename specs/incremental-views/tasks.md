@@ -105,3 +105,6 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [ ] T071 [P] [US7] MEDULLA-INCREMENTAL-VIEWS-R014 Documentation and quickstart. Implement it with its tests.
 - [ ] T072 [US7] MEDULLA-INCREMENTAL-VIEWS-R015 Release gate. Implement it with its tests.
 - [ ] T073 [US7] MEDULLA-INCREMENTAL-VIEWS-R015 Evidence: reconcile every row against merged code, bound tests and the documentation page.
+- [ ] T74 [US7] MEDULLA-INCREMENTAL-VIEWS-R016 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T75 [US7] MEDULLA-INCREMENTAL-VIEWS-R016.1 Materialization/MaterializationStatus state machine: route 10 census findings through MaterializationStatus::apply
+- [ ] T76 [US7] MEDULLA-INCREMENTAL-VIEWS-R016.2 MaterializationManifest/MaterializationPhase state machine: route 4 census findings through MaterializationPhase::apply

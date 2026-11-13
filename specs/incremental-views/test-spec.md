@@ -121,3 +121,9 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 - Nightly: `cargo bench -p medulla-plan --bench incremental_delta`, `cargo bench -p medulla-table-store --bench matview_incremental`, `cargo bench -p medulla-reasoner --bench owl_retract`.
 - Scanners: the changed-file complexity, clone and KISS hooks of `.config/pre-commit.yaml` at manual stage, and `cargo clippy --no-default-features --features full --all-targets -- -D warnings`.
 - Record the revision, the command and the exit status of each run in the pull request.
+
+## Explicit state machine rows (Article XXXI)
+
+- `MEDULLA-INCREMENTAL-VIEWS-R016`: see each child (rollup).
+- `MEDULLA-INCREMENTAL-VIEWS-R016.1`: `crates/medulla-epistemic/src/materialization_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-epistemic/src/materialization_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-epistemic/src/materialization_machine.rs::tests::no_writer_sets_status_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::materialization_machine_matches_edge_table` (planned, L1): proves: Materialization/MaterializationStatus state machine: route 10 census findings through MaterializationStatus::apply.
+- `MEDULLA-INCREMENTAL-VIEWS-R016.2`: `crates/medulla-core/src/materialization_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-core/src/materialization_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-core/src/materialization_machine.rs::tests::no_writer_sets_phase_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::materialization_machine_matches_edge_table` (planned, L1): proves: MaterializationManifest/MaterializationPhase state machine: route 4 census findings through MaterializationPhase::apply.
