@@ -12,6 +12,7 @@ name = "medulla_program"
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 medulla-modality = { path = "../medulla-modality" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

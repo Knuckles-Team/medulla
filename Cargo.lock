@@ -6411,6 +6411,7 @@ name = "medulla-program"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-decision-outcome-types",
  "medulla-modality",
  "medulla-protocol-types",
  "medulla-types",

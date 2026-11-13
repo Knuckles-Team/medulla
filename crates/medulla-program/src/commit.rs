@@ -533,7 +533,10 @@ impl PromotionCommit {
         let candidate = self
             .result
             .selected_candidate()
-            .filter(|_| self.result.promoted)
+            .filter(|_| {
+                self.result.stage
+                    == medulla_decision_outcome_types::decision::promotion::RevisionStage::Evaluated
+            })
             .ok_or(ProgramError::InvalidCommit)?;
         self.envelope
             .validate()

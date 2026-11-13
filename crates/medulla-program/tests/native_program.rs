@@ -1,14 +1,16 @@
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_modality::{
     ArtifactId, Classification, DerivationId, EvidenceAddress, EvidenceLocus, EvidenceLocusId,
     OpaqueRef, PolicyEnvelope, PrivacyAttestation, ResourceId,
 };
 use medulla_program::{
     AdapterKind, EvaluationSummary, EvidenceBinding, ExampleOutcome, ExampleSplit, FieldRole,
-    FieldSpec, GovernedContentRef, ModelCallRequest, ModelCallResponse, ModelFinishReason,
-    ModelTier, ModelUsage, ModuleKind, NativeCompiler, OptimizationBudget, OptimizationRequest,
-    OptimizerArtifact, OptimizerArtifactKind, OptimizerExecution, OptimizerKind, PlanExecutor,
-    PlanStepKind, ProgramModality, ProgramRevision, ProgramRevisionIdentity, PromotionPolicy,
-    SignatureSpec, TrainingCorpus, TrainingExample, PROGRAM_SCHEMA_VERSION,
+    FieldSpec, GovernedContentRef, GraderKind, ModelCallRequest, ModelCallResponse,
+    ModelFinishReason, ModelTier, ModelUsage, ModuleKind, NativeCompiler, OptimizationBudget,
+    OptimizationRequest, OptimizerArtifact, OptimizerArtifactKind, OptimizerExecution,
+    OptimizerKind, PlanExecutor, PlanStepKind, ProgramModality, ProgramRevision,
+    ProgramRevisionIdentity, PromotionPolicy, SignatureSpec, TrainingCorpus, TrainingExample,
+    PROGRAM_SCHEMA_VERSION,
 };
 use sha2::{Digest, Sha256};
 
@@ -139,6 +141,9 @@ fn request(optimizer: OptimizerKind) -> OptimizationRequest {
                 feedback_ref: Some(opaque("feedback", &format!("feedback:{index}"))),
                 trace_ref: Some(opaque("trace", &format!("example-trace:{index}"))),
                 split: ExampleSplit::Train,
+                grader_kind: GraderKind::Annotation,
+                score_ref: None,
+                author: None,
                 outcome: if optimizer == OptimizerKind::Avatar && index % 2 == 1 {
                     ExampleOutcome::Failure
                 } else {
@@ -213,7 +218,7 @@ fn request(optimizer: OptimizerKind) -> OptimizationRequest {
 fn all_modalities_compile_and_require_evidence_before_promotion() {
     let mut request = request(OptimizerKind::LabeledFewShot);
     let proposal = NativeCompiler::compile(&request).expect("compile proposal");
-    assert!(!proposal.promoted);
+    assert_eq!(proposal.stage, RevisionStage::Draft);
     assert_eq!(proposal.candidates.len(), 1);
     assert_eq!(
         proposal.candidates[0].modalities,
@@ -232,7 +237,7 @@ fn all_modalities_compile_and_require_evidence_before_promotion() {
         evidence_refs: vec![opaque("evaluation", "candidate-evidence")],
     });
     let promoted = NativeCompiler::compile(&request).expect("compile evaluated candidate");
-    assert!(promoted.promoted);
+    assert_eq!(promoted.stage, RevisionStage::Evaluated);
     assert_eq!(
         promoted.selected_candidate_ref,
         Some(proposal.candidates[0].candidate_ref.clone())
@@ -460,7 +465,7 @@ fn promotion_identity_and_model_trace_bind_to_one_revision() {
         evidence_refs: vec![opaque("evaluation", "promotion-evidence")],
     });
     let result = NativeCompiler::compile(&request).expect("compile promoted candidate");
-    assert!(result.promoted);
+    assert_eq!(result.stage, RevisionStage::Evaluated);
     let candidate = result.selected_candidate().expect("selected candidate");
     let mut bound_candidate = candidate.clone();
     bound_candidate.content_digest = token("promotion-bound-candidate");
@@ -552,4 +557,51 @@ fn promotion_identity_and_model_trace_bind_to_one_revision() {
     let mut wrong_profile = model_request.clone();
     wrong_profile.model_profile_ref = opaque("model_profile", "other-model");
     assert!(wrong_profile.validate_for_revision(&identity).is_err());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R813.1
+#[test]
+fn example_round_trips_per_grader_kind() {
+    let base = request(OptimizerKind::LabeledFewShot);
+    let template = base.corpus.examples[0].clone();
+    let kinds = [
+        (GraderKind::Annotation, true),
+        (GraderKind::Human, true),
+        (GraderKind::ModelJudge, false),
+        (GraderKind::TraceMetric, true),
+        (GraderKind::Api, true),
+    ];
+    for (kind, decides) in kinds {
+        let mut example = template.clone();
+        example.grader_kind = kind;
+        example.score_ref = Some(opaque("score", "stored-score"));
+        example.author = Some(opaque("author", "grader"));
+        assert_eq!(msgpack_round_trip(&example), example);
+        let json = serde_json::to_value(&example).expect("serialise");
+        assert_eq!(
+            json["grader_kind"],
+            serde_json::to_value(kind).expect("kind")
+        );
+        let back: TrainingExample = serde_json::from_value(json).expect("deserialise");
+        assert_eq!(back, example);
+        assert_eq!(back.grader_kind.decides_promotion(), decides);
+    }
+    // Only a model judge never decides a promotion.
+    assert_eq!(
+        [
+            GraderKind::Annotation,
+            GraderKind::Human,
+            GraderKind::ModelJudge,
+            GraderKind::TraceMetric,
+            GraderKind::Api
+        ]
+        .into_iter()
+        .filter(|kind| !kind.decides_promotion())
+        .count(),
+        1
+    );
+    // A stored example without a grader kind is refused: no silent default.
+    let mut json = serde_json::to_value(&template).expect("serialise");
+    json.as_object_mut().expect("object").remove("grader_kind");
+    assert!(serde_json::from_value::<TrainingExample>(json).is_err());
 }

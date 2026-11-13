@@ -9,6 +9,7 @@ mod address;
 
 use std::collections::BTreeSet;
 
+pub use medulla_decision_outcome_types::decision::promotion::GraderKind;
 use medulla_modality::{
     EvidenceAddress, EvidenceLocus, OpaqueRef, PolicyEnvelope, PrivacyAttestation,
 };
@@ -284,6 +285,15 @@ pub struct TrainingExample {
     #[serde(default)]
     pub split: ExampleSplit,
     pub outcome: ExampleOutcome,
+    /// Who graded the score; only a model judge never decides a promotion
+    /// (MEDULLA-DECISION-ENGINE-R813.1).
+    pub grader_kind: GraderKind,
+    /// The stored score this example was built from, when it came from one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score_ref: Option<OpaqueRef>,
+    /// The grader's identity, when the grader is a person or a service.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<OpaqueRef>,
     /// Held-out or online metric in `[0, 1]`.
     pub score: f64,
     /// Non-negative evaluation weight.

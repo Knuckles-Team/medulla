@@ -227,6 +227,7 @@ fn ops_carry_their_authz_action_and_wire_tag() {
     assert!(get.into_record().is_err());
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R811.1
 #[test]
 fn every_policy_operation_and_receipt_round_trips() {
     let version = ModelPolicyVersion {

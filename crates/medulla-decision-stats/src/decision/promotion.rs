@@ -23,8 +23,9 @@ use medulla_decision_types::{decision::StatisticalPolicy, decision::UnitRational
 use medulla_types::contract::BoundedVec;
 
 use medulla_decision_outcome_types::decision::promotion::{
-    HeldOutEvidence, ReceiptKind, RevisionSubject, KNOBS as PROMOTION_KNOBS,
-    MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN,
+    ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
+    RollbackDecision, KNOBS as PROMOTION_KNOBS, MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN,
+    REGRESSION_MARGIN, REGRESSION_WINDOW,
 };
 use medulla_decision_types::decision::codes::{
     EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
@@ -329,6 +330,50 @@ pub fn challenger_wins(evidence: &HeldOutEvidence, policy: &DecisionPolicy) -> P
             reason: "margin_not_met",
         }
     }
+}
+
+/// MEDULLA-DECISION-ENGINE-R805.2: does a later measurement of the champion
+/// call for a rollback? `promoted` is the evidence the promotion won on and
+/// `latest` a later one on the same `evaluation_set_digest`. The champion
+/// rolls back to the pointer's previous target when `latest.case_count`
+/// reaches `promotion.regression_window` and the score fell by more than
+/// `promotion.regression_margin`. Scores are ppm; all arithmetic is integer.
+/// Writes nothing.
+pub fn regression_rollback(
+    pointer: &ChampionPointer,
+    promoted: &HeldOutEvidence,
+    latest: &HeldOutEvidence,
+    policy: &DecisionPolicy,
+) -> PromotionVerdict {
+    let hold = |reason: &str| PromotionVerdict::Hold {
+        reason: reason.to_owned(),
+    };
+    if promoted.evaluation_set_digest != latest.evaluation_set_digest {
+        return hold("evaluation_set_mismatch");
+    }
+    if latest.case_count < integer_knob(policy, REGRESSION_WINDOW) {
+        return hold("window_not_reached");
+    }
+    let margin = match policy.knob(&PROMOTION_KNOBS[REGRESSION_MARGIN]) {
+        KnobValue::DecimalMicros(value) => value,
+        _ => i64::MAX,
+    };
+    let drop = promoted
+        .challenger_score_ppm
+        .saturating_sub(latest.challenger_score_ppm);
+    if drop <= margin {
+        return hold("within_margin");
+    }
+    let Some(previous) = pointer.parent_ref.clone() else {
+        return hold("no_previous_target");
+    };
+    PromotionVerdict::Rollback(RollbackDecision {
+        pointer: pointer.clone(),
+        from_ref: pointer.revision_ref.clone(),
+        to_ref: previous,
+        reason: format!("regression:drop_ppm={drop}"),
+        evidence_refs: Vec::new(),
+    })
 }
 
 /// MEDULLA-DECISION-ENGINE-R805.11: the gate rule of the evidence's subject.
@@ -691,5 +736,129 @@ mod class_metric_tests {
             observe(&mut protocol, &format!("class-{index:02}"), &[0], false);
         }
         assert!(protocol.finish(65, true, &policy(1)).is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use medulla_decision_outcome_types::decision::promotion::{
+        ChampionPointer, GraderKind, HeldOutEvidence, PromotionVerdict, ReceiptKind,
+        RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION, KNOBS, REGRESSION_MARGIN,
+        REGRESSION_WINDOW,
+    };
+    use medulla_decision_types::decision::knobs::KnobValue;
+    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_types::contract::OpaqueId;
+
+    use super::regression_rollback;
+
+    fn subject() -> RevisionSubject {
+        RevisionSubject::DecisionHead {
+            component_id: "head-a".to_owned(),
+        }
+    }
+
+    fn id(value: &str) -> OpaqueId {
+        OpaqueId::new(format!("revision:{value}")).expect("valid opaque id")
+    }
+
+    fn pointer(parent: Option<&str>) -> ChampionPointer {
+        ChampionPointer {
+            subject: subject(),
+            revision_ref: id("two"),
+            parent_ref: parent.map(id),
+            promoted_by_decision: OpaqueId::new("decision:d4".to_owned()).expect("id"),
+        }
+    }
+
+    fn evidence(score_ppm: i64, cases: u64, set: &str) -> HeldOutEvidence {
+        HeldOutEvidence {
+            schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+            subject: subject(),
+            challenger_ref: "two".to_owned(),
+            champion_ref: Some("one".to_owned()),
+            receipt_kind: ReceiptKind::DecisionEval,
+            receipt_digest: "sha256:aa".to_owned(),
+            evaluation_set_digest: set.to_owned(),
+            challenger_score_ppm: score_ppm,
+            champion_score_ppm: Some(700_000),
+            delta_ppm: score_ppm - 700_000,
+            case_count: cases,
+            independent: true,
+            grader_kind: GraderKind::Annotation,
+            measurement: None,
+            review: None,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R805.2
+    #[test]
+    fn regression_triggers_rollback() {
+        let policy = DecisionPolicy::engine_default();
+        let promoted = evidence(800_000, 100, "sha256:set");
+        // 50 cases, 3 points worse: rolls back to the previous target.
+        let verdict = regression_rollback(
+            &pointer(Some("one")),
+            &promoted,
+            &evidence(770_000, 50, "sha256:set"),
+            &policy,
+        );
+        let PromotionVerdict::Rollback(rollback) = verdict else {
+            panic!("expected a rollback, got {verdict:?}");
+        };
+        assert_eq!(rollback.from_ref, id("two"));
+        assert_eq!(rollback.to_ref, id("one"));
+        assert_eq!(rollback.reason, "regression:drop_ppm=30000");
+        let hold = |reason: &str| PromotionVerdict::Hold {
+            reason: reason.to_owned(),
+        };
+        // 49 cases: the window is not reached.
+        assert_eq!(
+            regression_rollback(
+                &pointer(Some("one")),
+                &promoted,
+                &evidence(770_000, 49, "sha256:set"),
+                &policy
+            ),
+            hold("window_not_reached")
+        );
+        // A drop of exactly the margin (0.02) is not more than the margin.
+        assert_eq!(
+            regression_rollback(
+                &pointer(Some("one")),
+                &promoted,
+                &evidence(780_000, 50, "sha256:set"),
+                &policy
+            ),
+            hold("within_margin")
+        );
+        // Another evaluation set is not comparable.
+        assert_eq!(
+            regression_rollback(
+                &pointer(Some("one")),
+                &promoted,
+                &evidence(700_000, 50, "sha256:other"),
+                &policy
+            ),
+            hold("evaluation_set_mismatch")
+        );
+        // No previous target: nothing to roll back to.
+        assert_eq!(
+            regression_rollback(
+                &pointer(None),
+                &promoted,
+                &evidence(770_000, 50, "sha256:set"),
+                &policy
+            ),
+            hold("no_previous_target")
+        );
+        // The knobs are Fixed and carry the spec's defaults and bounds.
+        assert_eq!(KNOBS[REGRESSION_WINDOW].name, "promotion.regression_window");
+        assert_eq!(KNOBS[REGRESSION_MARGIN].name, "promotion.regression_margin");
+        assert_eq!(KNOBS[REGRESSION_WINDOW].default, KnobValue::Integer(50));
+        assert_eq!(
+            KNOBS[REGRESSION_MARGIN].default,
+            KnobValue::DecimalMicros(20_000)
+        );
     }
 }

@@ -209,6 +209,116 @@ impl<const K: usize> ParetoFront<K> {
         &self.candidates
     }
 
+    /// Crowding distance of every candidate, in candidate order. Every score
+    /// and the cost count as one objective each, normalised by the front's
+    /// range of that objective; boundary candidates are infinitely far.
+    pub fn crowding_distances(&self) -> Vec<f64> {
+        let count = self.candidates.len();
+        let mut distance = vec![0.0f64; count];
+        let objective = |candidate: &PolicyCandidate<K>, index: usize| -> f64 {
+            if index < K {
+                f64::from(candidate.scores[index])
+            } else {
+                candidate.cost_micro_usd as f64
+            }
+        };
+        for index in 0..=K {
+            let mut order: Vec<usize> = (0..count).collect();
+            order.sort_by(|&left, &right| {
+                objective(&self.candidates[left], index)
+                    .total_cmp(&objective(&self.candidates[right], index))
+                    .then_with(|| self.candidates[left].id.cmp(&self.candidates[right].id))
+            });
+            let (Some(&first), Some(&last)) = (order.first(), order.last()) else {
+                continue;
+            };
+            distance[first] = f64::INFINITY;
+            distance[last] = f64::INFINITY;
+            let low = objective(&self.candidates[first], index);
+            let range = objective(&self.candidates[last], index) - low;
+            if range <= 0.0 {
+                continue;
+            }
+            for window in order.windows(3) {
+                let gap = objective(&self.candidates[window[2]], index)
+                    - objective(&self.candidates[window[0]], index);
+                distance[window[1]] += gap / range;
+            }
+        }
+        distance
+    }
+
+    /// Keep at most `max_size` candidates: the smallest crowding distance
+    /// leaves first, ties dropping the greater id.
+    pub fn bound(&mut self, max_size: usize) {
+        while self.candidates.len() > max_size.max(1) {
+            let distance = self.crowding_distances();
+            let Some(worst) = (0..self.candidates.len()).min_by(|&left, &right| {
+                distance[left]
+                    .total_cmp(&distance[right])
+                    .then_with(|| self.candidates[right].id.cmp(&self.candidates[left].id))
+            }) else {
+                return;
+            };
+            self.candidates.remove(worst);
+        }
+    }
+
+    /// The next parent by binary tournament: two draws of a SplitMix64
+    /// stream seeded by `seed`; the larger crowding distance wins and a tie
+    /// picks the lower id. `None` on an empty front.
+    pub fn next_parent(&self, seed: u64) -> Option<&PolicyCandidate<K>> {
+        let count = self.candidates.len() as u64;
+        if count == 0 {
+            return None;
+        }
+        let distance = self.crowding_distances();
+        let mut state = seed;
+        let first = (splitmix64(&mut state) % count) as usize;
+        let second = (splitmix64(&mut state) % count) as usize;
+        let winner = match distance[first].total_cmp(&distance[second]) {
+            std::cmp::Ordering::Greater => first,
+            std::cmp::Ordering::Less => second,
+            std::cmp::Ordering::Equal => {
+                if self.candidates[first].id <= self.candidates[second].id {
+                    first
+                } else {
+                    second
+                }
+            }
+        };
+        Some(&self.candidates[winner])
+    }
+
+    /// Candidates ranked by `scores[0]` per `max(cost_micro_usd, 1)`,
+    /// descending; ties by id.
+    pub fn scoreboard(&self) -> Vec<&PolicyCandidate<K>> {
+        let ratio = |candidate: &PolicyCandidate<K>| {
+            if K == 0 {
+                0.0
+            } else {
+                f64::from(candidate.scores[0]) / candidate.cost_micro_usd.max(1) as f64
+            }
+        };
+        let mut ranked: Vec<&PolicyCandidate<K>> = self.candidates.iter().collect();
+        ranked.sort_by(|left, right| {
+            ratio(right)
+                .total_cmp(&ratio(left))
+                .then_with(|| left.id.cmp(&right.id))
+        });
+        ranked
+    }
+
+    /// SHA-256 over the canonical JSON of the candidates sorted by id, as 64
+    /// lowercase hex characters.
+    pub fn digest(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let mut sorted: Vec<&PolicyCandidate<K>> = self.candidates.iter().collect();
+        sorted.sort_by(|left, right| left.id.cmp(&right.id));
+        let canonical = serde_json::to_vec(&sorted).unwrap_or_default();
+        hex::encode(Sha256::digest(canonical))
+    }
+
     /// Insert a valid candidate unless an existing candidate dominates it.
     /// Returns `true` when the front changes.
     pub fn insert(&mut self, candidate: PolicyCandidate<K>) -> Result<bool, FrontError> {
@@ -225,4 +335,13 @@ impl<const K: usize> ParetoFront<K> {
         self.candidates.push(candidate);
         Ok(true)
     }
+}
+
+/// One SplitMix64 step.
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
 }

@@ -372,6 +372,12 @@ pub const MIN_CASES: usize = 0;
 pub const MIN_MARGIN: usize = 1;
 /// `measured_fact.min_cases`: fewest cases a measured-fact run needs.
 pub const MEASURED_FACT_MIN_CASES: usize = 2;
+/// `promotion.regression_window`: cases a later run needs before it can roll
+/// a promotion back (MEDULLA-DECISION-ENGINE-R805.2).
+pub const REGRESSION_WINDOW: usize = 3;
+/// `promotion.regression_margin`: score drop, as a fraction, that rolls a
+/// promotion back (MEDULLA-DECISION-ENGINE-R805.2).
+pub const REGRESSION_MARGIN: usize = 4;
 
 /// The promotion knobs. The gate knobs are `Fixed`: a knob-set revision may
 /// not loosen the bar a challenger must clear.
@@ -399,6 +405,22 @@ pub const KNOBS: &[KnobSpec] = &[
         min: KnobValue::Integer(1),
         max: KnobValue::Integer(100_000),
         safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "promotion.regression_window",
+        unit: "cases",
+        default: KnobValue::Integer(50),
+        min: KnobValue::Integer(20),
+        max: KnobValue::Integer(10_000),
+        safety: KnobSafety::Fixed,
+    },
+    KnobSpec {
+        name: "promotion.regression_margin",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(20_000),
+        min: KnobValue::DecimalMicros(5_000),
+        max: KnobValue::DecimalMicros(200_000),
+        safety: KnobSafety::Fixed,
     },
 ];
 

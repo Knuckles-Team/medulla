@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_modality::{OpaqueRef, PolicyEnvelope};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -486,7 +487,10 @@ pub struct OptimizationResult {
     pub plans: Vec<OptimizationPlan>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selected_candidate_ref: Option<OpaqueRef>,
-    pub promoted: bool,
+    /// `Evaluated` when a candidate carries held-out evidence and was
+    /// selected, otherwise `Draft`; promotion itself is a later transition
+    /// (MEDULLA-DECISION-ENGINE-R810.1).
+    pub stage: RevisionStage,
     pub checkpoint: OptimizationCheckpoint,
 }
 
@@ -585,7 +589,11 @@ impl NativeCompiler {
             optimizer: request.optimizer,
             candidates,
             plans,
-            promoted: selected_candidate_ref.is_some(),
+            stage: if selected_candidate_ref.is_some() {
+                RevisionStage::Evaluated
+            } else {
+                RevisionStage::Draft
+            },
             selected_candidate_ref,
             checkpoint: OptimizationCheckpoint {
                 request_ref: request.request_ref.clone(),
