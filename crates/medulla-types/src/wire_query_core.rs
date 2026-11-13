@@ -367,6 +367,64 @@ pub enum ShapeKeep {
     Violating,
 }
 
+/// The aggregate function of one GROUP aggregate (MEDULLA-FEDERATED-QUERY-R733).
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GroupAggFunc {
+    Count,
+    Sum,
+    Min,
+    Max,
+    Avg,
+}
+
+#[cfg(feature = "query")]
+impl GroupAggFunc {
+    /// The UQL keyword of the function.
+    pub fn keyword(self) -> &'static str {
+        match self {
+            Self::Count => "COUNT",
+            Self::Sum => "SUM",
+            Self::Min => "MIN",
+            Self::Max => "MAX",
+            Self::Avg => "AVG",
+        }
+    }
+}
+
+/// One aggregate of the GROUP stage: `COUNT [(field)]` or `SUM|MIN|MAX|AVG (field)`,
+/// optionally `AS alias` (MEDULLA-FEDERATED-QUERY-R733).
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GroupAgg {
+    pub func: GroupAggFunc,
+    /// The aggregated field; `None` only for a bare `COUNT`.
+    #[serde(default)]
+    pub field: Option<String>,
+    #[serde(default)]
+    pub alias: Option<String>,
+}
+
+#[cfg(feature = "query")]
+impl GroupAgg {
+    /// The output column name: the alias, else `count` for a bare `COUNT`, else
+    /// `<func>_<field>` in lower case.
+    pub fn column(&self) -> String {
+        if let Some(alias) = &self.alias {
+            return alias.clone();
+        }
+        let func = self.func.keyword().to_ascii_lowercase();
+        match &self.field {
+            Some(field) => format!("{func}_{field}"),
+            None => func,
+        }
+    }
+}
+
 /// One cross-modal operator. A [`Plan`] is an ordered list of these — a pipeline
 /// where each op `(RowSet) -> RowSet`. This increment binds SQL + graph + vector
 /// (`Scan | Filter | Traverse | Rank | Limit`); reasoning/blob ops are later
@@ -580,6 +638,18 @@ pub enum Op {
     /// execution requires the `federation` feature. The inline-spec counterpart is the
     /// `federation`-gated [`Op::ForeignScan`] above.
     Foreign { name: String },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R733, UQL `GROUP BY k {, k} AGGREGATE agg {, agg}`)
+    /// — one row per distinct key tuple. A key or an aggregated field is read from the
+    /// row's typed cells, else from its node's properties (`label` reads the node label).
+    /// The result's columns are the keys then the aggregates, written to the one typed
+    /// tabular channel (MEDULLA-FEDERATED-QUERY-R737): keys as text, `COUNT` as int and
+    /// the other aggregates as float. The row id is the key tuple joined by `|`. More
+    /// groups than the knob `uql.group.max_groups` refuse `UQL_GROUP_LIMIT`; a key or
+    /// field no input row carries refuses `UQL_UNKNOWN_FIELD`.
+    Group {
+        keys: Vec<String>,
+        aggs: Vec<GroupAgg>,
+    },
     /// SOURCE (spatial, CONCEPT:MEDULLA-KG.ontology.singles-concept) — seed the RowSet with every node in the spatial
     /// `layer` (a node label / `type`) whose geometry's bounding box intersects `bbox`
     /// (`[minx, miny, maxx, maxy]`). The executor builds medulla-geo's packed Hilbert R-tree

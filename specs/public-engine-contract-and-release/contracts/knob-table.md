@@ -36,6 +36,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `transfer.min_backbones` | u64 | 2 | [2, 16] | count | Tunable | `MEDULLA_TRANSFER_MIN_BACKBONES` |
 | `transfer.min_samples` | u64 | 30 | [10, 10000] | labels | Tunable | `MEDULLA_TRANSFER_MIN_SAMPLES` |
 | `transfer.skill_after_successes` | u64 | 3 | [1, 100] | labels | Tunable | `MEDULLA_TRANSFER_SKILL_AFTER_SUCCESSES` |
+| `uql.group.max_groups` | u64 | 100000 | [1, 1000000] | groups | Tunable | `MEDULLA_UQL_GROUP_MAX_GROUPS` |
 | `transfer.min_rollouts` | u64 | 3 | [1, 100] | records | Tunable | `MEDULLA_TRANSFER_MIN_ROLLOUTS` |
 | `memory_sync.cursor_ttl_s` | u64 | 900 | [60, 86400] | seconds | Tunable | `MEDULLA_MEMORY_SYNC_CURSOR_TTL_S` |
 | `memory.search_state_max_bytes` | u64 | 1048576 | [65536, 1048576] | bytes | Tunable | `MEDULLA_MEMORY_SEARCH_STATE_MAX_BYTES` |

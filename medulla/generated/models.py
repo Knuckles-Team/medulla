@@ -19166,6 +19166,35 @@ class OpForeignBody(BaseModel):
     name: str
 
 
+class GroupAggFunc(str, Enum):
+    COUNT = "count"
+    SUM = "sum"
+    MIN = "min"
+    MAX = "max"
+    AVG = "avg"
+
+
+class GroupAgg(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    alias: str | None = None
+    field: str | None = None
+    func: GroupAggFunc
+
+
+class OpGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Group: OpGroupBody
+
+
+class OpGroupBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    aggs: list[GroupAgg]
+    keys: list[str]
+
+
 class OpForeignScan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -29354,6 +29383,7 @@ Op = (
     | OpWindow
     | OpWindowAgg
     | OpForeign
+    | OpGroup
     | OpSpatialScan
     | OpReproject
     | OpSpatialOp
@@ -34844,6 +34874,8 @@ __all__ = [
     "GraphTextPropertyRef",
     "GraphType",
     "GraphlearnPrediction",
+    "GroupAgg",
+    "GroupAggFunc",
     "GroupEffect",
     "GroupInput",
     "GroupMembershipChange",
@@ -36422,6 +36454,8 @@ __all__ = [
     "OpForeignBody",
     "OpForeignScan",
     "OpForeignScanBody",
+    "OpGroup",
+    "OpGroupBody",
     "OpFuseRrf",
     "OpFuseRrfBody",
     "OpLimit",

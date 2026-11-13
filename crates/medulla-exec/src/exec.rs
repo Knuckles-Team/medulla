@@ -43,6 +43,7 @@ mod decay_cluster;
 mod expand;
 #[cfg(feature = "federation")]
 pub mod foreign;
+mod group;
 mod pred_sql;
 pub mod propagate;
 mod string_eq;
@@ -2533,7 +2534,7 @@ fn cep_op(view: &GraphView, input: RowSet, spec: &medulla_types::wire::CepPatter
     let values = input.values();
     let mut events: Vec<medulla_stream::Event> = Vec::new();
     for r in input.rows() {
-        if let Some(mut ev) = row_event(view, &r.id).or_else(|| series_event(&r.id, values)) {
+        if let Some(mut ev) = row_event(view, &r.id).or_else(|| series_event(&r.id, &values)) {
             ev.attrs.insert(
                 CEP_ID_ATTR.to_string(),
                 serde_json::Value::String(r.id.clone()),
@@ -2986,6 +2987,7 @@ mod scan_order_tests {
             max_result_rows: 10,
             max_traversal_visits: 2,
             max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
+            max_groups: Budget::DEFAULT_MAX_GROUPS,
         });
         let err = traverse_op(&tight, "CITES", 2, 2, input.clone()).unwrap_err();
         assert!(err.starts_with(BUDGET_EXCEEDED), "{err}");
@@ -2995,6 +2997,7 @@ mod scan_order_tests {
             max_result_rows: 10,
             max_traversal_visits: 3,
             max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
+            max_groups: Budget::DEFAULT_MAX_GROUPS,
         });
         assert_eq!(
             traverse_op(&boundary, "CITES", 2, 2, input).unwrap().ids(),

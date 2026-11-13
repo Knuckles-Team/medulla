@@ -1209,7 +1209,7 @@ Pre-untangled design, one line per answer.
 
 - Owner. Medulla, `crates/medulla-uql` (grammar) and the executor crate.
 - Cohesion. Each construct is one production, one plan node and one executor arm; the grammar table is the single source of the EBNF block, the natural-language prompt and the expected-token lists.
-- Dependency direction. The parser depends on the plan AST in `medulla-query-types`; the executor depends on the AST.
+- Dependency direction. The parser depends on the plan AST (`Op` in `medulla-types`); the executor depends on the AST. GROUP (R733) is built: `Op::Group`, `crates/medulla-exec/src/exec/group.rs`, results in the typed tabular channel of R737.
 - Interface depth. Four keywords: GROUP, ORDER, SKIP, EDGES.
 - Special cases. None. A web view needs no engine method of its own; it sends UQL text.
 - State. None; queries are stateless.

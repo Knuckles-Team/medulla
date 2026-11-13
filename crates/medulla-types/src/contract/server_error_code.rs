@@ -525,6 +525,8 @@ closed_error_codes! {
         UnsupportedCoalition => "UNSUPPORTED_COALITION",
         UqlEClusterNoVector => "UQL_E_CLUSTER_NO_VECTOR",
         UqlEDecayNoTime => "UQL_E_DECAY_NO_TIME",
+        UqlGroupLimit => "UQL_GROUP_LIMIT",
+        UqlUnknownField => "UQL_UNKNOWN_FIELD",
         WalletKeyTrustNotFound => "WALLET_KEY_TRUST_NOT_FOUND",
         WebBackendInvalid => "WEB_BACKEND_INVALID",
         WebResultUrlMissing => "WEB_RESULT_URL_MISSING",

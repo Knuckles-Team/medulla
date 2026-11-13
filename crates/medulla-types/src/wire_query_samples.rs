@@ -114,6 +114,21 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::Foreign => Op::Foreign {
             name: "peer-east".into(),
         },
+        OpKind::Group => Op::Group {
+            keys: vec!["label".into()],
+            aggs: vec![
+                GroupAgg {
+                    func: GroupAggFunc::Count,
+                    field: None,
+                    alias: Some("n".into()),
+                },
+                GroupAgg {
+                    func: GroupAggFunc::Avg,
+                    field: Some("weight".into()),
+                    alias: None,
+                },
+            ],
+        },
         #[cfg(feature = "geo")]
         OpKind::SpatialScan => Op::SpatialScan {
             layer: "roads".into(),

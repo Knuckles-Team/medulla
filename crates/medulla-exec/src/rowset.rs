@@ -24,6 +24,16 @@
 //! that keep their input rows (`limit`, `intersect_keep_order`, `DERIVE`) keep the
 //! table; ops that rebuild rows from scratch start empty, and the UQL serve path has
 //! already recorded the values it may `RETURN` by then.
+//!
+//! **One typed tabular channel (MEDULLA-FEDERATED-QUERY-R737).** Value and text columns
+//! are not two side tables: every column a row carries is one typed [`Cell`] in one
+//! table keyed by row id, in the order the columns were first written. The exact `f64`
+//! channels are its `Float` cells and the text columns its `Text` cells
+//! ([`RowSet::values`] and [`RowSet::texts`] are typed views of the same table), and
+//! `GROUP` writes its keys and aggregates there too. [`RowSet::columns`] and
+//! [`RowSet::typed_rows`] read the whole result as named, typed columns with `id` and
+//! `score` as ordinary leading columns; `PROJECT` narrows that same table
+//! ([`RowSet::project`]). There is no second result shape.
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -33,6 +43,60 @@ pub type ValueChannels = BTreeMap<String, BTreeMap<String, f64>>;
 /// Row id → column name → text value (the text columns of a typed source row, such as a web
 /// result's title and engine; MEDULLA-UNIFIED-DATA-PLANE-R038.7.5).
 pub type TextChannels = BTreeMap<String, BTreeMap<String, String>>;
+
+/// One typed value of the tabular channel (MEDULLA-FEDERATED-QUERY-R737).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Cell {
+    Int(i64),
+    Float(f64),
+    Text(String),
+    Bool(bool),
+}
+
+impl Cell {
+    /// The column type this cell belongs to.
+    pub fn column_type(&self) -> ColumnType {
+        match self {
+            Self::Int(_) => ColumnType::Int,
+            Self::Float(_) => ColumnType::Float,
+            Self::Text(_) => ColumnType::Text,
+            Self::Bool(_) => ColumnType::Bool,
+        }
+    }
+
+    /// The cell as a number, when it is one (an `Int` widens to `f64`).
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Self::Int(v) => Some(*v as f64),
+            Self::Float(v) => Some(*v),
+            Self::Text(_) | Self::Bool(_) => None,
+        }
+    }
+}
+
+/// The closed set of column types.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ColumnType {
+    Int,
+    Float,
+    Text,
+    Bool,
+}
+
+/// One named, typed column of a [`RowSet`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Column {
+    pub name: String,
+    pub ty: ColumnType,
+}
+
+/// The name of the leading id column of [`RowSet::columns`].
+pub const ID_COLUMN: &str = "id";
+/// The name of the score column of [`RowSet::columns`].
+pub const SCORE_COLUMN: &str = "score";
+
+/// Row id → column name → typed cell: the one tabular channel.
+pub type CellTable = BTreeMap<String, BTreeMap<String, Cell>>;
 
 /// The row id of point `ts_ns` of `series` (EH-521): `series@ts`. Per-series ids keep two
 /// series' points at one timestamp distinct (a bare-ts id let the first series win).
@@ -102,8 +166,10 @@ impl Row {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RowSet {
     rows: Vec<Row>,
-    values: ValueChannels,
-    texts: TextChannels,
+    /// The typed cells of every row, keyed by row id (R737).
+    cells: CellTable,
+    /// Column names in the order they were first written.
+    order: Vec<String>,
 }
 
 impl RowSet {
@@ -125,54 +191,252 @@ impl RowSet {
     fn of_rows(rows: Vec<Row>) -> Self {
         Self {
             rows,
-            values: ValueChannels::new(),
-            texts: TextChannels::new(),
+            cells: CellTable::new(),
+            order: Vec::new(),
         }
     }
 
-    /// Attach text columns (row id → name → value). Columns of ids not in the set are dropped.
-    pub fn with_texts(mut self, mut texts: TextChannels) -> Self {
-        let ids = self.id_set();
-        texts.retain(|id, _| ids.contains(id.as_str()));
-        self.texts = texts;
+    /// Replace every cell of type `ty` with `incoming`, keeping cells of other types.
+    /// Cells of ids not in the set are dropped, so the table never names a row the set
+    /// does not hold.
+    fn replace_typed(mut self, ty: ColumnType, incoming: CellTable) -> Self {
+        for row in self.cells.values_mut() {
+            row.retain(|_, cell| cell.column_type() != ty);
+        }
+        let ids: HashSet<String> = self.rows.iter().map(|r| r.id.clone()).collect();
+        for (id, row) in incoming {
+            if !ids.contains(&id) {
+                continue;
+            }
+            for (name, cell) in row {
+                self.note_column(&name);
+                self.cells.entry(id.clone()).or_default().insert(name, cell);
+            }
+        }
+        self.cells.retain(|_, row| !row.is_empty());
+        self.prune_order();
         self
+    }
+
+    fn note_column(&mut self, name: &str) {
+        if !self.order.iter().any(|known| known == name) {
+            self.order.push(name.to_string());
+        }
+    }
+
+    /// Drop column names no row carries any more.
+    fn prune_order(&mut self) {
+        let cells = &self.cells;
+        self.order
+            .retain(|name| cells.values().any(|row| row.contains_key(name)));
+    }
+
+    /// The cells of type `ty`, mapped out of the one table.
+    fn typed_view<T>(
+        &self,
+        pick: impl Fn(&Cell) -> Option<T>,
+    ) -> BTreeMap<String, BTreeMap<String, T>> {
+        self.cells
+            .iter()
+            .filter_map(|(id, row)| {
+                let picked: BTreeMap<String, T> = row
+                    .iter()
+                    .filter_map(|(name, cell)| pick(cell).map(|value| (name.clone(), value)))
+                    .collect();
+                (!picked.is_empty()).then(|| (id.clone(), picked))
+            })
+            .collect()
+    }
+
+    /// Attach text columns (row id → name → value) as `Text` cells, replacing the text
+    /// cells already held. Columns of ids not in the set are dropped.
+    pub fn with_texts(self, texts: TextChannels) -> Self {
+        let incoming = texts
+            .into_iter()
+            .map(|(id, row)| {
+                let row = row
+                    .into_iter()
+                    .map(|(name, value)| (name, Cell::Text(value)))
+                    .collect();
+                (id, row)
+            })
+            .collect();
+        self.replace_typed(ColumnType::Text, incoming)
     }
 
     /// Row `id`'s text under column `name`.
     pub fn text(&self, id: &str, name: &str) -> Option<&str> {
-        self.texts
+        match self.cell(id, name) {
+            Some(Cell::Text(value)) => Some(value.as_str()),
+            _ => None,
+        }
+    }
+
+    /// The text cells of the table (row id → name → value).
+    pub fn texts(&self) -> TextChannels {
+        self.typed_view(|cell| match cell {
+            Cell::Text(value) => Some(value.clone()),
+            _ => None,
+        })
+    }
+
+    /// Row `id`'s text cells (name → value).
+    pub fn row_texts(&self, id: &str) -> BTreeMap<String, String> {
+        self.cells
             .get(id)
-            .and_then(|m| m.get(name))
-            .map(String::as_str)
+            .map(|row| {
+                row.iter()
+                    .filter_map(|(name, cell)| match cell {
+                        Cell::Text(value) => Some((name.clone(), value.clone())),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
-    /// The whole text-column table.
-    pub fn texts(&self) -> &TextChannels {
-        &self.texts
+    /// Attach exact value channels (row id → name → value) as `Float` cells, replacing
+    /// the float cells already held. Channels of ids not in the set are dropped, so the
+    /// table never names a row the set does not hold.
+    pub fn with_values(self, values: ValueChannels) -> Self {
+        let incoming = values
+            .into_iter()
+            .map(|(id, row)| {
+                let row = row
+                    .into_iter()
+                    .map(|(name, value)| (name, Cell::Float(value)))
+                    .collect();
+                (id, row)
+            })
+            .collect();
+        self.replace_typed(ColumnType::Float, incoming)
     }
 
-    /// Attach exact value channels (row id → name → value). Channels of ids not in the
-    /// set are dropped, so the table never names a row the set does not hold.
-    pub fn with_values(mut self, mut values: ValueChannels) -> Self {
-        let ids = self.id_set();
-        values.retain(|id, _| ids.contains(id.as_str()));
-        self.values = values;
+    /// Row `id`'s exact value under channel `name` (a `Float` cell).
+    pub fn value(&self, id: &str, name: &str) -> Option<f64> {
+        match self.cell(id, name) {
+            Some(Cell::Float(value)) => Some(*value),
+            _ => None,
+        }
+    }
+
+    /// The float cells of the table (row id → channel → value).
+    pub fn values(&self) -> ValueChannels {
+        self.typed_view(|cell| match cell {
+            Cell::Float(value) => Some(*value),
+            _ => None,
+        })
+    }
+
+    /// The numeric cells of the table (`Int` and `Float`) as `f64`, row id → column →
+    /// value: what a numeric result channel reads.
+    pub fn numeric_values(&self) -> ValueChannels {
+        self.typed_view(Cell::as_f64)
+    }
+
+    /// The names of the numeric (`Int` or `Float`) cell columns, in column order.
+    pub fn numeric_columns(&self) -> Vec<String> {
+        self.columns()
+            .into_iter()
+            .skip(2)
+            .filter(|column| matches!(column.ty, ColumnType::Int | ColumnType::Float))
+            .map(|column| column.name)
+            .collect()
+    }
+
+    /// Split into rows and the value channels (an op that keeps its rows re-attaches
+    /// them with [`RowSet::with_values`]).
+    pub fn into_parts(self) -> (Vec<Row>, ValueChannels) {
+        let values = self.values();
+        (self.rows, values)
+    }
+
+    /// Row `id`'s cell under column `name`.
+    pub fn cell(&self, id: &str, name: &str) -> Option<&Cell> {
+        self.cells.get(id).and_then(|row| row.get(name))
+    }
+
+    /// Write one typed cell (the GROUP stage writes its keys and aggregates this way).
+    /// A cell for an id the set does not hold is ignored.
+    pub fn with_cell(mut self, id: &str, name: &str, cell: Cell) -> Self {
+        if self.rows.iter().any(|r| r.id == id) {
+            self.note_column(name);
+            self.cells
+                .entry(id.to_string())
+                .or_default()
+                .insert(name.to_string(), cell);
+        }
         self
     }
 
-    /// Row `id`'s exact value under channel `name`.
-    pub fn value(&self, id: &str, name: &str) -> Option<f64> {
-        self.values.get(id).and_then(|m| m.get(name)).copied()
+    /// The named, typed columns of the result in order: `id` (text) and `score` (float)
+    /// first, as ordinary columns, then every cell column in the order it was first
+    /// written. A column's type is the type of its cells.
+    pub fn columns(&self) -> Vec<Column> {
+        let mut columns = vec![
+            Column {
+                name: ID_COLUMN.to_string(),
+                ty: ColumnType::Text,
+            },
+            Column {
+                name: SCORE_COLUMN.to_string(),
+                ty: ColumnType::Float,
+            },
+        ];
+        for name in &self.order {
+            let ty = self
+                .cells
+                .values()
+                .find_map(|row| row.get(name).map(Cell::column_type));
+            if let Some(ty) = ty {
+                columns.push(Column {
+                    name: name.clone(),
+                    ty,
+                });
+            }
+        }
+        columns
     }
 
-    /// The whole value-channel table.
-    pub fn values(&self) -> &ValueChannels {
-        &self.values
+    /// Every row as typed values in [`RowSet::columns`] order: the id, the score, then
+    /// each column's cell (`None` where the row has no value).
+    pub fn typed_rows(&self) -> Vec<Vec<Option<Cell>>> {
+        let columns = self.columns();
+        self.rows
+            .iter()
+            .map(|row| {
+                columns
+                    .iter()
+                    .map(|column| match column.name.as_str() {
+                        ID_COLUMN => Some(Cell::Text(row.id.clone())),
+                        SCORE_COLUMN => row.score.map(|s| Cell::Float(f64::from(s))),
+                        name => self.cell(&row.id, name).cloned(),
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
-    /// Split into rows and the value table (an op that keeps its rows re-attaches it).
-    pub fn into_parts(self) -> (Vec<Row>, ValueChannels) {
-        (self.rows, self.values)
+    /// Keep only the named cell columns (PROJECT). `id` and `score` are always kept, and
+    /// so are the text columns, which are the row's source provenance the encoder returns
+    /// beside the channels; a name no row carries is ignored.
+    pub fn project(mut self, names: &[String]) -> Self {
+        for row in self.cells.values_mut() {
+            row.retain(|name, cell| {
+                cell.column_type() == ColumnType::Text || names.iter().any(|keep| keep == name)
+            });
+        }
+        self.cells.retain(|_, row| !row.is_empty());
+        self.prune_order();
+        self
+    }
+
+    /// Keep the cells of the ids still in the set (after a truncation or a filter).
+    fn retain_cells(mut self) -> Self {
+        let ids: HashSet<String> = self.rows.iter().map(|r| r.id.clone()).collect();
+        self.cells.retain(|id, _| ids.contains(id));
+        self.prune_order();
+        self
     }
 
     /// Build from scored ids (a RANK result — already in score order). Dedup keeps
@@ -244,18 +508,19 @@ impl RowSet {
             .filter(|r| keep.contains(r.id.as_str()))
             .cloned()
             .collect();
-        RowSet::of_rows(rows)
-            .with_values(self.values.clone())
-            .with_texts(self.texts.clone())
+        RowSet {
+            rows,
+            cells: self.cells.clone(),
+            order: self.order.clone(),
+        }
+        .retain_cells()
     }
 
     /// Truncate to the top-k (LIMIT). Order-respecting: after a RANK this is top-k by
     /// score; on an unranked set it is the first k discovered.
     pub fn limit(mut self, k: usize) -> RowSet {
         self.rows.truncate(k);
-        let values = std::mem::take(&mut self.values);
-        let texts = std::mem::take(&mut self.texts);
-        self.with_values(values).with_texts(texts)
+        self.retain_cells()
     }
 }
 

@@ -32,4 +32,7 @@ wasm-udf = ["query", "medulla-exec/wasm-udf", "medulla-types/wasm-udf"]
 
 [dev-dependencies]
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+rmp-serde = "1.3"

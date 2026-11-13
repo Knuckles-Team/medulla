@@ -267,6 +267,7 @@ fn budgets_refuse_with_a_typed_error() {
         max_result_rows: 1,
         max_traversal_visits: 100,
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
+        max_groups: Budget::DEFAULT_MAX_GROUPS,
     });
     let err = run("MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
     assert!(
@@ -283,6 +284,7 @@ fn profile_refuses_when_final_rows_exceed_budget() {
         max_result_rows: 1,
         max_traversal_visits: 100,
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
+        max_groups: Budget::DEFAULT_MAX_GROUPS,
     });
     let err = run("PROFILE MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
     assert!(

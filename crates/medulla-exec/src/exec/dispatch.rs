@@ -62,6 +62,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Window { .. }
         | Op::WindowAgg { .. }
         | Op::Foreign { .. }
+        | Op::Group { .. }
         | Op::DecisionScan { .. }
         | Op::Attribute { .. }
         | Op::Decay { .. }
@@ -299,8 +300,11 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
             apply_graph_navigation(op, input, ctx)
         }
         Op::Propagate { .. } => super::propagate::apply(op, &input, ctx),
-        // Channel selection is applied where the result is encoded; rows pass through.
-        Op::Project { .. } => Ok(input),
+        // PROJECT narrows the one typed tabular channel to the named columns
+        // (MEDULLA-FEDERATED-QUERY-R737); rows pass through, and the encoder selects the
+        // score channels it recorded under the same names.
+        Op::Project { channels } => Ok(input.project(channels)),
+        Op::Group { keys, aggs } => super::group::group(ctx, input, keys, aggs),
         Op::DecisionScan { preds } => super::decisions::decision_scan(ctx, preds),
         Op::Attribute {
             input: players,

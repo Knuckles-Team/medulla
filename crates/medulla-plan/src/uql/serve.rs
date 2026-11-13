@@ -165,7 +165,7 @@ fn rows_of(rows: &RowSet, columns: &[String], table: &ChannelTable) -> Vec<UqlRo
             channels: row_channels(&r.id, columns, table),
             knowledge: None,
             proof: None,
-            provenance: rows.texts().get(&r.id).cloned().unwrap_or_default(),
+            provenance: rows.row_texts(&r.id),
         })
         .collect()
 }
@@ -184,8 +184,27 @@ fn row_channels(id: &str, columns: &[String], table: &ChannelTable) -> Vec<Optio
         .collect()
 }
 
+/// Whether the plan aggregates with a `GROUP` stage (MEDULLA-FEDERATED-QUERY-R733).
+fn groups(ops: &[Op]) -> bool {
+    ops.iter().any(|op| matches!(op, Op::Group { .. }))
+}
+
 fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, String> {
     let columns = returned_channels(&plan.ops);
+    if columns.is_empty() && groups(&plan.ops) {
+        // A GROUP answer with no RETURN returns its own numeric columns (the aggregates)
+        // in column order; the keys are the row id and the row's text columns.
+        let traced = traced(plan, ctx)?;
+        let columns = traced.rows.numeric_columns();
+        return Ok(UqlResult::Rows {
+            rows: rows_of(&traced.rows, &columns, &traced.table),
+            columns,
+            warnings,
+            snapshot_revision: 0,
+            knowledge_revision: 0,
+            source_coverage: Vec::new(),
+        });
+    }
     if columns.is_empty() {
         let rows = medulla_exec::exec::execute(plan, ctx)?;
         return Ok(UqlResult::Rows {
@@ -240,7 +259,9 @@ fn traced(plan: &Plan, ctx: &PlanCtx) -> Result<Traced, String> {
 /// Record a stage's per-row value channels (EH-521/522), its score under its
 /// channel, and its secondary channels (EH-523/525).
 fn record_channel(op: &Op, rows: &RowSet, extra: &StageChannels, table: &mut ChannelTable) {
-    for (id, values) in rows.values() {
+    // Every numeric cell of the one typed tabular channel (MEDULLA-FEDERATED-QUERY-R737):
+    // float value channels and the int counts a GROUP writes.
+    for (id, values) in rows.numeric_values() {
         let row = table.entry(id.clone()).or_default();
         row.extend(values.iter().map(|(name, &v)| (name.clone(), v)));
     }

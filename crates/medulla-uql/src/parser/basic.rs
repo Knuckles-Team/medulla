@@ -165,6 +165,58 @@ impl<'a> Parser<'a> {
         Ok(Op::ClusterByEmbedding { k })
     }
 
+    /// `GROUP BY name {, name} AGGREGATE agg {, agg}` with
+    /// `agg = ( COUNT [ "(" name ")" ] | ( SUM | MIN | MAX | AVG ) "(" name ")" ) [ AS name ]`
+    /// (MEDULLA-FEDERATED-QUERY-R733).
+    pub(super) fn group(&mut self) -> Result<Op, UqlError> {
+        use medulla_types::wire::{GroupAgg, GroupAggFunc};
+        self.expect_kw("BY")?;
+        let mut keys = vec![self.name("a GROUP key")?];
+        while self.eat(&Tok::Comma) {
+            keys.push(self.name("a GROUP key")?);
+        }
+        self.expect_kw("AGGREGATE")?;
+        let mut aggs = Vec::new();
+        loop {
+            let at = self.cur_span().0;
+            let word = self.name("an aggregate (COUNT, SUM, MIN, MAX or AVG)")?;
+            let func = match word.to_ascii_uppercase().as_str() {
+                "COUNT" => GroupAggFunc::Count,
+                "SUM" => GroupAggFunc::Sum,
+                "MIN" => GroupAggFunc::Min,
+                "MAX" => GroupAggFunc::Max,
+                "AVG" => GroupAggFunc::Avg,
+                _ => {
+                    return Err(
+                        self.err_at(at, "expected COUNT, SUM, MIN, MAX or AVG after AGGREGATE")
+                    )
+                }
+            };
+            let field = if self.eat(&Tok::LParen) {
+                let field = self.name("an aggregated field")?;
+                self.expect(&Tok::RParen, "`)` after the aggregated field")?;
+                Some(field)
+            } else if func == GroupAggFunc::Count {
+                None
+            } else {
+                return Err(self.err_at(at, "SUM, MIN, MAX and AVG need a `(field)`"));
+            };
+            let alias = if self.eat_kw("AS") {
+                Some(self.name("an aggregate alias")?)
+            } else {
+                None
+            };
+            let agg = GroupAgg { func, field, alias };
+            // A later `RETURN` may name the aggregate's output column.
+            self.derived.insert(agg.column());
+            aggs.push(agg);
+            if !self.eat(&Tok::Comma) {
+                break;
+            }
+        }
+        Ok(Op::Group { keys, aggs })
+    }
+
     /// `RETURN name {, name}` — each name a score channel this build produces, a series
     /// value channel `v0..vk` (EH-521) or a `DERIVE … AS name` alias declared earlier.
     pub(super) fn return_stage(&mut self) -> Result<Op, UqlError> {

@@ -374,6 +374,9 @@ knobs! {
     transfer_min_samples: u64 = "transfer.min_samples", U64(30), [10, 10_000], "labels", Tunable;
     /// Independent successes of one option under one question before it is a skill candidate (MEDULLA-DECISION-ENGINE-R059.2).
     transfer_skill_after_successes: u64 = "transfer.skill_after_successes", U64(3), [1, 100], "labels", Tunable;
+    /// Most key groups one UQL `GROUP` stage may produce before it refuses `UQL_GROUP_LIMIT`
+    /// (MEDULLA-FEDERATED-QUERY-R733).
+    uql_group_max_groups: u64 = "uql.group.max_groups", U64(100_000), [1, 1_000_000], "groups", Tunable;
     /// Fewest distinct records behind a skill candidate's successes (MEDULLA-DECISION-ENGINE-R059.2).
     transfer_min_rollouts: u64 = "transfer.min_rollouts", U64(3), [1, 100], "records", Tunable;
     /// Lifetime of a signed memory snapshot list cursor (MEDULLA-DURABLE-KERNEL-R085.2).

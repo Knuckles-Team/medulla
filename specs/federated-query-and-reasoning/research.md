@@ -51,6 +51,15 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 
 **Decision.** RowSet gains a typed tabular channel (named variables plus typed values per row) used by GROUP and every projection (`MEDULLA-FEDERATED-QUERY-R737`). Id and score stay as ordinary columns. A parallel group-result type would give every consumer two shapes to read.
 
+**Built (R737, R733).** The value channels and the text columns stopped being two side tables:
+both are typed views of one cell table in `RowSet`, so `GROUP` (keys as text, `COUNT` as int, the
+other aggregates as float) and `RETURN` read and write the same thing. `RETURN` keeps text
+columns because they are the row's source provenance, which the encoder returns beside the
+channels. `label` as a GROUP key reads the node label from the same fields `Scan` reads. A
+served answer with `GROUP` and no `RETURN` returns its aggregate columns, so a graph view needs
+no projection to see its counts. The `uql.group.max_groups` knob reaches the executor through
+`Budget::max_groups`, set by the served planner, so the executor reads no registry itself.
+
 ## Decisions: stored-query serving (MEDULLA-FEDERATED-QUERY-R708.3, R708.4, R708.8)
 
 - **Template.** `StoredQueryPut` and `StoredQueryCall` follow the live-artifact methods end to end: handler family in `crates/medulla-h-query/src/query/stored_query.rs` routed by an `is_stored_query_method` check in `dispatch_query_family`; node writes through the staged query gateway (`is_query_gateway_method`, `GATEWAY_ROUTED`, `query_method_name`); write classification; capability descriptors with the `query:write` and `query:read` scopes; result contract entries; `ServerErrorCode` variants and the `STORED_QUERY_` method prefix; audit control line; capability snapshot lists; wire vector fixture; served Python test.

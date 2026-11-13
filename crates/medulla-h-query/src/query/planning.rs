@@ -378,7 +378,13 @@ pub fn run_unified_with<T>(
     //      harness, or a graph that predates the factory).
     // Built/bound ONLY when the plan actually references a text op, so a non-text
     // served query pays nothing either way.
-    let ctx = PlanCtx::new(view, semantic);
+    // The GROUP stage's key-group bound is the registry knob `uql.group.max_groups`
+    // (MEDULLA-FEDERATED-QUERY-R733).
+    let ctx = PlanCtx::new(view, semantic).with_budget(medulla_exec::budget::Budget {
+        max_groups: usize::try_from(medulla_server_api::knob_config::knobs().uql_group_max_groups)
+            .unwrap_or(usize::MAX),
+        ..medulla_exec::budget::Budget::default()
+    });
     #[cfg(feature = "text")]
     let need_text = plan_needs_text(&ops);
     #[cfg(feature = "text")]

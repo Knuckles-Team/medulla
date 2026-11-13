@@ -8291,7 +8291,10 @@ name = "medulla-uql"
 version = "0.1.0"
 dependencies = [
  "medulla-exec",
+ "medulla-graph-core",
+ "medulla-semantic-index",
  "medulla-types",
+ "rmp-serde",
  "serde_json",
 ]
 

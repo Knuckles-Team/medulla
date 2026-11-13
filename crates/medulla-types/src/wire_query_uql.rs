@@ -374,6 +374,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Window { secs } => window(*secs),
         Op::WindowAgg { secs, agg } => window_agg(*secs, agg),
         Op::Foreign { name } => keyword_quoted("FOREIGN", name),
+        Op::Group { keys, aggs } => group(keys, aggs),
         #[cfg(feature = "geo")]
         Op::SpatialScan { layer, bbox } => super::wire_query_uql_modal::spatial_scan(layer, bbox),
         #[cfg(feature = "geo")]
@@ -489,6 +490,35 @@ fn filter(preds: &[Pred]) -> Printed {
         ));
     }
     Ok(format!("WHERE {}", conjunction(preds)?))
+}
+
+/// `GROUP BY k {, k} AGGREGATE agg {, agg}` (MEDULLA-FEDERATED-QUERY-R733).
+fn group(keys: &[String], aggs: &[GroupAgg]) -> Printed {
+    if keys.is_empty() || aggs.is_empty() {
+        return Err(refuse(
+            UqlPrintCode::DegenerateShape,
+            "GROUP needs at least one key and one aggregate",
+        ));
+    }
+    let keys: Vec<String> = keys.iter().map(|k| uql_ident(k)).collect();
+    let aggs: Vec<String> = aggs
+        .iter()
+        .map(|agg| {
+            let mut text = agg.func.keyword().to_string();
+            if let Some(field) = &agg.field {
+                text.push_str(&format!("({})", uql_ident(field)));
+            }
+            if let Some(alias) = &agg.alias {
+                text.push_str(&format!(" AS {}", uql_ident(alias)));
+            }
+            text
+        })
+        .collect();
+    Ok(format!(
+        "GROUP BY {} AGGREGATE {}",
+        keys.join(", "),
+        aggs.join(", ")
+    ))
 }
 
 fn project(channels: &[String]) -> Printed {
