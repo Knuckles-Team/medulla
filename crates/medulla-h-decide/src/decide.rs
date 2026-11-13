@@ -88,6 +88,9 @@ mod stat_slate;
 mod stat_slate_attribution;
 #[cfg(feature = "decide")]
 mod stat_support;
+// MEDULLA-DECISION-ENGINE-R824: capacity adjustment proposals.
+#[cfg(feature = "decide")]
+mod stat_capacity;
 // MEDULLA-DECISION-ENGINE-R045: the smallest covering tool subset within a
 // context-token budget.
 #[cfg(feature = "decide")]

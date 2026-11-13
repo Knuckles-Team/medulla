@@ -7,6 +7,7 @@
 //! decision with its own method.
 
 pub mod belief;
+pub mod capacity;
 pub mod body;
 pub mod dataset;
 pub mod declared;
@@ -261,6 +262,8 @@ pub enum QuestionKind {
     ProcessRemediation,
     /// Which goals the remaining ingest budget funds and which items may be purged (MEDULLA-DECISION-ENGINE-R826). See `decision::ingest_shortfall`.
     IngestShortfall,
+    /// Whether a proposed capacity change is allowed against the ledger (MEDULLA-DECISION-ENGINE-R824). See `decision::statistical::capacity`.
+    CapacityProposal,
 }
 
 /// What is at stake. Exploration is permitted only for

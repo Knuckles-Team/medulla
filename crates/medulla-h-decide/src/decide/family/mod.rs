@@ -11,6 +11,7 @@ mod answer_ranking;
 pub(super) mod assemble;
 mod branch_outcome;
 mod capability_designation;
+mod capacity_proposal;
 mod changeset_review;
 mod classify;
 mod command_config;
@@ -322,6 +323,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         process_remediation::ProcessRemediationFamily;
     static INGESTSHORTFALLFAMILY: ingest_shortfall::IngestShortfallFamily =
         ingest_shortfall::IngestShortfallFamily;
+    static CAPACITYPROPOSALFAMILY: capacity_proposal::CapacityProposalFamily =
+        capacity_proposal::CapacityProposalFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -389,6 +392,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ServingTechniqueActivation => &SERVINGTECHNIQUEFAMILY,
         QuestionKind::ProcessRemediation => &PROCESSREMEDIATIONFAMILY,
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
+        QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
     }
 }
 
@@ -466,6 +470,7 @@ mod tests {
             QuestionKind::ServingTechniqueActivation,
             QuestionKind::ProcessRemediation,
             QuestionKind::IngestShortfall,
+            QuestionKind::CapacityProposal,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -530,10 +535,11 @@ mod tests {
             | QuestionKind::ToolRelevance
             | QuestionKind::FanoutAggregate
             | QuestionKind::DelegationAdmission
-            | QuestionKind::AnswerRanking => true,
+            | QuestionKind::AnswerRanking
             | QuestionKind::ServingTechniqueActivation
             | QuestionKind::ProcessRemediation
-            | QuestionKind::IngestShortfall => true,
+            | QuestionKind::IngestShortfall
+            | QuestionKind::CapacityProposal => true,
         };
         assert!(exhaustive);
         kinds

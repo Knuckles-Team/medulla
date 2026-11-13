@@ -120,6 +120,17 @@ async fn serve(
             super::family::with_similarity(state, store.as_ref(), verified, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::CapacityProposal {
+        // A `capacity_proposal` question reads the cell's headroom and epoch
+        // from the capacity ledger here and records them in its own parameter
+        // (MEDULLA-DECISION-ENGINE-R824).
+        telemetry::stage_async(
+            telemetry::Stage::Entailment,
+            &family,
+            verified.tenant(),
+            super::stat_capacity::with_read(state, request),
+        )
+        .await?
     } else {
         request
     };
