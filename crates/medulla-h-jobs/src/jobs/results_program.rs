@@ -445,7 +445,7 @@ mod privacy_tests {
             candidates: vec![candidate],
             plans: Vec::new(),
             selected_candidate_ref: None,
-            promoted: false,
+            stage: medulla_decision_outcome_types::decision::promotion::RevisionStage::Draft,
             checkpoint: OptimizationCheckpoint {
                 request_ref: opaque("optimization_request", "program-result-request"),
                 corpus_ref: opaque("corpus", "program-result-corpus"),

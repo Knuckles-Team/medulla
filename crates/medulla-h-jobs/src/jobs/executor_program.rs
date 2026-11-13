@@ -95,7 +95,9 @@ async fn program_promotion_identity(
     corpus: &medulla_program::TrainingCorpus,
     seed: u64,
 ) -> Result<Option<ProgramRevisionIdentity>, String> {
-    if !optimization.promoted {
+    if optimization.stage
+        != medulla_decision_outcome_types::decision::promotion::RevisionStage::Evaluated
+    {
         return Ok(None);
     }
     let active_revision_ref =
