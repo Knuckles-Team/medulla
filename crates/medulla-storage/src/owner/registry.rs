@@ -104,8 +104,11 @@ pub const SQL_ANN_DIRTY: TableDefinition<'static, (&str, u64), u64> =
 /// msgpack spec`. Their generations share `__sql_ann_generations__`.
 pub const SQL_EDGE_INDEXES: TableDefinition<'static, (&str, &str), &[u8]> =
     TableDefinition::new("__sql_edge_indexes__");
+/// The table catalog: table name -> MessagePack `TableSchema`.
+pub(crate) const SQL_CATALOG: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("__sql_catalog__");
 const SQL_STR_BYTES: [TableDefinition<'static, &str, &[u8]>; 7] = [
-    TableDefinition::new("__sql_catalog__"),
+    SQL_CATALOG,
     TableDefinition::new("__sql_functions__"),
     TableDefinition::new("__sql_ann_indexes__"),
     TableDefinition::new("__sql_secondary_indexes__"),
@@ -118,7 +121,40 @@ const SQL_STR_STR: [TableDefinition<'static, &str, &str>; 2] = [
     TableDefinition::new("__sql_extensions__"),
 ];
 const SQL_ROWS: TableDefinition<'static, (&str, u64), &[u8]> = TableDefinition::new("__sql_rows__");
-const SQL_SEQ: TableDefinition<'static, &str, u64> = TableDefinition::new("__sql_seq__");
+/// The per-table physical rowid allocator: table name -> next rowid.
+pub(crate) const SQL_SEQ: TableDefinition<'static, &str, u64> = TableDefinition::new("__sql_seq__");
+/// Named sequences (MEDULLA-ENGINE-PARITY-R013.1/R013.2): four `u64` entries per
+/// sequence (`start`, `increment`, `cache`, `high_mark`) under
+/// [`sequence_row_key`]. A `SERIAL` column draws its values from
+/// `<table>_<column>_seq` here; the rowid allocator in `__sql_seq__` is only the
+/// physical row key.
+pub const SQL_SEQUENCES: TableDefinition<'static, &str, u64> =
+    TableDefinition::new("__sql_sequences__");
+
+/// The sequence a `SERIAL` column of `table` allocates through
+/// (MEDULLA-ENGINE-PARITY-R013.2).
+pub fn serial_sequence_name(table: &str, column: &str) -> String {
+    format!("{table}_{column}_seq")
+}
+
+/// The one definition of a sequence field's key in [`SQL_SEQUENCES`], scoped to
+/// the owning tenant so two scopes never share a sequence.
+pub fn sequence_row_key(scope: &str, name: &str, field: &str) -> String {
+    format!("\0seq\0{scope}\0{name}\0{field}")
+}
+
+/// Logical resource name of the bootstrap scope every catalog read and every
+/// one-shot DDL/DML write of one SQL store runs under. Its tenant half is the
+/// store's own owner scope, which is how an offline upgrade recovers the scopes
+/// a file has served.
+pub const SQL_BOOTSTRAP_RESOURCE: &str = "sql-user-tables";
+
+/// `SERIAL` sequence defaults: first value, step and values reserved per write.
+pub const SERIAL_SEQUENCE_START: u64 = 1;
+/// See [`SERIAL_SEQUENCE_START`].
+pub const SERIAL_SEQUENCE_INCREMENT: u64 = 1;
+/// See [`SERIAL_SEQUENCE_START`].
+pub const SERIAL_SEQUENCE_CACHE: u64 = 32;
 const SQL_CATALOG_VERSIONS: TableDefinition<'static, &str, u64> =
     TableDefinition::new("__sql_schema_catalog_versions__");
 const SQL_SCHEMA_VERSIONS: TableDefinition<'static, (&str, &str), u64> =
@@ -388,6 +424,7 @@ macro_rules! visit_owner_tables {
                 $visit!(SQL_ANN_GENERATIONS);
                 $visit!(SQL_ANN_DIRTY);
                 $visit!(SQL_EDGE_INDEXES);
+                $visit!(SQL_SEQUENCES);
             }
             OwnerLayout::Blob => {
                 $visit!(BLOB_CHUNKS);
@@ -818,6 +855,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "__sql_ann_generations__",
             "__sql_ann_dirty__",
             "__sql_edge_indexes__",
+            "__sql_sequences__",
         ],
         OwnerLayout::Blob => &[
             "cas_chunks",

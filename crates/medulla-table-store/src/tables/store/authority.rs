@@ -30,7 +30,7 @@ use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
 use medulla_storage::{
     ledger_scope_key, OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead,
-    SqlOwner, StorageKernel, SQL_SOURCE_AUTHORITY,
+    SqlOwner, StorageKernel, SQL_BOOTSTRAP_RESOURCE, SQL_SOURCE_AUTHORITY,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationKernel};
 use redb::ReadableTable;
@@ -40,12 +40,6 @@ use redb::ReadableTable;
 /// manifest, so a file created for another owner can never be opened as this
 /// one.
 pub(crate) const SQL_PHYSICAL_STORE: &str = "eg-query:sql-user-tables";
-
-/// Logical resource name of the bootstrap scope every catalog read and every
-/// one-shot DDL/DML maintenance write of one store runs under. The tenant half
-/// is the store's own `open_scoped` owner scope, so two tenants sharing one
-/// physical file still have distinct bootstrap identities.
-pub(crate) const SQL_BOOTSTRAP_RESOURCE: &str = "sql-user-tables";
 
 const SQL_SOURCE_AUTHORITY_KEY: &str = "current";
 const SQL_SOURCE_AUTHORITY_RECORD_BYTES: usize = 32 + 8;

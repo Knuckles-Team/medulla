@@ -24,12 +24,14 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
     GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
     GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, RBAC_BEFORE_PROFILE_GRANTS,
-    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
+    SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
-    inspect_sql_ann_generation_upgrade, inspect_sql_source_checkpoint_upgrade,
-    upgrade_sql_ann_generations, upgrade_sql_source_checkpoints,
+    inspect_sql_ann_generation_upgrade, inspect_sql_named_sequence_upgrade,
+    inspect_sql_source_checkpoint_upgrade, upgrade_sql_ann_generations,
+    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints,
     SqlSourceCheckpointInspectionOptions, SqlSourceCheckpointUpgradeReport,
 };
 use crate::physical::integrity::PrivatePayloadIntegrity;
@@ -185,6 +187,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         SQL_BEFORE_DURABLE_ANN,
         inspect_sql_ann_generation_upgrade,
         upgrade_sql_ann_generations
+    ),
+    offline_upgrade!(
+        SQL_BEFORE_NAMED_SEQUENCES,
+        inspect_sql_named_sequence_upgrade,
+        upgrade_sql_named_sequences
     ),
     offline_upgrade!(
         AGENT_LIBRARY_BEFORE_MCP_CATALOG,

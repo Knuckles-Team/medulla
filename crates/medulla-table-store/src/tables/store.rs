@@ -12,8 +12,9 @@
 //!     constraint rules out a per-table `TableDefinition`), keeping each logical
 //!     table's rows contiguous for an efficient prefix range-scan.
 //!   * `__sql_seq__`      `table_name              -> next rowid (u64)`
-//!     A per-table monotonic rowid allocator — the internal row identity AND the
-//!     surface exposed as `SERIAL`/`DEFAULT nextval` (CONCEPT:MEDULLA-KG.query.register-each-user-table).
+//!     A per-table monotonic rowid allocator — the physical row key (a `SERIAL` column draws from its own
+//!     sequence, MEDULLA-ENGINE-PARITY-R013.2).
+//!   * `__sql_sequences__` `\0seq\0scope\0name\0field -> u64` (named sequences; serial columns draw from `<table>_<column>_seq`)
 //!   * `__sql_secondary_indexes__` / `__sql_secondary_index_entries__`
 //!     owner-scoped scalar index definitions and schema-bound B-tree directory
 //!     entries. These are optional row-reduction structures; a digest/version
@@ -5650,7 +5651,7 @@ fn drop_column_in(
         sequence::drop_in(
             wtx,
             tenant_scope,
-            &sequence::serial_sequence_name(table, column),
+            &medulla_storage::serial_sequence_name(table, column),
             true,
         )?;
     }
@@ -5816,8 +5817,8 @@ fn rename_column_in(
         sequence::rename_in(
             wtx,
             tenant_scope,
-            &sequence::serial_sequence_name(table, from),
-            &sequence::serial_sequence_name(table, to),
+            &medulla_storage::serial_sequence_name(table, from),
+            &medulla_storage::serial_sequence_name(table, to),
         )?;
     }
     schema.columns_mut()[idx].name = to.to_string();
@@ -5882,8 +5883,8 @@ fn rename_table_in(
         sequence::rename_in(
             wtx,
             tenant_scope,
-            &sequence::serial_sequence_name(table, &column.name),
-            &sequence::serial_sequence_name(new_name, &column.name),
+            &medulla_storage::serial_sequence_name(table, &column.name),
+            &medulla_storage::serial_sequence_name(new_name, &column.name),
         )?;
     }
     // Rows: re-key each (table, rowid) -> (new_name, rowid).
@@ -6302,7 +6303,12 @@ fn create_serial_sequence_in(
     table: &str,
     column: &str,
 ) -> Result<(), String> {
-    let def = medulla_tables::sequence::Sequence::new(sequence::serial_sequence_name(table, column));
+    let def = medulla_tables::sequence::Sequence {
+        name: medulla_storage::serial_sequence_name(table, column),
+        start: medulla_storage::SERIAL_SEQUENCE_START as i64,
+        increment: medulla_storage::SERIAL_SEQUENCE_INCREMENT as i64,
+        cache: medulla_storage::SERIAL_SEQUENCE_CACHE,
+    };
     sequence::create_in(wtx, tenant_scope, &def, false)?;
     Ok(())
 }
@@ -6319,7 +6325,7 @@ fn drop_serial_sequences_in(
         sequence::drop_in(
             wtx,
             tenant_scope,
-            &sequence::serial_sequence_name(table, &column.name),
+            &medulla_storage::serial_sequence_name(table, &column.name),
             true,
         )?;
     }
@@ -6347,8 +6353,13 @@ fn alloc_rows(
 ) -> Result<Vec<RowAlloc>, String> {
     let first_rowid = alloc_rowids(wtx, table, count)?;
     let mut firsts = Vec::new();
-    for (ci, column) in schema.columns().iter().enumerate().filter(|(_, c)| c.serial) {
-        let name = sequence::serial_sequence_name(table, &column.name);
+    for (ci, column) in schema
+        .columns()
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.serial)
+    {
+        let name = medulla_storage::serial_sequence_name(table, &column.name);
         let first = sequence::alloc_in(wtx, tenant_scope, &name, count)?;
         firsts.push((ci, first));
     }

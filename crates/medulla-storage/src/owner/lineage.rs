@@ -218,6 +218,46 @@ pub const SQL_BEFORE_DURABLE_ANN: LayoutPredecessor = LayoutPredecessor {
     file_name: "sql.redb",
 };
 
+/// The SQL owner tables of the layout before named sequences: everything the
+/// current layout declares except `__sql_sequences__`.
+const SQL_TABLES_BEFORE_NAMED_SEQUENCES: &[&str] = &[
+    "__sql_catalog__",
+    "__sql_functions__",
+    "__sql_ann_indexes__",
+    "__sql_secondary_indexes__",
+    "__sql_secondary_index_entries__",
+    "__sql_hypertables__",
+    "__sql_source_authority__",
+    "__sql_views__",
+    "__sql_extensions__",
+    "__sql_rows__",
+    "__sql_seq__",
+    "__sql_schema_catalog_versions__",
+    "__sql_schema_versions__",
+    "__sql_schema_migrations__",
+    "__sql_schema_migration_order__",
+    "__sql_schema_catalog_order__",
+    "__sql_property_graphs__",
+    "__sql_property_graph_seq__",
+    "__sql_source_checkpoints__",
+    "__sql_ann_generations__",
+    "__sql_ann_dirty__",
+    "__sql_edge_indexes__",
+];
+
+/// `sql.redb` before named sequences: a `SERIAL` column took its values from
+/// the table's rowid counter, and a named sequence lived beside that counter
+/// under reserved keys. The offline upgrade creates `<table>_<column>_seq` for
+/// every serial column, seeds its high mark from the old counter and moves the
+/// named sequences into `__sql_sequences__` (MEDULLA-ENGINE-PARITY-R013.2).
+pub const SQL_BEFORE_NAMED_SEQUENCES: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Sql,
+    label: "SQL catalog store before named sequences",
+    owner_tables: SQL_TABLES_BEFORE_NAMED_SEQUENCES,
+    data_lost: SQL_DATA_LOST,
+    file_name: "sql.redb",
+};
+
 const SQL_DATA_LOST: &str = "its SQL catalog and rows require an explicit offline upgrade \
                              before normal open, or re-ingestion after moving the file aside";
 
@@ -462,7 +502,11 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         ],
         OwnerLayout::Blob => &[BLOB_BEFORE_HOLDERS],
         OwnerLayout::SemanticIndex => &[SEMANTIC_INDEX_BEFORE_PROMOTION],
-        OwnerLayout::Sql => &[SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_DURABLE_ANN],
+        OwnerLayout::Sql => &[
+            SQL_BEFORE_SOURCE_CHECKPOINTS,
+            SQL_BEFORE_DURABLE_ANN,
+            SQL_BEFORE_NAMED_SEQUENCES,
+        ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Jobs

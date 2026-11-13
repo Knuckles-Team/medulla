@@ -2,12 +2,15 @@
 
 use super::super::contract::expected_table_contracts;
 use super::super::layout::{layout_digest_over, OwnerLayout};
-use super::super::lineage::{SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS};
+use super::super::lineage::{
+    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
+};
 use crate::physical::incarnation::STORAGE_KERNEL_SCHEMA_VERSION;
 use crate::physical::manifest::{OwnerManifest, TableContract, TableOwnership};
 
-/// Frozen digests of the two real SQL predecessor layouts. They were recorded
-/// before source checkpoints and before durable ANN/edge registrations.
+/// Frozen digests of the three real SQL predecessor layouts. They were recorded
+/// before source checkpoints, before durable ANN/edge registrations and before
+/// named sequences.
 pub(super) const PRE_SOURCE_CHECKPOINTS: [u8; 32] = [
     0xb6, 0xb3, 0xee, 0x31, 0xc3, 0x24, 0x7b, 0xc8, 0x36, 0xd5, 0xfa, 0x39, 0x99, 0x45, 0x61, 0xcf,
     0x7e, 0xb1, 0xa5, 0x10, 0xeb, 0xeb, 0xe1, 0xa1, 0x45, 0xbe, 0x72, 0x3c, 0x6d, 0x2f, 0xc0, 0x16,
@@ -17,11 +20,17 @@ pub(super) const PRE_DURABLE_ANN: [u8; 32] = [
     0xa0, 0x50, 0xc6, 0x8a, 0xcb, 0xec, 0x87, 0x6f, 0xc0, 0x69, 0xd3, 0xb5, 0x06, 0xd9, 0x3e, 0x1e,
 ];
 
+pub(super) const PRE_NAMED_SEQUENCES: [u8; 32] = [
+    0x74, 0x35, 0xc6, 0x9e, 0x2d, 0xe7, 0x05, 0x2a, 0x35, 0x1a, 0x89, 0xf1, 0x7c, 0xcb, 0x4a, 0x98,
+    0x8f, 0x92, 0x18, 0x9f, 0x09, 0xd5, 0x23, 0xee, 0x7f, 0x8e, 0x08, 0x86, 0x07, 0x92, 0x43, 0x98,
+];
+
 pub(super) fn contracts_for(manifest: &OwnerManifest) -> Result<Vec<TableContract>, String> {
     let current = expected_table_contracts(OwnerLayout::Sql);
     for (predecessor, pinned) in [
         (SQL_BEFORE_SOURCE_CHECKPOINTS, PRE_SOURCE_CHECKPOINTS),
         (SQL_BEFORE_DURABLE_ANN, PRE_DURABLE_ANN),
+        (SQL_BEFORE_NAMED_SEQUENCES, PRE_NAMED_SEQUENCES),
     ] {
         let contracts: Vec<_> = current
             .iter()

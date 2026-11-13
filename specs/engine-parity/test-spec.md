@@ -43,7 +43,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R012.2` | `crates/medulla-sql-tests/tests/trigger.rs::depth_bound_refuses` | planned |
 | `MEDULLA-ENGINE-PARITY-R012.3` | `tests/pgwire_roundtrip.rs::after_insert_trigger_runs_once_per_row`; bench group `engine_parity/trigger_after_insert` | planned |
 | `MEDULLA-ENGINE-PARITY-R013.1` | `crates/medulla-sql-tests/tests/sequence.rs::values_never_repeat_after_crash`; `tests/pgwire_roundtrip.rs::serial_column_uses_sequence` | planned |
-| `MEDULLA-ENGINE-PARITY-R013.2` | `crates/medulla-sql-tests/tests/sequence.rs::setval_below_high_mark_refuses` | existing |
+| `MEDULLA-ENGINE-PARITY-R013.2` | `crates/medulla-sql-tests/tests/sequence.rs::setval_below_high_mark_refuses`; `crates/medulla-storage/src/owner/sql_checkpoint_upgrade/tests.rs::named_sequence_upgrade_seeds_serial_sequences_above_the_old_high_mark`; `::named_sequence_upgrade_seeds_every_served_tenant_scope`; `::named_sequence_upgrade_refuses_serial_columns_without_a_served_scope` | existing |
 | `MEDULLA-ENGINE-PARITY-R013.3` | `tests/pgwire_roundtrip.rs::serial_column_uses_sequence`; bench group `engine_parity/sequence_nextval` | planned |
 | `MEDULLA-ENGINE-PARITY-R014.1` | `crates/medulla-sql-tests/tests/matview.rs::refresh_recomputes_and_records_input_versions`; `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` | planned |
 | `MEDULLA-ENGINE-PARITY-R014.2` | `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` | planned |

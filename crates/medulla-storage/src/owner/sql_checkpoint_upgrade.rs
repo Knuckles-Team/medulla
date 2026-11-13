@@ -8,10 +8,12 @@
 use super::domain::SqlOwner;
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
-use super::lineage::{SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS};
+use super::lineage::{
+    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
+};
 use super::manifest_io::read_manifest_slot;
 use super::registry::{
-    sql_predecessor_evidence, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS, SQL_EDGE_INDEXES,
+    sql_predecessor_evidence, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS, SQL_EDGE_INDEXES, SQL_SEQUENCES,
     SQL_SOURCE_CHECKPOINTS,
 };
 use super::validate_declared_tables_write;
@@ -36,6 +38,7 @@ use std::sync::Arc;
 
 mod contract;
 pub(crate) mod preview;
+mod sequences;
 
 // Both inspection and the exclusive upgrade have an explicit small page cache.
 pub(crate) const UPGRADE_CACHE_BYTES: usize = 64 * 1024 * 1024;
@@ -215,6 +218,31 @@ pub fn upgrade_sql_ann_generations(
     upgrade_sql_source_checkpoints(token)
 }
 
+/// Inspect a pinned predecessor before adding named sequences. The serial
+/// columns of its catalog get their sequences seeded from the old rowid
+/// counters by the upgrade.
+pub fn inspect_sql_named_sequence_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: SqlSourceCheckpointInspectionOptions,
+) -> Result<ValidatedSqlSourceCheckpointUpgrade, String> {
+    inspect_sql_source_checkpoint_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+    )
+}
+
+/// Apply the inspected transition, including the sequence seeding, in one
+/// immediate durable owner commit.
+pub fn upgrade_sql_named_sequences(
+    token: ValidatedSqlSourceCheckpointUpgrade,
+) -> Result<(StorageKernel, SqlSourceCheckpointUpgradeReport), String> {
+    upgrade_sql_source_checkpoints(token)
+}
+
 /// Bind the exact descriptor before redb can initialize or repair any bytes.
 /// Keeping the clone lets the exclusive transaction recheck its actual file.
 fn upgrade_opened_predecessor(
@@ -381,6 +409,7 @@ fn predecessor_evidence(
         .collect();
     if owner_tables == SQL_BEFORE_SOURCE_CHECKPOINTS.owner_tables
         || owner_tables == SQL_BEFORE_DURABLE_ANN.owner_tables
+        || owner_tables == SQL_BEFORE_NAMED_SEQUENCES.owner_tables
     {
         sql_predecessor_evidence(source, &owner_tables)
     } else {
@@ -597,6 +626,13 @@ fn stage_checkpoint_layout(
     write
         .open_table(SQL_EDGE_INDEXES)
         .map_err(|error| error.to_string())?;
+    // A table that is already part of the predecessor is opened again here;
+    // `open_table` creates only the missing ones. The sequences are seeded
+    // after every successor table exists, from rows the predecessor wrote.
+    write
+        .open_table(SQL_SEQUENCES)
+        .map_err(|error| error.to_string())?;
+    sequences::seed_named_sequences(write)?;
     #[cfg(test)]
     tests::crash_at("after_table");
     stage_upgrade_manifest(write, current, "SQL checkpoint upgraded owner manifest")?;

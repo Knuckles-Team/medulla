@@ -240,3 +240,232 @@ fn mismatched_census_is_rejected_without_changing_the_file() {
     let after: [u8; 32] = Sha256::digest(std::fs::read(&path).unwrap()).into();
     assert_eq!(before, after);
 }
+
+/// The old per-table rowid counter and a named sequence a predecessor kept
+/// beside it, written the way the predecessor's engine wrote them.
+const OLD_COUNTER: u64 = 7;
+const OLD_NAMED_SEQUENCE_HIGH_MARK: u64 = 11;
+
+#[derive(serde::Serialize)]
+struct OldColumn {
+    name: &'static str,
+    serial: bool,
+}
+
+#[derive(serde::Serialize)]
+struct OldTable {
+    name: &'static str,
+    columns: Vec<OldColumn>,
+}
+
+/// A predecessor file that has served tenant `tenant`: a bound SQL bootstrap
+/// scope, one table `orders` with a serial column `id` whose rowid counter is
+/// [`OLD_COUNTER`], one table without a serial column, and one named sequence.
+fn serial_predecessor(
+    path: &Path,
+    old: &crate::owner::persisted_layout::LayoutPredecessor,
+    tenant: &str,
+) {
+    use crate::owner::registry::{SQL_CATALOG, SQL_SEQ};
+    predecessor(path, old);
+    let (incarnation, _) = StoreIncarnation::derive(path).unwrap();
+    let scope = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
+        tenant,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
+        crate::owner::registry::SQL_BOOTSTRAP_RESOURCE,
+        "sql-upgrade-test",
+    )
+    .unwrap();
+    let db = Database::open(path).unwrap();
+    let write = db.begin_write().unwrap();
+    crate::physical::binding::bind_scope_in(&store_handle(incarnation), &write, &scope, 0).unwrap();
+    {
+        let mut catalog = write.open_table(SQL_CATALOG).unwrap();
+        for table in [
+            OldTable {
+                name: "orders",
+                columns: vec![
+                    OldColumn {
+                        name: "id",
+                        serial: true,
+                    },
+                    OldColumn {
+                        name: "note",
+                        serial: false,
+                    },
+                ],
+            },
+            OldTable {
+                name: "plain",
+                columns: vec![OldColumn {
+                    name: "k",
+                    serial: false,
+                }],
+            },
+        ] {
+            let bytes = rmp_serde::to_vec_named(&table).unwrap();
+            catalog.insert(table.name, bytes.as_slice()).unwrap();
+        }
+        let mut counters = write.open_table(SQL_SEQ).unwrap();
+        counters.insert("orders", OLD_COUNTER).unwrap();
+        counters.insert("plain", 3).unwrap();
+        counters
+            .insert(
+                crate::owner::registry::sequence_row_key(tenant, "invoice_no", "high_mark")
+                    .as_str(),
+                OLD_NAMED_SEQUENCE_HIGH_MARK,
+            )
+            .unwrap();
+    }
+    write.commit().unwrap();
+}
+
+fn sequence_value(path: &Path, tenant: &str, name: &str, field: &str) -> Option<u64> {
+    use crate::owner::registry::{sequence_row_key, SQL_SEQUENCES};
+    let db = Database::open(path).unwrap();
+    let read = db.begin_read().unwrap();
+    let table = read.open_table(SQL_SEQUENCES).unwrap();
+    let value = table
+        .get(sequence_row_key(tenant, name, field).as_str())
+        .unwrap()
+        .map(|value| value.value());
+    value
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R013.2
+#[test]
+fn named_sequence_upgrade_seeds_serial_sequences_above_the_old_high_mark() {
+    let _serial = redb_files();
+    for old in [
+        SQL_BEFORE_SOURCE_CHECKPOINTS,
+        SQL_BEFORE_DURABLE_ANN,
+        SQL_BEFORE_NAMED_SEQUENCES,
+    ] {
+        let directory = private_local_tempdir();
+        let path = directory.path().join("sql.redb");
+        serial_predecessor(&path, &old, "tenant-a");
+        // A normal open of the old layout refuses with the upgrade-required code.
+        let refusal = StorageKernel::open_owner::<SqlOwner>(&path, identity(), None)
+            .err()
+            .expect("the old layout must refuse a normal open");
+        assert!(
+            refusal.contains("FORMAT_UPGRADE_REQUIRED"),
+            "{}: {refusal}",
+            old.label
+        );
+        let token =
+            inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).unwrap();
+        drop(upgrade_sql_named_sequences(token).unwrap());
+
+        // The first value never issued is the old counter + 1: the old engine
+        // issued rowid + 1 and the counter was the next rowid.
+        assert_eq!(
+            sequence_value(&path, "tenant-a", "orders_id_seq", "high_mark"),
+            Some(OLD_COUNTER + 1)
+        );
+        assert_eq!(
+            sequence_value(&path, "tenant-a", "orders_id_seq", "start"),
+            Some(1)
+        );
+        assert_eq!(
+            sequence_value(&path, "tenant-a", "orders_id_seq", "increment"),
+            Some(1)
+        );
+        assert!(sequence_value(&path, "tenant-a", "orders_id_seq", "cache").is_some());
+        // A table without a serial column gets no sequence.
+        assert_eq!(
+            sequence_value(&path, "tenant-a", "plain_k_seq", "high_mark"),
+            None
+        );
+        // The named sequence moved out of the rowid-counter table, intact.
+        assert_eq!(
+            sequence_value(&path, "tenant-a", "invoice_no", "high_mark"),
+            Some(OLD_NAMED_SEQUENCE_HIGH_MARK)
+        );
+        let db = Database::open(&path).unwrap();
+        let read = db.begin_read().unwrap();
+        let counters = read.open_table(crate::owner::registry::SQL_SEQ).unwrap();
+        assert_eq!(
+            counters.get("orders").unwrap().unwrap().value(),
+            OLD_COUNTER
+        );
+        assert!(counters
+            .iter()
+            .unwrap()
+            .all(|entry| !entry.unwrap().0.value().starts_with('\0')));
+        drop(counters);
+        drop(read);
+        drop(db);
+        // The upgraded file opens normally and is never upgraded twice.
+        drop(StorageKernel::open_owner::<SqlOwner>(&path, identity(), None).unwrap());
+        assert!(
+            inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).is_err()
+        );
+    }
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R013.2
+#[test]
+fn named_sequence_upgrade_seeds_every_served_tenant_scope() {
+    let _serial = redb_files();
+    let directory = private_local_tempdir();
+    let path = directory.path().join("sql.redb");
+    serial_predecessor(&path, &SQL_BEFORE_NAMED_SEQUENCES, "tenant-a");
+    let scope = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
+        "tenant-b",
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
+        crate::owner::registry::SQL_BOOTSTRAP_RESOURCE,
+        "sql-upgrade-test",
+    )
+    .unwrap();
+    let (incarnation, _) = StoreIncarnation::derive(&path).unwrap();
+    let db = Database::open(&path).unwrap();
+    let write = db.begin_write().unwrap();
+    crate::physical::binding::bind_scope_in(&store_handle(incarnation), &write, &scope, 0).unwrap();
+    write.commit().unwrap();
+    drop(db);
+    let token =
+        inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).unwrap();
+    drop(upgrade_sql_named_sequences(token).unwrap());
+    for tenant in ["tenant-a", "tenant-b"] {
+        assert_eq!(
+            sequence_value(&path, tenant, "orders_id_seq", "high_mark"),
+            Some(OLD_COUNTER + 1),
+            "{tenant}"
+        );
+    }
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R013.2
+#[test]
+fn named_sequence_upgrade_refuses_serial_columns_without_a_served_scope() {
+    let _serial = redb_files();
+    let directory = private_local_tempdir();
+    let path = directory.path().join("sql.redb");
+    predecessor(&path, &SQL_BEFORE_NAMED_SEQUENCES);
+    let db = Database::open(&path).unwrap();
+    let write = db.begin_write().unwrap();
+    {
+        let table = OldTable {
+            name: "orders",
+            columns: vec![OldColumn {
+                name: "id",
+                serial: true,
+            }],
+        };
+        let bytes = rmp_serde::to_vec_named(&table).unwrap();
+        write
+            .open_table(crate::owner::registry::SQL_CATALOG)
+            .unwrap()
+            .insert("orders", bytes.as_slice())
+            .unwrap();
+    }
+    write.commit().unwrap();
+    drop(db);
+    let token =
+        inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).unwrap();
+    let refusal = upgrade_sql_named_sequences(token).err().unwrap();
+    assert!(refusal.contains("no tenant scope"), "{refusal}");
+    // The refused upgrade left the file in its predecessor layout.
+    assert!(inspect_sql_named_sequence_upgrade(&path, identity(), None, options(&path)).is_ok());
+}

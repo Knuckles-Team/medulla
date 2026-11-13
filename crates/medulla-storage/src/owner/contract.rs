@@ -402,7 +402,8 @@ fn sql_value_type(name: &str) -> Option<&'static str> {
         | "__sql_schema_catalog_versions__"
         | "__sql_schema_versions__"
         | "__sql_property_graph_seq__"
-        | "__sql_ann_dirty__" => Some("u64"),
+        | "__sql_ann_dirty__"
+        | "__sql_sequences__" => Some("u64"),
         "__sql_views__"
         | "__sql_extensions__"
         | "__sql_schema_migration_order__"

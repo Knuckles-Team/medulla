@@ -104,7 +104,7 @@ none
 - `COMMIT` over the SQL wire to `sql_catalog.rs:269` to `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2022`) to `commit_txn_batch_inner` (:2095) to `TxnFootprint::validate` (`crates/medulla-transaction/src/occ.rs:92`).
 - Pgwire startup to `on_startup` (`crates/medulla-wire/src/pgwire/auth.rs:176`) to `resolve_wire_login`; a statement to `do_query` (`crates/medulla-wire/src/pgwire/mod.rs:925`) to `classify` (`crates/medulla-sql-lang/src/sql/classify.rs:520`).
 - `medulla-server restore` to `src/offline_tools/restore.rs` to `restore_bundle` (`crates/medulla-persistence/src/backup.rs:801`) to `replay_to`.
-- Obsolete paths to delete: the per-column serial counter of `store.rs`, read once into the sequence `high_mark` and then removed (R013.2).
+- Obsolete paths to delete: serial values derived from the rowid counter of `store.rs` (R013.2). The counter stays as the physical row key; the offline upgrade `SQL_BEFORE_NAMED_SEQUENCES` reads it once into each serial sequence's `high_mark`.
 
 ## Cross-repo seams
 
@@ -113,7 +113,7 @@ none
 
 ## Decisions (see research.md)
 
-- Sequences are persisted in the existing `__sql_seq__` allocator table under NUL-prefixed keys; no new owner table.
+- Sequences are persisted in the owner table `__sql_sequences__` under NUL-prefixed keys; `__sql_seq__` stays the per-table rowid counter. The new table is a layout change applied by the offline upgrade registry (R013.2).
 - One SQLSTATE table in `crates/medulla-wire-core/src/wire/sqlstate.rs`; both `user_err` functions read it.
 - `COPY ... TO STDOUT` is a plain read through the authorized read path.
 - Partial and expression indexes are used only by a planner that proves the predicate (R010.2).

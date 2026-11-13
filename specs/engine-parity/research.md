@@ -5,10 +5,11 @@ Decisions that shape the rows. Current state only.
 ## Sequences persist in the existing allocator table
 
 A named sequence needs durable state, and a new owner table is a storage layout
-change with a frozen predecessor census and an offline upgrade. The per-table
-`__sql_seq__` allocator already holds `name -> u64`. A sequence is four `u64`
-entries under a NUL-prefixed key that no table name can equal, written in one
-maintenance transaction. `R013.2` moves the serial counters onto the same keys.
+change with a frozen predecessor census and an offline upgrade. The sequences live
+in the owner table `__sql_sequences__` (`name -> u64`); the per-table `__sql_seq__`
+allocator stays the physical rowid counter. A sequence is four `u64` entries under
+a NUL-prefixed key, written in one maintenance transaction. `R013.2` moves the
+serial counters onto the same keys.
 A later layout change may give sequences their own table.
 
 ## One SQLSTATE table, shared by the wire and the store errors

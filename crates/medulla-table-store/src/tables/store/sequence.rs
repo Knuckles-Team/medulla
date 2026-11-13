@@ -1,7 +1,7 @@
 //! Durable named sequences (MEDULLA-ENGINE-PARITY-R013.1).
 //!
-//! A sequence is four `u64` entries in the existing `__sql_seq__` allocator
-//! table, under NUL-prefixed keys no table name can equal: `start`,
+//! A sequence is four `u64` entries in the `__sql_sequences__` table, under
+//! NUL-prefixed keys: `start`,
 //! `increment`, `cache` and `high_mark`. `high_mark` is the first value never
 //! reserved. The store reserves a block of `cache` values with one write
 //! transaction (`high_mark += cache * increment`), then serves the block from
@@ -15,7 +15,9 @@ use std::sync::Mutex;
 use medulla_tables::sequence::{Sequence, SequenceSource, SEQUENCE_REWIND, SEQUENCE_UNKNOWN};
 use redb::ReadableTable;
 
-use super::{map_err, SqlWrite, TableStore, SEQ};
+use medulla_storage::{sequence_row_key, SQL_SEQUENCES};
+
+use super::{map_err, SqlWrite, TableStore};
 
 /// The values still to be served from one reserved block: `next` is the next
 /// value, `end` the first value not in the block.
@@ -57,7 +59,7 @@ impl Field {
 }
 
 fn key(scope: &str, name: &str, field: Field) -> String {
-    format!("\0seq\0{scope}\0{name}\0{}", field.label())
+    sequence_row_key(scope, name, field.label())
 }
 
 fn unknown(name: &str) -> String {
@@ -90,7 +92,7 @@ fn put_field(
 
 /// Read a sequence's definition and high mark inside `wtx`.
 fn load(wtx: &SqlWrite<'_>, scope: &str, name: &str) -> Result<(Sequence, i64), String> {
-    let seq = wtx.open_table(SEQ)?;
+    let seq = wtx.open_table(SQL_SEQUENCES)?;
     let need = |field| get_field(&seq, scope, name, field)?.ok_or_else(|| unknown(name));
     Ok((
         Sequence {
@@ -110,12 +112,6 @@ const SEQUENCE_FIELDS: [Field; 4] = [
     Field::HighMark,
 ];
 
-/// The sequence a `SERIAL` column of `table` allocates through
-/// (MEDULLA-ENGINE-PARITY-R013.2).
-pub(super) fn serial_sequence_name(table: &str, column: &str) -> String {
-    format!("{table}_{column}_seq")
-}
-
 /// Create a sequence inside `wtx`. `Ok(false)` is the `IF NOT EXISTS` result.
 pub(super) fn create_in(
     wtx: &SqlWrite<'_>,
@@ -123,7 +119,7 @@ pub(super) fn create_in(
     def: &Sequence,
     if_not_exists: bool,
 ) -> Result<bool, String> {
-    let mut seq = wtx.open_table(SEQ)?;
+    let mut seq = wtx.open_table(SQL_SEQUENCES)?;
     if get_field(&seq, scope, &def.name, Field::HighMark)?.is_some() {
         if if_not_exists {
             return Ok(false);
@@ -156,7 +152,7 @@ pub(super) fn drop_in(
     name: &str,
     if_exists: bool,
 ) -> Result<bool, String> {
-    let mut seq = wtx.open_table(SEQ)?;
+    let mut seq = wtx.open_table(SQL_SEQUENCES)?;
     if get_field(&seq, scope, name, Field::HighMark)?.is_none() {
         if if_exists {
             return Ok(false);
@@ -178,7 +174,7 @@ pub(super) fn rename_in(
     from: &str,
     to: &str,
 ) -> Result<(), String> {
-    let mut seq = wtx.open_table(SEQ)?;
+    let mut seq = wtx.open_table(SQL_SEQUENCES)?;
     for field in SEQUENCE_FIELDS {
         let value = get_field(&seq, scope, from, field)?.ok_or_else(|| unknown(from))?;
         seq.remove(key(scope, from, field).as_str())
@@ -204,7 +200,7 @@ pub(super) fn alloc_in(
         .and_then(|count| count.checked_mul(def.increment))
         .and_then(|span| high.checked_add(span))
         .ok_or_else(|| format!("{SEQUENCE_REWIND}: sequence `{name}` is exhausted"))?;
-    let mut seq = wtx.open_table(SEQ)?;
+    let mut seq = wtx.open_table(SQL_SEQUENCES)?;
     put_field(&mut seq, scope, name, Field::HighMark, span as u64)?;
     Ok(high)
 }
@@ -246,7 +242,7 @@ impl TableStore {
     /// The reserved high mark of `name`: the first value never reserved.
     pub fn sequence_high_mark(&self, name: &str) -> Result<i64, String> {
         let rtx = self.authority.read()?;
-        let seq = rtx.open_owner_table(SEQ)?;
+        let seq = rtx.open_owner_table(SQL_SEQUENCES)?;
         seq.get(key(self.index_scope(), name, Field::HighMark).as_str())
             .map_err(map_err)?
             .map(|v| v.value() as i64)
@@ -263,7 +259,7 @@ impl TableStore {
                     .checked_mul(def.increment)
                     .and_then(|span| high.checked_add(span))
                     .ok_or_else(|| format!("{SEQUENCE_REWIND}: sequence `{name}` is exhausted"))?;
-                let mut seq = wtx.open_table(SEQ)?;
+                let mut seq = wtx.open_table(SQL_SEQUENCES)?;
                 put_field(&mut seq, &scope, name, Field::HighMark, span as u64)?;
                 Ok(Block {
                     next: high,
@@ -309,7 +305,7 @@ impl SequenceSource for TableStore {
             let next_high = value
                 .checked_add(def.increment)
                 .ok_or_else(|| format!("{SEQUENCE_REWIND}: sequence `{name}` is exhausted"))?;
-            let mut seq = wtx.open_table(SEQ)?;
+            let mut seq = wtx.open_table(SQL_SEQUENCES)?;
             put_field(&mut seq, &scope, name, Field::HighMark, next_high as u64)?;
             Ok(())
         })?;
