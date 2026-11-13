@@ -277,8 +277,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T266 [US7] MEDULLA-DECISION-ENGINE-R139.1 Model
 - [ ] T267 [US7] MEDULLA-DECISION-ENGINE-R139.2 Behaviour
 - [ ] T268 [US7] MEDULLA-DECISION-ENGINE-R139.3 Wiring and authority
-- [ ] T269 [US7] MEDULLA-DECISION-ENGINE-R139.4 Typed refusal
-- [ ] T270 [US7] MEDULLA-DECISION-ENGINE-R139.5 Evidence
+- [x] T269 [US7] MEDULLA-DECISION-ENGINE-R139.4 Typed refusal
+- [x] T270 [US7] MEDULLA-DECISION-ENGINE-R139.5 Evidence
 - [ ] T271 [US7] MEDULLA-DECISION-ENGINE-R139.6 Served acceptance
 - [ ] T272 [US4] MEDULLA-DECISION-ENGINE-R100.101.1 Grounded topic coverage
 - [ ] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score

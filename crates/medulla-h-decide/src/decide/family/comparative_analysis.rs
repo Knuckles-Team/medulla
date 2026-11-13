@@ -11,14 +11,17 @@ use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_decision_stats::decision::comparative_analysis::plan_comparative_analysis;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::comparative_analysis::{
-    ComparativeAnalysisPlan, ComparativeAnalysisRequest, ComparativeKnobs,
-    COMPARATIVE_CANDIDATE_INVALID, COMPARATIVE_STALE_INPUT,
+    ComparativeAnalysisPlan, ComparativeAnalysisRequest, ComparativeAnalysisStage,
+    ComparativeKnobs, COMPARATIVE_CANDIDATE_INVALID, COMPARATIVE_STALE_INPUT,
 };
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::{
+    DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, QuantisedValue,
+    ResolutionKind,
+};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
@@ -130,6 +133,65 @@ pub(in crate::decide) fn plan(
     plan_comparative_analysis(tenant_id, policy_digest, body, &knobs)
         .map(Some)
         .map_err(|refusal| refused(refusal.code(), refusal.detail()))
+}
+
+fn stage_name(stage: ComparativeAnalysisStage) -> &'static str {
+    match stage {
+        ComparativeAnalysisStage::Discovery => "discovery",
+        ComparativeAnalysisStage::Synthesis => "synthesis",
+        ComparativeAnalysisStage::Extraction => "extraction",
+    }
+}
+
+/// A Q32 value as decimal millionths (`0.500000`), rounded down.
+fn decimal(value: &QuantisedValue) -> String {
+    let micros = (i128::from(value.value) * 1_000_000) >> 32;
+    format!("{}.{:06}", micros / 1_000_000, micros % 1_000_000)
+}
+
+/// One `Claim` premise per input the plan binds, in plan order, each with
+/// `Request` provenance (MEDULLA-DECISION-ENGINE-R139.5): the caller supplied
+/// every one of them, and the weakest class is `Claim`.
+pub(in crate::decide) fn premises(plan: &ComparativeAnalysisPlan) -> Vec<PremiseRef> {
+    let claim = |fact: String| PremiseRef {
+        subject: "comparative".to_string(),
+        fact,
+        class: PremiseClass::Claim,
+        provenance: PremiseProvenance::Request {
+            field: PARAM.to_string(),
+        },
+    };
+    let mut out = vec![
+        claim(format!(
+            "comparative:space={}@{}",
+            plan.space_id, plan.space_revision
+        )),
+        claim(format!(
+            "comparative:query_vector={}",
+            plan.query_vector_digest
+        )),
+        claim(format!(
+            "comparative:result={}",
+            plan.unified_query_result_digest
+        )),
+    ];
+    out.extend(plan.candidates.iter().map(|candidate| {
+        claim(format!(
+            "comparative:candidate={}@{}/{}/{}",
+            candidate.candidate_id,
+            candidate.candidate_revision,
+            decimal(&candidate.score),
+            decimal(&candidate.importance)
+        ))
+    }));
+    out.extend(plan.stage_budgets.iter().map(|budget| {
+        claim(format!(
+            "comparative:stage={}/{}",
+            stage_name(budget.stage),
+            budget.max_calls
+        ))
+    }));
+    out
 }
 
 impl DecisionFamily for ComparativeAnalysisPlanFamily {

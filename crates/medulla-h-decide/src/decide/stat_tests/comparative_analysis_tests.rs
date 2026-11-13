@@ -240,3 +240,247 @@ async fn decide_returns_plan_without_model_execution() {
     assert_eq!(discovery.max_calls, 0);
     assert_eq!(transport.0.load(Ordering::SeqCst), 0);
 }
+
+/// Mutate the typed comparative body of `request` in place.
+fn edit_body(request: &mut DecideRequest, edit: impl FnOnce(&mut ComparativeAnalysisRequest)) {
+    let mut params = request.params.as_slice().to_vec();
+    let TypedValue::ComparativeAnalysis(body) = &mut params[0].value else {
+        panic!("a comparative_analysis parameter");
+    };
+    edit(body);
+    request.params = BoundedVec::new(params).unwrap();
+}
+
+fn with_ceiling(mut request: DecideRequest, ceiling: u32) -> DecideRequest {
+    edit_body(&mut request, |body| body.total_call_ceiling = ceiling);
+    request
+}
+
+fn thresholds(h: &Harness, synthesis: i64, extraction: i64) -> DecisionPolicyRef {
+    use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        KnobName::new("comparative.synthesis_importance_min"),
+        KnobValue::DecimalMicros(synthesis),
+    );
+    policy.knobs.insert(
+        KnobName::new("comparative.extraction_importance_min"),
+        KnobValue::DecimalMicros(extraction),
+    );
+    DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-comparative-thresholds", &policy),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R139.4
+#[tokio::test]
+async fn comparative_refusals() {
+    let transport = RecordingTransport(AtomicUsize::new(0));
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let revisions = publish_tools(&h, TENANT, &["cand-a", "cand-b", "cand-c"]);
+    let at = |id: &str, importance: i64| {
+        let (id, revision) = revisions.iter().find(|(known, _)| known == id).unwrap();
+        candidate(id, *revision, importance)
+    };
+    let refuses = |code: &str, request: DecideRequest| {
+        let h = &h;
+        async move {
+            let error = decide(h, request).await.expect_err(code);
+            assert!(error.contains(code), "{code}: {error}");
+            error
+        }
+    };
+
+    // COMPARATIVE_STALE_INPUT: a candidate revision differs from the visible one.
+    let mut stale = at("cand-a", 9);
+    stale.candidate_revision += 1;
+    refuses(
+        "COMPARATIVE_STALE_INPUT",
+        comparative_request(&pin, vec![stale]),
+    )
+    .await;
+    // COMPARATIVE_CANDIDATE_INVALID: invisible, then duplicate.
+    refuses(
+        "COMPARATIVE_CANDIDATE_INVALID",
+        comparative_request(&pin, vec![candidate("cand-missing", 1, 9)]),
+    )
+    .await;
+    refuses(
+        "COMPARATIVE_CANDIDATE_INVALID",
+        comparative_request(&pin, vec![at("cand-a", 9), at("cand-a", 9)]),
+    )
+    .await;
+    // COMPARATIVE_OVER_LIMIT: a 65th candidate is refused when the request is
+    // decoded, by the registered code.
+    let mut wire = serde_json::to_value(comparative_request(&pin, vec![at("cand-a", 9)])).unwrap();
+    let carried = wire
+        .pointer_mut("/params/0/value/value/candidates")
+        .and_then(|value| value.as_array_mut())
+        .expect("the candidates travel in the typed param");
+    let first = carried[0].clone();
+    carried.extend(std::iter::repeat(first).take(64));
+    let error = serde_json::from_value::<DecideRequest>(wire).unwrap_err();
+    assert!(
+        error.to_string().contains("COMPARATIVE_OVER_LIMIT"),
+        "{error}"
+    );
+    // COMPARATIVE_IMPORTANCE_INVALID: an importance above 1.
+    refuses(
+        "COMPARATIVE_IMPORTANCE_INVALID",
+        comparative_request(&pin, vec![at("cand-a", 11)]),
+    )
+    .await;
+    // COMPARATIVE_THRESHOLD_ORDER: the extraction minimum below the synthesis one.
+    let mut inverted = comparative_request(&pin, vec![at("cand-a", 9)]);
+    inverted.policy = thresholds(&h, 500_000, 200_000);
+    refuses("COMPARATIVE_THRESHOLD_ORDER", inverted).await;
+    // COMPARATIVE_BUDGET_INVALID: a zero ceiling where calls are needed, then a
+    // ceiling above the knob maximum (130).
+    refuses(
+        "COMPARATIVE_BUDGET_INVALID",
+        with_ceiling(comparative_request(&pin, vec![at("cand-a", 9)]), 0),
+    )
+    .await;
+    refuses(
+        "COMPARATIVE_BUDGET_INVALID",
+        with_ceiling(comparative_request(&pin, vec![at("cand-a", 9)]), 131),
+    )
+    .await;
+    // COMPARATIVE_STAGE_EXCEEDS_TOTAL names the stage, the requested calls and
+    // the calls that remain: synthesis takes the one call there is, and
+    // extraction needs three.
+    let error = refuses(
+        "COMPARATIVE_STAGE_EXCEEDS_TOTAL",
+        with_ceiling(
+            comparative_request(
+                &pin,
+                vec![at("cand-a", 9), at("cand-b", 9), at("cand-c", 9)],
+            ),
+            1,
+        ),
+    )
+    .await;
+    assert!(
+        error.contains("stage Extraction needs 3 calls and 0 remain under the ceiling"),
+        "{error}"
+    );
+    // No refusal reached a model.
+    assert_eq!(transport.0.load(Ordering::SeqCst), 0);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R139.5
+#[tokio::test]
+async fn mutating_a_bound_input_changes_the_plan_digest() {
+    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let revisions = publish_tools(&h, TENANT, &["cand-a", "cand-b"]);
+    let base = |h: &Harness| {
+        let candidates = revisions
+            .iter()
+            .map(|(id, revision)| candidate(id, *revision, if id == "cand-a" { 9 } else { 6 }))
+            .collect();
+        let _ = h;
+        comparative_request(&pin, candidates)
+    };
+    let plan_of = |request: DecideRequest| {
+        let h = &h;
+        async move {
+            let batch = decide(h, request).await.unwrap();
+            let record = batch.records.as_slice()[0].clone();
+            let plan = record.comparative_analysis_plan().expect("a plan").clone();
+            (record, plan)
+        }
+    };
+    let (record, plan) = plan_of(base(&h)).await;
+
+    // One Claim premise per bound input, each with Request provenance.
+    let fact = |text: &str| {
+        let found: Vec<_> = record
+            .premises
+            .iter()
+            .filter(|premise| premise.fact == text)
+            .collect();
+        assert_eq!(found.len(), 1, "one premise {text}");
+        assert_eq!(found[0].class, PremiseClass::Claim);
+        assert_eq!(
+            found[0].provenance,
+            PremiseProvenance::Request {
+                field: "comparative_analysis".to_string()
+            }
+        );
+    };
+    fact("comparative:space=space:a@3");
+    fact(&format!("comparative:query_vector={DIGEST}"));
+    fact(&format!("comparative:result={DIGEST}"));
+    let ordered: Vec<&str> = record
+        .premises
+        .iter()
+        .map(|premise| premise.fact.as_str())
+        .filter(|fact| fact.starts_with("comparative:candidate="))
+        .collect();
+    assert_eq!(ordered.len(), 2);
+    for (premise, candidate) in ordered.iter().zip(plan.candidates.iter()) {
+        assert!(premise.starts_with(&format!(
+            "comparative:candidate={}@{}/0.500000/",
+            candidate.candidate_id, candidate.candidate_revision
+        )));
+    }
+    fact("comparative:stage=discovery/0");
+    fact("comparative:stage=synthesis/1");
+    fact("comparative:stage=extraction/1");
+    assert!(record.premises.iter().any(|premise| premise
+        .fact
+        .starts_with("knob:comparative.synthesis_batch=")));
+    assert_eq!(plan.plan_digest.len(), 64);
+
+    // Mutating any bound input changes the digest.
+    let mutations: Vec<(&str, Box<dyn Fn(&mut ComparativeAnalysisRequest)>)> = vec![
+        ("space id", Box::new(|b| b.space_id = "space:b".into())),
+        ("space revision", Box::new(|b| b.space_revision = 4)),
+        (
+            "query vector",
+            Box::new(|b| b.query_vector_digest = "1".repeat(64)),
+        ),
+        (
+            "result",
+            Box::new(|b| b.unified_query_result_digest = "2".repeat(64)),
+        ),
+        ("ceiling", Box::new(|b| b.total_call_ceiling = 11)),
+        (
+            "importance",
+            Box::new(|b| {
+                let mut all = b.candidates.as_slice().to_vec();
+                all[1].importance = q32(7);
+                b.candidates = BoundedVec::new(all).unwrap();
+            }),
+        ),
+        (
+            "score",
+            Box::new(|b| {
+                let mut all = b.candidates.as_slice().to_vec();
+                all[0].score = q32(4);
+                b.candidates = BoundedVec::new(all).unwrap();
+            }),
+        ),
+        (
+            "candidate order",
+            Box::new(|b| {
+                let mut all = b.candidates.as_slice().to_vec();
+                all.reverse();
+                b.candidates = BoundedVec::new(all).unwrap();
+            }),
+        ),
+    ];
+    let mut digests = std::collections::BTreeSet::from([plan.plan_digest.clone()]);
+    for (name, edit) in mutations {
+        let mut request = base(&h);
+        edit_body(&mut request, |body| edit(body));
+        let (_, mutated) = plan_of(request).await;
+        assert!(
+            digests.insert(mutated.plan_digest.clone()),
+            "mutating the {name} must change the plan digest"
+        );
+    }
+}

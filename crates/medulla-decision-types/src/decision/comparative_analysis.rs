@@ -6,7 +6,7 @@
 //! `PremiseRef` values (R139.5), so this module declares neither. Digests are
 //! SHA-256, 64 lowercase hex characters.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
@@ -170,10 +170,27 @@ pub struct ComparativeAnalysisRequest {
     pub query_vector_digest: String,
     /// SHA-256 of the unified query result.
     pub unified_query_result_digest: String,
-    /// The ranked candidates.
+    /// The ranked candidates; more than 64 refuse as `COMPARATIVE_OVER_LIMIT`.
+    #[serde(deserialize_with = "bounded_candidates")]
     pub candidates: BoundedVec<ComparativeCandidate, MAX_COMPARATIVE_CANDIDATES>,
     /// The most model calls across every stage.
     pub total_call_ceiling: u32,
+}
+
+/// Decode the request's candidates, refusing a list above the bound with the
+/// registered `COMPARATIVE_OVER_LIMIT` code rather than a bare length error.
+fn bounded_candidates<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<BoundedVec<ComparativeCandidate, MAX_COMPARATIVE_CANDIDATES>, D::Error> {
+    let candidates = Vec::<ComparativeCandidate>::deserialize(deserializer)?;
+    if candidates.len() > MAX_COMPARATIVE_CANDIDATES {
+        return Err(serde::de::Error::custom(format!(
+            "{}: {} candidates exceed the limit of {MAX_COMPARATIVE_CANDIDATES}",
+            COMPARATIVE_OVER_LIMIT.as_str(),
+            candidates.len()
+        )));
+    }
+    BoundedVec::new(candidates).map_err(serde::de::Error::custom)
 }
 
 /// The budgeted plan `Decide` returns.

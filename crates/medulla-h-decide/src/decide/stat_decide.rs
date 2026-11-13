@@ -540,7 +540,12 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         }
         QuestionKind::TaskPlan => medulla_decision_types::decision::knob_families::task_plan::KNOBS,
         QuestionKind::ToolRelevance => medulla_decision_types::decision::tool_relevance::KNOBS,
-        QuestionKind::ProbeVerdict => medulla_decision_types::decision::knob_families::red_team::KNOBS,
+        QuestionKind::ComparativeAnalysisPlan => {
+            medulla_decision_types::decision::comparative_analysis::KNOBS
+        }
+        QuestionKind::ProbeVerdict => {
+            medulla_decision_types::decision::knob_families::red_team::KNOBS
+        }
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS
         }
@@ -717,6 +722,9 @@ fn seal(
         }
         None => None,
     };
+    if let Some(plan) = &comparative {
+        premise_list.extend(super::family::comparative_analysis::premises(plan));
+    }
     if let Some(topology) = &executed.topology {
         premise_list.extend(topology.premises.iter().cloned());
     }
