@@ -43,9 +43,9 @@ pub use microstructure::{
     HawkesFit,
 };
 pub use signals::{
-    alpha_combination_engine, brier_score, convergence_gate, effective_independent_n,
-    empirical_kelly, information_ratio, order_book_imbalance, queue_imbalance, realized_vol_tick,
-    spread_reversion, ConvergenceGate, QueueSignal, SpreadReversion,
+    alpha_combination_engine, convergence_gate, effective_independent_n, empirical_kelly,
+    information_ratio, order_book_imbalance, queue_imbalance, realized_vol_tick, spread_reversion,
+    ConvergenceGate, QueueSignal, SpreadReversion,
 };
 pub use surveillance::{kyle_lambda, surveillance_risk, SurveillanceRisk};
 
@@ -272,14 +272,6 @@ mod tests {
         assert_eq!(w.len(), 3);
         let abs_sum: f64 = w.iter().map(|x| x.abs()).sum();
         assert!((abs_sum - 1.0).abs() < 1e-9, "abs_sum={}", abs_sum);
-    }
-
-    #[test]
-    fn test_brier_score() {
-        // perfect calibration ⇒ 0
-        assert!(brier_score(&[1.0, 0.0], &[1.0, 0.0]).abs() < 1e-12);
-        // p=0.5 on every outcome ⇒ 0.25
-        assert!((brier_score(&[0.5, 0.5, 0.5, 0.5], &[1.0, 0.0, 1.0, 0.0]) - 0.25).abs() < 1e-9);
     }
 
     #[test]

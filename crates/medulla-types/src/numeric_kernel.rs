@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 
 /// Most values any one input array of an op may hold.
 pub const MAX_KERNEL_INPUT: usize = 1_000_000;
+/// Most observations a `regime_hmm` refit may take (the fit is iterative, so it is
+/// bounded well below the plain array ceiling).
+pub const MAX_REFIT_OBSERVATIONS: usize = 100_000;
 /// Most splits a `purged_cpcv` op may produce.
 pub const MAX_CPCV_SPLITS: usize = 100_000;
 

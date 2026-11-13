@@ -66,3 +66,86 @@ impl Kalman {
         (x, p)
     }
 }
+
+#[cfg(all(test, feature = "evaluate"))]
+mod tests {
+    use super::*;
+    use crate::evaluation::registry::evaluate;
+    use medulla_types::numeric_kernel::{KernelCode, NumericEvaluateOp as Op, NumericKernelOutput};
+
+    fn close(a: f64, b: f64) {
+        assert!((a - b).abs() < 1e-12, "{a} != {b}");
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.11
+    #[test]
+    fn kalman_independent_vectors() {
+        // Level, q = 0, r = 1, p0 = 1, observations [2, 4], worked by hand:
+        // step 1: P = 1, S = 2, K = 1/2, x = 1, P = 1/2; step 2: S = 3/2, K = 1/3, x = 2, P = 1/3.
+        let mut level = Kalman::new(1.0, KalmanNoise { q: 0.0, r: 1.0 }, 0.0, 1.0);
+        let (x, p) = level.observe(2.0, 1.0);
+        close(x, 1.0);
+        close(p, 0.5);
+        let (x, p) = level.observe(4.0, 1.0);
+        close(x, 2.0);
+        close(p, 1.0 / 3.0);
+        // The seeded level takes its first observation as the state at variance r.
+        let mut seeded = Kalman::level(KalmanNoise { q: 0.0, r: 1.0 });
+        assert_eq!(seeded.observe(5.0, 1.0), (5.0, 1.0));
+        // Beta, H = [1, 2], z = [2, 4]: step 2 has S = 3, K = 1/3, x = 5/3, P = 1/6.
+        let mut beta = Kalman::beta(KalmanNoise { q: 0.0, r: 1.0 });
+        beta.observe(2.0, 1.0);
+        let (x, p) = beta.observe(4.0, 2.0);
+        close(x, 5.0 / 3.0);
+        close(p, 1.0 / 6.0);
+
+        // The registry serves the same vectors and refuses with each stable code.
+        let served = evaluate(&Op::KalmanLevel {
+            observations: vec![2.0, 4.0],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .unwrap();
+        let NumericKernelOutput::Kalman(state) = served else {
+            panic!("expected a Kalman state")
+        };
+        close(state.states[1], 2.0);
+        close(state.variances[1], 1.0 / 3.0);
+        let level = |observations: Vec<f64>, q: f64, r: f64, p0: f64| {
+            evaluate(&Op::KalmanLevel {
+                observations,
+                f: 1.0,
+                q,
+                h: 1.0,
+                r,
+                x0: 0.0,
+                p0,
+            })
+        };
+        assert_eq!(
+            level(vec![], 0.0, 1.0, 1.0).unwrap_err().code,
+            KernelCode::InputShort
+        );
+        assert_eq!(
+            level(vec![1.0], -1.0, 1.0, 1.0).unwrap_err().code,
+            KernelCode::ParamInvalid
+        );
+        assert_eq!(
+            level(vec![1.0], 0.0, 0.0, 0.0).unwrap_err().code,
+            KernelCode::Singular
+        );
+        let beta = evaluate(&Op::KalmanBeta {
+            market_returns: vec![1.0, 2.0],
+            asset_returns: vec![2.0, 4.0],
+            q: 0.0,
+            r: 0.0,
+            beta0: 0.0,
+            p0: 0.0,
+        });
+        assert_eq!(beta.unwrap_err().code, KernelCode::Singular);
+    }
+}

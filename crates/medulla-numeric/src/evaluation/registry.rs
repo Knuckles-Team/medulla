@@ -8,7 +8,7 @@
 
 use medulla_types::numeric_kernel::{
     CvSplit, DieboldMariano, EwmaSmoothing, KernelCode, KernelRefusal, NumericEvaluateOp,
-    NumericKernelOutput, MAX_CPCV_SPLITS, MAX_KERNEL_INPUT,
+    NumericKernelOutput, MAX_CPCV_SPLITS, MAX_KERNEL_INPUT, MAX_REFIT_OBSERVATIONS,
 };
 
 use super::{backtest, regime_hmm, skill, statarb};
@@ -93,6 +93,17 @@ fn positive(what: &str, value: f64) -> Refused<()> {
         return refuse(
             KernelCode::ParamInvalid,
             format!("`{what}` is not above zero"),
+        );
+    }
+    Ok(())
+}
+
+/// A filter whose innovation variance is zero at every step has nothing to update on.
+fn zero_innovation(q: f64, r: f64, p0: f64, h: f64) -> Refused<()> {
+    if q == 0.0 && r == 0.0 && (p0 == 0.0 || h == 0.0) {
+        return refuse(
+            KernelCode::Singular,
+            "q, r and the initial variance leave the innovation variance at zero",
         );
     }
     Ok(())
@@ -320,6 +331,7 @@ pub fn evaluate(op: &NumericEvaluateOp) -> Result<NumericKernelOutput, KernelRef
             for (name, v) in [("q", q), ("r", r), ("p0", p0)] {
                 non_negative(name, *v)?;
             }
+            zero_innovation(*q, *r, *p0, *h)?;
             Ok(NumericKernelOutput::Kalman(statarb::kalman_filter_1d(
                 observations,
                 *f,
@@ -353,6 +365,7 @@ pub fn evaluate(op: &NumericEvaluateOp) -> Result<NumericKernelOutput, KernelRef
             for (name, v) in [("q", q), ("r", r), ("p0", p0)] {
                 non_negative(name, *v)?;
             }
+            zero_innovation(*q, *r, *p0, 1.0)?;
             Ok(NumericKernelOutput::Kalman(statarb::kalman_beta(
                 market_returns,
                 asset_returns,
@@ -395,6 +408,12 @@ pub fn evaluate(op: &NumericEvaluateOp) -> Result<NumericKernelOutput, KernelRef
                     "a constant spread cannot be regressed",
                 );
             }
+            if !statarb::ou_phi(spread).is_some_and(|phi| phi > 0.0 && phi < 1.0) {
+                return refuse(
+                    KernelCode::Singular,
+                    "the fitted AR(1) coefficient is outside (0, 1): the spread does not revert",
+                );
+            }
             Ok(NumericKernelOutput::OuParams(statarb::ou_calibrate(
                 spread, *dt,
             )))
@@ -425,10 +444,10 @@ pub fn evaluate(op: &NumericEvaluateOp) -> Result<NumericKernelOutput, KernelRef
         NumericEvaluateOp::Adf { series, max_lag } => {
             within_budget("series", series.len())?;
             finite("series", series)?;
-            if *max_lag > series.len() {
+            if *max_lag > series.len() / 4 {
                 return refuse(
                     KernelCode::ParamInvalid,
-                    "`max_lag` exceeds the series length",
+                    "`max_lag` exceeds a quarter of the series length",
                 );
             }
             at_least("series", series.len(), max_lag + 4)?;
@@ -445,6 +464,15 @@ pub fn evaluate(op: &NumericEvaluateOp) -> Result<NumericKernelOutput, KernelRef
             tol,
         } => {
             within_budget("observations", observations.len())?;
+            if observations.len() > MAX_REFIT_OBSERVATIONS {
+                return refuse(
+                    KernelCode::StateBudget,
+                    format!(
+                        "`observations` holds {} values; a refit takes at most {MAX_REFIT_OBSERVATIONS}",
+                        observations.len()
+                    ),
+                );
+            }
             at_least("observations", observations.len(), 2)?;
             finite("observations", observations)?;
             positive("tol", *tol)?;

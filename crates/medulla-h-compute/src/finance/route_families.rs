@@ -883,11 +883,22 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             forecasts,
             outcomes,
         } => {
-            let v = medulla_finance_quant::quant::brier_score(&forecasts, &outcomes);
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceBrierScore>(v),
-            )
+            // The shared kernel answers; a refusal is the caller's typed error, never a
+            // default (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.10).
+            let op = medulla_types::numeric_kernel::NumericEvaluateOp::Brier {
+                forecasts,
+                outcomes,
+            };
+            match medulla_numeric::evaluation::registry::evaluate(&op) {
+                Ok(medulla_types::numeric_kernel::NumericKernelOutput::Scalar { value }) => {
+                    Response::ok(
+                        req_id,
+                        ResultPayload::scalar::<results::FinanceBrierScore>(value),
+                    )
+                }
+                Ok(_) => Response::err(req_id, "INVALID_ARGUMENT: brier returned a non-scalar"),
+                Err(refusal) => Response::err(req_id, format!("INVALID_ARGUMENT: {refusal}")),
+            }
         }
         Method::FinanceConvergenceGate {
             strengths,

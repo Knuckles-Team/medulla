@@ -391,3 +391,42 @@ fn backtrack_viterbi_path(
 
     states
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evaluation::registry::evaluate;
+    use medulla_types::numeric_kernel::{
+        KernelCode, NumericEvaluateOp as Op, MAX_REFIT_OBSERVATIONS,
+    };
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.14
+    #[test]
+    fn regime_hmm_independent_vectors() {
+        // Two constant regimes of known mean decode to a clean two-block Viterbi path.
+        let mut obs = vec![0.01; 50];
+        obs.extend(std::iter::repeat_n(-0.02, 50));
+        let fit = detect_regimes(&obs, 2, 100, 1e-6);
+        assert_eq!(fit.states.len(), 100);
+        assert!(fit.states[..50].iter().all(|s| *s == fit.states[0]));
+        assert!(fit.states[50..].iter().all(|s| *s == fit.states[99]));
+        assert_ne!(fit.states[0], fit.states[99]);
+        let mut means = fit.means.clone();
+        means.sort_by(f64::total_cmp);
+        assert!((means[0] + 0.02).abs() < 1e-4 && (means[1] - 0.01).abs() < 1e-4);
+
+        let code = |op: Op| evaluate(&op).unwrap_err().code;
+        let hmm = |observations: Vec<f64>, n_states: usize| Op::RegimeHmm {
+            observations,
+            n_states,
+            max_iter: 10,
+            tol: 1e-6,
+        };
+        assert_eq!(code(hmm(vec![0.1], 2)), KernelCode::InputShort);
+        assert_eq!(code(hmm(vec![0.1, 0.2], 0)), KernelCode::ParamInvalid);
+        assert_eq!(
+            code(hmm(vec![0.0; MAX_REFIT_OBSERVATIONS + 1], 2)),
+            KernelCode::StateBudget
+        );
+    }
+}

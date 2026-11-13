@@ -470,3 +470,274 @@ async fn numeric_evaluate_rejects_oversize_input() {
         "KERNEL_STATE_BUDGET",
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.11
+async fn kalman_served_matches_vectors() {
+    let mut s = Session::open().await;
+    // Level, q = 0, r = 1, p0 = 1: states 1 then 2, variances 1/2 then 1/3.
+    let level = raw(&s
+        .eval(Op::KalmanLevel {
+            observations: vec![2.0, 4.0],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .await);
+    close(&level["states"][0], 1.0, 1e-12);
+    close(&level["states"][1], 2.0, 1e-12);
+    close(&level["variances"][0], 0.5, 1e-12);
+    close(&level["variances"][1], 1.0 / 3.0, 1e-12);
+    // Beta, H = [1, 2], z = [2, 4]: the second step gives 5/3 at variance 1/6.
+    let beta = raw(&s
+        .eval(Op::KalmanBeta {
+            market_returns: vec![1.0, 2.0],
+            asset_returns: vec![2.0, 4.0],
+            q: 0.0,
+            r: 1.0,
+            beta0: 0.0,
+            p0: 1.0,
+        })
+        .await);
+    close(&beta["states"][1], 5.0 / 3.0, 1e-12);
+    close(&beta["variances"][1], 1.0 / 6.0, 1e-12);
+    // Volatility with a log-variance that never moves: sqrt(0.01 * 252).
+    let vol = raw(&s
+        .eval(Op::KalmanVolatility {
+            returns: vec![0.1, -0.1, 0.1],
+            q: 0.0,
+            r: 1.0,
+            log_var0: Some(0.01_f64.ln()),
+            p0: 1.0,
+            annualization: 252.0,
+        })
+        .await);
+    for i in 0..3 {
+        close(&vol[i], 2.52_f64.sqrt(), 1e-9);
+    }
+    // Each refusal code.
+    refused(
+        &s.eval(Op::KalmanLevel {
+            observations: vec![],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .await,
+        "KERNEL_INPUT_SHORT",
+    );
+    refused(
+        &s.eval(Op::KalmanBeta {
+            market_returns: vec![1.0],
+            asset_returns: vec![1.0],
+            q: -1.0,
+            r: 1.0,
+            beta0: 0.0,
+            p0: 1.0,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    refused(
+        &s.eval(Op::KalmanBeta {
+            market_returns: vec![1.0],
+            asset_returns: vec![1.0],
+            q: 0.0,
+            r: 0.0,
+            beta0: 0.0,
+            p0: 0.0,
+        })
+        .await,
+        "KERNEL_SINGULAR",
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.12
+async fn ou_served_matches_vectors() {
+    let mut s = Session::open().await;
+    let ou = raw(&s
+        .eval(Op::OuCalibrate {
+            spread: vec![0.0, 1.0, 1.5, 1.75, 1.875, 1.9375],
+            dt: 0.5,
+        })
+        .await);
+    close(&ou["mu"], 2.0, 1e-6);
+    close(&ou["theta"], 2.0 * std::f64::consts::LN_2, 1e-6);
+    let th = raw(&s
+        .eval(Op::OuThresholds {
+            theta: 1.0,
+            mu: 0.5,
+            sigma: 1.0,
+            sigma_eq: 0.7,
+            cost: 0.0,
+        })
+        .await);
+    close(&th["exit"], 0.5, 1e-12);
+    refused(
+        &s.eval(Op::OuCalibrate {
+            spread: vec![1.0, 2.0],
+            dt: 1.0,
+        })
+        .await,
+        "KERNEL_INPUT_SHORT",
+    );
+    refused(
+        &s.eval(Op::OuCalibrate {
+            spread: vec![1.0, 2.0, 3.0],
+            dt: 0.0,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    refused(
+        &s.eval(Op::OuCalibrate {
+            spread: vec![1.0, 2.0, 4.0, 8.0, 16.0],
+            dt: 1.0,
+        })
+        .await,
+        "KERNEL_SINGULAR",
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.13
+async fn adf_served_matches_vectors() {
+    let mut s = Session::open().await;
+    let mut noise = noise_source(12_345);
+    let mut stationary = vec![0.0];
+    for i in 1..400 {
+        stationary.push(0.2 * stationary[i - 1] + noise());
+    }
+    let mut walk = vec![0.0];
+    for _ in 1..400 {
+        walk.push(walk.last().unwrap() + noise());
+    }
+    let ar = raw(&s
+        .eval(Op::Adf {
+            series: stationary.clone(),
+            max_lag: 1,
+        })
+        .await);
+    assert_eq!(ar["stationary_5pct"], true);
+    assert_eq!(ar["n_obs"], 398);
+    let rw = raw(&s
+        .eval(Op::Adf {
+            series: walk,
+            max_lag: 1,
+        })
+        .await);
+    assert_eq!(rw["stationary_5pct"], false);
+    refused(
+        &s.eval(Op::Adf {
+            series: vec![1.0, 2.0, 3.0],
+            max_lag: 0,
+        })
+        .await,
+        "KERNEL_INPUT_SHORT",
+    );
+    refused(
+        &s.eval(Op::Adf {
+            series: stationary[..40].to_vec(),
+            max_lag: 11,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    refused(
+        &s.eval(Op::Adf {
+            series: vec![5.0; 30],
+            max_lag: 1,
+        })
+        .await,
+        "KERNEL_SINGULAR",
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.14
+async fn regime_hmm_served_matches_vectors() {
+    let mut s = Session::open().await;
+    let mut obs = vec![0.01; 50];
+    obs.extend(std::iter::repeat_n(-0.02, 50));
+    let hmm = raw(&s
+        .eval(Op::RegimeHmm {
+            observations: obs,
+            n_states: 2,
+            max_iter: 100,
+            tol: 1e-6,
+        })
+        .await);
+    let states = hmm["states"].as_array().unwrap();
+    assert_eq!(states.len(), 100);
+    assert!(states[..50].iter().all(|v| *v == states[0]));
+    assert!(states[50..].iter().all(|v| *v == states[99]));
+    assert_ne!(states[0], states[99]);
+    let mut means: Vec<f64> = hmm["means"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    means.sort_by(f64::total_cmp);
+    assert!((means[0] + 0.02).abs() < 1e-4 && (means[1] - 0.01).abs() < 1e-4);
+    let case = |observations: Vec<f64>, n_states: usize| Op::RegimeHmm {
+        observations,
+        n_states,
+        max_iter: 10,
+        tol: 1e-6,
+    };
+    refused(&s.eval(case(vec![0.1], 2)).await, "KERNEL_INPUT_SHORT");
+    refused(
+        &s.eval(case(vec![0.1, 0.2], 0)).await,
+        "KERNEL_PARAM_INVALID",
+    );
+    refused(
+        &s.eval(case(
+            vec![0.0; medulla_types::numeric_kernel::MAX_REFIT_OBSERVATIONS + 1],
+            2,
+        ))
+        .await,
+        "KERNEL_STATE_BUDGET",
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.10
+async fn brier_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    // The retained finance entry answers the shared kernel's 0.045 on the pairs of
+    // `brier_independent_vectors`, bit-identical to the generic door.
+    let legacy = s
+        .send(Method::FinanceBrierScore {
+            forecasts: vec![0.9, 0.8, 0.3, 0.2],
+            outcomes: vec![1.0, 1.0, 0.0, 0.0],
+        })
+        .await;
+    let generic = s
+        .eval(Op::Brier {
+            forecasts: vec![0.9, 0.8, 0.3, 0.2],
+            outcomes: vec![1.0, 1.0, 0.0, 0.0],
+        })
+        .await;
+    assert!((float(&legacy) - 0.045).abs() < 1e-12);
+    assert_eq!(float(&legacy).to_bits(), float(&generic).to_bits());
+    // A mismatch is the kernel's typed refusal, not a truncation or a zero.
+    refused(
+        &s.send(Method::FinanceBrierScore {
+            forecasts: vec![0.5, 0.5],
+            outcomes: vec![1.0],
+        })
+        .await,
+        "KERNEL_LENGTH_MISMATCH",
+    );
+    // The truncating wrapper is gone.
+    let signals = include_str!("../crates/medulla-finance-quant/src/quant/signals.rs");
+    assert!(!signals.contains("fn brier_score"));
+}

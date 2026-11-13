@@ -226,6 +226,18 @@ pub fn adf_test(series: &[f64], max_lag: usize) -> AdfResult {
 /// Calibrate an OU process dS = θ(μ−S)dt + σ dW from a discretely-sampled spread
 /// via the exact AR(1) discretisation S_t = a + b·S_{t-1} + ε (Euler-Maruyama /
 /// MLE-equivalent). `dt` is the sampling interval.
+/// The fitted AR(1) coefficient `phi` of a spread, unclamped; `None` when the
+/// regression is singular. A reverting fit has `0 < phi < 1`.
+pub fn ou_phi(spread: &[f64]) -> Option<f64> {
+    let n = spread.len();
+    if n < 3 {
+        return None;
+    }
+    let x: Vec<Vec<f64>> = (0..n - 1).map(|i| vec![1.0, spread[i]]).collect();
+    let y: Vec<f64> = (1..n).map(|i| spread[i]).collect();
+    ols_with_se(&x, &y).map(|(coefs, _, _)| coefs[1])
+}
+
 pub fn ou_calibrate(spread: &[f64], dt: f64) -> OuParams {
     let n = spread.len();
     if n < 3 {
@@ -373,4 +385,145 @@ fn search_best_entry_z(theta: f64, s: f64, cost: f64) -> (f64, f64) {
         }
     }
     (best_z, best_j)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Deterministic noise in [-1, 1).
+    fn noise_source(mut seed: u64) -> impl FnMut() -> f64 {
+        move || {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            ((seed >> 33) as f64 / (1u64 << 31) as f64) - 1.0
+        }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.12
+    #[test]
+    fn ou_independent_vectors() {
+        use crate::evaluation::registry::evaluate;
+        use medulla_types::numeric_kernel::{KernelCode, NumericEvaluateOp as Op};
+        // s_t = 0.5 s_{t-1} + 1 has phi = 0.5, mean 2 and theta = -ln(0.5)/dt = ln 2.
+        let spread = [0.0, 1.0, 1.5, 1.75, 1.875, 1.9375];
+        let phi = ou_phi(&spread).unwrap();
+        assert!((phi - 0.5).abs() < 1e-9);
+        let p = ou_calibrate(&spread, 1.0);
+        assert!((p.theta - std::f64::consts::LN_2).abs() < 1e-6);
+        assert!((p.mu - 2.0).abs() < 1e-6);
+        assert!((p.half_life - 1.0).abs() < 1e-6);
+        // dt scales theta as -ln(phi)/dt.
+        let p = ou_calibrate(&spread, 0.5);
+        assert!((p.theta - 2.0 * std::f64::consts::LN_2).abs() < 1e-6);
+        // A seeded noisy AR(1) path recovers phi within sampling error.
+        let mut noise = noise_source(7);
+        let mut path = vec![0.0];
+        for i in 1..4_000 {
+            path.push(0.8 * path[i - 1] + 0.1 * noise());
+        }
+        assert!((ou_phi(&path).unwrap() - 0.8).abs() < 0.05);
+        // Refusals: short input, bad dt, non-reverting fits.
+        let code = |op: Op| evaluate(&op).unwrap_err().code;
+        assert_eq!(
+            code(Op::OuCalibrate {
+                spread: vec![1.0, 2.0],
+                dt: 1.0
+            }),
+            KernelCode::InputShort
+        );
+        assert_eq!(
+            code(Op::OuCalibrate {
+                spread: spread.to_vec(),
+                dt: 0.0
+            }),
+            KernelCode::ParamInvalid
+        );
+        // phi = 2 (explosive) and phi = -0.5 (oscillating) are not reverting.
+        assert_eq!(
+            code(Op::OuCalibrate {
+                spread: vec![1.0, 2.0, 4.0, 8.0, 16.0],
+                dt: 1.0
+            }),
+            KernelCode::Singular
+        );
+        assert_eq!(
+            code(Op::OuCalibrate {
+                spread: vec![16.0, -8.0, 4.0, -2.0, 1.0],
+                dt: 1.0
+            }),
+            KernelCode::Singular
+        );
+        assert_eq!(
+            code(Op::OuCalibrate {
+                spread: vec![3.0; 6],
+                dt: 1.0
+            }),
+            KernelCode::Singular
+        );
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.13
+    #[test]
+    fn adf_independent_vectors() {
+        use crate::evaluation::registry::evaluate;
+        use medulla_types::numeric_kernel::{KernelCode, NumericEvaluateOp as Op};
+        let mut noise = noise_source(12_345);
+        let mut stationary = vec![0.0];
+        for i in 1..400 {
+            stationary.push(0.2 * stationary[i - 1] + noise());
+        }
+        let mut walk = vec![0.0];
+        for _ in 1..400 {
+            walk.push(walk.last().unwrap() + noise());
+        }
+        let ar = adf_test(&stationary, 1);
+        assert!(ar.stationary_5pct && ar.statistic < ar.crit_5pct);
+        assert!(ar.crit_1pct < ar.crit_5pct && ar.crit_5pct < ar.crit_10pct);
+        assert_eq!(ar.n_obs, 398);
+        let rw = adf_test(&walk, 1);
+        assert!(!rw.stationary_5pct && rw.statistic > rw.crit_5pct);
+        // The finite-sample critical values approach MacKinnon's asymptotic ones.
+        assert!((ar.crit_5pct + 2.86).abs() < 0.02);
+        let code = |op: Op| evaluate(&op).unwrap_err().code;
+        assert_eq!(
+            code(Op::Adf {
+                series: vec![1.0, 2.0, 3.0],
+                max_lag: 0
+            }),
+            KernelCode::InputShort
+        );
+        // max_lag above n/4 refuses.
+        assert_eq!(
+            code(Op::Adf {
+                series: stationary[..40].to_vec(),
+                max_lag: 11
+            }),
+            KernelCode::ParamInvalid
+        );
+        assert!(evaluate(&Op::Adf {
+            series: stationary[..40].to_vec(),
+            max_lag: 10
+        })
+        .is_ok());
+        assert_eq!(
+            code(Op::Adf {
+                series: vec![5.0; 30],
+                max_lag: 1
+            }),
+            KernelCode::Singular
+        );
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.1.11
+    #[test]
+    fn kalman_volatility_independent_vectors() {
+        // A seeded log-variance that never moves: sqrt(exp(ln 0.01) * 252).
+        let v = kalman_volatility(&[0.1, -0.1, 0.1], 0.0, 1.0, Some(0.01_f64.ln()), 1.0, 252.0);
+        for x in v {
+            assert!((x - 2.52_f64.sqrt()).abs() < 1e-9);
+        }
+        assert!(kalman_volatility(&[], 0.0, 1.0, None, 1.0, 252.0).is_empty());
+    }
 }

@@ -201,16 +201,6 @@ pub fn alpha_combination_engine(returns_matrix: &[Vec<f64>], lookback: usize) ->
     w
 }
 
-/// Brier score — mean squared error of probabilistic forecasts vs binary
-/// outcomes. Lower is better; < 0.25 is production-grade calibration. The finance
-/// entry of `medulla_numeric::calibration::metrics::binary_brier_score` (EH-530): pairs
-/// beyond the shorter input are ignored and no pairs score `0`.
-pub fn brier_score(forecasts: &[f64], outcomes: &[f64]) -> f64 {
-    let n = forecasts.len().min(outcomes.len());
-    medulla_numeric::calibration::metrics::binary_brier_score(&forecasts[..n], &outcomes[..n])
-        .unwrap_or(0.0)
-}
-
 pub use medulla_result_types::compute_result::finance::ConvergenceGate;
 
 /// Conviction gate: require ≥ `min_agree` of N signals to STRONGLY agree on a
