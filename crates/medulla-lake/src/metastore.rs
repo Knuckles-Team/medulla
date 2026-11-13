@@ -8,7 +8,9 @@ use medulla_types::contract::ServerErrorCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub mod orc;
 pub mod scan;
+pub mod thrift;
 
 /// Secret-reference schemes an `auth_ref` may use; anything else is an inline secret.
 const AUTH_REF_SCHEMES: &[&str] = &["env://", "openbao://"];
@@ -163,7 +165,13 @@ impl std::error::Error for MetastoreError {}
 /// The metastore port. The production implementation speaks the metastore wire protocol;
 /// tests use a recorded-response fake.
 pub trait MetastoreClient {
-    fn list_tables(&self, db: &str, page: Option<&str>) -> Result<TablePage, MetastoreError>;
+    /// One page of at most `page_size` table names of `db`, after the cursor `page`.
+    fn list_tables(
+        &self,
+        db: &str,
+        page: Option<&str>,
+        page_size: u64,
+    ) -> Result<TablePage, MetastoreError>;
     fn table(&self, db: &str, name: &str) -> Result<MetastoreTable, MetastoreError>;
     fn partitions_by_filter(
         &self,

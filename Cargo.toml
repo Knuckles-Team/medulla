@@ -2034,6 +2034,11 @@ path = "benches/shape_validation.rs"
 harness = false
 required-features = ["shacl"]
 
+# MEDULLA-UNIFIED-DATA-PLANE-R031.2: per-source quota metering and fault isolation, served.
+[[test]]
+name = "attached_isolation_served"
+path = "tests/attached_isolation_served.rs"
+required-features = ["federation-sql", "security"]
 # Wire protocol latency at 64 concurrent sessions (MEDULLA-DURABLE-KERNEL-R042.5): nightly budget.
 [[bench]]
 name = "wire_protocols"

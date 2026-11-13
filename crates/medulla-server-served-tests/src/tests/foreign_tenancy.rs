@@ -45,6 +45,7 @@ async fn register_in(
 ) {
     let method = Method::RegisterForeignSource {
         name: "remote_docs".into(),
+        quota: None,
         source,
     };
     assert_ok(&dispatch_as(state, id, agent, method).await);

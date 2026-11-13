@@ -5,9 +5,16 @@
 use std::cell::Cell;
 use std::collections::BTreeMap;
 
+use std::sync::Arc;
+
+use arrow::array::{Int64Array, RecordBatch, StringArray};
+use arrow::datatypes::{DataType, Field, Schema};
+use medulla_lake::metastore::orc::{
+    scan_orc, LocalFileBytes, OrcFiles, StripeBound, StripeOp, StripePredicate,
+};
 use medulla_lake::metastore::scan::{
-    partition_filter, DataFileSource, MetastoreTableProvider, OpenedFile, PartitionPredicate,
-    ScanLimits, ScanReceipt,
+    list_all_tables, partition_filter, DataFileSource, MetastoreTableProvider, OpenedFile,
+    PartitionPredicate, ScanLimits, ScanReceipt,
 };
 use medulla_lake::metastore::{
     FileStats, LakeFileFormat, MetastoreCatalogSpec, MetastoreClient, MetastoreColumn,
@@ -71,10 +78,18 @@ impl FakeMetastore {
 }
 
 impl MetastoreClient for FakeMetastore {
-    fn list_tables(&self, _db: &str, _page: Option<&str>) -> Result<TablePage, MetastoreError> {
+    fn list_tables(
+        &self,
+        _db: &str,
+        page: Option<&str>,
+        page_size: u64,
+    ) -> Result<TablePage, MetastoreError> {
+        // Ten tables t0..t9; the cursor is the index of the first table of the page.
+        let start: usize = page.map_or(0, |cursor| cursor.parse().unwrap());
+        let end = (start + page_size as usize).min(10);
         Ok(TablePage {
-            tables: vec![self.table.name.clone()],
-            next: None,
+            tables: (start..end).map(|n| format!("t{n}")).collect(),
+            next: (end < 10).then(|| end.to_string()),
         })
     }
 
@@ -247,6 +262,50 @@ fn partition_pruning_reads_only_matching_partitions() {
     assert_eq!(over.code(), ServerErrorCode::PartitionLimitExceeded);
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1
+#[test]
+fn listing_pages_at_the_knob_size() {
+    let client = FakeMetastore::new(sample_table(LakeFileFormat::Orc, plain_paths()));
+    let limits = ScanLimits::new(3, 8);
+    let first = client
+        .list_tables("db", None, limits.list_page_size)
+        .unwrap();
+    assert_eq!(first.tables.len(), 3, "a page holds the knob size");
+    assert_eq!(first.next.as_deref(), Some("3"));
+    let all = list_all_tables(&client, "db", limits).unwrap();
+    assert_eq!(all.len(), 10);
+    assert_eq!((all[0].as_str(), all[9].as_str()), ("t0", "t9"));
+
+    // A page over the asked size is refused.
+    struct Oversized;
+    impl MetastoreClient for Oversized {
+        fn list_tables(
+            &self,
+            _db: &str,
+            _page: Option<&str>,
+            _page_size: u64,
+        ) -> Result<TablePage, MetastoreError> {
+            Ok(TablePage {
+                tables: vec!["a".into(), "b".into()],
+                next: None,
+            })
+        }
+        fn table(&self, _: &str, _: &str) -> Result<MetastoreTable, MetastoreError> {
+            unreachable!("listing reads no table")
+        }
+        fn partitions_by_filter(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<Vec<PartitionInfo>, MetastoreError> {
+            unreachable!("listing reads no partition")
+        }
+    }
+    let refused = list_all_tables(&Oversized, "db", ScanLimits::new(1, 8)).unwrap_err();
+    assert_eq!(refused.code(), ServerErrorCode::MetastoreSpecInvalid);
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.4
 #[test]
 fn metastore_refusals() {
@@ -302,5 +361,142 @@ fn receipt_counts_match() {
             stripes_skipped: 6,
             bytes_read: 200,
         }
+    );
+}
+
+/// Writes an ORC file of three stripes: ids 1..=100, 101..=200 and 201..=300.
+fn write_three_stripe_orc(path: &std::path::Path) {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+    ]));
+    let file = std::fs::File::create(path).unwrap();
+    let mut writer = orc_rust::arrow_writer::ArrowWriterBuilder::new(file, schema.clone())
+        .try_build()
+        .unwrap();
+    for (stripe, prefix) in [(0i64, "a"), (1, "m"), (2, "x")] {
+        let ids: Vec<i64> = (stripe * 100 + 1..=stripe * 100 + 100).collect();
+        let names: Vec<String> = ids.iter().map(|i| format!("{prefix}{i}")).collect();
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int64Array::from(ids)),
+                Arc::new(StringArray::from(names)),
+            ],
+        )
+        .unwrap();
+        writer.write(&batch).unwrap();
+        writer.flush_stripe().unwrap();
+    }
+    writer.close().unwrap();
+}
+
+fn id_at_least(value: i64) -> StripePredicate {
+    StripePredicate {
+        column: "id".into(),
+        op: StripeOp::Ge,
+        value: StripeBound::Int(value),
+    }
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2
+#[test]
+fn orc_stripe_pruning_skips_non_matching_stripes() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("facts.orc");
+    write_three_stripe_orc(&path);
+    let bytes = bytes::Bytes::from(std::fs::read(&path).unwrap());
+
+    // No predicate: every stripe is read.
+    let all = scan_orc(bytes.clone(), &[], &[]).unwrap();
+    assert_eq!((all.opened.stripes_total, all.opened.stripes_read), (3, 3));
+    let rows = |scan: &medulla_lake::metastore::orc::OrcScan| -> usize {
+        scan.batches.iter().map(|b| b.num_rows()).sum()
+    };
+    assert_eq!(rows(&all), 300);
+
+    // id in [150, 160]: only the middle stripe can hold a match.
+    let middle = scan_orc(
+        bytes.clone(),
+        &[
+            id_at_least(150),
+            StripePredicate {
+                column: "id".into(),
+                op: StripeOp::Le,
+                value: StripeBound::Int(160),
+            },
+        ],
+        &["id".to_string()],
+    )
+    .unwrap();
+    assert_eq!(
+        (middle.opened.stripes_total, middle.opened.stripes_read),
+        (3, 1)
+    );
+    assert_eq!(rows(&middle), 100);
+    // Only the projected column is decoded.
+    assert!(middle.batches.iter().all(|b| b.num_columns() == 1));
+    for batch in &middle.batches {
+        let ids = batch
+            .column_by_name("id")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        assert!(ids.iter().flatten().all(|id| (101..=200).contains(&id)));
+    }
+    assert!(middle.opened.bytes_read < all.opened.bytes_read);
+
+    // A text equality prunes by the string bounds.
+    let by_name = scan_orc(
+        bytes.clone(),
+        &[StripePredicate {
+            column: "name".into(),
+            op: StripeOp::Eq,
+            value: StripeBound::Text("x250".into()),
+        }],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(by_name.opened.stripes_read, 1);
+
+    // A value above every stripe skips all of them and decodes nothing.
+    let none = scan_orc(bytes, &[id_at_least(1000)], &[]).unwrap();
+    assert_eq!((none.opened.stripes_read, none.opened.bytes_read), (0, 0));
+    assert!(none.batches.is_empty());
+
+    // Through the scan: the receipt counts the skipped stripes of the file it opened.
+    let client = FakeMetastore::new(sample_table(
+        LakeFileFormat::Orc,
+        [path.to_str().unwrap(), "/wh/none/b.orc", "/wh/none/c.orc"],
+    ));
+    let reader = LocalFileBytes {
+        source_label: "warehouse".into(),
+    };
+    let files = OrcFiles {
+        bytes: &reader,
+        predicates: vec![id_at_least(250)],
+        projection: vec![],
+    };
+    let receipt = MetastoreTableProvider {
+        client: &client,
+        files: &files,
+        source_label: "warehouse".into(),
+        database: "db".into(),
+        table: "t".into(),
+        limits: ScanLimits {
+            list_page_size: 50,
+            max_partitions: 8,
+        },
+    }
+    .scan("day = 'mon'")
+    .unwrap();
+    assert_eq!(
+        (
+            receipt.files_read,
+            receipt.stripes_read,
+            receipt.stripes_skipped
+        ),
+        (1, 1, 2)
     );
 }

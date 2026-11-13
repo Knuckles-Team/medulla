@@ -506,6 +506,11 @@ $($variants)*
     RegisterForeignSource {
         name: String,
         source: medulla_query_types::wire::ForeignSourceSpec,
+        /// The per-query bounds the source may spend (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+        /// Absent takes the `foreign.default_quota.*` knobs; a value outside the bounds
+        /// refuses `SOURCE_QUOTA_INVALID`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        quota: Option<medulla_catalog_types::consolidation_isolation::SourceQuota>,
     },
 
     /// Register (or replace) a named read-only graph view over approved R2RML

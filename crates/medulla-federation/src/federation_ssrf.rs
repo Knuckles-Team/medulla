@@ -249,7 +249,6 @@ fn normalize_http_host(host: &str) -> Result<String, String> {
 }
 
 /// Exact allowlist matching only: no substrings, suffixes, globs, regexes, or CIDRs.
-#[cfg_attr(not(feature = "federation-sql"), allow(dead_code))]
 fn http_json_target_allowlisted(host: &str, port: u16, is_https: bool) -> bool {
     let Ok(raw) = std::env::var(HTTP_JSON_FEDERATION_ALLOW_ENV) else {
         return false;
@@ -397,6 +396,23 @@ pub fn check_sql_dsn(dsn: &str) -> Result<(), String> {
         .split(',')
         .try_for_each(|host| check_sql_host(host, port))
         .map_err(|_| REFUSED.to_string())
+}
+
+/// Admit a metastore `host:port` endpoint through the same resolve, sensitive-range and exact
+/// allow-list gate as an HTTP destination (MEDULLA-UNIFIED-DATA-PLANE-R038.4.3). An endpoint
+/// with no host or a bad port is refused.
+pub fn check_metastore_endpoint(endpoint: &str) -> Result<(), String> {
+    const REFUSED: &str = "federation: metastore destination is not allowed";
+    let (host, port) = parse_http_authority(endpoint, 9083).map_err(|_| REFUSED.to_string())?;
+    let host = normalize_http_host(host).map_err(|_| REFUSED.to_string())?;
+    let allowlisted = http_json_target_allowlisted(&host, port, true)
+        || http_json_target_allowlisted(&host, port, false);
+    let addresses = resolve_http_json_addresses(&host, port).map_err(|_| REFUSED.to_string())?;
+    let sensitive = addresses.iter().any(|a| is_ssrf_sensitive_ip(a.ip()));
+    if sensitive && !allowlisted {
+        return Err(REFUSED.to_string());
+    }
+    Ok(())
 }
 
 /// One `host[:port]` of a SQL DSN through the shared resolve + sensitive-range + allow-list gate.

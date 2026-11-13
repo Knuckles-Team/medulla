@@ -323,3 +323,22 @@ none
 - Source ingest of fetched pages and outside quality results: `MEDULLA-UNIFIED-DATA-PLANE-R651.7.3` provides, `SCION-SOURCE-INGEST-R001` consumes. Contract: [scion-source-ingest.md](contracts/scion-source-ingest.md).
 - Gramps pilot corpus and phase exits: `MEDULLA-UNIFIED-DATA-PLANE-R026.2.2` provides, `CONN-GRAMPS-MCP-CONNECTOR-CONTENT-R001` consumes. Contract: [gramps-native-pilot.md](contracts/gramps-native-pilot.md).
 - Cross-application entity links: `MEDULLA-UNIFIED-DATA-PLANE-R030.3` provides, `CONN-IMMICH-API-R001` consumes. Contract: [immich-entity-links.md](contracts/immich-entity-links.md).
+
+## Catalog probe (R014.2.2, R014.2.3)
+
+Registration (`ForeignSourceCatalog::register`) writes the record with a fresh `ProbeRecord` in `Registered`. For a `mysql://` or `mariadb://` DSN the registration handler then spawns `run_catalog_probe`: `ProbeStarted`, `medulla_plan::mysql_catalog::read_catalog` (reads through `medulla_federation::mysql_introspect`), then `ProbeSucceeded`, `SchemaChanged` or `ProbeErrored`. The first success stores the schema digest (`AttachedCatalogGraph::content_hash`) as the baseline. `catalog_read` serves the graph for a `Baselined` source and refuses `SCHEMA_DRIFT` or `SOURCE_UNAVAILABLE` otherwise.
+
+### Usage from source query logs and the usage answer (R764.7, R764.8)
+
+`SourceQueryLogIngest` is an analytics job kind. Its claim runs `run_query_log_ingest`
+(`medulla-server-ops`), which reads the source log through `SourceQueryLog`, tallies reads, joins
+and filters on the shared parser and appends `asset_usage.*` points. `Method::CatalogUsage` is a
+read-only query-family method answered by `handle_usage` from those series; see research.md for
+the cursor, scope-stamping and refusal decisions.
+
+## Graph view compilation (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2, R038.6.4)
+
+`virtual_view.rs` compiles one `MATCH ... RETURN` to one SPARQL `SELECT`; refusals are `ViewRefusal` codes and run no source statement. Same-database joins push as one statement through `ObdaSource::scan_join`.
+
+### Discovery at registration (R038.2.1)
+`RegisterForeignSource` → `discover_source` (exhaustive `discoverer_for(SourceCategory)`) → catalog insert → `write_contract` (one durable `AddNode` of `vg:MetadataContract`). Live catalog read for PostgreSQL-wire and MySQL-family sources; declared-shape hash for the rest. See research.md.

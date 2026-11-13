@@ -194,6 +194,9 @@ pub fn observe_rf019_tenant_owner(
 // under `api::query_txn` (R056.8).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod registry_reaper;
+// MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2: watermark capture of attached SQLite files.
+#[cfg(feature = "federation")]
+pub mod attached_poll;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sealed_retention;

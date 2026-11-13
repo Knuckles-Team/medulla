@@ -27,11 +27,121 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_auth::access::OwnerScopedCall;
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 
+/// Where a registration writes its `MetadataContract` (MEDULLA-UNIFIED-DATA-PLANE-R038.2.1): the
+/// request's graph, through the same durable mutation path as every other graph write.
+pub struct ContractWriteTarget<'a> {
+    pub core: &'a std::sync::Arc<medulla_graph_core::graph::GraphCore>,
+    pub persistence:
+        Option<&'a std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub graph: &'a str,
+    pub principal: Option<&'a str>,
+    pub tenant_scope: &'a str,
+}
+
+/// The `vg:MetadataContract` class every registered source's discovery writes.
+const METADATA_CONTRACT_CLASS: &str =
+    "https://knuckles-team.github.io/ontology/virtual-graph#MetadataContract";
+
+/// The graph node id of `owner_scope`'s contract for source `name`: a digest, so no name or
+/// scope text can shape the id.
+pub fn contract_node_id(owner_scope: &str, name: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut digest = Sha256::new();
+    digest.update((owner_scope.len() as u64).to_be_bytes());
+    digest.update(owner_scope.as_bytes());
+    digest.update(name.as_bytes());
+    format!("vg-contract:{}", hex::encode(digest.finalize()))
+}
+
+/// The contract stored for `node_id`, if the graph holds one.
+fn stored_contract(
+    core: &medulla_graph_core::graph::GraphCore,
+    node_id: &str,
+) -> Option<medulla_types::metadata_acceleration::MetadataContract> {
+    let blob = core.get_node_properties(node_id)?;
+    let value: serde_json::Value = rmp_serde::from_slice(&blob).ok()?;
+    Some(medulla_types::metadata_acceleration::MetadataContract {
+        source_kind: value.get("source_kind")?.as_str()?.to_string(),
+        source_name: value.get("source_name")?.as_str()?.to_string(),
+        schema_version: u32::try_from(value.get("schema_version")?.as_u64()?).ok()?,
+        content_hash: value.get("content_hash")?.as_str()?.to_string(),
+    })
+}
+
+/// Write `contract` as one `AddNode` MutationBatch. A contract unchanged since the stored one is
+/// not rewritten.
+async fn write_contract(
+    target: &ContractWriteTarget<'_>,
+    req_id: u64,
+    owner: &medulla_server_api::carrier::CarrierAuthority,
+    node_id: String,
+    contract: &medulla_types::metadata_acceleration::MetadataContract,
+    stored: Option<&medulla_types::metadata_acceleration::MetadataContract>,
+) -> Result<(), String> {
+    if stored == Some(contract) {
+        return Ok(());
+    }
+    let failed = |detail: String| {
+        format!(
+            "{}: {detail}",
+            medulla_types::contract::ServerErrorCode::DiscoveryContractWriteFailed
+        )
+    };
+    let properties = serde_json::json!({
+        "type": "MetadataContract",
+        "rdf_type": METADATA_CONTRACT_CLASS,
+        "source_kind": contract.source_kind,
+        "source_name": contract.source_name,
+        "schema_version": contract.schema_version,
+        "content_hash": contract.content_hash,
+        "_owner": owner.agent_id(),
+        "_visibility": "private",
+    });
+    let properties_msgpack = rmp_serde::to_vec_named(&properties)
+        .map_err(|error| failed(format!("contract encoding failed: {error}")))?;
+    let method = Method::AddNode {
+        node_id,
+        properties_msgpack,
+    };
+    let batch_id = medulla_server_api::batch_compile::opaque_request_key(
+        "foreign-contract",
+        target.graph,
+        req_id,
+        &method,
+    );
+    medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+            target.persistence,
+            target.core,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: req_id,
+                principal: target.principal,
+            },
+            target.graph,
+            &batch_id,
+            vec![method],
+            &ResultPayload::Bool(true),
+        )
+        .with_tenant_scope(target.tenant_scope),
+    )
+    .await
+    .map(|_| ())
+    .map_err(failed)
+}
+
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
-pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Response, Method> {
+pub async fn try_handle(
+    call: OwnerScopedCall<'_>,
+    method: Method,
+    target: &ContractWriteTarget<'_>,
+) -> Result<Response, Method> {
     let req_id = call.req_id;
     match method {
-        Method::RegisterForeignSource { name, source } => {
+        Method::RegisterForeignSource {
+            name,
+            source,
+            quota,
+        } => {
             let owner = match call.owner("RegisterForeignSource") {
                 Ok(owner) => owner,
                 Err(refusal) => return Ok(refusal),
@@ -39,6 +149,21 @@ pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Res
             if let Err(error) = medulla_federation::federation::validate_column_mapping(&source) {
                 return Ok(Response::err(req_id, error));
             }
+            // MEDULLA-UNIFIED-DATA-PLANE-R038.2.1: discovery reads catalog metadata only and runs
+            // before anything is registered, so an unreachable source leaves no catalog entry.
+            let node_id = contract_node_id(owner.owner_scope(), &name);
+            let stored = stored_contract(target.core, &node_id);
+            let contract =
+                match medulla_server_ops::api::query_txn::foreign_discovery::discover_source(
+                    &name,
+                    &source,
+                    stored.as_ref(),
+                )
+                .await
+                {
+                    Ok(contract) => contract,
+                    Err(refusal) => return Ok(Response::err(req_id, refusal.to_string())),
+                };
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
@@ -51,11 +176,29 @@ pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Res
             {
                 return Ok(Response::err(req_id, error));
             }
+            // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a registration without a quota takes the
+            // resolved `foreign.default_quota.*` knobs.
+            let knobs = medulla_server_api::knob_config::knobs();
+            let quota = quota.unwrap_or(medulla_types::consolidation_isolation::SourceQuota {
+                max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
+                    .unwrap_or(u32::MAX),
+                max_rows: knobs.foreign_default_quota_max_rows,
+                max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
+            });
             let catalog = s.foreign_sources();
-            if let Err(error) = catalog.register(&owner, name.clone(), source) {
+            let prior = catalog.prior_registration(&owner, &name);
+            if let Err(error) = catalog.register(&owner, name.clone(), source, quota) {
                 return Ok(Response::err(req_id, error));
             }
             drop(s);
+            // The contract is written in the same call as the catalog insert; when the durable
+            // write fails the insert is undone and the registration is refused.
+            if let Err(error) =
+                write_contract(target, req_id, &owner, node_id, &contract, stored.as_ref()).await
+            {
+                catalog.restore_registration(&owner, &name, prior);
+                return Ok(Response::err(req_id, error));
+            }
             // MEDULLA-UNIFIED-DATA-PLANE-R014.2.3: registration is the synchronous record
             // write above. A MySQL or MariaDB source is probed by a separate job, whose
             // outcome is the source's probe state, so nothing here waits for it.

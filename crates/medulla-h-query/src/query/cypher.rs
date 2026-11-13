@@ -228,7 +228,11 @@ fn view_rows_result(
             .collect();
         rows.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
     }
-    Ok(medulla_protocol_types::protocol::QueryResult { columns, rows })
+    Ok(medulla_protocol_types::protocol::QueryResult {
+        columns,
+        rows,
+        warnings: Vec::new(),
+    })
 }
 
 #[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
@@ -282,7 +286,11 @@ fn view_explain_result(
         ];
         rows.push(rmp_serde::to_vec(&cells).map_err(|e| format!("encode row: {e}"))?);
     }
-    Ok(medulla_protocol_types::protocol::QueryResult { columns, rows })
+    Ok(medulla_protocol_types::protocol::QueryResult {
+        columns,
+        rows,
+        warnings: Vec::new(),
+    })
 }
 
 /// The 8-hex fingerprint of a source name, the label shape `FragmentTrace` expects.

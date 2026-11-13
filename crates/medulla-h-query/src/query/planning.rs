@@ -362,6 +362,14 @@ pub fn run_unified_with<T>(
             replica_lag_bound_ms: knobs.federation_replica_lag_bound_ms,
             statement_timeout_ms: knobs.federation_statement_timeout_ms,
         });
+        // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a source without its own quota runs under the
+        // resolved `foreign.default_quota.*` knobs.
+        session.set_default_quota(medulla_types::consolidation_isolation::SourceQuota {
+            max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
+                .unwrap_or(u32::MAX),
+            max_rows: knobs.foreign_default_quota_max_rows,
+            max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
+        });
         session
     });
 

@@ -19,6 +19,7 @@ sha2 = { version = "0.10", optional = true }
 sha1 = { version = "0.10", optional = true }
 md-5 = { version = "0.10", optional = true }
 medulla-text = { path = "../medulla-text", optional = true }
+medulla-lake = { path = "../medulla-lake", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 redb = { workspace = true, optional = true }
@@ -61,9 +62,10 @@ medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
+metastore-federation = ["dep:medulla-lake", "medulla-lake/metastore"]
 iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal"]
 numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
-sql = ["medulla-sql-lang/sql", "iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:petgraph", "dep:tracing", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
+sql = ["medulla-sql-lang/sql", "iceberg-federation", "metastore-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:petgraph", "dep:tracing", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

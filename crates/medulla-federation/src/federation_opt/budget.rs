@@ -28,6 +28,34 @@ pub const REPLICA_LAG_EXCEEDED: &str = "REPLICA_LAG_EXCEEDED";
 /// Error code of a read plan that holds a statement other than a `SELECT`.
 pub const SOURCE_WRITE_FORBIDDEN: &str = "SOURCE_WRITE_FORBIDDEN";
 
+/// Error code of one source that spent its own quota: rows, request time or concurrent
+/// requests (MEDULLA-UNIFIED-DATA-PLANE-R031.2). It names that source and no other.
+pub const SOURCE_QUOTA_EXCEEDED: &str = "SOURCE_QUOTA_EXCEEDED";
+/// Error code of a source that failed to answer (MEDULLA-UNIFIED-DATA-PLANE-R031.2): its error is
+/// the cause and no other source is touched.
+pub const SOURCE_UNAVAILABLE: &str = "SOURCE_UNAVAILABLE";
+
+/// The typed refusal of one source over one quota dimension.
+pub(crate) fn quota_refusal(label: &str, dimension: &str, limit: impl std::fmt::Display) -> String {
+    format!("{SOURCE_QUOTA_EXCEEDED}:{dimension}: source {label} exceeded its quota of {limit}")
+}
+
+/// A source's failure as the typed `SOURCE_UNAVAILABLE`, unless it already carries a code
+/// (`CODE: detail`), which stays as it is.
+pub(crate) fn unavailable(label: &str, error: String) -> String {
+    let coded = error.split_once(':').is_some_and(|(code, _)| {
+        code.len() > 2
+            && code
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
+    });
+    if coded {
+        error
+    } else {
+        format!("{SOURCE_UNAVAILABLE}: source {label}: {error}")
+    }
+}
+
 /// The typed refusal for one exhausted dimension.
 pub(crate) fn refusal(dimension: &str, limit: impl std::fmt::Display) -> String {
     format!("{BUDGET_EXCEEDED}:{dimension}: the federated query exceeded its limit of {limit}")
@@ -139,5 +167,23 @@ mod exhausted_budget_refusal {
             .charge_rows(1)
             .expect_err("a zero-row budget must refuse the first row");
         assert!(err.starts_with(BUDGET_EXCEEDED), "unexpected error: {err}");
+    }
+}
+
+#[cfg(test)]
+mod source_fault_codes {
+    use super::{quota_refusal, unavailable, SOURCE_QUOTA_EXCEEDED, SOURCE_UNAVAILABLE};
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R031.2
+    #[test]
+    fn an_uncoded_source_failure_is_unavailable_and_a_coded_one_keeps_its_code() {
+        let wrapped = unavailable("http-json#ab12", "connection refused".into());
+        assert!(wrapped.starts_with(SOURCE_UNAVAILABLE), "{wrapped}");
+        assert!(wrapped.contains("http-json#ab12"), "{wrapped}");
+        let coded = unavailable("mcp#cd34", "SOURCE_UNREACHABLE: no port".into());
+        assert_eq!(coded, "SOURCE_UNREACHABLE: no port");
+        let quota = quota_refusal("sql#ef56", "max_rows", 10);
+        assert!(quota.starts_with(SOURCE_QUOTA_EXCEEDED), "{quota}");
+        assert!(quota.contains("sql#ef56"), "{quota}");
     }
 }

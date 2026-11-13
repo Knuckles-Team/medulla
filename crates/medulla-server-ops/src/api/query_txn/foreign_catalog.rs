@@ -66,6 +66,7 @@ use medulla_catalog_types::{
 };
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_types::consolidation_isolation::SourceQuota;
 use medulla_types::contract::Digest256;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
@@ -82,9 +83,14 @@ struct CatalogKey {
 
 /// A registered spec plus the registering principal's agent id, which names the
 /// source's share resource (EH-378).
+#[derive(Clone)]
 struct OwnedSpec {
     owner_agent: String,
     spec: ForeignSourceSpec,
+    /// The per-query bounds of this source (MEDULLA-UNIFIED-DATA-PLANE-R031.2): the
+    /// registration's own quota, else the `foreign.default_quota.*` values resolved when it
+    /// was registered.
+    quota: SourceQuota,
     /// The catalog probe of this source (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3): the one state
     /// field and the baseline digest. Registering a source starts a fresh record.
     probe: ProbeRecord,
@@ -105,12 +111,31 @@ pub struct ForeignSourceBindingDescriptor {
     pub contract_digest: Digest256,
 }
 
+/// What `owner` held under a name before a registration replaced it.
+pub struct PriorRegistration(Option<OwnedSpec>);
+
 /// Every owner's registered foreign sources, partitioned by verified owner
 /// (tenant+principal) scope.
 #[derive(Default)]
 pub struct ForeignSourceCatalog {
     entries: DashMap<CatalogKey, OwnedSpec>,
     views: GraphViewCatalog,
+}
+
+/// One registered SQLite file source the capture poll reads
+/// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SqliteCaptureSource {
+    /// The registering owner's scope (tenant and principal).
+    pub owner_scope: String,
+    /// The source name within that owner.
+    pub name: String,
+    /// The database file.
+    pub path: String,
+    /// The captured table.
+    pub table: String,
+    /// The declared watermark column: `rowid` or an indexed integer column.
+    pub watermark: String,
 }
 
 /// One registered graph view with the mapping and sources it reads
@@ -249,7 +274,14 @@ impl ForeignSourceCatalog {
         owner: &CarrierAuthority,
         name: String,
         spec: ForeignSourceSpec,
+        quota: SourceQuota,
     ) -> Result<(), String> {
+        quota.validate().map_err(|reason| {
+            format!(
+                "{}: {reason}",
+                medulla_types::contract::ServerErrorCode::SourceQuotaInvalid.as_str()
+            )
+        })?;
         validate_search_capability(&spec)?;
         verify_outbound_before_register(&spec)?;
         let key = CatalogKey {
@@ -262,11 +294,46 @@ impl ForeignSourceCatalog {
             OwnedSpec {
                 owner_agent,
                 spec,
+                quota,
                 probe: ProbeRecord::default(),
                 catalog: None,
             },
         );
         Ok(())
+    }
+
+    /// The entry `owner` holds under `name`, kept so a registration that fails after the catalog
+    /// insert (the contract write of MEDULLA-UNIFIED-DATA-PLANE-R038.2.1) can put it back.
+    pub fn prior_registration(&self, owner: &CarrierAuthority, name: &str) -> PriorRegistration {
+        PriorRegistration(
+            self.entries
+                .get(&CatalogKey {
+                    owner_scope: owner.owner_scope().to_string(),
+                    name: name.to_string(),
+                })
+                .map(|entry| entry.value().clone()),
+        )
+    }
+
+    /// Put `prior` back under `owner`'s `name`: the previous entry, or no entry at all.
+    pub fn restore_registration(
+        &self,
+        owner: &CarrierAuthority,
+        name: &str,
+        prior: PriorRegistration,
+    ) {
+        let key = CatalogKey {
+            owner_scope: owner.owner_scope().to_string(),
+            name: name.to_string(),
+        };
+        match prior.0 {
+            Some(entry) => {
+                self.entries.insert(key, entry);
+            }
+            None => {
+                self.entries.remove(&key);
+            }
+        }
     }
 
     /// THE scoping chokepoint: the executor registry holding `caller`'s own
@@ -283,7 +350,7 @@ impl ForeignSourceCatalog {
         for entry in self.entries.iter() {
             let (key, value) = (entry.key(), entry.value());
             if key.owner_scope == owner_scope {
-                own.push((key.name.clone(), value.spec.clone()));
+                own.push((key.name.clone(), value.spec.clone(), value.quota));
             } else if may_use_shared(
                 isolation,
                 caller.agent_id(),
@@ -292,15 +359,23 @@ impl ForeignSourceCatalog {
                 shared.push((
                     shared_name(&value.owner_agent, &key.name),
                     value.spec.clone(),
+                    value.quota,
                 ));
             }
         }
         shared.sort_by(|a, b| a.0.cmp(&b.0));
         own.sort_by(|a, b| a.0.cmp(&b.0));
-        let cache_salt = resolved_digest(owner_scope, shared.iter().chain(&own));
+        let cache_salt = resolved_digest(
+            owner_scope,
+            shared
+                .iter()
+                .chain(&own)
+                .map(|(name, spec, _)| (name, spec)),
+        );
         let mut registry = ForeignSourceRegistry::new();
-        for (name, spec) in shared.into_iter().chain(own) {
-            registry.register_spec(name, spec);
+        for (name, spec, quota) in shared.into_iter().chain(own) {
+            registry.register_spec(name.clone(), spec);
+            registry.set_quota(name, quota);
         }
         OwnedForeignRegistry {
             owner_scope: owner_scope.to_string(),
@@ -589,6 +664,33 @@ impl ForeignSourceCatalog {
         &self.views
     }
 
+    /// Every registered SQLite file source that declares a watermark column, in a stable
+    /// order (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). A source with no declared watermark
+    /// is not captured.
+    pub fn capture_sources(&self) -> Vec<SqliteCaptureSource> {
+        let mut sources: Vec<SqliteCaptureSource> = self
+            .entries
+            .iter()
+            .filter_map(|entry| match &entry.value().spec {
+                ForeignSourceSpec::SqliteFile {
+                    path,
+                    table,
+                    watermark: Some(watermark),
+                    ..
+                } => Some(SqliteCaptureSource {
+                    owner_scope: entry.key().owner_scope.clone(),
+                    name: entry.key().name.clone(),
+                    path: path.clone(),
+                    table: table.clone(),
+                    watermark: watermark.clone(),
+                }),
+                _ => None,
+            })
+            .collect();
+        sources.sort_by(|a, b| (&a.owner_scope, &a.name).cmp(&(&b.owner_scope, &b.name)));
+        sources
+    }
+
     /// Whether no owner has registered any source.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
@@ -769,6 +871,23 @@ fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), Strin
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
         return medulla_federation::federation_ssrf::check_sql_dsn(dsn);
     }
+    if let ForeignSourceSpec::Metastore {
+        endpoint,
+        database_filter,
+        auth_ref,
+    } = spec
+    {
+        // The destination passes the outbound gate, and the auth reference must be a secret
+        // reference, never an inline secret.
+        medulla_federation::federation_ssrf::check_metastore_endpoint(endpoint)?;
+        return medulla_lake::metastore::MetastoreCatalogSpec {
+            endpoint: endpoint.clone(),
+            database_filter: database_filter.clone(),
+            auth_ref: auth_ref.clone(),
+        }
+        .validate()
+        .map_err(|error| error.to_string());
+    }
     let _ = spec;
     Ok(())
 }
@@ -834,7 +953,7 @@ fn approved_operation_matches(
 /// Length-prefixed SHA-256 over the owner scope and every resolved `(name, spec)`.
 fn resolved_digest<'a>(
     owner_scope: &str,
-    resolved: impl Iterator<Item = &'a (String, ForeignSourceSpec)>,
+    resolved: impl Iterator<Item = (&'a String, &'a ForeignSourceSpec)>,
 ) -> String {
     use sha2::{Digest, Sha256};
     let mut digest = Sha256::new();
@@ -884,6 +1003,15 @@ mod tests {
         CarrierAuthority::verified_for_test(agent)
     }
 
+    /// The registration quota the tests give every source: the server defaults.
+    fn quota() -> SourceQuota {
+        SourceQuota {
+            max_concurrent: 8,
+            max_rows: 250_000,
+            max_wall_ms: 60_000,
+        }
+    }
+
     fn http_spec(url: &str) -> ForeignSourceSpec {
         ForeignSourceSpec::HttpJson {
             url: url.into(),
@@ -928,10 +1056,10 @@ mod tests {
         assert_eq!(a.tenant_scope(), b.tenant_scope(), "one engine, one tenant");
         let catalog = ForeignSourceCatalog::default();
         catalog
-            .register(&a, "src".into(), http_spec("http://a.invalid/"))
+            .register(&a, "src".into(), http_spec("http://a.invalid/"), quota())
             .expect("http sources are not outbound-gated here");
         catalog
-            .register(&b, "src".into(), http_spec("http://b.invalid/"))
+            .register(&b, "src".into(), http_spec("http://b.invalid/"), quota())
             .expect("http sources are not outbound-gated here");
         assert_eq!(
             catalog.spec_for(&a, "src"),
@@ -954,7 +1082,12 @@ mod tests {
         let (a, b) = (carrier("agent-a"), carrier("agent-b"));
         let catalog = ForeignSourceCatalog::default();
         catalog
-            .register(&a, "secret_src".into(), http_spec("http://a.invalid/"))
+            .register(
+                &a,
+                "secret_src".into(),
+                http_spec("http://a.invalid/"),
+                quota(),
+            )
             .expect("http sources are not outbound-gated here");
         let scoped = catalog
             .resolve_for_plan(
@@ -1039,6 +1172,7 @@ mod tests {
                     &a,
                     "bad_sql".into(),
                     sql_spec("postgres://u@127.0.0.1:5433/db"),
+                    quota(),
                 )
                 .expect_err("a disallowed SQL destination must be refused");
             assert!(!err.is_empty());
@@ -1064,6 +1198,7 @@ mod tests {
                     &a,
                     "ok_sql".into(),
                     sql_spec("postgres://u@127.0.0.1:5432/db"),
+                    quota(),
                 )
                 .expect("an allowed SQL destination must still register");
             assert!(catalog.spec_for(&a, "ok_sql").is_some());

@@ -108,6 +108,7 @@ where
 fn typed_sql_response(
     req_id: u64,
     typed: medulla_sql_lang::sql::typed_result::TypedQueryResult,
+    warnings: Vec<String>,
 ) -> Response {
     match typed.rows.iter().map(msgpack_bytes).collect() {
         Ok(rows) => dynamic_response::<query_results::Sql, _>(
@@ -115,6 +116,7 @@ fn typed_sql_response(
             &medulla_protocol_types::protocol::QueryResult {
                 columns: typed.columns.iter().map(|c| c.name.clone()).collect(),
                 rows,
+                warnings,
             },
         ),
         Err(error) => Response::err(req_id, error),

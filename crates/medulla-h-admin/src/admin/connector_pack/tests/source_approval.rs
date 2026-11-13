@@ -312,6 +312,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
                 "r722-four-phase:register",
                 medulla_protocol_types::protocol::Method::RegisterForeignSource {
                     name: source_name.clone(),
+                    quota: None,
                     source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                         server: connector.to_string(),
                         tool: "list_suppliers".to_string(),
@@ -831,6 +832,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                     &format!("r722-two-sources:register:{}", registration.source_id),
                     medulla_protocol_types::protocol::Method::RegisterForeignSource {
                         name: registration.source_id.clone(),
+                        quota: None,
                         source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
                             server: connector.to_string(),
                             tool: registration.operation.clone(),

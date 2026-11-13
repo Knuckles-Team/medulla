@@ -80,6 +80,7 @@ pub(crate) fn kind(spec: &ForeignSourceSpec) -> Option<&'static str> {
         ForeignSourceSpec::A2a { .. } => Some("a2a"),
         ForeignSourceSpec::GraphQl { .. } => Some("graphql"),
         ForeignSourceSpec::BrainGuarded { .. } => Some("brain-guarded"),
+        ForeignSourceSpec::Metastore { .. } => Some("metastore"),
         ForeignSourceSpec::RemoteEngine { .. }
         | ForeignSourceSpec::HttpJson { .. }
         | ForeignSourceSpec::Sql { .. }

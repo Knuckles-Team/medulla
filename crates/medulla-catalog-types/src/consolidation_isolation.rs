@@ -22,6 +22,57 @@ pub struct AttachedApplicationQuota {
     pub max_storage_bytes: u64,
 }
 
+/// The bounds one registered foreign source may spend per query
+/// (MEDULLA-UNIFIED-DATA-PLANE-R031.2). Bounds are checked by [`SourceQuota::validate`]; a
+/// request narrows a quota with [`SourceQuota::narrowed`] and never widens it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SourceQuota {
+    /// Requests in flight against the source at once.
+    pub max_concurrent: u32,
+    /// Rows the source may return to one query.
+    pub max_rows: u64,
+    /// Wall-clock milliseconds one request to the source may take.
+    pub max_wall_ms: u64,
+}
+
+impl SourceQuota {
+    pub const CONCURRENT_BOUNDS: (u32, u32) = (1, 256);
+    pub const ROWS_BOUNDS: (u64, u64) = (1, 10_000_000);
+    pub const WALL_MS_BOUNDS: (u64, u64) = (100, 600_000);
+
+    /// Refuse a quota with a dimension outside its bounds; the message names the dimension.
+    pub fn validate(&self) -> Result<(), String> {
+        fn check<T: PartialOrd + std::fmt::Display + Copy>(
+            name: &str,
+            value: T,
+            (lo, hi): (T, T),
+        ) -> Result<(), String> {
+            if value < lo || value > hi {
+                return Err(format!("{name} {value} is outside [{lo}, {hi}]"));
+            }
+            Ok(())
+        }
+        check(
+            "max_concurrent",
+            self.max_concurrent,
+            Self::CONCURRENT_BOUNDS,
+        )?;
+        check("max_rows", self.max_rows, Self::ROWS_BOUNDS)?;
+        check("max_wall_ms", self.max_wall_ms, Self::WALL_MS_BOUNDS)
+    }
+
+    /// The quota a request runs under: each dimension is the smaller of the source's and the
+    /// request's, so a request narrows a quota and never widens it.
+    pub fn narrowed(&self, rows: u64, wall_ms: u64) -> Self {
+        Self {
+            max_concurrent: self.max_concurrent,
+            max_rows: self.max_rows.min(rows),
+            max_wall_ms: self.max_wall_ms.min(wall_ms),
+        }
+    }
+}
+
 /// How a later upgrade to this application's integration is allowed to
 /// couple with other attached applications.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -155,6 +206,47 @@ mod tests {
             },
             upgrade_coupling: UpgradeCouplingPolicy::Independent,
         }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R031.2
+    #[test]
+    fn source_quota_is_bounded_and_only_narrows() {
+        let quota = SourceQuota {
+            max_concurrent: 8,
+            max_rows: 250_000,
+            max_wall_ms: 60_000,
+        };
+        assert!(quota.validate().is_ok());
+        for bad in [
+            SourceQuota {
+                max_concurrent: 0,
+                ..quota
+            },
+            SourceQuota {
+                max_concurrent: 257,
+                ..quota
+            },
+            SourceQuota {
+                max_rows: 0,
+                ..quota
+            },
+            SourceQuota {
+                max_rows: 10_000_001,
+                ..quota
+            },
+            SourceQuota {
+                max_wall_ms: 99,
+                ..quota
+            },
+            SourceQuota {
+                max_wall_ms: 600_001,
+                ..quota
+            },
+        ] {
+            assert!(bad.validate().is_err(), "{bad:?}");
+        }
+        let narrowed = quota.narrowed(1_000, 5_000_000);
+        assert_eq!((narrowed.max_rows, narrowed.max_wall_ms), (1_000, 60_000));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R031.1

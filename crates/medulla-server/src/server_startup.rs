@@ -1022,6 +1022,28 @@ pub async fn sealed_expiry_tick(
     }
 }
 
+/// One watermark capture sweep over every attached SQLite file source
+/// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). A refused source is logged by name and
+/// skipped; the next tick retries it.
+#[cfg(feature = "federation")]
+pub async fn attached_poll_tick(state: SharedState) {
+    for report in crate::attached_poll::run(&state).await {
+        match report {
+            Ok(report) if report.captured > 0 => tracing::info!(
+                source = %report.source,
+                captured = report.captured,
+                "Attached SQLite capture: committed changed rows"
+            ),
+            Ok(_) => {}
+            Err((source, error)) => tracing::warn!(
+                %source,
+                %error,
+                "Attached SQLite capture: poll refused; will retry next tick"
+            ),
+        }
+    }
+}
+
 pub async fn registry_reap_tick(state: SharedState) {
     let now_ms = medulla_server_api::txn::now_ms();
     let n = crate::registry_reaper::reap_expired_servers(&state, now_ms).await;

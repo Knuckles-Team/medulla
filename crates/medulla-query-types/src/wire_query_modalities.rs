@@ -505,6 +505,23 @@ pub enum ForeignSourceSpec {
         /// The exposed columns; empty exposes every declared column.
         #[serde(default)]
         columns: Vec<String>,
+        /// The watermark column the capture poll reads (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2):
+        /// `rowid` or an indexed integer `updated_at` column. `None` declares no
+        /// capture, so the poll skips the source.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        watermark: Option<String>,
+    },
+    /// A Hive metastore catalog, read through the `hive()` SQL table function
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.4.3). The endpoint lives only here, never in SQL text.
+    /// `auth_ref` is a secret reference (`env://` or `openbao://`), never a secret.
+    Metastore {
+        /// `host:port` of the metastore Thrift service.
+        endpoint: String,
+        /// The one database the source may name; `None` admits every database.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        database_filter: Option<String>,
+        /// Secret reference for the metastore credential.
+        auth_ref: String,
     },
     /// A brain-guarded source (MEDULLA-DURABLE-KERNEL-R024.6): an inner query that
     /// MUST pass a named semantic/policy guard check (the "brain") before any

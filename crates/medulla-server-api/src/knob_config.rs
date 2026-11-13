@@ -623,6 +623,12 @@ knobs! {
     eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
     /// Longest replay lag at which a declared replica may serve a snapshot read.
     federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
+    /// Requests in flight against one registered foreign source at once, when its registration names no quota (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    foreign_default_quota_max_concurrent: u64 = "foreign.default_quota.max_concurrent", U64(8), [1, 256], "requests", Tunable;
+    /// Rows one registered foreign source may return to one query, when its registration names no quota (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    foreign_default_quota_max_rows: u64 = "foreign.default_quota.max_rows", U64(250_000), [1, 10_000_000], "rows", Tunable;
+    /// Wall-clock time one request to a registered foreign source may take, when its registration names no quota (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    foreign_default_quota_max_wall_ms: u64 = "foreign.default_quota.max_wall_ms", U64(60_000), [100, 600_000], "ms", Tunable;
     /// Deepest variable-length openCypher path a graph view compiles (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2).
     federation_cypher_max_path_depth: u64 = "federation.cypher_max_path_depth", U64(8), [1, 32], "hops", Tunable;
     /// Longest a web metasearch result is served from the cache (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
@@ -692,6 +698,12 @@ knobs! {
     foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;
     /// Watermark poll interval of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2).
     foreign_sqlite_poll_interval_ms: u64 = "foreign.sqlite.poll_interval_ms", U64(5_000), [100, 3_600_000], "ms", Tunable;
+    /// Table names one metastore listing page asks for (MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1).
+    metastore_list_page_size: u64 = "metastore.list_page_size", U64(500), [1, 100_000], "tables", Tunable;
+    /// Most partitions one metastore scan may read after pruning (MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1).
+    metastore_max_partitions: u64 = "metastore.max_partitions", U64(10_000), [1, 10_000_000], "partitions", Tunable;
+    /// Longest wait for one metastore connect, send or reply (MEDULLA-UNIFIED-DATA-PLANE-R038.4.3).
+    metastore_timeout_ms: u64 = "metastore.timeout_ms", U64(10_000), [100, 600_000], "ms", Tunable;
     /// Most connections one catalog read of an attached MySQL or MariaDB source opens (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
     foreign_mysql_pool_size: u64 = "foreign.mysql.pool_size", U64(4), [1, 64], "connections", Tunable;
     /// Largest hop bound of one column lineage impact walk (MEDULLA-UNIFIED-DATA-PLANE-R763.3).

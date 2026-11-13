@@ -72,7 +72,10 @@ enum UserTable {
 /// tables-only obs path expose the identical function set. (DataFusion's native array
 /// functions + `unnest` come from the `nested_expressions` feature, registered by
 /// `SessionContext::new_with_config`'s default-feature set — no explicit call needed.)
-fn register_pg_common(ctx: &SessionContext) {
+fn register_pg_common(
+    ctx: &SessionContext,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) {
     ctx.register_udf(greatest_udf());
     ctx.register_udf(least_udf());
     ctx.register_udf(int4range_udf());
@@ -87,6 +90,12 @@ fn register_pg_common(ctx: &SessionContext) {
     // `nodes`/`edges` exactly like `pagerank()`/`generate_series(...)` are.
     #[cfg(feature = "iceberg-federation")]
     ctx.register_udtf("iceberg", Arc::new(super::iceberg_federation::IcebergFunc));
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 — `hive('db.table')` over the caller's registered
+    // metastore source; the endpoint comes from the registry, never from the SQL text.
+    ctx.register_udtf(
+        "hive",
+        Arc::new(super::metastore_federation::MetastoreFunc::new(hive)),
+    );
     // CONCEPT:MEDULLA-KG.query.sqlite-compat-scalar-udfs (turso-assimilation rank 14) —
     // crypto hash + base64 + ipaddr helpers turso ships as loadable extensions.
     ctx.register_udf(md5_udf());
@@ -204,7 +213,7 @@ pub fn exec_sql_over_tables(
         ctx.register_udf(bm25_score_udf());
         ctx.register_udf(bm25_snippet_udf());
         // CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange — greatest/least, range fns, generate_series (obs path too).
-        register_pg_common(&ctx);
+        register_pg_common(&ctx, None);
         // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates over the obs
         // Arrow tables too (e.g. `SELECT approx_distinct(trace_id) FROM logs`).
         ctx.register_udaf(medulla_sql_udfs::sketch_udfs::approx_distinct_udaf());
@@ -348,6 +357,33 @@ pub fn exec_sql_typed_with_tables_in_graph(
     sql: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
+    exec_sql_typed_with_tables_in_graph_hive(view, store, graph, sql, cancel, None)
+}
+
+/// As [`exec_sql_typed_with_tables_cancellable`], binding the caller's metastore sources to the
+/// `hive()` table function (MEDULLA-UNIFIED-DATA-PLANE-R038.4.3). `None` binds none: a `hive()`
+/// call then refuses with `METASTORE_SPEC_INVALID`.
+pub fn exec_sql_typed_with_tables_hive(
+    view: &GraphView,
+    store: &TableStore,
+    sql: &str,
+    cancel: &CancellationToken,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) -> Result<TypedQueryResult, String> {
+    exec_sql_typed_with_tables_in_graph_hive(view, store, None, sql, cancel, hive)
+}
+
+/// The statement reader both of the above reach: a statement over `graph` (see
+/// [`exec_sql_typed_with_tables_in_graph`]) that also binds the caller's metastore sources to
+/// `hive()` (see [`exec_sql_typed_with_tables_hive`]).
+pub fn exec_sql_typed_with_tables_in_graph_hive(
+    view: &GraphView,
+    store: &TableStore,
+    graph: Option<&str>,
+    sql: &str,
+    cancel: &CancellationToken,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) -> Result<TypedQueryResult, String> {
     // The store's catalog objects: stored functions (CONCEPT:MEDULLA-KG.query.create-drop-function,
     // expanded into the query text before planning), durable views, property graphs, the
     // pgvector ANN registrations (CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313) and the
@@ -362,7 +398,9 @@ pub fn exec_sql_typed_with_tables_in_graph(
     // The recursive call reuses the SAME `cancel` token, so a cancelled outer request also
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
-        let run_sql = |q: &str| exec_sql_typed_with_tables_in_graph(view, store, graph, q, cancel);
+        let run_sql = |q: &str| {
+            exec_sql_typed_with_tables_in_graph_hive(view, store, graph, q, cancel, hive.clone())
+        };
         if let Some(res) =
             medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)?
         {
@@ -371,7 +409,7 @@ pub fn exec_sql_typed_with_tables_in_graph(
     }
     let nodes = infer_nodes(view)?;
     let user = materialize_user_tables(store)?;
-    run_typed(view, nodes, user, catalog, sql, cancel)
+    run_typed_with(view, nodes, user, catalog, sql, cancel, hive)
 }
 
 /// Run `sql` over `view` reusing `cache`'s `(nodes, edges)` tables when they are
@@ -854,6 +892,16 @@ fn build_ctx(
     nodes: (SchemaRef, arrow::record_batch::RecordBatch),
     user_tables: Vec<UserTable>,
 ) -> Result<BuiltCtx, String> {
+    build_ctx_with(snap, nodes, user_tables, None)
+}
+
+/// As [`build_ctx`], binding the caller's metastore sources to `hive()`.
+fn build_ctx_with(
+    snap: Arc<GraphView>,
+    nodes: (SchemaRef, arrow::record_batch::RecordBatch),
+    user_tables: Vec<UserTable>,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) -> Result<BuiltCtx, String> {
     let nodes_schema = nodes.0.clone();
 
     // CONCEPT:MEDULLA-KG.query.concept-12: `nodes` is a custom provider with secondary-index predicate
@@ -930,7 +978,7 @@ fn build_ctx(
     ctx.register_udtf("betweenness", Arc::new(BetweennessFunc::new(snap.clone())));
     // CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange — greatest/least, int4range/tsrange + range predicates, and the
     // generate_series table function, rounding out the Postgres common-function surface.
-    register_pg_common(&ctx);
+    register_pg_common(&ctx, hive);
     // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates
     // (HyperLogLog/Count-Min-Sketch/MinHash). Always-on: pure-Rust, no heavy dep beyond what
     // `sql` already links.
@@ -1020,6 +1068,18 @@ fn collect_sql_batches(
     sql: &str,
     cancel: &CancellationToken,
 ) -> Result<Vec<arrow::record_batch::RecordBatch>, String> {
+    collect_sql_batches_with(view, nodes, user_tables, catalog, sql, cancel, None)
+}
+
+fn collect_sql_batches_with(
+    view: &GraphView,
+    nodes: NodeBatch,
+    user_tables: Vec<UserTable>,
+    catalog: StoreCatalog,
+    sql: &str,
+    cancel: &CancellationToken,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) -> Result<Vec<arrow::record_batch::RecordBatch>, String> {
     // The graph table functions run their kernel over an owned snapshot; clone the
     // topology+ids once (cheap relative to the algorithm) so they don't borrow `view`.
     // `EdgesTableProvider` reuses this SAME snapshot (built_ctx below), so `edges`
@@ -1050,7 +1110,7 @@ fn collect_sql_batches(
     // operator for them). A no-op when none are present or the SQL doesn't parse.
     let sql = medulla_sql_lang::sql::classify::desugar_vector_ops(&sql);
     rt.block_on(async move {
-        let built = build_ctx(snap, nodes, user_tables)?;
+        let built = build_ctx_with(snap, nodes, user_tables, hive)?;
         let ctx = built.ctx;
         register_sequences(&ctx, catalog.sequences.as_ref());
         register_views(&ctx, &catalog.views, &catalog.functions).await?;
@@ -1198,13 +1258,26 @@ fn run_typed(
     sql: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
-    batches_to_typed(&collect_sql_batches(
+    run_typed_with(view, nodes, user_tables, catalog, sql, cancel, None)
+}
+
+fn run_typed_with(
+    view: &GraphView,
+    nodes: NodeBatch,
+    user_tables: Vec<UserTable>,
+    catalog: StoreCatalog,
+    sql: &str,
+    cancel: &CancellationToken,
+    hive: Option<Arc<super::metastore_federation::HiveScope>>,
+) -> Result<TypedQueryResult, String> {
+    batches_to_typed(&collect_sql_batches_with(
         view,
         nodes,
         user_tables,
         catalog,
         sql,
         cancel,
+        hive,
     )?)
 }
 

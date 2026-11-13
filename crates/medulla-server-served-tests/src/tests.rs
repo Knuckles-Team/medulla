@@ -1485,6 +1485,7 @@ async fn test_register_foreign_source_served() {
             None,
             Method::RegisterForeignSource {
                 name: "papers_api".into(),
+                quota: None,
                 source: medulla_query_types::wire::ForeignSourceSpec::HttpJson {
                     url: "http://example.invalid/papers".into(),
                     json_path: "data".into(),
@@ -1554,6 +1555,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
             None,
             Method::RegisterForeignSource {
                 name: "remote_docs".into(),
+                quota: None,
                 source: federation_remote_spec(remote_addr),
             },
         ),
@@ -1667,6 +1669,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
             None,
             Method::RegisterForeignSource {
                 name: "remote_docs".into(),
+                quota: None,
                 source: federation_remote_spec(remote_addr),
             },
         ),

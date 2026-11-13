@@ -62,13 +62,14 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
+medulla-lake = { path = "../medulla-lake", optional = true }
 
 [features]
 ann-redb = ["redb", "medulla-server-api/ann-redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb"]
 compute-dist = ["medulla-server-api/compute-dist", "medulla-protocol-types/compute-dist", "medulla-types/compute-dist", "redb"]
 decide = ["jobs", "redb", "shacl", "dep:medulla-numeric", "medulla-server-api/decide", "medulla-capabilities/decide", "owl", "sparql"]
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-mutation/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
-federation = ["query", "dep:medulla-plan", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-exec/federation", "medulla-federation/federation", "medulla-graphql?/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-types/federation", "medulla-query-types/federation"]
+federation = ["query", "dep:medulla-plan", "dep:medulla-lake", "medulla-lake/metastore", "medulla-sql/metastore-federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-exec/federation", "medulla-federation/federation", "medulla-graphql?/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-types/federation", "medulla-query-types/federation"]
 federation-search = ["federation", "dep:ureq", "medulla-server-api/federation-search", "medulla-federation/federation-search"]
 federation-sql = ["federation", "dep:medulla-plan", "medulla-server-api/federation-sql", "medulla-federation/federation-sql", "medulla-plan?/federation-sql"]
 graphql = ["security", "dep:medulla-graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-server-mutation/graphql", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-types/graphql"]

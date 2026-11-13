@@ -17,6 +17,7 @@ use super::budget::RESULT_INCOMPLETE;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities, SourceRate};
 use super::remote::{Identity, RemoteFetch};
 use super::search::{SearchHit, SearchRemote};
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
 use medulla_catalog_types::web_source::WebSearchCapability;
 use medulla_query_types::search_source::SearchIndexCapability;
 
@@ -129,6 +130,9 @@ pub(crate) struct McpRemote {
     search: Option<SearchIndexCapability>,
     port: Option<SharedPort>,
     identity: Identity,
+    /// The registration's quota: one call never asks the connector for more rows or time
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    quota: Option<SourceQuota>,
 }
 
 impl McpRemote {
@@ -145,6 +149,24 @@ impl McpRemote {
             search,
             port,
             identity,
+            quota: None,
+        }
+    }
+
+    /// Bound each call by the registration's quota.
+    pub(crate) fn with_quota(mut self, quota: Option<SourceQuota>) -> Self {
+        self.quota = quota;
+        self
+    }
+
+    /// The budget one call runs under: the connector contract's bounds, narrowed by the quota.
+    fn call_budget(&self) -> ConnectorBudget {
+        let (rows, wall) = self
+            .quota
+            .map_or((u64::MAX, u64::MAX), |q| (q.max_rows, q.max_wall_ms));
+        ConnectorBudget {
+            max_rows: CALL_MAX_ROWS.min(usize::try_from(rows).unwrap_or(usize::MAX)),
+            timeout_ms: CALL_TIMEOUT_MS.min(wall).max(100),
         }
     }
 
@@ -267,10 +289,7 @@ impl McpRemote {
             tool: self.tool.clone(),
             arguments,
             pushed_filter,
-            budget: ConnectorBudget {
-                max_rows: CALL_MAX_ROWS,
-                timeout_ms: CALL_TIMEOUT_MS,
-            },
+            budget: self.call_budget(),
         };
         let reply = port.rows(&call).map_err(|why| self.unreachable(&why))?;
         self.check_reply(reply)

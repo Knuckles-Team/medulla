@@ -114,6 +114,7 @@ fn watermark_poll_emits_each_change_once() {
     }
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3
 #[test]
 fn live_file_reads_and_capture_under_concurrent_writer() {
     const WRITERS: usize = 4;

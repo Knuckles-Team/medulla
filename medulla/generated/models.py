@@ -17857,10 +17857,19 @@ class MethodRegisterContinuousQueryParams(BaseModel):
     spec_msgpack: _EgOctets
 
 
+class SourceQuota(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_concurrent: int
+    max_rows: int
+    max_wall_ms: int
+
+
 class MethodRegisterForeignSourceParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     name: str
+    quota: SourceQuota | None = None
     source: ForeignSourceSpec
 
 
@@ -36378,6 +36387,7 @@ __all__ = [
     "MethodRegisterContinuousQueryParams",
     "MethodRegisterForeignSource",
     "MethodRegisterForeignSourceParams",
+    "SourceQuota",
     "MethodRegisterGraphView",
     "MethodRegisterGraphViewParams",
     "GraphView",

@@ -88,6 +88,7 @@ medulla-index-types = { path = "../medulla-index-types" }
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-ann = { path = "../medulla-ann", optional = true }
+medulla-durable = { path = "../medulla-durable" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }

@@ -182,6 +182,7 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
             path,
             table,
             columns,
+            ..
         } => Box::new(crate::sqlite_foreign::SqliteFileSource {
             path,
             table,
@@ -194,6 +195,7 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
         | ForeignSourceSpec::Mcp { .. }
         | ForeignSourceSpec::A2a { .. }
         | ForeignSourceSpec::GraphQl { .. }
+        | ForeignSourceSpec::Metastore { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => Box::new(Oq2Unbound {
             kind: crate::federation_opt::oq2::kind(spec).unwrap(),
         }),
@@ -2070,6 +2072,9 @@ pub struct ForeignSourceRegistry {
     /// A plain `register_spec` entry remains optimizer-resolvable from its own spec; only this
     /// marker gives a bound callback precedence over that spec-derived fallback.
     bound_names: HashSet<String>,
+    /// The per-query bounds each registered name may spend
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    quotas: HashMap<String, medulla_types::consolidation_isolation::SourceQuota>,
     cache_scope: Option<Arc<crate::federation_opt::FragmentCacheScope>>,
 }
 
@@ -2094,6 +2099,7 @@ impl ForeignSourceRegistry {
         let name = name.into();
         self.specs.remove(&name);
         self.bound_names.remove(&name);
+        self.quotas.remove(&name);
         self.sources.insert(name, source);
         self
     }
@@ -2171,6 +2177,22 @@ impl ForeignSourceRegistry {
             return None;
         }
         Some((self.specs.get(name)?, self.sources.get(name)?))
+    }
+
+    /// Bound `name` by `quota`: every query reads it under at most this many concurrent
+    /// requests, rows and milliseconds per request.
+    pub fn set_quota(
+        &mut self,
+        name: impl Into<String>,
+        quota: medulla_types::consolidation_isolation::SourceQuota,
+    ) -> &mut Self {
+        self.quotas.insert(name.into(), quota);
+        self
+    }
+
+    /// The quota `name` was registered under (`None` for a source registered without one).
+    pub fn quota(&self, name: &str) -> Option<medulla_types::consolidation_isolation::SourceQuota> {
+        self.quotas.get(name).copied()
     }
 
     /// The spec a `register_spec` entry was registered with (`None` for table/closure sources).

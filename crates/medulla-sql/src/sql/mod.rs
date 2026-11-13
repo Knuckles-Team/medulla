@@ -73,6 +73,9 @@ pub(crate) mod filter_shape;
 #[cfg(feature = "iceberg-federation")]
 mod iceberg_federation;
 pub(crate) mod index_scan;
+/// MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 — the `hive('db.table')` metastore table function.
+#[cfg(feature = "metastore-federation")]
+pub mod metastore_federation;
 // `pub(crate)` (not `mod providers;`) so `crate::tables::provider::UserTableProvider`
 // (CONCEPT:MEDULLA-KG.query.register-each-user-table) can reuse `NodesTableProvider`'s generic equality-index
 // pushdown for its own full-scan fallback, instead of duplicating that machinery.
@@ -104,7 +107,8 @@ pub use exec::{
     exec_sql_arrow, exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables,
     exec_sql_typed, exec_sql_typed_cancellable, exec_sql_typed_with_tables,
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
-    exec_sql_typed_with_tables_in_graph, QueryResult, SqlContextCache,
+    exec_sql_typed_with_tables_hive, exec_sql_typed_with_tables_in_graph,
+    exec_sql_typed_with_tables_in_graph_hive, QueryResult, SqlContextCache,
 };
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.

@@ -180,7 +180,16 @@ mod tests {
         let mut isolation = medulla_server_api::state::ServerState::test_isolation("share-admin");
         let catalog = ForeignSourceCatalog::default();
         catalog
-            .register(&carrier("agent-a"), "src".into(), spec())
+            .register(
+                &carrier("agent-a"),
+                "src".into(),
+                spec(),
+                medulla_types::consolidation_isolation::SourceQuota {
+                    max_concurrent: 8,
+                    max_rows: 250_000,
+                    max_wall_ms: 60_000,
+                },
+            )
             .expect("registering the shared source succeeds");
         provision_share_role(&mut isolation, "agent-a", "src").unwrap();
         provision_share_role(&mut isolation, "agent-a", "src").unwrap();

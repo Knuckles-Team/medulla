@@ -12,6 +12,7 @@ use crate::federation::{ForeignSource, ForeignSourceRegistry, SharedForeignSourc
 use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
 
 /// A foreign source that can answer a [`RemoteRequest`]. `fetch` must return a SUPERSET of
 /// the rows the request selects: every row whose id is in `keys` (when keys are given), the
@@ -27,6 +28,11 @@ pub trait RemoteFetch {
         self.identity().fingerprint
     }
     fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String>;
+    /// The quota this source was registered under (MEDULLA-UNIFIED-DATA-PLANE-R031.2);
+    /// `None` for an inline spec, which runs under the session's default quota.
+    fn quota(&self) -> Option<SourceQuota> {
+        None
+    }
     /// A source safe to call on several threads. Opaque registered closures remain
     /// sequential because the registry's trait does not promise thread safety.
     fn parallel_safe(&self) -> Option<&(dyn RemoteFetch + Sync)> {
@@ -74,6 +80,7 @@ impl Identity {
             ForeignSourceSpec::Trino { .. }
             | ForeignSourceSpec::Cypher { .. }
             | ForeignSourceSpec::SparkBatch { .. }
+            | ForeignSourceSpec::Metastore { .. }
             | ForeignSourceSpec::BrainGuarded { .. } => super::oq2::kind(spec).unwrap(),
             ForeignSourceSpec::Named { .. } => "named",
             ForeignSourceSpec::Api { .. } => "api",
@@ -153,7 +160,7 @@ pub(crate) fn resolve<'a>(
 ) -> Option<Box<dyn RemoteFetch + 'a>> {
     match spec {
         ForeignSourceSpec::Named { name } => resolve_named(name, registry?),
-        other => Some(from_spec(other, None)),
+        other => Some(from_spec(other, None, None)),
     }
 }
 
@@ -173,21 +180,79 @@ pub(crate) fn resolve_search<'a>(
             server,
             tool,
             capabilities,
-        } if capabilities.search.is_some() => Some(Box::new(super::mcp::McpRemote::new(
-            (server, tool),
-            (capabilities.key_filter_pushdown, capabilities.search),
-            super::mcp::registered_port(),
-            Identity::of_spec(spec, name),
-        ))),
+        } if capabilities.search.is_some() => Some(Box::new(
+            super::mcp::McpRemote::new(
+                (server, tool),
+                (capabilities.key_filter_pushdown, capabilities.search),
+                super::mcp::registered_port(),
+                Identity::of_spec(spec, name),
+            )
+            .with_quota(name.and_then(|name| registry?.quota(name))),
+        )),
         _ => None,
     }
 }
 
+/// A resolved source that carries the quota its registration named.
+struct Quoted<'a> {
+    inner: Box<dyn RemoteFetch + 'a>,
+    quota: SourceQuota,
+}
+
+impl RemoteFetch for Quoted<'_> {
+    fn capabilities(&self) -> SourceCapabilities {
+        self.inner.capabilities()
+    }
+    fn identity(&self) -> &Identity {
+        self.inner.identity()
+    }
+    fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
+        self.inner.fetch(request)
+    }
+    fn quota(&self) -> Option<SourceQuota> {
+        Some(self.quota)
+    }
+    fn parallel_safe(&self) -> Option<&(dyn RemoteFetch + Sync)> {
+        self.inner.parallel_safe()
+    }
+    fn fit_keys(&self, keys: &[String]) -> usize {
+        self.inner.fit_keys(keys)
+    }
+    fn key_expressible(&self, key: &str) -> bool {
+        self.inner.key_expressible(key)
+    }
+    fn open_snapshot(&self, bound: &SnapshotBound) -> Result<Option<SnapshotSemantics>, String> {
+        self.inner.open_snapshot(bound)
+    }
+    fn held_snapshot(&self) -> Option<Arc<dyn SnapshotConn>> {
+        self.inner.held_snapshot()
+    }
+    fn adopt_snapshot(&self, conn: Arc<dyn SnapshotConn>) {
+        self.inner.adopt_snapshot(conn);
+    }
+}
+
 /// Resolve a registered name: its spec when it was registered as one (pushdown-capable),
-/// else the registered source itself (fetch-only).
+/// else the registered source itself (fetch-only). A name registered with a quota carries it.
 pub(crate) fn resolve_named<'a>(
     name: &'a str,
     registry: &'a ForeignSourceRegistry,
+) -> Option<Box<dyn RemoteFetch + 'a>> {
+    let quota = registry.quota(name);
+    let remote = resolve_registered(name, registry, quota)?;
+    Some(match quota {
+        Some(quota) => Box::new(Quoted {
+            inner: remote,
+            quota,
+        }),
+        None => remote,
+    })
+}
+
+fn resolve_registered<'a>(
+    name: &'a str,
+    registry: &'a ForeignSourceRegistry,
+    quota: Option<SourceQuota>,
 ) -> Option<Box<dyn RemoteFetch + 'a>> {
     if let Some((spec, source)) = registry.bound_entry(name) {
         return Some(Box::new(Opaque {
@@ -199,7 +264,7 @@ pub(crate) fn resolve_named<'a>(
         }));
     }
     if let Some(spec) = registry.spec(name) {
-        return Some(from_spec(spec, Some(name)));
+        return Some(from_spec(spec, Some(name), quota));
     }
     let source = registry.get(name)?;
     Some(Box::new(Opaque {
@@ -222,7 +287,11 @@ fn declared_key_pushdown(spec: &ForeignSourceSpec) -> bool {
 }
 
 /// The pushdown-capable implementation for a self-describing spec.
-fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn RemoteFetch + 'a> {
+fn from_spec<'a>(
+    spec: &'a ForeignSourceSpec,
+    name: Option<&'a str>,
+    quota: Option<SourceQuota>,
+) -> Box<dyn RemoteFetch + 'a> {
     let identity = Identity::of_spec(spec, name);
     match spec {
         ForeignSourceSpec::Sql {
@@ -254,12 +323,15 @@ fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn 
             server,
             tool,
             capabilities,
-        } => Box::new(super::mcp::McpRemote::new(
-            (server, tool),
-            (capabilities.key_filter_pushdown, capabilities.search),
-            super::mcp::registered_port(),
-            identity,
-        )),
+        } => Box::new(
+            super::mcp::McpRemote::new(
+                (server, tool),
+                (capabilities.key_filter_pushdown, capabilities.search),
+                super::mcp::registered_port(),
+                identity,
+            )
+            .with_quota(quota),
+        ),
         other => Box::new(Opaque {
             source: OpaqueSource::Spec(crate::federation::source_for(other)),
             identity,

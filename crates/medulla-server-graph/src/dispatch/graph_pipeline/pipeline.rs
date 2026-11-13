@@ -375,11 +375,22 @@ pub async fn route_process_global_domains(
     // method whose feature is off falls through to the graph_ops not-available
     // catch-all.
     #[cfg(feature = "federation")]
-    let method =
-        match medulla_h_sparql::foreign_source_handlers::try_handle(owner_call, method).await {
-            Ok(r) => return Ok(r),
-            Err(m) => m,
-        };
+    let method = match medulla_h_sparql::foreign_source_handlers::try_handle(
+        owner_call,
+        method,
+        &medulla_h_sparql::foreign_source_handlers::ContractWriteTarget {
+            core: &ctx.core,
+            persistence: ctx.persistence.as_ref(),
+            graph: ctx.graph_name,
+            principal: caller,
+            tenant_scope: &ctx.tenant_scope,
+        },
+    )
+    .await
+    {
+        Ok(r) => return Ok(r),
+        Err(m) => m,
+    };
     // Distributed graph compute (CONCEPT:MEDULLA-KG.storage.feature, feature `compute-dist`):
     // DistributedCompute + the matview lifecycle. Cross-shard, so it takes
     // `state` (it gathers each shard graph's snapshot from the registry).

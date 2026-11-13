@@ -502,6 +502,41 @@ pub(crate) async fn handle_unified_query(
     ))
 }
 
+/// The caller's metastore sources for `hive()`: only the sources the verified caller owns or
+/// holds a share grant for. Without the federation build no source can be registered, so no
+/// scope is bound and a `hive()` call refuses.
+#[cfg(all(feature = "query", feature = "federation"))]
+async fn hive_scope(
+    state: &Arc<RwLock<ServerState>>,
+    authority: &medulla_server_api::carrier::CarrierAuthority,
+) -> Option<Arc<medulla_sql::sql::metastore_federation::HiveScope>> {
+    use medulla_server_ops::api::query_txn::ForeignStateExt;
+    let guard = state.read().await;
+    let owned = guard
+        .foreign_sources()
+        .registry_for(authority, &guard.isolation);
+    let registry = owned.registry();
+    let specs: Vec<_> = registry
+        .names()
+        .into_iter()
+        .filter_map(|name| registry.spec(&name).cloned().map(|spec| (name, spec)))
+        .collect();
+    let sources = medulla_server_ops::api::query_txn::hive_sources::OwnedHiveSources::from_specs(
+        specs.iter().map(|(name, spec)| (name.as_str(), spec)),
+    );
+    Some(medulla_sql::sql::metastore_federation::HiveScope::new(
+        Arc::new(sources),
+    ))
+}
+
+#[cfg(all(feature = "query", not(feature = "federation")))]
+async fn hive_scope(
+    _state: &Arc<RwLock<ServerState>>,
+    _authority: &medulla_server_api::carrier::CarrierAuthority,
+) -> Option<Arc<medulla_sql::sql::metastore_federation::HiveScope>> {
+    None
+}
+
 /// Run one read statement against the tenant's authorized SQL catalog off the
 /// async runtime, cancellable by the request's cancel token and timeout: the
 /// execution both served SQL read paths (`handle_sql`, KnowledgeStream) share. The
@@ -521,6 +556,10 @@ pub(super) async fn catalog_sql_response(
         Some(decide) => decide.read_only_relations(state, &authority, &query).await,
         None => None,
     };
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.4.3: the metastore sources this caller may name, built
+    // from the caller's own registry, and the receipts their scans return as warnings.
+    let hive = hive_scope(state, &authority).await;
+    let hive_for_task = hive.clone();
     let cancel = medulla_sql::sql::CancellationToken::new();
     let _cancel_guard = crate::request_cancel::register(req_id, cancel.clone());
     let timeout_task = crate::request_cancel::spawn_timeout(cancel.clone());
@@ -533,16 +572,23 @@ pub(super) async fn catalog_sql_response(
             read_only.as_deref(),
             &graph,
         )?;
-        medulla_sql::sql::exec_sql_typed_with_tables_cancellable(
+        medulla_sql::sql::exec_sql_typed_with_tables_hive(
             &snap,
             authorized.store(),
             &query,
             &cancel_for_task,
+            hive_for_task,
         )
     })
     .await
     {
-        Ok(Ok(typed)) => typed_sql_response(req_id, typed),
+        Ok(Ok(typed)) => typed_sql_response(
+            req_id,
+            typed,
+            hive.as_ref()
+                .map(|scope| scope.warnings())
+                .unwrap_or_default(),
+        ),
         Ok(Err(message)) => Response::err(req_id, sql_refusal(message)),
         Err(response) => response,
     };

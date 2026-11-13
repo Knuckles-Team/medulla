@@ -282,6 +282,10 @@ pub struct Vf2MatchResult {
 pub struct QueryResult {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<u8>>,
+    /// Evidence the read returns beside its rows, as `key=json` entries (the `hive()` scan
+    /// receipt is `hive_scan_receipt=<json>`); empty for a read with none.
+    #[serde(default)]
+    pub warnings: Vec<String>,
 }
 
 /// Materialized result of a `Method::Sparql` SELECT (CONCEPT:MEDULLA-KG.ontology.concept-11). Returned via

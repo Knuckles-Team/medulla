@@ -883,11 +883,21 @@ where
     F: Fn() -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
-    if interval_secs == 0 {
+    spawn_periodic_sweep_ms(interval_secs.saturating_mul(1000), metric_name, sweep);
+}
+
+/// [`spawn_periodic_sweep`] with the interval in milliseconds, for a registry knob that is
+/// declared in milliseconds.
+fn spawn_periodic_sweep_ms<F, Fut>(interval_ms: u64, metric_name: &'static str, sweep: F)
+where
+    F: Fn() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+{
+    if interval_ms == 0 {
         return;
     }
     tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(std::time::Duration::from_secs(interval_secs));
+        let mut ticker = tokio::time::interval(std::time::Duration::from_millis(interval_ms));
         wait_for_periodic_tick(&mut ticker).await; // consume the immediate first tick
         loop {
             wait_for_periodic_tick(&mut ticker).await;
@@ -1933,6 +1943,19 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     spawn_periodic_sweep(reap_interval, "server_registry_reap", move || {
         server_startup::registry_reap_tick(reaper_state.clone())
     });
+
+    // ── Attached SQLite watermark capture (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2) ──
+    // Every `foreign.sqlite.poll_interval_ms` the sweep polls each registered SQLite file
+    // source that declares a watermark and commits the changed rows as a governed envelope.
+    #[cfg(feature = "federation")]
+    {
+        let poll_state = state.clone();
+        spawn_periodic_sweep_ms(
+            medulla_server_api::knob_config::knobs().foreign_sqlite_poll_interval_ms,
+            "attached_sqlite_poll",
+            move || server_startup::attached_poll_tick(poll_state.clone()),
+        );
+    }
 
     // ── Sealed record expiry (EH-558) ─────────────────────────────────────────
     // Retires every sealed record past its class's configured retention through

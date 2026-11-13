@@ -118,7 +118,7 @@ pub(crate) async fn exec_sql_graph_table_read(
 ) -> Response {
     let rows = compute_off_lock(req_id, move || graph_table_rows(&store, &read_core, &query)).await;
     match rows {
-        Ok(Ok(typed)) => typed_sql_response(req_id, typed),
+        Ok(Ok(typed)) => typed_sql_response(req_id, typed, Vec::new()),
         Ok(Err(error)) => Response::err(req_id, sql_refusal(error)),
         Err(response) => response,
     }
@@ -185,6 +185,7 @@ pub(crate) fn sql_write_ack(
             let result = medulla_protocol_types::protocol::QueryResult {
                 columns: vec![tag.to_string()],
                 rows: vec![row],
+                warnings: Vec::new(),
             };
             dynamic_response::<query_results::Sql, _>(req_id, &result)
         }

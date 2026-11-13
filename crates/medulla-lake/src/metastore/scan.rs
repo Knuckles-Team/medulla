@@ -1,6 +1,7 @@
 //! Metastore scan (MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1, .4.4, .4.5): partition pruning by a
 //! pushed filter, the typed refusals that read zero data files, and the exact scan receipt.
 
+use arrow::array::RecordBatch;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -43,6 +44,49 @@ pub struct ScanLimits {
     pub max_partitions: u64,
 }
 
+impl ScanLimits {
+    /// The limits of one scan, from the resolved `metastore.list_page_size` and
+    /// `metastore.max_partitions` knob values.
+    pub fn new(list_page_size: u64, max_partitions: u64) -> Self {
+        Self {
+            list_page_size,
+            max_partitions,
+        }
+    }
+}
+
+/// Every table name of `db`, listed in pages of `limits.list_page_size`. A client that
+/// answers a page larger than asked, or a cursor that never advances, is refused rather
+/// than trusted, so a listing is bounded by the knob and never loops.
+pub fn list_all_tables(
+    client: &dyn MetastoreClient,
+    db: &str,
+    limits: ScanLimits,
+) -> Result<Vec<String>, MetastoreError> {
+    let mut tables = Vec::new();
+    let mut cursor: Option<String> = None;
+    loop {
+        let page = client.list_tables(db, cursor.as_deref(), limits.list_page_size)?;
+        if page.tables.len() as u64 > limits.list_page_size {
+            return Err(MetastoreError::SpecInvalid(format!(
+                "a listing page held {} tables over the page size {}",
+                page.tables.len(),
+                limits.list_page_size
+            )));
+        }
+        tables.extend(page.tables);
+        match page.next {
+            None => return Ok(tables),
+            Some(next) if cursor.as_deref() == Some(next.as_str()) => {
+                return Err(MetastoreError::SpecInvalid(
+                    "the listing cursor did not advance".to_string(),
+                ))
+            }
+            Some(next) => cursor = Some(next),
+        }
+    }
+}
+
 /// One equality predicate pushed onto a partition key.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PartitionPredicate {
@@ -70,9 +114,65 @@ pub struct MetastoreTableProvider<'a> {
     pub limits: ScanLimits,
 }
 
+/// A data-file port that also returns the rows it kept.
+pub trait RowFileSource: DataFileSource {
+    /// Read one file: the batches of the stripes that survived pruning and what it cost.
+    fn read(&self, file: &FileStats) -> Result<(Vec<RecordBatch>, OpenedFile), MetastoreError>;
+}
+
+/// The rows of one scanned partition: its key values and the batches of its files.
+#[derive(Debug)]
+pub struct PartitionRows {
+    pub values: Vec<String>,
+    pub batches: Vec<RecordBatch>,
+}
+
+/// A scan that returned rows: the table, the exact receipt and the rows per partition.
+#[derive(Debug)]
+pub struct RowScan {
+    pub table: MetastoreTable,
+    pub receipt: ScanReceipt,
+    pub partitions: Vec<PartitionRows>,
+}
+
 impl MetastoreTableProvider<'_> {
     /// Validate, prune, then read: every refusal happens before the first data file opens.
     pub fn scan(&self, filter: &str) -> Result<ScanReceipt, MetastoreError> {
+        let (_, receipt, _) = self.run(filter, |_, file| {
+            self.files.open(file).map(|opened| (opened, ()))
+        })?;
+        Ok(receipt)
+    }
+
+    /// As [`Self::scan`], also returning the rows of every file the scan opened. `rows` reads
+    /// the files; the provider's own `files` port still answers the schema checks.
+    pub fn scan_rows(
+        &self,
+        filter: &str,
+        rows: &dyn RowFileSource,
+    ) -> Result<RowScan, MetastoreError> {
+        let (table, receipt, partitions) = self.run(filter, |_, file| {
+            rows.read(file).map(|(batches, opened)| (opened, batches))
+        })?;
+        Ok(RowScan {
+            table,
+            receipt,
+            partitions: partitions
+                .into_iter()
+                .map(|(values, parts)| PartitionRows {
+                    values,
+                    batches: parts.into_iter().flatten().collect(),
+                })
+                .collect(),
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn run<T>(
+        &self,
+        filter: &str,
+        mut open: impl FnMut(&PartitionInfo, &FileStats) -> Result<(OpenedFile, T), MetastoreError>,
+    ) -> Result<(MetastoreTable, ScanReceipt, Vec<(Vec<String>, Vec<T>)>), MetastoreError> {
         let table = self.client_call(|c| c.table(&self.database, &self.table))?;
         check_layout(&table)?;
         let matched =
@@ -90,14 +190,20 @@ impl MetastoreTableProvider<'_> {
             partitions_read: found,
             ..ScanReceipt::default()
         };
-        for file in matched.iter().flat_map(|p| &p.files) {
-            let opened = self.files.open(file).map_err(|e| self.relabel(e))?;
-            receipt.files_read += 1;
-            receipt.stripes_read += opened.stripes_read;
-            receipt.stripes_skipped += opened.stripes_total.saturating_sub(opened.stripes_read);
-            receipt.bytes_read += opened.bytes_read;
+        let mut read = Vec::with_capacity(matched.len());
+        for partition in &matched {
+            let mut parts = Vec::with_capacity(partition.files.len());
+            for file in &partition.files {
+                let (opened, value) = open(partition, file).map_err(|e| self.relabel(e))?;
+                receipt.files_read += 1;
+                receipt.stripes_read += opened.stripes_read;
+                receipt.stripes_skipped += opened.stripes_total.saturating_sub(opened.stripes_read);
+                receipt.bytes_read += opened.bytes_read;
+                parts.push(value);
+            }
+            read.push((partition.values.clone(), parts));
         }
-        Ok(receipt)
+        Ok((table, receipt, read))
     }
 
     fn client_call<T>(

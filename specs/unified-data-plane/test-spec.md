@@ -125,6 +125,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.3`: `tests/federation/test_o
 | Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.4.4` | `crates/medulla-lake/tests/metastore.rs::metastore_refusals`: Each case returns its code and reads no data file. |
 
 | Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.4.5` | `crates/medulla-lake/tests/metastore.rs::receipt_counts_match`: The receipt counts match the files the scan opened. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.4.5` | `tests/federation/test_metastore_orc_avro_served.py::test_served_scan_receipt_counts_what_the_scan_opened`: The served warnings carry the exact receipt. |
 
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R038.4.6` | `tests/federation/test_metastore_orc_avro_served.py::test_partition_pruned_scan`: The answer matches the full-scan oracle and the receipt shows pruning. |
 
@@ -350,6 +351,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R711:** `tests/data_plane/test_stream_adapters_served.py::test_checkpoint_returns_after_durable_write` (planned). Proves the row: Message-stream records normalize into a `ChangeEnvelope`: refusal, evidence and hot-path proof.
 - **MEDULLA-UNIFIED-DATA-PLANE-R030.701:** `tests/data_plane/test_identity_evidence_served.py::test_high_entropy_names_do_not_merge` (planned). Proves the row: Identity evidence kinds and merge decisions: refusal, evidence and hot path.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.1:** `tests/federation/test_acceleration_served.py::test_registration_writes_contract_only` (planned). Proves the row: Discovery writes one `MetadataContract` per registered source kind.
+- **MEDULLA-UNIFIED-DATA-PLANE-R038.2.1:** `tests/federation/test_acceleration_served.py::test_unreachable_source_registers_nothing` (planned). Proves the row: Discovery writes one `MetadataContract` per registered source kind.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2:** `crates/medulla-catalog-types/src/metadata_acceleration.rs::tests::expired_watermark_falls_back_to_live` (planned). Proves the row: The copy route is bounded by rows and by watermark.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2:** `tests/federation/test_acceleration_served.py::test_stale_watermark_reads_live` (planned). Proves the row: The copy route is bounded by rows and by watermark.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.3:** `crates/medulla-federation/src/federation_opt/tests.rs::trace_names_route_per_fragment` (planned). Proves the row: EXPLAIN states whether each fragment ran live or from a copy.

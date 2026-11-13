@@ -35,12 +35,18 @@ def _free_port() -> int:
 PG_PORT = _free_port()
 PG_PASSWORD = "federation-test"
 GATEWAY_PORT = _free_port()
+# A port nothing listens on: the endpoint of a source whose catalog cannot be read.
+DEAD_PORT = _free_port()
+# The recorded Hive metastore the metastore-source tests stand up (hms_recorded.py).
+HMS_PORT = _free_port()
 os.environ["MEDULLA_FEDERATION_ALLOW"] = ",".join(
     part
     for part in (
         os.environ.get("MEDULLA_FEDERATION_ALLOW", ""),
         f"127.0.0.1:{PG_PORT}",
         f"127.0.0.1:{GATEWAY_PORT}",
+        f"127.0.0.1:{DEAD_PORT}",
+        f"127.0.0.1:{HMS_PORT}",
     )
     if part
 )
@@ -144,6 +150,24 @@ def pg_source() -> Iterator[PgSource]:
         )
     finally:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+
+
+@pytest.fixture
+def hms_port() -> int:
+    """The loopback port the outbound allow-list admits for the recorded metastore."""
+    return HMS_PORT
+
+
+@pytest.fixture
+def dead_port() -> int:
+    """A loopback port the outbound allow-list admits but nothing listens on."""
+    return DEAD_PORT
+
+
+@pytest.fixture
+def dead_pg_dsn() -> str:
+    """A PostgreSQL DSN the outbound allow-list admits but nothing answers."""
+    return f"postgres://postgres:unused@127.0.0.1:{DEAD_PORT}/postgres"
 
 
 WEB_SERVER = "web-stub-mcp"

@@ -12341,6 +12341,23 @@ class QueryClient:
         ).payload
         return self._rows_to_dicts(result)
 
+    async def sql_with_warnings(
+        self, query: str, params_msgpack: bytes = b""
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """As :meth:`sql`, also returning the read's evidence entries.
+
+        Each warning is ``key=json``; a ``hive()`` scan returns
+        ``hive_scan_receipt=<json>`` with the exact partition, file, stripe and byte
+        counts the scan opened.
+        """
+        result = (
+            await _gen.query.send_sql(
+                self._client, {"query": query, "params_msgpack": params_msgpack}
+            )
+        ).payload
+        warnings = list(result.get("warnings", [])) if result else []
+        return self._rows_to_dicts(result), warnings
+
     async def register_graph_view(
         self,
         name: str,

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use medulla_exec::algebra::Op;
+use medulla_types::consolidation_isolation::SourceQuota;
 
 use super::budget::BudgetMeter;
 use super::cache::FragmentCacheScope;
@@ -37,6 +38,11 @@ struct SessionState {
     snapshots: HashMap<Fingerprint, SnapshotHandle>,
     bound: SnapshotBound,
     consistency: Consistency,
+    /// The quota of a source that carries none of its own (the resolved
+    /// `foreign.default_quota.*` knobs; MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    default_quota: Option<SourceQuota>,
+    /// Rows each source has returned to this query.
+    source_rows: HashMap<Fingerprint, u64>,
 }
 
 /// One federated query's optimizer state, bound on the `PlanCtx` with
@@ -61,6 +67,8 @@ impl FederationSession {
                 snapshots: HashMap::new(),
                 bound: SnapshotBound::default(),
                 consistency: Consistency::default(),
+                default_quota: None,
+                source_rows: HashMap::new(),
             }),
         }
     }
@@ -97,6 +105,47 @@ impl FederationSession {
     /// UQL calls this before its first fragment; no hint can grant extra network work.
     pub fn narrow_budget(&self, requested: FederationBudget) {
         self.lock().meter.narrow(requested);
+    }
+
+    /// The quota a source without its own runs under: the resolved
+    /// `foreign.default_quota.*` knobs (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
+    pub fn set_default_quota(&self, quota: SourceQuota) {
+        self.lock().default_quota = Some(quota);
+    }
+
+    /// The quota one source runs under in this query: its own, else the default, narrowed by
+    /// the query's budget so a request never widens it. `None` when neither exists.
+    pub(super) fn quota_for(&self, own: Option<SourceQuota>) -> Option<SourceQuota> {
+        let state = self.lock();
+        let budget = state.meter.budget();
+        own.or(state.default_quota).map(|quota| {
+            quota.narrowed(
+                u64::try_from(budget.max_rows).unwrap_or(u64::MAX),
+                budget.max_wall_ms,
+            )
+        })
+    }
+
+    /// Account `rows` returned by the source `fingerprint` against its quota. A source over its
+    /// own row bound refuses `SOURCE_QUOTA_EXCEEDED`, which names that source only.
+    pub(super) fn charge_source_rows(
+        &self,
+        fingerprint: Fingerprint,
+        label: &str,
+        rows: usize,
+        quota: SourceQuota,
+    ) -> Result<(), String> {
+        let mut state = self.lock();
+        let spent = state.source_rows.entry(fingerprint).or_default();
+        *spent = spent.saturating_add(u64::try_from(rows).unwrap_or(u64::MAX));
+        if *spent > quota.max_rows {
+            return Err(super::budget::quota_refusal(
+                label,
+                "max_rows",
+                quota.max_rows,
+            ));
+        }
+        Ok(())
     }
 
     /// The bounds snapshots of this query open under (the server knobs).

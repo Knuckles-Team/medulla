@@ -2,16 +2,16 @@
 //! arms of the executor land here.
 
 use std::collections::HashSet;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use medulla_query_types::wire::ForeignSourceSpec;
 
 use super::budget::{
-    BUDGET_EXCEEDED, REPLICA_LAG_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE,
-    SOURCE_WRITE_FORBIDDEN,
+    quota_refusal, unavailable, BUDGET_EXCEEDED, REPLICA_LAG_EXCEEDED, REQUIRES_KEYS,
+    RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE, SOURCE_QUOTA_EXCEEDED, SOURCE_WRITE_FORBIDDEN,
 };
 use super::capability::{
-    FullFetch, LimitPushdown, PageRequest, Paging, RemoteRequest, SourceCapabilities,
+    FullFetch, LimitPushdown, PageRequest, Paging, RemoteRequest, SourceCapabilities, SourceRate,
 };
 use super::http::PAGE_SIZE;
 use super::limiter;
@@ -115,6 +115,7 @@ fn is_refusal(error: &str) -> bool {
         RESULT_INCOMPLETE,
         SNAPSHOT_UNAVAILABLE,
         REPLICA_LAG_EXCEEDED,
+        SOURCE_QUOTA_EXCEEDED,
         SOURCE_WRITE_FORBIDDEN,
     ]
     .iter()
@@ -526,12 +527,22 @@ fn fetch_one(
 ) -> Attempt {
     let cache_scope = session.cache_scope();
     let cache_name = remote.identity().cache_name.as_deref();
+    let label = remote.label();
+    let fingerprint = remote.fingerprint();
+    // MEDULLA-UNIFIED-DATA-PLANE-R031.2: this source's own bounds, narrowed by the query's.
+    let quota = session.quota_for(remote.quota());
     if let (Some(scope), Some(name)) = (cache_scope.as_deref(), cache_name) {
-        if let Some(rows) = scope.get(name, &remote.fingerprint(), request) {
-            if let Err(error) = session.with_meter(|meter| {
-                meter.check_wall()?;
-                meter.charge_rows(rows.len())
-            }) {
+        if let Some(rows) = scope.get(name, &fingerprint, request) {
+            let charged = session
+                .with_meter(|meter| meter.check_wall())
+                .and_then(|()| match quota {
+                    Some(quota) => {
+                        session.charge_source_rows(fingerprint, &label, rows.len(), quota)
+                    }
+                    None => Ok(()),
+                })
+                .and_then(|()| session.with_meter(|meter| meter.charge_rows(rows.len())));
+            if let Err(error) = charged {
                 return Attempt::refused(error);
             }
             return Attempt {
@@ -546,18 +557,49 @@ fn fetch_one(
         return Attempt::refused(e);
     }
     let deadline = session.with_meter(|m| m.deadline());
-    let Some(_permit) = limiter::acquire(remote.fingerprint(), caps.rate, deadline) else {
-        return Attempt::refused(session.with_meter(|m| m.wall_refusal()));
+    // The source's concurrency is the smaller of what its kind allows and its quota; waiting
+    // for a permit ends at the query's deadline or one source wall, whichever is first, so a
+    // source holding its own permits never holds another source's.
+    let (rate, admit_by) = match quota {
+        Some(quota) => (
+            SourceRate::new(
+                caps.rate
+                    .max_concurrent
+                    .min(usize::try_from(quota.max_concurrent).unwrap_or(usize::MAX)),
+                caps.rate.requests_per_second,
+            ),
+            deadline.min(Instant::now() + Duration::from_millis(quota.max_wall_ms)),
+        ),
+        None => (caps.rate, deadline),
+    };
+    let Some(_permit) = limiter::acquire(fingerprint, rate, admit_by) else {
+        return Attempt::refused(match quota {
+            Some(quota) if Instant::now() < deadline => {
+                quota_refusal(&label, "max_concurrent", quota.max_concurrent)
+            }
+            _ => session.with_meter(|m| m.wall_refusal()),
+        });
     };
     let sent = Instant::now();
-    let result = remote.fetch(request);
+    let result = remote
+        .fetch(request)
+        .map_err(|error| unavailable(&label, error));
     let ms = u64::try_from(sent.elapsed().as_millis()).unwrap_or(u64::MAX);
-    stats::observe_request(&remote.fingerprint(), ms);
+    stats::observe_request(&fingerprint, ms);
     let rows = result.as_ref().map_or(0, RowSet::len);
+    let result = match quota {
+        Some(quota) if ms >= quota.max_wall_ms => {
+            Err(quota_refusal(&label, "max_wall_ms", quota.max_wall_ms))
+        }
+        _ => result,
+    };
     let result = result.and_then(|rows| {
+        if let Some(quota) = quota {
+            session.charge_source_rows(fingerprint, &label, rows.len(), quota)?;
+        }
         session.with_meter(|m| m.charge_rows(rows.len()))?;
         if let (Some(scope), Some(name)) = (cache_scope.as_deref(), cache_name) {
-            scope.insert(name, &remote.fingerprint(), request, &rows);
+            scope.insert(name, &fingerprint, request, &rows);
         }
         Ok(rows)
     });

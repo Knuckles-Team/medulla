@@ -6,12 +6,18 @@ pub mod edge_test_support;
 /// place a caller's verified owner (tenant+principal) selects which sources a plan may resolve.
 #[cfg(feature = "federation")]
 pub mod foreign_catalog;
+/// MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 — metadata-only discovery of a registered source.
+#[cfg(feature = "federation")]
+pub mod foreign_discovery;
 /// MEDULLA-FEDERATED-QUERY-R722.3 — bounded host-driven foreign-read executions.
 #[cfg(feature = "federation")]
 pub mod foreign_read;
 /// Explicit RBAC-grant sharing of an owner-scoped foreign source (EH-378).
 #[cfg(feature = "federation")]
 pub mod foreign_share;
+/// MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 — the caller-scoped metastore sources of a `hive()` query.
+#[cfg(feature = "federation")]
+pub mod hive_sources;
 pub mod query_support;
 pub mod txn_intent;
 pub mod txn_support;
