@@ -27,6 +27,7 @@ pub mod adapter;
 pub mod admission;
 pub mod aggregate;
 pub mod bm25;
+pub mod branch_outcomes;
 pub mod candidate;
 pub mod changeset_review;
 pub mod cluster_knobs;
