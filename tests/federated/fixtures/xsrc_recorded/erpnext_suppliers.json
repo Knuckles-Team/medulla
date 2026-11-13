@@ -1,0 +1,10 @@
+{
+  "server": "erpnext-agent",
+  "tool": "list_documents",
+  "arguments": ["doctype", "fields", "filters", "limit_page_length"],
+  "rows": [
+    {"id": "SUP-0001", "values": {}, "texts": {"supplier_name": "Acme Cloud, Inc.", "status": "Active"}},
+    {"id": "SUP-0002", "values": {}, "texts": {"supplier_name": "Globex Logistics GmbH", "status": "Active"}},
+    {"id": "SUP-0003", "values": {}, "texts": {"supplier_name": "Initech Hosting", "status": "Disabled"}}
+  ]
+}

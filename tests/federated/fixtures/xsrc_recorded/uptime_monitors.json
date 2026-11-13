@@ -1,0 +1,9 @@
+{
+  "server": "uptime-kuma-agent",
+  "tool": "get_monitors",
+  "arguments": ["limit"],
+  "rows": [
+    {"id": "https://billing.example.com:8443/health", "values": {}, "texts": {"name": "billing", "url": "https://billing.example.com:8443/health", "status": "up"}},
+    {"id": "https://reports.example.com/status", "values": {}, "texts": {"name": "reports", "url": "https://reports.example.com/status", "status": "down"}}
+  ]
+}

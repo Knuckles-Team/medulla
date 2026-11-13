@@ -17,4 +17,4 @@ The mapping vocabulary is `vg:VirtualMapping` in `crates/medulla-core/ontology/v
 
 ## Test vectors
 
-The recorded responses are `tests/federated/fixtures/xsrc_recorded/` (planned); the shape tests are in `crates/medulla-core/tests/supply_chain_vocab.rs`.
+The recorded responses are `tests/federated/fixtures/xsrc_recorded/`; the shape tests are in `crates/medulla-core/tests/supply_chain_vocab.rs`.

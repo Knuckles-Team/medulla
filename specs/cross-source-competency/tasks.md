@@ -9,12 +9,12 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T003 [US1] MEDULLA-CQ-XSRC-R002.3 Add `:Vulnerability` and `:affectsComponent`
 - [ ] T004 [US1] MEDULLA-CQ-XSRC-R002.5 Source-authority seed: suppliers, purchase items and third-party risk
 - [ ] T005 [US1] MEDULLA-CQ-XSRC-R002.6 Source-authority seed: software components and vulnerabilities
-- [ ] T006 [US1] MEDULLA-CQ-XSRC-R002.7 Virtual mapping fixture: erpnext supplier table to `:Supplier`
+- [x] T006 [US1] MEDULLA-CQ-XSRC-R002.7 Virtual mapping fixture: erpnext supplier table to `:Supplier`
 - [ ] T007 [US1] MEDULLA-CQ-XSRC-R003.1 Source-authority seed: `:Service` health and identity
 - [ ] T008 [US1] MEDULLA-CQ-XSRC-R003.2 Source-authority seed: deployed workloads, images and hosts
 - [ ] T009 [US1] MEDULLA-CQ-XSRC-R003.3 Source-authority seed: business capabilities
-- [ ] T010 [US1] MEDULLA-CQ-XSRC-R003.4 Virtual mapping fixture: uptime monitor to `:Service`
-- [ ] T011 [US1] MEDULLA-CQ-XSRC-R003.5 Virtual mapping fixture: container-manager deployment to `:Workload` and its image
+- [x] T010 [US1] MEDULLA-CQ-XSRC-R003.4 Virtual mapping fixture: uptime monitor to `:Service`
+- [x] T011 [US1] MEDULLA-CQ-XSRC-R003.5 Virtual mapping fixture: container-manager deployment to `:Workload` and its image
 - [ ] T012 [US4] MEDULLA-CQ-XSRC-R004.1 Add `:usesComponent` (service to component version) and `:suppliesService`
 - [ ] T013 [US4] MEDULLA-CQ-XSRC-R004.3 Resolve a vendor in erpnext, leanix and dockerhub to one `:Supplier`
 - [x] T014 [US4] MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`
