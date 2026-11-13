@@ -108,6 +108,20 @@ pub struct Postings {
     by_tag: Vec<Vec<u32>>,
 }
 
+impl Postings {
+    /// Bytes the posting lists and interned names hold resident
+    /// (MEDULLA-DECISION-ENGINE-R172.10).
+    pub fn resident_bytes(&self) -> usize {
+        let lists = |lists: &[Vec<u32>]| {
+            lists
+                .iter()
+                .map(|list| list.capacity() * std::mem::size_of::<u32>())
+                .sum::<usize>()
+        };
+        lists(&self.by_capability) + lists(&self.by_tag)
+    }
+}
+
 fn insert_sorted(list: &mut Vec<u32>, slot: u32) {
     if let Err(at) = list.binary_search(&slot) {
         list.insert(at, slot);

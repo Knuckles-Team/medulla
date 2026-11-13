@@ -31,6 +31,28 @@
     "decide/edit_concentration/kernel": {
       "p50_ms": 0.5,
       "p99_ms": 2.0
+    },
+    "decide/capability_designation": {
+      "p50_ms": 3.0,
+      "p99_ms": 15.0,
+      "peak_mib": 8192.0,
+      "filtered_p50_ms": 2.0,
+      "filtered_p99_ms": 10.0,
+      "recall_at_5_min": 0.95,
+      "upsert_p99_ms": 1.0,
+      "resident_bytes_per_record_overhead": 96,
+      "resident_bytes_vector_factor": 1.25
+    },
+    "decide/capability_designation/n10000": {
+      "p50_ms": 3.0,
+      "p99_ms": 15.0,
+      "peak_mib": 8192.0,
+      "filtered_p50_ms": 2.0,
+      "filtered_p99_ms": 10.0,
+      "recall_at_5_min": 0.95,
+      "upsert_p99_ms": 1.0,
+      "resident_bytes_per_record_overhead": 96,
+      "resident_bytes_vector_factor": 1.25
     }
   },
   "groups": {}

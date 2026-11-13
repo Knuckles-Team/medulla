@@ -125,6 +125,15 @@ impl ShardSnapshot {
         }
     }
 
+    /// Bytes this generation holds resident: the record slots, the vector
+    /// arena (codes, scales, offsets, stored vectors and graph) and the
+    /// postings index (MEDULLA-DECISION-ENGINE-R172.10).
+    pub fn resident_bytes(&self) -> usize {
+        let records = self.records.capacity() * std::mem::size_of::<Option<CapabilityRecord>>();
+        let live = self.live.capacity() * std::mem::size_of::<u32>();
+        records + live + self.arena.resident_bytes() + self.postings.resident_bytes()
+    }
+
     /// The epoch: one more after each published batch.
     pub fn epoch(&self) -> u64 {
         self.epoch

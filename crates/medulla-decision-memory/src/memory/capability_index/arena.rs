@@ -81,6 +81,15 @@ impl Arena {
         slot
     }
 
+    /// Bytes held resident: the u8 codes, the per-slot scale and offset, the
+    /// stored f32 vectors and the proximity graph (MEDULLA-DECISION-ENGINE-R172.10).
+    pub fn resident_bytes(&self) -> usize {
+        self.codes.capacity()
+            + (self.scale.capacity() + self.offset.capacity() + self.vectors.capacity())
+                * std::mem::size_of::<f32>()
+            + self.graph.byte_size()
+    }
+
     /// The dimension of the stored vectors.
     pub fn vector_dim(&self) -> usize {
         self.dim

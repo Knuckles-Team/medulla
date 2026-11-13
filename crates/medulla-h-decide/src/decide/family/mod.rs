@@ -10,7 +10,7 @@ mod answer_ranking;
 #[cfg(feature = "decide")]
 pub(super) mod assemble;
 mod branch_outcome;
-mod capability_designation;
+pub(in crate::decide) mod capability_designation;
 mod capacity_proposal;
 mod changeset_review;
 mod classify;

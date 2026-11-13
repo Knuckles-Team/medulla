@@ -894,6 +894,219 @@ fn bench_concentration_kernel(c: &mut Criterion, report: &mut BTreeMap<String, s
     );
 }
 
+/// Deterministic xorshift generator: the bench fixture needs no entropy source.
+struct Xorshift(u64);
+
+impl Xorshift {
+    fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+
+    /// A value in `[-1, 1)`.
+    fn unit(&mut self) -> f32 {
+        ((self.next() >> 40) as f32 / (1u64 << 23) as f32) - 1.0
+    }
+
+    fn vector(&mut self, dim: usize) -> Vec<f32> {
+        let raw: Vec<f32> = (0..dim).map(|_| self.unit()).collect();
+        let norm = raw
+            .iter()
+            .map(|v| v * v)
+            .sum::<f32>()
+            .sqrt()
+            .max(f32::MIN_POSITIVE);
+        raw.iter().map(|v| v / norm).collect()
+    }
+}
+
+const DESIGNATION_VERSION: &str = "bench-emb";
+const DESIGNATION_DIM: usize = 1024;
+const DESIGNATION_K: usize = 5;
+const DESIGNATION_QUERIES: usize = 200;
+const RARE_CAPABILITY: &str = "cap:rare";
+
+fn designation_record(
+    tenant: &medulla_types::contract::TenantId,
+    index: usize,
+) -> medulla_decision_types::decision::capability_designation::CapabilityRecord {
+    use medulla_decision_types::decision::capability_designation::{CapabilityRecord, EntityKind};
+    // Eight capabilities per record; every 25th record (4 %) also holds the
+    // rare one, so a filter on it selects at most 5 % of the records.
+    let mut capabilities: std::collections::BTreeSet<String> = (0..8)
+        .map(|slot| format!("cap:{}", (index * 7 + slot * 13) % 64))
+        .collect();
+    if index % 25 == 0 {
+        capabilities.insert(RARE_CAPABILITY.to_string());
+    }
+    while capabilities.len() > 8 {
+        let drop = capabilities.iter().find(|c| *c != RARE_CAPABILITY).cloned();
+        capabilities.remove(&drop.unwrap());
+    }
+    CapabilityRecord {
+        tenant_id: Some(tenant.clone()),
+        entity_id: medulla_types::contract::OpaqueId::new(format!("agent-{index}")).unwrap(),
+        entity_kind: EntityKind::Agent,
+        capabilities,
+        ontology_type: None,
+        policy_tags: std::collections::BTreeSet::new(),
+        swappable_with: std::collections::BTreeSet::new(),
+        embedding_version: DESIGNATION_VERSION.to_string(),
+        dim: DESIGNATION_DIM as u16,
+        record_revision: 1,
+    }
+}
+
+/// The `decide/capability_designation` group (MEDULLA-DECISION-ENGINE-R172.10):
+/// the resident index at the reference load (`records` records of dim 1024,
+/// eight capabilities each, k = 5, one core). The group's `p50_ms`/`p99_ms`
+/// are the unfiltered read; the filtered read (one required capability
+/// selecting at most 5 %), recall@5 against an exact scan, the incremental
+/// upsert p99 and the resident bytes ride beside them for
+/// `scripts/check_decide_budgets.py`.
+fn bench_capability_designation(
+    c: &mut Criterion,
+    group_name: &str,
+    records: usize,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_memory::memory::capability_index::{CapabilityIndex, ShardLimits};
+    use medulla_decision_types::decision::capability_designation::DesignationKnobs;
+    use medulla_decision_types::decision::DecisionPolicy;
+    use std::collections::{BTreeMap as Map, BTreeSet as Set};
+
+    let knobs = DesignationKnobs::from_policy(&DecisionPolicy::engine_default());
+    let tenant = medulla_types::contract::TenantId::new(TENANT).unwrap();
+    let index = CapabilityIndex::new(ShardLimits {
+        max_records: records + 1_024,
+        compact_ratio_q32: knobs.tombstone_compact_ratio_q32,
+    });
+    let mut rng = Xorshift(0x0172_1010_5eed_cafe);
+    let mut vectors: Vec<Vec<f32>> = Vec::with_capacity(records);
+    for i in 0..records {
+        let vector = rng.vector(DESIGNATION_DIM);
+        index
+            .upsert(designation_record(&tenant, i), vector.clone())
+            .expect("bench upsert");
+        vectors.push(vector);
+    }
+    let queries: Vec<Vec<f32>> = (0..DESIGNATION_QUERIES)
+        .map(|_| rng.vector(DESIGNATION_DIM))
+        .collect();
+    let shortlist = (knobs.oversample_factor.max(1) * DESIGNATION_K).max(DESIGNATION_K);
+    let none: Set<String> = Set::new();
+    let no_subtypes: Map<String, Set<String>> = Map::new();
+    let rare: Set<String> = Set::from([RARE_CAPABILITY.to_string()]);
+    let rare_subtypes: Map<String, Set<String>> =
+        Map::from([(RARE_CAPABILITY.to_string(), Set::new())]);
+    let read = |query: &[f32], required: &Set<String>, subtypes: &Map<String, Set<String>>| {
+        index
+            .read(
+                &tenant,
+                DESIGNATION_VERSION,
+                query,
+                required,
+                &none,
+                subtypes,
+                shortlist,
+                knobs.flat_threshold,
+            )
+            .expect("bench read")
+    };
+    let mut group = c.benchmark_group(group_name);
+    group.bench_function("unfiltered", |b| {
+        let mut at = 0;
+        b.iter(|| {
+            at = (at + 1) % DESIGNATION_QUERIES;
+            black_box(read(&queries[at], &none, &no_subtypes))
+        });
+    });
+    group.bench_function("filtered", |b| {
+        let mut at = 0;
+        b.iter(|| {
+            at = (at + 1) % DESIGNATION_QUERIES;
+            black_box(read(&queries[at], &rare, &rare_subtypes))
+        });
+    });
+    group.finish();
+
+    let time = |mut run: Box<dyn FnMut(usize) + '_>| {
+        let mut samples: Vec<Duration> = (0..DESIGNATION_QUERIES)
+            .map(|at| {
+                let start = Instant::now();
+                run(at);
+                start.elapsed()
+            })
+            .collect();
+        samples.sort();
+        samples
+    };
+    let unfiltered = time(Box::new(|at| {
+        black_box(read(&queries[at], &none, &no_subtypes));
+    }));
+    let filtered = time(Box::new(|at| {
+        black_box(read(&queries[at], &rare, &rare_subtypes));
+    }));
+    let filtered_share =
+        read(&queries[0], &rare, &rare_subtypes).capability_filtered as f64 / records as f64;
+    assert!(
+        filtered_share <= 0.05,
+        "the filter selects {filtered_share}"
+    );
+
+    // Recall@5 against an exact scan of every stored vector.
+    let mut found = 0usize;
+    for query in &queries[..50] {
+        let mut exact: Vec<(usize, f32)> = vectors
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (i, v.iter().zip(query).map(|(a, b)| a * b).sum()))
+            .collect();
+        exact.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        let truth: Set<String> = exact[..DESIGNATION_K]
+            .iter()
+            .map(|(i, _)| format!("agent-{i}"))
+            .collect();
+        let got = read(query, &none, &no_subtypes);
+        found += got
+            .hits
+            .iter()
+            .take(DESIGNATION_K)
+            .filter(|hit| truth.contains(hit.record.entity_id.as_str()))
+            .count();
+    }
+    let recall = found as f64 / (50 * DESIGNATION_K) as f64;
+
+    // Incremental upsert of a replacement record, without durable commit.
+    let upserts = time(Box::new(|at| {
+        let i = at % records;
+        index
+            .upsert(designation_record(&tenant, i), vectors[i].clone())
+            .expect("bench replace");
+    }));
+    let resident = index
+        .shard(Some(&tenant))
+        .map_or(0, |shard| shard.snapshot().resident_bytes());
+    let before = high_water_mib();
+    report.insert(
+        group_name.to_string(),
+        serde_json::json!({
+            "p50_ms": percentile_ms(&unfiltered, 0.50),
+            "p99_ms": percentile_ms(&unfiltered, 0.99),
+            "peak_mib": high_water_mib().max(before),
+            "filtered_p50_ms": percentile_ms(&filtered, 0.50),
+            "filtered_p99_ms": percentile_ms(&filtered, 0.99),
+            "recall_at_5": recall,
+            "upsert_p99_ms": percentile_ms(&upserts, 0.99),
+            "resident_bytes": resident,
+            "records": records,
+            "dim": DESIGNATION_DIM,
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -928,6 +1141,13 @@ fn bench_decide(c: &mut Criterion) {
     bench_task_plan_bounds(c, &rt, &mut report);
     bench_tool_relevance_cap(c, &rt, &mut report);
     bench_program_lookup(c, &rt, &mut report);
+    bench_capability_designation(c, "decide/capability_designation", 100_000, &mut report);
+    bench_capability_designation(
+        c,
+        "decide/capability_designation/n10000",
+        10_000,
+        &mut report,
+    );
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);

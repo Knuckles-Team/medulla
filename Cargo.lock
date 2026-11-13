@@ -4914,6 +4914,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-cypher",
+ "medulla-decision-memory",
  "medulla-decision-outcome-types",
  "medulla-decision-policy",
  "medulla-decision-stats",

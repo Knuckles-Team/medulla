@@ -1928,6 +1928,7 @@ medulla-store-apply = { path = "crates/medulla-store-apply", features = ["test-s
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
 medulla-source-types = { path = "crates/medulla-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
+medulla-decision-memory = { path = "crates/medulla-decision-memory" }
 medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }
 medulla-federation = { path = "crates/medulla-federation", features = ["test-support"] }
 medulla-agent-types = { path = "crates/medulla-agent-types", features = ["test-support"] }

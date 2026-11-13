@@ -8,6 +8,7 @@ use medulla_decision_memory::memory::capability_index::{CapabilityIndex, ShardLi
 use medulla_decision_types::decision::capability_designation::{
     DesignationAsk, DesignationKnobs, SchemaProjection, DESIGNATION_PARAM,
 };
+use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterScope;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, TypedValue,
 };
@@ -37,6 +38,55 @@ pub(super) struct DesignationRuntime {
     /// The pack facts and tool outcome counts a `usage_guidance` question
     /// reads (MEDULLA-DECISION-ENGINE-R177.3); `None` otherwise.
     pub(super) usage_guidance: Option<super::stat_usage_guidance::UsageGuidanceRead>,
+    /// The adapter active for the question's capability scope (or the graph's
+    /// scope), applied to the task embedding before the index read
+    /// (MEDULLA-DECISION-ENGINE-R172.13). `None` ranks by the base vector.
+    pub(super) adapter: Option<AppliedAdapter>,
+}
+
+/// An active adapter and the revision of the pointer move that activated it.
+#[derive(Clone)]
+pub(super) struct AppliedAdapter {
+    pub(super) served: Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>,
+    pub(super) revision: u64,
+}
+
+impl AppliedAdapter {
+    /// The premise fact naming the adapter: `adapter:<digest>@<revision>`.
+    pub(super) fn fact(&self) -> String {
+        format!("adapter:{}@{}", self.served.digest(), self.revision)
+    }
+}
+
+/// The adapter a question runs with: the scope of its one required
+/// capability when that scope has an active adapter, else the graph scope,
+/// else none. A graph the caller cannot read has none.
+async fn adapter_of(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    ask: &DesignationAsk,
+) -> Option<AppliedAdapter> {
+    let core = super::topology_read::graph_core(state, &ask.graph, verified)
+        .await
+        .ok()?;
+    let tenant = ask.question.tenant_id.as_str();
+    let mut scopes = Vec::new();
+    let mut required = ask.question.required_capabilities.iter();
+    if let (Some(capability), None) = (required.next(), required.next()) {
+        scopes.push(AdapterScope::Capability {
+            capability_iri: capability.to_string(),
+        });
+    }
+    scopes.push(AdapterScope::Graph);
+    for scope in scopes {
+        let key = super::stat_adapter::scoped_adapter_pointer(&ask.graph, &scope);
+        if let Some((served, revision)) =
+            super::served_adapter::served_at(state, tenant, &key, &core).await
+        {
+            return Some(AppliedAdapter { served, revision });
+        }
+    }
+    None
 }
 
 /// `CODE: detail`, the one refusal text form of a registered code.
@@ -168,6 +218,7 @@ pub(super) async fn with_runtime(
 ) -> Result<DesignationRuntime, String> {
     let ask = question_of(request)?;
     let index = shared_capability_index(&*state.read().await);
+    let adapter = adapter_of(state, verified, ask).await;
     Ok(match schema_closure(state, verified, &ask.graph).await {
         Ok((projection, schema_digest)) => DesignationRuntime {
             index,
@@ -176,6 +227,7 @@ pub(super) async fn with_runtime(
             schema_error: None,
             load_set: None,
             usage_guidance: None,
+            adapter,
         },
         Err(detail) => DesignationRuntime {
             index,
@@ -187,6 +239,7 @@ pub(super) async fn with_runtime(
             )),
             load_set: None,
             usage_guidance: None,
+            adapter,
         },
     })
 }

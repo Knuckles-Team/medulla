@@ -157,6 +157,30 @@ fn query_of(ask: &DesignationAsk) -> Result<Vec<f32>, String> {
         .collect())
 }
 
+/// The task embedding after the active adapter, unit length again; the base
+/// vector when no adapter is active, the adapter serves another width, or the
+/// adapted vector has no direction (MEDULLA-DECISION-ENGINE-R172.13).
+pub(crate) fn adapted_query(runtime: &DesignationRuntime, base: Vec<f32>) -> Vec<f32> {
+    let Some(applied) = &runtime.adapter else {
+        return base;
+    };
+    let Some(adapted) = applied.served.adapt(&base) else {
+        return base;
+    };
+    let norm = adapted
+        .iter()
+        .map(|value| f64::from(*value) * f64::from(*value))
+        .sum::<f64>()
+        .sqrt();
+    if !norm.is_finite() || norm == 0.0 {
+        return base;
+    }
+    adapted
+        .iter()
+        .map(|value| (f64::from(*value) / norm) as f32)
+        .collect()
+}
+
 /// The first required capability no visible record covers, sorted order.
 fn first_uncovered(
     runtime: &DesignationRuntime,
@@ -407,7 +431,7 @@ pub(crate) fn designate(
         .weights
         .validate()
         .map_err(|detail| invalid_parameter(detail))?;
-    let query = query_of(ask)?;
+    let query = adapted_query(runtime, query_of(ask)?);
     if !question.required_capabilities.is_empty() || !question.target_classes.is_empty() {
         if let Some(detail) = &runtime.schema_error {
             return Err(coded(DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, detail));
@@ -593,7 +617,15 @@ pub(crate) fn capability_designation_outcome(
         Designated::Abstain(code, detail) => return Ok(abstained_with(code, detail)),
     };
     let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
-    let premises = premises_of(&answer, policy, &policy_digest);
+    let mut premises = premises_of(&answer, policy, &policy_digest);
+    if let Some(applied) = &runtime.adapter {
+        premises.push(premise(
+            "adapter",
+            applied.fact(),
+            PremiseClass::Observation,
+            observation(answer.index_epoch),
+        ));
+    }
     let scores: Vec<ScoredOption> = answer
         .designations
         .iter()

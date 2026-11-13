@@ -75,12 +75,14 @@ fn cached_or_decode(
 fn load(
     store: &AgentLibraryStore,
     tenant: &str,
-    graph: &str,
-) -> Result<Option<Arc<ServedAdapter>>, String> {
-    let key = super::stat_adapter::adapter_pointer(graph);
-    let (_, pointer) = super::stat_pointer::read_pointer(store, tenant, &key)?;
+    pointer_key: &str,
+) -> Result<Option<(Arc<ServedAdapter>, u64)>, String> {
+    let (_, pointer) = super::stat_pointer::read_pointer(store, tenant, pointer_key)?;
+    let revision = pointer.active.as_ref().map_or(0, |event| event.at_ms);
     match pointer.target() {
-        Some(digest) => cached_or_decode(store, tenant, digest),
+        Some(digest) => {
+            Ok(cached_or_decode(store, tenant, digest)?.map(|served| (served, revision)))
+        }
         None => Ok(None),
     }
 }
@@ -95,11 +97,32 @@ pub(crate) async fn served_for(
     graph: &str,
     core: &GraphCore,
 ) -> Option<Arc<ServedAdapter>> {
-    let (tenant, graph) = (tenant?.to_string(), graph.to_string());
+    served_at(
+        state,
+        tenant?,
+        &super::stat_adapter::adapter_pointer(graph),
+        core,
+    )
+    .await
+    .map(|(adapter, _)| adapter)
+}
+
+/// The adapter active at `pointer_key` under `tenant` and the revision of
+/// the move that activated it (the pointer's active event time), served only
+/// in the space `core` declares. A scoped pointer is read the same way as the
+/// graph's (MEDULLA-DECISION-ENGINE-R172.13).
+pub(crate) async fn served_at(
+    state: &Arc<tokio::sync::RwLock<ServerState>>,
+    tenant: &str,
+    pointer_key: &str,
+    core: &GraphCore,
+) -> Option<(Arc<ServedAdapter>, u64)> {
+    let (tenant, key) = (tenant.to_string(), pointer_key.to_string());
     let store = state.read().await.agent_library()?;
-    let loaded = tokio::task::spawn_blocking(move || load(&store, &tenant, &graph)).await;
+    let loaded = tokio::task::spawn_blocking(move || load(&store, &tenant, &key)).await;
     let declared = core.semantic_store.read().space().map(|s| s.digest.clone());
-    let in_space = |a: &Arc<ServedAdapter>| declared.as_ref().is_none_or(|d| d == a.space_digest());
+    let in_space =
+        |a: &(Arc<ServedAdapter>, u64)| declared.as_ref().is_none_or(|d| d == a.0.space_digest());
     match loaded {
         Ok(Ok(adapter)) => adapter.filter(in_space),
         Ok(Err(error)) => {
