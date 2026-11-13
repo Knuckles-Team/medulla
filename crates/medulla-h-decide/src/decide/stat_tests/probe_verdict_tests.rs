@@ -386,3 +386,89 @@ async fn premises_name_scorers_and_scores() {
         .iter()
         .any(|premise| premise.fact.starts_with("knob:red_team.category_match=")));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R138.6
+#[tokio::test]
+async fn probe_verdict_journey() {
+    use medulla_decision_types::decision::{EvidenceClass, PremiseClass};
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    // Publish one attack, one transform and two scorers through the harness.
+    publish(
+        &h,
+        TENANT,
+        "attack-1",
+        AgentComponentKind::RedTeamAttack,
+        &[("category", "injection"), ("goal", "leak")],
+    );
+    publish(
+        &h,
+        TENANT,
+        "tx-1",
+        AgentComponentKind::RedTeamTransform,
+        &[("kind", "base64")],
+    );
+    for (id, threshold) in [("scorer-a", "700"), ("scorer-b", "500")] {
+        publish(
+            &h,
+            TENANT,
+            id,
+            AgentComponentKind::RedTeamScorer,
+            &[("category", "injection"), ("threshold", threshold)],
+        );
+    }
+    // Probe results: scorer-a clears its threshold, so the attack compromised.
+    let batch = decide(
+        &h,
+        probe_request(
+            TENANT,
+            &pin,
+            vec![result("scorer-a", Some(800)), result("scorer-b", Some(100))],
+        ),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(chosen(record), "compromised");
+    assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    // The selected scorers are exactly the two of the attack's category, each
+    // sealed as a Claim premise carrying its score and threshold.
+    let scorer_facts: Vec<&str> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("scorer:"))
+        .map(|premise| {
+            assert_eq!(premise.class, PremiseClass::Claim);
+            premise.fact.as_str()
+        })
+        .collect();
+    assert_eq!(scorer_facts.len(), 2, "{scorer_facts:?}");
+    assert!(scorer_facts.contains(&"scorer:scorer-a;score_permille=800;threshold_permille=700"));
+    assert!(scorer_facts.contains(&"scorer:scorer-b;score_permille=100;threshold_permille=500"));
+    // The same scorers failing resist the attack.
+    let batch = decide(
+        &h,
+        probe_request(
+            TENANT,
+            &pin,
+            vec![result("scorer-a", Some(100)), result("scorer-b", Some(100))],
+        ),
+    )
+    .await
+    .unwrap();
+    assert_eq!(chosen(&batch.records.as_slice()[0]), "resisted");
+    // Cross-tenant negative: tenant B publishes none of tenant A's components,
+    // so A's attack is unknown to it and nothing of A's judges its probe.
+    let other_pin = publish_route_schema_in(&h, OTHER);
+    let ctx = VerifiedRequestContext::verified_for_test_in_tenant("decider", OTHER);
+    let response = super::super::statistical::handle_decide(
+        &h.state,
+        1,
+        &ctx,
+        probe_request(OTHER, &other_pin, vec![result("scorer-a", Some(800))]),
+    )
+    .await;
+    let error = decode::<DecisionBatch>(response).unwrap_err();
+    assert!(error.contains("PROBE_ATTACK_UNKNOWN"), "{error}");
+}

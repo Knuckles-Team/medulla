@@ -272,7 +272,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T261 [US7] MEDULLA-DECISION-ENGINE-R138.3 Wiring
 - [ ] T262 [US7] MEDULLA-DECISION-ENGINE-R138.4 Refusal
 - [x] T263 [US7] MEDULLA-DECISION-ENGINE-R138.5 Evidence
-- [ ] T264 [US7] MEDULLA-DECISION-ENGINE-R138.6 Hot-path proof
+- [x] T264 [US7] MEDULLA-DECISION-ENGINE-R138.6 Hot-path proof
 - [ ] T265 [US7] MEDULLA-DECISION-ENGINE-R138.7 Store red-team records as library components
 - [ ] T266 [US7] MEDULLA-DECISION-ENGINE-R139.1 Model
 - [ ] T267 [US7] MEDULLA-DECISION-ENGINE-R139.2 Behaviour
