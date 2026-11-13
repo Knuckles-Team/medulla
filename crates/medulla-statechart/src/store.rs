@@ -451,11 +451,12 @@ impl StatechartStore {
         let context = apply_all(initial_context, &entry_actions, &entry_event);
 
         let now = now_ms();
-        let status = if configuration.is_final(&def) {
-            InstanceStatus::Final
-        } else {
-            InstanceStatus::Active
-        };
+        let status = InstanceStatus::initial()
+            .settle(configuration.is_final(&def))
+            .map_err(|refused| StatechartError::InvalidTransition {
+                instance_id: "<new>".to_string(),
+                reason: refused.to_string(),
+            })?;
         let instance = MachineInstance {
             instance_id: self.next_instance_id(),
             def_id: def_id.to_string(),
@@ -509,11 +510,12 @@ impl StatechartStore {
         let context = apply_all(initial_context, &entry_actions, &entry_event);
 
         let now = committed_at_ms as i64;
-        let status = if configuration.is_final(&def) {
-            InstanceStatus::Final
-        } else {
-            InstanceStatus::Active
-        };
+        let status = InstanceStatus::initial()
+            .settle(configuration.is_final(&def))
+            .map_err(|refused| StatechartError::InvalidTransition {
+                instance_id: "<new>".to_string(),
+                reason: refused.to_string(),
+            })?;
         let instance = MachineInstance {
             instance_id: instance_id_for_request(request_batch_id),
             def_id: def_id.to_string(),
@@ -650,7 +652,7 @@ impl StatechartStore {
         // the exact bytes we will persist (the key that makes a replayed Raft proposal
         // an idempotent no-op). A well-defined no-op returned above; it never reaches
         // here.
-        let next = transitioned_instance(&instance, &def, &outcome, now_ms);
+        let next = transitioned_instance(&instance, &def, &outcome, now_ms)?;
         let blob = encode_instance(&next)?;
         let expected_version = self.mutation_version()?;
         let batch = instance_batch(&next, &blob, &self.owner, expected_version)?;
@@ -740,20 +742,22 @@ fn transitioned_instance(
     def: &StatechartDef,
     outcome: &StepOutcome,
     now_ms: i64,
-) -> MachineInstance {
+) -> Result<MachineInstance> {
     let mut next = instance.clone();
     next.configuration = outcome.next.clone();
     next.context = outcome.next_context.clone();
     next.version = next.version.saturating_add(1);
     next.transitions_fired = next.transitions_fired.saturating_add(1);
     next.events_seen = next.events_seen.saturating_add(1);
-    next.status = if next.configuration.is_final(def) {
-        InstanceStatus::Final
-    } else {
-        InstanceStatus::Active
-    };
+    next.status = instance
+        .status
+        .settle(next.configuration.is_final(def))
+        .map_err(|refused| StatechartError::InvalidTransition {
+            instance_id: instance.instance_id.clone(),
+            reason: refused.to_string(),
+        })?;
     next.updated_at_ms = now_ms;
-    next
+    Ok(next)
 }
 
 fn commit_transition(

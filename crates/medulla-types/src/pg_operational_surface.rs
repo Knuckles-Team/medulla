@@ -66,6 +66,18 @@ pub struct SqlFormEntry {
     pub state: SqlFormState,
 }
 
+impl SqlFormEntry {
+    /// A new entry: the form starts `Refused` and reaches `target` through the
+    /// `SqlFormMachine` event that leads there (MEDULLA-ENGINE-PARITY-R021.2).
+    pub fn served_as(name: &str, kind: SqlFormKind, target: SqlFormState) -> Self {
+        Self {
+            name: name.to_string(),
+            kind,
+            state: SqlFormState::serve_as(target),
+        }
+    }
+}
+
 /// Statement forms the classifier serves today, one per `StatementKind`
 /// variant (`StatementKind::form_name` in `medulla-sql-lang`).
 pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
@@ -160,18 +172,18 @@ impl PgCompatibilityMatrix {
     pub fn with_served_forms() -> Self {
         let mut m = Self::fail_closed();
         for (name, state) in SERVED_STATEMENT_FORMS {
-            m.forms.push(SqlFormEntry {
-                name: (*name).to_string(),
-                kind: SqlFormKind::Statement,
-                state: *state,
-            });
+            m.forms.push(SqlFormEntry::served_as(
+                name,
+                SqlFormKind::Statement,
+                *state,
+            ));
         }
         for name in SERVED_FUNCTIONS {
-            m.forms.push(SqlFormEntry {
-                name: (*name).to_string(),
-                kind: SqlFormKind::Function,
-                state: SqlFormState::Supported,
-            });
+            m.forms.push(SqlFormEntry::served_as(
+                name,
+                SqlFormKind::Function,
+                SqlFormState::Supported,
+            ));
         }
         m
     }

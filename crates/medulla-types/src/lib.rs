@@ -216,6 +216,7 @@ pub mod cross_store_scope;
 // operational surfaces and a fail-closed compatibility matrix. Pure serde,
 // no dep.
 pub mod pg_operational_surface;
+pub mod sql_form_machine;
 // MEDULLA-DURABLE-KERNEL-R039 — in-memory structure/atomic-primitive kinds and a
 // durability declaration that always names redb as sole durability
 // authority. Pure serde, no dep.

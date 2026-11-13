@@ -5,6 +5,8 @@ mod jobs;
 mod resources;
 #[cfg(feature = "statechart")]
 mod statechart;
+#[cfg(feature = "statechart")]
+mod statechart_instance_machine;
 mod work_items;
 
 #[cfg(feature = "jobs")]
@@ -12,6 +14,8 @@ pub use jobs::*;
 pub use resources::*;
 #[cfg(feature = "statechart")]
 pub use statechart::*;
+#[cfg(feature = "statechart")]
+pub use statechart_instance_machine::*;
 pub use work_items::*;
 
 use medulla_agent_types::delegation::KgDelegateResult;

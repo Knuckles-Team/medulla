@@ -61,6 +61,7 @@ pub mod check;
 pub mod context;
 pub mod guard;
 pub mod instance;
+pub mod instance_machine;
 pub mod kg;
 pub mod loops;
 pub mod model;

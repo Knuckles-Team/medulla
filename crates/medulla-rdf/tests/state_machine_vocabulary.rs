@@ -942,6 +942,39 @@ fn signal_machine_matches_edge_table() {
 #[test]
 fn signal_machine_classes_extend_core() {
     sm::assert_extends_core("SignalData");
+// spec: MEDULLA-ENGINE-PARITY-R021.1
+#[test]
+fn instance_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_statechart::instance_machine::INSTANCE_MACHINE);
+}
+// spec: MEDULLA-ENGINE-PARITY-R021.1
+#[test]
+fn instance_machine_classes_extend_core() {
+    sm::assert_extends_core("Instance");
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R021.2
+#[test]
+fn sql_form_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::sql_form_machine::SQL_FORM_MACHINE);
+}
+// spec: MEDULLA-ENGINE-PARITY-R021.2
+#[test]
+fn sql_form_machine_classes_extend_core() {
+    sm::assert_extends_core("SqlForm");
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R021.3
+#[test]
+fn statechart_instance_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_protocol_types::result_contract::coordination::STATECHART_INSTANCE_MACHINE,
+    );
+}
+// spec: MEDULLA-ENGINE-PARITY-R021.3
+#[test]
+fn statechart_instance_machine_classes_extend_core() {
+    sm::assert_extends_core("StatechartInstance");
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R738.16

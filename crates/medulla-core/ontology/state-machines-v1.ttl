@@ -4013,3 +4013,263 @@
     :fromState :UqlMachine_Planned ;
     :toState :UqlMachine_Measured ;
     :firedBy :UqlMachine_Event_Measure .
+# spec: MEDULLA-ENGINE-PARITY-R021.1
+# The Instance machine: the status marker of one durable machine instance. The Rust edge table is the same table.
+
+:InstanceState a owl:Class ;
+    rdfs:label "Instance State" ;
+    rdfs:comment "A state of the Instance machine." ;
+    rdfs:subClassOf :State .
+
+:InstanceTerminalState a owl:Class ;
+    rdfs:label "Instance Terminal State" ;
+    rdfs:comment "A terminal state of the Instance machine." ;
+    rdfs:subClassOf :TerminalState, :InstanceState .
+
+:InstanceTransition a owl:Class ;
+    rdfs:label "Instance Transition" ;
+    rdfs:comment "A transition of the Instance machine." ;
+    rdfs:subClassOf :Transition .
+
+:InstanceEvent a owl:Class ;
+    rdfs:label "Instance Event" ;
+    rdfs:comment "An event of the Instance machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:InstanceGuard a owl:Class ;
+    rdfs:label "Instance Guard" ;
+    rdfs:comment "A guard of the Instance machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:InstanceMachine a :StateMachine ;
+    rdfs:label "Instance machine" ;
+    :initialState :InstanceMachine_Active ;
+    :hasState :InstanceMachine_Active, :InstanceMachine_Final .
+
+:InstanceMachine_Active a :InstanceState ;
+    rdfs:label "Instance Active" ;
+    :storedForm "active" .
+
+:InstanceMachine_Final a :InstanceState ;
+    rdfs:label "Instance Final" ;
+    :storedForm "final" .
+
+:InstanceMachine_Event_Remain a :InstanceEvent ;
+    rdfs:label "Instance Remain" .
+
+:InstanceMachine_Event_ReachFinal a :InstanceEvent ;
+    rdfs:label "Instance ReachFinal" .
+
+:InstanceMachine_Event_LeaveFinal a :InstanceEvent ;
+    rdfs:label "Instance LeaveFinal" .
+
+:InstanceMachine_Event_RemainFinal a :InstanceEvent ;
+    rdfs:label "Instance RemainFinal" .
+
+:InstanceMachine_I01 a :InstanceTransition ;
+    rdfs:label "Instance I01" ;
+    :edgeId "I01" ;
+    :fromState :InstanceMachine_Active ;
+    :toState :InstanceMachine_Active ;
+    :firedBy :InstanceMachine_Event_Remain .
+
+:InstanceMachine_I02 a :InstanceTransition ;
+    rdfs:label "Instance I02" ;
+    :edgeId "I02" ;
+    :fromState :InstanceMachine_Active ;
+    :toState :InstanceMachine_Final ;
+    :firedBy :InstanceMachine_Event_ReachFinal .
+
+:InstanceMachine_I03 a :InstanceTransition ;
+    rdfs:label "Instance I03" ;
+    :edgeId "I03" ;
+    :fromState :InstanceMachine_Final ;
+    :toState :InstanceMachine_Active ;
+    :firedBy :InstanceMachine_Event_LeaveFinal .
+
+:InstanceMachine_I04 a :InstanceTransition ;
+    rdfs:label "Instance I04" ;
+    :edgeId "I04" ;
+    :fromState :InstanceMachine_Final ;
+    :toState :InstanceMachine_Final ;
+    :firedBy :InstanceMachine_Event_RemainFinal .
+
+# spec: MEDULLA-ENGINE-PARITY-R021.2
+# The SqlForm machine: how far the engine serves one SQL form. The Rust edge table is the same table.
+
+:SqlFormState a owl:Class ;
+    rdfs:label "SqlForm State" ;
+    rdfs:comment "A state of the SqlForm machine." ;
+    rdfs:subClassOf :State .
+
+:SqlFormTerminalState a owl:Class ;
+    rdfs:label "SqlForm Terminal State" ;
+    rdfs:comment "A terminal state of the SqlForm machine." ;
+    rdfs:subClassOf :TerminalState, :SqlFormState .
+
+:SqlFormTransition a owl:Class ;
+    rdfs:label "SqlForm Transition" ;
+    rdfs:comment "A transition of the SqlForm machine." ;
+    rdfs:subClassOf :Transition .
+
+:SqlFormEvent a owl:Class ;
+    rdfs:label "SqlForm Event" ;
+    rdfs:comment "An event of the SqlForm machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SqlFormGuard a owl:Class ;
+    rdfs:label "SqlForm Guard" ;
+    rdfs:comment "A guard of the SqlForm machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SqlFormMachine a :StateMachine ;
+    rdfs:label "SqlForm machine" ;
+    :initialState :SqlFormMachine_Refused ;
+    :hasState :SqlFormMachine_Supported, :SqlFormMachine_Partial, :SqlFormMachine_Refused .
+
+:SqlFormMachine_Supported a :SqlFormState ;
+    rdfs:label "SqlForm Supported" ;
+    :storedForm "supported" .
+
+:SqlFormMachine_Partial a :SqlFormState ;
+    rdfs:label "SqlForm Partial" ;
+    :storedForm "partial" .
+
+:SqlFormMachine_Refused a :SqlFormState ;
+    rdfs:label "SqlForm Refused" ;
+    :storedForm "refused" .
+
+:SqlFormMachine_Event_ServePartially a :SqlFormEvent ;
+    rdfs:label "SqlForm ServePartially" .
+
+:SqlFormMachine_Event_ServeFully a :SqlFormEvent ;
+    rdfs:label "SqlForm ServeFully" .
+
+:SqlFormMachine_Event_Narrow a :SqlFormEvent ;
+    rdfs:label "SqlForm Narrow" .
+
+:SqlFormMachine_Event_Withdraw a :SqlFormEvent ;
+    rdfs:label "SqlForm Withdraw" .
+
+:SqlFormMachine_S01 a :SqlFormTransition ;
+    rdfs:label "SqlForm S01" ;
+    :edgeId "S01" ;
+    :fromState :SqlFormMachine_Refused ;
+    :toState :SqlFormMachine_Partial ;
+    :firedBy :SqlFormMachine_Event_ServePartially .
+
+:SqlFormMachine_S02 a :SqlFormTransition ;
+    rdfs:label "SqlForm S02" ;
+    :edgeId "S02" ;
+    :fromState :SqlFormMachine_Refused ;
+    :toState :SqlFormMachine_Supported ;
+    :firedBy :SqlFormMachine_Event_ServeFully .
+
+:SqlFormMachine_S03 a :SqlFormTransition ;
+    rdfs:label "SqlForm S03" ;
+    :edgeId "S03" ;
+    :fromState :SqlFormMachine_Partial ;
+    :toState :SqlFormMachine_Supported ;
+    :firedBy :SqlFormMachine_Event_ServeFully .
+
+:SqlFormMachine_S04 a :SqlFormTransition ;
+    rdfs:label "SqlForm S04" ;
+    :edgeId "S04" ;
+    :fromState :SqlFormMachine_Partial ;
+    :toState :SqlFormMachine_Refused ;
+    :firedBy :SqlFormMachine_Event_Withdraw .
+
+:SqlFormMachine_S05 a :SqlFormTransition ;
+    rdfs:label "SqlForm S05" ;
+    :edgeId "S05" ;
+    :fromState :SqlFormMachine_Supported ;
+    :toState :SqlFormMachine_Partial ;
+    :firedBy :SqlFormMachine_Event_Narrow .
+
+:SqlFormMachine_S06 a :SqlFormTransition ;
+    rdfs:label "SqlForm S06" ;
+    :edgeId "S06" ;
+    :fromState :SqlFormMachine_Supported ;
+    :toState :SqlFormMachine_Refused ;
+    :firedBy :SqlFormMachine_Event_Withdraw .
+
+# spec: MEDULLA-ENGINE-PARITY-R021.3
+# The StatechartInstance machine: the status marker of one statechart instance on the wire. The Rust edge table is the same table.
+
+:StatechartInstanceState a owl:Class ;
+    rdfs:label "StatechartInstance State" ;
+    rdfs:comment "A state of the StatechartInstance machine." ;
+    rdfs:subClassOf :State .
+
+:StatechartInstanceTerminalState a owl:Class ;
+    rdfs:label "StatechartInstance Terminal State" ;
+    rdfs:comment "A terminal state of the StatechartInstance machine." ;
+    rdfs:subClassOf :TerminalState, :StatechartInstanceState .
+
+:StatechartInstanceTransition a owl:Class ;
+    rdfs:label "StatechartInstance Transition" ;
+    rdfs:comment "A transition of the StatechartInstance machine." ;
+    rdfs:subClassOf :Transition .
+
+:StatechartInstanceEvent a owl:Class ;
+    rdfs:label "StatechartInstance Event" ;
+    rdfs:comment "An event of the StatechartInstance machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:StatechartInstanceGuard a owl:Class ;
+    rdfs:label "StatechartInstance Guard" ;
+    rdfs:comment "A guard of the StatechartInstance machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:StatechartInstanceMachine a :StateMachine ;
+    rdfs:label "StatechartInstance machine" ;
+    :initialState :StatechartInstanceMachine_Active ;
+    :hasState :StatechartInstanceMachine_Active, :StatechartInstanceMachine_Final .
+
+:StatechartInstanceMachine_Active a :StatechartInstanceState ;
+    rdfs:label "StatechartInstance Active" ;
+    :storedForm "active" .
+
+:StatechartInstanceMachine_Final a :StatechartInstanceState ;
+    rdfs:label "StatechartInstance Final" ;
+    :storedForm "final" .
+
+:StatechartInstanceMachine_Event_Remain a :StatechartInstanceEvent ;
+    rdfs:label "StatechartInstance Remain" .
+
+:StatechartInstanceMachine_Event_ReachFinal a :StatechartInstanceEvent ;
+    rdfs:label "StatechartInstance ReachFinal" .
+
+:StatechartInstanceMachine_Event_LeaveFinal a :StatechartInstanceEvent ;
+    rdfs:label "StatechartInstance LeaveFinal" .
+
+:StatechartInstanceMachine_Event_RemainFinal a :StatechartInstanceEvent ;
+    rdfs:label "StatechartInstance RemainFinal" .
+
+:StatechartInstanceMachine_I01 a :StatechartInstanceTransition ;
+    rdfs:label "StatechartInstance I01" ;
+    :edgeId "I01" ;
+    :fromState :StatechartInstanceMachine_Active ;
+    :toState :StatechartInstanceMachine_Active ;
+    :firedBy :StatechartInstanceMachine_Event_Remain .
+
+:StatechartInstanceMachine_I02 a :StatechartInstanceTransition ;
+    rdfs:label "StatechartInstance I02" ;
+    :edgeId "I02" ;
+    :fromState :StatechartInstanceMachine_Active ;
+    :toState :StatechartInstanceMachine_Final ;
+    :firedBy :StatechartInstanceMachine_Event_ReachFinal .
+
+:StatechartInstanceMachine_I03 a :StatechartInstanceTransition ;
+    rdfs:label "StatechartInstance I03" ;
+    :edgeId "I03" ;
+    :fromState :StatechartInstanceMachine_Final ;
+    :toState :StatechartInstanceMachine_Active ;
+    :firedBy :StatechartInstanceMachine_Event_LeaveFinal .
+
+:StatechartInstanceMachine_I04 a :StatechartInstanceTransition ;
+    rdfs:label "StatechartInstance I04" ;
+    :edgeId "I04" ;
+    :fromState :StatechartInstanceMachine_Final ;
+    :toState :StatechartInstanceMachine_Final ;
+    :firedBy :StatechartInstanceMachine_Event_RemainFinal .
