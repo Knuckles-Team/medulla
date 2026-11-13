@@ -137,6 +137,10 @@ where
     warm: HashMap<K, WarmEntry>,
     cold_meta: HashMap<K, ColdMeta>,
     cold_store: Box<dyn ColdStore<K>>,
+    /// Keep a block's cold row when it is paged in to HOT (MEDULLA-DURABLE-KERNEL-R083.5):
+    /// a cache whose cold device is the one durable copy of its blocks must not delete
+    /// that copy on a hit. Off by default (a promotion moves the bytes up).
+    retain_cold_copy: bool,
     pinned: HashSet<K>,
 
     /// Graph-topology importance weights (CONCEPT:MEDULLA-KG.memory.graph-guided-paging), layered
@@ -225,6 +229,7 @@ where
             warm: HashMap::new(),
             cold_meta: HashMap::new(),
             cold_store,
+            retain_cold_copy: false,
             pinned: HashSet::new(),
             importance: HashMap::new(),
             importance_weight: 1.0,
@@ -248,6 +253,15 @@ where
             drops: 0,
             invalidations: 0,
         }
+    }
+
+    /// Keep the cold row of a block that a hit pages in to HOT, builder-style
+    /// (MEDULLA-DURABLE-KERNEL-R083.5). The cold device then holds the one durable copy of
+    /// every block it has ever been given; only a cold-budget drop or an explicit removal
+    /// deletes a row.
+    pub fn with_retained_cold_copy(mut self) -> Self {
+        self.retain_cold_copy = true;
+        self
     }
 
     /// Select the WARM-tier compression codec (CONCEPT:MEDULLA-KG.storage.rle-codec-default), builder-style.
@@ -301,6 +315,12 @@ where
         for (key, importance) in scores {
             self.importance.insert(key, importance);
         }
+    }
+
+    /// Forget every importance stamp, so a fresh scoring of the graph replaces the old one
+    /// instead of layering on it (MEDULLA-DURABLE-KERNEL-R083.6).
+    pub fn clear_importance(&mut self) {
+        self.importance.clear();
     }
 
     /// `key`'s current graph-topology importance (CONCEPT:MEDULLA-KG.memory.graph-guided-paging), or `0.0` if never set
@@ -464,7 +484,9 @@ where
         if let Some(m) = self.cold_meta.remove(key) {
             self.cold_bytes -= m.stored_len;
             let blob = self.cold_store.get(key).ok().flatten();
-            let _ = self.cold_store.remove(key);
+            if !self.retain_cold_copy {
+                let _ = self.cold_store.remove(key);
+            }
             if let Some(sb) = blob.as_deref().and_then(decode_cold_block) {
                 let bytes = sb.decode();
                 self.verify_digest(key, &bytes)?;
@@ -608,7 +630,9 @@ where
                 self.cold_bytes -= m.stored_len;
                 let blob = self.cold_store.get(key).ok().flatten();
                 if let Some(sb) = blob.as_deref().and_then(decode_cold_block) {
-                    let _ = self.cold_store.remove(key);
+                    if !self.retain_cold_copy {
+                        let _ = self.cold_store.remove(key);
+                    }
                     let value = V::from_bytes(&sb.decode());
                     self.insert_hot(key.clone(), value, m.score, clk);
                 }
@@ -1376,5 +1400,35 @@ mod tests {
         second.set_data_version(DataVersion::At(1));
         assert!(!second.adopt_cold(&1));
         assert_eq!(device.get(&1).unwrap(), None, "the stale row is gone");
+    }
+
+    /// MEDULLA-DURABLE-KERNEL-R083.5: with the retained-copy mode a hit that pages a cold
+    /// block in to HOT leaves its row on the device, so a later cache can adopt it again;
+    /// without it the hit moves the bytes up and the row is gone.
+    #[test]
+    fn dk_r083_5_retained_cold_copy_keeps_the_row_after_a_hit() {
+        for retain in [true, false] {
+            let device = SharedCold::default();
+            let build = || {
+                let cache: TieredCache<u64, Block> =
+                    TieredCache::with_cold_store(1, 1, 1_000_000, Box::new(device.clone()));
+                if retain {
+                    cache.with_retained_cold_copy()
+                } else {
+                    cache
+                }
+            };
+            let mut first = build();
+            first.put(1, compressible_page(40, 1));
+            first.put(2, compressible_page(40, 2));
+            assert_eq!(first.tier_of(&1), Some(Tier::Cold));
+            assert_eq!(first.get(&1), Some(compressible_page(40, 1)));
+            let mut second = build();
+            assert_eq!(
+                second.adopt_cold(&1),
+                retain,
+                "the row survives a hit only in the retained mode"
+            );
+        }
     }
 }

@@ -97,13 +97,15 @@ use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
 use medulla_kvcache::{
-    BranchId, DataVersion, ReleaseOutcome, SharedKvBackend, SharedKvIndex, SnapshotId,
+    BranchId, DataVersion, KvTierError, ReleaseOutcome, SharedKvBackend, SharedKvIndex, SnapshotId,
 };
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::state::ServerState;
 
+#[cfg(feature = "kv")]
+mod cold_namespace;
 /// The zero-copy snapshot/fork sub-surface: `/kv/snapshot…`, `/kv/fork/stats`
 /// and `/kv/branch…`.
 mod fork;
@@ -111,15 +113,13 @@ mod fork;
 /// KV-cache over the engine's live `kv.redb` (feature `kv`). See [`shared_store`].
 mod metrics;
 #[cfg(feature = "kv")]
-mod cold_namespace;
-#[cfg(feature = "kv")]
 mod shared_store;
 #[cfg(feature = "kv")]
 pub use cold_namespace::KvNamespaceColdStore;
 #[cfg(feature = "kv")]
 pub use shared_store::{
-    rank_keys_by_importance, SharedKvStoreBackend, SharedKvStoreStats, StoreOutcome,
-    DEFAULT_BLOCK_POLICY,
+    rank_keys_by_importance, SharedKvStoreBackend, SharedKvStoreStats, StoreOutcome, TierBudgets,
+    DEFAULT_BLOCK_POLICY, DEFAULT_TIER_BUDGETS,
 };
 
 /// Env var selecting the KV-cache backend (CONCEPT:MEDULLA-KG.backend.networked-shared-kv):
@@ -162,8 +162,36 @@ pub const KVCACHE_MODEL_ID_HEADER: &str = "x-medulla-model-id";
 /// block. A `GET` or `PUT` under another revision of the same model refuses with
 /// `KV_MODEL_VERSION_MISMATCH`.
 pub const KVCACHE_MODEL_VERSION_HEADER: &str = "x-medulla-model-version";
+/// Request header (MEDULLA-DURABLE-KERNEL-R083.6): comma-separated hashes of the graph
+/// neighbours the caller read for the block it asks for. A hit pages those of them that
+/// sit in the COLD tier up to HOT.
+pub const KVCACHE_NEIGHBORS_HEADER: &str = "x-medulla-neighbors";
 const MAX_KVCACHE_BODY_BYTES: usize = 64 * 1024 * 1024;
 const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// Why a block operation failed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BackendError {
+    /// The durable store refused a read or write.
+    Store(String),
+    /// The tier ladder refused (MEDULLA-DURABLE-KERNEL-R083.8): 507 or 422 on the wire.
+    Tier(KvTierError),
+}
+
+impl std::fmt::Display for BackendError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Store(message) => f.write_str(message),
+            Self::Tier(refusal) => write!(f, "{refusal}"),
+        }
+    }
+}
+
+impl From<KvTierError> for BackendError {
+    fn from(refusal: KvTierError) -> Self {
+        Self::Tier(refusal)
+    }
+}
 
 /// How a `PUT /kv/<hash>` ended.
 enum PutStatus {
@@ -265,19 +293,28 @@ impl KvCacheStore {
         }
     }
 
-    fn get(&self, hash: &str) -> Option<Vec<u8>> {
+    /// The block under `hash`; a durable page-in whose digest differs from the digest
+    /// recorded at first write refuses with its tier error (MEDULLA-DURABLE-KERNEL-R083.8).
+    /// `neighbors` are the graph neighbours the request read (MEDULLA-DURABLE-KERNEL-R083.6).
+    fn get(&self, hash: &str, neighbors: &[String]) -> Result<Option<Vec<u8>>, KvTierError> {
         #[cfg(feature = "kv")]
         if let Some(durable) = &self.durable {
-            return durable.get_block(hash);
+            return durable.fetch_with_neighbors(hash, neighbors);
         }
-        self.index.lock().unwrap().get_block(hash)
+        let _ = neighbors;
+        Ok(self.index.lock().unwrap().get_block(hash))
     }
 
     /// Store `block` under `hash`, stamped with the [`DataVersion`] it was `derived_at`
     /// (CONCEPT:MEDULLA-KG.storage.content-addressed-put). `Ok(true)` iff a NEW block was created
     /// (`Ok(false)` on a dedup hit against an already-present block); `Err` on a durable
     /// store failure (so the surface can 500 rather than silently claim it cached).
-    fn put(&self, hash: &str, block: Vec<u8>, derived_at: DataVersion) -> Result<bool, String> {
+    fn put(
+        &self,
+        hash: &str,
+        block: Vec<u8>,
+        derived_at: DataVersion,
+    ) -> Result<bool, BackendError> {
         #[cfg(feature = "kv")]
         if let Some(durable) = &self.durable {
             return durable.store_block(hash, block, derived_at);
@@ -297,7 +334,7 @@ impl KvCacheStore {
         block: Vec<u8>,
         derived_at: DataVersion,
         rebuild_cost_ms: Option<u64>,
-    ) -> Result<PutStatus, String> {
+    ) -> Result<PutStatus, BackendError> {
         #[cfg(feature = "kv")]
         if let Some(durable) = &self.durable {
             return Ok(
@@ -359,6 +396,16 @@ impl KvCacheStore {
             return;
         }
         self.index.lock().unwrap().set_data_version(version);
+    }
+
+    /// Re-score the durable backend's blocks from the graph topology a version bump
+    /// carried (MEDULLA-DURABLE-KERNEL-R083.6); the in-process index has no tiers to rank.
+    fn refresh_importance(&self, edges: &[(String, String)]) {
+        #[cfg(feature = "kv")]
+        if let Some(durable) = &self.durable {
+            durable.refresh_importance(edges);
+        }
+        let _ = edges;
     }
 
     /// The surface's current data version as connector-friendly JSON (CONCEPT:MEDULLA-KG.storage.content-addressed-put).
@@ -487,8 +534,20 @@ impl KvCacheStore {
         #[cfg(feature = "kv")]
         if let Some(durable) = &self.durable {
             let s = durable.stats();
+            let t = durable.tier_stats();
             return serde_json::json!({
                 "backend": "durable",
+                "tiers": {
+                    "hot_entries": t.hot_entries,
+                    "warm_entries": t.warm_entries,
+                    "cold_entries": t.cold_entries,
+                    "hot_bytes": t.hot_bytes,
+                    "warm_bytes": t.warm_bytes,
+                    "cold_bytes": t.cold_bytes,
+                    "promotions": t.promotions,
+                    "demotions_to_warm": t.demotions_to_warm,
+                    "demotions_to_cold": t.demotions_to_cold,
+                },
                 "instance": durable.instance_id(),
                 "durable": durable.is_durable(),
                 "get_hits": s.get_hits,
@@ -749,22 +808,46 @@ impl BlockRoute<'_> {
             Self::Version => on_read(&req.method, || {
                 KvResponse::json("200 OK", store.version_json())
             }),
-            Self::SetVersion(version) => on_write(&req.method, || set_version(store, version)),
+            Self::SetVersion(version) => {
+                on_write(&req.method, || set_version(store, version, &req.body))
+            }
             Self::Exists(hash) => exists(store, hash),
             Self::Block(hash) => block(store, req, hash),
         }
     }
 }
 
-/// `PUT|POST /kv/version/<n>` — advance the store's data version.
-fn set_version(store: &KvCacheStore, raw: &str) -> KvResponse {
-    match raw.parse::<u64>() {
-        Ok(version) => {
-            store.set_data_version(DataVersion::At(version));
-            KvResponse::json("200 OK", store.version_json())
-        }
-        Err(_) => KvResponse::error("400 Bad Request", "BadRequest", "version must be a u64"),
+/// `PUT|POST /kv/version/<n>` — advance the store's data version. The optional JSON body
+/// `{"edges": [["<hash>", "<hash>"], ...]}` is the graph topology between blocks the write
+/// hook knows; the durable backend re-scores every block's graph importance from it
+/// (MEDULLA-DURABLE-KERNEL-R083.6). An empty body bumps the version only.
+fn set_version(store: &KvCacheStore, raw: &str, body: &[u8]) -> KvResponse {
+    let Ok(version) = raw.parse::<u64>() else {
+        return KvResponse::error("400 Bad Request", "BadRequest", "version must be a u64");
+    };
+    let edges = match parse_topology_edges(body) {
+        Ok(edges) => edges,
+        Err(message) => return KvResponse::error("400 Bad Request", "BadRequest", message),
+    };
+    store.set_data_version(DataVersion::At(version));
+    if let Some(edges) = edges {
+        store.refresh_importance(&edges);
     }
+    KvResponse::json("200 OK", store.version_json())
+}
+
+/// The topology edges a version bump carries, `None` for an empty body.
+fn parse_topology_edges(body: &[u8]) -> Result<Option<Vec<(String, String)>>, &'static str> {
+    if body.iter().all(u8::is_ascii_whitespace) {
+        return Ok(None);
+    }
+    #[derive(serde::Deserialize)]
+    struct Topology {
+        edges: Vec<(String, String)>,
+    }
+    serde_json::from_slice::<Topology>(body)
+        .map(|topology| Some(topology.edges))
+        .map_err(|_| "body must be {\"edges\": [[from, to], ...]}")
 }
 
 /// `/kv/<hash>/exists` — presence as JSON, without transferring the page.
@@ -793,14 +876,44 @@ fn block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
         }
     }
     match req.method.as_str() {
-        "GET" => match store.get(hash) {
-            Some(bytes) => KvResponse::bytes("200 OK", bytes),
-            None => KvResponse::error("404 Not Found", "NoSuchBlock", "no block under that hash"),
-        },
+        "GET" => {
+            let neighbors: Vec<String> = req
+                .headers
+                .get(KVCACHE_NEIGHBORS_HEADER)
+                .map(|raw| {
+                    raw.split(',')
+                        .map(str::trim)
+                        .filter(|hash| !hash.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default();
+            match store.get(hash, &neighbors) {
+                Ok(Some(bytes)) => KvResponse::bytes("200 OK", bytes),
+                Ok(None) => {
+                    KvResponse::error("404 Not Found", "NoSuchBlock", "no block under that hash")
+                }
+                Err(refusal) => tier_refusal(refusal),
+            }
+        }
         "HEAD" => head(store, hash),
         "PUT" => put_block(store, req, hash, model.as_ref()),
         _ => method_not_allowed(),
     }
+}
+
+/// The refusal a tier error answers with: its registered code and HTTP status
+/// (MEDULLA-DURABLE-KERNEL-R083.8).
+fn tier_refusal(refusal: KvTierError) -> KvResponse {
+    let status = match refusal.http_status() {
+        507 => "507 Insufficient Storage",
+        _ => "422 Unprocessable Entity",
+    };
+    KvResponse::error(
+        status,
+        refusal.code(),
+        "the KV-cache tier refused the block",
+    )
 }
 
 /// `HEAD /kv/<hash>` — the presence answer with the body suppressed.
@@ -845,6 +958,7 @@ fn put_block(
         // Accepted, not stored: the tier policy kept the block out, and a refusal is a
         // miss for the next GET, never an error for the writer.
         Ok(PutStatus::Refused) => KvResponse::empty("202 Accepted"),
+        Err(BackendError::Tier(refusal)) => tier_refusal(refusal),
         Err(error) => {
             tracing::warn!(
                 target: "medulla::kvcache",
@@ -931,12 +1045,18 @@ async fn resolve_store(state: &Arc<RwLock<ServerState>>) -> std::io::Result<KvCa
         // The block tier follows the server's loaded knobs, like the served answer cache.
         let knobs = medulla_server_api::knob_config::knobs();
         Ok(KvCacheStore::with_durable(
-            SharedKvStoreBackend::with_policy(
+            SharedKvStoreBackend::with_tiers(
                 kv,
                 instance_id,
                 medulla_kvcache::TierPolicy {
                     max_bytes: knobs.kvcache_answer_max_bytes,
                     min_worth: knobs.kvcache_min_worth,
+                },
+                TierBudgets {
+                    hot_bytes: knobs.kvcache_hot_bytes,
+                    warm_bytes: knobs.kvcache_warm_bytes,
+                    cold_bytes: knobs.kvcache_cold_bytes,
+                    importance_weight: knobs.kvcache_importance_weight,
                 },
             ),
         ))

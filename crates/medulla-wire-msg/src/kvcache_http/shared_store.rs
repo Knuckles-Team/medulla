@@ -22,9 +22,12 @@
 //!
 //! One namespace holds the blocks, one holds the invalidation epoch:
 //!
-//! * `kvcache-blocks / <token-hash> -> [tag u8][version u64 BE][KV page bytes…]` — the
-//!   block, framed with the [`DataVersion`] it was derived at (`tag 0` = `Agnostic`
-//!   pure content-addressed page; `tag 1` = `At(v)` derived context).
+//! * `kvcache-blocks / <token-hash> -> ColdFrame` — the block as the self-describing cold
+//!   frame of `medulla-kvcache` (codec, original length, [`DataVersion`] it was derived at,
+//!   content digest, stored bytes). This namespace is the COLD rung of the tier ladder and
+//!   the one durable copy of a block; every block is written through to it before the
+//!   put is acknowledged, and a block a restarted or second instance has not seen is
+//!   adopted from its row ([`medulla_kvcache::TieredCache::adopt_cold`]).
 //! * `kvcache-meta / data_version -> <u64 BE>` — the store's current data version
 //!   (CONCEPT:MEDULLA-KG.storage.content-addressed-put). Absent ⇒ version-tracking inactive
 //!   (`Agnostic`). Persisted so EVERY instance agrees on freshness across the fleet — a
@@ -54,11 +57,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use medulla_kvcache::{
-    AdmissionRefusal, Block, CacheEntryMeta, DataVersion, PolicyTier, SharedKvBackend, Tier,
-    TierPolicy,
+    content_hash, decode_cold_frame, encode_cold_frame, AdmissionRefusal, Block, CacheEntryMeta,
+    ColdFrame, DataVersion, KvTierError, PolicyTier, SharedKvBackend, StoredBlock, Tier,
+    TierPolicy, TieredCache,
 };
 
 use medulla_server_blob::kv::KvStore;
+
+use super::cold_namespace::KvNamespaceColdStore;
+use super::BackendError;
 
 /// KV namespace for the framed KV-cache block bytes.
 const BLOCK_NS: &str = "kvcache-blocks";
@@ -66,8 +73,6 @@ const BLOCK_NS: &str = "kvcache-blocks";
 const META_NS: &str = "kvcache-meta";
 /// Meta key holding the store's current [`DataVersion`] (absent ⇒ `Agnostic`).
 const VERSION_KEY: &str = "data_version";
-/// Fixed frame header: 1 discriminant byte + 8 big-endian version bytes.
-const FRAME_HEADER: usize = 9;
 /// Emit the periodic hit-rate metric once every this many accesses (mirrors
 /// `result_cache::maybe_log_rate`'s 1024-access cadence — cheap, never floods).
 const HIT_RATE_LOG_EVERY: u64 = 1024;
@@ -80,6 +85,30 @@ const SHARED_TENANT: &str = "shared";
 pub const DEFAULT_BLOCK_POLICY: TierPolicy = TierPolicy {
     max_bytes: 268_435_456,
     min_worth: 0.001,
+};
+
+/// The byte budgets of the three rungs and the graph-importance weight, as the registry
+/// knobs `kvcache.hot_bytes`, `kvcache.warm_bytes`, `kvcache.cold_bytes` and
+/// `kvcache.importance_weight` resolve them (MEDULLA-DURABLE-KERNEL-R083.5/R083.6).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TierBudgets {
+    /// HOT (raw, in RAM) byte budget.
+    pub hot_bytes: u64,
+    /// WARM (compressed, in RAM) byte budget.
+    pub warm_bytes: u64,
+    /// COLD (durable `kvcache-blocks` namespace) byte budget.
+    pub cold_bytes: u64,
+    /// Weight of the graph-importance term in the demotion score.
+    pub importance_weight: f64,
+}
+
+/// The `KnobConfig` defaults (1 GiB, 4 GiB, 64 GiB, weight 1.0), for a backend built
+/// without the loaded knobs.
+pub const DEFAULT_TIER_BUDGETS: TierBudgets = TierBudgets {
+    hot_bytes: 1_073_741_824,
+    warm_bytes: 4_294_967_296,
+    cold_bytes: 68_719_476_736,
+    importance_weight: 1.0,
 };
 
 /// What [`SharedKvStoreBackend::store_block_priced`] did with a block.
@@ -134,6 +163,9 @@ impl SharedKvStoreStats {
 /// counters are atomic), so the `&mut self` in the trait is a pure signature detail.
 pub struct SharedKvStoreBackend {
     store: Arc<KvStore>,
+    /// The tier ladder over the blocks this instance has served or stored; its cold rung
+    /// is the `kvcache-blocks` namespace of `store`, which keeps the one durable copy.
+    cache: Mutex<TieredCache<String, Block>>,
     /// This serving instance's id — stamped on every metric so cross-instance reuse is
     /// visible in the logs (e.g. instance B logging a hit on a hash instance A stored).
     instance_id: String,
@@ -161,7 +193,28 @@ impl SharedKvStoreBackend {
         instance_id: impl Into<String>,
         policy: TierPolicy,
     ) -> Self {
+        Self::with_tiers(store, instance_id, policy, DEFAULT_TIER_BUDGETS)
+    }
+
+    /// [`with_policy`](Self::with_policy) with the tier byte budgets and importance weight
+    /// the server loaded from its knobs.
+    pub fn with_tiers(
+        store: Arc<KvStore>,
+        instance_id: impl Into<String>,
+        policy: TierPolicy,
+        budgets: TierBudgets,
+    ) -> Self {
+        let to_cap = |bytes: u64| usize::try_from(bytes).unwrap_or(usize::MAX);
+        let cache = TieredCache::with_cold_store(
+            to_cap(budgets.hot_bytes),
+            to_cap(budgets.warm_bytes),
+            to_cap(budgets.cold_bytes),
+            Box::new(KvNamespaceColdStore::new(Arc::clone(&store), BLOCK_NS)),
+        )
+        .with_retained_cold_copy()
+        .with_importance_weight(budgets.importance_weight);
         Self {
+            cache: Mutex::new(cache),
             store,
             instance_id: instance_id.into(),
             min_worth: policy.min_worth,
@@ -183,51 +236,133 @@ impl SharedKvStoreBackend {
 
     // ── block ops (the SharedKvBackend seam, `&self` internals) ─────────────────────
 
-    /// Fetch the fresh block stored under `hash`, else `None` (absent OR stale).
-    /// Counts the hit/miss and emits the per-op + periodic hit-rate `tracing`.
-    fn fetch(&self, hash: &str) -> Option<Block> {
-        let raw = match self.store.get(BLOCK_NS, hash) {
-            Ok(Some(raw)) => raw,
-            Ok(None) => return self.miss(hash, false),
-            Err(error) => {
-                // A store read error is a cache MISS (never crash token generation), but
-                // surface it — it is not a normal absent-key outcome.
-                tracing::warn!(
-                    target: "medulla::kvcache",
-                    instance = %self.instance_id,
-                    hash = %hash,
-                    error = %error,
-                    "kvcache durable get failed, treating as miss"
-                );
-                return self.miss(hash, false);
+    /// The tier ladder, recovered if a panic elsewhere left the lock poisoned (the ladder
+    /// holds maps and counters only).
+    fn cache(&self) -> std::sync::MutexGuard<'_, TieredCache<String, Block>> {
+        self.cache
+            .lock_recovering("kvcache shared-store tier ladder")
+    }
+
+    /// Bring the ladder's data version level with the store's persisted one, so a bump any
+    /// instance made retires this instance's stale resident blocks too.
+    fn sync_version(&self, cache: &mut TieredCache<String, Block>) {
+        let current = self.current_version();
+        if cache.current_version() != current {
+            cache.set_data_version(current);
+        }
+    }
+
+    /// Fetch the fresh block stored under `hash`, else `Ok(None)` (absent OR stale); a
+    /// page-in whose digest differs from the digest recorded at first write refuses with
+    /// [`KvTierError::BlockDigestMismatch`]. A block the ladder does not hold is adopted
+    /// from its durable row first. Counts the hit/miss and emits the per-op + periodic
+    /// hit-rate `tracing`.
+    pub fn fetch_checked(&self, hash: &str) -> Result<Option<Block>, KvTierError> {
+        self.fetch_with_neighbors(hash, &[])
+    }
+
+    /// [`fetch_checked`](Self::fetch_checked) that, on a hit, pages the COLD blocks named
+    /// in `neighbors` (the graph neighbours the request read) up to HOT too
+    /// (MEDULLA-DURABLE-KERNEL-R083.6). A miss prefetches nothing.
+    pub fn fetch_with_neighbors(
+        &self,
+        hash: &str,
+        neighbors: &[String],
+    ) -> Result<Option<Block>, KvTierError> {
+        let key = hash.to_string();
+        let mut cache = self.cache();
+        let resident_before = cache.tier_of(&key).is_some();
+        self.sync_version(&mut cache);
+        let mut stale = false;
+        let found = match self.page_in(&mut cache, &key, &mut stale, resident_before) {
+            Ok(found) => found,
+            Err(refusal) => {
+                drop(cache);
+                self.miss(hash, false);
+                return Err(refusal);
             }
         };
-        let Some((version, block)) = decode_frame(&raw) else {
-            tracing::warn!(
-                target: "medulla::kvcache",
-                instance = %self.instance_id,
-                hash = %hash,
-                "kvcache stored block frame is malformed, treating as miss"
-            );
-            return self.miss(hash, false);
-        };
-        // Freshness gate (CONCEPT:MEDULLA-KG.storage.content-addressed-put): an Agnostic pure
-        // KV page is fresh forever and never reads the epoch (the dedup hot path); a
-        // versioned derived-context entry is fresh only at the store's current version.
-        let fresh = match version {
-            DataVersion::Agnostic => true,
-            DataVersion::At(_) => version.is_fresh(self.current_version()),
-        };
-        if fresh {
+        if let Some(block) = &found {
+            for neighbor in neighbors.iter().filter(|neighbor| **neighbor != key) {
+                cache.adopt_cold(neighbor);
+                if cache.tier_of(neighbor) == Some(Tier::Cold) {
+                    // A cold neighbour pages up to HOT; a digest refusal drops it and
+                    // the neighbour's own read refuses later, so it is not this read's.
+                    let _ = cache.try_get(neighbor);
+                }
+            }
+            drop(cache);
             self.note_served(hash, block.len() as u64);
             self.get_hits.fetch_add(1, Ordering::Relaxed);
             self.trace_access(hash, true);
             self.maybe_log_rate();
-            Some(block.to_vec())
-        } else {
-            self.stale_missed.fetch_add(1, Ordering::Relaxed);
-            self.miss(hash, true)
+            return Ok(found);
         }
+        drop(cache);
+        if stale {
+            self.stale_missed.fetch_add(1, Ordering::Relaxed);
+        }
+        Ok(self.miss(hash, stale))
+    }
+
+    /// Serve `key` from the ladder, adopting its durable row when no tier holds it.
+    /// `stale` is set when the miss is a version-retired block, not an absent one.
+    fn page_in(
+        &self,
+        cache: &mut TieredCache<String, Block>,
+        key: &String,
+        stale: &mut bool,
+        resident_before: bool,
+    ) -> Result<Option<Block>, KvTierError> {
+        if let Some(block) = cache.try_get(key)? {
+            return Ok(Some(block));
+        }
+        if resident_before {
+            *stale = true;
+        }
+        let raw = match self.store.get(BLOCK_NS, key) {
+            Ok(Some(raw)) => raw,
+            Ok(None) => return Ok(None),
+            Err(error) => {
+                // A store read error is a cache MISS (never crash token generation), but
+                // surface it: it is not a normal absent-key outcome.
+                tracing::warn!(
+                    target: "medulla::kvcache",
+                    instance = %self.instance_id,
+                    hash = %key,
+                    error = %error,
+                    "kvcache durable get failed, treating as miss"
+                );
+                return Ok(None);
+            }
+        };
+        let Some(frame) = decode_cold_frame(&raw) else {
+            tracing::warn!(
+                target: "medulla::kvcache",
+                instance = %self.instance_id,
+                hash = %key,
+                "kvcache stored block frame is malformed, treating as miss"
+            );
+            return Ok(None);
+        };
+        if !frame.version.is_fresh(cache.current_version()) {
+            // A row derived at a version the store has moved past: retire it.
+            *stale = true;
+            if let Err(error) = self.store.delete(BLOCK_NS, key) {
+                tracing::warn!(
+                    target: "medulla::kvcache",
+                    instance = %self.instance_id,
+                    hash = %key,
+                    error = %error,
+                    "kvcache could not delete a stale block row"
+                );
+            }
+            return Ok(None);
+        }
+        if cache.adopt_cold(key) {
+            return cache.try_get(key);
+        }
+        Ok(None)
     }
 
     fn miss(&self, hash: &str, _stale: bool) -> Option<Block> {
@@ -258,7 +393,7 @@ impl SharedKvStoreBackend {
         hash: &str,
         block: Block,
         derived_at: DataVersion,
-    ) -> Result<bool, String> {
+    ) -> Result<bool, BackendError> {
         Ok(matches!(
             self.store_block_priced(hash, block, derived_at, None)?,
             StoreOutcome::Created
@@ -273,7 +408,7 @@ impl SharedKvStoreBackend {
         block: Block,
         derived_at: DataVersion,
         rebuild_cost_ms: Option<u64>,
-    ) -> Result<StoreOutcome, String> {
+    ) -> Result<StoreOutcome, BackendError> {
         // Whether a row occupying this key is FRESH right now — not merely whether
         // SOME row physically occupies it. An `Agnostic` page is fresh forever
         // (content-addressed: any present row is byte-identical), so this matches
@@ -293,11 +428,8 @@ impl SharedKvStoreBackend {
             .ok()
             .flatten()
             .as_deref()
-            .and_then(decode_frame)
-            .is_some_and(|(version, _)| match version {
-                DataVersion::Agnostic => true,
-                DataVersion::At(_) => version.is_fresh(self.current_version()),
-            });
+            .and_then(decode_cold_frame)
+            .is_some_and(|frame| frame.version.is_fresh(self.current_version()));
         // A content-addressed page already present (and therefore fresh) is
         // identical bytes — skip the redundant durable rewrite and count the
         // cross-instance dedup (the hot path).
@@ -315,9 +447,24 @@ impl SharedKvStoreBackend {
                 return Ok(StoreOutcome::Refused(refusal));
             }
         };
-        let frame = encode_frame(&block, derived_at);
-        self.store.put(BLOCK_NS, hash, frame)?;
+        let mut cache = self.cache();
+        self.sync_version(&mut cache);
+        // Write through to the durable row before anything is acknowledged: the cold
+        // rung's namespace is the one durable copy of the block, so a block that is HOT
+        // only in RAM never exists without it.
+        let stored = StoredBlock::encode_with(cache.warm_codec(), &block);
+        let frame = encode_cold_frame(&ColdFrame {
+            codec: stored.codec,
+            orig_len: stored.orig_len,
+            version: derived_at,
+            digest: content_hash(&block),
+            data: stored.data,
+        });
+        self.store
+            .put(BLOCK_NS, hash, frame)
+            .map_err(BackendError::Store)?;
         for gone in evicted {
+            cache.evict(&gone.key_digest);
             if let Err(error) = self.store.delete(BLOCK_NS, &gone.key_digest) {
                 tracing::warn!(
                     target: "medulla::kvcache",
@@ -328,6 +475,8 @@ impl SharedKvStoreBackend {
                 );
             }
         }
+        cache.try_put_versioned(hash.to_string(), block, derived_at)?;
+        drop(cache);
         if existing_is_fresh {
             // A versioned re-publish of an ALREADY-fresh value REFRESHES the
             // entry's version stamp (un-stales it) — still a dedup.
@@ -390,14 +539,12 @@ impl SharedKvStoreBackend {
         policy.lookup(SHARED_TENANT, hash, 0);
     }
 
-    /// Whether a fresh (non-stale) block exists under `hash`.
+    /// Whether a fresh (non-stale) block exists under `hash`: its durable row is the
+    /// record of every block the fleet holds.
     fn has(&self, hash: &str) -> bool {
         match self.store.get(BLOCK_NS, hash) {
-            Ok(Some(raw)) => match decode_frame(&raw) {
-                Some((DataVersion::Agnostic, _)) => true,
-                Some((version @ DataVersion::At(_), _)) => version.is_fresh(self.current_version()),
-                None => false,
-            },
+            Ok(Some(raw)) => decode_cold_frame(&raw)
+                .is_some_and(|frame| frame.version.is_fresh(self.current_version())),
             _ => false,
         }
     }
@@ -411,12 +558,14 @@ impl SharedKvStoreBackend {
         match version {
             DataVersion::At(v) => self
                 .store
-                .put(META_NS, VERSION_KEY, v.to_be_bytes().to_vec()),
+                .put(META_NS, VERSION_KEY, v.to_be_bytes().to_vec())?,
             DataVersion::Agnostic => {
                 self.store.delete(META_NS, VERSION_KEY)?;
-                Ok(())
             }
         }
+        let mut cache = self.cache();
+        self.sync_version(&mut cache);
+        Ok(())
     }
 
     /// The store's current data version (`Agnostic` when tracking is inactive).
@@ -443,8 +592,12 @@ impl SharedKvStoreBackend {
         let pairs = self.store.scan(BLOCK_NS, "", max)?;
         let mut retired = 0usize;
         for (key, raw) in pairs {
-            if let Some((version @ DataVersion::At(_), _)) = decode_frame(&raw) {
-                if !version.is_fresh(current) && self.store.delete(BLOCK_NS, &key)? {
+            if let Some(frame) = decode_cold_frame(&raw) {
+                if matches!(frame.version, DataVersion::At(_))
+                    && !frame.version.is_fresh(current)
+                    && self.store.delete(BLOCK_NS, &key)?
+                {
+                    self.cache().evict(&key);
                     retired += 1;
                 }
             }
@@ -474,11 +627,59 @@ impl SharedKvStoreBackend {
             if paged.len() >= budget {
                 break;
             }
-            if let Some(block) = self.fetch(key) {
+            if let Ok(Some(block)) = self.fetch_checked(key) {
                 paged.push((key.clone(), block));
             }
         }
         paged
+    }
+
+    /// Re-score every block by its place in the graph (MEDULLA-DURABLE-KERNEL-R083.6): the
+    /// PageRank of the topology `edges` (block hash to block hash) replaces the previous
+    /// importance, so the demotion score `recency + importance_weight * importance` keeps
+    /// the graph-central blocks resident longer. Returns the number of blocks scored. The
+    /// scores are derived and rebuildable, so they live only in the ladder.
+    pub fn refresh_importance(&self, edges: &[(String, String)]) -> usize {
+        use medulla_graph_core::graph::GraphCore;
+        let graph = GraphCore::new();
+        let mut seen = HashSet::new();
+        for (from, to) in edges {
+            for node in [from, to] {
+                if seen.insert(node.clone()) {
+                    graph.add_node(node.clone(), b"{}".to_vec());
+                }
+            }
+        }
+        for (from, to) in edges {
+            if let Err(error) = graph.add_edge(from.clone(), to.clone(), b"{}".to_vec()) {
+                tracing::warn!(
+                    target: "medulla::kvcache",
+                    instance = %self.instance_id,
+                    error = %error,
+                    "kvcache skipped a topology edge"
+                );
+            }
+        }
+        let scores = medulla_graph_algos::graph_importance::pagerank_importance(
+            &graph.topology_snapshot(),
+            0.85,
+            20,
+        );
+        let scored = scores.len();
+        let mut cache = self.cache();
+        cache.clear_importance();
+        cache.apply_importance_scores(scores);
+        scored
+    }
+
+    /// The tier `hash` currently occupies in this instance's ladder, if resident and fresh.
+    pub fn tier_of(&self, hash: &str) -> Option<Tier> {
+        self.cache().tier_of(&hash.to_string())
+    }
+
+    /// Occupancy and lifetime counters of this instance's tier ladder.
+    pub fn tier_stats(&self) -> medulla_kvcache::CacheStats {
+        self.cache().stats()
     }
 
     /// Current occupancy + hit-rate counters (the Seam-6 export shape).
@@ -541,43 +742,9 @@ impl SharedKvStoreBackend {
     }
 }
 
-/// Frame a block with its [`DataVersion`]: `[tag u8][version u64 BE][bytes…]`.
-fn encode_frame(block: &[u8], version: DataVersion) -> Vec<u8> {
-    let mut frame = Vec::with_capacity(FRAME_HEADER + block.len());
-    match version {
-        DataVersion::Agnostic => {
-            frame.push(0);
-            frame.extend_from_slice(&0u64.to_be_bytes());
-        }
-        DataVersion::At(v) => {
-            frame.push(1);
-            frame.extend_from_slice(&v.to_be_bytes());
-        }
-    }
-    frame.extend_from_slice(block);
-    frame
-}
-
-/// Decode a framed block into `(version, block-bytes)`; `None` on a malformed frame.
-fn decode_frame(frame: &[u8]) -> Option<(DataVersion, &[u8])> {
-    if frame.len() < FRAME_HEADER {
-        return None;
-    }
-    let version = match frame[0] {
-        0 => DataVersion::Agnostic,
-        1 => {
-            let mut buf = [0u8; 8];
-            buf.copy_from_slice(&frame[1..FRAME_HEADER]);
-            DataVersion::At(u64::from_be_bytes(buf))
-        }
-        _ => return None,
-    };
-    Some((version, &frame[FRAME_HEADER..]))
-}
-
 impl SharedKvBackend for SharedKvStoreBackend {
     fn get_block(&self, hash: &str) -> Option<Block> {
-        self.fetch(hash)
+        self.fetch_checked(hash).ok().flatten()
     }
 
     fn put_block(&mut self, hash: &str, block: Block, derived_at: DataVersion) -> bool {
@@ -836,31 +1003,6 @@ mod tests {
         );
     }
 
-    /// The framed block round-trips its version stamp + bytes, and a malformed frame reads
-    /// as a miss (defensive decode).
-    #[test]
-    fn frame_encode_decode_round_trips() {
-        for version in [
-            DataVersion::Agnostic,
-            DataVersion::At(0),
-            DataVersion::At(42),
-        ] {
-            let block = vec![1u8, 2, 3, 255, 0, 10];
-            let frame = encode_frame(&block, version);
-            let (decoded_version, decoded_block) = decode_frame(&frame).unwrap();
-            assert_eq!(decoded_version, version);
-            assert_eq!(decoded_block, &block[..]);
-        }
-        assert!(
-            decode_frame(&[0u8; 4]).is_none(),
-            "too-short frame is malformed"
-        );
-        assert!(
-            decode_frame(&[9u8; 16]).is_none(),
-            "bad discriminant is malformed"
-        );
-    }
-
     /// Durability: a block one instance PUTs survives a store close + reopen, so the fleet
     /// cache survives an engine restart (the L2 durability property).
     #[test]
@@ -877,5 +1019,135 @@ mod tests {
         let b = SharedKvStoreBackend::new(s, "B");
         assert_eq!(b.get_block("survivor"), Some(vec![5u8; 256]));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A page whose consecutive bytes differ, so the warm codec cannot shrink it.
+    fn page(seed: u8, len: usize) -> Block {
+        (0..len)
+            .map(|i| (usize::from(seed) * 31 + i * 7) as u8)
+            .collect()
+    }
+
+    fn small_tiers(store: &Arc<KvStore>, name: &str) -> SharedKvStoreBackend {
+        tiers_with_hot(store, name, 100)
+    }
+
+    fn tiers_with_hot(store: &Arc<KvStore>, name: &str, hot_bytes: u64) -> SharedKvStoreBackend {
+        SharedKvStoreBackend::with_tiers(
+            Arc::clone(store),
+            name,
+            DEFAULT_BLOCK_POLICY,
+            TierBudgets {
+                hot_bytes,
+                warm_bytes: 100,
+                cold_bytes: 1_000_000,
+                importance_weight: 1.0,
+            },
+        )
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R083.5
+    /// Byte pressure demotes blocks hot, warm, cold; a hit pages one back to HOT
+    /// byte-identical, and every block keeps its durable row.
+    #[test]
+    fn over_budget_puts_demote_and_a_get_promotes() {
+        let shared = store("tiers");
+        let backend = small_tiers(&shared, "A");
+        for seed in 0..6u8 {
+            backend
+                .store_block(
+                    &format!("blk-{seed}"),
+                    page(seed, 80),
+                    DataVersion::Agnostic,
+                )
+                .unwrap();
+        }
+        let stats = backend.tier_stats();
+        assert!(stats.demotions_to_warm > 0, "hot overflowed into warm");
+        assert!(stats.demotions_to_cold > 0, "warm overflowed into cold");
+        assert!(stats.cold_entries > 0);
+        let cold: Vec<String> = (0..6u8)
+            .map(|seed| format!("blk-{seed}"))
+            .filter(|hash| backend.tier_of(hash) == Some(Tier::Cold))
+            .collect();
+        assert!(!cold.is_empty());
+        for hash in &cold {
+            let seed: u8 = hash.trim_start_matches("blk-").parse().unwrap();
+            assert_eq!(backend.fetch_checked(hash).unwrap(), Some(page(seed, 80)));
+            assert_eq!(backend.tier_of(hash), Some(Tier::Hot), "a hit promotes");
+        }
+        for seed in 0..6u8 {
+            assert!(
+                shared
+                    .get(BLOCK_NS, &format!("blk-{seed}"))
+                    .unwrap()
+                    .is_some(),
+                "the namespace row is the one durable copy"
+            );
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R083.5
+    /// A second instance, and a restarted one, serve a block they never held from its row.
+    #[test]
+    fn a_new_instance_adopts_the_block_rows_of_another() {
+        let shared = store("adopt");
+        let first = small_tiers(&shared, "A");
+        for seed in 0..4u8 {
+            first
+                .store_block(&format!("blk-{seed}"), page(seed, 80), DataVersion::At(0))
+                .unwrap();
+        }
+        let second = small_tiers(&shared, "B");
+        for seed in 0..4u8 {
+            assert_eq!(
+                second.fetch_checked(&format!("blk-{seed}")).unwrap(),
+                Some(page(seed, 80))
+            );
+        }
+        // A bump retires them for the second instance's ladder and for the row alike.
+        first.set_version(DataVersion::At(1)).unwrap();
+        assert_eq!(second.fetch_checked("blk-0").unwrap(), None);
+        assert_eq!(second.stats().stale_missed, 1);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R083.6
+    /// Re-scoring from the graph keeps the central block resident while peripheral blocks
+    /// of the same age go down the ladder, and a cold neighbour named by the request
+    /// pages up with the hit.
+    #[test]
+    fn graph_importance_keeps_the_central_block_hot_and_prefetches_neighbours() {
+        let shared = store("importance");
+        let backend = tiers_with_hot(&shared, "A", 200);
+        let edges: Vec<(String, String)> = (0..4)
+            .map(|i| (format!("leaf-{i}"), "hub".to_string()))
+            .collect();
+        assert!(backend.refresh_importance(&edges) >= 5);
+        backend
+            .store_block("hub", page(9, 80), DataVersion::Agnostic)
+            .unwrap();
+        for i in 0..4u8 {
+            backend
+                .store_block(&format!("leaf-{i}"), page(i, 80), DataVersion::Agnostic)
+                .unwrap();
+        }
+        assert_eq!(
+            backend.tier_of("hub"),
+            Some(Tier::Hot),
+            "central block outlives"
+        );
+        let cold_leaf = (0..4u8)
+            .map(|i| format!("leaf-{i}"))
+            .find(|leaf| backend.tier_of(leaf) == Some(Tier::Cold))
+            .expect("a peripheral block reached cold");
+        let hit = backend
+            .fetch_with_neighbors("hub", std::slice::from_ref(&cold_leaf))
+            .unwrap();
+        assert_eq!(hit, Some(page(9, 80)));
+        assert_eq!(
+            backend.tier_of(&cold_leaf),
+            Some(Tier::Hot),
+            "neighbour prefetched"
+        );
     }
 }
