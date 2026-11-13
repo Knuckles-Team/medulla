@@ -372,6 +372,83 @@ def _control_proposal(*, join: bool = True):
     }
 
 
+def _call_proposal(reference: str, tool: str = "create_issue"):
+    """The explicit plan with a tool step: `join` calls a tool and binds its body
+    to the output of a task it depends on."""
+    proposal = _proposal()
+    join = next(task for task in proposal["tasks"] if task["task_id"] == "join")
+    join["call"] = {
+        "server": "github",
+        "tool": tool,
+        "arguments": {"title": "Joined", "body": {"$ref": reference}},
+    }
+    return proposal
+
+
+# spec: MEDULLA-DECISION-ENGINE-R134.111.13
+def test_tool_step_bindings_end_to_end(authenticated_plan_client):
+    client = authenticated_plan_client
+    try:
+        pin = publish(
+            client,
+            "task-plan-schema-" + uuid.uuid4().hex,
+            "feature_schema",
+            schema_body(),
+        )
+        proposal = _call_proposal("steps.c.output.summary")
+        asked = task_plan_request(TEST_TENANT, "fixture-tool-step", proposal, pin)
+        record = client._send("Decide", {"request": asked})["records"][0]
+        plan = record["answer"]["value"]
+
+        # Calls and bindings round trip: only the tool step carries one.
+        by_id = {task["task_id"]: task for task in plan["tasks"]}
+        assert by_id["join"]["call"] == proposal["tasks"][0]["call"]
+        assert by_id["join"]["call"]["arguments"]["body"] == {
+            "$ref": "steps.c.output.summary"
+        }
+        assert all(
+            task.get("call") is None for tid, task in by_id.items() if tid != "join"
+        )
+        claims = {p["fact"] for p in record["premises"] if p["subject"] == "join"}
+        assert (
+            "task_plan_call:server=github;tool=create_issue;"
+            "bindings=steps.c.output.summary"
+        ) in claims
+        assert (
+            verify_task_plan_receipt(record, asked, expected_principal=TEST_AGENT_ID)
+            == plan
+        )
+        _persist_and_read(client, proposal, plan)
+
+        # The digest binds the call: a different tool or reference changes it.
+        for changed in (
+            _call_proposal("steps.c.output.summary", tool="update_issue"),
+            _call_proposal("steps.a.output.summary"),
+        ):
+            other = client._send(
+                "Decide",
+                {
+                    "request": task_plan_request(
+                        TEST_TENANT, "fixture-tool-step-changed", changed, pin
+                    )
+                },
+            )["records"][0]["answer"]["value"]
+            assert other["plan_digest"] != plan["plan_digest"]
+
+        # A reference to a non-dependency is refused with the typed code, no plan.
+        refused = task_plan_request(
+            TEST_TENANT,
+            "fixture-tool-step-refused",
+            _call_proposal("steps.b.output"),
+            pin,
+        )
+        with pytest.raises(Exception, match="binding_not_dependency") as refusal:
+            client._send("Decide", {"request": refused})
+        assert "records" not in str(refusal.value)
+    finally:
+        client.close()
+
+
 # spec: MEDULLA-DECISION-ENGINE-R134.111.18
 def test_control_steps_served(authenticated_plan_client):
     client = authenticated_plan_client

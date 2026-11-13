@@ -64,6 +64,7 @@ pub mod code_health;
 // MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
+pub mod participant;
 pub mod corpus_retrieval;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;

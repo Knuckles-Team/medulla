@@ -130,3 +130,45 @@ async fn attach_point_reads_published_invariants() {
             .is_err()
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R129.3, MEDULLA-DECISION-ENGINE-R129.4
+#[tokio::test]
+async fn contradicting_rule_is_rejected_and_compatible_rule_promotes() {
+    let h = Harness::new().await;
+    publish_invariant(
+        &h,
+        TENANT,
+        1,
+        &invariant("inv:review-required", "rule:skip-review"),
+    );
+    // The first contradicted invariant, in invariant order, is the one named,
+    // however many resolutions back the rule.
+    publish_invariant(
+        &h,
+        TENANT,
+        2,
+        &invariant("inv:z-also-review", "rule:skip-review"),
+    );
+
+    let rejected = promote(&h, "rule:skip-review").await.unwrap();
+    assert_eq!(
+        rejected.verdict,
+        RulePromotionVerdict::RejectedInvariant {
+            invariant_iri: "inv:review-required".to_string()
+        }
+    );
+    assert!(!rejected.published && rejected.definition_digest.is_none());
+    assert!(h
+        .store
+        .published_guardrail_rules(TENANT)
+        .unwrap()
+        .is_empty());
+
+    // A compatible rule promotes and becomes the one active rule.
+    let promoted = promote(&h, "rule:add-check").await.unwrap();
+    assert_eq!(promoted.verdict, RulePromotionVerdict::Promotable);
+    assert!(promoted.published && promoted.definition_digest.is_some());
+    let rules = h.store.published_guardrail_rules(TENANT).unwrap();
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].rule_id, "rule:add-check");
+}

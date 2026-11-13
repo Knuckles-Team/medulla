@@ -1106,6 +1106,10 @@ mod importance_penalty_tests;
 // MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
 mod rule_promotion_tests;
 
+// MEDULLA-DECISION-ENGINE-R174.7.3.1: serve the scoped adapter.
+#[cfg(feature = "query")]
+mod scoped_adapter_tests;
+
 // MEDULLA-DECISION-ENGINE-R020.1.1: context digest and matched history.
 mod exploration_pool_tests;
 // EH-528: replay evaluation (its validation kernels are finance's).

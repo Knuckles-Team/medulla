@@ -26,9 +26,9 @@ use medulla_decision_types::{
 };
 use serde_json::json;
 
-const GRAPH: &str = "kg-retrieval";
+pub(super) const GRAPH: &str = "kg-retrieval";
 
-async fn pointer_state(
+pub(super) async fn pointer_state(
     h: &Harness,
     pointer: PointerRef,
     movement: PointerMovement,
@@ -45,7 +45,7 @@ async fn pointer_state(
     }
 }
 
-fn activate(target: &str, receipt_digest: &str) -> PointerMovement {
+pub(super) fn activate(target: &str, receipt_digest: &str) -> PointerMovement {
     PointerMovement::Activate {
         target: target.to_string(),
         receipt_digest: receipt_digest.to_string(),
@@ -55,7 +55,7 @@ fn activate(target: &str, receipt_digest: &str) -> PointerMovement {
 /// Nodes `p<i>` (what answers cite) are the unit axis 1 and `n<i>` (what the
 /// base query prefers) the unit axis 0; every judged run returned `n<i>` above
 /// `p<i>`.
-async fn embedded_graph(h: &Harness) -> Arc<medulla_graph_core::graph::GraphCore> {
+pub(super) async fn embedded_graph(h: &Harness) -> Arc<medulla_graph_core::graph::GraphCore> {
     let rows = (0..40).flat_map(|i| {
         [
             (format!("p{i}"), vec![0.0, 1.0, 0.0]),
@@ -119,7 +119,7 @@ pub(super) fn q16(values: &[f64]) -> BoundedVec<i32, 4096> {
     .unwrap()
 }
 
-async fn judged_runs(h: &Harness, space: &str) {
+pub(super) async fn judged_runs(h: &Harness, space: &str) {
     let template_entry = executed_template(h).await;
     for i in 0..40 {
         let record_id = format!("rec-{i:02}");
@@ -136,7 +136,7 @@ async fn judged_runs(h: &Harness, space: &str) {
     }
 }
 
-fn fit_request(space: &str) -> AdapterFitRequest {
+pub(super) fn fit_request(space: &str) -> AdapterFitRequest {
     AdapterFitRequest {
         graph: GRAPH.to_string(),
         space_digest: space.to_string(),
@@ -152,7 +152,7 @@ fn fit_request(space: &str) -> AdapterFitRequest {
     }
 }
 
-fn top(core: &medulla_graph_core::graph::GraphCore, query: &[f32]) -> String {
+pub(super) fn top(core: &medulla_graph_core::graph::GraphCore, query: &[f32]) -> String {
     core.semantic_store.read().semantic_search(query, 1)[0]
         .0
         .clone()

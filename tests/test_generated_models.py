@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, Literal, get_args
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
@@ -200,3 +200,30 @@ def test_decision_eval_pages_cannot_decode_as_a_different_operation() -> None:
     assert isinstance(timeline, models.DecisionReceiptTimelinePage)
     with pytest.raises(ContractViolation):
         coordination.decode_decision_eval(result, operation="timeline")
+
+
+# spec: MEDULLA-DECISION-ENGINE-R128.14
+def test_harness_config_kind_is_a_contract_question_kind() -> None:
+    """The generated contract lists `harness_config` beside `tool_subset`, and a
+    question of that kind validates through the strict generated model."""
+    literals = [
+        value
+        for member in get_args(models.QuestionKind)
+        if getattr(member, "__origin__", None) is Literal
+        for value in get_args(member)
+    ]
+    assert "tool_subset" in literals
+    assert "harness_config" in literals
+    assert literals.index("harness_config") == literals.index("tool_subset") + 1
+
+    question = models.StatisticalQuestion.model_validate(
+        {
+            "kind": "harness_config",
+            "question_id": "q-harness-config",
+            "safety": "ordinary",
+        }
+    )
+    assert question.kind == "harness_config"
+    dumped = question.model_dump(mode="json")
+    assert dumped["kind"] == "harness_config"
+    assert models.StatisticalQuestion.model_validate(dumped) == question

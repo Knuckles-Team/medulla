@@ -510,7 +510,7 @@ These acceptance tests require the consumer prerequisites described in the plan.
 - `MEDULLA-DECISION-ENGINE-R128.13.2`: planned `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::harness_config_record_commits` must prove full answer re-derivation and independent stored-record readback. Include changed-premise and forged-answer refusal cases.
 - `MEDULLA-DECISION-ENGINE-R128.13.2.1`: planned `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::harness_config_record_commits` must prove full answer re-derivation and independent stored-record readback. Include changed-premise and forged-answer refusal cases. All remain pending.
 - `MEDULLA-DECISION-ENGINE-R128.13.2.2`: planned, unimplemented `benches/harness_config_replay.rs::commits_rederived_harness_config_budget` measures complete replay, persistence and readback. Measure against the `HarnessReplayLimits` defaults in requirements; retain exact-source optimized-build measurements.
-- `MEDULLA-DECISION-ENGINE-R128.14`: `crates/medulla-capabilities/tests/contract_generated.rs::question_kind_lists_harness_config`.
+- `MEDULLA-DECISION-ENGINE-R128.14`: `tests/test_generated_models.py::test_harness_config_kind_is_a_contract_question_kind`.
 - `MEDULLA-DECISION-ENGINE-R128.15`: `tests/decide/test_harness_config_served.py::test_harness_config_end_to_end`.
 
 ## Committed pack receipt binding
