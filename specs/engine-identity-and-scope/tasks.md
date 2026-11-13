@@ -83,3 +83,5 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T77 [US6] MEDULLA-IDENTITY-R722.3 ElevationLease/ElevationLeaseState state machine: route 4 census findings through ElevationLeaseState::apply
 - [ ] T78 [US6] MEDULLA-IDENTITY-R724.2 ReplayReceipt/ReplayStatus state machine: route 4 census findings through ReplayStatus::apply
 - [ ] T79 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
+- [ ] T80 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
+- [ ] T81 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
