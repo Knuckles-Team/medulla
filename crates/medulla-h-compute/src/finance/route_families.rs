@@ -6,6 +6,23 @@ use medulla_result_types::compute_result::finance::PosteriorCredibleInterval;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_types::numeric_kernel::{NumericEvaluateOp as Op, NumericKernelOutput};
+
+/// Runs one op on the shared numeric registry: the one implementation behind every
+/// finance kernel entry (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.*). A kernel refusal is
+/// the caller's `INVALID_ARGUMENT` with the stable `KERNEL_*` code first; no default is
+/// ever substituted.
+fn kernel_run(req_id: u64, op: &Op) -> Result<NumericKernelOutput, Response> {
+    medulla_numeric::evaluation::registry::evaluate(op)
+        .map_err(|refusal| Response::err(req_id, format!("INVALID_ARGUMENT: {refusal}")))
+}
+
+fn wrong_shape(req_id: u64, op: &str) -> Response {
+    Response::err(
+        req_id,
+        format!("INVALID_ARGUMENT: {op} returned an unexpected output shape"),
+    )
+}
 
 pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, Method> {
     Ok(match method {
@@ -169,16 +186,20 @@ pub(super) fn handle_regime(req_id: u64, method: Method) -> Result<Response, Met
             max_iter,
             tol,
         } => {
-            let result = medulla_finance_quant::regime::detect_regimes(
-                &observations,
+            let op = Op::RegimeHmm {
+                observations,
                 n_states,
                 max_iter,
                 tol,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceDetectRegimes>(result),
-            )
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Regime(result)) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceDetectRegimes>(result),
+                ),
+                Ok(_) => wrong_shape(req_id, "regime_hmm"),
+                Err(refusal) => refusal,
+            }
         }
         other => return Err(other),
     })
@@ -220,12 +241,18 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
             signal,
             forward_returns,
         } => {
-            let v =
-                medulla_finance_market::signals::information_coefficient(&signal, &forward_returns);
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceInformationCoefficient>(v),
-            )
+            let op = Op::InformationCoefficient {
+                signal,
+                forward_returns,
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceInformationCoefficient>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "information_coefficient"),
+                Err(refusal) => refusal,
+            }
         }
         other => return Err(other),
     })
@@ -600,51 +627,83 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             purge_window,
             embargo,
         } => {
-            let v = medulla_finance_market::market::validation::purged_cpcv_splits(
+            let op = Op::PurgedCpcv {
                 n_samples,
                 n_groups,
                 n_test_groups,
                 purge_window,
                 embargo,
-            );
-            Response::ok(req_id, ResultPayload::of::<results::FinancePurgedCpcv>(v))
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Splits { splits }) => {
+                    let v: Vec<medulla_result_types::compute_result::finance::CvSplit> = splits
+                        .into_iter()
+                        .map(|s| medulla_result_types::compute_result::finance::CvSplit {
+                            train: s.train,
+                            test: s.test,
+                        })
+                        .collect();
+                    Response::ok(req_id, ResultPayload::of::<results::FinancePurgedCpcv>(v))
+                }
+                Ok(_) => wrong_shape(req_id, "purged_cpcv"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceDeflatedSharpe {
             observed_sr,
             n_trials,
             sr_returns,
         } => {
-            let v = medulla_finance_market::market::validation::deflated_sharpe_ratio(
+            let op = Op::DeflatedSharpe {
                 observed_sr,
                 n_trials,
-                &sr_returns,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceDeflatedSharpe>(v),
-            )
+                sr_returns,
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceDeflatedSharpe>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "deflated_sharpe"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceProbabilityBacktestOverfit { insample, oos } => {
-            let v = medulla_finance_market::market::validation::probability_of_backtest_overfit(
-                &insample, &oos,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceProbabilityBacktestOverfit>(v),
-            )
+            let op = Op::ProbabilityOfBacktestOverfit { insample, oos };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceProbabilityBacktestOverfit>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "probability_of_backtest_overfit"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceDieboldMariano {
             losses_a,
             losses_b,
             h,
         } => {
-            let v = medulla_finance_market::market::validation::diebold_mariano(
-                &losses_a, &losses_b, h,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceDieboldMariano>(v),
-            )
+            let op = Op::DieboldMariano {
+                losses_a,
+                losses_b,
+                h,
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::DieboldMariano(dm)) => {
+                    let v = medulla_result_types::compute_result::finance::DieboldMariano {
+                        statistic: dm.statistic,
+                        p_value: dm.p_value,
+                        a_better: dm.a_better,
+                    };
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceDieboldMariano>(v),
+                    )
+                }
+                Ok(_) => wrong_shape(req_id, "diebold_mariano"),
+                Err(refusal) => refusal,
+            }
         }
         other => return Err(other),
     })
@@ -679,19 +738,23 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             x0,
             p0,
         } => {
-            let v = medulla_finance_quant::statespace::kalman_filter_1d(
-                &observations,
+            let op = Op::KalmanLevel {
+                observations,
                 f,
                 q,
                 h,
                 r,
                 x0,
                 p0,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceKalmanFilter1d>(v),
-            )
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Kalman(v)) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceKalmanFilter1d>(v),
+                ),
+                Ok(_) => wrong_shape(req_id, "kalman_level"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceKalmanBeta {
             market_returns,
@@ -701,15 +764,21 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             beta0,
             p0,
         } => {
-            let v = medulla_finance_quant::statespace::kalman_beta(
-                &market_returns,
-                &asset_returns,
+            let op = Op::KalmanBeta {
+                market_returns,
+                asset_returns,
                 q,
                 r,
                 beta0,
                 p0,
-            );
-            Response::ok(req_id, ResultPayload::of::<results::FinanceKalmanBeta>(v))
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Kalman(v)) => {
+                    Response::ok(req_id, ResultPayload::of::<results::FinanceKalmanBeta>(v))
+                }
+                Ok(_) => wrong_shape(req_id, "kalman_beta"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceKalmanVolatility {
             returns,
@@ -719,26 +788,42 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             p0,
             annualization,
         } => {
-            let v = medulla_finance_quant::statespace::kalman_volatility(
-                &returns,
+            let op = Op::KalmanVolatility {
+                returns,
                 q,
                 r,
                 log_var0,
                 p0,
                 annualization,
-            );
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceKalmanVolatility>(v),
-            )
+            };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Vector { values }) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceKalmanVolatility>(values),
+                ),
+                Ok(_) => wrong_shape(req_id, "kalman_volatility"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceAdfTest { series, max_lag } => {
-            let v = medulla_finance_quant::statespace::adf_test(&series, max_lag);
-            Response::ok(req_id, ResultPayload::of::<results::FinanceAdfTest>(v))
+            let op = Op::Adf { series, max_lag };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Adf(v)) => {
+                    Response::ok(req_id, ResultPayload::of::<results::FinanceAdfTest>(v))
+                }
+                Ok(_) => wrong_shape(req_id, "adf"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceOuCalibrate { spread, dt } => {
-            let v = medulla_finance_quant::statespace::ou_calibrate(&spread, dt);
-            Response::ok(req_id, ResultPayload::of::<results::FinanceOuCalibrate>(v))
+            let op = Op::OuCalibrate { spread, dt };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::OuParams(v)) => {
+                    Response::ok(req_id, ResultPayload::of::<results::FinanceOuCalibrate>(v))
+                }
+                Ok(_) => wrong_shape(req_id, "ou_calibrate"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceOuOptimalThresholds {
             theta,
@@ -747,22 +832,21 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             sigma_eq,
             cost,
         } => {
-            let params = medulla_finance_quant::statespace::OuParams {
+            let op = Op::OuThresholds {
                 theta,
                 mu,
                 sigma,
                 sigma_eq,
-                half_life: if theta > 1e-12 {
-                    std::f64::consts::LN_2 / theta
-                } else {
-                    f64::INFINITY
-                },
+                cost,
             };
-            let v = medulla_finance_quant::statespace::ou_optimal_thresholds(&params, cost);
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceOuOptimalThresholds>(v),
-            )
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::OuThresholds(v)) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceOuOptimalThresholds>(v),
+                ),
+                Ok(_) => wrong_shape(req_id, "ou_thresholds"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceMarkovTransitionMatrix { states, n_states } => {
             let v = medulla_finance_quant::statespace::markov_transition_matrix(&states, n_states);
@@ -855,18 +939,26 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
     Ok(match method {
         // Signal quality, validation, and sizing
         Method::FinanceInformationRatio { ic, n_independent } => {
-            let v = medulla_finance_quant::quant::information_ratio(ic, n_independent);
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceInformationRatio>(v),
-            )
+            let op = Op::InformationRatio { ic, n_independent };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceInformationRatio>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "information_ratio"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceEffectiveIndependentN { returns_matrix } => {
-            let v = medulla_finance_quant::quant::effective_independent_n(&returns_matrix);
-            Response::ok(
-                req_id,
-                ResultPayload::scalar::<results::FinanceEffectiveIndependentN>(v),
-            )
+            let op = Op::EffectiveIndependentN { returns_matrix };
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceEffectiveIndependentN>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "effective_independent_n"),
+                Err(refusal) => refusal,
+            }
         }
         Method::FinanceAlphaCombinationEngine {
             returns_matrix,
@@ -885,19 +977,17 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
         } => {
             // The shared kernel answers; a refusal is the caller's typed error, never a
             // default (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.10).
-            let op = medulla_types::numeric_kernel::NumericEvaluateOp::Brier {
+            let op = Op::Brier {
                 forecasts,
                 outcomes,
             };
-            match medulla_numeric::evaluation::registry::evaluate(&op) {
-                Ok(medulla_types::numeric_kernel::NumericKernelOutput::Scalar { value }) => {
-                    Response::ok(
-                        req_id,
-                        ResultPayload::scalar::<results::FinanceBrierScore>(value),
-                    )
-                }
-                Ok(_) => Response::err(req_id, "INVALID_ARGUMENT: brier returned a non-scalar"),
-                Err(refusal) => Response::err(req_id, format!("INVALID_ARGUMENT: {refusal}")),
+            match kernel_run(req_id, &op) {
+                Ok(NumericKernelOutput::Scalar { value }) => Response::ok(
+                    req_id,
+                    ResultPayload::scalar::<results::FinanceBrierScore>(value),
+                ),
+                Ok(_) => wrong_shape(req_id, "brier"),
+                Err(refusal) => refusal,
             }
         }
         Method::FinanceConvergenceGate {

@@ -127,13 +127,10 @@ pub fn mean_reversion(values: &[f64], window: usize) -> Vec<f64> {
         .collect()
 }
 
-/// Information Coefficient — the Pearson correlation of a signal with forward returns
-/// over their finite pairs. The evaluation kernel (EH-530).
-pub use medulla_numeric::evaluation::skill::information_coefficient;
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_numeric::evaluation::skill::information_coefficient;
 
     #[test]
     fn test_rolling_zscore() {

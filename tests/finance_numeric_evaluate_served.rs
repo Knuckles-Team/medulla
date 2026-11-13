@@ -741,3 +741,453 @@ async fn brier_caller_uses_shared_kernel() {
     let signals = include_str!("../crates/medulla-finance-quant/src/quant/signals.rs");
     assert!(!signals.contains("fn brier_score"));
 }
+
+/// The decoded result of a response, whatever payload form the entry answers in.
+fn decoded(response: &Response) -> Value {
+    match response.result.as_ref() {
+        Some(ResultPayload::Float(v)) => serde_json::json!(v),
+        Some(ResultPayload::Json(v)) => v.clone(),
+        _ => raw(response),
+    }
+}
+
+/// A retained finance entry and the generic door answer the same value, bit for bit.
+fn same_answer(legacy: &Response, generic: &Response) {
+    assert!(legacy.error.is_none(), "legacy: {:?}", legacy.error_detail);
+    assert!(
+        generic.error.is_none(),
+        "generic: {:?}",
+        generic.error_detail
+    );
+    assert_eq!(decoded(legacy), decoded(generic));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.3
+async fn information_coefficient_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let signal = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+    let forward = vec![2.0, 4.0, 6.0, 8.0, 10.0];
+    let legacy = s
+        .send(Method::FinanceInformationCoefficient {
+            signal: signal.clone(),
+            forward_returns: forward.clone(),
+        })
+        .await;
+    let generic = s
+        .eval(Op::InformationCoefficient {
+            signal,
+            forward_returns: forward,
+        })
+        .await;
+    assert!((float(&legacy) - 1.0).abs() < 1e-12);
+    same_answer(&legacy, &generic);
+    // A constant side is the kernel's typed refusal, not a zero.
+    refused(
+        &s.send(Method::FinanceInformationCoefficient {
+            signal: vec![1.0; 5],
+            forward_returns: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+        })
+        .await,
+        "KERNEL_SINGULAR",
+    );
+    let market = include_str!("../crates/medulla-finance-market/src/signals.rs");
+    assert!(!market.contains("pub use medulla_numeric::evaluation::skill::information_coefficient"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.4
+async fn information_ratio_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let legacy = s
+        .send(Method::FinanceInformationRatio {
+            ic: 0.1,
+            n_independent: 100.0,
+        })
+        .await;
+    let generic = s
+        .eval(Op::InformationRatio {
+            ic: 0.1,
+            n_independent: 100.0,
+        })
+        .await;
+    assert!((float(&legacy) - 1.0).abs() < 1e-12);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceInformationRatio {
+            ic: f64::NAN,
+            n_independent: 100.0,
+        })
+        .await,
+        "KERNEL_INPUT_NONFINITE",
+    );
+    let signals = include_str!("../crates/medulla-finance-quant/src/quant/signals.rs");
+    assert!(!signals.contains("pub use medulla_numeric::evaluation::skill"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.5
+async fn effective_sample_size_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let orthogonal = vec![vec![1.0, -1.0, 1.0, -1.0], vec![1.0, 1.0, -1.0, -1.0]];
+    let legacy = s
+        .send(Method::FinanceEffectiveIndependentN {
+            returns_matrix: orthogonal.clone(),
+        })
+        .await;
+    let generic = s
+        .eval(Op::EffectiveIndependentN {
+            returns_matrix: orthogonal,
+        })
+        .await;
+    assert!((float(&legacy) - 2.0).abs() < 1e-9);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceEffectiveIndependentN {
+            returns_matrix: vec![vec![1.0], vec![2.0]],
+        })
+        .await,
+        "KERNEL_INPUT_SHORT",
+    );
+    let signals = include_str!("../crates/medulla-finance-quant/src/quant/signals.rs");
+    assert!(!signals.contains("pub use medulla_numeric::evaluation::skill"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.6
+async fn diebold_mariano_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let a: Vec<f64> = (0..20).map(|i| 1.0 + 0.01 * (i % 3) as f64).collect();
+    let b: Vec<f64> = (0..20).map(|i| 2.0 + 0.01 * ((i + 1) % 3) as f64).collect();
+    let legacy = s
+        .send(Method::FinanceDieboldMariano {
+            losses_a: a.clone(),
+            losses_b: b.clone(),
+            h: 1,
+        })
+        .await;
+    let generic = s
+        .eval(Op::DieboldMariano {
+            losses_a: a,
+            losses_b: b,
+            h: 1,
+        })
+        .await;
+    assert_eq!(raw(&legacy)["a_better"], true);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceDieboldMariano {
+            losses_a: vec![1.0; 12],
+            losses_b: vec![2.0; 11],
+            h: 1,
+        })
+        .await,
+        "KERNEL_LENGTH_MISMATCH",
+    );
+    let validation = include_str!("../crates/medulla-finance-market/src/market/validation.rs");
+    assert!(!validation.contains("pub fn diebold_mariano"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7
+async fn deflated_sharpe_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let returns: Vec<f64> = (0..200).map(|i| 0.001 + f64::from(i % 7) * 1e-4).collect();
+    let legacy = s
+        .send(Method::FinanceDeflatedSharpe {
+            observed_sr: 1.5,
+            n_trials: 10,
+            sr_returns: returns.clone(),
+        })
+        .await;
+    let generic = s
+        .eval(Op::DeflatedSharpe {
+            observed_sr: 1.5,
+            n_trials: 10,
+            sr_returns: returns.clone(),
+        })
+        .await;
+    assert!((0.0..=1.0).contains(&float(&legacy)));
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceDeflatedSharpe {
+            observed_sr: 1.5,
+            n_trials: 0,
+            sr_returns: returns,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    let validation = include_str!("../crates/medulla-finance-market/src/market/validation.rs");
+    assert!(!validation.contains("deflated_sharpe_ratio"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.8
+async fn purged_cv_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let method = |n_groups: usize, n_test_groups: usize| Method::FinancePurgedCpcv {
+        n_samples: 120,
+        n_groups,
+        n_test_groups,
+        purge_window: 5,
+        embargo: 5,
+    };
+    let legacy = s.send(method(6, 2)).await;
+    let generic = s
+        .eval(Op::PurgedCpcv {
+            n_samples: 120,
+            n_groups: 6,
+            n_test_groups: 2,
+            purge_window: 5,
+            embargo: 5,
+        })
+        .await;
+    assert_eq!(raw(&legacy).as_array().map(Vec::len), Some(15));
+    same_answer(&legacy, &generic);
+    refused(&s.send(method(2, 6)).await, "KERNEL_PARAM_INVALID");
+    let validation = include_str!("../crates/medulla-finance-market/src/market/validation.rs");
+    assert!(!validation.contains("pub fn purged_cpcv_splits"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.9
+async fn pbo_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let insample = vec![
+        vec![1.0, 2.0, 3.0],
+        vec![3.0, 2.0, 1.0],
+        vec![1.0, 3.0, 2.0],
+        vec![1.0, 2.0, 3.0],
+    ];
+    let oos = vec![
+        vec![3.0, 2.0, 1.0],
+        vec![1.0, 2.0, 3.0],
+        vec![1.0, 2.0, 3.0],
+        vec![1.0, 2.0, 3.0],
+    ];
+    let legacy = s
+        .send(Method::FinanceProbabilityBacktestOverfit {
+            insample: insample.clone(),
+            oos: oos.clone(),
+        })
+        .await;
+    let generic = s
+        .eval(Op::ProbabilityOfBacktestOverfit { insample, oos })
+        .await;
+    assert!((float(&legacy) - 0.5).abs() < 1e-12);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceProbabilityBacktestOverfit {
+            insample: vec![vec![1.0, 2.0]],
+            oos: vec![vec![1.0, 2.0], vec![2.0, 1.0]],
+        })
+        .await,
+        "KERNEL_LENGTH_MISMATCH",
+    );
+    let validation = include_str!("../crates/medulla-finance-market/src/market/validation.rs");
+    assert!(!validation.contains("probability_of_backtest_overfit"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.11
+async fn kalman_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let legacy = s
+        .send(Method::FinanceKalmanFilter1d {
+            observations: vec![10.0, 10.0],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .await;
+    let generic = s
+        .eval(Op::KalmanLevel {
+            observations: vec![10.0, 10.0],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .await;
+    close(&raw(&legacy)["states"][0], 5.0, 1e-12);
+    same_answer(&legacy, &generic);
+    let beta = Method::FinanceKalmanBeta {
+        market_returns: vec![1.0, 2.0, 3.0],
+        asset_returns: vec![2.0, 4.0, 6.0],
+        q: 0.0,
+        r: 1e-6,
+        beta0: 0.0,
+        p0: 1.0,
+    };
+    let legacy = s.send(beta).await;
+    let generic = s
+        .eval(Op::KalmanBeta {
+            market_returns: vec![1.0, 2.0, 3.0],
+            asset_returns: vec![2.0, 4.0, 6.0],
+            q: 0.0,
+            r: 1e-6,
+            beta0: 0.0,
+            p0: 1.0,
+        })
+        .await;
+    close(&raw(&legacy)["states"][2], 2.0, 1e-4);
+    same_answer(&legacy, &generic);
+    let vol = |returns: Vec<f64>| Method::FinanceKalmanVolatility {
+        returns,
+        q: 0.0,
+        r: 1.0,
+        log_var0: Some((1e-4_f64).ln()),
+        p0: 1.0,
+        annualization: 252.0,
+    };
+    let legacy = s.send(vol(vec![0.01; 5])).await;
+    let generic = s
+        .eval(Op::KalmanVolatility {
+            returns: vec![0.01; 5],
+            q: 0.0,
+            r: 1.0,
+            log_var0: Some((1e-4_f64).ln()),
+            p0: 1.0,
+            annualization: 252.0,
+        })
+        .await;
+    same_answer(&legacy, &generic);
+    refused(&s.send(vol(Vec::new())).await, "KERNEL_INPUT_SHORT");
+    refused(
+        &s.send(Method::FinanceKalmanBeta {
+            market_returns: vec![1.0, 2.0, 3.0],
+            asset_returns: vec![2.0, 4.0],
+            q: 0.0,
+            r: 1e-6,
+            beta0: 0.0,
+            p0: 1.0,
+        })
+        .await,
+        "KERNEL_LENGTH_MISMATCH",
+    );
+    let statespace = include_str!("../crates/medulla-finance-quant/src/statespace.rs");
+    assert!(!statespace.contains("pub use medulla_numeric::evaluation::statarb"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.12
+async fn ou_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let spread = vec![0.0, 1.0, 1.5, 1.75, 1.875, 1.9375];
+    let legacy = s
+        .send(Method::FinanceOuCalibrate {
+            spread: spread.clone(),
+            dt: 1.0,
+        })
+        .await;
+    let generic = s.eval(Op::OuCalibrate { spread, dt: 1.0 }).await;
+    close(&raw(&legacy)["mu"], 2.0, 1e-6);
+    same_answer(&legacy, &generic);
+    let legacy = s
+        .send(Method::FinanceOuOptimalThresholds {
+            theta: 1.0,
+            mu: 0.5,
+            sigma: 1.0,
+            sigma_eq: 0.7,
+            cost: 0.0,
+        })
+        .await;
+    let generic = s
+        .eval(Op::OuThresholds {
+            theta: 1.0,
+            mu: 0.5,
+            sigma: 1.0,
+            sigma_eq: 0.7,
+            cost: 0.0,
+        })
+        .await;
+    close(&raw(&legacy)["exit"], 0.5, 1e-12);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceOuCalibrate {
+            spread: vec![1.0; 6],
+            dt: 1.0,
+        })
+        .await,
+        "KERNEL_SINGULAR",
+    );
+    let statespace = include_str!("../crates/medulla-finance-quant/src/statespace.rs");
+    assert!(!statespace.contains("pub use medulla_numeric::evaluation::statarb"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.13
+async fn adf_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let mut noise = noise_source(12_345);
+    let mut series = vec![0.0];
+    for i in 1..400 {
+        series.push(0.2 * series[i - 1] + noise());
+    }
+    let legacy = s
+        .send(Method::FinanceAdfTest {
+            series: series.clone(),
+            max_lag: 1,
+        })
+        .await;
+    let generic = s.eval(Op::Adf { series, max_lag: 1 }).await;
+    assert_eq!(raw(&legacy)["stationary_5pct"], true);
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceAdfTest {
+            series: vec![0.0, 1.0, 0.5, 1.5, 1.0, 2.0, 1.0, 0.0, 1.0, 0.5],
+            max_lag: 5,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    let statespace = include_str!("../crates/medulla-finance-quant/src/statespace.rs");
+    assert!(!statespace.contains("pub use medulla_numeric::evaluation::statarb"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.14
+async fn regime_hmm_caller_uses_shared_kernel() {
+    let mut s = Session::open().await;
+    let mut observations = vec![0.01; 50];
+    observations.extend(std::iter::repeat_n(-0.02, 50));
+    let legacy = s
+        .send(Method::FinanceDetectRegimes {
+            observations: observations.clone(),
+            n_states: 2,
+            max_iter: 100,
+            tol: 1e-6,
+        })
+        .await;
+    let generic = s
+        .eval(Op::RegimeHmm {
+            observations,
+            n_states: 2,
+            max_iter: 100,
+            tol: 1e-6,
+        })
+        .await;
+    assert_eq!(
+        decoded(&legacy)["states"].as_array().map(Vec::len),
+        Some(100)
+    );
+    same_answer(&legacy, &generic);
+    refused(
+        &s.send(Method::FinanceDetectRegimes {
+            observations: vec![0.1, 0.2],
+            n_states: 0,
+            max_iter: 10,
+            tol: 1e-6,
+        })
+        .await,
+        "KERNEL_PARAM_INVALID",
+    );
+    let regime = include_str!("../crates/medulla-finance-quant/src/regime.rs");
+    assert!(!regime.contains("pub use medulla_numeric::evaluation::regime_hmm"));
+}

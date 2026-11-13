@@ -15,8 +15,12 @@ use super::{
     UniverseMember, INVALID_REQUEST, LOOK_AHEAD,
 };
 use crate::{
-    market::validation::deflated_sharpe_ratio, market::validation::probability_of_backtest_overfit,
-    market::validation::purged_cpcv_splits, market::validation::CvSplit,
+    // The evaluation kernels are called directly: one implementation, no finance wrapper
+    // (MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7..9).
+    medulla_numeric::evaluation::backtest::deflated_sharpe_ratio,
+    medulla_numeric::evaluation::backtest::probability_of_backtest_overfit,
+    medulla_numeric::evaluation::backtest::purged_cpcv_splits,
+    medulla_numeric::evaluation::backtest::CvSplit,
 };
 
 const RUN_DOMAIN: &str = "eg/finance/backtest-run/v1";

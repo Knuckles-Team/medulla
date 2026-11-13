@@ -2,13 +2,8 @@
 //
 // The Kalman, ADF and Ornstein-Uhlenbeck kernels live in `medulla_numeric::evaluation::statarb`
 // (MEDULLA-FINANCE-PRIMITIVES-R002.1.11..R002.1.13): one implementation behind the finance
-// Methods and `NumericEvaluate`. This module re-exports them and keeps the Markov
-// transition-matrix estimator.
-
-pub use medulla_numeric::evaluation::statarb::{
-    adf_test, kalman_beta, kalman_filter_1d, kalman_volatility, ou_calibrate, ou_optimal_thresholds,
-};
-pub use medulla_types::numeric_kernel::{AdfResult, KalmanState, OuParams, OuThresholds};
+// Methods and `NumericEvaluate`, reached through the numeric registry. This module keeps
+// only the Markov transition-matrix estimator.
 
 // ════════════════════════════════════════════════════════════════════════
 //  Markov transition matrix (cross-venue regime / lead-lag)
@@ -40,6 +35,10 @@ pub fn markov_transition_matrix(states: &[usize], n_states: usize) -> Vec<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_numeric::evaluation::statarb::{
+        adf_test, kalman_beta, kalman_filter_1d, kalman_volatility, ou_calibrate,
+        ou_optimal_thresholds,
+    };
 
     #[test]
     fn test_kalman_filter_1d_tracks_constant() {

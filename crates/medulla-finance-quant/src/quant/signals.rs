@@ -102,11 +102,6 @@ pub fn spread_reversion(bid_px: &[f64], ask_px: &[f64], window: usize) -> Spread
     SpreadReversion { zscore, signal }
 }
 
-/// The information ratio and the effective breadth are the evaluation kernels'
-/// (EH-530; the breadth's eigenvalues come from the one symmetric eigensolver,
-/// `medulla_numeric::linalg::eigh`, not a local Jacobi).
-pub use medulla_numeric::evaluation::skill::{effective_independent_n, information_ratio};
-
 /// Grinold-style alpha combination engine: combine N signals' historical return
 /// series into weights that reward independent edge and penalise shared variance.
 /// Rows = signals, cols = periods. Returns weights summing to 1 in absolute value.

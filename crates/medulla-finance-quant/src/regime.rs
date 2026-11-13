@@ -2,14 +2,12 @@
 //
 // The Gaussian HMM (Baum-Welch EM + Viterbi) lives in
 // `medulla_numeric::evaluation::regime_hmm` (MEDULLA-FINANCE-PRIMITIVES-R002.1.14): one
-// implementation behind `FinanceDetectRegimes` and `NumericEvaluate`.
-
-pub use medulla_numeric::evaluation::regime_hmm::detect_regimes;
-pub use medulla_types::numeric_kernel::RegimeResult;
+// implementation behind `FinanceDetectRegimes` and `NumericEvaluate`, reached through the
+// numeric registry; nothing here wraps it.
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use medulla_numeric::evaluation::regime_hmm::detect_regimes;
 
     #[test]
     fn test_regime_detection_two_states() {

@@ -32,9 +32,8 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::DecisionEvalRequest, decision::DecisionJobOutput, decision::QuantisedValue,
 };
-use medulla_finance_market::{
-    market::validation::deflated_sharpe_ratio, market::validation::diebold_mariano,
-    market::validation::probability_of_backtest_overfit,
+use medulla_numeric::evaluation::backtest::{
+    deflated_sharpe_ratio, diebold_mariano, probability_of_backtest_overfit,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;

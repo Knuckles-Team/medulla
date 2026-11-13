@@ -43,16 +43,19 @@ pub use microstructure::{
     HawkesFit,
 };
 pub use signals::{
-    alpha_combination_engine, convergence_gate, effective_independent_n, empirical_kelly,
-    information_ratio, order_book_imbalance, queue_imbalance, realized_vol_tick, spread_reversion,
-    ConvergenceGate, QueueSignal, SpreadReversion,
+    alpha_combination_engine, convergence_gate, empirical_kelly, order_book_imbalance,
+    queue_imbalance, realized_vol_tick, spread_reversion, ConvergenceGate, QueueSignal,
+    SpreadReversion,
 };
 pub use surveillance::{kyle_lambda, surveillance_risk, SurveillanceRisk};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_finance_market::market::validation::*;
+    use medulla_numeric::evaluation::backtest::{
+        deflated_sharpe_ratio, probability_of_backtest_overfit,
+    };
+    use medulla_numeric::evaluation::skill::effective_independent_n;
 
     #[test]
     fn test_avellaneda_stoikov_inventory_skew() {
