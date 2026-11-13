@@ -1,11 +1,8 @@
 //! `DecisionCommit`'s store half: the planted catalog-side inputs of
 //! DECIDE-LAYER-DESIGN §11.1 and the outcome link of §4.6 (EH-070).
 
-#[cfg(test)]
 use medulla_agent_types::agent_component::ComponentDependency;
-#[cfg(test)]
 use medulla_agent_types::agent_graph::AgentGraphPublishRequest;
-#[cfg(test)]
 use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::{
     agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
