@@ -327,8 +327,11 @@ fn feature_matrix(
 }
 
 fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationRecord> {
-    if sealing.request.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan {
-        return None; // Explicit DAG planning never makes an exploration draw.
+    if matches!(
+        sealing.request.question.kind,
+        QuestionKind::TaskPlan | QuestionKind::ThoughtSearch
+    ) {
+        return None; // Explicit planning and thought search never draw.
     }
     let medulla_decision_types::decision::ColdStart::Explore { budget } =
         &sealing.policy.policy.cold_start
@@ -406,10 +409,12 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
 /// of the belief slices it consulted through `DriftThresholds::from_policy`.
 fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
     let contrast: &[medulla_decision_types::decision::knobs::KnobSpec] =
-        if sealing.request.question.kind == QuestionKind::HarnessContrast {
-            medulla_decision_types::decision::harness_contrast::KNOBS
-        } else {
-            &[]
+        match sealing.request.question.kind {
+            QuestionKind::HarnessContrast => {
+                medulla_decision_types::decision::harness_contrast::KNOBS
+            }
+            QuestionKind::ThoughtSearch => medulla_decision_types::decision::thought_search::KNOBS,
+            _ => &[],
         };
     medulla_decision_stats::decision::drift::KNOBS
         .iter()
@@ -571,6 +576,9 @@ fn seal(
     if let Some(topology) = &executed.topology {
         premise_list.extend(topology.premises.iter().cloned());
     }
+    if let Some(thought) = &executed.thought {
+        premise_list.extend(thought.premises.iter().cloned());
+    }
     premise_list.extend(sealing.registry.premises(sealing.request));
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
@@ -611,6 +619,13 @@ fn seal(
                 medulla_decision_types::decision::statistical::outcome::FamilyAnswer::TaskPlan(
                     Box::new(plan),
                 )
+            })
+            .or_else(|| {
+                executed.thought.as_ref().map(|thought| {
+                    medulla_decision_types::decision::statistical::outcome::FamilyAnswer::ThoughtSearch(
+                        Box::new(thought.answer.clone()),
+                    )
+                })
             })
             .or_else(|| {
                 executed.topology.as_ref().map(|topology| {

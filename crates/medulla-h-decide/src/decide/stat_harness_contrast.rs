@@ -311,5 +311,6 @@ fn compute(
         seed: [0u8; 32],
         harness_contrast: Some(decision),
         topology: None,
+        thought: None,
     })
 }

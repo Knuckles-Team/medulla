@@ -69,6 +69,16 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R111.1); `None` for every other kind and for
     /// a topology abstention.
     pub(super) topology: Option<TopologyExecuted>,
+    /// The expansion choice or stop a `ThoughtSearch` question sealed
+    /// (MEDULLA-DECISION-ENGINE-R750.754); `None` for every other kind and
+    /// for a thought-search abstention.
+    pub(super) thought: Option<ThoughtExecuted>,
+}
+
+/// A thought-search answer with the premises it rests on.
+pub(super) struct ThoughtExecuted {
+    pub(super) answer: medulla_decision_types::decision::thought_search::ThoughtSearchAnswer,
+    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
 }
 
 /// A topology plan with the premises it rests on.
@@ -203,6 +213,7 @@ pub(super) fn run_on_matrix(
                 seed,
                 harness_contrast: None,
                 topology: None,
+                thought: None,
             });
         }
         Some(Ok(evaluated)) => Some(evaluated),
@@ -224,7 +235,8 @@ pub(super) fn run_on_matrix(
         reading,
         seed,
         harness_contrast: None,
-                topology: None,
+        topology: None,
+        thought: None,
     })
 }
 
@@ -257,6 +269,7 @@ pub(super) fn execute(
                 seed: [0u8; 32],
                 harness_contrast: None,
                 topology: None,
+                thought: None,
             });
         }
     };

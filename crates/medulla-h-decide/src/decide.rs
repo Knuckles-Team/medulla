@@ -51,13 +51,13 @@ mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
 #[cfg(feature = "decide")]
-mod stat_penalty;
-#[cfg(feature = "decide")]
 mod stat_learning;
 #[cfg(feature = "decide")]
 mod stat_log;
 #[cfg(feature = "decide")]
 mod stat_nl;
+#[cfg(feature = "decide")]
+mod stat_penalty;
 #[cfg(feature = "decide")]
 mod stat_pointer;
 #[cfg(feature = "decide")]
@@ -82,6 +82,8 @@ mod stat_support;
 // context-token budget.
 #[cfg(feature = "decide")]
 mod stat_task_plan;
+#[cfg(feature = "decide")]
+mod stat_thought_search;
 #[cfg(feature = "decide")]
 mod stat_tool_subset;
 #[cfg(feature = "decide")]

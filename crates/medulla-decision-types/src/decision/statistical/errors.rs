@@ -77,6 +77,20 @@ closed_error_codes! {
         /// The logical graph's pointer moved while a cycle activated
         /// (MEDULLA-DECISION-ENGINE-R174.4).
         GenerationPointerConflict => "GENERATION_POINTER_CONFLICT",
+        /// A thought-search question names no reasoning strategy in the
+        /// pinned policy for its task class (MEDULLA-DECISION-ENGINE-R750.752).
+        ThoughtStrategyUnknown => "THOUGHT_STRATEGY_UNKNOWN",
+        /// A thought-search budget is 0 or above its knob maximum
+        /// (MEDULLA-DECISION-ENGINE-R750.752).
+        ThoughtBudgetInvalid => "THOUGHT_BUDGET_INVALID",
+        /// A graph merge makes a thought its own descendant
+        /// (MEDULLA-DECISION-ENGINE-R750.752).
+        ThoughtMergeCycle => "THOUGHT_MERGE_CYCLE",
+        /// A thought score is not on scale Q32 (MEDULLA-DECISION-ENGINE-R750.752).
+        ThoughtScoreNotFixedPoint => "THOUGHT_SCORE_NOT_FIXED_POINT",
+        /// A thought has a duplicate id, a missing parent or a depth that
+        /// disagrees with its parent (MEDULLA-DECISION-ENGINE-R750.752).
+        ThoughtNodeInvalid => "THOUGHT_NODE_INVALID",
     }
 }
 

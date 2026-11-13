@@ -8,7 +8,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::numeric::QuantisedValue;
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+use super::numeric::{QuantScaleTag, QuantisedValue};
+use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
+use super::statistical::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
 
 /// Most expandable leaves one reasoning state may carry.
@@ -74,6 +78,90 @@ impl ReasoningState {
             ledger,
         })
     }
+
+    /// The structural check the served family runs before it chooses
+    /// (MEDULLA-DECISION-ENGINE-R750.752). Arena order puts a parent before
+    /// its children, so a parent id must be smaller than the child's. With
+    /// `merge` (the `Graph` strategy), two thoughts that reached the same
+    /// state as an ancestor and its descendant would merge into one thought
+    /// that is its own descendant.
+    pub fn validate(&self, merge: bool) -> Result<(), ThoughtFault> {
+        let nodes = self.nodes.as_slice();
+        let mut by_id: std::collections::BTreeMap<u32, &ThoughtNode> =
+            std::collections::BTreeMap::new();
+        for node in nodes {
+            if node.score.scale != QuantScaleTag::Q32 {
+                return Err(ThoughtFault::ScoreNotFixedPoint { id: node.id });
+            }
+            if by_id.insert(node.id, node).is_some() {
+                return Err(ThoughtFault::NodeInvalid {
+                    id: node.id,
+                    detail: "duplicate id",
+                });
+            }
+        }
+        for node in nodes {
+            let invalid = |detail| ThoughtFault::NodeInvalid {
+                id: node.id,
+                detail,
+            };
+            match node.parent {
+                None if node.depth != 0 => return Err(invalid("a root has depth 0")),
+                None => {}
+                Some(parent) if parent >= node.id => {
+                    return Err(invalid("the parent is not an earlier arena index"))
+                }
+                Some(_) if node.depth == 0 => return Err(invalid("a child has depth above 0")),
+                Some(parent) => {
+                    if let Some(parent) = by_id.get(&parent) {
+                        if node.depth != parent.depth.saturating_add(1) {
+                            return Err(invalid("the depth disagrees with the parent"));
+                        }
+                    }
+                }
+            }
+            if merge {
+                let mut cursor = node.parent;
+                while let Some(id) = cursor {
+                    let Some(ancestor) = by_id.get(&id) else {
+                        break;
+                    };
+                    if ancestor.state_digest == node.state_digest {
+                        return Err(ThoughtFault::MergeCycle { id: node.id });
+                    }
+                    cursor = ancestor.parent;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Why a reasoning state is refused (MEDULLA-DECISION-ENGINE-R750.752).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThoughtFault {
+    /// A duplicate id, a missing parent or a depth that disagrees with it.
+    NodeInvalid { id: u32, detail: &'static str },
+    /// A score outside scale Q32.
+    ScoreNotFixedPoint { id: u32 },
+    /// A graph merge that makes a thought its own descendant.
+    MergeCycle { id: u32 },
+}
+
+impl ThoughtFault {
+    /// The stable refusal text, `"CODE: detail"`.
+    pub fn refusal(self) -> String {
+        match self {
+            Self::NodeInvalid { id, detail } => {
+                StatisticalErrorCode::ThoughtNodeInvalid.refusal(format!("thought {id}: {detail}"))
+            }
+            Self::ScoreNotFixedPoint { id } => StatisticalErrorCode::ThoughtScoreNotFixedPoint
+                .refusal(format!("thought {id}: the score is not on scale Q32")),
+            Self::MergeCycle { id } => StatisticalErrorCode::ThoughtMergeCycle.refusal(format!(
+                "thought {id}: the merge makes it its own descendant"
+            )),
+        }
+    }
 }
 
 /// The answer of one thought-search decision.
@@ -126,7 +214,66 @@ impl Default for ThoughtSearchKnobs {
     }
 }
 
+/// The refusal codes the `thought_search` family declares
+/// (MEDULLA-DECISION-ENGINE-R750.752); each is also a `StatisticalErrorCode`.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("THOUGHT_STRATEGY_UNKNOWN"),
+    RefusalCode::new("THOUGHT_BUDGET_INVALID"),
+    RefusalCode::new("THOUGHT_MERGE_CYCLE"),
+    RefusalCode::new("THOUGHT_SCORE_NOT_FIXED_POINT"),
+    RefusalCode::new("THOUGHT_NODE_INVALID"),
+];
+
+const fn spec(
+    name: &'static str,
+    unit: &'static str,
+    default: i64,
+    min: i64,
+    max: i64,
+) -> KnobSpec {
+    KnobSpec {
+        name,
+        unit,
+        default: KnobValue::Integer(default),
+        min: KnobValue::Integer(min),
+        max: KnobValue::Integer(max),
+        safety: KnobSafety::Tunable,
+    }
+}
+
+/// The `thought_search.*` decision knobs (MEDULLA-DECISION-ENGINE-R750.750),
+/// in the field order of [`ThoughtSearchKnobs`].
+pub const KNOBS: &[KnobSpec] = &[
+    spec("thought_search.max_nodes", "nodes", 100_000, 1, 1_000_000),
+    spec("thought_search.max_depth", "levels", 16, 1, 64),
+    spec("thought_search.max_branching", "children", 4, 1, 16),
+    spec(
+        "thought_search.max_tokens",
+        "tokens",
+        200_000,
+        1_000,
+        4_000_000,
+    ),
+    spec("thought_search.beam_width", "nodes", 3, 1, 16),
+];
+
 impl ThoughtSearchKnobs {
+    /// The values the pinned policy sets, each knob or its default.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let read = |index: usize| match policy.knob(&KNOBS[index]) {
+            KnobValue::Integer(value) => u64::try_from(value).unwrap_or(0),
+            _ => 0,
+        };
+        let narrow = |value: u64| u32::try_from(value).unwrap_or(u32::MAX);
+        Self {
+            max_nodes: read(0),
+            max_depth: narrow(read(1)),
+            max_branching: narrow(read(2)),
+            max_tokens: read(3),
+            beam_width: narrow(read(4)),
+        }
+    }
+
     /// The validating constructor: every knob inside its declared range.
     pub fn checked(self) -> Result<Self, String> {
         let in_range = (1..=1_000_000).contains(&self.max_nodes)
@@ -214,11 +361,58 @@ mod tests {
             .unwrap()
             .push(serde_json::to_value(node(64)).unwrap());
         assert!(serde_json::from_value::<ReasoningState>(wire).is_err());
+        assert_eq!(
+            ThoughtSearchKnobs::from_policy(&DecisionPolicy::engine_default()),
+            ThoughtSearchKnobs::default()
+        );
         assert!(ThoughtSearchKnobs {
             beam_width: 17,
             ..ThoughtSearchKnobs::default()
         }
         .checked()
         .is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R750.752
+    #[test]
+    fn declared_refusals_are_registered_statistical_codes() {
+        for code in REFUSALS {
+            assert_eq!(super::super::codes::resolve(code.as_str()), Some(*code));
+            assert!(StatisticalErrorCode::ALL
+                .iter()
+                .any(|known| known.as_str() == code.as_str()));
+        }
+    }
+
+    #[test]
+    fn validation_refuses_each_fault() {
+        let ok = ReasoningState::new(vec![node(0), node(1)], BudgetLedger::default()).unwrap();
+        assert!(ok.validate(true).is_ok());
+        let check = |nodes: Vec<ThoughtNode>, merge: bool| {
+            ReasoningState::new(nodes, BudgetLedger::default())
+                .unwrap()
+                .validate(merge)
+                .unwrap_err()
+                .refusal()
+        };
+        assert!(check(vec![node(1), node(1)], false).starts_with("THOUGHT_NODE_INVALID"));
+        let mut orphan = node(1);
+        orphan.parent = Some(5);
+        assert!(check(vec![orphan], false).starts_with("THOUGHT_NODE_INVALID"));
+        let mut deep = node(1);
+        deep.depth = 4;
+        assert!(check(vec![node(0), deep], false).starts_with("THOUGHT_NODE_INVALID"));
+        let mut float = node(0);
+        float.score.scale = QuantScaleTag::Pico;
+        assert!(check(vec![float], false).starts_with("THOUGHT_SCORE_NOT_FIXED_POINT"));
+        let mut twin = node(1);
+        twin.state_digest = node(0).state_digest;
+        assert!(check(vec![node(0), twin.clone()], true).starts_with("THOUGHT_MERGE_CYCLE"));
+        assert!(
+            ReasoningState::new(vec![node(0), twin], BudgetLedger::default())
+                .unwrap()
+                .validate(false)
+                .is_ok()
+        );
     }
 }

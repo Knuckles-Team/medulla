@@ -1142,3 +1142,6 @@ mod loops_tests;
 // tracked contradictions.
 #[cfg(feature = "statechart")]
 mod belief_revision_tests;
+
+// MEDULLA-DECISION-ENGINE-R750: bounded multi-step reasoning search, served.
+mod thought_search_tests;

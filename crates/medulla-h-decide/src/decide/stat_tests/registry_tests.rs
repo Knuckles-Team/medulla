@@ -64,7 +64,8 @@ fn declared_request(
 }
 
 /// The kinds without a specialized body: one shared matrix ladder, reached
-/// through the registry.
+/// through the registry. `ThoughtSearch` concludes through its own family
+/// (`thought_search_tests`).
 const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::Route,
     QuestionKind::Rank,
@@ -86,7 +87,6 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::UsageGuidance,
     QuestionKind::BranchOutcome,
     QuestionKind::EditConcentration,
-    QuestionKind::ThoughtSearch,
     QuestionKind::ComparativeAnalysisPlan,
     QuestionKind::ContextPackage,
 ];

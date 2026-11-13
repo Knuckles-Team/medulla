@@ -162,3 +162,8 @@ and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revi
 - R036.106: `ProfileGrantMachine` and the `rbac_profile_use_grant` owner table; the predecessor layout is upgraded only through the offline upgrade registry; the commit admission lists the caller's active grants as `profile_grant:<id>` premises (research.md).
 - R036.105.1 and R036.105.2: the coordinator-decision certificate lives in its own `xshard_decision_certificate` owner table with a graph-shard lineage predecessor and an offline-upgrade registry row, never under a reserved key of `XSHARD_PREPARE` or `XSHARD_DECISION`; `DecisionCommit` writes the pending marker and the terminal decision with the sealed certificate through `commit_cross_shard_recoverable`; the deadline is the knob `xshard.decision_deadline_ms` (research.md).
 - R113.2.5 and R113.3.1.1: the shared-owner commit path (record and evidence in one Agent Library transaction, lease as the graph participant, decided by the R036.105.2 coordinator decision) and the durable `decision_retry_allowance` table are the producers of R113.2.2 to R113.2.4 and R113.3.2.
+
+## Thought search (R750.750 to R750.754)
+
+`Decide` with `QuestionKind::ThoughtSearch` runs `family/thought_search.rs`, which calls `stat_thought_search::conclude`: parse the typed `thought_search` and `task_class` params, read the strategy from `DecisionPolicy.reasoning`, validate the frontier, read the knobs through `ThoughtSearchKnobs::from_policy`, apply request lowerings, then run `choose_expansion`. The answer is sealed as `FamilyAnswer::ThoughtSearch` with `thought:*` and `knob:*` premises. Nothing is written.
+

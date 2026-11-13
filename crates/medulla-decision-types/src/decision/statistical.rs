@@ -225,6 +225,8 @@ pub enum TypedValue {
     ContextPackages(Box<super::context_package::ContextPackageRequest>),
     /// A standalone topology question (MEDULLA-DECISION-ENGINE-R111.1).
     Topology(Box<topology::TopologyQuestion>),
+    /// The bounded frontier of a thought search (MEDULLA-DECISION-ENGINE-R750.754).
+    ThoughtSearch(Box<super::thought_search::ReasoningState>),
 }
 
 /// One named parameter of a question.

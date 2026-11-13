@@ -109,3 +109,11 @@ solver and the cap admission with `AgentAssemble`, so the two cannot disagree on
 - **One coordinator decision for every owner.** The Agent Library, the capacity ledger and RBAC are separate owner files, so none can commit the others. The durable coordinator decision is the single commit point; each owner resolves from it, and recovery finishes any owner that stopped between the decision and its own write.
 - **Evidence and record share an owner.** The decision record and the graph evidence are both Agent Library rows, so they commit in one owner transaction; only the capacity lease is a second participant. This keeps the participant count at the minimum and avoids a second capacity authority.
 - **Retry allowance is a table, not a counter.** The tombstone row is retained so a restart never restores the allowance; it is an allowance row, not a decision record, which keeps R113.2.3's rule that a denial leaves no decision record.
+
+## Thought search wiring (R750.750 to R750.754)
+
+- **Knobs are decision knobs.** The five `thought_search.*` knobs are `KnobSpec` rows in the decision knob registry, read from the pinned policy with `DecisionPolicy::knob` and recorded as `knob:` premises, like the harness-contrast knobs. They are not server startup knobs: the server loader's own rule is that decision knobs live only in the decision registry, and evolution tunes them through knob-set revisions.
+- **Candidates are the leaf ids.** `Decide` needs a candidate source; the family declares the frontier leaves as options so the record's candidate digest covers exactly what was ranked. An empty frontier is refused, because a declared source names at least one option.
+- **A budget stop abstains.** The answer still carries `Stop{certified_gap}`; the outcome is `Abstained` with `BudgetExhausted` naming the best node, resolution `Optimization`, evidence `Claim` (scores are caller claims).
+- **A missing strategy is unknown.** A task class absent from `DecisionPolicy.reasoning` refuses `THOUGHT_STRATEGY_UNKNOWN`; there is no silent default strategy.
+

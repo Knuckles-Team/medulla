@@ -37,6 +37,7 @@ fn executed(outcome: StatisticalOutcome, topology: Option<TopologyExecuted>) -> 
         seed: [0u8; 32],
         harness_contrast: None,
         topology,
+        thought: None,
     }
 }
 
