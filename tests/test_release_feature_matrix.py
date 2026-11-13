@@ -314,7 +314,8 @@ def test_pyo3_gate_is_independent_required_and_keeps_trusted_cache_policy(
     assert job["needs"] == "changes"
     assert job["if"] == (
         "needs.changes.outputs.code == 'true' && "
-        "(github.event_name != 'pull_request' || "
+        "((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' "
+        "|| startsWith(github.ref, 'refs/tags/v')) || "
         "needs.changes.outputs.packaging == 'true')"
     )
     assert (
@@ -397,7 +398,8 @@ def test_slim_server_clippy_profile_lints_with_warnings_denied(release_matrix):
 def test_engine_main_wheel_publishes_a_prerelease_on_main_push_only(release_matrix):
     workflow, _ = release_matrix
     job = workflow["jobs"]["engine-main-wheel"]
-    assert "push" in job["if"] and "refs/heads/main" in job["if"]
+    # The full matrix, and so the prerelease, runs on the nightly schedule.
+    assert "schedule" in job["if"] and "needs.gates.result == 'success'" in job["if"]
     assert "gates-variants" in job["needs"]
     assert job["env"]["MEDULLA_WHEEL_TARGET"] == "x86_64-unknown-linux-gnu"
     names = [str(step.get("name", "")) for step in job["steps"]]
@@ -429,7 +431,10 @@ def test_only_workspace_clippy_runs_on_pull_requests(release_matrix):
     ]
     release = workflow["jobs"]["clippy-release-profiles"]
     assert release["if"] == (
-        "needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'"
+        "needs.changes.outputs.code == 'true' && "
+        "(github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch' || "
+        "startsWith(github.ref, 'refs/tags/v'))"
     )
     assert release["strategy"]["fail-fast"] is False
     assert {p["name"] for p in release["strategy"]["matrix"]["profile"]} == {

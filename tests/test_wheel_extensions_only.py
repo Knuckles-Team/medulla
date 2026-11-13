@@ -73,8 +73,13 @@ def test_each_platform_publishes_on_its_own_behind_the_guard() -> None:
     publish = next(i for i, n in enumerate(legs) if n.startswith("Publish "))
     assert smoke < publish
     assert jobs["publish-x86"]["needs"] == "build-x86"
-    sdist_uses = [s.get("uses") for s in jobs["build-sdist"]["steps"]]
-    assert "./.github/actions/publish-distribution" in sdist_uses
+    # The source archive publishes last, from the verifier, after every
+    # required wheel exists; build-sdist only builds and validates it.
+    assert "./.github/actions/publish-distribution" not in [
+        s.get("uses") for s in jobs["build-sdist"]["steps"]
+    ]
+    verify_uses = [s.get("uses") for s in jobs["verify-pypi"]["steps"]]
+    assert "./.github/actions/publish-distribution" in verify_uses
     # No uploader waits on another platform; only the verifier joins them.
     assert set(jobs["verify-pypi"]["needs"]) == {
         "build",
@@ -99,8 +104,8 @@ def test_compile_cache_is_saved_from_main_and_restored_on_tags() -> None:
     )
     assert cache["with"]["save-if"] == "${{ inputs.cache-save == 'true' }}"
     ci = _yaml(CI)["jobs"]["wheel-cache"]
-    assert "github.event_name == 'push'" in ci["if"]
-    assert "refs/heads/main" in ci["if"]
+    # The nightly schedule on the default branch warms the cache.
+    assert "github.event_name == 'schedule'" in ci["if"]
     warm = next(s for s in ci["steps"] if s.get("uses", "").endswith("folded-wheel"))
     assert warm["with"]["cache-save"] == "true"
     release = RELEASE.read_text()

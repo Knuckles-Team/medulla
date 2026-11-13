@@ -840,9 +840,11 @@ def test_plan_fuzz_remains_independent_required_acceptance() -> None:
     jobs = _workflow()["jobs"]
     job = jobs["gates-plan-fuzz"]
     assert job["needs"] == "changes"
-    # Main pushes, the nightly schedule and dispatch (MEDULLA-CONTRACT-R053.7).
+    # The nightly schedule, dispatch and tag pushes (MEDULLA-CONTRACT-R053.7).
     assert job["if"] == (
-        "needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'"
+        "needs.changes.outputs.code == 'true' && (github.event_name == 'schedule' "
+        "|| github.event_name == 'workflow_dispatch' || "
+        "startsWith(github.ref, 'refs/tags/v'))"
     )
     assert "continue-on-error" not in job
     command = COMPILER_CACHE_COMMANDS["gates-plan-fuzz"][
