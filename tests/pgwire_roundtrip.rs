@@ -1823,3 +1823,180 @@ async fn disjoint_sessions_commit_in_parallel() {
         "every row holds its own session's value"
     );
 }
+
+// ── Wire logins (MEDULLA-ENGINE-PARITY-R007.2, R007.3) ─────────────────────────
+
+const LOGIN_SECRET: &str = "wire-login-test-secret"; // sanitizer:ignore
+const LOGIN_PASSWORD: &str = "wire-login-pass"; // sanitizer:ignore
+const LOGIN_SALT: [u8; 16] = [9u8; 16];
+
+/// A state whose `__commons__` graph holds one private node per principal.
+fn login_state(principals: &[&str]) -> Arc<RwLock<ServerState>> {
+    let registry = GraphRegistry::new();
+    let core = registry.get("__commons__").unwrap().core.clone();
+    for principal in principals {
+        let properties = serde_json::json!({
+            "type": "Note",
+            "_visibility": "private",
+            "_owner": principal,
+        });
+        core.add_node(
+            format!("note-{principal}"),
+            rmp_serde::to_vec_named(&properties).expect("encode node"),
+        );
+    }
+    test_support::state_with_registry(
+        LOGIN_SECRET,
+        test_support::wire_isolation(principals),
+        registry,
+        Some(sql_test_persist_dir()),
+        None,
+    )
+}
+
+fn register_password_login(login: &str, principal: &str, tenant: &str) {
+    let record = medulla_identity_types::identity::WireLoginRecord::new(
+        login,
+        medulla_identity_types::identity::WireLoginKind::Password,
+        &pgwire::password_verifier(LOGIN_PASSWORD, &LOGIN_SALT),
+        principal,
+        tenant,
+        1,
+    );
+    medulla_wire_core::sql_wire_auth::wire_login_registry()
+        .put(record)
+        .expect("register wire login");
+}
+
+async fn wire_note_ids(client: &tokio_postgres::Client) -> Vec<String> {
+    let mut ids: Vec<String> = client
+        .query("SELECT id FROM nodes WHERE type = 'Note'", &[])
+        .await
+        .expect("wire read")
+        .iter()
+        .map(|row| row.get::<_, String>(0))
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// The same read through `Method::Uql`, signed as `principal`.
+async fn native_note_ids(
+    state: &test_support::SharedState,
+    id: u64,
+    principal: &str,
+) -> Vec<String> {
+    let request = common::signed_request_as(
+        LOGIN_SECRET,
+        id,
+        "__commons__",
+        principal,
+        medulla_protocol_types::protocol::Method::Uql {
+            text: "MATCH (:Note)".to_string(),
+            params: Default::default(),
+            prepare: false,
+            foreign_executions: Default::default(),
+        },
+    );
+    let response = test_support::dispatch(state, request).await;
+    assert!(
+        response.error.is_none(),
+        "native read: {:?}",
+        response.error
+    );
+    let mut ids = test_support::uql_ids(&response);
+    ids.sort();
+    ids
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R007.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn wire_rls_equals_native_rls() {
+    let principals = ["rls-a", "rls-b", "rls-c"];
+    let state = login_state(&principals);
+    let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
+    for (n, principal) in principals.iter().enumerate() {
+        let login = format!("bi-{principal}");
+        register_password_login(&login, principal, common::TEST_TENANT);
+        let client = connect_scram(&addr, &login, LOGIN_PASSWORD, "__commons__")
+            .await
+            .expect("wire login");
+        let over_wire = wire_note_ids(&client).await;
+        let native = native_note_ids(&state, 100 + n as u64, principal).await;
+        assert_eq!(
+            over_wire, native,
+            "{principal}: the wire read and Method::Uql return the same rows"
+        );
+        assert!(
+            over_wire.contains(&format!("note-{principal}")),
+            "{principal} sees its own row"
+        );
+        assert!(
+            over_wire.len() < principals.len(),
+            "{principal} does not see every principal's private row"
+        );
+    }
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R007.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn wire_login_of_another_tenant_refuses_plan_scope_unverified() {
+    let state = login_state(&["tenant-x"]);
+    let addr = spawn_listener_mode(state, pgwire::PgWireAuthMode::Scram).await;
+    register_password_login("bi-foreign", "tenant-x", "some-other-tenant");
+    let client = connect_scram(&addr, "bi-foreign", LOGIN_PASSWORD, "__commons__")
+        .await
+        .expect("SCRAM succeeds; the scope check runs on the first query");
+    let err = client
+        .query("SELECT id FROM nodes", &[])
+        .await
+        .expect_err("a login whose tenant is unverified reads nothing");
+    assert!(
+        error_chain(&err).contains("plan_scope_unverified"),
+        "got {}",
+        error_chain(&err)
+    );
+    // An unknown login refuses at startup with SQLSTATE 28000.
+    let unknown = connect_scram(&addr, "no-such-login", LOGIN_PASSWORD, "__commons__")
+        .await
+        .expect_err("unknown login refuses");
+    let chain = error_chain(&unknown);
+    assert!(
+        chain.contains("28000") || chain.contains("28p01"),
+        "got {chain}"
+    );
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R007.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn login_maps_to_principal() {
+    const TOKEN: &str = "wire-login-token-1"; // sanitizer:ignore
+    let state = login_state(&["login-a"]);
+    let addr = spawn_listener_mode(state, pgwire::PgWireAuthMode::Scram).await;
+    register_password_login("bi-login-a", "login-a", common::TEST_TENANT);
+    medulla_wire_core::sql_wire_auth::wire_login_registry()
+        .put(medulla_identity_types::identity::WireLoginRecord::new(
+            "bi-token-a",
+            medulla_identity_types::identity::WireLoginKind::Token,
+            &medulla_identity_types::identity::sha256_verifier(TOKEN.as_bytes()),
+            "login-a",
+            common::TEST_TENANT,
+            1,
+        ))
+        .expect("register token login");
+    for round in 0..1_000 {
+        let by_password = connect_scram(&addr, "bi-login-a", LOGIN_PASSWORD, "__commons__")
+            .await
+            .unwrap_or_else(|e| panic!("password login {round}: {e}"));
+        let by_token = connect_scram(&addr, "bi-token-a", TOKEN, "__commons__")
+            .await
+            .unwrap_or_else(|e| panic!("token login {round}: {e}"));
+        for client in [&by_password, &by_token] {
+            assert_eq!(
+                wire_note_ids(client).await,
+                vec!["note-login-a".to_string()],
+                "login {round}"
+            );
+        }
+    }
+}

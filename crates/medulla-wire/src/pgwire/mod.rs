@@ -85,7 +85,7 @@ use medulla_wire_core::wire::WireSession;
 
 mod auth;
 
-pub use auth::{derive_pg_password, PgWireAuthMode, PGWIRE_AUTH_ENV};
+pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
 
 /// Env var: when set (and the binary is built `--features pgwire`), the pgwire
 /// listener binds this address (e.g. `127.0.0.1:5433`). Unset → no listener.
@@ -558,6 +558,12 @@ fn user_err(msg: impl Into<String>) -> PgWireError {
 /// Map a wire-neutral [`WireError`] onto a Postgres error frame, preserving the exact
 /// SQLSTATE + message the shared core produced (so a client sees byte-for-byte the
 /// same `ERROR` it did before MEDULLA-074 — e.g. `25P02` aborted-txn, `42501` denied).
+/// Stable refusal code of a wire login whose tenant the verified authority does
+/// not carry (MEDULLA-ENGINE-PARITY-R007.2).
+const PLAN_SCOPE_UNVERIFIED: &str = "PLAN_SCOPE_UNVERIFIED";
+/// SQLSTATE of [`PLAN_SCOPE_UNVERIFIED`]; the sqlstate table maps the code to it.
+const PLAN_SCOPE_UNVERIFIED_SQLSTATE: &str = "28000";
+
 fn wire_err_to_pg(e: WireError) -> PgWireError {
     PgWireError::UserError(Box::new(ErrorInfo::new(
         "ERROR".to_owned(),
@@ -842,18 +848,36 @@ impl EngineBackend {
         let user = user
             .filter(|value| !value.trim().is_empty())
             .ok_or_else(|| user_err("authenticated SQL identity is required"))?;
-        // A registered, active wire login acts as the principal it maps to; every
-        // other login (engine agents) acts as itself.
-        let user = <medulla_wire_core::sql_wire_auth::WireLoginRegistry as medulla_wire_core::sql_wire_auth::WireLoginSource>::find(
+        // A registered, active wire login acts as the principal it maps to, in the
+        // tenant its record names; every other login (engine agents) acts as itself.
+        let record = <medulla_wire_core::sql_wire_auth::WireLoginRegistry as medulla_wire_core::sql_wire_auth::WireLoginSource>::find(
             &medulla_wire_core::sql_wire_auth::wire_login_registry(),
             &user,
         )
-            .filter(|record| record.is_active())
-            .map_or(user, |record| record.principal);
+        .filter(|record| record.is_active());
+        let actor = record
+            .as_ref()
+            .map_or_else(|| user.clone(), |record| record.principal.clone());
         self.session
-            .bind_authenticated_sql_actor("pgwire", &user)
+            .bind_authenticated_sql_actor("pgwire", &actor)
             .await
-            .map_err(wire_err_to_pg)
+            .map_err(wire_err_to_pg)?;
+        // The scope every read of this connection carries is the verified
+        // authority's tenant. A login whose record names another tenant never
+        // reads under this one (MEDULLA-ENGINE-PARITY-R007.2).
+        if let Some(record) = record {
+            let authority = self.session.carrier_authority().map_err(wire_err_to_pg)?;
+            if authority.tenant_scope() != record.tenant {
+                return Err(wire_err_to_pg(WireError {
+                    code: PLAN_SCOPE_UNVERIFIED_SQLSTATE.to_string(),
+                    message: format!(
+                        "{PLAN_SCOPE_UNVERIFIED}: wire login `{}` names a tenant this connection's verified authority does not carry",
+                        record.login
+                    ),
+                }));
+            }
+        }
+        Ok(())
     }
 
     /// Resolve the wire `Type` OIDs for a statement's `$N` parameters

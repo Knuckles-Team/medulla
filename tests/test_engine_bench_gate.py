@@ -1,6 +1,7 @@
 """Behaviour tests for scripts/engine_parity_bench_gate.py.
 
 spec: MEDULLA-ENGINE-PARITY-R005.2
+spec: MEDULLA-ENGINE-PARITY-R005.3
 """
 
 from __future__ import annotations
@@ -114,3 +115,45 @@ def test_missing_baseline_refuses(tmp_path):
     done = _run(tmp_path, _full(), None)
     assert done.returncode == 1
     assert "BENCH_BASELINE_MISSING" in done.stderr
+
+
+_BASELINE_FILE = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "benches"
+    / "baselines"
+    / "engine_parity.json"
+)
+
+
+def test_baseline_file_matches_records_schema(tmp_path):
+    """spec: MEDULLA-ENGINE-PARITY-R005.3
+
+    The committed baseline names exactly the five required workloads, each with
+    the numeric metrics a record carries, and the gate accepts records equal to it.
+    """
+    baseline = json.loads(_BASELINE_FILE.read_text())
+    assert set(baseline) == {"workloads"}
+    assert set(baseline["workloads"]) == set(_WORKLOADS)
+    for name, metrics in baseline["workloads"].items():
+        assert set(metrics) == {"p99_us", "throughput"}, name
+        assert metrics["p99_us"] > 0 and metrics["throughput"] > 0, name
+    records = [
+        _record(n, p99=m["p99_us"], throughput=m["throughput"])
+        for n, m in baseline["workloads"].items()
+    ]
+    records_path = tmp_path / "records.jsonl"
+    records_path.write_text("".join(json.dumps(r) + "\n" for r in records))
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(_GATE),
+            "--records",
+            str(records_path),
+            "--baseline",
+            str(_BASELINE_FILE),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
