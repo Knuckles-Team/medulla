@@ -82,6 +82,11 @@
       "resident_bytes_per_record_overhead": 96,
       "resident_bytes_vector_factor": 1.25
     },
+    "decide/distilled_rank": {
+      "p50_ms": 10.0,
+      "p99_ms": 50.0,
+      "peak_mib": 64.0
+    },
     "decide/load_set": {
       "p50_ms": 25.0,
       "p99_ms": 50.0,
