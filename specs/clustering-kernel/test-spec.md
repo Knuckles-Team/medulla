@@ -43,6 +43,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-CLUSTER-R004.2` | Every transition is tested | `crates/medulla-numeric/src/cluster/state.rs::tests::every_state_event_pair_is_decided` (planned) |
 | `MEDULLA-CLUSTER-R004.3` | Consumer: progress reaches the background-task registry | `crates/medulla-numeric/tests/cluster_kernel.rs::progress_is_reported_per_state_change_and_throttled` (planned) |
 | `MEDULLA-CLUSTER-R004.4` | Cancellation | `crates/medulla-numeric/tests/cluster_kernel.rs::cancel_stops_at_next_boundary_without_centroids` (planned) |
+| `MEDULLA-CLUSTER-R004.5` | ClusterRun/State state machine | `crates/medulla-numeric/src/cluster/state.rs::tests::every_legal_transition_applies`, `crates/medulla-numeric/src/cluster/state.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-numeric/src/cluster/state.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::cluster_run_machine_matches_edge_table` (planned, L1) |
 | `MEDULLA-CLUSTER-R005` | Bounded work (rollup) | `crates/medulla-numeric/tests/cluster_kernel.rs::no_input_spins` (planned) |
 | `MEDULLA-CLUSTER-R005.1` | Input refusals | `crates/medulla-numeric/tests/cluster_kernel.rs::bad_inputs_refuse_with_typed_codes` (planned) |
 | `MEDULLA-CLUSTER-R005.2` | Step budget | `crates/medulla-numeric/tests/cluster_kernel.rs::budget_exhaustion_is_a_named_end_state` (planned) |

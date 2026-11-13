@@ -76,6 +76,7 @@ The spec itself lands first as PR 1.
 - [ ] T053 [US4] MEDULLA-CLUSTER-R009.4 Background retrain, warm start, swap.
 - [ ] T054 [US1] MEDULLA-CLUSTER-R010 Benchmark against the current full-batch method (rollup).
 - [ ] T055 [US1] MEDULLA-CLUSTER-R010.2 Acceptance thresholds.
+- [ ] T057 [US1] MEDULLA-CLUSTER-R004.5 ClusterRun/State state machine: route 4 census findings through State::apply
 
 ## Bindings
 
