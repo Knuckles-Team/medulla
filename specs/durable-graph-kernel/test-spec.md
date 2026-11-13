@@ -634,7 +634,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 |---|---|
 | `MEDULLA-DURABLE-KERNEL-R042.2`, `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench.rs::run_owner_recovery` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::read_changes` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.2` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::step_examines_batch_in_id_order` (planned) |
@@ -689,8 +689,8 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R750`, `MEDULLA-DURABLE-KERNEL-R750.753` | `tests/durable/test_agent_turn_queue_served.py::test_cancel_reaches_leased_worker_on_renew` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.752` | `tests/durable/test_agent_turn_queue_served.py::test_full_queue_stale_head_and_bad_capability_refuse` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R867` | `tests/durable/test_capacity_lease_served.py::test_background_lease_cannot_spend_reserved_floor` |
-| `MEDULLA-DURABLE-KERNEL-R094.7.1` | `tests/durable/test_concept_lineage_served.py::test_known_ids_and_edges_survive_restart` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R094.7` | `tests/durable/test_concept_lineage_served.py::test_lineage_cycle_is_refused` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R094.7.1` | `tests/durable/test_concept_lineage_served.py::test_known_ids_and_edges_survive_restart` |
+| `MEDULLA-DURABLE-KERNEL-R094.7` | `tests/durable/test_concept_lineage_served.py::test_lineage_cycle_is_refused` |
 | `MEDULLA-DURABLE-KERNEL-R700`, `MEDULLA-DURABLE-KERNEL-R700.6` | `tests/durable/test_retention_cleanup_served.py::test_held_and_referenced_nodes_survive` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.5` | `tests/durable/test_retention_cleanup_served.py::test_record_reproduces_report` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/durable/test_retention_cleanup_served.py::test_refusals_leave_state_unchanged` (planned) |

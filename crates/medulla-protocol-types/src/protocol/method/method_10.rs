@@ -204,6 +204,14 @@ $($variants)*
     WriteBack {
         op: Box<medulla_mutation_types::write_back::WriteBackOp>,
     },
+    /// Known concept ids and the `superseded_by` lineage DAG between them
+    /// (MEDULLA-DURABLE-KERNEL-R094.7): claim an id for a repository, add an
+    /// edge, or read one concept with its direct successors. Refuses a
+    /// collision, a malformed id, an unknown endpoint, a self edge and a cycle
+    /// by registered code.
+    ConceptLineage {
+        op: Box<medulla_agent_types::concept_lineage::ConceptLineageOp>,
+    },
 
     // ── Graph schema sources and the mutation outbox (X9, X10) ─────────────
     /// Attach, replace or detach one keyed schema source on the request graph.

@@ -298,6 +298,15 @@ from .agent_component import (
     AgentComponentSearchRequest,
     AgentComponentStatusRequest,
 )
+from .concept_lineage import (
+    ConceptEdgeRecord,
+    ConceptLineageOp,
+    ConceptLineageOpAddEdge,
+    ConceptLineageOpClaim,
+    ConceptLineageOpRead,
+    ConceptReadResult,
+    ConceptRecord,
+)
 from .connector_pack import (
     BoundedVec_PackEntry_8192,
     BoundedVec_PackRef_64,
@@ -29567,6 +29576,13 @@ __all__ = [
     "ComponentProvenanceSourcePackage",
     "ComputeSimilarityEdgesResult",
     "ComputeSimilarityEdgesResultValueItem",
+    "ConceptEdgeRecord",
+    "ConceptLineageOp",
+    "ConceptLineageOpAddEdge",
+    "ConceptLineageOpClaim",
+    "ConceptLineageOpRead",
+    "ConceptReadResult",
+    "ConceptRecord",
     "ConfirmToken",
     "ConnectedComponentsResult",
     "ConnectorPackBindRequest",

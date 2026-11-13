@@ -52,3 +52,35 @@ Consequences: an ETag is a manifest digest, not the digest of the bytes; identic
 share one digest. A multipart upload keeps its parts as staged chunks and writes one manifest
 at completion.
 
+
+## Concept ids and lineage edges are tenant-keyed Agent Library rows (MEDULLA-DURABLE-KERNEL-R094.7, R094.7.1)
+
+Decision: `concept_ids` is keyed `(tenant, concept id)` and `concept_lineage_edges` is keyed
+`(tenant, superseded, successor)`, both in the Agent Library owner. The served method is
+`ConceptLineage` with ops `claim`, `add_edge` and `read`; writes commit through the admitted
+pack-write lifecycle (replay identity, staged batch, owner rows, receipt), reads come from one
+committed snapshot.
+
+Why: a principal or repository name can exist in two tenants, and a key without the tenant would
+let one tenant's claim collide with, or make visible, another's (ISO-OWNER-KEY). The owner already
+carries the receipt, replay and outbox rows a durable write needs, so no second store is added.
+
+Decisions made while building:
+- The decision to allow a claim or an edge stays in `ConceptPathSet::claim` and
+  `ConceptLineage::add_edge`. The adapter loads only the rows those calls need: the two endpoint
+  rows, and the edges reachable from the successor (a cycle through a new edge `a -> b` is a path
+  `b -> ... -> a`), so the write costs the number of edges touched, as the row requires.
+  `ConceptLineage::restore_edge` puts stored edges back without re-checking them; the store only
+  ever holds edges `add_edge` accepted.
+- Ids travel as text and are parsed by the handler, so a malformed id refuses `CONCEPT_ID_MALFORMED`
+  and a path claimed by another repository refuses `CONCEPT_ID_PATH_COLLISION` (the landed
+  `ConceptIdError`, given codes), instead of failing the wire decode with an untyped error.
+- Authorization reuses `agent:component-write` and `agent:component-read`: the concept store is part
+  of the component catalog and no new privilege is introduced.
+- `Read` returns the concept and at most `MAX_CONCEPT_SUCCESSORS_READ` direct successors with a
+  `truncated` flag, so a page is never mistaken for the whole set.
+- Re-claiming an id by its owner, and re-adding an edge, return the first stored evidence and write
+  nothing new.
+- LAYOUT-REGEN needed: the Agent Library layout digest pin in `owner/lineage.rs` is replaced by the
+  compiled digest (the foundation commit already declares the predecessor and upgrade).
+- WIRE-REGEN needed: `ConceptLineage` is a new method; the wire vectors are refreshed by the gate.

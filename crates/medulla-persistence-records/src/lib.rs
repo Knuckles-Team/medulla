@@ -34,6 +34,9 @@ pub mod agent_row;
 pub mod agent_template;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod concept_lineage;
+#[cfg(feature = "redb")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod connector_pack;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

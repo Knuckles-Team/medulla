@@ -837,6 +837,7 @@ mod tests {
         ("AgentGraph", "native MutationBatch in agent_library.redb: graph revision + head + kernel receipt/outbox in one WTX via medulla-transaction, exactly like AgentLibrary alongside it"),
         ("AgentComponent", "native MutationBatch in agent_library.redb: component revision + head + kernel receipt/outbox in one WTX via medulla-transaction, alongside the agents and graphs that reference it"),
         ("AgentTemplate", "native MutationBatch in agent_library.redb: template revision + head + kernel receipt/outbox in one WTX via medulla-transaction, alongside the components, agents and graphs its base is assembled from"),
+        ("ConceptLineage", "native MutationBatch in agent_library.redb: concept id and lineage edge rows + kernel receipt/outbox in one WTX via medulla-transaction, alongside the components the concepts name"),
         // RF-019. Commits into the semantic index's OWN `OwnerLayout::SemanticIndex`
         // owner through `medulla-transaction`, never a graph shard: one WTX carries the
         // stage transition, its artifact, the successor intent, the generation

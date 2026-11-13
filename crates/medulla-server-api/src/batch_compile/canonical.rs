@@ -379,6 +379,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TxnBlobRef { .. }
         | Method::Maintain { .. }
         | Method::AgentComponent { .. }
+        // MEDULLA-DURABLE-KERNEL-R094.7: the same native agent_library.redb
+        // write as the component layer beside it.
+        | Method::ConceptLineage { .. }
         | Method::BeginTxn { .. }
         | Method::AddNode { .. }
         | Method::FinanceHawkesMle { .. }

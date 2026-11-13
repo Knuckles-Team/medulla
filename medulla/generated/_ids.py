@@ -424,6 +424,7 @@ METHOD_IDS = frozenset(
         "DecisionCommit",
         "ConnectorPack",
         "WriteBack",
+        "ConceptLineage",
         "TsAppend",
         "TsRange",
         "TsAsofJoin",

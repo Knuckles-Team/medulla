@@ -227,6 +227,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "AgentGraph",
     "AgentLibrary",
     "AgentTemplate",
+    // Claim and AddEdge write; Read is an authenticated snapshot.
+    "ConceptLineage",
     "CypherQuery",
     "GraphLearnFit",
     "GraphLearnPredict",

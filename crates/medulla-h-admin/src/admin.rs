@@ -32,6 +32,8 @@ mod backup;
 mod cluster;
 #[cfg(feature = "redb")]
 mod component_content;
+#[cfg(feature = "redb")]
+pub mod concept_lineage;
 // Declared in every build -- the dispatch arm that reaches it carries no cfg;
 // each op refuses by name in a build without its durable substrates.
 // `pub(crate)` so the projection worker shares the admin re-projection path.

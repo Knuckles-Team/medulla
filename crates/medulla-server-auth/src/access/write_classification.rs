@@ -75,6 +75,10 @@ fn requires_write_agent_surface(method: &Method) -> Option<bool> {
     if let Method::AgentComponent { op } = method {
         return Some(op.is_mutation());
     }
+    // Concept ids and lineage edges: `Read` is a snapshot, the rest write.
+    if let Method::ConceptLineage { op } = method {
+        return Some(op.is_mutation());
+    }
     // Agent templates, likewise. `Instantiate` is a READ here because it is
     // one: it binds parameters and hands back a draft. The `AgentLibrary`
     // publish that stores the resulting instance is a separate method and

@@ -22,6 +22,8 @@ pub mod agent_ontology;
 pub mod agent_template;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_topology;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod concept_lineage;
 // RF-020 — typed Agent Library delegation admission/result currency.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delegation;

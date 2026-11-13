@@ -28,6 +28,12 @@ from .agent_component import (
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
 )
+from .concept_lineage import (
+    ConceptEdgeRecord,
+    ConceptLineageOp,
+    ConceptReadResult,
+    ConceptRecord,
+)
 from .connector_pack import (
     ConnectorPackImportRequest,
     ConnectorPackOp,
@@ -1034,6 +1040,76 @@ async def send_write_back(
         idempotency_key=idempotency_key,
     )
     return OpaqueResult("WriteBack", payload)
+
+
+class ConceptLineageRequest(BaseModel):
+    """Validate one engine-contract request body.
+
+    Method:
+        ConceptLineage
+    Request schema:
+        contract/schemas/method.request.json
+        #/methods/ConceptLineage
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    op: ConceptLineageOp
+
+
+async def send_concept_lineage(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        ConceptLineage
+    Authorization:
+        agent:component-write
+    Durability:
+        ControlRedb
+    Replay:
+        OperationIdentity
+    Result:
+        one declared body per request op
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/ConceptLineage
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    ConceptLineageRequest.model_validate(params or {})
+    payload = await client._send(
+        "ConceptLineage",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("ConceptLineage", payload)
+
+
+def decode_concept_record(result: OpaqueResult) -> ConceptRecord:
+    """Decode the body of a ``claim`` result."""
+    return ConceptRecord.model_validate(result.payload)
+
+
+def decode_concept_edge_record(result: OpaqueResult) -> ConceptEdgeRecord:
+    """Decode the body of an ``add_edge`` result."""
+    return ConceptEdgeRecord.model_validate(result.payload)
+
+
+def decode_concept_read_result(result: OpaqueResult) -> ConceptReadResult:
+    """Decode the body of a ``read`` result."""
+    return ConceptReadResult.model_validate(result.payload)
 
 
 async def send_ts_append(

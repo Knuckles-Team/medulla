@@ -423,6 +423,29 @@ pub async fn dispatch_agent_library_methods(
                 )
             }
         }
+        Method::ConceptLineage { op } => {
+            #[cfg(feature = "redb")]
+            {
+                dispatch_boxed(async {
+                    medulla_h_admin::admin::concept_lineage::handle(
+                        state,
+                        req.id,
+                        verified_context,
+                        *op,
+                    )
+                    .await
+                })
+                .await
+            }
+            #[cfg(not(feature = "redb"))]
+            {
+                let _ = (state, verified_context, op);
+                Response::err(
+                    req.id,
+                    "Concept lineage is not available in this build (requires `redb`)",
+                )
+            }
+        }
         Method::AgentTemplate { op } => {
             #[cfg(feature = "redb")]
             {

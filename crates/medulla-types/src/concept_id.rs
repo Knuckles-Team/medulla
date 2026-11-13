@@ -37,6 +37,19 @@ pub enum ConceptIdError {
     },
 }
 
+impl ConceptIdError {
+    /// The registered refusal code of this error.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::PathCollision { .. } => "CONCEPT_ID_PATH_COLLISION",
+            Self::TooLong
+            | Self::MalformedRoot(_)
+            | Self::SegmentCount
+            | Self::MalformedSegment(_) => "CONCEPT_ID_MALFORMED",
+        }
+    }
+}
+
 fn kebab(part: &str, alpha: fn(u8) -> bool) -> bool {
     !part.is_empty()
         && part
@@ -223,6 +236,18 @@ impl ConceptLineage {
             },
         );
         Ok(())
+    }
+
+    /// Put back an edge that was admitted earlier and read from the durable
+    /// store. The store only ever holds edges `add_edge` accepted, so nothing
+    /// is re-checked; the rebuilt DAG is what the next `add_edge` walks.
+    pub fn restore_edge(
+        &mut self,
+        superseded: ConceptId,
+        successor: ConceptId,
+        evidence: LineageEdge,
+    ) {
+        self.edges.insert((superseded, successor), evidence);
     }
 
     /// Whether `target` is reachable from `from` along `superseded_by` edges.

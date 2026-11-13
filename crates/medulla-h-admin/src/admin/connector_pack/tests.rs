@@ -32,21 +32,22 @@ use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::dispatch_test_on_heap;
 
 mod admin;
+mod concept_lineage;
 mod content_model;
-mod embedding_set;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 #[path = "import/contract_tests.rs"]
 mod contract_tests;
+mod embedding_set;
 mod model_input_capabilities;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod ontology;
 #[cfg(feature = "shacl")]
 mod outbox;
 mod scale;
-mod sql_columns;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_approval;
+mod sql_columns;
 mod storage_acceptance;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 #[path = "../../connector_pack_projection/surface_tests.rs"]

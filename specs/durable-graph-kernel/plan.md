@@ -1153,3 +1153,14 @@ Organization constitution Article XXXI requires a closed set of states, one tran
 `CdcHub::read`. The feed types, the cursor and the authorization revision are in
 `crates/medulla-types/src/graph_change_feed.rs`. The served proofs are in
 `tests/graph_change_feed_served.rs`.
+
+## Concept lineage served method (R094.7, R094.7.1)
+
+`Method::ConceptLineage` (ops `claim`, `add_edge`, `read`) routes through the control-plane arm to
+`medulla_h_admin::admin::concept_lineage::handle`, which binds the caller's context to the verified
+request and calls `AgentLibraryStore::{claim_concept, add_concept_edge, read_concept}`
+(`crates/medulla-persistence-records/src/concept_lineage.rs`). The store commits through the admitted
+pack-write lifecycle into the tenant-keyed `concept_ids` and `concept_lineage_edges` tables. The wire
+contract is `crates/medulla-agent-types/src/concept_lineage.rs`; five registered refusal codes route
+to this method only. Served proof: `tests/durable/test_concept_lineage_served.py` (L3) and the signed
+dispatch tests in `crates/medulla-h-admin/src/admin/connector_pack/tests/concept_lineage.rs`.

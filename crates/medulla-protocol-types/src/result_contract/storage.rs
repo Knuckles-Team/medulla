@@ -19,6 +19,7 @@ use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
 use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_agent_types::agent_template::AgentTemplateCommittedResult;
 use medulla_agent_types::agent_template::AgentTemplateEntry;
+use medulla_agent_types::concept_lineage::{ConceptEdgeRecord, ConceptReadResult, ConceptRecord};
 use medulla_catalog_types::connector_pack::conformance_evidence::ConformanceEvidence;
 use medulla_catalog_types::connector_pack::ConnectorPackStatus as ConnectorPackStatusBody;
 use medulla_catalog_types::{
@@ -131,6 +132,9 @@ method_results! {
     WriteBackRecordAttempt(WriteBack / "record_attempt") => Raw<WriteBackReceipt>;
     WriteBackRecordReconciliation(WriteBack / "record_reconciliation") => Raw<ReconciliationReceipt>;
     WriteBackReceipts(WriteBack / "receipts") => Raw<WriteBackReceiptPage>;
+    ConceptLineageClaim(ConceptLineage / "claim") => Raw<ConceptRecord>;
+    ConceptLineageAddEdge(ConceptLineage / "add_edge") => Raw<ConceptEdgeRecord>;
+    ConceptLineageRead(ConceptLineage / "read") => Raw<ConceptReadResult>;
     ImportSqliteFile(ImportSqliteFile) => Json<SqliteImportReport>;
     ExportSqliteFile(ExportSqliteFile) => Json<SqliteExportReport>;
 }

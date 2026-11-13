@@ -143,6 +143,19 @@ fn agent_component_policy(
     )
 }
 
+/// Concept ids and lineage edges live in the Agent Library owner beside the
+/// components they name, so the op owns the read/write split and the grant.
+fn concept_lineage_policy(
+    op: &medulla_agent_types::concept_lineage::ConceptLineageOp,
+) -> MethodPolicy {
+    native_owner_policy(
+        op.is_mutation(),
+        DurabilityDomain::ControlRedb,
+        op.authz_action(),
+        TxnParticipation::Atomic,
+    )
+}
+
 /// The semantic index takes the same runtime-conditional shape as the four agent
 /// layers above, but with SIX authz actions rather than two. `is_mutation` and
 /// `authz_action` both live on the op itself so this policy and
@@ -496,6 +509,7 @@ fn agent_family_policy(method: &Method) -> Option<MethodPolicy> {
         Method::AgentGraph { op } => Some(agent_graph_policy(op)),
         Method::AgentComponent { op } => Some(agent_component_policy(op)),
         Method::AgentTemplate { op } => Some(agent_template_policy(op)),
+        Method::ConceptLineage { op } => Some(concept_lineage_policy(op)),
         Method::SemanticIndex { op } => Some(semantic_index_policy(op)),
         _ => None,
     }

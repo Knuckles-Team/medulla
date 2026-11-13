@@ -900,6 +900,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     ("AgentLibrary", &["STALE_AGENT_LIBRARY_REVISION"]),
+    // MEDULLA-DURABLE-KERNEL-R094.7 / R094.7.1: concept ids and lineage edges.
+    (
+        "ConceptLineage",
+        &[
+            "CONCEPT_ID_MALFORMED",
+            "CONCEPT_ID_PATH_COLLISION",
+            "CONCEPT_LINEAGE_CYCLE",
+            "CONCEPT_LINEAGE_SELF_EDGE",
+            "CONCEPT_LINEAGE_UNKNOWN_ID",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R702.6.
     ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
