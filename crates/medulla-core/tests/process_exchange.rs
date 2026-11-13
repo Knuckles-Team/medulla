@@ -299,3 +299,111 @@ fn dmn_reader_keeps_tables_and_requirements() {
         Err(ProcessExchangeError::TooLarge { .. })
     ));
 }
+
+// spec: MEDULLA-CQ-ORCH-R702.5
+#[test]
+fn dmn_mapping_keeps_rule_order() {
+    use medulla_core::architecture_exchange::graph::ExchangeMutation;
+    use medulla_core::process_exchange::dmn_graph::{dmn_mutations, element_iri};
+    use medulla_core::process_exchange::dmn_read::parse_dmn;
+    use medulla_core::process_exchange::xml_tree::XmlLimits;
+
+    // One table of five rules whose ids do not sort in declared order.
+    let rules = ["r5", "r2", "r4", "r1", "r3"];
+    let mut body = String::new();
+    for (index, id) in rules.iter().enumerate() {
+        body.push_str(&format!(
+            "<rule id=\"{id}\"><inputEntry><text>&lt; {index}</text></inputEntry>\
+             <outputEntry><text>{index}</text></outputEntry></rule>"
+        ));
+    }
+    let xml = format!(
+        "<?xml version=\"1.0\"?><definitions xmlns=\"https://www.omg.org/spec/DMN/20191111/MODEL/\" \
+         id=\"defs\" name=\"Fees\"><inputData id=\"amount\" name=\"Amount\"/>\
+         <decision id=\"base\" name=\"Base\"/>\
+         <decision id=\"tier\" name=\"Tier\">\
+         <informationRequirement><requiredInput href=\"#amount\"/></informationRequirement>\
+         <informationRequirement><requiredDecision href=\"#base\"/></informationRequirement>\
+         <decisionTable id=\"t\" hitPolicy=\"COLLECT\" aggregation=\"SUM\">\
+         <input id=\"i1\" label=\"Amount\"><inputExpression><text>amount</text></inputExpression></input>\
+         <output id=\"o1\" name=\"fee\"/>{body}</decisionTable></decision></definitions>"
+    );
+    let doc = parse_dmn(xml.as_bytes(), XmlLimits::default()).unwrap();
+    let model = "model:fees";
+    let out = dmn_mutations(&doc, model);
+    assert_eq!(out, dmn_mutations(&doc, model), "equal input, equal output");
+
+    let nodes: Vec<(&str, &str, &std::collections::BTreeMap<String, String>)> = out
+        .iter()
+        .filter_map(|m| match m {
+            ExchangeMutation::UpsertNode {
+                id,
+                label,
+                properties,
+            } => Some((id.as_str(), label.as_str(), properties)),
+            ExchangeMutation::Link { .. } => None,
+        })
+        .collect();
+    // Each rule is one DmnRule node carrying its declared position.
+    for (declared, id) in rules.iter().enumerate() {
+        let iri = element_iri(model, id);
+        let (_, label, properties) = nodes.iter().find(|(n, _, _)| *n == iri).unwrap();
+        assert_eq!(*label, "DmnRule");
+        assert_eq!(properties["dmnRuleIndex"], declared.to_string());
+    }
+    // Reading the rules back by index recovers the declared order.
+    let mut by_index: Vec<_> = nodes
+        .iter()
+        .filter(|(_, label, _)| *label == "DmnRule")
+        .map(|(iri, _, p)| (p["dmnRuleIndex"].parse::<usize>().unwrap(), *iri))
+        .collect();
+    by_index.sort();
+    let recovered: Vec<_> = by_index
+        .into_iter()
+        .map(|(_, iri)| iri.to_owned())
+        .collect();
+    let declared: Vec<_> = rules.iter().map(|id| element_iri(model, id)).collect();
+    assert_eq!(recovered, declared);
+    // Output order is element id order: the rule nodes appear as r1..r5.
+    let rule_order: Vec<_> = nodes
+        .iter()
+        .filter(|(_, label, _)| *label == "DmnRule")
+        .map(|(iri, _, _)| *iri)
+        .collect();
+    let mut sorted = rule_order.clone();
+    sorted.sort();
+    assert_eq!(rule_order, sorted);
+    // Classes and requirement edges.
+    for label in [
+        "DmnDecisionRequirements",
+        "DmnDecision",
+        "DmnDecisionTable",
+        "DmnInputClause",
+        "DmnOutputClause",
+        "DmnInputData",
+    ] {
+        assert!(nodes.iter().any(|(_, l, _)| *l == label), "{label}");
+    }
+    let links: Vec<_> = out
+        .iter()
+        .filter_map(|m| match m {
+            ExchangeMutation::Link {
+                source,
+                target,
+                predicate,
+            } => Some((source.as_str(), target.as_str(), predicate.as_str())),
+            ExchangeMutation::UpsertNode { .. } => None,
+        })
+        .collect();
+    let tier = element_iri(model, "tier");
+    assert!(links.contains(&(
+        tier.as_str(),
+        element_iri(model, "amount").as_str(),
+        "dmnRequiresInput"
+    )));
+    assert!(links.contains(&(
+        tier.as_str(),
+        element_iri(model, "base").as_str(),
+        "dmnRequiresDecision"
+    )));
+}
