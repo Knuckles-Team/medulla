@@ -7375,6 +7375,26 @@ class GraphOperationsClient:
             raise RuntimeError("SourceSync must answer with an object")
         return result
 
+    async def write_back(
+        self,
+        op: dict[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Run one write-back operation (MEDULLA-ENGINE-PARITY-R019.2).
+
+        ``op`` is one ``WriteBackOp`` (``{"op": "create", "change_set": ...}``,
+        ``get``, ``record_attempt``, ``record_reconciliation`` or ``receipts``).
+        The engine records governed change sets and receipts; it never calls a
+        source. A change set whose ``target_class`` names a durable engine record
+        class is refused ``EXTERNAL_PLACEMENT_FORBIDDEN`` and writes nothing.
+        """
+        return (
+            await _gen.storage.send_write_back(
+                self._client, {"op": op}, None, idempotency_key=idempotency_key
+            )
+        ).payload
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.

@@ -51,7 +51,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T045 [US4] MEDULLA-ENGINE-PARITY-R016.2 Point-in-time recovery from a backup bundle and archived batches: wiring and refusal
 - [ ] T046 [P] [US4] MEDULLA-ENGINE-PARITY-R016.3 Point-in-time recovery from a backup bundle and archived batches: hot-path proof
 - [ ] T047 [US5] MEDULLA-ENGINE-PARITY-R019.1 Outside PostgreSQL databases are sources only: model and behavior
-- [ ] T048 [US5] MEDULLA-ENGINE-PARITY-R019.2 Outside PostgreSQL databases are sources only: wiring and refusal
+- [x] T048 [US5] MEDULLA-ENGINE-PARITY-R019.2 Outside PostgreSQL databases are sources only: wiring and refusal
 - [ ] T049 [P] [US5] MEDULLA-ENGINE-PARITY-R019.3 Outside PostgreSQL databases are sources only: hot-path proof
 - [ ] T050 [US5] MEDULLA-ENGINE-PARITY-R020.1 Capability report: model and behavior
 - [ ] T051 [US5] MEDULLA-ENGINE-PARITY-R020.2 Capability report: wiring and refusal
