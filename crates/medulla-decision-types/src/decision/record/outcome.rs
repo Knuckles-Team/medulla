@@ -228,6 +228,8 @@ mod tests {
             crate::decision::usage::REFUSALS
                 .iter()
                 .chain(crate::decision::reputation::REFUSALS.iter())
+                .chain(crate::decision::importance_penalty::REFUSALS.iter())
+                .chain(crate::decision::statistical::retrieval_generation::REFUSALS.iter())
                 .map(|code| code.as_str()),
         );
         for (_, table) in codes::module_tables() {

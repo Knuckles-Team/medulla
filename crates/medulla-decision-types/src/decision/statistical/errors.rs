@@ -55,6 +55,28 @@ closed_error_codes! {
         /// A run outcome cites a row that none of its referenced decisions
         /// returned (MEDULLA-DECISION-ENGINE-R100.102.4).
         CitationNotRetrieved => "CITATION_NOT_RETRIEVED",
+        /// An importance weight lies outside [0, 1]
+        /// (MEDULLA-DECISION-ENGINE-R151.4).
+        ImportanceOutOfRange => "IMPORTANCE_OUT_OF_RANGE",
+        /// An importance entry's evidence digest is empty or malformed
+        /// (MEDULLA-DECISION-ENGINE-R151.4).
+        ImportanceEvidenceMissing => "IMPORTANCE_EVIDENCE_MISSING",
+        /// A penalty names no feature importance at all
+        /// (MEDULLA-DECISION-ENGINE-R151.4).
+        ImportanceFeaturesEmpty => "IMPORTANCE_FEATURES_EMPTY",
+        /// An importance entry names a feature absent from the pinned feature
+        /// schema (MEDULLA-DECISION-ENGINE-R151.4).
+        ImportanceUnknownFeature => "IMPORTANCE_UNKNOWN_FEATURE",
+        /// A generation cycle's model dimension is not the shadow
+        /// generation's (MEDULLA-DECISION-ENGINE-R174.4).
+        GenerationDimensionMismatch => "GENERATION_DIMENSION_MISMATCH",
+        /// A generation cycle's evaluation receipt failed, so the cycle ended
+        /// `rejected` and the pointer did not move
+        /// (MEDULLA-DECISION-ENGINE-R174.4).
+        GenerationReceiptFailed => "GENERATION_RECEIPT_FAILED",
+        /// The logical graph's pointer moved while a cycle activated
+        /// (MEDULLA-DECISION-ENGINE-R174.4).
+        GenerationPointerConflict => "GENERATION_POINTER_CONFLICT",
     }
 }
 

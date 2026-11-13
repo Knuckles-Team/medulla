@@ -12,6 +12,7 @@ use sha2::{Digest, Sha256};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::{QuantScaleTag, QuantisedValue};
+use super::record::outcome::RefusalCode;
 
 /// Version of the serialized penalty types.
 pub const IMPORTANCE_SCHEMA_VERSION: u32 = 1;
@@ -22,6 +23,24 @@ pub const MAX_IMPORTANCE_FEATURES: usize = 256;
 fn schema_version() -> u32 {
     IMPORTANCE_SCHEMA_VERSION
 }
+
+/// Refusal: a weight outside [0, 1].
+pub const IMPORTANCE_OUT_OF_RANGE: RefusalCode = RefusalCode::new("IMPORTANCE_OUT_OF_RANGE");
+/// Refusal: an empty or malformed evidence digest.
+pub const IMPORTANCE_EVIDENCE_MISSING: RefusalCode =
+    RefusalCode::new("IMPORTANCE_EVIDENCE_MISSING");
+/// Refusal: a penalty with zero features.
+pub const IMPORTANCE_FEATURES_EMPTY: RefusalCode = RefusalCode::new("IMPORTANCE_FEATURES_EMPTY");
+/// Refusal: a feature absent from the pinned feature schema.
+pub const IMPORTANCE_UNKNOWN_FEATURE: RefusalCode = RefusalCode::new("IMPORTANCE_UNKNOWN_FEATURE");
+
+/// The refusal codes of the importance penalty (MEDULLA-DECISION-ENGINE-R151.4).
+pub const REFUSALS: &[RefusalCode] = &[
+    IMPORTANCE_OUT_OF_RANGE,
+    IMPORTANCE_EVIDENCE_MISSING,
+    IMPORTANCE_FEATURES_EMPTY,
+    IMPORTANCE_UNKNOWN_FEATURE,
+];
 
 /// The knobs of the importance penalty.
 pub const KNOBS: &[KnobSpec] = &[
@@ -85,7 +104,7 @@ impl TryFrom<FeatureImportanceFields> for FeatureImportance {
 }
 
 /// Whether `weight` reads inside `[0, 1]` on its own scale.
-fn weight_in_unit_interval(weight: &QuantisedValue) -> bool {
+pub fn weight_in_unit_interval(weight: &QuantisedValue) -> bool {
     let one: i128 = match weight.scale {
         QuantScaleTag::Pico => 1_000_000_000_000,
         QuantScaleTag::Q32 => 1_i128 << 32,
@@ -93,7 +112,7 @@ fn weight_in_unit_interval(weight: &QuantisedValue) -> bool {
     (0..=one).contains(&i128::from(weight.value))
 }
 
-fn is_sha256_hex(text: &str) -> bool {
+pub fn is_sha256_hex(text: &str) -> bool {
     text.len() == 64 && text.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 

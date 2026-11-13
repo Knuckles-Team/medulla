@@ -208,6 +208,8 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
         .chain(FOLDED.iter())
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
+        .chain(super::importance_penalty::REFUSALS.iter())
+        .chain(super::statistical::retrieval_generation::REFUSALS.iter())
         .copied()
         .chain(module_tables().into_iter().flat_map(|(_, table)| table))
         .find(|registered| registered.as_str() == code)

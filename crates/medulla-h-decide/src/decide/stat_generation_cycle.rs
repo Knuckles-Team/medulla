@@ -117,7 +117,8 @@ fn check_request(run: &CycleRun, request: &GenerationCycleRequest) -> Result<(),
         ));
     }
     if model.dimension as usize != run.gens.shadow.dimensions() {
-        return Err(invalid(
+        return Err(refusal(
+            StatisticalErrorCode::GenerationDimensionMismatch,
             "the model dimension is not the dimension of the shadow generation",
         ));
     }
@@ -165,11 +166,19 @@ fn open(run: &CycleRun, request: &GenerationCycleRequest) -> Result<Record, Stri
                     reembedded_nodes: 0,
                     batches: 0,
                     receipt: None,
+                    rejection: None,
                 },
                 stored: None,
             })
         }
     }
+}
+
+fn pointer_conflict() -> String {
+    refusal(
+        StatisticalErrorCode::GenerationPointerConflict,
+        "the logical graph's pointer moved while the cycle activated; start a new cycle",
+    )
 }
 
 /// Re-embed the next batch of shadow nodes and checkpoint it.
@@ -213,7 +222,7 @@ pub(super) fn run_cycle(
     check_request(run, request)?;
     let eval = &request.evaluation;
     let pointer_key = generation_pointer(&eval.logical);
-    let (_, before) = read_pointer(run.ctx.store, run.tenant, &pointer_key)?;
+    let (before_bytes, before) = read_pointer(run.ctx.store, run.tenant, &pointer_key)?;
     let mut record = open(run, request)?;
     if record.stored.is_none() && before.target() == Some(eval.shadow_graph.as_str()) {
         // The model is already the active generation: nothing to do.
@@ -249,6 +258,9 @@ pub(super) fn run_cycle(
         } else {
             GenerationCycleEvent::EvaluationFailed
         };
+        if !evaluated.receipt.passed {
+            record.job.rejection = Some(StatisticalErrorCode::GenerationReceiptFailed.to_string());
+        }
         fire(&mut record.job, event, Some(evaluated.receipt_digest))?;
         record.save(run)?;
     }
@@ -259,6 +271,12 @@ pub(super) fn run_cycle(
             .receipt_digest
             .clone()
             .ok_or("an evaluated cycle holds its receipt digest")?;
+        // The pointer must still be what this cycle started from: a move in
+        // between is a conflict, never an overwrite.
+        let (now_bytes, now) = read_pointer(run.ctx.store, run.tenant, &pointer_key)?;
+        if now_bytes != before_bytes && now.target() != Some(eval.shadow_graph.as_str()) {
+            return Err(pointer_conflict());
+        }
         let qualified = qualified_generation(
             run.ctx.store,
             run.tenant,
@@ -271,7 +289,13 @@ pub(super) fn run_cycle(
             principal: &run.reader.principal,
             now_ms: run.ctx.now_ms,
         };
-        let after = activate(run.ctx.store, &at, &qualified)?;
+        let after = activate(run.ctx.store, &at, &qualified).map_err(|error| {
+            if error.starts_with(StatisticalErrorCode::IdempotencyConflict.as_str()) {
+                pointer_conflict()
+            } else {
+                error
+            }
+        })?;
         record.job.receipt = Some(GenerationCycleReceipt {
             schema_version: GENERATION_CYCLE_SCHEMA_VERSION,
             model_ref: request.model_ref.clone(),

@@ -24,6 +24,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::retrieval::MAX_QUERY_DIMENSIONS;
+use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
 
 /// Format identity of a generation receipt.
@@ -110,6 +111,23 @@ use medulla_types::transition_refused::{
 
 /// Format identity of a generation cycle and its job record.
 pub const GENERATION_CYCLE_SCHEMA_VERSION: u16 = 1;
+
+/// Refusal: the model dimension is not the shadow generation's.
+pub const GENERATION_DIMENSION_MISMATCH: RefusalCode =
+    RefusalCode::new("GENERATION_DIMENSION_MISMATCH");
+/// Recorded on a cycle whose evaluation receipt failed.
+pub const GENERATION_RECEIPT_FAILED: RefusalCode = RefusalCode::new("GENERATION_RECEIPT_FAILED");
+/// Refusal: the pointer moved while the cycle activated.
+pub const GENERATION_POINTER_CONFLICT: RefusalCode =
+    RefusalCode::new("GENERATION_POINTER_CONFLICT");
+
+/// The refusal codes of the generation cycle (MEDULLA-DECISION-ENGINE-R174.4),
+/// in the retrieval-learning table.
+pub const REFUSALS: &[RefusalCode] = &[
+    GENERATION_DIMENSION_MISMATCH,
+    GENERATION_RECEIPT_FAILED,
+    GENERATION_POINTER_CONFLICT,
+];
 
 /// The embedding model a cycle publishes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -356,6 +374,10 @@ pub struct GenerationCycleJob {
     pub batches: u64,
     #[serde(default)]
     pub receipt: Option<GenerationCycleReceipt>,
+    /// The refusal code recorded when the cycle ended `rejected`
+    /// (`GENERATION_RECEIPT_FAILED`); absent in every other state.
+    #[serde(default)]
+    pub rejection: Option<String>,
 }
 
 #[cfg(test)]

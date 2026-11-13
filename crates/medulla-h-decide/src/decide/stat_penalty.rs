@@ -38,6 +38,7 @@ pub(super) fn resolve_penalty(
         return Ok(None);
     };
     let names = dataset.feature_names.as_slice();
+    check_importance(request, names)?;
     let mut importance = vec![0.0; names.len()];
     for entry in request.features.iter() {
         if let Some(k) = names.iter().position(|name| *name == entry.feature_id) {
@@ -81,6 +82,44 @@ pub(super) fn resolve_penalty(
     let receipt = PenaltyReceipt::seal(objective, request.features.as_slice())
         .map_err(|detail| refusal(StatisticalErrorCode::HeadInvalid, detail))?;
     Ok(Some(ResolvedPenalty { penalty, receipt }))
+}
+
+/// Refuse a penalty whose importance list is empty, names a feature outside the
+/// pinned schema, or carries an entry that is out of range or without
+/// well-formed evidence (MEDULLA-DECISION-ENGINE-R151.4). Runs before the fit
+/// starts, so a refusal writes no artifact.
+fn check_importance(request: &DecisionFitRequest, names: &[String]) -> Result<(), String> {
+    use medulla_decision_types::decision::importance_penalty::{
+        is_sha256_hex, weight_in_unit_interval,
+    };
+    if request.features.is_empty() {
+        return Err(refusal(
+            StatisticalErrorCode::ImportanceFeaturesEmpty,
+            "a penalty names at least one feature importance",
+        ));
+    }
+    for entry in request.features.iter() {
+        let feature = &entry.feature_id;
+        if !weight_in_unit_interval(&entry.importance_weight) {
+            return Err(refusal(
+                StatisticalErrorCode::ImportanceOutOfRange,
+                format!("importance_weight of {feature} is outside [0, 1]"),
+            ));
+        }
+        if !is_sha256_hex(&entry.evidence_digest) {
+            return Err(refusal(
+                StatisticalErrorCode::ImportanceEvidenceMissing,
+                format!("evidence_digest of {feature} is not 64 lowercase hex characters"),
+            ));
+        }
+        if !names.iter().any(|name| name == feature) {
+            return Err(refusal(
+                StatisticalErrorCode::ImportanceUnknownFeature,
+                format!("{feature} is not a feature of the pinned schema"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// The premises a draft's penalty adds to an evaluation of that draft: the one

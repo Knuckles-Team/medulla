@@ -376,3 +376,128 @@ async fn receipt_holds_model_counts_metrics_and_pointers() {
     assert_eq!(receipt.pointer_before, None);
     assert_eq!(receipt.pointer_after.as_deref(), Some(SHADOW));
 }
+
+/// Moves the logical graph's pointer to another generation while the cycle
+/// re-embeds, as a concurrent operator would.
+struct MovesPointer<'a>(&'a medulla_persistence_records::agent_library::AgentLibraryStore);
+
+impl Reembedder for MovesPointer<'_> {
+    fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>, String> {
+        use super::super::stat_generation::generation_pointer;
+        use super::super::stat_pointer::{activate, PointerMove, Qualified};
+        let at = PointerMove {
+            tenant: TENANT,
+            key: generation_pointer(ACTIVE),
+            principal: "operator",
+            now_ms: 5,
+        };
+        let other = Qualified {
+            target: "kg-other".to_string(),
+            receipt_digest: "sha256:other".to_string(),
+        };
+        activate(self.0, &at, &other)?;
+        let hash = medulla_exec::exec::HashEmbedder::new(SHADOW_DIMS);
+        texts.iter().map(|text| hash.embed(text)).collect()
+    }
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R174.4: each refusal returns its code and
+/// leaves the active pointer unchanged.
+// spec: MEDULLA-DECISION-ENGINE-R174.4
+#[tokio::test]
+async fn refusal_codes() {
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let ledger = tempfile::tempdir().unwrap();
+    with_ledger(&h, ledger.path()).await;
+    two_graphs(&h).await;
+    let items = judged_items(&h).await;
+    let declared = medulla_protocol_types::error_registry::declared_error_code;
+
+    // A caller without admin:decision-head.
+    let stranger = DecisionLogOp::Learn {
+        tenant_id: TENANT.to_string(),
+        write: LearningWrite::RunGenerationCycle {
+            request: Box::new(request(items.clone(), None)),
+        },
+    };
+    let refused =
+        decode::<LearningRecorded>(super::log_tests::log_op(&h, "stranger", stranger).await);
+    assert!(refused.unwrap_err().starts_with("ACCESS_DENIED"));
+
+    // A model of another dimension than the shadow generation.
+    let mut wrong = request(items.clone(), None);
+    wrong.model_ref.dimension = 8;
+    let refused = cycle(&h, &wrong).await.unwrap_err();
+    assert!(
+        refused.starts_with("GENERATION_DIMENSION_MISMATCH"),
+        "{refused}"
+    );
+    assert!(declared("GENERATION_DIMENSION_MISMATCH"));
+
+    // A failing receipt ends the cycle `rejected`, with its code recorded.
+    let mut failing = request(items.clone(), None);
+    failing.evaluation.min_eval_items = 100;
+    let rejected = cycle(&h, &failing).await.unwrap();
+    assert_eq!(rejected.cycle.state(), GenerationCycleState::Rejected);
+    assert_eq!(
+        rejected.rejection.as_deref(),
+        Some("GENERATION_RECEIPT_FAILED")
+    );
+    assert!(rejected.receipt.is_none());
+    assert!(declared("GENERATION_RECEIPT_FAILED"));
+    assert!(
+        pointer_rows(&h).await.is_empty(),
+        "no refusal moved the pointer"
+    );
+
+    // A pointer that moved during the cycle is a conflict, never overwritten.
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+    let reader = LogReader::of(&verified);
+    let active = graph_vectors(&h.state, "decider", ACTIVE).await.unwrap();
+    let shadow = graph_vectors(&h.state, "decider", SHADOW).await.unwrap();
+    let gens = Generations {
+        active: &active,
+        shadow: &shadow,
+    };
+    let ctx = ExecutionContext {
+        store: &h.store,
+        tenant_id: TENANT,
+        now_ms: 1_000,
+        server_secret: b"cycle-test-secret",
+    };
+    let embedder = MovesPointer(&h.store);
+    let run = CycleRun {
+        ctx: &ctx,
+        reader: &reader,
+        gens: &gens,
+        embedder: &embedder,
+        tenant: TENANT,
+        lease_id: None,
+        batch_nodes: 512,
+    };
+    let mut racing = request(items, None);
+    racing.model_ref.revision = "3".to_string();
+    let conflict = match run_cycle(&run, &racing) {
+        Err(error) => error,
+        Ok(_) => panic!("a moved pointer is refused"),
+    };
+    assert!(
+        conflict.starts_with("GENERATION_POINTER_CONFLICT"),
+        "{conflict}"
+    );
+    assert!(declared("GENERATION_POINTER_CONFLICT"));
+    assert_eq!(
+        pointer_rows(&h).await,
+        vec![vec![json!("activated"), json!(true)]],
+        "only the operator's move is recorded"
+    );
+    let (_, pointer) = super::super::stat_pointer::read_pointer(
+        &h.store,
+        TENANT,
+        &super::super::stat_generation::generation_pointer(ACTIVE),
+    )
+    .unwrap();
+    assert_eq!(pointer.target(), Some("kg-other"));
+}

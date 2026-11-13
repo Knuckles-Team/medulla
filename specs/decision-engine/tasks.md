@@ -377,9 +377,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T370 [US4] MEDULLA-DECISION-ENGINE-R151.1 Model
 - [ ] T371 [US4] MEDULLA-DECISION-ENGINE-R151.2 Behavior
 - [ ] T372 [US4] MEDULLA-DECISION-ENGINE-R151.3 Wiring
-- [ ] T373 [US4] MEDULLA-DECISION-ENGINE-R151.4 Refusal
+- [x] T373 [US4] MEDULLA-DECISION-ENGINE-R151.4 Refusal
 - [ ] T374 [US4] MEDULLA-DECISION-ENGINE-R151.5 Evidence
-- [ ] T375 [US4] MEDULLA-DECISION-ENGINE-R151.6 Hot-path proof
+- [x] T375 [US4] MEDULLA-DECISION-ENGINE-R151.6 Hot-path proof
 - [ ] T376 [US7] MEDULLA-DECISION-ENGINE-R139.100 Graph-backed comparative sources with exact revision provenance
 - [ ] T377 [US2] MEDULLA-DECISION-ENGINE-R019.100.1 Evidence-stream references sealed into records
 - [ ] T378 [US2] MEDULLA-DECISION-ENGINE-R019.100.2 Approval receipt checked before commit
@@ -588,7 +588,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T581 [US8] MEDULLA-DECISION-ENGINE-R174.1 Model
 - [ ] T582 [US8] MEDULLA-DECISION-ENGINE-R174.2 Behavior
 - [ ] T583 [US8] MEDULLA-DECISION-ENGINE-R174.3 Wiring
-- [ ] T584 [US8] MEDULLA-DECISION-ENGINE-R174.4 Refusal
+- [x] T584 [US8] MEDULLA-DECISION-ENGINE-R174.4 Refusal
 - [ ] T585 [US8] MEDULLA-DECISION-ENGINE-R174.5 Evidence
 - [ ] T586 [US8] MEDULLA-DECISION-ENGINE-R174.6 Hot-path proof
 - [ ] T587 [US8] MEDULLA-DECISION-ENGINE-R176.1 Model

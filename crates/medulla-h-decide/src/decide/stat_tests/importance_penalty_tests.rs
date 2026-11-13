@@ -17,6 +17,7 @@ fn quantised(micros: i64) -> QuantisedValue {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R151.1
+// spec: MEDULLA-DECISION-ENGINE-R151.6
 #[tokio::test]
 async fn fit_with_importance_keeps_important_weights() {
     let h = Harness::new().await;
@@ -34,7 +35,7 @@ async fn fit_with_importance_keeps_important_weights() {
         importance_scale: quantised(500_000),
     });
     request.features = BoundedVec::new(vec![FeatureImportance::new(
-        fixture.ids[0].clone(),
+        "text".into(),
         quantised(900_000),
         "cd".repeat(32),
     )
@@ -65,6 +66,47 @@ async fn fit_with_importance_keeps_important_weights() {
         panic!("fit output")
     };
     assert_eq!(draft.kind, HeadKind::ListwiseLogistic);
+
+    // The journey (R151.6): a plain fit and a penalised fit of the same data,
+    // the penalised head evaluated, and the receipt read back.
+    let free: DecisionJobRecord =
+        decode(submit_fit(&h, 3, penalised_request(&fixture, &data, "fit-free", None)).await)
+            .unwrap();
+    let DecisionJobOutput::Fit {
+        draft: free_draft, ..
+    } = succeeded(&free)
+    else {
+        panic!("fit output")
+    };
+    let pulled_request = penalised_request(&fixture, &data, "fit-pulled", Some(900_000));
+    let expected = pulled_request.features.as_slice().to_vec();
+    let pulled: DecisionJobRecord = decode(submit_fit(&h, 4, pulled_request).await).unwrap();
+    let DecisionJobOutput::Fit {
+        draft: pulled_draft,
+        draft_sha256,
+        draft_length,
+        penalty,
+        ..
+    } = succeeded(&pulled).clone()
+    else {
+        panic!("fit output")
+    };
+    assert!(
+        first_weight(&pulled_draft) < first_weight(free_draft),
+        "the high-importance weight stays closer to the parent"
+    );
+    let receipt = penalty.expect("a penalised fit leaves a receipt");
+    assert_eq!(
+        receipt.features.as_slice(),
+        expected.as_slice(),
+        "the receipt lists every weight"
+    );
+    let eval =
+        super::scorer_tests::evaluated(&h, 5, (draft_sha256, draft_length), data.clone()).await;
+    assert_eq!(
+        eval.premises.as_slice(),
+        [format!("penalty:{}", receipt.penalty_digest)]
+    );
 }
 
 fn penalised_request(
@@ -256,4 +298,64 @@ async fn penalty_evidence() {
     let plain_eval =
         super::scorer_tests::evaluated(&h, 6, (draft_sha256, draft_length), data).await;
     assert!(plain_eval.premises.is_empty());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R151.4
+#[tokio::test]
+async fn invalid_importance_refuses() {
+    let h = Harness::new().await;
+    let fixture = route_fixture(&h).await;
+    let data = dataset(&fixture.schema_digest, &fixture.ids, &fixture.values, 400);
+    let entry = |feature: &str, micros: i64, digest: &str| FeatureImportance {
+        schema_version: IMPORTANCE_SCHEMA_VERSION,
+        feature_id: feature.into(),
+        importance_weight: quantised(micros),
+        evidence_digest: digest.into(),
+    };
+    let good = "cd".repeat(32);
+    let cases: Vec<(&str, Vec<FeatureImportance>)> = vec![
+        (
+            "IMPORTANCE_OUT_OF_RANGE",
+            vec![entry("text", 2_000_000, &good)],
+        ),
+        (
+            "IMPORTANCE_EVIDENCE_MISSING",
+            vec![entry("text", 500_000, "")],
+        ),
+        (
+            "IMPORTANCE_EVIDENCE_MISSING",
+            vec![entry("text", 500_000, "XY")],
+        ),
+        ("IMPORTANCE_FEATURES_EMPTY", Vec::new()),
+        (
+            "IMPORTANCE_UNKNOWN_FEATURE",
+            vec![entry("nope", 500_000, &good)],
+        ),
+    ];
+    let before = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "", 10_000)
+        .unwrap();
+    for (n, (code, features)) in cases.into_iter().enumerate() {
+        let mut request =
+            penalised_request(&fixture, &data, &format!("fit-bad-{n}"), Some(500_000));
+        request.features = BoundedVec::new(features).unwrap();
+        let refused: Result<DecisionJobRecord, String> =
+            decode(submit_fit(&h, 10 + n as u64, request).await);
+        let error = refused.unwrap_err();
+        assert!(error.starts_with(code), "{code}: {error}");
+        assert!(
+            medulla_protocol_types::error_registry::declared_error_code(code),
+            "{code} is a published code"
+        );
+    }
+    let after = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "", 10_000)
+        .unwrap();
+    assert_eq!(
+        before.len(),
+        after.len(),
+        "a refused fit writes no artifact"
+    );
 }
