@@ -453,6 +453,11 @@ fn holdout_bucket(decision_id: &str) -> u64 {
     hash % 100
 }
 
+/// Whether a decision id is in the held-out share of `holdout_pct` percent.
+pub fn is_held_out(decision_id: &str, holdout_pct: u8) -> bool {
+    holdout_bucket(decision_id) < u64::from(holdout_pct)
+}
+
 /// The directions snapped to the stored fixed point (units on `Q30`, gains
 /// on `Q16`): what is evaluated and served, so a refit replays bit for bit.
 pub fn snap(directions: &[Direction]) -> Vec<Direction> {
@@ -489,7 +494,7 @@ pub fn fit_scoped(
     let mut training_ids = Vec::new();
     let mut held: Vec<JudgedItem> = Vec::new();
     for scoped in items.iter().filter(|s| s.weight > 0) {
-        if holdout_bucket(&scoped.decision_id) < u64::from(params.holdout_pct) {
+        if is_held_out(&scoped.decision_id, params.holdout_pct) {
             held.push(scoped.item.clone());
         } else {
             training_ids.push(scoped.decision_id.clone());

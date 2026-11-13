@@ -172,3 +172,5 @@ and commits the receipt (`run_credit/run/<run_id>`) with every new baseline revi
 ### R614.3 SemanticEnrich route
 
 `Method::SemanticEnrich` (method_11) is served by `graph_pipeline/semantic_enrichment.rs`: schedule gate, then the pure behaviours of `medulla-enrich`, then the digest-keyed write-set of `medulla-h-ingest::semantic_enrichment` committed through the ChangeEnvelope authority. Refusals map the typed `EnrichError` codes (registered in `ServerErrorCode` and the method's error routing) and write nothing.
+
+Scoped adapter wiring (R174.7.3, R174.7.4): `stat_adapter.rs` fits graph-scope retrieval-outcome adapters on the original split and every other scope through `fit_scoped`; `ensure_room` enforces `adapter.max_per_tenant` before an activation; `monitor` is the only automatic rollback path.

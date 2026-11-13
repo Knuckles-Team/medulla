@@ -9,7 +9,9 @@
 //! a generation evaluation probes.
 
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitRequest;
+use medulla_decision_types::decision::statistical::retrieval_adapter::{
+    AdapterFitRequest, AdapterMonitorRequest, AdapterScope,
+};
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest;
 use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
 use medulla_decision_types::{
@@ -19,7 +21,9 @@ use medulla_decision_types::{
     decision::statistical::retrieval::PointerRef,
 };
 
-use super::stat_adapter::{adapter_pointer, fit_adapter, qualified, scoped_adapter_pointer};
+use super::stat_adapter::{
+    adapter_pointer, ensure_room, fit_adapter, monitor, qualified, scoped_adapter_pointer,
+};
 use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, Generations,
@@ -90,6 +94,17 @@ impl Serving<'_> {
         Ok(LearningRecorded::Fitted(Box::new(fitted)))
     }
 
+    fn monitor(&self, request: &AdapterMonitorRequest) -> Result<LearningRecorded, String> {
+        let monitored = monitor(
+            self.ctx,
+            self.reader,
+            request,
+            self.graph(0)?,
+            self.tenant(),
+        )?;
+        Ok(LearningRecorded::Monitored(Box::new(monitored)))
+    }
+
     fn cycle(&self, request: &GenerationCycleRequest) -> Result<LearningRecorded, String> {
         let support = self
             .inputs
@@ -131,11 +146,15 @@ impl Serving<'_> {
     ) -> Result<Qualified, String> {
         let store = self.ctx.store;
         match pointer {
-            PointerRef::Adapter { graph } => {
-                qualified(store, self.tenant(), graph, target, receipt)
-            }
-            PointerRef::ScopedAdapter { graph, .. } => {
-                qualified(store, self.tenant(), graph, target, receipt)
+            PointerRef::Adapter { graph } => qualified(
+                store,
+                self.tenant(),
+                (graph, &AdapterScope::Graph),
+                target,
+                receipt,
+            ),
+            PointerRef::ScopedAdapter { graph, scope } => {
+                qualified(store, self.tenant(), (graph, scope), target, receipt)
             }
             PointerRef::Generation { logical } => {
                 qualified_generation(store, self.tenant(), (logical, target), receipt)
@@ -163,11 +182,16 @@ impl Serving<'_> {
             PointerMovement::Activate {
                 target,
                 receipt_digest,
-            } => activate(
-                self.ctx.store,
-                &at,
-                &self.qualify(pointer, target, receipt_digest)?,
-            )?,
+            } => {
+                let qualified = self.qualify(pointer, target, receipt_digest)?;
+                if matches!(
+                    pointer,
+                    PointerRef::Adapter { .. } | PointerRef::ScopedAdapter { .. }
+                ) {
+                    ensure_room(self.ctx.store, self.tenant(), &at.key)?;
+                }
+                activate(self.ctx.store, &at, &qualified)?
+            }
             PointerMovement::Rollback => rollback(self.ctx.store, &at)?,
         };
         Ok(LearningRecorded::Pointer(Box::new(state)))
@@ -177,6 +201,7 @@ impl Serving<'_> {
 fn graphs_of(write: &LearningWrite) -> Vec<&str> {
     match write {
         LearningWrite::FitAdapter { request } => vec![request.graph.as_str()],
+        LearningWrite::MonitorAdapter { request } => vec![request.graph.as_str()],
         LearningWrite::EvaluateGeneration { request } => {
             vec![request.active_graph.as_str(), request.shadow_graph.as_str()]
         }
@@ -284,6 +309,7 @@ pub(super) fn dispatch(
             record_outcome(ctx, reader, *outcome)?,
         ))),
         LearningWrite::FitAdapter { request } => s.fit(&request),
+        LearningWrite::MonitorAdapter { request } => s.monitor(&request),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
         LearningWrite::RefreshFreshness { request } => {

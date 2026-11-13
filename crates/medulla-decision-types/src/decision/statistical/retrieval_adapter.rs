@@ -210,8 +210,73 @@ pub struct AdapterEvalReceipt {
     pub adapted_mrr_q16: i64,
     /// Wilson 95% lower bound of `wins / (wins + losses)`, on `Q16`.
     pub win_rate_lower_q16: i64,
+    /// Wilson 95% upper bound of `wins / (wins + losses)`, on `Q16`.
+    pub win_rate_upper_q16: i64,
+    /// What the adapter is fitted for.
+    pub scope: AdapterScope,
+    /// Which side of retrieval it transforms.
+    pub side: AdapterSide,
+    /// Each outcome source that trained it, with the items it contributed.
+    pub sources: Vec<SourceCount>,
+    /// Digest of the admitted training items, in order.
+    pub training_digest: String,
+    /// The refit counter within the scope; the first fit is revision 1.
+    pub revision: u32,
+    /// The adapter this one was refitted from, when the scope had one active.
+    pub parent_digest: Option<String>,
     /// Passed: `n_eval >= min_eval_items` and the lower bound exceeds one half.
     pub passed: bool,
+}
+
+/// One outcome source of a fit and the items it contributed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SourceCount {
+    pub source: OutcomeSource,
+    pub count: u64,
+}
+
+/// Run the post-activation monitor of the scope's active adapter over the
+/// outcomes judged in `window` (MEDULLA-DECISION-ENGINE-R174.7.2.1). A
+/// verdict of rollback moves the scope's pointer back in the same write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdapterMonitorRequest {
+    pub graph: String,
+    pub scope: AdapterScope,
+    pub window: RecordWindow,
+}
+
+/// The state machine of one monitor run: `watching` while the window holds
+/// too few outcomes, `healthy`, or `rolled_back`; the only writer is the
+/// monitor write.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum MonitorState {
+    Watching,
+    Healthy,
+    RolledBack,
+}
+
+/// What the monitor saw and did: the window, the counts and the Wilson upper
+/// bound that decided it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdapterMonitored {
+    pub adapter_digest: String,
+    pub scope: AdapterScope,
+    pub state: MonitorState,
+    pub window: RecordWindow,
+    pub outcomes: u64,
+    pub wins: u64,
+    pub losses: u64,
+    /// Wilson 95% upper bound of `wins / (wins + losses)`, on `Q16`.
+    pub win_rate_upper_q16: i64,
+    pub min_outcomes: u64,
 }
 
 /// A fitted adapter, its receipt and the digests they are pinned by.

@@ -302,6 +302,10 @@ pub enum LearningWrite {
     RecordOutcome { outcome: Box<RetrievalOutcome> },
     /// Fit a query-side adapter and receipt it on a held-out split.
     FitAdapter { request: Box<AdapterFitRequest> },
+    /// Monitor the active adapter of a scope and roll it back when it hurts.
+    MonitorAdapter {
+        request: Box<super::retrieval_adapter::AdapterMonitorRequest>,
+    },
     /// Dual-serve judged runs against a shadow generation and receipt it.
     EvaluateGeneration { request: Box<GenerationEvalRequest> },
     /// Run one re-embedding cycle: re-embed the shadow generation in
@@ -332,6 +336,7 @@ impl LearningWrite {
         match self {
             Self::RecordOutcome { .. } | Self::RunOutcome { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
+            | Self::MonitorAdapter { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
@@ -347,6 +352,7 @@ impl LearningWrite {
 pub enum LearningRecorded {
     Outcome(Box<StoredRetrievalOutcome>),
     Fitted(Box<AdapterFitted>),
+    Monitored(Box<super::retrieval_adapter::AdapterMonitored>),
     Generation(Box<GenerationEvaluated>),
     Cycle(Box<super::retrieval_generation::GenerationCycleJob>),
     Pointer(Box<PointerState>),

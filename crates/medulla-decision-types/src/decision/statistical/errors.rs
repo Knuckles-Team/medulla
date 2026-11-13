@@ -91,6 +91,22 @@ closed_error_codes! {
         /// A thought has a duplicate id, a missing parent or a depth that
         /// disagrees with its parent (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtNodeInvalid => "THOUGHT_NODE_INVALID",
+        /// A scoped adapter fit names a corpus or capability scope that none
+        /// of the tenant's judged retrievals belongs to
+        /// (MEDULLA-DECISION-ENGINE-R174.7.4).
+        AdapterScopeUnknown => "ADAPTER_SCOPE_UNKNOWN",
+        /// Fewer held-out outcomes than the fit's evaluation needs
+        /// (MEDULLA-DECISION-ENGINE-R174.7.4).
+        AdapterInsufficientOutcomes => "ADAPTER_INSUFFICIENT_OUTCOMES",
+        /// The fit's space digest is not the graph's embedding space
+        /// (MEDULLA-DECISION-ENGINE-R174.7.4).
+        AdapterSpaceMismatch => "ADAPTER_SPACE_MISMATCH",
+        /// Rank times dimension exceeds `adapter.max_resident_bytes`
+        /// (MEDULLA-DECISION-ENGINE-R174.7.4).
+        AdapterMemoryBudget => "ADAPTER_MEMORY_BUDGET",
+        /// Activating would leave more active adapters than
+        /// `adapter.max_per_tenant` (MEDULLA-DECISION-ENGINE-R174.7.4).
+        AdapterTooMany => "ADAPTER_TOO_MANY",
     }
 }
 
