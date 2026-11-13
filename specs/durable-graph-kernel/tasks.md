@@ -260,7 +260,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T251 MEDULLA-DURABLE-KERNEL-R864 Serve scheduled loop control: status, schedules, run and pause
 - [ ] T252 MEDULLA-DURABLE-KERNEL-R865 Child message admission record
 - [ ] T253 MEDULLA-DURABLE-KERNEL-R866 One task queue store
-- [ ] T254 MEDULLA-DURABLE-KERNEL-R867 Capacity cells and leases admit shared resources with fences
+- [x] T254 MEDULLA-DURABLE-KERNEL-R867 Capacity cells and leases admit shared resources with fences
 - [ ] T255 MEDULLA-DURABLE-KERNEL-R868 Delete the unwired topic-log and agent-peer record code
 - [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads
 - [ ] T257 MEDULLA-DURABLE-KERNEL-R870 Read-RLS path-prefix predicate

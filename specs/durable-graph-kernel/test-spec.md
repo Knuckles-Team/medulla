@@ -688,7 +688,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R750.750.1` | `tests/dispatch/test_agent_turn_envelope_served.py::test_signed_envelope_carries_subset_and_decision_ref` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750`, `MEDULLA-DURABLE-KERNEL-R750.753` | `tests/durable/test_agent_turn_queue_served.py::test_cancel_reaches_leased_worker_on_renew` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.752` | `tests/durable/test_agent_turn_queue_served.py::test_full_queue_stale_head_and_bad_capability_refuse` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R867` | `tests/durable/test_capacity_lease_served.py::test_background_lease_cannot_spend_reserved_floor` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R867` | `tests/durable/test_capacity_lease_served.py::test_background_lease_cannot_spend_reserved_floor` |
 | `MEDULLA-DURABLE-KERNEL-R094.7.1` | `tests/durable/test_concept_lineage_served.py::test_known_ids_and_edges_survive_restart` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R094.7` | `tests/durable/test_concept_lineage_served.py::test_lineage_cycle_is_refused` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700`, `MEDULLA-DURABLE-KERNEL-R700.6` | `tests/durable/test_retention_cleanup_served.py::test_held_and_referenced_nodes_survive` (planned) |
