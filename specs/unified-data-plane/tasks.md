@@ -205,3 +205,13 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
 - [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
 - [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
+- [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply
+- [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Wire status codes named `status`: HTTP, S3, key-value cache, TDS header and Iceberg manifest entry status values; one Python HTTP response status
+- [ ] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
+- [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 ProjectionHealth/ProjectionStatus state machine: route 1 census findings through ProjectionStatus::apply
+- [ ] T203 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.5 SchemaMigrationRecord/MigrationState state machine: route 1 census findings through MigrationState::apply
+- [ ] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
+- [ ] T205 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.7 SessionRecord/SessionState state machine: route 9 census findings through SessionState::apply
+- [ ] T206 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.8 Span/SpanStatus state machine: route 1 census findings through SpanStatus::apply
+- [ ] T207 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.9 TckPointResult/TckStatus state machine: route 1 census findings through TckStatus::apply
