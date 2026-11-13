@@ -4,7 +4,9 @@ use crate::owner::lineage_fixtures::{
     recorded_identity, RecordedLayout, BEFORE_AUDIT_REQUESTS, BEFORE_ENRICHMENT,
 };
 use crate::owner::persisted_layout::create_predecessor_owner_file;
-use crate::owner::registry::{AGENT_LIBRARY_REVISIONS, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES};
+use crate::owner::registry::{
+    AGENT_LIBRARY_REVISIONS, KV, KV_COLD, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES,
+};
 use medulla_direct_state::direct_state::private_local_tempdir;
 use redb::{ReadableDatabase, ReadableTableMetadata};
 
@@ -376,4 +378,99 @@ fn effect_receipt_upgrade_preserves_existing_graph_rows() {
         GraphShardSource::BeforeEffectReceipts,
         super::super::graph_shard::EFFECT_RECEIPTS,
     );
+}
+
+fn write_kv_rows(path: &Path) {
+    let database = Database::open(path).unwrap();
+    let write = database.begin_write().unwrap();
+    write
+        .open_table(KV)
+        .unwrap()
+        .insert(("tenant-a", "kvcache-blocks/key"), b"kept row".as_slice())
+        .unwrap();
+    write
+        .open_table(KV_COLD)
+        .unwrap()
+        .insert(b"cold-key".as_slice(), b"retired cache bytes".as_slice())
+        .unwrap();
+    write.commit().unwrap();
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R083.5
+#[test]
+fn frozen_kv_predecessor_contract_matches_the_previous_pin() {
+    let contracts = super::super::contract::predecessor_table_contracts(OwnerLayout::Kv)
+        .into_iter()
+        .filter(|contract| {
+            contract.ownership == TableOwnership::Ledger
+                || KV_BEFORE_NAMESPACE_COLD
+                    .owner_tables
+                    .contains(&contract.table_id.as_str())
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::Kv, &contracts),
+        super::super::lineage::KV_PRE_NAMESPACE_COLD_DIGEST
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R083.5
+#[test]
+fn kv_upgrade_keeps_every_kv_row_deletes_the_cold_table_and_runs_once() {
+    let directory = private_local_tempdir();
+    let path = directory.path().join("kv.redb");
+    create_predecessor_owner_file(&path, identity(), &KV_BEFORE_NAMESPACE_COLD).unwrap();
+    write_kv_rows(&path);
+    let error = StorageKernel::open_owner::<KvOwner>(&path, identity(), None)
+        .err()
+        .expect("a normal open must refuse the predecessor");
+    assert!(error.contains("KV_FORMAT_UPGRADE_REQUIRED"), "{error}");
+    let token = inspect_kv_cold_tier_upgrade(&path, identity(), None, options(&path)).unwrap();
+    let (kernel, report) = upgrade_kv_cold_tier(token).unwrap();
+    assert_eq!(
+        report.previous_authority_epoch + 1,
+        report.current_authority_epoch
+    );
+    assert_eq!(
+        report.previous_layout_digest,
+        super::super::lineage::KV_PRE_NAMESPACE_COLD_DIGEST
+    );
+    assert_eq!(report.current_layout_digest, OwnerLayout::Kv.digest());
+    drop(kernel);
+    let database = Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    let kept = read
+        .open_table(KV)
+        .unwrap()
+        .get(("tenant-a", "kvcache-blocks/key"))
+        .unwrap()
+        .unwrap()
+        .value()
+        .to_vec();
+    assert_eq!(kept, b"kept row");
+    assert!(
+        read.list_tables()
+            .unwrap()
+            .all(|table| table.name() != "eg_kvcache_cold"),
+        "the retired cold table is deleted"
+    );
+    drop(read);
+    drop(database);
+    assert!(inspect_kv_cold_tier_upgrade(&path, identity(), None, options(&path)).is_err());
+    StorageKernel::open_owner::<KvOwner>(&path, identity(), None).unwrap();
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R083.5
+#[test]
+fn kv_inspected_bytes_are_rechecked_before_the_cold_table_is_deleted() {
+    let directory = private_local_tempdir();
+    let path = directory.path().join("kv.redb");
+    create_predecessor_owner_file(&path, identity(), &KV_BEFORE_NAMESPACE_COLD).unwrap();
+    let token = inspect_kv_cold_tier_upgrade(&path, identity(), None, options(&path)).unwrap();
+    write_kv_rows(&path);
+    assert!(upgrade_kv_cold_tier(token).is_err());
+    assert!(StorageKernel::open_owner::<KvOwner>(&path, identity(), None).is_err());
+    let database = Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(read.open_table(KV_COLD).unwrap().len().unwrap(), 1);
 }

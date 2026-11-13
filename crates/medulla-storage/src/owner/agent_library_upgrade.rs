@@ -5,14 +5,15 @@
 //! writer rechecks the pinned descriptor, byte fingerprint, table census and
 //! strict typed evidence before its one immediate durable commit.
 
-use super::domain::{AgentLibraryOwner, GraphShardOwner, RbacOwner, SemanticIndexOwner};
+use super::domain::{AgentLibraryOwner, GraphShardOwner, KvOwner, RbacOwner, SemanticIndexOwner};
 use super::identity::PhysicalStoreIdentity;
 use super::layout::{layout_digest_over, OwnerLayout};
 use super::lineage::{
     AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD, AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
     AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
     GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
-    GRAPH_SHARD_BEFORE_ENRICHMENT, RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
+    SEMANTIC_INDEX_BEFORE_PROMOTION,
 };
 use super::persisted_layout::LayoutPredecessor;
 use super::registry::predecessor_evidence;
@@ -47,6 +48,8 @@ enum UpgradeTarget {
     SemanticIndex,
     /// The RBAC store before the profile-use grant records.
     Rbac,
+    /// The kv store while the KV-cache cold rung still had its own table.
+    Kv,
 }
 
 /// The Agent Library generation an offline upgrade starts from. Every one ends
@@ -150,6 +153,7 @@ impl UpgradeTarget {
             Self::GraphShard(_) => OwnerLayout::GraphShard,
             Self::SemanticIndex => OwnerLayout::SemanticIndex,
             Self::Rbac => OwnerLayout::Rbac,
+            Self::Kv => OwnerLayout::Kv,
         }
     }
 
@@ -159,6 +163,7 @@ impl UpgradeTarget {
             Self::GraphShard(source) => source.declared_generation(),
             Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
             Self::Rbac => &RBAC_BEFORE_PROFILE_GRANTS,
+            Self::Kv => &KV_BEFORE_NAMESPACE_COLD,
         }
     }
 
@@ -168,6 +173,7 @@ impl UpgradeTarget {
             Self::GraphShard(source) => source.frozen_digest(),
             Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
             Self::Rbac => super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
+            Self::Kv => super::lineage::KV_PRE_NAMESPACE_COLD_DIGEST,
         }
     }
 }
@@ -309,6 +315,23 @@ pub fn inspect_rbac_profile_grant_upgrade(
     )
 }
 
+/// Inspect a kv owner file from before the KV-cache cold rung moved into a
+/// namespace of the `kv` table (MEDULLA-DURABLE-KERNEL-R083.5).
+pub fn inspect_kv_cold_tier_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: SqlSourceCheckpointInspectionOptions,
+) -> Result<ValidatedOwnerLayoutUpgrade, String> {
+    inspect_layout_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+        UpgradeTarget::Kv,
+    )
+}
+
 fn inspect_layout_upgrade(
     path: &Path,
     expected_physical_identity: PhysicalStoreIdentity,
@@ -424,6 +447,14 @@ pub fn upgrade_rbac_profile_grants(
     upgrade_layout(token, UpgradeTarget::Rbac)
 }
 
+/// Bring an inspected kv file to the current layout in one durable commit: every `kv` row
+/// is kept and the retired `eg_kvcache_cold` table is deleted with the cache bytes it held.
+pub fn upgrade_kv_cold_tier(
+    token: ValidatedOwnerLayoutUpgrade,
+) -> Result<(StorageKernel, OwnerLayoutUpgradeReport), String> {
+    upgrade_layout(token, UpgradeTarget::Kv)
+}
+
 fn upgrade_layout(
     token: ValidatedOwnerLayoutUpgrade,
     target: UpgradeTarget,
@@ -487,6 +518,12 @@ fn upgrade_layout(
             token.source.private_integrity,
             options,
         )?,
+        UpgradeTarget::Kv => StorageKernel::open_owner_with::<KvOwner>(
+            &token.source.path,
+            current.physical_identity,
+            token.source.private_integrity,
+            options,
+        )?,
     };
     Ok((kernel, report))
 }
@@ -495,7 +532,7 @@ fn contracts_for(
     manifest: &OwnerManifest,
     target: UpgradeTarget,
 ) -> Result<Vec<TableContract>, String> {
-    let contracts: Vec<_> = super::contract::expected_table_contracts(target.layout())
+    let contracts: Vec<_> = super::contract::predecessor_table_contracts(target.layout())
         .into_iter()
         .filter(|contract| {
             contract.ownership == TableOwnership::Ledger

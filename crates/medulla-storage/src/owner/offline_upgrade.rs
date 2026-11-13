@@ -11,11 +11,12 @@
 use super::agent_library_upgrade::{
     inspect_agent_library_capability_reward_upgrade, inspect_agent_library_concept_lineage_upgrade,
     inspect_agent_library_mcp_catalog_upgrade, inspect_agent_library_retry_allowance_upgrade,
-    inspect_graph_shard_upgrade, inspect_rbac_profile_grant_upgrade,
+    inspect_graph_shard_upgrade, inspect_kv_cold_tier_upgrade, inspect_rbac_profile_grant_upgrade,
     inspect_semantic_index_promotion_upgrade, upgrade_agent_library_capability_reward,
     upgrade_agent_library_concept_lineage, upgrade_agent_library_mcp_catalog,
-    upgrade_agent_library_retry_allowances, upgrade_graph_shard, upgrade_rbac_profile_grants,
-    upgrade_semantic_index_promotion, GraphShardSource, OwnerLayoutUpgradeReport,
+    upgrade_agent_library_retry_allowances, upgrade_graph_shard, upgrade_kv_cold_tier,
+    upgrade_rbac_profile_grants, upgrade_semantic_index_promotion, GraphShardSource,
+    OwnerLayoutUpgradeReport,
 };
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
@@ -25,7 +26,7 @@ use super::lineage::{
     AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
-    GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, RBAC_BEFORE_PROFILE_GRANTS,
+    GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
     SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
@@ -252,6 +253,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         RBAC_BEFORE_PROFILE_GRANTS,
         inspect_rbac_profile_grant_upgrade,
         upgrade_rbac_profile_grants
+    ),
+    offline_upgrade!(
+        KV_BEFORE_NAMESPACE_COLD,
+        inspect_kv_cold_tier_upgrade,
+        upgrade_kv_cold_tier
     ),
     offline_upgrade!(
         GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,

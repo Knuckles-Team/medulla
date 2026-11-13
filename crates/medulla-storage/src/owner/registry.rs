@@ -50,7 +50,11 @@ const TS_ROWS: [TableDefinition<'static, &str, &[u8]>; 2] = [
     TableDefinition::new("series_projection_state"),
 ];
 pub(crate) const KV: TableDefinition<'static, (&str, &str), &[u8]> = TableDefinition::new("kv");
-const KV_COLD: TableDefinition<'static, &[u8], &[u8]> = TableDefinition::new("eg_kvcache_cold");
+/// The retired KV-cache cold table. No current layout declares it: the cache's cold rung
+/// is a namespace of the `kv` table. The definition stays only so the offline upgrade can
+/// hash and delete the table of a `KV_BEFORE_NAMESPACE_COLD` file.
+pub(crate) const KV_COLD: TableDefinition<'static, &[u8], &[u8]> =
+    TableDefinition::new("eg_kvcache_cold");
 const PATH_INDEX: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("path_index");
 /// The ANN code buffers of one semantic index generation.
 ///
@@ -429,7 +433,6 @@ macro_rules! visit_owner_tables {
             }
             OwnerLayout::Kv => {
                 $visit!(KV);
-                $visit!(KV_COLD);
             }
             OwnerLayout::PathIndex => $visit!(PATH_INDEX),
             OwnerLayout::Sql => {
@@ -808,6 +811,10 @@ pub(crate) fn predecessor_evidence(
     crate::tables::visit_ledger_tables!(hash_predecessor);
     let ledger_rows = rows;
     visit_owner_tables!(layout, hash_predecessor);
+    // A predecessor may still carry a table the current layout retired.
+    if layout == OwnerLayout::Kv {
+        hash_predecessor!(KV_COLD);
+    }
     Ok(StrictRecoveryEvidence {
         ledger_rows,
         owner_rows: rows - ledger_rows,
@@ -821,6 +828,17 @@ pub(crate) fn sql_predecessor_evidence(
     owner_tables: &[&str],
 ) -> Result<StrictRecoveryEvidence, String> {
     predecessor_evidence(source, OwnerLayout::Sql, owner_tables)
+}
+
+/// Owner tables a declared predecessor of `layout` carries that the current layout no
+/// longer declares, in the predecessor's table order. Their contracts and definitions
+/// serve predecessor validation and the offline upgrade only; nothing opens them at a
+/// normal open.
+pub(crate) fn retired_owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
+    match layout {
+        OwnerLayout::Kv => &["eg_kvcache_cold"],
+        _ => &[],
+    }
 }
 
 /// Exact sorted physical table names for a closed owner layout.
@@ -860,7 +878,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
         ],
         OwnerLayout::Statechart => &["statechart_defs", "statechart_instances"],
         OwnerLayout::TimeSeries => &["series_chunks", "series_meta", "series_projection_state"],
-        OwnerLayout::Kv => &["kv", "eg_kvcache_cold"],
+        OwnerLayout::Kv => &["kv"],
         OwnerLayout::PathIndex => &["path_index"],
         OwnerLayout::Sql => &[
             "__sql_catalog__",

@@ -47,7 +47,7 @@ use medulla_server_api::state::ServerState;
 /// The single KV table: `(namespace, key) -> value bytes`. Composite key so one file
 /// holds every namespace and a prefix scan of one is a contiguous range. `medulla-storage`
 /// declares it as an owner table of `OwnerLayout::Kv`; this module only names it
-/// (RF-RULING-004). That layout's OTHER owner table, `medulla_kvcache_cold`, is medulla-kvcache's.
+/// (RF-RULING-004). The KV-cache block namespace `kvcache-blocks` is a set of rows of this same table.
 const KV: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("kv");
 /// Operator-facing identity of the ONE physical `kv.redb` owner file — the physical
 /// authority boundary, independent of any logical serving scope.

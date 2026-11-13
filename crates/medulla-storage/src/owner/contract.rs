@@ -28,6 +28,19 @@ pub(crate) fn expected_table_contracts(layout: OwnerLayout) -> Vec<TableContract
         .collect()
 }
 
+/// The contracts of a declared predecessor of `layout`: the current ones, then the
+/// tables the current layout retired (see `retired_owner_table_names`), so a
+/// predecessor's frozen digest is reproduced exactly.
+pub(crate) fn predecessor_table_contracts(layout: OwnerLayout) -> Vec<TableContract> {
+    let mut contracts = expected_table_contracts(layout);
+    contracts.extend(
+        super::registry::retired_owner_table_names(layout)
+            .iter()
+            .map(|name| table_contract(name, Some(layout))),
+    );
+    contracts
+}
+
 /// Contract for one ledger table, which no owner layout owns.
 pub(crate) fn ledger_table_contract(name: &str) -> TableContract {
     table_contract(name, None)

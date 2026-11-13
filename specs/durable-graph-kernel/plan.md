@@ -829,7 +829,7 @@ execution and storage-fixture qualification must be reported separately.
 
 ### Agent-memory substrate: KV-cache tiers, benchmarks and wire listeners (R083.5–R083.8, R042.2–R042.6, R860)
 
-The KV-cache tier ladder reuses `crates/medulla-kvcache`. `tiered.rs` holds the hot, warm and cold tiers. `cold.rs` holds the durable redb cold store. `graph_importance.rs` holds the centrality scores. The inference connector in `medulla/kvcache/connector.py` moves blocks between accelerator memory and the engine. R083.5 to R083.8 bind this code to tests; graph-neighbor prefetch is new code.
+The KV-cache tier ladder reuses `crates/medulla-kvcache`. `tiered.rs` holds the hot, warm and cold tiers. `cold.rs` holds the `ColdStore` seam and the in-RAM store; the durable cold rung is `KvNamespaceColdStore` over the `kvcache-blocks` namespace of `kv.redb` (the `eg_kvcache_cold` table and `RedbColdStore` are retired by the offline upgrade `KV_BEFORE_NAMESPACE_COLD`). `graph_importance.rs` holds the centrality scores. The inference connector in `medulla/kvcache/connector.py` moves blocks between accelerator memory and the engine. R083.5 to R083.8 bind this code to tests; graph-neighbor prefetch is new code.
 
 The benchmark rows R042.2 to R042.6 publish each result as the `BenchmarkClaim` of R042.1. Each target is a starting default. A measurement on this platform replaces it.
 

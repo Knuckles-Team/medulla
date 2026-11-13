@@ -8,9 +8,9 @@
 //!   byte budget. Every access bumps the block's score.
 //! * **WARM** — still in RAM but **compressed** ([`crate::compress`]), so more blocks
 //!   fit before anything has to leave RAM.
-//! * **COLD** — a [`ColdStore`] blob device (an in-RAM map by default, or a durable redb
-//!   store behind the `durable` feature). This is the disk-offload rung: bytes that no
-//!   longer fit in RAM live here and, with `durable`, survive a restart.
+//! * **COLD** — a [`ColdStore`] blob device (an in-RAM map by default, or a durable store
+//!   the caller plugs in). This is the disk-offload rung: bytes that no
+//!   longer fit in RAM live here and, with a durable device, survive a restart.
 //!
 //! **Movement is score-driven.** On a hit a block is *promoted* toward HOT and its score
 //! rises. Under byte pressure the lowest-scoring UNPINNED block is *demoted* one rung
@@ -127,7 +127,7 @@ pub struct CacheStats {
 /// `K` is the block key (e.g. a token-span / prefix hash), `V` the block value (any
 /// [`CacheValue`]; the common case is [`crate::Block`] = `Vec<u8>`). Construct with
 /// [`TieredCache::new`] for the pure-RAM cold tier, or [`TieredCache::with_cold_store`]
-/// to plug in a durable ([`crate::cold::RedbColdStore`]) device.
+/// to plug in a durable [`ColdStore`] device.
 pub struct TieredCache<K, V>
 where
     K: Hash + Eq + Clone,
@@ -216,7 +216,7 @@ where
     }
 
     /// A cache with an explicit COLD backing store — e.g. a durable
-    /// [`crate::cold::RedbColdStore`] so demoted bytes survive an OOM / restart
+    /// kv-namespace cold store so demoted bytes survive an OOM / restart
     /// (CONCEPT:MEDULLA-KG.memory.byte-bounded-tiers).
     pub fn with_cold_store(
         hot_cap: usize,

@@ -211,8 +211,8 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T203 MEDULLA-DURABLE-KERNEL-R800.6 Hot-path proof
 - [ ] T204 [US2] MEDULLA-DURABLE-KERNEL-R028.4.1 Recover immutable run submission records
 - [ ] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Owner-bound recovery meets a 10 ms p99
-- [ ] T206 MEDULLA-DURABLE-KERNEL-R083.5 Tier ladder from accelerator memory to durable storage
-- [ ] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
+- [x] T206 MEDULLA-DURABLE-KERNEL-R083.5 Tier ladder from accelerator memory to durable storage
+- [x] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
 - [ ] T208 MEDULLA-DURABLE-KERNEL-R083.7 Long-context coherence across tiers
 - [ ] T209 MEDULLA-DURABLE-KERNEL-R083.8 Tier refusals
 - [x] T210 [US6] MEDULLA-DURABLE-KERNEL-R042.2 Cross-modal query latency benchmark

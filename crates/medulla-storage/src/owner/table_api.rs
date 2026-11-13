@@ -175,7 +175,6 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "promotion_verdicts"
         | "embedding_version_tags"
         | "eg_ann"
-        | "eg_kvcache_cold"
         | "path_index"
         | "verified_request_replay"
         | "viz_provenance"

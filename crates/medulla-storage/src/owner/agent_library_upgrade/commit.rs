@@ -1,5 +1,5 @@
-//! The one durable write of an inspected Agent Library, GraphShard or
-//! SemanticIndex layout.
+//! The one durable write of an inspected Agent Library, GraphShard, SemanticIndex, Rbac or
+//! Kv layout.
 
 use super::{
     successor, validate_census, validate_descriptor, validate_predecessor, AgentLibrarySource,
@@ -13,9 +13,9 @@ use crate::owner::graph_shard::{
 };
 use crate::owner::registry::{
     predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
-    DECISION_RETRY_ALLOWANCES, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
-    SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS,
-    SEMANTIC_STAGE_RECEIPTS,
+    DECISION_RETRY_ALLOWANCES, KV_COLD, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES,
+    RBAC_PROFILE_USE_GRANT, SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS,
+    SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
 };
 use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
@@ -56,6 +56,7 @@ pub(super) fn commit_upgrade(
         return Err("owner predecessor changed before atomic upgrade".into());
     }
     let current = successor(&old, target)?;
+    retire_predecessor_tables(&write, target)?;
     open_successor_tables(&write, target)?;
     stage_upgrade_manifest(&write, &current, "upgraded owner manifest")?;
     validate_manifest_write(&write, &current.physical_identity, target.layout())?;
@@ -63,6 +64,19 @@ pub(super) fn commit_upgrade(
     validate_descriptor(token, file)?;
     write.commit().map_err(|error| error.to_string())?;
     Ok(current)
+}
+
+/// Delete, with its rows, every table the predecessor had and the current layout retired.
+fn retire_predecessor_tables(
+    write: &WriteTransaction,
+    target: UpgradeTarget,
+) -> Result<(), String> {
+    if target == UpgradeTarget::Kv {
+        write
+            .delete_table(KV_COLD)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Result<(), String> {
@@ -75,6 +89,8 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
                 .open_table(RBAC_PROFILE_USE_GRANT)
                 .map_err(|error| error.to_string())?;
         }
+        // The Kv successor adds no table: the retired table is deleted above.
+        UpgradeTarget::Kv => {}
     }
     Ok(())
 }

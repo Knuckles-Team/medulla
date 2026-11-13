@@ -476,8 +476,8 @@ fn strict_backup_copies_owner_rows_and_reopens_with_stable_evidence() {
         backup_strict_recovery_store_of(&store, &destination_path, destination_physical.clone())
             .unwrap();
     assert_eq!(evidence.owner_rows, 1);
-    // 18 ledger tables + the Kv layout's `kv` and `medulla_kvcache_cold`.
-    assert_eq!(evidence.tables.len(), 20);
+    // 18 ledger tables + the Kv layout's `kv`.
+    assert_eq!(evidence.tables.len(), 19);
     assert_eq!(
         evidence
             .tables

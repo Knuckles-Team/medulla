@@ -9,8 +9,8 @@
 //!   (their bytes are MOVED, not dropped) instead of the process OOM-ing; on access
 //!   they are *promoted* back to HOT. [`TieredCache::pin`] keeps a hot working set
 //!   (e.g. a shared prompt prefix) resident. The COLD tier is pluggable
-//!   ([`cold::ColdStore`]): an in-RAM store by default, or a durable redb store behind
-//!   the `durable` feature so offloaded bytes survive an OOM / restart.
+//!   ([`cold::ColdStore`]): an in-RAM store by default, or a durable store the caller plugs
+//!   in (the server uses a namespace of the kv store) so offloaded bytes survive an OOM / restart.
 //!
 //! * **[`SharedKvBackend`] + [`SharedKvIndex`] (CONCEPT:MEDULLA-KG.enrichment.content-address-separation)** — a content-addressed,
 //!   ref-counted backend so parallel instances SHARE KV blocks by token-hash: an
@@ -30,12 +30,11 @@
 //! ## Dependency posture (the Pi contract)
 //!
 //! The default build links NOTHING — the content hash (FNV-1a-128), the WARM compressor
-//! (RLE + raw fallback) and the tiered LRU are all hand-written. Two optional features
-//! pull a dependency: the durable COLD tier (`durable`) pulls `redb` (reusing the
-//! engine's KG-2.195 durability tier), and a REAL WARM codec (CONCEPT:MEDULLA-KG.storage.rle-codec-default,
-//! `compression` → `zstd`; optional `lz4` → `lz4_flex`) is selectable via
-//! [`TieredCache::with_warm_codec`]. Both are OFF by default, so a `pi`/default build
-//! carries no redb and no zstd — the base build stays lean.
+//! (RLE + raw fallback) and the tiered LRU are all hand-written. A REAL WARM codec
+//! (CONCEPT:MEDULLA-KG.storage.rle-codec-default, `compression` → `zstd`; optional `lz4` →
+//! `lz4_flex`) is selectable via [`TieredCache::with_warm_codec`]. Both are OFF by
+//! default, so a `pi`/default build carries no zstd — the base build stays lean. The crate
+//! owns no database: a durable COLD device is supplied by the caller.
 //!
 //! ## Downstream wiring (built ON this substrate)
 //!
@@ -75,8 +74,6 @@ pub use tiered::{CacheStats, Tier, TieredCache};
 pub use value::{Block, CacheValue};
 pub use version::{DataVersion, KvBlockKey};
 
-#[cfg(feature = "durable")]
-pub use cold::{ColdKey, RedbColdStore};
 pub use cold::{ColdStore, MemoryColdStore};
 
 #[cfg(test)]

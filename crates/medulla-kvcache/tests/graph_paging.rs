@@ -18,6 +18,7 @@ fn star_graph() -> GraphView {
     graph.topology_snapshot()
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R083.6
 #[test]
 fn central_blocks_stay_hot_and_neighbors_prefetch() {
     let scores = graph_importance::pagerank_importance(&star_graph(), 0.85, 20);

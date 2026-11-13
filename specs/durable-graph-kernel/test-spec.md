@@ -644,7 +644,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R101.2` | `crates/medulla-jobs/src/downtime.rs::priority_then_budget_fit` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R083.7` | `crates/medulla-kvcache/tests/long_context.rs::ten_million_token_context_pages_in_coherent` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R083.8` | `crates/medulla-kvcache/tests/tier_ladder.rs::cold_write_failure_and_digest_mismatch_refuse` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R083.5` | `crates/medulla-kvcache/tests/tier_ladder.rs::demote_then_promote_keeps_bytes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.5` | `crates/medulla-kvcache/tests/tier_ladder.rs::demote_then_promote_keeps_bytes` |
 | `MEDULLA-DURABLE-KERNEL-R800.3` | `crates/medulla-kvcache/tests/tier_policy.rs::dependency_advance_invalidates_answer` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R800.5` | `crates/medulla-kvcache/tests/tier_policy.rs::foreign_tenant_key_misses` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.3` | `crates/medulla-kvcache/tests/tier_policy.rs::tiering_receipt_has_per_tier_hit_rate` (planned) |
@@ -703,9 +703,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R820`, `MEDULLA-DURABLE-KERNEL-R820.6` | `tests/durable/test_uncertain_effect_served.py::test_started_item_never_dead_letters` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `tests/graph_change_feed_served.rs::expired_stale_and_revoked_cursors_return_typed_results_without_leaks` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `tests/graph_change_feed_served.rs::snapshot_cursor_leaves_no_gap_under_concurrent_commits` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R083.5` | `tests/kvcache_http_served.rs::over_budget_put_demotes_and_get_promotes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.5` | `tests/kvcache_http_served.rs::over_budget_put_demotes_and_get_promotes` |
 | `MEDULLA-DURABLE-KERNEL-R083.8` | `tests/kvcache_http_served.rs::refusal_codes_map_to_507_and_422` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R083.6` | `tests/kvcache_http_served.rs::version_bump_refreshes_importance_and_central_block_outlives_peripheral` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.6` | `tests/kvcache_http_served.rs::version_bump_refreshes_importance_and_central_block_outlives_peripheral` |
 | `MEDULLA-DURABLE-KERNEL-R863` | `tests/memory_sync_served.rs::sync_rewrite_requires_a_current_admit_receipt` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.101` | `tests/mutation_batch_sole_envelope.rs::every_store_member_commits_through_mutation_batch` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.2` | `tests/operator_command_store_upgrade_cli.rs::rebind_copied_store_then_open` (planned) |

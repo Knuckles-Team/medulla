@@ -573,6 +573,27 @@ pub const RBAC_BEFORE_PROFILE_GRANTS: LayoutPredecessor = LayoutPredecessor {
     file_name: "rbac.redb",
 };
 
+/// The Kv owner tables before the KV-cache cold rung moved into a namespace of the `kv`
+/// table (MEDULLA-DURABLE-KERNEL-R083.5), in registry order.
+const KV_TABLES_BEFORE_NAMESPACE_COLD: &[&str] = &["kv", "eg_kvcache_cold"];
+
+/// The frozen layout digest of [`KV_BEFORE_NAMESPACE_COLD`]: the Kv pin while the cache's
+/// cold rung had its own `eg_kvcache_cold` table.
+pub const KV_PRE_NAMESPACE_COLD_DIGEST: [u8; 32] = [
+    0x48, 0xb6, 0x46, 0x4a, 0xd5, 0x96, 0x0b, 0xd1, 0x4f, 0xc0, 0x97, 0x61, 0x19, 0xb6, 0x89, 0xc0,
+    0x01, 0x6b, 0xe6, 0x3e, 0x8c, 0xc8, 0xbe, 0x72, 0xdf, 0x4e, 0x70, 0x30, 0xed, 0x59, 0x3f, 0x9e,
+];
+
+/// A Kv owner file from before the cache's cold rung became a `kv` namespace. The upgrade
+/// deletes the `eg_kvcache_cold` table.
+pub const KV_BEFORE_NAMESPACE_COLD: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Kv,
+    label: "kv store before the KV-cache cold rung moved into a kv namespace",
+    owner_tables: KV_TABLES_BEFORE_NAMESPACE_COLD,
+    data_lost: "the rows of the retired eg_kvcache_cold table, which only held cache bytes the cache rebuilds on a miss; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "kv.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -594,11 +615,11 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             SQL_BEFORE_TRIGGER_REACTIONS,
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
+        OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Jobs
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
-        | OwnerLayout::Kv
         | OwnerLayout::PathIndex
         | OwnerLayout::RequestReplay
         | OwnerLayout::VizProvenance
@@ -663,6 +684,8 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         OwnerLayout::TimeSeries => {
             "5f2b379c6ea02f36f38bcfd2fd8f6277e5174467f3c81b309fffdf87ec1a1581"
         }
+        // LAYOUT-REGEN needed: the compiled Kv digest changed with the retired table; the gate
+        // fixer runs the digest-printing test and replaces this pin.
         OwnerLayout::Kv => "48b6464ad5960bd14fc0976119b689c0016be63e8cc8be72df4e7030ed593f9e",
         OwnerLayout::Blob => "982e463fd13db3ec48fbdda77249ecaefed3b9174276c61ac7cd2eb206c47d6b",
         OwnerLayout::SemanticIndex => {

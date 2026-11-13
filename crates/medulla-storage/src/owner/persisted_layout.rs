@@ -15,11 +15,12 @@
 //! ([`crate::owner::lineage`]), which runs this check before every open and at
 //! every manifest read.
 
+use crate::owner::contract::table_contract;
 use crate::owner::identity::PhysicalStoreIdentity;
 use crate::owner::layout::{layout_digest_over, OwnerLayout};
 use crate::owner::manifest_io::{read_manifest_slot, write_new_manifest};
 use crate::owner::offline_upgrade::{registered_offline_upgrade, OFFLINE_UPGRADE_APPLY_COMMAND};
-use crate::owner::registry::owner_table_names;
+use crate::owner::registry::{owner_table_names, retired_owner_table_names, KV_COLD};
 use crate::physical::manifest::{OwnerManifest, TableOwnership};
 use crate::physical::read_only::open_read_only;
 use crate::tables::OWNER_MANIFEST;
@@ -176,6 +177,23 @@ pub fn create_predecessor_owner_file(
         table.ownership == TableOwnership::Ledger
             || predecessor.owner_tables.contains(&table.table_id.as_str())
     });
+    // A predecessor may carry a table the current layout retired: it is not in the
+    // current manifest, so its contract is added after the kept ones.
+    let retired_tables: Vec<&str> = retired_owner_table_names(predecessor.layout)
+        .iter()
+        .copied()
+        .filter(|name| predecessor.owner_tables.contains(name))
+        .collect();
+    for name in &retired_tables {
+        manifest
+            .tables
+            .push(table_contract(name, Some(predecessor.layout)));
+    }
+    if retired_tables.contains(&"eg_kvcache_cold") {
+        write
+            .open_table(KV_COLD)
+            .map_err(|error| error.to_string())?;
+    }
     manifest.layout_digest = layout_digest_over(manifest.layout, &manifest.tables);
     write
         .open_table(OWNER_MANIFEST)
@@ -206,13 +224,9 @@ mod tests {
     use crate::StorageKernel;
     use sha2::{Digest, Sha256};
 
-    const KV_BEFORE_COLD_CACHE: LayoutPredecessor = LayoutPredecessor {
-        layout: OwnerLayout::Kv,
-        label: "kv store before the cold KV-cache table",
-        owner_tables: &["kv"],
-        data_lost: "its key-value rows are not migrated",
-        file_name: "kv.redb",
-    };
+    /// The kv store while the cache's cold rung still had its own table: a real declared
+    /// predecessor of the current layout, which retired that table.
+    const KV_BEFORE_COLD_CACHE: LayoutPredecessor = crate::owner::lineage::KV_BEFORE_NAMESPACE_COLD;
 
     fn identity() -> PhysicalStoreIdentity {
         PhysicalStoreIdentity::new("physical:test:persisted-layout").unwrap()
@@ -230,11 +244,7 @@ mod tests {
         let before = file_digest(&path);
         let error = refuse_known_predecessor(&path, &KV_BEFORE_COLD_CACHE).unwrap_err();
         assert!(error.starts_with("KV_FORMAT_UPGRADE_REQUIRED: "), "{error}");
-        assert!(error.contains("move kv.redb aside"), "{error}");
-        assert!(
-            error.contains("its key-value rows are not migrated"),
-            "{error}"
-        );
+        assert!(error.contains("eg_kvcache_cold"), "{error}");
         assert_eq!(file_digest(&path), before, "the refusal must not write");
         let normal = StorageKernel::open_owner::<KvOwner>(&path, identity(), None)
             .err()
@@ -257,7 +267,7 @@ mod tests {
             Ok(())
         );
         let other = LayoutPredecessor {
-            owner_tables: &["eg_kvcache_cold"],
+            owner_tables: &["kv"],
             ..KV_BEFORE_COLD_CACHE
         };
         let predecessor = dir.path().join("kv.redb");
@@ -270,7 +280,7 @@ mod tests {
         let mut manifest = OwnerManifest::new(identity(), OwnerLayout::Kv).unwrap();
         manifest
             .tables
-            .retain(|table| table.table_id != "eg_kvcache_cold");
+            .push(table_contract("eg_kvcache_cold", Some(OwnerLayout::Kv)));
         assert!(!KV_BEFORE_COLD_CACHE.matches(&manifest), "stale digest");
         manifest.layout_digest = layout_digest_over(OwnerLayout::Kv, &manifest.tables);
         assert!(KV_BEFORE_COLD_CACHE.matches(&manifest));
