@@ -414,6 +414,28 @@ pub(super) fn decide_blocking(
         roles: Vec::new(),
         retention: super::stat_retention::Retention::none(),
     };
+    // A trajectory query rides on the plan: its facts are the policy knobs, the
+    // clock and the outcome records this reader may see (R140.104).
+    let (task_plan, trajectory_premises) = match task_plan {
+        Some(super::stat_task_plan::Planned::Plan(mut plan, notes)) => {
+            match super::stat_trajectory::query_of(request) {
+                Some(query) => {
+                    let (decision, premises) =
+                        super::stat_trajectory::decide(ctx, &reader, &policy, query)?;
+                    plan.trajectory = Some(decision);
+                    (
+                        Some(super::stat_task_plan::Planned::Plan(plan, notes)),
+                        premises,
+                    )
+                }
+                None => (
+                    Some(super::stat_task_plan::Planned::Plan(plan, notes)),
+                    Vec::new(),
+                ),
+            }
+        }
+        other => (other, Vec::new()),
+    };
     let context_digest = super::stat_log::context_digest_of(
         &request.question.question_id,
         request.params.as_slice(),
@@ -512,6 +534,7 @@ pub(super) fn decide_blocking(
             nl,
             task_plan,
             comparative,
+            trajectory_premises,
         )
     })?;
     let batch = telemetry::stage(Stage::Conclude, family, tenant, || {
@@ -1017,6 +1040,7 @@ fn seal(
     comparative: Option<
         medulla_decision_types::decision::comparative_analysis::ComparativeAnalysisPlan,
     >,
+    trajectory_premises: Vec<PremiseRef>,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
         harness_evaluation: match executed
@@ -1065,6 +1089,12 @@ fn seal(
     if let Some(plan) = &comparative {
         premise_list.extend(super::family::comparative_analysis::premises(plan));
     }
+    // A plan that carries a trajectory decision is as strong as its weakest
+    // premise (R140.104).
+    let trajectory_evidence = task_plan
+        .as_ref()
+        .is_some_and(|plan| plan.trajectory.is_some());
+    premise_list.extend(trajectory_premises);
     if let Some(family) = &executed.family {
         premise_list.extend(family.premises.iter().cloned());
     }
@@ -1112,7 +1142,13 @@ fn seal(
                 .resolution_kind(&outcome)
                 .unwrap_or_else(|| resolution(&outcome))
         },
-        evidence_class: if let Some(sealed) = executed.family.as_ref().and_then(|a| a.evidence) {
+        evidence_class: if trajectory_evidence {
+            premise_list
+                .iter()
+                .map(|p| premise_evidence(p.class))
+                .max()
+                .unwrap_or(EvidenceClass::Proof)
+        } else if let Some(sealed) = executed.family.as_ref().and_then(|a| a.evidence) {
             sealed
         } else if executed
             .family

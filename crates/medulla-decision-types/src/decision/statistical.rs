@@ -459,6 +459,8 @@ pub enum TypedValue {
     LoadSet(Box<super::load_set::LoadSetQuestion>),
     /// A plan to admit against the architecture view (MEDULLA-DECISION-ENGINE-R171.3).
     PlanningAdmission(Box<super::planning_admission::PlanningAdmissionRequest>),
+    /// One trajectory decision of a task plan (MEDULLA-DECISION-ENGINE-R140.104).
+    Trajectory(Box<super::task_plan::trajectory::TrajectoryQuery>),
 }
 
 /// One named parameter of a question.

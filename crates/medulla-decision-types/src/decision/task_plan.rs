@@ -23,6 +23,7 @@ pub mod horizon;
 pub mod pairwise;
 pub mod skill_plan;
 pub mod skill_tree;
+pub mod trajectory;
 pub mod trajectory_budget;
 pub mod trajectory_projection;
 pub mod trajectory_refusal;
@@ -201,6 +202,11 @@ pub struct TaskPlan {
     /// the horizon limit has one horizon. The plan digest covers it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub horizons: Option<horizon::HorizonPartition>,
+    /// The trajectory decision the request asked for, when it asked for one
+    /// (MEDULLA-DECISION-ENGINE-R140.104). It is not part of the plan digest:
+    /// the executable body is the same with or without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trajectory: Option<trajectory::TrajectoryDecision>,
 }
 
 /// The policy digest includes every engine bound and ordering rule.
@@ -418,6 +424,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
         skill_trees: BoundedVec::default(),
         critical_chain: None,
         horizons: None,
+        trajectory: None,
     };
     plan.plan_digest = compute_plan_digest(&plan);
     Ok(plan)

@@ -1,5 +1,6 @@
 //! Evaluate-only explicit DAG planning. EG derives a plan; the host admits it.
 
+use medulla_decision_types::decision::task_plan::trajectory::TRAJECTORY_PARAM;
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::DecideRequest,
     decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
@@ -421,7 +422,11 @@ pub(super) fn task_plan(
     policy: &DecisionPolicy,
 ) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan {
-        if request.params.iter().any(|p| is_plan_param(&p.value)) {
+        if request
+            .params
+            .iter()
+            .any(|p| is_plan_param(&p.value) || matches!(p.value, TypedValue::Trajectory(_)))
+        {
             return Err(invalid_parameter(
                 "task_plan parameter requires task_plan question",
             ));
@@ -447,9 +452,22 @@ pub(super) fn task_plan(
              decomposition or skill_query, got {proposers}"
         )));
     }
-    if request.params.len() != 1 + 2 * usize::from(has_admission_inputs(request)) {
+    // At most one trajectory query rides on the plan (MEDULLA-DECISION-ENGINE-R140.104).
+    let trajectories: Vec<_> = request
+        .params
+        .iter()
+        .filter(|p| matches!(p.value, TypedValue::Trajectory(_)))
+        .collect();
+    if trajectories.len() > 1 || trajectories.iter().any(|p| p.name != TRAJECTORY_PARAM) {
         return Err(invalid_parameter(
-            "task_plan takes its one proposer parameter and no other, besides a plan to admit and its graph",
+            "a task_plan question carries at most one trajectory query, named trajectory",
+        ));
+    }
+    if request.params.len()
+        != 1 + 2 * usize::from(has_admission_inputs(request)) + trajectories.len()
+    {
+        return Err(invalid_parameter(
+            "task_plan takes its one proposer parameter and no other, besides a plan to admit and its graph and one trajectory query",
         ));
     }
     let param = request

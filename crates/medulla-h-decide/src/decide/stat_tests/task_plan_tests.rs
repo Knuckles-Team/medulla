@@ -7,7 +7,7 @@ use medulla_decision_types::{
     decision::task_plan::TASK_PLAN_POLICY_REVISION,
 };
 
-fn task_request(pin: &ComponentDependency) -> DecideRequest {
+pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
     let tasks: Vec<TaskPlanTask> = [
         ("a", vec![]),
         ("b", vec![]),
