@@ -53,6 +53,7 @@ pub mod contract_catalog;
 pub mod delta;
 // MEDULLA-DURABLE-KERNEL-R038 — the declared durability class (ephemeral/async/sync)
 // a KV namespace or table carries. Pure serde, no dep.
+pub mod deployment_profile;
 pub mod durability_class;
 
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.

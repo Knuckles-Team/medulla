@@ -82,6 +82,16 @@ pub struct ServerArgs {
     #[arg(long, env = "MEDULLA_WRITE_CONFLICT_STRATEGY", default_value = "refuse", value_parser = ["refuse", "prefer_newer", "field_union"])]
     pub write_conflict_strategy: String,
 
+    /// `deployment.profile` (MEDULLA-DURABLE-KERNEL-R038.100): `served` (default) or
+    /// `embedded`. It changes transport and startup only; a namespace keeps its
+    /// declared durability class and redb stays the acknowledgment authority. Any
+    /// other value is refused `DEPLOYMENT_PROFILE_UNKNOWN`.
+    #[arg(
+        long = "deployment-profile",
+        env = "MEDULLA_DEPLOYMENT_PROFILE",
+        default_value = "served"
+    )]
+    pub deployment_profile: String,
     /// Ebbinghaus decay sweep interval in seconds (0 = disabled).
     #[arg(long, default_value = "0", env = "GRAPH_SERVICE_DECAY_INTERVAL")]
     pub decay_interval: u64,
@@ -1054,6 +1064,22 @@ pub async fn txn_ttl_tick(state: SharedState, ttl: u64) {
             "Txn TTL sweep: rolled back {} idle transaction(s)",
             reclaimed
         );
+    }
+}
+
+/// The configured deployment profile, or the registered `DEPLOYMENT_PROFILE_UNKNOWN`
+/// refusal (MEDULLA-DURABLE-KERNEL-R038.100). The server binary serves the `served`
+/// profile; `embedded` is the in-process library and is refused here with the same
+/// registered code rather than silently served.
+pub fn validate_deployment_profile(args: &ServerArgs) -> Result<(), BoxError> {
+    use medulla_types::deployment_profile::DeploymentProfile;
+    match DeploymentProfile::parse_declared(&args.deployment_profile)? {
+        DeploymentProfile::Served => Ok(()),
+        DeploymentProfile::Embedded => Err(format!(
+            "{}: the server binary serves the served profile; the embedded profile is the in-process library",
+            medulla_types::contract::ServerErrorCode::DeploymentProfileUnknown.as_str()
+        )
+        .into()),
     }
 }
 

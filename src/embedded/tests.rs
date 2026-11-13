@@ -346,3 +346,54 @@ fn embedded_sqlite_equivalent_create_insert_select() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R038.100
+#[cfg(feature = "kv")]
+#[test]
+fn embedded_profile_reads_and_writes_an_ephemeral_namespace() {
+    use medulla_types::durability_class::DurabilityClass;
+    let _env = durable_env_guard();
+    let dir = tmp_dir("kv-profile");
+    let open = || {
+        let mut options = EmbeddedOptions::durable();
+        options.deployment_profile = Some("embedded".to_string());
+        EmbeddedEngine::open(Some(&dir), options).unwrap()
+    };
+    let engine = open();
+    engine
+        .kv_declare_namespace("scratch", DurabilityClass::Ephemeral)
+        .unwrap();
+    engine.kv_put("scratch", "k", b"v".to_vec()).unwrap();
+    engine.kv_put("kept", "k", b"d".to_vec()).unwrap();
+    assert_eq!(engine.kv_get("scratch", "k").unwrap(), Some(b"v".to_vec()));
+    // An ephemeral namespace cannot become durable, and a durable one cannot become ephemeral.
+    let refused = engine
+        .kv_declare_namespace("scratch", DurabilityClass::Sync)
+        .unwrap_err();
+    assert!(
+        refused.starts_with("DURABILITY_CLASS_MISMATCH: "),
+        "{refused}"
+    );
+    let refused = engine
+        .kv_declare_namespace("kept", DurabilityClass::Ephemeral)
+        .unwrap_err();
+    assert!(
+        refused.starts_with("DURABILITY_CLASS_MISMATCH: "),
+        "{refused}"
+    );
+    // An unknown profile and the served profile are refused for an in-process engine.
+    for profile in ["cluster", "served"] {
+        let mut options = EmbeddedOptions::in_memory();
+        options.deployment_profile = Some(profile.to_string());
+        let refused = EmbeddedEngine::open(None::<&std::path::Path>, options).err();
+        assert!(
+            refused.is_some_and(|e| e.starts_with("DEPLOYMENT_PROFILE_UNKNOWN: ")),
+            "{profile}"
+        );
+    }
+    engine.close().unwrap();
+    // After a restart the durable namespace keeps its row and the ephemeral one is empty.
+    let engine = open();
+    assert_eq!(engine.kv_get("kept", "k").unwrap(), Some(b"d".to_vec()));
+    assert_eq!(engine.kv_get("scratch", "k").unwrap(), None);
+}

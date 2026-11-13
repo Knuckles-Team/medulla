@@ -611,8 +611,8 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `tests/operator_command_store_upgrade_cli.rs::pre_checkpoint_store_migrates_and_reads_back_identical_heads` (L4).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_memory_refs_round_trip_against_a_served_engine` (L4).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_checkpoint_models_match_the_rust_vectors` (L2).
-- `MEDULLA-DURABLE-KERNEL-R038.100`: Planned: `src/embedded.rs::tests::embedded_profile_reads_and_writes_an_ephemeral_namespace` (L2).
-- `MEDULLA-DURABLE-KERNEL-R038.100`: Planned: `tests/adopt_workitem_authenticated_replay.rs::served_profile_keeps_declared_class_and_refuses_mismatch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R038.100`: `src/embedded/tests.rs::embedded_profile_reads_and_writes_an_ephemeral_namespace` (L2).
+- `MEDULLA-DURABLE-KERNEL-R038.100`: `tests/adopt_workitem_authenticated_replay.rs::served_profile_keeps_declared_class_and_refuses_mismatch` (L3).
 - `MEDULLA-DURABLE-KERNEL-R043.100`: Planned: `tests/graph_change_feed_served.rs::two_clients_see_ordered_deduplicable_changes_and_recover` (L3).
 - `MEDULLA-DURABLE-KERNEL-R042.100`: Planned: `tests/bench_claim_cli.rs::measurement_throughput_and_cost_are_recomputed_for_two_releases` (L2).
 - `MEDULLA-DURABLE-KERNEL-R099`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
@@ -776,3 +776,4 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R038.3`: `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_namespace_declaration_reads_back_survives_restart_and_refuses_weakening` (L3): undeclared answers sync with declared false, an unknown class is refused and stores nothing, async to sync is accepted, ephemeral and weakening changes are refused DURABILITY_CLASS_MISMATCH, another principal sees nothing, and a reopened store still answers the declaration.
 - `MEDULLA-DURABLE-KERNEL-R038.3`: `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_ephemeral_namespace_is_served_from_memory_and_not_declared_over_durable_rows` (L3): an ephemeral namespace reads, writes and scans, loses its rows at restart and keeps its declaration; a namespace holding durable rows refuses to become ephemeral.
 - `MEDULLA-DURABLE-KERNEL-R038.3`: `crates/medulla-types/src/durability_class.rs::redeclaration_never_weakens_and_never_crosses_ephemeral` (L1).
+- `MEDULLA-DURABLE-KERNEL-R038.100`: `crates/medulla-types/src/deployment_profile.rs::profile_parses_its_two_values_and_refuses_the_rest` (L1).

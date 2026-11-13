@@ -1788,3 +1788,98 @@ async fn lease_consumption_expiry_through_signed_dispatch() {
     drop(concrete);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+/// The served profile accepts only its own configured value, and a namespace keeps the
+/// class it declared: redeclaring a durable namespace `ephemeral` is refused and its
+/// rows stay readable (MEDULLA-DURABLE-KERNEL-R038.100).
+// spec: MEDULLA-DURABLE-KERNEL-R038.100
+#[cfg(feature = "kv")]
+#[tokio::test]
+async fn served_profile_keeps_declared_class_and_refuses_mismatch() {
+    use clap::Parser;
+    use medulla_protocol_types::storage_wire::{KvEntry, KvNamespaceClass};
+    use medulla_server::server_startup::{validate_deployment_profile, ServerArgs};
+    use medulla_server_blob::kv::KvStateExt;
+
+    #[derive(Parser)]
+    struct Cli {
+        #[command(flatten)]
+        args: ServerArgs,
+    }
+    let parse = |profile: Option<&str>| {
+        let mut argv = vec!["medulla"];
+        if let Some(profile) = profile {
+            argv.extend(["--deployment-profile", profile]);
+        }
+        Cli::try_parse_from(argv).expect("server args").args
+    };
+    validate_deployment_profile(&parse(None)).expect("served is the default");
+    validate_deployment_profile(&parse(Some("served"))).expect("served");
+    let unknown = validate_deployment_profile(&parse(Some("cluster"))).unwrap_err();
+    assert!(
+        unknown
+            .to_string()
+            .starts_with("DEPLOYMENT_PROFILE_UNKNOWN: "),
+        "{unknown}"
+    );
+
+    let dir = temp_dir("medulla-served-profile-kv");
+    let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).expect("open redb backend"));
+    let backend: Arc<dyn PersistenceBackend> = concrete.clone();
+    let state = state_with(backend, dir.clone());
+    let kv = Arc::new(medulla_server_blob::kv::KvStore::open(Some(&dir)).expect("kv store"));
+    state.write().await.set_kv_store(Some(kv));
+
+    let call = |id: u64, key: &str, method: Method| {
+        let state = state.clone();
+        let request = signed_request(id, method, key);
+        async move { test_support::dispatch(&state, request).await }
+    };
+    let declared = call(
+        1,
+        "profile-declare",
+        Method::KvDeclareNamespace {
+            namespace: "ledger".into(),
+            class: "sync".into(),
+            shared: false,
+        },
+    )
+    .await;
+    let declared: KvNamespaceClass = decode_raw(&declared, "KvDeclareNamespace");
+    assert_eq!(declared.class, "sync");
+    let put = call(
+        2,
+        "profile-put",
+        Method::KvPut {
+            namespace: "ledger".into(),
+            key: "k".into(),
+            value: b"v".to_vec(),
+            shared: false,
+        },
+    )
+    .await;
+    assert!(put.error.is_none(), "{:?}", put.error);
+    let mismatch = call(
+        3,
+        "profile-mismatch",
+        Method::KvDeclareNamespace {
+            namespace: "ledger".into(),
+            class: "ephemeral".into(),
+            shared: false,
+        },
+    )
+    .await;
+    assert_eq!(mismatch.error.as_deref(), Some("DURABILITY_CLASS_MISMATCH"));
+    let read = call(
+        4,
+        "profile-get",
+        Method::KvGet {
+            namespace: "ledger".into(),
+            key: "k".into(),
+            shared: false,
+        },
+    )
+    .await;
+    let entry: Option<KvEntry> = decode_raw(&read, "KvGet");
+    assert_eq!(entry.map(|e| e.value), Some(b"v".to_vec()));
+}

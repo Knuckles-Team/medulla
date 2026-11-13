@@ -371,6 +371,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     server_startup::bus_participant_ttl_or_exit(args.server.bus_participant_ttl_s);
 
     // ── Security gate: an auth secret and a durable-state directory are mandatory ──
+    server_startup::validate_deployment_profile(&args)?;
     server_startup::validate_auth_mode(&args, socket_mode)?;
     let tcp_tls = server_startup::prepare_tcp_tls(&args).await?;
 

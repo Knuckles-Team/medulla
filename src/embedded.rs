@@ -76,6 +76,11 @@ use store::EmbeddedRedbStore;
 /// Configuration for opening an [`EmbeddedEngine`].
 #[derive(Debug, Clone, Default)]
 pub struct EmbeddedOptions {
+    /// `deployment.profile` (MEDULLA-DURABLE-KERNEL-R038.100). `None` is the embedded
+    /// profile; `Some(name)` is parsed and refused `DEPLOYMENT_PROFILE_UNKNOWN` when it
+    /// is neither `embedded` nor `served`, and an engine opened in-process refuses
+    /// `served` the same way, so the profile can never be mistaken for another.
+    pub deployment_profile: Option<String>,
     /// When `true` (the default when a persist dir is given) every durable mutation
     /// is committed to redb before the call returns (commit-before-return). When
     /// `false`, or when there is no persist dir, the engine is in-memory only.
@@ -86,11 +91,17 @@ impl EmbeddedOptions {
     /// Durable (the SQLite-style default): commit-before-return when a persist dir
     /// is configured.
     pub fn durable() -> Self {
-        Self { durable: true }
+        Self {
+            durable: true,
+            deployment_profile: None,
+        }
     }
     /// In-memory only — no durable writes even if a persist dir is given.
     pub fn in_memory() -> Self {
-        Self { durable: false }
+        Self {
+            durable: false,
+            deployment_profile: None,
+        }
     }
 }
 
@@ -114,6 +125,9 @@ struct Inner {
     /// in-memory effect; the same gate preserves durable order across cloned
     /// embedded handles writing concurrently.
     write_gate: Mutex<()>,
+    /// The namespaced key-value store: `{persist_dir}/kv.redb` when durable, else in memory.
+    #[cfg(feature = "kv")]
+    kv: Arc<medulla_server_blob::kv::KvStore>,
     /// Durable redb store, present when a persist dir is configured AND `durable`.
     #[cfg(feature = "redb")]
     store: Option<EmbeddedRedbStore>,
@@ -151,6 +165,7 @@ impl EmbeddedEngine {
         options: EmbeddedOptions,
     ) -> Result<Self, String> {
         let persist_dir = persist_dir.map(|p| p.as_ref().to_path_buf());
+        Self::admit_profile(options.deployment_profile.as_deref())?;
 
         #[cfg(feature = "redb")]
         {
@@ -174,10 +189,19 @@ impl EmbeddedEngine {
             };
             #[cfg(feature = "query")]
             let tables = Self::open_table_store(persist_dir.as_deref(), options.durable)?;
+            #[cfg(feature = "kv")]
+            let kv = Arc::new(medulla_server_blob::kv::KvStore::open(
+                persist_dir
+                    .as_deref()
+                    .filter(|_| options.durable)
+                    .and_then(Path::to_str),
+            )?);
             Ok(Self {
                 inner: Arc::new(Inner {
                     registry,
                     write_gate: Mutex::new(()),
+                    #[cfg(feature = "kv")]
+                    kv,
                     store,
                     _persist_lock: persist_lock,
                     #[cfg(feature = "query")]
@@ -202,6 +226,45 @@ impl EmbeddedEngine {
                 }),
             })
         }
+    }
+
+    /// Refuse a `deployment.profile` this engine does not serve (R038.100).
+    fn admit_profile(name: Option<&str>) -> Result<(), String> {
+        use medulla_types::deployment_profile::DeploymentProfile;
+        match name.map(DeploymentProfile::parse_declared).transpose() {
+            Ok(None | Some(DeploymentProfile::Embedded)) => Ok(()),
+            Ok(Some(DeploymentProfile::Served)) => Err(format!(
+                "{}: an in-process engine serves the embedded profile",
+                medulla_types::contract::ServerErrorCode::DeploymentProfileUnknown.as_str()
+            )),
+            Err(unknown) => Err(unknown.to_string()),
+        }
+    }
+
+    /// Declare a key-value namespace's durability class (same rule as the served
+    /// `KvDeclareNamespace`).
+    #[cfg(feature = "kv")]
+    pub fn kv_declare_namespace(
+        &self,
+        namespace: &str,
+        class: medulla_types::durability_class::DurabilityClass,
+    ) -> Result<(), String> {
+        self.inner
+            .kv
+            .declare_namespace(namespace, class)
+            .map(|_| ())
+    }
+
+    /// Store a key-value row; an `ephemeral` namespace is held in process memory.
+    #[cfg(feature = "kv")]
+    pub fn kv_put(&self, namespace: &str, key: &str, value: Vec<u8>) -> Result<(), String> {
+        self.inner.kv.put_in_class(namespace, key, value)
+    }
+
+    /// Fetch a key-value row.
+    #[cfg(feature = "kv")]
+    pub fn kv_get(&self, namespace: &str, key: &str) -> Result<Option<Vec<u8>>, String> {
+        self.inner.kv.get_in_class(namespace, key)
     }
 
     /// Open the SQLite-equivalent user-table store (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside / MEDULLA-022): a

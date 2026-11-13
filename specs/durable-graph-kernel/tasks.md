@@ -166,7 +166,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T157 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.3 Fenced resume read
 - [x] T158 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.1 Hosted checkpoint exports and generated facade
 - [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 Python client parity for the checkpoint methods
-- [ ] T160 [US6] MEDULLA-DURABLE-KERNEL-R038.100 Embedded and served profiles preserve durability classes
+- [x] T160 [US6] MEDULLA-DURABLE-KERNEL-R038.100 Embedded and served profiles preserve durability classes
 - [ ] T161 [US1] MEDULLA-DURABLE-KERNEL-R043.7 Attested envelope text admits @ and \ and refuses only host identity
 - [ ] T162 [US1] MEDULLA-DURABLE-KERNEL-R043.8 Envelope admission refusals carry a declared code and a safe diagnostic
 - [ ] T163 MEDULLA-DURABLE-KERNEL-R099.1 Model

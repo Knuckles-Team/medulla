@@ -147,4 +147,54 @@ impl KvStore {
                 .then_some(&self.ephemeral),
         )
     }
+
+    /// Declare `namespace`'s class in-process, for the embedded profile. It is the same
+    /// declaration row and the same [`DurabilityClass::admit_redeclaration`] rule as the
+    /// served `KvDeclareNamespace`, written as one ledgered maintenance mutation.
+    pub fn declare_namespace(
+        &self,
+        namespace: &str,
+        requested: DurabilityClass,
+    ) -> Result<KvNamespaceClass, String> {
+        validate_key(namespace, "")?;
+        match &self.backend {
+            Backend::Redb(store) => store.maintain(
+                "kv_declare",
+                &row_subject(DECLARATION_NAMESPACE, namespace),
+                |owner_write| {
+                    let mut table = owner_write.open_table(KV)?;
+                    declare_in(&mut table, namespace, requested).map(|class| (class, true))
+                },
+            ),
+            Backend::Memory(m) => declare_in(&mut *m.lock(), namespace, requested),
+        }
+    }
+
+    /// Store a value honouring the namespace's declared class: an `ephemeral` namespace
+    /// lives in process memory, every other namespace takes the durable [`Self::put`].
+    pub fn put_in_class(&self, namespace: &str, key: &str, value: Vec<u8>) -> Result<(), String> {
+        let Some(ephemeral) = self.ephemeral_rows(namespace)? else {
+            return self.put(namespace, key, value);
+        };
+        validate_key(namespace, key)?;
+        validate_value(&value)?;
+        ephemeral
+            .rows
+            .lock()
+            .insert((namespace.to_string(), key.to_string()), value);
+        Ok(())
+    }
+
+    /// Fetch a value honouring the namespace's declared class.
+    pub fn get_in_class(&self, namespace: &str, key: &str) -> Result<Option<Vec<u8>>, String> {
+        let Some(ephemeral) = self.ephemeral_rows(namespace)? else {
+            return self.get(namespace, key);
+        };
+        validate_key(namespace, key)?;
+        Ok(ephemeral
+            .rows
+            .lock()
+            .get(&(namespace.to_string(), key.to_string()))
+            .cloned())
+    }
 }
