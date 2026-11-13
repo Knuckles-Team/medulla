@@ -635,7 +635,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R702.3: the refusals of a search-task synthesis. An unknown
-    // or unreadable answer node is `SEARCH_TASK_INVALID`; a risky task names its
+    // or unreadable answer node is `SEARCH_TASK_INVALID`; a risky task is a typed rejection, not an error: it names its
     // detector under `SEARCH_TASK_SHORTCUT`.
     (
         "SynthesizeSearchTask",

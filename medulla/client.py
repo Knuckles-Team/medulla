@@ -49,7 +49,7 @@ from .policy_evolution import PolicyEvolutionClient
 from .work_market import GapClient, WorkMarketClient
 
 if TYPE_CHECKING:
-    from .generated.models import SparqlResult
+    from .generated.models import SearchTaskRejection, SparqlResult
 
 logger = logging.getLogger(__name__)
 
@@ -7424,19 +7424,21 @@ class GraphOperationsClient:
         tenant_id: str,
         answer_node: str,
         graph: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | SearchTaskRejection:
         """Synthesize one multi-hop search task around ``answer_node``
         (MEDULLA-FEDERATED-QUERY-R702.3).
 
         The engine reads the evidence the caller may read within the
         ``search_task.evidence_hops`` neighbourhood of the answer node, builds a
         clue chain and a templated question with no model call, runs the four
-        shortcut detectors and refines the task. Returns ``{task, report,
-        thresholds, rounds_used, evidence_nodes}``; a task over any threshold
-        is refused with ``SEARCH_TASK_SHORTCUT`` naming the detector, and
-        the refusal text carries the complete ``RiskReport`` as JSON after
-        ``; report=`` (MEDULLA-FEDERATED-QUERY-R702.5). Nothing is stored: the caller turns an accepted task into a pinned query-set
-        item for ``DecisionEval``. ``graph`` defaults to the client's graph.
+        shortcut detectors and refines the task. An accepted task returns
+        ``{outcome, task, report, thresholds, rounds_used, evidence_nodes}``.
+        A task over any threshold returns the typed ``SearchTaskRejection``
+        (``code`` ``SEARCH_TASK_SHORTCUT``, the tripped ``detector``, the
+        complete ``RiskReport`` and the ``thresholds``;
+        MEDULLA-FEDERATED-QUERY-R702.5). Nothing is stored: the caller turns
+        an accepted task into a pinned query-set item for ``DecisionEval``.
+        ``graph`` defaults to the client's graph.
         """
         graph = graph or self._client._graph_name
         request: dict[str, Any] = {
@@ -7452,6 +7454,12 @@ class GraphOperationsClient:
             result = msgpack.unpackb(result, raw=False)
         if not isinstance(result, dict):
             raise RuntimeError("SynthesizeSearchTask must answer with an object")
+        if result.get("outcome") == "rejected":
+            from .generated.models import SearchTaskRejection
+
+            return SearchTaskRejection.model_validate(
+                {key: value for key, value in result.items() if key != "outcome"}
+            )
         return result
 
     async def mine_topology(

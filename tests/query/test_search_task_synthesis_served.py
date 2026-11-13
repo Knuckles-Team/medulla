@@ -9,12 +9,12 @@ a retrieval ranking evaluation and submits it to ``DecisionEval``.
 from __future__ import annotations
 
 import hashlib
-import json
 
 import pytest
 from conftest import TEST_TENANT
 
 from medulla.client import EngineResponseError
+from medulla.generated.models import SearchTaskRejection, ShortcutDetector
 
 # Each ring is the answer node joined to three evidence nodes in a cycle, so no
 # clue decides the answer alone and no clue's evidence sits beside many others.
@@ -217,14 +217,18 @@ def test_risk_report_lists_values(clean_graph):
     # The prior-knowledge finding names the answer node itself.
     assert report["findings"][3]["nodes"] == ["ent-orion"]
 
-    with pytest.raises(EngineResponseError, match="SEARCH_TASK_SHORTCUT") as refused:
-        gc.graph.synthesize_search_task(tenant_id=TEST_TENANT, answer_node="ent-star")
-    text = str(refused.value)
-    assert "single_clue" in text.split("; report=")[0]
-    rejected = json.loads(text.split("; report=", 1)[1])
-    assert [f["detector"] for f in rejected["findings"]] == detectors
-    single = rejected["findings"][0]
-    assert single["value"] == 1.0
-    assert sorted(single["nodes"]) == [f"ent-star-l{n}" for n in range(3)]
-    assert rejected["findings"][3]["nodes"] == ["ent-star"]
-    assert rejected["findings"][3]["value"] == 3.0
+    rejected = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-star"
+    )
+    # A typed rejection, not an error: the code, the tripped detector and the
+    # complete report arrive as values.
+    assert isinstance(rejected, SearchTaskRejection)
+    assert rejected.code == "SEARCH_TASK_SHORTCUT"
+    assert rejected.detector == ShortcutDetector.SINGLE_CLUE
+    assert [f.detector.value for f in rejected.report.findings] == detectors
+    single = rejected.report.findings[0]
+    assert single.value == 1.0
+    assert sorted(single.nodes) == [f"ent-star-l{n}" for n in range(3)]
+    assert rejected.report.findings[3].nodes == ["ent-star"]
+    assert rejected.report.findings[3].value == 3.0
+    assert single.value > rejected.thresholds.single_clue

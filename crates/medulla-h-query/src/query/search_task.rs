@@ -23,8 +23,9 @@ use medulla_plan::search_task::synthesize;
 use medulla_protocol_types::result_contract::query::SynthesizeSearchTask;
 use medulla_server_api::knob_config::knobs;
 use medulla_work_types::search_task::{
-    EvidenceEdge, EvidenceGraph, EvidenceNode, RiskThresholds, SynthesizeSearchTaskRequest,
-    SynthesizeSearchTaskResult, SEARCH_TASK_INVALID, SEARCH_TASK_SCHEMA_VERSION,
+    EvidenceEdge, EvidenceGraph, EvidenceNode, RiskThresholds, SynthesizeSearchTaskAnswer,
+    SynthesizeSearchTaskRequest, SynthesizeSearchTaskResult, SEARCH_TASK_INVALID,
+    SEARCH_TASK_SCHEMA_VERSION, SEARCH_TASK_SHORTCUT,
 };
 
 /// The evidence neighbourhood is larger than `search_task.max_evidence_nodes`.
@@ -156,9 +157,10 @@ fn thresholds() -> RiskThresholds {
     }
 }
 
-/// Build the evidence subgraph, synthesize the task and refuse it by detector
-/// name when a value is over its threshold.
-fn synthesize_task(view: &GraphView, answer: &str) -> Result<SynthesizeSearchTaskResult, String> {
+/// Build the evidence subgraph and synthesize the task. A task with a value over
+/// its threshold answers with the typed rejection carrying the complete report;
+/// a malformed report is a refusal.
+fn synthesize_task(view: &GraphView, answer: &str) -> Result<SynthesizeSearchTaskAnswer, String> {
     let knobs = knobs();
     let graph = evidence_graph(
         view,
@@ -169,17 +171,23 @@ fn synthesize_task(view: &GraphView, answer: &str) -> Result<SynthesizeSearchTas
     let thresholds = thresholds();
     let synthesis = synthesize(&graph, answer, &thresholds, knobs.search_task_refine_rounds)
         .map_err(|refusal| refusal.to_string())?;
-    synthesis
-        .report
-        .check(&thresholds)
-        .map_err(|refusal| synthesis.report.rejection_detail(&refusal))?;
-    Ok(SynthesizeSearchTaskResult {
-        task: synthesis.task,
-        report: synthesis.report,
-        thresholds,
-        rounds_used: synthesis.rounds_used,
-        evidence_nodes: graph.nodes.len() as u64,
-    })
+    if let Err(refusal) = synthesis.report.check(&thresholds) {
+        return match synthesis.report.rejection(&thresholds) {
+            Some(rejection) if refusal.code == SEARCH_TASK_SHORTCUT => {
+                Ok(SynthesizeSearchTaskAnswer::Rejected(rejection))
+            }
+            _ => Err(refusal.to_string()),
+        };
+    }
+    Ok(SynthesizeSearchTaskAnswer::Accepted(
+        SynthesizeSearchTaskResult {
+            task: synthesis.task,
+            report: synthesis.report,
+            thresholds,
+            rounds_used: synthesis.rounds_used,
+            evidence_nodes: graph.nodes.len() as u64,
+        },
+    ))
 }
 
 /// Serve one `SynthesizeSearchTask`.

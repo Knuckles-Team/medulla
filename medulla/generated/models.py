@@ -22316,6 +22316,14 @@ RewindTarget = Annotated[
 ]
 
 
+class RiskFinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    detector: ShortcutDetector
+    nodes: list[str]
+    value: float
+
+
 class RiskMethod(str, Enum):
     LEARN_THEN_TEST = "learn_then_test"
     CONFORMAL_RISK_CONTROL = "conformal_risk_control"
@@ -22369,6 +22377,12 @@ class RiskPropagationMiningResult(BaseModel):
     written_back: Annotated[int, Field(ge=0)]
 
 
+class RiskReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    findings: list[RiskFinding]
+
+
 class RiskScoreRow(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -22386,6 +22400,15 @@ class RiskStatement(BaseModel):
     epsilon: UnitRationalWire
     method: RiskMethod
     n_calibration: Annotated[int, Field(ge=0)]
+
+
+class RiskThresholds(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    co_coverage: float
+    exposed_constant: float
+    prior_knowledge: float
+    single_clue: float
 
 
 class Role(BaseModel):
@@ -22716,6 +22739,15 @@ class SearchIndexCapability(BaseModel):
     max_k: Annotated[int, Field(ge=0)]
     score_kind: ScoreKind
     vector: bool
+
+
+class SearchTaskRejection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+    detector: ShortcutDetector
+    report: RiskReport
+    thresholds: RiskThresholds
 
 
 class SeedAttributionRow(BaseModel):
@@ -24840,6 +24872,13 @@ class ShexValidationReport(BaseModel):
 
     conforms: bool
     results: list[ShexNodeResult]
+
+
+class ShortcutDetector(str, Enum):
+    SINGLE_CLUE = "single_clue"
+    CO_COVERAGE = "co_coverage"
+    EXPOSED_CONSTANT = "exposed_constant"
+    PRIOR_KNOWLEDGE = "prior_knowledge"
 
 
 class ShortlistProvenance(BaseModel):
@@ -37112,6 +37151,7 @@ __all__ = [
     "RewindTarget",
     "RewindTargetAt",
     "RewindTargetStart",
+    "RiskFinding",
     "RiskMethod",
     "RiskMetrics",
     "RiskModel",
@@ -37119,8 +37159,10 @@ __all__ = [
     "RiskModelNoisyOr",
     "RiskModelShare",
     "RiskPropagationMiningResult",
+    "RiskReport",
     "RiskScoreRow",
     "RiskStatement",
+    "RiskThresholds",
     "Role",
     "RoleGraphGrant",
     "RoleRecord",
@@ -37173,6 +37215,7 @@ __all__ = [
     "SealedRecordTombstone",
     "SearchIndexCapability",
     "Secret",
+    "SearchTaskRejection",
     "SeedAttributionRow",
     "SelectWebPagesAnswer",
     "SelectWebPagesRequest",
@@ -37411,6 +37454,7 @@ __all__ = [
     "ShellProficiency",
     "ShexNodeResult",
     "ShexValidationReport",
+    "ShortcutDetector",
     "ShortlistProvenance",
     "SignalAdvanced",
     "SignalKey",

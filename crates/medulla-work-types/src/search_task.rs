@@ -225,30 +225,34 @@ impl RiskReport {
         if let Some(bad) = self.findings.iter().find(|f| !f.value.is_finite()) {
             return Err(refuse(SEARCH_TASK_INVALID, bad.detector.name()));
         }
-        match self
-            .findings
-            .iter()
-            .find(|f| thresholds.breached(f.detector, f.value))
-        {
+        match self.first_over(thresholds) {
             Some(finding) => Err(refuse(SEARCH_TASK_SHORTCUT, finding.detector.name())),
             None => Ok(()),
         }
     }
 
-    /// The served refusal text for a rejected task: the refusal (`CODE:
-    /// detector`) followed by `; report=` and this complete report as JSON, so a
-    /// rejected task shows every detector value, threshold input and node id
-    /// exactly like an accepted one (MEDULLA-FEDERATED-QUERY-R702.5).
-    pub fn rejection_detail(&self, refusal: &SearchTaskRefusal) -> String {
-        match serde_json::to_string(self) {
-            Ok(json) => format!("{refusal}{REPORT_MARKER}{json}"),
-            Err(_) => refusal.to_string(),
-        }
+    /// The first finding whose value exceeds its threshold.
+    fn first_over(&self, thresholds: &RiskThresholds) -> Option<&RiskFinding> {
+        self.findings
+            .iter()
+            .find(|f| thresholds.breached(f.detector, f.value))
+    }
+
+    /// The typed rejection of a task over a threshold: the shortcut code, the
+    /// detector that tripped and this complete report with the thresholds it was
+    /// judged against, so a rejected task shows every detector value and node id
+    /// exactly like an accepted one (MEDULLA-FEDERATED-QUERY-R702.5). `None` when
+    /// no value is over its threshold.
+    pub fn rejection(&self, thresholds: &RiskThresholds) -> Option<SearchTaskRejection> {
+        self.first_over(thresholds)
+            .map(|finding| SearchTaskRejection {
+                code: SEARCH_TASK_SHORTCUT.to_string(),
+                detector: finding.detector,
+                report: self.clone(),
+                thresholds: thresholds.clone(),
+            })
     }
 }
-
-/// Separates the refusal from the report in [`RiskReport::rejection_detail`].
-pub const REPORT_MARKER: &str = "; report=";
 
 /// Version of the `SynthesizeSearchTask` request and result shapes.
 pub const SEARCH_TASK_SCHEMA_VERSION: u16 = 1;
@@ -279,6 +283,29 @@ pub struct SynthesizeSearchTaskResult {
     pub rounds_used: u32,
     /// Evidence nodes the caller could read and the task was built from.
     pub evidence_nodes: u64,
+}
+
+/// A task refused for a shortcut: the stable refusal code, the detector that
+/// tripped and the complete report (MEDULLA-FEDERATED-QUERY-R702.5). It is a
+/// typed value of the served answer, never text inside an error message.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SearchTaskRejection {
+    pub code: String,
+    pub detector: ShortcutDetector,
+    pub report: RiskReport,
+    pub thresholds: RiskThresholds,
+}
+
+/// The served answer of `SynthesizeSearchTask`: an accepted task or the typed
+/// rejection of a risky one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum SynthesizeSearchTaskAnswer {
+    Accepted(SynthesizeSearchTaskResult),
+    Rejected(SearchTaskRejection),
 }
 
 #[cfg(test)]
@@ -394,7 +421,7 @@ mod tests {
 
     // spec: MEDULLA-FEDERATED-QUERY-R702.5
     #[test]
-    fn rejection_detail_carries_the_complete_report() {
+    fn rejection_carries_the_complete_report() {
         let thresholds = RiskThresholds {
             single_clue: 0.5,
             co_coverage: 0.5,
@@ -402,14 +429,23 @@ mod tests {
             prior_knowledge: 0.5,
         };
         let rejected = report(0.9);
-        let refusal = rejected.check(&thresholds).unwrap_err();
-        let detail = rejected.rejection_detail(&refusal);
-        let (head, json) = detail.split_once(REPORT_MARKER).unwrap();
-        assert_eq!(head, format!("{SEARCH_TASK_SHORTCUT}: single_clue"));
-        let carried: RiskReport = serde_json::from_str(json).unwrap();
-        assert_eq!(carried, rejected);
-        assert_eq!(carried.findings.len(), ShortcutDetector::ALL.len());
-        assert!(carried.findings.iter().all(|f| !f.nodes.is_empty()));
+        let rejection = rejected.rejection(&thresholds).unwrap();
+        assert_eq!(rejection.code, SEARCH_TASK_SHORTCUT);
+        assert_eq!(rejection.detector, ShortcutDetector::SingleClue);
+        assert_eq!(rejection.report, rejected);
+        assert_eq!(rejection.thresholds, thresholds);
+        assert_eq!(rejection.report.findings.len(), ShortcutDetector::ALL.len());
+        assert!(rejection
+            .report
+            .findings
+            .iter()
+            .all(|f| !f.nodes.is_empty()));
+        let answer = SynthesizeSearchTaskAnswer::Rejected(rejection);
+        let wire = serde_json::to_value(&answer).unwrap();
+        assert_eq!(wire["outcome"], "rejected");
+        let back: SynthesizeSearchTaskAnswer = serde_json::from_value(wire).unwrap();
+        assert_eq!(back, answer);
+        assert!(report(0.1).rejection(&thresholds).is_none());
     }
     // spec: MEDULLA-FEDERATED-QUERY-R702.4
     #[test]
