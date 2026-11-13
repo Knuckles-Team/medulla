@@ -18,8 +18,8 @@
 //!   * `decay_weighted_mean` — recency-weighted series aggregate using the ONE shared
 //!     Ebbinghaus curve (`medulla_core::decay`) the memory layer uses (CONCEPT:MEDULLA-KG.compute.handled-outside-single-anchor).
 //!
-//! Where the math is already in the engine we REUSE it (`ewma_signal`,
-//! `rolling_zscore` from `medulla_finance_market::signals`) — no re-implementation.
+//! Where the math is already in the engine we REUSE it (the EWMA and rolling z-score of
+//! `medulla_numeric::series`) — no re-implementation.
 
 use crate::point::{Point, Ts};
 
@@ -283,17 +283,22 @@ pub fn decay_weighted_mean(points: &[Point], now: Ts, half_life_secs: f64) -> f6
 
 // ───────────────────── series-kernel reuse (no re-implementation) ─────────────
 
-/// EWMA over field 0 of a stored series — the one series kernel (`medulla_numeric::series`,
-/// EH-522), through its finance entry so the `NaN`/empty conventions match.
-pub fn series_ewma(points: &[Point], span: usize) -> Vec<f64> {
+/// EWMA over field 0 of a stored series — the one series kernel (`medulla_numeric::series`),
+/// `NaN` during warm-up. A kernel refusal is returned, never replaced by an empty series.
+pub fn series_ewma(points: &[Point], span: usize) -> medulla_numeric::error::Result<Vec<f64>> {
+    use medulla_numeric::series::{apply_nan, Smoothing, Spec};
     let vals: Vec<f64> = points.iter().map(|p| p.values[0]).collect();
-    medulla_finance_market::signals::ewma_signal(&vals, span)
+    apply_nan(Spec::Ewma(Smoothing::Span(span as f64)), &vals)
 }
 
 /// Rolling z-score over field 0 of a stored series — the one series kernel, as above.
-pub fn series_rolling_zscore(points: &[Point], window: usize) -> Vec<f64> {
+pub fn series_rolling_zscore(
+    points: &[Point],
+    window: usize,
+) -> medulla_numeric::error::Result<Vec<f64>> {
+    use medulla_numeric::series::{apply_nan, Rolling, Spec};
     let vals: Vec<f64> = points.iter().map(|p| p.values[0]).collect();
-    medulla_finance_market::signals::rolling_zscore(&vals, window)
+    apply_nan(Spec::Rolling(Rolling::Zscore, window), &vals)
 }
 
 // ───────────────────── multimodal sensor fusion (CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream) ────────────────

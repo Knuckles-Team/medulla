@@ -19,8 +19,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T013 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.1.12 Ornstein-Uhlenbeck shared kernel
 - [ ] T014 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.1.13 ADF shared kernel
 - [ ] T015 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.1.14 Regime HMM shared kernel
-- [ ] T016 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1 Rolling z-score generic caller migration
-- [ ] T017 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.2 EWMA generic caller migration
+- [x] T016 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1 Rolling z-score generic caller migration
+- [x] T017 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.2 EWMA generic caller migration
 - [ ] T018 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.3 Information coefficient generic caller migration
 - [ ] T019 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.4 Information ratio generic caller migration
 - [ ] T020 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.5 Effective sample size generic caller migration
@@ -33,8 +33,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T027 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.12 Ornstein-Uhlenbeck generic caller migration
 - [ ] T028 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.13 ADF generic caller migration
 - [ ] T029 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.1.14 Regime HMM generic caller migration
-- [ ] T030 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.1 Rolling z-score finance alias removal
-- [ ] T031 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.2 EWMA finance alias removal
+- [x] T030 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.1 Rolling z-score finance alias removal
+- [x] T031 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.2 EWMA finance alias removal
 - [x] T032 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.3 Information coefficient finance alias removal
 - [x] T033 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.4 Information ratio finance alias removal
 - [x] T034 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.2.5 Effective sample size finance alias removal
@@ -62,7 +62,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T056 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.13 ADF UQL time-series exposure
 - [ ] T057 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.14 Regime HMM UQL time-series exposure
 - [ ] T058 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15 UQL EVALUATE report stage
-- [ ] T059 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.4 Complete caller coverage verification
+- [x] T059 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.4 Complete caller coverage verification
 - [ ] T060 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.5 Served NumericEvaluate method and kernel registry
 - [x] T061 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.3 Client bindings for NumericEvaluate and retired-method absence
 - [ ] T062 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.4 Bound original regime derivations and streaming work

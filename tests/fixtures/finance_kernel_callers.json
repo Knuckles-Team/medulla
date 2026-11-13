@@ -1,0 +1,287 @@
+[
+  {
+    "kernel": "rolling_z_score",
+    "symbol": [
+      "rolling_zscore"
+    ],
+    "disposition": "retired",
+    "tokens": [
+      "Rolling::Zscore"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-market/src/signals.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1"
+      },
+      {
+        "file": "crates/medulla-tsdb/src/derive/mod.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1"
+      },
+      {
+        "file": "crates/medulla-tsdb/src/query.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1"
+      }
+    ]
+  },
+  {
+    "kernel": "ewma",
+    "symbol": [
+      "ewma_signal"
+    ],
+    "disposition": "retired",
+    "tokens": [
+      "Spec::Ewma"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-tsdb/src/derive/mod.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.2"
+      },
+      {
+        "file": "crates/medulla-tsdb/src/query.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.2"
+      }
+    ]
+  },
+  {
+    "kernel": "information_coefficient",
+    "symbol": [
+      "information_coefficient"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "information_coefficient"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-decision-stats/src/decision/feature_power.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.3"
+      },
+      {
+        "file": "crates/medulla-finance-market/src/signals.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.3"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/factor.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.3"
+      }
+    ]
+  },
+  {
+    "kernel": "information_ratio",
+    "symbol": [
+      "information_ratio"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "information_ratio"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-decision-stats/src/decision/feature_power.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.4"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/factor.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.4"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.4"
+      }
+    ]
+  },
+  {
+    "kernel": "effective_independent_n",
+    "symbol": [
+      "effective_independent_n"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "effective_independent_n"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.5"
+      }
+    ]
+  },
+  {
+    "kernel": "diebold_mariano",
+    "symbol": [
+      "diebold_mariano"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "diebold_mariano"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.6"
+      },
+      {
+        "file": "crates/medulla-h-decide/src/decide/stat_walk_forward.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.6"
+      }
+    ]
+  },
+  {
+    "kernel": "deflated_sharpe",
+    "symbol": [
+      "deflated_sharpe_ratio"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "deflated_sharpe_ratio"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-market/src/market/backtest_run.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7"
+      },
+      {
+        "file": "crates/medulla-h-decide/src/decide/stat_walk_forward.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.7"
+      }
+    ]
+  },
+  {
+    "kernel": "purged_cpcv",
+    "symbol": [
+      "purged_cpcv_splits"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "purged_cpcv_splits"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-market/src/market/backtest_run.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.8"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.8"
+      }
+    ]
+  },
+  {
+    "kernel": "probability_of_backtest_overfit",
+    "symbol": [
+      "probability_of_backtest_overfit"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "probability_of_backtest_overfit"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-market/src/market/backtest_run.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.9"
+      },
+      {
+        "file": "crates/medulla-finance-quant/src/quant.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.9"
+      },
+      {
+        "file": "crates/medulla-h-decide/src/decide/stat_walk_forward.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.9"
+      }
+    ]
+  },
+  {
+    "kernel": "brier",
+    "symbol": [
+      "binary_brier_score"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "brier_score"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-h-graph/src/graph_ops/finance_regime_gate.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.10"
+      }
+    ]
+  },
+  {
+    "kernel": "kalman",
+    "symbol": [
+      "kalman_filter_1d",
+      "kalman_beta",
+      "kalman_volatility"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "kalman_filter_1d",
+      "kalman_beta",
+      "kalman_volatility"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-quant/src/statespace.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.11"
+      }
+    ]
+  },
+  {
+    "kernel": "ou",
+    "symbol": [
+      "ou_calibrate",
+      "ou_mfpt",
+      "search_best_entry_z"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "ou_calibrate",
+      "ou_mfpt",
+      "search_best_entry_z"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-quant/src/statespace.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.12"
+      }
+    ]
+  },
+  {
+    "kernel": "adf",
+    "symbol": [
+      "adf_pvalue",
+      "mackinnon_crit",
+      "ols_with_se"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "adf_pvalue",
+      "mackinnon_crit",
+      "ols_with_se"
+    ],
+    "callers": []
+  },
+  {
+    "kernel": "regime_hmm",
+    "symbol": [
+      "detect_regimes",
+      "viterbi"
+    ],
+    "disposition": "numeric",
+    "tokens": [
+      "detect_regimes",
+      "viterbi"
+    ],
+    "callers": [
+      {
+        "file": "crates/medulla-finance-quant/src/regime.rs",
+        "child": "MEDULLA-FINANCE-PRIMITIVES-R002.2.1.14"
+      }
+    ]
+  }
+]

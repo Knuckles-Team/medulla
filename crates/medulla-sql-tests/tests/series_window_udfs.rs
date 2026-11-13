@@ -1,6 +1,6 @@
 //! EH-522 — the `medulla_<func>` SQL window functions: per-partition, in `ORDER BY`, and
 //! bit-identical to the one series kernel behind UQL `DERIVE` (`medulla_tsdb::derive::Program`)
-//! and the finance entries (`medulla_finance_market::signals`). Only compiles under `numeric`.
+//! and the shared series kernel (`medulla_numeric::series`). Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
 
 use medulla_graph_core::graph::GraphCore;
@@ -70,11 +70,15 @@ fn window_functions_equal_the_derive_program_and_the_finance_entries() {
             program(SeriesFunc::Zscore, 5.0, xs),
             "SQL = DERIVE zscore ({series})"
         );
-        let finance = medulla_finance_market::signals::rolling_zscore(xs, 5);
+        let finance = medulla_numeric::series::apply_nan(
+            medulla_numeric::series::Spec::Rolling(medulla_numeric::series::Rolling::Zscore, 5),
+            xs,
+        )
+        .expect("shared kernel");
         assert_eq!(
             z,
             nan_to_none(finance),
-            "SQL = finance rolling_zscore ({series})"
+            "SQL = shared kernel rolling z-score ({series})"
         );
         let e = column(&out, series, 3);
         assert_eq!(
@@ -82,11 +86,15 @@ fn window_functions_equal_the_derive_program_and_the_finance_entries() {
             program(SeriesFunc::Ewma, 4.0, xs),
             "SQL = DERIVE ewma ({series})"
         );
-        let finance = medulla_finance_market::signals::ewma_signal(xs, 4);
+        let finance = medulla_numeric::series::apply_nan(
+            medulla_numeric::series::Spec::Ewma(medulla_numeric::series::Smoothing::Span(4.0)),
+            xs,
+        )
+        .expect("shared kernel");
         assert_eq!(
             e,
             nan_to_none(finance),
-            "SQL = finance ewma_signal ({series})"
+            "SQL = shared kernel ewma ({series})"
         );
     }
 }

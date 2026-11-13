@@ -190,3 +190,232 @@ async fn adf_legacy_method_is_undecodable() {
 async fn regime_hmm_legacy_method_is_undecodable() {
     retired_is_undecodable_and_generic_serves(&["FinanceDetectRegimes"], "regime_hmm").await;
 }
+
+// ---------------------------------------------------------------------------------------
+// Wrapper absence and the caller census (R002.2.2.1, R002.2.2.2, R002.2.4).
+// ---------------------------------------------------------------------------------------
+
+/// One production source file under `crates/` or `src/`.
+#[derive(Clone)]
+struct Source {
+    path: String,
+    /// The file text without whole-line `//` comments.
+    text: String,
+}
+
+impl Source {
+    fn in_numeric(&self) -> bool {
+        self.path.starts_with("crates/medulla-numeric/")
+    }
+}
+
+/// Every production `.rs` file of the repository (test and bench files excluded; the
+/// numeric crate included so the one definition of a kernel is visible).
+fn load_tree() -> Vec<Source> {
+    fn walk(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<Source>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if !matches!(name.as_str(), "target" | "tests" | "benches") {
+                    walk(root, &path, out);
+                }
+            } else if name.ends_with(".rs")
+                && !name.ends_with("tests.rs")
+                && !name.ends_with("_test.rs")
+            {
+                let raw = std::fs::read_to_string(&path).unwrap_or_default();
+                let text = raw
+                    .lines()
+                    .filter(|line| !line.trim_start().starts_with("//"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let relative = path
+                    .strip_prefix(root)
+                    .expect("under the manifest dir")
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                out.push(Source {
+                    path: relative,
+                    text,
+                });
+            }
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut out = Vec::new();
+    for top in ["crates", "src"] {
+        walk(root, &root.join(top), &mut out);
+    }
+    out
+}
+
+fn census() -> Vec<Value> {
+    serde_json::from_str::<Vec<Value>>(include_str!("fixtures/finance_kernel_callers.json"))
+        .expect("census is a JSON array")
+}
+
+fn defines(source: &Source, symbol: &str) -> bool {
+    source.text.contains(&format!("fn {symbol}(")) || source.text.contains(&format!("fn {symbol}<"))
+}
+
+fn strings(value: &Value) -> Vec<String> {
+    value
+        .as_array()
+        .expect("array")
+        .iter()
+        .map(|v| v.as_str().expect("string").to_string())
+        .collect()
+}
+
+/// Compares the census with the tree. Every finding is a line; an empty result means the
+/// census is complete: no caller is unmapped, no listed caller has vanished, no retired
+/// wrapper is defined, and no kernel function is defined outside `crates/medulla-numeric`.
+fn audit(census: &[Value], tree: &[Source]) -> Vec<String> {
+    let valid_children: Vec<String> = (1..=14)
+        .map(|n| format!("MEDULLA-FINANCE-PRIMITIVES-R002.2.1.{n}"))
+        .collect();
+    let mut findings = Vec::new();
+    for entry in census {
+        let kernel = entry["kernel"].as_str().expect("kernel name").to_string();
+        let retired = entry["disposition"] == "retired";
+        for symbol in strings(&entry["symbol"]) {
+            for source in tree {
+                if !defines(source, &symbol) {
+                    continue;
+                }
+                if retired {
+                    findings.push(format!(
+                        "{kernel}: wrapper `{symbol}` is still defined in {}",
+                        source.path
+                    ));
+                } else if !source.in_numeric() {
+                    findings.push(format!(
+                        "{kernel}: `{symbol}` has a second definition in {}",
+                        source.path
+                    ));
+                }
+            }
+        }
+        let tokens = strings(&entry["tokens"]);
+        let actual: std::collections::BTreeSet<String> = tree
+            .iter()
+            .filter(|s| !s.in_numeric())
+            .filter(|s| s.text.contains("medulla_numeric"))
+            .filter(|s| tokens.iter().any(|t| s.text.contains(t.as_str())))
+            .map(|s| s.path.clone())
+            .collect();
+        let mut listed = std::collections::BTreeSet::new();
+        for caller in entry["callers"].as_array().expect("callers array") {
+            let file = caller["file"].as_str().expect("file").to_string();
+            let child = caller["child"].as_str().expect("child");
+            if !valid_children.iter().any(|c| c == child) {
+                findings.push(format!("{kernel}: {file} names an unknown child {child}"));
+            }
+            listed.insert(file);
+        }
+        for file in actual.difference(&listed) {
+            findings.push(format!("{kernel}: caller {file} is not in the census"));
+        }
+        for file in listed.difference(&actual) {
+            findings.push(format!(
+                "{kernel}: census lists {file}, which no longer calls the kernel"
+            ));
+        }
+    }
+    findings
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.2.1
+async fn rolling_z_score_wrapper_absent() {
+    let tree = load_tree();
+    assert!(
+        !tree.iter().any(|s| defines(s, "rolling_zscore")),
+        "the finance `rolling_zscore` wrapper must not be defined"
+    );
+    let entry = census()
+        .into_iter()
+        .find(|e| e["kernel"] == "rolling_z_score")
+        .expect("census entry");
+    assert!(audit(&[entry], &tree).is_empty());
+    retired_is_undecodable_and_generic_serves(
+        &["FinanceRollingZScore", "FinanceRollingZscore"],
+        "rolling_z_score",
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.2.2
+async fn ewma_wrapper_absent() {
+    let tree = load_tree();
+    assert!(
+        !tree.iter().any(|s| defines(s, "ewma_signal")),
+        "the finance `ewma_signal` wrapper must not be defined"
+    );
+    let entry = census()
+        .into_iter()
+        .find(|e| e["kernel"] == "ewma")
+        .expect("census entry");
+    assert!(audit(&[entry], &tree).is_empty());
+    retired_is_undecodable_and_generic_serves(&["FinanceEwma", "FinanceEwmaSignal"], "ewma").await;
+}
+
+#[test]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.4
+fn complete_caller_coverage() {
+    let census = census();
+    assert_eq!(census.len(), 14, "one census entry per shared kernel");
+    let tree = load_tree();
+    let findings = audit(&census, &tree);
+    assert!(findings.is_empty(), "census findings: {findings:#?}");
+
+    // Deleting a census caller is a finding.
+    let mut missing = census.clone();
+    let entry = missing
+        .iter_mut()
+        .find(|e| e["kernel"] == "rolling_z_score")
+        .expect("rolling_z_score entry");
+    entry["callers"]
+        .as_array_mut()
+        .expect("callers")
+        .pop()
+        .expect("a caller to delete");
+    assert!(
+        audit(&missing, &tree)
+            .iter()
+            .any(|f| f.contains("is not in the census")),
+        "a deleted census entry must fail"
+    );
+
+    // Restoring an old wrapper is a finding.
+    let mut restored = tree.clone();
+    restored.push(Source {
+        path: "crates/medulla-finance-market/src/signals.rs".to_string(),
+        text: "pub fn rolling_zscore(values: &[f64], window: usize) -> Vec<f64> { vec![] }"
+            .to_string(),
+    });
+    assert!(
+        audit(&census, &restored)
+            .iter()
+            .any(|f| f.contains("wrapper `rolling_zscore` is still defined")),
+        "a restored wrapper must fail"
+    );
+
+    // A second implementation of a kernel outside the numeric crate is a finding.
+    let mut duplicated = tree.clone();
+    duplicated.push(Source {
+        path: "crates/medulla-finance-quant/src/copy.rs".to_string(),
+        text: "pub fn information_coefficient(a: &[f64], b: &[f64]) -> f64 { 0.0 }".to_string(),
+    });
+    assert!(
+        audit(&census, &duplicated)
+            .iter()
+            .any(|f| f.contains("second definition")),
+        "a second implementation must fail"
+    );
+}

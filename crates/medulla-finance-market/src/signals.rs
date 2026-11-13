@@ -11,23 +11,6 @@ pub struct SignalOutput {
     pub signal_name: String,
 }
 
-/// Rolling Z-score `(x - rolling_mean) / rolling_std` (population deviation, `0` on a
-/// flat window, `NaN` during warm-up; empty for a zero window). The finance entry of the
-/// one series kernel `medulla_numeric::series` (EH-522/EH-530) — the same values UQL
-/// `DERIVE zscore(v0, w)` and SQL `medulla_zscore(v, w)` produce.
-pub fn rolling_zscore(values: &[f64], window: usize) -> Vec<f64> {
-    use medulla_numeric::series::{apply_nan, Rolling, Spec};
-    apply_nan(Spec::Rolling(Rolling::Zscore, window), values).unwrap_or_default()
-}
-
-/// Exponential weighted moving average (EWMA) signal, `α = 2/(span+1)`, seeded with the
-/// first value (empty for a zero span). The finance entry of `medulla_numeric::series`
-/// (UQL `DERIVE ewma(v0, span)`, SQL `medulla_ewma(v, span)`).
-pub fn ewma_signal(values: &[f64], span: usize) -> Vec<f64> {
-    use medulla_numeric::series::{apply_nan, Smoothing, Spec};
-    apply_nan(Spec::Ewma(Smoothing::Span(span as f64)), values).unwrap_or_default()
-}
-
 /// Signal decay — exponential decay applied to a signal.
 pub fn signal_decay(signal: &[f64], half_life: f64) -> Vec<f64> {
     if signal.is_empty() {
@@ -118,36 +101,27 @@ pub fn momentum(prices: &[f64], lookback: usize) -> Vec<f64> {
 }
 
 /// Mean reversion signal — deviation from rolling mean, normalized.
-pub fn mean_reversion(values: &[f64], window: usize) -> Vec<f64> {
-    let zscore = rolling_zscore(values, window);
+///
+/// The z-score is the shared series kernel `medulla_numeric::series` (the same values UQL
+/// `DERIVE zscore(v0, w)` and SQL `medulla_zscore(v, w)` produce); a kernel refusal is
+/// returned to the caller and never replaced by an empty series.
+pub fn mean_reversion(
+    values: &[f64],
+    window: usize,
+) -> Result<Vec<f64>, medulla_numeric::error::NumericError> {
+    use medulla_numeric::series::{apply_nan, Rolling, Spec};
+    let zscore = apply_nan(Spec::Rolling(Rolling::Zscore, window), values)?;
     // Negate: large positive z-score → sell signal (expect reversion)
-    zscore
+    Ok(zscore
         .iter()
         .map(|z| if z.is_finite() { -z } else { f64::NAN })
-        .collect()
+        .collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use medulla_numeric::evaluation::skill::information_coefficient;
-
-    #[test]
-    fn test_rolling_zscore() {
-        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
-        let result = rolling_zscore(&values, 3);
-        assert_eq!(result.len(), 10);
-        assert!(result[0].is_nan());
-        assert!(result[2].is_finite());
-    }
-
-    #[test]
-    fn test_ewma() {
-        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let result = ewma_signal(&values, 3);
-        assert_eq!(result.len(), 5);
-        assert_eq!(result[0], 1.0);
-    }
 
     #[test]
     fn test_combine_alphas() {

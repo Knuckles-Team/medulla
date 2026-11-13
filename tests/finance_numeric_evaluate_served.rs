@@ -714,6 +714,158 @@ async fn brier_caller_uses_shared_kernel() {
     generic_door_matches_registry("brier").await;
 }
 
+/// True when `symbol` is defined as a function in any `.rs` file under `crates/` or `src/`.
+fn defines_function(symbol: &str) -> bool {
+    fn walk(dir: &std::path::Path, needle: &str) -> bool {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return false;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if path.file_name().is_some_and(|n| n == "target") {
+                    continue;
+                }
+                if walk(&path, needle) {
+                    return true;
+                }
+            } else if path.extension().is_some_and(|e| e == "rs")
+                && std::fs::read_to_string(&path).is_ok_and(|text| text.contains(needle))
+            {
+                return true;
+            }
+        }
+        false
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let needle = format!("fn {symbol}(");
+    ["crates", "src"]
+        .iter()
+        .any(|dir| walk(&root.join(dir), &needle))
+}
+
+/// Independent two-pass population z-score: `None` during warm-up, `0` on a flat window.
+fn zscore_oracle(values: &[f64], window: usize) -> Vec<Option<f64>> {
+    (0..values.len())
+        .map(|i| {
+            if i + 1 < window {
+                return None;
+            }
+            let w = &values[i + 1 - window..=i];
+            let mean = w.iter().sum::<f64>() / window as f64;
+            let var = w.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / window as f64;
+            Some(if var == 0.0 {
+                0.0
+            } else {
+                (values[i] - mean) / var.sqrt()
+            })
+        })
+        .collect()
+}
+
+/// Independent EWMA recursion `alpha = 2 / (span + 1)`, seeded with the first value.
+fn ewma_oracle(values: &[f64], span: f64) -> Vec<f64> {
+    let alpha = 2.0 / (span + 1.0);
+    let mut out = Vec::with_capacity(values.len());
+    for (i, x) in values.iter().enumerate() {
+        let next = match out.last() {
+            Some(prev) if i > 0 => alpha * x + (1.0 - alpha) * prev,
+            _ => *x,
+        };
+        out.push(next);
+    }
+    out
+}
+
+fn assert_series(actual: &Value, expected: &[Option<f64>]) {
+    let items = actual.as_array().expect("series array");
+    assert_eq!(items.len(), expected.len());
+    for (a, e) in items.iter().zip(expected) {
+        match e {
+            Some(v) => close(a, *v, 1e-12),
+            None => assert!(a.is_null(), "warm-up must be null, got {a}"),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1
+async fn rolling_z_score_caller_uses_shared_kernel() {
+    let values = vec![1.0, 2.0, 4.0, 7.0, 11.0, 16.0];
+    let expected = zscore_oracle(&values, 3);
+    let mut s = Session::open().await;
+
+    // The generic door answers the independent population formula.
+    let served = raw(&s
+        .eval(Op::RollingZScore {
+            values: values.clone(),
+            window: 3,
+        })
+        .await);
+    assert_series(&served, &expected);
+
+    // The retained caller (the mean-reversion signal) negates the shared kernel's z-score.
+    let response = s
+        .send(Method::FinanceMeanReversion {
+            values: values.clone(),
+            window: 3,
+        })
+        .await;
+    assert!(response.error.is_none(), "{:?}", response.error_detail);
+    let reversion = raw(&response);
+    let negated: Vec<Option<f64>> = expected.iter().map(|z| z.map(|v| -v)).collect();
+    assert_series(&reversion, &negated);
+
+    // A refusal is the kernel's typed refusal, never a substituted default.
+    refused(
+        &s.eval(Op::RollingZScore {
+            values: vec![1.0, f64::NAN, 3.0],
+            window: 2,
+        })
+        .await,
+        "KERNEL_INPUT_NONFINITE",
+    );
+    let bad_window = s
+        .send(Method::FinanceMeanReversion { values, window: 0 })
+        .await;
+    assert_eq!(bad_window.error.as_deref(), Some("INVALID_ARGUMENT"));
+    assert!(bad_window.result.is_none());
+
+    assert!(
+        !defines_function("rolling_zscore"),
+        "the finance wrapper must be gone"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.2
+async fn ewma_caller_uses_shared_kernel() {
+    let values = vec![2.0, 4.0, 3.0, 8.0, 5.0];
+    let expected: Vec<Option<f64>> = ewma_oracle(&values, 3.0).into_iter().map(Some).collect();
+    let mut s = Session::open().await;
+    let served = raw(&s
+        .eval(Op::Ewma {
+            values: values.clone(),
+            smoothing: EwmaSmoothing::Span(3.0),
+        })
+        .await);
+    assert_series(&served, &expected);
+
+    refused(
+        &s.eval(Op::Ewma {
+            values: vec![1.0, f64::NAN],
+            smoothing: EwmaSmoothing::Span(3.0),
+        })
+        .await,
+        "KERNEL_INPUT_NONFINITE",
+    );
+
+    assert!(
+        !defines_function("ewma_signal"),
+        "the finance wrapper must be gone"
+    );
+}
+
 /// The decoded result of a response, whatever payload form the entry answers in.
 /// The shared op the generic door serves for `op`, taken from the Rust-emitted vectors.
 fn vector_op(op: &str) -> Op {

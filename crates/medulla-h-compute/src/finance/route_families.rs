@@ -186,11 +186,13 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
             Response::ok(req_id, ResultPayload::of::<results::FinanceMomentum>(v))
         }
         Method::FinanceMeanReversion { values, window } => {
-            let v = medulla_finance_market::signals::mean_reversion(&values, window);
-            Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceMeanReversion>(v),
-            )
+            match medulla_finance_market::signals::mean_reversion(&values, window) {
+                Ok(v) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceMeanReversion>(v),
+                ),
+                Err(error) => Response::err(req_id, format!("INVALID_ARGUMENT: {error}")),
+            }
         }
         other => return Err(other),
     })

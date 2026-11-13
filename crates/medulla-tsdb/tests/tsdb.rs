@@ -445,7 +445,7 @@ fn decay_weighted_mean_uses_shared_curve() {
 #[test]
 fn finance_kernel_reuse_ewma() {
     let pts: Vec<Point> = (0..10).map(|i| Point::single(i * NS, i as f64)).collect();
-    let ewma = series_ewma(&pts, 3);
+    let ewma = series_ewma(&pts, 3).expect("shared kernel");
     assert_eq!(ewma.len(), 10);
     assert_eq!(ewma[0], 0.0);
     assert!(ewma[9] > ewma[5] && ewma[5] > ewma[1]);
