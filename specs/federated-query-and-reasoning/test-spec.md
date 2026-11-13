@@ -912,7 +912,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R653.3:** `tests/retrieval/test_corpus_retrieve_served.py::test_method_reaches_each_mode` (planned). Wiring. Compares served output with the mode functions.
 - **MEDULLA-FEDERATED-QUERY-R653.4:** `tests/retrieval/test_corpus_retrieve_served.py::test_corpus_refusals` (planned). Refusal. Asserts each code, no rows and a cross-tenant negative case.
 - **MEDULLA-FEDERATED-QUERY-R653.5:** `tests/retrieval/test_corpus_retrieve_served.py::test_corpus_evidence` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R653.6:** `tests/retrieval/test_corpus_retrieve_served.py::test_each_mode_is_served` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench corpus_retrieval meets the key.
+- **MEDULLA-FEDERATED-QUERY-R653.6:** `tests/retrieval/test_corpus_retrieve_served.py::test_each_mode_is_served`. Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench corpus_retrieval meets the key.
 - **MEDULLA-FEDERATED-QUERY-R654:** `tests/retrieval/test_code_context_served.py::test_code_context_and_diagnose` (planned). Code, operations and deployment context (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.1:** `crates/medulla-plan/src/code_context.rs::tests::types_round_trip_and_reject_unknown_stage` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.2:** `crates/medulla-plan/src/code_context.rs::tests::depth_cap_and_hub_order` (planned). Behavior: code context. The fixture and expected result are stated in the row's Test cell.

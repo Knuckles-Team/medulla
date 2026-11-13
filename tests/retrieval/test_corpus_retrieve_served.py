@@ -6,6 +6,7 @@ entity neighbourhood, session history or answer lineage.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import uuid
@@ -286,5 +287,43 @@ def test_corpus_evidence(start_medulla_server) -> None:
         session = _retrieve(client, graph, mode="session", session_id="sess-1")
         assert session["evidence"]["scanned_nodes"] == 2
         assert session["evidence"]["matches"] == 2
+
+    _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R653.6")
+def test_each_mode_is_served(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R653.6: all four modes are served."""
+
+    def body(client: Any, graph: str) -> None:
+        grep = _retrieve(client, graph, mode="grep", pattern=r"fn \w+", label="File")
+        assert [(m["node_id"], m["line"]) for m in grep["matches"]] == [
+            ("f1", 2),
+            ("f2", 1),
+        ]
+        entity = _retrieve(client, graph, mode="entity", entity="hub")
+        assert entity["entity"]["neighbours"][0]["node_id"] == "near-a"
+        session = _retrieve(client, graph, mode="session", session_id="sess-1")
+        assert [t["ordinal"] for t in session["session"]] == [1, 2]
+        lineage = _retrieve(client, graph, mode="lineage", answer_ref="answer")
+        assert [p["hops"][-1]["node_id"] for p in lineage["lineage"]] == [
+            "src-a",
+            "src-b",
+            "deep",
+        ]
+        for mode, result in (
+            ("grep", grep),
+            ("entity", entity),
+            ("session", session),
+            ("lineage", lineage),
+        ):
+            assert result["evidence"]["mode"] == mode
+        # The hot-path gate is the criterion bench with its committed keys.
+        thresholds = json.loads(
+            (_ROOT / "crates/medulla-plan/benches/thresholds.json").read_text()
+        )
+        assert thresholds["latency_p50_ns_max"]["corpus_grep_1m"] == 4_000_000
+        assert thresholds["latency_p99_ns_max"]["corpus_grep_1m"] == 20_000_000
+        assert (_ROOT / "crates/medulla-plan/benches/corpus_retrieval.rs").is_file()
 
     _with_graph(body)

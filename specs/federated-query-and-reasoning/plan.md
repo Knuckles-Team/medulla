@@ -1261,3 +1261,10 @@ Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/
 `medulla-ann::low_storage` holds the manifest, checked accounting, the compact artifact (`HnswIndex::to_compact`, `LowStorageArtifact::{encode,decode,candidates}`) and `prune_hubs`. Regeneration, the bounded provider and the served path (R040.5.3, R040.5.4, R040.5.6) layer on top and own the L4 proof of the slice.
 
 - R040.5.4: `BoundedCachingEmbeddingProvider::with_limits(EmbedLimits)` batches by items and bytes, runs waves of `embed.concurrency` batches on scoped threads, reserves calls per wave, keeps an LRU cache capped by `embed.cache_entries` and `embed.cache_bytes`, and returns `EMBED_*` coded refusals.
+
+### R722.5 build order (continuation)
+
+1. Add the `provenance` text map to `UqlRow` in `crates/medulla-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
+2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
+3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
+4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).

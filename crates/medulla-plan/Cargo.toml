@@ -536,6 +536,14 @@ name = "context_bundle"
 path = "benches/context_bundle.rs"
 harness = false
 
+# ── Corpus grep bench (MEDULLA-FEDERATED-QUERY-R653.6) ────────────────────────────────
+# One grep over a 1,000,000-token corpus; the key `corpus_grep_1m` in `thresholds.json`
+# caps p50 at 4 ms and p99 at 20 ms.
+[[bench]]
+name = "corpus_retrieval"
+path = "benches/corpus_retrieval.rs"
+harness = false
+
 # ── Stored-query read bench (MEDULLA-FEDERATED-QUERY-R708.6) ──────────────────────────
 # One 10,000-row materialized read; the key `stored_query` in `thresholds.json` caps p99
 # at 3 ms. Nightly only.
