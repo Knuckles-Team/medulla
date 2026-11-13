@@ -6,7 +6,18 @@
 //! `toc.line_index_stride`-th line, so a span read seeks to the nearest
 //! checkpoint instead of scanning the whole source.
 
+use crate::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
+
+/// Every refusal code of the `ReadSpan` family
+/// (MEDULLA-DECISION-ENGINE-R153.4). Collected by
+/// `medulla_decision_types::decision::codes::module_tables`.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("SPAN_INVERTED"),
+    RefusalCode::new("SPAN_OUT_OF_BOUNDS"),
+    RefusalCode::new("SPAN_TOO_LARGE"),
+    RefusalCode::new("TOC_MISSING"),
+];
 
 /// Current wire schema version of [`SourceToc`].
 pub const SOURCE_TOC_SCHEMA_VERSION: u32 = 1;
@@ -141,6 +152,9 @@ pub const TOC_DIGEST_PROPERTY: &str = "toc_digest";
 pub const SOURCE_DIGEST_PROPERTY: &str = "source_digest";
 /// Node property holding the revision the stored table and text belong to.
 pub const SOURCE_REVISION_PROPERTY: &str = "source_revision";
+/// Node property holding the line count of the stored text, so a span past the
+/// end is refused before any blob is read (MEDULLA-DECISION-ENGINE-R153.4).
+pub const SOURCE_TOTAL_LINES_PROPERTY: &str = "source_total_lines";
 /// Record payload field that carries the text of a text source.
 pub const SOURCE_TEXT_FIELD: &str = "source_text";
 

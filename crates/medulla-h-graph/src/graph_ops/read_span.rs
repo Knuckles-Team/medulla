@@ -15,7 +15,7 @@ use medulla_server_api::knob_config::knobs;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::source_toc::{
     ReadSpanResult, SourceToc, SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY,
-    TOC_DIGEST_PROPERTY,
+    SOURCE_TOTAL_LINES_PROPERTY, TOC_DIGEST_PROPERTY,
 };
 
 /// Content-addressed read access to the stored source text and table blobs.
@@ -157,6 +157,7 @@ struct StoredText {
     toc_digest: String,
     source_digest: String,
     revision: u64,
+    total_lines: u64,
 }
 
 fn stored_text(core: &GraphCore, document_id: &str) -> Result<StoredText, SpanRefusal> {
@@ -177,12 +178,18 @@ fn stored_text(core: &GraphCore, document_id: &str) -> Result<StoredText, SpanRe
         properties
             .get(SOURCE_REVISION_PROPERTY)
             .and_then(|value| value.as_u64()),
+        properties
+            .get(SOURCE_TOTAL_LINES_PROPERTY)
+            .and_then(|value| value.as_u64()),
     ) {
-        (Some(toc_digest), Some(source_digest), Some(revision)) => Ok(StoredText {
-            toc_digest,
-            source_digest,
-            revision,
-        }),
+        (Some(toc_digest), Some(source_digest), Some(revision), Some(total_lines)) => {
+            Ok(StoredText {
+                toc_digest,
+                source_digest,
+                revision,
+                total_lines,
+            })
+        }
         _ => Err(SpanRefusal::TocMissing),
     }
 }
@@ -204,6 +211,9 @@ fn read_span(
     let stored = stored_text(core, &request.document_id)?;
     if stored.revision != request.revision {
         return Err(SpanRefusal::TocMissing);
+    }
+    if request.line_end > stored.total_lines {
+        return Err(SpanRefusal::OutOfBounds);
     }
     let unavailable = |error: String| SpanRefusal::Unavailable(error);
     let toc_bytes = blobs

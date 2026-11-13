@@ -180,14 +180,16 @@ pub struct StagedToc {
 impl StagedToc {
     /// The node properties that bind a document node to its stored table, text
     /// and revision.
-    pub fn node_properties(&self) -> [(&'static str, serde_json::Value); 3] {
+    pub fn node_properties(&self) -> [(&'static str, serde_json::Value); 4] {
         use medulla_types::source_toc::{
-            SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY, TOC_DIGEST_PROPERTY,
+            SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY, SOURCE_TOTAL_LINES_PROPERTY,
+            TOC_DIGEST_PROPERTY,
         };
         [
             (TOC_DIGEST_PROPERTY, self.toc_digest.clone().into()),
             (SOURCE_DIGEST_PROPERTY, self.source_digest.clone().into()),
             (SOURCE_REVISION_PROPERTY, self.toc.revision.into()),
+            (SOURCE_TOTAL_LINES_PROPERTY, self.toc.total_lines.into()),
         ]
     }
 }

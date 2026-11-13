@@ -215,3 +215,66 @@ fn read_span_respects_visibility() {
     let owned = result_of(&serve_read_span(2, &bob.project_core(&raw), &blobs, &ask));
     assert_eq!(owned.text, "preamble\n# Title\n");
 }
+
+/// Counts every blob read, so a refusal can prove it read nothing.
+struct CountingBlobs<'a> {
+    inner: &'a MemoryBlobs,
+    reads: std::sync::atomic::AtomicUsize,
+}
+
+impl SpanBlobs for CountingBlobs<'_> {
+    fn get(&self, digest: &str) -> Result<Option<Vec<u8>>, String> {
+        self.reads.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.inner.get(digest)
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R153.4
+#[test]
+fn read_span_refusals() {
+    let memory = MemoryBlobs::default();
+    let core = GraphCore::new();
+    ingest(&memory, &core, "doc-r", 4);
+    let blobs = CountingBlobs {
+        inner: &memory,
+        reads: std::sync::atomic::AtomicUsize::new(0),
+    };
+    let registered: Vec<&str> = medulla_types::source_toc::REFUSALS
+        .iter()
+        .map(|code| code.as_str())
+        .collect();
+
+    let cases = [
+        ("SPAN_INVERTED", span("doc-r", 4, 5, 4)),
+        ("SPAN_OUT_OF_BOUNDS", span("doc-r", 4, 2, 99)),
+        ("SPAN_OUT_OF_BOUNDS", span("doc-r", 4, 0, 3)),
+        ("SPAN_TOO_LARGE", span("doc-r", 4, 1, 5000)),
+        ("TOC_MISSING", span("doc-r", 3, 2, 4)),
+        ("DOCUMENT_NOT_FOUND", span("absent", 4, 1, 2)),
+    ];
+    for (code, request) in cases {
+        let response = serve_read_span(1, &core, &blobs, &request);
+        assert!(response.result.is_none(), "{code}: no result");
+        assert!(
+            response.refusal_text().unwrap().starts_with(code),
+            "{code}: got {:?}",
+            response.refusal_text()
+        );
+        if code != "DOCUMENT_NOT_FOUND" {
+            assert!(
+                registered.contains(&code),
+                "{code} is in the REFUSALS table"
+            );
+        }
+        assert_eq!(
+            blobs.reads.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "{code}: a refusal reads no blob byte"
+        );
+    }
+
+    // A valid range reads blobs, so the counter is live.
+    let ok = serve_read_span(2, &core, &blobs, &span("doc-r", 4, 2, 4));
+    assert!(ok.result.is_some());
+    assert!(blobs.reads.load(std::sync::atomic::Ordering::SeqCst) > 0);
+}
