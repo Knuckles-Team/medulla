@@ -581,6 +581,112 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MEDULLA-FEDERATED-QUERY-R721.4 — a fresh engine answers graph, vector and SQL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The ids of a served `Method::Sql` answer's first column.
+fn sql_first_column(response: &Response) -> Vec<String> {
+    assert!(response.error.is_none(), "sql error: {:?}", response.error);
+    let raw = match response.result.as_ref() {
+        Some(ResultPayload::Raw(bytes)) => bytes,
+        other => panic!("expected a Raw sql result, got {other:?}"),
+    };
+    let result: medulla_protocol_types::protocol::QueryResult =
+        rmp_serde::from_slice(raw).expect("a QueryResult");
+    result
+        .rows
+        .iter()
+        .map(|row| {
+            let cells: Vec<serde_json::Value> = rmp_serde::from_slice(row).expect("a sql row");
+            cells[0].as_str().expect("a text id").to_string()
+        })
+        .collect()
+}
+
+/// The hot path of the modality rollup: a fresh engine with its default configuration
+/// takes ordinary ingest writes (nodes, an edge, embeddings) and then answers a graph
+/// traversal, a vector rank and a SQL read over them, with no tenant setup, extension
+/// load or index build command in between: ingest builds every index the reads use.
+// spec: MEDULLA-FEDERATED-QUERY-R721.4
+#[tokio::test]
+async fn fresh_engine_answers_cross_modal_query() {
+    let state = state().await;
+    for (id, (node, kind)) in [("doc_a", "Doc"), ("doc_b", "Doc"), ("topic_x", "Topic")]
+        .into_iter()
+        .enumerate()
+    {
+        ok(
+            &state,
+            1 + id as u64,
+            Method::AddNode {
+                node_id: node.into(),
+                properties_msgpack: pack(json!({ "type": kind, "title": node })),
+            },
+        )
+        .await;
+    }
+    ok(
+        &state,
+        4,
+        Method::AddEdge {
+            source_id: "doc_a".into(),
+            target_id: "topic_x".into(),
+            properties_msgpack: pack(json!({ "relationship": "ABOUT" })),
+        },
+    )
+    .await;
+    for (id, (node, embedding)) in [("doc_a", vec![1.0, 0.0]), ("doc_b", vec![0.0, 1.0])]
+        .into_iter()
+        .enumerate()
+    {
+        ok(
+            &state,
+            5 + id as u64,
+            Method::AddEmbedding {
+                node_id: node.into(),
+                embedding,
+            },
+        )
+        .await;
+    }
+
+    // Graph: the ingested edge is traversable.
+    assert!(
+        off_txn_text(
+            &state,
+            10,
+            "MATCH (:Doc) |> TRAVERSE -[:ABOUT]->{1,1} |> LIMIT 5"
+        )
+        .await
+        .contains(&"topic_x".to_string()),
+        "the ingested edge must be traversable with no index build"
+    );
+    // Vector: the ingested embeddings rank with no index build command.
+    assert_eq!(
+        off_txn_text(&state, 11, "MATCH (:Doc) |> RANK BY ~[1.0,0.0] |> LIMIT 1").await,
+        vec!["doc_a".to_string()],
+        "the nearest ingested embedding must rank first"
+    );
+    // SQL: the same nodes read as rows of the `nodes` table.
+    let sql = Box::pin(dispatch(
+        &state,
+        req(
+            12,
+            Method::Sql {
+                query: "SELECT id FROM nodes WHERE type = 'Doc' ORDER BY id".into(),
+                params_msgpack: Vec::new(),
+            },
+        ),
+    ))
+    .await;
+    assert_eq!(
+        sql_first_column(&sql),
+        vec!["doc_a".to_string(), "doc_b".to_string()],
+        "the ingested nodes must be SQL rows with no extension load"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MEDULLA-392 (test 9) — concurrent SERIALIZABLE across modalities: phantom → conflict
 // ─────────────────────────────────────────────────────────────────────────────
 
