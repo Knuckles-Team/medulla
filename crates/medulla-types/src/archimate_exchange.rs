@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::refusal_code::RefusalCode;
+
 /// Current record version of the exchange types.
 pub const ARCHIMATE_EXCHANGE_SCHEMA_VERSION: u16 = 1;
 
@@ -183,6 +185,17 @@ pub struct ArchitectureModelImported {
     pub edges: u64,
 }
 
+/// The refusal codes of the architecture exchange (MEDULLA-CQ-ORCH-R705.8). The decision plane
+/// collects this table with every other family table and refuses a code declared twice.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("ARCHIMATE_DOC_MALFORMED"),
+    RefusalCode::new("ARCHIMATE_DOC_ENTITY_REFUSED"),
+    RefusalCode::new("ARCHIMATE_DOC_TOO_LARGE"),
+    RefusalCode::new("ARCHIMATE_NAMESPACE_UNKNOWN"),
+    RefusalCode::new("ARCHIMATE_RELATIONSHIP_INVALID"),
+    RefusalCode::new("ARCHIMATE_VERSION_MISMATCH"),
+];
+
 /// Why an exchange document was not read or written.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case", deny_unknown_fields)]
@@ -230,6 +243,40 @@ impl std::error::Error for ArchimateExchangeError {}
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // spec: MEDULLA-CQ-ORCH-R705.8
+    #[test]
+    fn codes_are_unique_and_stable() {
+        let mut codes: Vec<&str> = REFUSALS.iter().map(|c| c.as_str()).collect();
+        let declared = codes.len();
+        codes.sort_unstable();
+        codes.dedup();
+        assert_eq!(codes.len(), declared, "a refusal code is declared twice");
+        for code in &codes {
+            assert!(code
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'));
+        }
+        let errors = [
+            ArchimateExchangeError::Malformed { line: 1, column: 1 },
+            ArchimateExchangeError::EntityRefused,
+            ArchimateExchangeError::TooLarge { bytes: 1 },
+            ArchimateExchangeError::NamespaceUnknown {
+                namespace: String::new(),
+            },
+            ArchimateExchangeError::RelationshipInvalid {
+                identifier: String::new(),
+            },
+        ];
+        for error in &errors {
+            assert!(
+                codes.contains(&error.wire_code()),
+                "{} is not in REFUSALS",
+                error.wire_code()
+            );
+        }
+        assert!(codes.contains(&"ARCHIMATE_VERSION_MISMATCH"));
+    }
 
     // spec: MEDULLA-CQ-ORCH-R705.2
     #[test]
