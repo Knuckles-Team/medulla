@@ -200,6 +200,12 @@ pub enum StatementKind {
     /// `DROP SEQUENCE [IF EXISTS] name`.
     DropSequence { name: String, if_exists: bool },
 
+    // ── row-event triggers (MEDULLA-ENGINE-PARITY-R012.2) ─────────────────────
+    /// `CREATE TRIGGER name {BEFORE|AFTER} events ON table EXECUTE MACHINE id`.
+    CreateTrigger(super::trigger_ddl::CreateTriggerPlan),
+    /// `DROP TRIGGER name ON table`.
+    DropTrigger { name: String, table: String },
+
     // ── Postgres-family extension parity (wave 19) ─────────────────────────────
     /// `CREATE INDEX … USING hnsw|ivfflat (col opclass)` (CONCEPT:MEDULLA-KG.query.real-ann-top-k) — register a
     /// pgvector ANN index so a `ORDER BY col <-> $1 LIMIT k` query pushes down to medulla-ann.
@@ -300,6 +306,8 @@ impl StatementKind {
             Self::DropExtension { .. } => "drop_extension",
             Self::CreateSequence { .. } => "create_sequence",
             Self::DropSequence { .. } => "drop_sequence",
+            Self::CreateTrigger(_) => "create_trigger",
+            Self::DropTrigger { .. } => "drop_trigger",
             Self::CreateAnnIndex(_) => "create_ann_index",
             Self::CreateIndex(_) => "create_index",
             Self::DropIndex { .. } => "drop_index",
@@ -752,6 +760,7 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     // dispatcher's measured complexity.
     if let Some(result) = classify_pgq_precheck(sql)
         .or_else(|| classify_sequence_precheck(sql))
+        .or_else(|| classify_trigger_precheck(sql))
         .or_else(|| {
             parse_drop_extension(sql)
                 .map(|(name, if_exists)| Ok(StatementKind::DropExtension { name, if_exists }))
@@ -803,6 +812,15 @@ fn classify_sequence_precheck(sql: &str) -> Option<Result<StatementKind, String>
     super::sequence_ddl::parse_drop_sequence(sql).map(|parsed| {
         parsed.map(|(name, if_exists)| StatementKind::DropSequence { name, if_exists })
     })
+}
+
+/// `CREATE TRIGGER … EXECUTE MACHINE` and `DROP TRIGGER` (MEDULLA-ENGINE-PARITY-R012.2).
+fn classify_trigger_precheck(sql: &str) -> Option<Result<StatementKind, String>> {
+    if let Some(parsed) = super::trigger_ddl::parse_create_trigger(sql) {
+        return Some(parsed.map(StatementKind::CreateTrigger));
+    }
+    super::trigger_ddl::parse_drop_trigger(sql)
+        .map(|parsed| parsed.map(|(name, table)| StatementKind::DropTrigger { name, table }))
 }
 
 fn classify_pgq_precheck(sql: &str) -> Option<Result<StatementKind, String>> {

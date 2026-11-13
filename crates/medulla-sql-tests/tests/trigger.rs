@@ -506,3 +506,95 @@ fn before_trigger_cannot_write_and_a_refusing_nested_trigger_aborts_everything()
     assert!(error.starts_with("TRIGGER_MACHINE_INVALID: "), "{error}");
     let _ = std::fs::remove_file(&path);
 }
+
+/// Serves one fixed machine under one id, as the engine's statechart store does.
+struct FixedMachine {
+    id: String,
+    machine: StatechartDef,
+}
+
+impl medulla_table_store::tables::TriggerMachineSource for FixedMachine {
+    fn machine(&self, _persist_dir: &Path, machine_id: &str) -> Result<StatechartDef, String> {
+        if machine_id == self.id {
+            Ok(self.machine.clone())
+        } else {
+            Err("no stored definition".to_string())
+        }
+    }
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R012.2
+#[test]
+fn create_trigger_statement_runs_the_named_machine() {
+    use medulla_sql_lang::sql::classify::{classify, StatementKind};
+    use medulla_table_store::tables::{resolve_trigger_spec, TableTxn, TxnOp};
+
+    let machine = chart(
+        "before_insert",
+        None,
+        vec![assign("new.status", json!("open"))],
+    );
+    let id = machine.def_id();
+    medulla_table_store::tables::install_trigger_machine_source(std::sync::Arc::new(
+        FixedMachine {
+            id: id.clone(),
+            machine,
+        },
+    ));
+    let path = fresh_path("ddl");
+    let store = open(&path);
+    tickets(&store);
+
+    let create = classify(&format!(
+        "CREATE TRIGGER stamp BEFORE INSERT ON tickets EXECUTE MACHINE {id}"
+    ))
+    .unwrap();
+    let StatementKind::CreateTrigger(plan) = create else {
+        panic!("expected CreateTrigger");
+    };
+    let spec = resolve_trigger_spec(
+        &path,
+        &plan.table,
+        &plan.name,
+        plan.timing,
+        plan.events,
+        &plan.machine_id,
+    )
+    .unwrap();
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::CreateTrigger { spec });
+    store.commit_txn(&txn).unwrap();
+    store
+        .insert_rows("tickets", &cols(), &[vec![json!(1), json!("closed")]])
+        .unwrap();
+    assert_eq!(status_of(&store, 1), Cell::Text("open".to_string()));
+
+    // An id the statechart store does not hold refuses before anything is written.
+    let unknown = resolve_trigger_spec(
+        &path,
+        "tickets",
+        "other",
+        TriggerTiming::Before,
+        vec![TriggerEvent::Insert],
+        "no-such-machine",
+    )
+    .unwrap_err();
+    assert!(
+        unknown.starts_with("TRIGGER_MACHINE_INVALID: "),
+        "{unknown}"
+    );
+
+    let StatementKind::DropTrigger { name, table } =
+        classify("DROP TRIGGER stamp ON tickets").unwrap()
+    else {
+        panic!("expected DropTrigger");
+    };
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::DropTrigger { table, name });
+    store.commit_txn(&txn).unwrap();
+    store
+        .insert_rows("tickets", &cols(), &[vec![json!(2), json!("closed")]])
+        .unwrap();
+    assert_eq!(status_of(&store, 2), Cell::Text("closed".to_string()));
+    let _ = std::fs::remove_file(&path);
+}

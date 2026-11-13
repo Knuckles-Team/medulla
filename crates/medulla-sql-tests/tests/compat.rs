@@ -45,8 +45,8 @@ fn matrix_loads_and_is_closed() {
     );
 
     // Closed: an unlisted form is Refused, with no entry to point at.
-    assert_eq!(matrix.form_state("create_trigger"), None);
-    assert_eq!(matrix.resolve_form("create_trigger"), SqlFormState::Refused);
+    assert_eq!(matrix.form_state("create_policy"), None);
+    assert_eq!(matrix.resolve_form("create_policy"), SqlFormState::Refused);
     assert_eq!(
         PgCompatibilityMatrix::fail_closed().resolve_form("read"),
         SqlFormState::Refused
@@ -98,6 +98,11 @@ const STATEMENT_SAMPLES: &[(&str, &str)] = &[
     ("copy_out", "COPY prices TO STDOUT"),
     ("create_extension", "CREATE EXTENSION vector"),
     ("drop_extension", "DROP EXTENSION vector"),
+    (
+        "create_trigger",
+        "CREATE TRIGGER audit AFTER INSERT ON t EXECUTE MACHINE m1",
+    ),
+    ("drop_trigger", "DROP TRIGGER audit ON t"),
     (
         "create_ann_index",
         "CREATE INDEX ON docs USING hnsw (emb vector_l2_ops)",
@@ -206,11 +211,17 @@ fn every_supported_entry_has_a_test() {
 // spec: MEDULLA-ENGINE-PARITY-R009.2
 #[test]
 fn a_form_outside_the_matrix_is_refused_with_feature_not_supported() {
+    // The PostgreSQL `EXECUTE FUNCTION` trigger is not this engine's trigger (a trigger
+    // runs a stored machine): the form is served, this shape is refused.
+    let function_trigger =
+        classify("CREATE TRIGGER t BEFORE INSERT ON a FOR EACH ROW EXECUTE FUNCTION f()")
+            .unwrap_err();
+    assert!(
+        function_trigger
+            .starts_with("FEATURE_NOT_SUPPORTED: create_trigger: unsupported statement shape"),
+        "{function_trigger}"
+    );
     for (sql, form) in [
-        (
-            "CREATE TRIGGER t BEFORE INSERT ON a FOR EACH ROW EXECUTE FUNCTION f()",
-            "create_trigger",
-        ),
         ("CREATE POLICY p ON a USING (true)", "create_policy"),
         ("DROP POLICY p ON a", "drop_policy"),
     ] {

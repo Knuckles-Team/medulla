@@ -79,7 +79,10 @@ pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
 pub use occ::{retry_on_conflict, OccLog, TXN_CONFLICT, TXN_RETRY_EXHAUSTED, TXN_SNAPSHOT_EXPIRED};
-pub use trigger::install_trigger_depth_max;
+pub use trigger::{
+    install_trigger_depth_max, install_trigger_machine_source, resolve_trigger_spec,
+    TriggerMachineSource,
+};
 
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
@@ -373,6 +376,16 @@ pub enum TxnOp {
     DropSequence {
         name: String,
         if_exists: bool,
+    },
+    /// `CREATE TRIGGER` (MEDULLA-ENGINE-PARITY-R012.2): the spec carries the
+    /// resolved machine.
+    CreateTrigger {
+        spec: medulla_tables::trigger::TriggerSpec,
+    },
+    /// `DROP TRIGGER` (MEDULLA-ENGINE-PARITY-R012.2).
+    DropTrigger {
+        table: String,
+        name: String,
     },
     CreateFunction {
         function: StoredFunction,
@@ -2735,6 +2748,8 @@ fn ddl_tables(op: &TxnOp) -> Vec<&str> {
         | TxnOp::AddConstraint { table, .. } => vec![table.as_str()],
         TxnOp::RenameTable { table, new_name } => vec![table.as_str(), new_name.as_str()],
         TxnOp::CreateView { name, .. } | TxnOp::DropView { name, .. } => vec![name.as_str()],
+        TxnOp::CreateTrigger { spec } => vec![spec.table.as_str()],
+        TxnOp::DropTrigger { table, .. } => vec![table.as_str()],
         _ => Vec::new(),
     }
 }
@@ -2806,6 +2821,10 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
         }
         TxnOp::DropSequence { name, if_exists } => {
             apply_txn_op_drop_sequence(wtx, tenant_scope, name, *if_exists)
+        }
+        TxnOp::CreateTrigger { spec } => trigger::create_trigger_in(wtx, spec).map(|()| 0),
+        TxnOp::DropTrigger { table, name } => {
+            trigger::drop_trigger_in(wtx, table, name).map(|()| 0)
         }
         TxnOp::CreateFunction {
             function,

@@ -198,6 +198,7 @@ fn sql_catalog_drop_kind(kind: &medulla_sql_lang::sql::classify::StatementKind) 
             | K::DropView(_)
             | K::DropExtension { .. }
             | K::DropSequence { .. }
+            | K::DropTrigger { .. }
             | K::DropFunction(_)
             | K::DropIndex { .. }
     )
@@ -211,6 +212,7 @@ fn sql_catalog_create_kind(kind: &medulla_sql_lang::sql::classify::StatementKind
         K::CreateView(_)
             | K::CreateExtension { .. }
             | K::CreateSequence { .. }
+            | K::CreateTrigger(_)
             | K::CreateFunction(_)
             | K::CreateAnnIndex(_)
             | K::CreateIndex(_)
@@ -388,6 +390,17 @@ async fn exec_sql_catalog_drop(
             )
             .await
         }
+        K::DropTrigger { name, table } => {
+            commit_catalog_op(
+                req_id,
+                scope,
+                sql_method,
+                store,
+                medulla_table_store::tables::TxnOp::DropTrigger { table, name },
+                "DROP TRIGGER",
+            )
+            .await
+        }
         K::DropSequence { name, if_exists } => {
             commit_catalog_op(
                 req_id,
@@ -482,6 +495,28 @@ async fn exec_sql_catalog_create(
                     if_not_exists,
                 },
                 "CREATE EXTENSION",
+            )
+            .await
+        }
+        K::CreateTrigger(plan) => {
+            let spec = match medulla_table_store::tables::resolve_trigger_spec(
+                scope.persist_dir,
+                &plan.table,
+                &plan.name,
+                plan.timing,
+                plan.events,
+                &plan.machine_id,
+            ) {
+                Ok(spec) => spec,
+                Err(error) => return Response::err(req_id, error),
+            };
+            commit_catalog_op(
+                req_id,
+                scope,
+                sql_method,
+                store,
+                medulla_table_store::tables::TxnOp::CreateTrigger { spec },
+                "CREATE TRIGGER",
             )
             .await
         }
@@ -607,6 +642,8 @@ fn classify_sql_catalog_terminal(
         | K::DropExtension { .. }
         | K::CreateSequence { .. }
         | K::DropSequence { .. }
+        | K::CreateTrigger(_)
+        | K::DropTrigger { .. }
         | K::CreateAnnIndex(_)
         | K::CreateIndex(_)
         | K::DropIndex { .. }

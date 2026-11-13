@@ -109,6 +109,8 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("drop_extension", SqlFormState::Partial),
     ("create_sequence", SqlFormState::Supported),
     ("drop_sequence", SqlFormState::Supported),
+    ("create_trigger", SqlFormState::Supported),
+    ("drop_trigger", SqlFormState::Supported),
     ("create_ann_index", SqlFormState::Supported),
     ("create_index", SqlFormState::Supported),
     ("drop_index", SqlFormState::Supported),
@@ -297,8 +299,8 @@ mod tests {
     fn absent_form_resolves_to_refused() {
         let m = PgCompatibilityMatrix::with_served_forms();
         assert_eq!(m.form_state("read"), Some(SqlFormState::Supported));
-        assert_eq!(m.form_state("create_trigger"), None);
-        assert_eq!(m.resolve_form("create_trigger"), SqlFormState::Refused);
+        assert_eq!(m.form_state("create_policy"), None);
+        assert_eq!(m.resolve_form("create_policy"), SqlFormState::Refused);
         assert_eq!(
             PgCompatibilityMatrix::fail_closed().resolve_form("read"),
             SqlFormState::Refused

@@ -549,38 +549,100 @@ fn put_triggers_in(wtx: &SqlWrite<'_>, schema: &TableSchema) -> Result<(), Strin
     Ok(())
 }
 
+/// Attach `spec` to its table inside the write transaction `wtx`.
+pub(super) fn create_trigger_in(wtx: &SqlWrite<'_>, spec: &TriggerSpec) -> Result<(), String> {
+    spec.validate()?;
+    let mut schema = get_schema_in(wtx, &spec.table)?
+        .ok_or_else(|| format!("table `{}` does not exist", spec.table))?;
+    if schema.triggers().iter().any(|t| t.name == spec.name) {
+        return Err(format!(
+            "{TRIGGER_EXISTS}: trigger `{}` already exists on `{}`",
+            spec.name, spec.table
+        ));
+    }
+    schema.triggers_mut().push(spec.clone());
+    put_triggers_in(wtx, &schema)
+}
+
+/// Remove trigger `name` from `table` inside the write transaction `wtx`.
+pub(super) fn drop_trigger_in(wtx: &SqlWrite<'_>, table: &str, name: &str) -> Result<(), String> {
+    let mut schema =
+        get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
+    let before = schema.triggers().len();
+    schema.triggers_mut().retain(|t| t.name != name);
+    if schema.triggers().len() == before {
+        return Err(format!(
+            "{TRIGGER_UNKNOWN}: trigger `{name}` does not exist on `{table}`"
+        ));
+    }
+    put_triggers_in(wtx, &schema)
+}
+
 impl TableStore {
     /// Attach a trigger to its table (stored in the table's schema record).
     pub fn create_trigger(&self, spec: &TriggerSpec) -> Result<(), String> {
         spec.validate()?;
         self.authority
             .maintain("create-trigger", &spec.table, |wtx| {
-                let mut schema = get_schema_in(wtx, &spec.table)?
-                    .ok_or_else(|| format!("table `{}` does not exist", spec.table))?;
-                if schema.triggers().iter().any(|t| t.name == spec.name) {
-                    return Err(format!(
-                        "{TRIGGER_EXISTS}: trigger `{}` already exists on `{}`",
-                        spec.name, spec.table
-                    ));
-                }
-                schema.triggers_mut().push(spec.clone());
-                put_triggers_in(wtx, &schema)
+                create_trigger_in(wtx, spec)
             })
     }
 
     /// Remove a trigger from its table.
     pub fn drop_trigger(&self, table: &str, name: &str) -> Result<(), String> {
         self.authority.maintain("drop-trigger", table, |wtx| {
-            let mut schema = get_schema_in(wtx, table)?
-                .ok_or_else(|| format!("table `{table}` does not exist"))?;
-            let before = schema.triggers().len();
-            schema.triggers_mut().retain(|t| t.name != name);
-            if schema.triggers().len() == before {
-                return Err(format!(
-                    "{TRIGGER_UNKNOWN}: trigger `{name}` does not exist on `{table}`"
-                ));
-            }
-            put_triggers_in(wtx, &schema)
+            drop_trigger_in(wtx, table, name)
         })
     }
+}
+
+/// Where a `CREATE TRIGGER` statement finds the stored statechart it names.
+/// The table store cannot see the statechart store, so the composition root
+/// installs one source (MEDULLA-ENGINE-PARITY-R012.2).
+pub trait TriggerMachineSource: Send + Sync {
+    /// The stored definition `machine_id` names in the engine rooted at
+    /// `persist_dir`, or the reason it cannot be read.
+    fn machine(
+        &self,
+        persist_dir: &std::path::Path,
+        machine_id: &str,
+    ) -> Result<medulla_statechart::StatechartDef, String>;
+}
+
+static MACHINE_SOURCE: std::sync::OnceLock<std::sync::Arc<dyn TriggerMachineSource>> =
+    std::sync::OnceLock::new();
+
+/// Install the machine source. Set once by the composition root; a second
+/// install is ignored.
+pub fn install_trigger_machine_source(source: std::sync::Arc<dyn TriggerMachineSource>) {
+    let _ = MACHINE_SOURCE.set(source);
+}
+
+/// Build the `TriggerSpec` a `CREATE TRIGGER … EXECUTE MACHINE` statement
+/// names, reading the machine through the installed source. An unknown id, or
+/// an engine with no statechart store, refuses `TRIGGER_MACHINE_INVALID`.
+pub fn resolve_trigger_spec(
+    persist_dir: &std::path::Path,
+    table: &str,
+    name: &str,
+    timing: TriggerTiming,
+    events: Vec<TriggerEvent>,
+    machine_id: &str,
+) -> Result<TriggerSpec, String> {
+    let source = MACHINE_SOURCE.get().ok_or_else(|| {
+        format!("{TRIGGER_MACHINE_INVALID}: no statechart store serves trigger machines")
+    })?;
+    let machine = source
+        .machine(persist_dir, machine_id)
+        .map_err(|reason| format!("{TRIGGER_MACHINE_INVALID}: machine `{machine_id}`: {reason}"))?;
+    let spec = TriggerSpec {
+        table: table.to_string(),
+        name: name.to_string(),
+        timing,
+        events,
+        machine_id: machine_id.to_string(),
+        machine,
+    };
+    spec.validate()?;
+    Ok(spec)
 }

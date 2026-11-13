@@ -594,6 +594,8 @@ fn authorize_table_txn_op(
         | TxnOp::DropExtension { .. }
         | TxnOp::CreateSequence { .. }
         | TxnOp::DropSequence { .. }
+        | TxnOp::CreateTrigger { .. }
+        | TxnOp::DropTrigger { .. }
         | TxnOp::CreateFunction { .. }
         | TxnOp::DropFunction { .. } => authority
             .require_admin(
@@ -2315,6 +2317,11 @@ impl WireSession {
             StatementKind::DropSequence { name, if_exists } => {
                 self.run_drop_sequence(graph, sql, name, if_exists).await
             }
+            // MEDULLA-ENGINE-PARITY-R012.2 — CREATE/DROP TRIGGER over a stored statechart.
+            StatementKind::CreateTrigger(plan) => self.run_create_trigger(graph, sql, plan).await,
+            StatementKind::DropTrigger { name, table } => {
+                self.run_drop_trigger(graph, sql, table, name).await
+            }
             // CONCEPT:MEDULLA-KG.query.create-drop-function — CREATE/DROP FUNCTION over the durable function catalog.
             StatementKind::CreateFunction(plan) => self.run_create_function(graph, sql, plan).await,
             StatementKind::DropFunction(plan) => self.run_drop_function(graph, sql, plan).await,
@@ -3283,6 +3290,45 @@ impl WireSession {
         txn.push(TxnOp::DropSequence { name, if_exists });
         self.commit_table_txn(graph, sql, txn).await?;
         Ok(WireOutcome::command("DROP SEQUENCE"))
+    }
+
+    /// MEDULLA-ENGINE-PARITY-R012.2 — `CREATE TRIGGER name … EXECUTE MACHINE id`.
+    /// The machine is read from the statechart store; an unknown id refuses
+    /// `TRIGGER_MACHINE_INVALID` before anything is written.
+    async fn run_create_trigger(
+        &self,
+        graph: &str,
+        sql: &str,
+        plan: medulla_sql_lang::sql::trigger_ddl::CreateTriggerPlan,
+    ) -> WireResult<WireOutcome> {
+        let (_, persist_dir) = self.catalog_authority().await?;
+        let spec = medulla_table_store::tables::resolve_trigger_spec(
+            &persist_dir,
+            &plan.table,
+            &plan.name,
+            plan.timing,
+            plan.events,
+            &plan.machine_id,
+        )
+        .map_err(user_err)?;
+        let mut txn = TableTxn::new();
+        txn.push(TxnOp::CreateTrigger { spec });
+        self.commit_table_txn(graph, sql, txn).await?;
+        Ok(WireOutcome::command("CREATE TRIGGER"))
+    }
+
+    /// MEDULLA-ENGINE-PARITY-R012.2 — `DROP TRIGGER name ON table`.
+    async fn run_drop_trigger(
+        &self,
+        graph: &str,
+        sql: &str,
+        table: String,
+        name: String,
+    ) -> WireResult<WireOutcome> {
+        let mut txn = TableTxn::new();
+        txn.push(TxnOp::DropTrigger { table, name });
+        self.commit_table_txn(graph, sql, txn).await?;
+        Ok(WireOutcome::command("DROP TRIGGER"))
     }
 
     /// CONCEPT:MEDULLA-KG.query.create-drop-extension-over — `DROP EXTENSION [IF EXISTS] name`.

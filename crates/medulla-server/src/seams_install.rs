@@ -70,7 +70,34 @@ pub fn install_seams(state: &ServerState) {
         std::sync::Arc::new(medulla_wire_core::wire::WireSeam),
     );
 
+    // CREATE TRIGGER names a stored statechart; the table store reads it through this source
+    // (MEDULLA-ENGINE-PARITY-R012.2).
+    #[cfg(all(feature = "query", feature = "statechart"))]
+    medulla_table_store::tables::install_trigger_machine_source(std::sync::Arc::new(
+        StatechartMachines,
+    ));
+
     // L6 persistence, raft, server-api.
+}
+
+/// Reads trigger machines from the engine's statechart store.
+#[cfg(all(feature = "query", feature = "statechart"))]
+struct StatechartMachines;
+
+#[cfg(all(feature = "query", feature = "statechart"))]
+impl medulla_table_store::tables::TriggerMachineSource for StatechartMachines {
+    fn machine(
+        &self,
+        persist_dir: &std::path::Path,
+        machine_id: &str,
+    ) -> Result<medulla_statechart::StatechartDef, String> {
+        let persist_dir = persist_dir
+            .to_str()
+            .ok_or_else(|| "the persistence directory is not valid UTF-8".to_string())?;
+        medulla_h_jobs::statechart::statechart_store(Some(persist_dir))?
+            .get_def(machine_id)
+            .map_err(|error| error.to_string())
+    }
 }
 
 /// Graph handler behaviour installed on the seam registry's `graph` slot.

@@ -54,6 +54,7 @@ medulla-raft-xshard = { path = "../medulla-raft-xshard" }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-statechart = { path = "../medulla-statechart" }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
 medulla-stream = { path = "../medulla-stream", optional = true }
