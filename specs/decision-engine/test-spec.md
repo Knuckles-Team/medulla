@@ -1292,7 +1292,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R117.1.1`: L2 `tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces, with the PromQL surface compiling to the shared `Kernel` series program and holding no evaluator of its own.
 - `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.1`: planned L1 `crates/medulla-decision-types/src/decision/reputation.rs::tests::source_reliability_round_trips`.
-- `MEDULLA-DECISION-ENGINE-R118.1.2.2`: planned L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.2`: L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.3`: planned L1 `crates/medulla-h-query/src/query/explain_wire_b.rs::tests::caller_reliability_cannot_replace_the_governed_estimate`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/reputation_tests.rs::three_readers_agree_on_sparse_abstention_and_dense_estimate`.
 - `MEDULLA-DECISION-ENGINE-R119`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::walk_forward_seals_trial_count_pbo_and_dm_figures` compares the sealed trial count, PBO and Diebold-Mariano figures to independently recomputed values and asserts the policy-dependent refusal.

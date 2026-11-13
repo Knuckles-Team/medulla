@@ -362,9 +362,15 @@ impl OpKind {
 
 /// `ATTRIBUTE`'s secondary channel: the sampled-Shapley CI half-width.
 pub const ATTRIBUTION_EXTRA_CHANNELS: &[&str] = &["attribution_ci"];
-/// `SOURCE RELIABILITY`'s secondary channels: the learned reliability's credible interval.
+/// `SOURCE RELIABILITY`'s secondary channels: the learned reliability's credible interval,
+/// the reliability itself (absent when the source abstained) and the abstention flag (1 or 0).
 #[cfg(feature = "epistemic")]
-pub const RELIABILITY_EXTRA_CHANNELS: &[&str] = &["reliability_lo", "reliability_hi"];
+pub const RELIABILITY_EXTRA_CHANNELS: &[&str] = &[
+    "reliability_lo",
+    "reliability_hi",
+    "reliability",
+    "reliability_abstained",
+];
 
 /// How one stage bears on a `WITH PROOF` row proof (EH-448).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

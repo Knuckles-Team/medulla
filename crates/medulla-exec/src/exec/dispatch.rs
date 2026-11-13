@@ -213,7 +213,8 @@ pub fn apply_with_channels(
     Ok((apply(op, input, ctx)?, Vec::new()))
 }
 
-/// `SOURCE RELIABILITY` with its learned interval on every row (none when not learned).
+/// `SOURCE RELIABILITY` with its value, learned interval, abstention flag and source on
+/// every row (the value and interval are absent where the source abstained or was not learned).
 #[cfg(feature = "epistemic")]
 fn reliability_with_channels(
     ctx: &PlanCtx,
@@ -221,17 +222,39 @@ fn reliability_with_channels(
     source_id: &str,
 ) -> Result<(RowSet, StageChannels), String> {
     let reliability = super::reliability::reliability_of(ctx, source_id)?;
-    let rows = super::reliability::reweighted(&input, &reliability);
-    let Some((lower, upper)) = reliability.interval else {
-        return Ok((rows, Vec::new()));
-    };
-    let [lo, hi] = [lower as f32, upper as f32];
+    let texts = rows_text(&input, reliability.source.label());
+    let rows = super::reliability::reweighted(&input, &reliability).with_texts(texts);
     let per_row = |value: f32| -> Vec<(String, f32)> {
         rows.ids().into_iter().map(|id| (id, value)).collect()
     };
     let names = medulla_types::wire::RELIABILITY_EXTRA_CHANNELS;
-    let channels = vec![(names[0], per_row(lo)), (names[1], per_row(hi))];
+    let mut channels = Vec::new();
+    if let Some((lower, upper)) = reliability.interval {
+        channels.push((names[0], per_row(lower as f32)));
+        channels.push((names[1], per_row(upper as f32)));
+    }
+    if let Some(mean) = reliability.mean {
+        channels.push((names[2], per_row(mean as f32)));
+    }
+    let abstained = f32::from(reliability.mean.is_none());
+    channels.push((names[3], per_row(abstained)));
     Ok((rows, channels))
+}
+
+/// The `reliability_source` text of every row of `input`.
+#[cfg(feature = "epistemic")]
+fn rows_text(input: &RowSet, source: &str) -> crate::rowset::TextChannels {
+    input
+        .ids()
+        .into_iter()
+        .map(|id| {
+            let column = std::collections::BTreeMap::from([(
+                "reliability_source".to_string(),
+                source.to_string(),
+            )]);
+            (id, column)
+        })
+        .collect()
 }
 
 /// Graph scans share one physical tier; the dispatcher has already selected it.

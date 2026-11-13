@@ -314,7 +314,10 @@ RDF strings; only explicitly typed RDF cells carry a different datatype.
 source's propagated belief confidence; when the served query has the caller's decision log
 bound and that log holds independently evaluated outcomes of `s1`, the reliability is the
 prior updated with those outcomes (the `reputation` view, EH-525), and the channels
-`reliability_lo` / `reliability_hi` carry its credible interval.
+`reliability_lo` / `reliability_hi` carry its credible interval. A source whose visible outcomes
+are fewer than `reputation.min_support` abstains: its rows are unscored, `reliability` is null
+and `reliability_abstained` is 1. Every row carries `reliability_source` (`materialized`,
+`prior` or `abstained`).
 
 ```uql
 MATCH (:Claim) |> EVIDENCE FOR 'c1' |> BELIEF AS OF @1700000000 |> LIMIT 10
