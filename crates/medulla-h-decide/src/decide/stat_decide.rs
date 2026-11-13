@@ -157,6 +157,10 @@ async fn serve(
                 super::stat_concentration::concentration_view(state, verified.agent_id(), &request)
                     .await
                     .map(Some)
+            } else if request.question.kind == QuestionKind::HeldItemAdmission {
+                super::family::held_item_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
                 super::family::disclosure_view(state, verified.agent_id(), &request)
                     .await

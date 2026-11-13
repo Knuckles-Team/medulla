@@ -1137,6 +1137,9 @@ mod scorer_tests;
 #[cfg(feature = "query")]
 mod paper_admission_tests;
 
+// MEDULLA-DECISION-ENGINE-R038.3: the served held-item admission gate.
+mod held_item_admission_tests;
+
 // MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.
 mod importance_penalty_tests;
 

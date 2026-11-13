@@ -278,6 +278,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::PaperAdmission,
         super::paper_admission::REFUSALS,
     ),
+    (QuestionKind::HeldItemAdmission, super::held_item::REFUSALS),
     (
         QuestionKind::InstructionDisclosure,
         super::instruction_disclosure::REFUSALS,

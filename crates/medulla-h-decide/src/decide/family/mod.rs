@@ -26,6 +26,7 @@ mod field_shielding;
 mod graph_intake;
 mod harness_config;
 mod harness_contrast;
+mod held_item_admission;
 mod ingestion_lane;
 mod instruction_disclosure;
 mod item_recommendation;
@@ -58,6 +59,7 @@ mod tool_subset;
 mod topology;
 mod usage_guidance;
 
+pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
@@ -254,6 +256,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static A2AROUTEFAMILY: a2a_route::A2aRouteFamily = a2a_route::A2aRouteFamily;
     static PAPERADMISSIONFAMILY: paper_admission::PaperAdmissionFamily =
         paper_admission::PaperAdmissionFamily;
+    static HELDITEMADMISSIONFAMILY: held_item_admission::HeldItemAdmissionFamily =
+        held_item_admission::HeldItemAdmissionFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -305,6 +309,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::PlanningAdmission => &PLANNINGADMISSIONFAMILY,
         QuestionKind::A2aRoute => &A2AROUTEFAMILY,
         QuestionKind::PaperAdmission => &PAPERADMISSIONFAMILY,
+        QuestionKind::HeldItemAdmission => &HELDITEMADMISSIONFAMILY,
     }
 }
 
@@ -366,6 +371,7 @@ mod tests {
             QuestionKind::PlanningAdmission,
             QuestionKind::A2aRoute,
             QuestionKind::PaperAdmission,
+            QuestionKind::HeldItemAdmission,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -417,7 +423,8 @@ mod tests {
             | QuestionKind::FeedbackLoop
             | QuestionKind::PlanningAdmission
             | QuestionKind::A2aRoute
-            | QuestionKind::PaperAdmission => true,
+            | QuestionKind::PaperAdmission
+            | QuestionKind::HeldItemAdmission => true,
         };
         assert!(exhaustive);
         kinds
@@ -429,7 +436,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            50,
+            51,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

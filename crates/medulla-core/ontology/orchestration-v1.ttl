@@ -979,3 +979,65 @@
 :canonicalGateKind a owl:AnnotationProperty ;
     rdfs:label "canonical gate kind" ;
     rdfs:comment "The gate (and, or, xor) of a split, a join or an event-based wait." .
+
+# MEDULLA-DECISION-ENGINE-R038.3: the facts held-item admission reads from a
+# stored run program or run output proposal. Each term names the node row key
+# the served `held_item_admission` question reads (snake_case in the row).
+:HeldItem a owl:Class ;
+    rdfs:label "Held item" ;
+    rdfs:comment "A stored run program or run output proposal that waits for admission. Row key held_item_kind: stored_run_program or run_output_proposal." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:heldItemContentDigest a owl:DatatypeProperty ;
+    rdfs:label "held item content digest" ;
+    rdfs:comment "Row key content_digest: the 64-hex digest of the stored item." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemLifecycle a owl:DatatypeProperty ;
+    rdfs:label "held item lifecycle" ;
+    rdfs:comment "Row key lifecycle: active or retired. A retired program is never admitted." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemCompiledBy a owl:DatatypeProperty ;
+    rdfs:label "compiled by" ;
+    rdfs:comment "Row key compiled_by: the principal that compiled the program." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemVerifiedBy a owl:DatatypeProperty ;
+    rdfs:label "verified by" ;
+    rdfs:comment "Row key verified_by: the principal that verified the program; it must differ from compiled_by." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemVerificationRef a owl:DatatypeProperty ;
+    rdfs:label "verification ref" ;
+    rdfs:comment "Row key verification_ref: the verification record of the program." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemVerificationPasses a owl:DatatypeProperty ;
+    rdfs:label "verification passes" ;
+    rdfs:comment "Row key verification_passes: the passes the verification earned." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:integer .
+
+:heldItemCritiqueRef a owl:DatatypeProperty ;
+    rdfs:label "critique ref" ;
+    rdfs:comment "Row key critique_ref: the critique record of an output proposal." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemCritiqueDigest a owl:DatatypeProperty ;
+    rdfs:label "critique digest" ;
+    rdfs:comment "Row key critique_digest: the content digest the critique verdict is bound to." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .
+
+:heldItemCritiqueVerdict a owl:DatatypeProperty ;
+    rdfs:label "critique verdict" ;
+    rdfs:comment "Row key critique_verdict: accept or reject." ;
+    rdfs:domain :HeldItem ;
+    rdfs:range xsd:string .

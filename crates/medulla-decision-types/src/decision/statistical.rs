@@ -207,6 +207,8 @@ pub enum QuestionKind {
     A2aRoute,
     /// Staged papers admitted by calibrated relevance to platform goals and graph content (MEDULLA-DECISION-ENGINE-R031.100). See `decision::paper_admission`.
     PaperAdmission,
+    /// Whether a held run program or run output proposal is admitted (MEDULLA-DECISION-ENGINE-R038.3). See `decision::held_item`.
+    HeldItemAdmission,
 }
 
 /// What is at stake. Exploration is permitted only for

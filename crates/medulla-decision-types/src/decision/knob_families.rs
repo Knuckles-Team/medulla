@@ -39,4 +39,5 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::delegation_quality::KNOBS,
     super::field_shielding::KNOBS,
     super::paper_admission::KNOBS,
+    super::held_item::KNOBS,
 ];

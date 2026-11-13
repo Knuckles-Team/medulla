@@ -88,6 +88,7 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::PlanningAdmission,
     QuestionKind::A2aRoute,
     QuestionKind::PaperAdmission,
+    QuestionKind::HeldItemAdmission,
 ];
 
 /// The samples the budget report takes per group.
@@ -149,6 +150,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::PlanningAdmission => "planning_admission",
         QuestionKind::A2aRoute => "a2a_route",
         QuestionKind::PaperAdmission => "paper_admission",
+        QuestionKind::HeldItemAdmission => "held_item_admission",
     }
 }
 

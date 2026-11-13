@@ -39,6 +39,7 @@ pub mod feature_match;
 pub mod field_shielding;
 pub mod graph_intake;
 pub mod harness_contrast;
+pub mod held_item;
 pub mod importance_penalty;
 pub mod indexless_retrieval;
 pub mod ingestion_admission;
@@ -134,8 +135,9 @@ pub use replay::{
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
-    LibraryCandidateScope, SolverBudget, TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
-    DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
+    LibraryCandidateScope, SolverBudget, TopologyCommitEvidence, TopologyCommitOutcome,
+    ASSEMBLY_RESULT_SCHEMA_VERSION, DECISION_COMMIT_RESULT_SCHEMA_VERSION,
+    DECISION_COMPONENT_ID_PREFIX,
 };
 pub use statistical::{
     CalibrationMethod, CalibrationStatement, CandidateSource, DecideRequest, DecisionBatch,
