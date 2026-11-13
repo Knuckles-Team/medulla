@@ -152,6 +152,7 @@ mod tests {
             schema_version: MEMORY_REWRITE_SCHEMA_VERSION,
             tenant_id: "tenant-a".into(),
             idempotency_key: "key-1".into(),
+            graph: "default".into(),
             record_id: "memory:1".into(),
             active: RevisionRef {
                 revision: 4,
@@ -166,6 +167,7 @@ mod tests {
             token_count: tokens,
             metric_id: "memory_fidelity_set_overlap".into(),
             policy: "c".repeat(64),
+            policy_ref: medulla_decision_types::decision::DecisionPolicyRef::Default,
             history: RewriteHistory::sealed(Vec::new()).unwrap(),
         }
     }

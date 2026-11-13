@@ -56,6 +56,8 @@ mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
 #[cfg(feature = "decide")]
+mod stat_memory_change;
+#[cfg(feature = "decide")]
 mod stat_learning;
 #[cfg(feature = "decide")]
 mod stat_log;

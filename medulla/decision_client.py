@@ -455,6 +455,17 @@ def evaluate_op(tenant_id: str, evaluation: Mapping[str, Any]) -> dict[str, Any]
     return {"op": "evaluate", "tenant_id": tenant_id, "evaluation": dict(evaluation)}
 
 
+def memory_rewrite_op(proposal: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate one memory rewrite (R141.100) as a ``DecisionEval`` job."""
+    return {"op": "memory_rewrite_submit", "request": dict(proposal)}
+
+
+def memory_benchmark_op(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Score one memory change against a benchmark dataset (R141.101) as a
+    ``DecisionEval`` job."""
+    return {"op": "memory_change_benchmark_submit", "request": dict(request)}
+
+
 def aggregate_op(
     tenant_id: str, window: tuple[int, int], question_id: str | None = None
 ) -> dict[str, Any]:

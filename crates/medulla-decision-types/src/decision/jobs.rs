@@ -516,6 +516,14 @@ pub enum DecisionJobOutput {
     Eval { receipt: Box<DecisionEvalReceipt> },
     /// A replay evaluation's sealed run (EH-528).
     Replay { run: Box<EvaluationRun> },
+    /// A memory rewrite's fidelity-gated evaluation (R141.100).
+    MemoryRewrite {
+        evaluation: Box<super::memory_rewrite::MemoryRewriteEvaluation>,
+    },
+    /// A memory change's benchmark receipt (R141.101).
+    MemoryBenchmark {
+        receipt: Box<super::memory_benchmark::MemoryBenchmarkReceipt>,
+    },
 }
 
 /// Where a job is.
@@ -542,6 +550,8 @@ pub enum DecisionJobState {
 pub enum DecisionJobKind {
     Fit,
     Eval,
+    MemoryRewrite,
+    MemoryBenchmark,
 }
 
 /// One durable decision-job row.
@@ -637,12 +647,26 @@ pub enum DecisionEvalOp {
     /// job artifact (MEDULLA-DECISION-ENGINE-R157.3).
     DelegationQuality {
         request: Box<DelegationQualityRequest>,
+    /// Evaluate one memory rewrite (R141.100); writes the decision job only.
+    MemoryRewriteSubmit {
+        request: Box<super::memory_rewrite::MemoryRewriteProposal>,
+    },
+    /// Score one memory change against a benchmark dataset (R141.101); writes
+    /// the decision job only.
+    MemoryChangeBenchmarkSubmit {
+        request: Box<super::memory_benchmark::MemoryChangeBenchmarkRequest>,
     },
 }
 
 impl DecisionEvalOp {
     pub fn is_mutation(&self) -> bool {
         matches!(self, Self::Submit { .. } | Self::DelegationQuality { .. })
+        matches!(
+            self,
+            Self::Submit { .. }
+                | Self::MemoryRewriteSubmit { .. }
+                | Self::MemoryChangeBenchmarkSubmit { .. }
+        )
     }
 
     pub fn authz_action(&self) -> &'static str {
@@ -657,6 +681,8 @@ impl DecisionEvalOp {
             Self::Receipts { request } => &request.tenant_id,
             Self::Timeline { request } => &request.tenant_id,
             Self::DelegationQuality { request } => &request.tenant_id,
+            Self::MemoryRewriteSubmit { request } => &request.tenant_id,
+            Self::MemoryChangeBenchmarkSubmit { request } => &request.tenant_id,
         }
     }
 }

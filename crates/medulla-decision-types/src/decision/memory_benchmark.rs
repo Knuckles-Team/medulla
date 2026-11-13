@@ -11,6 +11,9 @@ use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::record::outcome::RefusalCode;
 
+/// Domain of the benchmark receipt digest.
+pub const MEMORY_BENCHMARK_DIGEST_DOMAIN: &str = "eg/memory-change-benchmark/v1";
+
 /// Format identity of a benchmark request.
 pub const MEMORY_BENCHMARK_SCHEMA_VERSION: u16 = 1;
 
@@ -193,5 +196,65 @@ impl BenchmarkKnobs {
             max_regression_ppm: micros(&KNOBS[2])?,
             max_k,
         })
+    }
+}
+
+/// The exact metrics of one run, as the receipt carries them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RunMetricsReceipt {
+    /// Sum of the per-query recall, in parts per million.
+    pub recall_ppm_sum: u64,
+    pub correct: u64,
+    pub queries: u64,
+    pub recall_at_k_ppm: u64,
+    pub answer_accuracy_ppm: u64,
+}
+
+/// The verdict of a benchmark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum BenchmarkVerdictKind {
+    Admit,
+    Discard,
+}
+
+/// The receipt of one scored benchmark: every pinned input by digest, both
+/// runs' metrics, the verdict with every failing reason, and the premises.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MemoryBenchmarkReceipt {
+    pub schema_version: u16,
+    pub tenant_id: String,
+    pub record_id: String,
+    pub change_kind: ChangeKind,
+    pub baseline: RevisionRef,
+    pub candidate: RevisionRef,
+    pub dataset_id: String,
+    pub dataset_revision: u64,
+    pub dataset_digest: String,
+    pub k: u32,
+    pub evaluator_revision: String,
+    /// SHA-256 (64 hex characters) of the resolved decision policy.
+    pub policy_digest: String,
+    pub baseline_metrics: RunMetricsReceipt,
+    pub candidate_metrics: RunMetricsReceipt,
+    pub verdict: BenchmarkVerdictKind,
+    /// The failing reasons in the order recall, accuracy, regression.
+    pub reason_codes: Vec<String>,
+    pub premises: Vec<String>,
+    /// SHA-256 over the receipt with this field cleared.
+    pub receipt_digest: String,
+}
+
+impl MemoryBenchmarkReceipt {
+    /// The digest the receipt carries: the receipt with the digest cleared.
+    pub fn compute_receipt_digest(&self) -> String {
+        let mut subject = self.clone();
+        subject.receipt_digest = String::new();
+        super::digest::digest_text_hex(MEMORY_BENCHMARK_DIGEST_DOMAIN, &subject)
     }
 }

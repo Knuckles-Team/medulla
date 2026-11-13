@@ -230,6 +230,9 @@ pub struct MemoryRewriteProposal {
     pub schema_version: u32,
     pub tenant_id: String,
     pub idempotency_key: String,
+    /// The graph whose snapshot store holds the record's head; read behind
+    /// the caller's read access.
+    pub graph: String,
     /// The id of the memory record the rewrite is for.
     pub record_id: String,
     pub active: RevisionRef,
@@ -240,6 +243,9 @@ pub struct MemoryRewriteProposal {
     pub metric_id: String,
     /// SHA-256 of the decision policy the proposal was made under.
     pub policy: String,
+    /// Where the policy comes from; the resolved policy's digest must equal
+    /// `policy`, and its `memory_rewrite.*` knobs are the thresholds.
+    pub policy_ref: super::DecisionPolicyRef,
     pub history: RewriteHistory,
 }
 

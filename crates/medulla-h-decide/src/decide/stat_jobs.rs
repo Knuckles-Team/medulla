@@ -602,6 +602,20 @@ fn submit_job(
                     started,
                 );
             }
+            DecisionJobOutput::MemoryRewrite { .. } => telemetry::stage_done(
+                telemetry::Stage::Learn,
+                "memory_rewrite",
+                &identity.tenant_id,
+                true,
+                started,
+            ),
+            DecisionJobOutput::MemoryBenchmark { .. } => telemetry::stage_done(
+                telemetry::Stage::Learn,
+                "memory_benchmark",
+                &identity.tenant_id,
+                true,
+                started,
+            ),
             DecisionJobOutput::Fit { draft, .. } => {
                 telemetry::fitted(draft.n_training, draft.calibration.is_some(), started);
                 telemetry::stage_done(
@@ -683,6 +697,7 @@ async fn serve_fit(
 
 async fn serve_eval(
     state: &SharedState,
+    verified: &VerifiedRequestContext,
     reader: LogReader,
     op: DecisionEvalOp,
 ) -> Result<ResultPayload, String> {
@@ -704,6 +719,46 @@ async fn serve_eval(
             let job = medulla_server_api::api::dispatch_support::blocking_task(
                 BLOCKING_TASK,
                 move || submit_job(&store, &id, || run_eval_job(&store, &reader, &request)),
+            )
+            .await?;
+            ResultPayload::of::<DecisionEvalSubmit>(job)
+        }
+        DecisionEvalOp::MemoryRewriteSubmit { request } => {
+            let id = identity(
+                DecisionJobKind::MemoryRewrite,
+                &request.tenant_id,
+                &request.idempotency_key,
+                &request,
+                now_ms,
+            );
+            let head =
+                super::stat_memory_change::stored_head_revision(state, verified, &request).await;
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || {
+                    submit_job(&store, &id, || {
+                        super::stat_memory_change::run_rewrite(&store, &request, head)
+                    })
+                },
+            )
+            .await?;
+            ResultPayload::of::<DecisionEvalSubmit>(job)
+        }
+        DecisionEvalOp::MemoryChangeBenchmarkSubmit { request } => {
+            let id = identity(
+                DecisionJobKind::MemoryBenchmark,
+                &request.tenant_id,
+                &request.idempotency_key,
+                &request,
+                now_ms,
+            );
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || {
+                    submit_job(&store, &id, || {
+                        super::stat_memory_change::run_benchmark(&store, &request)
+                    })
+                },
             )
             .await?;
             ResultPayload::of::<DecisionEvalSubmit>(job)
@@ -939,7 +994,7 @@ async fn handle_decision_job(
     let result = async {
         match op {
             DecisionJobOperation::Fit(op) => serve_fit(state, reader, op).await,
-            DecisionJobOperation::Eval(op) => serve_eval(state, reader, op).await,
+            DecisionJobOperation::Eval(op) => serve_eval(state, verified, reader, op).await,
         }
     }
     .instrument(span)
