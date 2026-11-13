@@ -107,3 +107,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T101 [US4] MEDULLA-PLACEMENT-R781.6 ResourceReservationSummary/ResourceReservationSummaryState state machine: route 1 census findings through ResourceReservationRecordState::apply
 - [ ] T102 [US4] MEDULLA-PLACEMENT-R783.10 ShardDrain/DrainPhase state machine: route 9 census findings through DrainPhase::apply
 - [ ] T103 [US4] MEDULLA-PLACEMENT-R783.11 ShardPlacement/PlacementState state machine: route 5 census findings through PlacementState::apply
+- [ ] T104 [US4] MEDULLA-PLACEMENT-R785 Census debt of jobs and control leases is closed (rollup)
+- [ ] T105 [US4] MEDULLA-PLACEMENT-R785.1 ScheduleRecord/ScheduleState and ScheduleView state machine: holder-level transition delegating to ScheduleState::apply
+- [ ] T106 [US4] MEDULLA-PLACEMENT-R785.2 Control lease wire views follow `ControlLeaseMachine`: Python mirror follows the Rust machine
