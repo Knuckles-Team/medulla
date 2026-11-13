@@ -115,6 +115,7 @@ fn executed(choice: &RouteChoice, ctx: &ExecutionContext) -> Result<Executed, St
         context_selection: None,
         thought: None,
         family_premises: Vec::new(),
+        answered: None,
         route: Some(RouteExecuted {
             stage: choice.stage,
             option_id: choice.option_id.clone(),

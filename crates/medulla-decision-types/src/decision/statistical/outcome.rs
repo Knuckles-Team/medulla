@@ -149,6 +149,15 @@ pub enum FamilyAnswer {
     /// The budgeted plan of the `comparative_analysis_plan` family
     /// (MEDULLA-DECISION-ENGINE-R139.3).
     ComparativeAnalysis(Box<crate::decision::comparative_analysis::ComparativeAnalysisPlan>),
+    /// The designated agents, tools and skills of the `capability_designation`
+    /// family (MEDULLA-DECISION-ENGINE-R172.7).
+    CapabilityDesignation(Box<crate::decision::capability_designation::CapabilityDesignation>),
+    /// The bounded tool, skill and agent set of the `load_set` family
+    /// (MEDULLA-DECISION-ENGINE-R176.3).
+    LoadSet(Box<crate::decision::load_set::LoadSetAnswer>),
+    /// The ordered steps, prompts and cautions of the `usage_guidance` family
+    /// (MEDULLA-DECISION-ENGINE-R177.3).
+    UsageGuidance(Box<crate::decision::usage_guidance::UsageGuidance>),
 }
 
 impl FamilyAnswer {
@@ -156,7 +165,25 @@ impl FamilyAnswer {
     pub fn task_plan(&self) -> Option<&crate::decision::task_plan::TaskPlan> {
         match self {
             Self::TaskPlan(plan) => Some(plan),
-            Self::Topology(_) | Self::ThoughtSearch(_) | Self::ComparativeAnalysis(_) => None,
+            _ => None,
+        }
+    }
+
+    /// The designation this answer carries.
+    pub fn capability_designation(
+        &self,
+    ) -> Option<&crate::decision::capability_designation::CapabilityDesignation> {
+        match self {
+            Self::CapabilityDesignation(designation) => Some(designation),
+            _ => None,
+        }
+    }
+
+    /// The load set this answer carries.
+    pub fn load_set(&self) -> Option<&crate::decision::load_set::LoadSetAnswer> {
+        match self {
+            Self::LoadSet(answer) => Some(answer),
+            _ => None,
         }
     }
 
@@ -164,7 +191,7 @@ impl FamilyAnswer {
     pub fn topology_plan(&self) -> Option<&medulla_agent_types::agent_topology::TopologyPlan> {
         match self {
             Self::Topology(plan) => Some(plan),
-            Self::TaskPlan(_) | Self::ThoughtSearch(_) | Self::ComparativeAnalysis(_) => None,
+            _ => None,
         }
     }
 
@@ -172,7 +199,7 @@ impl FamilyAnswer {
     pub fn thought_search(&self) -> Option<&crate::decision::thought_search::ThoughtSearchAnswer> {
         match self {
             Self::ThoughtSearch(answer) => Some(answer),
-            Self::TaskPlan(_) | Self::Topology(_) | Self::ComparativeAnalysis(_) => None,
+            _ => None,
         }
     }
 
@@ -182,7 +209,15 @@ impl FamilyAnswer {
     ) -> Option<&crate::decision::comparative_analysis::ComparativeAnalysisPlan> {
         match self {
             Self::ComparativeAnalysis(plan) => Some(plan),
-            Self::TaskPlan(_) | Self::Topology(_) | Self::ThoughtSearch(_) => None,
+            _ => None,
+        }
+    }
+
+    /// The usage guidance this answer carries.
+    pub fn usage_guidance(&self) -> Option<&crate::decision::usage_guidance::UsageGuidance> {
+        match self {
+            Self::UsageGuidance(guidance) => Some(guidance),
+            _ => None,
         }
     }
 }

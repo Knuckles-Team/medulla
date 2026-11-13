@@ -50,12 +50,14 @@ mod history;
 mod open_tests;
 mod receipt;
 mod replay;
+mod reward;
 mod write;
 
 pub(super) use batch::native_lifecycle_batch;
 use history::read_history;
 pub(super) use receipt::{owner_batch_receipt, owner_receipt, OwnerReceiptInput};
 use replay::{receipt_result, record_result, replay_record};
+pub use reward::CAPABILITY_REWARD_STALE;
 
 /// Persist-dir file for the EG-owned Agent Library.
 pub const AGENT_LIBRARY_FILE: &str = "agent_library.redb";

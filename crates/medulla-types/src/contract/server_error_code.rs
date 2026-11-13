@@ -349,6 +349,8 @@ closed_error_codes! {
         PackProjectionNoHead => "PACK_PROJECTION_NO_HEAD",
         PackProjectionPolicyUnbootstrapped => "PACK_PROJECTION_POLICY_UNBOOTSTRAPPED",
         PackProjectionPreviouslyFailed => "PACK_PROJECTION_PREVIOUSLY_FAILED",
+        /// A question named a connector pack the caller's tenant has not imported (MEDULLA-CQ-CONN-R084.7).
+        PackNotImported => "PACK_NOT_IMPORTED",
         PackRecordUndecodable => "PACK_RECORD_UNDECODABLE",
         PackProjectionStoreBusy => "PACK_PROJECTION_STORE_BUSY",
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",

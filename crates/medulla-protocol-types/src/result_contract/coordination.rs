@@ -208,6 +208,8 @@ method_results! {
     DecisionLogPromoteRule(DecisionLog / "promote_rule") => Raw<medulla_decision_types::decision::statistical::log::RulePromotionResult>;
     DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackOutcome>;
     DecisionLogRunRecord(DecisionLog / "run_record") => Raw<medulla_decision_types::decision::program_store::RunRecordStored>;
+    DecisionLogCapabilityOutcome(DecisionLog / "capability_outcome") => Raw<medulla_decision_types::decision::capability_designation::CapabilityOutcomeApplied>;
+    DecisionLogGenerationSpace(DecisionLog / "generation_space") => Raw<medulla_decision_types::decision::statistical::retrieval_generation::GenerationSpaceRead>;
     BeliefRevise(BeliefRevise) => Raw<medulla_types::belief_revision::BeliefPassResult>;
     ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;

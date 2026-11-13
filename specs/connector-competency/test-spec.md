@@ -46,13 +46,14 @@ These tests remain PENDING; this documentation change supplies no implementation
 
 ## Connector-pack competency questions (R084)
 
-- `MEDULLA-CQ-CONN-R084`: Rollup closes when every child `.1` to `.6` passes its proving test.
+- `MEDULLA-CQ-CONN-R084`: Rollup closes when every child `.1` to `.7` passes its proving test.
 - `MEDULLA-CQ-CONN-R084.1`: `crates/medulla-core/tests/connector_pack_competency.rs::finance_algorithm_selection_answers`.
 - `MEDULLA-CQ-CONN-R084.2`: `crates/medulla-core/tests/connector_pack_competency.rs::positions_and_applicable_risk_analyses_answer`.
 - `MEDULLA-CQ-CONN-R084.3`: `crates/medulla-core/tests/connector_pack_competency.rs::capability_to_surface_and_contract_answers`.
 - `MEDULLA-CQ-CONN-R084.4`: `crates/medulla-core/tests/connector_pack_competency.rs::record_governance_answers`.
 - `MEDULLA-CQ-CONN-R084.5`: `crates/medulla-core/tests/connector_pack_competency.rs::finance_method_terms_and_shape`.
 - `MEDULLA-CQ-CONN-R084.6`: `tests/typed_packs/test_connector_pack_competency_served.py::test_pack_questions_end_to_end`.
+- `MEDULLA-CQ-CONN-R084.7`: `crates/medulla-persistence-records/src/connector_pack.rs::tests::a_required_pack_the_tenant_never_imported_is_named_missing` (L2) and `tests/typed_packs/test_connector_pack_competency_served.py::test_pack_question_abstains_when_its_pack_is_not_imported` (L4).
 
 - `MEDULLA-CQ-CONN-R085`: See each child.
 - `MEDULLA-CQ-CONN-R085.1`: `crates/medulla-core/tests/connector_auto_onboard.rs::fixture_parses_and_is_linked_to_the_parent`.
@@ -311,6 +312,8 @@ Rows `MEDULLA-CQ-CONN-R068.20` to `MEDULLA-CQ-CONN-R090`. A test marked planned 
 | `crates/medulla-core/tests/connector_pack_competency.rs::capability_to_surface_query_uses_registered_terms` | MEDULLA-CQ-CONN-R084.3 | L2 | Parse the fixture or module through the registry helpers named in the row. | Every term the row names is registered and the row's stated observation holds. | PENDING |
 | `crates/medulla-core/tests/connector_pack_competency.rs::record_governance_query_uses_registered_terms` | MEDULLA-CQ-CONN-R084.4 | L2 | Parse the fixture or module through the registry helpers named in the row. | Every term the row names is registered and the row's stated observation holds. | PENDING |
 | `tests/typed_packs/test_connector_pack_competency_served.py::test_pack_questions_end_to_end` | MEDULLA-CQ-CONN-R084.6 | L4 | Start a served engine, import the fixture pack, run the served request named in the row. | The served answer carries source, record id and as-of, and the stated refusal or abstention is named. | PENDING |
+| `crates/medulla-persistence-records/src/connector_pack.rs::tests::a_required_pack_the_tenant_never_imported_is_named_missing` | MEDULLA-CQ-CONN-R084.7 | L2 | Open an empty Agent Library store and ask for the first missing visible pack among required ids. | The first required id with no visible head is named; an empty requirement and an unusable id behave as the row states. |
+| `tests/typed_packs/test_connector_pack_competency_served.py::test_pack_question_abstains_when_its_pack_is_not_imported` | MEDULLA-CQ-CONN-R084.7 | L4 | Start a served engine, ask each question with its required pack never imported, then import the pack and ask again. | The first read is refused with `PACK_NOT_IMPORTED` naming the connector; the second is not refused. |
 | `crates/medulla-core/tests/connector_auto_onboard.rs::parent_term_question_returns_native_and_live_connector_rows` | MEDULLA-CQ-CONN-R085.2 | L2 | Parse the fixture or module through the registry helpers named in the row. | Every term the row names is registered and the row's stated observation holds. | PENDING |
 | `tests/typed_packs/test_connector_auto_onboard_served.py::test_check_uses_production_import_and_scan` | MEDULLA-CQ-CONN-R085.3 | L4 | Start a served engine, import the fixture pack, run the served request named in the row. | The served answer carries source, record id and as-of, and the stated refusal or abstention is named. | PENDING |
 | `crates/medulla-h-admin/src/admin/connector_pack/tests/orphan_policy.rs::orphan_and_held_variants_abstain_by_name` | MEDULLA-CQ-CONN-R085.4 | L2 | Parse the fixture or module through the registry helpers named in the row. | Every term the row names is registered and the row's stated observation holds. | PENDING |

@@ -106,11 +106,15 @@ pub(crate) async fn project_head(
         Ok(documents) => documents,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
     };
+    let facts = match surface::surface_facts(plan, &documents.ontologies) {
+        Ok(facts) => facts,
+        Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
+    };
     let committed = match commit_schema_projection(state, req_id, verified, plan, documents).await {
         Ok(committed) => committed,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
     };
-    finish_projection(store, context, plan, committed)
+    finish_projection(store, context, plan, committed, facts)
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
@@ -202,16 +206,18 @@ fn finish_projection(
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     committed: medulla_catalog_types::graph_schema::GraphSchemaCommitted,
+    surface: Vec<medulla_catalog_types::connector_pack::PackSurfaceFacts>,
 ) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
     let expected_graph = committed.graph;
     let expected_graph_version = committed.graph_version;
-    let receipt = store.commit_connector_pack_projection(
+    let receipt = store.commit_connector_pack_projection_with_surface(
         context,
         plan,
         PackProjectionState::Applied {
             graph: expected_graph.clone(),
             graph_version: expected_graph_version,
         },
+        Some(surface),
     )?;
     match &receipt.projection {
         PackProjectionState::Applied {

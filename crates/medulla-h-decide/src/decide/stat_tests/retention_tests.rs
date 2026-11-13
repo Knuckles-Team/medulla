@@ -50,6 +50,7 @@ async fn compact_at(
         now_ms,
         server_secret: state.auth_secret.as_bytes(),
         matched: &[],
+        designation: None,
     };
     super::super::stat_retention::compact(
         &ctx,

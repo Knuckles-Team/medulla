@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use base64::Engine as _;
 use medulla_types::contract::{OpaqueId, TenantId};
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
@@ -41,6 +42,19 @@ pub enum EntityKind {
     Skill,
 }
 
+/// The imported connector pack a record was projected from
+/// (MEDULLA-DECISION-ENGINE-R172.12.4, R172.12.5). The pack facts are claims
+/// of the connector, at an exact binding revision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PackOrigin {
+    pub connector: String,
+    pub binding_revision: u64,
+    pub pack_digest: String,
+    pub entry_digest: String,
+}
+
 /// One designatable entity. A record with no tenant is a commons record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -60,6 +74,15 @@ pub struct CapabilityRecord {
     pub embedding_version: String,
     pub dim: u16,
     pub record_revision: u64,
+    /// The classes the component applies to (`cp:appliesTo`, `cp:operatesOn`).
+    #[serde(default)]
+    pub applies_to: BTreeSet<ClassIri>,
+    /// The classes of the methods the component executes (`cp:executes`).
+    #[serde(default)]
+    pub executes: BTreeSet<ClassIri>,
+    /// The imported pack the record was projected from, when it came from one.
+    #[serde(default)]
+    pub pack: Option<PackOrigin>,
 }
 
 impl CapabilityRecord {
@@ -71,6 +94,8 @@ impl CapabilityRecord {
         if self.capabilities.len() > MAX_RECORD_ITEMS
             || self.policy_tags.len() > MAX_RECORD_ITEMS
             || self.swappable_with.len() > MAX_RECORD_ITEMS
+            || self.applies_to.len() > MAX_RECORD_ITEMS
+            || self.executes.len() > MAX_RECORD_ITEMS
         {
             return Err(format!(
                 "a record set holds at most {MAX_RECORD_ITEMS} items"
@@ -206,6 +231,10 @@ pub struct CapabilityDesignationQuestion {
     /// The class a designated entity is expected to be of, if any.
     #[serde(default)]
     pub ontology_prior: Option<ClassIri>,
+    /// Classes the job targets: a record answers when a class it applies to or
+    /// executes is the target or a subclass of it (MEDULLA-DECISION-ENGINE-R172.12.1).
+    #[serde(default)]
+    pub target_classes: BTreeSet<ClassIri>,
 }
 
 impl CapabilityDesignationQuestion {
@@ -213,6 +242,11 @@ impl CapabilityDesignationQuestion {
     pub fn validate(&self) -> Result<(), String> {
         if self.k == 0 || self.k > MAX_DESIGNATIONS {
             return Err(format!("k lies in [1, {MAX_DESIGNATIONS}]"));
+        }
+        if self.target_classes.len() > MAX_RECORD_ITEMS {
+            return Err(format!(
+                "a question names at most {MAX_RECORD_ITEMS} target classes"
+            ));
         }
         self.query_vector.validate()?;
         self.weights.validate()
@@ -257,6 +291,18 @@ pub struct CapabilityEligibility {
     /// Class paths from the record's type up to the prior, when it subsumes.
     #[serde(default)]
     pub subsumption_paths: Vec<Vec<ClassIri>>,
+    /// Whether the record meets the question's target classes; true when the
+    /// question names none.
+    #[serde(default = "default_true")]
+    pub targets_matched: bool,
+    /// Class paths from a class the record applies to or executes up to a
+    /// target class, shortest first per target.
+    #[serde(default)]
+    pub target_paths: Vec<Vec<ClassIri>>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// One designated entity.
@@ -275,6 +321,16 @@ pub struct DesignatedCapability {
     /// Entities the record says may stand in for it.
     #[serde(default)]
     pub alternatives: BTreeSet<OpaqueId>,
+    #[serde(default)]
+    pub applies_to: BTreeSet<ClassIri>,
+    #[serde(default)]
+    pub executes: BTreeSet<ClassIri>,
+    /// The pack the designated component came from, when it came from one.
+    #[serde(default)]
+    pub pack: Option<PackOrigin>,
+    /// The record's own revision, the graph revision the pack facts were read at.
+    #[serde(default)]
+    pub record_revision: u64,
     pub eligibility: CapabilityEligibility,
 }
 
@@ -290,7 +346,97 @@ pub struct CapabilityDesignation {
     pub capability_filtered: u64,
     pub index_epoch: u64,
     pub embedding_version: String,
+    /// The schema digest the closure below was derived at; empty when the
+    /// question named no schema-dependent filter and the schema was not read.
+    #[serde(default)]
+    pub schema_digest: String,
+    /// One request-scoped closure per required capability: the capability and
+    /// every class below it, sorted (MEDULLA-DECISION-ENGINE-R650.2).
+    #[serde(default)]
+    pub closures:
+        Vec<medulla_agent_types::agent_component::capability_descriptor::ClosureProjection>,
 }
+
+/// The name of the typed parameter that carries a designation question.
+pub const DESIGNATION_PARAM: &str = "capability_designation";
+
+/// The typed parameter of a `capability_designation` `Decide` request: the
+/// question, and the graph whose composed schema supplies the subclass closure
+/// (MEDULLA-DECISION-ENGINE-R172.7). The graph is read under the caller's own
+/// access; the engine never matches capabilities by literal text when the
+/// closure is unavailable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DesignationAsk {
+    pub question: CapabilityDesignationQuestion,
+    /// The graph whose composed schema holds the capability classes.
+    pub graph: String,
+}
+
+/// A record or question names another embedding version than the index.
+pub const DESIGNATION_EMBEDDING_VERSION_MISMATCH: RefusalCode =
+    RefusalCode::new("DESIGNATION_EMBEDDING_VERSION_MISMATCH");
+/// A record or question has another dimension than the index.
+pub const DESIGNATION_DIM_MISMATCH: RefusalCode = RefusalCode::new("DESIGNATION_DIM_MISMATCH");
+/// The query vector is empty (a dimension of zero).
+pub const DESIGNATION_EMPTY_QUERY_VECTOR: RefusalCode =
+    RefusalCode::new("DESIGNATION_EMPTY_QUERY_VECTOR");
+/// The query vector is not base64 `f32`, or not finite.
+pub const DESIGNATION_MALFORMED_QUERY_VECTOR: RefusalCode =
+    RefusalCode::new("DESIGNATION_MALFORMED_QUERY_VECTOR");
+/// More required capabilities than `designation.max_required_capabilities`.
+pub const DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES: RefusalCode =
+    RefusalCode::new("DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES");
+/// A `k` above `designation.max_k`.
+pub const DESIGNATION_TOO_MANY_CANDIDATES: RefusalCode =
+    RefusalCode::new("DESIGNATION_TOO_MANY_CANDIDATES");
+/// Required capabilities exist and the schema closure or its digest is unavailable.
+pub const DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE: RefusalCode =
+    RefusalCode::new("DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE");
+/// The index holds its limit of records.
+pub const DESIGNATION_INDEX_CAPACITY_EXCEEDED: RefusalCode =
+    RefusalCode::new("DESIGNATION_INDEX_CAPACITY_EXCEEDED");
+/// No visible candidate meets the filters; an abstention, not a request refusal.
+pub const DESIGNATION_NO_CAPABLE_CANDIDATE: RefusalCode =
+    RefusalCode::new("DESIGNATION_NO_CAPABLE_CANDIDATE");
+
+/// A target class has no record that applies to or executes it.
+pub const DESIGNATION_NO_DESIGNATED_COMPONENT: RefusalCode =
+    RefusalCode::new("DESIGNATION_NO_DESIGNATED_COMPONENT");
+/// A target-matching record comes from a pack revision older than the newest
+/// one the index holds for the same connector.
+pub const DESIGNATION_STALE_PACK_REVISION: RefusalCode =
+    RefusalCode::new("DESIGNATION_STALE_PACK_REVISION");
+/// A target class is not a class of the composed schema.
+pub const DESIGNATION_UNKNOWN_TARGET_CLASS: RefusalCode =
+    RefusalCode::new("DESIGNATION_UNKNOWN_TARGET_CLASS");
+
+/// A `capability_outcome` op names neither `success` nor `reward_q32`.
+pub const DESIGNATION_OUTCOME_VALUE_MISSING: RefusalCode =
+    RefusalCode::new("DESIGNATION_OUTCOME_VALUE_MISSING");
+/// A `capability_outcome` op names both `success` and `reward_q32`.
+pub const DESIGNATION_OUTCOME_VALUE_CONFLICT: RefusalCode =
+    RefusalCode::new("DESIGNATION_OUTCOME_VALUE_CONFLICT");
+
+/// The `capability_designation` family's refusal table
+/// (MEDULLA-DECISION-ENGINE-R172.8, R172.7.1).
+pub const REFUSALS: &[RefusalCode] = &[
+    DESIGNATION_NO_DESIGNATED_COMPONENT,
+    DESIGNATION_STALE_PACK_REVISION,
+    DESIGNATION_UNKNOWN_TARGET_CLASS,
+    DESIGNATION_OUTCOME_VALUE_MISSING,
+    DESIGNATION_OUTCOME_VALUE_CONFLICT,
+    DESIGNATION_EMBEDDING_VERSION_MISMATCH,
+    DESIGNATION_DIM_MISMATCH,
+    DESIGNATION_EMPTY_QUERY_VECTOR,
+    DESIGNATION_MALFORMED_QUERY_VECTOR,
+    DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES,
+    DESIGNATION_TOO_MANY_CANDIDATES,
+    DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+    DESIGNATION_INDEX_CAPACITY_EXCEEDED,
+    DESIGNATION_NO_CAPABLE_CANDIDATE,
+];
 
 /// The `designation.*` knobs (MEDULLA-DECISION-ENGINE-R172.2 to R172.5). The
 /// limits of R172.8 are `Fixed`; every other knob is `Tunable`.
@@ -383,6 +529,30 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::DecimalMicros(1_000_000),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "designation.feed_claim_limit",
+        unit: "outbox rows",
+        default: KnobValue::Integer(16),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(256),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "designation.feed_lease_ms",
+        unit: "milliseconds",
+        default: KnobValue::Integer(120_000),
+        min: KnobValue::Integer(1000),
+        max: KnobValue::Integer(3_600_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "designation.feed_idle_ms",
+        unit: "milliseconds",
+        default: KnobValue::Integer(500),
+        min: KnobValue::Integer(10),
+        max: KnobValue::Integer(60_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// A decimal-micros knob value on Q32.
@@ -407,6 +577,12 @@ pub struct DesignationKnobs {
     pub reward_alpha_q32: i64,
     pub reembed_reset_distance_q32: i64,
     pub reward_decay_q32: i64,
+    /// Outbox rows one feed sweep claims (`designation.feed_claim_limit`).
+    pub feed_claim_limit: usize,
+    /// How long a claimed feed row stays leased (`designation.feed_lease_ms`).
+    pub feed_lease_ms: u64,
+    /// Idle back-off between feed sweeps (`designation.feed_idle_ms`).
+    pub feed_idle_ms: u64,
 }
 
 impl DesignationKnobs {
@@ -432,6 +608,9 @@ impl DesignationKnobs {
             reward_alpha_q32: q32(8),
             reembed_reset_distance_q32: q32(9),
             reward_decay_q32: q32(10),
+            feed_claim_limit: int(11),
+            feed_lease_ms: int(12) as u64,
+            feed_idle_ms: int(13) as u64,
         }
     }
 }
@@ -443,6 +622,8 @@ pub struct SchemaProjection {
     /// The schema digest the closure was derived at.
     pub schema_digest: String,
     parents: BTreeMap<ClassIri, BTreeSet<ClassIri>>,
+    /// Every class of the composed schema, including those with no edge.
+    classes: BTreeSet<ClassIri>,
 }
 
 impl SchemaProjection {
@@ -454,8 +635,44 @@ impl SchemaProjection {
         }
         Self {
             schema_digest: schema_digest.to_string(),
+            classes: BTreeSet::new(),
             parents,
         }
+    }
+
+    /// Also register classes that have no subclass edge at all.
+    pub fn with_classes(mut self, classes: impl IntoIterator<Item = ClassIri>) -> Self {
+        self.classes.extend(classes);
+        self
+    }
+
+    /// Whether `class` is a class of the composed schema.
+    pub fn knows(&self, class: &str) -> bool {
+        self.classes.contains(class)
+            || self.parents.contains_key(class)
+            || self.parents.values().any(|parents| parents.contains(class))
+    }
+
+    /// The shortest class path from a class `record` applies to or executes up
+    /// to one of the question's target classes, per target, smallest first
+    /// (MEDULLA-DECISION-ENGINE-R172.12.2). A subclass of a target matches by
+    /// `rdfs:subClassOf`; an empty result means the record misses every target.
+    pub fn target_paths(
+        &self,
+        record: &CapabilityRecord,
+        targets: &BTreeSet<ClassIri>,
+    ) -> Vec<Vec<ClassIri>> {
+        targets
+            .iter()
+            .filter_map(|target| {
+                record
+                    .applies_to
+                    .iter()
+                    .chain(record.executes.iter())
+                    .filter_map(|class| self.path(class, target))
+                    .min_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)))
+            })
+            .collect()
     }
 
     /// The shortest class path from `from` up to `to`, both included; ties go
@@ -553,6 +770,8 @@ pub fn compute_capability_eligibility(
         .difference(&record.policy_tags)
         .cloned()
         .collect();
+    let target_paths = projection.target_paths(record, &question.target_classes);
+    let targets_matched = question.target_classes.is_empty() || !target_paths.is_empty();
     let capabilities_matched = missing_caps.is_empty();
     let policy_matched = missing_policy_tags.is_empty();
     CapabilityEligibility {
@@ -569,8 +788,13 @@ pub fn compute_capability_eligibility(
         policy_matched,
         reward: NEUTRAL_REWARD_Q32,
         ontology_type: record.ontology_type.clone(),
-        eligible: capabilities_matched && policy_matched && tenant_match != TenantMatch::Mismatch,
+        eligible: capabilities_matched
+            && policy_matched
+            && targets_matched
+            && tenant_match != TenantMatch::Mismatch,
         subsumption_paths,
+        targets_matched,
+        target_paths,
     }
 }
 
@@ -636,6 +860,48 @@ pub fn apply_capability_outcome(
         updated_revision: revision,
         ..reward.clone()
     }
+}
+
+/// The trace one `capability_outcome` op leaves: what the reward was, what it
+/// became and why (MEDULLA-DECISION-ENGINE-R172.7.1, R172.9). It is written in
+/// the same transaction as the reward row, under the op's `decision_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CapabilityOutcomeTrace {
+    pub tenant_id: TenantId,
+    pub entity_id: OpaqueId,
+    /// The decision whose outcome this is; the idempotency key with the entity.
+    pub decision_id: String,
+    /// The observed value on Q32, after clamping to `[0, 1]`.
+    pub observed_q32: i64,
+    pub prior_reward_q32: i64,
+    pub new_reward_q32: i64,
+    /// The `designation.reward_alpha` knob value the update used, on Q32.
+    pub alpha_q32: i64,
+    pub generation: u32,
+    /// The reward row's revision after the update.
+    pub revision: u64,
+    /// The records the outcome is evidence from, as the caller named them.
+    pub source_ids: Vec<String>,
+}
+
+/// The result of a `capability_outcome` op: the reward now in force and the
+/// trace of the update. A re-send of the same outcome answers the stored trace
+/// and the reward now held, and applies nothing twice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CapabilityOutcomeApplied {
+    pub reward: CapabilityReward,
+    pub trace: CapabilityOutcomeTrace,
+    /// True when the op was a replay of an outcome already applied.
+    pub replayed: bool,
+}
+
+/// The storage key of an outcome trace.
+pub fn capability_outcome_key(entity_id: &str, decision_id: &str) -> String {
+    format!("capability_outcome:{entity_id}:{decision_id}")
 }
 
 /// A writer upserted the record again with a vector at `distance_q32` (cosine
@@ -711,6 +977,8 @@ mod tests {
             ontology_type: Some("https://knuckles-team.github.io/ontology/core#Skill".into()),
             eligible: false,
             subsumption_paths: vec![vec!["a".into(), "b".into()]],
+            targets_matched: true,
+            target_paths: Vec::new(),
         }
     }
 
@@ -737,6 +1005,9 @@ mod tests {
             embedding_version: "emb-v1".into(),
             dim: 3,
             record_revision: 9,
+            applies_to: BTreeSet::new(),
+            executes: BTreeSet::new(),
+            pack: None,
         };
         record.validate().unwrap();
         let reward = CapabilityReward::neutral(tenant("tenant-a"), record.entity_id.clone());
@@ -756,6 +1027,7 @@ mod tests {
                 prior_q32: Q32_ONE / 4,
             },
             ontology_prior: Some("https://knuckles-team.github.io/ontology/core#Agent".into()),
+            target_classes: BTreeSet::new(),
         };
         question.validate().unwrap();
         let designation = CapabilityDesignation {
@@ -768,12 +1040,18 @@ mod tests {
                 ontology_type: record.ontology_type.clone(),
                 capabilities: record.capabilities.clone(),
                 alternatives: record.swappable_with.clone(),
+                applies_to: BTreeSet::new(),
+                executes: BTreeSet::new(),
+                pack: None,
+                record_revision: 9,
                 eligibility: eligibility(),
             }],
             candidate_pool_size: 10,
             capability_filtered: 4,
             index_epoch: 7,
             embedding_version: "emb-v1".into(),
+            schema_digest: String::new(),
+            closures: Vec::new(),
         };
         round_trip!(record, CapabilityRecord);
         round_trip!(reward, CapabilityReward);
@@ -856,6 +1134,9 @@ mod tests {
             embedding_version: "emb-v1".into(),
             dim: 2,
             record_revision: 1,
+            applies_to: BTreeSet::new(),
+            executes: BTreeSet::new(),
+            pack: None,
         }
     }
 
@@ -872,7 +1153,99 @@ mod tests {
                 prior_q32: 0,
             },
             ontology_prior: None,
+            target_classes: BTreeSet::new(),
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R172.12.1
+    #[test]
+    fn pack_surface_fields_round_trip() {
+        let mut record = record(Some("tenant-a"), &["cap:risk"], &[]);
+        record.applies_to = [format!("{CORE}Position")].into_iter().collect();
+        record.executes = [format!("{CORE}RiskAnalysis")].into_iter().collect();
+        record.pack = Some(PackOrigin {
+            connector: "finance".into(),
+            binding_revision: 4,
+            pack_digest: "sha256:aa".into(),
+            entry_digest: "sha256:bb".into(),
+        });
+        record.validate().unwrap();
+        let mut question = ask(&[], &[]);
+        question.target_classes = [format!("{CORE}Position")].into_iter().collect();
+        question.validate().unwrap();
+        round_trip!(record, CapabilityRecord);
+        round_trip!(question, CapabilityDesignationQuestion);
+        // A record or question written before the fields existed still reads.
+        let mut wire = serde_json::to_value(&record).unwrap();
+        for field in ["applies_to", "executes", "pack"] {
+            wire.as_object_mut().unwrap().remove(field);
+        }
+        let old: CapabilityRecord = serde_json::from_value(wire).unwrap();
+        assert!(old.applies_to.is_empty() && old.executes.is_empty() && old.pack.is_none());
+        // The sets are bounded like every other record set.
+        let mut crowded = record.clone();
+        crowded.applies_to = (0..=MAX_RECORD_ITEMS).map(|i| format!("c{i}")).collect();
+        assert!(crowded.validate().is_err());
+        let mut many = question;
+        many.target_classes = (0..=MAX_RECORD_ITEMS).map(|i| format!("c{i}")).collect();
+        assert!(many.validate().is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R172.12.2
+    #[test]
+    fn target_class_subsumption_selects_tools() {
+        let position = format!("{CORE}Position");
+        let equity = format!("{CORE}EquityPosition");
+        let var = format!("{CORE}ValueAtRisk");
+        let method = format!("{CORE}RiskMethod");
+        let projection = SchemaProjection::new(
+            "digest-1",
+            [
+                (equity.clone(), position.clone()),
+                (var.clone(), method.clone()),
+            ],
+        )
+        .with_classes([format!("{CORE}Isolated")]);
+        let mut by_subclass = record(Some("tenant-a"), &[], &[]);
+        by_subclass.applies_to = [equity.clone()].into_iter().collect();
+        let mut by_method = record(Some("tenant-a"), &[], &[]);
+        by_method.executes = [var.clone()].into_iter().collect();
+        let unrelated = record(Some("tenant-a"), &[], &[]);
+
+        // A tool applying to a subclass of the target is eligible, with its path.
+        let mut question = ask(&[], &[]);
+        question.target_classes = [position.clone()].into_iter().collect();
+        let hit = compute_capability_eligibility(&by_subclass, &question, &projection);
+        assert!(hit.eligible && hit.targets_matched);
+        assert_eq!(
+            hit.target_paths,
+            vec![vec![equity.clone(), position.clone()]]
+        );
+        // The exact class matches with a one-element path.
+        let mut exact = by_subclass.clone();
+        exact.applies_to = [position.clone()].into_iter().collect();
+        let direct = compute_capability_eligibility(&exact, &question, &projection);
+        assert_eq!(direct.target_paths, vec![vec![position.clone()]]);
+        // A record that names no class under the target misses it.
+        let miss = compute_capability_eligibility(&unrelated, &question, &projection);
+        assert!(!miss.eligible && !miss.targets_matched && miss.target_paths.is_empty());
+        // A method question: the executing tool is eligible by the method class.
+        question.target_classes = [method.clone()].into_iter().collect();
+        let tool = compute_capability_eligibility(&by_method, &question, &projection);
+        assert!(tool.eligible);
+        assert_eq!(tool.target_paths, vec![vec![var, method]]);
+        // The superclass direction never matches: a target below the record's class.
+        question.target_classes = [equity].into_iter().collect();
+        let mut broad = record(Some("tenant-a"), &[], &[]);
+        broad.applies_to = [position].into_iter().collect();
+        assert!(!compute_capability_eligibility(&broad, &question, &projection).eligible);
+        // No target asked for: nothing is excluded and no path is reported.
+        let open = compute_capability_eligibility(&unrelated, &ask(&[], &[]), &projection);
+        assert!(open.eligible && open.targets_matched && open.target_paths.is_empty());
+        // Class knowledge includes classes with no edge.
+        assert!(projection.knows(&format!("{CORE}Isolated")));
+        assert!(projection.knows(&format!("{CORE}Position")));
+        assert!(!projection.knows(&format!("{CORE}Nowhere")));
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R172.3

@@ -383,6 +383,7 @@ fn build_local_method(
             base_iri: String::new(),
             type_convention: String::new(),
             explain: false,
+            requires_packs: Vec::new(),
         },
         #[cfg(feature = "query")]
         "sql" => medulla_protocol_types::protocol::Method::Sql {

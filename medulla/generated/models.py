@@ -16836,6 +16836,7 @@ class MethodSparqlParams(BaseModel):
     base_iri: str | None = None
     explain: bool | None = None
     query: str
+    requires_packs: list[str] = Field(default_factory=list)
     type_convention: str | None = None
 
 

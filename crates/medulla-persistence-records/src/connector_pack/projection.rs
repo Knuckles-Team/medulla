@@ -208,7 +208,27 @@ impl AgentLibraryStore {
         plan: &ConnectorPackProjectionPlan,
         projection: PackProjectionState,
     ) -> Result<PackImportReceipt, String> {
+        self.commit_connector_pack_projection_with_surface(context, plan, projection, None)
+    }
+
+    /// Complete the projection and, for an applied one, leave the surface
+    /// outbox row the capability feed consumes in the same commit
+    /// (MEDULLA-DECISION-ENGINE-R172.12.3). `surface` is the declared surface
+    /// links of the head's members; a failed projection publishes nothing.
+    pub fn commit_connector_pack_projection_with_surface(
+        &self,
+        context: AgentLibraryMutationContext,
+        plan: &ConnectorPackProjectionPlan,
+        projection: PackProjectionState,
+        surface: Option<Vec<medulla_catalog_types::connector_pack::PackSurfaceFacts>>,
+    ) -> Result<PackImportReceipt, String> {
         validate_projection_identity(&context, plan, &projection)?;
+        let outbox = match (&projection, surface) {
+            (PackProjectionState::Applied { .. }, Some(members)) => {
+                vec![surface_intent(plan, members)?]
+            }
+            _ => Vec::new(),
+        };
         let identity = PackWriteIdentity {
             purpose: "connector-pack:reproject",
             kind: "connector-pack-reproject",
@@ -221,7 +241,7 @@ impl AgentLibraryStore {
         };
         let effects = PackWriteEffects {
             operations: projection_operations(plan, &projection),
-            outbox: Vec::new(),
+            outbox,
         };
         let result = self.commit_pack_write(&context, identity, effects, |write, _| {
             let updated = apply_projection_rows(write, plan, projection)?;
@@ -236,6 +256,38 @@ impl AgentLibraryStore {
             }
         }
     }
+}
+
+/// The surface outbox row of an applied projection.
+fn surface_intent(
+    plan: &ConnectorPackProjectionPlan,
+    members: Vec<medulla_catalog_types::connector_pack::PackSurfaceFacts>,
+) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
+    let event = medulla_catalog_types::connector_pack::PackSurfaceEvent {
+        tenant_id: plan.tenant_id.clone(),
+        connector: plan.connector.as_str().to_string(),
+        binding_revision: plan.head.binding_revision,
+        pack_digest: plan.pack_digest().to_hex(),
+        members,
+    };
+    Ok(
+        medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+            topic: medulla_catalog_types::connector_pack::CONNECTOR_PACK_SURFACE_TOPIC.to_string(),
+            key: format!(
+                "{}:{}:{}",
+                event.tenant_id, event.connector, event.binding_revision
+            ),
+            payload: medulla_storage::encode_bounded(&event, "connector pack surface event")?,
+            headers: std::collections::BTreeMap::from([
+                ("tenant_id".to_string(), event.tenant_id.clone()),
+                ("connector".to_string(), event.connector.clone()),
+                (
+                    "binding_revision".to_string(),
+                    event.binding_revision.to_string(),
+                ),
+            ]),
+        },
+    )
 }
 
 fn validate_head_record(

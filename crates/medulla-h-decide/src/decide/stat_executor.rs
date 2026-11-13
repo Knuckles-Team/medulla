@@ -51,6 +51,9 @@ pub(super) struct ExecutionContext<'a> {
     /// context (MEDULLA-DECISION-ENGINE-R020.1.1), where a decision reads them;
     /// empty for every job that decides nothing.
     pub(super) matched: &'a [super::stat_log::MatchedTrajectory],
+    /// What a `capability_designation` question read beside the library: the
+    /// resident index and the schema closure (MEDULLA-DECISION-ENGINE-R172.7).
+    pub(super) designation: Option<&'a super::stat_designation::DesignationRuntime>,
 }
 
 /// The pinned inputs of one decision.
@@ -91,6 +94,10 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R035.750.1); `None` for every other kind and
     /// when the shared ladder (the learned policy) answered.
     pub(super) route: Option<RouteExecuted>,
+    /// The typed answer and premises a `CapabilityDesignation`, `LoadSet` or `UsageGuidance`
+    /// question sealed (MEDULLA-DECISION-ENGINE-R172.7, R176.3, R177.4); `None` for
+    /// every other kind and for an abstention.
+    pub(super) answered: Option<AnsweredFamily>,
 }
 
 /// Where a premise a family computed at conclude time came from; a policy
@@ -159,6 +166,18 @@ pub(super) struct RouteExecuted {
     /// The matched earlier decisions that ran the chosen option, when the
     /// stage reads history (team reuse); empty otherwise.
     pub(super) matched_records: Vec<String>,
+}
+
+/// A family answer with the premises it rests on.
+pub(super) struct AnsweredFamily {
+    pub(super) answer: medulla_decision_types::decision::statistical::outcome::FamilyAnswer,
+    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
+    /// The resolution kind the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the family hook's.
+    pub(super) resolution: Option<medulla_decision_types::decision::ResolutionKind>,
+    /// The evidence class the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the claim rule of the record stage.
+    pub(super) evidence: Option<medulla_decision_types::decision::EvidenceClass>,
 }
 
 /// A thought-search answer with the premises it rests on.
@@ -303,6 +322,7 @@ pub(super) fn run_on_matrix(
                 thought: None,
                 family_premises: Vec::new(),
                 route: None,
+                answered: None,
             });
         }
         Some(Ok(evaluated)) => Some(evaluated),
@@ -329,6 +349,7 @@ pub(super) fn run_on_matrix(
         thought: None,
         family_premises: Vec::new(),
         route: None,
+        answered: None,
     })
 }
 
@@ -365,6 +386,7 @@ pub(super) fn execute(
                 thought: None,
                 family_premises: Vec::new(),
                 route: None,
+                answered: None,
             });
         }
     };

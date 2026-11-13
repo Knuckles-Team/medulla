@@ -110,6 +110,7 @@ declared_owner_tables!(
     McpCatalogScopeRows: AgentLibraryOwner => ((String, String, String), Vec<u8>, "mcp_catalog_scopes"),
     ConceptIdRows: AgentLibraryOwner => ((String, String), Vec<u8>, "concept_ids"),
     ConceptLineageEdgeRows: AgentLibraryOwner => ((String, String, String), Vec<u8>, "concept_lineage_edges"),
+    CapabilityRewardRows: AgentLibraryOwner => ((String, String), Vec<u8>, "capability_reward"),
     DecisionArtifactRows: AgentLibraryOwner => ((String, String), Vec<u8>, "decision_artifacts"),
     DecisionRecordRows: AgentLibraryOwner => ((String, String), Vec<u8>, "decision_records"),
     WriteBackChangeSetRows: AgentLibraryOwner => ((String, String), Vec<u8>, "write_back_change_sets"),
@@ -206,7 +207,8 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "write_back_change_sets"
         | "write_back_idempotency"
         | "write_back_receipts"
-        | "write_back_receipt_heads" => OwnerTableAccess::DomainService,
+        | "write_back_receipt_heads"
+        | "capability_reward" => OwnerTableAccess::DomainService,
         name if name.starts_with("__sql_") => OwnerTableAccess::DomainService,
         // Every graph-shard table is reached through the shard's own admitted
         // owner write, never as a shared service: one shard file is one

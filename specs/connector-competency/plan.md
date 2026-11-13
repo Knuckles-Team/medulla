@@ -323,6 +323,8 @@ Vocabulary declarations alone do not prove runtime competency.
 
 Every connector ships an OWL/RDF ontology pack with its domain ontology, ingest contract and surface. The engine imports it as native relationships (`MEDULLA-TYPED-PACKS-R101`, `MEDULLA-TYPED-PACKS-R102`). R084 states the acceptance questions for that design. The engine answers each by SPARQL over imported packs. The method-selection question also runs through `Decide` (`MEDULLA-DECISION-ENGINE-R172.12`). Call path: `ConnectorPack.Import` → pack graph → `SourceIngest` → served SPARQL handler (`crates/medulla-h-sparql/src/rdf/sparql.rs:30`) and `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:50`).
 
+Decision (R084.7): the pack requirement rides the one served read. `Method::Sparql` carries `requires_packs` (connector ids); the dispatch checks them against the tenant's visible pack heads before any query runs and refuses with the registered code `PACK_NOT_IMPORTED` naming the first missing id. Each question declares its packs in `requires_packs.txt` beside its query. No per-question operation exists.
+
 ### North star
 
 One engine, medulla, holds all facts. There is no second database and no sync. External stores are virtual-graph sources reached through connectors. Every connector that connects through arbora onboards itself. Its ontology extends the core ontology. Its prompts become system-prompt candidates. Its skills, tools and resources appear as virtual graph entries in the engine. The exit gate is competency questions. The ontology answers how to execute a task and produces cross-source reports from connector virtual graphs.

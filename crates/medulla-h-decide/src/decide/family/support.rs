@@ -112,6 +112,7 @@ pub(in crate::decide) fn advisory(ids: Vec<String>) -> Result<Executed, String> 
         family_premises: Vec::new(),
         context_selection: None,
         route: None,
+        answered: None,
     })
 }
 
@@ -142,6 +143,7 @@ pub(super) fn abstained(
         family_premises: Vec::new(),
         context_selection: None,
         route: None,
+        answered: None,
     }
 }
 

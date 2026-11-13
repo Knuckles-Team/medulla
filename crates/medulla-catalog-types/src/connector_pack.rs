@@ -62,6 +62,9 @@ pub const MAX_PACK_RECORD_BYTES: usize = 4 << 20;
 
 /// The outbox topic one committed import publishes on.
 pub const CONNECTOR_PACK_IMPORT_TOPIC: &str = "medulla.connector-pack.import.v1";
+/// The outbox topic one applied surface projection publishes on
+/// (MEDULLA-DECISION-ENGINE-R172.12.3).
+pub const CONNECTOR_PACK_SURFACE_TOPIC: &str = "medulla.connector-pack.surface.v1";
 /// Typed mutation-result schema carried by a committed import receipt.
 pub const CONNECTOR_PACK_RESULT_SCHEMA_ID: &str = "connector-pack-import-result.v1";
 
@@ -149,3 +152,32 @@ pub use self_served_catalog::{
     check_self_served_import, self_served_candidate, self_served_component_revision,
     McpSelfServedCatalogAttestRequest, SelfServedAttester,
 };
+
+/// The declared surface links of one pack member, as the projection read them
+/// from the pack ontologies (`cp:appliesTo`, `cp:operatesOn`, `cp:executes`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackSurfaceFacts {
+    /// The Agent Library component of the member.
+    pub component_id: String,
+    /// Classes the member applies to or operates on.
+    #[serde(default)]
+    pub applies_to: std::collections::BTreeSet<String>,
+    /// Classes of the methods the member executes.
+    #[serde(default)]
+    pub executes: std::collections::BTreeSet<String>,
+}
+
+/// What one applied surface projection tells the capability feed: the pack
+/// head it projected and the declared surface links of its members
+/// (MEDULLA-DECISION-ENGINE-R172.12.3). Published on
+/// [`CONNECTOR_PACK_SURFACE_TOPIC`] in the same commit as the projection.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PackSurfaceEvent {
+    pub tenant_id: String,
+    pub connector: String,
+    pub binding_revision: u64,
+    pub pack_digest: String,
+    pub members: Vec<PackSurfaceFacts>,
+}

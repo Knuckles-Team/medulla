@@ -301,6 +301,10 @@ pub const CONCEPT_IDS: TableDefinition<'static, (&str, &str), &[u8]> =
 /// `(tenant, superseded id, successor id)`, valued with repository and admission time.
 pub const CONCEPT_LINEAGE_EDGES: TableDefinition<'static, (&str, &str, &str), &[u8]> =
     TableDefinition::new("concept_lineage_edges");
+/// One durable learned reward per tenant and designated entity
+/// (MEDULLA-DECISION-ENGINE-R172.5.1).
+pub const CAPABILITY_REWARD: TableDefinition<'static, (&str, &str), &[u8]> =
+    TableDefinition::new("capability_reward");
 /// Decide-layer job rows, evaluation receipts and fit drafts, keyed
 /// `(tenant, "job:<id>" | "receipt:<digest>" | "draft:<sha256>")`. Written once,
 /// never updated: a job runs to a terminal state inside its submit.
@@ -453,6 +457,7 @@ macro_rules! visit_owner_tables {
                 $visit!(WRITE_BACK_IDEMPOTENCY);
                 $visit!(WRITE_BACK_RECEIPTS);
                 $visit!(WRITE_BACK_RECEIPT_HEADS);
+                $visit!(CAPABILITY_REWARD);
             }
             OwnerLayout::BranchRegistry => $visit!(crate::owner::branch_registry::BRANCH_REGISTRY),
             OwnerLayout::RetrievalState => $visit!(crate::owner::retrieval_state::DOC_STATE),
@@ -877,6 +882,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "write_back_idempotency",
             "write_back_receipts",
             "write_back_receipt_heads",
+            "capability_reward",
         ],
         OwnerLayout::BranchRegistry => &["branch_registry"],
         OwnerLayout::RetrievalState => &["doc_state"],

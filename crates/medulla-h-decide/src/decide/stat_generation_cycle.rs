@@ -27,6 +27,7 @@ use super::stat_executor::ExecutionContext;
 use super::stat_generation::{
     evaluate_generation, generation_pointer, qualified_generation, stored_evaluation, Generations,
 };
+use super::stat_generation_space::model_space;
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, read_pointer, PointerMove};
 use super::stat_support::{invalid_parameter as invalid, refusal};
@@ -35,7 +36,7 @@ use super::stat_support::{invalid_parameter as invalid, refusal};
 const JOB_ID_DOMAIN: &str = "eg/generation-cycle-job/v1";
 
 /// Embeds node text for the shadow generation.
-pub(super) trait Reembedder: Send + Sync {
+pub trait Reembedder: Send + Sync {
     /// One vector per text, in order.
     fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>, String>;
 }
@@ -299,6 +300,12 @@ pub(super) fn run_cycle(
         record.save(run)?;
     }
     if record.job.cycle.state() == GenerationCycleState::Published {
+        // The shadow generation is a new embedding space: a shadow graph that
+        // declares none gets the model's, so an activated generation always
+        // has a space a reader can pin its query vectors to (R172.12.6).
+        run.gens
+            .shadow
+            .ensure_space(&model_space(&request.model_ref)?)?;
         fire(&mut record.job, GenerationCycleEvent::ReembedBegun, None)?;
         record.save(run)?;
     }

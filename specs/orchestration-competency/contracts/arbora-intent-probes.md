@@ -13,7 +13,7 @@ Arbora resolves the plain question through its intent tools and calls the engine
 
 ## Authoritative types
 
-The answer types of `crates/medulla-decision-outcome-types/src/decision/usage_guidance.rs` and `load_set.rs`, and the `NlQuery` result types of `crates/medulla-protocol-types`.
+The answer types of `crates/medulla-decision-types/src/decision/usage_guidance.rs` and `load_set.rs`, and the `NlQuery` result types of `crates/medulla-protocol-types`.
 
 ## Test vectors
 

@@ -14,7 +14,7 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         let read = store.read().unwrap();
         assert_eq!(
             medulla_storage::owner_table_names(medulla_storage::OwnerLayout::AgentLibrary).len(),
-            21
+            22
         );
         macro_rules! empty_table {
             ($table:ident) => {
@@ -33,6 +33,7 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         empty_table!(CONNECTOR_PACK_IMPORTS);
         empty_table!(CONNECTOR_PACK_BODY_HOLDERS);
         empty_table!(CONNECTOR_PACK_BINDINGS);
+        empty_table!(CAPABILITY_REWARD);
         let status = store
             .connector_pack_status("tenant-a", &ResourceId::new("fresh-pack").unwrap())
             .unwrap();
@@ -74,4 +75,47 @@ fn production_open_refuses_each_genuine_predecessor_without_writing() {
             );
         }
     }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R172.5.1
+#[test]
+fn capability_reward_survives_reopen() {
+    use medulla_decision_types::decision::capability_designation::{CapabilityReward, Q32_ONE};
+    use medulla_types::contract::{OpaqueId, TenantId};
+    let dir = tempfile::tempdir().unwrap();
+    let tenant = TenantId::new("tenant-a").unwrap();
+    let entity = OpaqueId::new("agent-1").unwrap();
+    let mut reward = CapabilityReward::neutral(tenant.clone(), entity.clone());
+    reward.reward_q32 = Q32_ONE * 3 / 4;
+    reward.outcome_count = 5;
+    reward.generation = 2;
+    reward.updated_revision = 9;
+    {
+        let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
+        assert!(store
+            .capability_reward("tenant-a", "agent-1")
+            .unwrap()
+            .is_none());
+        store.put_capability_reward(&reward).unwrap();
+        // Another tenant's entity of the same id is a different row.
+        let other = CapabilityReward::neutral(TenantId::new("tenant-b").unwrap(), entity.clone());
+        store.put_capability_reward(&other).unwrap();
+    }
+    let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
+    assert_eq!(
+        store.capability_reward("tenant-a", "agent-1").unwrap(),
+        Some(reward.clone())
+    );
+    let rewards = store.capability_rewards("tenant-a").unwrap();
+    assert_eq!(rewards, vec![reward.clone()]);
+    // A staler write never replaces a newer durable reward.
+    let mut stale = reward.clone();
+    stale.updated_revision = 3;
+    stale.reward_q32 = 0;
+    let error = store.put_capability_reward(&stale).unwrap_err();
+    assert!(error.starts_with(super::CAPABILITY_REWARD_STALE), "{error}");
+    assert_eq!(
+        store.capability_reward("tenant-a", "agent-1").unwrap(),
+        Some(reward)
+    );
 }

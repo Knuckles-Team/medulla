@@ -60,6 +60,9 @@ fn record(
         embedding_version: version.into(),
         dim,
         record_revision: 1,
+        applies_to: BTreeSet::new(),
+        executes: BTreeSet::new(),
+        pack: None,
     }
 }
 

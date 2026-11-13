@@ -1,0 +1,3 @@
+{c}	feature-doc-search	Tool	search_documents	contract
+{c}	feature-doc-search	Prompt	{c}-doc-prompt	contract
+{c}	feature-doc-search	Skill	{c}-doc-skill	contract

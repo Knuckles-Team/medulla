@@ -562,6 +562,8 @@ async fn spawn_optional_service_listeners(
     spawn_kvcache_listener(state).await?;
     recover_durable_catalog(state).await?;
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
+    #[cfg(feature = "decide")]
+    medulla_h_decide::decide::capability_feed::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
     medulla_h_ingest::repository_index::enrich::spawn(state.clone())?;
     #[cfg(feature = "epistemic-tms")]

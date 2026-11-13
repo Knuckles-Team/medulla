@@ -848,13 +848,13 @@ No test in this section has run.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test, and `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` passes.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
-- `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records`.
+- `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records`.
 - `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
 - `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
-- `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records`.
+- `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records`.
 - `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
 - `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.12.6`: `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack`.
@@ -934,11 +934,11 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174`: `tests/decide/test_generation
 
 | Behavior | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide/src/decide/stat_tests/load_set.rs::bounded_union_in_stable_order`: A job over three packs returns a bounded, duplicate-free set in a stable order. |
 
-| Wiring | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set.rs::served_decide_reaches_load_set`: A served `Decide` with a load-set question reaches the new arm. |
+| Wiring | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set`: A served `Decide` with a load-set question reaches the new arm. |
 
-| Refusal | `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide/src/decide/stat_tests/load_set.rs::load_set_refusals`: Each case returns its code, and no partial set hides an abstention. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::load_set_refusals`: Each case returns its code, and no partial set hides an abstention. |
 
-| Evidence | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set.rs::premises_per_component`: Each chosen tool has one premise with its pack digest. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::premises_per_component`: Each chosen tool has one premise with its pack digest. |
 
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set`: The answer holds 32 tools or fewer, their skills and one agent start, and meets the time budget. |
 
@@ -950,7 +950,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R176`: `tests/decide/test_load_set_s
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-DECISION-ENGINE-R177.1` | `crates/medulla-decision-outcome-types/src/decision/usage_guidance/tests.rs::guidance_round_trips`: A serde round trip keeps every field and rejects a step without a tool. |
+| Model | `MEDULLA-DECISION-ENGINE-R177.1` | `crates/medulla-decision-types/src/decision/usage_guidance/tests.rs::guidance_round_trips`: A serde round trip keeps every field and rejects a step without a tool. |
 
 | Behavior | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::steps_ordered_by_outcome`: A fixture connector's steps are ordered, and success rate breaks a tie between steps that may swap. `tests::order_is_deterministic` (L2) shuffles the input. |
 
@@ -1611,7 +1611,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R172.12.1` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.12.2` | `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.12.2` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R172.12.3` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R172.12.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.12.4` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.12.5` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.12.6` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | (planned) |

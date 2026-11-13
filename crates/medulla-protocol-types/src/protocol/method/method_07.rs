@@ -149,6 +149,12 @@ $($variants)*
         /// the graph once per triple pattern.
         #[serde(default)]
         explain: bool,
+        /// Connector packs the question needs, by connector id (MEDULLA-CQ-CONN-R084.7). A
+        /// competency question names the packs it reads; when the caller's tenant has no
+        /// visible pack for one of them the read abstains with `PACK_NOT_IMPORTED` naming the
+        /// first missing id, before any query runs. Empty ⇒ no pack is required.
+        #[serde(default)]
+        requires_packs: Vec<String>,
     },
 
     /// OBDA / R2RML VIRTUAL GRAPH query (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /

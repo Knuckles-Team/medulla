@@ -310,6 +310,12 @@ knobs! {
     concept_lineage_read_max_successors: u64 = "concept_lineage.read_max_successors", U64(1_024), [1, 65_536], "successors", Tunable;
     /// Time a cross-shard COMMIT decision may wait after its request before it is refused (MEDULLA-DECISION-ENGINE-R036.105.2).
     xshard_decision_deadline_ms: u64 = "xshard.decision_deadline_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
+    /// Designation feed: Agent Library outbox rows one sweep claims.
+    designation_feed_claim_limit: u64 = "designation.feed_claim_limit", U64(16), [1, 256], "outbox rows", Tunable;
+    /// Designation feed: how long a claimed outbox row stays leased.
+    designation_feed_lease_ms: u64 = "designation.feed_lease_ms", U64(120_000), [1000, 3_600_000], "milliseconds", Tunable;
+    /// Designation feed: idle back-off between sweeps.
+    designation_feed_idle_ms: u64 = "designation.feed_idle_ms", U64(500), [10, 60_000], "milliseconds", Tunable;
     /// Topology slot width cap.
     topology_max_width: u64 = "topology.max_width", U64(16), [1, 16], "count", Tunable;
     /// Topology depth cap.

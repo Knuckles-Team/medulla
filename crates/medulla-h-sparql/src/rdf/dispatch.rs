@@ -145,47 +145,101 @@ async fn try_handle_sparql(
             base_iri,
             type_convention,
             explain,
-        } => Some(
-            match visible_pack_graphs(state, graph_name, read_authority).await {
-                Err(error) => Response::err(req_id, error),
-                Ok(packs) => {
-                    // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking +
-                    // row filters reach the SPARQL read through the projection
-                    // adapter: the ONE rewrite (apply_policies) over the shared
-                    // Plan IR. A row filter splices in as a FILTER; a column mask
-                    // cannot be expressed inline in SPARQL 1.1, so a tagged
-                    // projection is refused until the value-level boundary lands.
-                    // The caller's tenant policy set arrives via the R706.7
-                    // loader; until one is bound the rewrite is a byte-for-byte
-                    // no-op — the call itself is never skipped.
-                    #[cfg(feature = "security")]
-                    let principal = medulla_exec::policy_mask::PrincipalRef::from(caller);
-                    #[cfg(not(feature = "security"))]
-                    let principal = medulla_exec::policy_mask::PrincipalRef::from("");
-                    let query = match medulla_exec::policy_mask::sparql_read_rewrite(
-                        query,
-                        &medulla_exec::policy_mask::PolicySet::default(),
-                        &principal,
-                    ) {
-                        Ok((rewritten, _applied)) => rewritten,
-                        Err(refusal) => return Some(Response::err(req_id, refusal)),
-                    };
-                    super::sparql::handle_sparql(
+            requires_packs,
+        } => {
+            // MEDULLA-CQ-CONN-R084.7: a question that names the packs it reads abstains by
+            // name when the caller's tenant has not imported one, before any query runs.
+            match missing_required_pack(state, read_authority, requires_packs).await {
+                Err(error) => return Some(Response::err(req_id, error)),
+                Ok(Some(missing)) => {
+                    return Some(Response::err(
                         req_id,
-                        (core, packs),
-                        query.clone(),
-                        medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
-                        super::sparql::SparqlProofMode::of(*explain),
-                        #[cfg(feature = "security")]
-                        caller,
-                        #[cfg(feature = "security")]
-                        rls,
-                    )
-                    .await
+                        format!(
+                            "{}: connector pack `{missing}` is not imported for this tenant",
+                            medulla_types::contract::ServerErrorCode::PackNotImported.as_str()
+                        ),
+                    ))
                 }
-            },
-        ),
+                Ok(None) => {}
+            }
+            Some(
+                match visible_pack_graphs(state, graph_name, read_authority).await {
+                    Err(error) => Response::err(req_id, error),
+                    Ok(packs) => {
+                        // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking +
+                        // row filters reach the SPARQL read through the projection
+                        // adapter: the ONE rewrite (apply_policies) over the shared
+                        // Plan IR. A row filter splices in as a FILTER; a column mask
+                        // cannot be expressed inline in SPARQL 1.1, so a tagged
+                        // projection is refused until the value-level boundary lands.
+                        // The caller's tenant policy set arrives via the R706.7
+                        // loader; until one is bound the rewrite is a byte-for-byte
+                        // no-op — the call itself is never skipped.
+                        #[cfg(feature = "security")]
+                        let principal = medulla_exec::policy_mask::PrincipalRef::from(caller);
+                        #[cfg(not(feature = "security"))]
+                        let principal = medulla_exec::policy_mask::PrincipalRef::from("");
+                        let query = match medulla_exec::policy_mask::sparql_read_rewrite(
+                            query,
+                            &medulla_exec::policy_mask::PolicySet::default(),
+                            &principal,
+                        ) {
+                            Ok((rewritten, _applied)) => rewritten,
+                            Err(refusal) => return Some(Response::err(req_id, refusal)),
+                        };
+                        super::sparql::handle_sparql(
+                            req_id,
+                            (core, packs),
+                            query.clone(),
+                            medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
+                            super::sparql::SparqlProofMode::of(*explain),
+                            #[cfg(feature = "security")]
+                            caller,
+                            #[cfg(feature = "security")]
+                            rls,
+                        )
+                        .await
+                    }
+                },
+            )
+        }
         _ => None,
+    }
+}
+
+/// The first connector id of `required` whose pack the caller's verified tenant has
+/// not imported (MEDULLA-CQ-CONN-R084.7). A caller without verified tenant authority,
+/// or a deployment without a persistence directory, has imported none, so the first
+/// required id is the one missing; an empty `required` is never missing.
+#[cfg(feature = "sparql")]
+async fn missing_required_pack(
+    state: &Arc<RwLock<ServerState>>,
+    read_authority: Option<&GraphReadAuthority>,
+    required: &[String],
+) -> Result<Option<String>, String> {
+    if required.is_empty() {
+        return Ok(None);
+    }
+    #[cfg(feature = "redb")]
+    {
+        let Some(carrier) = read_authority.and_then(GraphReadAuthority::carrier) else {
+            return Ok(required.first().cloned());
+        };
+        let tenant = carrier.log_owner().0;
+        let state = state.read().await;
+        let Some(persist_dir) = state.persist_dir.as_deref() else {
+            return Ok(required.first().cloned());
+        };
+        medulla_persistence_records::agent_library::open_shared_agent_library(
+            &state.agent_library_open,
+            persist_dir,
+        )
+        .and_then(|store| store.first_missing_visible_pack(tenant, required))
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, read_authority);
+        Ok(required.first().cloned())
     }
 }
 

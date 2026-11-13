@@ -47,7 +47,7 @@ fn owner_layout_registry_has_frozen_cardinality() {
         .contains(&"semantic_generation_checkpoint_heads"));
     // MEDULLA-TYPED-PACKS-R089: the agent-library owner census, so an
     // untracked addition or removal of a pack body holder table fails here.
-    assert_eq!(owner_table_names(OwnerLayout::AgentLibrary).len(), 21);
+    assert_eq!(owner_table_names(OwnerLayout::AgentLibrary).len(), 24);
 }
 
 #[test]

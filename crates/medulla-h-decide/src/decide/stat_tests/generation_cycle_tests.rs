@@ -256,6 +256,7 @@ async fn resume_activates_once() {
         now_ms: 1_000,
         server_secret: b"cycle-test-secret",
         matched: &[],
+        designation: None,
     };
     let embedder = Counting(AtomicUsize::new(0));
     let run = CycleRun {
@@ -479,6 +480,7 @@ async fn refusal_codes() {
         now_ms: 1_000,
         server_secret: b"cycle-test-secret",
         matched: &[],
+        designation: None,
     };
     let embedder = MovesPointer(&h.store);
     let run = CycleRun {

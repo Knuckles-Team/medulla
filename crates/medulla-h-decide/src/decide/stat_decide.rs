@@ -101,6 +101,44 @@ async fn serve(
     // A `topology` question reads its schema entailments and capacity headroom
     // here, where the graph and the capacity cells are reachable, and records
     // them in its own parameter (MEDULLA-DECISION-ENGINE-R111.1).
+    // A `capability_designation` question loads the resident index handle and
+    // the schema closure it concludes over (MEDULLA-DECISION-ENGINE-R172.7).
+    let designation = match request.question.kind {
+        QuestionKind::CapabilityDesignation => Some(
+            telemetry::stage_async(
+                telemetry::Stage::Entailment,
+                &family,
+                verified.tenant(),
+                super::stat_designation::with_runtime(state, verified, &request),
+            )
+            .await?,
+        ),
+        // A `load_set` question reads the same index and schema closure, plus
+        // the local agents of its graph (MEDULLA-DECISION-ENGINE-R176.3).
+        QuestionKind::LoadSet => Some(
+            telemetry::stage_async(
+                telemetry::Stage::Entailment,
+                &family,
+                verified.tenant(),
+                super::stat_load_set::with_load_set_runtime(state, verified, &request),
+            )
+            .await?,
+        ),
+        // A `usage_guidance` question reads the connector pack of its graph
+        // and the tenant's tool outcomes (MEDULLA-DECISION-ENGINE-R177.3).
+        QuestionKind::UsageGuidance => Some(
+            telemetry::stage_async(
+                telemetry::Stage::Entailment,
+                &family,
+                verified.tenant(),
+                super::stat_usage_guidance::with_usage_guidance_runtime(
+                    state, &store, verified, &request,
+                ),
+            )
+            .await?,
+        ),
+        _ => None,
+    };
     let request = if request.question.kind == QuestionKind::Topology {
         telemetry::stage_async(
             telemetry::Stage::Entailment,
@@ -227,6 +265,7 @@ async fn serve(
                     now_ms,
                     server_secret: secret.as_bytes(),
                     matched: &[],
+                    designation: designation.as_ref(),
                 };
                 decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
             })
@@ -747,6 +786,9 @@ fn seal(
         executed,
         &sealing.policy.digest,
     ));
+    if let Some(answered) = &executed.answered {
+        premise_list.extend(answered.premises.iter().cloned());
+    }
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
         .pinned
@@ -769,16 +811,29 @@ fn seal(
             ResolutionKind::Optimization
         } else if let Some(route) = &executed.route {
             route.resolution
+        } else if let Some(sealed) = executed.answered.as_ref().and_then(|a| a.resolution) {
+            sealed
         } else {
             sealing
                 .registry
                 .resolution_kind(&outcome)
                 .unwrap_or_else(|| resolution(&outcome))
         },
-        evidence_class: sealing
-            .registry
-            .evidence_class(&outcome)
-            .unwrap_or_else(|| evidence_class(&premise_list, &outcome)),
+        evidence_class: if let Some(sealed) = executed.answered.as_ref().and_then(|a| a.evidence) {
+            sealed
+        } else if executed
+            .answered
+            .as_ref()
+            .is_some_and(|d| d.premises.iter().any(|p| p.class == PremiseClass::Claim))
+        {
+            // An answer resting on a connector pack's facts is a claim.
+            EvidenceClass::Claim
+        } else {
+            sealing
+                .registry
+                .evidence_class(&outcome)
+                .unwrap_or_else(|| evidence_class(&premise_list, &outcome))
+        },
         trace_fidelity: TraceFidelity::FullStep,
         premises: BoundedVec::new(premise_list)
             .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
@@ -802,6 +857,12 @@ fn seal(
                         Box::new(thought.answer.clone()),
                     )
                 })
+            })
+            .or_else(|| {
+                executed
+                    .answered
+                    .as_ref()
+                    .map(|answered| answered.answer.clone())
             })
             .or_else(|| {
                 executed.topology.as_ref().map(|topology| {

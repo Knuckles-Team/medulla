@@ -160,6 +160,7 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         context_selection: None,
         family_premises: Vec::new(),
         route: None,
+        answered: None,
     }
 }
 

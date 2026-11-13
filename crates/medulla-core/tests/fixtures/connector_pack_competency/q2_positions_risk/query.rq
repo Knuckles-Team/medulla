@@ -1,0 +1,13 @@
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX cp: <https://knuckles-team.github.io/ontology/connector-pack#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+SELECT ?instrument ?quantity ?analysis ?algorithm ?position ?record ?source ?asof WHERE {
+  ?position a :Position ; :positionInstrument ?instrument ; :positionQuantity ?quantity ;
+            :sourceRecordId ?record ; :sourceUpdatedAt ?asof ; :sourceMappingReference ?source .
+  FILTER(STRSTARTS(STR(?source), "connector:{c}#"))
+  ?algorithm :appliesToInstrumentType :Position ; :appliesToAnalysis ?analysis .
+  ?analysis skos:broader <https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/RiskAnalysis> .
+  ?tool cp:executes ?algorithm .
+  FILTER(STRSTARTS(STR(?tool), "tool://{c}/"))
+}

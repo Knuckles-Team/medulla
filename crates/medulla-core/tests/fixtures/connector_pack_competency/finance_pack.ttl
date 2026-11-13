@@ -1,0 +1,31 @@
+# Finance pack of the connector-pack competency questions (MEDULLA-CQ-CONN-R084.1, R084.2). {c} is the connector name.
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix t: <https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/> .
+
+t:VarHistorical a owl:Class ; rdfs:subClassOf :FinanceAlgorithm ;
+    :appliesToAnalysis t:ValueAtRisk ; :appliesToInstrumentType :Position .
+t:StressTest a owl:Class ; rdfs:subClassOf :FinanceAlgorithm ;
+    :appliesToAnalysis t:StressLoss ; :appliesToInstrumentType :Position .
+t:BlackScholes a owl:Class ; rdfs:subClassOf :FinanceAlgorithm ;
+    :appliesToAnalysis t:OptionValuation ; :appliesToInstrumentType :FinancialInstrument .
+# Declared but executed by no tool of the pack: it must never appear in an answer.
+t:KellySizing a owl:Class ; rdfs:subClassOf :FinanceAlgorithm ;
+    :appliesToAnalysis t:PositionSizing ; :appliesToInstrumentType :Position .
+
+t:RiskAnalysis a :AnalysisType .
+t:ValueAtRisk a :AnalysisType ; skos:broader t:RiskAnalysis .
+t:StressLoss a :AnalysisType ; skos:broader t:RiskAnalysis .
+t:OptionValuation a :AnalysisType .
+t:PositionSizing a :AnalysisType .
+
+<tool://{c}/var_historical> cp:executes t:VarHistorical ; cp:operatesOn :Position .
+<tool://{c}/stress_portfolio> cp:executes t:StressTest ; cp:operatesOn :Position .
+<tool://{c}/price_option> cp:executes t:BlackScholes ; cp:operatesOn :FinancialInstrument .
+
+<mcp-server://{c}> cp:providesFeature t:feature-risk, t:feature-valuation .
+t:feature-risk a cp:Feature ; cp:realizedBy <tool://{c}/var_historical>, <tool://{c}/stress_portfolio> .
+t:feature-valuation a cp:Feature ; cp:realizedBy <tool://{c}/price_option> .

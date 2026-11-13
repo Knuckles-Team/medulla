@@ -139,6 +139,48 @@ fn declared_individuals(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>
     Ok(individuals)
 }
 
+/// The declared surface links of each tool and skill member of `plan`'s head
+/// (MEDULLA-DECISION-ENGINE-R172.12.3): the classes it applies to or operates
+/// on, and the classes of the methods it executes. These are the facts the
+/// capability feed upserts beside the component record.
+pub(super) fn surface_facts(
+    plan: &ConnectorPackProjectionPlan,
+    ontologies: &[PackSchemaDocument],
+) -> Result<Vec<medulla_catalog_types::connector_pack::PackSurfaceFacts>, String> {
+    let links = declared_links(ontologies)?;
+    let applies = [cp("appliesTo"), cp("operatesOn")];
+    let executes = cp("executes");
+    let mut facts = Vec::new();
+    for member in &plan.surface {
+        if !matches!(member.kind, PackEntryKind::Tool | PackEntryKind::Skill) {
+            continue;
+        }
+        let mut entry = medulla_catalog_types::connector_pack::PackSurfaceFacts {
+            component_id: member.component_id.clone(),
+            applies_to: Default::default(),
+            executes: Default::default(),
+        };
+        for link in &links {
+            let NamedOrBlankNode::NamedNode(subject) = &link.subject else {
+                continue;
+            };
+            let Term::NamedNode(object) = &link.object else {
+                continue;
+            };
+            if subject.as_str() != member.uri {
+                continue;
+            }
+            if applies.contains(&link.predicate) {
+                entry.applies_to.insert(object.as_str().to_string());
+            } else if link.predicate == executes {
+                entry.executes.insert(object.as_str().to_string());
+            }
+        }
+        facts.push(entry);
+    }
+    Ok(facts)
+}
+
 /// The surface of `plan`'s head and the individuals its ontologies describe as
 /// one N-Triples document, or `None` when the head has neither.
 pub(super) fn surface_triples(
@@ -216,7 +258,8 @@ mod tests {
         assert_eq!(triples.len(), 2, "{triples:?}");
         assert!(triples
             .iter()
-            .all(|t| t.subject.to_string() == "<https://knuckles-team.github.io/ontology/core#amount_a>"));
+            .all(|t| t.subject.to_string()
+                == "<https://knuckles-team.github.io/ontology/core#amount_a>"));
     }
 
     fn individuals(ids: &[&str]) -> String {

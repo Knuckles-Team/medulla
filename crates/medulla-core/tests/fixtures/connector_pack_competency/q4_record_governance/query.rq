@@ -1,0 +1,14 @@
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX cp: <https://knuckles-team.github.io/ontology/connector-pack#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+SELECT ?contract ?connector ?revision ?mapping ?acl ?privacy ?provenance ?record ?source ?asof WHERE {
+  ?doc a :Document ; :sourceRecordId ?record ; :sourceUpdatedAt ?asof ; :sourceMappingReference ?source .
+  FILTER(STRSTARTS(STR(?source), "connector:{c}#"))
+  ?object cp:ontologyClass :Document ; cp:hasFieldMapping ?mapping .
+  ?contract cp:hasSourceObject ?object ; cp:contractOf ?connector ; cp:contractVersion ?revision ;
+            cp:privacyClass ?privacy ; cp:hasAccessPolicy ?policy ; cp:requiresProvenance ?requirement .
+  ?policy cp:defaultAcl ?acl .
+  ?requirement cp:requiredField ?provenance .
+  FILTER(STRSTARTS(STR(?contract), "https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/"))
+}

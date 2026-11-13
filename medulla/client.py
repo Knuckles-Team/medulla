@@ -13701,6 +13701,7 @@ class RdfClient:
         type_convention: str = "",
         *,
         explain: bool = False,
+        requires_packs: list[str] | None = None,
     ) -> SparqlResult:
         """Run a SPARQL ``SELECT`` and return the engine's typed ``SparqlResult``
         (EH-377): ``vars``, ``rows`` aligned to them, and one witness proof per row
@@ -13716,6 +13717,8 @@ class RdfClient:
         }
         if explain:
             params["explain"] = True
+        if requires_packs:
+            params["requires_packs"] = list(requires_packs)
         sent = await _gen.reasoning.send_sparql(self._client, params)
         return _gen.reasoning.decode_sparql(sent)
 
@@ -13724,6 +13727,8 @@ class RdfClient:
         query: str,
         base_iri: str = "",
         type_convention: str = "",
+        *,
+        requires_packs: list[str] | None = None,
     ) -> list[dict[str, str | None]]:
         """Run a SPARQL 1.1 ``SELECT`` over the connection's graph and return a list
         of row dicts keyed by projected variable (``None`` for an unbound OPTIONAL
@@ -13742,8 +13747,16 @@ class RdfClient:
 
         The engine's ``SparqlResult`` is validated against its contract model
         (:meth:`sparql_result`) before each row is zipped to its vars.
+
+        ``requires_packs`` names the connector packs the question reads, by connector
+        id. When the tenant has not imported one, the read abstains with
+        ``PACK_NOT_IMPORTED`` naming the first missing id, before any query runs.
         """
-        return _sparql_rows(await self.sparql_result(query, base_iri, type_convention))
+        return _sparql_rows(
+            await self.sparql_result(
+                query, base_iri, type_convention, requires_packs=requires_packs
+            )
+        )
 
     async def sparql_explain(
         self,

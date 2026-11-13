@@ -12,9 +12,10 @@ use crate::owner::graph_shard::{
     XSHARD_DECISION_CERTIFICATE,
 };
 use crate::owner::registry::{
-    predecessor_evidence, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES, MCP_CATALOG_CONFIGS,
-    MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT, SEMANTIC_EMBEDDING_VERSION_TAGS,
-    SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
+    predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
+    MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
+    SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS,
+    SEMANTIC_STAGE_RECEIPTS,
 };
 use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
@@ -74,8 +75,13 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
                 .open_table(MCP_CATALOG_SCOPES)
                 .map_err(|error| error.to_string())?;
             open_concept_lineage_tables(write)?;
+            open_capability_reward_table(write)?;
         }
-        UpgradeTarget::AgentLibraryConceptLineage => open_concept_lineage_tables(write)?,
+        UpgradeTarget::AgentLibraryConceptLineage => {
+            open_concept_lineage_tables(write)?;
+            open_capability_reward_table(write)?;
+        }
+        UpgradeTarget::AgentLibraryReward => open_capability_reward_table(write)?,
         UpgradeTarget::GraphShard(source) => open_graph_shard_tables(write, source)?,
         UpgradeTarget::SemanticIndex => open_promotion_tables(write)?,
         UpgradeTarget::Rbac => {
@@ -85,6 +91,14 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
         }
     }
     Ok(())
+}
+
+/// Create, empty, the learned capability reward table.
+fn open_capability_reward_table(write: &WriteTransaction) -> Result<(), String> {
+    write
+        .open_table(CAPABILITY_REWARD)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
 }
 
 /// Create, empty, the known concept id and lineage edge tables.

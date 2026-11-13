@@ -1,0 +1,12 @@
+PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX cp: <https://knuckles-team.github.io/ontology/connector-pack#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+SELECT ?connector ?feature ?kind ?component ?contract ?record ?source ?asof WHERE {
+  ?capable cp:providesCapability <https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/DocumentSearch> .
+  ?feature cp:realizedBy ?capable ; cp:realizedBy ?component .
+  ?connector cp:providesFeature ?feature ; cp:hasContract ?contract .
+  ?component a ?kind ; cp:componentId ?record ; cp:packDigest ?source ; cp:entryRevision ?asof .
+  FILTER(?kind IN (cp:Tool, cp:Prompt, cp:Skill))
+  FILTER(CONTAINS(STR(?component), "{c}"))
+}

@@ -65,6 +65,32 @@ pub struct GenerationEvalRequest {
     pub max_score_psi_q16: i64,
 }
 
+/// The embedding space of one generation: the graph that holds it, the digest
+/// every vector in it is pinned to and the vector width.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ActiveSpaceRead {
+    /// The graph the logical graph resolves to now: the generation pointer's
+    /// target, or the logical graph itself while no pointer has moved.
+    pub graph: String,
+    pub space_digest: String,
+    pub dimensions: u32,
+}
+
+/// What `DecisionLog.generation_space` answers (MEDULLA-DECISION-ENGINE-R172.12.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GenerationSpaceRead {
+    pub logical: String,
+    /// The active generation's space; `None` while its graph declares none.
+    pub active: Option<ActiveSpaceRead>,
+    /// The digest of the space a cycle of the asked model declares on its
+    /// shadow graph, which the cycle's evaluation must name as `shadow_space`.
+    pub model_space_digest: Option<String>,
+}
+
 /// The receipt a generation activation must present.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

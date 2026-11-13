@@ -50,6 +50,7 @@ impl DecisionFamily for ThoughtSearchFamily {
                     thought,
                     family_premises: Vec::new(),
                     route: None,
+                    answered: None,
                 },
             ),
         )

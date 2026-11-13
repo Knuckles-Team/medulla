@@ -435,6 +435,31 @@ pub enum DecisionLogOp {
         tenant_id: String,
         record: super::super::program_store::RunRecord,
     },
+    /// Record what one run observed of a designated entity and update its
+    /// learned reward (MEDULLA-DECISION-ENGINE-R172.7.1). Exactly one of
+    /// `success` and `reward_q32` is set; `policy` names the knob values the
+    /// update reads.
+    CapabilityOutcome {
+        tenant_id: String,
+        entity_id: String,
+        #[serde(default)]
+        success: Option<bool>,
+        #[serde(default)]
+        reward_q32: Option<i64>,
+        decision_id: String,
+        #[serde(default)]
+        source_ids: BoundedVec<String, 64>,
+        policy: DecisionPolicyRef,
+    },
+    /// Read the embedding space of the generation a logical graph resolves to,
+    /// and the space a cycle of `model` would declare
+    /// (MEDULLA-DECISION-ENGINE-R172.12.6). Reads the generation pointer; commits nothing.
+    GenerationSpace {
+        tenant_id: String,
+        logical: String,
+        #[serde(default)]
+        model: Option<super::retrieval_generation::ModelRef>,
+    },
 }
 
 /// The result of a `PromoteRule` op.
@@ -482,10 +507,13 @@ impl DecisionLogOp {
     /// The operation's authorization class; the one classifier.
     pub fn class(&self) -> LogOpClass {
         match self {
-            Self::Commit { .. } => LogOpClass::Write,
+            Self::Commit { .. } | Self::CapabilityOutcome { .. } => LogOpClass::Write,
             Self::Evaluate { .. } | Self::Resolve { .. } => LogOpClass::Evaluate,
             Self::Compact { .. } => LogOpClass::Admin,
-            Self::Get { .. } | Self::Aggregate { .. } | Self::Verify { .. } => LogOpClass::Read,
+            Self::Get { .. }
+            | Self::Aggregate { .. }
+            | Self::Verify { .. }
+            | Self::GenerationSpace { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
@@ -522,7 +550,9 @@ impl DecisionLogOp {
             | Self::Learn { tenant_id, .. }
             | Self::PromoteRule { tenant_id, .. }
             | Self::Writeback { tenant_id, .. }
-            | Self::RunRecord { tenant_id, .. } => tenant_id,
+            | Self::RunRecord { tenant_id, .. }
+            | Self::CapabilityOutcome { tenant_id, .. }
+            | Self::GenerationSpace { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

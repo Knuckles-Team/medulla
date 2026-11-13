@@ -106,7 +106,7 @@ pub mod worker {
 
     /// One sweep over the deployment tenant's import stream. Returns whether
     /// it did any work, so an idle worker backs off.
-    pub(crate) async fn sweep(
+    pub async fn sweep(
         state: &Arc<RwLock<ServerState>>,
         subscribed: &AtomicBool,
     ) -> Result<bool, String> {

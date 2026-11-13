@@ -24,7 +24,8 @@ use medulla_types::contract::BoundedVec;
 /// The engine's admissibility role.
 pub(crate) const ADMITS_TOPOLOGY: &str = medulla_types::ontology_iri!("reasoning#admitsTopology");
 /// The engine's "needs an independent check" task class.
-pub(crate) const NEEDS_INDEPENDENT_CHECK: &str = medulla_types::ontology_iri!("reasoning#NeedsIndependentCheck");
+pub(crate) const NEEDS_INDEPENDENT_CHECK: &str =
+    medulla_types::ontology_iri!("reasoning#NeedsIndependentCheck");
 
 /// What the schema entailed for one topology question.
 pub(super) struct Entailed {
@@ -61,7 +62,7 @@ fn authority_of(source_id: &str) -> SchemaAuthority {
 /// Every ontology triple of the composed sources, blank nodes scoped per
 /// source exactly as the graph-view extractor scopes them, plus the weakest
 /// authority among the sources that mention the admissibility role.
-fn ontology(
+pub(super) fn ontology(
     sources: &medulla_graph_core::graph::GraphSchemaSources,
 ) -> Result<(Vec<medulla_rdf::oxrdf::Triple>, SchemaAuthority, String), String> {
     let mut triples = Vec::new();

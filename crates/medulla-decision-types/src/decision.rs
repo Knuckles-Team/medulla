@@ -56,6 +56,8 @@ pub mod knob_families;
 pub mod knobs;
 pub mod memory_rewrite;
 pub mod lifecycle;
+pub mod load_set;
+pub mod load_set_knobs;
 pub mod memory_benchmark;
 pub mod numeric;
 pub mod package_validation;
@@ -87,6 +89,7 @@ pub mod tool_relevance;
 pub mod trace_fix_binding;
 pub mod transfer;
 pub mod usage;
+pub mod usage_guidance;
 pub mod verifier_receipt;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.

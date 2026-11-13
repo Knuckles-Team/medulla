@@ -18,6 +18,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `designation.reward_decay` | f64 | 0.99 | [0.5, 1] | factor | Tunable | `MEDULLA_DESIGNATION_REWARD_DECAY` |
 | `designation.max_required_capabilities` | u64 | 32 | [32, 32] | count | Fixed | `MEDULLA_DESIGNATION_MAX_REQUIRED_CAPABILITIES` |
 | `xshard.decision_deadline_ms` | u64 | 30000 | [1000, 600000] | ms | Tunable | `MEDULLA_XSHARD_DECISION_DEADLINE_MS` |
+| `designation.feed_claim_limit` | u64 | 16 | [1, 256] | outbox rows | Tunable | `MEDULLA_DESIGNATION_FEED_CLAIM_LIMIT` |
+| `designation.feed_lease_ms` | u64 | 120000 | [1000, 3600000] | milliseconds | Tunable | `MEDULLA_DESIGNATION_FEED_LEASE_MS` |
+| `designation.feed_idle_ms` | u64 | 500 | [10, 60000] | milliseconds | Tunable | `MEDULLA_DESIGNATION_FEED_IDLE_MS` |
 | `topology.max_width` | u64 | 16 | [1, 16] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_WIDTH` |
 | `topology.max_depth` | u64 | 8 | [1, 8] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_DEPTH` |
 | `topology.max_rounds` | u64 | 8 | [1, 8] | count | Tunable | `MEDULLA_TOPOLOGY_MAX_ROUNDS` |

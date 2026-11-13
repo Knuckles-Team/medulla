@@ -100,6 +100,72 @@ def decide_request(
     }
 
 
+def capability_designation_request(
+    tenant_id: str,
+    question_id: str,
+    question: Mapping[str, Any],
+    graph: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``capability_designation`` ``Decide`` request.
+
+    ``question`` is the typed designation question (tenant, query vector,
+    required capabilities and policy tags, ``k``, weights and ontology prior);
+    ``graph`` names the graph whose composed schema supplies the capability
+    class closure. The engine ranks the resident index: it never takes the
+    candidates from the caller, so the one declared candidate is the question id.
+    """
+    return decide_request(
+        tenant_id,
+        (question_id, "capability_designation", "ordinary"),
+        declared([DeclaredOption(question_id)]),
+        feature_schema,
+        policy=policy,
+        params=[
+            param(
+                "capability_designation",
+                "capability_designation",
+                {"question": dict(question), "graph": graph},
+            )
+        ],
+    )
+
+
+def usage_guidance_request(
+    tenant_id: str,
+    question_id: str,
+    connector: str,
+    job_class: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    graph: str | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``usage_guidance`` ``Decide`` request: how and when to use a connector.
+
+    ``connector`` is the pack's connector node (``mcp-server://<name>``) and
+    ``job_class`` the class whose ``:hasStep`` chain is ordered. The engine
+    reads the pack and the tenant's tool outcomes itself, so the one declared
+    candidate is the question id.
+    """
+    params = [
+        param("connector", "iri", connector),
+        param("job_class", "iri", job_class),
+    ]
+    if graph is not None:
+        params.append(param("graph", "text", graph))
+    return decide_request(
+        tenant_id,
+        (question_id, "usage_guidance", "ordinary"),
+        declared([DeclaredOption(question_id)]),
+        feature_schema,
+        policy=policy,
+        params=params,
+    )
+
+
 def task_plan_request(
     tenant_id: str,
     question_id: str,
@@ -490,6 +556,32 @@ def learn_op(tenant_id: str, write: str, **fields: Any) -> dict[str, Any]:
     }
 
 
+def capability_outcome_op(
+    tenant_id: str,
+    entity_id: str,
+    decision_id: str,
+    *,
+    success: bool | None = None,
+    reward_q32: int | None = None,
+    source_ids: Iterable[str] = (),
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Record what one run observed of a designated entity (``capability_outcome``):
+    exactly one of ``success`` and ``reward_q32`` (a Q32 reward in ``[0, 2**32]``)
+    updates the entity's learned reward. A re-send of the same ``decision_id`` and
+    outcome applies nothing twice; ``policy`` defaults to the engine default."""
+    return {
+        "op": "capability_outcome",
+        "tenant_id": tenant_id,
+        "entity_id": entity_id,
+        "success": success,
+        "reward_q32": reward_q32,
+        "decision_id": decision_id,
+        "source_ids": list(source_ids),
+        "policy": dict(policy) if policy is not None else {"policy": "default"},
+    }
+
+
 def record_outcome_op(
     tenant_id: str,
     record_id: str,
@@ -715,6 +807,11 @@ class DecisionClient:
             return decode_decide(result)
         return _payload(result)
 
+    async def designate(self, request: Mapping[str, Any]) -> Any:
+        """Send a ``capability_designation`` ``Decide`` built by
+        :func:`capability_designation_request`."""
+        return await self.decide(request)
+
     async def log(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
@@ -810,6 +907,7 @@ __all__ = [
     "claim_advance_op",
     "claim_compile_op",
     "claim_evidence_op",
+    "capability_outcome_op",
     "claim_get_op",
     "claim_propose_op",
     "commit_op",

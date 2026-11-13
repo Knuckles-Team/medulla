@@ -68,6 +68,7 @@ use medulla_persistence_records::decision_jobs::record_key;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
 
 /// Most log rows one read walks before refusing as unbounded.
 pub(super) const MAX_LOG_ROWS: usize = 100_000;
@@ -726,6 +727,7 @@ fn dispatch(
     reader: &LogReader,
     op: DecisionLogOp,
     inputs: Option<&super::stat_learning::LearningInputs>,
+    index: &medulla_decision_memory::memory::capability_index::CapabilityIndex,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionLogAggregate,
@@ -790,6 +792,29 @@ fn dispatch(
                  through the durable mutation path",
             ))
         }
+        DecisionLogOp::CapabilityOutcome {
+            entity_id,
+            success,
+            reward_q32,
+            decision_id,
+            source_ids,
+            policy,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogCapabilityOutcome,
+        >(super::stat_capability_outcome::apply(
+            ctx,
+            index,
+            &entity_id,
+            success,
+            reward_q32,
+            &decision_id,
+            &source_ids,
+            &policy,
+        )?),
+        DecisionLogOp::GenerationSpace { .. } => {
+            Err("generation_space is served on the async path".to_string())
+        }
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,
@@ -814,7 +839,19 @@ async fn serve(
         let mut guard = state.write().await;
         (guard.ensure_agent_library()?, guard.auth_secret.clone())
     };
+    if let DecisionLogOp::GenerationSpace { logical, model, .. } = &op {
+        let tenant = CarrierAuthority::from_verified(verified)?
+            .tenant_scope()
+            .to_string();
+        let read =
+            super::stat_generation_space::serve(state, &store, &tenant, logical, model.as_ref())
+                .await?;
+        return ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogGenerationSpace,
+        >(read);
+    }
     let reader = LogReader::served(state, verified).await;
+    let index = super::stat_designation::shared_capability_index(&*state.read().await);
     let inputs = super::stat_learning::prepare(state, verified, &op).await?;
     let run_graph = super::run_record::open_graph(state, verified, &op).await?;
     let blocking_graph = run_graph.clone();
@@ -828,6 +865,7 @@ async fn serve(
             now_ms,
             server_secret: secret.as_bytes(),
             matched: &[],
+            designation: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(
@@ -838,7 +876,7 @@ async fn serve(
                 &principal,
             )
             .map(|staged| Served::RunRecord(Box::new(staged))),
-            op => dispatch(&ctx, &reader, op, inputs.as_ref()).map(Served::Payload),
+            op => dispatch(&ctx, &reader, op, inputs.as_ref(), &index).map(Served::Payload),
         }
     })
     .await

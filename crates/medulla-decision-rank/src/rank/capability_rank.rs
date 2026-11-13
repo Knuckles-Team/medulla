@@ -227,6 +227,7 @@ mod tests {
                 prior_q32: prior,
             },
             ontology_prior: ontology_prior.map(str::to_string),
+            target_classes: BTreeSet::new(),
         }
     }
 

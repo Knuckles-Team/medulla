@@ -315,5 +315,6 @@ fn compute(
         thought: None,
         family_premises: Vec::new(),
         route: None,
+        answered: None,
     })
 }

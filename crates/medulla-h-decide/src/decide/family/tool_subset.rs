@@ -42,6 +42,7 @@ impl DecisionFamily for ToolSubsetFamily {
                 thought: None,
                 family_premises: Vec::new(),
                 route: None,
+                answered: None,
             }),
             Err(detail) => Err(detail),
         })

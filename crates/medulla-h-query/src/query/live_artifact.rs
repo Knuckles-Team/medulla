@@ -359,6 +359,7 @@ pub(super) async fn sparql_response(
         base_iri: String::new(),
         type_convention: String::new(),
         explain: false,
+        requires_packs: Vec::new(),
     };
     let handler_ctx = TryHandleContext {
         req_id: ctx.req_id,

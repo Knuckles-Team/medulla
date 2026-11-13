@@ -1,0 +1,3 @@
+VarHistorical	ValueAtRisk	Position	var_historical	{c}
+StressTest	StressLoss	Position	stress_portfolio	{c}
+BlackScholes	OptionValuation	FinancialInstrument	price_option	{c}

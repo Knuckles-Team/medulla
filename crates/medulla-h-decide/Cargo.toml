@@ -52,12 +52,16 @@ medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-memory = { path = "../medulla-decision-memory" }
 medulla-decision-rank = { path = "../medulla-decision-rank" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
@@ -77,7 +81,7 @@ finance = ["medulla-compute/finance", "medulla-protocol-types/finance", "medulla
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-server-ops/owl", "medulla-types/owl", "rdf", "server", "sparql"]
 query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "dep:medulla-raft-xshard", "medulla-raft-xshard/raft", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "server"]
-redb = ["medulla-server-mutation/redb", "medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
+redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-server-mutation/redb", "medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-epistemic", "dep:medulla-h-jobs", "dep:medulla-statechart", "dep:medulla-store", "medulla-h-jobs/statechart", "medulla-protocol-types/statechart", "medulla-store/statechart", "medulla-types/statechart", "server"]
 security = ["redb", "dep:medulla-store", "medulla-store/security", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
 solve = ["medulla-compute/solve", "medulla-decision-policy/solve"]

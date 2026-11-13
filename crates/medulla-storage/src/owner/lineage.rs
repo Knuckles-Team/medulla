@@ -121,6 +121,49 @@ pub const AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE: LayoutPredecessor = LayoutPredec
     file_name: "agent_library.redb",
 };
 
+/// The frozen layout digest of [`AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD`]: the
+/// Agent Library pin before the `capability_reward` table. LAYOUT-REGEN needed:
+/// the gate fixer prints the digest of the layout with the concept tables and
+/// no reward table and replaces this value.
+pub const AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST: [u8; 32] = [
+    0xe1, 0x12, 0xd8, 0x11, 0x8e, 0x4e, 0x62, 0xb0, 0x02, 0x79, 0x9b, 0x84, 0xbb, 0xa8, 0xc6, 0x91,
+    0x62, 0xe4, 0x77, 0x07, 0x18, 0x61, 0xa8, 0x1d, 0x38, 0x93, 0x27, 0x77, 0x36, 0x72, 0x7e, 0xa0,
+];
+
+/// An Agent Library owner file from before the learned capability reward rows
+/// (MEDULLA-DECISION-ENGINE-R172.5.1): it already has the concept tables.
+pub const AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::AgentLibrary,
+    label: "Agent Library before learned capability rewards",
+    owner_tables: &[
+        "agent_library",
+        "agent_library_heads",
+        "agent_graph",
+        "agent_graph_heads",
+        "agent_component",
+        "agent_component_heads",
+        "agent_template",
+        "agent_template_heads",
+        "connector_pack_heads",
+        "connector_pack_members",
+        "connector_pack_imports",
+        "connector_pack_body_holders",
+        "connector_pack_bindings",
+        "mcp_catalog_configs",
+        "mcp_catalog_scopes",
+        "concept_ids",
+        "concept_lineage_edges",
+        "decision_artifacts",
+        "decision_records",
+        "write_back_change_sets",
+        "write_back_idempotency",
+        "write_back_receipts",
+        "write_back_receipt_heads",
+    ],
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "agent_library.redb",
+};
+
 /// `blob.redb` before holder rows, retention and the cursor high-water mark.
 pub const BLOB_BEFORE_HOLDERS: LayoutPredecessor = LayoutPredecessor {
     layout: OwnerLayout::Blob,
@@ -416,6 +459,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             AGENT_LIBRARY_BEFORE_CONNECTOR_PACKS,
             AGENT_LIBRARY_BEFORE_MCP_CATALOG,
             AGENT_LIBRARY_BEFORE_CONCEPT_LINEAGE,
+            AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
         ],
         OwnerLayout::Blob => &[BLOB_BEFORE_HOLDERS],
         OwnerLayout::SemanticIndex => &[SEMANTIC_INDEX_BEFORE_PROMOTION],

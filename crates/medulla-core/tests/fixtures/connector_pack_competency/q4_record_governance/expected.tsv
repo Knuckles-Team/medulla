@@ -1,0 +1,4 @@
+contract	{c}	1.0.0	field-id	quarantine	internal	record_id
+contract	{c}	1.0.0	field-id	quarantine	internal	source_uri
+contract	{c}	1.0.0	field-title	quarantine	internal	record_id
+contract	{c}	1.0.0	field-title	quarantine	internal	source_uri

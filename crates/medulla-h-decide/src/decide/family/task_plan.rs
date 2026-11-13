@@ -66,5 +66,6 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         thought: None,
         family_premises: Vec::new(),
         route: None,
+        answered: None,
     }
 }

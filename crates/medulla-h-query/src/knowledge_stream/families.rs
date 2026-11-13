@@ -187,6 +187,7 @@ async fn execute_rdf(
                 base_iri: base_iri.to_string(),
                 type_convention: type_convention.to_string(),
                 explain: false,
+                requires_packs: Vec::new(),
             },
             #[cfg(feature = "security")]
             rls,

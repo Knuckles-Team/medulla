@@ -1,0 +1,34 @@
+# Document pack of the connector-pack competency questions (MEDULLA-CQ-CONN-R084.3, R084.4). {c} is the connector name.
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix t: <https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/> .
+
+t:DocumentSearch a :ServiceCapability .
+
+<tool://{c}/search_documents> cp:providesCapability t:DocumentSearch ; cp:operatesOn :Document .
+<prompt://{c}-doc-prompt> cp:appliesTo :Document .
+<skill://{c}-doc-skill> cp:appliesTo :Document .
+
+<mcp-server://{c}> cp:providesFeature t:feature-doc-search ; cp:hasContract t:contract .
+t:feature-doc-search a cp:Feature ;
+    cp:realizedBy <tool://{c}/search_documents>, <prompt://{c}-doc-prompt>, <skill://{c}-doc-skill> .
+
+t:contract a cp:IngestContract ;
+    cp:contractOf <mcp-server://{c}> ;
+    cp:contractVersion "1.0.0" ;
+    cp:contractDigest "0000000000000000000000000000000000000000000000000000000000000001" ;
+    cp:privacyClass "internal" ;
+    cp:hasSourceObject t:contract-doc ;
+    cp:hasAccessPolicy t:access ;
+    cp:requiresProvenance t:provenance .
+t:contract-doc a cp:SourceObject ;
+    cp:objectName "doc" ; cp:ontologyClass :Document ;
+    cp:hasKeyRule t:key ; cp:hasFieldMapping t:field-id, t:field-title .
+t:key a cp:KeyRule ; cp:keyField "id" .
+t:field-id a cp:FieldMapping ; cp:sourceField "id" ; cp:mapsPredicate "identifier" .
+t:field-title a cp:FieldMapping ; cp:sourceField "title" ; cp:mapsPredicate "label" .
+t:access a cp:AccessPolicy ; cp:defaultAcl "quarantine" .
+t:provenance a cp:ProvenanceRequirement ; cp:requiredField "source_uri", "record_id" .

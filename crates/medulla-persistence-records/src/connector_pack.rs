@@ -275,6 +275,34 @@ impl AgentLibraryStore {
         Ok(graphs)
     }
 
+    /// The first connector id in `required` whose pack the tenant has not imported
+    /// visibly (MEDULLA-CQ-CONN-R084.7), or `None` when every required pack is
+    /// visible. A connector id that cannot name a pack is as absent as one with no
+    /// head; a head still projecting keeps its last visible graph and counts as
+    /// imported. The order of `required` decides which absence is named.
+    pub fn first_missing_visible_pack(
+        &self,
+        tenant_id: &str,
+        required: &[String],
+    ) -> Result<Option<String>, String> {
+        let visible = self.visible_connector_pack_graphs(tenant_id)?;
+        for id in required {
+            let present = ResourceId::new(id.as_str())
+                .ok()
+                .and_then(|connector| {
+                    medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+                        tenant_id, &connector,
+                    )
+                    .ok()
+                })
+                .is_some_and(|graph| visible.contains(&graph));
+            if !present {
+                return Ok(Some(id.clone()));
+            }
+        }
+        Ok(None)
+    }
+
     /// Current durable membership rows for one connector, in URI order.
     ///
     /// Import planning uses this snapshot to derive withdrawals and to reject
@@ -682,6 +710,33 @@ pub mod tests {
             .visible_connector_pack_graphs("tenant-a")
             .unwrap()
             .is_empty());
+    }
+
+    // spec: MEDULLA-CQ-CONN-R084.7
+    #[test]
+    fn a_required_pack_the_tenant_never_imported_is_named_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
+        let required = vec!["finance-pack".to_string(), "doc-pack".to_string()];
+        assert_eq!(
+            store
+                .first_missing_visible_pack("tenant-a", &required)
+                .unwrap(),
+            Some("finance-pack".to_string()),
+            "the first required id with no visible head is named"
+        );
+        assert_eq!(
+            store.first_missing_visible_pack("tenant-a", &[]).unwrap(),
+            None,
+            "a question requiring no pack never abstains"
+        );
+        assert_eq!(
+            store
+                .first_missing_visible_pack("tenant-a", &["not a pack id!".to_string()])
+                .unwrap(),
+            Some("not a pack id!".to_string()),
+            "an id that cannot name a pack is absent"
+        );
     }
 
     #[test]

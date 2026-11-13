@@ -183,6 +183,10 @@ pub struct ServerState {
     /// opened once under `persist_dir` by the first state read or build.
     #[cfg(feature = "redb")]
     pub doc_state_store: Arc<Mutex<Option<ErasedHandle>>>,
+    /// The resident capability designation index (MEDULLA-DECISION-ENGINE-R172.7),
+    /// opened once by the first designation read or feed write and then shared.
+    /// The index stores nothing durable; the Agent Library is its source.
+    pub capability_index: Arc<Mutex<Option<ErasedHandle>>>,
     /// Cold-tenant access tracker (CONCEPT:MEDULLA-KG.sharding.medulla-r6/MEDULLA-040, R6), feature `redb`. The
     /// dispatch read+write path calls `touch(graph)` on every graph access so the
     /// periodic cold-offload sweep (`offload_cold_tenants`) can hibernate graphs idle
@@ -484,6 +488,7 @@ impl ServerState {
             branch_registry: Arc::default(),
             #[cfg(feature = "redb")]
             doc_state_store: Arc::default(),
+            capability_index: Arc::default(),
             #[cfg(feature = "redb")]
             cold_tracker: None,
             #[cfg(feature = "viz-static-export")]

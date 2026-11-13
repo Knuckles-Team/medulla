@@ -113,6 +113,26 @@ fn rbac_before_profile_grants_matches_the_previous_pin() {
     );
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R172.5.1
+#[test]
+fn agent_library_before_capability_reward_matches_the_previous_pin() {
+    let predecessor = &AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD;
+    let contracts: Vec<_> =
+        crate::owner::contract::expected_table_contracts(OwnerLayout::AgentLibrary)
+            .into_iter()
+            .filter(|contract| {
+                contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                    || predecessor
+                        .owner_tables
+                        .contains(&contract.table_id.as_str())
+            })
+            .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::AgentLibrary, &contracts),
+        AGENT_LIBRARY_PRE_CAPABILITY_REWARD_DIGEST
+    );
+}
+
 #[test]
 fn the_layout_list_is_complete_and_ordered() {
     for (index, layout) in ALL_LAYOUTS.iter().enumerate() {

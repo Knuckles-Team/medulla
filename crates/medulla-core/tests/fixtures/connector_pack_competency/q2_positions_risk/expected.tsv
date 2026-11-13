@@ -1,0 +1,4 @@
+AAPL	10	ValueAtRisk	VarHistorical
+AAPL	10	StressLoss	StressTest
+MSFT	5	ValueAtRisk	VarHistorical
+MSFT	5	StressLoss	StressTest

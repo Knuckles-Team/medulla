@@ -1,0 +1,19 @@
+# L2 stand-in for what the served path adds (the projection stamps and the SourceIngest
+# metadata). The served L4 test never uses this file: the engine writes these facts itself.
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix cp: <https://knuckles-team.github.io/ontology/connector-pack#> .
+@prefix t: <https://knuckles-team.github.io/ontology/test/connector-pack-competency/{c}/> .
+
+<tool://{c}/var_historical> a cp:Tool ; cp:componentId "cmp-var" ; cp:packDigest "d1" ; cp:entryRevision 1 .
+<tool://{c}/stress_portfolio> a cp:Tool ; cp:componentId "cmp-stress" ; cp:packDigest "d1" ; cp:entryRevision 1 .
+<tool://{c}/price_option> a cp:Tool ; cp:componentId "cmp-price" ; cp:packDigest "d1" ; cp:entryRevision 1 .
+<tool://{c}/search_documents> a cp:Tool ; cp:componentId "cmp-search" ; cp:packDigest "d2" ; cp:entryRevision 1 .
+<prompt://{c}-doc-prompt> a cp:Prompt ; cp:componentId "cmp-prompt" ; cp:packDigest "d2" ; cp:entryRevision 1 .
+<skill://{c}-doc-skill> a cp:Skill ; cp:componentId "cmp-skill" ; cp:packDigest "d2" ; cp:entryRevision 1 .
+
+<urn:rec:p1> a :Position ; :positionInstrument "AAPL" ; :positionQuantity 10 ;
+    :sourceRecordId "p-1" ; :sourceUpdatedAt "2026-09-20T00:00:00Z" ; :sourceMappingReference "connector:{c}#mappings/position" .
+<urn:rec:p2> a :Position ; :positionInstrument "MSFT" ; :positionQuantity 5 ;
+    :sourceRecordId "p-2" ; :sourceUpdatedAt "2026-09-21T00:00:00Z" ; :sourceMappingReference "connector:{c}#mappings/position" .
+<urn:rec:d1> a :Document ; :sourceRecordId "doc-1" ; :sourceUpdatedAt "2026-09-20T00:00:00Z" ;
+    :sourceMappingReference "connector:{c}#mappings/doc" .

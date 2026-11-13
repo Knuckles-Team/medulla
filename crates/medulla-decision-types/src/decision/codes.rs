@@ -479,6 +479,12 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::ComparativeAnalysisPlan,
         super::comparative_analysis::REFUSALS,
     ),
+    (
+        QuestionKind::CapabilityDesignation,
+        super::capability_designation::REFUSALS,
+    ),
+    (QuestionKind::LoadSet, super::load_set::REFUSALS),
+    (QuestionKind::UsageGuidance, super::usage_guidance::REFUSALS),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

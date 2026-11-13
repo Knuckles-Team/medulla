@@ -381,6 +381,10 @@ pub enum TypedValue {
     /// The ranked candidates of one unified query to budget a comparative
     /// analysis over (MEDULLA-DECISION-ENGINE-R139.3).
     ComparativeAnalysis(Box<super::comparative_analysis::ComparativeAnalysisRequest>),
+    /// A capability designation question (MEDULLA-DECISION-ENGINE-R172.7).
+    CapabilityDesignation(Box<super::capability_designation::DesignationAsk>),
+    /// A job-scoped load set question (MEDULLA-DECISION-ENGINE-R176.3).
+    LoadSet(Box<super::load_set::LoadSetQuestion>),
 }
 
 /// One named parameter of a question.

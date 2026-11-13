@@ -5283,6 +5283,7 @@ ex:carol a ex:Person ; ex:name "Carol" ; ex:age "40"^^xsd:integer ; ex:knows ex:
                 base_iri: String::new(),
                 type_convention: String::new(),
                 explain: false,
+                requires_packs: Vec::new(),
             },
         ),
     )

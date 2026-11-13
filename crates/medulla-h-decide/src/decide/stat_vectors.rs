@@ -62,6 +62,19 @@ impl GraphVectors {
             .is_none_or(|space| space.digest == space_digest)
     }
 
+    /// Declare `space` when the store declares none. A store that already
+    /// declares a space keeps it: the evaluation then admits only that one.
+    pub(super) fn ensure_space(
+        &self,
+        space: &medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<(), String> {
+        let mut store = self.core.semantic_store.write();
+        if store.space().is_some() {
+            return Ok(());
+        }
+        store.declare_space(space.clone())
+    }
+
     /// The store's vector width.
     pub(super) fn dimensions(&self) -> usize {
         self.core.semantic_store.read().dim()

@@ -27,16 +27,26 @@ pub(crate) mod statistical;
 #[cfg(feature = "decide")]
 mod candidates;
 #[cfg(feature = "decide")]
+#[cfg(feature = "redb")]
+pub mod capability_feed;
+#[cfg(feature = "decide")]
 mod family;
 #[cfg(feature = "decide")]
 mod stat_adapter;
 #[cfg(feature = "decide")]
 mod stat_belief;
+mod stat_capability_outcome;
 #[cfg(feature = "decide")]
 mod stat_classes;
 #[cfg(feature = "decide")]
+mod stat_concentration;
+#[cfg(feature = "decide")]
 #[allow(missing_docs)]
 pub mod stat_decide;
+mod stat_delegation;
+#[cfg(feature = "decide")]
+mod stat_designation;
+mod stat_distilled;
 #[cfg(feature = "decide")]
 mod stat_evaluator;
 #[cfg(feature = "decide")]
@@ -45,11 +55,8 @@ mod stat_executor;
 mod stat_generation;
 #[cfg(feature = "decide")]
 mod stat_generation_cycle;
-// MEDULLA-DECISION-ENGINE-R803: the contrastive harness composition decision.
 #[cfg(feature = "decide")]
-mod stat_concentration;
-mod stat_delegation;
-mod stat_distilled;
+pub(crate) mod stat_generation_space;
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
@@ -59,6 +66,8 @@ mod stat_jobs;
 mod stat_memory_change;
 #[cfg(feature = "decide")]
 mod stat_learning;
+#[cfg(feature = "decide")]
+mod stat_load_set;
 #[cfg(feature = "decide")]
 mod stat_log;
 #[cfg(feature = "decide")]
@@ -73,17 +82,19 @@ mod stat_replay;
 #[cfg(feature = "decide")]
 mod stat_resolve;
 #[cfg(feature = "decide")]
+mod stat_usage_guidance;
+#[cfg(feature = "decide")]
 mod stat_writeback;
 // MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
 #[cfg(feature = "decide")]
-mod stat_retention;
-#[cfg(feature = "decide")]
 mod run_record;
-mod tool_index;
+#[cfg(feature = "decide")]
+mod stat_retention;
 #[cfg(feature = "decide")]
 mod stat_rule_promotion;
 #[cfg(feature = "decide")]
 mod stat_slate;
+mod tool_index;
 // EH-523: the per-component split of a slate's outcome on the outcome aggregate.
 #[cfg(feature = "decide")]
 mod stat_slate_attribution;

@@ -45,6 +45,5 @@ pub mod skill_upgrade;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod topology_tests;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod usage_guidance;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod web_fetch_selection;

@@ -1246,3 +1246,15 @@ mod command_config_tests;
 
 // MEDULLA-DECISION-ENGINE-R159.3: routing-path preference, served.
 mod path_preference_tests;
+
+// MEDULLA-DECISION-ENGINE-R172.7: capability designation served through Decide.
+#[cfg(feature = "redb")]
+mod capability_designation_tests;
+
+// MEDULLA-DECISION-ENGINE-R176.3: the load set served through Decide.
+#[cfg(feature = "redb")]
+mod load_set_tests;
+
+// MEDULLA-DECISION-ENGINE-R177.3 to R177.5: usage guidance served through Decide.
+#[cfg(feature = "redb")]
+mod usage_guidance_tests;
