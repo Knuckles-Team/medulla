@@ -12,6 +12,8 @@ fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
         join: None,
         decision: None,
         approval: None,
+        duration_ms: None,
+        priority_weight: None,
     }
 }
 
@@ -90,46 +92,46 @@ fn refuses(mutator: impl FnOnce(&mut TaskPlanProposal), reason: &str) {
 // spec: MEDULLA-DECISION-ENGINE-R134.111.4
 #[test]
 fn invalid_graphs_refuse() {
-    refuses(|p| p.tasks = BoundedVec::default(), "empty_plan");
+    refuses(|p| p.tasks = BoundedVec::default(), "EMPTY_PLAN");
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("a", &[]), task("a", &[])]).unwrap(),
-        "duplicate_task_id",
+        "DUPLICATE_TASK_ID",
     );
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("bad id", &[])]).unwrap(),
-        "invalid_task_id",
+        "INVALID_TASK_ID",
     );
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("a", &["missing"])]).unwrap(),
-        "missing_dependency",
+        "MISSING_DEPENDENCY",
     );
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("a", &["a"])]).unwrap(),
-        "plan_cycle",
+        "PLAN_CYCLE",
     );
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("a", &["b"]), task("b", &["a"])]).unwrap(),
-        "plan_cycle",
+        "PLAN_CYCLE",
     );
     refuses(
         |p| p.tasks = BoundedVec::new(vec![task("a", &["b", "b"]), task("b", &[])]).unwrap(),
-        "duplicate_dependency",
+        "DUPLICATE_DEPENDENCY",
     );
     refuses(
         |p| p.output_task_id = "missing".into(),
-        "invalid_output_task",
+        "INVALID_OUTPUT_TASK",
     );
-    refuses(|p| p.output_task_id = "c".into(), "disconnected_output");
+    refuses(|p| p.output_task_id = "c".into(), "DISCONNECTED_OUTPUT");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.4
 #[test]
 fn work_and_text_bounds_refuse() {
     for value in [0, 3, 65] {
-        refuses(|p| p.max_steps = value, "plan_bounds");
+        refuses(|p| p.max_steps = value, "PLAN_BOUNDS");
     }
     for value in [0, 5, 9] {
-        refuses(|p| p.max_concurrency = value, "plan_bounds");
+        refuses(|p| p.max_concurrency = value, "PLAN_BOUNDS");
     }
     for prompt in [" ".into(), "x".repeat(MAX_PROMPT_BYTES + 1)] {
         refuses(
@@ -140,7 +142,7 @@ fn work_and_text_bounds_refuse() {
                 }])
                 .unwrap()
             },
-            "plan_text_bounds",
+            "PLAN_TEXT_BOUNDS",
         );
     }
     let mut input = proposal();
@@ -156,7 +158,7 @@ fn work_and_text_bounds_refuse() {
     input.max_steps = 5;
     assert!(plan_explicit_tasks(&input)
         .unwrap_err()
-        .starts_with("plan_text_bounds"));
+        .starts_with("PLAN_TEXT_BOUNDS"));
     let input = TaskPlanProposal {
         tasks: BoundedVec::new(
             (0..64)
@@ -171,7 +173,7 @@ fn work_and_text_bounds_refuse() {
     // All tasks are bounded, but most do not feed the output sink.
     assert!(plan_explicit_tasks(&input)
         .unwrap_err()
-        .starts_with("disconnected_output"));
+        .starts_with("DISCONNECTED_OUTPUT"));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.2
@@ -194,6 +196,8 @@ fn maximum_bounded_chain_is_valid() {
             join: None,
             decision: None,
             approval: None,
+            duration_ms: None,
+            priority_weight: None,
         })
         .collect();
     let input = TaskPlanProposal {
@@ -225,24 +229,24 @@ fn index_refusal_precedence_is_stable() {
     input.tasks = BoundedVec::default();
     assert_eq!(
         index(&input).unwrap_err(),
-        "empty_plan: at least one task is required"
+        "EMPTY_PLAN: at least one task is required"
     );
     input.tasks = BoundedVec::new(vec![task("bad id", &[])]).unwrap();
     assert_eq!(
         index(&input).unwrap_err(),
-        "plan_bounds: invalid task or concurrency ceiling"
+        "PLAN_BOUNDS: invalid task or concurrency ceiling"
     );
     input.max_steps = 4;
     let mut invalid = task("bad id", &["missing", "missing"]);
     invalid.prompt = " ".into();
     input.tasks = BoundedVec::new(vec![invalid.clone()]).unwrap();
-    assert_eq!(index(&input).unwrap_err(), "invalid_task_id: bad id");
+    assert_eq!(index(&input).unwrap_err(), "INVALID_TASK_ID: bad id");
     invalid.task_id = "a".into();
     input.tasks = BoundedVec::new(vec![invalid.clone()]).unwrap();
-    assert_eq!(index(&input).unwrap_err(), "plan_text_bounds: a");
+    assert_eq!(index(&input).unwrap_err(), "PLAN_TEXT_BOUNDS: a");
     invalid.prompt = "Valid prompt".into();
     input.tasks = BoundedVec::new(vec![task("a", &[]), invalid]).unwrap();
-    assert_eq!(index(&input).unwrap_err(), "duplicate_dependency: a");
+    assert_eq!(index(&input).unwrap_err(), "DUPLICATE_DEPENDENCY: a");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.4
@@ -259,7 +263,7 @@ fn index_accepts_exact_total_prompt_byte_limit() {
     tasks.push(task("extra", &[]));
     input.tasks = BoundedVec::new(tasks).unwrap();
     input.max_steps = 5;
-    assert_eq!(index(&input).unwrap_err(), "plan_text_bounds: extra");
+    assert_eq!(index(&input).unwrap_err(), "PLAN_TEXT_BOUNDS: extra");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.7
@@ -351,7 +355,7 @@ fn tool_step_round_trips_with_literals_and_bindings() {
     let extra = serde_json::json!({ "x": { "$ref": "steps.a.output", "default": 1 } });
     assert!(plan_explicit_tasks(&mixed(extra))
         .unwrap_err()
-        .starts_with("binding_bad_path"));
+        .starts_with("BINDING_BAD_PATH"));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.9
@@ -396,7 +400,7 @@ fn binding_bounds() {
     assert!(
         plan_explicit_tasks(&mixed(bound_arguments(MAX_BINDINGS_PER_CALL + 1, 0)))
             .unwrap_err()
-            .starts_with("call_bounds")
+            .starts_with("CALL_BOUNDS")
     );
     let base = argument_bytes(&bound_arguments(0, 0));
     let exact = bound_arguments(0, MAX_CALL_ARGUMENT_BYTES - base);
@@ -405,7 +409,7 @@ fn binding_bounds() {
     let over = bound_arguments(0, MAX_CALL_ARGUMENT_BYTES - base + 1);
     assert!(plan_explicit_tasks(&mixed(over))
         .unwrap_err()
-        .starts_with("call_bounds"));
+        .starts_with("CALL_BOUNDS"));
     let path = |n: usize| {
         let segments = vec!["k"; n].join(".");
         serde_json::json!({ "x": reference(&format!("steps.a.output.{segments}")) })
@@ -414,7 +418,7 @@ fn binding_bounds() {
     assert!(
         plan_explicit_tasks(&mixed(path(MAX_BINDING_PATH_SEGMENTS + 1)))
             .unwrap_err()
-            .starts_with("binding_bad_path")
+            .starts_with("BINDING_BAD_PATH")
     );
     let long = |len: usize| {
         let key = "k".repeat(len - "steps.a.output.".len());
@@ -424,7 +428,7 @@ fn binding_bounds() {
     assert!(
         plan_explicit_tasks(&mixed(long(MAX_BINDING_PATH_BYTES + 1)))
             .unwrap_err()
-            .starts_with("binding_bad_path")
+            .starts_with("BINDING_BAD_PATH")
     );
     let tools = TaskPlanProposal {
         tasks: BoundedVec::new(
@@ -462,7 +466,7 @@ fn binding_bounds() {
     // Four full prompts fit; the call text pushes the plan past 64 KiB.
     assert!(plan_explicit_tasks(&over_total)
         .unwrap_err()
-        .starts_with("plan_text_bounds"));
+        .starts_with("PLAN_TEXT_BOUNDS"));
 }
 
 fn binding_refusal(proposal: TaskPlanProposal) -> String {
@@ -475,15 +479,15 @@ fn refuses_each_binding_defect() {
     let cases = [
         (
             serde_json::json!({ "x": reference("steps.zz.output") }),
-            "binding_unknown_task: task=b pointer=/x",
+            "BINDING_UNKNOWN_TASK: task=b pointer=/x",
         ),
         (
             serde_json::json!({ "n": { "x": reference("steps.a.output.a b") } }),
-            "binding_bad_path: task=b pointer=/n/x",
+            "BINDING_BAD_PATH: task=b pointer=/n/x",
         ),
         (
             serde_json::json!({ "x": [reference("steps.b.output")] }),
-            "binding_cycle: task=b pointer=/x/0",
+            "BINDING_CYCLE: task=b pointer=/x/0",
         ),
     ];
     for (arguments, expected) in cases {
@@ -498,7 +502,7 @@ fn refuses_each_binding_defect() {
     not_dependency.max_steps = 3;
     assert_eq!(
         binding_refusal(not_dependency),
-        "binding_not_dependency: task=b pointer=/x"
+        "BINDING_NOT_DEPENDENCY: task=b pointer=/x"
     );
     // A reference to a downstream task closes a cycle through `depends_on`.
     let mut downstream = mixed(serde_json::json!({}));
@@ -511,7 +515,7 @@ fn refuses_each_binding_defect() {
     downstream.tasks = BoundedVec::new(tasks).unwrap();
     assert_eq!(
         binding_refusal(downstream),
-        "binding_cycle: task=a pointer=/y"
+        "BINDING_CYCLE: task=a pointer=/y"
     );
     for call in [
         TaskPlanCall {
@@ -539,18 +543,18 @@ fn refuses_each_binding_defect() {
         let mut tasks = input.tasks.as_slice().to_vec();
         tasks[1].call = Some(call);
         input.tasks = BoundedVec::new(tasks).unwrap();
-        assert_eq!(binding_refusal(input), "call_invalid: task=b pointer=");
+        assert_eq!(binding_refusal(input), "CALL_INVALID: task=b pointer=");
     }
     assert_eq!(
         binding_refusal(mixed(bound_arguments(MAX_BINDINGS_PER_CALL + 1, 0))),
-        "call_bounds: task=b pointer=/k00"
+        "CALL_BOUNDS: task=b pointer=/k00"
     );
     // A plain dependency cycle still refuses as a plan cycle.
     let mut cyclic = mixed(serde_json::json!({ "x": reference("steps.a.output") }));
     let mut tasks = cyclic.tasks.as_slice().to_vec();
     tasks[0].depends_on = BoundedVec::new(vec!["b".into()]).unwrap();
     cyclic.tasks = BoundedVec::new(tasks).unwrap();
-    assert!(binding_refusal(cyclic).starts_with("plan_cycle"));
+    assert!(binding_refusal(cyclic).starts_with("PLAN_CYCLE"));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.11
@@ -884,7 +888,7 @@ fn control_checks_refuse_planted_faults() {
             task_mut(v, "route")["branch"]["arms"][0]["condition"]["ref"] =
                 "steps.start.output".into()
         },
-        "binding_not_dependency",
+        "BINDING_NOT_DEPENDENCY",
         "route",
     );
     refused(
@@ -897,7 +901,7 @@ fn control_checks_refuse_planted_faults() {
         task_mut(v, "start")["depends_on"] = serde_json::json!(["final"]);
     }))
     .unwrap_err();
-    assert!(err.starts_with("plan_cycle"), "{err}");
+    assert!(err.starts_with("PLAN_CYCLE"), "{err}");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R134.111.17
@@ -1164,5 +1168,27 @@ fn a_decomposition_cycle_is_left_to_the_shipped_cycle_check() {
     let proposal = decompose_task(&f, &knobs()).unwrap();
     assert!(plan_explicit_tasks(&proposal)
         .unwrap_err()
-        .starts_with("plan_cycle"));
+        .starts_with("PLAN_CYCLE"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.6
+#[test]
+fn every_planner_code_is_registered_upper_snake() {
+    use crate::decision::codes::resolve;
+    for code in super::TASK_PLAN_REFUSALS {
+        assert_eq!(resolve(code.as_str()), Some(*code));
+        assert!(code
+            .as_str()
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b == b'_'));
+    }
+    for raised in [
+        "EMPTY_PLAN",
+        "PLAN_CYCLE",
+        "DISCONNECTED_OUTPUT",
+        "BINDING_NOT_DEPENDENCY",
+        "PLAN_PARAMETER_CONFLICT",
+    ] {
+        assert!(resolve(raised).is_some(), "{raised} is registered");
+    }
 }

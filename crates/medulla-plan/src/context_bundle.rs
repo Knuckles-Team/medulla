@@ -379,9 +379,11 @@ pub fn compile_with(
         candidates: BoundedVec::new(candidates.clone()).map_err(|_| PackageRefusal {
             code: medulla_decision_types::decision::context_package::ContextPackageErrorCode::InvalidMeasurement,
             detail: "candidate list exceeds the solver bound".to_string(),
+            exhaustion: None,
         })?,
         value_floor_micro_per_token: knobs.value_floor_micro_per_token,
         node_budget: knobs.solver_node_budget,
+        remaining: None,
     };
     let solved = select(&package)?;
     evidence.stages.push(PipelineStage::Select);

@@ -75,6 +75,9 @@ mod stat_writeback;
 #[cfg(feature = "decide")]
 mod stat_retention;
 #[cfg(feature = "decide")]
+mod run_record;
+mod tool_index;
+#[cfg(feature = "decide")]
 mod stat_rule_promotion;
 #[cfg(feature = "decide")]
 mod stat_slate;

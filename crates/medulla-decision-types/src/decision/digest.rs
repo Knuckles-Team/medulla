@@ -14,6 +14,15 @@ use super::statistical::StatisticalDecisionRecord;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 
+/// Domain of a verifier receipt (MEDULLA-DECISION-ENGINE-R138.100.2).
+pub const VERIFIER_RECEIPT_DIGEST_DOMAIN: &str = "medulla/verifier-receipt/v1";
+
+/// The digest a caller states for a verifier receipt: over the whole receipt,
+/// its header and every case.
+pub fn verifier_receipt_digest(receipt: &super::verifier_receipt::VerifierReceipt) -> String {
+    digest_text(VERIFIER_RECEIPT_DIGEST_DOMAIN, receipt)
+}
+
 /// Domain of a v1 (assembly) decision record.
 pub const DECISION_RECORD_DIGEST_DOMAIN: &str = "eg/decision-record/v1";
 /// Domain of a v2 (statistical) decision record.

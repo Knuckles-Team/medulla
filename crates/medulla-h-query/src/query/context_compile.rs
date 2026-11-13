@@ -463,6 +463,10 @@ fn run_compile(
         // The package codes are registered strings; the router needs a static.
         let code: &'static str = match code {
             "CONTEXT_PACKAGE_MISSING_FACT" => "CONTEXT_PACKAGE_MISSING_FACT",
+            "CONTEXT_PACKAGE_WORK_EXHAUSTED" => "CONTEXT_PACKAGE_WORK_EXHAUSTED",
+            "CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE" => {
+                "CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE"
+            }
             _ => "CONTEXT_PACKAGE_INVALID_MEASUREMENT",
         };
         refuse(code, refusal.detail)

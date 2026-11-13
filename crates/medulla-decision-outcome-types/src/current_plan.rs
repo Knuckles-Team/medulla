@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::{
-    decision::task_plan::plan_explicit_tasks, decision::task_plan::TaskPlan,
-    decision::task_plan::TaskPlanProposal,
+    decision::task_plan::plan_explicit_tasks, decision::task_plan::without_derived,
+    decision::task_plan::TaskPlan, decision::task_plan::TaskPlanProposal,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,7 +76,7 @@ impl PublishCurrentPlanRequest {
         match (&self.task_plan_proposal, &self.snapshot.task_plan) {
             (None, None) => {}
             (Some(proposal), Some(plan)) => {
-                if &plan_explicit_tasks(proposal)? != plan {
+                if plan_explicit_tasks(proposal)? != without_derived(plan) {
                     return Err("current-plan task plan does not match canonical proposal".into());
                 }
             }

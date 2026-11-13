@@ -3,6 +3,7 @@
 //! `KNOBS` table; [`REGISTRY`] lists them for the knob registry.
 
 pub mod context;
+pub mod criterion_review;
 pub mod memory;
 pub mod participant;
 pub mod placement;
@@ -14,12 +15,14 @@ pub mod schema_mapping;
 pub mod task_plan;
 pub mod topology;
 pub mod trajectory;
+pub mod verifier;
 
 use super::knobs::KnobSpec;
 
 /// The family tables this crate registers.
 pub const REGISTRY: &[&[KnobSpec]] = &[
     context::KNOBS,
+    criterion_review::KNOBS,
     memory::KNOBS,
     participant::KNOBS,
     placement::KNOBS,
@@ -31,6 +34,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     schema_mapping::KNOBS,
     topology::KNOBS,
     trajectory::KNOBS,
+    verifier::KNOBS,
     super::ingestion_admission::KNOBS,
     super::statistical::run_credit::KNOBS,
     super::thought_search::KNOBS,
@@ -47,4 +51,9 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::path_success::KNOBS,
     super::temporal_query::KNOBS,
     super::comparative_analysis::KNOBS,
+    super::run_governance::KNOBS,
+    super::program_store::KNOBS,
+    super::program_store::insight::KNOBS,
+    super::program_store::preplan::KNOBS,
+    super::tool_relevance::KNOBS,
 ];

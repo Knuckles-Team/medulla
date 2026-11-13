@@ -7,6 +7,11 @@
   },
   "regression_tolerance": 0.1,
   "group_budgets": {
+    "decide/tool_relevance_cap": {
+      "p50_ms": 40.0,
+      "p99_ms": 150.0,
+      "peak_mib": 64.0
+    },
     "decide/task_plan_bounds": {
       "p99_ms": 5.0,
       "peak_mib": 8.0

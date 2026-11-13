@@ -91,6 +91,9 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::A2aRoute,
     QuestionKind::PaperAdmission,
     QuestionKind::HeldItemAdmission,
+    QuestionKind::CriterionReview,
+    QuestionKind::GeneratedCodeAdmission,
+    QuestionKind::RuntimeQuota,
 ];
 
 /// The samples the budget report takes per group.
@@ -155,6 +158,14 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::A2aRoute => "a2a_route",
         QuestionKind::PaperAdmission => "paper_admission",
         QuestionKind::HeldItemAdmission => "held_item_admission",
+        QuestionKind::CriterionReview => "criterion_review",
+        QuestionKind::GeneratedCodeAdmission => "generated_code_admission",
+        QuestionKind::RuntimeQuota => "runtime_quota",
+        // Needs a stored program, so it has its own bench fixture.
+        // Needs stored insights, so it has its own bench fixture.
+        QuestionKind::InsightSelection => "insight_selection",
+        // Needs a tool index, so it has its own bench fixture.
+        QuestionKind::ToolRelevance => "tool_relevance",
     }
 }
 
@@ -410,6 +421,90 @@ fn bench_task_plan_bounds(
     );
 }
 
+/// The `decide/tool_relevance_cap` group (MEDULLA-DECISION-ENGINE-R134.751): a
+/// visible catalog of `tool_subset.max_tools` (default 10000) tools with the
+/// tool index cache warm, ranked through the served path.
+fn bench_tool_relevance_cap(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_agent_types::agent_component::{AgentComponentFacts, ToolEffect};
+    use medulla_decision_types::decision::tool_relevance::ToolAssignmentRequest;
+    use medulla_persistence_records::agent_component::test_component_draft;
+
+    let (h, mut asked) = rt.block_on(fixture(QuestionKind::ToolRelevance));
+    // The cap is the knob default; the catalog holds exactly that many tools.
+    let cap = 10_000;
+    for index in 0..cap {
+        let id = format!("tool-cap-{index:05}");
+        let mut draft = test_component_draft(TENANT, &id);
+        draft.summary = format!("tool number {index} handles topic{} requests", index % 97);
+        draft.facts = AgentComponentFacts::Tool {
+            effect: ToolEffect::Read,
+            required_scopes: Vec::new(),
+            input_schema_digest: None,
+            output_schema_digest: None,
+            read_only_hint: None,
+            destructive_hint: None,
+            idempotent_hint: None,
+            open_world_hint: None,
+            modalities: Default::default(),
+            cost: None,
+            latency_declared: None,
+            side_effects: None,
+            declared_by: None,
+            schema_tokens: Some(50),
+            read_only_unproven: false,
+        };
+        draft
+            .attributes
+            .insert("name".to_string(), format!("tool {index}"));
+        h.commit_in(TENANT, draft, None).unwrap();
+    }
+    asked.params = BoundedVec::new(vec![TypedParam {
+        name: "tool_assignment".to_string(),
+        value: TypedValue::ToolAssignment(Box::new(ToolAssignmentRequest {
+            schema_version: 1,
+            task_text: "handles topic5 requests".to_string(),
+            task_embedding: None,
+            agent_role_iri: String::new(),
+            top_k: 12,
+            context_budget_tokens: 4000,
+            required_capabilities: BoundedVec::default(),
+        })),
+    }])
+    .unwrap();
+    // The first call builds the index; every timed call then hits the cache.
+    let response = decide(rt, &h, &asked);
+    assert!(
+        response.error.is_none(),
+        "tool_relevance_cap fixture: {response:?}"
+    );
+    let group_name = "decide/tool_relevance_cap".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(decide(rt, &h, &asked));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// The widest bounded plan: six slots whose widths total 64 agents, at the
 /// round cap, with every slot declaring tokens.
 fn widest_plan() -> TopologyPlan {
@@ -503,6 +598,7 @@ fn bench_decide(c: &mut Criterion) {
     }
     bench_claims(c, &rt, &mut report);
     bench_task_plan_bounds(c, &rt, &mut report);
+    bench_tool_relevance_cap(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();

@@ -108,6 +108,28 @@ impl Harness {
         })
     }
 
+    /// Retire component `id` of `tenant` at its current entry revision
+    /// `expected_revision`, leaving a durable tombstone.
+    pub fn retire_in(&self, tenant: &str, id: &str, expected_revision: u64) -> Result<(), String> {
+        let nonce = self.nonce.get();
+        self.nonce.set(nonce + 1);
+        self.store
+            .retire_component(
+                medulla_agent_types::agent_component::AgentComponentRetireRequest {
+                    context: mutation_context(
+                        &self.store,
+                        tenant,
+                        &format!("retire-{id}-{nonce}"),
+                        nonce,
+                        expected_revision,
+                        "agent-component:retire",
+                    ),
+                    component_id: id.to_string(),
+                },
+            )
+            .map(|_| ())
+    }
+
     pub fn publish_test_component(
         &self,
         id: &str,

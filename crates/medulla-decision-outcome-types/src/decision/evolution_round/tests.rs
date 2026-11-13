@@ -176,3 +176,80 @@ fn stronger_models_go_to_high_impact_stages() {
     assert_eq!(none, AllocationRefusal::NoAdequateModel { models: 1 });
     assert_eq!(none.code(), "ALLOCATION_NO_ADEQUATE_MODEL");
 }
+
+fn report(rubric: &str, states: &[bool]) -> CriterionReport {
+    CriterionReport {
+        rubric_digest: rubric.to_string(),
+        artifact_digest: "a".repeat(64),
+        grader_revision: "g1".to_string(),
+        criteria: states
+            .iter()
+            .enumerate()
+            .map(|(i, satisfied)| CriterionState {
+                criterion_id: format!("c{}", i + 1),
+                satisfied: *satisfied,
+                evidence_ref: format!("e{}", i + 1),
+            })
+            .collect(),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R136.101
+#[test]
+fn review_holds_every_satisfied_criterion() {
+    let prior = report("r", &[true, false, true]);
+    let kept = review_criteria(&prior, &report("r", &[true, true, true])).unwrap();
+    assert_eq!((kept.held_satisfied, kept.newly_satisfied), (2, 1));
+    // The first regression by id order is named.
+    assert_eq!(
+        review_criteria(&prior, &report("r", &[false, true, false])),
+        Err(CriterionRefusal::Regression {
+            criterion_id: "c1".to_string()
+        })
+    );
+    // A criterion the new report does not grade counts as regressed.
+    assert_eq!(
+        review_criteria(&prior, &report("r", &[true])),
+        Err(CriterionRefusal::Regression {
+            criterion_id: "c3".to_string()
+        })
+    );
+    assert!(matches!(
+        review_criteria(&prior, &report("other", &[true, true, true])),
+        Err(CriterionRefusal::RubricMismatch { .. })
+    ));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R136.102
+#[test]
+fn grading_must_cover_the_rubric_and_the_artifact() {
+    let rubric = RubricDeclaration {
+        rubric_digest: "r".to_string(),
+        criteria: vec!["c1".to_string(), "c2".to_string(), "c3".to_string()],
+    };
+    let full = report("r", &[true, false, true]);
+    let artifact = "a".repeat(64);
+    assert_eq!(check_grading(&full, &rubric, Some(&artifact)), Ok(()));
+    assert_eq!(
+        check_grading(&report("r", &[true, true]), &rubric, None),
+        Err(CriterionRefusal::Ungraded {
+            criterion_id: "c3".to_string()
+        })
+    );
+    assert!(matches!(
+        check_grading(&full, &rubric, Some(&"b".repeat(64))),
+        Err(CriterionRefusal::ArtifactMismatch { .. })
+    ));
+    let mut bare = full.clone();
+    bare.criteria[1].evidence_ref = " ".to_string();
+    assert_eq!(
+        check_grading(&bare, &rubric, None),
+        Err(CriterionRefusal::EvidenceMissing {
+            criterion_id: "c2".to_string()
+        })
+    );
+    assert!(matches!(
+        check_grading(&report("other", &[true, true, true]), &rubric, None),
+        Err(CriterionRefusal::RubricMismatch { .. })
+    ));
+}

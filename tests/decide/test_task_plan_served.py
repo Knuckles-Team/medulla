@@ -296,7 +296,7 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
             verify_task_plan_receipt(changed, asked, expected_principal=TEST_AGENT_ID)
         invalid = copy.deepcopy(asked)
         invalid["params"][0]["value"]["value"]["output_task_id"] = "b"
-        with pytest.raises(Exception, match="disconnected_output"):
+        with pytest.raises(Exception, match="DISCONNECTED_OUTPUT"):
             client._send("Decide", {"request": invalid})
     finally:
         client.close()
@@ -442,7 +442,7 @@ def test_tool_step_bindings_end_to_end(authenticated_plan_client):
             _call_proposal("steps.b.output"),
             pin,
         )
-        with pytest.raises(Exception, match="binding_not_dependency") as refusal:
+        with pytest.raises(Exception, match="BINDING_NOT_DEPENDENCY") as refusal:
             client._send("Decide", {"request": refused})
         assert "records" not in str(refusal.value)
     finally:

@@ -232,6 +232,58 @@ pub const ALLOCATION_BUDGET_BELOW_MINIMUM: RefusalCode =
 pub const ALLOCATION_NO_ADEQUATE_MODEL: RefusalCode =
     RefusalCode::new("ALLOCATION_NO_ADEQUATE_MODEL");
 
+// The `criterion_review` family's refusals (MEDULLA-DECISION-ENGINE-R136.101).
+/// The prior and new reports were graded against different rubrics.
+pub const CRITERION_RUBRIC_MISMATCH: RefusalCode = RefusalCode::new("CRITERION_RUBRIC_MISMATCH");
+/// A criterion satisfied in the prior report is no longer satisfied.
+pub const CRITERION_REGRESSION: RefusalCode = RefusalCode::new("CRITERION_REGRESSION");
+
+/// A criterion of the rubric has no state in the report
+/// (MEDULLA-DECISION-ENGINE-R136.102).
+pub const CRITERION_UNGRADED: RefusalCode = RefusalCode::new("CRITERION_UNGRADED");
+/// The report grades another artifact than the one the request declares.
+pub const CRITERION_ARTIFACT_MISMATCH: RefusalCode =
+    RefusalCode::new("CRITERION_ARTIFACT_MISMATCH");
+/// A criterion state carries no evidence reference.
+pub const CRITERION_EVIDENCE_MISSING: RefusalCode = RefusalCode::new("CRITERION_EVIDENCE_MISSING");
+/// The judge's score trend runs away from the independent outcome trend
+/// (MEDULLA-DECISION-ENGINE-R136.103).
+pub const JUDGE_OUTCOME_DIVERGENCE: RefusalCode = RefusalCode::new("JUDGE_OUTCOME_DIVERGENCE");
+
+/// Every `criterion_review` family code, in declaration order.
+pub const CRITERION_REVIEW: &[RefusalCode] = &[
+    CRITERION_RUBRIC_MISMATCH,
+    CRITERION_REGRESSION,
+    CRITERION_UNGRADED,
+    CRITERION_ARTIFACT_MISMATCH,
+    CRITERION_EVIDENCE_MISSING,
+    JUDGE_OUTCOME_DIVERGENCE,
+];
+
+// The `generated_code_admission` family's refusals (MEDULLA-DECISION-ENGINE-R138.100.2).
+/// The verifier receipt is absent, or holds fewer cases than the policy requires.
+pub const VERIFIER_RECEIPT_MISSING: RefusalCode = RefusalCode::new("VERIFIER_RECEIPT_MISSING");
+/// An attack case is neither retested nor failed: open or fixed only.
+pub const VERIFIER_CASE_UNRESOLVED: RefusalCode = RefusalCode::new("VERIFIER_CASE_UNRESOLVED");
+/// The receipt, or a retest, names another artifact than the proposed one.
+pub const VERIFIER_ARTIFACT_STALE: RefusalCode = RefusalCode::new("VERIFIER_ARTIFACT_STALE");
+/// The receipt was produced against another test set than the declared one.
+pub const VERIFIER_TESTS_CHANGED: RefusalCode = RefusalCode::new("VERIFIER_TESTS_CHANGED");
+/// A retest of an attack case failed.
+pub const VERIFIER_RECHECK_FAILED: RefusalCode = RefusalCode::new("VERIFIER_RECHECK_FAILED");
+/// The attack policy or the verifier is not the current revision.
+pub const VERIFIER_REVISION_STALE: RefusalCode = RefusalCode::new("VERIFIER_REVISION_STALE");
+
+/// Every `generated_code_admission` family code, in declaration order.
+pub const GENERATED_CODE_ADMISSION: &[RefusalCode] = &[
+    VERIFIER_RECEIPT_MISSING,
+    VERIFIER_CASE_UNRESOLVED,
+    VERIFIER_ARTIFACT_STALE,
+    VERIFIER_TESTS_CHANGED,
+    VERIFIER_RECHECK_FAILED,
+    VERIFIER_REVISION_STALE,
+];
+
 /// Every `round_verdict` family code, in declaration order.
 pub const ROUND_VERDICT: &[RefusalCode] = &[ROUND_NO_PREDICTION];
 
@@ -246,8 +298,17 @@ pub const STAGE_ALLOCATION: &[RefusalCode] = &[
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::Rank, RANK),
     (QuestionKind::ResolveEntity, RESOLVE_ENTITY),
+    (
+        QuestionKind::ContextPackage,
+        super::context_package::REFUSALS,
+    ),
     (QuestionKind::RoundVerdict, ROUND_VERDICT),
     (QuestionKind::StageAllocation, STAGE_ALLOCATION),
+    (QuestionKind::CriterionReview, CRITERION_REVIEW),
+    (
+        QuestionKind::GeneratedCodeAdmission,
+        GENERATED_CODE_ADMISSION,
+    ),
     (
         QuestionKind::RetrievalPlan,
         super::statistical::run_credit::REFUSALS,
@@ -302,6 +363,15 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::FieldShielding,
         super::field_shielding::REFUSALS,
     ),
+    (QuestionKind::RuntimeQuota, super::run_governance::REFUSALS),
+    (QuestionKind::TaskPlan, super::task_plan::TASK_PLAN_REFUSALS),
+    (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
+    (QuestionKind::ToolRelevance, super::tool_relevance::REFUSALS),
+    (
+        QuestionKind::InsightSelection,
+        super::program_store::insight::REFUSALS,
+    ),
+    (QuestionKind::BranchOutcome, super::branch_fusion::REFUSALS),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

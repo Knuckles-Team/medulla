@@ -264,8 +264,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T253 [US7] MEDULLA-DECISION-ENGINE-R137.7 Context package records
 - [ ] T254 [US7] MEDULLA-DECISION-ENGINE-R137.8 Package lowering and exact selection kernel
 - [ ] T255 [US7] MEDULLA-DECISION-ENGINE-R137.9 Package family wiring with independent certificate check
-- [ ] T256 [US7] MEDULLA-DECISION-ENGINE-R137.10 Package refusals and abstentions
-- [ ] T257 [US7] MEDULLA-DECISION-ENGINE-R137.11 Package evidence
+- [x] T256 [US7] MEDULLA-DECISION-ENGINE-R137.10 Package refusals and abstentions
+- [x] T257 [US7] MEDULLA-DECISION-ENGINE-R137.11 Package evidence
 - [ ] T258 [US7] MEDULLA-DECISION-ENGINE-R137.12 Served proof of certified package selection
 - [ ] T259 [US7] MEDULLA-DECISION-ENGINE-R138.1 Model
 - [ ] T260 [US7] MEDULLA-DECISION-ENGINE-R138.2 Behavior
@@ -290,7 +290,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T279 [US1] MEDULLA-DECISION-ENGINE-R001.101.3 Route AgentAssemble and DecideText through the registry
 - [ ] T280 [US1] MEDULLA-DECISION-ENGINE-R001.101.4 Family template for new roots
 - [ ] T281 [US1] MEDULLA-DECISION-ENGINE-R001.101.5 Typed family body and answer carriers
-- [ ] T282 [US7] MEDULLA-DECISION-ENGINE-R135.7 Pre-plan test receipt gates pattern promotion
+- [x] T282 [US7] MEDULLA-DECISION-ENGINE-R135.7 Pre-plan test receipt gates pattern promotion
 - [ ] T283 [US2] MEDULLA-DECISION-ENGINE-R106.1 Council positions coordinate into one evidence-bound decision
 - [ ] T284 [US7] MEDULLA-DECISION-ENGINE-R137.13 Measured signals select direct or recursive mode
 - [ ] T285 [US7] MEDULLA-DECISION-ENGINE-R134.9 Behavior: ranked skill tree per task

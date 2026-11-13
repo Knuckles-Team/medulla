@@ -864,6 +864,32 @@
     rdfs:domain :RunTrace ;
     rdfs:range :TaskClass .
 
+# MEDULLA-DECISION-ENGINE-R133.3: the per-class run quota overrides a task class holds.
+
+:defaultWallTimeMs a owl:DatatypeProperty ;
+    rdfs:label "defaultWallTimeMs" ;
+    rdfs:comment "The wall time in milliseconds a run of this task class gets by default, clamped to the fixed ceiling." ;
+    rdfs:domain :TaskClass ;
+    rdfs:range xsd:integer .
+
+:defaultMemoryBytes a owl:DatatypeProperty ;
+    rdfs:label "defaultMemoryBytes" ;
+    rdfs:comment "The memory in bytes a run of this task class gets by default, clamped to the fixed ceiling." ;
+    rdfs:domain :TaskClass ;
+    rdfs:range xsd:integer .
+
+:defaultProcessCount a owl:DatatypeProperty ;
+    rdfs:label "defaultProcessCount" ;
+    rdfs:comment "The process count a run of this task class gets by default, clamped to the fixed ceiling." ;
+    rdfs:domain :TaskClass ;
+    rdfs:range xsd:integer .
+
+:defaultGraceMs a owl:DatatypeProperty ;
+    rdfs:label "defaultGraceMs" ;
+    rdfs:comment "The grace period in milliseconds before a run of this task class is killed, clamped to the fixed ceiling." ;
+    rdfs:domain :TaskClass ;
+    rdfs:range xsd:integer .
+
 # MEDULLA-ORCH-VOCAB-R011.1 through R011.5: measured model facts from evaluation.
 
 :EvaluationRun a owl:Class ;

@@ -16,7 +16,7 @@ mod connector_event_triage;
 mod connector_tool_choice;
 mod connector_write_back;
 pub(super) mod context_budget;
-mod context_package;
+pub(super) mod context_package;
 mod context_replacement;
 mod correction_admission;
 mod edit_concentration;
@@ -24,11 +24,13 @@ mod enrichment_schedule;
 mod evolution_round;
 mod feedback_loop;
 mod field_shielding;
+mod generated_code_admission;
 mod graph_intake;
 mod harness_config;
 mod harness_contrast;
 mod held_item_admission;
 mod ingestion_lane;
+mod insight_selection;
 mod instruction_disclosure;
 mod item_recommendation;
 mod load_set;
@@ -38,13 +40,14 @@ mod path_preference;
 mod placement;
 mod planning_admission;
 mod pre_tool_risk;
-mod probe_verdict;
 mod program_store;
+mod probe_verdict;
 mod rank;
 mod resolve_entity;
 mod retrieval_plan;
 mod route;
 mod run_adjustment;
+mod runtime_quota;
 mod schema_mapping;
 mod skill_upgrade;
 mod skill_workflow;
@@ -58,12 +61,14 @@ mod temporal_basis;
 mod thought_search;
 mod tool_necessity;
 mod tool_subset;
+mod tool_relevance;
 mod topology;
 mod usage_guidance;
 
 pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use command_config::command_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
+pub(in crate::decide) use runtime_quota::quota_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use support::advisory;
@@ -269,6 +274,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         tool_necessity::ToolNecessityFamily;
     static FEEDBACKLOOPFAMILY: feedback_loop::FeedbackLoopFamily =
         feedback_loop::FeedbackLoopFamily;
+    static RUNTIMEQUOTAFAMILY: runtime_quota::RuntimeQuotaFamily = runtime_quota::RuntimeQuotaFamily;
     static PLANNINGADMISSIONFAMILY: planning_admission::PlanningAdmissionFamily =
         planning_admission::PlanningAdmissionFamily;
     static A2AROUTEFAMILY: a2a_route::A2aRouteFamily = a2a_route::A2aRouteFamily;
@@ -280,6 +286,14 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         changeset_review::ChangesetReviewFamily;
     static TEMPORALBASISFAMILY: temporal_basis::TemporalBasisFamily =
         temporal_basis::TemporalBasisFamily;
+    static GENERATEDCODEADMISSIONFAMILY: generated_code_admission::GeneratedCodeAdmissionFamily =
+        generated_code_admission::GeneratedCodeAdmissionFamily;
+    static CRITERIONREVIEWFAMILY: evolution_round::CriterionReviewFamily =
+        evolution_round::CriterionReviewFamily;
+    static TOOLRELEVANCEFAMILY: tool_relevance::ToolRelevanceFamily =
+        tool_relevance::ToolRelevanceFamily;
+    static INSIGHTSELECTIONFAMILY: insight_selection::InsightSelectionFamily =
+        insight_selection::InsightSelectionFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -334,6 +348,11 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::A2aRoute => &A2AROUTEFAMILY,
         QuestionKind::PaperAdmission => &PAPERADMISSIONFAMILY,
         QuestionKind::HeldItemAdmission => &HELDITEMADMISSIONFAMILY,
+        QuestionKind::CriterionReview => &CRITERIONREVIEWFAMILY,
+        QuestionKind::GeneratedCodeAdmission => &GENERATEDCODEADMISSIONFAMILY,
+        QuestionKind::RuntimeQuota => &RUNTIMEQUOTAFAMILY,
+        QuestionKind::InsightSelection => &INSIGHTSELECTIONFAMILY,
+        QuestionKind::ToolRelevance => &TOOLRELEVANCEFAMILY,
     }
 }
 
@@ -398,6 +417,11 @@ mod tests {
             QuestionKind::A2aRoute,
             QuestionKind::PaperAdmission,
             QuestionKind::HeldItemAdmission,
+            QuestionKind::CriterionReview,
+            QuestionKind::GeneratedCodeAdmission,
+            QuestionKind::RuntimeQuota,
+            QuestionKind::InsightSelection,
+            QuestionKind::ToolRelevance,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -452,7 +476,12 @@ mod tests {
             | QuestionKind::PlanningAdmission
             | QuestionKind::A2aRoute
             | QuestionKind::PaperAdmission
-            | QuestionKind::HeldItemAdmission => true,
+            | QuestionKind::HeldItemAdmission
+            | QuestionKind::CriterionReview
+            | QuestionKind::GeneratedCodeAdmission
+            | QuestionKind::RuntimeQuota
+            | QuestionKind::InsightSelection
+            | QuestionKind::ToolRelevance => true,
         };
         assert!(exhaustive);
         kinds
@@ -464,7 +493,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            53,
+            58,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

@@ -90,6 +90,12 @@ pub const REFUSALS: &[RefusalCode] = &[
     codes::ROUND_NO_PREDICTION,
     codes::ALLOCATION_BUDGET_BELOW_MINIMUM,
     codes::ALLOCATION_NO_ADEQUATE_MODEL,
+    codes::CRITERION_RUBRIC_MISMATCH,
+    codes::CRITERION_REGRESSION,
+    codes::CRITERION_UNGRADED,
+    codes::CRITERION_ARTIFACT_MISMATCH,
+    codes::CRITERION_EVIDENCE_MISSING,
+    codes::JUDGE_OUTCOME_DIVERGENCE,
 ];
 
 /// Why a round verdict was refused.
@@ -340,6 +346,218 @@ pub fn allocate_stage_models(
         allocations[index].model_ref = strong.model_ref.clone();
     }
     Ok(allocations)
+}
+
+/// One criterion of a rubric and whether the artifact satisfies it
+/// (MEDULLA-DECISION-ENGINE-R136.101). Free-text self-reflection is never a
+/// criterion state: the type has no field for it and rejects unknown fields.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CriterionState {
+    pub criterion_id: String,
+    pub satisfied: bool,
+    /// Where the grader's evidence for this state is stored.
+    pub evidence_ref: String,
+}
+
+/// One grading of one artifact against one rubric.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CriterionReport {
+    /// SHA-256 of the rubric, 64 lowercase hex characters.
+    pub rubric_digest: String,
+    /// SHA-256 of the graded artifact, 64 lowercase hex characters.
+    pub artifact_digest: String,
+    pub grader_revision: String,
+    pub criteria: Vec<CriterionState>,
+}
+
+/// Why a criterion review did not accept the revision.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CriterionRefusal {
+    /// The two reports were graded against different rubrics.
+    RubricMismatch { prior: String, new: String },
+    /// A criterion satisfied in the prior report is not satisfied in the new
+    /// one; the first such criterion by id order.
+    Regression { criterion_id: String },
+    /// A criterion of the rubric has no state in the report
+    /// (MEDULLA-DECISION-ENGINE-R136.102).
+    Ungraded { criterion_id: String },
+    /// The report grades another artifact than the declared one.
+    ArtifactMismatch { declared: String, graded: String },
+    /// A criterion state names no evidence.
+    EvidenceMissing { criterion_id: String },
+    /// The judge score trend exceeds the independent outcome trend by more
+    /// than the threshold (MEDULLA-DECISION-ENGINE-R136.103); micros are
+    /// millionths of a score unit.
+    JudgeOutcomeDivergence {
+        divergence_micros: i64,
+        threshold_micros: i64,
+    },
+}
+
+impl DecisionRefusal for CriterionRefusal {
+    fn code(&self) -> RefusalCode {
+        match self {
+            Self::RubricMismatch { .. } => codes::CRITERION_RUBRIC_MISMATCH,
+            Self::Regression { .. } => codes::CRITERION_REGRESSION,
+            Self::Ungraded { .. } => codes::CRITERION_UNGRADED,
+            Self::ArtifactMismatch { .. } => codes::CRITERION_ARTIFACT_MISMATCH,
+            Self::EvidenceMissing { .. } => codes::CRITERION_EVIDENCE_MISSING,
+            Self::JudgeOutcomeDivergence { .. } => codes::JUDGE_OUTCOME_DIVERGENCE,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::RubricMismatch { prior, new } => {
+                format!("the prior report names rubric {prior}, the new one {new}")
+            }
+            Self::Regression { criterion_id } => {
+                format!("criterion {criterion_id} was satisfied and no longer is")
+            }
+            Self::Ungraded { criterion_id } => {
+                format!("the rubric criterion {criterion_id} has no state in the report")
+            }
+            Self::ArtifactMismatch { declared, graded } => {
+                format!("the request declares artifact {declared}, the report grades {graded}")
+            }
+            Self::EvidenceMissing { criterion_id } => {
+                format!("criterion {criterion_id} names no evidence")
+            }
+            Self::JudgeOutcomeDivergence {
+                divergence_micros,
+                threshold_micros,
+            } => format!(
+                "judge score slope exceeds the outcome slope by {divergence_micros} micros, \
+                 above the threshold of {threshold_micros} micros"
+            ),
+        }
+    }
+}
+
+/// One past run's judge score and independent outcome score, both in
+/// millionths of a score unit, oldest run first in a history
+/// (MEDULLA-DECISION-ENGINE-R136.103).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct JudgeRun {
+    pub judge_score_micros: i64,
+    pub outcome_score_micros: i64,
+}
+
+/// The rubric a request names: its digest and the ids of every criterion it
+/// holds (MEDULLA-DECISION-ENGINE-R136.102).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RubricDeclaration {
+    pub rubric_digest: String,
+    pub criteria: Vec<String>,
+}
+
+/// Check that `report` grades the whole rubric: the report names the rubric,
+/// every criterion has a state, and every state names its evidence. When
+/// `declared_artifact` is given the report must grade that artifact. An
+/// aggregate score never stands in for a missing criterion: there is none in
+/// the report type to count.
+pub fn check_grading(
+    report: &CriterionReport,
+    rubric: &RubricDeclaration,
+    declared_artifact: Option<&str>,
+) -> Result<(), CriterionRefusal> {
+    if report.rubric_digest != rubric.rubric_digest {
+        return Err(CriterionRefusal::RubricMismatch {
+            prior: rubric.rubric_digest.clone(),
+            new: report.rubric_digest.clone(),
+        });
+    }
+    let graded: std::collections::BTreeMap<&str, &CriterionState> = report
+        .criteria
+        .iter()
+        .map(|c| (c.criterion_id.as_str(), c))
+        .collect();
+    let mut ids: Vec<&String> = rubric.criteria.iter().collect();
+    ids.sort();
+    for id in ids {
+        if !graded.contains_key(id.as_str()) {
+            return Err(CriterionRefusal::Ungraded {
+                criterion_id: id.clone(),
+            });
+        }
+    }
+    if let Some(declared) = declared_artifact {
+        if report.artifact_digest != declared {
+            return Err(CriterionRefusal::ArtifactMismatch {
+                declared: declared.to_string(),
+                graded: report.artifact_digest.clone(),
+            });
+        }
+    }
+    for id in &rubric.criteria {
+        if graded[id.as_str()].evidence_ref.trim().is_empty() {
+            return Err(CriterionRefusal::EvidenceMissing {
+                criterion_id: id.clone(),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// What an accepted review compared: how many criteria the prior report had
+/// satisfied, all of which the new report still satisfies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CriterionReview {
+    pub rubric_digest: String,
+    pub held_satisfied: usize,
+    pub newly_satisfied: usize,
+}
+
+/// Compare `new` with `prior`: every criterion satisfied in `prior` must stay
+/// satisfied in `new`. A criterion `new` does not grade counts as not
+/// satisfied. Reports graded against different rubrics are not comparable.
+pub fn review_criteria(
+    prior: &CriterionReport,
+    new: &CriterionReport,
+) -> Result<CriterionReview, CriterionRefusal> {
+    if prior.rubric_digest != new.rubric_digest {
+        return Err(CriterionRefusal::RubricMismatch {
+            prior: prior.rubric_digest.clone(),
+            new: new.rubric_digest.clone(),
+        });
+    }
+    let state = |report: &CriterionReport| -> std::collections::BTreeMap<String, bool> {
+        report
+            .criteria
+            .iter()
+            .map(|c| (c.criterion_id.clone(), c.satisfied))
+            .collect()
+    };
+    let (before, after) = (state(prior), state(new));
+    let mut held = 0;
+    for (id, was) in &before {
+        if *was {
+            if after.get(id).copied().unwrap_or(false) {
+                held += 1;
+            } else {
+                return Err(CriterionRefusal::Regression {
+                    criterion_id: id.clone(),
+                });
+            }
+        }
+    }
+    let newly = after
+        .iter()
+        .filter(|(id, now)| **now && !before.get(*id).copied().unwrap_or(false))
+        .count();
+    Ok(CriterionReview {
+        rubric_digest: new.rubric_digest.clone(),
+        held_satisfied: held,
+        newly_satisfied: newly,
+    })
 }
 
 #[cfg(test)]

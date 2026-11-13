@@ -7,12 +7,17 @@
 //! nothing, and `DecisionLog` `commit` stores the sealed record.
 
 use medulla_decision_outcome_types::decision::evolution_round::{
-    allocate_stage_models, decide_round_verdict, summarize_allocation, tally_round,
-    AllocationRefusal, EvolutionDefaults, ModelOption, PredictionDeclaration, RoundRefusal,
-    RoundTaskOutcome, RoundVerdict, RunBudget, StageInput,
+    allocate_stage_models, check_grading, decide_round_verdict, review_criteria,
+    summarize_allocation, tally_round, AllocationRefusal, CriterionRefusal, CriterionReport,
+    EvolutionDefaults, JudgeRun, ModelOption, PredictionDeclaration, RoundRefusal,
+    RoundTaskOutcome, RoundVerdict, RubricDeclaration, RunBudget, StageInput,
 };
+use medulla_decision_stats::decision::evolution_round::{
+    judge_outcome_divergence, DivergenceKnobs,
+};
+use medulla_decision_types::decision::context_package::is_sha256_hex;
 use medulla_decision_types::decision::harness_contrast::ContrastKnobs;
-use medulla_decision_types::decision::knob_families::round_verdict;
+use medulla_decision_types::decision::knob_families::{criterion_review, round_verdict};
 use medulla_decision_types::decision::numeric::UnitRationalWire;
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -27,7 +32,7 @@ use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
-use super::support::{abstained, advisory, invalid, json_param, single_option};
+use super::support::{abstained, advisory, invalid, json_param, param, single_option};
 use super::DecisionFamily;
 
 /// The one option a round verdict question declares.
@@ -40,6 +45,15 @@ pub struct RoundVerdictFamily;
 
 /// The family of the `stage_allocation` question kind.
 pub struct StageAllocationFamily;
+
+/// The one option a criterion review question declares.
+pub const REVIEW_OPTION: &str = "review";
+/// The option an accepted criterion review names.
+pub const ACCEPT_OPTION: &str = "accept";
+
+/// The family of the `criterion_review` question kind
+/// (MEDULLA-DECISION-ENGINE-R136.101).
+pub struct CriterionReviewFamily;
 
 /// The verdict's wire name.
 pub fn verdict_name(verdict: RoundVerdict) -> &'static str {
@@ -275,5 +289,178 @@ impl DecisionFamily for StageAllocationFamily {
 
     fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
         matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Claim)
+    }
+}
+
+/// The prior and the new grading the review compares, each validated.
+fn review_params(request: &DecideRequest) -> Result<(CriterionReport, CriterionReport), String> {
+    let prior: CriterionReport = json_param(request, "prior_report")?;
+    let new: CriterionReport = json_param(request, "new_report")?;
+    for (name, report) in [("prior_report", &prior), ("new_report", &new)] {
+        for (field, digest) in [
+            ("rubric_digest", &report.rubric_digest),
+            ("artifact_digest", &report.artifact_digest),
+        ] {
+            if !is_sha256_hex(digest) {
+                return Err(invalid(format!(
+                    "{name}.{field} is not 64 lowercase hex characters"
+                )));
+            }
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        for criterion in &report.criteria {
+            if criterion.criterion_id.is_empty() || !ids.insert(criterion.criterion_id.as_str()) {
+                return Err(invalid(format!(
+                    "{name} names a criterion id that is empty or repeated"
+                )));
+            }
+        }
+    }
+    Ok((prior, new))
+}
+
+/// The rubric and the declared artifact digest the grading is checked against
+/// (MEDULLA-DECISION-ENGINE-R136.102).
+fn grading_params(request: &DecideRequest) -> Result<(RubricDeclaration, String), String> {
+    let rubric: RubricDeclaration = json_param(request, "rubric")?;
+    let artifact: String = json_param(request, "artifact_digest")?;
+    if !is_sha256_hex(&rubric.rubric_digest) || !is_sha256_hex(&artifact) {
+        return Err(invalid(
+            "rubric.rubric_digest and artifact_digest must be 64 lowercase hex characters",
+        ));
+    }
+    Ok((rubric, artifact))
+}
+
+/// The judge and outcome history of past runs, oldest first, when the request
+/// carries one.
+fn judge_runs(request: &DecideRequest) -> Result<Option<Vec<JudgeRun>>, String> {
+    match param(request, "runs")? {
+        None => Ok(None),
+        Some(_) => json_param(request, "runs").map(Some),
+    }
+}
+
+/// Refuse a request as `PARAMETER_INVALID` carrying the criterion code.
+fn criterion_invalid(refusal: &CriterionRefusal) -> String {
+    invalid(format!(
+        "{}: {}",
+        DecisionRefusal::code(refusal).as_str(),
+        refusal.detail()
+    ))
+}
+
+impl DecisionFamily for CriterionReviewFamily {
+    fn validate_candidates(
+        &self,
+        options: &[DeclaredOption],
+        _principal: &str,
+    ) -> Result<(), String> {
+        single_option(options, REVIEW_OPTION)
+    }
+
+    // Grading completeness and artifact binding (R136.102): both reports must
+    // grade every criterion of the rubric with evidence, and the new report must
+    // grade the declared artifact. Nothing is compared until this passes.
+    fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        let (prior, new) = review_params(request)?;
+        let (rubric, artifact) = grading_params(request)?;
+        judge_runs(request)?;
+        check_grading(&prior, &rubric, None).map_err(|r| criterion_invalid(&r))?;
+        check_grading(&new, &rubric, Some(&artifact)).map_err(|r| criterion_invalid(&r))
+    }
+
+    fn conclude(
+        &self,
+        _ctx: &ExecutionContext,
+        request: &DecideRequest,
+        policy: &DecisionPolicy,
+        _graph_view: Option<&GraphView>,
+    ) -> Option<Result<Executed, String>> {
+        Some((|| {
+            let (prior, new) = review_params(request)?;
+            let rubric = || FamilyPremise {
+                subject: "criterion",
+                fact: format!("criterion.rubric_digest={}", prior.rubric_digest),
+                class: PremiseClass::Claim,
+                source: FamilyPremiseSource::Request("params.prior_report"),
+            };
+            // The judge score trend must not run away from the independent outcome
+            // trend (R136.103); the review holds whatever the criteria say.
+            let mut divergence = None;
+            let divergence_premise = |micros: i64| FamilyPremise {
+                subject: "criterion",
+                fact: format!("criterion.divergence={micros}"),
+                class: PremiseClass::Claim,
+                source: FamilyPremiseSource::Request("params.runs"),
+            };
+            if let Some(runs) = judge_runs(request)? {
+                let knobs = DivergenceKnobs {
+                    window: criterion_review::divergence_window(policy),
+                    threshold_micros: criterion_review::divergence_threshold_micros(policy),
+                };
+                match judge_outcome_divergence(&runs, &knobs) {
+                    Ok(reading) => divergence = Some(divergence_premise(reading.divergence_micros)),
+                    Err(refusal) => {
+                        let micros = match &refusal {
+                            CriterionRefusal::JudgeOutcomeDivergence {
+                                divergence_micros, ..
+                            } => *divergence_micros,
+                            _ => 0,
+                        };
+                        let mut held = abstained(QuestionKind::CriterionReview, &refusal);
+                        held.family_premises = vec![rubric(), divergence_premise(micros)];
+                        return Ok(held);
+                    }
+                }
+            }
+            match review_criteria(&prior, &new) {
+                Ok(_) => {
+                    let mut executed = advisory(vec![ACCEPT_OPTION.to_string()])?;
+                    executed.family_premises =
+                        std::iter::once(rubric()).chain(divergence).collect();
+                    Ok(executed)
+                }
+                // A regression holds the revision: an abstention that names the
+                // first failing criterion.
+                Err(refusal @ CriterionRefusal::Regression { .. }) => {
+                    let CriterionRefusal::Regression { criterion_id } = &refusal else {
+                        unreachable!("matched above")
+                    };
+                    let mut held = abstained(QuestionKind::CriterionReview, &refusal);
+                    held.family_premises = vec![
+                        rubric(),
+                        FamilyPremise {
+                            subject: "criterion",
+                            fact: format!("criterion.regressed:{criterion_id}"),
+                            class: PremiseClass::Claim,
+                            source: FamilyPremiseSource::Request("params.new_report"),
+                        },
+                    ];
+                    Ok(held)
+                }
+                // Every other refusal makes the reports incomparable or ungraded:
+                // the request is refused (the rubric mismatch, and grading checks
+                // that `constraints` already ran).
+                Err(refusal) => Err(criterion_invalid(&refusal)),
+            }
+        })())
+    }
+
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        sealed(executed, policy_digest)
+    }
+
+    fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(ResolutionKind::Constraint)
+    }
+
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Observation)
     }
 }

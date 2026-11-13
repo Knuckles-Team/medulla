@@ -273,7 +273,7 @@ fn check_reads(
     for reference in references {
         let source = source_of(&reference);
         if !task.depends_on.iter().any(|d| d == source) {
-            return Err(refuse("binding_not_dependency", &task.task_id));
+            return Err(refuse("BINDING_NOT_DEPENDENCY", &task.task_id));
         }
     }
     Ok(())

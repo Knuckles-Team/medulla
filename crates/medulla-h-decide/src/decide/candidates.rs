@@ -18,7 +18,8 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::{
-    agent_component::AgentComponentEntry, agent_component::AgentComponentSearchRequest,
+    agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
+    agent_component::AgentComponentSearchRequest,
 };
 use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
@@ -181,6 +182,40 @@ pub(super) fn library_candidates(
             classification_under: scope.classification_under.clone(),
         },
         visibility: RecordVisibility::Tenant,
+    })
+}
+
+/// The candidates of a question whose family reads its own index instead of
+/// the stage-2 candidate scan (`ToolRelevance`, MEDULLA-DECISION-ENGINE-R134.110.3).
+///
+/// The source must be the Agent Library scoped to the `Tool` kind alone; no
+/// view is read here, so the 64-candidate stage-2 cap does not apply. The
+/// record still names the source, so the sealed record binds it.
+pub(super) fn indexed_tool_candidates(source: &CandidateSource) -> Result<ReadCandidates, String> {
+    let CandidateSource::AgentLibrary { scope } = source else {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "a tool_relevance question reads the Agent Library with kind tool",
+        ));
+    };
+    if scope.kinds.as_slice() != [AgentComponentKind::Tool] {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "a tool_relevance question reads the Agent Library with kind tool",
+        ));
+    }
+    Ok(ReadCandidates {
+        views: Vec::new(),
+        entries: Vec::new(),
+        record: CandidateSourceRecord::AgentLibrary {
+            kinds: scope.kinds.clone(),
+            classification_under: scope.classification_under.clone(),
+        },
+        visibility: RecordVisibility::Tenant,
+        derived: DerivedClasses {
+            rules: current_rules(),
+            ..DerivedClasses::default()
+        },
     })
 }
 

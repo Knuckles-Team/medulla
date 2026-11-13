@@ -29,6 +29,18 @@ pub enum AggregationOp {
     FirstValid,
 }
 
+impl AggregationOp {
+    /// The wire name of the operator.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Concat => "concat",
+            Self::MajorityVote => "majority_vote",
+            Self::Reduce => "reduce",
+            Self::FirstValid => "first_valid",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

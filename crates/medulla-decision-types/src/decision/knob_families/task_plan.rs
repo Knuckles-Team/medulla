@@ -82,7 +82,43 @@ pub const SKILL_TREE_KNOBS: &[KnobSpec] = &[
 ];
 
 /// Every `task_plan.*`, `skill_plan.*` and `skill_tree.*` knob, each `Tunable`.
+/// The units of a step's priority weight that make one whole weight
+/// (MEDULLA-DECISION-ENGINE-R134.15): the critical chain's total is the sum of
+/// `duration_ms * priority_weight` over its steps divided by this scale.
+pub const WEIGHT_SCALE: KnobSpec = KnobSpec {
+    name: "task_plan.weight_scale",
+    unit: "units per whole weight",
+    default: KnobValue::Integer(100),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(10_000),
+    safety: KnobSafety::Tunable,
+};
+
+/// The most steps one horizon holds (MEDULLA-DECISION-ENGINE-R134.11).
+pub const HORIZON_MAX_STEPS: KnobSpec = KnobSpec {
+    name: "horizon.max_steps",
+    unit: "steps",
+    default: KnobValue::Integer(8),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(64),
+    safety: KnobSafety::Tunable,
+};
+
+/// The credit ceiling each horizon is accounted against.
+pub const HORIZON_CREDIT_CEILING: KnobSpec = KnobSpec {
+    name: "horizon.credit_ceiling",
+    unit: "tokens",
+    default: KnobValue::Integer(200_000),
+    min: KnobValue::Integer(1_000),
+    max: KnobValue::Integer(10_000_000),
+    safety: KnobSafety::Tunable,
+};
+
+/// Every `task_plan.*`, `skill_plan.*` and `horizon.*` knob, each `Tunable`.
 pub const KNOBS: &[KnobSpec] = &[
+    HORIZON_MAX_STEPS,
+    HORIZON_CREDIT_CEILING,
+    WEIGHT_SCALE,
     SPECIALIST_MIN_SCORE,
     SKILL_BM25_SATURATION,
     SKILL_RELEVANCE_FLOOR,

@@ -126,7 +126,7 @@ impl Walk<'_> {
             _ => None,
         };
         let Some((source_task, reference)) = parsed else {
-            return Err(refuse("binding_bad_path", self.task, pointer));
+            return Err(refuse("BINDING_BAD_PATH", self.task, pointer));
         };
         self.bindings.push(TaskPlanBinding {
             pointer: pointer.to_string(),
@@ -150,7 +150,7 @@ pub(super) fn canonical_call(
         || !valid_id(&call.tool)
         || object.is_none_or(|map| map.contains_key(BINDING_KEY))
     {
-        return Err(refuse("call_invalid", task, ""));
+        return Err(refuse("CALL_INVALID", task, ""));
     }
     let mut walk = Walk {
         task,
@@ -158,13 +158,13 @@ pub(super) fn canonical_call(
     };
     let arguments = walk.value(&call.arguments, "")?;
     let argument_bytes = serde_json::to_vec(&arguments)
-        .map_err(|e| error("call_invalid", e))?
+        .map_err(|e| error("CALL_INVALID", e))?
         .len();
     if argument_bytes > MAX_CALL_ARGUMENT_BYTES {
-        return Err(refuse("call_bounds", task, ""));
+        return Err(refuse("CALL_BOUNDS", task, ""));
     }
     if walk.bindings.len() > MAX_BINDINGS_PER_CALL {
-        return Err(refuse("call_bounds", task, &walk.bindings[0].pointer));
+        return Err(refuse("CALL_BOUNDS", task, &walk.bindings[0].pointer));
     }
     let bytes = call.server.len() + call.tool.len() + argument_bytes;
     let canonical = TaskPlanCall {
@@ -203,19 +203,19 @@ pub(super) fn ancestors(tasks: &BTreeMap<String, TaskPlanTask>, id: &str) -> BTr
 pub(super) fn check_bindings(tasks: &BTreeMap<String, TaskPlanTask>) -> Result<(), String> {
     let tool_steps = tasks.values().filter(|t| t.call.is_some()).count();
     if tool_steps > MAX_TOOL_STEPS {
-        return Err(error("call_bounds", "too many tool steps"));
+        return Err(error("CALL_BOUNDS", "too many tool steps"));
     }
     for task in tasks.values() {
         for binding in task_bindings(task) {
             let (id, pointer) = (task.task_id.as_str(), binding.pointer.as_str());
             if !tasks.contains_key(&binding.source_task) {
-                return Err(refuse("binding_unknown_task", id, pointer));
+                return Err(refuse("BINDING_UNKNOWN_TASK", id, pointer));
             }
             if binding.source_task == id || ancestors(tasks, &binding.source_task).contains(id) {
-                return Err(refuse("binding_cycle", id, pointer));
+                return Err(refuse("BINDING_CYCLE", id, pointer));
             }
             if !task.depends_on.iter().any(|d| *d == binding.source_task) {
-                return Err(refuse("binding_not_dependency", id, pointer));
+                return Err(refuse("BINDING_NOT_DEPENDENCY", id, pointer));
             }
         }
     }

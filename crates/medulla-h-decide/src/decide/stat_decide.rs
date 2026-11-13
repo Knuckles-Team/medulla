@@ -165,8 +165,18 @@ async fn serve(
                 super::family::command_view(state, verified.agent_id(), &request)
                     .await
                     .map(Some)
+            } else if request.question.kind == QuestionKind::RuntimeQuota {
+                super::family::quota_view(state, verified.agent_id(), &request).await
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
                 super::family::disclosure_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
+            } else if request.question.kind == QuestionKind::ContextPackage {
+                // A `context_package` question declares its candidates and checks
+                // each against its cited source node in the graph named by its
+                // `source_graph` param, under the same ACL and RLS filter.
+                let graph = super::family::context_package::source_graph(&request)?;
+                super::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(Some)
             } else {
@@ -218,6 +228,11 @@ pub(super) fn decide_blocking(
     let registry = super::family::for_kind(request.question.kind);
     let task_plan = super::stat_task_plan::plan_of_request(ctx, request, &principal)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
+        // A tool_relevance question reads its own index (R134.110.3), so the
+        // stage-2 candidate scan and its cap do not apply to it.
+        if request.question.kind == QuestionKind::ToolRelevance {
+            return super::candidates::indexed_tool_candidates(&request.candidates);
+        }
         read_candidates(
             ctx.store,
             ctx.tenant_id,
@@ -483,6 +498,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::knob_families::resolve_entity::KNOBS
         }
         QuestionKind::StageAllocation => medulla_decision_types::decision::harness_contrast::KNOBS,
+        QuestionKind::ContextPackage => {
+            medulla_decision_types::decision::knob_families::context::KNOBS
+        }
         QuestionKind::OverWindowPlan => {
             medulla_decision_types::decision::knob_families::context::KNOBS
         }
@@ -497,6 +515,16 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::knob_families::task_plan::SKILL_TREE_KNOBS
         }
         QuestionKind::TemporalBasis => medulla_decision_types::decision::temporal_query::KNOBS,
+        QuestionKind::RuntimeQuota => medulla_decision_types::decision::run_governance::KNOBS,
+        QuestionKind::ProgramLookup => medulla_decision_types::decision::program_store::KNOBS,
+        QuestionKind::InsightSelection => {
+            medulla_decision_types::decision::program_store::insight::KNOBS
+        }
+        QuestionKind::TaskPlan => medulla_decision_types::decision::knob_families::task_plan::KNOBS,
+        QuestionKind::ToolRelevance => medulla_decision_types::decision::tool_relevance::KNOBS,
+        QuestionKind::CriterionReview => {
+            medulla_decision_types::decision::knob_families::criterion_review::KNOBS
+        }
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS
@@ -627,7 +655,7 @@ fn seal(
     sealing: Sealing,
     executed: &Executed,
     nl: Option<NlBinding>,
-    task_plan: Option<medulla_decision_types::decision::task_plan::TaskPlan>,
+    task_plan: Option<super::stat_task_plan::Planned>,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
         harness_evaluation: None,
@@ -653,9 +681,17 @@ fn seal(
         &(&sealing.request.question, &inputs),
     );
     let mut premise_list = premises(&sealing, nl.as_ref());
-    if let Some(plan) = &task_plan {
-        premise_list.extend(super::stat_task_plan::premises(plan));
-    }
+    let task_plan = match task_plan {
+        Some(super::stat_task_plan::Planned::Plan(plan, notes)) => {
+            premise_list.extend(super::stat_task_plan::premises(&plan, &notes));
+            Some(plan)
+        }
+        Some(super::stat_task_plan::Planned::Abstain { premise, .. }) => {
+            premise_list.push(premise);
+            None
+        }
+        None => None,
+    };
     if let Some(topology) = &executed.topology {
         premise_list.extend(topology.premises.iter().cloned());
     }

@@ -32,6 +32,17 @@ pub struct PackageRefusal {
     pub code: ContextPackageErrorCode,
     /// What was refused.
     pub detail: String,
+    /// Where an exhausted search stood, for `WorkExhausted` only.
+    pub exhaustion: Option<PackageExhaustion>,
+}
+
+/// What the verifier established about a search whose node budget ran out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackageExhaustion {
+    /// The verified objective of the best package found, when one was found.
+    pub incumbent: Option<Scalar>,
+    /// The verified lower bound, when any bound leaf was proven.
+    pub lower_bound: Option<Scalar>,
 }
 
 impl PackageRefusal {
@@ -39,6 +50,7 @@ impl PackageRefusal {
         Self {
             code,
             detail: detail.into(),
+            exhaustion: None,
         }
     }
 
@@ -200,6 +212,16 @@ pub struct SolvedPackage {
 /// not a verified optimum with zero gap is refused; a greedy fallback never
 /// qualifies.
 pub fn select(request: &ContextPackageRequest) -> Result<SolvedPackage, PackageRefusal> {
+    select_with(request, super::solve)
+}
+
+/// [`select`] with the solver supplied by the caller. The verifier is always
+/// the independent one, so a solver that returns a corrupted certificate is
+/// refused `CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE`.
+pub fn select_with(
+    request: &ContextPackageRequest,
+    solver: impl FnOnce(&Model, &SolverConfig) -> Certificate,
+) -> Result<SolvedPackage, PackageRefusal> {
     let (spec, capacity) = lower(request)?;
     let model = Model::try_from(spec.clone())
         .map_err(|error| PackageRefusal::invalid(format!("model refused: {error}")))?;
@@ -210,9 +232,30 @@ pub fn select(request: &ContextPackageRequest) -> Result<SolvedPackage, PackageR
         accepted_gap: Scalar::new(0),
     })
     .map_err(|error| PackageRefusal::invalid(format!("solver config refused: {error:?}")))?;
-    let certificate = super::solve(&model, &config);
-    let verdict = verify(&model, &certificate)
-        .map_err(|error| PackageRefusal::invalid(format!("certificate refused: {error}")))?;
+    let certificate = solver(&model, &config);
+    let verdict = verify(&model, &certificate).map_err(|error| {
+        PackageRefusal::new(
+            ContextPackageErrorCode::CertificateUnacceptable,
+            format!("certificate refused: {error}"),
+        )
+    })?;
+    if let Verdict::Unresolved {
+        incumbent,
+        lower_bound,
+    } = &verdict
+    {
+        return Err(PackageRefusal {
+            code: ContextPackageErrorCode::WorkExhausted,
+            detail: format!(
+                "the node budget of {} was spent before an optimal package was proven",
+                request.node_budget
+            ),
+            exhaustion: Some(PackageExhaustion {
+                incumbent: *incumbent,
+                lower_bound: *lower_bound,
+            }),
+        });
+    }
     let proven = matches!(
         verdict,
         Verdict::ProvenOptimal { .. } | Verdict::OptimalityRequiresReplay { .. }
@@ -223,7 +266,8 @@ pub fn select(request: &ContextPackageRequest) -> Result<SolvedPackage, PackageR
     let incumbent = match (&certificate.incumbent, proven) {
         (Some(incumbent), true) => incumbent,
         _ => {
-            return Err(PackageRefusal::invalid(
+            return Err(PackageRefusal::new(
+                ContextPackageErrorCode::CertificateUnacceptable,
                 "the solver did not prove an optimal package within its node budget",
             ))
         }

@@ -35,6 +35,18 @@ struct Chosen {
     text: String,
     deps: BTreeSet<String>,
     skill: String,
+    /// The `Q32` relevance of the chosen skill; a merged task keeps the lowest
+    /// of its members, so the claim is the weakest one.
+    relevance_q32: i64,
+}
+
+/// A skill plan: the proposal and the relevance each planned task was chosen
+/// with (MEDULLA-DECISION-ENGINE-R134.7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkillPlan {
+    pub proposal: TaskPlanProposal,
+    /// `Q32` relevance per task id; split parts share their subtask's value.
+    pub relevance_q32: BTreeMap<String, i64>,
 }
 
 fn refusal(code: &str, detail: impl std::fmt::Display) -> String {
@@ -64,7 +76,7 @@ pub fn skill_relevances(
     let mut out = Vec::with_capacity(subtasks.len());
     for subtask in subtasks {
         if !seen.insert(subtask.id.as_str()) {
-            return Err(refusal("duplicate_task_id", &subtask.id));
+            return Err(refusal("DUPLICATE_TASK_ID", &subtask.id));
         }
         let scores = bm25::scores(&documents, &subtask.text);
         let mut row = Vec::with_capacity(ordered.len());
@@ -101,7 +113,8 @@ fn choose(
                 best = Some((*relevance, skill.as_str()));
             }
         }
-        let Some((_, skill)) = best.filter(|(r, _)| reaches(*r, knobs.relevance_floor_micros))
+        let Some((relevance_q32, skill)) =
+            best.filter(|(r, _)| reaches(*r, knobs.relevance_floor_micros))
         else {
             return Err(refusal(NO_SKILL_FOR_SUBTASK, &id));
         };
@@ -115,6 +128,7 @@ fn choose(
             text: subtask.text.clone(),
             deps: subtask.depends_on.iter().cloned().collect(),
             skill: skill.to_string(),
+            relevance_q32,
         });
     }
     Ok(chosen)
@@ -137,6 +151,7 @@ fn merge(chosen: Vec<Chosen>, cap: usize) -> (Vec<Chosen>, BTreeMap<String, Stri
             current = match current.take() {
                 Some(mut open) if open.text.len() + 1 + item.text.len() <= cap => {
                     map.insert(item.id.clone(), open.id.clone());
+                    open.relevance_q32 = open.relevance_q32.min(item.relevance_q32);
                     open.text.push('\n');
                     open.text.push_str(&item.text);
                     Some(open)
@@ -186,7 +201,7 @@ pub fn plan_over_skills(
     query: &SkillPlanQuery,
     skills: &[SkillDocument],
     knobs: &SkillPlanKnobs,
-) -> Result<TaskPlanProposal, String> {
+) -> Result<SkillPlan, String> {
     if skills.is_empty() {
         return Err(refusal(EMPTY_SKILL_INDEX, "no published skill is visible"));
     }
@@ -213,6 +228,7 @@ pub fn plan_over_skills(
             .map_or_else(|| kept.to_string(), Clone::clone)
     };
     let mut tasks = Vec::new();
+    let mut relevance_q32 = BTreeMap::new();
     for (item, parts) in &chains {
         let deps: BTreeSet<String> = item.deps.iter().map(|d| resolve(d)).collect();
         let total = parts.len();
@@ -227,10 +243,11 @@ pub fn plan_over_skills(
                     vec![format!("{}.{}", item.id, index)],
                 )
             };
+            relevance_q32.insert(task_id.clone(), item.relevance_q32);
             tasks.push(TaskPlanTask {
                 task_id,
                 prompt: part.clone(),
-                depends_on: BoundedVec::new(depends_on).map_err(|d| refusal("plan_bounds", d))?,
+                depends_on: BoundedVec::new(depends_on).map_err(|d| refusal("PLAN_BOUNDS", d))?,
                 call: None,
                 aggregation: None,
                 assignee: Some(item.skill.clone()),
@@ -238,16 +255,21 @@ pub fn plan_over_skills(
                 join: None,
                 decision: None,
                 approval: None,
+                duration_ms: None,
+                priority_weight: None,
             });
         }
     }
     let independent = independent_ids(&tasks).len();
     let max_steps = tasks.len() as u16;
-    Ok(TaskPlanProposal {
-        tasks: BoundedVec::new(tasks).map_err(|d| refusal("plan_bounds", d))?,
-        output_task_id: resolve(&query.output_task_id),
-        max_concurrency: independent.clamp(1, usize::from(MAX_CONCURRENCY)) as u16,
-        max_steps,
+    Ok(SkillPlan {
+        proposal: TaskPlanProposal {
+            tasks: BoundedVec::new(tasks).map_err(|d| refusal("PLAN_BOUNDS", d))?,
+            output_task_id: resolve(&query.output_task_id),
+            max_concurrency: independent.clamp(1, usize::from(MAX_CONCURRENCY)) as u16,
+            max_steps,
+        },
+        relevance_q32,
     })
 }
 
@@ -315,7 +337,7 @@ mod tests {
                 ),
             ],
         );
-        let proposal = plan_over_skills(&q, &skills(), &knobs()).unwrap();
+        let proposal = plan_over_skills(&q, &skills(), &knobs()).unwrap().proposal;
         let plan = plan_explicit_tasks(&proposal).unwrap();
         let position: BTreeMap<&str, usize> = plan
             .tasks
@@ -355,7 +377,8 @@ mod tests {
                 subtask("z-report", "summarise findings report narrative", &["big"]),
             ],
         );
-        let plan = plan_explicit_tasks(&plan_over_skills(&q, &skills(), &tight).unwrap()).unwrap();
+        let plan = plan_explicit_tasks(&plan_over_skills(&q, &skills(), &tight).unwrap().proposal)
+            .unwrap();
         let parts: Vec<&TaskPlanTask> = plan
             .tasks
             .iter()
@@ -384,7 +407,8 @@ mod tests {
                 subtask("z", "summarise findings report narrative", &["m1", "m2"]),
             ],
         );
-        let plan = plan_explicit_tasks(&plan_over_skills(&q, &skills(), &tight).unwrap()).unwrap();
+        let plan = plan_explicit_tasks(&plan_over_skills(&q, &skills(), &tight).unwrap().proposal)
+            .unwrap();
         assert_eq!(plan.tasks.len(), 3);
     }
 
@@ -437,9 +461,9 @@ mod tests {
                 subtask("b", "deploy cluster rollout release", &["a"]),
             ],
         );
-        let proposal = plan_over_skills(&q, &skills(), &knobs()).unwrap();
+        let proposal = plan_over_skills(&q, &skills(), &knobs()).unwrap().proposal;
         assert!(plan_explicit_tasks(&proposal)
             .unwrap_err()
-            .starts_with("plan_cycle"));
+            .starts_with("PLAN_CYCLE"));
     }
 }

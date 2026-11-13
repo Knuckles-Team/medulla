@@ -7,27 +7,13 @@
 //! breach, never only the first.
 
 use medulla_decision_types::decision::context_package::is_sha256_hex;
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use medulla_decision_types::decision::knob_families::verifier::min_cases;
+#[cfg(test)]
+use medulla_decision_types::decision::knob_families::verifier::KNOBS;
+#[cfg(test)]
+use medulla_decision_types::decision::knobs::{KnobSafety, KnobValue};
 use medulla_decision_types::decision::verifier_receipt::{VerifierCaseState, VerifierReceipt};
 use medulla_decision_types::decision::DecisionPolicy;
-
-/// The `verifier.*` knobs. The minimum is `Fixed`: a revision may not move it.
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "verifier.min_cases",
-    unit: "count",
-    default: KnobValue::Integer(1),
-    min: KnobValue::Integer(1),
-    max: KnobValue::Integer(64),
-    safety: KnobSafety::Fixed,
-}];
-
-/// The fewest cases a receipt of `policy` carries.
-pub fn min_cases(policy: &DecisionPolicy) -> usize {
-    match policy.knob(&KNOBS[0]) {
-        KnobValue::Integer(v) => usize::try_from(v).unwrap_or(1),
-        _ => 1,
-    }
-}
 
 /// One reason a receipt does not admit the artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -168,6 +168,8 @@ pub fn decompose_task(
             join: None,
             decision: None,
             approval: None,
+            duration_ms: None,
+            priority_weight: None,
         });
     }
     let independent = independent_ids(&tasks);
@@ -190,7 +192,7 @@ pub fn decompose_task(
     }
     let max_steps = tasks.len() as u16;
     Ok(TaskPlanProposal {
-        tasks: BoundedVec::new(tasks).map_err(|detail| error("plan_bounds", detail))?,
+        tasks: BoundedVec::new(tasks).map_err(|detail| error("PLAN_BOUNDS", detail))?,
         output_task_id: facts.output_task_id.clone(),
         max_concurrency: count.clamp(1, usize::from(MAX_CONCURRENCY)) as u16,
         max_steps,

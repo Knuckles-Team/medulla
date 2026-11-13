@@ -54,6 +54,7 @@ fn request(
         candidates: BoundedVec::new(candidates).unwrap(),
         value_floor_micro_per_token: 0,
         node_budget: 100_000,
+        remaining: None,
     }
 }
 

@@ -204,6 +204,7 @@ method_results! {
     DecisionLogLearn(DecisionLog / "learn") => Raw<LearningRecorded>;
     DecisionLogPromoteRule(DecisionLog / "promote_rule") => Raw<medulla_decision_types::decision::statistical::log::RulePromotionResult>;
     DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackOutcome>;
+    DecisionLogRunRecord(DecisionLog / "run_record") => Raw<medulla_decision_types::decision::program_store::RunRecordStored>;
     BeliefRevise(BeliefRevise) => Raw<medulla_types::belief_revision::BeliefPassResult>;
     ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;

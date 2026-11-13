@@ -758,6 +758,9 @@ fn dispatch(
             &tenant_id,
             computation,
         )?),
+        DecisionLogOp::RunRecord { record, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogRunRecord,
+        >(super::run_record::commit(ctx, &reader.retention, record)?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,

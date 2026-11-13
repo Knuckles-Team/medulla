@@ -145,6 +145,28 @@ pub(super) fn abstained(
     }
 }
 
+/// An abstention that reports every one of `refusals` under `kind`'s registered
+/// table, in the order given; `refusals` is never empty.
+pub(super) fn abstained_all<R>(
+    kind: medulla_decision_types::decision::statistical::QuestionKind,
+    refusals: &[R],
+) -> Result<Executed, String>
+where
+    R: medulla_decision_types::decision::record::outcome::DecisionRefusal,
+{
+    use medulla_decision_types::decision::record::outcome::RefusalOrigin;
+    use medulla_decision_types::decision::AbstainReason;
+    let reasons: Vec<AbstainReason> = refusals
+        .iter()
+        .map(|refusal| AbstainReason::from_refusal(RefusalOrigin::Decide(kind), refusal))
+        .collect();
+    let reasons = BoundedVec::new(reasons)
+        .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?;
+    let mut executed = abstained(kind, &refusals[0]);
+    executed.ladder.outcome = StatisticalOutcome::Abstained { reasons };
+    Ok(executed)
+}
+
 /// The text parameter `name`, if present.
 pub(super) fn text_param<'a>(
     request: &'a DecideRequest,

@@ -182,6 +182,8 @@ fn task_of(step: &ParsedStep<'_>) -> Result<TaskPlanTask, SkillPlanRefusal> {
         join: None,
         decision: None,
         approval: None,
+        duration_ms: None,
+        priority_weight: None,
     })
 }
 
@@ -202,12 +204,12 @@ fn plan_refusal(message: &str) -> SkillPlanRefusal {
     let code = message.split(':').next().unwrap_or_default();
     let detail = message.split_once(": ").map_or("", |(_, rest)| rest);
     match code {
-        "plan_cycle" => SkillPlanRefusal::Cycle,
-        "missing_dependency" | "disconnected_output" => {
+        "PLAN_CYCLE" => SkillPlanRefusal::Cycle,
+        "MISSING_DEPENDENCY" | "DISCONNECTED_OUTPUT" => {
             SkillPlanRefusal::DependencyUnresolved(detail.to_string())
         }
-        "duplicate_task_id" => SkillPlanRefusal::StepIdDuplicate(detail.to_string()),
-        "invalid_task_id" => SkillPlanRefusal::StepIdMissing,
+        "DUPLICATE_TASK_ID" => SkillPlanRefusal::StepIdDuplicate(detail.to_string()),
+        "INVALID_TASK_ID" => SkillPlanRefusal::StepIdMissing,
         _ => SkillPlanRefusal::TypeUnsupported(message.to_string()),
     }
 }

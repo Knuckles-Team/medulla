@@ -222,6 +222,31 @@ pub fn read_engine_body(
     )
 }
 
+/// How readable an engine-owned manifest is in `tenant_id`'s namespace: its
+/// length when the manifest exists under that tenant and every chunk is present
+/// with its declared length; `None` for an absent manifest, another tenant's
+/// manifest or a damaged one. Reads no body bytes into the caller.
+pub fn engine_manifest_length(
+    store: &dyn super::store::ChunkStore,
+    tenant_id: &str,
+    manifest_digest: &str,
+) -> Result<Option<u64>, String> {
+    let Some(manifest) = store.get_manifest(manifest_digest)? else {
+        return Ok(None);
+    };
+    if manifest.owner_scope != format!("engine-internal:connector-pack:{tenant_id}") {
+        return Ok(None);
+    }
+    let mut total = 0u64;
+    for (digest, declared) in manifest.chunks.iter().zip(&manifest.chunk_lens) {
+        match store.get_chunk(digest)? {
+            Some(chunk) if chunk.len() == *declared as usize => total += chunk.len() as u64,
+            _ => return Ok(None),
+        }
+    }
+    Ok((total == manifest.len).then_some(total))
+}
+
 /// Read a repository source only under its tenant and repository namespace,
 /// checking the complete raw SHA-256 before any worker can use the bytes.
 pub fn read_repository_body(

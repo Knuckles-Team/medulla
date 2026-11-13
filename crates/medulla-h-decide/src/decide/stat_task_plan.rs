@@ -14,6 +14,7 @@ use medulla_decision_types::{
     decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_library::lifecycle::AgentLibraryLifecycle;
@@ -30,16 +31,96 @@ use std::collections::BTreeMap;
 use super::stat_log::{
     context_digest_of, evaluations_of, visible_entries, visible_entry, LogReader,
 };
+use medulla_decision_stats::decision::skill_plan::{plan_over_skills, SkillDocument};
+use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::statistical::TypedParam;
-use medulla_decision_types::decision::task_plan::skill_plan::SkillPlanKnobs;
+use medulla_decision_types::decision::task_plan::skill_plan::{
+    SkillPlanKnobs, EMPTY_SKILL_INDEX, NO_SKILL_FOR_SUBTASK,
+};
 use medulla_decision_types::decision::task_plan::{
-    decompose_task, DecomposeKnobs, TaskPlanProposal,
+    attach_critical_chain, attach_horizons, decompose_task, CriticalPathKnobs, DecomposeKnobs,
+    HorizonKnobs, TaskPlanProposal,
+};
+use medulla_decision_types::decision::task_plan::{
+    NO_SPECIALIST_FOR_SUBTASK, PLAN_PARAMETER_CONFLICT,
 };
 use medulla_decision_types::decision::{DecisionPolicy, LibraryCandidateScope};
 
 use super::candidates::library_candidates;
 use super::stat_executor::ExecutionContext;
 use super::stat_support::{invalid_parameter, resolve_policy};
+
+/// What a `task_plan` question concludes: the canonical plan, or the family's
+/// abstention when a proposer cannot cover a subtask (MEDULLA-DECISION-ENGINE-R134.6).
+pub(super) enum Planned {
+    Plan(TaskPlan, PlanNotes),
+    Abstain {
+        code: RefusalCode,
+        detail: String,
+        premise: PremiseRef,
+    },
+}
+
+/// What the proposer knew that the canonical plan does not keep: the `Q32`
+/// relevance a skill planner chose each task with and whether the engine, not
+/// the caller, chose the output aggregation (MEDULLA-DECISION-ENGINE-R134.7).
+#[derive(Default)]
+pub(super) struct PlanNotes {
+    pub(super) relevance_q32: std::collections::BTreeMap<String, i64>,
+    pub(super) engine_chose_aggregation: bool,
+}
+
+/// A proposer's result before canonicalization.
+enum Proposal {
+    Plan(TaskPlanProposal, PlanNotes),
+    Abstain(Planned),
+}
+
+/// The abstention a proposer's coded failure is: only the coverage codes
+/// abstain; every other planner failure is a refused request.
+fn abstention(message: &str, param: &str) -> Option<Planned> {
+    let (code, detail) = message.split_once(": ").unwrap_or((message, ""));
+    if ![
+        NO_SKILL_FOR_SUBTASK,
+        NO_SPECIALIST_FOR_SUBTASK,
+        EMPTY_SKILL_INDEX,
+    ]
+    .contains(&code)
+    {
+        return None;
+    }
+    let code = codes::resolve(code)?;
+    let subject = if code.as_str() == EMPTY_SKILL_INDEX {
+        "skill_index".to_string()
+    } else {
+        detail.to_string()
+    };
+    Some(Planned::Abstain {
+        code,
+        detail: detail.to_string(),
+        premise: PremiseRef {
+            subject,
+            fact: format!(
+                "task_plan_abstention:code={};subtask={detail}",
+                code.as_str()
+            ),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Request {
+                field: format!("params.{param}"),
+            },
+        },
+    })
+}
+
+fn proposed(result: Result<TaskPlanProposal, String>, param: &str) -> Result<Proposal, String> {
+    match result {
+        Ok(proposal) => Ok(Proposal::Plan(proposal, PlanNotes::default())),
+        Err(message) => match abstention(&message, param) {
+            Some(planned) => Ok(Proposal::Abstain(planned)),
+            None => Err(invalid_parameter(message)),
+        },
+    }
+}
 
 /// The proposal a `task_plan` question's one typed parameter names: the
 /// caller's explicit tasks (`task_plan`), the harness's subtasks and specialist
@@ -50,16 +131,45 @@ fn proposal_of(
     ctx: &ExecutionContext,
     param: &TypedParam,
     policy: &DecisionPolicy,
-) -> Result<TaskPlanProposal, String> {
+) -> Result<Proposal, String> {
     match (param.name.as_str(), &param.value) {
-        ("task_plan", TypedValue::TaskPlan(proposal)) => Ok((**proposal).clone()),
-        ("decomposition", TypedValue::TaskDecomposition(facts)) => {
-            decompose_task(facts, &DecomposeKnobs::from_policy(policy)).map_err(invalid_parameter)
+        ("task_plan", TypedValue::TaskPlan(proposal)) => {
+            Ok(Proposal::Plan((**proposal).clone(), PlanNotes::default()))
         }
+        ("decomposition", TypedValue::TaskDecomposition(facts)) => proposed(
+            decompose_task(facts, &DecomposeKnobs::from_policy(policy)),
+            "decomposition",
+        )
+        .map(|proposal| match proposal {
+            Proposal::Plan(plan, _) => Proposal::Plan(
+                plan,
+                PlanNotes {
+                    relevance_q32: Default::default(),
+                    engine_chose_aggregation: true,
+                },
+            ),
+            other => other,
+        }),
         ("skill_query", TypedValue::SkillPlanQuery(query)) => {
             let (skills, _) = visible_skills(ctx)?;
             plan_over_skills(query, &skills, &SkillPlanKnobs::from_policy(policy))
                 .map_err(invalid_parameter)
+            let skills = visible_skills(ctx)?;
+            let planned = plan_over_skills(query, &skills, &SkillPlanKnobs::from_policy(policy));
+            let relevance = planned
+                .as_ref()
+                .map(|p| p.relevance_q32.clone())
+                .unwrap_or_default();
+            proposed(planned.map(|p| p.proposal), "skill_query").map(|proposal| match proposal {
+                Proposal::Plan(plan, _) => Proposal::Plan(
+                    plan,
+                    PlanNotes {
+                        relevance_q32: relevance,
+                        engine_chose_aggregation: false,
+                    },
+                ),
+                other => other,
+            })
         }
         (_, TypedValue::TaskPlan(_)) => Err(invalid_parameter(
             "task_plan parameter must be named task_plan",
@@ -288,6 +398,7 @@ pub(super) fn plan_of_request(
     request: &DecideRequest,
     principal: &str,
 ) -> Result<Option<TaskPlan>, String> {
+) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan
         && !request.params.iter().any(|p| is_plan_param(&p.value))
     {
@@ -303,7 +414,7 @@ pub(super) fn task_plan(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     policy: &DecisionPolicy,
-) -> Result<Option<TaskPlan>, String> {
+) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan {
         if request.params.iter().any(|p| is_plan_param(&p.value)) {
             return Err(invalid_parameter(
@@ -315,16 +426,38 @@ pub(super) fn task_plan(
     if request.question.safety != QuestionSafety::Ordinary
         || request.head.is_some()
         || !request.belief_as_of.is_empty()
-        || request.params.len() != 1
     {
         return Err(invalid_parameter(
-            "task_plan needs ordinary safety, no head or belief slices, and one parameter",
+            "task_plan needs ordinary safety, no head or belief slices",
+        ));
+    }
+    let proposers = request
+        .params
+        .iter()
+        .filter(|p| is_plan_param(&p.value))
+        .count();
+    if proposers != 1 {
+        return Err(invalid_parameter(format!(
+            "{PLAN_PARAMETER_CONFLICT}: a task_plan question carries exactly one of task_plan, \
+             decomposition or skill_query, got {proposers}"
+        )));
+    }
+    if request.params.len() != 1 {
+        return Err(invalid_parameter(
+            "task_plan takes its one proposer parameter and no other",
         ));
     }
     let param = &request.params.as_slice()[0];
-    let proposal = proposal_of(ctx, param, policy)?;
+    let proposal = match proposal_of(ctx, param, policy)? {
+        Proposal::Plan(proposal, notes) => (proposal, notes),
+        Proposal::Abstain(planned) => return Ok(Some(planned)),
+    };
+    let (proposal, notes) = proposal;
     let proposal = &proposal;
-    let plan = plan_explicit_tasks(proposal).map_err(invalid_parameter)?;
+    let mut plan = plan_explicit_tasks(proposal).map_err(invalid_parameter)?;
+    attach_critical_chain(&mut plan, &CriticalPathKnobs::from_policy(policy))
+        .map_err(invalid_parameter)?;
+    attach_horizons(&mut plan, &HorizonKnobs::from_policy(policy)).map_err(invalid_parameter)?;
     let CandidateSource::Declared { options } = &request.candidates else {
         return Err(invalid_parameter("task_plan requires declared task ids"));
     };
@@ -347,7 +480,7 @@ pub(super) fn task_plan(
             "declared candidates must be exactly the sorted task ids without facts",
         ));
     }
-    Ok(Some(plan))
+    Ok(Some(Planned::Plan(plan, notes)))
 }
 
 pub(super) fn outcome(_plan: &TaskPlan) -> StatisticalOutcome {
@@ -395,7 +528,7 @@ fn call_premises(task: &TaskPlanTask) -> Vec<PremiseRef> {
     out
 }
 
-pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
+pub(super) fn premises(plan: &TaskPlan, notes: &PlanNotes) -> Vec<PremiseRef> {
     let mut out: Vec<PremiseRef> = plan
         .tasks
         .iter()
@@ -444,6 +577,9 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
             },
         }));
     }
+    out.extend(assignment_premises(plan, notes));
+    out.extend(critical_chain_premises(plan));
+    out.extend(horizon_premises(plan));
     out.push(PremiseRef {
         subject: plan.policy_revision.clone(),
         fact: format!(
@@ -456,4 +592,120 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
         },
     });
     out
+}
+
+/// The planner premises (MEDULLA-DECISION-ENGINE-R134.7): one `Claim` per task
+/// that names its assignee, relevance (skill-planned tasks only) and whether it
+/// has no dependency, and one `Definition` for the output task's aggregation,
+/// saying whether the engine chose the operator.
+fn assignment_premises(plan: &TaskPlan, notes: &PlanNotes) -> Vec<PremiseRef> {
+    let independent =
+        medulla_decision_types::decision::task_plan::independent_ids(plan.tasks.as_slice());
+    let mut out: Vec<PremiseRef> = plan
+        .tasks
+        .iter()
+        .filter_map(|task| {
+            let assignee = task.assignee.as_deref()?;
+            let relevance = notes
+                .relevance_q32
+                .get(&task.task_id)
+                .map(|q| format!("relevance_q32={q};"))
+                .unwrap_or_default();
+            Some(PremiseRef {
+                subject: task.task_id.clone(),
+                fact: format!(
+                    "task_plan_assignment:assignee={assignee};{relevance}independent={}",
+                    independent.contains(task.task_id.as_str())
+                ),
+                class: PremiseClass::Claim,
+                provenance: PremiseProvenance::Request {
+                    field: "params.task_plan.tasks.assignee".to_string(),
+                },
+            })
+        })
+        .collect();
+    let output = plan
+        .tasks
+        .iter()
+        .find(|task| task.task_id == plan.output_task_id);
+    if let Some(aggregation) = output.and_then(|task| task.aggregation.as_ref()) {
+        out.push(PremiseRef {
+            subject: plan.output_task_id.clone(),
+            fact: format!(
+                "task_plan_aggregation:op={};default={}",
+                aggregation.op.name(),
+                notes.engine_chose_aggregation
+            ),
+            class: PremiseClass::Definition,
+            provenance: PremiseProvenance::Policy {
+                policy_digest: plan.policy_digest.clone(),
+            },
+        });
+    }
+    out
+}
+
+/// The critical-chain premises (MEDULLA-DECISION-ENGINE-R134.15): one `Claim`
+/// per task naming the duration and weight the caller supplied, and one
+/// `Definition` for the chain the engine derived from them.
+fn critical_chain_premises(plan: &TaskPlan) -> Vec<PremiseRef> {
+    let Some(chain) = &plan.critical_chain else {
+        return Vec::new();
+    };
+    let mut out: Vec<PremiseRef> = plan
+        .tasks
+        .iter()
+        .filter_map(|task| {
+            Some(PremiseRef {
+                subject: task.task_id.clone(),
+                fact: format!(
+                    "critical_path_input:task={};duration_ms={};weight={}",
+                    task.task_id, task.duration_ms?, task.priority_weight?
+                ),
+                class: PremiseClass::Claim,
+                provenance: PremiseProvenance::Request {
+                    field: "params.task_plan.tasks.duration_ms".to_string(),
+                },
+            })
+        })
+        .collect();
+    out.push(PremiseRef {
+        subject: plan.output_task_id.clone(),
+        fact: format!(
+            "task_plan_critical_chain:steps={};total_weighted_duration_ms={};weight_scale={};\
+             input_digest={}",
+            chain.critical_chain_step_ids.join(","),
+            chain.total_weighted_duration_ms,
+            chain.weight_scale,
+            chain.input_digest
+        ),
+        class: PremiseClass::Definition,
+        provenance: PremiseProvenance::Policy {
+            policy_digest: plan.policy_digest.clone(),
+        },
+    });
+    out
+}
+
+/// One `Claim` per horizon naming its steps (MEDULLA-DECISION-ENGINE-R134.11).
+fn horizon_premises(plan: &TaskPlan) -> Vec<PremiseRef> {
+    let Some(partition) = &plan.horizons else {
+        return Vec::new();
+    };
+    partition
+        .horizons
+        .iter()
+        .map(|horizon| PremiseRef {
+            subject: plan.output_task_id.clone(),
+            fact: format!(
+                "horizon:index={};steps={}",
+                horizon.index,
+                horizon.step_ids.join(",")
+            ),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::Policy {
+                policy_digest: plan.policy_digest.clone(),
+            },
+        })
+        .collect()
 }

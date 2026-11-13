@@ -219,6 +219,24 @@ pub enum QuestionKind {
     PaperAdmission,
     /// Whether a held run program or run output proposal is admitted (MEDULLA-DECISION-ENGINE-R038.3). See `decision::held_item`.
     HeldItemAdmission,
+    /// Whether a revision keeps every criterion the prior grading satisfied
+    /// (MEDULLA-DECISION-ENGINE-R136.101). See `decision::evolution_round`.
+    CriterionReview,
+    /// Whether generated code is admitted, from its adversarial verifier receipt
+    /// (MEDULLA-DECISION-ENGINE-R138.100). See `decision::verifier_receipt`.
+    GeneratedCodeAdmission,
+    /// The runtime quota of one run: knob defaults, task-class overrides and a
+    /// request that only tightens, under fixed ceilings (MEDULLA-DECISION-ENGINE-R133).
+    /// Evaluate-only. See `decision::run_governance`.
+    RuntimeQuota,
+    /// Which run-derived insights apply to one context signature
+    /// (MEDULLA-DECISION-ENGINE-R135.10). Evaluate-only: a selection writes
+    /// nothing. See `decision::program_store::insight`.
+    InsightSelection,
+    /// Which tools a role should see for one task, ranked by lexical and
+    /// embedding relevance (MEDULLA-DECISION-ENGINE-R134.110). Evaluate-only.
+    /// See `decision::tool_relevance`.
+    ToolRelevance,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -323,6 +341,8 @@ pub enum TypedValue {
     IntakeSources(BoundedVec<super::graph_intake::IntakeSource, 64>),
     /// One round of a checker feedback loop (MEDULLA-DECISION-ENGINE-R169.1).
     Feedback(Box<super::checker_feedback::FeedbackRecord>),
+    /// A tool-assignment request (MEDULLA-DECISION-ENGINE-R134.110.1).
+    ToolAssignment(Box<super::tool_relevance::ToolAssignmentRequest>),
 }
 
 /// One named parameter of a question.
@@ -576,6 +596,8 @@ mod tests {
             join: None,
             decision: None,
             approval: None,
+            duration_ms: None,
+            priority_weight: None,
         }
     }
 

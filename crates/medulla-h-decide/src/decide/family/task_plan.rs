@@ -5,10 +5,15 @@
 //! host).
 
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::statistical::DecideRequest;
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, QuestionKind, StatisticalOutcome,
+};
+use medulla_decision_types::decision::AbstainReason;
 use medulla_graph_core::graph::GraphView;
+use medulla_types::contract::BoundedVec;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
+use crate::decide::stat_task_plan::Planned;
 
 use super::DecisionFamily;
 
@@ -43,7 +48,41 @@ impl DecisionFamily for TaskPlanFamily {
                 family_premises: Vec::new(),
                 route: None,
             })),
+            Ok(Some(Planned::Plan(plan))) => {
+            Ok(Some(Planned::Plan(plan, _))) => {
+                Some(Ok(executed(crate::decide::stat_task_plan::outcome(&plan))))
+            }
+            Ok(Some(Planned::Abstain { code, detail, .. })) => {
+                Some(Ok(executed(StatisticalOutcome::Abstained {
+                    reasons: BoundedVec::new(vec![AbstainReason::Family {
+                        family: QuestionKind::TaskPlan,
+                        code,
+                        detail,
+                    }])
+                    .expect("one reason fits the bound"),
+                })))
+            }
             Ok(None) => None,
         }
+    }
+}
+
+fn executed(outcome: StatisticalOutcome) -> Executed {
+    Executed {
+        matrix: None,
+        ladder: LadderResult {
+            outcome,
+            calibration: None,
+            explained: None,
+            audit: None,
+            logging: Vec::new(),
+        },
+        reading: None,
+        seed: [0u8; 32],
+        harness_contrast: None,
+        topology: None,
+        context_selection: None,
+        thought: None,
+        family_premises: Vec::new(),
     }
 }

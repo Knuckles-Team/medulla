@@ -429,6 +429,12 @@ pub enum DecisionLogOp {
         tenant_id: String,
         computation: super::writeback::WritebackOp,
     },
+    /// Commit one run record (MEDULLA-DECISION-ENGINE-R135.3): the engine
+    /// compiles a successful run into a stored program keyed by task signature.
+    RunRecord {
+        tenant_id: String,
+        record: super::super::program_store::RunRecord,
+    },
 }
 
 /// The result of a `PromoteRule` op.
@@ -490,6 +496,7 @@ impl DecisionLogOp {
             }
             Self::Learn { write, .. } => write.class(),
             Self::PromoteRule { .. } => LogOpClass::Govern,
+            Self::RunRecord { .. } => LogOpClass::Write,
         }
     }
 
@@ -514,7 +521,8 @@ impl DecisionLogOp {
             | Self::Resolve { tenant_id, .. }
             | Self::Learn { tenant_id, .. }
             | Self::PromoteRule { tenant_id, .. }
-            | Self::Writeback { tenant_id, .. } => tenant_id,
+            | Self::Writeback { tenant_id, .. }
+            | Self::RunRecord { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

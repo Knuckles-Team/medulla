@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
+use crate::decision::record::outcome::RefusalCode;
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
 
@@ -23,8 +24,44 @@ closed_error_codes! {
         InvalidMeasurement => "CONTEXT_PACKAGE_INVALID_MEASUREMENT",
         /// A ceiling was supplied without the rate that converts it to tokens.
         MissingFact => "CONTEXT_PACKAGE_MISSING_FACT",
+        /// A candidate differs from its source: the source node is absent from
+        /// the caller's visible graph, or its revision or content digest moved.
+        StaleSource => "CONTEXT_PACKAGE_STALE_SOURCE",
+        /// The solver's certificate failed the independent verifier or does not
+        /// prove an optimum.
+        CertificateUnacceptable => "CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE",
+        /// The selection is empty: no candidate fits the effective capacity.
+        /// An abstention, never a refusal.
+        NoneAdmissible => "CONTEXT_PACKAGE_NONE_ADMISSIBLE",
+        /// The solver's node budget ran out before it proved an optimum. An
+        /// abstention that carries the incumbent and the lower bound.
+        WorkExhausted => "CONTEXT_PACKAGE_WORK_EXHAUSTED",
+        /// The ceiling less what is committed and reserved is negative.
+        RemainderNegative => "CONTEXT_PACKAGE_REMAINDER_NEGATIVE",
+        /// A candidate was measured by another tokenizer than the remaining
+        /// budget names.
+        TokenizerMismatch => "CONTEXT_PACKAGE_TOKENIZER_MISMATCH",
     }
 }
+
+/// The registered refusal codes of the `context_package` family, in
+/// declaration order (R137.9, R137.10).
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("CONTEXT_PACKAGE_INVALID_MEASUREMENT"),
+    RefusalCode::new("CONTEXT_PACKAGE_MISSING_FACT"),
+    RefusalCode::new("CONTEXT_PACKAGE_STALE_SOURCE"),
+    RefusalCode::new("CONTEXT_PACKAGE_CERTIFICATE_UNACCEPTABLE"),
+    NONE_ADMISSIBLE,
+    WORK_EXHAUSTED,
+    RemainingBudget::NEGATIVE,
+    RemainingBudget::TOKENIZER_MISMATCH,
+];
+
+/// The abstention code of an empty selection (R137.10).
+pub const NONE_ADMISSIBLE: RefusalCode = RefusalCode::new("CONTEXT_PACKAGE_NONE_ADMISSIBLE");
+
+/// The abstention code of a spent node budget (R137.10).
+pub const WORK_EXHAUSTED: RefusalCode = RefusalCode::new("CONTEXT_PACKAGE_WORK_EXHAUSTED");
 
 /// One measured candidate span at one resolution of one evidence unit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +117,50 @@ pub struct ContextPackageBudget {
     pub tokens_per_second: Option<u64>,
 }
 
+/// The tokens a run has left in its own budget (R137.16). The package never
+/// takes more than `ceiling - committed - reserved`, scaled by the task
+/// complexity band.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RemainingBudget {
+    /// The run's token ceiling.
+    pub ceiling_tokens: u64,
+    /// The tokens already spent or promised.
+    pub committed_tokens: u64,
+    /// The tokens held back for later steps.
+    pub reserved_tokens: u64,
+    /// The tokenizer the counts are in; every candidate must be measured by it.
+    pub tokenizer_id: String,
+    /// That tokenizer's version.
+    pub tokenizer_version: String,
+}
+
+impl RemainingBudget {
+    /// The registered code of a negative remainder.
+    pub const NEGATIVE: RefusalCode = RefusalCode::new("CONTEXT_PACKAGE_REMAINDER_NEGATIVE");
+    /// The registered code of a tokenizer mismatch.
+    pub const TOKENIZER_MISMATCH: RefusalCode =
+        RefusalCode::new("CONTEXT_PACKAGE_TOKENIZER_MISMATCH");
+
+    /// `ceiling - committed - reserved` in checked arithmetic. A sum that
+    /// overflows or exceeds the ceiling is a negative remainder.
+    pub fn remaining(&self) -> Result<u64, (ContextPackageErrorCode, String)> {
+        self.committed_tokens
+            .checked_add(self.reserved_tokens)
+            .and_then(|spent| self.ceiling_tokens.checked_sub(spent))
+            .ok_or_else(|| {
+                (
+                    ContextPackageErrorCode::RemainderNegative,
+                    format!(
+                        "committed {} and reserved {} exceed the ceiling {}",
+                        self.committed_tokens, self.reserved_tokens, self.ceiling_tokens
+                    ),
+                )
+            })
+    }
+}
+
 /// One context-package question.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -93,6 +174,10 @@ pub struct ContextPackageRequest {
     pub value_floor_micro_per_token: u64,
     /// The solver's node budget.
     pub node_budget: u32,
+    /// What the run has left; when present the package is bounded by it
+    /// (R137.16).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remaining: Option<RemainingBudget>,
 }
 
 /// The chosen package and its certificate.
@@ -244,6 +329,7 @@ mod tests {
             candidates: BoundedVec::new(candidates).unwrap(),
             value_floor_micro_per_token: 1,
             node_budget: 1_000,
+            remaining: None,
         }
     }
 
@@ -321,5 +407,11 @@ mod tests {
             ContextPackageErrorCode::InvalidMeasurement.as_str(),
             "CONTEXT_PACKAGE_INVALID_MEASUREMENT"
         );
+        let registered: Vec<&str> = REFUSALS.iter().map(|code| code.as_str()).collect();
+        let declared: Vec<&str> = ContextPackageErrorCode::ALL
+            .iter()
+            .map(|code| code.as_str())
+            .collect();
+        assert_eq!(registered, declared);
     }
 }

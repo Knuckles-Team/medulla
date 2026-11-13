@@ -1072,6 +1072,9 @@ mod context_package_tests;
 // MEDULLA-DECISION-ENGINE-R136.4: served round verdict and stage allocation.
 mod evolution_round_tests;
 
+// MEDULLA-DECISION-ENGINE-R138.100.2: served generated-code admission.
+mod generated_code_admission_tests;
+
 // MEDULLA-DECISION-ENGINE-R137.3: the served over-window plan.
 mod over_window_plan_tests;
 
@@ -1083,6 +1086,17 @@ mod a2a_route_tests;
 
 // MEDULLA-DECISION-ENGINE-R137.100: relevance-triggered instruction disclosure.
 mod instruction_disclosure_tests;
+
+// MEDULLA-DECISION-ENGINE-R133.3: the served runtime quota.
+mod runtime_quota_tests;
+
+// MEDULLA-DECISION-ENGINE-R135.3: the served run-record commit and program lookup.
+mod program_store_tests;
+// MEDULLA-DECISION-ENGINE-R134.14: branch outcome records and the fusion receipt, served.
+mod branch_outcomes_tests;
+// MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
+mod insight_tests;
+mod tool_relevance_tests;
 
 mod scope_bound_tests;
 

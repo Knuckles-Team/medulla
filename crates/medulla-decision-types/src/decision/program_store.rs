@@ -8,11 +8,17 @@
 //! returns the stored program for a task signature and writes nothing. Nothing
 //! here reads a clock or a store.
 
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+use super::policy::DecisionPolicy;
+use super::run_governance::{RunOutcome, RunTraceRecord, TraceScalar};
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+
+pub mod insight;
+pub mod preplan;
 
 /// Most steps one compiled program may hold. A `Fixed` safety bound.
 pub const MAX_PROGRAM_STEPS: usize = 40;
@@ -24,9 +30,171 @@ pub const PROGRAM_SCHEMA_VERSION: u32 = 1;
 /// Refusal: a program of more than [`MAX_PROGRAM_STEPS`] steps.
 pub const PROGRAM_TOO_LONG: RefusalCode = RefusalCode::new("PROGRAM_TOO_LONG");
 
+/// Refusal: a run that did not succeed is never compiled.
+pub const RUN_NOT_SUCCESSFUL: RefusalCode = RefusalCode::new("RUN_NOT_SUCCESSFUL");
+/// Abstain reason: no program is stored for the signature.
+pub const NO_PROGRAM: RefusalCode = RefusalCode::new("NO_PROGRAM");
+
+/// One run-record commit (`DecisionLogOp::RunRecord`,
+/// MEDULLA-DECISION-ENGINE-R135.3). A closed enum: later rows add variants.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RunRecord {
+    /// Compile one successful run into a stored program. `policy` names the
+    /// decision policy whose `program.*` knobs bound the compilation.
+    ///
+    /// `reusable` asks to promote the program to a reusable pattern
+    /// (MEDULLA-DECISION-ENGINE-R135.7): it needs the `plan_binding` the plan
+    /// was made under and a `preplan_receipt` that verifies against it. Both
+    /// live on this request, never in the stored program body.
+    CompiledProgram {
+        trace: RunTraceRecord,
+        policy: crate::decision::request::DecisionPolicyRef,
+        #[serde(default)]
+        reusable: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        plan_binding: Option<preplan::PlanBinding>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        preplan_receipt: Option<preplan::PrePlanTestReceipt>,
+    },
+    /// Store one run-derived insight (MEDULLA-DECISION-ENGINE-R135.12). The
+    /// wire value is checked by [`insight::Insight::from_value`], so an insight
+    /// with no source run refuses with `MISSING_SOURCE_RUN`.
+    Insight { insight: serde_json::Value },
+    /// Store one horizon's credit checkpoint (MEDULLA-DECISION-ENGINE-R134.11).
+    /// `plan` is the plan `Decide` answered; the commit re-derives its horizon
+    /// partition under `policy` and refuses a checkpoint of another revision.
+    HorizonCheckpoint {
+        plan: Box<super::task_plan::TaskPlan>,
+        policy: crate::decision::request::DecisionPolicyRef,
+        checkpoint: super::task_plan::HorizonCheckpoint,
+    },
+    /// Store one branch's outcome (MEDULLA-DECISION-ENGINE-R134.14).
+    BranchRecord {
+        record: super::branch_fusion::BranchRecord,
+    },
+    /// Store what a later branch consumed (MEDULLA-DECISION-ENGINE-R134.14).
+    BranchRetrieval {
+        receipt: super::branch_fusion::BranchRetrievalReceipt,
+    },
+}
+
+/// What a committed [`RunRecord`] stored: the compiled program or the insight.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum StoredRun {
+    /// The compiled program as stored.
+    CompiledProgram {
+        program: CompiledProgram,
+        /// The reusable pattern the commit promoted, when it asked for one.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pattern: Option<preplan::ReusablePattern>,
+    },
+    /// The insight as stored.
+    Insight { insight: insight::Insight },
+    /// The checkpoint as stored.
+    HorizonCheckpoint {
+        checkpoint: super::task_plan::HorizonCheckpoint,
+    },
+    /// The branch record as stored.
+    BranchRecord {
+        record: super::branch_fusion::BranchRecord,
+    },
+    /// The retrieval receipt as stored.
+    BranchRetrieval {
+        receipt: super::branch_fusion::BranchRetrievalReceipt,
+    },
+}
+
+/// The answer of a committed [`RunRecord`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RunRecordStored {
+    /// The artifact key the record is stored under.
+    pub key: String,
+    /// The record as stored.
+    pub stored: StoredRun,
+    /// Whether the commit answered an existing row with equal content.
+    pub replayed: bool,
+}
+
+/// The decision-artifact key of the program stored for `task_signature`.
+pub fn program_key(task_signature: &str) -> String {
+    format!("run_record/compiled_program/{task_signature}")
+}
+
+/// A lookup that finds no stored program for the signature: the abstain reason
+/// `NO_PROGRAM` (MEDULLA-DECISION-ENGINE-R135.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoProgram {
+    pub task_signature: String,
+}
+
+impl crate::decision::record::outcome::DecisionRefusal for NoProgram {
+    fn code(&self) -> RefusalCode {
+        NO_PROGRAM
+    }
+
+    fn detail(&self) -> String {
+        format!(
+            "no program is stored for task_signature `{}`",
+            self.task_signature
+        )
+    }
+}
+
 /// Every refusal code of the program-lookup family; joins
 /// `codes::FAMILY_TABLES` under `QuestionKind::ProgramLookup`.
-pub const REFUSALS: &[RefusalCode] = &[PROGRAM_TOO_LONG];
+pub const REFUSALS: &[RefusalCode] = &[
+    PROGRAM_TOO_LONG,
+    RUN_NOT_SUCCESSFUL,
+    NO_PROGRAM,
+    preplan::PREPLAN_RECEIPT_MISSING,
+    preplan::PREPLAN_COMMAND_MISMATCH,
+    preplan::PREPLAN_RECEIPT_STALE,
+    preplan::PREPLAN_ARTIFACTS_UNREADABLE,
+    preplan::PREPLAN_ARTIFACTS_EMPTY,
+    preplan::PREPLAN_TESTS_FAILED,
+    RefusalCode::new(super::task_plan::horizon::HORIZON_BUDGET_RULE_INVALID),
+    RefusalCode::new(super::task_plan::horizon::HORIZON_OVER_CREDIT),
+    RefusalCode::new(super::task_plan::horizon::HORIZON_CHECKPOINT_MISSING),
+    RefusalCode::new(super::task_plan::horizon::HORIZON_PLAN_STALE),
+];
+
+/// The `program.*` knob (MEDULLA-DECISION-ENGINE-R135.2). The hard cap
+/// [`MAX_PROGRAM_STEPS`] stays `Fixed`; the knob only lowers it.
+pub const KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "program.max_steps",
+    unit: "steps",
+    default: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
+    safety: KnobSafety::Tunable,
+}];
+
+/// The resolved values of the `program.*` knobs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProgramKnobs {
+    pub max_steps: usize,
+}
+
+impl ProgramKnobs {
+    /// The values `policy` resolves, clamped to `[1, MAX_PROGRAM_STEPS]`.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let value = match policy.knob(&KNOBS[0]) {
+            KnobValue::Integer(v) => v,
+            KnobValue::DecimalMicros(v) => v,
+            KnobValue::DurationMs(v) => i64::try_from(v).unwrap_or(i64::MAX),
+        };
+        let max_steps = usize::try_from(value)
+            .unwrap_or(1)
+            .clamp(1, MAX_PROGRAM_STEPS);
+        Self { max_steps }
+    }
+}
 
 /// The type of one program parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,8 +248,10 @@ pub struct CompiledProgram {
 /// Why a program was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProgramError {
-    /// More than [`MAX_PROGRAM_STEPS`] steps (`PROGRAM_TOO_LONG`).
+    /// More steps than the cap allows (`PROGRAM_TOO_LONG`).
     TooLong { steps: usize },
+    /// The run did not succeed (`RUN_NOT_SUCCESSFUL`).
+    RunNotSuccessful { outcome: RunOutcome },
     /// The wire value did not decode.
     Malformed(String),
     /// A field broke an invariant.
@@ -91,7 +261,11 @@ pub enum ProgramError {
 impl ProgramError {
     /// The registered refusal code, when the error is one.
     pub fn code(&self) -> Option<RefusalCode> {
-        matches!(self, Self::TooLong { .. }).then_some(PROGRAM_TOO_LONG)
+        match self {
+            Self::TooLong { .. } => Some(PROGRAM_TOO_LONG),
+            Self::RunNotSuccessful { .. } => Some(RUN_NOT_SUCCESSFUL),
+            _ => None,
+        }
     }
 }
 
@@ -102,6 +276,11 @@ impl std::fmt::Display for ProgramError {
                 f,
                 "{}: {steps} steps exceed {MAX_PROGRAM_STEPS}",
                 PROGRAM_TOO_LONG.as_str()
+            ),
+            Self::RunNotSuccessful { outcome } => write!(
+                f,
+                "{}: the run ended {outcome:?}",
+                RUN_NOT_SUCCESSFUL.as_str()
             ),
             Self::Malformed(detail) => write!(f, "program is malformed: {detail}"),
             Self::Invalid(detail) => write!(f, "program is invalid: {detail}"),
@@ -188,6 +367,96 @@ impl CompiledProgram {
     }
 }
 
+/// Compile one successful run into a program. Every string, integer or
+/// boolean scalar in a step's arguments is a literal: it becomes a parameter
+/// `p0`, `p1`, ... named by first occurrence, and equal literals (same kind and
+/// value) share one name. Step `k` becomes state `s<k>`, moving to `s<k+1>`,
+/// and the last step ends the program. A step's action is its `action_ref`
+/// followed by its arguments with each literal replaced by its parameter name,
+/// so two runs that differ only in literals compile to the same program.
+pub fn compile_program(
+    trace: &RunTraceRecord,
+    knobs: &ProgramKnobs,
+) -> Result<CompiledProgram, ProgramError> {
+    if trace.outcome != RunOutcome::Succeeded {
+        return Err(ProgramError::RunNotSuccessful {
+            outcome: trace.outcome,
+        });
+    }
+    let cap = knobs.max_steps.min(MAX_PROGRAM_STEPS);
+    if trace.steps.len() > cap {
+        return Err(ProgramError::TooLong {
+            steps: trace.steps.len(),
+        });
+    }
+    let mut seen: Vec<(ProgramParameterKind, String)> = Vec::new();
+    let mut steps = Vec::with_capacity(trace.steps.len());
+    for (k, step) in trace.steps.iter().enumerate() {
+        let mut args = Vec::new();
+        for argument in &step.arguments {
+            let (kind, text) = match &argument.value {
+                TraceScalar::Text(text) => (ProgramParameterKind::Text, text.clone()),
+                TraceScalar::Int(int) => (ProgramParameterKind::Int, int.to_string()),
+                TraceScalar::Bool(flag) => (ProgramParameterKind::Bool, flag.to_string()),
+            };
+            let slot = match seen.iter().position(|known| *known == (kind, text.clone())) {
+                Some(slot) => slot,
+                None => {
+                    seen.push((kind, text));
+                    seen.len() - 1
+                }
+            };
+            args.push(format!("{}=p{slot}", argument.name));
+        }
+        let action = if args.is_empty() {
+            step.action_ref.clone()
+        } else {
+            format!("{}({})", step.action_ref, args.join(","))
+        };
+        steps.push(ProgramStep {
+            state: format!("s{k}"),
+            action,
+            next: (k + 1 < trace.steps.len()).then(|| format!("s{}", k + 1)),
+            agent_config: None,
+        });
+    }
+    let parameters = seen
+        .iter()
+        .enumerate()
+        .map(|(slot, (kind, _))| ProgramParameter {
+            name: format!("p{slot}"),
+            kind: *kind,
+        })
+        .collect::<Vec<_>>();
+    let too_many = |count: usize| {
+        ProgramError::Invalid(format!(
+            "{count} parameters exceed {MAX_PROGRAM_PARAMETERS}"
+        ))
+    };
+    let count = parameters.len();
+    let program = CompiledProgram {
+        schema_version: PROGRAM_SCHEMA_VERSION,
+        task_signature: trace.task_signature.clone(),
+        steps: BoundedVec::new(steps).map_err(ProgramError::Invalid)?,
+        parameters: BoundedVec::new(parameters).map_err(|_| too_many(count))?,
+        source_run_id: trace.run_id.clone(),
+        program_digest: String::new(),
+    }
+    .sealed();
+    program.validate()?;
+    Ok(program)
+}
+
+/// The stored program for `task_signature`, or none.
+pub fn lookup_program<'a>(
+    artifacts: &'a [CompiledProgram],
+    task_signature: &str,
+) -> Option<&'a CompiledProgram> {
+    artifacts
+        .iter()
+        .find(|program| program.task_signature == task_signature)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,6 +505,141 @@ mod tests {
             program_digest: String::new(),
         }
         .sealed()
+    }
+
+    fn trace(
+        run_id: &str,
+        outcome: RunOutcome,
+        literals: [&str; 2],
+        steps: usize,
+    ) -> RunTraceRecord {
+        use crate::decision::run_governance::{StepKind, StepOutcome, TraceArgument, TraceStep};
+        let make = |index: usize| {
+            let mut arguments = vec![TraceArgument {
+                name: "title".into(),
+                value: TraceScalar::Text(literals[0].into()),
+            }];
+            if index == 0 {
+                arguments.push(TraceArgument {
+                    name: "limit".into(),
+                    value: TraceScalar::Int(10),
+                });
+                arguments.push(TraceArgument {
+                    name: "dry_run".into(),
+                    value: TraceScalar::Bool(true),
+                });
+                arguments.push(TraceArgument {
+                    name: "label".into(),
+                    value: TraceScalar::Text(literals[1].into()),
+                });
+            }
+            TraceStep {
+                index: index as u32,
+                kind: StepKind::ToolCall,
+                action_ref: format!("tool:t{index}"),
+                outcome: StepOutcome::Ok,
+                arguments: BoundedVec::new(arguments).unwrap(),
+            }
+        };
+        RunTraceRecord {
+            schema_version: 1,
+            run_id: run_id.into(),
+            task_signature: "summarize-report".into(),
+            model_id: "model".into(),
+            steps: BoundedVec::new((0..steps).map(make).collect()).unwrap(),
+            outcome,
+            started_at_ms: 1,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R135.2
+    #[test]
+    fn literals_become_parameters() {
+        let knobs = ProgramKnobs {
+            max_steps: MAX_PROGRAM_STEPS,
+        };
+        let first = compile_program(
+            &trace("run-1", RunOutcome::Succeeded, ["Q3", "x"], 2),
+            &knobs,
+        )
+        .unwrap();
+        let second = compile_program(
+            &trace("run-1", RunOutcome::Succeeded, ["Q4", "y"], 2),
+            &knobs,
+        )
+        .unwrap();
+        // Two traces that differ only in literals compile to one program.
+        assert_eq!(first, second);
+        // Parameters are named by first occurrence; equal literals share a name.
+        let names: Vec<&str> = first.parameters.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["p0", "p1", "p2", "p3"]);
+        let kinds: Vec<ProgramParameterKind> = first.parameters.iter().map(|p| p.kind).collect();
+        assert_eq!(
+            kinds,
+            [
+                ProgramParameterKind::Text,
+                ProgramParameterKind::Int,
+                ProgramParameterKind::Bool,
+                ProgramParameterKind::Text
+            ]
+        );
+        assert_eq!(
+            first.steps[0].action,
+            "tool:t0(title=p0,limit=p1,dry_run=p2,label=p3)"
+        );
+        // The second step repeats the title literal and reuses p0.
+        assert_eq!(first.steps[1].action, "tool:t1(title=p0)");
+        assert_eq!(first.steps[0].state, "s0");
+        assert_eq!(first.steps[0].next.as_deref(), Some("s1"));
+        assert_eq!(first.steps[1].next, None);
+        first.validate().unwrap();
+        // Different run ids give different digests.
+        let other = compile_program(
+            &trace("run-2", RunOutcome::Succeeded, ["Q3", "x"], 2),
+            &knobs,
+        )
+        .unwrap();
+        assert_ne!(other.program_digest, first.program_digest);
+        // Equal text and int literals stay distinct parameters (kind matters).
+        let mut mixed = trace("run-1", RunOutcome::Succeeded, ["10", "x"], 1);
+        let compiled = compile_program(&mixed, &knobs).unwrap();
+        assert_eq!(compiled.parameters.len(), 4);
+        mixed.steps = BoundedVec::new(Vec::new()).unwrap();
+        assert!(matches!(
+            compile_program(&mixed, &knobs),
+            Err(ProgramError::Invalid(_))
+        ));
+
+        // The knob lowers the cap; the hard cap stays 40.
+        let capped = ProgramKnobs { max_steps: 1 };
+        let refused = compile_program(
+            &trace("run-1", RunOutcome::Succeeded, ["a", "b"], 2),
+            &capped,
+        )
+        .unwrap_err();
+        assert_eq!(refused, ProgramError::TooLong { steps: 2 });
+        let wide = ProgramKnobs { max_steps: 1000 };
+        let refused = compile_program(
+            &trace("run-1", RunOutcome::Succeeded, ["a", "b"], 41),
+            &wide,
+        )
+        .unwrap_err();
+        assert_eq!(refused.code(), Some(PROGRAM_TOO_LONG));
+        // A failed run is never compiled.
+        let failed = compile_program(&trace("run-1", RunOutcome::Failed, ["a", "b"], 1), &knobs)
+            .unwrap_err();
+        assert_eq!(failed.code(), Some(RUN_NOT_SUCCESSFUL));
+        assert!(failed.to_string().starts_with("RUN_NOT_SUCCESSFUL"));
+
+        // Lookup returns the stored program for its signature, else none.
+        let stored = vec![first.clone()];
+        assert_eq!(lookup_program(&stored, "summarize-report"), Some(&first));
+        assert_eq!(lookup_program(&stored, "other"), None);
+        // The knob resolves from a policy and defaults to the hard cap.
+        assert_eq!(
+            ProgramKnobs::from_policy(&DecisionPolicy::engine_default()).max_steps,
+            MAX_PROGRAM_STEPS
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R135.1

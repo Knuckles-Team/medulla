@@ -78,6 +78,10 @@ pub struct AgentLibraryStore {
     bootstrap: Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>,
     scopes: Mutex<HashMap<String, Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>>>,
     serving_principal: String,
+    /// Derived, rebuildable per-process state that callers keep beside the
+    /// store (the tool index of `Decide`). Holds no authority and is never
+    /// persisted; see [`AgentLibraryStore::derived_slot`].
+    derived: Mutex<HashMap<&'static str, Arc<dyn std::any::Any + Send + Sync>>>,
 }
 
 impl std::fmt::Debug for AgentLibraryStore {
@@ -121,7 +125,28 @@ impl AgentLibraryStore {
             bootstrap,
             scopes: Mutex::new(HashMap::new()),
             serving_principal,
+            derived: Mutex::new(HashMap::new()),
         })
+    }
+
+    /// The derived-state slot `name`, created with `T::default()` on first use.
+    ///
+    /// The slot lives and dies with this store handle, so a cache kept in it
+    /// can never outlive or cross to another library. It is derived state:
+    /// nothing in it is authoritative and the owner of the slot can always
+    /// rebuild it from the store. A slot name used with two different types
+    /// is a programming error and panics.
+    pub fn derived_slot<T: Default + std::any::Any + Send + Sync>(
+        &self,
+        name: &'static str,
+    ) -> Arc<T> {
+        let mut slots = self.derived.lock();
+        let slot = slots
+            .entry(name)
+            .or_insert_with(|| Arc::new(T::default()) as Arc<dyn std::any::Any + Send + Sync>);
+        Arc::clone(slot)
+            .downcast::<T>()
+            .unwrap_or_else(|_| panic!("derived slot {name} holds another type"))
     }
 
     /// The process-owned serving principal stamped into the native mutation

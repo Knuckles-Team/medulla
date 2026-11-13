@@ -65,7 +65,7 @@ fn declared_request(
 
 /// The kinds without a specialized body: one shared matrix ladder, reached
 /// through the registry. `ThoughtSearch` concludes through its own family
-/// (`thought_search_tests`).
+/// (`thought_search_tests`) and `BranchOutcome` through `branch_outcomes_tests`.
 const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::Route,
     QuestionKind::Rank,
@@ -82,7 +82,6 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::ItemRecommendation,
     QuestionKind::LoadSet,
     QuestionKind::UsageGuidance,
-    QuestionKind::BranchOutcome,
     QuestionKind::EditConcentration,
     QuestionKind::ComparativeAnalysisPlan,
 ];
@@ -101,6 +100,8 @@ fn task_request(pin: &ComponentDependency) -> DecideRequest {
             join: None,
             decision: None,
             approval: None,
+            duration_ms: None,
+            priority_weight: None,
         })
         .collect();
     DecideRequest {
