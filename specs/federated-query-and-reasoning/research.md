@@ -208,3 +208,6 @@ The exposed-constant and prior-knowledge detectors say "at least" in their row t
 ## R722.8 key pushdown of a bound pack source
 
 Decision: a bound callback's key lookup is offered only when its registration declares `key_filter_pushdown`; the lookup rides a new `ForeignSource::fetch_keys` whose default is the full read, and the optimizer's join always intersects the answer with the local selection (the exact residual). Why: one capability source (the registration), a source that over-claims or ignores keys returns a superset and is still correct. The key batch size is the federation budget's `max_bind_keys`, not a second limit.
+## R709.6 the GeoSPARQL hot-path bench is served
+
+The bench lives in `crates/medulla-server/benches/geosparql.rs`, not in `medulla-rdf`, because the row names `Method::Sparql` and only `medulla-server` can stand up the signed request chain (FQ-R707.6). It uses its own p99 harness rather than criterion, so it needs no new dependency: it loads a 1,000 by 1,000 grid of `geo:wktLiteral` points through served SPARQL updates of 10,000 triples, asserts the polygon returns exactly its 100 by 100 cells, and compares the p99 with `latency_p99_ns_max.geosparql_within` (40 ms) and with the stored `latency_p99_ns_baseline.geosparql_within` plus 10 percent when one is recorded.

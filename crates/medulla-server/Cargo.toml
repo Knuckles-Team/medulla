@@ -258,3 +258,12 @@ medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"
 wat = "1"
+
+# Served GeoSPARQL bench (MEDULLA-FEDERATED-QUERY-R709.6): `geof:sfWithin` over 1M points through
+# the served `Method::Sparql` chain with the per-graph spatial index built; the key
+# `geosparql_within` in `crates/medulla-plan/benches/thresholds.json` caps p99 at 40 ms. Nightly only.
+[[bench]]
+name = "geosparql"
+path = "benches/geosparql.rs"
+harness = false
+required-features = ["sparql-http", "geosparql", "redb", "test-support"]

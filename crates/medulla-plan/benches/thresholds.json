@@ -27,11 +27,16 @@
       "r613/regime_1m": null
     }
   },
+  "latency_p99_ns_baseline": {
+    "_comment": "MEDULLA-FEDERATED-QUERY-R709.6: the stored p99 (ns) of the served geosparql bench that a later run may exceed by at most 10 percent; null until the nightly lane records one.",
+    "geosparql_within": null
+  },
   "latency_p99_ns_max": {
     "access_check_256": 1000000,
     "context_bundle_compile": 12000000,
     "corpus_grep_1m": 20000000,
     "feedback_boost_256": 200000,
+    "geosparql_within": 40000000,
     "knowledge_scope_50": 2000000,
     "live_artifact_refresh": 30000000,
     "ontology_diff": 50000000,
