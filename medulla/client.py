@@ -7433,8 +7433,9 @@ class GraphOperationsClient:
         clue chain and a templated question with no model call, runs the four
         shortcut detectors and refines the task. Returns ``{task, report,
         thresholds, rounds_used, evidence_nodes}``; a task over any threshold
-        is refused with ``SEARCH_TASK_SHORTCUT`` naming the detector. Nothing
-        is stored: the caller turns an accepted task into a pinned query-set
+        is refused with ``SEARCH_TASK_SHORTCUT`` naming the detector, and
+        the refusal text carries the complete ``RiskReport`` as JSON after
+        ``; report=`` (MEDULLA-FEDERATED-QUERY-R702.5). Nothing is stored: the caller turns an accepted task into a pinned query-set
         item for ``DecisionEval``. ``graph`` defaults to the client's graph.
         """
         graph = graph or self._client._graph_name

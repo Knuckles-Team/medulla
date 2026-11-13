@@ -9,6 +9,7 @@ a retrieval ranking evaluation and submits it to ``DecisionEval``.
 from __future__ import annotations
 
 import hashlib
+import json
 
 import pytest
 from conftest import TEST_TENANT
@@ -190,3 +191,40 @@ def test_task_feeds_ranking_evaluation(clean_graph):
         )
     with pytest.raises(EngineResponseError, match="SEARCH_TASK_INVALID"):
         gc.graph.synthesize_search_task(tenant_id=TEST_TENANT, answer_node="ent-absent")
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R702.5
+def test_risk_report_lists_values(clean_graph):
+    gc = clean_graph
+    _seed(gc)
+    # A star: every leaf is decided by the answer alone, so single_clue is 1.0.
+    gc.nodes.add("ent-star", {"type": "Company", "name": "Star Co", "text": "Star Co"})
+    for n in range(3):
+        leaf = f"ent-star-l{n}"
+        gc.nodes.add(leaf, {"type": "Site", "name": f"Leaf {n}", "text": f"Leaf {n}"})
+        gc.edges.add("ent-star", leaf, {"relationship": "SUPPLIES"})
+
+    detectors = ["single_clue", "co_coverage", "exposed_constant", "prior_knowledge"]
+    accepted = gc.graph.synthesize_search_task(
+        tenant_id=TEST_TENANT, answer_node="ent-orion"
+    )
+    report = accepted["report"]
+    assert [f["detector"] for f in report["findings"]] == detectors
+    for finding in report["findings"]:
+        assert isinstance(finding["value"], float)
+        assert isinstance(finding["nodes"], list)
+        assert finding["value"] <= accepted["thresholds"][finding["detector"]]
+    # The prior-knowledge finding names the answer node itself.
+    assert report["findings"][3]["nodes"] == ["ent-orion"]
+
+    with pytest.raises(EngineResponseError, match="SEARCH_TASK_SHORTCUT") as refused:
+        gc.graph.synthesize_search_task(tenant_id=TEST_TENANT, answer_node="ent-star")
+    text = str(refused.value)
+    assert "single_clue" in text.split("; report=")[0]
+    rejected = json.loads(text.split("; report=", 1)[1])
+    assert [f["detector"] for f in rejected["findings"]] == detectors
+    single = rejected["findings"][0]
+    assert single["value"] == 1.0
+    assert sorted(single["nodes"]) == [f"ent-star-l{n}" for n in range(3)]
+    assert rejected["findings"][3]["nodes"] == ["ent-star"]
+    assert rejected["findings"][3]["value"] == 3.0

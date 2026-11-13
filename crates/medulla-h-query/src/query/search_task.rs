@@ -172,7 +172,7 @@ fn synthesize_task(view: &GraphView, answer: &str) -> Result<SynthesizeSearchTas
     synthesis
         .report
         .check(&thresholds)
-        .map_err(|refusal| refusal.to_string())?;
+        .map_err(|refusal| synthesis.report.rejection_detail(&refusal))?;
     Ok(SynthesizeSearchTaskResult {
         task: synthesis.task,
         report: synthesis.report,
