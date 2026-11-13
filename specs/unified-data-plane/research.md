@@ -98,3 +98,21 @@ Discovery runs before the catalog insert, so a source whose catalog cannot be re
 - Decision: rule and score node ids are tenant-private hashes; `QualityRulePut` stores the rule approved by the verified agent and resets its failure counter.
 - Shape and freshness measurement (R762.9): a `graph:<label>` shape rule validates the label's nodes the job actor may read (`IsolationLayer::filter_view`, the served row predicate) against the composed GraphSchema shapes, projected under the shape IRI's namespace (no projection knob: the shape names its vocabulary); a freshness rule reads the lag of the tenant's durable change cursor for the target source (`TimestampMillis` only). Unmeasurable rules stay unscored with `QUALITY_MEASURE_UNAVAILABLE`. Why: one access-check path, the one cursor store, no second shapes source. `QualityEvaluate` stays `NON_ROW_SCOPED` at submit (submit reads no row); the worker never reads the raw core for a shape rule.
 - WIRE-REGEN: `QualityRulePut`, the new `JobKind` variants and `QualityRuleReceipt` were hand-edited into `medulla/generated/models.py`; regenerate models and wire vectors.
+
+## Tenant isolation proof of the profile and quality jobs (R761.3, R762.3)
+
+Decision: the two-tenant proof is one served-tests case
+(`medulla_h_jobs_data_plane_tenant_tests.rs`): one state, one graph store, one job store and one table
+root, with TENANT and OTHER_TENANT dispatched through `dispatch_verified_request`. Both rows are proven in
+one test because the analytics job store and the colocated worker pool are process-wide: the worker the
+first submit starts runs on that test's runtime against that test's state. The Python served tests prove
+only the door (a foreign-tenant carrier is refused `AUTH_TENANT_MISMATCH`, the owner's answer unchanged),
+because a deployment is pinned to one tenant. The job result path is `status["output"]["rows"]` (the
+`AnalyticsJobRecord.output` of the served status).
+## Decision: how a warehouse or lake source is read (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2)
+
+- `medulla-federation` sits below `medulla-plan` and `medulla-sql`, so a `Warehouse` source reaches the Iceberg scan and the DuckDB file reader through a `WarehouseReader` port that the host registers once at startup (the same seam the MCP connector port uses). The row chain `foreign_scan` to `plan_pushdown` to the engine is realised as `WarehouseSource` to the registered reader to `plan_pushdown` to the kind's engine. One path, no second model.
+- The Iceberg catalog comes from the registered source config (`catalog_uri`, optional `warehouse`, `credential`, `scope`, `oauth2_uri`, `token`), never from the process environment. The catalog and token destinations go through the one federation outbound gate at registration and at every read. The object-store endpoint is vended by the catalog and is outside that gate, as it is for the `iceberg(...)` table function.
+- A filter is pushed to the manifest planner only when the column's type holds the value without conversion (string on a string column, integer on an integer column, number on a floating-point column). Pushed filters are inexact, so the local residual still decides the rows.
+- `foreign.sqlite.allowed_roots` and `foreign.duckdb.allowed_roots` are two keys of one path-list loader, installed once at startup; the DuckDB reader re-checks the canonical path against the resolved list at read time, so an inline spec cannot bypass the registration gate.
+- The four typed refusals (`CAPABILITY_UNSUPPORTED`, `SOURCE_UNAVAILABLE`, `SCHEMA_DRIFT`, `DUCKDB_FILE_DENIED`) are registered codes listed for `QueryForeignColumns`; the wire carries fixed text, never the source's own message.

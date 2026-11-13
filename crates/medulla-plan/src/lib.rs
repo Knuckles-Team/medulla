@@ -58,8 +58,15 @@
 // refusal for an invalid config or an unmet Flight SQL preference. Pure
 // `std` + `medulla-types`, no I/O; issuing the pushed-down query is a later
 // child.
+/// A DuckDB file as a read-only foreign source (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
+#[cfg(feature = "source-duckdb")]
+pub mod duckdb_foreign;
 pub mod modality;
 pub mod warehouse_pushdown;
+/// The engine-backed reader of warehouse and lake foreign sources
+/// (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
+#[cfg(feature = "federation")]
+pub mod warehouse_reader;
 // MEDULLA-UNIFIED-DATA-PLANE-R005 — mapping approval-state machine for named R2RML
 // virtual graphs; an unapproved or model-only mapping refuses to be queried.
 pub mod virtual_graph_mapping;

@@ -9,7 +9,7 @@
 use std::sync::{Arc, RwLock};
 
 use medulla_exec::rowset::RowSet;
-use medulla_types::warehouse_federation::WarehouseSourceConfig;
+use medulla_types::warehouse_federation::{WarehouseSourceConfig, WarehouseSourceKind};
 
 use crate::federation::ForeignSource;
 use crate::federation_opt::{
@@ -22,6 +22,21 @@ pub const CAPABILITY_UNSUPPORTED: &str = "CAPABILITY_UNSUPPORTED";
 pub const SOURCE_UNAVAILABLE: &str = "SOURCE_UNAVAILABLE";
 /// Typed refusal: the source schema no longer matches the registered columns.
 pub const SCHEMA_DRIFT: &str = "SCHEMA_DRIFT";
+
+/// Vet the destinations an Iceberg config dials (the REST catalog and its token endpoint)
+/// through the one federation outbound gate: public HTTPS, or an exact allowlist entry.
+/// Other kinds dial nothing from here (a DuckDB file is checked against its path allowlist).
+pub fn check_outbound(config: &WarehouseSourceConfig) -> Result<(), String> {
+    if config.kind != Some(WarehouseSourceKind::Iceberg) {
+        return Ok(());
+    }
+    for field in ["catalog_uri", "oauth2_uri"] {
+        if let Some(uri) = config.fields.get(field).filter(|uri| !uri.is_empty()) {
+            crate::federation_ssrf::validate_http_json_target(uri)?;
+        }
+    }
+    Ok(())
+}
 
 /// One read of a warehouse table: what the column plan asked the source for.
 #[derive(Debug, Clone)]
@@ -94,6 +109,7 @@ impl WarehouseSource<'_> {
         columns: Vec<String>,
         filters: Vec<ColumnPredicate>,
     ) -> Result<ForeignRows, String> {
+        check_outbound(self.config)?;
         let reader = registered_reader().ok_or_else(|| {
             format!("{CAPABILITY_UNSUPPORTED}: no warehouse reader is installed in this build")
         })?;

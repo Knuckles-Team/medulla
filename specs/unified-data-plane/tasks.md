@@ -42,7 +42,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T032 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 Model: `build_document_conformance_entry` builds a MongoDB/DocumentDB conformance entry with a fixed adapter label, refusing a malformed outcome/deviation shape
 - [ ] T033 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.1 Model: `WarehouseSourceKind`/`WarehouseSourceConfig` are a closed source-kind vocabulary with a per-kind required-field refusal
 - [ ] T034 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 Model: `plan_pushdown` decides the Arrow-Flight-SQL-vs-native transport for a validated `WarehouseSourceConfig`, refusing an invalid config or an unmet Flight SQL preference
-- [ ] T035 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.2 Live Iceberg and DuckDB pushdown
+- [x] T035 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.2 Live Iceberg and DuckDB pushdown
 - [ ] T036 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.3.1 Model: `build_warehouse_conformance_entry` builds a warehouse/lake conformance entry whose adapter label is derived from the closed `WarehouseSourceKind`, refusing a blank engine version or a malformed outcome/deviation shape
 - [ ] T037 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.1 Model: `DebeziumChangeEvent` is a typed envelope shape with an op-code and before/after refusal
 - [ ] T038 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.2 Kafka consumer plus real conversion into ChangeEnvelope records

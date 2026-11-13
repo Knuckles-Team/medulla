@@ -557,6 +557,8 @@ federation = ["medulla-server/federation", "medulla-h-graph/federation", "medull
 # The SQL driver uses the pure-Rust rustls backend and is included in the one main build;
 # no OpenSSL dependency is introduced.
 federation-sql = ["medulla-server/federation-sql", "medulla-wire/federation-sql", "medulla-h-admin/federation-sql", "medulla-h-txn/federation-sql", "medulla-h-query/federation-sql", "medulla-h-sparql/federation-sql", "medulla-h-decide/federation-sql", "medulla-h-jobs/federation-sql", "medulla-raft/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql", "dep:medulla-plan", "medulla-plan/federation-sql", "federation", "medulla-federation/federation-sql", "medulla-server-served-tests/federation-sql"]
+# A DuckDB database file as a read-only foreign source (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
+source-duckdb = ["federation", "medulla-plan/source-duckdb", "dep:duckdb"]
 # Spatial / geospatial modality (CONCEPT:MEDULLA-083): the `Op::SpatialScan { layer, bbox }`
 # SOURCE op + the `Pred::SpatialWithin`/`SpatialDWithin` FILTER predicates, so a spatial
 # filter composes with Traverse/Rank/Filter in ONE UnifiedQuery plan. Pulls medulla-plan's
@@ -1237,7 +1239,7 @@ policy_export = ["medulla-server/policy_export", "medulla-server-lake/policy_exp
 # `eg2.` protocol identity binding and `kvcache-server`'s KV-cache HTTP bearer auth —
 # rather than each surface vendoring its own copy.
 oidc = ["medulla-server/oidc", "medulla-server-lake/oidc", "medulla-server-obs/oidc", "medulla-server-api/oidc", "medulla-server-auth/oidc", "dep:jsonwebtoken", "dep:ureq", "medulla-federation/oidc"]
-full = ["medulla-server/full", "medulla-wire/full", "medulla-h-txn/full", "medulla-h-query/full", "medulla-server-api/full", "compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "otel-export", "shex", "obs", "geosparql", "nl-query", "promql", "traces", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "lake", "lake-rest", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
+full = ["medulla-server/full", "medulla-wire/full", "medulla-h-txn/full", "medulla-h-query/full", "medulla-server-api/full", "compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "source-duckdb", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "otel-export", "shex", "obs", "geosparql", "nl-query", "promql", "traces", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "lake", "lake-rest", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
 all = ["full"]
 # D4 (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate): `epistemic` (the medulla-epistemic
 # claims/evidence/belief-state layer, E6/E2/D3/D5) is folded into `full` above so a
@@ -1649,6 +1651,7 @@ medulla-tensor = { path = "crates/medulla-tensor", optional = true }
 # uses its safe native Parquet-format implementation. These edges are optional and
 # `obs`-gated; the writer explicitly chooses uncompressed pages.
 arrow = { version = "58.4", optional = true }
+duckdb = { version = "1.4", features = ["bundled"], optional = true }
 polars-core = { version = "0.54.4", optional = true, default-features = false }
 polars-io = { version = "0.54.4", optional = true, default-features = false, features = ["parquet"] }
 # Native RDF/SPARQL surface (features `rdf`/`sparql`, included in the main build,
@@ -1933,6 +1936,10 @@ medulla-mutation-types = { path = "crates/medulla-mutation-types" }
 medulla-identity-types = { path = "crates/medulla-identity-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }
 tempfile = "3"
+# The Iceberg table writers and Arrow batches of the attached-warehouse served test fixture.
+iceberg = "0.10"
+arrow = "58.4"
+futures-util = "0.3"
 clap = { version = "4.6", features = ["derive", "env"] }
 tracing-subscriber = "0.3"
 # Real Postgres client for the pgwire wire round-trip integration test
@@ -2019,6 +2026,13 @@ path = "tests/attached_conformance.rs"
 name = "attached_sqlite_served"
 path = "tests/attached_sqlite_served.rs"
 required-features = ["federation", "durable"]
+
+# MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: Iceberg and DuckDB warehouse sources read through
+# `RegisterForeignSource` then `QueryForeignColumns`, compared with the native engines.
+[[test]]
+name = "attached_warehouse_served"
+path = "tests/attached_warehouse_served.rs"
+required-features = ["federation", "source-duckdb", "server", "security"]
 
 # MEDULLA-UNIFIED-DATA-PLANE-R014.2.2: live MySQL and MariaDB catalog read and type map against
 # containerised servers; the nightly lane runs it with `--ignored` and the two DSNs set.

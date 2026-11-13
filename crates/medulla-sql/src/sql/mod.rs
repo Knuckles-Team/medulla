@@ -118,7 +118,8 @@ pub use providers::SqlCache;
 // trusting an unobservable internal count.
 #[cfg(feature = "iceberg-federation")]
 pub use iceberg_federation::{
-    build_iceberg_provider, IcebergPushdownStats, IcebergTableProvider,
+    build_iceberg_provider, read_iceberg_table, IcebergCompare, IcebergFilter,
+    IcebergPushdownStats, IcebergReadError, IcebergReadRequest, IcebergRows, IcebergTableProvider,
     ICEBERG_FEDERATION_CATALOG_URI_ENV, ICEBERG_FEDERATION_CREDENTIAL_ENV,
     ICEBERG_FEDERATION_OAUTH2_URI_ENV, ICEBERG_FEDERATION_SCOPE_ENV, ICEBERG_FEDERATION_TOKEN_ENV,
     ICEBERG_FEDERATION_WAREHOUSE_ENV,

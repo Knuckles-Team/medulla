@@ -341,14 +341,28 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(2);
         }
     }
-    match medulla_server_api::knob_config::load_allowed_roots(&args.knob, |name| {
-        std::env::var(name).ok()
-    }) {
-        Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(roots),
-        Err(refusal) => {
-            eprintln!("error: {refusal}");
-            std::process::exit(2);
+    for key in medulla_server_api::knob_config::ROOT_LIST_KEYS {
+        match medulla_server_api::knob_config::load_allowed_roots(key, &args.knob, |name| {
+            std::env::var(name).ok()
+        }) {
+            Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(key, roots),
+            Err(refusal) => {
+                eprintln!("error: {refusal}");
+                std::process::exit(2);
+            }
         }
+    }
+    // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: warehouse and lake sources are read by the engine
+    // reader, which re-checks a DuckDB path against the resolved allowlist at read time.
+    #[cfg(feature = "federation")]
+    {
+        medulla_plan::warehouse_reader::register();
+        medulla_plan::warehouse_reader::set_duckdb_allowed_roots(
+            medulla_server_api::knob_config::allowed_roots(
+                medulla_server_api::knob_config::FOREIGN_DUCKDB_ALLOWED_ROOTS,
+            )
+            .to_vec(),
+        );
     }
 
     if args.exact_performance_probe {

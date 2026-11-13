@@ -151,6 +151,22 @@ impl IcebergCatalogConfig {
         })
     }
 
+    /// The catalog a registered `Warehouse` source names in its config fields
+    /// (`catalog_uri`, and optionally `warehouse`, `credential`, `scope`, `oauth2_uri`,
+    /// `token`), so a served read never consults the process environment.
+    fn from_fields(fields: &std::collections::BTreeMap<String, String>) -> Result<Self, String> {
+        let get = |name: &str| fields.get(name).filter(|v| !v.is_empty()).cloned();
+        Ok(Self {
+            catalog_uri: get("catalog_uri")
+                .ok_or_else(|| "the iceberg source config has no `catalog_uri`".to_string())?,
+            warehouse: get("warehouse"),
+            credential: get("credential"),
+            scope: get("scope"),
+            oauth2_uri: get("oauth2_uri"),
+            token: get("token"),
+        })
+    }
+
     fn catalog_props(&self) -> HashMap<String, String> {
         let mut props = HashMap::new();
         props.insert("uri".to_string(), self.catalog_uri.clone());
@@ -556,6 +572,205 @@ async fn read_table(
         }
     }
     Ok((batches, files_scanned))
+}
+
+/// A comparison of one column with a JSON scalar, pushed to the Iceberg manifest planner.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IcebergCompare {
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+/// One filter of an [`IcebergReadRequest`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct IcebergFilter {
+    pub column: String,
+    pub compare: IcebergCompare,
+    pub value: serde_json::Value,
+}
+
+/// One served read of an Iceberg table by a registered warehouse source
+/// (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
+#[derive(Clone, Debug)]
+pub struct IcebergReadRequest<'a> {
+    /// The source config fields (`catalog_uri`, ...).
+    pub fields: &'a std::collections::BTreeMap<String, String>,
+    /// `namespace.table`.
+    pub table: &'a str,
+    pub snapshot_id: Option<i64>,
+    /// The columns to read; every one must exist in the table schema.
+    pub columns: Vec<String>,
+    /// Filters handed to the manifest planner. A filter the table format cannot encode for
+    /// the column's type is not pushed; the caller's residual filter still decides rows.
+    pub filters: Vec<IcebergFilter>,
+}
+
+/// Why a served Iceberg read did not produce rows.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IcebergReadError {
+    /// The catalog or table could not be reached, loaded or read.
+    Unavailable(String),
+    /// A requested column is absent from the table schema.
+    SchemaDrift(String),
+}
+
+impl std::fmt::Display for IcebergReadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unavailable(m) | Self::SchemaDrift(m) => f.write_str(m),
+        }
+    }
+}
+
+impl std::error::Error for IcebergReadError {}
+
+/// The rows of one served Iceberg read, with the pushdown counters the manifest planner
+/// reported (`files_skipped` is the proof that partition pruning ran).
+#[derive(Clone, Debug)]
+pub struct IcebergRows {
+    pub rows: Vec<std::collections::BTreeMap<String, serde_json::Value>>,
+    pub stats: IcebergPushdownStats,
+}
+
+fn json_scalar(array: &dyn arrow::array::Array, row: usize) -> serde_json::Value {
+    use arrow::array::{
+        Array, AsArray, BooleanArray, Float32Array, Float64Array, Int16Array, Int32Array,
+        Int64Array, Int8Array, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
+    };
+    use arrow::datatypes::DataType;
+    if array.is_null(row) {
+        return serde_json::Value::Null;
+    }
+    macro_rules! number {
+        ($ty:ty) => {
+            serde_json::Value::from(array.as_any().downcast_ref::<$ty>().map(|a| a.value(row)))
+        };
+    }
+    match array.data_type() {
+        DataType::Boolean => number!(BooleanArray),
+        DataType::Int8 => number!(Int8Array),
+        DataType::Int16 => number!(Int16Array),
+        DataType::Int32 => number!(Int32Array),
+        DataType::Int64 => number!(Int64Array),
+        DataType::UInt8 => number!(UInt8Array),
+        DataType::UInt16 => number!(UInt16Array),
+        DataType::UInt32 => number!(UInt32Array),
+        DataType::UInt64 => number!(UInt64Array),
+        DataType::Float32 => number!(Float32Array),
+        DataType::Float64 => number!(Float64Array),
+        DataType::Utf8 => serde_json::Value::from(array.as_string::<i32>().value(row)),
+        DataType::LargeUtf8 => serde_json::Value::from(array.as_string::<i64>().value(row)),
+        _ => arrow::util::display::array_value_to_string(array, row)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+    }
+}
+
+/// The Iceberg predicate for one filter, only when the column's type can hold the value
+/// without conversion (a string on a string column, an integer on an integer column, a
+/// number on a floating-point column).
+fn iceberg_predicate_for_filter(filter: &IcebergFilter, schema: &Schema) -> Option<Predicate> {
+    use arrow::datatypes::DataType;
+    let field = schema.field_with_name(&filter.column).ok()?;
+    let datum = match (field.data_type(), &filter.value) {
+        (DataType::Utf8 | DataType::LargeUtf8, serde_json::Value::String(s)) => {
+            Datum::string(s.clone())
+        }
+        (DataType::Int64 | DataType::Int32, serde_json::Value::Number(n)) => {
+            Datum::long(n.as_i64()?)
+        }
+        (DataType::Float64, serde_json::Value::Number(n)) => Datum::double(n.as_f64()?),
+        _ => return None,
+    };
+    let reference = Reference::new(filter.column.clone());
+    Some(match filter.compare {
+        IcebergCompare::Eq => reference.equal_to(datum),
+        IcebergCompare::Ne => reference.not_equal_to(datum),
+        IcebergCompare::Lt => reference.less_than(datum),
+        IcebergCompare::Le => reference.less_than_or_equal_to(datum),
+        IcebergCompare::Gt => reference.greater_than(datum),
+        IcebergCompare::Ge => reference.greater_than_or_equal_to(datum),
+    })
+}
+
+/// Read an Iceberg table named by a registered warehouse source: connect to the catalog in
+/// the source config, plan the scan with the requested projection and filters (manifest
+/// pruning), and return the rows with the planner's pushdown counters.
+pub fn read_iceberg_table(
+    request: &IcebergReadRequest<'_>,
+) -> Result<IcebergRows, IcebergReadError> {
+    let unavailable = |m: String| IcebergReadError::Unavailable(m);
+    let table_ident = TableIdent::from_strs(request.table.split('.')).map_err(|e| {
+        unavailable(format!(
+            "'{}' is not a valid `namespace.table` identifier: {e}",
+            request.table
+        ))
+    })?;
+    let config = IcebergCatalogConfig::from_fields(request.fields).map_err(unavailable)?;
+    let runtime = FederationRuntime::start().map_err(|e| unavailable(e.to_string()))?;
+    let table = runtime
+        .block_on(load_table(
+            config,
+            runtime.iceberg.clone(),
+            table_ident,
+            request.table.to_string(),
+        ))
+        .map_err(|e| unavailable(e.to_string()))?;
+    let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(|e| unavailable(e.to_string()))?;
+    for column in &request.columns {
+        if schema.field_with_name(column).is_err() {
+            return Err(IcebergReadError::SchemaDrift(format!(
+                "iceberg table '{}' has no column '{column}'",
+                request.table
+            )));
+        }
+    }
+    let total = total_data_files(&table, request.snapshot_id);
+    let scan = ScanRequest {
+        columns: Some(request.columns.clone()),
+        predicate: request
+            .filters
+            .iter()
+            .filter_map(|filter| iceberg_predicate_for_filter(filter, &schema))
+            .reduce(Predicate::and),
+        snapshot_id: request.snapshot_id,
+        limit: None,
+    };
+    let (batches, files_scanned) = runtime
+        .block_on(read_table(table, scan))
+        .map_err(|e| unavailable(e.to_string()))?;
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let names: Vec<String> = batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|f| f.name().clone())
+            .collect();
+        for row in 0..batch.num_rows() {
+            rows.push(
+                names
+                    .iter()
+                    .enumerate()
+                    .map(|(i, name)| (name.clone(), json_scalar(batch.column(i).as_ref(), row)))
+                    .collect(),
+            );
+        }
+    }
+    Ok(IcebergRows {
+        rows,
+        stats: IcebergPushdownStats {
+            total_data_files: total,
+            files_scanned,
+            columns_total: schema.fields().len(),
+            columns_projected: request.columns.len(),
+        },
+    })
 }
 
 /// Best-effort DataFusion `Expr` -> iceberg `Predicate` translation for the pushdown

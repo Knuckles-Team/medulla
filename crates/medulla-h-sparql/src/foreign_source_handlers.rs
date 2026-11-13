@@ -642,6 +642,26 @@ async fn query_columns(
     }
 }
 
+/// The typed refusals of a warehouse source read and the fixed text each carries.
+const WAREHOUSE_REFUSALS: [(&str, &str); 4] = [
+    (
+        medulla_federation::warehouse_foreign::CAPABILITY_UNSUPPORTED,
+        "foreign source kind or transport is not served by the engine",
+    ),
+    (
+        medulla_federation::warehouse_foreign::SOURCE_UNAVAILABLE,
+        "foreign source could not be read",
+    ),
+    (
+        medulla_federation::warehouse_foreign::SCHEMA_DRIFT,
+        "foreign source schema no longer matches the registered columns",
+    ),
+    (
+        "DUCKDB_FILE_DENIED",
+        "duckdb file is outside foreign.duckdb.allowed_roots",
+    ),
+];
+
 /// Map connector and planner prose to the codes declared for this read method.
 /// Do not promote a source-supplied prefix into an arbitrary wire code.
 fn column_query_error(error: &str) -> String {
@@ -657,8 +677,16 @@ fn column_query_error(error: &str) -> String {
     if error.contains("HTTP column projection exceeds limit") {
         return "ENGINE_RESOURCE_EXHAUSTED: foreign column projection exceeded size limit".into();
     }
+    // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: the warehouse reader's typed refusals are ours and
+    // closed; the source's own text never reaches the wire.
+    for (code, message) in WAREHOUSE_REFUSALS {
+        if error.starts_with(code) {
+            return format!("{code}: {message}");
+        }
+    }
     if [
         "not exposed",
+        "warehouse config invalid",
         "column mapping",
         "column query requires a registered source",
         "SQL query is not read-only",
@@ -723,6 +751,16 @@ mod tests {
             column_query_error("federation: HTTP column projection exceeds limit")
                 .starts_with("ENGINE_RESOURCE_EXHAUSTED:")
         );
+        for code in [
+            "CAPABILITY_UNSUPPORTED",
+            "SOURCE_UNAVAILABLE",
+            "SCHEMA_DRIFT",
+            "DUCKDB_FILE_DENIED",
+        ] {
+            let mapped = column_query_error(&format!("{code}: backend detail"));
+            assert!(mapped.starts_with(&format!("{code}: ")), "{mapped}");
+            assert!(!mapped.contains("backend detail"));
+        }
         let unexpected = column_query_error("UNDECLARED_CODE: secret backend detail");
         assert!(unexpected.starts_with("ENGINE_UNAVAILABLE:"));
         assert!(!unexpected.contains("secret backend detail"));

@@ -897,8 +897,7 @@ pub fn load_knobs(
             ));
         };
         let name = name.trim();
-        if name != FOREIGN_SQLITE_ALLOWED_ROOTS && !KNOB_TABLE.iter().any(|spec| spec.name == name)
-        {
+        if !ROOT_LIST_KEYS.contains(&name) && !KNOB_TABLE.iter().any(|spec| spec.name == name) {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,
                 name,
@@ -927,18 +926,32 @@ pub fn load_knobs(
 /// every path.
 pub const FOREIGN_SQLITE_ALLOWED_ROOTS: &str = "foreign.sqlite.allowed_roots";
 
-/// Read `foreign.sqlite.allowed_roots`: the last `--knob` for the key, else
-/// `MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS`, split on `:`. Every entry must be an absolute
-/// path; a relative one refuses startup with `KNOB_INVALID`.
+/// The list-valued key naming the directories an attached DuckDB database file may live
+/// under (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2); the default is the empty list.
+pub const FOREIGN_DUCKDB_ALLOWED_ROOTS: &str = "foreign.duckdb.allowed_roots";
+
+/// Every list-valued path key, read beside the scalar table.
+pub const ROOT_LIST_KEYS: [&str; 2] = [FOREIGN_SQLITE_ALLOWED_ROOTS, FOREIGN_DUCKDB_ALLOWED_ROOTS];
+
+/// The environment name a path-list key falls back to: `foreign.sqlite.allowed_roots`
+/// reads `MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS`.
+fn root_list_env_name(key: &str) -> String {
+    format!("MEDULLA_{}", key.to_uppercase().replace('.', "_"))
+}
+
+/// Read the path-list `key` (one of [`ROOT_LIST_KEYS`]): the last `--knob` for the key,
+/// else its environment name, split on `:`. Every entry must be an absolute path; a
+/// relative one refuses startup with `KNOB_INVALID`.
 pub fn load_allowed_roots(
+    key: &str,
     args: &[String],
     env: impl Fn(&str) -> Option<String>,
 ) -> Result<Vec<std::path::PathBuf>, KnobRefusal> {
     let from_cli = args.iter().rev().find_map(|arg| {
         let (name, value) = arg.split_once('=')?;
-        (name.trim() == FOREIGN_SQLITE_ALLOWED_ROOTS).then(|| value.to_string())
+        (name.trim() == key).then(|| value.to_string())
     });
-    let raw = from_cli.or_else(|| env("MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS"));
+    let raw = from_cli.or_else(|| env(&root_list_env_name(key)));
     let mut roots = Vec::new();
     for entry in raw.iter().flat_map(|raw| raw.split(':')) {
         if entry.trim().is_empty() {
@@ -948,7 +961,7 @@ pub fn load_allowed_roots(
         if !path.is_absolute() {
             return Err(refusal(
                 ServerErrorCode::KnobInvalid,
-                FOREIGN_SQLITE_ALLOWED_ROOTS,
+                key,
                 format!("root {entry:?} is not an absolute path"),
             ));
         }
@@ -957,17 +970,30 @@ pub fn load_allowed_roots(
     Ok(roots)
 }
 
-static ALLOWED_ROOTS: OnceLock<Vec<std::path::PathBuf>> = OnceLock::new();
+static SQLITE_ROOTS: OnceLock<Vec<std::path::PathBuf>> = OnceLock::new();
+static DUCKDB_ROOTS: OnceLock<Vec<std::path::PathBuf>> = OnceLock::new();
 
-/// Hand the startup-loaded SQLite roots to the registration gate; the first install wins.
-pub fn install_allowed_roots(roots: Vec<std::path::PathBuf>) {
-    let _ = ALLOWED_ROOTS.set(roots);
+fn roots_slot(key: &str) -> Option<&'static OnceLock<Vec<std::path::PathBuf>>> {
+    match key {
+        FOREIGN_SQLITE_ALLOWED_ROOTS => Some(&SQLITE_ROOTS),
+        FOREIGN_DUCKDB_ALLOWED_ROOTS => Some(&DUCKDB_ROOTS),
+        _ => None,
+    }
 }
 
-/// The roots an attached SQLite file may live under; empty until installed, so every
-/// path is refused.
-pub fn allowed_roots() -> &'static [std::path::PathBuf] {
-    ALLOWED_ROOTS.get().map_or(&[], Vec::as_slice)
+/// Hand the startup-loaded roots of `key` to the registration gate; the first install wins.
+pub fn install_allowed_roots(key: &str, roots: Vec<std::path::PathBuf>) {
+    if let Some(slot) = roots_slot(key) {
+        let _ = slot.set(roots);
+    }
+}
+
+/// The roots of `key` an attached file may live under; empty until installed (and for an
+/// unknown key), so every path is refused.
+pub fn allowed_roots(key: &str) -> &'static [std::path::PathBuf] {
+    roots_slot(key)
+        .and_then(OnceLock::get)
+        .map_or(&[], Vec::as_slice)
 }
 
 static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();
@@ -1157,5 +1183,30 @@ mod scheduler_knob_tests {
             assert_eq!(refusal.code, ServerErrorCode::KnobOutOfRange);
             assert_eq!(refusal.knob, "batch.max_operations");
         }
+mod root_list_tests {
+    use super::*;
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R020.2.2
+    #[test]
+    fn each_root_list_key_reads_its_own_cli_value_and_environment_name() {
+        let args = vec!["foreign.duckdb.allowed_roots=/data/a:/data/b".to_string()];
+        let duck = load_allowed_roots(FOREIGN_DUCKDB_ALLOWED_ROOTS, &args, |_| None).unwrap();
+        assert_eq!(duck.len(), 2);
+        // The other key does not see this key's value.
+        let sqlite = load_allowed_roots(FOREIGN_SQLITE_ALLOWED_ROOTS, &args, |_| None).unwrap();
+        assert!(sqlite.is_empty());
+        let from_env = load_allowed_roots(FOREIGN_DUCKDB_ALLOWED_ROOTS, &[], |name| {
+            (name == "MEDULLA_FOREIGN_DUCKDB_ALLOWED_ROOTS").then(|| "/data/c".to_string())
+        })
+        .unwrap();
+        assert_eq!(from_env, vec![std::path::PathBuf::from("/data/c")]);
+        let relative = vec!["foreign.duckdb.allowed_roots=data/a".to_string()];
+        assert!(load_allowed_roots(FOREIGN_DUCKDB_ALLOWED_ROOTS, &relative, |_| None).is_err());
+    }
+
+    #[test]
+    fn an_unknown_root_list_key_has_no_roots() {
+        install_allowed_roots("foreign.other.allowed_roots", vec!["/x".into()]);
+        assert!(allowed_roots("foreign.other.allowed_roots").is_empty());
     }
 }

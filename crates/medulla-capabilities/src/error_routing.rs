@@ -237,6 +237,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
     ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: a DuckDB file outside its allowlist is refused at
+    // registration; a warehouse read refuses a kind the engine does not serve, an unreadable
+    // source, a drifted schema and a denied file with these typed codes.
+    ("RegisterForeignSource", &["DUCKDB_FILE_DENIED"]),
+    (
+        "QueryForeignColumns",
+        &[
+            "CAPABILITY_UNSUPPORTED",
+            "SOURCE_UNAVAILABLE",
+            "SCHEMA_DRIFT",
+            "DUCKDB_FILE_DENIED",
+        ],
+    ),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
     ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
     // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an

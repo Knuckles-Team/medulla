@@ -864,8 +864,36 @@ impl ForeignSourceCatalog {
 /// rather than only when a plan later tries to use it. Other variants are untouched here;
 /// their own gates still run where they ran before (see the module doc).
 fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), String> {
+    use medulla_server_api::knob_config as knobs;
+    use medulla_types::contract::ServerErrorCode;
     if let ForeignSourceSpec::SqliteFile { path, .. } = spec {
-        return verify_sqlite_root(path, medulla_server_api::knob_config::allowed_roots());
+        return verify_file_root(
+            path,
+            knobs::allowed_roots(knobs::FOREIGN_SQLITE_ALLOWED_ROOTS),
+            ServerErrorCode::SqliteFileDenied,
+            knobs::FOREIGN_SQLITE_ALLOWED_ROOTS,
+        );
+    }
+    // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: a warehouse source's config must be complete for
+    // its kind, and a DuckDB file must lie under `foreign.duckdb.allowed_roots`.
+    if let ForeignSourceSpec::Warehouse { config, .. } = spec {
+        let kind = config.validate().map_err(|missing| {
+            format!("INVALID_ARGUMENT: warehouse source config invalid: {missing}")
+        })?;
+        medulla_federation::warehouse_foreign::check_outbound(config)?;
+        if kind == medulla_types::warehouse_federation::WarehouseSourceKind::DuckDb {
+            let path = config
+                .fields
+                .get("database_path")
+                .map_or("", String::as_str);
+            return verify_file_root(
+                path,
+                knobs::allowed_roots(knobs::FOREIGN_DUCKDB_ALLOWED_ROOTS),
+                ServerErrorCode::DuckdbFileDenied,
+                knobs::FOREIGN_DUCKDB_ALLOWED_ROOTS,
+            );
+        }
+        return Ok(());
     }
     #[cfg(feature = "federation-sql")]
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
@@ -892,16 +920,20 @@ fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), Strin
     Ok(())
 }
 
-/// `MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3` — a `SqliteFile` spec's canonical path must lie
-/// under one of `foreign.sqlite.allowed_roots`. The default is an empty list, so every
-/// path is refused (`SQLITE_FILE_DENIED`). Canonicalisation resolves `..` and symlinks, so
-/// neither can escape a root; a path that does not exist cannot be canonicalised and is
+/// A file source's canonical path must lie under one of the roots of its allowlist key
+/// (`foreign.sqlite.allowed_roots`, `foreign.duckdb.allowed_roots`). The default is an empty
+/// list, so every path is refused with `denied`. Canonicalisation resolves `..` and symlinks,
+/// so neither can escape a root; a path that does not exist cannot be canonicalised and is
 /// refused too.
-fn verify_sqlite_root(path: &str, roots: &[std::path::PathBuf]) -> Result<(), String> {
-    let denied = medulla_types::contract::ServerErrorCode::SqliteFileDenied;
+fn verify_file_root(
+    path: &str,
+    roots: &[std::path::PathBuf],
+    denied: medulla_types::contract::ServerErrorCode,
+    key: &str,
+) -> Result<(), String> {
     let Ok(canonical) = std::fs::canonicalize(path) else {
         return Err(format!(
-            "{denied}: sqlite file path is not an existing file"
+            "{denied}: source file path is not an existing file"
         ));
     };
     let under_root = roots
@@ -910,9 +942,7 @@ fn verify_sqlite_root(path: &str, roots: &[std::path::PathBuf]) -> Result<(), St
     if under_root {
         Ok(())
     } else {
-        Err(format!(
-            "{denied}: sqlite file is outside foreign.sqlite.allowed_roots"
-        ))
+        Err(format!("{denied}: source file is outside {key}"))
     }
 }
 
@@ -1035,14 +1065,22 @@ mod tests {
         std::fs::write(&inside, b"").unwrap();
         std::fs::write(&outside, b"").unwrap();
         let roots = vec![allowed.clone()];
-        assert!(verify_sqlite_root(inside.to_str().unwrap(), &roots).is_ok());
+        let sqlite = |path: &str, roots: &[std::path::PathBuf]| {
+            verify_file_root(
+                path,
+                roots,
+                medulla_types::contract::ServerErrorCode::SqliteFileDenied,
+                "foreign.sqlite.allowed_roots",
+            )
+        };
+        assert!(sqlite(inside.to_str().unwrap(), &roots).is_ok());
         // The default empty list refuses every path.
-        let refused = verify_sqlite_root(inside.to_str().unwrap(), &[]).unwrap_err();
+        let refused = sqlite(inside.to_str().unwrap(), &[]).unwrap_err();
         assert!(refused.starts_with("SQLITE_FILE_DENIED"), "{refused}");
         // A path outside the root, and a `..` escape out of it, are refused.
-        assert!(verify_sqlite_root(outside.to_str().unwrap(), &roots).is_err());
+        assert!(sqlite(outside.to_str().unwrap(), &roots).is_err());
         let escape = allowed.join("../other/b.db");
-        assert!(verify_sqlite_root(escape.to_str().unwrap(), &roots).is_err());
+        assert!(sqlite(escape.to_str().unwrap(), &roots).is_err());
         std::fs::remove_dir_all(&base).unwrap();
     }
 

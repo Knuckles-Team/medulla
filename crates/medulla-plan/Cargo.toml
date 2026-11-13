@@ -91,6 +91,10 @@ timeseries = ["medulla-exec/timeseries", "query", "dep:medulla-tsdb", "medulla-t
 # by default and the facade folds it into node/cluster/full but NEVER `pi` — the Pi
 # contract: a `pi` build links no sqlx/postgres/mysql/openssl.
 federation-sql = ["federation", "medulla-federation/federation-sql"]
+# A DuckDB database file as a read-only foreign source (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2):
+# the `duckdb` crate with its bundled engine. Without it a `duckdb` warehouse source refuses
+# `CAPABILITY_UNSUPPORTED`.
+source-duckdb = ["federation", "dep:duckdb"]
 # Spatial / geospatial modality (CONCEPT:MEDULLA-083): the `Op::SpatialScan` SOURCE op (an
 # medulla-geo packed-Hilbert-R-tree bbox scan over a layer's geometries) + the spatial
 # `Pred::SpatialWithin`/`SpatialDWithin` FILTER predicates (evaluated per-row by medulla-geo's
@@ -427,6 +431,7 @@ medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-sql = { path = "../medulla-sql" }
+duckdb = { version = "1.4", features = ["bundled"], optional = true }
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
