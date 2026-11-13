@@ -40,6 +40,7 @@ fn executed(outcome: StatisticalOutcome, topology: Option<TopologyExecuted>) -> 
         context_selection: None,
         thought: None,
         family_premises: Vec::new(),
+        sealed_premises: Vec::new(),
         route: None,
         answered: None,
     }

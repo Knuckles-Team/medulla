@@ -229,3 +229,64 @@ async fn other_tenant_edits_are_not_counted() {
         ("action:keep".to_string(), "count:2".to_string())
     );
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R173.5: the sealed record lists every
+/// counted edit and the window, threshold and policy revision the verdict
+/// used, as Observation premises.
+// spec: MEDULLA-DECISION-ENGINE-R173.5
+#[tokio::test]
+async fn record_lists_counted_edits() {
+    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+
+    let h = Harness::new().await;
+    let pin = pinned(&h).await;
+    // Candidate round 6, window 5: rounds 2..=6. The round-1 edit, the
+    // proposed edit and the other tenant's edit are not counted.
+    let edits = vec![
+        Edit("edit:a", "shipped", 4, None),
+        Edit("edit:b", "shipped", 5, None),
+        Edit("edit:old", "shipped", 1, None),
+        Edit("edit:proposed", "proposed", 3, None),
+        Edit("edit:foreign", "shipped", 5, Some("tenant-other")),
+        candidate(),
+    ];
+    let record = decide_edit(&h, &pin, &graph_view(&edits, 3));
+    let concentration: Vec<_> = record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("edit_concentration."))
+        .collect();
+    let facts: Vec<&str> = concentration.iter().map(|p| p.fact.as_str()).collect();
+    assert_eq!(
+        facts,
+        vec![
+            "edit_concentration.counted_edit:edit:a",
+            "edit_concentration.counted_edit:edit:b",
+            "edit_concentration.counted_total=3",
+            "edit_concentration.window_first_round=4",
+            "edit_concentration.window_last_round=6",
+            "edit_concentration.threshold=3",
+            "edit_concentration.policy_revision=1",
+        ]
+    );
+    for premise in &concentration {
+        assert_eq!(premise.class, PremiseClass::Observation);
+        assert_eq!(premise.subject, DIMENSION);
+        assert!(matches!(
+            premise.provenance,
+            PremiseProvenance::Observation { .. }
+        ));
+    }
+
+    // With no other shipped edit nothing is listed but the total.
+    let few = vec![candidate()];
+    let record = decide_edit(&h, &pin, &graph_view(&few, 3));
+    let facts: Vec<&str> = record
+        .premises
+        .iter()
+        .map(|p| p.fact.as_str())
+        .filter(|f| f.starts_with("edit_concentration."))
+        .collect();
+    assert_eq!(facts[0], "edit_concentration.counted_total=1");
+    assert!(!facts.iter().any(|f| f.contains("counted_edit:")));
+}

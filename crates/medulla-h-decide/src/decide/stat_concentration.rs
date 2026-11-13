@@ -10,8 +10,8 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_outcome_types::decision::concentration::{
-    concentration_verdict, ConcentrationAbstention, ConcentrationAction, ConcentrationPolicy,
-    EditFact, EditStatus,
+    concentration_verdict, counted_edits, ConcentrationAbstention, ConcentrationAction,
+    ConcentrationPolicy, EditFact, EditStatus,
 };
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::codes::{MIXED_POLICY_REVISION, NO_CONCENTRATION_POLICY};
@@ -19,7 +19,9 @@ use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::decision::{
+    AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
+};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
@@ -159,6 +161,7 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         thought: None,
         context_selection: None,
         family_premises: Vec::new(),
+        sealed_premises: Vec::new(),
         route: None,
         answered: None,
     }
@@ -190,12 +193,19 @@ fn abstained(code: medulla_types::refusal_code::RefusalCode, detail: String) -> 
     })
 }
 
-/// Answer one concentration question over the caller's filtered graph view.
-pub(super) fn conclude(
+/// What one concentration question reads from the caller's graph view.
+struct Inputs {
+    policy_iri: String,
+    policy: Option<ConcentrationPolicy>,
+    candidate: EditFact,
+    facts: Vec<EditFact>,
+}
+
+fn inputs(
     request: &DecideRequest,
     tenant: &str,
     graph_view: Option<&GraphView>,
-) -> Result<Executed, String> {
+) -> Result<Inputs, String> {
     let view = graph_view.ok_or_else(|| {
         invalid_parameter("an edit_concentration question reads the graph its graph param names")
     })?;
@@ -224,6 +234,26 @@ pub(super) fn conclude(
                 .flatten()
         })
         .collect();
+    Ok(Inputs {
+        policy_iri: policy_iri.to_string(),
+        policy,
+        candidate,
+        facts,
+    })
+}
+
+/// Answer one concentration question over the caller's filtered graph view.
+pub(super) fn conclude(
+    request: &DecideRequest,
+    tenant: &str,
+    graph_view: Option<&GraphView>,
+) -> Result<Executed, String> {
+    let Inputs {
+        policy_iri,
+        policy,
+        candidate,
+        facts,
+    } = inputs(request, tenant, graph_view)?;
     Ok(
         match concentration_verdict(&facts, &candidate, policy.as_ref()) {
             Err(ConcentrationAbstention::NoConcentrationPolicy) => abstained(
@@ -244,11 +274,71 @@ pub(super) fn conclude(
                     scored("action:revert".to_string(), revert),
                     scored(format!("count:{}", verdict.count), i64::from(verdict.count)),
                 ];
-                executed(StatisticalOutcome::Advisory {
+                let mut answered = executed(StatisticalOutcome::Advisory {
                     scores: BoundedVec::new(scores).expect("three scores fit the bound"),
                     calibrated: false,
-                })
+                });
+                answered.sealed_premises = premises(request, tenant, graph_view);
+                answered
             }
         },
     )
+}
+
+/// Most counted-edit premises one decision records.
+const MAX_COUNTED_EDIT_PREMISES: usize = 64;
+
+/// The Observation premises of a concentration verdict
+/// (MEDULLA-DECISION-ENGINE-R173.5): one per counted edit (up to 64), the
+/// counted total, the window's first and last round, the threshold and the
+/// policy revision. A question that abstains or does not read has none.
+pub(super) fn premises(
+    request: &DecideRequest,
+    tenant: &str,
+    graph_view: Option<&GraphView>,
+) -> Vec<PremiseRef> {
+    let Ok(read) = inputs(request, tenant, graph_view) else {
+        return Vec::new();
+    };
+    let Some(policy) = &read.policy else {
+        return Vec::new();
+    };
+    let Ok(verdict) = concentration_verdict(&read.facts, &read.candidate, Some(policy)) else {
+        return Vec::new();
+    };
+    let dimension = read.candidate.dimension_iri.as_str();
+    let observed = |fact: String| PremiseRef {
+        subject: dimension.to_string(),
+        fact,
+        class: PremiseClass::Observation,
+        provenance: PremiseProvenance::Observation {
+            evaluation_id: read.candidate.edit_id.clone(),
+        },
+    };
+    let mut out: Vec<PremiseRef> = counted_edits(&read.facts, &read.candidate, policy)
+        .into_iter()
+        .take(MAX_COUNTED_EDIT_PREMISES)
+        .map(|edit| observed(format!("edit_concentration.counted_edit:{}", edit.edit_id)))
+        .collect();
+    out.push(observed(format!(
+        "edit_concentration.counted_total={}",
+        verdict.count
+    )));
+    out.push(observed(format!(
+        "edit_concentration.window_first_round={}",
+        verdict.first_round
+    )));
+    out.push(observed(format!(
+        "edit_concentration.window_last_round={}",
+        verdict.last_round
+    )));
+    out.push(observed(format!(
+        "edit_concentration.threshold={}",
+        policy.min_shipped
+    )));
+    out.push(observed(format!(
+        "edit_concentration.policy_revision={}",
+        policy.revision
+    )));
+    out
 }

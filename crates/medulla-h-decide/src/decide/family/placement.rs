@@ -47,6 +47,7 @@ impl DecisionFamily for PlacementFamily {
             thought: None,
             context_selection: None,
             family_premises: Vec::new(),
+            sealed_premises: Vec::new(),
             route: None,
             answered: None,
         }))

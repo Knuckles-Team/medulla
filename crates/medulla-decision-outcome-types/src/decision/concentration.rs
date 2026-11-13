@@ -138,6 +138,31 @@ fn check_revisions(
     Ok(())
 }
 
+/// The shipped edits the verdict counts for `candidate`: same dimension,
+/// not the candidate itself, in the window of `policy.window_rounds` rounds
+/// that ends at the candidate's round. Ordered by round, then edit id.
+pub fn counted_edits<'a>(
+    facts: &'a [EditFact],
+    candidate: &EditFact,
+    policy: &ConcentrationPolicy,
+) -> Vec<&'a EditFact> {
+    let first = candidate
+        .round
+        .saturating_sub(policy.window_rounds.saturating_sub(1));
+    let mut counted: Vec<&EditFact> = facts
+        .iter()
+        .filter(|f| f.status == EditStatus::Shipped && f.dimension_iri == candidate.dimension_iri)
+        .filter(|f| f.edit_id != candidate.edit_id)
+        .filter(|f| f.round >= first && f.round <= candidate.round)
+        .collect();
+    counted.sort_by(|a, b| {
+        a.round
+            .cmp(&b.round)
+            .then_with(|| a.edit_id.cmp(&b.edit_id))
+    });
+    counted
+}
+
 /// Keep or revert one candidate edit given the recorded edits.
 pub fn concentration_verdict(
     facts: &[EditFact],
