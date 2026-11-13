@@ -8,6 +8,7 @@ use medulla_types::contract::ServerErrorCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub mod avro;
 pub mod orc;
 pub mod scan;
 pub mod thrift;

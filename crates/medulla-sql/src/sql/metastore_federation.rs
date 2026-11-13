@@ -21,10 +21,11 @@ use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result as DfResult};
 use datafusion::logical_expr::{BinaryExpr, Expr, Operator, TableProviderFilterPushDown};
 use datafusion::scalar::ScalarValue;
+use medulla_lake::metastore::avro::AvroFiles;
 use medulla_lake::metastore::orc::{FileBytes, OrcFiles, StripeBound, StripeOp, StripePredicate};
 use medulla_lake::metastore::scan::{
-    partition_filter, MetastoreTableProvider, PartitionPredicate, ScanLimits, ScanReceipt,
-    RECEIPT_WARNING_KEY,
+    partition_filter, DataFileSource, MetastoreTableProvider, PartitionPredicate, RowFileSource,
+    ScanLimits, ScanReceipt, RECEIPT_WARNING_KEY,
 };
 use medulla_lake::metastore::{LakeFileFormat, MetastoreClient, MetastoreError, MetastoreTable};
 
@@ -340,9 +341,12 @@ impl TableProvider for HiveTableProvider {
         pushed: &[Expr],
         limit: Option<usize>,
     ) -> ScanPlan {
-        if self.description.format != LakeFileFormat::Orc {
+        if !matches!(
+            self.description.format,
+            LakeFileFormat::Orc | LakeFileFormat::Avro
+        ) {
             return Err(refusal(MetastoreError::UnsupportedLayout(format!(
-                "{}.{} is stored as {:?}; hive() reads ORC tables",
+                "{}.{} is stored as {:?}; hive() reads ORC and Avro tables",
                 self.database, self.table, self.description.format
             ))));
         }
@@ -360,24 +364,36 @@ impl TableProvider for HiveTableProvider {
             .map(|f| f.name().clone())
             .filter(|name| !self.is_key(name))
             .collect();
-        let files = OrcFiles {
+        let orc = OrcFiles {
             bytes: self.source.bytes.as_ref(),
             predicates: pushed
                 .iter()
                 .filter_map(|e| self.stripe_predicate(e))
                 .collect(),
+            projection: columns.clone(),
+        };
+        // MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3: an Avro table reads in the metastore's reader
+        // schema; it has no stripe statistics, so only partition pruning skips files.
+        let avro = AvroFiles {
+            bytes: self.source.bytes.as_ref(),
+            reader_schema: self.description.columns.clone(),
             projection: columns,
         };
+        let (files, data): (&dyn RowFileSource, &dyn DataFileSource) =
+            match self.description.format {
+                LakeFileFormat::Avro => (&avro, &avro),
+                _ => (&orc, &orc),
+            };
         let provider = MetastoreTableProvider {
             client: self.source.client.as_ref(),
-            files: &files,
+            files: data,
             source_label: self.source.label.clone(),
             database: self.database.clone(),
             table: self.table.clone(),
             limits: self.source.limits,
         };
         let scanned = provider
-            .scan_rows(&partition_filter(&partition_predicates), &files)
+            .scan_rows(&partition_filter(&partition_predicates), files)
             .map_err(refusal)?;
         self.scope.record(scanned.receipt);
         let mut batches = Vec::new();

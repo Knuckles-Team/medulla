@@ -1,5 +1,5 @@
 //! Metastore catalog model, pruning, refusals and scan receipt
-//! (MEDULLA-UNIFIED-DATA-PLANE-R038.4.1, .4.2.1, .4.4, .4.5).
+//! (MEDULLA-UNIFIED-DATA-PLANE-R038.4.1, .4.2.1, .4.2.3, .4.4, .4.5).
 #![cfg(feature = "metastore")]
 
 use std::cell::Cell;
@@ -499,4 +499,83 @@ fn orc_stripe_pruning_skips_non_matching_stripes() {
         ),
         (1, 1, 2)
     );
+}
+
+/// Writes an Avro file in an older writer schema: `id` as an Avro `int`, `name` as a string,
+/// and no `email` field.
+fn write_old_schema_avro() -> Vec<u8> {
+    let schema = apache_avro::Schema::parse_str(
+        r#"{"type":"record","name":"t","fields":[
+            {"name":"id","type":"int"},
+            {"name":"name","type":"string"}]}"#,
+    )
+    .unwrap();
+    let mut writer = apache_avro::Writer::new(&schema, Vec::new()).unwrap();
+    for (id, name) in [(1, "ada"), (2, "grace")] {
+        let mut record = apache_avro::types::Record::new(&schema).unwrap();
+        record.put("id", id);
+        record.put("name", name);
+        writer.append(record).unwrap();
+    }
+    writer.into_inner().unwrap()
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3
+#[test]
+fn avro_reader_schema_projection() {
+    use medulla_lake::metastore::avro::{avro_schema, read_avro, AvroFiles};
+    use medulla_lake::metastore::scan::RowFileSource;
+
+    let bytes = write_old_schema_avro();
+    assert_eq!(
+        avro_schema(&bytes).unwrap(),
+        vec![column("id", "int"), column("name", "string")]
+    );
+
+    // The reader schema wins: `id` is promoted to bigint and the added optional `email` is null.
+    let reader = vec![
+        column("id", "bigint"),
+        column("name", "string"),
+        column("email", "string"),
+    ];
+    let (batch, opened) = read_avro(&bytes, &reader, &[]).unwrap();
+    assert_eq!(batch.num_rows(), 2);
+    assert_eq!(batch.schema().field(0).data_type(), &DataType::Int64);
+    let ids = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap();
+    assert_eq!(ids.values().to_vec(), vec![1, 2]);
+    let email = batch.column_by_name("email").unwrap();
+    assert_eq!(email.null_count(), 2);
+    assert_eq!(opened.bytes_read, bytes.len() as u64);
+    assert_eq!(opened.stripes_total, 0);
+
+    // A projection returns only the named reader columns.
+    let (projected, _) = read_avro(&bytes, &reader, &["email".to_string()]).unwrap();
+    assert_eq!(projected.num_columns(), 1);
+    assert_eq!(projected.column(0).null_count(), 2);
+
+    // A writer type the reader type cannot promote from is refused before any row decodes.
+    let narrowing = vec![column("name", "bigint")];
+    let refused = read_avro(&bytes, &narrowing, &[]).unwrap_err();
+    assert_eq!(refused.code(), ServerErrorCode::SchemaIncompatible);
+
+    // Through the port: one file read whole, rows in the reader schema.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("facts.avro");
+    std::fs::write(&path, &bytes).unwrap();
+    let local = LocalFileBytes {
+        source_label: "hms".into(),
+    };
+    let files = AvroFiles {
+        bytes: &local,
+        reader_schema: reader,
+        projection: vec![],
+    };
+    let (batches, opened) = RowFileSource::read(&files, &file(path.to_str().unwrap())).unwrap();
+    assert_eq!(batches.len(), 1);
+    assert_eq!(batches[0].num_columns(), 3);
+    assert_eq!(opened.bytes_read, bytes.len() as u64);
 }

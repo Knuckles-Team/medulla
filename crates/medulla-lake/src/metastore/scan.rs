@@ -260,15 +260,16 @@ fn check_layout(table: &MetastoreTable) -> Result<(), MetastoreError> {
     Ok(())
 }
 
-/// Avro schema resolution: each reader column must exist in the writer with the same type or
-/// a lossless promotion.
-fn resolve_schema(
+/// Avro schema resolution: a reader column the writer also has must carry the same type or a
+/// lossless promotion. A reader column the writer lacks is an optional field added later and
+/// reads as null (MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3).
+pub fn resolve_schema(
     reader: &[MetastoreColumn],
     writer: &[MetastoreColumn],
 ) -> Result<(), MetastoreError> {
     for column in reader {
         let found = writer.iter().find(|w| w.name == column.name);
-        if !found.is_some_and(|w| promotes(&w.data_type, &column.data_type)) {
+        if found.is_some_and(|w| !promotes(&w.data_type, &column.data_type)) {
             return Err(MetastoreError::SchemaIncompatible(format!(
                 "column {} cannot be resolved against the writer schema",
                 column.name
