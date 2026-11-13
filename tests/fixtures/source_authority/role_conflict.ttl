@@ -1,0 +1,38 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix ex:  <urn:eg:fixture:roles:> .
+
+# MEDULLA-SRC-AUTH-R010.3: two sources conflict on :Incident at the same rank.
+# The live_truth source must win over the historical_context one.
+
+ex:live a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-live ;
+    vg:foreignSourceName "live-incidents-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-live vg:url "https://live.example.invalid/mcp" .
+ex:hist a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-hist ;
+    vg:foreignSourceName "history-incidents-mcp" ; vg:sourceRole "historical_context" .
+ex:ep-hist vg:url "https://history.example.invalid/mcp" .
+
+ex:live-contract a vg:MetadataContract ; vg:contractSource ex:live ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000011" ;
+    vg:discoveredEntity "incident" ; vg:discoveredField "incident.id", "incident.title" .
+ex:live-incidents a vg:VirtualMapping ; vg:mapsContract ex:live-contract ;
+    vg:mapsOntologyClass kg:Incident ; vg:mapsEntity "incident" ; vg:keyField "incident.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:live-title .
+ex:live-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "incident.title" .
+
+ex:hist-contract a vg:MetadataContract ; vg:contractSource ex:hist ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000012" ;
+    vg:discoveredEntity "incident" ; vg:discoveredField "incident.id", "incident.title" .
+ex:hist-incidents a vg:VirtualMapping ; vg:mapsContract ex:hist-contract ;
+    vg:mapsOntologyClass kg:Incident ; vg:mapsEntity "incident" ; vg:keyField "incident.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:hist-title .
+ex:hist-title a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "incident.title" .
+
+# The historical source has the better rank number; only its role keeps it second.
+ex:incident-hist a vg:SourceAuthority ; vg:authoritativeSource ex:hist ;
+    vg:authorityFor kg:Incident ; vg:authorityMapping ex:hist-incidents ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+ex:incident-live a vg:SourceAuthority ; vg:authoritativeSource ex:live ;
+    vg:authorityFor kg:Incident ; vg:authorityMapping ex:live-incidents ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .

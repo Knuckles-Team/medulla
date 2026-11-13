@@ -20,8 +20,9 @@ use medulla_identity_types::source_coverage::{
 use medulla_protocol_types::result_contract::query::SourceCoverage;
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_virtual_graph::source_selection::{
-    audit_from, connected_sources_from_turtle, fixture_from_schema_sources, select_sources_with,
-    CoverageFixture, CoverageResult, Premise, SelectionQuery, SourceSelectionHop,
+    audit_from, connected_sources_from_turtle, fixture_from_schema_sources, role_order,
+    select_sources_with, CoverageFixture, CoverageResult, Premise, SelectionQuery,
+    SourceSelectionHop,
 };
 use std::collections::BTreeSet;
 
@@ -190,6 +191,7 @@ pub(crate) async fn handle_source_coverage(
         partition: Some(ctx.graph_name.to_string()),
         now_epoch_seconds,
         needs_current_state,
+        role_order: role_order(),
         facets: facets
             .into_iter()
             .map(|facet| (facet.class, facet.property))

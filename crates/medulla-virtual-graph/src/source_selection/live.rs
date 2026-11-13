@@ -252,3 +252,58 @@ pub fn connected_sources_from_turtle(documents: &[&str]) -> Result<BTreeSet<Stri
     }
     Ok(connected)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_graph_core::graph::GraphSchemaSource;
+    use std::sync::Arc;
+
+    const DOC: &str = r#"
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix ex: <urn:eg:fixture:roles:> .
+ex:live a vg:SourceConnection ; vg:foreignSourceName "live-mcp" ; vg:sourceRole "live_truth" .
+ex:hist a vg:SourceConnection ; vg:foreignSourceName "hist-mcp" ; vg:sourceRole "historical_context" .
+ex:idea a vg:SourceConnection ; vg:foreignSourceName "idea-mcp" ; vg:sourceRole "inspiration" .
+ex:none a vg:SourceConnection ; vg:foreignSourceName "none-mcp" .
+"#;
+
+    // spec: MEDULLA-SRC-AUTH-R010.3
+    #[test]
+    fn roles_read_from_schema_sources() {
+        let source =
+            GraphSchemaSource::new(SchemaSourceOrigin::Operator, None, Some(Arc::from(DOC)), 1)
+                .unwrap();
+        let mut dynamic = BTreeMap::new();
+        dynamic.insert("operator".to_string(), source);
+        let sources = GraphSchemaSources::with_dynamic(dynamic).unwrap();
+        let fixture = fixture_from_schema_sources(&sources).unwrap();
+        assert_eq!(fixture.role("live-mcp"), SourceRole::LiveTruth);
+        assert_eq!(fixture.role("hist-mcp"), SourceRole::HistoricalContext);
+        assert_eq!(fixture.role("idea-mcp"), SourceRole::Inspiration);
+        assert_eq!(
+            fixture.role("none-mcp"),
+            SourceRole::LiveTruth,
+            "an undeclared role reads as the default"
+        );
+        let closed: Vec<String> = [
+            SourceRole::LiveTruth,
+            SourceRole::HistoricalContext,
+            SourceRole::Inspiration,
+        ]
+        .iter()
+        .map(|role| {
+            serde_json::to_value(role)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+        assert_eq!(
+            closed,
+            medulla_graph_core::graph::SOURCE_ROLE_VALUES.to_vec(),
+            "the attach-time role set is the engine's role set"
+        );
+    }
+}

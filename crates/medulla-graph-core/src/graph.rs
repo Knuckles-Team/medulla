@@ -56,15 +56,15 @@ use analysis_support::apply_decay;
 pub use analysis_support::{
     match_props, vf2_match_views, DEFAULT_VF2_MAX_RESULTS, DEFAULT_VF2_MAX_STEPS,
 };
+pub use core_expand::{edge_weight, expand_hops, ExpandedHit};
 use core_helpers::{edge_endpoint_not_found, push_ledger_impl, HexLedger};
 pub use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
     OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
     MAX_CORE_SCHEMA_SOURCES, MAX_ONTOLOGY_REVISION_HISTORY, MAX_SCHEMA_DOCUMENT_TRIPLES,
-    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
+    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
-pub use core_expand::{edge_weight, expand_hops, ExpandedHit};
 pub use view::GraphView;
 #[cfg(feature = "result-cache")]
 pub use view::ProjectionScope;

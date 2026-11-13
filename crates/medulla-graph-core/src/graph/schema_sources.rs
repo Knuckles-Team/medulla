@@ -492,6 +492,7 @@ fn validate_dynamic_sources(dynamic: &BTreeMap<String, GraphSchemaSource>) -> Re
         validate_dynamic_identity(source_id, &source.origin)?;
         source.validate()?;
         reject_pack_or_ingestion_approval_claim(source_id, source)?;
+        reject_unknown_source_role(source_id, source)?;
         total = total
             .checked_add(source.byte_len())
             .ok_or_else(|| "dynamic schema byte count overflowed".to_string())?;
@@ -533,6 +534,56 @@ fn reject_pack_or_ingestion_approval_claim(
         }
     }
     Ok(())
+}
+
+/// The closed set of `vg:sourceRole` values (MEDULLA-SRC-AUTH-R010.3); the
+/// virtual-graph crate pins it to the serde names of `SourceRole`.
+pub const SOURCE_ROLE_VALUES: [&str; 3] = ["live_truth", "historical_context", "inspiration"];
+
+/// MEDULLA-SRC-AUTH-R010.3: a `vg:sourceRole` value outside the closed set is
+/// refused at the attach seam with the typed code `SOURCE_ROLE_UNKNOWN`, so a
+/// misspelt role can never silently rank a source as live truth.
+fn reject_unknown_source_role(source_id: &str, source: &GraphSchemaSource) -> Result<(), String> {
+    for (label, document) in [
+        ("shapes", source.shapes_ttl.as_deref()),
+        ("ontology", source.ontology_ttl.as_deref()),
+    ] {
+        if let Some(value) = document.and_then(unknown_source_role) {
+            return Err(format!(
+                "SOURCE_ROLE_UNKNOWN: {label} document of '{source_id}' gives vg:sourceRole \
+                 \"{value}\"; the roles are {SOURCE_ROLE_VALUES:?}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// The first quoted `vg:sourceRole` value of `document` that is not a known role.
+fn unknown_source_role(document: &str) -> Option<String> {
+    const ROLE: &str = medulla_types::ontology_iri!("virtual-graph#sourceRole");
+    let lines: Vec<&str> = document.lines().collect();
+    let mut needles: Vec<String> = vec![format!("<{ROLE}>")];
+    for (label, iri) in prefix_bindings(&lines) {
+        if format!("{iri}sourceRole") == ROLE {
+            needles.push(format!("{label}:sourceRole"));
+        }
+    }
+    for line in &lines {
+        let text = strip_line_comment(line);
+        for needle in &needles {
+            for (position, _) in text.match_indices(needle.as_str()) {
+                let rest = text[position + needle.len()..].trim_start();
+                let Some(quoted) = rest.strip_prefix('"') else {
+                    continue;
+                };
+                let value = quoted.split('"').next().unwrap_or_default();
+                if !SOURCE_ROLE_VALUES.contains(&value) {
+                    return Some(value.to_string());
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Conservative line scan for a truthy `vg:approved` triple. This crate has no
@@ -2184,5 +2235,34 @@ mod tests {
             )
             .unwrap();
         assert_eq!(sources.dynamic.len(), 2);
+    }
+
+    // spec: MEDULLA-SRC-AUTH-R010.3
+    #[test]
+    fn an_unknown_source_role_is_refused_and_the_closed_set_attaches() {
+        let doc = |role: &str| {
+            format!(
+                "@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .\n\
+                 <urn:x:a> a vg:SourceConnection ; vg:sourceRole \"{role}\" .\n"
+            )
+        };
+        for role in SOURCE_ROLE_VALUES {
+            assert_eq!(unknown_source_role(&doc(role)), None, "{role}");
+        }
+        assert_eq!(
+            unknown_source_role(&doc("live-truth")).as_deref(),
+            Some("live-truth")
+        );
+        let source = GraphSchemaSource::new(
+            SchemaSourceOrigin::Admin {
+                name: "roles".to_string(),
+            },
+            None,
+            Some(Arc::from(doc("primary"))),
+            0,
+        )
+        .unwrap();
+        let error = reject_unknown_source_role("admin:roles", &source).unwrap_err();
+        assert!(error.starts_with("SOURCE_ROLE_UNKNOWN:"), "{error}");
     }
 }
