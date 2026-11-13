@@ -947,6 +947,11 @@ pub struct UqlRow {
     /// `WITH PROOF` (EH-448): why the row is in the result; `None` without it.
     #[serde(default)]
     pub proof: Option<UqlRowProof>,
+    /// A source row's answer provenance (MEDULLA-FEDERATED-QUERY-R722.5): the named text
+    /// channels a non-materialised source attached to the row (connector, contract IRI,
+    /// mapping IRI, fetch time). Empty, and omitted on the wire, for a stored row.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub provenance: std::collections::BTreeMap<String, String>,
 }
 
 /// A row's knowledge-frame state on the wire (EH-450 row contract,
@@ -1289,6 +1294,7 @@ mod kernel_row_rejection_reason_contract {
             channels: Vec::new(),
             knowledge: None,
             proof: None,
+            provenance: Default::default(),
         };
         let value = serde_json::to_value(&row).expect("UqlRow must serialize");
         let obj = value

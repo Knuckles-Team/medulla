@@ -108,6 +108,7 @@ mod tests {
             channels: Vec::new(),
             knowledge: None,
             proof: None,
+            provenance: Default::default(),
         }
     }
 

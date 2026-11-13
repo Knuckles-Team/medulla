@@ -629,9 +629,30 @@ impl medulla_federation::federation::ForeignSource for PageBackedSource {
         if record.state != SessionState::Complete {
             return Err("FOREIGN_READ_NOT_COMPLETE: source pages are not complete".into());
         }
+        // Every answer row carries its provenance as text channels so the served answer
+        // can show where it came from (MEDULLA-FEDERATED-QUERY-R722.5). Nothing is stored.
+        let fetch_time_ms = now_ms().to_string();
+        let connector = record.approval.connector.as_str().to_string();
+        let contract_iri = record.approval.registration.contract_iri.clone();
+        let mut texts = medulla_exec::rowset::TextChannels::new();
+        for row in &record.rows {
+            let provenance = serde_json::to_string(&row.provenance)
+                .map_err(|error| format!("FOREIGN_READ_PROVENANCE: {error}"))?;
+            texts.insert(
+                row.id.clone(),
+                std::collections::BTreeMap::from([
+                    ("connector".to_string(), connector.clone()),
+                    ("contract_iri".to_string(), contract_iri.clone()),
+                    ("mapping_iri".to_string(), contract_iri.clone()),
+                    ("fetch_time_ms".to_string(), fetch_time_ms.clone()),
+                    ("provenance".to_string(), provenance),
+                ]),
+            );
+        }
         Ok(medulla_exec::rowset::RowSet::from_rows(
             record.rows.iter().map(|row| (row.id.clone(), row.score)),
-        ))
+        )
+        .with_texts(texts))
     }
 
     fn fetch_columns(&self) -> Result<medulla_federation::federation_opt::ForeignRows, String> {

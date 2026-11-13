@@ -400,7 +400,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T380 [US4] MEDULLA-FEDERATED-QUERY-R722.2 Registration and digest behavior
 - [ ] T381 [US4] MEDULLA-FEDERATED-QUERY-R722.3 Registration handoff and read path
 - [ ] T382 [US4] MEDULLA-FEDERATED-QUERY-R722.4 Refusal of Connector data resources register as virtual-graph sources at pack import
-- [ ] T383 [US4] MEDULLA-FEDERATED-QUERY-R722.5 Evidence of Connector data resources register as virtual-graph sources at pack import
+- [x] T383 [US4] MEDULLA-FEDERATED-QUERY-R722.5 Evidence of Connector data resources register as virtual-graph sources at pack import
 - [ ] T384 [US4] MEDULLA-FEDERATED-QUERY-R722.6 Hot-path proof of Connector data resources register as virtual-graph sources at pack import
 - [ ] T385 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.7 Discover excludes unchecked records
 - [ ] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters

@@ -19,6 +19,10 @@ pub(crate) fn query_assets(method: &Method) -> Vec<String> {
         )
         .unwrap_or_default(),
         Method::UnifiedQuery { plan, .. } => plan_labels(plan),
+        // A UQL statement is read by the plan it parses to (MEDULLA-FEDERATED-QUERY-R722.5).
+        Method::Uql { text, .. } => medulla_uql::parse(text)
+            .map(|plan| plan_labels(&plan))
+            .unwrap_or_default(),
         _ => Vec::new(),
     }
 }
@@ -30,12 +34,25 @@ fn plan_labels(plan: &medulla_exec::algebra::Plan) -> Vec<String> {
         .iter()
         .filter_map(|op| match op {
             medulla_exec::algebra::Op::Scan { label } => Some(label.clone()),
+            // A pack source read counts as a read of its catalog asset
+            // (MEDULLA-FEDERATED-QUERY-R722.5).
+            #[cfg(feature = "federation")]
+            medulla_exec::algebra::Op::ForeignScan { source, .. } => foreign_source_name(source),
             _ => None,
         })
         .collect();
     labels.sort();
     labels.dedup();
     labels
+}
+
+/// The catalog asset a foreign scan reads: the registered source name, when the plan names one.
+#[cfg(feature = "federation")]
+fn foreign_source_name(source: &medulla_types::wire::ForeignSourceSpec) -> Option<String> {
+    match source {
+        medulla_types::wire::ForeignSourceSpec::Named { name } => Some(name.clone()),
+        _ => None,
+    }
 }
 
 /// True when `response` is a successful answer.

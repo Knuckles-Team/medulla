@@ -135,7 +135,7 @@ async def _send_or_refuse(
 
 async def _journey(
     kind: str, connector: str, fixture: FixtureSource, client: MedullaClient
-) -> None:
+) -> dict[str, Any]:
     contract_bytes = _contract_ttl(connector, kind).encode()
     contract_digest = hashlib.sha256(contract_bytes).hexdigest()
     resource_uri = f"contract://{connector}"
@@ -376,9 +376,13 @@ async def _journey(
     status, _ = _host_fetch(fixture, kind)
     assert status == 503
     assert _named_refusal(status) == UNAVAILABLE_REFUSAL
+    return answer
 
 
-def _run_journey(kind: str, clean_graph: SyncMedullaClient, tmp_path: Path) -> None:
+def _run_journey(
+    kind: str, clean_graph: SyncMedullaClient, tmp_path: Path
+) -> dict[str, Any]:
+    """Run one kind's journey and return the served answer it read."""
     connector = f"ck-{kind}"
     recordings = tmp_path / "recordings"
     recordings.mkdir()
@@ -390,6 +394,8 @@ def _run_journey(kind: str, clean_graph: SyncMedullaClient, tmp_path: Path) -> N
     # query must leave the count unchanged (zero stored source rows).
     before = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
     assert before == [], "the graph must hold no row of the source before the journey"
+
+    answers: list[dict[str, Any]] = []
 
     async def exercise() -> None:
         client = await MedullaClient.connect(
@@ -416,7 +422,7 @@ def _run_journey(kind: str, clean_graph: SyncMedullaClient, tmp_path: Path) -> N
                 None,
                 idempotency_key=bind_key,
             )
-            await _journey(kind, connector, fixture, client)
+            answers.append(await _journey(kind, connector, fixture, client))
         finally:
             await client.close()
 
@@ -427,6 +433,7 @@ def _run_journey(kind: str, clean_graph: SyncMedullaClient, tmp_path: Path) -> N
 
     after = clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }")
     assert after == before, "the store holds no row of the source after the query"
+    return answers[0]
 
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.1")

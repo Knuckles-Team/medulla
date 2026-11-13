@@ -39,6 +39,7 @@ pub(crate) fn handle_harness_metric(ctx: &QueryHandlerCtx<'_>, query: &HarnessQu
             channels: row.values,
             knowledge: None,
             proof: None,
+            provenance: Default::default(),
         })
         .collect();
     let result = medulla_types::wire::UqlResult::Rows {

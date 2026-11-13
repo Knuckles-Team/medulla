@@ -439,9 +439,8 @@ pub(crate) async fn handle_stored_call(
     let bound = query.bind(args)?;
     let now = now_ms();
     if !query.materialize {
-        let (columns, rows, generation) = run_stored(ctx, query, &bound)
-            .await
-            .map_err(run_refusal)?;
+        let (columns, rows, generation) =
+            run_stored(ctx, query, &bound).await.map_err(run_refusal)?;
         let row_count = rows.as_array().map_or(0, |rows| rows.len() as u64);
         return Ok(StoredCall {
             name: name.to_string(),
@@ -458,11 +457,7 @@ pub(crate) async fn handle_stored_call(
     let digest = args_digest(&bound);
     let prior = load_result(ctx.core, name, version, &digest);
     let outcome = if needs_run(query.refresh, prior.as_ref(), now) {
-        Some(
-            run_stored(ctx, query, &bound)
-                .await
-                .map_err(run_refusal)?,
-        )
+        Some(run_stored(ctx, query, &bound).await.map_err(run_refusal)?)
     } else {
         None
     };
@@ -547,6 +542,7 @@ pub(crate) async fn handle_call_stored_statement(
                         .collect(),
                     knowledge: None,
                     proof: None,
+                    provenance: Default::default(),
                 })
                 .collect()
         })

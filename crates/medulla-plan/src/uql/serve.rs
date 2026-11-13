@@ -171,6 +171,7 @@ fn rows_of(rows: &RowSet, columns: &[String], table: &ChannelTable) -> Vec<UqlRo
             channels: row_channels(&r.id, columns, table),
             knowledge: None,
             proof: None,
+            provenance: rows.texts().get(&r.id).cloned().unwrap_or_default(),
         })
         .collect()
 }
