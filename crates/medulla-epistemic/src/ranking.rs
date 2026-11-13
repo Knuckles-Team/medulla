@@ -26,9 +26,11 @@ pub struct RetrievalCandidate {
     /// Similarity score from the retrieval backend (embedding cosine, BM25,
     /// …), expected in `[0, 1]` (higher = more similar to the query).
     pub similarity: f64,
-    /// Source authority/reliability in `[0, 1]` — e.g. the dominant source's
-    /// `AuthorityPolicy::source_reliability`, or a stored per-source trust score.
-    pub source_reliability: f64,
+    /// The source's governed reliability in `[0, 1]`, resolved by the engine from the
+    /// caller's visible decision log (never supplied by the caller). `None` when the
+    /// source abstained (too little history): the component then contributes `0.0`,
+    /// an honest "unknown" like an absent calibration.
+    pub source_reliability: Option<f64>,
     /// How recent the evidence is, in `[0, 1]` (`1.0` = freshest). A caller
     /// typically derives this from the same recency-decay model the stored
     /// `NodeData.confidence` already carries.
@@ -102,7 +104,7 @@ pub fn evidence_quality(candidate: &RetrievalCandidate) -> f64 {
         })
         .unwrap_or(0.0);
     let components = [
-        candidate.source_reliability.clamp(0.0, 1.0),
+        candidate.source_reliability.unwrap_or(0.0).clamp(0.0, 1.0),
         corroboration,
         precision,
         candidate.freshness.clamp(0.0, 1.0),
@@ -269,7 +271,7 @@ mod tests {
         RetrievalCandidate {
             id: id.to_string(),
             similarity,
-            source_reliability: 0.95,
+            source_reliability: Some(0.95),
             freshness: 0.9,
             calibration: Some(Calibration {
                 interval: (0.85, 0.95),
@@ -283,7 +285,7 @@ mod tests {
         RetrievalCandidate {
             id: id.to_string(),
             similarity,
-            source_reliability: 0.3,
+            source_reliability: Some(0.3),
             freshness: 0.3,
             calibration: None,
         }
@@ -337,7 +339,7 @@ mod tests {
         let loose = RetrievalCandidate {
             id: "loose".to_string(),
             similarity: 0.5,
-            source_reliability: 0.5,
+            source_reliability: Some(0.5),
             freshness: 0.5,
             calibration: Some(Calibration {
                 interval: (0.1, 0.9),
@@ -348,7 +350,7 @@ mod tests {
         let tight = RetrievalCandidate {
             id: "tight".to_string(),
             similarity: 0.5,
-            source_reliability: 0.5,
+            source_reliability: Some(0.5),
             freshness: 0.5,
             calibration: Some(Calibration {
                 interval: (0.55, 0.65),

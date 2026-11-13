@@ -2175,7 +2175,10 @@ async fn epistemic_status_returns_every_facet_over_rpc() {
     assert_eq!(status.evidence, vec!["evidence1".to_string()]);
     assert_eq!(status.why_not, None);
     // authority
-    assert_eq!(status.authority.source_reliability, 1.0);
+    assert_eq!(
+        status.authority.source_reliability,
+        medulla_decision_types::decision::reputation::SourceReliability::Absent
+    );
     assert_eq!(status.authority.attack_multiplier, 1.5);
     assert_eq!(status.authority.prior_strength, 2.0);
     // time
@@ -2579,7 +2582,7 @@ async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_ove
         RetrievalCandidateWire {
             id: "well-sourced".into(),
             similarity: 0.7,
-            source_reliability: 0.95,
+            source_id: "trusted".into(),
             freshness: 0.9,
             calibration: Some(CalibrationWire {
                 interval: (0.85, 0.95),
@@ -2590,7 +2593,7 @@ async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_ove
         RetrievalCandidateWire {
             id: "more-similar".into(),
             similarity: 0.9,
-            source_reliability: 0.3,
+            source_id: "unsourced".into(),
             freshness: 0.3,
             calibration: None,
         },

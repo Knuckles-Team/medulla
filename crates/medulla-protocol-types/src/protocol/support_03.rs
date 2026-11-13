@@ -218,13 +218,19 @@ pub struct CalibrationWire {
 
 /// Wire mirror of `medulla_epistemic::RetrievalCandidate` (EPI-P3-3) — one candidate in
 /// a `Method::RankByProvenance` request, before ranking.
+///
+/// The candidate names its `source_id`; the engine resolves that source's reliability from
+/// the caller's visible decision log (MEDULLA-DECISION-ENGINE-R118.1.2.3). A caller-supplied
+/// reliability scalar is refused at decode.
 #[cfg(feature = "epistemic")]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetrievalCandidateWire {
     pub id: String,
     pub similarity: f64,
-    pub source_reliability: f64,
+    /// The source whose governed reliability weighs this candidate.
+    pub source_id: String,
     pub freshness: f64,
     /// `None` for a candidate with no evidence-graph backing (ranks on
     /// similarity/reliability/freshness alone — an honest "unknown", never a

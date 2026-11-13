@@ -351,8 +351,8 @@ $($variants)*
     ///
     /// Either way, returns a calibrated `CausalEstimateResult` (mean/variance/
     /// credible-interval per variable, in `variables` order) via
-    /// `ResultPayload::raw`. A pure function over request-carried inputs — no graph
-    /// snapshot is read. Gated `epistemic` at the wire level; the HANDLER
+    /// `ResultPayload::raw`. Each candidate's source reliability is resolved by the
+    /// engine (graph prior, caller's visible decision log estimate); a caller scalar is refused. Gated `epistemic` at the wire level; the HANDLER
     /// additionally requires `epistemic-causal` — same build-tier fallback
     /// convention as `ExplainEvidence`.
     ///
@@ -392,8 +392,8 @@ $($variants)*
     /// `candidates` by a weighted blend of similarity AND evidence quality/
     /// provenance (source reliability, corroboration, calibration precision,
     /// freshness) rather than similarity alone (`medulla_epistemic::rank`, feature
-    /// `epistemic-causal`). A pure function over request-carried inputs — no graph
-    /// snapshot is read. Returns a `RankByProvenanceResult` via `ResultPayload::raw`.
+    /// `epistemic-causal`). Each candidate's source reliability is resolved by the
+    /// engine (graph prior, caller's visible decision log estimate); a caller scalar is refused. Returns a `RankByProvenanceResult` via `ResultPayload::raw`.
     /// Same build-tier fallback convention as `ExplainEvidence`/`CausalEstimate`.
     #[cfg(feature = "epistemic")]
     RankByProvenance {

@@ -166,7 +166,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T157 [US5] MEDULLA-DECISION-ENGINE-R118.1.1 A sparse pool abstains in the reputation materialization
 - [ ] T158 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.1 Typed source-reliability read contract
 - [x] T159 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.2 UQL SOURCE RELIABILITY propagates the typed result
-- [ ] T160 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.3 Authority policy and retrieval ranking read the governed estimate
+- [x] T160 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.3 Authority policy and retrieval ranking read the governed estimate
 - [ ] T161 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.4 Served cross-surface agreement proof
 - [ ] T162 [US4] MEDULLA-DECISION-ENGINE-R119 Walk-forward replay seals deflated Sharpe and PBO evidence
 - [ ] T163 [US5] MEDULLA-DECISION-ENGINE-R120 Admission anchors are limited to persisted write paths

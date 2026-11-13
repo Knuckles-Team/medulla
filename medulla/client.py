@@ -12632,19 +12632,24 @@ class QueryClient:
 
         Each candidate dict is::
 
-            {"id": "doc-1", "similarity": 0.7, "source_reliability": 0.95,
+            {"id": "doc-1", "similarity": 0.7, "source_id": "wiki",
              "freshness": 0.9,
              "calibration": {"interval": [0.85, 0.95], "level": 0.95, "evidence_count":
              5}}
+
+        The engine resolves ``source_id``'s reliability from the caller's visible
+        decision log (a caller-supplied ``source_reliability`` is refused); each
+        ranked row reports the governed read as ``source_reliability``.
 
         ``calibration`` is optional (``None``/omitted for a candidate with no
         evidence-graph backing — it then ranks on similarity/reliability/freshness
         alone). ``weights`` is ``{"similarity": w1, "evidence_quality": w2}``,
         defaulting to ``{0.5, 0.5}`` (equal-weighted) when omitted.
 
-        Returns ``{"ranked": [{"id", "score", "similarity", "evidence_quality"},
-        ...]}``, highest score first. A pure function over the request — no graph
-        node is read. Epistemic-causal support is included in the mandatory main build.
+        Returns ``{"ranked": [{"id", "score", "similarity", "evidence_quality",
+        "source_reliability"},
+        ...]}``, highest score first. The graph (RLS-filtered) supplies each source's prior.
+        Epistemic-causal support is included in the mandatory main build.
         """
         params: dict[str, Any] = {"candidates": candidates}
         if weights is not None:

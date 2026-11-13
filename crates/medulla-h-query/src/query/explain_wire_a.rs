@@ -736,17 +736,32 @@ pub(crate) fn minimal_flip_set_wire(
 /// [`BeliefGraph`] off `view` and run `medulla_epistemic::epistemic_status` under the
 /// default `AuthorityPolicy` (no facade caller binds a tenant-specific policy today,
 /// matching `explain_belief`'s own posture), wire-projecting every facet.
+///
+/// The claim's source reliability is resolved through the governed read
+/// (`medulla_exec::exec::reliability::resolve`, MEDULLA-DECISION-ENGINE-R118.1.2.3) over the
+/// caller's visible decision log `decisions`. An estimate becomes the policy's global
+/// reliability multiplier; `Absent` and `InsufficientHistory` leave the default multiplier
+/// (no number is substituted where the log has spoken but not loudly enough) and the wire
+/// reports the typed state.
 #[cfg(feature = "epistemic-tms")]
 pub(crate) fn epistemic_status_wire(
     node_id: &str,
     view: &medulla_graph_core::graph::GraphView,
-) -> medulla_protocol_types::protocol::EpistemicStatusResult {
+    decisions: Option<&dyn medulla_exec::exec::DecisionSource>,
+) -> Result<medulla_protocol_types::protocol::EpistemicStatusResult, String> {
     use medulla_protocol_types::protocol::AuthorityPolicyWire;
     use medulla_protocol_types::protocol::EpistemicStatusResult;
     use medulla_protocol_types::protocol::EpistemicStatusWire;
 
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
-    let policy = medulla_epistemic::AuthorityPolicy::default();
+    let mut policy = medulla_epistemic::AuthorityPolicy::default();
+    let governed = medulla_exec::exec::reliability::resolve(&bg, &policy, decisions, node_id)?;
+    if let medulla_decision_types::decision::reputation::SourceReliability::Estimated {
+        mean, ..
+    } = governed.learned
+    {
+        policy.source_reliability = mean;
+    }
     let status = medulla_epistemic::epistemic_status(&bg, node_id, &policy);
 
     // CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — OTEL epistemic span attributes (WS-1b),
@@ -770,7 +785,7 @@ pub(crate) fn epistemic_status_wire(
     )
     .entered();
 
-    EpistemicStatusResult {
+    Ok(EpistemicStatusResult {
         status: EpistemicStatusWire {
             claim: status.claim,
             believed: status.believed,
@@ -782,7 +797,7 @@ pub(crate) fn epistemic_status_wire(
             contradicting: status.contradicting,
             attacking: status.attacking,
             authority: AuthorityPolicyWire {
-                source_reliability: status.authority.source_reliability,
+                source_reliability: governed.learned,
                 attack_multiplier: status.authority.attack_multiplier,
                 prior_strength: status.authority.prior_strength,
             },
@@ -793,7 +808,7 @@ pub(crate) fn epistemic_status_wire(
                 .as_ref()
                 .map(minimal_flip_set_wire),
         },
-    }
+    })
 }
 
 /// `Method::ResolveConflict` (EPI-P3-7, gap-fill) — build a `BeliefGraph` off `view`

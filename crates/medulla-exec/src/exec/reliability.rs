@@ -21,7 +21,7 @@ use medulla_decision_types::decision::reputation::SourceReliability;
 
 /// Where a source's reliability number came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum ReliabilitySource {
+pub enum ReliabilitySource {
     /// The estimate learned from the visible decision log.
     Materialized,
     /// The graph's propagated belief confidence (the log holds no outcome of the source).
@@ -32,7 +32,7 @@ pub(super) enum ReliabilitySource {
 
 impl ReliabilitySource {
     /// The `reliability_source` text a row carries.
-    pub(super) fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Materialized => "materialized",
             Self::Prior => "prior",
@@ -43,14 +43,16 @@ impl ReliabilitySource {
 
 /// A source's reliability (none when it abstained) and, when it was learned, its credible
 /// interval.
-pub(super) struct Reliability {
-    pub(super) mean: Option<f64>,
-    pub(super) interval: Option<(f64, f64)>,
-    pub(super) source: ReliabilitySource,
+pub struct Reliability {
+    pub mean: Option<f64>,
+    pub interval: Option<(f64, f64)>,
+    pub source: ReliabilitySource,
+    /// The typed read the number was folded from (what a wire reader reports).
+    pub learned: SourceReliability,
 }
 
 /// The reliability the typed read `learned` yields over the graph `prior`.
-pub(super) fn from_learned(prior: f64, learned: SourceReliability) -> Reliability {
+pub fn from_learned(prior: f64, learned: SourceReliability) -> Reliability {
     match learned {
         SourceReliability::Estimated {
             mean, lower, upper, ..
@@ -58,16 +60,19 @@ pub(super) fn from_learned(prior: f64, learned: SourceReliability) -> Reliabilit
             mean: Some(mean),
             interval: Some((lower, upper)),
             source: ReliabilitySource::Materialized,
+            learned,
         },
         SourceReliability::Absent => Reliability {
             mean: Some(prior),
             interval: None,
             source: ReliabilitySource::Prior,
+            learned,
         },
         SourceReliability::InsufficientHistory { .. } => Reliability {
             mean: None,
             interval: None,
             source: ReliabilitySource::Abstained,
+            learned,
         },
     }
 }
@@ -75,9 +80,21 @@ pub(super) fn from_learned(prior: f64, learned: SourceReliability) -> Reliabilit
 /// The reliability of `source_id` under `ctx`.
 pub(super) fn reliability_of(ctx: &PlanCtx, source_id: &str) -> Result<Reliability, String> {
     let graph = medulla_epistemic::BeliefGraph::from_graph_view(ctx.view);
-    let policy = belief_policy(ctx);
-    let prior = medulla_epistemic::propagate_confidence(&graph, source_id, &policy).confidence;
-    let learned = match ctx.decisions {
+    resolve(&graph, &belief_policy(ctx), ctx.decisions, source_id)
+}
+
+/// The reliability of `source_id`: the graph's propagated belief is the prior, the caller's
+/// visible decision log (when one is bound) supplies the governed estimate. Every reader of
+/// a source's reliability (the `SOURCE RELIABILITY` stage, `EpistemicStatus`,
+/// `RankByProvenance`) resolves through this one function.
+pub fn resolve(
+    graph: &medulla_epistemic::BeliefGraph,
+    policy: &medulla_epistemic::AuthorityPolicy,
+    decisions: Option<&dyn crate::exec::DecisionSource>,
+    source_id: &str,
+) -> Result<Reliability, String> {
+    let prior = medulla_epistemic::propagate_confidence(graph, source_id, policy).confidence;
+    let learned = match decisions {
         Some(log) => log.learned_reliability(source_id, prior, policy.prior_strength)?,
         None => SourceReliability::Absent,
     };

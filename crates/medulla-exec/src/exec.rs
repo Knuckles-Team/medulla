@@ -32,7 +32,7 @@ pub(crate) mod attribution;
 mod decisions;
 // EH-525 — `SOURCE RELIABILITY`, learned from the decision log when one is bound.
 #[cfg(feature = "epistemic")]
-mod reliability;
+pub mod reliability;
 // The OWL membership closure behind `REASON` (and its `WITH PROOF` explanation, EH-448).
 #[cfg(feature = "owl")]
 pub mod reason;

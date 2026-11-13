@@ -256,12 +256,42 @@ pub(crate) async fn handle_epistemic_status(
     let req_id = ctx.req_id;
     let core = ctx.core.clone();
     let snap = core.analysis_snapshot();
-    let resp = match compute_off_lock(req_id, move || epistemic_status_wire(&node_id, &snap)).await
+    let decisions = reputation_source(ctx).await;
+    let resp = match compute_off_lock(req_id, move || {
+        epistemic_status_wire(&node_id, &snap, decisions.as_deref())
+    })
+    .await
     {
-        Ok(result) => result_response::<query_results::EpistemicStatus>(req_id, &result),
+        Ok(Ok(result)) => result_response::<query_results::EpistemicStatus>(req_id, &result),
+        Ok(Err(msg)) => Response::err(
+            req_id,
+            medulla_protocol_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "EpistemicStatus error: ",
+                &msg,
+            ),
+        ),
         Err(resp) => resp,
     };
     Ok(resp)
+}
+
+/// The caller's visible decision log for the readers of learned source reliability
+/// (MEDULLA-DECISION-ENGINE-R118.1.2.3); `None` where the build has no decide handler or the
+/// caller carries no verified tenant, and the reader then keeps the belief-graph prior.
+#[cfg(feature = "epistemic")]
+async fn reputation_source(
+    ctx: &QueryHandlerCtx<'_>,
+) -> Option<std::sync::Arc<dyn medulla_exec::exec::DecisionSource>> {
+    #[cfg(feature = "decide")]
+    {
+        served_reputation_source(ctx.state, ctx.read_authority).await
+    }
+    #[cfg(not(feature = "decide"))]
+    {
+        let _ = ctx;
+        None
+    }
 }
 
 // L53 (EPI-P3-5): the one facet not subsumed by `EpistemicStatus` — a
@@ -640,9 +670,12 @@ pub(crate) async fn handle_causal_counterfactual(
     Ok(resp)
 }
 
-// EPI-P3-3: provenance-aware retrieval ranking. A pure function over
-// request-carried inputs — no graph snapshot needed. Gated `epistemic-causal`
-// at the handler (same fallback convention as above).
+// EPI-P3-3: provenance-aware retrieval ranking. Each candidate's source is resolved
+// through the governed reliability read (MEDULLA-DECISION-ENGINE-R118.1.2.3), which
+// reads the graph's propagated belief as the prior: the snapshot is `rls.filter_view`ed
+// first, the SAME idiom every other graph read applies, so an invisible node never
+// shapes a prior. Gated `epistemic-causal` at the handler (same fallback convention
+// as above).
 #[cfg(feature = "epistemic-causal")]
 pub(crate) async fn handle_rank_by_provenance(
     ctx: &QueryHandlerCtx<'_>,
@@ -650,12 +683,29 @@ pub(crate) async fn handle_rank_by_provenance(
     weights: medulla_protocol_types::protocol::RankWeightsWire,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
+    #[cfg(feature = "security")]
+    let caller = ctx.caller;
+    #[cfg(feature = "security")]
+    let rls = ctx.rls;
+    #[cfg_attr(not(feature = "security"), allow(unused_mut))]
+    let mut snap = ctx.core.analysis_snapshot();
+    #[cfg(feature = "security")]
+    rls.filter_view(caller, &mut snap);
+    let decisions = reputation_source(ctx).await;
     let resp = match compute_off_lock(req_id, move || {
-        rank_by_provenance_wire(&candidates, weights)
+        rank_by_provenance_wire(&candidates, weights, &snap, decisions.as_deref())
     })
     .await
     {
-        Ok(result) => result_response::<query_results::RankByProvenance>(req_id, &result),
+        Ok(Ok(result)) => result_response::<query_results::RankByProvenance>(req_id, &result),
+        Ok(Err(msg)) => Response::err(
+            req_id,
+            medulla_protocol_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "RankByProvenance error: ",
+                &msg,
+            ),
+        ),
         Err(resp) => resp,
     };
     Ok(resp)

@@ -485,20 +485,43 @@ pub(crate) fn causal_counterfactual_wire(
     Ok(medulla_protocol_types::protocol::CausalCounterfactualResult { values: ordered })
 }
 
-/// `Method::RankByProvenance` (EPI-P3-3) — map the request-carried
-/// `RetrievalCandidateWire`s onto `medulla_epistemic::RetrievalCandidate` and run
-/// `medulla_epistemic::rank` under the request's `RankWeightsWire`.
+/// `Method::RankByProvenance` (EPI-P3-3) — resolve each candidate's source through the
+/// governed reliability read (`medulla_exec::exec::reliability::resolve`: the graph's
+/// propagated belief is the prior, the caller's visible decision log the estimate), map the
+/// request-carried `RetrievalCandidateWire`s onto `medulla_epistemic::RetrievalCandidate`
+/// and run `medulla_epistemic::rank` under the request's `RankWeightsWire`. A source that
+/// abstains (too little history) contributes no reliability; the result reports why.
 #[cfg(feature = "epistemic-causal")]
 pub(crate) fn rank_by_provenance_wire(
     candidates: &[medulla_protocol_types::protocol::RetrievalCandidateWire],
     weights: medulla_protocol_types::protocol::RankWeightsWire,
-) -> medulla_protocol_types::protocol::RankByProvenanceResult {
+    view: &medulla_graph_core::graph::GraphView,
+    decisions: Option<&dyn medulla_exec::exec::DecisionSource>,
+) -> Result<medulla_protocol_types::protocol::RankByProvenanceResult, String> {
+    let graph = medulla_epistemic::BeliefGraph::from_graph_view(view);
+    let policy = medulla_epistemic::AuthorityPolicy::default();
+    let mut governed: std::collections::HashMap<
+        &str,
+        medulla_exec::exec::reliability::Reliability,
+    > = std::collections::HashMap::new();
+    for c in candidates {
+        if !governed.contains_key(c.source_id.as_str()) {
+            let resolved =
+                medulla_exec::exec::reliability::resolve(&graph, &policy, decisions, &c.source_id)?;
+            governed.insert(c.source_id.as_str(), resolved);
+        }
+    }
+    let read_of = |source_id: &str| governed[source_id].learned;
+    let by_id: std::collections::HashMap<&str, &str> = candidates
+        .iter()
+        .map(|c| (c.id.as_str(), c.source_id.as_str()))
+        .collect();
     let candidates: Vec<medulla_epistemic::RetrievalCandidate> = candidates
         .iter()
         .map(|c| medulla_epistemic::RetrievalCandidate {
             id: c.id.clone(),
             similarity: c.similarity,
-            source_reliability: c.source_reliability,
+            source_reliability: governed[c.source_id.as_str()].mean,
             freshness: c.freshness,
             calibration: c.calibration.map(|cal| medulla_epistemic::Calibration {
                 interval: cal.interval,
@@ -512,15 +535,116 @@ pub(crate) fn rank_by_provenance_wire(
         evidence_quality: weights.evidence_quality,
     };
     let ranked = medulla_epistemic::rank(&candidates, weights);
-    medulla_protocol_types::protocol::RankByProvenanceResult {
+    Ok(medulla_protocol_types::protocol::RankByProvenanceResult {
         ranked: ranked
             .into_iter()
             .map(|r| medulla_protocol_types::protocol::RankedResultWire {
+                source_reliability: read_of(by_id[r.id.as_str()]),
                 id: r.id,
                 score: r.score,
                 similarity: r.similarity,
                 evidence_quality: r.evidence_quality,
             })
             .collect(),
+    })
+}
+
+#[cfg(all(test, feature = "epistemic-causal"))]
+mod tests {
+    use super::*;
+    use medulla_decision_types::decision::reputation::SourceReliability;
+    use medulla_exec::exec::DecisionSource;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_protocol_types::protocol::RetrievalCandidateWire;
+    use serde_json::{Map, Value};
+
+    /// A decision log whose reputation view answers per source id.
+    struct Governed;
+
+    impl DecisionSource for Governed {
+        fn decision_rows(&self) -> Result<Vec<Map<String, Value>>, String> {
+            Ok(Vec::new())
+        }
+
+        fn learned_reliability(
+            &self,
+            subject: &str,
+            _prior_mean: f64,
+            _prior_strength: f64,
+        ) -> Result<SourceReliability, String> {
+            Ok(match subject {
+                "dense" => SourceReliability::Estimated {
+                    mean: 0.9,
+                    lower: 0.8,
+                    upper: 0.95,
+                    trials: 40,
+                },
+                "sparse" => SourceReliability::InsufficientHistory {
+                    trials: 2,
+                    min_support: 5,
+                },
+                _ => SourceReliability::Absent,
+            })
+        }
+    }
+
+    fn candidate(id: &str, source: &str) -> RetrievalCandidateWire {
+        RetrievalCandidateWire {
+            id: id.to_string(),
+            similarity: 0.6,
+            source_id: source.to_string(),
+            freshness: 0.5,
+            calibration: None,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R118.1.2.3
+    #[test]
+    fn caller_reliability_cannot_replace_the_governed_estimate() {
+        // A caller-supplied reliability scalar is refused at decode: there is no field for it.
+        let smuggled = serde_json::json!({
+            "id": "a", "similarity": 0.6, "source_id": "dense",
+            "source_reliability": 1.0, "freshness": 0.5
+        });
+        assert!(
+            serde_json::from_value::<RetrievalCandidateWire>(smuggled).is_err(),
+            "a caller scalar reliability must be refused"
+        );
+
+        // The governed estimate alone sets the reliability component.
+        let core = GraphCore::new();
+        let view = core.analysis_snapshot();
+        let candidates = [
+            candidate("from-dense", "dense"),
+            candidate("from-sparse", "sparse"),
+        ];
+        let result =
+            rank_by_provenance_wire(&candidates, Default::default(), &view, Some(&Governed))
+                .expect("ranked");
+        assert_eq!(result.ranked[0].id, "from-dense");
+        assert_eq!(result.ranked[1].id, "from-sparse");
+        assert!(matches!(
+            result.ranked[0].source_reliability,
+            SourceReliability::Estimated { mean, .. } if (mean - 0.9).abs() < 1e-12
+        ));
+        assert_eq!(
+            result.ranked[1].source_reliability,
+            SourceReliability::InsufficientHistory {
+                trials: 2,
+                min_support: 5
+            },
+            "a sparse source reports its abstention instead of a number"
+        );
+        // (0.9 + 0 + 0 + 0.5) / 4 and (0 + 0 + 0 + 0.5) / 4: the abstained source counts 0.0.
+        assert!((result.ranked[0].evidence_quality - 0.35).abs() < 1e-9);
+        assert!((result.ranked[1].evidence_quality - 0.125).abs() < 1e-9);
+
+        // Without a decision log every source reads Absent and keeps the graph prior.
+        let absent = rank_by_provenance_wire(&candidates, Default::default(), &view, None)
+            .expect("ranked without a log");
+        assert!(absent
+            .ranked
+            .iter()
+            .all(|r| r.source_reliability == SourceReliability::Absent));
     }
 }

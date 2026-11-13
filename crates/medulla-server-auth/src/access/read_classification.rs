@@ -191,6 +191,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ParseFiles",
     "PersonalizedPageRank",
     "PlanMatViewGet",
+    "RankByProvenance",
     "ReadContinuousQuery",
     "ReadMemorySnapshot",
     "ResolveCandidates",
@@ -281,10 +282,10 @@ pub(super) const REASON_ADMIN_ONLY_CEP: &str =
 // read methods were traced to their handlers in `src/server/handlers/query.rs`. Two
 // (`ResolveConflict`/`ExplainEvidence`) DO build a `BeliefGraph` off `core.analysis_snapshot()`
 // and are now `RLS_ROUTED` above (their handler arms were fixed to `rls.filter_view` the
-// snapshot first -- see those arms' own doc comments). The other three below never touch
+// snapshot first -- see those arms' own doc comments). `RankByProvenance` joined them once it read learned source reliability (priors come from a graph snapshot, `rls.filter_view`ed first). The other two below never touch
 // `core`/`state`/`GraphView` at all.
 pub(super) const REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE: &str =
-    "src/server/handlers/query.rs's causal_estimate_wire/causal_counterfactual_wire/rank_by_provenance_wire (Method::CausalEstimate/CausalCounterfactual/RankByProvenance) build an ephemeral medulla_epistemic::CausalGraph, or rank medulla_epistemic::RetrievalCandidates, purely from the REQUEST's own variables/do_values/actual/candidates/weights fields -- these three handler arms never call core.analysis_snapshot() or reference state/core/GraphView at all (confirmed by reading each arm and its wire fn body), so there is no tenant-owned graph row in play to RLS-scope; the same posture as REASON_PURE_COMPUTE's finance/datascience primitives, just epistemic-causal's own request-scoped SCM/ranking inputs instead";
+    "src/server/handlers/query.rs's causal_estimate_wire/causal_counterfactual_wire (Method::CausalEstimate/CausalCounterfactual) build an ephemeral medulla_epistemic::CausalGraph purely from the REQUEST's own variables/do_values/actual fields -- these two handler arms never call core.analysis_snapshot() or reference state/core/GraphView at all (confirmed by reading each arm and its wire fn body), so there is no tenant-owned graph row in play to RLS-scope; the same posture as REASON_PURE_COMPUTE's finance/datascience primitives, just epistemic-causal's own request-scoped SCM inputs instead";
 // t1-grounding-0802 follow-up audit: `ClusterMembers` was added (ADR-1/W1.1
 // engine-authoritative cluster-topology discovery) without a classification here.
 // Auth-unification wave 1 (Workstream C): `GetIdentity` is the identity READ-BACK that
@@ -680,7 +681,6 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE
     ("CausalCounterfactual", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
     ("CausalEstimate", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
-    ("RankByProvenance", REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
     // REASON_NATIVE_RESERVATION_READ
     ("QueryWorkItemReservation", REASON_NATIVE_RESERVATION_READ),
     ("ResourceReservationStatus", REASON_NATIVE_RESERVATION_READ),

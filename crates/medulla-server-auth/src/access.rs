@@ -1727,17 +1727,17 @@ mod read_rls_coverage_tests {
     }
 
     #[test]
-    fn rank_by_provenance_is_a_documented_non_row_scoped_exception() {
-        let non_row: HashMap<&'static str, &'static str> = NON_ROW_SCOPED.iter().copied().collect();
-        assert_eq!(
-            non_row.get("RankByProvenance").copied(),
-            Some(REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE),
-            "RankByProvenance's handler (rank_by_provenance_wire) never reads \
-             core/state/GraphView -- pure compute over the request's own candidates/weights"
+    fn rank_by_provenance_is_rls_routed() {
+        assert!(
+            RLS_ROUTED.contains(&"RankByProvenance"),
+            "RankByProvenance's handler resolves each candidate's source prior from a graph \
+             snapshot (explain_handlers.rs's handle_rank_by_provenance) and must \
+             rls.filter_view it first -- RLS_ROUTED"
         );
-        assert!(!RLS_ROUTED.contains(&"RankByProvenance"));
+        let non_row: HashMap<&'static str, &'static str> = NON_ROW_SCOPED.iter().copied().collect();
         let not_audited: HashMap<&'static str, &'static str> =
             NOT_YET_AUDITED.iter().copied().collect();
+        assert!(!non_row.contains_key("RankByProvenance"));
         assert!(!not_audited.contains_key("RankByProvenance"));
     }
 

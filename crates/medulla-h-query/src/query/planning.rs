@@ -734,22 +734,34 @@ async fn served_decision_leg(
     if !required && !plan_reads_reputation(&plan.ops) {
         return Ok(None);
     }
-    let carrier = read_authority.and_then(GraphReadAuthority::carrier);
-    let Some(carrier) = carrier else {
-        if !required {
-            return Ok(None);
-        }
+    let source = served_reputation_source(state, read_authority).await;
+    if read_authority
+        .and_then(GraphReadAuthority::carrier)
+        .is_none()
+        && required
+    {
         medulla_kernel::metrics::process().access_denied();
         return Err("ACCESS_DENIED: DECISIONS requires a verified tenant carrier".to_string());
-    };
-    let source = match medulla_server_ops::api::admin::decide_seam(state).await {
-        Some(decide) => decide.decision_source(state, carrier).await,
-        None => None,
-    };
+    }
     if source.is_none() && required {
         return Err("DECISIONS: the decision log is unavailable on this server".to_string());
     }
     Ok(source)
+}
+
+/// The caller's visible decision log for a reader of learned reputation (`SOURCE
+/// RELIABILITY`, `EpistemicStatus`, `RankByProvenance`), derived from the verified carrier
+/// only; `None` without a carrier or a log, where the reader keeps the belief-graph prior.
+#[cfg(all(feature = "query", feature = "decide"))]
+pub(crate) async fn served_reputation_source(
+    state: &Arc<RwLock<ServerState>>,
+    read_authority: Option<&GraphReadAuthority>,
+) -> Option<Arc<dyn medulla_exec::exec::DecisionSource>> {
+    let carrier = read_authority.and_then(GraphReadAuthority::carrier)?;
+    match medulla_server_ops::api::admin::decide_seam(state).await {
+        Some(decide) => decide.decision_source(state, carrier).await,
+        None => None,
+    }
 }
 
 /// Parse UQL `text` into the `wire::Plan` every UQL front-end runs; a parse error is

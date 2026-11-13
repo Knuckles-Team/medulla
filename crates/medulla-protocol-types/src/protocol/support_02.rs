@@ -294,11 +294,15 @@ pub enum ExplainBeliefResponse {
 
 /// Wire mirror of `medulla_epistemic::AuthorityPolicy` — the confidence-weighting policy an
 /// `EpistemicStatus` was computed under ("under whose authority").
+///
+/// `source_reliability` is the governed read of the claim's source from the caller's visible
+/// decision log (MEDULLA-DECISION-ENGINE-R118.1.2.3): absent, insufficient history, or an
+/// estimate. A caller can never supply it.
 #[cfg(feature = "epistemic")]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct AuthorityPolicyWire {
-    pub source_reliability: f64,
+    pub source_reliability: medulla_decision_types::decision::reputation::SourceReliability,
     pub attack_multiplier: f64,
     pub prior_strength: f64,
 }
