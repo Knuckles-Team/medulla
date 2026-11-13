@@ -162,6 +162,8 @@ mod column_lineage;
 #[cfg(feature = "query")]
 mod context_compile;
 #[cfg(feature = "query")]
+mod corpus_retrieve;
+#[cfg(feature = "query")]
 mod schema_projections;
 #[cfg(all(feature = "query", feature = "federation-sql"))]
 pub use column_lineage::derive_lineage;
@@ -173,6 +175,8 @@ pub(crate) use context_compile::handle_context_compile;
 mod retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
+#[cfg(feature = "query")]
+pub(crate) use corpus_retrieve::handle_corpus_retrieve;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;

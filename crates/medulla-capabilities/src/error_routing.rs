@@ -411,6 +411,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RetrievalRound",
         &["RETRIEVAL_CONTRACT_INVALID", "RETRIEVAL_ROUND_LIMIT_REQUIRED"],
     ),
+    // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
+    ("CorpusRetrieve", &["CORPUS_REGEX_TOO_COMPLEX"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.5: an empty provenance list or an unresolved key.

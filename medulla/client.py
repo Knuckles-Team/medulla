@@ -6948,6 +6948,44 @@ class GraphOperationsClient:
             raise RuntimeError("ReadSpan must answer with an object")
         return result
 
+    async def corpus_retrieve(
+        self,
+        mode: str,
+        *,
+        pattern: str | None = None,
+        label: str | None = None,
+        entity: str | None = None,
+        session_id: str | None = None,
+        answer_ref: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Read the corpus in one closed mode (MEDULLA-FEDERATED-QUERY-R653.3).
+
+        ``mode`` is ``grep`` (``pattern``, optional ``label``), ``entity``
+        (``entity``), ``session`` (``session_id``, optional literal ``pattern``) or
+        ``lineage`` (``answer_ref``). Returns the rows of that mode only:
+        ``matches``, ``entity``, ``session`` or ``lineage``. A pattern that does not
+        compile within the size limits is refused ``CORPUS_REGEX_TOO_COMPLEX``.
+        """
+        request: dict[str, Any] = {"mode": mode, "limit": limit}
+        for key, value in (
+            ("pattern", pattern),
+            ("label", label),
+            ("entity", entity),
+            ("session_id", session_id),
+            ("answer_ref", answer_ref),
+        ):
+            if value is not None:
+                request[key] = value
+        result = await self._client._send(
+            "CorpusRetrieve", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("CorpusRetrieve must answer with an object")
+        return result
+
     async def context_compile(
         self,
         query_text: str,

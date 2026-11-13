@@ -20,6 +20,7 @@ mod core_decay;
 mod core_dirty;
 mod core_edge_lifecycle;
 mod core_edge_queries;
+mod core_expand;
 mod core_fork;
 mod core_helpers;
 mod core_index_changes;
@@ -63,6 +64,7 @@ pub use schema_sources::{
     MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
+pub use core_expand::{edge_weight, expand_hops, ExpandedHit};
 pub use view::GraphView;
 #[cfg(feature = "result-cache")]
 pub use view::ProjectionScope;

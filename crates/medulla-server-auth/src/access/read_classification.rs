@@ -94,6 +94,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "DiscountedReturn",
     "ContextCompile",
     "RetrievalRound",
+    "CorpusRetrieve",
     "Discover",
     "DistributedCompute",
     "EdgeCount",

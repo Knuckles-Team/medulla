@@ -1233,3 +1233,8 @@ Order: R733, then R734 and R735 in parallel.
 ### Served context compile (R650.3 to R650.6)
 
 `Method::ContextCompile { request }` is registered by the seven-step recipe: variant in `method_05.rs`, policy `query:retrieval` in `domains/query.rs`, result `Raw<ContextBundle>` in `result_contract/query.rs`, the RLS-routed read table, the canonical read arm, `add_typed_handler_errors` codes, and `medulla/client.py::context_compile`. `handle_context_compile` validates, serves a cached bundle by `BundleKey` when one exists, else gathers the lexical and semantic arms off-lock, measures spans, runs `filter_hits`, calls `compile`. Bench `context_bundle` guards the compile (p50 2 ms, p99 12 ms). Decisions: `research.md`, section "Served context compile decisions".
+
+### Served corpus retrieve (R653.2, R653.3, R653.8 to R653.10)
+
+`Method::CorpusRetrieve { request }` follows the seven-step recipe (variant in `method_05.rs`, policy `query:retrieval`, result `Raw<CorpusResult>`, read class, routed code `CORPUS_REGEX_TOO_COMPLEX`, client `corpus_retrieve`). `handle_corpus_retrieve` fills a `CorpusView` from the projected core and calls `medulla_plan::corpus_retrieval::dispatch`, which calls `grep_corpus`, `entity_context`, `session_hits` or `lineage_path`. `expand_hops` now lives in `medulla-graph-core`.
+

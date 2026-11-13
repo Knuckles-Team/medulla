@@ -91,3 +91,13 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - `run_round` takes the `PlanCtx` the handler binds, so the plan runs on the same row-level-security snapshot, tenant narrowing and legs as `UnifiedQuery`. The method writes and caches nothing.
 - A caller's round limit may lower the knob value and never raise it, for sufficiency as for stop.
 - `decide_stop` stays pure: the two progress checks arrive as a measured `RoundProgress` built by `round_progress`, and apply only when the context says the round supplied measured evidence. A confidence below the calibrated baseline reports margin 0 so the verdict stays in [0, 1].
+
+## Corpus retrieval decisions (R653.2, R653.3, R653.8 to R653.10)
+
+- The wire types sit in `medulla-types` (the protocol crate carries the request) and `medulla-plan` re-exports them, as the bundle records did. `expand_hops` moves to `medulla-graph-core`: `medulla-h-graph` and `medulla-h-query` are siblings, so a shared walk has to sit below both; there is still exactly one.
+- The mode functions read the core only through the `CorpusView` trait; the handler fills it from the row-projected core, so no mode can reach an unreadable row. The request has no `hops` field, so the entity mode walks 2 hops (the spec maximum) and reports that depth.
+- Lineage edges run answer to source (`DERIVED_FROM`, `GENERATED_BY`, `CITES` leave the answer); each reached node yields one shortest path, breadth first, ordered by node id, bounded by `retrieval.lineage_depth`.
+- A transcript turn is a graph node of type `TranscriptTurn` with `session_id`, `ordinal`, `role` and `content`.
+- Grep scans the string properties of each node (optionally only one `type`), line by line; `start` and `end` are byte offsets within the line.
+- R703.5 and R722.5 are not in this change: the denied and timeout reads of R703.5 need the registered access port of R703.3, and R722.5 needs the foreign provenance columns; both stay queued.
+

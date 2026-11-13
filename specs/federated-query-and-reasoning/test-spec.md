@@ -1046,7 +1046,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.2` | `crates/medulla-graph-algos/src/graphlearn/nary.rs::tests::unseen_member_scores_inductively` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.3` | `tests/graphlearn_nary_served.rs::refusals_and_unchanged_graph_revision` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R086.100.4` | `tests/graphlearn_nary_served.rs::nary_hypotheses_are_read_only_and_ordered` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `crates/medulla-h-graph/src/graph_ops/discover_plan.rs::tests::hop_cap_and_order` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `crates/medulla-graph-core/src/graph/core_expand.rs::tests::hop_cap_and_order` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `tests/retrieval/test_discover_planning_served.py::test_two_hop_neighbour_is_returned_with_path` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::cache_and_materialize_candidates_respect_capability` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `tests/federation/test_plan_evolution_served.py::test_cache_candidate_kept_when_faster` |

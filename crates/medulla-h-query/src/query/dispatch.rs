@@ -112,6 +112,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R653.3: one corpus read over the caller's projected core.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::CorpusRetrieve { request } => {
+            return Ok(handle_corpus_retrieve(hctx, *request).await)
+        }
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;

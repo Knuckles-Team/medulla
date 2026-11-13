@@ -62,6 +62,7 @@ pub mod code_health;
 // MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
+pub mod corpus_retrieval;
 pub mod evidence_class;
 pub mod external_schema;
 pub mod ontology_diff;

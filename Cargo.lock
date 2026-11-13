@@ -6365,6 +6365,7 @@ dependencies = [
  "petgraph",
  "proptest",
  "rayon",
+ "regex",
  "rmp-serde",
  "serde",
  "serde_json",

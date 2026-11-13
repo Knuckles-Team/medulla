@@ -627,6 +627,12 @@ $($variants)*
     RetrievalRound {
         request: Box<medulla_result_types::retrieval_round::RoundRequest>,
     },
+
+    /// MEDULLA-FEDERATED-QUERY-R653.3: grep, entity, session or lineage rows over
+    /// the caller's projected core. A read; nothing is committed.
+    CorpusRetrieve {
+        request: Box<medulla_types::corpus_retrieval::CorpusRequest>,
+    },
         ]);
     };
 }

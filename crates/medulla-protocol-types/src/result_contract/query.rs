@@ -63,6 +63,8 @@ method_results! {
     // MEDULLA-FEDERATED-QUERY-R081.11: the rows and verdicts of one retrieval round.
     #[cfg(feature = "query")]
     RetrievalRound(RetrievalRound) => Json<medulla_result_types::retrieval_round::RoundResult>;
+    // MEDULLA-FEDERATED-QUERY-R653.3: the rows of one corpus mode.
+    CorpusRetrieve(CorpusRetrieve) => Raw<medulla_types::corpus_retrieval::CorpusResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     #[cfg(feature = "query")]
