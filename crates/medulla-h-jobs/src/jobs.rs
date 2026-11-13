@@ -103,6 +103,7 @@ mod prelude_std;
 mod program_validation;
 mod publication;
 mod results_association;
+mod schedule_tick;
 mod schedules;
 #[cfg(feature = "program-optimization")]
 mod results_program;

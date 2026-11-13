@@ -65,8 +65,9 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T059 [P] [US4] MEDULLA-PLACEMENT-R751.750 Model: Unified scheduling, leader election and cost-bounded resource allocation.
 - [x] T060 [US4] MEDULLA-PLACEMENT-R751.751 Behavior: Unified scheduling, leader election and cost-bounded resource allocation.
 - [x] T061 [US4] MEDULLA-PLACEMENT-R751.752 Refusal: Unified scheduling, leader election and cost-bounded resource allocation.
-- [ ] T088 [US4] MEDULLA-PLACEMENT-R751.761 Leader lease record with an explicit state machine
-- [ ] T089 [US4] MEDULLA-PLACEMENT-R751.762 Task-kind to job-spec table
+- [x] T088 [US4] MEDULLA-PLACEMENT-R751.761 Leader lease record with an explicit state machine
+- [x] T089 [US4] MEDULLA-PLACEMENT-R751.762 Task-kind to job-spec table
+- [ ] T090 [US4] MEDULLA-PLACEMENT-R751.763 Served test harness can start two engines sharing one durable store
 - [ ] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.
 - [x] T063 [US4] MEDULLA-PLACEMENT-R751.754 Owned schedule record.
 - [ ] T064 [US4] MEDULLA-PLACEMENT-R751.755 Per-schedule budget.

@@ -289,6 +289,47 @@ impl ReleaseChannel {
 /// Longest schedule name or task kind, in characters.
 pub const MAX_SCHEDULE_TEXT: usize = 128;
 
+/// The job a scheduled task kind submits (MEDULLA-PLACEMENT-R751.762).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ScheduledJob {
+    /// The task kind a schedule names.
+    pub task_kind: &'static str,
+    /// Association-rule mining parameters of the submitted job.
+    pub algorithm: &'static str,
+    pub min_support: f64,
+    pub min_confidence: f64,
+}
+
+/// The closed table of task kinds. A kind has exactly one job spec; a kind without an entry is
+/// refused at schedule creation.
+pub const SCHEDULE_TASK_KINDS: &[ScheduledJob] = &[
+    ScheduledJob {
+        task_kind: "association.refresh",
+        algorithm: "fpgrowth",
+        min_support: 0.1,
+        min_confidence: 0.5,
+    },
+    ScheduledJob {
+        task_kind: "association.rebuild",
+        algorithm: "eclat",
+        min_support: 0.05,
+        min_confidence: 0.5,
+    },
+];
+
+/// The job spec of `task_kind`, or `INVALID_SCHEDULE`.
+pub fn job_for_task_kind(task_kind: &str) -> Result<&'static ScheduledJob, ScheduleError> {
+    SCHEDULE_TASK_KINDS
+        .iter()
+        .find(|job| job.task_kind == task_kind)
+        .ok_or_else(|| {
+            ScheduleError::new(
+                INVALID_SCHEDULE,
+                format!("task kind {task_kind:?} has no job spec"),
+            )
+        })
+}
+
 /// One owned schedule: the body of a `Schedule` node in the tenant graph
 /// (MEDULLA-PLACEMENT-R751.754). The owner is the principal that created it;
 /// only the owner may update or delete it.
@@ -319,6 +360,7 @@ impl ScheduleRecord {
                 ));
             }
         }
+        job_for_task_kind(&self.task_kind)?;
         self.spec.validate()
     }
 
@@ -481,7 +523,7 @@ mod tests {
                 minute: "0".into(),
                 hour: "*/6".into(),
             },
-            task_kind: "sweep".into(),
+            task_kind: "association.refresh".into(),
         };
         assert!(record.validate().is_ok());
         assert!(record.authorize_write("alice").is_ok());

@@ -76,6 +76,7 @@ pub(super) fn ensure_job_workers(
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
+        super::schedule_tick::ensure_schedule_tick(state.clone());
         let workers = std::env::var("MEDULLA_ANALYTICS_WORKERS")
             .ok()
             .and_then(|value| value.parse::<usize>().ok())

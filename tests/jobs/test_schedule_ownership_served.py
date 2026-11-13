@@ -34,9 +34,9 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
     clean_graph.tenants.create(graph, "Team")
     name = f"nightly-{uuid.uuid4().hex[:8]}"
 
-    created = clean_graph.jobs.schedule_create(graph, name, CRON, "sweep")
+    created = clean_graph.jobs.schedule_create(graph, name, CRON, "association.refresh")
     assert created["name"] == name
-    assert created["task_kind"] == "sweep"
+    assert created["task_kind"] == "association.refresh"
     assert created["owner"]
 
     assert clean_graph.jobs.schedule_get(graph, name) == created
@@ -45,21 +45,26 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
 
     # A duplicate create does not replace the record.
     with pytest.raises((EngineResponseError, RuntimeError), match="SCHEDULE_EXISTS"):
-        clean_graph.jobs.schedule_create(graph, name, CRON, "other")
+        clean_graph.jobs.schedule_create(graph, name, CRON, "association.rebuild")
 
     updated = clean_graph.jobs.schedule_update(
-        graph, name, {"Interval": {"every_ms": 60_000, "start_ms": 0}}, "sweep-2"
+        graph,
+        name,
+        {"Interval": {"every_ms": 60_000, "start_ms": 0}},
+        "association.rebuild",
     )
-    assert updated["task_kind"] == "sweep-2"
+    assert updated["task_kind"] == "association.rebuild"
     assert updated["owner"] == created["owner"]
 
     # Invalid cron fields and a zero interval are refused with a typed error,
     # on create and on update, and leave the stored record unchanged.
     bad_cron = {"Cron": {"minute": "61", "hour": "*"}}
     with pytest.raises((EngineResponseError, RuntimeError), match="INVALID_SCHEDULE"):
-        clean_graph.jobs.schedule_create(graph, f"{name}-bad", bad_cron, "sweep")
+        clean_graph.jobs.schedule_create(
+            graph, f"{name}-bad", bad_cron, "association.refresh"
+        )
     with pytest.raises((EngineResponseError, RuntimeError), match="INVALID_SCHEDULE"):
-        clean_graph.jobs.schedule_update(graph, name, bad_cron, "sweep")
+        clean_graph.jobs.schedule_update(graph, name, bad_cron, "association.refresh")
     assert clean_graph.jobs.schedule_get(graph, name) == updated
 
     # A principal that does not own the schedule can neither change nor remove it.
@@ -68,7 +73,7 @@ def test_schedule_crud_is_owner_scoped_and_validates_cron(clean_graph):
         with pytest.raises(
             (EngineResponseError, RuntimeError), match="SCHEDULE_NOT_OWNER"
         ):
-            other.jobs.schedule_update(graph, name, CRON, "hijack")
+            other.jobs.schedule_update(graph, name, CRON, "association.rebuild")
         with pytest.raises(
             (EngineResponseError, RuntimeError), match="SCHEDULE_NOT_OWNER"
         ):

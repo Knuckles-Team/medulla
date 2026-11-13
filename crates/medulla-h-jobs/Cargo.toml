@@ -53,6 +53,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc", optional = true }
 medulla-retrieval = { path = "../medulla-retrieval" }
 
 [features]
+security = ["medulla-server-api/security"]
 default = []
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
 jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]

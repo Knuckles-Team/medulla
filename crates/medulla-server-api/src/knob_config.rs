@@ -217,6 +217,8 @@ knobs! {
     context_proof_edges_per_item: u64 = "context.proof_edges_per_item", U64(3), [0, 16], "edges", Tunable;
     /// Context bundle: least value per token a chosen span must carry.
     context_value_floor_micro_per_token: u64 = "context.value_floor_micro_per_token", U64(0), [0, 1_000_000], "micro-units", Tunable;
+    /// Executor schedule tick: seconds between passes over the due schedule windows.
+    jobs_schedule_poll_s: u64 = "jobs.schedule_poll_s", U64(1), [1, 60], "seconds", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.

@@ -77,3 +77,11 @@ default = []
 name = "claim_pacing"
 path = "benches/claim_pacing.rs"
 harness = false
+
+# MEDULLA-PLACEMENT-R751.753 nightly hot-path proof: one tick pass over 100,000 schedules;
+# p50 < 3 ms, p99 < 9 ms, memory < 24 MiB.
+# Run: `cargo bench -p medulla-jobs schedule_tick`.
+[[bench]]
+name = "schedule_tick"
+path = "benches/schedule_tick.rs"
+harness = false

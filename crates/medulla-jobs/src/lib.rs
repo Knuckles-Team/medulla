@@ -64,6 +64,7 @@ pub mod model;
 pub mod result;
 // MEDULLA-PLACEMENT-R751 — unified schedule ticks, fenced daemon leadership and
 // cost-bounded allocation slices.
+pub mod leader_lease;
 pub mod schedule;
 pub mod store;
 
