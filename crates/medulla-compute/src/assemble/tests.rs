@@ -8,6 +8,7 @@ mod golden;
 mod oracle;
 mod planted;
 mod primitive;
+mod prompt;
 mod refusal;
 mod routing;
 mod template;

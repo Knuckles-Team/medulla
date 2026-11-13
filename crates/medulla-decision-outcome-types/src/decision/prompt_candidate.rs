@@ -34,6 +34,9 @@ pub struct PromptCandidate {
     pub serves: BTreeSet<String>,
     /// The catalog's lowercase SHA-256 digest (64 hexadecimal characters).
     pub digest: String,
+    /// The confidence of the prompt's harness component, a number in [0, 1]
+    /// as Q32 fixed point (`1.0` is `1 << 32`) (MEDULLA-DECISION-ENGINE-R814.2).
+    pub confidence_q32: i64,
 }
 
 impl PromptCandidate {
@@ -64,6 +67,7 @@ mod tests {
             role: PromptRole::System,
             serves: BTreeSet::from(["urn:task:incident-triage".into()]),
             digest: "a".repeat(64),
+            confidence_q32: 1 << 32,
         };
         let encoded = serde_json::to_string(&candidate).unwrap();
         let decoded: PromptCandidate = serde_json::from_str(&encoded).unwrap();

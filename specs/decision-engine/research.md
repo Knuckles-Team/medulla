@@ -746,3 +746,9 @@ The rewrite proposal names the graph that holds the record's snapshot head (`gra
 - The corpus builder is a pure function over typed `ScoreRow`s under a caller-bound `CorpusPolicy`; it writes nothing. A value outside its declared range is refused rather than clamped, so a bad score row never trains silently.
 - Every grader kind may train. Only kinds whose `decides_promotion()` holds, on a held-out split, count as promotion evidence (R804.4), reported in `promotion_deciding`.
 - The job path stages the built corpus; the served end-to-end proof is the root slice test of the R813 rollup, which lands with the rollup.
+
+## System-prompt selection (R814.2)
+
+- `prompt_candidate.min_match_ratio` is a decision-policy knob (DE-R059.1-KNOBS), so it sits in the decision-types knob families and the selector takes its resolved value as a parameter; the selector reads no policy itself.
+- The legality test is exact integer arithmetic (`matched * 1_000_000 >= min * required`), never a rounded Q32 ratio, so a boundary ratio is never lost to rounding. Only the score uses Q32.
+- Only system-role candidates are considered; task and template prompts stay tool guidance. The served L3 journey through `AgentAssemble` is the root slice test of the R814 rollup.

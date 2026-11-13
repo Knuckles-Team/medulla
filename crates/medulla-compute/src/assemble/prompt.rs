@@ -7,9 +7,11 @@
 //! under the versioned [`RenderPolicy`]. Equal inputs give equal bytes and the
 //! same SHA-256 `render_digest`; any refusal yields no result.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_agent_types::agent_component::{facts::ValidatedPrompt, frame_pins};
+use medulla_decision_outcome_types::decision::prompt_candidate::PromptCandidate;
+use medulla_decision_types::decision::record::outcome::AbstainReason;
 use medulla_types::contract::Digest256;
 use serde_json::Value;
 
@@ -142,6 +144,81 @@ pub fn render_prompt(
         bytes,
         render_digest,
     })
+}
+
+/// The prompt `select_system_prompt` picked and why (MEDULLA-DECISION-ENGINE-R814.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedPrompt {
+    pub component_id: String,
+    pub digest: String,
+    /// `match_ratio * confidence`, Q32 (`1.0` is `1 << 32`).
+    pub score_q32: i64,
+}
+
+/// Pick the system prompt for one slot (MEDULLA-DECISION-ENGINE-R814.2).
+///
+/// The match ratio is the share of `required` that a candidate `serves`. A
+/// candidate is legal when its ratio is at least `min_match_micros` (the
+/// `prompt_candidate.min_match_ratio` knob, millionths), compared exactly in
+/// integers. The score is `match_ratio * confidence` in Q32; the highest score
+/// wins and ties go to the lowest `component_id`. Only system-role candidates
+/// are considered. When none is legal the answer is
+/// `UncoveredCapability` naming the first required capability, in sorted
+/// order, that no considered candidate serves (or the first required one when
+/// every capability is served somewhere but no single prompt is legal). The
+/// function never invents a prompt.
+pub fn select_system_prompt(
+    required: &BTreeSet<String>,
+    candidates: &[PromptCandidate],
+    min_match_micros: i64,
+) -> Result<SelectedPrompt, AbstainReason> {
+    let total = required.len() as u128;
+    let mut best: Option<(i64, &PromptCandidate)> = None;
+    for candidate in candidates.iter().filter(|c| c.is_system_candidate()) {
+        let matched = required.intersection(&candidate.serves).count() as u128;
+        let legal = if total == 0 {
+            true
+        } else {
+            matched * 1_000_000 >= (min_match_micros.max(0) as u128) * total
+        };
+        if !legal || candidate.confidence_q32 < 0 {
+            continue;
+        }
+        let ratio_q32 = if total == 0 {
+            1u128 << 32
+        } else {
+            (matched << 32) / total
+        };
+        let score = ((ratio_q32 * candidate.confidence_q32 as u128) >> 32) as i64;
+        let better = match best {
+            None => true,
+            Some((top, held)) => {
+                score > top || (score == top && candidate.component_id < held.component_id)
+            }
+        };
+        if better {
+            best = Some((score, candidate));
+        }
+    }
+    if let Some((score_q32, candidate)) = best {
+        return Ok(SelectedPrompt {
+            component_id: candidate.component_id.clone(),
+            digest: candidate.digest.clone(),
+            score_q32,
+        });
+    }
+    let served: BTreeSet<&String> = candidates
+        .iter()
+        .filter(|c| c.is_system_candidate())
+        .flat_map(|c| c.serves.iter())
+        .collect();
+    let iri = required
+        .iter()
+        .find(|iri| !served.contains(iri))
+        .or_else(|| required.iter().next())
+        .cloned()
+        .unwrap_or_default();
+    Err(AbstainReason::UncoveredCapability { iri })
 }
 
 #[cfg(test)]

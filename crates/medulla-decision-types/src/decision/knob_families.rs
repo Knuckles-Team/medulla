@@ -9,6 +9,7 @@ pub mod memory;
 pub mod participant;
 pub mod placement;
 pub mod profile;
+pub mod prompt_candidate;
 pub mod resolve_entity;
 pub mod red_team;
 pub mod round_verdict;
@@ -30,6 +31,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     participant::KNOBS,
     placement::KNOBS,
     profile::KNOBS,
+    prompt_candidate::KNOBS,
     task_plan::KNOBS,
     resolve_entity::KNOBS,
     red_team::KNOBS,
