@@ -2174,7 +2174,8 @@ impl TableStore {
 
     /// Install the bound on the deferred foreign keys one transaction may touch
     /// (registry knob `tables.deferred_fk_pending_max`, MEDULLA-ENGINE-PARITY-R011.1).
-    /// Set once by the composition root; a second install is ignored.
+    /// Set once by the composition root; a second install is ignored. A store
+    /// without an install uses the knob's registry default.
     pub fn install_deferred_fk_pending_max(&self, max: usize) {
         self.deferred_fk.install_max_pending(max);
     }

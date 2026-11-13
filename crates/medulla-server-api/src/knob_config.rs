@@ -248,7 +248,7 @@ knobs! {
     /// User tables: times an auto-commit UPDATE or DELETE retries after `TXN_CONFLICT` before `TXN_RETRY_EXHAUSTED` (MEDULLA-ENGINE-PARITY-R004.2).
     tables_occ_max_retries: u64 = "tables.occ_max_retries", U64(3), [0, 10], "retries", Tunable;
     /// User tables: most deferred foreign keys one transaction may touch; a larger transaction refuses `DEFERRED_FK_PENDING_EXCEEDED` (MEDULLA-ENGINE-PARITY-R011.1).
-    tables_deferred_fk_pending_max: u64 = "tables.deferred_fk_pending_max", U64(100_000), [1, 10_000_000], "keys", Tunable;
+    tables_deferred_fk_pending_max: u64 = "tables.deferred_fk_pending_max", U64(medulla_tables::DEFERRED_FK_PENDING_MAX_DEFAULT), [1, 10_000_000], "keys", Tunable;
     /// Trace critique read: most nodes one page returns (MEDULLA-DECISION-ENGINE-R133.7.3).
     trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
     /// Batch: most operations one served `Batch` carries; a larger batch refuses `BATCH_TOO_LARGE` before any operation runs (MEDULLA-DURABLE-KERNEL-R871).

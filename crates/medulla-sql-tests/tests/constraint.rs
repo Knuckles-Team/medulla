@@ -325,3 +325,22 @@ fn deferred_pending_set_is_bounded_by_the_knob() {
     assert!(store.scan("children").unwrap().is_empty());
     let _ = std::fs::remove_file(&path);
 }
+
+// spec: MEDULLA-ENGINE-PARITY-R011.1
+#[test]
+fn ephemeral_store_without_an_installed_bound_commits_a_deferred_foreign_key() {
+    // An ephemeral store (no composition root installed the knob value) uses the
+    // registry default, never zero, so a deferred-key transaction commits.
+    let (store, path) = TableStore::open_temp().unwrap();
+    parent_and_child(&store, true, true);
+    let mut txn = TableTxn::new();
+    txn.push(insert(
+        "children",
+        &["id", "parent_id"],
+        vec![json!(1), json!(10)],
+    ));
+    txn.push(insert("parents", &["id"], vec![json!(10)]));
+    store.commit_txn(&txn).unwrap();
+    assert_eq!(store.scan("children").unwrap().len(), 1);
+    let _ = std::fs::remove_file(&path);
+}

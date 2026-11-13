@@ -76,6 +76,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `process.document_max_bytes` | u64 | 16777216 | [1024, 268435456] | bytes | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_BYTES` |
 | `process.document_max_depth` | u64 | 64 | [4, 256] | levels | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_DEPTH` |
 | `sync.max_records` | u64 | 50000 | [1, 1000000] | records | Tunable | `MEDULLA_SYNC_MAX_RECORDS` |
+| `tables.deferred_fk_pending_max` | u64 | 100000 | [1, 10000000] | keys | Tunable | `MEDULLA_TABLES_DEFERRED_FK_PENDING_MAX` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
 | `context_budget.relevance_min` | f64 | 0.5 | [0.0, 1.0] | ratio | Tunable | - |
 | `trace.critique_page_limit` | u64 | 64 | [1, 256] | rows | Tunable | `MEDULLA_TRACE_CRITIQUE_PAGE_LIMIT` |

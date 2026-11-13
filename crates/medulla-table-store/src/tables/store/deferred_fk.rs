@@ -7,7 +7,8 @@
 //! commit follows the keys the transaction touched and never the size of a
 //! table. Each lookup goes through a secondary index on the key's first column
 //! when one exists. The pending set is bounded by the registry knob
-//! `tables.deferred_fk_pending_max`; a transaction that touches more keys is
+//! `tables.deferred_fk_pending_max` (a store without an installed value uses the
+//! knob's registry default); a transaction that touches more keys is
 //! refused `DEFERRED_FK_PENDING_EXCEEDED` and writes nothing.
 
 use std::collections::HashSet;
@@ -25,8 +26,6 @@ use super::{
 
 /// Refusal when one transaction touches more deferred keys than the knob allows.
 pub const DEFERRED_FK_PENDING_EXCEEDED: &str = "DEFERRED_FK_PENDING_EXCEEDED";
-/// Refusal when a deferred key is touched before the pending bound is installed.
-pub const DEFERRED_FK_LIMIT_UNSET: &str = "DEFERRED_FK_LIMIT_UNSET";
 
 /// The store-wide settings and metric of the deferred-key pass. Clones of a
 /// `TableStore` share one value.
@@ -40,6 +39,14 @@ impl DeferredFkState {
     /// Install the pending bound (`tables.deferred_fk_pending_max`). Set once.
     pub(super) fn install_max_pending(&self, max: usize) {
         let _ = self.max_pending.set(max);
+    }
+
+    /// The bound in force: the value the composition root installed from the
+    /// registry knob, else the knob's registry default, never zero.
+    pub(super) fn max_pending(&self) -> usize {
+        self.max_pending.get().copied().unwrap_or(
+            usize::try_from(medulla_tables::DEFERRED_FK_PENDING_MAX_DEFAULT).unwrap_or(usize::MAX),
+        )
     }
 
     /// Keys checked by every end-of-transaction pass since the store opened.
@@ -159,9 +166,7 @@ impl DeferredFkPending {
         if !self.seen.insert(signature) {
             return Ok(());
         }
-        let max = *state.max_pending.get().ok_or_else(|| {
-            format!("{DEFERRED_FK_LIMIT_UNSET}: tables.deferred_fk_pending_max is not installed")
-        })?;
+        let max = state.max_pending();
         if self.children.len().saturating_add(self.parents.len()) >= max {
             return Err(format!(
                 "{DEFERRED_FK_PENDING_EXCEEDED}: the transaction touches more deferred foreign keys than tables.deferred_fk_pending_max ({max})"

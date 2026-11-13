@@ -6,6 +6,12 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// Default of the registry knob `tables.deferred_fk_pending_max` (MEDULLA-ENGINE-PARITY-R011.1):
+/// the most deferred foreign keys one transaction may touch. The knob table in
+/// `medulla-server-api` takes this value as its default, so there is one source;
+/// a store the composition root has not installed a resolved value on uses it.
+pub const DEFERRED_FK_PENDING_MAX_DEFAULT: u64 = 100_000;
+
 #[cfg(feature = "sql")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod index;
