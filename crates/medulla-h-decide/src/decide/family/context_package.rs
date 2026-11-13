@@ -225,6 +225,7 @@ fn answered(outcome: StatisticalOutcome) -> Executed {
         context_selection: None,
         thought: None,
         family_premises: Vec::new(),
+        route: None,
     }
 }
 
@@ -480,28 +481,6 @@ fn solve(
         .collect();
     let scores = BoundedVec::new(scores)
         .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?;
-    Ok(Executed {
-        matrix: None,
-        ladder: LadderResult {
-            outcome: StatisticalOutcome::Advisory {
-                scores,
-                calibrated: false,
-            },
-            calibration: None,
-            explained: None,
-            audit: None,
-            logging: Vec::new(),
-        },
-        reading: None,
-        seed: [0u8; 32],
-        harness_contrast: None,
-        topology: None,
-        context_selection: None,
-        thought: None,
-        family_premises: Vec::new(),
-        route: None,
-    })
-    Ok(answered(StatisticalOutcome::Advisory {
     let mut executed = answered(StatisticalOutcome::Advisory {
         scores,
         calibrated: false,

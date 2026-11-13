@@ -30,25 +30,6 @@ impl DecisionFamily for TaskPlanFamily {
     ) -> Option<Result<Executed, String>> {
         match crate::decide::stat_task_plan::task_plan(ctx, request, policy) {
             Err(detail) => Some(Err(detail)),
-            Ok(Some(plan)) => Some(Ok(Executed {
-                matrix: None,
-                ladder: LadderResult {
-                    outcome: crate::decide::stat_task_plan::outcome(&plan),
-                    calibration: None,
-                    explained: None,
-                    audit: None,
-                    logging: Vec::new(),
-                },
-                reading: None,
-                seed: [0u8; 32],
-                harness_contrast: None,
-                topology: None,
-                context_selection: None,
-                thought: None,
-                family_premises: Vec::new(),
-                route: None,
-            })),
-            Ok(Some(Planned::Plan(plan))) => {
             Ok(Some(Planned::Plan(plan, _))) => {
                 Some(Ok(executed(crate::decide::stat_task_plan::outcome(&plan))))
             }
@@ -84,5 +65,6 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         context_selection: None,
         thought: None,
         family_premises: Vec::new(),
+        route: None,
     }
 }

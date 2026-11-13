@@ -40,8 +40,8 @@ mod path_preference;
 mod placement;
 mod planning_admission;
 mod pre_tool_risk;
-mod program_store;
 mod probe_verdict;
+mod program_store;
 mod rank;
 mod resolve_entity;
 mod retrieval_plan;
@@ -60,18 +60,18 @@ mod template_choice;
 mod temporal_basis;
 mod thought_search;
 mod tool_necessity;
-mod tool_subset;
 mod tool_relevance;
+mod tool_subset;
 mod topology;
 mod usage_guidance;
 
 pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use command_config::command_view;
 pub(in crate::decide) use instruction_disclosure::disclosure_view;
-pub(in crate::decide) use runtime_quota::quota_view;
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use support::advisory;
+pub(in crate::decide) use runtime_quota::quota_view;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -274,7 +274,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         tool_necessity::ToolNecessityFamily;
     static FEEDBACKLOOPFAMILY: feedback_loop::FeedbackLoopFamily =
         feedback_loop::FeedbackLoopFamily;
-    static RUNTIMEQUOTAFAMILY: runtime_quota::RuntimeQuotaFamily = runtime_quota::RuntimeQuotaFamily;
+    static RUNTIMEQUOTAFAMILY: runtime_quota::RuntimeQuotaFamily =
+        runtime_quota::RuntimeQuotaFamily;
     static PLANNINGADMISSIONFAMILY: planning_admission::PlanningAdmissionFamily =
         planning_admission::PlanningAdmissionFamily;
     static A2AROUTEFAMILY: a2a_route::A2aRouteFamily = a2a_route::A2aRouteFamily;

@@ -584,14 +584,14 @@ mod tests {
             ]
         );
         assert_eq!(
-            first.steps[0].action,
+            first.steps.as_slice()[0].action,
             "tool:t0(title=p0,limit=p1,dry_run=p2,label=p3)"
         );
         // The second step repeats the title literal and reuses p0.
-        assert_eq!(first.steps[1].action, "tool:t1(title=p0)");
-        assert_eq!(first.steps[0].state, "s0");
-        assert_eq!(first.steps[0].next.as_deref(), Some("s1"));
-        assert_eq!(first.steps[1].next, None);
+        assert_eq!(first.steps.as_slice()[1].action, "tool:t1(title=p0)");
+        assert_eq!(first.steps.as_slice()[0].state, "s0");
+        assert_eq!(first.steps.as_slice()[0].next.as_deref(), Some("s1"));
+        assert_eq!(first.steps.as_slice()[1].next, None);
         first.validate().unwrap();
         // Different run ids give different digests.
         let other = compile_program(
