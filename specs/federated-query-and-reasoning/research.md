@@ -151,3 +151,8 @@ scheduler fields; the semantic index worker reads them and passes them in. Chunk
 `ServerErrorCode` variants so they join the one published refusal registry, routed to `SemanticIndex`.
 Dimension mismatch and non-finite components are refused with `ENCODE_DIM_MISMATCH` and `ENCODE_NON_FINITE`
 inside the aggregation, so a malformed chunk can never silently reach a document vector.
+
+
+## R081.100 joint sparse selection
+
+The kernel is plain cyclic coordinate descent on the nonnegative lasso, validated against an exhaustive-support KKT oracle. A caller-supplied query vector is allowed because `Op::Rank` already accepts one; the knobs bound the solver, so no new score authority is added. The mode lives on `SelectionPart` because the dual-score policy fields do not apply to it.

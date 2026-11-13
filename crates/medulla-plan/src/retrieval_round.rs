@@ -8,17 +8,20 @@
 //! and every part can only see what the caller may read.
 
 use crate::retrieval_stop::{decide_stop, round_progress};
+use medulla_decision_stats::sparse_select::{joint_sparse_select, SparseSelectError};
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
 use medulla_result_types::retrieval_round::{
     selection_policy_digest, sha256_hex_of, ActivationBenchmark, HierarchyPart, InferenceCounts,
-    RetrievalPremise, RoundRequest, RoundResult, RoundRow, SelectionPart, StopKnobs,
+    JointCoefficient, JointSelection, RetrievalPremise, RoundRequest, RoundResult, RoundRow,
+    SelectionMode, SelectionPart, SolverStatus, StopKnobs,
 };
 use medulla_result_types::retrieval_verdict::RepairStep;
 use medulla_result_types::retrieval_verdict::{
     ChunkScorePair, DescentPolicy, HierarchyRetrievalKind, HierarchyStage, HierarchyStageReceipt,
     RetrievalRefusal, SectionGranularity as WireGranularity, RETRIEVAL_CONTRACT_INVALID,
-    RETRIEVAL_SCORE_PAIR_REQUIRED,
+    RETRIEVAL_EMBEDDING_REVISION_MISMATCH, RETRIEVAL_POLICY_UNVERIFIED,
+    RETRIEVAL_SCORE_PAIR_REQUIRED, RETRIEVAL_SOLVER_NOT_CONVERGED,
 };
 use medulla_retrieval::leanrag::{retrieve_vector_free, SectionGranularity, VectorFreeLimits};
 use medulla_retrieval::retrieval_verdict::{
@@ -55,6 +58,12 @@ pub struct RoundKnobs {
     pub cost_limit: u64,
     /// `knob retrieval.saturation_epsilon`, score.
     pub saturation_epsilon: f64,
+    /// `knob retrieval.joint_lambda`, unitless. Used when a joint request names no lambda.
+    pub joint_lambda: f64,
+    /// `knob retrieval.joint_tolerance`, unitless. Used when a joint request names none.
+    pub joint_tolerance: f64,
+    /// `knob retrieval.joint_max_iters`, sweeps. A caller may lower it, never raise it.
+    pub joint_max_iters: u32,
 }
 
 impl Default for RoundKnobs {
@@ -71,6 +80,9 @@ impl Default for RoundKnobs {
             inference_limit: 8,
             cost_limit: 1_000_000,
             saturation_epsilon: 0.01,
+            joint_lambda: 0.1,
+            joint_tolerance: 0.000001,
+            joint_max_iters: 1000,
         }
     }
 }
@@ -234,6 +246,149 @@ fn run_selection(
         }),
     });
     Ok(receipt)
+}
+
+/// Joint sparse nonnegative selection (R081.100): reconstruct the query vector from the
+/// stored embeddings of the executed rows and keep the rows with a positive coefficient.
+/// The rows are the plan's rows, so tenant and row-level security already bound them; the
+/// policy's `max_chunks` bounds the result count. Calls no reranker and no generation model.
+fn run_joint_selection(
+    request: &RoundRequest,
+    part: &SelectionPart,
+    rows: &RowSet,
+    ctx: &PlanCtx,
+    knobs: &RoundKnobs,
+    steps: &mut Steps,
+) -> Result<JointSelection, RoundError> {
+    let SelectionMode::JointSparse {
+        embedding_revision,
+        lambda,
+        tolerance,
+        max_iters,
+        query_vector,
+    } = &part.mode
+    else {
+        return Err(contract_invalid("not a joint selection"));
+    };
+    part.policy
+        .validate()
+        .map_err(|e| contract_invalid(&e.to_string()))?;
+    if embedding_revision != &request.model_revision
+        || embedding_revision != &part.policy.embedding_model_revision
+    {
+        return Err(RetrievalRefusal::new(
+            RETRIEVAL_EMBEDDING_REVISION_MISMATCH,
+            format!(
+                "joint selection names embedding revision `{embedding_revision}`; the round and \
+                 the policy name `{}` and `{}`",
+                request.model_revision, part.policy.embedding_model_revision
+            ),
+        )
+        .into());
+    }
+    let lambda = lambda.unwrap_or(knobs.joint_lambda);
+    let tolerance = tolerance.unwrap_or(knobs.joint_tolerance);
+    let sweeps = max_iters
+        .unwrap_or(knobs.joint_max_iters)
+        .min(knobs.joint_max_iters);
+    let unverified =
+        |detail: &str| RoundError::from(RetrievalRefusal::new(RETRIEVAL_POLICY_UNVERIFIED, detail));
+    if !(lambda.is_finite() && lambda > 0.0) {
+        return Err(unverified("lambda must be a positive finite number"));
+    }
+    if !(tolerance.is_finite() && tolerance > 0.0) || sweeps == 0 {
+        return Err(unverified(
+            "tolerance must be positive and at least one sweep is required",
+        ));
+    }
+    let query: Vec<f32> = match query_vector {
+        Some(vector) => vector.clone(),
+        None => {
+            if part.query.trim().is_empty() {
+                return Err(contract_invalid(
+                    "a joint selection needs a query vector or a query text",
+                ));
+            }
+            let embedder = ctx
+                .embedder
+                .ok_or_else(|| contract_invalid("no text embedder is bound to embed the query"))?;
+            steps.inference.embedding += 1;
+            embedder.embed(&part.query).map_err(RoundError::Plan)?
+        }
+    };
+    let pool: Vec<_> = rows.rows().iter().take(knobs.rerank_pool).collect();
+    let mut matrix: Vec<Vec<f64>> = Vec::with_capacity(pool.len());
+    for row in &pool {
+        let stored = ctx.semantic.get_embedding(&row.id).ok_or_else(|| {
+            score_pair_required(format!("row `{}` carries no stored embedding", row.id))
+        })?;
+        if stored.len() != query.len() {
+            return Err(RetrievalRefusal::new(
+                RETRIEVAL_EMBEDDING_REVISION_MISMATCH,
+                format!(
+                    "row `{}` has {} dimensions; the query has {}",
+                    row.id,
+                    stored.len(),
+                    query.len()
+                ),
+            )
+            .into());
+        }
+        matrix.push(stored.iter().map(|v| f64::from(*v)).collect());
+    }
+    let q64: Vec<f64> = query.iter().map(|v| f64::from(*v)).collect();
+    let solved = joint_sparse_select(&q64, &matrix, lambda, tolerance, sweeps).map_err(
+        |error| match error {
+            SparseSelectError::NotConverged { .. } => RoundError::from(RetrievalRefusal::new(
+                RETRIEVAL_SOLVER_NOT_CONVERGED,
+                error.to_string(),
+            )),
+            SparseSelectError::Shape(detail) => RoundError::from(RetrievalRefusal::new(
+                RETRIEVAL_EMBEDDING_REVISION_MISMATCH,
+                detail,
+            )),
+            SparseSelectError::Parameter(detail) => unverified(&detail),
+        },
+    )?;
+    let mut positive: Vec<JointCoefficient> = pool
+        .iter()
+        .zip(&solved.coefficients)
+        .filter(|(_, c)| **c > 0.0)
+        .map(|(row, c)| JointCoefficient {
+            id: row.id.clone(),
+            coefficient: *c,
+        })
+        .collect();
+    positive.sort_by(|a, b| {
+        b.coefficient
+            .total_cmp(&a.coefficient)
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    let cap = part.policy.max_chunks as usize;
+    let truncated = positive.len().saturating_sub(cap) as u32;
+    positive.truncate(cap);
+    let selection = JointSelection {
+        embedding_revision: embedding_revision.clone(),
+        selected: positive,
+        residual: solved.residual,
+        status: SolverStatus::Converged,
+        iterations: solved.iterations,
+        lambda,
+        tolerance,
+        truncated,
+    };
+    steps.premises.push(RetrievalPremise {
+        step: "selection".into(),
+        name: "retrieval.joint_selection".into(),
+        value: serde_json::json!({
+            "selection": selection,
+            "policy_digest": selection_policy_digest(&part.policy),
+            "candidates": pool.len(),
+            "unscored": rows.rows().len().saturating_sub(pool.len()),
+            "inference": steps.inference,
+        }),
+    });
+    Ok(selection)
 }
 
 /// The hierarchy step (R081.9.3, R081.9.5, R081.9.7.3, R081.9.7.5). Returns the selected
@@ -467,8 +622,16 @@ pub fn run_round(
             Some(judge_sufficiency(&evidence, &rule, &call)?)
         }
     };
+    let mut joint_selection = None;
     let selection = match &request.selection {
         None => None,
+        Some(part) if matches!(part.mode, SelectionMode::JointSparse { .. }) => {
+            let _span = tracing::info_span!("medulla.retrieval.joint_selection").entered();
+            joint_selection = Some(run_joint_selection(
+                request, part, &rows, ctx, knobs, &mut steps,
+            )?);
+            None
+        }
         Some(part) => {
             let _span = tracing::info_span!("medulla.retrieval.selection").entered();
             Some(run_selection(request, part, &rows, ctx, knobs, &mut steps)?)
@@ -539,6 +702,7 @@ pub fn run_round(
             .collect(),
         sufficiency,
         selection,
+        joint_selection,
         hierarchy_selected,
         stop,
         inference: steps.inference,
@@ -569,6 +733,9 @@ mod tests {
         inference_limit: 8,
         cost_limit: 1_000_000,
         saturation_epsilon: 0.01,
+        joint_lambda: 0.1,
+        joint_tolerance: 0.000001,
+        joint_max_iters: 1000,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -682,6 +849,7 @@ mod tests {
                     mean_selected: 3.0,
                 },
             }),
+            mode: SelectionMode::DualScore,
         });
         request
     }

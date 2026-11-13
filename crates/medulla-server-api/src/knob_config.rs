@@ -245,6 +245,12 @@ knobs! {
     retrieval_encode_window_tokens: u64 = "retrieval.encode_window_tokens", U64(512), [16, 8192], "tokens", Tunable;
     /// Chunk encoding: tokens shared by neighbouring windows; below the window size.
     retrieval_encode_window_overlap: u64 = "retrieval.encode_window_overlap", U64(64), [0, 512], "tokens", Tunable;
+    /// Retrieval round: L1 weight of the joint sparse selection.
+    retrieval_joint_lambda: f64 = "retrieval.joint_lambda", F64(0.1), [0.0001, 10.0], "unitless", Tunable;
+    /// Retrieval round: coefficient change below which the joint solve stops.
+    retrieval_joint_tolerance: f64 = "retrieval.joint_tolerance", F64(0.000001), [0.000000001, 0.001], "unitless", Tunable;
+    /// Retrieval round: most sweeps of the joint solve.
+    retrieval_joint_max_iters: u64 = "retrieval.joint_max_iters", U64(1000), [10, 100000], "sweeps", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.

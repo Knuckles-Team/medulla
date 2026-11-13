@@ -16,7 +16,7 @@ use medulla_exec::exec::{HashEmbedder, TextEmbedder};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_result_types::retrieval_round::{
     sha256_hex_of, ActivationBenchmark, BenchmarkResult, HierarchyPart, RoundRequest, RoundResult,
-    SectionRequest, SelectionPart, SufficiencyPart,
+    SectionRequest, SelectionMode, SelectionPart, SufficiencyPart,
 };
 use medulla_result_types::retrieval_verdict::{
     FallbackPolicy, HierarchyParentLink, HierarchyRetrievalKind, HierarchyRetrievalPolicy,
@@ -322,6 +322,7 @@ fn selection_request(benchmark: Option<ActivationBenchmark>) -> RoundRequest {
         query: QUERY_TEXT.into(),
         policy: selection_policy(),
         benchmark,
+        mode: SelectionMode::DualScore,
     });
     request
 }
@@ -1273,4 +1274,120 @@ async fn uncalibrated_rounds_keep_the_refusal_marker() {
         "{refused}"
     );
     assert!(refused.contains("inference_calls") && refused.contains("ROUND_NOT_CALIBRATED"));
+}
+
+// ---- R081.100: joint sparse nonnegative selection ----
+
+/// Four documents in three dimensions: `diverse-a` and `diverse-b` span the query's plane,
+/// `corr-a` and `corr-b` are highly correlated with each other and mostly off it.
+async fn seed_joint(state: &Arc<RwLock<ServerState>>) {
+    for (id, embedding) in [
+        ("diverse-a", vec![1.0, 0.0, 0.0]),
+        ("diverse-b", vec![0.0, 1.0, 0.0]),
+        ("corr-a", vec![0.4, 0.4, 0.8]),
+        ("corr-b", vec![0.38, 0.42, 0.81]),
+    ] {
+        put(
+            state,
+            None,
+            id,
+            serde_json::json!({ "type": "Chunk", "text": id }),
+            Some(embedding),
+        )
+        .await;
+    }
+}
+
+fn joint_request(
+    lambda: Option<f64>,
+    max_iters: Option<u32>,
+    revision: &str,
+    max_chunks: u32,
+) -> RoundRequest {
+    let mut policy = selection_policy();
+    policy.max_chunks = max_chunks;
+    let mut request = request(None);
+    request.plan = Plan::new(vec![Op::Scan {
+        label: "Chunk".into(),
+    }]);
+    request.selection = Some(SelectionPart {
+        query: QUERY_TEXT.into(),
+        policy,
+        benchmark: None,
+        mode: SelectionMode::JointSparse {
+            embedding_revision: revision.into(),
+            lambda,
+            tolerance: Some(1e-12),
+            max_iters,
+            query_vector: Some(vec![1.0, 0.8, 0.0]),
+        },
+    });
+    request
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.100
+#[tokio::test(flavor = "multi_thread")]
+async fn joint_selection_prefers_diverse_pair() {
+    let state = state();
+    seed_joint(&state).await;
+
+    // The diverse pair reconstructs the query; the correlated pair gets no coefficient.
+    // Exhaustive oracle at lambda 0.1: coefficients 0.95 and 0.75, residual hypot(0.05, 0.05).
+    let result =
+        decode(round_as(&state, None, joint_request(Some(0.1), None, "model-1", 10)).await);
+    let joint = result.joint_selection.expect("joint selection");
+    assert!(
+        result.selection.is_none(),
+        "the dual-score receipt is not produced"
+    );
+    let ids: Vec<_> = joint.selected.iter().map(|c| c.id.as_str()).collect();
+    assert_eq!(ids, ["diverse-a", "diverse-b"]);
+    assert!((joint.selected[0].coefficient - 0.95).abs() < 1e-6);
+    assert!((joint.selected[1].coefficient - 0.75).abs() < 1e-6);
+    assert!((joint.residual - 0.05_f64.hypot(0.05)).abs() < 1e-6);
+    assert_eq!(joint.embedding_revision, "model-1");
+    assert_eq!(joint.truncated, 0);
+    assert_eq!(result.inference.reranker, 0, "no model is called");
+
+    // The result-count bound still applies: one chunk keeps the largest coefficient.
+    let capped = decode(round_as(&state, None, joint_request(Some(0.1), None, "model-1", 1)).await)
+        .joint_selection
+        .expect("joint selection");
+    assert_eq!(capped.selected.len(), 1);
+    assert_eq!(capped.selected[0].id, "diverse-a");
+    assert_eq!(capped.truncated, 1);
+
+    // Another tenant's graph holds none of these documents, so it selects nothing.
+    let other = round_as(
+        &state,
+        Some("other-tenant"),
+        joint_request(Some(0.1), None, "model-1", 10),
+    )
+    .await;
+    if other.error.is_none() {
+        let other = decode(other);
+        assert!(other
+            .joint_selection
+            .is_none_or(|joint| joint.selected.is_empty()));
+    }
+
+    // Refusals: a stale embedding revision, an invalid lambda and a solve that cannot converge.
+    let mismatch =
+        error_of(round_as(&state, None, joint_request(Some(0.1), None, "model-2", 10)).await);
+    assert!(
+        mismatch.contains("RETRIEVAL_EMBEDDING_REVISION_MISMATCH"),
+        "{mismatch}"
+    );
+    let invalid =
+        error_of(round_as(&state, None, joint_request(Some(-1.0), None, "model-1", 10)).await);
+    assert!(invalid.contains(RETRIEVAL_POLICY_UNVERIFIED), "{invalid}");
+    let stuck = error_of(
+        round_as(
+            &state,
+            None,
+            joint_request(Some(0.1), Some(1), "model-1", 10),
+        )
+        .await,
+    );
+    assert!(stuck.contains("RETRIEVAL_SOLVER_NOT_CONVERGED"), "{stuck}");
 }

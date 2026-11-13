@@ -89,6 +89,81 @@ pub struct SelectionPart {
     /// quality floor and cost ratio, the part refuses `RETRIEVAL_POLICY_UNVERIFIED`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub benchmark: Option<ActivationBenchmark>,
+    /// How chunks are chosen (R081.100). Absent means the dual-score mode.
+    #[serde(default, skip_serializing_if = "SelectionMode::is_dual_score")]
+    pub mode: SelectionMode,
+}
+
+/// How a selection part chooses chunks. The joint mode never replaces the dual-score mode;
+/// a request names one.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+pub enum SelectionMode {
+    /// The dual-score mode of R081.7: embedding score and cross-encoder score.
+    #[default]
+    DualScore,
+    /// Joint sparse nonnegative reconstruction of the query from the candidates' stored
+    /// embeddings (R081.100). An absent number takes its knob value
+    /// (`retrieval.joint_lambda`, `retrieval.joint_tolerance`, `retrieval.joint_max_iters`);
+    /// `max_iters` can be lowered by the caller and never raised above the knob.
+    JointSparse {
+        /// The embedding space and revision the candidates' vectors were stored in.
+        embedding_revision: String,
+        /// The L1 weight; must be positive and finite.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        lambda: Option<f64>,
+        /// The coefficient change below which the solve stops.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tolerance: Option<f64>,
+        /// Most coordinate-descent sweeps.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_iters: Option<u32>,
+        /// The query vector in that space; absent means the bound embedder embeds
+        /// the part's `query` text.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        query_vector: Option<Vec<f32>>,
+    },
+}
+
+impl SelectionMode {
+    /// True for the default mode, so an absent mode round-trips unchanged.
+    pub fn is_dual_score(&self) -> bool {
+        matches!(self, Self::DualScore)
+    }
+}
+
+/// How a joint solve ended. Non-convergence refuses `RETRIEVAL_SOLVER_NOT_CONVERGED` and
+/// never reaches a result, so the one value a result carries is `Converged`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SolverStatus {
+    /// The largest coefficient change fell below the tolerance.
+    Converged,
+}
+
+/// One selected document and its reconstruction coefficient.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JointCoefficient {
+    pub id: String,
+    pub coefficient: f64,
+}
+
+/// The result of a joint selection (R081.100): the documents whose coefficient is above
+/// zero, coefficient-descending then id ascending, at most the policy's `max_chunks`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JointSelection {
+    pub embedding_revision: String,
+    pub selected: Vec<JointCoefficient>,
+    /// `||q - Vᵀx||₂` of the full solution.
+    pub residual: f64,
+    pub status: SolverStatus,
+    pub iterations: u32,
+    pub lambda: f64,
+    pub tolerance: f64,
+    /// Documents with a positive coefficient the `max_chunks` bound left out.
+    pub truncated: u32,
 }
 
 /// Where a document-section traversal starts and what it returns (R081.9.7.3).
@@ -173,6 +248,9 @@ pub struct RoundResult {
     /// The selection receipt, when the request carried a `selection` part.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selection: Option<SelectionReceipt>,
+    /// The joint selection, when the selection part named the joint sparse mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub joint_selection: Option<JointSelection>,
     /// Entity ids (community policy) or section ids (document-section policy) the
     /// hierarchy part selected, best first. They join the evidence set the sufficiency
     /// part counts.

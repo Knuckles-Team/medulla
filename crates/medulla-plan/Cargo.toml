@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["medulla-sql/sql", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
+query = ["medulla-sql/sql", "dep:medulla-decision-stats", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -245,6 +245,7 @@ medulla-nlq = { path = "../medulla-nlq" }
 medulla-decision-policy = { path = "../medulla-decision-policy", features = ["solve"] }
 medulla-federation = { path = "../medulla-federation" }
 medulla-retrieval = { path = "../medulla-retrieval" }
+medulla-decision-stats = { path = "../medulla-decision-stats", optional = true }
 medulla-exec = { path = "../medulla-exec" }
 # The plan AST (Op/Pred/Plan) is the wire DTO, defined in medulla-types behind its
 # `query` feature — but it is pure serde (NO DataFusion), so medulla-plan ALWAYS enables

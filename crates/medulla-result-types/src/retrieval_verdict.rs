@@ -25,6 +25,14 @@ pub const RETRIEVAL_FEEDBACK_INVALID: &str = "RETRIEVAL_FEEDBACK_INVALID";
 pub const RETRIEVAL_HIERARCHY_INVALID: &str = "RETRIEVAL_HIERARCHY_INVALID";
 /// A breadth, depth, scoring or cost bound ran out (R081.9.4).
 pub const RETRIEVAL_BUDGET_EXCEEDED: &str = "RETRIEVAL_BUDGET_EXCEEDED";
+/// The query or the candidates are not in the declared embedding space and revision (R081.100).
+pub const RETRIEVAL_EMBEDDING_REVISION_MISMATCH: &str = "RETRIEVAL_EMBEDDING_REVISION_MISMATCH";
+/// The joint solve did not converge within its sweep bound (R081.100).
+pub const RETRIEVAL_SOLVER_NOT_CONVERGED: &str = "RETRIEVAL_SOLVER_NOT_CONVERGED";
+/// A stored document state is stale against its content digest or encoder (R081.101.3).
+pub const RETRIEVAL_STATE_STALE: &str = "RETRIEVAL_STATE_STALE";
+/// A document state is malformed: incomplete segment coverage or over a bound (R081.101.1).
+pub const RETRIEVAL_STATE_INVALID: &str = "RETRIEVAL_STATE_INVALID";
 /// A contract field is missing, out of bounds or inconsistent.
 pub const RETRIEVAL_CONTRACT_INVALID: &str = "RETRIEVAL_CONTRACT_INVALID";
 

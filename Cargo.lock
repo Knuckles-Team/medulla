@@ -6329,6 +6329,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-decision-policy",
+ "medulla-decision-stats",
  "medulla-decision-types",
  "medulla-durable",
  "medulla-epistemic",

@@ -30,6 +30,9 @@ fn round_knobs() -> RoundKnobs {
         inference_limit: u32::try_from(knobs.retrieval_inference_limit).unwrap_or(u32::MAX),
         cost_limit: knobs.retrieval_cost_limit,
         saturation_epsilon: knobs.retrieval_saturation_epsilon,
+        joint_lambda: knobs.retrieval_joint_lambda,
+        joint_tolerance: knobs.retrieval_joint_tolerance,
+        joint_max_iters: u32::try_from(knobs.retrieval_joint_max_iters).unwrap_or(u32::MAX),
     }
 }
 
