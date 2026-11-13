@@ -322,3 +322,152 @@ pub fn declared_request(
         belief_as_of: BoundedVec::default(),
     }
 }
+
+/// The capacity cell the generation-cycle fixture leases from.
+pub const CYCLE_CELL: &str = "cell-embed";
+/// The graph the cycle fixture's logical graph resolves to before its first generation.
+pub const CYCLE_ACTIVE: &str = "kg-bench-cycle";
+/// The shadow graph the cycle fixture re-embeds.
+pub const CYCLE_SHADOW: &str = "kg-bench-cycle-2";
+/// Width of the cycle fixture's embedding model.
+pub const CYCLE_DIMS: usize = 384;
+
+/// The digest of the fixture model's space at `revision`.
+fn cycle_space(revision: &str) -> String {
+    medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
+        "m", revision, "sha256:w", "sha256:p", CYCLE_DIMS, false,
+    )
+    .unwrap()
+    .digest
+}
+
+/// A first generation request (R174.6 bench): the logical graph has no active
+/// generation, so the cycle bootstraps; `nodes` Doc nodes sit unembedded in the
+/// shadow graph and a durable capacity ledger with one embedding cell is
+/// installed in the served state under `ledger`.
+pub async fn generation_cycle_fixture(
+    h: &Harness,
+    ledger: &std::path::Path,
+    nodes: usize,
+) -> medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest {
+    use medulla_decision_types::decision::statistical::retrieval_generation::{
+        GenerationCycleRequest, GenerationEvalRequest, ModelRef,
+    };
+    use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass};
+    use medulla_protocol_types::protocol::Method;
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_work_types::native_control::{
+        CapacityCellUpdateRequest, NativeControlSchemaVersion,
+    };
+
+    let backend = Arc::new(
+        medulla_persistence::redb_backend::RedbBackend::open_with_shards(
+            ledger.to_str().unwrap().to_string(),
+            16,
+            1,
+        )
+        .unwrap(),
+    );
+    backend
+        .commit_capacity_lease(
+            &medulla_kernel::persist::sanitize(CYCLE_ACTIVE),
+            Method::UpdateCapacityCell {
+                request: CapacityCellUpdateRequest {
+                    schema_version: NativeControlSchemaVersion::V1,
+                    cell: CapacityCell {
+                        cell_id: CYCLE_CELL.into(),
+                        parent_id: None,
+                        resource_class: CapacityResourceClass::LlmEmbedding,
+                        capacity: 8,
+                        reserved_floor: 0,
+                        epoch: 1,
+                        policy_digest: "d".repeat(64),
+                        updated_at_ms: 0,
+                        throttle: None,
+                    },
+                    expected_epoch: None,
+                    now_ms: 1,
+                },
+            },
+        )
+        .await
+        .unwrap();
+    let mut guard = h.state.write().await;
+    guard.persistence = Some(backend);
+    for name in [CYCLE_ACTIVE, CYCLE_SHADOW] {
+        guard
+            .registry
+            .create_graph(
+                name,
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
+            .unwrap();
+    }
+    let core = guard.registry.get(CYCLE_SHADOW).unwrap().core.clone();
+    drop(guard);
+    core.semantic_store
+        .write()
+        .declare_space(
+            medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
+                "m", "2", "sha256:w", "sha256:p", CYCLE_DIMS, false,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    for index in 0..nodes {
+        let id = format!("doc-{index}");
+        let props = serde_json::json!({"type": "Doc", "text": id});
+        core.add_node(id, rmp_serde::to_vec_named(&props).unwrap());
+    }
+    GenerationCycleRequest {
+        model_ref: ModelRef {
+            id: "m".to_string(),
+            revision: "2".to_string(),
+            dimension: CYCLE_DIMS as u32,
+        },
+        evaluation: GenerationEvalRequest {
+            logical: CYCLE_ACTIVE.to_string(),
+            active_graph: CYCLE_ACTIVE.to_string(),
+            active_space: "none".to_string(),
+            shadow_graph: CYCLE_SHADOW.to_string(),
+            shadow_space: cycle_space("2"),
+            items: BoundedVec::default(),
+            top_k: 5,
+            min_eval_items: 5,
+            max_score_psi_q16: 64 << 16,
+        },
+        capacity_cell: CYCLE_CELL.to_string(),
+        max_batches: Some(1),
+        index_adapter: None,
+    }
+}
+
+/// One served submission of a generation cycle through `DecisionLog` (`Learn`):
+/// the state and node checkpoint it reports, as `(state, reembedded_nodes)`.
+pub async fn submit_generation_cycle(
+    h: &Harness,
+    request: &medulla_decision_types::decision::statistical::retrieval_generation::GenerationCycleRequest,
+) -> Result<(String, u64), String> {
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use medulla_decision_types::decision::statistical::retrieval::{
+        LearningRecorded, LearningWrite,
+    };
+    let verified =
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+            "decider", TENANT,
+        );
+    let op = DecisionLogOp::Learn {
+        tenant_id: TENANT.to_string(),
+        write: LearningWrite::RunGenerationCycle {
+            request: Box::new(request.clone()),
+        },
+    };
+    let response = super::log::handle_decision_log(&h.state, 9, &verified, op).await;
+    match decode::<LearningRecorded>(response)? {
+        LearningRecorded::Cycle(job) => {
+            Ok((format!("{:?}", job.cycle.state()), job.reembedded_nodes))
+        }
+        other => Err(format!("a cycle answers with its job, not {other:?}")),
+    }
+}

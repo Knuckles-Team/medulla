@@ -1107,6 +1107,142 @@ fn bench_capability_designation(
     );
 }
 
+/// Nodes the nightly `decide/retrieval_learning` cycle run re-embeds.
+const CYCLE_NODES: usize = 10_000;
+/// Nodes one served batch re-embeds.
+const CYCLE_BATCH: usize = 256;
+/// Rank and width of the adapter the query-latency budget is held at.
+const ADAPTER_RANK: usize = 8;
+const ADAPTER_DIM: usize = 1024;
+
+/// The `decide/retrieval_learning` groups (MEDULLA-DECISION-ENGINE-R174.6 and
+/// R174.7.6). The group itself times a generation cycle over 10,000 nodes
+/// through the served `DecisionLog` `Learn` path, one 256-node batch per
+/// submission, and reports the engine overhead of a batch: the served time
+/// minus the time the embedder takes for the same texts (`p99_ms`, budget 1 ms).
+/// `decide/retrieval_learning/adapter_query` times the query adapter applied to
+/// a query at `d = 1024` and rank 8, which is the latency a served `Discover`
+/// gains once an adapter is active (`p99_ms`, budget 0.05 ms).
+fn bench_retrieval_learning(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_stats::decision::adapter::{to_body, AdapterKernel, Direction};
+    use medulla_exec::exec::TextEmbedder;
+    use medulla_h_decide::decide::stat_test_support::{
+        generation_cycle_fixture, submit_generation_cycle, CYCLE_DIMS,
+    };
+
+    let group_name = "decide/retrieval_learning".to_string();
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
+        "decider",
+    )));
+    let ledger = tempfile::tempdir().expect("bench ledger dir");
+    let request = rt.block_on(generation_cycle_fixture(&h, ledger.path(), CYCLE_NODES));
+    let hash = medulla_exec::exec::HashEmbedder::new(CYCLE_DIMS);
+    let texts: Vec<String> = (0..CYCLE_BATCH).map(|i| format!("doc-{i}")).collect();
+    let embed = || {
+        for text in &texts {
+            black_box(hash.embed(text).expect("bench embed"));
+        }
+    };
+    let embedding = {
+        let mut times: Vec<Duration> = (0..20)
+            .map(|_| {
+                let start = Instant::now();
+                embed();
+                start.elapsed()
+            })
+            .collect();
+        times.sort();
+        times[times.len() / 2]
+    };
+    let before = high_water_mib();
+    let mut overhead: Vec<Duration> = Vec::new();
+    loop {
+        let start = Instant::now();
+        let (state, nodes) = rt
+            .block_on(submit_generation_cycle(&h, &request))
+            .expect("bench cycle submission");
+        let elapsed = start.elapsed();
+        if state == "Activated" {
+            assert_eq!(
+                nodes as usize, CYCLE_NODES,
+                "the cycle re-embedded every node"
+            );
+            break;
+        }
+        overhead.push(elapsed.saturating_sub(embedding));
+    }
+    overhead.sort();
+    assert!(
+        overhead.len() >= CYCLE_NODES / CYCLE_BATCH - 1,
+        "a 10,000-node cycle runs in 256-node batches"
+    );
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("embedding_floor", |b| b.iter(embed));
+    group.finish();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&overhead, 0.50),
+            "p99_ms": percentile_ms(&overhead, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+            "batches": overhead.len(),
+            "nodes": CYCLE_NODES,
+        }),
+    );
+
+    let mut rng = Xorshift(0x0174_7600_5eed_cafe);
+    let directions: Vec<Direction> = (0..ADAPTER_RANK)
+        .map(|_| {
+            let unit: Vec<f64> = rng.vector(ADAPTER_DIM).into_iter().map(f64::from).collect();
+            Direction { unit, gain: 0.25 }
+        })
+        .collect();
+    let body = to_body(
+        &directions,
+        "sha256:bench",
+        ADAPTER_DIM,
+        ("bench".into(), 1),
+    )
+    .expect("bench adapter body");
+    let kernel = AdapterKernel::of(&body).expect("bench adapter kernel");
+    let queries: Vec<Vec<f32>> = (0..DESIGNATION_QUERIES)
+        .map(|_| rng.vector(ADAPTER_DIM))
+        .collect();
+    let adapter_group = "decide/retrieval_learning/adapter_query".to_string();
+    let mut group = c.benchmark_group(&adapter_group);
+    group.bench_function("apply", |b| {
+        let mut at = 0;
+        b.iter(|| {
+            at = (at + 1) % DESIGNATION_QUERIES;
+            black_box(kernel.apply(&queries[at]))
+        });
+    });
+    group.finish();
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..DESIGNATION_QUERIES * 10)
+        .map(|at| {
+            let start = Instant::now();
+            black_box(kernel.apply(&queries[at % DESIGNATION_QUERIES]));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        adapter_group,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+            "rank": ADAPTER_RANK,
+            "dim": ADAPTER_DIM,
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -1148,6 +1284,7 @@ fn bench_decide(c: &mut Criterion) {
         10_000,
         &mut report,
     );
+    bench_retrieval_learning(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);

@@ -53,6 +53,16 @@
       "upsert_p99_ms": 1.0,
       "resident_bytes_per_record_overhead": 96,
       "resident_bytes_vector_factor": 1.25
+    },
+    "decide/retrieval_learning": {
+      "p50_ms": 0.5,
+      "p99_ms": 1.0,
+      "peak_mib": 512.0
+    },
+    "decide/retrieval_learning/adapter_query": {
+      "p50_ms": 0.03,
+      "p99_ms": 0.05,
+      "peak_mib": 8.0
     }
   },
   "groups": {}

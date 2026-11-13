@@ -969,3 +969,10 @@ The capability index feed (R172.7.2) is started by the server after the primary 
 - R171.3: a `task_plan` question may carry a plan to admit and its graph beside its one proposer parameter; the proposer is the parameter that is a plan parameter, and the family returns the plan only when the architecture view admits it.
 - R172.10: the designation budget check (recall floor, filtered and upsert latency, resident-byte ceiling) lives in `cargo xtask decide-budgets` (`tools/xtask/src/decide_budgets.rs`), because `scripts/check_decide_budgets.py` no longer exists (DE-MEMORY-ONE-BRANCH).
 - Wire changes in this item (`DecisionLog` capability_outcome and generation_space, `Decide` designation) need the wire-vector refresh of WIRE-REGEN (`MEDULLA_WRITE_VECTORS=1 cargo test -p medulla-capabilities --test wire_vectors`); `medulla/generated/models.py` carries no type for these DecisionLog ops.
+## R174.6 and R174.7.6: the decide/retrieval_learning budgets
+
+`decide/retrieval_learning` times a bootstrap generation cycle over 10,000 nodes through the served `DecisionLog` `Learn` path, one 256-node batch per submission, and reports the engine overhead of a batch (served time minus the embedder's time for the same texts); its `p99_ms` budget is 1 ms. The query adapter's added latency is its own group, `decide/retrieval_learning/adapter_query` (`AdapterKernel::apply` at `d = 1024`, rank 8), with a `p99_ms` budget of 0.05 ms, so each budget is checked by the one budget checker (`cargo xtask decide-budgets`) on its group's `p99_ms`. The fixture (`generation_cycle_fixture`, `submit_generation_cycle`) lives in the served-test kit `stat_test_support.rs` so the bench reaches the served handler.
+
+## R174.7.6: Discover names the capability it is asked for
+
+`Discover` carries an optional `capability` (an IRI). The served read resolves the capability-scope adapter first and the graph-scope adapter second, the order the designation question uses (R172.13); a query that names no capability resolves the graph scope only. `SemanticSearch` and a unified plan name none.
