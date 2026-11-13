@@ -7,10 +7,12 @@
 //! resolved as `Statistical`. The harness collects the windows.
 
 use medulla_decision_stats::decision::population::drift_reading;
-use medulla_decision_types::decision::population::{max_samples, DriftRequest, PopulationKnobs};
+use medulla_decision_types::decision::population::{
+    max_samples, DriftRequest, PopulationKnobs, DRIFT_EMPTY_WINDOW,
+};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
-    DecideRequest, StatisticalOutcome, TypedValue,
+    DecideRequest, QuestionKind, StatisticalErrorCode, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
@@ -18,7 +20,7 @@ use medulla_graph_core::graph::GraphView;
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;
 
-use super::kernel::{advisory, body, claim, one_option, shape};
+use super::kernel::{abstained, advisory, body, claim, one_option, shape};
 use super::DecisionFamily;
 
 const KIND: &str = "population_drift";
@@ -52,9 +54,27 @@ impl DecisionFamily for PopulationDriftFamily {
         Some(parse(request).and_then(|(drift, subject)| {
             let limit = max_samples(policy);
             if drift.reference.len() > limit || drift.current.len() > limit {
-                return Err(invalid_parameter(format!(
+                return Err(StatisticalErrorCode::DriftWindowTooLarge.refusal(format!(
                     "a drift window holds at most {limit} samples (knob drift.max_samples)"
                 )));
+            }
+            if drift.reference.is_empty() || drift.current.is_empty() {
+                // Valid input the evidence cannot answer: abstain, never a zero distance.
+                return Ok(Executed::from_family(
+                    abstained(
+                        QuestionKind::PopulationDrift,
+                        DRIFT_EMPTY_WINDOW,
+                        format!(
+                            "the {} window is empty",
+                            if drift.reference.is_empty() {
+                                "reference"
+                            } else {
+                                "current"
+                            }
+                        ),
+                    )?,
+                    None,
+                ));
             }
             let knobs = PopulationKnobs::from_policy(policy);
             let reading =
@@ -88,11 +108,12 @@ impl DecisionFamily for PopulationDriftFamily {
         }))
     }
 
-    fn resolution_kind(&self, _outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
-        Some(ResolutionKind::Statistical)
+    fn resolution_kind(&self, outcome: &StatisticalOutcome) -> Option<ResolutionKind> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. })
+            .then_some(ResolutionKind::Statistical)
     }
 
-    fn evidence_class(&self, _outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
-        Some(EvidenceClass::Claim)
+    fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
+        matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Claim)
     }
 }

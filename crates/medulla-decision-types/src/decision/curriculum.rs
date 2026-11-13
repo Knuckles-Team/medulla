@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
 use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
 
 /// One stage of a curriculum.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,14 +36,24 @@ pub struct PromotionPolicy {
 
 /// The `curriculum.*` knobs (MEDULLA-DECISION-ENGINE-R751.754): the number of
 /// latest independently evaluated runs a stage is judged on.
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "curriculum.window_runs",
-    unit: "runs",
-    default: KnobValue::Integer(20),
-    min: KnobValue::Integer(5),
-    max: KnobValue::Integer(200),
-    safety: KnobSafety::Tunable,
-}];
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "curriculum.window_runs",
+        unit: "runs",
+        default: KnobValue::Integer(20),
+        min: KnobValue::Integer(5),
+        max: KnobValue::Integer(200),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "curriculum.promote_floor",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(500_000),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+];
 
 /// The evaluation window, in runs, the policy in force sets.
 pub fn window_runs(policy: &DecisionPolicy) -> u32 {
@@ -55,6 +66,29 @@ pub fn window_runs(policy: &DecisionPolicy) -> u32 {
 /// The body of a curriculum promotion question: the stage and its policy. The
 /// stage's outcomes are read from the decision log under the option id
 /// `stage_id`, never carried in the request.
+/// `knob curriculum.promote_floor` in millionths: the lowest threshold a
+/// stage policy may set.
+pub fn promote_floor_micros(policy: &DecisionPolicy) -> i64 {
+    match policy.knob(&KNOBS[1]) {
+        KnobValue::DecimalMicros(value) => value.clamp(500_000, 1_000_000),
+        _ => 500_000,
+    }
+}
+
+/// Refusal code: fewer evaluations than the promotion window.
+pub const CURRICULUM_WINDOW_INCOMPLETE: RefusalCode =
+    RefusalCode::new("CURRICULUM_WINDOW_INCOMPLETE");
+/// Refusal code: a promotion threshold under `knob curriculum.promote_floor`.
+pub const CURRICULUM_THRESHOLD_BELOW_FLOOR: RefusalCode =
+    RefusalCode::new("CURRICULUM_THRESHOLD_BELOW_FLOOR");
+
+/// The `REFUSALS` table of the `curriculum_promotion` family, registered in
+/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
+pub const REFUSALS: &[RefusalCode] = &[
+    CURRICULUM_WINDOW_INCOMPLETE,
+    CURRICULUM_THRESHOLD_BELOW_FLOOR,
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

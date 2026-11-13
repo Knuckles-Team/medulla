@@ -10,7 +10,26 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::{QuantScaleTag, QuantisedValue};
 use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
+use super::statistical::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
+
+/// Abstention code: either drift window is empty; there is no distance to
+/// read, and a zero distance is never invented.
+pub const DRIFT_EMPTY_WINDOW: RefusalCode = RefusalCode::new("DRIFT_EMPTY_WINDOW");
+/// Refusal code: a drift window is above `knob drift.max_samples`.
+pub const DRIFT_WINDOW_TOO_LARGE: RefusalCode = RefusalCode::new("DRIFT_WINDOW_TOO_LARGE");
+/// Refusal code: the pairwise count differs from `replicas*(replicas-1)/2`, or
+/// an entry lies outside [0, 1].
+pub const POPULATION_SPREAD_INVALID: RefusalCode = RefusalCode::new("POPULATION_SPREAD_INVALID");
+/// Abstention code: the budget does not cover one replica.
+pub const FANOUT_BUDGET_TOO_LOW: RefusalCode = RefusalCode::new("FANOUT_BUDGET_TOO_LOW");
+
+/// The `REFUSALS` table of the `population_drift` family, registered in
+/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R752.752).
+pub const DRIFT_REFUSALS: &[RefusalCode] = &[DRIFT_EMPTY_WINDOW, DRIFT_WINDOW_TOO_LARGE];
+/// The `REFUSALS` table of the `fanout_width` family.
+pub const FANOUT_REFUSALS: &[RefusalCode] = &[POPULATION_SPREAD_INVALID, FANOUT_BUDGET_TOO_LOW];
 
 /// Most samples one drift window may hold: the maximum of `knob drift.max_samples`.
 pub const MAX_DRIFT_SAMPLES: usize = 2048;
@@ -140,31 +159,48 @@ pub struct PopulationSpread {
 }
 
 impl PopulationSpread {
-    /// The validating constructor: between 2 and [`MAX_SPREAD_REPLICAS`]
-    /// replicas, one entry per replica pair, each on `Q32` inside `[0, 1]`.
+    /// The validating constructor.
     pub fn new(replicas: u32, pairwise: Vec<QuantisedValue>) -> Result<Self, String> {
-        let count = usize::try_from(replicas).unwrap_or(usize::MAX);
+        let spread = Self {
+            replicas,
+            pairwise: BoundedVec::new(pairwise)?,
+        };
+        spread.validate()?;
+        Ok(spread)
+    }
+
+    /// Check the spread: `replicas` in `[2, MAX_SPREAD_REPLICAS]`, one entry per
+    /// replica pair, every entry on `Q32` inside `[0, 1]`. A spread that fails
+    /// is refused with `POPULATION_SPREAD_INVALID`.
+    pub fn validate(&self) -> Result<(), String> {
+        let invalid =
+            |detail: String| StatisticalErrorCode::PopulationSpreadInvalid.refusal(detail);
+        let count = usize::try_from(self.replicas).unwrap_or(usize::MAX);
         if !(2..=MAX_SPREAD_REPLICAS).contains(&count) {
-            return Err(format!("replicas must lie in [2, {MAX_SPREAD_REPLICAS}]"));
+            return Err(invalid(format!(
+                "replicas must lie in [2, {MAX_SPREAD_REPLICAS}]"
+            )));
         }
-        if pairwise.len() != count * (count - 1) / 2 {
-            return Err("pairwise must hold one entry per replica pair".to_string());
+        if self.pairwise.len() != count * (count - 1) / 2 {
+            return Err(invalid(format!(
+                "pairwise must hold {} entries, one per replica pair",
+                count * (count - 1) / 2
+            )));
         }
         let unit = 1i64 << 32;
-        if pairwise
+        if self
+            .pairwise
             .iter()
             .any(|d| d.scale != QuantScaleTag::Q32 || !(0..=unit).contains(&d.value))
         {
-            return Err("every pairwise diversity is on Q32 inside [0, 1]".to_string());
+            return Err(invalid(
+                "every pairwise diversity is on Q32 inside [0, 1]".to_string(),
+            ));
         }
-        Ok(Self {
-            replicas,
-            pairwise: BoundedVec::new(pairwise)?,
-        })
+        Ok(())
     }
 }
 
-/// The drift question: a reference window and a current window of scores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

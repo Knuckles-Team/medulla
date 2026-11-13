@@ -11,12 +11,37 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
 use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
 
 /// Most steps one trajectory may carry.
 pub const MAX_REWARD_STEPS: usize = 4096;
 /// Most hierarchy nodes one trajectory may carry.
 pub const MAX_HTN_NODES: usize = 256;
+
+/// Refusal code: the task hierarchy is deeper than `knob htn.max_depth`.
+pub const REWARD_HTN_TOO_DEEP: RefusalCode = RefusalCode::new("REWARD_HTN_TOO_DEEP");
+/// Refusal code: a parent index is not below its child, or a child's step
+/// range lies outside its parent's.
+pub const REWARD_HTN_INVALID: RefusalCode = RefusalCode::new("REWARD_HTN_INVALID");
+/// Refusal code: the proposed rewards miss the trajectory reward by more than
+/// `knob reward.sum_tolerance`.
+pub const REWARD_SUM_MISMATCH: RefusalCode = RefusalCode::new("REWARD_SUM_MISMATCH");
+/// Refusal code: an advantage was asked of fewer than two steps or of rewards
+/// with no deviation.
+pub const REWARD_ADVANTAGE_UNDEFINED: RefusalCode = RefusalCode::new("REWARD_ADVANTAGE_UNDEFINED");
+/// Refusal code: more steps than `knob reward.max_steps`.
+pub const REWARD_TOO_MANY_STEPS: RefusalCode = RefusalCode::new("REWARD_TOO_MANY_STEPS");
+
+/// The `REFUSALS` table of the `reward_decomposition` family, registered in
+/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
+pub const REFUSALS: &[RefusalCode] = &[
+    REWARD_HTN_TOO_DEEP,
+    REWARD_HTN_INVALID,
+    REWARD_SUM_MISMATCH,
+    REWARD_ADVANTAGE_UNDEFINED,
+    REWARD_TOO_MANY_STEPS,
+];
 
 /// What the caller's value model said after one step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,6 +175,22 @@ pub const KNOBS: &[KnobSpec] = &[
     ratio("reward.saturation_low", 0, 0, 1_000_000),
     ratio("reward.saturation_high", 1_000_000, 0, 1_000_000),
     ratio("reward.sum_tolerance", 1, 0, 1_000),
+    KnobSpec {
+        name: "htn.max_depth",
+        unit: "levels",
+        default: KnobValue::Integer(8),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(32),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "reward.max_steps",
+        unit: "steps",
+        default: KnobValue::Integer(1024),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(4096),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The pinned `reward.*` knob values, in millionths.
@@ -165,6 +206,10 @@ pub struct RewardKnobs {
     pub saturation_high_micros: i64,
     /// `knob reward.sum_tolerance`, range [0, 0.001].
     pub sum_tolerance_micros: i64,
+    /// `knob htn.max_depth`, range [1, 32], levels.
+    pub htn_max_depth: u32,
+    /// `knob reward.max_steps`, range [1, 4096], steps.
+    pub max_steps: u32,
 }
 
 impl Default for RewardKnobs {
@@ -173,12 +218,18 @@ impl Default for RewardKnobs {
             KnobValue::DecimalMicros(value) => value,
             _ => 0,
         };
+        let whole = |index: usize, fallback: u32| match KNOBS[index].default {
+            KnobValue::Integer(value) => u32::try_from(value).unwrap_or(fallback),
+            _ => fallback,
+        };
         Self {
             difficulty_floor_micros: read(0),
             cache_tier_discount_micros: read(1),
             saturation_low_micros: read(2),
             saturation_high_micros: read(3),
             sum_tolerance_micros: read(4),
+            htn_max_depth: whole(5, 8),
+            max_steps: whole(6, 1024),
         }
     }
 }
@@ -190,12 +241,18 @@ impl RewardKnobs {
             KnobValue::DecimalMicros(value) => value,
             _ => 0,
         };
+        let whole = |index: usize, fallback: u32| match policy.knob(&KNOBS[index]) {
+            KnobValue::Integer(value) => u32::try_from(value).unwrap_or(fallback),
+            _ => fallback,
+        };
         Self {
             difficulty_floor_micros: read(0),
             cache_tier_discount_micros: read(1),
             saturation_low_micros: read(2),
             saturation_high_micros: read(3),
             sum_tolerance_micros: read(4),
+            htn_max_depth: whole(5, 8),
+            max_steps: whole(6, 1024),
         }
     }
 }

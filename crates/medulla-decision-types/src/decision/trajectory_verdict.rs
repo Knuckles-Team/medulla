@@ -194,9 +194,26 @@ pub enum AdmissionVerdict {
 /// The refusal code an admission that is not admitted abstains with
 /// (MEDULLA-DECISION-ENGINE-R753.755).
 pub const PROBE_COMPROMISED: RefusalCode = RefusalCode::new("PROBE_COMPROMISED");
+/// Refusal code: a join over no trajectory.
+pub const JOIN_EMPTY_SET: RefusalCode = RefusalCode::new("JOIN_EMPTY_SET");
+/// Refusal code: a verification that names no trace digest to bind to.
+pub const VERIFY_VERDICT_UNBOUND: RefusalCode = RefusalCode::new("VERIFY_VERDICT_UNBOUND");
+/// Refusal code: the named trace digest differs from the recomputed one.
+pub const VERIFY_TRACE_MISMATCH: RefusalCode = RefusalCode::new("VERIFY_TRACE_MISMATCH");
+/// Refusal code: an admission over no probe.
+pub const PROBE_SET_EMPTY: RefusalCode = RefusalCode::new("PROBE_SET_EMPTY");
+/// Refusal code: more probes than `knob verify.probe_budget`.
+pub const PROBE_BUDGET_EXCEEDED: RefusalCode = RefusalCode::new("PROBE_BUDGET_EXCEEDED");
+
+/// The `REFUSALS` table of the `trajectory_join` family (the 64-trajectory
+/// bound reuses the shared `CANDIDATE_SET_TOO_LARGE`).
+pub const JOIN_REFUSALS: &[RefusalCode] = &[JOIN_EMPTY_SET];
+/// The `REFUSALS` table of the `step_verification` family.
+pub const VERIFY_REFUSALS: &[RefusalCode] = &[VERIFY_VERDICT_UNBOUND, VERIFY_TRACE_MISMATCH];
 
 /// The `AdversarialAdmission` family's refusal table.
-pub const REFUSALS: &[RefusalCode] = &[PROBE_COMPROMISED];
+/// The `REFUSALS` table of the `adversarial_admission` family.
+pub const REFUSALS: &[RefusalCode] = &[PROBE_SET_EMPTY, PROBE_BUDGET_EXCEEDED, PROBE_COMPROMISED];
 
 /// The `verify.*` knobs (MEDULLA-DECISION-ENGINE-R753.751): retries before a
 /// rollback, probes per admission and inconclusive probes an admission allows.
@@ -271,6 +288,12 @@ pub struct VerifyRequest {
     pub checks: BoundedVec<StepCheck, MAX_TRACE_STEPS>,
     #[serde(default)]
     pub attempts: u32,
+    /// The trace digest the verdict binds to: SHA-256 of the step digests in
+    /// order, 64 lowercase hex characters. Absent or malformed is
+    /// `VERIFY_VERDICT_UNBOUND`; different from the recomputed digest is
+    /// `VERIFY_TRACE_MISMATCH`.
+    #[serde(default)]
+    pub trace_digest: String,
 }
 
 /// The admission question: the probe results of one candidate.

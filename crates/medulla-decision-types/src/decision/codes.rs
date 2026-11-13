@@ -573,6 +573,27 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::trajectory_verdict::REFUSALS,
     ),
     (QuestionKind::PlaybookTriage, super::playbook::REFUSALS),
+    (
+        QuestionKind::TrajectoryJoin,
+        super::trajectory_verdict::JOIN_REFUSALS,
+    ),
+    (
+        QuestionKind::StepVerification,
+        super::trajectory_verdict::VERIFY_REFUSALS,
+    ),
+    (QuestionKind::RewardDecomposition, super::reward::REFUSALS),
+    (
+        QuestionKind::CurriculumPromotion,
+        super::curriculum::REFUSALS,
+    ),
+    (
+        QuestionKind::PopulationDrift,
+        super::population::DRIFT_REFUSALS,
+    ),
+    (
+        QuestionKind::FanoutWidth,
+        super::population::FANOUT_REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

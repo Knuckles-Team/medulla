@@ -3,7 +3,9 @@
 //! the derivation names every source, and the record rests on the weakest
 //! evidence among them.
 
-use super::kernel_family_support::{decide_as_other_tenant, facts, kernel_request};
+use super::kernel_family_support::{
+    decide_as_other_tenant, facts, kernel_request, persisted_files,
+};
 use super::*;
 use medulla_decision_types::decision::trajectory_verdict::{JoinRequest, TrajectoryEntry};
 use medulla_decision_types::decision::ResolutionKind;
@@ -213,4 +215,45 @@ async fn other_tenant_trajectories_are_not_read() {
     let refused =
         decide_as_other_tenant(&h, join(&schema, vec![entry("a", EvidenceClass::Claim, 1)])).await;
     assert!(refused.starts_with("ACCESS_DENIED"), "{refused}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R753.752 (join half): a join over no
+/// trajectory is `JOIN_EMPTY_SET`, one over more than 64 is the shared
+/// `CANDIDATE_SET_TOO_LARGE`, both codes are registered, and nothing is written.
+// spec: MEDULLA-DECISION-ENGINE-R753.752
+#[tokio::test]
+async fn join_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let dir = std::path::PathBuf::from(h.state.read().await.persist_dir.clone().unwrap());
+    decide(&h, join(&schema, vec![entry("a", EvidenceClass::Claim, 1)]))
+        .await
+        .unwrap();
+    let before = persisted_files(&dir);
+
+    let error = decide(&h, join(&schema, Vec::new())).await.unwrap_err();
+    assert!(error.starts_with("JOIN_EMPTY_SET"), "{error}");
+
+    let sixty_four: Vec<TrajectoryEntry> = (0..64)
+        .map(|i| entry(&format!("t{i:03}"), EvidenceClass::Claim, i))
+        .collect();
+    decide(&h, join(&schema, sixty_four.clone())).await.unwrap();
+    let before_large = persisted_files(&dir);
+    let mut sixty_five = sixty_four;
+    sixty_five.push(entry("t064", EvidenceClass::Claim, 64));
+    let error = decide(&h, join(&schema, sixty_five)).await.unwrap_err();
+    assert!(error.starts_with("CANDIDATE_SET_TOO_LARGE"), "{error}");
+    assert_eq!(
+        persisted_files(&dir),
+        before_large,
+        "a refusal writes nothing"
+    );
+    assert!(before_large.len() >= before.len());
+
+    for code in medulla_decision_types::decision::trajectory_verdict::JOIN_REFUSALS {
+        assert_eq!(
+            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            Some(*code)
+        );
+    }
 }

@@ -9,7 +9,9 @@
 //! is an `Observation` resolved as `Statistical`.
 
 use medulla_decision_stats::decision::curriculum::promotion_verdict;
-use medulla_decision_types::decision::curriculum::{window_runs, CurriculumRequest};
+use medulla_decision_types::decision::curriculum::{
+    promote_floor_micros, window_runs, CurriculumRequest,
+};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
@@ -75,8 +77,8 @@ impl DecisionFamily for CurriculumPromotionFamily {
                 &curriculum.policy,
                 &outcomes,
                 window,
-            )
-            .map_err(invalid_parameter)?;
+                promote_floor_micros(policy),
+            )?;
             let subject = curriculum.judged_stage.stage_id.as_str();
             let field = "params.curriculum_promotion";
             let premises = vec![

@@ -10,13 +10,15 @@
 //! `Irreversible`, always requires confirmation (`ACTION_NEEDS_APPROVAL`). The
 //! record is an `Observation` resolved as a `Constraint`.
 
-use medulla_decision_stats::decision::autonomy::{autonomy_verdict, ledger_from_outcomes};
+use medulla_decision_stats::decision::autonomy::{
+    autonomy_verdict, ledger_from_outcomes, rule_requires_approval,
+};
 use medulla_decision_types::decision::autonomy::{
-    clean_outcomes_needed, AutonomyReading, AutonomyRequest,
+    clean_outcomes_needed, AutonomyReading, AutonomyRequest, TRUST_SELF_REPORTED,
 };
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, StatisticalOutcome, TypedValue,
+    CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{
     DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
@@ -24,10 +26,10 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
-use crate::decide::stat_log::{recent_evaluations, LogReader};
+use crate::decide::stat_log::{recent_labels_counted, LogReader};
 use crate::decide::stat_support::invalid_parameter;
 
-use super::kernel::{advisory, body, claim, one_option};
+use super::kernel::{abstained, advisory, body, claim, one_option};
 use super::DecisionFamily;
 
 const KIND: &str = "autonomy_verdict";
@@ -89,8 +91,26 @@ impl DecisionFamily for AutonomyFamily {
     ) -> Option<Result<Executed, String>> {
         Some(parse(request).and_then(|(autonomy, class)| {
             let needed = clean_outcomes_needed(policy);
-            let outcomes = recent_evaluations(ctx.store, reader, class, needed as usize)?;
-            let ledger = ledger_from_outcomes(class, &outcomes);
+            let recent = recent_labels_counted(ctx.store, reader, class, needed as usize)?;
+            if !rule_requires_approval(autonomy.irreversibility, request.question.safety)
+                && recent.labels.is_empty()
+                && recent.refused > 0
+            {
+                // Valid input the log cannot answer: every recorded outcome of
+                // the class is self-reported, so none counts toward trust.
+                return Ok(Executed::from_family(
+                    abstained(
+                        QuestionKind::AutonomyVerdict,
+                        TRUST_SELF_REPORTED,
+                        format!(
+                            "{} recorded outcome(s) of {class} are self-reported; none count",
+                            recent.refused
+                        ),
+                    )?,
+                    None,
+                ));
+            }
+            let ledger = ledger_from_outcomes(class, &recent.labels);
             let reading: AutonomyReading = autonomy_verdict(
                 autonomy.irreversibility,
                 request.question.safety,

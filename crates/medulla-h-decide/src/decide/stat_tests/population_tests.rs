@@ -3,7 +3,9 @@
 //! between two windows with its alert, and the replica width a fan-out should
 //! use.
 
-use super::kernel_family_support::{decide_as_other_tenant, facts, kernel_request};
+use super::kernel_family_support::{
+    decide_as_other_tenant, facts, kernel_request, persisted_files,
+};
 use super::*;
 use medulla_decision_types::decision::population::{
     DriftRequest, DriftWindow, FanoutRequest, PopulationSpread,
@@ -150,11 +152,14 @@ async fn served_decide_reads_drift_and_picks_width() {
             "missing premise {expected}"
         );
     }
-    // A budget that cannot fund one replica is refused.
-    let error = decide(&h, fanout(&schema, ONE / 2, 3, 9))
+    // A budget that cannot fund one replica abstains (FANOUT_BUDGET_TOO_LOW).
+    let record = decide(&h, fanout(&schema, ONE / 2, 3, 9))
         .await
-        .unwrap_err();
-    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    assert_eq!(abstention_code(&record), "FANOUT_BUDGET_TOO_LOW");
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R752.754: drift premises name the distance
@@ -191,5 +196,101 @@ async fn other_tenant_inputs_are_not_read() {
     let mut request = drift(&schema, &samples, &[0, 1]);
     request.policy = DecisionPolicyRef::Pinned { component: pin };
     let error = decide(&h, request).await.unwrap_err();
-    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+    assert!(error.starts_with("DRIFT_WINDOW_TOO_LARGE"), "{error}");
+}
+
+fn abstention_code(record: &StatisticalDecisionRecord) -> String {
+    assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("expected an abstention, got {:?}", record.outcome);
+    };
+    reasons.as_slice()[0].code().as_str().to_string()
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R752.752 (population half): the empty
+/// window and the unfundable budget abstain, the oversized window and the
+/// invalid spread are refused, each with its registered code, and nothing is
+/// written.
+// spec: MEDULLA-DECISION-ENGINE-R752.752
+#[tokio::test]
+async fn population_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let dir = std::path::PathBuf::from(h.state.read().await.persist_dir.clone().unwrap());
+    decide(&h, drift(&schema, &[0, 1], &[0, 1])).await.unwrap();
+    let before = persisted_files(&dir);
+
+    // DRIFT_WINDOW_TOO_LARGE under a pinned bound of 16 samples.
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        medulla_decision_types::decision::knobs::KnobName::new("drift.max_samples"),
+        medulla_decision_types::decision::knobs::KnobValue::Integer(16),
+    );
+    let pin = h.publish_policy("policy-population", &policy);
+    let samples: Vec<i64> = (0..17).collect();
+    let mut large = drift(&schema, &[0, 1], &samples);
+    large.policy = DecisionPolicyRef::Pinned { component: pin };
+    let error = decide(&h, large).await.unwrap_err();
+    assert!(error.starts_with("DRIFT_WINDOW_TOO_LARGE"), "{error}");
+
+    // POPULATION_SPREAD_INVALID: a wrong pairwise count and an entry outside [0, 1].
+    for spread in [
+        PopulationSpread {
+            replicas: 4,
+            pairwise: BoundedVec::new(vec![q(ONE / 2); 5]).unwrap(),
+        },
+        PopulationSpread {
+            replicas: 4,
+            pairwise: BoundedVec::new(vec![q(ONE + 1); 6]).unwrap(),
+        },
+    ] {
+        let request = kernel_request(
+            &schema,
+            QuestionKind::FanoutWidth,
+            "fanout_width",
+            TypedValue::FanoutWidth(Box::new(FanoutRequest {
+                spread,
+                current_width: 3,
+                budget: 100,
+                cost_per_replica: 10,
+            })),
+            &["replicas"],
+        );
+        let error = decide(&h, request).await.unwrap_err();
+        assert!(error.starts_with("POPULATION_SPREAD_INVALID"), "{error}");
+    }
+
+    assert_eq!(persisted_files(&dir), before, "a refusal writes nothing");
+
+    // DRIFT_EMPTY_WINDOW: either window, an abstention and never a zero distance.
+    for (reference, current) in [(&[][..], &[1][..]), (&[1][..], &[][..])] {
+        let record = decide(&h, drift(&schema, reference, current))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        assert_eq!(abstention_code(&record), "DRIFT_EMPTY_WINDOW");
+        assert!(record.answer.is_none());
+    }
+
+    // FANOUT_BUDGET_TOO_LOW: an abstention.
+    let record = decide(&h, fanout(&schema, ONE / 2, 3, 9))
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
+    assert_eq!(abstention_code(&record), "FANOUT_BUDGET_TOO_LOW");
+
+    // Every code is registered.
+    for code in medulla_decision_types::decision::population::DRIFT_REFUSALS
+        .iter()
+        .chain(medulla_decision_types::decision::population::FANOUT_REFUSALS)
+    {
+        assert_eq!(
+            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            Some(*code)
+        );
+    }
 }

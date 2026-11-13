@@ -84,6 +84,19 @@ pub(super) async fn seed(
     path: &str,
     outcomes: &[bool],
 ) {
+    seed_as(h, tenant, pins, path, outcomes, EvidenceClass::Observation).await;
+}
+
+/// [`seed`] with the evidence class of every evaluation: a `Claim` is a
+/// self-reported outcome, which never counts as a label.
+pub(super) async fn seed_as(
+    h: &Harness,
+    tenant: &str,
+    pins: &(ComponentDependency, DecisionPolicyRef),
+    path: &str,
+    outcomes: &[bool],
+    class: EvidenceClass,
+) {
     let request = DecideRequest {
         tenant_id: tenant.to_string(),
         question: StatisticalQuestion {
@@ -140,7 +153,7 @@ pub(super) async fn seed(
                     evaluation: DecisionOutcomeEvaluation {
                         record_id: record.record_id.clone(),
                         evaluation_id: format!("e-{i:03}"),
-                        class: EvidenceClass::Observation,
+                        class,
                         selected_agent: "selected-agent".to_string(),
                         lease_holder: "lease-holder".to_string(),
                         fidelity: OutcomeFidelity::ToolCalls,

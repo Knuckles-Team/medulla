@@ -5,7 +5,7 @@
 //! outcomes never raise trust.
 
 use super::kernel_family_support::{facts, kernel_request};
-use super::path_preference_tests::{pins, run, seed, OTHER};
+use super::path_preference_tests::{pins, run, seed, seed_as, OTHER};
 use super::*;
 use medulla_decision_types::decision::autonomy::{
     AutonomyReading, AutonomyRequest, CorrigibilityVerdict, IrreversibilityClass,
@@ -155,4 +155,63 @@ async fn other_tenant_outcomes_never_raise_trust() {
     .await;
     assert_eq!(reading.verdict, CorrigibilityVerdict::RequireConfirmation);
     assert_eq!(reading.clean_outcomes, 0);
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R752.752 (autonomy half): the irreversible
+/// action carries `ACTION_NEEDS_APPROVAL` as its verdict code, and a class whose
+/// only recorded outcomes are self-reported abstains with `TRUST_SELF_REPORTED`;
+/// both codes are registered.
+// spec: MEDULLA-DECISION-ENGINE-R752.752
+#[tokio::test]
+async fn autonomy_refusals() {
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    seed_as(
+        &h,
+        TENANT,
+        &pins,
+        "file.write",
+        &run(5, 0),
+        EvidenceClass::Claim,
+    )
+    .await;
+
+    // TRUST_SELF_REPORTED: five self-reported successes count for nothing.
+    let mut request = kernel_request(
+        &pins.0,
+        QuestionKind::AutonomyVerdict,
+        "autonomy_verdict",
+        TypedValue::AutonomyVerdict(Box::new(AutonomyRequest {
+            irreversibility: IrreversibilityClass::Reversible,
+        })),
+        &["file.write"],
+    );
+    request.question.safety = QuestionSafety::Ordinary;
+    let record = decide(&h, request).await.unwrap().records.as_slice()[0].clone();
+    assert_eq!(record.resolution_kind, ResolutionKind::Abstention);
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("expected an abstention, got {:?}", record.outcome);
+    };
+    assert_eq!(reasons.as_slice()[0].code().as_str(), "TRUST_SELF_REPORTED");
+    assert!(record.answer.is_none());
+
+    // ACTION_NEEDS_APPROVAL: the rule precedes the ledger, so the same class
+    // asked as irreversible is a confirmation verdict, not an abstention.
+    let (_, reading) = ask(
+        &h,
+        &pins.0,
+        "file.write",
+        IrreversibilityClass::Irreversible,
+        QuestionSafety::Ordinary,
+    )
+    .await;
+    assert_eq!(reading.verdict, CorrigibilityVerdict::RequireConfirmation);
+    assert_eq!(reading.code.as_deref(), Some("ACTION_NEEDS_APPROVAL"));
+
+    for code in medulla_decision_types::decision::autonomy::REFUSALS {
+        assert_eq!(
+            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            Some(*code)
+        );
+    }
 }

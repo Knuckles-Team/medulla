@@ -2,7 +2,9 @@
 //! R751.755): a trajectory reward splits over its steps and hierarchy, the
 //! rewards sum exactly, and the record names the trajectory and its depth.
 
-use super::kernel_family_support::{decide_as_other_tenant, facts, kernel_request};
+use super::kernel_family_support::{
+    decide_as_other_tenant, facts, kernel_request, persisted_files,
+};
 use super::*;
 use medulla_decision_types::decision::reward::{
     HtnNode, RewardDecompositionRequest, StepSignal, TrajectoryReward,
@@ -197,7 +199,7 @@ async fn premises_name_trajectory_and_depth() {
     assert_eq!(
         facts
             .iter()
-            .filter(|f| f.starts_with("knob:reward."))
+            .filter(|f| f.starts_with("knob:reward.") || f.starts_with("knob:htn."))
             .count(),
         medulla_decision_types::decision::reward::KNOBS.len()
     );
@@ -227,4 +229,139 @@ async fn other_tenant_trajectory_is_not_read() {
     );
     let error = decide(&h, mismatched).await.unwrap_err();
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+}
+
+fn node(parent: Option<u32>, first_step: u32, last_step: u32) -> HtnNode {
+    HtnNode {
+        parent,
+        first_step,
+        last_step,
+    }
+}
+
+async fn refused_with(h: &Harness, request: DecideRequest, code: &str) {
+    let error = decide(h, request).await.unwrap_err();
+    assert!(error.starts_with(code), "{code}: {error}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R751.752 (reward half): every reward refusal
+/// code is returned as itself, is registered, and writes nothing.
+// spec: MEDULLA-DECISION-ENGINE-R751.752
+#[tokio::test]
+async fn reward_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let dir = std::path::PathBuf::from(h.state.read().await.persist_dir.clone().unwrap());
+    decide(
+        &h,
+        ask(&schema, trajectory("t", ONE / 2, 4, Vec::new(), false)),
+    )
+    .await
+    .unwrap();
+    let before = persisted_files(&dir);
+
+    // REWARD_HTN_TOO_DEEP: a chain of 9 levels is above the default 8.
+    let chain: Vec<HtnNode> = (0..9u32).map(|i| node(i.checked_sub(1), 0, 3)).collect();
+    refused_with(
+        &h,
+        ask(&schema, trajectory("t", ONE / 2, 4, chain.clone(), false)),
+        "REWARD_HTN_TOO_DEEP",
+    )
+    .await;
+    // The depth bound is the pinned knob: a hierarchy of two levels fails a pin of 1.
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.knobs.insert(
+        medulla_decision_types::decision::knobs::KnobName::new("htn.max_depth"),
+        medulla_decision_types::decision::knobs::KnobValue::Integer(1),
+    );
+    policy.knobs.insert(
+        medulla_decision_types::decision::knobs::KnobName::new("reward.max_steps"),
+        medulla_decision_types::decision::knobs::KnobValue::Integer(3),
+    );
+    let pin = h.publish_policy("policy-reward", &policy);
+    let mut pinned = ask(
+        &schema,
+        trajectory(
+            "t",
+            ONE / 2,
+            2,
+            vec![node(None, 0, 1), node(Some(0), 0, 0)],
+            false,
+        ),
+    );
+    pinned.policy = DecisionPolicyRef::Pinned {
+        component: pin.clone(),
+    };
+    refused_with(&h, pinned, "REWARD_HTN_TOO_DEEP").await;
+
+    // REWARD_TOO_MANY_STEPS: four steps against a pinned bound of three.
+    let mut many = ask(&schema, trajectory("t", ONE / 2, 4, Vec::new(), false));
+    many.policy = DecisionPolicyRef::Pinned { component: pin };
+    refused_with(&h, many, "REWARD_TOO_MANY_STEPS").await;
+
+    // REWARD_HTN_INVALID: a parent that is not below its child, and a child
+    // range outside its parent's.
+    refused_with(
+        &h,
+        ask(
+            &schema,
+            trajectory(
+                "t",
+                ONE / 2,
+                4,
+                vec![node(Some(1), 0, 3), node(None, 0, 3)],
+                false,
+            ),
+        ),
+        "REWARD_HTN_INVALID",
+    )
+    .await;
+    refused_with(
+        &h,
+        ask(
+            &schema,
+            trajectory(
+                "t",
+                ONE / 2,
+                4,
+                vec![node(None, 0, 1), node(Some(0), 0, 3)],
+                false,
+            ),
+        ),
+        "REWARD_HTN_INVALID",
+    )
+    .await;
+
+    // REWARD_SUM_MISMATCH: proposed rewards that miss the total.
+    let mut proposed = trajectory("t", ONE / 2, 2, Vec::new(), false);
+    proposed.proposed_rewards = Some(BoundedVec::new(vec![q(ONE / 8), q(ONE / 8)]).unwrap());
+    refused_with(&h, ask(&schema, proposed), "REWARD_SUM_MISMATCH").await;
+
+    // REWARD_ADVANTAGE_UNDEFINED: one step has no peer, equal rewards no spread.
+    refused_with(
+        &h,
+        ask(&schema, trajectory("t", ONE / 2, 1, Vec::new(), true)),
+        "REWARD_ADVANTAGE_UNDEFINED",
+    )
+    .await;
+    let mut flat = trajectory("t", ONE / 2, 2, Vec::new(), true);
+    flat.steps = BoundedVec::new(
+        (1..=2)
+            .map(|i| StepSignal {
+                value_estimate: q(i * (ONE / 4)),
+                cache_hit: false,
+            })
+            .collect(),
+    )
+    .unwrap();
+    refused_with(&h, ask(&schema, flat), "REWARD_ADVANTAGE_UNDEFINED").await;
+
+    // A refusal wrote nothing, and every code is registered.
+    assert_eq!(persisted_files(&dir), before);
+    for code in medulla_decision_types::decision::reward::REFUSALS {
+        assert_eq!(
+            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            Some(*code)
+        );
+    }
 }

@@ -9,6 +9,7 @@
 //! inconclusive ones. Pure functions of their inputs.
 
 use medulla_decision_types::decision::digest::step_trace_digest;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::trajectory_verdict::{
     is_sha256_hex, AdmissionVerdict, ProbeResult, ProbeVerdict, RecoveryAction, StepCheck,
     StepVerdict, TraceStep, VerifyKnobs,
@@ -24,27 +25,33 @@ pub fn verify_steps(
     attempts: u32,
     knobs: &VerifyKnobs,
 ) -> Result<Verified, String> {
+    let invalid = |detail: String| StatisticalErrorCode::ParameterInvalid.refusal(detail);
     if steps.is_empty() {
-        return Err("a trace needs at least one step".to_string());
+        return Err(invalid("a trace needs at least one step".to_string()));
     }
     if steps.len() != checks.len() {
-        return Err("the trace needs exactly one check per step".to_string());
+        return Err(invalid(
+            "the trace needs exactly one check per step".to_string(),
+        ));
     }
     for (index, (step, check)) in steps.iter().zip(checks).enumerate() {
         if step.step_id != check.step_id {
-            return Err(format!("check {index} does not name step {}", step.step_id));
+            return Err(invalid(format!(
+                "check {index} does not name step {}",
+                step.step_id
+            )));
         }
         if steps[..index]
             .iter()
             .any(|seen| seen.step_id == step.step_id)
         {
-            return Err(format!("step {} appears twice", step.step_id));
+            return Err(invalid(format!("step {} appears twice", step.step_id)));
         }
         if !is_sha256_hex(&step.digest) || !is_sha256_hex(&check.check_digest) {
-            return Err(format!(
+            return Err(invalid(format!(
                 "step {} carries a digest that is not 64 lowercase hex characters",
                 step.step_id
-            ));
+            )));
         }
     }
     let digests: Vec<&str> = steps.iter().map(|s| s.digest.as_str()).collect();
@@ -54,7 +61,7 @@ pub fn verify_steps(
     let Some(failed) = failed else {
         let last = steps[steps.len() - 1].step_id.clone();
         return Ok((
-            StepVerdict::new(last, true, trace_digest, check_digests)?,
+            StepVerdict::new(last, true, trace_digest, check_digests).map_err(invalid)?,
             None,
         ));
     };
@@ -72,18 +79,43 @@ pub fn verify_steps(
         }
     };
     Ok((
-        StepVerdict::new(step_id, false, trace_digest, check_digests)?,
+        StepVerdict::new(step_id, false, trace_digest, check_digests).map_err(invalid)?,
         Some(recovery),
     ))
 }
 
+/// Bind a verdict to the trace digest the caller names: the verification
+/// carries no proof until the digest it was asked about is the digest of the
+/// steps. An absent or malformed digest is `VERIFY_VERDICT_UNBOUND`; a digest
+/// that differs from the recomputed one is `VERIFY_TRACE_MISMATCH`.
+pub fn bind_verdict(verdict: &StepVerdict, claimed_trace_digest: &str) -> Result<(), String> {
+    if !is_sha256_hex(claimed_trace_digest) {
+        return Err(StatisticalErrorCode::VerifyVerdictUnbound.refusal(
+            "a verification names the trace digest to bind to: 64 lowercase hex characters",
+        ));
+    }
+    if claimed_trace_digest != verdict.trace_digest {
+        return Err(StatisticalErrorCode::VerifyTraceMismatch.refusal(format!(
+            "the named digest {claimed_trace_digest} differs from the recomputed {}",
+            verdict.trace_digest
+        )));
+    }
+    Ok(())
+}
+
 /// Admit a candidate from its probe results.
 pub fn admit(probes: &[ProbeResult], knobs: &VerifyKnobs) -> Result<AdmissionVerdict, String> {
-    if probes.is_empty() || probes.len() > knobs.probe_budget as usize {
-        return Err(format!(
-            "an admission takes between 1 and {} probes",
+    if probes.is_empty() {
+        return Err(
+            StatisticalErrorCode::ProbeSetEmpty.refusal("an admission needs at least one probe")
+        );
+    }
+    if probes.len() > knobs.probe_budget as usize {
+        return Err(StatisticalErrorCode::ProbeBudgetExceeded.refusal(format!(
+            "{} probes exceed knob verify.probe_budget {}",
+            probes.len(),
             knobs.probe_budget
-        ));
+        )));
     }
     let inconclusive = probes
         .iter()
@@ -235,8 +267,12 @@ mod tests {
         };
         assert_eq!(admit(&resisted(1), &knobs()), Ok(AdmissionVerdict::Admit));
         assert_eq!(admit(&resisted(8), &knobs()), Ok(AdmissionVerdict::Admit));
-        assert!(admit(&resisted(9), &knobs()).is_err());
-        assert!(admit(&[], &knobs()).is_err());
+        assert!(admit(&resisted(9), &knobs())
+            .unwrap_err()
+            .starts_with("PROBE_BUDGET_EXCEEDED"));
+        assert!(admit(&[], &knobs())
+            .unwrap_err()
+            .starts_with("PROBE_SET_EMPTY"));
         let mut compromised = resisted(3);
         compromised[1] = probe("bad", ProbeVerdict::Compromised);
         assert_eq!(admit(&compromised, &knobs()), Ok(AdmissionVerdict::Reject));
@@ -248,5 +284,19 @@ mod tests {
             ..knobs()
         };
         assert_eq!(admit(&unsure, &lenient), Ok(AdmissionVerdict::Admit));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R753.752
+    #[test]
+    fn a_verdict_binds_to_the_recomputed_trace_digest() {
+        let (steps, checks) = trace(&[true, true]);
+        let (verdict, _) = verify_steps(&steps, &checks, 0, &knobs()).unwrap();
+        assert_eq!(bind_verdict(&verdict, &verdict.trace_digest), Ok(()));
+        for unbound in ["", "not-hex", &"AB".repeat(32)] {
+            let error = bind_verdict(&verdict, unbound).unwrap_err();
+            assert!(error.starts_with("VERIFY_VERDICT_UNBOUND"), "{error}");
+        }
+        let error = bind_verdict(&verdict, &hex(9)).unwrap_err();
+        assert!(error.starts_with("VERIFY_TRACE_MISMATCH"), "{error}");
     }
 }

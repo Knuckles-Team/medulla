@@ -59,3 +59,23 @@ pub(super) async fn decide_as_other_tenant(h: &Harness, mut request: DecideReque
     request.tenant_id = "tenant-other".to_string();
     decide(h, request).await.unwrap_err()
 }
+
+/// Every file under the server's persist directory with its length: a refusal
+/// must leave it unchanged.
+pub(super) fn persisted_files(dir: &std::path::Path) -> Vec<(String, u64)> {
+    let mut out = Vec::new();
+    let mut pending = vec![dir.to_path_buf()];
+    while let Some(next) = pending.pop() {
+        for entry in std::fs::read_dir(&next).unwrap() {
+            let entry = entry.unwrap();
+            let meta = entry.metadata().unwrap();
+            if meta.is_dir() {
+                pending.push(entry.path());
+            } else {
+                out.push((entry.path().display().to_string(), meta.len()));
+            }
+        }
+    }
+    out.sort();
+    out
+}

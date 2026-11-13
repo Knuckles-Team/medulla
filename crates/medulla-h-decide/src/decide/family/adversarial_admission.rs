@@ -65,7 +65,7 @@ impl DecisionFamily for AdversarialAdmissionFamily {
     ) -> Option<Result<Executed, String>> {
         Some(parse(request).and_then(|(admission, subject)| {
             let knobs = VerifyKnobs::from_policy(policy);
-            let verdict = admit(admission.probes.as_slice(), &knobs).map_err(invalid_parameter)?;
+            let verdict = admit(admission.probes.as_slice(), &knobs)?;
             let field = "params.adversarial_admission";
             let premises = admission
                 .probes

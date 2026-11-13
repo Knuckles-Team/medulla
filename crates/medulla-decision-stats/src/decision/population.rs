@@ -12,6 +12,7 @@ use medulla_decision_types::decision::numeric::{micros_to_q32, QuantScaleTag, Qu
 use medulla_decision_types::decision::population::{
     DriftReading, PopulationKnobs, PopulationSpread, Wasserstein1,
 };
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 fn sorted_q32(window: &[QuantisedValue], what: &str) -> Result<Vec<i128>, String> {
     if window.is_empty() {
@@ -80,6 +81,15 @@ pub fn mean_diversity(spread: &PopulationSpread) -> i64 {
     i64::try_from(sum / entries.len().max(1) as i128).unwrap_or(i64::MAX)
 }
 
+/// The most replicas the budget and `knob fanout.replica_ceiling` allow; 0
+/// when the budget does not cover one replica or a replica costs nothing.
+pub fn fanout_cap(budget: u64, cost_per_replica: u64, knobs: &PopulationKnobs) -> u32 {
+    let affordable = budget
+        .checked_div(cost_per_replica)
+        .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
+    knobs.replica_ceiling.min(affordable)
+}
+
 /// The replica width to fan out: one more at high diversity, one fewer (to a
 /// minimum of 1) at low diversity, otherwise the current width, and never above
 /// `min(knob fanout.replica_ceiling, floor(budget / cost_per_replica))`.
@@ -90,16 +100,17 @@ pub fn fanout_width(
     cost_per_replica: u64,
     knobs: &PopulationKnobs,
 ) -> Result<u32, String> {
+    spread.validate()?;
+    let invalid = |detail: &str| StatisticalErrorCode::ParameterInvalid.refusal(detail);
     if current_width == 0 {
-        return Err("current_width must be at least 1".to_string());
+        return Err(invalid("current_width must be at least 1"));
     }
     if cost_per_replica == 0 {
-        return Err("cost_per_replica must be at least 1".to_string());
+        return Err(invalid("cost_per_replica must be at least 1"));
     }
-    let affordable = u32::try_from(budget / cost_per_replica).unwrap_or(u32::MAX);
-    let cap = knobs.replica_ceiling.min(affordable);
+    let cap = fanout_cap(budget, cost_per_replica, knobs);
     if cap == 0 {
-        return Err("the budget cannot fund one replica".to_string());
+        return Err(invalid("the budget cannot fund one replica"));
     }
     let diversity = mean_diversity(spread);
     let wanted = if diversity >= micros_to_q32(knobs.diversity_high_micros) {

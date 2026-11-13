@@ -45,8 +45,13 @@ pub enum CorrigibilityVerdict {
 /// `Policy`, `WriteBack` or `Irreversible`, needs a person's approval.
 pub const ACTION_NEEDS_APPROVAL: RefusalCode = RefusalCode::new("ACTION_NEEDS_APPROVAL");
 
+/// Abstention code: the only outcomes recorded for the action class are
+/// self-reported (claims, or by the agent, its lease holder or the decider), so
+/// none count toward trust (MEDULLA-DECISION-ENGINE-R752.752).
+pub const TRUST_SELF_REPORTED: RefusalCode = RefusalCode::new("TRUST_SELF_REPORTED");
+
 /// The `Autonomy` family's refusal table.
-pub const REFUSALS: &[RefusalCode] = &[ACTION_NEEDS_APPROVAL];
+pub const REFUSALS: &[RefusalCode] = &[ACTION_NEEDS_APPROVAL, TRUST_SELF_REPORTED];
 
 /// The `autonomy.*` knobs (MEDULLA-DECISION-ENGINE-R752.755): the clean run a
 /// reversible class needs, and the fixed rule that an irreversible class never

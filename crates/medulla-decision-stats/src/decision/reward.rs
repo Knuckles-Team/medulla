@@ -14,6 +14,7 @@ use medulla_decision_types::decision::reward::{
     RewardDecompositionRequest, RewardKnobs, StepReward, TrajectoryReward, MAX_HTN_NODES,
     MAX_REWARD_STEPS,
 };
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
 
 const ONE_MICROS: i128 = 1_000_000;
@@ -21,7 +22,9 @@ const ONE_MICROS: i128 = 1_000_000;
 fn q32(value: i128) -> Result<QuantisedValue, String> {
     Ok(QuantisedValue {
         scale: QuantScaleTag::Q32,
-        value: i64::try_from(value).map_err(|_| "a reward overflows scale Q32".to_string())?,
+        value: i64::try_from(value).map_err(|_| {
+            StatisticalErrorCode::NumericRefused.refusal("a reward overflows scale Q32")
+        })?,
     })
 }
 
@@ -29,7 +32,7 @@ fn on_q32(value: &QuantisedValue, what: &str) -> Result<i128, String> {
     if value.scale == QuantScaleTag::Q32 {
         Ok(i128::from(value.value))
     } else {
-        Err(format!("{what} must be on scale Q32"))
+        Err(StatisticalErrorCode::ParameterInvalid.refusal(format!("{what} must be on scale Q32")))
     }
 }
 
@@ -67,8 +70,13 @@ fn weights(request: &RewardDecompositionRequest, knobs: &RewardKnobs) -> Result<
 }
 
 /// The normalised advantage `(reward - mean) / std` of every reward, on `Q32`.
-/// A set whose rewards are all equal has no spread and every advantage is 0.
-fn advantages(rewards: &[i128]) -> Vec<i128> {
+/// An advantage is undefined for fewer than two rewards and for rewards with no
+/// deviation (`REWARD_ADVANTAGE_UNDEFINED`).
+fn advantages(rewards: &[i128]) -> Result<Vec<i128>, String> {
+    let undefined = |detail: &str| StatisticalErrorCode::RewardAdvantageUndefined.refusal(detail);
+    if rewards.len() < 2 {
+        return Err(undefined("an advantage needs at least 2 steps"));
+    }
     let count = rewards.len() as i128;
     let mean = rewards.iter().sum::<i128>().div_euclid(count);
     let variance = rewards
@@ -77,16 +85,42 @@ fn advantages(rewards: &[i128]) -> Vec<i128> {
         .sum::<i128>()
         / count;
     let std = isqrt(variance.unsigned_abs()) as i128;
-    rewards
-        .iter()
-        .map(|r| {
-            if std == 0 {
-                0
-            } else {
-                ((r - mean) << 32) / std
+    if std == 0 {
+        return Err(undefined("the step rewards have no deviation"));
+    }
+    Ok(rewards.iter().map(|r| ((r - mean) << 32) / std).collect())
+}
+
+/// The depth of the deepest chain of the hierarchy (a root is depth 1), after
+/// checking every node: a parent index must be below its child and a child's
+/// step range must lie inside its parent's (`REWARD_HTN_INVALID`).
+fn checked_depth(request: &RewardDecompositionRequest) -> Result<u32, String> {
+    let invalid = |detail: String| StatisticalErrorCode::RewardHtnInvalid.refusal(detail);
+    let nodes = request.hierarchy.as_slice();
+    let mut depth: Vec<u32> = Vec::with_capacity(nodes.len());
+    for (index, node) in nodes.iter().enumerate() {
+        let parent_depth = match node.parent {
+            None => 0,
+            Some(parent) if (parent as usize) < index => {
+                let parent_node = &nodes[parent as usize];
+                if node.first_step < parent_node.first_step
+                    || node.last_step > parent_node.last_step
+                {
+                    return Err(invalid(format!(
+                        "hierarchy node {index} lies outside the step range of its parent {parent}"
+                    )));
+                }
+                depth[parent as usize]
             }
-        })
-        .collect()
+            Some(_) => {
+                return Err(invalid(format!(
+                    "hierarchy node {index} has no earlier parent"
+                )))
+            }
+        };
+        depth.push(parent_depth + 1);
+    }
+    Ok(depth.into_iter().max().unwrap_or(0))
 }
 
 /// Split the trajectory reward over its steps, or verify a proposed split.
@@ -96,8 +130,21 @@ pub fn decompose(
 ) -> Result<TrajectoryReward, String> {
     let total_reward = on_q32(&request.trajectory_reward, "trajectory_reward")?;
     let count = request.steps.len();
-    if count == 0 || count > MAX_REWARD_STEPS {
-        return Err(format!("steps must hold 1 to {MAX_REWARD_STEPS} entries"));
+    if count > (knobs.max_steps as usize).min(MAX_REWARD_STEPS) {
+        return Err(StatisticalErrorCode::RewardTooManySteps.refusal(format!(
+            "{count} steps exceed knob reward.max_steps {}",
+            knobs.max_steps
+        )));
+    }
+    if count == 0 {
+        return Err(StatisticalErrorCode::ParameterInvalid.refusal("steps must not be empty"));
+    }
+    let depth = checked_depth(request)?;
+    if depth > knobs.htn_max_depth {
+        return Err(StatisticalErrorCode::RewardHtnTooDeep.refusal(format!(
+            "the hierarchy is {depth} levels deep, above knob htn.max_depth {}",
+            knobs.htn_max_depth
+        )));
     }
     let weights = weights(request, knobs)?;
     let rewards: Vec<i128> = match &request.proposed_rewards {
@@ -109,18 +156,21 @@ pub fn decompose(
                 .map(|r| on_q32(r, "a proposed reward"))
                 .collect::<Result<_, _>>()?;
             if proposed.len() != count {
-                return Err("proposed_rewards must hold one reward per step".to_string());
+                return Err(StatisticalErrorCode::ParameterInvalid
+                    .refusal("proposed_rewards must hold one reward per step"));
             }
             let tolerance = i128::from(micros_to_q32(knobs.sum_tolerance_micros));
             if (proposed.iter().sum::<i128>() - total_reward).abs() > tolerance {
-                return Err("the proposed rewards do not sum to the trajectory reward".to_string());
+                return Err(StatisticalErrorCode::RewardSumMismatch
+                    .refusal("the proposed rewards do not sum to the trajectory reward"));
             }
             proposed
         }
         None => {
             let total_weight: i128 = weights.iter().sum();
             if total_weight <= 0 {
-                return Err("the step weights vanish; lower reward.cache_tier_discount".to_string());
+                return Err(StatisticalErrorCode::ParameterInvalid
+                    .refusal("the step weights vanish; lower reward.cache_tier_discount"));
             }
             let mut rewards: Vec<i128> = weights[..count - 1]
                 .iter()
@@ -131,13 +181,19 @@ pub fn decompose(
             rewards
         }
     };
-    let advantage = request.with_advantage.then(|| advantages(&rewards));
+    let advantage = if request.with_advantage {
+        Some(advantages(&rewards)?)
+    } else {
+        None
+    };
     let step_rewards = rewards
         .iter()
         .enumerate()
         .map(|(index, reward)| {
             Ok(StepReward {
-                step: u32::try_from(index).map_err(|_| "too many steps".to_string())?,
+                step: u32::try_from(index).map_err(|_| {
+                    StatisticalErrorCode::RewardTooManySteps.refusal("too many steps")
+                })?,
                 reward: q32(*reward)?,
                 advantage: match &advantage {
                     Some(values) => Some(q32(values[index])?),
@@ -154,12 +210,9 @@ pub fn decompose(
     for (index, node) in request.hierarchy.iter().enumerate() {
         let (first, last) = (node.first_step as usize, node.last_step as usize);
         if first > last || last >= count {
-            return Err(format!(
+            return Err(StatisticalErrorCode::RewardHtnInvalid.refusal(format!(
                 "hierarchy node {index} names steps outside the trace"
-            ));
-        }
-        if node.parent.is_some_and(|parent| parent as usize >= index) {
-            return Err(format!("hierarchy node {index} has no earlier parent"));
+            )));
         }
         node_rewards.push(q32(prefix[last + 1] - prefix[first])?);
     }
@@ -401,13 +454,17 @@ mod tests {
             vec![678661107, -2272039375, -4986683820, 6580062088]
         );
         assert!(first.step_rewards.iter().all(|r| r.advantage.is_some()));
-        // A constant split has no spread: every advantage is 0.
+        // A constant split has no spread, and one step has no peer: the
+        // advantage is undefined, never a silent zero.
         let flat = decompose(
             &request(ONE, &[(ONE / 2, false), (ONE, false)], Vec::new(), true),
             &knobs,
         )
-        .unwrap();
-        assert!(flat.step_rewards.iter().all(|r| r.advantage == Some(q(0))));
+        .unwrap_err();
+        assert!(flat.starts_with("REWARD_ADVANTAGE_UNDEFINED"), "{flat}");
+        let single =
+            decompose(&request(ONE, &[(ONE, false)], Vec::new(), true), &knobs).unwrap_err();
+        assert!(single.starts_with("REWARD_ADVANTAGE_UNDEFINED"), "{single}");
     }
 
     #[test]

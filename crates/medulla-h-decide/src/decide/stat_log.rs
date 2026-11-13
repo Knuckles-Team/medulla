@@ -542,9 +542,54 @@ pub(super) fn recent_labels_where(
     wanted: impl Fn(&str) -> bool,
     n: usize,
 ) -> Result<Vec<OutcomeLabel>, String> {
+    Ok(recent_label_set_where(store, reader, wanted, n)?.labels)
+}
+
+/// The labels of [`recent_labels_where`] with the count of evaluations that
+/// did not count: claims, self-reports and traces below the fidelity floor
+/// (`LabelUse::Refused`).
+pub(super) struct LabelSet {
+    /// The latest labels, newest first.
+    pub(super) labels: Vec<OutcomeLabel>,
+    /// Evaluations of the accepted options that are refused as labels.
+    pub(super) refused: usize,
+}
+
+/// The labels of [`recent_evaluations`] with the refused count of one option.
+pub(super) struct RecentLabels {
+    /// The latest labels, newest first; `true` is a success.
+    pub(super) labels: Vec<bool>,
+    /// Evaluations of the option that are refused as labels.
+    pub(super) refused: usize,
+}
+
+/// The latest `n` labels of `option_id` and how many of its evaluations were
+/// refused as labels.
+pub(super) fn recent_labels_counted(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    option_id: &str,
+    n: usize,
+) -> Result<RecentLabels, String> {
+    let set = recent_label_set_where(store, reader, |executed| executed == option_id, n)?;
+    Ok(RecentLabels {
+        labels: set.labels.into_iter().map(|label| label.success).collect(),
+        refused: set.refused,
+    })
+}
+
+/// The one label read: the latest `n` labels of every option `wanted` accepts
+/// and the count of refused evaluations (MEDULLA-DECISION-ENGINE-R706.3).
+fn recent_label_set_where(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    wanted: impl Fn(&str) -> bool,
+    n: usize,
+) -> Result<LabelSet, String> {
     use medulla_decision_stats::decision::aggregate::{label_use, LabelUse};
     let floor = default_statistical_policy().min_outcome_fidelity;
     let mut labels: Vec<OutcomeLabel> = Vec::new();
+    let mut refused = 0usize;
     for (entry, evaluations) in joined(store, reader, None, None)? {
         let record = &entry.record;
         let Some(option_id) = executed_option(&record.outcome).filter(|id| wanted(id)) else {
@@ -554,13 +599,15 @@ pub(super) fn recent_labels_where(
             continue;
         }
         for stored in &evaluations {
-            if let LabelUse::Label(success) = label_use(stored, &record.caller_principal, floor) {
-                labels.push(OutcomeLabel {
+            match label_use(stored, &record.caller_principal, floor) {
+                LabelUse::Label(success) => labels.push(OutcomeLabel {
                     option_id: option_id.to_string(),
                     recorded_at_ms: stored.recorded_at_ms,
                     evaluation_id: stored.evaluation.evaluation_id.clone(),
                     success,
-                });
+                }),
+                LabelUse::Refused => refused += 1,
+                LabelUse::Censored => {}
             }
         }
     }
@@ -568,7 +615,7 @@ pub(super) fn recent_labels_where(
         (b.recorded_at_ms, &b.evaluation_id).cmp(&(a.recorded_at_ms, &a.evaluation_id))
     });
     labels.truncate(n);
-    Ok(labels)
+    Ok(LabelSet { labels, refused })
 }
 
 /// Options of the caller's visible, non-synthetic log that earned a skill

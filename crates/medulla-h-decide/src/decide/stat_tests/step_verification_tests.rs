@@ -3,7 +3,9 @@
 //! trace, a failed step selects a recovery, and a compromised candidate is
 //! rejected with `PROBE_COMPROMISED`.
 
-use super::kernel_family_support::{decide_as_other_tenant, facts, kernel_request};
+use super::kernel_family_support::{
+    decide_as_other_tenant, facts, kernel_request, persisted_files,
+};
 use super::*;
 use medulla_decision_types::decision::trajectory_verdict::{
     AdmissionRequest, AdmissionVerdict, ProbeResult, ProbeVerdict, RecoveryAction, StepCheck,
@@ -16,12 +18,26 @@ fn hex(n: u8) -> String {
 }
 
 fn verify(schema: &ComponentDependency, passes: &[bool], attempts: u32) -> DecideRequest {
-    let steps = (0..passes.len())
+    verify_naming(schema, passes, attempts, |recomputed| recomputed)
+}
+
+/// A verification whose named trace digest is `name(recomputed digest)`.
+fn verify_naming(
+    schema: &ComponentDependency,
+    passes: &[bool],
+    attempts: u32,
+    name: impl FnOnce(String) -> String,
+) -> DecideRequest {
+    let steps: Vec<TraceStep> = (0..passes.len())
         .map(|i| TraceStep {
             step_id: format!("s{i}"),
             digest: hex(i as u8 + 1),
         })
         .collect();
+    let digests: Vec<&str> = steps.iter().map(|s| s.digest.as_str()).collect();
+    let trace_digest = name(medulla_decision_types::decision::digest::step_trace_digest(
+        &digests,
+    ));
     let checks = passes
         .iter()
         .enumerate()
@@ -39,6 +55,7 @@ fn verify(schema: &ComponentDependency, passes: &[bool], attempts: u32) -> Decid
             steps: BoundedVec::new(steps).unwrap(),
             checks: BoundedVec::new(checks).unwrap(),
             attempts,
+            trace_digest,
         })),
         &["trace-1"],
     )
@@ -220,9 +237,9 @@ async fn served_decide_rejects_a_compromised_candidate() {
     let error = decide(&h, admission(&schema, &[ProbeVerdict::Resisted; 9]))
         .await
         .unwrap_err();
-    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+    assert!(error.starts_with("PROBE_BUDGET_EXCEEDED"), "{error}");
     let error = decide(&h, admission(&schema, &[])).await.unwrap_err();
-    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+    assert!(error.starts_with("PROBE_SET_EMPTY"), "{error}");
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R753.755: a request for another tenant is
@@ -255,9 +272,78 @@ async fn other_tenant_traces_are_not_read() {
             }])
             .unwrap(),
             attempts: 0,
+            trace_digest: medulla_decision_types::decision::digest::step_trace_digest(&[
+                hex(1).as_str()
+            ]),
         })),
         &["trace-1"],
     );
     let error = decide(&h, mismatched).await.unwrap_err();
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R753.752 (verification and admission half):
+/// a verification without a trace digest, or with the wrong one, an empty probe
+/// set and an over-budget probe set are each refused with their registered
+/// code, a compromised probe is the rejection reason, and nothing is written.
+// spec: MEDULLA-DECISION-ENGINE-R753.752
+#[tokio::test]
+async fn verification_and_admission_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let dir = std::path::PathBuf::from(h.state.read().await.persist_dir.clone().unwrap());
+    decide(&h, verify(&schema, &[true, true], 0)).await.unwrap();
+    let before = persisted_files(&dir);
+
+    // VERIFY_VERDICT_UNBOUND: no digest, and a digest that is not 64 lowercase hex.
+    for named in ["", "not-a-digest"] {
+        let error = decide(
+            &h,
+            verify_naming(&schema, &[true, true], 0, |_| named.to_string()),
+        )
+        .await
+        .unwrap_err();
+        assert!(error.starts_with("VERIFY_VERDICT_UNBOUND"), "{error}");
+    }
+    // VERIFY_TRACE_MISMATCH: a well-formed digest of another trace.
+    let error = decide(&h, verify_naming(&schema, &[true, true], 0, |_| hex(0xee)))
+        .await
+        .unwrap_err();
+    assert!(error.starts_with("VERIFY_TRACE_MISMATCH"), "{error}");
+    // PROBE_SET_EMPTY and PROBE_BUDGET_EXCEEDED.
+    let error = decide(&h, admission(&schema, &[])).await.unwrap_err();
+    assert!(error.starts_with("PROBE_SET_EMPTY"), "{error}");
+    let error = decide(&h, admission(&schema, &[ProbeVerdict::Resisted; 9]))
+        .await
+        .unwrap_err();
+    assert!(error.starts_with("PROBE_BUDGET_EXCEEDED"), "{error}");
+    assert_eq!(persisted_files(&dir), before, "a refusal writes nothing");
+
+    // PROBE_COMPROMISED: the rejection reason of an abstention.
+    let record = decide(
+        &h,
+        admission(
+            &schema,
+            &[ProbeVerdict::Resisted, ProbeVerdict::Compromised],
+        ),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("a compromised probe abstains, got {:?}", record.outcome);
+    };
+    assert_eq!(reasons.as_slice()[0].code().as_str(), "PROBE_COMPROMISED");
+
+    for code in medulla_decision_types::decision::trajectory_verdict::VERIFY_REFUSALS
+        .iter()
+        .chain(medulla_decision_types::decision::trajectory_verdict::REFUSALS)
+    {
+        assert_eq!(
+            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            Some(*code)
+        );
+    }
 }

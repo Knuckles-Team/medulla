@@ -8,17 +8,31 @@
 //! the order they arrive in never matters.
 
 use medulla_decision_types::decision::digest::trajectory_derivation_digest;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::trajectory_verdict::{DistilledTrajectory, TrajectoryEntry};
+
+/// The most trajectories one join takes; more refuse with
+/// `CANDIDATE_SET_TOO_LARGE`.
+pub const MAX_JOIN_TRAJECTORIES: usize = 64;
 
 /// Join competing trajectories into the strongest one.
 pub fn join(entries: &[TrajectoryEntry]) -> Result<DistilledTrajectory, String> {
     let mut source_ids: Vec<String> = entries.iter().map(|e| e.trajectory_id.clone()).collect();
     source_ids.sort();
     if source_ids.is_empty() {
-        return Err("a join needs at least one trajectory".to_string());
+        return Err(
+            StatisticalErrorCode::JoinEmptySet.refusal("a join needs at least one trajectory")
+        );
+    }
+    if source_ids.len() > MAX_JOIN_TRAJECTORIES {
+        return Err(StatisticalErrorCode::CandidateSetTooLarge.refusal(format!(
+            "a join takes at most {MAX_JOIN_TRAJECTORIES} trajectories, got {}",
+            source_ids.len()
+        )));
     }
     if source_ids.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err("a trajectory id appears twice in the join".to_string());
+        return Err(StatisticalErrorCode::ParameterInvalid
+            .refusal("a trajectory id appears twice in the join"));
     }
     // `EvidenceClass` orders `Proof < Observation < Claim`, so the strongest
     // evidence is the smallest; the score is compared descending.
@@ -30,7 +44,9 @@ pub fn join(entries: &[TrajectoryEntry]) -> Result<DistilledTrajectory, String> 
                 .then_with(|| b.verifier_score.value.cmp(&a.verifier_score.value))
                 .then_with(|| a.trajectory_id.cmp(&b.trajectory_id))
         })
-        .ok_or_else(|| "a join needs at least one trajectory".to_string())?;
+        .ok_or_else(|| {
+            StatisticalErrorCode::JoinEmptySet.refusal("a join needs at least one trajectory")
+        })?;
     let derivation_digest = trajectory_derivation_digest(&source_ids);
     DistilledTrajectory::new(
         format!("distilled:{derivation_digest}"),
@@ -38,6 +54,7 @@ pub fn join(entries: &[TrajectoryEntry]) -> Result<DistilledTrajectory, String> 
         source_ids,
         derivation_digest,
     )
+    .map_err(|detail| StatisticalErrorCode::ParameterInvalid.refusal(detail))
 }
 
 #[cfg(test)]
@@ -107,7 +124,7 @@ mod tests {
             format!("distilled:{}", distilled.derivation_digest)
         );
         // An empty join and a repeated id are refused.
-        assert!(join(&[]).is_err());
+        assert!(join(&[]).unwrap_err().starts_with("JOIN_EMPTY_SET"));
         assert!(join(&[
             entry("a", EvidenceClass::Claim, 1),
             entry("a", EvidenceClass::Proof, 2)

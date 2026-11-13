@@ -4,10 +4,12 @@
 //! and calls one pure kernel of `medulla-decision-stats`; none of them reads a
 //! store, so a request never reaches another tenant's data.
 
+use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionSafety, StatisticalOutcome, TypedValue,
+    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
 };
+use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::{
     EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
 };
@@ -86,6 +88,22 @@ pub(super) fn advisory() -> StatisticalOutcome {
         scores: BoundedVec::default(),
         calibrated: false,
     }
+}
+
+/// An abstention of `kind` under its registered `code`: the request is well
+/// formed but its evidence does not support an answer (DE-REFUSE-VS-ABSTAIN).
+pub(super) fn abstained(
+    kind: QuestionKind,
+    code: RefusalCode,
+    detail: String,
+) -> Result<StatisticalOutcome, String> {
+    Ok(StatisticalOutcome::Abstained {
+        reasons: BoundedVec::new(vec![AbstainReason::Family {
+            family: kind,
+            code,
+            detail,
+        }])?,
+    })
 }
 
 /// The wire label of an evidence class.

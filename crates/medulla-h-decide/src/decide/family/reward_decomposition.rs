@@ -70,7 +70,7 @@ impl DecisionFamily for RewardDecompositionFamily {
     ) -> Option<Result<Executed, String>> {
         Some(parse(request).and_then(|trajectory| {
             let knobs = RewardKnobs::from_policy(policy);
-            let reward = decompose(trajectory, &knobs).map_err(invalid_parameter)?;
+            let reward = decompose(trajectory, &knobs)?;
             let field = "params.reward_decomposition";
             let id = trajectory.trajectory_id.as_str();
             let premises: Vec<PremiseRef> = vec![

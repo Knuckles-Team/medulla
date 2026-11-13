@@ -22,6 +22,12 @@ pub fn ledger_from_outcomes(action_class: &str, outcomes: &[bool]) -> TrustLedge
     }
 }
 
+/// Whether the rule, not the ledger, requires confirmation: an irreversible
+/// class or a question of any safety class but `Ordinary`.
+pub fn rule_requires_approval(class: IrreversibilityClass, safety: QuestionSafety) -> bool {
+    class == IrreversibilityClass::Irreversible || safety != QuestionSafety::Ordinary
+}
+
 /// The corrigibility verdict of one action.
 pub fn autonomy_verdict(
     class: IrreversibilityClass,
@@ -29,9 +35,7 @@ pub fn autonomy_verdict(
     ledger: &TrustLedger,
     clean_needed: u32,
 ) -> AutonomyReading {
-    let rule_requires =
-        class == IrreversibilityClass::Irreversible || safety != QuestionSafety::Ordinary;
-    if rule_requires {
+    if rule_requires_approval(class, safety) {
         return AutonomyReading {
             verdict: CorrigibilityVerdict::RequireConfirmation,
             clean_outcomes: ledger.clean_outcomes,

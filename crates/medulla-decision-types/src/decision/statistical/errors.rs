@@ -287,6 +287,40 @@ closed_error_codes! {
         /// A context-search cursor was issued against an older snapshot
         /// revision than the one being read (MEDULLA-DECISION-ENGINE-R100.100.4).
         ContextCursorStale => "CONTEXT_CURSOR_STALE",
+        /// The task hierarchy is deeper than `knob htn.max_depth`
+        /// (MEDULLA-DECISION-ENGINE-R751.752).
+        RewardHtnTooDeep => "REWARD_HTN_TOO_DEEP",
+        /// A hierarchy parent is not below its child, or a child's step range
+        /// lies outside its parent's.
+        RewardHtnInvalid => "REWARD_HTN_INVALID",
+        /// Proposed rewards miss the trajectory reward by more than the tolerance.
+        RewardSumMismatch => "REWARD_SUM_MISMATCH",
+        /// An advantage was asked of fewer than two steps or of rewards with no
+        /// deviation.
+        RewardAdvantageUndefined => "REWARD_ADVANTAGE_UNDEFINED",
+        /// More steps than `knob reward.max_steps`.
+        RewardTooManySteps => "REWARD_TOO_MANY_STEPS",
+        /// Fewer evaluations than the promotion window.
+        CurriculumWindowIncomplete => "CURRICULUM_WINDOW_INCOMPLETE",
+        /// A promotion threshold under `knob curriculum.promote_floor`.
+        CurriculumThresholdBelowFloor => "CURRICULUM_THRESHOLD_BELOW_FLOOR",
+        /// A drift window above `knob drift.max_samples`
+        /// (MEDULLA-DECISION-ENGINE-R752.752).
+        DriftWindowTooLarge => "DRIFT_WINDOW_TOO_LARGE",
+        /// A population spread whose pairwise count is not `replicas*(replicas-1)/2`
+        /// or whose entries lie outside [0, 1].
+        PopulationSpreadInvalid => "POPULATION_SPREAD_INVALID",
+        /// A step verification names no trace digest to bind its verdict to
+        /// (MEDULLA-DECISION-ENGINE-R753.752).
+        VerifyVerdictUnbound => "VERIFY_VERDICT_UNBOUND",
+        /// The named trace digest differs from the recomputed one.
+        VerifyTraceMismatch => "VERIFY_TRACE_MISMATCH",
+        /// A trajectory join over no trajectory.
+        JoinEmptySet => "JOIN_EMPTY_SET",
+        /// An admission over no probe.
+        ProbeSetEmpty => "PROBE_SET_EMPTY",
+        /// An admission over more probes than `knob verify.probe_budget`.
+        ProbeBudgetExceeded => "PROBE_BUDGET_EXCEEDED",
     }
 }
 

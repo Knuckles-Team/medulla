@@ -6,7 +6,7 @@
 //! step selects the recovery. Checks are caller claims, so the record is a
 //! `Claim` resolved as a `Constraint`. The harness applies the recovery.
 
-use medulla_decision_stats::decision::step_verify::verify_steps;
+use medulla_decision_stats::decision::step_verify::{bind_verdict, verify_steps};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
@@ -67,8 +67,8 @@ impl DecisionFamily for StepVerificationFamily {
                 verify.checks.as_slice(),
                 verify.attempts,
                 &knobs,
-            )
-            .map_err(invalid_parameter)?;
+            )?;
+            bind_verdict(&verdict, &verify.trace_digest)?;
             let field = "params.step_verification";
             let mut premises = vec![claim(
                 subject,

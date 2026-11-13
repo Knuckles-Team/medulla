@@ -8,9 +8,10 @@
 //! applies the winner.
 
 use medulla_decision_stats::decision::trajectory_join::join;
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
-    DecideRequest, StatisticalOutcome, TypedValue,
+    DecideRequest, StatisticalErrorCode, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::trajectory_verdict::JoinRequest;
 use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, ResolutionKind};
@@ -51,6 +52,17 @@ fn parse(request: &DecideRequest) -> Result<&JoinRequest, String> {
 pub struct TrajectoryJoinFamily;
 
 impl DecisionFamily for TrajectoryJoinFamily {
+    /// A join over no trajectory is `JOIN_EMPTY_SET`, raised before the generic
+    /// declared-set check can answer `PARAMETER_INVALID`.
+    fn precheck_declared(&self, options: &[DeclaredOption]) -> Result<(), String> {
+        if options.is_empty() {
+            return Err(
+                StatisticalErrorCode::JoinEmptySet.refusal("a join needs at least one trajectory")
+            );
+        }
+        Ok(())
+    }
+
     fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
         parse(request).map(|_| ())
     }
@@ -63,7 +75,7 @@ impl DecisionFamily for TrajectoryJoinFamily {
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(parse(request).and_then(|join_request| {
-            let distilled = join(join_request.entries.as_slice()).map_err(invalid_parameter)?;
+            let distilled = join(join_request.entries.as_slice())?;
             let field = "params.trajectory_join";
             let mut sources: Vec<_> = join_request.entries.iter().collect();
             sources.sort_by(|a, b| a.trajectory_id.cmp(&b.trajectory_id));
