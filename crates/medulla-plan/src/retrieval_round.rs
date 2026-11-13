@@ -673,6 +673,23 @@ pub fn run_round_with_state(
             Some(run_selection(request, part, &rows, ctx, knobs, &mut steps)?)
         }
     };
+    // MEDULLA-FEDERATED-QUERY-R081.8.3: the feedback stage runs after selection and
+    // before stop. It only describes the next query; the stop verdict below decides
+    // whether the description is returned.
+    let mut feedback_outcome = match &request.feedback {
+        None => None,
+        Some(part) => {
+            let _span = tracing::info_span!("medulla.retrieval.feedback").entered();
+            let returned: Vec<&str> = rows.rows().iter().map(|r| r.id.as_str()).collect();
+            let provider = crate::query_understanding::expansion_provider();
+            Some(crate::retrieval_feedback::apply_feedback(
+                &part.feedback,
+                part.prior_terms.as_slice(),
+                &returned,
+                provider.as_deref(),
+            )?)
+        }
+    };
     let mut sufficiency = sufficiency;
     let stop = match &request.stop {
         None => None,
@@ -728,6 +745,8 @@ pub fn run_round_with_state(
                 if let Some(s) = sufficiency.as_mut() {
                     s.repair = RepairStep::Stop;
                 }
+                // A terminal verdict returns no continuation.
+                feedback_outcome = None;
             }
             Some(verdict)
         }
@@ -781,6 +800,7 @@ pub fn run_round_with_state(
         stop,
         inference: steps.inference,
         premises: steps.premises,
+        feedback: feedback_outcome,
     })
 }
 

@@ -359,6 +359,44 @@ pub struct RoundResult {
     /// The state rerank, when the request carried a `state` part.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub state: Option<StateResult>,
+    /// The next-query description the feedback part produced (MEDULLA-FEDERATED-QUERY-R081.8.3).
+    /// Absent when the request carried no feedback part or the stop verdict is terminal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback: Option<FeedbackOutcome>,
+}
+
+/// One term of the next query and the weight feedback left on it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WeightedTerm {
+    pub term: String,
+    /// In `[-1.0, 1.0]`.
+    pub weight: f64,
+}
+
+/// What applying one round's feedback decided (MEDULLA-FEDERATED-QUERY-R081.8.2).
+///
+/// A description only: medulla dispatches no next query. The harness sends the next
+/// round when the stop verdict allows it.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeedbackOutcome {
+    /// The original query text plus the reinforced terms, ordered by weight then term.
+    pub next_query: String,
+    /// Every term with a non-zero or recorded weight after this round, ordered by
+    /// weight descending then term.
+    pub terms: Vec<WeightedTerm>,
+    /// Terms feedback marked missing: recorded, no weight change.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub missing_terms: Vec<String>,
+    /// Perspective expansions, distinct by `perspective` name.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub perspectives: Vec<crate::retrieval_verdict::PerspectiveQuery>,
+    /// A critique's proposed reformulation, recorded as rejected and never applied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejected_reformulation: Option<String>,
+    /// The round whose feedback this outcome came from.
+    pub round: u32,
 }
 
 /// One completed round's answer, as the caller reports it.

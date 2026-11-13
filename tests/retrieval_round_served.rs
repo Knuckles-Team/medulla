@@ -1596,3 +1596,128 @@ async fn missing_state_refuses_stale_and_writes_nothing() {
             .is_none());
     }
 }
+
+fn feedback_part(
+    round: u32,
+    original: &str,
+) -> medulla_result_types::retrieval_round::RoundFeedback {
+    use medulla_result_types::retrieval_verdict::{
+        DocumentRelevance, FeedbackLimits, FeedbackTier, RetrievalFeedback, TermFeedback,
+    };
+    medulla_result_types::retrieval_round::RoundFeedback {
+        feedback: RetrievalFeedback {
+            original_query: original.into(),
+            round,
+            corpus_revision: "corpus-1".into(),
+            model_revision: "model-1".into(),
+            perspectives: Vec::new(),
+            documents: vec![DocumentRelevance {
+                document_id: "doc-0".into(),
+                relevance: 0.9,
+            }],
+            terms: vec![TermFeedback {
+                term: "snapshot".into(),
+                tier: FeedbackTier::Reinforce,
+                weight: 0.6,
+                evidence_document_ids: vec!["doc-0".into()],
+            }],
+            critique: None,
+            limits: FeedbackLimits {
+                max_rounds: 4,
+                max_queries: 2,
+                max_terms: 8,
+                max_tokens: 1000,
+                max_inference_calls: 2,
+            },
+        },
+        prior_terms: Default::default(),
+    }
+}
+
+fn stop_part(round_limit: Option<u32>) -> medulla_result_types::retrieval_round::StopRequest {
+    use medulla_result_types::retrieval_round::{BudgetUsage, CallerLimits, StopRequest};
+    StopRequest {
+        calibration: medulla_result_types::retrieval_stop::CalibrationTable {
+            rows: Default::default(),
+        },
+        history: Default::default(),
+        prior_row_ids: Default::default(),
+        prior_quality: None,
+        usage: BudgetUsage {
+            tokens_used: 10,
+            inference_calls_used: 0,
+            cost_used: 0,
+        },
+        limits: CallerLimits {
+            round_limit,
+            ..CallerLimits::default()
+        },
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R081.8.3
+#[tokio::test(flavor = "multi_thread")]
+async fn feedback_continuation_is_validated_and_bounded() {
+    let state = state();
+    seed(&state, 3).await;
+
+    // Round 1: validated feedback yields the next-query description.
+    let mut first = request(None);
+    first.feedback = Some(feedback_part(1, "replica recovery"));
+    first.stop = Some(stop_part(None));
+    let one = decode(round_as(&state, None, first).await);
+    let outcome = one.feedback.expect("a continuation is described");
+    assert_eq!(outcome.next_query, "replica recovery snapshot");
+    assert_eq!(outcome.round, 1);
+    assert!(!one.stop.expect("stop verdict").stop);
+
+    // Round 2 carries the weights forward and stays inside the knob bounds.
+    let mut second = request(None);
+    let mut part = feedback_part(2, &outcome.next_query);
+    part.prior_terms = medulla_types::contract::BoundedVec::new(vec![
+        medulla_result_types::retrieval_verdict::TermFeedback {
+            term: "snapshot".into(),
+            tier: medulla_result_types::retrieval_verdict::FeedbackTier::Reinforce,
+            weight: 0.6,
+            evidence_document_ids: vec![],
+        },
+    ])
+    .expect("one term fits");
+    second.feedback = Some(part);
+    second.stop = Some(stop_part(None));
+    let two = decode(round_as(&state, None, second).await);
+    let next = two.feedback.expect("second continuation");
+    assert_eq!(next.terms[0].term, "snapshot");
+    assert_eq!(next.terms[0].weight, 1.0, "0.6 prior + 0.6 now, clamped");
+
+    // A terminal stop verdict returns no continuation.
+    let mut last = request(None);
+    last.feedback = Some(feedback_part(1, "replica recovery"));
+    last.stop = Some(stop_part(Some(1)));
+    let done = decode(round_as(&state, None, last).await);
+    assert!(done.stop.expect("stop verdict").stop);
+    assert!(done.feedback.is_none(), "terminal verdict, no continuation");
+
+    // A document this round did not return is refused before anything is described.
+    let mut forged = request(None);
+    let mut bad = feedback_part(1, "replica recovery");
+    bad.feedback.documents[0].document_id = "elsewhere".into();
+    bad.feedback.terms[0].evidence_document_ids = vec!["elsewhere".into()];
+    forged.feedback = Some(bad);
+    let refused = round_as(&state, None, forged).await;
+    assert!(refused
+        .error
+        .unwrap_or_default()
+        .starts_with("RETRIEVAL_FEEDBACK_INVALID"));
+
+    // A limit above the registry bound is refused.
+    let mut raised = request(None);
+    let mut over = feedback_part(1, "replica recovery");
+    over.feedback.limits.max_tokens = u64::MAX;
+    raised.feedback = Some(over);
+    let refused = round_as(&state, None, raised).await;
+    assert!(refused
+        .error
+        .unwrap_or_default()
+        .starts_with("RETRIEVAL_BUDGET_EXCEEDED"));
+}

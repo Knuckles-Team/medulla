@@ -82,6 +82,9 @@ pub mod hierarchy_source;
 // MEDULLA-FEDERATED-QUERY-R082.2: the retrieval stop rule.
 #[cfg(feature = "query")]
 pub mod retrieval_stop;
+// MEDULLA-FEDERATED-QUERY-R081.8.2: bounded retrieval feedback and critique.
+#[cfg(feature = "query")]
+pub mod retrieval_feedback;
 // MEDULLA-FEDERATED-QUERY-R650.1: context bundle model and certified compile.
 pub mod context_bundle;
 // MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.
