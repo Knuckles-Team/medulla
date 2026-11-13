@@ -656,3 +656,6 @@ The parked chain that carried the run trace, recursive trace read, runtime quota
 - Elimination premises are class `Proof` (a checkable rule over the evidence); evidence premises are `Observation` citing the latest evaluation id, so the record class is `Observation`.
 - `recent_labels` is the one label read; `recent_evaluations` maps it, so the skip rule and the evidence share the label rule.
 - `knob:width.*` and `knob:path.*` premises are sealed through the shared knob-premise table in `stat_decide.rs`.
+
+## R158.6/R159.6: served proofs of run adjustment and path preference (decision)
+At the default thresholds one errored run in a 20-run window (5%) is above `width.error_hi` (2%), so the widening case of R158.6 pins a decision policy that tolerates it (`width.error_lo` 6%, `width.error_hi` 20%); the pin goes through the same policy-knob path the family reads. Both served tests use the loopback engine, and each seeds under a unique partition or connector so the shared session store never mixes runs. R159.6 needs two callers: the decider commits the exploring decision naming the evaluator's persistence id (`sha256` of its principal), and the evaluator, a second verified agent, records each outcome.
