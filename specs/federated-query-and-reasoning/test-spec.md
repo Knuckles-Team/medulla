@@ -1080,6 +1080,10 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.8` | `crates/medulla-plan/tests/pack_source.rs::undeclared_filters_stay_local_and_residual_always_runs` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.9` | `tests/test_uql_foreign_execution.py::test_driver_binding_rejects_payload_authority` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.10` | `tests/test_uql_foreign_execution.py::test_lifecycle_sequence_replay_expiry_and_terminal` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `tests/test_uql_foreign_execution.py::test_uql_forwards_many_server_issued_foreign_executions` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `crates/medulla-server-served-tests/src/tests/foreign_tenancy.rs::uql_joins_two_approved_sources_in_one_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `crates/medulla-h-query/src/query/uql_statement.rs::tests::foreign_executions_check_every_digest_and_refuse_duplicates` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `crates/medulla-protocol-types/src/protocol/tests.rs::uql_decodes_foreign_executions_and_refuses_the_singular_field` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R723` | `tests/semantic_index/test_reembed_methods_served.py::test_admit_then_reembed_one_job` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R724` | `tests/served_schema_projections.rs::projections_follow_caller_grants_and_hide_other_boundaries` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
