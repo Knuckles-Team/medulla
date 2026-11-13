@@ -543,6 +543,99 @@ def claim_get_op(
     return {"op": "get", "claim_id": claim_id, "artifact_id": artifact_id}
 
 
+def profile_share(role: str, action: str, effect: str = "Allow") -> dict[str, Any]:
+    """One ``ProfileShare``: ``role`` may (or may not) ``action`` the object."""
+    return {"role": role, "action": action, "effect": effect}
+
+
+def assistant_profile_wire(
+    *,
+    profile_id: str,
+    name: str,
+    owner_principal: str,
+    instructions: str = "",
+    document_set_ids: Sequence[str] = (),
+    tool_allowlist: Sequence[str] = (),
+    preferred_model_profile_refs: Sequence[str] = (),
+    max_context_tokens: int | None = None,
+    shares: Sequence[Mapping[str, Any]] = (),
+    revision: int = 0,
+    tenant: str = "tenant",
+) -> dict[str, Any]:
+    """An ``AssistantProfile`` in Rust field order. ``revision`` is the stored
+    revision the save is derived from (0 for a new profile); the engine writes
+    ``revision + 1`` and stamps the caller's tenant."""
+    return {
+        "profile_id": profile_id,
+        "tenant": tenant,
+        "name": name,
+        "instructions": instructions,
+        "document_set_ids": list(document_set_ids),
+        "tool_allowlist": list(tool_allowlist),
+        "model_hints": {
+            "preferred_model_profile_refs": list(preferred_model_profile_refs),
+            "max_context_tokens": max_context_tokens,
+        },
+        "owner_principal": owner_principal,
+        "shares": [dict(share) for share in shares],
+        "revision": revision,
+        "schema_version": 1,
+    }
+
+
+def document_set_wire(
+    *,
+    set_id: str,
+    name: str,
+    owner_principal: str,
+    members: Sequence[str] | None = None,
+    saved_query: str | None = None,
+    shares: Sequence[Mapping[str, Any]] = (),
+    tenant: str = "tenant",
+) -> dict[str, Any]:
+    """A ``DocumentSet``: exactly one of ``members`` or ``saved_query``."""
+    if (members is None) == (saved_query is None):
+        raise ValueError("a document set holds either members or a saved query")
+    kind: dict[str, Any] = (
+        {"members": list(members or [])}
+        if saved_query is None
+        else {"saved_query": saved_query}
+    )
+    return {
+        "set_id": set_id,
+        "tenant": tenant,
+        "name": name,
+        "kind": kind,
+        "owner_principal": owner_principal,
+        "shares": [dict(share) for share in shares],
+        "schema_version": 1,
+    }
+
+
+def put_profile_op(profile: Mapping[str, Any]) -> dict[str, Any]:
+    return {"op": "put_profile", "profile": dict(profile)}
+
+
+def put_document_set_op(document_set: Mapping[str, Any]) -> dict[str, Any]:
+    return {"op": "put_document_set", "set": dict(document_set)}
+
+
+def get_profile_op(profile_id: str) -> dict[str, Any]:
+    return {"op": "get_profile", "profile_id": profile_id}
+
+
+def get_document_set_op(set_id: str) -> dict[str, Any]:
+    return {"op": "get_document_set", "set_id": set_id}
+
+
+def list_profiles_op() -> dict[str, Any]:
+    return {"op": "list_profiles"}
+
+
+def list_document_sets_op() -> dict[str, Any]:
+    return {"op": "list_document_sets"}
+
+
 def _payload(result: Any) -> Any:
     return getattr(result, "payload", result)
 
@@ -618,6 +711,17 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def assistant_profile(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``AssistantProfile`` (save, share, read profiles and document sets)."""
+        from medulla.generated.coordination import send_assistant_profile
+
+        result = await send_assistant_profile(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",
@@ -625,6 +729,7 @@ __all__ = [
     "DecisionClient",
     "DeclaredOption",
     "aggregate_op",
+    "assistant_profile_wire",
     "belief_revise_request",
     "claim_advance_op",
     "claim_compile_op",
@@ -633,13 +738,21 @@ __all__ = [
     "claim_propose_op",
     "commit_op",
     "decide_request",
+    "document_set_wire",
     "declared",
     "evaluate_op",
+    "get_document_set_op",
     "get_op",
+    "get_profile_op",
     "learn_op",
+    "list_document_sets_op",
+    "list_profiles_op",
     "library",
     "named_evaluator",
     "param",
+    "profile_share",
+    "put_document_set_op",
+    "put_profile_op",
     "q32_of",
     "record_outcome_op",
     "resolve_op",

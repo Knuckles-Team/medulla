@@ -552,6 +552,7 @@ METHOD_IDS = frozenset(
         "SyncMemorySnapshot",
         "WalletKeyTrustGet",
         "WorkflowRegistry",
+        "AssistantProfile",
         "WorldTransform",
     }
 )

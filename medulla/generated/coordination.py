@@ -2995,3 +2995,24 @@ decode_workflow_registry_read = contract_decoder(
 decode_workflow_registry_register = contract_decoder(
     "WorkflowRegistry", "WorkflowRegistrationEntry", "register"
 )
+send_assistant_profile = contract_sender(
+    "AssistantProfile", "MethodAssistantProfileParams"
+)
+decode_assistant_profile_put_profile = contract_decoder(
+    "AssistantProfile", "AssistantProfile", "put_profile"
+)
+decode_assistant_profile_put_document_set = contract_decoder(
+    "AssistantProfile", "DocumentSet", "put_document_set"
+)
+decode_assistant_profile_get_profile = contract_decoder(
+    "AssistantProfile", "AssistantProfile", "get_profile"
+)
+decode_assistant_profile_get_document_set = contract_decoder(
+    "AssistantProfile", "DocumentSet", "get_document_set"
+)
+decode_assistant_profile_list_profiles = contract_decoder(
+    "AssistantProfile", "AssistantProfileList", "list_profiles"
+)
+decode_assistant_profile_list_document_sets = contract_decoder(
+    "AssistantProfile", "DocumentSetList", "list_document_sets"
+)

@@ -101,6 +101,7 @@ SEND_BY_METHOD = {
     "ArgumentMapGet": query.send_argument_map_get,
     "ArgumentMapPut": query.send_argument_map_put,
     "Asr": ingestion.send_asr,
+    "AssistantProfile": coordination.send_assistant_profile,
     "AuditAppend": security.send_audit_append,
     "AuditProveInclusion": security.send_audit_prove_inclusion,
     "AuditReadEvent": security.send_audit_read_event,

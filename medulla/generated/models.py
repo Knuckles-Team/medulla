@@ -13392,6 +13392,19 @@ class MethodWorkflowRegistry(BaseModel):
     params: MethodWorkflowRegistryParams
 
 
+class MethodAssistantProfileParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: ProfileOp
+
+
+class MethodAssistantProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AssistantProfile"]
+    params: MethodAssistantProfileParams
+
+
 # The PEP 604 `|` chain spelling of this 539-member union overflows vulture's
 # AST recursion depth in the whole-repo pre-push scan; `typing.Union[...]` is a
 # single subscript node, shallow at any member count.
@@ -13940,6 +13953,7 @@ Method = Annotated[
         MethodSubmitAdmittedRequest,
         MethodSyncMemorySnapshot,
         MethodWalletKeyTrustGet,
+        MethodAssistantProfile,
         MethodWorkflowRegistry,
     ],
     Field(discriminator="method"),
@@ -29037,6 +29051,121 @@ class WorkflowRegistryOpRegister(BaseModel):
     registration: WorkflowRegistrationEntry
 
 
+class ModelHints(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    preferred_model_profile_refs: list[str]
+    max_context_tokens: int | None
+
+
+class ProfileShare(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    role: str
+    action: RbacAction
+    effect: GrantEffect
+
+
+class AssistantProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    profile_id: str
+    tenant: str
+    name: str
+    instructions: str
+    document_set_ids: list[str]
+    tool_allowlist: list[str]
+    model_hints: ModelHints
+    owner_principal: str
+    shares: list[ProfileShare]
+    revision: int
+    schema_version: int
+
+
+class DocumentSetKindMembers(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    members: list[str]
+
+
+class DocumentSetKindSavedQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    saved_query: str
+
+
+DocumentSetKind = DocumentSetKindMembers | DocumentSetKindSavedQuery
+
+
+class DocumentSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    set_id: str
+    tenant: str
+    name: str
+    kind: DocumentSetKind
+    owner_principal: str
+    shares: list[ProfileShare]
+    schema_version: int
+
+
+class ProfileOpPutProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put_profile"]
+    profile: AssistantProfile
+
+
+class ProfileOpPutDocumentSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put_document_set"]
+    set: DocumentSet
+
+
+class ProfileOpGetProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["get_profile"]
+    profile_id: str
+
+
+class ProfileOpGetDocumentSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["get_document_set"]
+    set_id: str
+
+
+class ProfileOpListProfiles(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["list_profiles"]
+
+
+class ProfileOpListDocumentSets(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["list_document_sets"]
+
+
+ProfileOp = Annotated[
+    ProfileOpPutProfile
+    | ProfileOpPutDocumentSet
+    | ProfileOpGetProfile
+    | ProfileOpGetDocumentSet
+    | ProfileOpListProfiles
+    | ProfileOpListDocumentSets,
+    Field(discriminator="op"),
+]
+
+
+AssistantProfileList = list[AssistantProfile]
+
+
+DocumentSetList = list[DocumentSet]
+
+
 ActionRefusal = Annotated[
     ActionRefusalCriterionFailed
     | ActionRefusalUnknownParameter
@@ -29314,6 +29443,8 @@ __all__ = [
     "AssemblyRequest",
     "AssemblyRequirements",
     "AssemblyResult",
+    "AssistantProfile",
+    "AssistantProfileList",
     "AssociationMiningResult",
     "AssociationRuleRow",
     "AttributionBreakdown",
@@ -29956,6 +30087,11 @@ __all__ = [
     "DocTerms",
     "DocumentDeleteReceipt",
     "DocumentDeleteRequest",
+    "DocumentSet",
+    "DocumentSetKind",
+    "DocumentSetKindMembers",
+    "DocumentSetKindSavedQuery",
+    "DocumentSetList",
     "DpoResult",
     "DsLogSoftmaxResult",
     "DsPredictEstimatorResult",
@@ -30827,6 +30963,8 @@ __all__ = [
     "MethodArgumentMapPutParams",
     "MethodAsr",
     "MethodAsrParams",
+    "MethodAssistantProfile",
+    "MethodAssistantProfileParams",
     "MethodAuditAppend",
     "MethodAuditAppendParams",
     "MethodAuditProveInclusion",
@@ -31856,6 +31994,7 @@ __all__ = [
     "MinimumSpanningTreeResultValueItem",
     "ModalityFacts",
     "ModeTransition",
+    "ModelHints",
     "ModelInputCapabilities",
     "ModelInputMediaType",
     "ModelPolicyVersion",
@@ -32259,6 +32398,14 @@ __all__ = [
     "ProcessMiningResult",
     "ProductPort",
     "ProductPortKind",
+    "ProfileOp",
+    "ProfileOpGetDocumentSet",
+    "ProfileOpGetProfile",
+    "ProfileOpListDocumentSets",
+    "ProfileOpListProfiles",
+    "ProfileOpPutDocumentSet",
+    "ProfileOpPutProfile",
+    "ProfileShare",
     "PromotionMetrics",
     "PromptMode",
     "ProofNode",
