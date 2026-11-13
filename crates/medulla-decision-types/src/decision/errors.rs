@@ -76,6 +76,9 @@ closed_error_codes! {
         CertificateLegacyRow => "CERTIFICATE_LEGACY_ROW",
         /// MEDULLA-DECISION-ENGINE-R036.105: the transaction was already decided ABORT.
         CertificateDecidedAbort => "CERTIFICATE_DECIDED_ABORT",
+        /// MEDULLA-DECISION-ENGINE-R113.2.4: a capacity-backed commit was repeated after its
+        /// transaction was decided COMMIT; the refusal names the original outcome.
+        CommitAlreadyDecided => "COMMIT_ALREADY_DECIDED",
         /// MEDULLA-DECISION-ENGINE-R036.105: the engine has no durable backend to hold a decision.
         DecisionCoordinatorUnavailable => "DECISION_COORDINATOR_UNAVAILABLE",
     }

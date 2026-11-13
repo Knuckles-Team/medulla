@@ -17,6 +17,38 @@ use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
+#[cfg(test)]
+tokio::task_local! {
+    /// The participant boundary a test commit stops at, as a process crash would
+    /// (MEDULLA-DECISION-ENGINE-R113.2.4). Compiled only under `cfg(test)`.
+    pub(in crate::decide) static CRASH_AT: CrashPoint;
+}
+
+/// A participant boundary of a topology commit.
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::decide) enum CrashPoint {
+    /// After the owners reserved and the leases were acquired, before the vote.
+    Prepare,
+    /// After the durable COMMIT, before the record is written.
+    Decision,
+    /// After the record and evidence are written, before the owners resolve.
+    Apply,
+}
+
+/// Stop here when the running test asked to crash at `point`: no cleanup runs.
+#[cfg(test)]
+fn crash_if(point: CrashPoint) -> Result<(), String> {
+    if CRASH_AT.try_with(|at| *at == point).unwrap_or(false) {
+        return Err(format!(
+            "{}: injected crash at {point:?}",
+            medulla_decision_types::decision::DecisionErrorCode::DecisionCoordinatorUnavailable
+                .as_str()
+        ));
+    }
+    Ok(())
+}
+
 /// Commit one `DecisionRecord` as a component revision, idempotently.
 #[cfg(feature = "decide")]
 pub async fn handle_decision_commit(
@@ -137,9 +169,30 @@ async fn commit(
     // request-bound certificate first; both owners reserve; the vote is taken; the decision is
     // made durable with its certificate; only then is the record written; and both owners are
     // resolved from the durable decision. A repeat of a stored record needs none of this.
-    let replaying = store
-        .current_component(verified.tenant(), &record.record_id)?
-        .is_some();
+    let stored = store.current_component(verified.tenant(), &record.record_id)?;
+    let replaying = stored.is_some();
+    if let (Some(stored), true) = (&stored, capacity_backed) {
+        // MEDULLA-DECISION-ENGINE-R113.2.4: a repeat of a decided capacity-backed commit is
+        // refused with its original outcome. A crash after the record write may have left the
+        // owners unresolved: the durable COMMIT of this transaction finishes them first.
+        let txn_id = certified::Coordinator::transaction_id(&record, verified);
+        if certified::Coordinator::decided_commit(state, verified, &record).await? {
+            admission::Admitted::resume(state, verified, &txn_id)
+                .await
+                .resolve_decided(state, &store, OwnerDecision::Commit)
+                .await?;
+        }
+        return Err(format!(
+            "{}: record {} was decided COMMIT at version {}{}",
+            DecisionErrorCode::CommitAlreadyDecided.as_str(),
+            stored.component_id,
+            stored.version,
+            topology
+                .as_ref()
+                .map(|asked| format!(" with evidence graph {}", asked.evidence.graph.graph_id))
+                .unwrap_or_default()
+        ));
+    }
     let mut premise = None;
     let (admitted, coordinator) = if replaying {
         (admission::Admitted::none(verified.tenant()), None)
@@ -148,6 +201,33 @@ async fn commit(
             certified::Coordinator::begin(state, verified, &record, &expected_catalog_digest)
                 .await?;
         premise = Some(coordinator.premise());
+        if coordinator.interrupted {
+            // An earlier attempt stopped before the decision and its deadline passed: presumed
+            // abort, recorded, then the leases and both reservations are released from it.
+            let decision = coordinator.recover().await?;
+            if let (Some(asked), true) = (topology.as_ref(), capacity_backed) {
+                if let Ok(capacity::Prepared::Held(held)) = capacity::LeaseHold::acquire(
+                    state,
+                    verified,
+                    &record,
+                    &asked.capacity_graph,
+                    coordinator.txn_id(),
+                )
+                .await
+                {
+                    held.resolve_decided(decision).await?;
+                }
+            }
+            admission::Admitted::resume(state, verified, coordinator.txn_id())
+                .await
+                .resolve_decided(state, &store, decision)
+                .await?;
+            return Err(format!(
+                "{}: transaction {} was decided ABORT",
+                DecisionErrorCode::CertificateDecidedAbort.as_str(),
+                coordinator.txn_id()
+            ));
+        }
         let admitted = if coordinator.resumed {
             admission::Admitted::resume(state, verified, coordinator.txn_id()).await
         } else {
@@ -203,6 +283,8 @@ async fn commit(
             }
         }
     }
+    #[cfg(test)]
+    crash_if(CrashPoint::Prepare)?;
     if let Some(coordinator) = &coordinator {
         // The vote: the commit's own stale-catalog check, taken before the decision so a NO is
         // decided ABORT and both owners resolve from it.
@@ -224,6 +306,8 @@ async fn commit(
                         DecisionErrorCode::StaleCatalog.as_str()
                     ));
                 }
+                #[cfg(test)]
+                crash_if(CrashPoint::Decision)?;
             }
             Err(error) => {
                 // CERTIFICATE_EXPIRED (the coordinator recorded ABORT) or a storage refusal:
@@ -274,6 +358,8 @@ async fn commit(
                 .map(|written| (written, None)),
         },
     );
+    #[cfg(test)]
+    crash_if(CrashPoint::Apply)?;
     if let Some(coordinator) = &coordinator {
         // Both owners resolve from the durable decision, never from the local write result.
         let decision = coordinator.recover().await?;

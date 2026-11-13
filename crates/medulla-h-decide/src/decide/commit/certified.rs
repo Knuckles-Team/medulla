@@ -45,6 +45,10 @@ pub(in crate::decide) struct Coordinator {
     /// The transaction was already decided COMMIT by an earlier attempt: the owners hold their
     /// reservations and only the record write is left.
     pub(in crate::decide) resumed: bool,
+    /// An earlier attempt wrote the pending marker, never decided, and its certificate deadline
+    /// has passed (MEDULLA-DECISION-ENGINE-R113.2.4): the transaction is finished by presumed
+    /// abort, not started again.
+    pub(in crate::decide) interrupted: bool,
 }
 
 impl Coordinator {
@@ -96,7 +100,12 @@ impl Coordinator {
             backend,
             request,
             resumed: false,
+            interrupted: false,
         };
+        coordinator.interrupted = coordinator.is_interrupted()?;
+        if coordinator.interrupted {
+            return Ok(coordinator);
+        }
         let begun = certificate::begin(coordinator.redb()?, &coordinator.request).await?;
         match begun {
             Begun::Fresh => {}
@@ -110,6 +119,39 @@ impl Coordinator {
             }
         }
         Ok(coordinator)
+    }
+
+    /// A pending marker with no decision whose deadline has passed: the commit that wrote it
+    /// can no longer decide COMMIT, so nothing is in flight for this transaction.
+    fn is_interrupted(&self) -> Result<bool, String> {
+        let redb = self.redb()?;
+        certificate::verify_existing(redb, &self.request)?;
+        let Some(existing) =
+            redb.xshard_certificate_get(&self.request.txn_id, &self.request.tenant)?
+        else {
+            return Ok(false);
+        };
+        Ok(existing.decided_ms == 0
+            && redb.xshard_decision_get(&self.request.txn_id)?.is_none()
+            && existing.deadline_ms <= request_now_ms())
+    }
+
+    /// Whether the transaction of this request was decided COMMIT, read without writing.
+    pub(in crate::decide) async fn decided_commit(
+        state: &SharedState,
+        verified: &VerifiedRequestContext,
+        record: &DecisionRecord,
+    ) -> Result<bool, String> {
+        let Some(backend) = state.read().await.persistence.clone() else {
+            return Ok(false);
+        };
+        let redb = backend.as_redb().ok_or_else(|| {
+            format!(
+                "{}: the durable backend is not the redb coordinator store",
+                DecisionErrorCode::DecisionCoordinatorUnavailable.as_str()
+            )
+        })?;
+        Ok(redb.xshard_decision_get(&Self::transaction_id(record, verified))? == Some(true))
     }
 
     fn redb(&self) -> Result<&RedbBackend, String> {

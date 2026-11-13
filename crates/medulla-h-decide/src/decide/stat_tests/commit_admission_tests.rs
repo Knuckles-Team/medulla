@@ -439,6 +439,53 @@ async fn topology_world() -> TopologyWorld {
 }
 
 impl TopologyWorld {
+    /// Stop the engine and open the same stores again, as a restart does.
+    async fn reopen(self) -> TopologyWorld {
+        let TopologyWorld {
+            _dir: dir,
+            backend,
+            state,
+            store,
+            assembly,
+        } = self;
+        let path = dir.path().to_str().unwrap().to_string();
+        drop(store);
+        drop(state);
+        drop(backend);
+        let backend = Arc::new(RedbBackend::open_with_shards(path.clone(), 16, 1).unwrap());
+        let mut server = ServerState::new_for_test("topology-world", IsolationLayer::new());
+        server.persist_dir = Some(path);
+        server.persistence = Some(backend.clone());
+        server
+            .registry
+            .create_graph(
+                LEDGER,
+                medulla_protocol_types::protocol::GraphType::Global,
+                None,
+            )
+            .expect("the ledger graph is registered");
+        let state = Arc::new(RwLock::new(server));
+        let store = state.write().await.ensure_agent_library().unwrap();
+        TopologyWorld {
+            _dir: dir,
+            backend,
+            state,
+            store,
+            assembly,
+        }
+    }
+
+    /// The leases the ledger still holds for the plan's cell.
+    async fn active_leases(&self) -> usize {
+        self.leases()
+            .await
+            .iter()
+            .filter(|lease| {
+                lease.state == medulla_mutation_types::capacity_lease::CapacityLeaseState::Active
+            })
+            .count()
+    }
+
     fn request(&self, key: &str, nonce: u8, graph_nonce: u8) -> DecisionCommitRequest {
         let record = self.assembly.record.clone();
         DecisionCommitRequest {
@@ -567,10 +614,14 @@ async fn topology_shared_commit_journey() {
     let txn = format!("decision-commit:{}:good", record.record_id);
     assert_eq!(world.backend.xshard_decision_get(&txn).unwrap(), Some(true));
 
-    // 5. A repeat of the stored commit replays: no second lease, no second evidence revision.
-    let again =
-        decode_commit(handle_decision_commit(&world.state, 5, &verified("good", 4), good).await);
-    assert!(again.replayed);
+    // 5. A repeat of the decided commit is refused with its original outcome (R113.2.4): no
+    //    second lease, no second evidence revision.
+    let again = handle_decision_commit(&world.state, 5, &verified("good", 4), good).await;
+    assert_eq!(again.error.as_deref(), Some("COMMIT_ALREADY_DECIDED"));
+    assert!(again
+        .error_detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains(&record.record_id) && detail.contains(&graph_id)));
     assert_eq!(world.leases().await.len(), demands.len());
     assert_eq!(
         world
@@ -805,4 +856,161 @@ async fn topology_capacity_denial_leaves_no_commit_parts() {
             .state,
         AdmissionState::Aborted
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.4
+#[tokio::test]
+async fn topology_commit_recovery_preserves_atomic_outcome() {
+    use crate::decide::commit::{CrashPoint, CRASH_AT};
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    for (index, point) in [CrashPoint::Prepare, CrashPoint::Decision, CrashPoint::Apply]
+        .into_iter()
+        .enumerate()
+    {
+        let key = format!("crash-{index}");
+        let nonce = 20 + index as u8;
+        let world = topology_world().await;
+        let record = world.assembly.record.clone();
+        let demands = crate::decide::commit::capacity::demands(&record).len();
+        let request = world.request(&key, nonce, 80 + index as u8);
+        let graph_id = request
+            .topology
+            .as_ref()
+            .unwrap()
+            .evidence
+            .graph
+            .graph_id
+            .clone();
+        let txn = format!("decision-commit:{}:{key}", record.record_id);
+
+        // The process stops at the participant boundary: no cleanup runs.
+        let crashed = CRASH_AT
+            .scope(
+                point,
+                handle_decision_commit(&world.state, 1, &verified(&key, nonce), request.clone()),
+            )
+            .await;
+        assert_eq!(
+            crashed.error.as_deref(),
+            Some("DECISION_COORDINATOR_UNAVAILABLE"),
+            "{point:?}"
+        );
+
+        // Reopen every store, as a restart does, and read what the crash left behind.
+        let world = world.reopen().await;
+        let decision = world.backend.xshard_decision_get(&txn).unwrap();
+        let record_stored = |world: &TopologyWorld| {
+            world
+                .store
+                .current_component(TENANT, &record.record_id)
+                .unwrap()
+                .is_some()
+        };
+        let evidence_stored = |world: &TopologyWorld| {
+            world
+                .store
+                .current_graph(TENANT, &graph_id)
+                .unwrap()
+                .is_some()
+        };
+        let admission = |world: &TopologyWorld| world.store.admission(TENANT, &txn).unwrap();
+        match point {
+            CrashPoint::Prepare => {
+                assert_eq!(decision, None);
+                assert!(!record_stored(&world) && !evidence_stored(&world));
+                assert_eq!(world.active_leases().await, demands);
+                assert_eq!(admission(&world).unwrap().state, ReservationState::Reserved);
+            }
+            CrashPoint::Decision => {
+                assert_eq!(decision, Some(true));
+                assert!(!record_stored(&world) && !evidence_stored(&world));
+                assert_eq!(world.active_leases().await, demands);
+                assert_eq!(admission(&world).unwrap().state, ReservationState::Reserved);
+            }
+            CrashPoint::Apply => {
+                assert_eq!(decision, Some(true));
+                assert!(record_stored(&world) && evidence_stored(&world));
+                assert_eq!(world.active_leases().await, demands);
+                assert_eq!(admission(&world).unwrap().state, ReservationState::Reserved);
+            }
+        }
+
+        // The same request is presented again and finishes the transaction.
+        let retry = match point {
+            // An undecided transaction is finished by presumed abort once its deadline passed.
+            CrashPoint::Prepare => {
+                REQUEST_NOW_MS
+                    .scope(
+                        u64::MAX / 2,
+                        handle_decision_commit(
+                            &world.state,
+                            2,
+                            &verified(&key, nonce),
+                            request.clone(),
+                        ),
+                    )
+                    .await
+            }
+            _ => {
+                handle_decision_commit(&world.state, 2, &verified(&key, nonce), request.clone())
+                    .await
+            }
+        };
+        match point {
+            CrashPoint::Prepare => {
+                assert_eq!(retry.error.as_deref(), Some("CERTIFICATE_DECIDED_ABORT"));
+                assert_eq!(
+                    world.backend.xshard_decision_get(&txn).unwrap(),
+                    Some(false)
+                );
+                assert_eq!(admission(&world).unwrap().state, ReservationState::Aborted);
+                assert!(!record_stored(&world) && !evidence_stored(&world));
+                assert_eq!(world.active_leases().await, 0);
+            }
+            CrashPoint::Decision => {
+                let committed = decode_commit(retry);
+                assert!(!committed.replayed);
+                assert_eq!(committed.record_id, record.record_id);
+                assert_eq!(committed.topology.unwrap().evidence_graph_id, graph_id);
+                assert_eq!(world.backend.xshard_decision_get(&txn).unwrap(), Some(true));
+                assert_eq!(
+                    admission(&world).unwrap().state,
+                    ReservationState::Committed
+                );
+                assert!(record_stored(&world) && evidence_stored(&world));
+                assert_eq!(world.active_leases().await, demands);
+            }
+            CrashPoint::Apply => {
+                assert_eq!(retry.error.as_deref(), Some("COMMIT_ALREADY_DECIDED"));
+                assert_eq!(world.backend.xshard_decision_get(&txn).unwrap(), Some(true));
+                assert_eq!(
+                    admission(&world).unwrap().state,
+                    ReservationState::Committed
+                );
+                assert!(record_stored(&world) && evidence_stored(&world));
+                assert_eq!(world.active_leases().await, demands);
+            }
+        }
+
+        // Never a record without its lease, or a lease without its record.
+        let active = world.active_leases().await;
+        assert_eq!(record_stored(&world), active == demands, "{point:?}");
+        assert_eq!(record_stored(&world), evidence_stored(&world), "{point:?}");
+        assert!(active == 0 || active == demands, "{point:?}");
+
+        // A repeat of a decided transaction is refused with the original outcome and takes no
+        // second lease.
+        if point != CrashPoint::Prepare {
+            let repeated =
+                handle_decision_commit(&world.state, 3, &verified(&key, nonce), request.clone())
+                    .await;
+            assert_eq!(repeated.error.as_deref(), Some("COMMIT_ALREADY_DECIDED"));
+            assert!(repeated
+                .error_detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains(&record.record_id)));
+            assert_eq!(world.leases().await.len(), demands);
+        }
+    }
 }
