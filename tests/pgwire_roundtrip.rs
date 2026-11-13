@@ -2383,3 +2383,124 @@ async fn serial_column_uses_sequence() {
         "{reservations} reservation writes over the bound {bound}"
     );
 }
+
+/// The SQLSTATE and message of a refused simple statement.
+async fn refusal_of(client: &tokio_postgres::Client, sql: &str) -> (String, String) {
+    let error = client
+        .simple_query(sql)
+        .await
+        .expect_err("the statement must be refused");
+    let db = error.as_db_error().expect("a database error");
+    (db.code().code().to_string(), db.message().to_string())
+}
+
+async fn count_rows(client: &tokio_postgres::Client, table: &str) -> usize {
+    let rows = client
+        .simple_query(&format!("SELECT id FROM {table}"))
+        .await
+        .expect("count rows");
+    simple_ids(rows).len()
+}
+
+/// Each constraint kind refuses with its SQLSTATE and names the constraint, a
+/// deferred foreign key refuses at `COMMIT`, and a refused statement leaves the
+/// table unchanged.
+// spec: MEDULLA-ENGINE-PARITY-R011.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn constraint_violations_return_sqlstate() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let parents = unique_table();
+    let children = unique_table();
+
+    client
+        .simple_query(&format!("CREATE TABLE {parents} (id BIGINT PRIMARY KEY)"))
+        .await
+        .expect("CREATE parents");
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {children} (id BIGINT PRIMARY KEY, parent_id BIGINT, bal BIGINT NOT NULL, \
+             CONSTRAINT {children}_bal_nonneg CHECK (bal >= 0), \
+             CONSTRAINT {children}_parent_fk FOREIGN KEY (parent_id) REFERENCES {parents} (id))"
+        ))
+        .await
+        .expect("CREATE children");
+    client
+        .simple_query(&format!("INSERT INTO {parents} VALUES (1)"))
+        .await
+        .expect("seed parent");
+    client
+        .simple_query(&format!("INSERT INTO {children} VALUES (1, 1, 10)"))
+        .await
+        .expect("seed child");
+
+    // 23505: a duplicate primary key.
+    let (code, _) = refusal_of(&client, &format!("INSERT INTO {children} VALUES (1, 1, 5)")).await;
+    assert_eq!(code, "23505");
+    // 23503: a parent that does not exist, naming the constraint.
+    let (code, message) = refusal_of(
+        &client,
+        &format!("INSERT INTO {children} VALUES (2, 99, 5)"),
+    )
+    .await;
+    assert_eq!(code, "23503");
+    assert!(
+        message.contains(&format!("{children}_parent_fk")),
+        "{message}"
+    );
+    // 23514: a failing CHECK, naming the constraint.
+    let (code, message) = refusal_of(
+        &client,
+        &format!("INSERT INTO {children} VALUES (3, 1, -1)"),
+    )
+    .await;
+    assert_eq!(code, "23514");
+    assert!(
+        message.contains(&format!("{children}_bal_nonneg")),
+        "{message}"
+    );
+    // 23502: a NULL in a NOT NULL column.
+    let (code, _) = refusal_of(
+        &client,
+        &format!("INSERT INTO {children} (id, parent_id) VALUES (4, 1)"),
+    )
+    .await;
+    assert_eq!(code, "23502");
+    // UPDATE and DELETE are checked too.
+    let (code, _) = refusal_of(
+        &client,
+        &format!("UPDATE {children} SET bal = -5 WHERE id = 1"),
+    )
+    .await;
+    assert_eq!(code, "23514");
+    let (code, _) = refusal_of(&client, &format!("DELETE FROM {parents} WHERE id = 1")).await;
+    assert_eq!(code, "23503");
+    // Every refused statement left the tables unchanged.
+    assert_eq!(count_rows(&client, &children).await, 1);
+    assert_eq!(count_rows(&client, &parents).await, 1);
+
+    // A deferred foreign key refuses at COMMIT and writes nothing.
+    let deferred = unique_table();
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {deferred} (id BIGINT PRIMARY KEY, parent_id BIGINT, \
+             CONSTRAINT {deferred}_parent_fk FOREIGN KEY (parent_id) REFERENCES {parents} (id) \
+             DEFERRABLE INITIALLY DEFERRED)"
+        ))
+        .await
+        .expect("CREATE deferred");
+    client.simple_query("BEGIN").await.expect("BEGIN");
+    client
+        .simple_query(&format!("INSERT INTO {deferred} VALUES (1, 77)"))
+        .await
+        .expect("a deferred key is not checked per statement");
+    let (code, message) = refusal_of(&client, "COMMIT").await;
+    assert_eq!(code, "23503");
+    assert!(
+        message.contains(&format!("{deferred}_parent_fk")),
+        "{message}"
+    );
+    let _ = client.simple_query("ROLLBACK").await;
+    assert_eq!(count_rows(&client, &deferred).await, 0);
+}
