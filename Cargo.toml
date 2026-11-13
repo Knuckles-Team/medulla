@@ -1938,6 +1938,12 @@ tracing-subscriber = "0.3"
 # Real Postgres client for the pgwire wire round-trip integration test
 # (CONCEPT:KG-2.189). Only compiled for tests; never linked into the engine.
 tokio-postgres = "0.7"
+# mTLS wire-login proof (MEDULLA-ENGINE-PARITY-R007.3): a generated CA, server leaf and
+# client leaf at test time (no committed key material), and the rustls connector for
+# tokio-postgres. Tests only; never linked into the engine.
+rcgen = { version = "0.13", default-features = false, features = ["pem", "ring"] }
+tokio-postgres-rustls = "0.13"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 # S3 round-trip test client (MEDULLA-DURABLE-KERNEL-R860.4): Authorization-header SigV4
 # signing over the in-tree reqwest; the full AWS SDK is not added.
 aws-sigv4 = { version = "1", default-features = false, features = ["sign-http", "http1"] }

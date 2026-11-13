@@ -2000,3 +2000,166 @@ async fn login_maps_to_principal() {
         }
     }
 }
+
+/// Generated mTLS material: a CA, a server leaf for 127.0.0.1 and a client leaf, all
+/// created at test time. Only the PEM paths of the server side are handed to the
+/// listener; the client side stays in memory.
+struct MtlsFixture {
+    _directory: tempfile::TempDir,
+    server_cert: std::path::PathBuf,
+    server_key: std::path::PathBuf,
+    client_ca: std::path::PathBuf,
+    client_leaf_der: Vec<u8>,
+    connector: tokio_postgres_rustls::MakeRustlsConnect,
+}
+
+fn mtls_fixture() -> MtlsFixture {
+    use rcgen::{
+        BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, KeyPair,
+        SanType,
+    };
+    use std::os::unix::fs::PermissionsExt;
+
+    let ca_key = KeyPair::generate().expect("CA key");
+    let mut ca_params = CertificateParams::new(Vec::<String>::new()).expect("CA params");
+    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    ca_params
+        .distinguished_name
+        .push(DnType::CommonName, "wire-login-test-ca");
+    let ca = ca_params.self_signed(&ca_key).expect("CA certificate");
+
+    let server_key = KeyPair::generate().expect("server key");
+    let mut server_params = CertificateParams::new(Vec::<String>::new()).expect("server params");
+    server_params.subject_alt_names = vec![SanType::IpAddress("127.0.0.1".parse().unwrap())];
+    server_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
+    let server = server_params
+        .signed_by(&server_key, &ca, &ca_key)
+        .expect("server certificate");
+
+    let client_key = KeyPair::generate().expect("client key");
+    let mut client_params = CertificateParams::new(Vec::<String>::new()).expect("client params");
+    client_params
+        .distinguished_name
+        .push(DnType::CommonName, "bi-cert-a");
+    client_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ClientAuth];
+    let client = client_params
+        .signed_by(&client_key, &ca, &ca_key)
+        .expect("client certificate");
+
+    let directory = tempfile::tempdir().expect("TLS directory");
+    let write = |name: &str, pem: String, mode: u32| {
+        let path = directory.path().join(name);
+        std::fs::write(&path, pem).expect("write PEM");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))
+            .expect("restrict PEM");
+        path
+    };
+    let server_cert = write("server.pem", server.pem(), 0o600);
+    let server_key_path = write("server.key", server_key.serialize_pem(), 0o600);
+    let client_ca = write("client-ca.pem", ca.pem(), 0o600);
+
+    let mut roots = rustls::RootCertStore::empty();
+    roots.add(ca.der().clone()).expect("trust the test CA");
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let config = rustls::ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .expect("protocol versions")
+        .with_root_certificates(roots)
+        .with_client_auth_cert(
+            vec![client.der().clone()],
+            rustls::pki_types::PrivateKeyDer::Pkcs8(rustls::pki_types::PrivatePkcs8KeyDer::from(
+                client_key.serialize_der(),
+            )),
+        )
+        .expect("client identity");
+    MtlsFixture {
+        server_cert,
+        server_key: server_key_path,
+        client_ca,
+        client_leaf_der: client.der().as_ref().to_vec(),
+        connector: tokio_postgres_rustls::MakeRustlsConnect::new(config),
+        _directory: directory,
+    }
+}
+
+/// Bind an mTLS pgwire listener with explicit TLS material (no environment).
+async fn spawn_mtls_listener(state: Arc<RwLock<ServerState>>, fixture: &MtlsFixture) -> String {
+    provision_text_embedder_once();
+    let addr = test_support::ephemeral_listener_addr().await;
+    let secret = state.read().await.auth_secret.clone();
+    let prepared = pgwire::prepare_startup_policy_with_tls(
+        &addr,
+        secret,
+        pgwire::PgWireAuthMode::Scram,
+        Some(pgwire::PgWireTlsConfig {
+            cert_path: fixture.server_cert.to_string_lossy().into_owned(),
+            key_path: fixture.server_key.to_string_lossy().into_owned(),
+            client_ca_path: Some(fixture.client_ca.to_string_lossy().into_owned()),
+        }),
+    )
+    .await
+    .expect("prepare the mTLS listener");
+    tokio::spawn(async move {
+        let _ = pgwire::serve_prepared(state, prepared).await;
+    });
+    test_support::wait_for_listener_ready(&addr).await;
+    addr
+}
+
+async fn connect_mtls(
+    addr: &str,
+    connector: &tokio_postgres_rustls::MakeRustlsConnect,
+    user: &str,
+) -> Result<tokio_postgres::Client, tokio_postgres::Error> {
+    let port = addr.rsplit(':').next().unwrap();
+    let conn_str =
+        format!("host=127.0.0.1 port={port} user={user} dbname=__commons__ sslmode=require");
+    let (client, connection) = tokio_postgres::connect(&conn_str, connector.clone()).await?;
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    Ok(client)
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R007.3
+/// The Certificate leg of the login proof: 1,000 certificate logins over an mTLS
+/// listener each map to the record's principal, and a certificate whose fingerprint
+/// is not the record's refuses with SQLSTATE 28000.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn certificate_login_maps_to_principal() {
+    let state = login_state(&["login-a"]);
+    let fixture = mtls_fixture();
+    let addr = spawn_mtls_listener(state, &fixture).await;
+    let register = |login: &str, der: &[u8]| {
+        medulla_wire_core::sql_wire_auth::wire_login_registry()
+            .put(medulla_identity_types::identity::WireLoginRecord::new(
+                login,
+                medulla_identity_types::identity::WireLoginKind::Certificate,
+                &medulla_identity_types::identity::sha256_verifier(der),
+                "login-a",
+                common::TEST_TENANT,
+                1,
+            ))
+            .expect("register certificate login");
+    };
+    register("bi-cert-a", &fixture.client_leaf_der);
+    register("bi-cert-other", b"not the presented certificate");
+    for round in 0..1_000 {
+        let client = connect_mtls(&addr, &fixture.connector, "bi-cert-a")
+            .await
+            .unwrap_or_else(|e| panic!("certificate login {round}: {}", error_chain(&e)));
+        assert_eq!(
+            wire_note_ids(&client).await,
+            vec!["note-login-a".to_string()],
+            "certificate login {round}"
+        );
+    }
+    let mismatch = connect_mtls(&addr, &fixture.connector, "bi-cert-other")
+        .await
+        .expect_err("a fingerprint that is not the record's refuses");
+    let chain = error_chain(&mismatch);
+    assert!(
+        chain.contains("28000") || chain.contains("invalid_login"),
+        "got {chain}"
+    );
+}

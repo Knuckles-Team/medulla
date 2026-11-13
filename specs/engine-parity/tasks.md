@@ -21,7 +21,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T015 [P] [US2] MEDULLA-ENGINE-PARITY-R006.3 PostgreSQL wire protocol front end: hot-path proof
 - [ ] T016 [US2] MEDULLA-ENGINE-PARITY-R007.1 Wire authentication mapped to engine principals and row security: model and behavior
 - [ ] T017 [US2] MEDULLA-ENGINE-PARITY-R007.2 Wire authentication mapped to engine principals and row security: wiring and refusal
-- [ ] T018 [P] [US2] MEDULLA-ENGINE-PARITY-R007.3 Wire authentication mapped to engine principals and row security: hot-path proof
+- [x] T018 [P] [US2] MEDULLA-ENGINE-PARITY-R007.3 Wire authentication mapped to engine principals and row security: hot-path proof
 - [ ] T019 [US2] MEDULLA-ENGINE-PARITY-R007.4 Wire authentication mapped to engine principals and row security: wiring: grant and revoke wire logins
 - [ ] T020 [US2] MEDULLA-ENGINE-PARITY-R008.1 Catalog views for outside tools: model and behavior
 - [ ] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: wiring and refusal

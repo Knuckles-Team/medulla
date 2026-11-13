@@ -110,10 +110,13 @@ const MAX_TLS_PEM_BYTES: u64 = 1024 * 1024;
 /// enter [`ServerState`] or logs; the PEM bytes are retained only so the SCRAM
 /// handler can offer certificate-bound authentication on each fresh connection.
 #[derive(Clone, Debug)]
-struct PgWireTlsConfig {
-    cert_path: String,
-    key_path: String,
-    client_ca_path: Option<String>,
+pub struct PgWireTlsConfig {
+    /// PEM certificate chain the listener presents.
+    pub cert_path: String,
+    /// PEM private key for the chain.
+    pub key_path: String,
+    /// PEM CA bundle; when set, the listener requires a client certificate (mTLS).
+    pub client_ca_path: Option<String>,
 }
 
 type PgWireTlsMaterial = (pgwire::tokio::TlsAcceptor, Arc<Vec<u8>>);
@@ -480,7 +483,11 @@ pub async fn prepare_startup_policy(
     prepare_startup_policy_with_tls(addr, auth_secret, auth_mode, tls_config).await
 }
 
-async fn prepare_startup_policy_with_tls(
+/// [`prepare_startup_policy`] with EXPLICIT TLS material instead of the
+/// `MEDULLA_PGWIRE_TLS_*` environment: the environment path resolves its paths and
+/// calls this. A deployment or a test that holds the certificate, key and client CA
+/// paths passes them here, so no process-global variable decides the listener's TLS.
+pub async fn prepare_startup_policy_with_tls(
     addr: &str,
     auth_secret: String,
     auth_mode: PgWireAuthMode,
