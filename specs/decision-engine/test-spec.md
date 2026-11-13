@@ -941,7 +941,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174`: `tests/decide/test_generation
 
 | Evidence | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::premises_per_component`: Each chosen tool has one premise with its pack digest. |
 
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set`: The answer holds 32 tools or fewer, their skills and one agent start, and meets the time budget. |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set`: The answer holds 32 tools or fewer, their skills and 4 agent starts or fewer, and meets the time budget. |
 
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R176`: `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set`.
@@ -1678,7 +1678,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::other_tenant_packs_never_enter_the_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::load_set_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::premises_per_component` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | L4 (served Python) |
 | `MEDULLA-DECISION-ENGINE-R177` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::steps_ordered_by_outcome` | (planned) |
@@ -1688,7 +1688,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::other_tenant_outcomes_never_order_steps` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | L4 (served Python) |
 | `MEDULLA-DECISION-ENGINE-R178.2` | `tools/xtask/src/decide_budgets.rs::tests::a_planted_regression_fails` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R178.3` | `tests/test_check_decide_budgets.py::test_workflow_invokes_the_check` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R179.1` | `crates/medulla-decision-types/src/decision/knobs.rs::tests::knob_specs_round_trip_and_defaults_lie_within_bounds` | (planned) |

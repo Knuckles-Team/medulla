@@ -54,6 +54,11 @@
       "resident_bytes_per_record_overhead": 96,
       "resident_bytes_vector_factor": 1.25
     },
+    "decide/load_set": {
+      "p50_ms": 25.0,
+      "p99_ms": 50.0,
+      "peak_mib": 512.0
+    },
     "decide/retrieval_learning": {
       "p50_ms": 0.5,
       "p99_ms": 1.0,

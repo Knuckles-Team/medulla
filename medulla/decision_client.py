@@ -133,6 +133,33 @@ def capability_designation_request(
     )
 
 
+def load_set_request(
+    tenant_id: str,
+    question_id: str,
+    question: Mapping[str, Any],
+    feature_schema: Mapping[str, Any],
+    *,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``load_set`` ``Decide`` request: which tools, skills and agents a job
+    should have loaded.
+
+    ``question`` is the typed load-set question (``job_text``, ``job_embedding``
+    and its ``embedding_version``, ``required_capabilities``, ``max_tools``,
+    ``max_agents`` and the ``graph`` whose schema holds the capability classes).
+    The engine ranks the resident capability index and never takes candidates
+    from the caller, so the one declared candidate is the question id.
+    """
+    return decide_request(
+        tenant_id,
+        (question_id, "load_set", "ordinary"),
+        declared([DeclaredOption(question_id)]),
+        feature_schema,
+        policy=policy,
+        params=[param("load_set", "load_set", dict(question))],
+    )
+
+
 def usage_guidance_request(
     tenant_id: str,
     question_id: str,

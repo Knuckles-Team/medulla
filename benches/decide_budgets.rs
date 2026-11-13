@@ -956,6 +956,9 @@ fn designation_record(
         embedding_version: DESIGNATION_VERSION.to_string(),
         dim: DESIGNATION_DIM as u16,
         record_revision: 1,
+        applies_to: std::collections::BTreeSet::new(),
+        executes: std::collections::BTreeSet::new(),
+        pack: None,
     }
 }
 
@@ -1243,6 +1246,228 @@ fn bench_retrieval_learning(
     );
 }
 
+/// Packs and tools per pack the `decide/load_set` group seeds (R176.6): 5,000
+/// tools across 100 packs.
+const LOAD_SET_PACKS: usize = 100;
+const LOAD_SET_TOOLS_PER_PACK: usize = 50;
+const LOAD_SET_DIM: usize = 16;
+const LOAD_SET_VERSION: &str = "bench-load-set";
+const LOAD_SET_TOOLS: u16 = 32;
+
+/// A request of `kind` whose one typed parameter is `value` and whose one
+/// declared candidate is the question id.
+fn typed_request(
+    asked: &DecideRequest,
+    question_id: &str,
+    params: Vec<TypedParam>,
+) -> DecideRequest {
+    let mut out = asked.clone();
+    out.question.question_id = question_id.to_string();
+    out.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![DeclaredOption {
+            option_id: question_id.to_string(),
+            classification: BoundedVec::default(),
+            numbers: BoundedVec::default(),
+            texts: BoundedVec::default(),
+        }])
+        .expect("one option fits the bound"),
+    };
+    out.params = BoundedVec::new(params).expect("params fit the bound");
+    out
+}
+
+/// The `decide/load_set` group (MEDULLA-DECISION-ENGINE-R176.6): the served
+/// `LoadSet` question over a resident capability index of 5,000 tools in 100
+/// packs, one core. The budget is p95 <= 50 ms; the report's p99 is held
+/// to the same 50 ms, which is the stricter bound.
+fn bench_load_set(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::decision::capability_designation::{
+        CapabilityRecord, EntityKind, PackOrigin,
+    };
+    use medulla_decision_types::decision::load_set::{LoadSetQuestion, LOAD_SET_PARAM};
+    use medulla_h_decide::decide::capability_feed::shared_capability_index;
+
+    let (h, asked) = rt.block_on(fixture(QuestionKind::LoadSet));
+    let tenant = medulla_types::contract::TenantId::new(TENANT).unwrap();
+    let index = rt.block_on(async { shared_capability_index(&*h.state.read().await) });
+    let mut rng = Xorshift(0x0176_0006_5eed_cafe);
+    for pack in 0..LOAD_SET_PACKS {
+        let connector = format!("bench-pack-{pack}");
+        for slot in 0..LOAD_SET_TOOLS_PER_PACK {
+            let ordinal = pack * LOAD_SET_TOOLS_PER_PACK + slot;
+            let record = CapabilityRecord {
+                tenant_id: Some(tenant.clone()),
+                entity_id: medulla_types::contract::OpaqueId::new(format!(
+                    "mcp:{connector}/tool/t{slot}"
+                ))
+                .unwrap(),
+                entity_kind: EntityKind::Tool,
+                capabilities: std::collections::BTreeSet::from([format!("cap:{}", ordinal % 64)]),
+                ontology_type: None,
+                policy_tags: std::collections::BTreeSet::new(),
+                swappable_with: std::collections::BTreeSet::new(),
+                embedding_version: LOAD_SET_VERSION.to_string(),
+                dim: LOAD_SET_DIM as u16,
+                record_revision: 1,
+                applies_to: std::collections::BTreeSet::new(),
+                executes: std::collections::BTreeSet::new(),
+                pack: Some(PackOrigin {
+                    connector: connector.clone(),
+                    binding_revision: 1,
+                    pack_digest: format!("sha256:{}", "ab".repeat(32)),
+                    entry_digest: format!("sha256:{}", "cd".repeat(32)),
+                }),
+            };
+            index
+                .upsert(record, rng.vector(LOAD_SET_DIM))
+                .expect("bench upsert");
+        }
+    }
+    let question = LoadSetQuestion {
+        job_text: "look up an order and close the ticket".to_string(),
+        job_embedding: rng.vector(LOAD_SET_DIM),
+        required_capabilities: Vec::new(),
+        max_tools: LOAD_SET_TOOLS,
+        max_agents: 4,
+        graph: "__commons__".to_string(),
+        embedding_version: LOAD_SET_VERSION.to_string(),
+    };
+    let asked = typed_request(
+        &asked,
+        "bench.load_set",
+        vec![TypedParam {
+            name: LOAD_SET_PARAM.to_string(),
+            value: TypedValue::LoadSet(Box::new(question)),
+        }],
+    );
+    let served = decide(rt, &h, &asked);
+    assert!(
+        served.error.is_none(),
+        "the load set bench question must be answered: {:?}",
+        served.error
+    );
+    let group_name = "decide/load_set".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served_5000"));
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+    report.insert(group_name, sampled_report(rt, &h, &asked));
+}
+
+/// Time `REPORT_SAMPLES` served calls of `asked`: p50, p99 and the peak
+/// resident growth.
+fn sampled_report(rt: &Runtime, h: &Harness, asked: &DecideRequest) -> serde_json::Value {
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(decide(rt, h, asked));
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    serde_json::json!({
+        "p50_ms": percentile_ms(&samples, 0.50),
+        "p99_ms": percentile_ms(&samples, 0.99),
+        "peak_mib": (high_water_mib() - before).max(0.0),
+    })
+}
+
+/// The pack facts the `decide/usage_guidance` group reads: one connector with
+/// three tools, a job class with three steps and the outcome-free ordering.
+const USAGE_PACK_UPDATE: &str = "INSERT DATA { \
+<mcp-server://bench> <https://knuckles-team.github.io/ontology/connector-pack#providesFeature> <urn:feature:bench> . \
+<urn:feature:bench> <https://knuckles-team.github.io/ontology/connector-pack#realizedBy> <tool://bench/find> . \
+<urn:feature:bench> <https://knuckles-team.github.io/ontology/connector-pack#realizedBy> <tool://bench/read> . \
+<urn:feature:bench> <https://knuckles-team.github.io/ontology/connector-pack#realizedBy> <tool://bench/label> . \
+<tool://bench/find> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:find> . \
+<tool://bench/read> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:read> . \
+<tool://bench/label> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:label> . \
+<urn:job:bench> <https://knuckles-team.github.io/ontology/core#hasStep> <urn:step:find> . \
+<urn:job:bench> <https://knuckles-team.github.io/ontology/core#hasStep> <urn:step:read> . \
+<urn:job:bench> <https://knuckles-team.github.io/ontology/core#hasStep> <urn:step:label> . \
+<urn:step:find> <https://knuckles-team.github.io/ontology/core#needsSkill> <skill://find> . \
+<urn:step:read> <https://knuckles-team.github.io/ontology/core#needsSkill> <skill://read> . \
+<urn:step:label> <https://knuckles-team.github.io/ontology/core#needsSkill> <skill://label> . \
+<skill://find> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:find> . \
+<skill://read> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:read> . \
+<skill://label> <https://knuckles-team.github.io/ontology/connector-pack#providesCapability> <cap:label> . \
+<urn:step:find> <https://knuckles-team.github.io/ontology/core#precedes> <urn:step:label> . \
+<urn:step:read> <https://knuckles-team.github.io/ontology/core#precedes> <urn:step:label> . }";
+
+/// The `decide/usage_guidance` group (MEDULLA-DECISION-ENGINE-R177.6): the
+/// served `UsageGuidance` question over a pack and job class written to the
+/// commons graph through the served update path.
+fn bench_usage_guidance(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::decision::usage_guidance::{
+        USAGE_GUIDANCE_CONNECTOR_PARAM, USAGE_GUIDANCE_GRAPH_PARAM, USAGE_GUIDANCE_JOB_CLASS_PARAM,
+    };
+
+    let (h, asked) = rt.block_on(fixture(QuestionKind::UsageGuidance));
+    let written = rt.block_on(Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &h.state,
+            Request {
+                id: 177,
+                graph: "__commons__".into(),
+                auth_token: String::new(),
+                agent_id: Some("decider".into()),
+                method: Method::ApplyMutation {
+                    event_type: medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT
+                        .to_string(),
+                    query: USAGE_PACK_UPDATE.to_string(),
+                },
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes(
+                "decider",
+                TENANT,
+                &["kg:read", "kg:write", "agent:decision-write"],
+            ),
+        ),
+    ));
+    assert!(
+        written.error.is_none(),
+        "the usage guidance pack facts must be written: {:?}",
+        written.error
+    );
+    let asked = typed_request(
+        &asked,
+        "bench.usage_guidance",
+        vec![
+            TypedParam {
+                name: USAGE_GUIDANCE_CONNECTOR_PARAM.to_string(),
+                value: TypedValue::Iri("mcp-server://bench".to_string()),
+            },
+            TypedParam {
+                name: USAGE_GUIDANCE_GRAPH_PARAM.to_string(),
+                value: TypedValue::Text("__commons__".to_string()),
+            },
+            TypedParam {
+                name: USAGE_GUIDANCE_JOB_CLASS_PARAM.to_string(),
+                value: TypedValue::Iri("urn:job:bench".to_string()),
+            },
+        ],
+    );
+    let served = decide(rt, &h, &asked);
+    assert!(
+        served.error.is_none(),
+        "the usage guidance bench question must be answered: {:?}",
+        served.error
+    );
+    let group_name = "decide/usage_guidance".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served_pack"));
+    group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
+    group.finish();
+    report.insert(group_name, sampled_report(rt, &h, &asked));
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -1285,6 +1510,8 @@ fn bench_decide(c: &mut Criterion) {
         &mut report,
     );
     bench_retrieval_learning(c, &rt, &mut report);
+    bench_load_set(c, &rt, &mut report);
+    bench_usage_guidance(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
