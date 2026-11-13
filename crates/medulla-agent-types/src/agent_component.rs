@@ -52,6 +52,7 @@ pub mod capability_descriptor;
 pub mod content;
 pub mod facts;
 pub mod input_capabilities;
+pub mod red_team;
 pub mod search;
 
 mod validation;
@@ -120,7 +121,8 @@ const DIGEST_PREFIX: &str = "sha256:";
 /// `McpServer`, `McpPrompt`, `McpResource`, `Skill`, `Ontology`, `Schema`,
 /// `OutputValidator`, `Predicate`, `Shapes`, `A2aAgentCard`, `DecisionRecord`,
 /// `DecisionPolicy`, `DecisionHead`, `FeatureSchema`, `Rubric`, `NlTemplate`,
-/// and `GuardrailRule`.
+/// `GuardrailRule`, `RuleInvariant`, `RedTeamAttack`, `RedTeamTransform` and
+/// `RedTeamScorer`.
 ///
 /// Closed on purpose. Every kind is either referenced from an agent slot —
 /// [`crate::agent_library::AgentLibraryEntry`],
@@ -192,6 +194,14 @@ pub enum AgentComponentKind {
     /// IRI; `forbidden_rule_id` and `on_class` travel as attributes and are
     /// refused at publish when missing or malformed.
     RuleInvariant,
+    /// A red-team attack record: a category and the goal it pursues
+    /// (MEDULLA-DECISION-ENGINE-R138.7). The body travels as attributes and is
+    /// refused at publish when it does not decode.
+    RedTeamAttack,
+    /// A red-team transform record: how an attack prompt is rewritten.
+    RedTeamTransform,
+    /// A red-team scorer record: a category and a per-mille pass threshold.
+    RedTeamScorer,
 }
 
 impl AgentComponentKind {
@@ -219,6 +229,9 @@ impl AgentComponentKind {
             Self::NlTemplate => "nl_template",
             Self::GuardrailRule => "guardrail_rule",
             Self::RuleInvariant => "rule_invariant",
+            Self::RedTeamAttack => "red_team_attack",
+            Self::RedTeamTransform => "red_team_transform",
+            Self::RedTeamScorer => "red_team_scorer",
         }
     }
 
@@ -250,7 +263,10 @@ impl AgentComponentKind {
             | Self::A2aAgentCard
             | Self::DecisionRecord
             | Self::GuardrailRule
-            | Self::RuleInvariant => "agent:component-write",
+            | Self::RuleInvariant
+            | Self::RedTeamAttack
+            | Self::RedTeamTransform
+            | Self::RedTeamScorer => "agent:component-write",
         }
     }
 }
@@ -1624,7 +1640,7 @@ mod tests {
         ];
         /// The committed publish descriptors: every component kind and the
         /// authorization action publishing it needs.
-        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 22] = [
+        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 25] = [
             (AgentComponentKind::ModelProfile, "agent:component-write"),
             (AgentComponentKind::SystemPrompt, "agent:component-write"),
             (AgentComponentKind::Tool, "agent:component-write"),
@@ -1642,6 +1658,9 @@ mod tests {
             (AgentComponentKind::DecisionRecord, "agent:component-write"),
             (AgentComponentKind::GuardrailRule, "agent:component-write"),
             (AgentComponentKind::RuleInvariant, "agent:component-write"),
+            (AgentComponentKind::RedTeamAttack, "agent:component-write"),
+            (AgentComponentKind::RedTeamTransform, "agent:component-write"),
+            (AgentComponentKind::RedTeamScorer, "agent:component-write"),
             (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),
             (AgentComponentKind::DecisionHead, "admin:decision-head"),
             (AgentComponentKind::FeatureSchema, "admin:decision-catalog"),

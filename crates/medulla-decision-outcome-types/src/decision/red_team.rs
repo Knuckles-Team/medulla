@@ -1,34 +1,11 @@
 //! Red-team attack, transform and scorer records and the probe verdict
 //! (MEDULLA-DECISION-ENGINE-R138.1 and R138.2).
 
+use medulla_agent_types::agent_component::red_team::RedTeamAttack;
+use medulla_agent_types::agent_component::red_team::RedTeamScorer;
+#[cfg(test)]
+use medulla_agent_types::agent_component::red_team::RedTeamTransform;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RedTeamAttack {
-    pub id: String,
-    pub category: String,
-    pub goal: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RedTeamTransform {
-    pub id: String,
-    pub kind: String,
-}
-
-/// A scorer passes when its score reaches `threshold` (both per mille).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct RedTeamScorer {
-    pub id: String,
-    pub category: String,
-    pub threshold: u16,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

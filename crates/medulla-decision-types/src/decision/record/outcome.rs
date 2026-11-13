@@ -231,6 +231,7 @@ mod tests {
                 .chain(crate::decision::reputation::REFUSALS.iter())
                 .chain(crate::decision::transfer::REFUSALS.iter())
                 .chain(crate::decision::importance_penalty::REFUSALS.iter())
+                .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
                 .chain(crate::decision::statistical::retrieval_generation::REFUSALS.iter())
                 .map(|code| code.as_str()),
         );

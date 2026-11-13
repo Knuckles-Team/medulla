@@ -487,6 +487,7 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
         .chain(super::importance_penalty::REFUSALS.iter())
+        .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
         .chain(super::statistical::retrieval_generation::REFUSALS.iter())
         .copied()
         .chain(module_tables().into_iter().flat_map(|(_, table)| table))
