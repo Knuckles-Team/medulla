@@ -3583,3 +3583,106 @@
     :fromState :BarMachine_Provisional ;
     :toState :BarMachine_Final ;
     :firedBy :BarMachine_Event_Settle .
+
+# spec: MEDULLA-FINANCE-PRIMITIVES-R905.3
+# The Signal data machine: the data status of one signal projection. The Rust edge table
+# SIGNAL_MACHINE is the same table.
+
+:SignalDataState a owl:Class ;
+    rdfs:label "Signal data State" ;
+    rdfs:comment "A state of the Signal data machine." ;
+    rdfs:subClassOf :State .
+
+:SignalDataTerminalState a owl:Class ;
+    rdfs:label "Signal data Terminal State" ;
+    rdfs:comment "A terminal state of the Signal data machine; the machine declares none." ;
+    rdfs:subClassOf :TerminalState, :SignalDataState .
+
+:SignalDataTransition a owl:Class ;
+    rdfs:label "Signal data Transition" ;
+    rdfs:comment "A transition of the Signal data machine." ;
+    rdfs:subClassOf :Transition .
+
+:SignalDataEvent a owl:Class ;
+    rdfs:label "Signal data Event" ;
+    rdfs:comment "An event of the Signal data machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SignalDataMachine a :StateMachine ;
+    rdfs:label "Signal data data machine" ;
+    :initialState :SignalDataMachine_Unavailable ;
+    :hasState :SignalDataMachine_Unavailable, :SignalDataMachine_Warming, :SignalDataMachine_Valid, :SignalDataMachine_Stale .
+
+:SignalDataMachine_Unavailable a :SignalDataState ;
+    rdfs:label "Signal data Unavailable" ;
+    :storedForm "unavailable" .
+
+:SignalDataMachine_Warming a :SignalDataState ;
+    rdfs:label "Signal data Warming" ;
+    :storedForm "warming" .
+
+:SignalDataMachine_Valid a :SignalDataState ;
+    rdfs:label "Signal data Valid" ;
+    :storedForm "valid" .
+
+:SignalDataMachine_Stale a :SignalDataState ;
+    rdfs:label "Signal data Stale" ;
+    :storedForm "stale" .
+
+:SignalDataMachine_Event_Warm a :SignalDataEvent ;
+    rdfs:label "Signal data Warm" .
+
+:SignalDataMachine_Event_Confirm a :SignalDataEvent ;
+    rdfs:label "Signal data Confirm" .
+
+:SignalDataMachine_Event_Expire a :SignalDataEvent ;
+    rdfs:label "Signal data Expire" .
+
+:SignalDataMachine_S01 a :SignalDataTransition ;
+    rdfs:label "Signal data S01" ;
+    :edgeId "S01" ;
+    :fromState :SignalDataMachine_Unavailable ;
+    :toState :SignalDataMachine_Warming ;
+    :firedBy :SignalDataMachine_Event_Warm .
+
+:SignalDataMachine_S02 a :SignalDataTransition ;
+    rdfs:label "Signal data S02" ;
+    :edgeId "S02" ;
+    :fromState :SignalDataMachine_Warming ;
+    :toState :SignalDataMachine_Warming ;
+    :firedBy :SignalDataMachine_Event_Warm .
+
+:SignalDataMachine_S03 a :SignalDataTransition ;
+    rdfs:label "Signal data S03" ;
+    :edgeId "S03" ;
+    :fromState :SignalDataMachine_Unavailable ;
+    :toState :SignalDataMachine_Valid ;
+    :firedBy :SignalDataMachine_Event_Confirm .
+
+:SignalDataMachine_S04 a :SignalDataTransition ;
+    rdfs:label "Signal data S04" ;
+    :edgeId "S04" ;
+    :fromState :SignalDataMachine_Warming ;
+    :toState :SignalDataMachine_Valid ;
+    :firedBy :SignalDataMachine_Event_Confirm .
+
+:SignalDataMachine_S05 a :SignalDataTransition ;
+    rdfs:label "Signal data S05" ;
+    :edgeId "S05" ;
+    :fromState :SignalDataMachine_Valid ;
+    :toState :SignalDataMachine_Valid ;
+    :firedBy :SignalDataMachine_Event_Confirm .
+
+:SignalDataMachine_S06 a :SignalDataTransition ;
+    rdfs:label "Signal data S06" ;
+    :edgeId "S06" ;
+    :fromState :SignalDataMachine_Stale ;
+    :toState :SignalDataMachine_Valid ;
+    :firedBy :SignalDataMachine_Event_Confirm .
+
+:SignalDataMachine_S07 a :SignalDataTransition ;
+    rdfs:label "Signal data S07" ;
+    :edgeId "S07" ;
+    :fromState :SignalDataMachine_Valid ;
+    :toState :SignalDataMachine_Stale ;
+    :firedBy :SignalDataMachine_Event_Expire .

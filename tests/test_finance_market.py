@@ -101,7 +101,7 @@ def test_signal_replay_scan_and_advance_agree(clean_graph):
     assert state["data_status"] == "valid"
     flips = replayed["current"]
     assert [flip["to"] for flip in flips] == ["bullish", "bearish"]
-    assert all(record["status"] == "emitted" for record in replayed["records"])
+    assert all(record["kind"] == "emitted" for record in replayed["records"])
     head = clean_graph.finance.market(
         "signal_replay",
         request={"series": SERIES, "spec": SPEC, "records": bars[:6]},

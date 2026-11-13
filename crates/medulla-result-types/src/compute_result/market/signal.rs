@@ -198,11 +198,12 @@ pub struct TrendFlip {
     pub bar_revision: u32,
 }
 
-/// Whether a flip record asserts a flip or withdraws a prior one.
+/// Whether a flip record asserts a flip or withdraws a prior one. It is the record's kind,
+/// fixed when the record is built: a revision appends a new record, never changes this one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum FlipRecordStatus {
+pub enum FlipRecordKind {
     Emitted,
     /// Revised data removed the flip; `revises` names the record withdrawn.
     Retracted,
@@ -216,7 +217,7 @@ pub enum FlipRecordStatus {
 pub struct FlipRecord {
     /// `sha256:<hex>` over the record's content.
     pub record_id: String,
-    pub status: FlipRecordStatus,
+    pub kind: FlipRecordKind,
     pub flip: TrendFlip,
     pub revises: Option<String>,
     /// The `known_at` of the arrival that produced this record.
@@ -257,4 +258,49 @@ pub struct SignalReplay {
 pub struct SignalAdvanced {
     pub state: SignalState,
     pub flips: Vec<TrendFlip>,
+}
+
+#[cfg(test)]
+mod flip_record_kind_tests {
+    use super::*;
+
+    /// A flip record's kind is a one-shot outcome set when the record is built, never a
+    /// lifecycle: no production file assigns it afterwards, and the wire field is `kind`.
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R905.2
+    #[test]
+    fn flip_record_kind_is_set_only_at_construction() {
+        fn walk(dir: &std::path::Path, hits: &mut Vec<String>) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let name = entry.file_name().to_string_lossy().to_string();
+                if path.is_dir() {
+                    if name != "target" {
+                        walk(&path, hits);
+                    }
+                } else if name.ends_with(".rs") {
+                    let text = std::fs::read_to_string(&path).unwrap_or_default();
+                    for (number, line) in text.lines().enumerate() {
+                        let line = line.trim();
+                        if !line.starts_with("//")
+                            && (line.contains(".kind = FlipRecordKind::")
+                                || line.contains("FlipRecordStatus"))
+                        {
+                            hits.push(format!("{}:{}", path.display(), number + 1));
+                        }
+                    }
+                }
+            }
+        }
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut hits = Vec::new();
+        walk(&crates, &mut hits);
+        // This test names the retired type in its own scan pattern.
+        hits.retain(|hit| !hit.contains("market/signal.rs"));
+        assert!(hits.is_empty(), "flip record kind writes: {hits:?}");
+        let wire = serde_json::to_value(FlipRecordKind::Retracted).unwrap();
+        assert_eq!(wire, serde_json::json!("retracted"));
+    }
 }

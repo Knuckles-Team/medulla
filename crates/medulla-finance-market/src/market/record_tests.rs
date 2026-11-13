@@ -11,7 +11,7 @@ use super::signal::{advance, initial_state, replay, signal_key};
 use super::{
     BacktestRunDraft, BarRecord, CandleBasis, CostModel, DataRevisionRef, DataStatus, Direction,
     FillRule, FinalityFilter, FlipAbstainReason, FlipConfidence, FlipConfidenceRequest,
-    FlipFeatures, FlipOutcomeSample, FlipRecordStatus, IndicatorKind, IndicatorSpec, ScanFilter,
+    FlipFeatures, FlipOutcomeSample, FlipRecordKind, IndicatorKind, IndicatorSpec, ScanFilter,
     SignalState, Timeframe, TradeFill, UniverseMember, ValidationInputs, INVALID_REQUEST,
     LOOK_AHEAD, OUT_OF_ORDER,
 };
@@ -89,11 +89,11 @@ fn a_revision_appends_revision_records_and_never_rewrites() {
         after
             .records
             .iter()
-            .any(|r| r.status == FlipRecordStatus::Retracted)
+            .any(|r| r.kind == FlipRecordKind::Retracted)
             || after
                 .records
                 .iter()
-                .any(|r| r.revises.is_some() && r.status == FlipRecordStatus::Emitted)
+                .any(|r| r.revises.is_some() && r.kind == FlipRecordKind::Emitted)
     );
     // The replayed state equals a fresh advance over the latest resolved bars.
     let latest = resolve(&records, None, FinalityFilter::FinalOnly).unwrap();
@@ -261,8 +261,10 @@ fn a_separated_history_gives_a_singleton_claim_either_way() {
 
 #[test]
 fn warmup_thin_history_regime_drift_and_ambiguity_abstain() {
-    let mut warming = confidence(separated(), true);
-    warming.data_status = DataStatus::Warming;
+    let warming = FlipConfidenceRequest {
+        data_status: DataStatus::Warming,
+        ..confidence(separated(), true)
+    };
     let warm = reason(flip_confidence(&warming).unwrap());
     assert_eq!(
         warm,

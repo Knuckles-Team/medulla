@@ -923,3 +923,16 @@ fn bar_machine_matches_edge_table() {
 fn bar_machine_classes_extend_core() {
     sm::assert_extends_core("Bar");
 }
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R905.3
+#[test]
+fn signal_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_result_types::compute_result::market::signal_machine::SIGNAL_MACHINE,
+    );
+}
+// spec: MEDULLA-FINANCE-PRIMITIVES-R905.3
+#[test]
+fn signal_machine_classes_extend_core() {
+    sm::assert_extends_core("SignalData");
+}

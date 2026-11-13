@@ -13,7 +13,7 @@ use super::indicators::compute;
 use super::rollup::rollup;
 use super::signal::{advance, initial_state, replay, signal_key};
 use super::{
-    BarRecord, BarStatus, CandleBasis, Direction, FlipRecordStatus, IndicatorKind, IndicatorPoint,
+    BarRecord, BarStatus, CandleBasis, Direction, FlipRecordKind, IndicatorKind, IndicatorPoint,
     IndicatorSpec, IndicatorValue, SeriesIdentity, SignalReplayRequest, Timeframe, TradingCalendar,
 };
 
@@ -255,7 +255,7 @@ fn replayed_flips_are_the_reference_flips() {
     assert!(replayed
         .records
         .iter()
-        .all(|r| r.status == FlipRecordStatus::Emitted && r.revises.is_none()));
+        .all(|r| r.kind == FlipRecordKind::Emitted && r.revises.is_none()));
     let key = signal_key(&series(), &trail(CandleBasis::Raw)).unwrap();
     let (state, flips) = advance(&initial_state(key, trail(CandleBasis::Raw)), &daily()).unwrap();
     assert_eq!(replayed.state, state);

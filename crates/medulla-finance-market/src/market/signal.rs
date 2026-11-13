@@ -14,9 +14,10 @@ use std::collections::BTreeMap;
 use super::digest;
 use super::indicators::{indicator_version, param_hash};
 use super::resolve::apply_version;
+use super::signal_machine::SignalEvent;
 use super::supertrend::{step as trail_step, TrailParams};
 use super::{
-    BarRecord, BarStatus, DataStatus, FlipRecord, FlipRecordStatus, IndicatorSpec, MarketError,
+    BarRecord, BarStatus, DataStatus, FlipRecord, FlipRecordKind, IndicatorSpec, MarketError,
     MarketResult, SeriesIdentity, SignalAdvanced, SignalKey, SignalReplay, SignalReplayRequest,
     SignalState, SuperTrendCheckpoint, TrendFlip, INVALID_BAR, INVALID_REQUEST,
     REVISION_NEEDS_REPLAY,
@@ -69,7 +70,7 @@ pub fn initial_state(key: SignalKey, spec: IndicatorSpec) -> SignalState {
         key,
         spec,
         direction: None,
-        data_status: DataStatus::Unavailable,
+        data_status: DataStatus::INITIAL,
         line: None,
         atr: None,
         last_bar_open: None,
@@ -80,6 +81,13 @@ pub fn initial_state(key: SignalKey, spec: IndicatorSpec) -> SignalState {
         source_revision: digest::framed(SOURCE_DOMAIN, &[]),
         kernel: SuperTrendCheckpoint::default(),
     }
+}
+
+/// The status after `event`, through the one transition function of `SignalDataMachine`.
+fn status_after(current: DataStatus, event: SignalEvent) -> MarketResult<DataStatus> {
+    current
+        .apply(event)
+        .map_err(|refused| MarketError::new(INVALID_REQUEST, format!("{refused:?}")))
 }
 
 fn check_next(state: &SignalState, bar: &BarRecord) -> MarketResult<()> {
@@ -124,10 +132,10 @@ fn advance_one(
         ],
     );
     let Some(step) = step else {
-        state.data_status = DataStatus::Warming;
+        state.data_status = status_after(state.data_status, SignalEvent::Warm)?;
         return Ok(None);
     };
-    state.data_status = DataStatus::Valid;
+    state.data_status = status_after(state.data_status, SignalEvent::Confirm)?;
     state.direction = Some(step.direction);
     state.line = Some(step.line);
     state.atr = Some(step.atr);
@@ -171,16 +179,16 @@ pub fn advance_wire(state: &SignalState, bars: &[BarRecord]) -> MarketResult<Sig
 }
 
 fn record(
-    status: FlipRecordStatus,
+    kind: FlipRecordKind,
     flip: TrendFlip,
     revises: Option<String>,
     recorded_at: i64,
 ) -> FlipRecord {
     let revised = revises.clone().unwrap_or_default();
-    let body = serde_json::to_vec(&(status, &flip, recorded_at)).unwrap_or_default();
+    let body = serde_json::to_vec(&(kind, &flip, recorded_at)).unwrap_or_default();
     FlipRecord {
         record_id: digest::framed(RECORD_DOMAIN, &[&body, revised.as_bytes()]),
-        status,
+        kind,
         flip,
         revises,
         recorded_at,
@@ -244,7 +252,7 @@ impl Projection {
             .collect();
         for bar in &fresh {
             if let Some(flip) = advance_one(&mut self.state, self.params, bar)? {
-                let emitted = record(FlipRecordStatus::Emitted, flip, None, recorded_at);
+                let emitted = record(FlipRecordKind::Emitted, flip, None, recorded_at);
                 self.standing
                     .insert(emitted.flip.event_id.clone(), emitted.clone());
                 self.records.push(emitted);
@@ -272,7 +280,7 @@ impl Projection {
         for (id, old) in prior {
             match fresh.remove(&id) {
                 None => self.push(
-                    FlipRecordStatus::Retracted,
+                    FlipRecordKind::Retracted,
                     old.flip.clone(),
                     Some(old.record_id),
                     recorded_at,
@@ -282,7 +290,7 @@ impl Projection {
                     self.standing.insert(id, old);
                 }
                 Some(flip) => self.push(
-                    FlipRecordStatus::Emitted,
+                    FlipRecordKind::Emitted,
                     flip,
                     Some(old.record_id),
                     recorded_at,
@@ -291,20 +299,20 @@ impl Projection {
             }
         }
         for flip in fresh.into_values() {
-            self.push(FlipRecordStatus::Emitted, flip, None, recorded_at, true);
+            self.push(FlipRecordKind::Emitted, flip, None, recorded_at, true);
         }
         Ok(())
     }
 
     fn push(
         &mut self,
-        status: FlipRecordStatus,
+        kind: FlipRecordKind,
         flip: TrendFlip,
         revises: Option<String>,
         at: i64,
         stands: bool,
     ) {
-        let entry = record(status, flip, revises, at);
+        let entry = record(kind, flip, revises, at);
         if stands {
             self.standing
                 .insert(entry.flip.event_id.clone(), entry.clone());
@@ -329,7 +337,9 @@ fn mark_stale(state: &mut SignalState, as_of: Option<i64>, stale_after: Option<i
         return;
     };
     if state.data_status == DataStatus::Valid && now - close > bound {
-        state.data_status = DataStatus::Stale;
+        if let Ok(next) = state.data_status.apply(SignalEvent::Expire) {
+            state.data_status = next;
+        }
     }
 }
 
