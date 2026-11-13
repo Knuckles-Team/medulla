@@ -330,6 +330,8 @@ knobs! {
     process_document_max_bytes: u64 = "process.document_max_bytes", U64(16_777_216), [1_024, 268_435_456], "bytes", Tunable;
     /// Deepest element nesting a process or architecture exchange document may have.
     process_document_max_depth: u64 = "process.document_max_depth", U64(64), [4, 256], "levels", Tunable;
+    /// Most source records one `SourceSync` reconciles (MEDULLA-SRC-AUTH-R012.6); a larger read is refused.
+    sync_max_records: u64 = "sync.max_records", U64(50_000), [1, 1_000_000], "records", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).

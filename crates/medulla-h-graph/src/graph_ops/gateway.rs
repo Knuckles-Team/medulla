@@ -153,6 +153,20 @@ pub async fn try_handle_gateway(
         materialization_manifest,
         write_coalescer,
     };
+    // MEDULLA-SRC-AUTH-R012.6: a source sync plans against the caller's visible
+    // graph and takes its rows under the verified carrier, so it enters here,
+    // where both are in hand, before the carrier-less route table.
+    if matches!(method, Method::SourceSync { .. }) {
+        let visible = read_authority.map_or_else(|| core.clone(), |authority| authority.project_core(core));
+        return Ok(super::source_sync::handle_source_sync(
+            state,
+            &ctx,
+            &visible,
+            read_authority.and_then(|authority| authority.carrier()),
+            &method,
+        )
+        .await);
+    }
     if let Some(resp) =
         super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method).await
     {

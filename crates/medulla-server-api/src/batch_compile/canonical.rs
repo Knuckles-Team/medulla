@@ -600,6 +600,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-CQ-ORCH-R705.6: an import commits as one request-graph
         // `BatchUpdate`; an export commits nothing.
         | Method::ArchitectureModelImport { .. }
+        // MEDULLA-SRC-AUTH-R012.6: a sync commits as one request-graph `BatchUpdate`.
+        | Method::SourceSync { .. }
         | Method::ArchitectureModelExport { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }

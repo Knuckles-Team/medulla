@@ -148,6 +148,21 @@ $($variants)*
         scope: Option<String>,
     },
 
+    /// Keep one federated secondary in step with the native graph, the system
+    /// of record (MEDULLA-SRC-AUTH-R012.6). The host owns the connector call:
+    /// it opened, filled and completed the foreign read `foreign_execution`
+    /// with `plan_digest = sha256(connection_iri 0x00 class_iri)` first, and
+    /// the engine never calls out. `scope` names the adapter's scope (for an
+    /// architecture class, the model identifier). Inbound changes and the sync
+    /// state commit as one batch; outbound changes come back as drafts the
+    /// router queues as write-back proposals.
+    SourceSync {
+        connection_iri: String,
+        class_iri: String,
+        foreign_execution: medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
+        scope: Option<String>,
+    },
+
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.

@@ -55,6 +55,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `pattern.wick_max` | f64 | 0.1 | [0.0, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_WICK_MAX` |
 | `process.document_max_bytes` | u64 | 16777216 | [1024, 268435456] | bytes | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_BYTES` |
 | `process.document_max_depth` | u64 | 64 | [4, 256] | levels | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_DEPTH` |
+| `sync.max_records` | u64 | 50000 | [1, 1000000] | records | Tunable | `MEDULLA_SYNC_MAX_RECORDS` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
 | `generation.batch_nodes` | u64 | 256 | [16, 4096] | nodes | Tunable | `MEDULLA_GENERATION_BATCH_NODES` |
 | `adapter.rank` | u64 | 8 | [1, 8] | directions | Tunable | `MEDULLA_ADAPTER_RANK` |

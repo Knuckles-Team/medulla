@@ -659,6 +659,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "ARCHIMATE_VERSION_MISMATCH",
         ],
     ),
+    // MEDULLA-SRC-AUTH-R012.7: a sync the authority rows or the adapter table refuse.
+    (
+        "SourceSync",
+        &[
+            "SYNC_SOURCE_NOT_SECONDARY",
+            "SYNC_NO_SYSTEM_OF_RECORD",
+            "SYNC_ADAPTER_MISSING",
+            "SYNC_DIRECTION_REFUSED",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R153.4: a span the stored table cannot serve.
     (
         "ReadSpan",

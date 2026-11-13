@@ -163,6 +163,8 @@ _DURABLE_AT_BASE = (
         "ArgumentMapPut",
         # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
         "ArchitectureModelImport",
+        # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
+        "SourceSync",
     }
 )
 
@@ -292,6 +294,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "ArgumentMapPut",
         # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
         "ArchitectureModelImport",
+        # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
+        "SourceSync",
     }
 )
 

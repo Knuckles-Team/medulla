@@ -70,6 +70,7 @@ mod read_span_tests;
 pub mod retention_cleanup;
 mod schema_boundary;
 mod semantic;
+mod source_sync;
 mod subgraph;
 mod terminal;
 mod union;

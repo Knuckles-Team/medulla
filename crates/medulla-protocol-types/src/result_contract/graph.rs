@@ -25,6 +25,8 @@ method_results! {
     // MEDULLA-CQ-ORCH-R705.6: the architecture exchange import and export answers.
     ArchitectureModelImport(ArchitectureModelImport) => Json<medulla_types::archimate_exchange::ArchitectureModelImported>;
     ArchitectureModelExport(ArchitectureModelExport) => Json<medulla_types::archimate_exchange::ArchitectureModelExported>;
+    // MEDULLA-SRC-AUTH-R012.6: the source sync report.
+    SourceSync(SourceSync) => Json<medulla_source_types::source_sync::SyncReport>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;

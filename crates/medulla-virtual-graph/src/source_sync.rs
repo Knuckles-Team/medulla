@@ -38,6 +38,78 @@ impl ConflictRule {
     }
 }
 
+/// The role a source plays for a class (`vg:recordRole`). The set is closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordRole {
+    /// The native graph: the one source of truth for the class.
+    SystemOfRecord,
+    /// A secondary kept in step with the system of record.
+    FederatedSecondary,
+}
+
+impl RecordRole {
+    /// The `vg:recordRole` literal.
+    pub fn parse(literal: &str) -> Option<Self> {
+        match literal {
+            "system_of_record" => Some(Self::SystemOfRecord),
+            "federated_secondary" => Some(Self::FederatedSecondary),
+            _ => None,
+        }
+    }
+}
+
+/// Which way changes may flow between a secondary and the graph
+/// (`vg:syncDirection`). The set is closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncDirection {
+    /// Source changes may be applied to the graph; nothing is proposed back.
+    Inbound,
+    /// Graph changes may be proposed to the source; nothing is applied.
+    Outbound,
+    /// Both ways.
+    Both,
+}
+
+impl SyncDirection {
+    /// The `vg:syncDirection` literal.
+    pub fn parse(literal: &str) -> Option<Self> {
+        match literal {
+            "inbound" => Some(Self::Inbound),
+            "outbound" => Some(Self::Outbound),
+            "both" => Some(Self::Both),
+            _ => None,
+        }
+    }
+
+    /// Whether a source change may be applied to the graph.
+    pub fn allows_inbound(self) -> bool {
+        matches!(self, Self::Inbound | Self::Both)
+    }
+
+    /// Whether a graph change may be proposed to the source.
+    pub fn allows_outbound(self) -> bool {
+        matches!(self, Self::Outbound | Self::Both)
+    }
+}
+
+/// One `vg:SourceAuthority` row read for a sync: which connection plays which
+/// role for which class, and how a two-sided change is settled.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyncAuthority {
+    /// The authority row's IRI.
+    pub row: String,
+    /// The IRI of `vg:authoritativeSource`.
+    pub connection: String,
+    /// The IRI of `vg:authorityFor`.
+    pub class: String,
+    /// `vg:recordRole`.
+    pub role: RecordRole,
+    /// `vg:syncDirection`; present on a federated secondary.
+    pub direction: Option<SyncDirection>,
+    /// The `vg:conflictRule` literal; present on a federated secondary.
+    pub conflict_rule: Option<String>,
+}
+
 /// One side of a record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
@@ -134,6 +206,20 @@ pub fn reconcile(
             },
         },
     }
+}
+
+/// The digest the host opens the foreign read with for one connection and
+/// class, and the served handler recomputes to take the read's rows exactly
+/// once: SHA-256 over `connection_iri`, a zero byte, then `class_iri`.
+pub fn sync_plan_digest(
+    connection_iri: &str,
+    class_iri: &str,
+) -> medulla_types::contract::Digest256 {
+    let mut framed = Vec::new();
+    framed.extend_from_slice(connection_iri.as_bytes());
+    framed.push(0);
+    framed.extend_from_slice(class_iri.as_bytes());
+    medulla_types::contract::Digest256::sha256(&framed)
 }
 
 /// The inbound writes and the sync state of one sync, as the one list a single

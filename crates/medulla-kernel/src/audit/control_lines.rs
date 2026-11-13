@@ -153,6 +153,11 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::FinanceFactorRecord { factor_ids, .. } => {
             Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
         }
+        Method::SourceSync {
+            connection_iri,
+            class_iri,
+            ..
+        } => Some(format!("SOURCE_SYNC|{connection_iri}|{class_iri}")),
         Method::ArchitectureModelImport { document, .. } => Some(format!(
             "ARCHITECTURE_MODEL_IMPORT|{}",
             medulla_types::archimate_exchange::sha256_hex(document.as_bytes())

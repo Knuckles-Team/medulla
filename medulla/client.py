@@ -7257,6 +7257,40 @@ class GraphOperationsClient:
             raise RuntimeError("ArchitectureModelExport must answer with an object")
         return result
 
+    async def source_sync(
+        self,
+        connection_iri: str,
+        class_iri: str,
+        foreign_execution: dict[str, Any],
+        scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Keep one federated secondary in step with the graph
+        (MEDULLA-SRC-AUTH-R012.6).
+
+        The caller (the host) opened, filled and completed the foreign read
+        ``foreign_execution`` (the opaque reference ``ForeignReadOpen`` issued,
+        forwarded byte for byte) first, with ``plan_digest`` equal to the SHA-256
+        of ``connection_iri``, a zero byte and ``class_iri``; the engine never
+        calls the source. Source-only changes and the sync state commit as one batch.
+        Graph-side changes are queued as write-back proposals for approval.
+        Returns ``{connection_iri, class_iri, unchanged, applied, proposed,
+        conflicts, outbound, queued}``. A secondary the authority rows do not
+        name, a class without a system of record or an adapter, or a change the
+        direction forbids is refused with its ``SYNC_*`` code and writes nothing.
+        """
+        params: dict[str, Any] = {
+            "connection_iri": connection_iri,
+            "class_iri": class_iri,
+            "foreign_execution": foreign_execution,
+            "scope": scope,
+        }
+        result = await self._client._send(
+            "SourceSync", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("SourceSync must answer with an object")
+        return result
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.

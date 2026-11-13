@@ -116,6 +116,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
+    // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
+    "SourceSync",
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
     // through this gateway; `Read` is answered by the catalog admin route before
     // the graph path and never reaches it.
@@ -727,6 +729,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
+    // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
+    "SourceSync",
     // The registration upsert has no replicated command either
     // (MEDULLA-DECISION-ENGINE-R166.3).
     "WorkflowRegistry",
@@ -798,6 +802,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
         Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
+        Method::SourceSync { .. } => Some("SourceSync"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         Method::AssistantProfile { .. } => Some("AssistantProfile"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),

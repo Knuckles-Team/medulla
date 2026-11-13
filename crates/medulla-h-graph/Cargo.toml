@@ -55,12 +55,15 @@ medulla-finance = { path = "../medulla-finance", optional = true }
 medulla-finance-quant = { path = "../medulla-finance-quant", optional = true }
 medulla-finance-market = { path = "../medulla-finance-market", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-source-types = { path = "../medulla-source-types" }
+medulla-virtual-graph = { path = "../medulla-virtual-graph", optional = true }
 
 [features]
 blob = ["dep:medulla-server-blob", "medulla-server-blob/blob", "redb"]
 broker = ["medulla-core/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-server-api/broker", "medulla-server-auth/broker", "medulla-server-cdc/broker", "medulla-server-mutation/broker", "medulla-types/broker"]
 cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "numeric", "redb", "shacl", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "mining", "owl", "owl-dl", "query", "server", "sparql"]
+federation = ["query", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation"]
 finance = ["dep:medulla-numeric", "dep:medulla-finance", "dep:medulla-finance-quant", "dep:medulla-finance-market", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-types/finance"]
 epistemic = ["query", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic"]
 graphlearn = ["medulla-compute/graphlearn", "medulla-graph-algos/graphlearn", "medulla-kernel/graphlearn", "medulla-protocol-types/graphlearn", "medulla-result-types/graphlearn", "medulla-server-api/graphlearn", "medulla-server-mutation/graphlearn", "medulla-types/graphlearn"]
@@ -71,7 +74,7 @@ numeric = ["dep:medulla-numeric", "medulla-kernel/numeric", "medulla-persistence
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "sparql", "medulla-persistence/owl", "medulla-protocol-types/owl", "medulla-raft/owl", "medulla-server-api/owl", "medulla-server-cdc/owl", "medulla-server-ops/owl", "medulla-types/owl", "server"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "redb", "medulla-kernel/query", "medulla-persistence-ops/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence-ops/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
-rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf", "medulla-kernel/rdf", "medulla-persistence-records/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-server-mutation/rdf", "medulla-types/rdf", "server"]
+rdf = ["dep:medulla-rdf", "dep:medulla-virtual-graph", "medulla-virtual-graph/rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf", "medulla-kernel/rdf", "medulla-persistence-records/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-server-mutation/rdf", "medulla-types/rdf", "server"]
 reasoning = ["medulla-reasoner/reasoning", "medulla-compute/reasoning", "medulla-kernel/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-server-cdc/reasoning", "medulla-server-mutation/reasoning"]
 redb = ["medulla-kernel/redb", "medulla-persistence-ops/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
 security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-raft/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-cdc/security", "medulla-server-ops/security", "medulla-types/security"]

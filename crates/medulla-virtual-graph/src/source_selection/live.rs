@@ -11,6 +11,7 @@ use medulla_graph_core::graph::SchemaSourceOrigin;
 use oxrdf::{Term, Triple};
 
 use super::{AuthorityOrigin, AuthorityRow, CoverageFixture, Materialisation, SourceRole};
+use crate::source_sync::{RecordRole, SyncAuthority, SyncDirection};
 
 const VG: &str = medulla_types::ontology_iri!("virtual-graph#");
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -251,6 +252,66 @@ pub fn connected_sources_from_turtle(documents: &[&str]) -> Result<BTreeSet<Stri
         }
     }
     Ok(connected)
+}
+
+/// The sync roles of every `vg:SourceAuthority` row of the composed graph
+/// schema sources that declares a `vg:recordRole` (MEDULLA-SRC-AUTH-R012.6).
+/// A row with an unknown role, direction or rule literal is refused, so a
+/// sync never runs on a half-read row.
+pub fn sync_authorities(sources: &GraphSchemaSources) -> Result<Vec<SyncAuthority>, String> {
+    let mut out = Vec::new();
+    for source in sources.core.values().chain(sources.dynamic.values()) {
+        let Some(document) = source.ontology_ttl.as_deref() else {
+            continue;
+        };
+        // A pack or ingestion row stays a proposal (R003.4): it never steers a sync.
+        if matches!(
+            origin_of(&source.origin),
+            AuthorityOrigin::Pack | AuthorityOrigin::Ingestion
+        ) {
+            continue;
+        }
+        let triples = medulla_rdf::mapping::parse_turtle(document)?;
+        let index = Index::from_triples(&triples);
+        for subject in index.subjects_of_type(&format!("{VG}SourceAuthority")) {
+            let Some(role_literal) = index.vg(subject, "recordRole") else {
+                continue;
+            };
+            let (Some(connection), Some(class)) = (
+                index.vg(subject, "authoritativeSource"),
+                index.vg(subject, "authorityFor"),
+            ) else {
+                continue;
+            };
+            let role = RecordRole::parse(role_literal).ok_or_else(|| {
+                format!("INVALID_ARGUMENT: authority row {subject} has unknown vg:recordRole {role_literal}")
+            })?;
+            let direction = match index.vg(subject, "syncDirection") {
+                Some(literal) => Some(SyncDirection::parse(literal).ok_or_else(|| {
+                    format!("INVALID_ARGUMENT: authority row {subject} has unknown vg:syncDirection {literal}")
+                })?),
+                None => None,
+            };
+            let conflict_rule = match index.vg(subject, "conflictRule") {
+                Some(literal) => {
+                    crate::source_sync::ConflictRule::parse(literal).ok_or_else(|| {
+                        format!("INVALID_ARGUMENT: authority row {subject} has unknown vg:conflictRule {literal}")
+                    })?;
+                    Some(literal.to_string())
+                }
+                None => None,
+            };
+            out.push(SyncAuthority {
+                row: subject.to_string(),
+                connection: connection.to_string(),
+                class: class.to_string(),
+                role,
+                direction,
+                conflict_rule,
+            });
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

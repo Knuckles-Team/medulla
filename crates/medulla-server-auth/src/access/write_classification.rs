@@ -489,6 +489,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::FinanceFactorRecord { .. }
                 // MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
                 | Method::ArchitectureModelImport { .. }
+                // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
+                | Method::SourceSync { .. }
                 // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert
                 // commits graph nodes through the gateway.
                 | Method::ArgumentMapPut { .. }

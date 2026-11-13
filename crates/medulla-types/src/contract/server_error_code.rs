@@ -127,6 +127,11 @@ closed_error_codes! {
         ArchimateNamespaceUnknown => "ARCHIMATE_NAMESPACE_UNKNOWN",
         ArchimateRelationshipInvalid => "ARCHIMATE_RELATIONSHIP_INVALID",
         ArchimateVersionMismatch => "ARCHIMATE_VERSION_MISMATCH",
+        // MEDULLA-SRC-AUTH-R012.7: the source sync refusals.
+        SyncSourceNotSecondary => "SYNC_SOURCE_NOT_SECONDARY",
+        SyncNoSystemOfRecord => "SYNC_NO_SYSTEM_OF_RECORD",
+        SyncAdapterMissing => "SYNC_ADAPTER_MISSING",
+        SyncDirectionRefused => "SYNC_DIRECTION_REFUSED",
         SpanInverted => "SPAN_INVERTED",
         SpanOutOfBounds => "SPAN_OUT_OF_BOUNDS",
         SpanTooLarge => "SPAN_TOO_LARGE",
