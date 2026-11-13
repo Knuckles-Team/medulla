@@ -138,7 +138,8 @@ pub use audit::{
 };
 #[cfg(feature = "security")]
 pub use operation_audit::{
-    audit_writer_unavailable, operation_audit_append, operation_audit_read, OperationAuditEvent,
+    audit_writer_unavailable, operation_audit_append, operation_audit_read, read_audit_chain_scope,
+    OperationAuditEvent,
 };
 pub use shard::{Shard, ShardWrite};
 // ── Cross-shard 2PC durable rows (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — pure, server-INDEPENDENT ──

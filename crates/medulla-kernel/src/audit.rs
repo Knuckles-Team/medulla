@@ -166,6 +166,7 @@ where
                 entries: walked,
                 first_broken_seq: Some(seq),
                 detail: format!("sequence gap: expected seq {expected_seq}, found {seq}"),
+                read_entries: 0,
             };
         }
         let (stored_prev, stored_hash, line) = match decode_entry(blob) {
@@ -177,6 +178,7 @@ where
                     entries: walked,
                     first_broken_seq: Some(seq),
                     detail: "corrupt entry (too short to hold chain hashes)".to_string(),
+                    read_entries: 0,
                 };
             }
         };
@@ -191,6 +193,7 @@ where
                 entries: walked,
                 first_broken_seq: Some(seq),
                 detail: format!("hash-chain break at seq {seq} (entry mutated or chain altered)"),
+                read_entries: 0,
             };
         }
         prev = stored_hash;
@@ -202,6 +205,7 @@ where
         entries: walked,
         first_broken_seq: None,
         detail: "chain verified".to_string(),
+        read_entries: 0,
     }
 }
 

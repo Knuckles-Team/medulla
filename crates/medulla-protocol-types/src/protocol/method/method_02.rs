@@ -311,10 +311,16 @@ $($variants)*
         policy_iri: Option<String>,
     },
 
-    /// Read one operation-audit event and verify the graph's current chain.
-    /// Gated independently from append by `security:audit`.
+    /// Read one operation-audit event of the named chain and verify that
+    /// chain. `chain` is required: the graph chain and the caller tenant's
+    /// read-audit chain number their entries independently
+    /// (MEDULLA-IDENTITY-R023.5). Gated independently from append by
+    /// `security:audit`.
     #[cfg(feature = "security")]
-    AuditReadEvent { seq: u64 },
+    AuditReadEvent {
+        seq: u64,
+        chain: crate::result_contract::security::AuditChain,
+    },
 
     /// Produce + server-side-verify a Merkle inclusion proof for one node against
     /// a prior provenance anchor (CONCEPT:MEDULLA-KG.sharding.row-level-security, feature `security`) — the

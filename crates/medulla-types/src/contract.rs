@@ -27,6 +27,12 @@ pub use identifiers::{
 pub use server_error_code::ServerErrorCode;
 pub use uql_error_code::UqlCode;
 
+/// The logical-name prefix of a tenant's read-audit chain for a graph
+/// (MEDULLA-IDENTITY-R023.5). The chain is stored in a scope of its own named
+/// `read-audit:<tenant>/<graph key>`, so it never shares the graph's mutation
+/// scope or version. No graph may take a name with this prefix.
+pub const READ_AUDIT_CHAIN_PREFIX: &str = "read-audit:";
+
 /// Whether a located-evidence region is well-formed: every coordinate finite
 /// and a strictly positive extent. The wire contract and the modality artifact
 /// contract both validate image and page regions against this one definition.

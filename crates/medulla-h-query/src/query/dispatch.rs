@@ -568,7 +568,7 @@ async fn handle_sql_with_lease(
         name: ctx.graph_name.to_string(),
         core: Arc::clone(core),
     };
-    Ok(super::sql_read::catalog_sql_response(
+    let response = super::sql_read::catalog_sql_response(
         state,
         req_id,
         snap,
@@ -577,7 +577,12 @@ async fn handle_sql_with_lease(
         query,
         graph,
     )
-    .await)
+    .await;
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    Ok(match read_scope.close(response.error.is_none()) {
+        Ok(()) => response,
+        Err(code) => Response::err(req_id, code.as_str()),
+    })
 }
 
 #[cfg(all(feature = "query", feature = "security"))]

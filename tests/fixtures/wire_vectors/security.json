@@ -50,6 +50,7 @@
     "request": {
       "method": "AuditReadEvent",
       "params": {
+        "chain": "graph",
         "seq": 0
       }
     },
@@ -62,7 +63,7 @@
       "previous_sha256": "",
       "seq": 0
     },
-    "sha256": "5416690c60b980bcc2ca6b127488e3eebb3bc635a6103247c28c40e5b962c57c"
+    "sha256": "ea7180612d461d47b40bf05529ea7b0a127b25b3a0a2d956780655d1be7b6f29"
   },
   {
     "method": "AuditVerify",
@@ -74,9 +75,10 @@
       "entries": 0,
       "first_broken_seq": 0,
       "graph": "",
-      "ok": false
+      "ok": false,
+      "read_entries": 0
     },
-    "sha256": "5870f237d8c41833a469a3873fb89006a6aca890a7029ac8dd3b774a66c31ae5"
+    "sha256": "9e5f56cd3dbbf2d8af388b1392bcc2a009b9cdc6b2226d2a56a74b3018c5eac7"
   },
   {
     "method": "CheckAccess",

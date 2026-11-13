@@ -14,8 +14,16 @@ pub const FOREIGN_SOURCE_RESOURCE_PREFIX: &str = "foreign-source:";
 /// Name prefixes that belong to non-graph RBAC resources and are never graph names.
 pub const RESERVED_RBAC_RESOURCE_PREFIXES: &[&str] = &[FOREIGN_SOURCE_RESOURCE_PREFIX];
 
-/// Refuse a graph name that falls inside a reserved RBAC resource namespace.
+/// Refuse a graph name that falls inside a reserved RBAC resource namespace,
+/// or that would name a tenant's read-audit chain
+/// ([`medulla_types::contract::READ_AUDIT_CHAIN_PREFIX`], MEDULLA-IDENTITY-R023.5).
 pub fn validate_graph_name(name: &str) -> Result<(), String> {
+    if name.starts_with(medulla_types::contract::READ_AUDIT_CHAIN_PREFIX) {
+        return Err(format!(
+            "RESERVED_GRAPH_NAME: graph names starting with '{}' are reserved for read-audit chains",
+            medulla_types::contract::READ_AUDIT_CHAIN_PREFIX
+        ));
+    }
     match RESERVED_RBAC_RESOURCE_PREFIXES
         .iter()
         .find(|prefix| name.starts_with(*prefix))
@@ -38,5 +46,8 @@ mod tests {
         assert!(err.starts_with("RESERVED_GRAPH_NAME"), "{err}");
         assert!(validate_graph_name("foreign-sources-graph").is_ok());
         assert!(validate_graph_name("__commons__").is_ok());
+        // MEDULLA-IDENTITY-R023.5: a read-audit chain's name is never a graph's.
+        let err = validate_graph_name("read-audit:tenant/__commons__").unwrap_err();
+        assert!(err.starts_with("RESERVED_GRAPH_NAME"), "{err}");
     }
 }

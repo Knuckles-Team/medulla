@@ -144,7 +144,7 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         name: graph_name.to_string(),
         core: Arc::clone(core),
     };
-    catalog_sql_response(
+    let response = catalog_sql_response(
         state,
         req_id,
         snap,
@@ -153,7 +153,12 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         query,
         graph,
     )
-    .await
+    .await;
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    match read_scope.close(response.error.is_none()) {
+        Ok(()) => response,
+        Err(code) => Response::err(req_id, code.as_str()),
+    }
 }
 
 #[cfg(feature = "query")]

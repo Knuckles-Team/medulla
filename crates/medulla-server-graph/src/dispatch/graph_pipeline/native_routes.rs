@@ -734,14 +734,15 @@ async fn route_graph_audit_and_modality(
 ) -> Result<Response, Method> {
     #[cfg(feature = "security")]
     let method = match method {
-        Method::AuditReadEvent { seq } => {
-            // The caller's tenant in both spellings the chain records: the
-            // carrier's opaque scope and the verified tenant id.
-            let verified_tenant = ctx.verified_context.tenant();
+        Method::AuditReadEvent { seq, chain } => {
             return Ok(dispatch_op_audit_read_event(
                 ctx.req_id,
-                ctx.graph_name,
-                &[ctx.tenant_scope, verified_tenant],
+                AuditChainTarget::of(
+                    ctx.graph_name,
+                    chain,
+                    ctx.tenant_scope,
+                    ctx.verified_context.tenant(),
+                ),
                 ctx.persistence.clone(),
                 seq,
             )
@@ -788,9 +789,13 @@ async fn route_graph_audit_and_modality(
     };
     #[cfg(feature = "security")]
     if matches!(method, Method::AuditVerify) {
-        return Ok(
-            dispatch_op_audit_verify(ctx.req_id, ctx.graph_name, ctx.persistence.clone()).await,
-        );
+        return Ok(dispatch_op_audit_verify(
+            ctx.req_id,
+            ctx.graph_name,
+            ctx.verified_context.tenant(),
+            ctx.persistence.clone(),
+        )
+        .await);
     }
 
     #[cfg(feature = "security")]

@@ -46,6 +46,24 @@ pub fn audit_writer_unavailable(cause: impl std::fmt::Display) -> String {
     format!("{AUDIT_WRITER_UNAVAILABLE}: {cause}")
 }
 
+/// The scope that holds one tenant's read-audit chain for one graph
+/// (MEDULLA-IDENTITY-R023.5): the durable key of the logical name
+/// `read-audit:<tenant>/<graph key>`.
+///
+/// A read-audit line is never a graph mutation: appending it in the graph's
+/// own mutation scope would advance the graph's version on every read, and the
+/// reader's next write, whose version claim came from that read, would meet
+/// `STALE_VERSION`. The chain therefore lives in a scope of its own, with its
+/// own sequence and version. Graph creation refuses the
+/// [`medulla_types::contract::READ_AUDIT_CHAIN_PREFIX`] prefix, so no graph's
+/// durable key is this one.
+pub fn read_audit_chain_scope(tenant: &str, graph_fname: &str) -> String {
+    super::sanitize(&format!(
+        "{}{tenant}/{graph_fname}",
+        medulla_types::contract::READ_AUDIT_CHAIN_PREFIX
+    ))
+}
+
 /// The audit classes an operation may declare.
 const AUDIT_CLASSES: [&str; 3] = ["event", "identity_chain", "scope_exceeds_policy"];
 /// How a caller spells "this operation declares no audit class".
@@ -359,16 +377,10 @@ pub fn operation_audit_append(
 /// Fetch one operation event and verify the entire graph chain before giving
 /// the caller a proof status. This is an operator read, so the O(history)
 /// verification is explicit; appends remain O(log history) on a cold tail.
-///
-/// `verified_tenants` are the spellings of the ONE verified caller tenant the
-/// chain records events under: the carrier's opaque tenant scope (served
-/// `AuditAppend`, effect writes) and the verified tenant id itself (engine
-/// evidence lines that name the tenant, such as the read audit of
-/// MEDULLA-IDENTITY-R023.5). An event of any other tenant is not found.
 pub fn operation_audit_read(
     shard: &Shard,
     graph: &str,
-    verified_tenants: &[&str],
+    verified_tenant: &str,
     seq: u64,
 ) -> Result<medulla_protocol_types::protocol::AuditEventProof, String> {
     let handle = shard.graph(graph)?;
@@ -380,10 +392,7 @@ pub fn operation_audit_read(
     let (previous, hash, line) = medulla_kernel::audit::decode_entry(entry.value())
         .ok_or_else(|| "AUDIT_EVENT_CORRUPT".to_string())?;
     let event_line = std::str::from_utf8(line).map_err(|_| "AUDIT_EVENT_CORRUPT")?;
-    let owned = verified_tenants
-        .iter()
-        .any(|tenant| event_line.starts_with(&format!("OP_AUDIT|v1|tenant={tenant}|")));
-    if !owned {
+    if !event_line.starts_with(&format!("OP_AUDIT|v1|tenant={verified_tenant}|")) {
         return Err("AUDIT_EVENT_NOT_FOUND".to_string());
     }
     let proof = medulla_protocol_types::protocol::AuditEventProof {
