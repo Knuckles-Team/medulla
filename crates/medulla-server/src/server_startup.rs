@@ -844,6 +844,18 @@ pub struct Transports {
     pub tcp_tls: Option<crate::transport::PreparedTcpTls>,
 }
 
+/// Start the background workers that run once the primary listener is bound:
+/// boot maintenance and, where the decision plane and durable store are built,
+/// the capability index feed that follows committed Agent Library changes
+/// (MEDULLA-DECISION-ENGINE-R172.7.2).
+async fn spawn_post_bind_workers(state: SharedState) {
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    #[cfg(all(feature = "decide", feature = "redb"))]
+    medulla_h_decide::decide::capability_feed::spawn(state);
+    #[cfg(not(all(feature = "decide", feature = "redb")))]
+    let _ = state;
+}
+
 /// UDS is the primary transport on unix, with an optional secondary TCP
 /// listener. Returns when the shutdown signal fires.
 ///
@@ -862,7 +874,7 @@ pub async fn serve_transports(
             .tcp_addr
             .ok_or("TCP-only mode requires --tcp-addr")?;
         let listener = crate::transport::bind_tcp(&addr, &transports.tcp_tls).await?;
-        medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+        spawn_post_bind_workers(state.clone()).await;
         crate::transport::serve_tcp_listener(
             listener,
             state.clone(),
@@ -884,7 +896,7 @@ pub async fn serve_transports(
     }
     let listener =
         crate::transport::bind_uds(&transports.socket_path, transports.socket_mode).await?;
-    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    spawn_post_bind_workers(state.clone()).await;
     crate::transport::serve_uds_listener(listener, state.clone(), shutdown.clone()).await?;
     Ok(())
 }
@@ -908,7 +920,7 @@ pub async fn serve_transports(
         .unwrap_or_else(|| "127.0.0.1:8765".to_string());
     info!("AF_UNIX unavailable; using the configured native TCP transport");
     let listener = crate::transport::bind_tcp(&addr, &transports.tcp_tls).await?;
-    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    spawn_post_bind_workers(state.clone()).await;
     crate::transport::serve_tcp_listener(
         listener,
         state.clone(),
