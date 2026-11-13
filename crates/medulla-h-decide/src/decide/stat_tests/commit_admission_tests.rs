@@ -700,3 +700,109 @@ async fn topology_commit_publishes_capacity_and_evidence() {
         .unwrap();
     assert!(foreign_leases.leases.is_empty());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R113.2.3
+#[tokio::test]
+async fn topology_capacity_denial_leaves_no_commit_parts() {
+    use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
+    use medulla_work_types::native_control::{
+        CapacityAcquireRequest, CapacityAcquireResult, CapacityDecision, CapacityDemand,
+        NativeControlSchemaVersion,
+    };
+    #[cfg(any(feature = "security", feature = "raft"))]
+    let _env_guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let world = topology_world().await;
+    let record = world.assembly.record.clone();
+
+    // Another holder takes the whole cell, so the plan's lease is denied by the ledger itself.
+    let blocker = world
+        .backend
+        .commit_capacity_lease(
+            LEDGER,
+            medulla_protocol_types::protocol::Method::AcquireCapacity {
+                request: CapacityAcquireRequest {
+                    schema_version: NativeControlSchemaVersion::V1,
+                    tenant_ref: TENANT.into(),
+                    work_item_id: "blocker".into(),
+                    owner_digest: "other-owner".into(),
+                    idempotency_key: "blocker".into(),
+                    priority: LeasePriority::BackgroundIngestion,
+                    demands: vec![CapacityDemand {
+                        cell_id: "cell-llm".into(),
+                        resource_class: CapacityResourceClass::LlmGenerator,
+                        amount: 8,
+                    }],
+                    lease_id: None,
+                    ttl_ms: 600_000,
+                    now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+                    cost_budget_micros: None,
+                    token_budget: None,
+                },
+            },
+        )
+        .await
+        .unwrap();
+    let blocker: CapacityAcquireResult = rmp_serde::from_slice(&blocker).unwrap();
+    assert_eq!(blocker.decision, CapacityDecision::Accepted);
+    let held_before = world.leases().await;
+    assert_eq!(held_before.len(), 1);
+
+    let request = world.request("denied", 8, 73);
+    let graph_id = request
+        .topology
+        .as_ref()
+        .unwrap()
+        .evidence
+        .graph
+        .graph_id
+        .clone();
+    let denied =
+        handle_decision_commit(&world.state, 1, &verified("denied", 8), request.clone()).await;
+
+    // The stable code answers, with the one-time retry allowance of `RetryAllowance`.
+    assert_eq!(denied.error.as_deref(), Some("CAPACITY_DENIED"));
+    assert!(denied.result.is_none());
+    assert!(
+        denied
+            .error_detail
+            .as_deref()
+            .is_some_and(|detail| detail.contains("retry allowance 1")),
+        "{:?}",
+        denied.error_detail
+    );
+    assert!(
+        medulla_agent_types::agent_topology::enforcement::REFUSALS
+            .iter()
+            .any(|code| code.as_str() == "CAPACITY_DENIED"),
+        "the code is registered in the topology family refusals"
+    );
+
+    // Nothing was written: no new record, no new lease, no evidence graph.
+    assert!(world
+        .store
+        .current_component(TENANT, &record.record_id)
+        .unwrap()
+        .is_none());
+    assert!(world
+        .store
+        .current_graph(TENANT, &graph_id)
+        .unwrap()
+        .is_none());
+    assert_eq!(world.leases().await, held_before);
+
+    // The coordinator decided ABORT durably and the Agent Library reservation was released.
+    let txn = format!("decision-commit:{}:denied", record.record_id);
+    assert_eq!(
+        world.backend.xshard_decision_get(&txn).unwrap(),
+        Some(false)
+    );
+    assert_eq!(
+        world
+            .store
+            .admission(TENANT, &txn)
+            .unwrap()
+            .expect("the library reserved before the lease was asked")
+            .state,
+        AdmissionState::Aborted
+    );
+}

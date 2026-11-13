@@ -23,12 +23,17 @@ pub const TOPOLOGY_ROUNDS_EXCEEDS_CAP: RefusalCode =
 pub const TOPOLOGY_TOKENS_EXCEEDS_CAP: RefusalCode =
     RefusalCode::new("TOPOLOGY_TOKENS_EXCEEDS_CAP");
 
+/// The capacity ledger denied a capacity-backed plan's lease at commit: nothing was written and
+/// one further decision is allowed (MEDULLA-DECISION-ENGINE-R113.2.3).
+pub const CAPACITY_DENIED: RefusalCode = RefusalCode::new("CAPACITY_DENIED");
+
 /// Every admission refusal code, in declaration order.
 pub const REFUSALS: &[RefusalCode] = &[
     TOPOLOGY_WIDTH_EXCEEDS_CAP,
     TOPOLOGY_DEPTH_EXCEEDS_CAP,
     TOPOLOGY_ROUNDS_EXCEEDS_CAP,
     TOPOLOGY_TOKENS_EXCEEDS_CAP,
+    CAPACITY_DENIED,
 ];
 
 /// Hash domain of a plan inside its enforcement record.
