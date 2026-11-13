@@ -115,6 +115,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         // Needs a published template and a typed question, so it has its own
         // bench fixture, not the generic one `FAMILIES` is driven with.
         QuestionKind::Topology => "topology",
+        // Needs a stored program, so it has its own bench fixture.
+        QuestionKind::ProgramLookup => "program_lookup",
     }
 }
 

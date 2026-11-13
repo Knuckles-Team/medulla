@@ -218,6 +218,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         super::task_plan::branch_breadth::REFUSALS,
     ),
     (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
+    (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

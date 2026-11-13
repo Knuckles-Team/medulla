@@ -155,6 +155,10 @@ pub enum QuestionKind {
     /// (MEDULLA-DECISION-ENGINE-R111.1). Evaluate-only: it takes no capacity lease.
     /// See `statistical::topology`.
     Topology,
+    /// The stored compiled program for one task signature
+    /// (MEDULLA-DECISION-ENGINE-R135). Evaluate-only: a lookup writes nothing.
+    /// See `decision::program_store`.
+    ProgramLookup,
 }
 
 /// What is at stake. Exploration is permitted only for

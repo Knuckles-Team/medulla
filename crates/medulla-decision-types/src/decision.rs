@@ -39,6 +39,7 @@ pub mod lifecycle;
 pub mod numeric;
 pub mod policy;
 pub mod primitive;
+pub mod program_store;
 pub mod rapid_r015;
 pub mod record;
 pub mod replay;

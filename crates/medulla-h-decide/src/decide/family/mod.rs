@@ -22,6 +22,7 @@ mod item_recommendation;
 mod load_set;
 mod placement;
 mod pre_tool_risk;
+mod program_store;
 mod probe_verdict;
 mod rank;
 mod resolve_entity;
@@ -164,6 +165,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static CONTEXTPACKAGEFAMILY: context_package::ContextPackageFamily =
         context_package::ContextPackageFamily;
     static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;
+    static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
+        program_store::ProgramLookupFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -196,6 +199,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ComparativeAnalysisPlan => &COMPARATIVEANALYSISPLANFAMILY,
         QuestionKind::ContextPackage => &CONTEXTPACKAGEFAMILY,
         QuestionKind::Topology => &TOPOLOGYFAMILY,
+        QuestionKind::ProgramLookup => &PROGRAMLOOKUPFAMILY,
     }
 }
 
@@ -238,6 +242,7 @@ mod tests {
             QuestionKind::ComparativeAnalysisPlan,
             QuestionKind::ContextPackage,
             QuestionKind::Topology,
+            QuestionKind::ProgramLookup,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -270,7 +275,8 @@ mod tests {
             | QuestionKind::ThoughtSearch
             | QuestionKind::ComparativeAnalysisPlan
             | QuestionKind::ContextPackage
-            | QuestionKind::Topology => true,
+            | QuestionKind::Topology
+            | QuestionKind::ProgramLookup => true,
         };
         assert!(exhaustive);
         kinds
@@ -282,7 +288,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            31,
+            32,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {
