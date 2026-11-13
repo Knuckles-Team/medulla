@@ -50,7 +50,7 @@ mod string_eq;
 #[cfg(feature = "timeseries")]
 mod derive;
 #[cfg(feature = "timeseries")]
-pub(crate) use derive::derive_op;
+pub use derive::derive_op;
 // EH-522 — the `SKILL` predictive-skill report stage.
 #[cfg(feature = "timeseries")]
 mod skill;

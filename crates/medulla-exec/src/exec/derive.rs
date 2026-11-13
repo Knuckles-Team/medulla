@@ -18,7 +18,7 @@ const SCORE: &str = "score";
 
 /// Evaluate every `DERIVE` column over `input`, in column order (a later column may read
 /// an earlier one).
-pub(crate) fn derive_op(input: RowSet, columns: &[DeriveColumn]) -> Result<RowSet, String> {
+pub fn derive_op(input: RowSet, columns: &[DeriveColumn]) -> Result<RowSet, String> {
     let programs = columns
         .iter()
         .map(|c| Program::compile(&c.expr).map_err(|e| format!("DERIVE {}: {e}", c.name)))

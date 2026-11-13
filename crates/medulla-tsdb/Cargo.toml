@@ -40,7 +40,7 @@ arrow-seg = ["dep:arrow", "dep:datafusion", "datafusion/sql", "dep:tokio", "dep:
 # enabling it only lights up the `promql` module. The facade wires
 # the Prometheus HTTP API over this behind its own `promql` feature (which implies
 # `obs`); the orchestrator folds that into obs/node/full at merge time.
-promql = []
+promql = ["derive"]
 # EH-522 / EH-524 — derived series: a wire `SeriesExpr` compiled into a tree of
 # `medulla_numeric::series` kernels, checkpointed (`derive` module). medulla-types' `timeseries`
 # gives the canonical expression printer the provenance digest hashes.

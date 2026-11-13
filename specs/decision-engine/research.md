@@ -149,3 +149,9 @@ Decision: the node budget counts sources read, so the result count never bounds 
 
 ## Matching: what the entropy guard removes (R707.2)
 Decision: a name at or above `match.entropy_mbit` contributes no token similarity, so two features that share only such a name score at most the label and embedding weights and fall below `match.score_min` unless the embeddings agree. Entropy is computed with an integer base-2 logarithm (Q20), so the guard is the same on every platform and needs no float transcendental. Blocks are filled in feature id order so the cap is reproducible; the count of features past the cap is returned, not hidden.
+## PromQL series functions and the golden equivalence test (R117.1.1)
+
+- PromQL series functions are named `medulla_<func>`, the same spelling the SQL window functions use, one per `SIGNATURES` entry; a PromQL name that merely matches a bare kernel name (`abs`, `lag`) never shadows a built-in PromQL function.
+- A call takes its range vectors first (one or two, per the signature) and then numeric parameters; the planner compiles it to the shared `Program` and holds no evaluator of its own. Each series' points inside the range window are fed in timestamp order and the sample is the value at the last point (none while warming up). Two-series calls pair series whose labels agree ignoring the metric name, on the timestamps both carry. A window that holds the whole history therefore equals the UQL and SQL whole-history result.
+- The reference vectors are not copied: the test reads the existing pandas reference fixture and a small manifest names the functions, parameters and reference case; `div` is checked against the `x / y` oracle (CONTRACT-R004, FIN-R013.2.6: no committed generated artifacts).
+- `medulla-tsdb`'s `promql` feature now implies `derive`, because the series functions run the derive program.

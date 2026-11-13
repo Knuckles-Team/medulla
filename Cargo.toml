@@ -1995,6 +1995,13 @@ medulla-server-router = { path = "crates/medulla-server-router" }
 
 # MEDULLA-UNIFIED-DATA-PLANE-R022: attached-source conformance (change-capture replay
 # against the source's own row state).
+# MEDULLA-DECISION-ENGINE-R117.1.1: UQL DERIVE, the SQL window functions and the PromQL
+# series functions agree on the golden reference (the one crate that depends on all three).
+[[test]]
+name = "derive_golden"
+path = "tests/derive_golden.rs"
+required-features = ["numeric", "query", "promql"]
+
 [[test]]
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"

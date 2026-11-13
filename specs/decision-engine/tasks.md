@@ -161,7 +161,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T152 [US2] MEDULLA-DECISION-ENGINE-R114 Subagent allowance negotiation reads Medulla's topology facts
 - [ ] T153 [US5] MEDULLA-DECISION-ENGINE-R116.1 RETIRED: enforcement is server-side only
 - [ ] T154 [US5] MEDULLA-DECISION-ENGINE-R116.2 Generated-client inventory covers every served method
-- [ ] T155 [US5] MEDULLA-DECISION-ENGINE-R117.1.1 Cross-surface golden equivalence
+- [x] T155 [US5] MEDULLA-DECISION-ENGINE-R117.1.1 Cross-surface golden equivalence
 - [ ] T156 [US5] MEDULLA-DECISION-ENGINE-R117.1.2 Feature-power metrics in DecisionEval
 - [ ] T157 [US5] MEDULLA-DECISION-ENGINE-R118.1.1 A sparse pool abstains in the reputation materialization
 - [ ] T158 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.1 Typed source-reliability read contract

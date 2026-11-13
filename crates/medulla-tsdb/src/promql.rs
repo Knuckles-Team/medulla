@@ -49,6 +49,7 @@ use std::collections::BTreeMap;
 use crate::point::Ts;
 
 mod barrier;
+mod series_fn;
 
 /// A metric's label set — the reserved [`METRIC_NAME`] plus user labels.
 pub type Labels = BTreeMap<String, String>;
@@ -1333,6 +1334,9 @@ impl<'a> Evaluator<'a> {
     /// The PromQL function table. Split across three tiers purely to keep each
     /// dispatch flat; the tiers are probed in the order the arms were written.
     fn eval_call(&self, func: &str, args: &[Expr], t: Ts) -> Result<Value, PromqlError> {
+        if let Some(sig) = series_fn::named(func) {
+            return self.eval_series_call(sig, args, t);
+        }
         match func {
             "rate" | "irate" | "increase" => self.eval_rate_call(func, args, t),
             "abs" | "ceil" | "floor" => self.eval_math_call(func, args, t),

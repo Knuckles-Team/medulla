@@ -1,0 +1,20 @@
+{
+  "tolerance": 1e-9,
+  "functions": [
+    {"name": "lag", "params": [3], "reference": "lag"},
+    {"name": "diff", "params": [3], "reference": "diff"},
+    {"name": "ret", "params": [3], "reference": "ret"},
+    {"name": "logret", "params": [3], "reference": "logret"},
+    {"name": "rmean", "params": [20], "reference": "rmean"},
+    {"name": "rstd", "params": [20], "reference": "rstd"},
+    {"name": "rsum", "params": [20], "reference": "rsum"},
+    {"name": "rmin", "params": [20], "reference": "rmin"},
+    {"name": "rmax", "params": [20], "reference": "rmax"},
+    {"name": "rrank", "params": [20], "reference": "rrank"},
+    {"name": "rcorr", "params": [20], "reference": "rcorr"},
+    {"name": "ewma", "params": [12.0], "reference": "ewma"},
+    {"name": "zscore", "params": [20], "reference": "zscore"},
+    {"name": "div", "params": [], "reference": null},
+    {"name": "wsum", "params": [20], "reference": "wsum"}
+  ]
+}
