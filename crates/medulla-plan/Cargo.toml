@@ -544,6 +544,22 @@ name = "corpus_retrieval"
 path = "benches/corpus_retrieval.rs"
 harness = false
 
+# ── Read-time access check bench (MEDULLA-FEDERATED-QUERY-R703.6) ─────────────────────
+# 256 hits over 4 sources with warm caches; the key `access_check_256` in `thresholds.json`
+# caps p99 at 1 ms.
+[[bench]]
+name = "access_check"
+path = "benches/access_check.rs"
+harness = false
+
+# ── Feedback boost bench (MEDULLA-FEDERATED-QUERY-R705.6) ─────────────────────────────
+# 256 fused candidates re-ranked by boosts; the key `feedback_boost_256` in
+# `thresholds.json` caps p99 at 200 microseconds.
+[[bench]]
+name = "feedback_boost"
+path = "benches/feedback_boost.rs"
+harness = false
+
 # ── Stored-query read bench (MEDULLA-FEDERATED-QUERY-R708.6) ──────────────────────────
 # One 10,000-row materialized read; the key `stored_query` in `thresholds.json` caps p99
 # at 3 ms. Nightly only.
