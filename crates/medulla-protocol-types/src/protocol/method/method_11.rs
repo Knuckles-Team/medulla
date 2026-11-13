@@ -396,6 +396,11 @@ $($variants)*
     ReadGraphChanges {
         cursor: String,
         limit: u32,
+        /// Only the row changes of this user table (MEDULLA-ENGINE-PARITY-R015.2);
+        /// absent returns graph changes and the changes of every table the
+        /// caller may read.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        table: Option<String>,
     },
     // ── Agent bus roster (MEDULLA-DURABLE-KERNEL-R095.1002) ────────────────
     /// Register (replace) one session's participant row on the request

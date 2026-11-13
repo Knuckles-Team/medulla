@@ -186,7 +186,7 @@ pub struct FiredAction {
 /// Materialized result of a `Method::CdcRead` call (B-8, 2026-08-13). Same
 /// defect class as `GetLedger` (BUG A1): `CdcHub` (`src/server/cdc.rs`) backs
 /// `CdcRead`/`Watch`/`FiredTriggers` with a bounded, per-graph, PURELY
-/// IN-MEMORY ring (default 65,536 entries, `MEDULLA_CDC_RING` to
+/// IN-MEMORY ring (default 65,536 entries, the `cdc.ring_events` knob to
 /// override) — deliberately EPHEMERAL, not durable (see that module's own
 /// doc for the reasoning and why durability is a separate, out-of-scope,
 /// storage-format decision). A caller that persists a `from_seq` cursor and

@@ -71,7 +71,7 @@ fn upserted(page: &GraphChangePage) -> Vec<String> {
         .iter()
         .flat_map(|event| match &event.change {
             GraphChange::Upsert { node_ids, .. } => node_ids.clone(),
-            GraphChange::Tombstone { .. } => Vec::new(),
+            GraphChange::Tombstone { .. } | GraphChange::Row { .. } => Vec::new(),
         })
         .collect()
 }
@@ -113,6 +113,7 @@ async fn snapshot_cursor_leaves_no_gap_under_concurrent_commits() {
                 Method::ReadGraphChanges {
                     cursor: cursor.clone(),
                     limit: 3,
+                    table: None,
                 },
             )
             .await,
@@ -153,6 +154,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
             Method::ReadGraphChanges {
                 cursor: snapshot.high_water_cursor.clone(),
                 limit: 10,
+                table: None,
             },
         )
         .await,
@@ -168,6 +170,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
             Method::ReadGraphChanges {
                 cursor: snapshot.high_water_cursor.clone(),
                 limit,
+                table: None,
             },
         )
         .await;
@@ -182,6 +185,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
         Method::ReadGraphChanges {
             cursor: snapshot.high_water_cursor.clone(),
             limit: 10,
+            table: None,
         },
     )
     .await;
@@ -200,6 +204,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
         Method::ReadGraphChanges {
             cursor: snapshot.high_water_cursor.clone(),
             limit: 10,
+            table: None,
         },
     )
     .await;
@@ -219,6 +224,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
             Method::ReadGraphChanges {
                 cursor: safe,
                 limit: 10,
+                table: None,
             },
         )
         .await,
@@ -247,6 +253,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
         Method::ReadGraphChanges {
             cursor: ahead_cursor,
             limit: 10,
+            table: None,
         },
     )
     .await;
@@ -271,6 +278,7 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
         Method::ReadGraphChanges {
             cursor: foreign,
             limit: 10,
+            table: None,
         },
     )
     .await;

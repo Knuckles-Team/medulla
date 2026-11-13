@@ -251,7 +251,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T243 [US1] MEDULLA-DURABLE-KERNEL-R043.100.1 Feed types and snapshot digest
 - [ ] T244 [US1] MEDULLA-DURABLE-KERNEL-R043.100.2 OpenGraphSnapshot returns the exact high-water cursor
 - [ ] T245 [US1] MEDULLA-DURABLE-KERNEL-R043.100.3 ReadGraphChanges pages events and revokes cursors
-- [ ] T246 [US1] MEDULLA-DURABLE-KERNEL-R043.100.4 Python client methods for the feed
+- [x] T246 [US1] MEDULLA-DURABLE-KERNEL-R043.100.4 Python client methods for the feed
 - [ ] T247 [US1] MEDULLA-DURABLE-KERNEL-R043.101 Every store member commits through the envelope with an idempotent terminal outcome
 - [ ] T248 [US1] MEDULLA-DURABLE-KERNEL-R043.102 No direct table write exists outside the transaction crate
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R094.7.1 Known concept ids and the lineage edge store

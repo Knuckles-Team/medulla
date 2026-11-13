@@ -726,7 +726,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R873.2` | `crates/medulla-store-apply/tests/dump_page_seek.rs::page_reads_are_independent_of_prefix_length` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R865` | `tests/test_child_input_served.py::test_child_input_record_reads_over_the_wire` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.7` | `tests/test_engine_bench_gate.py::test_gate_loads_records` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R043.100.4` | `tests/test_graph_change_feed_client.py::test_client_reads_feed_from_a_served_engine` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.4` | `tests/test_graph_change_feed_client.py::test_client_reads_feed_from_a_served_engine` |
 | `MEDULLA-DURABLE-KERNEL-R800`, `MEDULLA-DURABLE-KERNEL-R800.3` | `tests/test_kvcache_policy_served.py::test_answer_entry_invalidated_when_dependency_advances` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R800.6` | `tests/test_kvcache_policy_served.py::test_policy_admits_hot_answer_and_refuses_cold_one` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R800.5` | `tests/test_kvcache_policy_served.py::test_stats_report_policy_counters_and_trace` (planned) |

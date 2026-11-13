@@ -118,3 +118,4 @@ none
 - `COPY ... TO STDOUT` is a plain read through the authorized read path.
 - Partial and expression indexes are used only by a planner that proves the predicate (R010.2).
 - `R005.1` depends on `R002.2` (its conflict-heavy workload); `R001.3` lands with `R005.1`.
+- `R015.1`: the hub is installed as the tenant store's row-change sink by `handle_sql`; the ring is the knob `cdc.ring_events`; a row event is a `Row` change on `ReadGraphChanges` gated by `cdc:read` and the table's SELECT grant.

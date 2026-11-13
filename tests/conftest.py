@@ -381,6 +381,10 @@ def start_medulla_server(request, tmp_path_factory):
     # refuse to start without this key (`server/handlers/txn/receipts.rs`); this is the
     # ONLY `strict_server_env` call site that passes `persist_dir`, so no other caller
     # is affected. Respects a value a caller already exported instead of clobbering it.
+    # The change feed keeps 4096 events per graph (knob `cdc.ring_events`), so the
+    # served change-feed tests can push a cursor out of the window with a bounded
+    # number of commits (MEDULLA-ENGINE-PARITY-R015.1).
+    server_env.setdefault("MEDULLA_CDC_RING_EVENTS", "4096")
     server_env.setdefault(
         "MEDULLA_ENCRYPTION_KEY",
         os.environ.get("MEDULLA_ENCRYPTION_KEY", "test-medulla-encryption-key"),

@@ -338,6 +338,18 @@ pub(crate) fn source_acl_snapshot(
     source_acl_snapshot_locked(&guard, &acl, authority, table)
 }
 
+/// Whether `authority` may read the committed row changes of `table`
+/// (MEDULLA-ENGINE-PARITY-R015.2): the owner, an admin or a grantee of SELECT.
+/// A table with a row-level column is withheld from the stream because its
+/// rows are filtered per caller, and a stream carries every row. Any failure
+/// to read the ACL is a refusal.
+pub fn may_stream_table(persist_dir: &Path, authority: &CarrierAuthority, table: &str) -> bool {
+    source_acl_snapshot(persist_dir, authority, table).is_ok_and(|snapshot| {
+        snapshot.privileges.contains(&SqlPrivilege::Select)
+            && (snapshot.rls_column.is_none() || snapshot.owner || authority.is_admin())
+    })
+}
+
 trait SourceAuthorityProof {}
 
 impl SourceAuthorityProof for std::sync::RwLockReadGuard<'_, ()> {}

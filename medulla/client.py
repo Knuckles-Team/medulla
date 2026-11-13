@@ -6948,6 +6948,58 @@ class GraphOperationsClient:
             raise RuntimeError("ReadSpan must answer with an object")
         return result
 
+    async def open_graph_snapshot(self, graph: str | None = None) -> dict[str, Any]:
+        """Open one consistent snapshot of a graph and the cursor after it
+        (MEDULLA-DURABLE-KERNEL-R043.100.4).
+
+        Returns ``{schema_version, incarnation, committed_revision,
+        snapshot_digest, visibility_revision, high_water_cursor}``. Pass
+        ``high_water_cursor`` to :meth:`read_graph_changes` to read every
+        change committed after the snapshot, with no gap. The caller needs
+        ``graph:read``.
+        """
+        result = await self._client._send(
+            "OpenGraphSnapshot", None, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("OpenGraphSnapshot must answer with an object")
+        return result
+
+    async def read_graph_changes(
+        self,
+        cursor: str,
+        limit: int = 256,
+        graph: str | None = None,
+        table: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one page of committed graph changes after ``cursor``
+        (MEDULLA-DURABLE-KERNEL-R043.100.4).
+
+        Returns ``{schema_version, events, next_cursor}``; each event is
+        ``{schema_version, commit_id, event_ordinal, committed_at_ms,
+        visible_at_ms, latency_profile_revision, commit_to_visible_ms, change}``
+        and delivery is at least once under the stable ``(commit_id,
+        event_ordinal)`` identity. ``limit`` is 1 to 256. A cursor behind the
+        retained window raises ``EngineResponseError`` with code
+        ``CURSOR_EXPIRED``, one from a replaced feed ``GRAPH_INCARNATION_STALE``
+        and one minted under other token scopes ``AUTHORIZATION_CHANGED``; the
+        first two name a ``safe_cursor=`` in ``detail`` to resume from.
+
+        ``table`` reads only the committed row changes of that user table
+        (``{"kind": "row", "table", "operation", "key"}``); row changes need the
+        ``cdc:read`` scope and read access to the table
+        (MEDULLA-ENGINE-PARITY-R015.2).
+        """
+        params: dict[str, Any] = {"cursor": cursor, "limit": int(limit)}
+        if table is not None:
+            params["table"] = table
+        result = await self._client._send(
+            "ReadGraphChanges", params, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ReadGraphChanges must answer with an object")
+        return result
+
     async def viewport_query(
         self,
         request: dict[str, Any],
@@ -13888,7 +13940,7 @@ class StreamingClient:
 
         B-8 (2026-08-13): the engine's CDC feed (``CdcHub``, ``src/server/cdc.rs``)
         is a bounded, purely IN-MEMORY ring per graph (default 65,536 events,
-        ``MEDULLA_CDC_RING`` to override) -- DELIBERATELY EPHEMERAL, not
+        the ``cdc.ring_events`` knob to override) -- DELIBERATELY EPHEMERAL, not
         durable (see that module's doc for the reasoning; making it durable is a
         separate storage-format/migration decision, out of scope here). A
         persisted ``from_seq`` cursor can therefore become unservicable in two

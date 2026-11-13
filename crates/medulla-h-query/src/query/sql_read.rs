@@ -156,6 +156,26 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
     .await
 }
 
+/// Hand the tenant store the change feed as the sink of its committed row
+/// changes (MEDULLA-ENGINE-PARITY-R015.1). The store keeps the first sink it is
+/// given, so installing on every SQL request is one cheap no-op after the first.
+#[cfg(feature = "query")]
+async fn install_row_change_sink(
+    state: &Arc<RwLock<ServerState>>,
+    store: &medulla_table_store::tables::TableStore,
+) {
+    #[cfg(feature = "streaming")]
+    {
+        use medulla_server_cdc::cdc::CdcStateExt;
+        let hub = state.read().await.cdc_hub().cloned();
+        if let Some(hub) = hub {
+            store.install_row_change_sink(hub);
+        }
+    }
+    #[cfg(not(feature = "streaming"))]
+    let _ = (state, store);
+}
+
 #[cfg(feature = "query")]
 pub(crate) async fn handle_sql(
     ctx: &QueryHandlerCtx<'_>,
@@ -178,6 +198,7 @@ pub(crate) async fn handle_sql(
         Ok(store) => store,
         Err(response) => return Ok(response),
     };
+    install_row_change_sink(ctx.state, &store).await;
     let sql_method = Method::Sql {
         query: query.clone(),
         params_msgpack,

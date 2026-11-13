@@ -308,6 +308,8 @@ knobs! {
     ingest_acl_stale_after_s: u64 = "ingest.acl_stale_after_s", U64(3_600), [60, 604_800], "s", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
+    /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).
+    cdc_ring_events: u64 = "cdc.ring_events", U64(65_536), [16, 16_777_216], "events", Tunable;
     /// Largest page of `ReadGraphChanges` (MEDULLA-DURABLE-KERNEL-R043.100.3).
     graph_change_feed_max_page: u64 = "graph_change_feed.max_page", U64(256), [1, 256], "events", Tunable;
     /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.

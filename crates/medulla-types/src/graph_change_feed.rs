@@ -50,6 +50,22 @@ pub enum GraphChange {
         deleted_ids: Vec<String>,
         deletion_revision: u64,
     },
+    /// One committed row of a user table (MEDULLA-ENGINE-PARITY-R015.2): the
+    /// table, what happened to the row and its primary key rendered as text.
+    Row {
+        table: String,
+        operation: RowOperation,
+        key: String,
+    },
+}
+
+/// What a committed user-table commit did to one row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RowOperation {
+    Insert,
+    Update,
+    Delete,
 }
 
 /// One committed change, delivered at least once under a stable id.

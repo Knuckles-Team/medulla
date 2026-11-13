@@ -15,7 +15,7 @@ use medulla_server_cdc::cdc::{CdcHub, CdcStateExt};
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::graph_change_feed::{
     authorization_revision, snapshot_digest, GraphChange, GraphChangeCursor, GraphChangeEvent,
-    GraphChangePage, GraphSnapshot, GRAPH_CHANGE_FEED_SCHEMA_VERSION,
+    GraphChangePage, GraphSnapshot, RowOperation, GRAPH_CHANGE_FEED_SCHEMA_VERSION,
 };
 use medulla_types::wire::{CdcEvent, CdcKind};
 
@@ -101,14 +101,25 @@ pub(super) async fn try_handle_graph_change_feed(
                 open_snapshot(&hub, &caller, ctx.graph_name, ctx.core),
             ),
         ),
-        Method::ReadGraphChanges { cursor, limit } => {
+        Method::ReadGraphChanges {
+            cursor,
+            limit,
+            table,
+        } => {
+            let persist_dir = ctx.state.read().await.persist_dir.clone();
+            let row_access =
+                |table: &str| row_access_of(ctx.read_authority, persist_dir.as_deref(), table);
             match read_changes(
                 &hub,
                 &caller,
                 ctx.read_authority,
                 ctx.graph_name,
-                &cursor,
-                limit,
+                ReadRequest {
+                    cursor: &cursor,
+                    limit,
+                    table: table.as_deref(),
+                    row_access: &row_access,
+                },
             ) {
                 Ok(page) => Response::ok(
                     ctx.req_id,
@@ -188,8 +199,8 @@ fn edge_id(event: &CdcEvent) -> String {
     format!("{}->{}", event.node_id, event.target_id)
 }
 
-/// The feed change of one hub event, or `None` for a row-change event (those
-/// reach the feed with the table filter of MEDULLA-ENGINE-PARITY-R015.2).
+/// The feed change of one hub event (a row event is one `Row` change,
+/// MEDULLA-ENGINE-PARITY-R015.2).
 fn change_of(event: &CdcEvent) -> Option<GraphChange> {
     match event.kind {
         CdcKind::AddNode | CdcKind::UpdateNode => Some(GraphChange::Upsert {
@@ -208,8 +219,67 @@ fn change_of(event: &CdcEvent) -> Option<GraphChange> {
             deleted_ids: vec![edge_id(event)],
             deletion_revision: event.seq,
         }),
-        CdcKind::InsertRow | CdcKind::UpdateRow | CdcKind::DeleteRow => None,
+        CdcKind::InsertRow => Some(row_change(event, RowOperation::Insert)),
+        CdcKind::UpdateRow => Some(row_change(event, RowOperation::Update)),
+        CdcKind::DeleteRow => Some(row_change(event, RowOperation::Delete)),
     }
+}
+
+fn row_change(event: &CdcEvent, operation: RowOperation) -> GraphChange {
+    GraphChange::Row {
+        table: event.table.clone(),
+        operation,
+        key: event.node_id.clone(),
+    }
+}
+
+fn is_row_event(event: &CdcEvent) -> bool {
+    matches!(
+        event.kind,
+        CdcKind::InsertRow | CdcKind::UpdateRow | CdcKind::DeleteRow
+    )
+}
+
+/// Whether the caller may read the committed rows of `table`: the token carries
+/// `cdc:read` and the table's ACL grants the caller SELECT
+/// (MEDULLA-ENGINE-PARITY-R015.2).
+fn row_access_of(authority: &GraphReadAuthority, persist_dir: Option<&str>, table: &str) -> bool {
+    let Some(carrier) = authority.carrier() else {
+        return false;
+    };
+    if !carrier
+        .scopes()
+        .iter()
+        .any(|scope| scope == "*" || scope == "cdc:read")
+    {
+        return false;
+    }
+    #[cfg(feature = "query")]
+    {
+        persist_dir.is_some_and(|dir| {
+            medulla_server_auth::sql_catalog_acl::may_stream_table(
+                std::path::Path::new(dir),
+                carrier,
+                table,
+            )
+        })
+    }
+    #[cfg(not(feature = "query"))]
+    {
+        let _ = (persist_dir, table);
+        false
+    }
+}
+
+/// One `ReadGraphChanges` request after decoding.
+pub(super) struct ReadRequest<'a> {
+    pub(super) cursor: &'a str,
+    pub(super) limit: u32,
+    /// Only the row changes of this table; `None` reads graph changes and every
+    /// readable table's row changes.
+    pub(super) table: Option<&'a str>,
+    /// Whether the caller may read the committed rows of a table.
+    pub(super) row_access: &'a dyn Fn(&str) -> bool,
 }
 
 /// One page of changes after `cursor`. Refusal order: a cursor that does not
@@ -220,9 +290,14 @@ pub(super) fn read_changes(
     caller: &FeedCaller,
     authority: &GraphReadAuthority,
     graph: &str,
-    cursor: &str,
-    limit: u32,
+    request: ReadRequest<'_>,
 ) -> Result<GraphChangePage, FeedRefusal> {
+    let ReadRequest {
+        cursor,
+        limit,
+        table,
+        row_access,
+    } = request;
     let max_page = knobs().graph_change_feed_max_page;
     if limit == 0 || u64::from(limit) > max_page {
         return Err(FeedRefusal::InvalidArgument(format!(
@@ -256,7 +331,12 @@ pub(super) fn read_changes(
     let mut events = Vec::new();
     for event in &read.events {
         next = event.seq + 1;
-        if !visible_to(authority, event) {
+        let permitted = if is_row_event(event) {
+            table.is_none_or(|wanted| wanted == event.table) && row_access(&event.table)
+        } else {
+            table.is_none() && visible_to(authority, event)
+        };
+        if !permitted {
             continue;
         }
         let Some(change) = change_of(event) else {

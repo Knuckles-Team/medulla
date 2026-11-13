@@ -39,15 +39,12 @@ use medulla_types::wire::FiredTriggersResult;
 use medulla_types::wire::TriggerInfo;
 use medulla_types::wire::WatchBatch;
 
-/// Default per-graph ring capacity (events retained for cursor reads). Overridable
-/// with `MEDULLA_CDC_RING`. A cursor older than the trimmed window gets an
-/// explicit "cursor behind retained window" error rather than silently skipping.
+/// Per-graph ring capacity: the events retained for cursor reads, set by the
+/// registry knob `cdc.ring_events`. A cursor older than the trimmed window gets
+/// an explicit "cursor behind retained window" error rather than silently
+/// skipping.
 fn ring_cap() -> usize {
-    std::env::var("MEDULLA_CDC_RING")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .filter(|&n: &usize| n > 0)
-        .unwrap_or(65_536)
+    medulla_server_api::knob_config::knobs().cdc_ring_events as usize
 }
 
 /// Per-graph CDC state: a monotonic seq, the retained event ring, the fired-trigger
