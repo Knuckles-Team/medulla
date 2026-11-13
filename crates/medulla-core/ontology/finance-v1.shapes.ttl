@@ -717,6 +717,51 @@
 # MEDULLA-FINANCE-PRIMITIVES-R018.5: a recorded factor names its id, scores, rank and
 # the kernel revisions that computed them. The derivedFrom edges are checked by the
 # write handler.
+:RegimeModelShape a sh:NodeShape ;
+    sh:description "A pinned regime model has one id, one model revision, one source series and revision, one as-of instant, the ordered state ids, the posterior and the transition matrix." ;
+    sh:name "Regime Model Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeModelId." ;
+            sh:minCount 1 ;
+            sh:path :regimeModelId ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeModelRevision." ;
+            sh:minCount 1 ;
+            sh:path :regimeModelRevision ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeSourceSeriesId." ;
+            sh:minCount 1 ;
+            sh:path :regimeSourceSeriesId ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeSourceRevision." ;
+            sh:minCount 1 ;
+            sh:path :regimeSourceRevision ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeAsOf." ;
+            sh:minCount 1 ;
+            sh:path :regimeAsOf ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeStateIds." ;
+            sh:minCount 1 ;
+            sh:path :regimeStateIds ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimePosterior." ;
+            sh:minCount 1 ;
+            sh:path :regimePosterior ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RegimeModel must have exactly one regimeTransitionMatrix." ;
+            sh:minCount 1 ;
+            sh:path :regimeTransitionMatrix ] ;
+    sh:targetClass :RegimeModel .
+
 :FactorShape a sh:NodeShape ;
     sh:description "A factor has one id, one information coefficient, one information ratio, a positive rank and the kernel revisions." ;
     sh:name "Factor Shape" ;

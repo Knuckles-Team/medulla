@@ -48,6 +48,7 @@ pub(super) async fn try_handle_graph_domains(
     #[cfg(feature = "finance")]
     {
         method = super::finance_accounting::handle_project(ctx, method).await?;
+        method = super::finance_regime::handle_regime(ctx, method).await?;
     }
     method = super::union::try_handle_cross_graph_union(ctx, method).await?;
     let _ = super::union::try_handle_subgraph_comparison(ctx, method).await?;

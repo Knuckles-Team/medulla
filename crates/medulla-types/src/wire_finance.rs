@@ -96,6 +96,8 @@ pub enum FinanceRecordKind {
     SentimentFusion,
     GeopoliticalRisk,
     StrategyCard,
+    // The pinned regime model a forecast reads (MEDULLA-FINANCE-PRIMITIVES-R002.11.0).
+    RegimeModel,
 }
 
 #[cfg(feature = "finance")]
@@ -116,6 +118,7 @@ impl FinanceRecordKind {
             Self::SentimentFusion => "SentimentFusion",
             Self::GeopoliticalRisk => "GeopoliticalRisk",
             Self::StrategyCard => "StrategyCard",
+            Self::RegimeModel => "RegimeModel",
         }
     }
 
@@ -199,6 +202,10 @@ pub const FINANCE_RECORD_POLICY: &[(FinanceRecordKind, FinanceRecordPolicy)] = &
     (
         FinanceRecordKind::StrategyCard,
         FinanceRecordPolicy::CreateOnly,
+    ),
+    (
+        FinanceRecordKind::RegimeModel,
+        FinanceRecordPolicy::ClientWritable,
     ),
 ];
 

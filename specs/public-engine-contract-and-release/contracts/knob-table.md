@@ -34,6 +34,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `red_team.max_probes` | u64 | 50 | [1, 500] | probes | Tunable | `MEDULLA_RED_TEAM_MAX_PROBES` |
 | `identity.ownership_writer_share` | f64 | 0.10 | [0.01, 0.5] | fraction | Tunable | `MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE` |
 | `retrieval.lineage_depth` | u64 | 8 | [1, 16] | hops | Tunable | `MEDULLA_RETRIEVAL_LINEAGE_DEPTH` |
+| `finance.regime_forecast.max_horizon` | u64 | 10000 | [1, 1000000] | steps | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_MAX_HORIZON` |
+| `finance.regime_forecast.sum_tolerance` | f64 | 0.000000001 | [0.000000000001, 0.000001] | probability | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_SUM_TOLERANCE` |
+| `finance.regime_forecast.max_brier` | f64 | 2.0 | [0.0, 2.0] | squared probability | Tunable | `MEDULLA_FINANCE_REGIME_FORECAST_MAX_BRIER` |
 | `feedback.events_per_doc` | u64 | 1000 | [10, 100000] | events | Tunable | `MEDULLA_FEEDBACK_EVENTS_PER_DOC` |
 | `feedback.rate_limit_per_hour` | u64 | 100 | [100, 100] | events per hour | Fixed | `MEDULLA_FEEDBACK_RATE_LIMIT_PER_HOUR` |
 | `federated.raw_scan_cost_per_kib` | f64 | 1 | [1, 100] | cost units per KiB | Tunable | `MEDULLA_FEDERATED_RAW_SCAN_COST_PER_KIB` |

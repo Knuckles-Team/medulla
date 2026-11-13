@@ -705,6 +705,26 @@ $($variants)*
         base_currency: String,
     },
 
+    // ── Served regime forecast and sizing input (MEDULLA-FINANCE-PRIMITIVES-R002.11) ──
+    /// Forecast `p_h = p0 * T^h` of a pinned regime model node at every requested
+    /// horizon, and gate each horizon by its held-out categorical Brier score when
+    /// the request carries calibration. `p0` and `T` come only from the pinned model;
+    /// a caller that supplies either is refused. Reads only.
+    #[cfg(feature = "finance")]
+    RegimeForecast {
+        request: medulla_types::regime_forecast::RegimeForecastRequest,
+    },
+
+    /// Turn a passing regime forecast into an advisory target weight per horizon
+    /// under a versioned sizing policy. `forecast_digest` must equal the digest of
+    /// the forecast recomputed from `request`. Reads only; creates no order.
+    #[cfg(feature = "finance")]
+    RegimeSizingInput {
+        request: medulla_types::regime_forecast::RegimeForecastRequest,
+        policy: medulla_types::regime_forecast::RegimeSizingPolicy,
+        forecast_digest: String,
+    },
+
     // ── Served finance alerts (MEDULLA-FINANCE-PRIMITIVES-R011.2.3) ──────────
     /// Raise one finance alert: the envelope is validated, then its event node and
     /// its `finance.events.v1` outbox fact commit in one owner transaction. The

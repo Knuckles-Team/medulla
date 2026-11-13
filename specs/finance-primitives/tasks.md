@@ -126,6 +126,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T119 [US3] MEDULLA-FINANCE-PRIMITIVES-R018.4 Factor research records each factor as a typed node: refusal
 - [ ] T120 [US3] MEDULLA-FINANCE-PRIMITIVES-R018.5 Factor node provenance evidence
 - [ ] T121 [US3] MEDULLA-FINANCE-PRIMITIVES-R018.6 Factor ranking hot-path proof
+- [ ] T166 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.11.0 Pinned regime model record
 - [ ] T122 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.11.1 Regime forecast p0 times T to the h
 - [ ] T123 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.11.2 Per-horizon categorical Brier calibration gate
 - [ ] T124 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.11.3 Policy-bound regime sizing input

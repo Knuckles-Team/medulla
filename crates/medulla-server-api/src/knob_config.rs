@@ -317,6 +317,12 @@ knobs! {
     identity_ownership_writer_share: f64 = "identity.ownership_writer_share", F64(0.10), [0.01, 0.5], "fraction", Tunable;
     /// Retrieval lineage depth.
     retrieval_lineage_depth: u64 = "retrieval.lineage_depth", U64(8), [1, 16], "hops", Tunable;
+    /// Regime forecast: largest horizon a request may ask for.
+    finance_regime_forecast_max_horizon: u64 = "finance.regime_forecast.max_horizon", U64(10_000), [1, 1_000_000], "steps", Tunable;
+    /// Regime forecast: tolerance on every probability vector and matrix row sum.
+    finance_regime_forecast_sum_tolerance: f64 = "finance.regime_forecast.sum_tolerance", F64(0.000000001), [0.000000000001, 0.000001], "probability", Tunable;
+    /// Regime forecast: the ceiling of a policy `max_brier` (the largest possible Brier score); a policy supplies the threshold and none is defaulted from this.
+    finance_regime_forecast_max_brier: f64 = "finance.regime_forecast.max_brier", F64(2.0), [0.0, 2.0], "squared probability", Tunable;
     /// Feedback events kept per document.
     feedback_events_per_doc: u64 = "feedback.events_per_doc", U64(1_000), [10, 100_000], "events", Tunable;
     /// Feedback rate limit per principal.

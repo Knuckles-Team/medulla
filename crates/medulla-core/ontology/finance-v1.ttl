@@ -1035,3 +1035,61 @@
     rdfs:comment "The medulla-numeric kernel revision that computed the information coefficient." ;
     rdfs:domain :Factor ;
     rdfs:range xsd:string .
+
+# MEDULLA-FINANCE-PRIMITIVES-R002.11.0: a fitted regime model pinned for forecasting.
+# The model revision, the source revision, the ordered state ids, the posterior p0 and
+# the transition matrix T are read only from this node by `Method::RegimeForecast`.
+
+:RegimeModel a owl:Class ;
+    rdfs:label "Regime Model" ;
+    rdfs:comment "A fitted Markov regime model pinned at one revision: ordered states, posterior p0 and transition matrix T, with the series revision it was fitted on (R002.11.0). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
+
+:regimeModelId a owl:DatatypeProperty ;
+    rdfs:label "regime model id" ;
+    rdfs:comment "The stable identifier of the pinned regime model." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeModelRevision a owl:DatatypeProperty ;
+    rdfs:label "regime model revision" ;
+    rdfs:comment "The revision of the fitted model; a forecast pins it and a different stored revision is stale." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeSourceSeriesId a owl:DatatypeProperty ;
+    rdfs:label "regime source series id" ;
+    rdfs:comment "The series the model was fitted on." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeSourceRevision a owl:DatatypeProperty ;
+    rdfs:label "regime source revision" ;
+    rdfs:comment "The revision of the series the model was fitted on." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeAsOf a owl:DatatypeProperty ;
+    rdfs:label "regime as-of" ;
+    rdfs:comment "The RFC 3339 instant the posterior state probabilities are valid at." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeStateIds a owl:DatatypeProperty ;
+    rdfs:label "regime state ids" ;
+    rdfs:comment "JSON array of the ordered state ids; the order of the posterior and of the matrix rows and columns." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimePosterior a owl:DatatypeProperty ;
+    rdfs:label "regime posterior" ;
+    rdfs:comment "JSON array of the posterior state probabilities p0, in state order." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .
+
+:regimeTransitionMatrix a owl:DatatypeProperty ;
+    rdfs:label "regime transition matrix" ;
+    rdfs:comment "JSON array of row-stochastic rows T, in state order." ;
+    rdfs:domain :RegimeModel ;
+    rdfs:range xsd:string .

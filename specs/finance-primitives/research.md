@@ -59,3 +59,11 @@ are `Activity` records of kind `split` or `dividend` resolved with `corporate_ac
 instant a corporate action applies before a trade. A futures roll is a `transfer_out`
 `Activity` that names its successor contract and carries both contracts' settlement, expiry,
 tick size and multiplier; it adds roll figures and does not alter the lot ledger.
+
+## Regime forecast: pinned model, gate and sizing (R002.11)
+
+- Decision: the pinned model is a finance-v1 record kind `RegimeModel` written through `FinanceRecordPut`, because the served record path already owns tenant scope, shape validation, record heads and the audit trail; a second store or a new write method would duplicate it (R002.11.0). A put replaces the node, so the stored revision is the single pin and an older revision is stale.
+- Decision: `forecast` lives in `crates/medulla-numeric/src/evaluation/regime_forecast.rs` beside the HMM fit in `evaluation/regime_hmm.rs`, which is where R002.1.14 placed the fit; it is the single owner of the multi-step transition powers. The wire types live in `crates/medulla-types/src/regime_forecast.rs` so `numeric_kernel.rs` stays under the file-size limit.
+- Decision: the held-out samples and the calibration policy travel on the forecast request, because the handler is a stateless read of the pinned model and the gate must be reproducible from the request alone; the result carries a dataset digest and the policy digest.
+- Decision: a failed threshold is a result (`passed: false`), a malformed input is a refusal, and the sizing input abstains (`SIZING_ABSTAIN`, reason first in the detail) when any horizon failed, the digest differs from the recomputed forecast, a state has no weight, or the capped figure exceeds the risk cap. No sizing value is returned on abstention.
+- Decision: `finance.regime_forecast.max_brier` is the ceiling of a policy threshold (the largest possible Brier score); the threshold is never defaulted from it.

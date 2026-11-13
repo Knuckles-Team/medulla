@@ -52,7 +52,7 @@ fn invalid(req_id: u64, detail: impl std::fmt::Display) -> Response {
 
 /// The text of a Turtle string or typed literal (`"x"` or `"x"^^xsd:t`), with
 /// `\"` and `\\` unescaped.
-fn literal(term: &str) -> Option<String> {
+pub(super) fn literal(term: &str) -> Option<String> {
     let body = term.strip_prefix('"')?;
     let end = body.rfind('"')?;
     Some(body[..end].replace("\\\"", "\"").replace("\\\\", "\\"))
@@ -93,7 +93,7 @@ fn decimal_ticks(text: &str) -> Option<i64> {
 }
 
 /// `YYYY-MM-DDTHH:MM:SS[.fraction](Z|+HH:MM|-HH:MM)` as UTC nanoseconds.
-fn datetime_ns(text: &str) -> Option<i64> {
+pub(super) fn datetime_ns(text: &str) -> Option<i64> {
     let (date, time) = text.split_once('T')?;
     let mut d = date.split('-');
     let (year, month, day): (i64, i64, i64) = (

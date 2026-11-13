@@ -40,6 +40,10 @@ mod context_facts_tests;
 mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;
+#[cfg(feature = "finance")]
+mod finance_regime;
+#[cfg(feature = "finance")]
+mod finance_regime_gate;
 mod finance_alerts;
 mod finance_factors;
 mod finance_records;

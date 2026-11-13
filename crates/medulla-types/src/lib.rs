@@ -14,6 +14,8 @@ pub mod row_change;
 pub mod assistant_profile;
 // MEDULLA-FINANCE-PRIMITIVES-R002.2.5 — served numeric kernel evaluation wire types.
 pub mod numeric_kernel;
+// MEDULLA-FINANCE-PRIMITIVES-R002.11 — the regime forecast, calibration gate and sizing input.
+pub mod regime_forecast;
 // MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
 pub mod agent_bus;
 // MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.

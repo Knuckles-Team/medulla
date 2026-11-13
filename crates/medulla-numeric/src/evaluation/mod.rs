@@ -5,6 +5,7 @@
 //! decision layer and UQL.
 
 pub mod backtest;
+pub mod regime_forecast;
 pub mod skill;
 pub mod special;
 
