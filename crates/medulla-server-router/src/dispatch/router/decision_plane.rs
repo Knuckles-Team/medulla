@@ -10,6 +10,7 @@ pub async fn dispatch_decision_plane_methods(
     ctx: DispatchCtx<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
+    let method = dispatch_source_sync_method(ctx, method).await?;
     let method = dispatch_decision_methods(ctx, method).await?;
     let method = dispatch_write_back_method(ctx, method).await?;
     dispatch_catalog_admin_methods(ctx, method).await
@@ -44,6 +45,152 @@ async fn dispatch_write_back_method(
             ctx.req.id,
             "write-back requires the `redb` feature",
         ))
+    }
+}
+
+/// `Method::SourceSync` (MEDULLA-SRC-AUTH-R012.5, R012.6): the graph side commits
+/// the inbound changes and the sync state in one batch and answers the outbound
+/// drafts; this router step queues them as write-back proposals. Sync never
+/// writes to a source itself.
+async fn dispatch_source_sync_method(
+    ctx: DispatchCtx<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let Method::SourceSync {
+        connection_iri,
+        class_iri,
+        ..
+    } = &method
+    else {
+        return ControlFlow::Continue(method);
+    };
+    let (connection, class) = (connection_iri.clone(), class_iri.clone());
+    let DispatchCtx {
+        state,
+        req,
+        verified_context,
+        ..
+    } = ctx;
+    let response = dispatch_boxed(dispatch_graph_op(
+        state,
+        &req.graph,
+        req.id,
+        req.agent_id.as_deref(),
+        verified_context,
+        method,
+    ))
+    .await;
+    ControlFlow::Break(
+        dispatch_boxed(queue_outbound(
+            state,
+            req.id,
+            &req.graph,
+            verified_context,
+            &connection,
+            &class,
+            response,
+        ))
+        .await,
+    )
+}
+
+/// Queue every outbound draft of a sync answer as one write-back proposal
+/// (MEDULLA-SRC-AUTH-R012.5). The queue id is the SHA-256 of the connection, the
+/// class and the sorted payload digests, so a re-sync of an unchanged graph
+/// proposes the same queue: `WRITEBACK_QUEUE_EXISTS` counts as already queued,
+/// which makes commit-then-queue self-healing (a proposed record keeps its
+/// earlier base, so the next sync proposes it again under the same id). Every
+/// sync outbound change is high tier: it is approved before release.
+async fn queue_outbound(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    req_id: u64,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    connection: &str,
+    class: &str,
+    response: Response,
+) -> Response {
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use medulla_decision_types::decision::statistical::writeback::{
+        ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
+    };
+    use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_protocol_types::result_contract::graph::SourceSync;
+    use medulla_source_types::source_sync::SyncReport;
+
+    if response.error.is_some() {
+        return response;
+    }
+    let Some(ResultPayload::Json(value)) = &response.result else {
+        return response;
+    };
+    let mut report: SyncReport = match serde_json::from_value(value.clone()) {
+        Ok(report) => report,
+        Err(error) => {
+            return Response::err(
+                req_id,
+                format!("INVALID_ARGUMENT: the sync report is undecodable: {error}"),
+            )
+        }
+    };
+    if report.outbound.is_empty() {
+        return response;
+    }
+    let mut digests: Vec<&str> = report
+        .outbound
+        .iter()
+        .map(|draft| draft.payload_digest.as_str())
+        .collect();
+    digests.sort_unstable();
+    let mut framed = Vec::new();
+    for part in [connection, class].into_iter().chain(digests) {
+        framed.extend_from_slice(part.as_bytes());
+        framed.push(0);
+    }
+    let queue_id = medulla_types::contract::Digest256::sha256(&framed).to_hex();
+    let prefix = &queue_id[..16];
+    let as_of_ms = i64::try_from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())
+        .unwrap_or(i64::MAX);
+    let proposals: Vec<QueuedProposalInput> = report
+        .outbound
+        .iter()
+        .map(|draft| QueuedProposalInput {
+            proposal: ProposalInput {
+                id: format!("sync:{prefix}:{}", draft.record_key),
+                external_id: draft.record_key.clone(),
+                system_of_record: graph.to_string(),
+                risk_tier: RiskTier::High,
+                as_of_ms,
+            },
+            source_values: std::collections::BTreeMap::new(),
+        })
+        .collect();
+    let proposal_ids: Vec<String> = proposals
+        .iter()
+        .map(|queued| queued.proposal.id.clone())
+        .collect();
+    let queued = medulla_h_decide::decide::handle_decision_log(
+        state,
+        req_id,
+        verified,
+        DecisionLogOp::Writeback {
+            tenant_id: verified.tenant().to_string(),
+            computation: WritebackOp::Queue {
+                queue_id,
+                proposals,
+            },
+        },
+    )
+    .await;
+    if let Some(refusal) = queued.refusal_text() {
+        if !refusal.starts_with("WRITEBACK_QUEUE_EXISTS") {
+            return Response::err(req_id, refusal);
+        }
+    }
+    report.queued = proposal_ids;
+    match ResultPayload::of::<SourceSync>(report) {
+        Ok(payload) => Response::ok(req_id, payload),
+        Err(error) => Response::err(req_id, error),
     }
 }
 

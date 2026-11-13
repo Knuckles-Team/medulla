@@ -7519,6 +7519,7 @@ dependencies = [
  "medulla-capabilities",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-direct-state",
  "medulla-document",
  "medulla-graph-algos",
