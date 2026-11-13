@@ -833,3 +833,14 @@ fn catalog_probe_machine_matches_edge_table() {
 fn catalog_probe_machine_classes_extend_core() {
     sm::assert_extends_core("CatalogProbe");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R805.7
+#[test]
+fn revision_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_decision_outcome_types::decision::promotion::REVISION_MACHINE);
+}
+// spec: MEDULLA-DECISION-ENGINE-R805.7
+#[test]
+fn revision_machine_classes_extend_core() {
+    sm::assert_extends_core("Revision");
+}

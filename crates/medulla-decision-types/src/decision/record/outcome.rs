@@ -221,6 +221,7 @@ mod tests {
         let mut all: Vec<&str> = FIXED_CODES.iter().map(|code| code.as_str()).collect();
         all.extend(codes::SHARED.iter().map(|code| code.as_str()));
         all.extend(codes::FOLDED.iter().map(|code| code.as_str()));
+        all.extend(codes::PROMOTION.iter().map(|code| code.as_str()));
         for (_, table) in codes::FAMILY_TABLES {
             all.extend(table.iter().map(|code| code.as_str()));
         }

@@ -22,6 +22,18 @@ use medulla_decision_types::{
 use medulla_decision_types::{decision::StatisticalPolicy, decision::UnitRationalWire};
 use medulla_types::contract::BoundedVec;
 
+use medulla_decision_outcome_types::decision::promotion::{
+    HeldOutEvidence, ReceiptKind, RevisionSubject, KNOBS as PROMOTION_KNOBS,
+    MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN,
+};
+use medulla_decision_types::decision::codes::{
+    EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
+    PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED, REVIEW_NOT_INDEPENDENT,
+};
+use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_types::decision::DecisionPolicy;
+use medulla_types::refusal_code::RefusalCode;
+
 use super::head_eval::top_index;
 use super::quant::{exact_wire, level, q32, unit_wire};
 use super::refusal::{Refusal, RefusalResult};
@@ -261,6 +273,323 @@ impl Protocol {
         };
         let failed = self.gates(top1, calibrated, statistical);
         Ok((metrics, failed.into_iter().map(str::to_string).collect()))
+    }
+}
+
+/// What the promotion gate concluded about one challenger.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromotionGate {
+    /// The challenger wins; the champion pointer may move.
+    Promote,
+    /// The evidence is sound but the challenger does not win.
+    Hold {
+        /// The stable hold reason.
+        reason: &'static str,
+    },
+    /// The evidence cannot decide; the refusal code names why.
+    Abstain(RefusalCode),
+}
+
+fn integer_knob(policy: &DecisionPolicy, index: usize) -> u64 {
+    match policy.knob(&PROMOTION_KNOBS[index]) {
+        KnobValue::Integer(value) => u64::try_from(value).unwrap_or(0),
+        _ => u64::MAX,
+    }
+}
+
+fn margin_micros(policy: &DecisionPolicy) -> i64 {
+    match policy.knob(&PROMOTION_KNOBS[MIN_MARGIN]) {
+        KnobValue::DecimalMicros(value) => value,
+        _ => i64::MAX,
+    }
+}
+
+/// MEDULLA-DECISION-ENGINE-R812.2: does the challenger beat the champion by
+/// the margin? Writes nothing. An evaluation set that is not independent,
+/// a model judge's score alone, too few cases and a missing champion score
+/// each abstain with their own code; a sound evidence record below the margin
+/// holds with `margin_not_met`.
+pub fn challenger_wins(evidence: &HeldOutEvidence, policy: &DecisionPolicy) -> PromotionGate {
+    if !evidence.independent {
+        return PromotionGate::Abstain(EVAL_SET_NOT_INDEPENDENT);
+    }
+    if !evidence.grader_kind.decides_promotion() {
+        return PromotionGate::Abstain(PROMOTION_JUDGE_ONLY);
+    }
+    if evidence.case_count < integer_knob(policy, MIN_CASES) {
+        return PromotionGate::Abstain(PROMOTION_EVAL_TOO_SMALL);
+    }
+    if evidence.champion_score_ppm.is_none() {
+        return PromotionGate::Abstain(PROMOTION_NO_BASELINE);
+    }
+    if evidence.delta_ppm >= margin_micros(policy) {
+        PromotionGate::Promote
+    } else {
+        PromotionGate::Hold {
+            reason: "margin_not_met",
+        }
+    }
+}
+
+/// MEDULLA-DECISION-ENGINE-R805.11: the gate rule of the evidence's subject.
+/// A `Definition` follows [`challenger_wins`] over its rollout receipt, as do
+/// the subjects of R805.7. A `MeasuredFact` wins when its run is independent,
+/// newer than the champion's and reaches `measured_fact.min_cases`. A
+/// `GovernedSet` never wins on a score: it needs a review approval whose
+/// reviewer is not its author.
+pub fn subject_gate(
+    subject: &RevisionSubject,
+    evidence: &HeldOutEvidence,
+    policy: &DecisionPolicy,
+) -> PromotionGate {
+    match subject {
+        RevisionSubject::MeasuredFact { .. } => {
+            if !evidence.independent {
+                return PromotionGate::Abstain(EVAL_SET_NOT_INDEPENDENT);
+            }
+            let newer = evidence.measurement.is_some_and(|window| {
+                window
+                    .champion_observed_at_ms
+                    .is_none_or(|champion| window.observed_at_ms > champion)
+            });
+            if !newer {
+                return PromotionGate::Abstain(MEASUREMENT_NOT_NEWER);
+            }
+            if evidence.case_count < integer_knob(policy, MEASURED_FACT_MIN_CASES) {
+                return PromotionGate::Abstain(PROMOTION_EVAL_TOO_SMALL);
+            }
+            PromotionGate::Promote
+        }
+        RevisionSubject::GovernedSet { .. } => match (&evidence.receipt_kind, &evidence.review) {
+            (ReceiptKind::ReviewApproval, Some(review)) if review.reviewer != review.author => {
+                PromotionGate::Promote
+            }
+            (ReceiptKind::ReviewApproval, Some(_)) => {
+                PromotionGate::Abstain(REVIEW_NOT_INDEPENDENT)
+            }
+            _ => PromotionGate::Abstain(REVIEW_APPROVAL_REQUIRED),
+        },
+        _ => challenger_wins(evidence, policy),
+    }
+}
+
+#[cfg(test)]
+mod gate_tests {
+    use medulla_decision_outcome_types::decision::promotion::{
+        DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind,
+        ReviewApproval, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION, KNOBS,
+        MEASURED_FACT_MIN_CASES,
+    };
+    use medulla_decision_types::decision::codes::{
+        EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
+        PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED,
+        REVIEW_NOT_INDEPENDENT,
+    };
+    use medulla_decision_types::decision::knobs::KnobValue;
+    use medulla_decision_types::decision::DecisionPolicy;
+
+    use super::{challenger_wins, subject_gate, PromotionGate};
+
+    fn evidence(subject: RevisionSubject, delta_ppm: i64, case_count: u64) -> HeldOutEvidence {
+        HeldOutEvidence {
+            schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+            subject,
+            challenger_ref: "challenger".to_owned(),
+            champion_ref: Some("champion".to_owned()),
+            receipt_kind: ReceiptKind::DecisionEval,
+            receipt_digest: "sha256:aa".to_owned(),
+            evaluation_set_digest: "sha256:bb".to_owned(),
+            challenger_score_ppm: 800_000 + delta_ppm,
+            champion_score_ppm: Some(800_000),
+            delta_ppm,
+            case_count,
+            independent: true,
+            grader_kind: GraderKind::Annotation,
+            measurement: None,
+            review: None,
+        }
+    }
+
+    fn head() -> RevisionSubject {
+        RevisionSubject::DecisionHead {
+            component_id: "head-a".to_owned(),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R812.2
+    #[test]
+    fn challenger_win_loss_tie_and_judge_refusal() {
+        let policy = DecisionPolicy::engine_default();
+        // Win: the margin (0.02) is reached exactly, and exceeded.
+        assert_eq!(
+            challenger_wins(&evidence(head(), 20_000, 50), &policy),
+            PromotionGate::Promote
+        );
+        assert_eq!(
+            challenger_wins(&evidence(head(), 90_000, 500), &policy),
+            PromotionGate::Promote
+        );
+        // Loss and tie: held with the margin reason.
+        let hold = PromotionGate::Hold {
+            reason: "margin_not_met",
+        };
+        assert_eq!(
+            challenger_wins(&evidence(head(), 19_999, 50), &policy),
+            hold
+        );
+        assert_eq!(challenger_wins(&evidence(head(), 0, 50), &policy), hold);
+        assert_eq!(
+            challenger_wins(&evidence(head(), -40_000, 50), &policy),
+            hold
+        );
+        // Refusals.
+        let mut dependent = evidence(head(), 90_000, 500);
+        dependent.independent = false;
+        assert_eq!(
+            challenger_wins(&dependent, &policy),
+            PromotionGate::Abstain(EVAL_SET_NOT_INDEPENDENT)
+        );
+        assert_eq!(
+            challenger_wins(&evidence(head(), 90_000, 49), &policy),
+            PromotionGate::Abstain(PROMOTION_EVAL_TOO_SMALL)
+        );
+        let mut no_baseline = evidence(head(), 90_000, 500);
+        no_baseline.champion_score_ppm = None;
+        no_baseline.champion_ref = None;
+        assert_eq!(
+            challenger_wins(&no_baseline, &policy),
+            PromotionGate::Abstain(PROMOTION_NO_BASELINE)
+        );
+        let mut judged = evidence(head(), 90_000, 500);
+        judged.grader_kind = GraderKind::ModelJudge;
+        assert_eq!(
+            challenger_wins(&judged, &policy),
+            PromotionGate::Abstain(PROMOTION_JUDGE_ONLY)
+        );
+        // Knobs: pinned values move the bar.
+        let mut strict = DecisionPolicy::engine_default();
+        strict.knobs.insert(
+            KNOBS[super::MIN_MARGIN].knob_name(),
+            KnobValue::DecimalMicros(100_000),
+        );
+        assert_eq!(
+            challenger_wins(&evidence(head(), 90_000, 500), &strict),
+            hold
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R805.11
+    #[test]
+    fn gate_rules_per_added_kind() {
+        let policy = DecisionPolicy::engine_default();
+        // Definition: follows challenger_wins.
+        for kind in [
+            DefinitionKind::Agent,
+            DefinitionKind::Workflow,
+            DefinitionKind::Team,
+            DefinitionKind::HarnessComponent,
+            DefinitionKind::HarnessBundle,
+        ] {
+            let subject = RevisionSubject::Definition {
+                definition_kind: kind,
+                definition_ref: "d".to_owned(),
+            };
+            let mut won = evidence(subject.clone(), 30_000, 60);
+            won.receipt_kind = ReceiptKind::RolloutSet;
+            assert_eq!(
+                subject_gate(&subject, &won, &policy),
+                PromotionGate::Promote
+            );
+            let mut lost = evidence(subject.clone(), 100, 60);
+            lost.receipt_kind = ReceiptKind::RolloutSet;
+            assert_eq!(
+                subject_gate(&subject, &lost, &policy),
+                PromotionGate::Hold {
+                    reason: "margin_not_met"
+                }
+            );
+        }
+        // MeasuredFact: independent, newer, enough cases (default 30).
+        let fact = RevisionSubject::MeasuredFact {
+            model_ref: "m".to_owned(),
+            property: "context_window".to_owned(),
+        };
+        let measured = |independent: bool, at: u64, champion: Option<u64>, cases: u64| {
+            let mut e = evidence(fact.clone(), 0, cases);
+            e.receipt_kind = ReceiptKind::MeasurementRun;
+            e.independent = independent;
+            e.measurement = Some(MeasurementWindow {
+                observed_at_ms: at,
+                champion_observed_at_ms: champion,
+            });
+            e
+        };
+        assert_eq!(
+            subject_gate(&fact, &measured(true, 2_000, Some(1_000), 30), &policy),
+            PromotionGate::Promote
+        );
+        assert_eq!(
+            subject_gate(&fact, &measured(true, 2_000, None, 30), &policy),
+            PromotionGate::Promote
+        );
+        assert_eq!(
+            subject_gate(&fact, &measured(false, 2_000, Some(1_000), 30), &policy),
+            PromotionGate::Abstain(EVAL_SET_NOT_INDEPENDENT)
+        );
+        assert_eq!(
+            subject_gate(&fact, &measured(true, 1_000, Some(1_000), 30), &policy),
+            PromotionGate::Abstain(MEASUREMENT_NOT_NEWER)
+        );
+        assert_eq!(
+            subject_gate(&fact, &measured(true, 2_000, Some(1_000), 29), &policy),
+            PromotionGate::Abstain(PROMOTION_EVAL_TOO_SMALL)
+        );
+        let mut no_window = measured(true, 2_000, Some(1_000), 30);
+        no_window.measurement = None;
+        assert_eq!(
+            subject_gate(&fact, &no_window, &policy),
+            PromotionGate::Abstain(MEASUREMENT_NOT_NEWER)
+        );
+        let mut relaxed = DecisionPolicy::engine_default();
+        relaxed.knobs.insert(
+            KNOBS[MEASURED_FACT_MIN_CASES].knob_name(),
+            KnobValue::Integer(5),
+        );
+        assert_eq!(
+            subject_gate(&fact, &measured(true, 2_000, Some(1_000), 5), &relaxed),
+            PromotionGate::Promote
+        );
+        // GovernedSet: never on a score; a different reviewer approves.
+        let set = RevisionSubject::GovernedSet {
+            scope_ref: "policy-rules".to_owned(),
+        };
+        let reviewed = |author: &str, reviewer: &str| {
+            let mut e = evidence(set.clone(), 900_000, 10_000);
+            e.receipt_kind = ReceiptKind::ReviewApproval;
+            e.review = Some(ReviewApproval {
+                author: author.to_owned(),
+                reviewer: reviewer.to_owned(),
+            });
+            e
+        };
+        assert_eq!(
+            subject_gate(&set, &reviewed("alice", "bob"), &policy),
+            PromotionGate::Promote
+        );
+        assert_eq!(
+            subject_gate(&set, &reviewed("alice", "alice"), &policy),
+            PromotionGate::Abstain(REVIEW_NOT_INDEPENDENT)
+        );
+        assert_eq!(
+            subject_gate(&set, &evidence(set.clone(), 900_000, 10_000), &policy),
+            PromotionGate::Abstain(REVIEW_APPROVAL_REQUIRED)
+        );
+        // Every GovernedSet knob is Fixed: the governed-set family declares none
+        // a revision may move.
+        assert!(KNOBS
+            .iter()
+            .filter(|spec| spec.name.starts_with("governed_set."))
+            .all(|spec| spec.safety == medulla_decision_types::decision::knobs::KnobSafety::Fixed));
     }
 }
 

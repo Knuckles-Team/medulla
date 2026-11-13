@@ -2662,3 +2662,121 @@
     :fromState :CatalogProbeMachine_ProbeFailed ;
     :toState :CatalogProbeMachine_Probing ;
     :firedBy :CatalogProbeMachine_Event_ProbeStarted .
+
+# spec: MEDULLA-DECISION-ENGINE-R805.7
+# The Revision machine. The Rust edge table REVISION_MACHINE is the same table; the ontology
+# test asserts equal edge sets.
+
+:RevisionState a owl:Class ;
+    rdfs:label "Revision State" ;
+    rdfs:comment "A state of the Revision machine." ;
+    rdfs:subClassOf :State .
+
+:RevisionTerminalState a owl:Class ;
+    rdfs:label "Revision Terminal State" ;
+    rdfs:comment "A terminal state of the Revision machine." ;
+    rdfs:subClassOf :TerminalState, :RevisionState .
+
+:RevisionTransition a owl:Class ;
+    rdfs:label "Revision Transition" ;
+    rdfs:comment "A transition of the Revision machine." ;
+    rdfs:subClassOf :Transition .
+
+:RevisionEvent a owl:Class ;
+    rdfs:label "Revision Event" ;
+    rdfs:comment "A event of the Revision machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:RevisionGuard a owl:Class ;
+    rdfs:label "Revision Guard" ;
+    rdfs:comment "A guard of the Revision machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:RevisionMachine a :StateMachine ;
+    rdfs:label "Revision machine" ;
+    :initialState :RevisionMachine_Draft ;
+    :hasState :RevisionMachine_Draft, :RevisionMachine_Evaluated, :RevisionMachine_Published, :RevisionMachine_Champion, :RevisionMachine_Retired .
+
+:RevisionMachine_Draft a :RevisionState ;
+    rdfs:label "Revision Draft" ;
+    :storedForm "draft" .
+
+:RevisionMachine_Evaluated a :RevisionState ;
+    rdfs:label "Revision Evaluated" ;
+    :storedForm "evaluated" .
+
+:RevisionMachine_Published a :RevisionState ;
+    rdfs:label "Revision Published" ;
+    :storedForm "published" .
+
+:RevisionMachine_Champion a :RevisionState ;
+    rdfs:label "Revision Champion" ;
+    :storedForm "champion" .
+
+:RevisionMachine_Retired a :RevisionState ;
+    rdfs:label "Revision Retired" ;
+    :storedForm "retired" .
+
+:RevisionMachine_Event_Evaluate a :RevisionEvent ;
+    rdfs:label "Revision Evaluate" .
+
+:RevisionMachine_Event_Publish a :RevisionEvent ;
+    rdfs:label "Revision Publish" .
+
+:RevisionMachine_Event_Promote a :RevisionEvent ;
+    rdfs:label "Revision Promote" .
+
+:RevisionMachine_Event_Retire a :RevisionEvent ;
+    rdfs:label "Revision Retire" .
+
+:RevisionMachine_Event_Reinstate a :RevisionEvent ;
+    rdfs:label "Revision Reinstate" .
+
+:RevisionMachine_V01 a :RevisionTransition ;
+    rdfs:label "Revision V01" ;
+    :edgeId "V01" ;
+    :fromState :RevisionMachine_Draft ;
+    :toState :RevisionMachine_Evaluated ;
+    :firedBy :RevisionMachine_Event_Evaluate .
+
+:RevisionMachine_V02 a :RevisionTransition ;
+    rdfs:label "Revision V02" ;
+    :edgeId "V02" ;
+    :fromState :RevisionMachine_Evaluated ;
+    :toState :RevisionMachine_Published ;
+    :firedBy :RevisionMachine_Event_Publish .
+
+:RevisionMachine_V03 a :RevisionTransition ;
+    rdfs:label "Revision V03" ;
+    :edgeId "V03" ;
+    :fromState :RevisionMachine_Published ;
+    :toState :RevisionMachine_Champion ;
+    :firedBy :RevisionMachine_Event_Promote .
+
+:RevisionMachine_V04 a :RevisionTransition ;
+    rdfs:label "Revision V04" ;
+    :edgeId "V04" ;
+    :fromState :RevisionMachine_Champion ;
+    :toState :RevisionMachine_Retired ;
+    :firedBy :RevisionMachine_Event_Retire .
+
+:RevisionMachine_V05 a :RevisionTransition ;
+    rdfs:label "Revision V05" ;
+    :edgeId "V05" ;
+    :fromState :RevisionMachine_Published ;
+    :toState :RevisionMachine_Retired ;
+    :firedBy :RevisionMachine_Event_Retire .
+
+:RevisionMachine_V06 a :RevisionTransition ;
+    rdfs:label "Revision V06" ;
+    :edgeId "V06" ;
+    :fromState :RevisionMachine_Evaluated ;
+    :toState :RevisionMachine_Retired ;
+    :firedBy :RevisionMachine_Event_Retire .
+
+:RevisionMachine_V07 a :RevisionTransition ;
+    rdfs:label "Revision V07" ;
+    :edgeId "V07" ;
+    :fromState :RevisionMachine_Retired ;
+    :toState :RevisionMachine_Champion ;
+    :firedBy :RevisionMachine_Event_Reinstate .

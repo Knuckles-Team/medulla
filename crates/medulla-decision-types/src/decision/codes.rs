@@ -165,6 +165,38 @@ pub const FOLDED: &[RefusalCode] = &[
     POLICY_NATIVE_AUTHORITY_REQUIRED,
 ];
 
+// Promotion and calibration refusals (MEDULLA-DECISION-ENGINE-R812.2, R805.11,
+// R822). `medulla-decision-outcome-types` re-exports the table as
+// `promotion::REFUSALS`.
+/// The evaluation set was not independent of the training data.
+pub const EVAL_SET_NOT_INDEPENDENT: RefusalCode = RefusalCode::new("EVAL_SET_NOT_INDEPENDENT");
+/// The held-out evaluation has fewer cases than the knob requires.
+pub const PROMOTION_EVAL_TOO_SMALL: RefusalCode = RefusalCode::new("PROMOTION_EVAL_TOO_SMALL");
+/// The evidence names no champion score to compare with.
+pub const PROMOTION_NO_BASELINE: RefusalCode = RefusalCode::new("PROMOTION_NO_BASELINE");
+/// The only score is a model judge's; a judge never decides promotion.
+pub const PROMOTION_JUDGE_ONLY: RefusalCode = RefusalCode::new("PROMOTION_JUDGE_ONLY");
+/// A measured fact whose run is not newer than the champion's.
+pub const MEASUREMENT_NOT_NEWER: RefusalCode = RefusalCode::new("MEASUREMENT_NOT_NEWER");
+/// A governed set has no review approval.
+pub const REVIEW_APPROVAL_REQUIRED: RefusalCode = RefusalCode::new("REVIEW_APPROVAL_REQUIRED");
+/// The reviewer of a governed set is its author.
+pub const REVIEW_NOT_INDEPENDENT: RefusalCode = RefusalCode::new("REVIEW_NOT_INDEPENDENT");
+/// A calibration fit has fewer judged pairs than the knob requires.
+pub const CALIBRATION_TOO_FEW_PAIRS: RefusalCode = RefusalCode::new("CALIBRATION_TOO_FEW_PAIRS");
+
+/// Every promotion and calibration code, in declaration order.
+pub const PROMOTION: &[RefusalCode] = &[
+    EVAL_SET_NOT_INDEPENDENT,
+    PROMOTION_EVAL_TOO_SMALL,
+    PROMOTION_NO_BASELINE,
+    PROMOTION_JUDGE_ONLY,
+    MEASUREMENT_NOT_NEWER,
+    REVIEW_APPROVAL_REQUIRED,
+    REVIEW_NOT_INDEPENDENT,
+    CALIBRATION_TOO_FEW_PAIRS,
+];
+
 /// The `REFUSALS` table of every registered family, keyed by its question
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[(
@@ -207,6 +239,7 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
     SHARED
         .iter()
         .chain(FOLDED.iter())
+        .chain(PROMOTION.iter())
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
         .chain(super::importance_penalty::REFUSALS.iter())

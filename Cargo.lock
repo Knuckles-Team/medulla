@@ -6658,6 +6658,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-catalog-types",
  "medulla-core",
+ "medulla-decision-outcome-types",
  "medulla-decision-types",
  "medulla-geo",
  "medulla-graph-core",
