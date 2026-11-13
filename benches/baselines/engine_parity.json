@@ -4,6 +4,7 @@
     "concurrent_64": {"p99_us": 5000, "throughput": 20000.0},
     "shards_8": {"p99_us": 5000, "throughput": 120000.0},
     "bulk_load": {"p99_us": 5000000, "throughput": 100000.0},
-    "conflict_heavy": {"p99_us": 5000, "throughput": 2000.0}
+    "conflict_heavy": {"p99_us": 5000, "throughput": 2000.0},
+    "pgwire_login": {"p99_us": 5000, "throughput": 20000.0}
   }
 }

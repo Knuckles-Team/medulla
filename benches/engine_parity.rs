@@ -17,12 +17,16 @@
 //! * `disjoint_writers` (R004.3): 32 sessions on disjoint row ranges, commit
 //!   p99 <= 200 us of validation wait, no `TXN_CONFLICT`.
 //!
+//! * `pgwire_login` (R007.3): login plus principal resolution through the warm
+//!   lookup cache, one login of each kind, p99 <= 5 ms.
+//!
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
 // spec: MEDULLA-ENGINE-PARITY-R005.1
 // spec: MEDULLA-ENGINE-PARITY-R002.3
 // spec: MEDULLA-ENGINE-PARITY-R004.3
+// spec: MEDULLA-ENGINE-PARITY-R007.3
 //!
 //! Run: cargo bench --features full --bench engine_parity
 
@@ -36,6 +40,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use medulla_identity_types::identity::{sha256_verifier, WireLoginKind, WireLoginRecord};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -44,6 +49,9 @@ use medulla_table_store::tables::{TableStore, TableTxn, TxnOp};
 use medulla_tables::schema::{Column, ColumnType, TableSchema};
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use medulla_types::contract::Digest256;
+use medulla_wire_core::sql_wire_auth::{
+    resolve_wire_login, CachedWireLogins, WireLoginRegistry, WireLoginSource, WireProof,
+};
 use serde_json::json;
 
 const W1_WRITES: usize = 2_000;
@@ -63,6 +71,9 @@ const OCC_VALIDATE_P99_BUDGET_US: u64 = 50;
 const DISJOINT_SESSIONS: usize = 32;
 const DISJOINT_ROUNDS: usize = 200;
 const DISJOINT_WAIT_P99_BUDGET_US: u64 = 200;
+const LOGIN_SAMPLES_PER_KIND: usize = 5_000;
+const LOGIN_CACHE_TTL_S: u64 = 60;
+const LOGIN_P99_BUDGET_US: u64 = 5_000;
 
 /// One workload result line.
 struct Record {
@@ -493,7 +504,84 @@ fn disjoint_writers() -> Record {
     }
 }
 
-/// Run W1 to W5 and the two OCC budget groups; print one record per workload.
+/// R007.3: login plus principal resolution at p99 <= 5 ms with a warm cache.
+/// One login of each kind is resolved repeatedly through `resolve_wire_login`
+/// over the cached lookup the pgwire startup handler uses.
+fn pgwire_login() -> Record {
+    let certificate_der = b"bench-client-certificate-der".to_vec();
+    let token = "bench-login-token"; // sanitizer:ignore
+    let registry = WireLoginRegistry::default();
+    for (login, kind, verifier) in [
+        (
+            "bench-password",
+            WireLoginKind::Password,
+            "salt:salted".to_string(),
+        ),
+        (
+            "bench-certificate",
+            WireLoginKind::Certificate,
+            sha256_verifier(&certificate_der),
+        ),
+        (
+            "bench-token",
+            WireLoginKind::Token,
+            sha256_verifier(token.as_bytes()),
+        ),
+    ] {
+        registry
+            .put(WireLoginRecord::new(
+                login,
+                kind,
+                &verifier,
+                "agent:bench",
+                "bench-tenant",
+                1,
+            ))
+            .expect("register bench login");
+    }
+    let source = CachedWireLogins::new(Arc::new(registry), LOGIN_CACHE_TTL_S);
+    for login in ["bench-password", "bench-certificate", "bench-token"] {
+        let _ = source.find(login);
+    }
+    let mut samples = Vec::with_capacity(LOGIN_SAMPLES_PER_KIND * 3);
+    let started = Instant::now();
+    for _ in 0..LOGIN_SAMPLES_PER_KIND {
+        let proofs = [
+            ("bench-password", WireProof::ScramVerified),
+            (
+                "bench-certificate",
+                WireProof::Certificate {
+                    certificate_der: &certificate_der,
+                },
+            ),
+            ("bench-token", WireProof::Token(token)),
+        ];
+        for (login, proof) in proofs {
+            let begun = Instant::now();
+            let resolved = resolve_wire_login(&source, login, proof).expect("bench login");
+            samples.push(begun.elapsed());
+            assert_eq!(resolved.principal, "agent:bench");
+        }
+    }
+    let wall = started.elapsed();
+    samples.sort();
+    let record = Record {
+        workload: "pgwire_login",
+        parameters: format!("kinds=3;samples_per_kind={LOGIN_SAMPLES_PER_KIND}"),
+        p50_us: percentile(&samples, 50),
+        p99_us: percentile(&samples, 99),
+        throughput: samples.len() as f64 / wall.as_secs_f64(),
+    };
+    assert!(
+        record.p99_us <= LOGIN_P99_BUDGET_US,
+        "pgwire_login p99 {} us over the {} us budget",
+        record.p99_us,
+        LOGIN_P99_BUDGET_US
+    );
+    record
+}
+
+/// Run W1 to W5 and the OCC and login budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(8)
@@ -513,6 +601,7 @@ fn emit_workload_records() {
     emit(&w5_conflict_heavy());
     emit(&occ_validate());
     emit(&disjoint_writers());
+    emit(&pgwire_login());
 }
 
 fn main() {

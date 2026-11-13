@@ -57,6 +57,7 @@ Decision: the `Password` verifier is the SCRAM salted credential, not the bare s
 A login record names a tenant. The connection's verified authority carries one tenant (the deployment's request policy). After the actor is bound, the two must be equal; a mismatch refuses the first query with `PLAN_SCOPE_UNVERIFIED` (SQLSTATE `28000`, one row in the sqlstate table) and no read runs. Wire reads add no second filter: the principal is the actor of the existing authorized read path, and the served test compares it with `Method::Uql` for three principals.
 
 ## R007.3 login budget group
+## R007.3 login budget group (parked foundation)
 
 The `engine_parity/pgwire_login` bench group lives in `benches/engine_parity.rs` and
 resolves one login of each kind through `resolve_wire_login` over the warm
@@ -119,3 +120,9 @@ Three writer-check rounds ran after the rebase onto train/next (lockfile, deferr
 ## Decision: status markers that follow a configuration or a catalog (R021.1 to R021.3)
 
 `InstanceStatus`, `StatechartInstanceStatus` and `SqlFormState` are real closed state sets, so each gets an explicit machine. `InstanceStatus` follows the instance configuration (a parallel chart can enter and leave a final state while another region fires), so no state is terminal and the events are `Remain`, `ReachFinal`, `LeaveFinal` and `RemainFinal`; the store settles the status with `InstanceStatus::settle`, which picks the event from the current state and the configuration and applies it. `SqlFormState` starts `Refused` (the matrix is closed) and moves by `ServePartially`, `ServeFully`, `Narrow` and `Withdraw`; entries are built with `SqlFormEntry::served_as`.
+`benches/baselines/engine_parity.json`). The row's L3 test
+`tests/pgwire_roundtrip.rs::login_maps_to_principal` covers Password and Token over
+pgwire; the Certificate leg needs an mTLS listener harness in the test binary (a
+generated CA and client leaf, pgwire TLS configured through the listener's explicit
+TLS material rather than environment) and is the remaining work before R007.3
+enters a trailer.
