@@ -93,6 +93,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `match.entropy_mbit` | u64 | 3500 | [1000, 6000] | millibits | Tunable | `MEDULLA_MATCH_ENTROPY_MBIT` |
 | `freshness.window` | u64 | 60 | [1, 3600] | seconds | Tunable | `MEDULLA_FRESHNESS_WINDOW` |
 | `concept_lineage.read_max_successors` | u64 | 1024 | [1, 65536] | successors | Tunable | `MEDULLA_CONCEPT_LINEAGE_READ_MAX_SUCCESSORS` |
+| `team.signal_max_age` | u64 | 30 | [1, 3600] | seconds | Tunable | none (registry knob, not an environment variable) |
 
 ## Wire shape
 

@@ -153,6 +153,13 @@ pub const MIXED_POLICY_REVISION: RefusalCode = RefusalCode::new("MIXED_POLICY_RE
 pub const CONCENTRATION_REFUSALS: &[RefusalCode] =
     &[NO_CONCENTRATION_POLICY, MIXED_POLICY_REVISION];
 
+/// A team coordination question whose channel reads available but whose signal is older than `team.signal_max_age`.
+pub const TEAM_SIGNAL_STALE: RefusalCode = RefusalCode::new("TEAM_SIGNAL_STALE");
+/// A team coordination question whose channel is unavailable and whose team has no explicitly bound member.
+pub const TEAM_NO_BOUND_MEMBER: RefusalCode = RefusalCode::new("TEAM_NO_BOUND_MEMBER");
+/// The `team_coordination` family's refusal table (MEDULLA-DECISION-ENGINE-R170.2).
+pub const TEAM_REFUSALS: &[RefusalCode] = &[TEAM_SIGNAL_STALE, TEAM_NO_BOUND_MEMBER];
+
 /// Every folded code, in declaration order.
 pub const FOLDED: &[RefusalCode] = &[
     HEAD_KIND_NOT_STATISTICAL,
@@ -424,6 +431,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::EditConcentration, CONCENTRATION_REFUSALS),
     (QuestionKind::ContextBudget, super::context_source::REFUSALS),
     (QuestionKind::A2aRoute, super::a2a_route::REFUSALS),
+    (QuestionKind::TeamCoordination, TEAM_REFUSALS),
     (
         QuestionKind::PaperAdmission,
         super::paper_admission::REFUSALS,

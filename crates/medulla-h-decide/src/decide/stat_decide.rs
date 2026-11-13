@@ -238,6 +238,10 @@ async fn serve(
                 super::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(Some)
+            } else if request.question.kind == QuestionKind::TeamCoordination {
+                super::stat_team::team_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
             } else {
                 super::candidates::filtered_graph_view(
                     state,

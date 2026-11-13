@@ -59,6 +59,8 @@ mod stat_generation_cycle;
 pub(crate) mod stat_generation_space;
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
+mod stat_team;
+#[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
