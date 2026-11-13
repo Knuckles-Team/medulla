@@ -47,16 +47,16 @@ pub fn splitmix64_next(state: &mut u64) -> u64 {
 /// copy produced — the seeded reproducibility those algorithms document is
 /// preserved exactly.
 pub struct SplitMix64 {
-    state: u64,
+    word: u64,
 }
 
 impl SplitMix64 {
     pub fn new(seed: u64) -> Self {
-        Self { state: seed }
+        Self { word: seed }
     }
 
     pub fn next_u64(&mut self) -> u64 {
-        splitmix64_next(&mut self.state)
+        splitmix64_next(&mut self.word)
     }
 
     /// A uniform `f64` in `[0, 1)`, via the top 53 bits (the standard

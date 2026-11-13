@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_result_types::{
     retrieval_verdict::ChunkScorePair, retrieval_verdict::ChunkSelection,
-    retrieval_verdict::DescentPolicy, retrieval_verdict::DescentReceipt,
-    retrieval_verdict::DescentStage, retrieval_verdict::FallbackPolicy,
+    retrieval_verdict::DescentLevel, retrieval_verdict::DescentPolicy,
+    retrieval_verdict::DescentReceipt, retrieval_verdict::FallbackPolicy,
     retrieval_verdict::HierarchyCommunity, retrieval_verdict::HierarchyVisit,
     retrieval_verdict::RepairStep, retrieval_verdict::RetrievalRefusal,
     retrieval_verdict::ScoreNormalization, retrieval_verdict::ScoreRegion,
@@ -294,7 +294,7 @@ pub struct StageScore {
 /// The reads and scoring a descent is allowed to make.
 pub trait HierarchySource {
     /// Score `id` at `stage` against the query.
-    fn score(&mut self, stage: DescentStage, id: &str) -> StageScore;
+    fn score(&mut self, stage: DescentLevel, id: &str) -> StageScore;
     /// The tenant an entity belongs to; `None` when the entity does not exist.
     fn entity_tenant(&self, entity_id: &str) -> Option<String>;
 }
@@ -326,7 +326,7 @@ impl<'a> Descent<'a> {
     fn charge(
         &mut self,
         source: &mut dyn HierarchySource,
-        stage: DescentStage,
+        stage: DescentLevel,
         id: &str,
     ) -> Result<f64, Box<DescentRefusal>> {
         if self.receipt.reranker_calls >= self.policy.max_reranker_calls {
@@ -349,7 +349,7 @@ impl<'a> Descent<'a> {
     fn level(
         &mut self,
         source: &mut dyn HierarchySource,
-        stage: DescentStage,
+        stage: DescentLevel,
         frontier: Vec<(&'a HierarchyCommunity, Vec<String>)>,
     ) -> Result<Vec<(&'a HierarchyCommunity, Vec<String>)>, Box<DescentRefusal>> {
         let mut scored = Vec::with_capacity(frontier.len());
@@ -369,7 +369,7 @@ impl<'a> Descent<'a> {
         let mut kept = Vec::new();
         for (rank, (score, community, path)) in scored.into_iter().enumerate() {
             self.receipt.visits.push(HierarchyVisit {
-                stage,
+                level: stage,
                 id: community.community_id.clone(),
                 score,
                 score_provenance: "summary_rerank".into(),
@@ -421,7 +421,7 @@ impl<'a> Descent<'a> {
                 return Err(self.refuse(RETRIEVAL_BUDGET_EXCEEDED, "depth".into()));
             }
             self.receipt.depth += 1;
-            kept = self.level(source, DescentStage::Community, frontier)?;
+            kept = self.level(source, DescentLevel::Community, frontier)?;
         }
         Ok(leaves)
     }
@@ -459,9 +459,9 @@ impl<'a> Descent<'a> {
                 return Err(self.refuse(RETRIEVAL_BUDGET_EXCEEDED, "entity candidates".into()));
             }
             self.receipt.entity_candidates += 1;
-            let score = self.charge(source, DescentStage::Entity, &entity)?;
+            let score = self.charge(source, DescentLevel::Entity, &entity)?;
             scored.push(HierarchyVisit {
-                stage: DescentStage::Entity,
+                level: DescentLevel::Entity,
                 id: entity,
                 score,
                 score_provenance: "entity_rerank".into(),
@@ -534,7 +534,7 @@ pub fn descend_hierarchy(
         .filter(|c| c.tenant == tenant)
         .map(|c| (c, vec![c.community_id.clone()]))
         .collect();
-    let kept = descent.level(source, DescentStage::Summary, roots)?;
+    let kept = descent.level(source, DescentLevel::Summary, roots)?;
     let leaves = descent.refine(source, kept)?;
     descent.entities(source, leaves)?;
     Ok(descent.receipt)

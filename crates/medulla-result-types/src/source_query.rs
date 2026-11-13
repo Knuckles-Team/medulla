@@ -341,7 +341,7 @@ impl ApprovedSourceQuery {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum SourceQueryPhase {
+pub enum SourceQueryBoundary {
     Start,
     Chunk,
     Complete,
@@ -356,7 +356,9 @@ pub struct SourceQueryApprovalCheck {
     pub observed_source_revision: String,
     pub observed_schema_digest: String,
     pub observed_snapshot_ref: String,
-    pub phase: SourceQueryPhase,
+    /// Served as `phase`: the text form of a check is unchanged.
+    #[serde(rename = "phase")]
+    pub boundary: SourceQueryBoundary,
 }
 
 /// A bounded validation result; it authorizes nothing past `valid_until_ms`.
@@ -375,6 +377,25 @@ pub struct SourceQueryApprovalValidity {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.14
+    #[test]
+    fn source_query_boundary_is_a_position_not_a_lifecycle() {
+        // A check names the boundary it verifies at; the check is one-shot and nothing moves
+        // the boundary afterwards. The served text form of the field is unchanged.
+        for (boundary, text) in [
+            (SourceQueryBoundary::Start, "start"),
+            (SourceQueryBoundary::Chunk, "chunk"),
+            (SourceQueryBoundary::Complete, "complete"),
+        ] {
+            assert_eq!(serde_json::to_value(boundary).unwrap(), text);
+        }
+        let source = include_str!("source_query.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(concat!("SourceQuery", "Phase")));
+        assert!(production
+            .contains("#[serde(rename = \"phase\")]\n    pub boundary: SourceQueryBoundary,"));
+    }
 
     fn limits() -> SourceQueryLimits {
         SourceQueryLimits {
@@ -451,7 +472,7 @@ mod tests {
             observed_source_revision: "rev-7".into(),
             observed_schema_digest: "sha256:abc".into(),
             observed_snapshot_ref: "snap-42".into(),
-            phase: SourceQueryPhase::Chunk,
+            boundary: SourceQueryBoundary::Chunk,
         };
         let json = serde_json::to_string(&check).unwrap();
         assert_eq!(

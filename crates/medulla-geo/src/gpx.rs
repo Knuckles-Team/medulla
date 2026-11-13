@@ -58,7 +58,7 @@ pub fn read_gpx(xml: &str) -> Result<Gpx, String> {
         match name {
             "trkseg" => apply_container_tag(&tag, &mut cur_seg, &mut gpx.tracks),
             "rte" => apply_container_tag(&tag, &mut cur_rte, &mut gpx.routes),
-            "trkpt" | "rtept" | "wpt" if !tag.is_close => match name {
+            "trkpt" | "rtept" | "wpt" if tag.kind != TagKind::Close => match name {
                 "wpt" => gpx.waypoints.push(tag.lat_lon_point()?),
                 "rtept" => cur_rte.push(tag.lat_lon_point()?),
                 // A trkpt outside its <trkseg> is attached best-effort, as is an rtept.
@@ -81,20 +81,41 @@ pub fn read_gpx(xml: &str) -> Result<Gpx, String> {
 /// inside it: a close flushes the run as a finished line into `lines`, an opening tag
 /// that is not self-closing starts a fresh run.
 fn apply_container_tag(tag: &Tag<'_>, run: &mut Vec<Point>, lines: &mut Vec<LineString>) {
-    if tag.is_close {
-        lines.push(LineString::new(std::mem::take(run)));
-    } else if !tag.is_self_closing {
-        run.clear();
+    match tag.kind {
+        TagKind::Close => lines.push(LineString::new(std::mem::take(run))),
+        TagKind::Open => run.clear(),
+        TagKind::SelfClosing => {}
     }
 }
 
 // ── a minimal XML tag scanner ──────────────────────────────────────────────────────
 
-/// One scanned XML tag: its raw inner text (between `<` and `>`), open/close/self-closing flags.
+/// What a scanned tag does to its element: opens it, closes it or is both at once.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TagKind {
+    Open,
+    Close,
+    SelfClosing,
+}
+
+impl TagKind {
+    /// The kind of the raw text between `<` and `>`. A leading `/` is a close; otherwise a
+    /// trailing `/` is self-closing. The impossible pair of flags is unrepresentable.
+    fn of(raw: &str) -> Self {
+        if raw.starts_with('/') {
+            Self::Close
+        } else if raw.ends_with('/') {
+            Self::SelfClosing
+        } else {
+            Self::Open
+        }
+    }
+}
+
+/// One scanned XML tag: its raw inner text (between `<` and `>`) and its kind.
 struct Tag<'a> {
     inner: &'a str,
-    is_close: bool,
-    is_self_closing: bool,
+    kind: TagKind,
 }
 
 impl<'a> Tag<'a> {
@@ -173,15 +194,10 @@ impl<'a> Iterator for TagIter<'a> {
             if raw.starts_with('?') || raw.starts_with('!') {
                 continue;
             }
-            let is_close = raw.starts_with('/');
-            let is_self_closing = raw.ends_with('/');
+            let kind = TagKind::of(raw);
             let inner = raw.trim_end_matches('/');
             let _ = bytes; // keep byte view for potential future speedups
-            return Some(Tag {
-                inner,
-                is_close,
-                is_self_closing,
-            });
+            return Some(Tag { inner, kind });
         }
         None
     }
@@ -210,6 +226,30 @@ mod tests {
     </trkseg>
   </trk>
 </gpx>"#;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.13
+    #[test]
+    fn tag_kind_is_one_enum_and_both_flags_are_gone() {
+        assert_eq!(TagKind::of("trkseg"), TagKind::Open);
+        assert_eq!(TagKind::of("/trkseg"), TagKind::Close);
+        assert_eq!(
+            TagKind::of("trkpt lat=\"1\" lon=\"2\"/"),
+            TagKind::SelfClosing
+        );
+        // A tag that both starts and ends with a slash is a close: one kind, never two flags.
+        assert_eq!(TagKind::of("/x/"), TagKind::Close);
+        let kinds: Vec<TagKind> = TagIter::new("<a><b/></a><?xml?><!-- c -->")
+            .map(|t| t.kind)
+            .collect();
+        assert_eq!(
+            kinds,
+            vec![TagKind::Open, TagKind::SelfClosing, TagKind::Close]
+        );
+        let source = include_str!("gpx.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(concat!("is_", "close:")));
+        assert!(!production.contains(concat!("is_self_", "closing:")));
+    }
 
     #[test]
     fn eg264_gpx_reads_waypoints_routes_tracks() {

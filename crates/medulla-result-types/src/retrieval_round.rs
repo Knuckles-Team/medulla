@@ -205,7 +205,7 @@ impl SelectionMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum SolverStatus {
+pub enum SolverOutcome {
     /// The largest coefficient change fell below the tolerance.
     Converged,
 }
@@ -229,7 +229,9 @@ pub struct JointSelection {
     pub selected: Vec<JointCoefficient>,
     /// `||q - Vᵀx||₂` of the full solution.
     pub residual: f64,
-    pub status: SolverStatus,
+    /// Stored and served as `status`: the text form of a selection is unchanged.
+    #[serde(rename = "status")]
+    pub outcome: SolverOutcome,
     pub iterations: u32,
     pub lambda: f64,
     pub tolerance: f64,
@@ -576,6 +578,37 @@ impl StopRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.11
+    #[test]
+    fn solver_outcome_is_a_result_value_not_a_lifecycle() {
+        // The solve either converges and reaches a result or refuses; a result carries the one
+        // value, so there is nothing to transition. The stored text form is unchanged.
+        let selection = JointSelection {
+            embedding_revision: "e1".into(),
+            selected: vec![JointCoefficient {
+                id: "d1".into(),
+                coefficient: 0.5,
+            }],
+            residual: 0.25,
+            outcome: SolverOutcome::Converged,
+            iterations: 3,
+            lambda: 0.1,
+            tolerance: 1e-6,
+            truncated: 0,
+        };
+        let json = serde_json::to_value(&selection).unwrap();
+        assert_eq!(json["status"], "converged");
+        assert!(json.get("outcome").is_none());
+        let back: JointSelection = serde_json::from_value(json).unwrap();
+        assert_eq!(back, selection);
+        let source = include_str!("retrieval_round.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(
+            !production.contains(concat!("Solver", "Status")),
+            "the lifecycle-sounding name is gone"
+        );
+    }
     use crate::retrieval_stop::RoundCalibration;
 
     fn request() -> StopRequest {

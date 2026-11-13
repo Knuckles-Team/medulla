@@ -143,15 +143,15 @@ pub fn l2_normalize_rows(rows: &mut [Vec<f64>]) {
 /// Deterministic SplitMix64 PRNG — the same family the mining GMM and the KAN
 /// link-predictor use, replicated here so the embedders share one seeding idiom.
 pub(crate) struct SplitMix64 {
-    state: u64,
+    word: u64,
 }
 
 impl SplitMix64 {
     pub(crate) fn new(seed: u64) -> Self {
-        Self { state: seed }
+        Self { word: seed }
     }
     pub(crate) fn next_u64(&mut self) -> u64 {
-        medulla_compute::splitmix64_next(&mut self.state)
+        medulla_compute::splitmix64_next(&mut self.word)
     }
     pub(crate) fn next_f64(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64

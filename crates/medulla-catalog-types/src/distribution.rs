@@ -248,17 +248,17 @@ fn empirical_type7_quantile(samples: &[f64], q: f64) -> f64 {
 /// SplitMix64 — a tiny, fast, deterministic PRNG. Seeded reproducibly so
 /// `sample(seed)` is a pure function of `(distribution, seed)`.
 struct SplitMix64 {
-    state: u64,
+    word: u64,
 }
 
 impl SplitMix64 {
     fn new(seed: u64) -> Self {
-        SplitMix64 { state: seed }
+        SplitMix64 { word: seed }
     }
 
     fn next_u64(&mut self) -> u64 {
-        self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut z = self.state;
+        self.word = self.word.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.word;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
         z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         z ^ (z >> 31)
@@ -518,6 +518,28 @@ mod tests {
     use super::*;
 
     const EPS: f64 = 1e-9;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.12
+    #[test]
+    fn rng_word_is_not_a_lifecycle_field() {
+        // The generator's one field is the SplitMix64 word, not a lifecycle state: the
+        // field is named for what it is and the seed seeds it directly.
+        let source = include_str!("distribution.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let start = production.find("struct SplitMix64 {").unwrap();
+        let body = &production[start..start + 80];
+        assert!(body.contains("word: u64,"));
+        assert!(!body.contains("state"));
+        let mut a = SplitMix64::new(7);
+        assert_eq!(a.word, 7);
+        let first = a.next_u64();
+        assert_ne!(a.word, 7, "next_u64 advances the word");
+        assert_eq!(
+            SplitMix64::new(7).next_u64(),
+            first,
+            "seeded streams repeat"
+        );
+    }
 
     #[test]
     fn gaussian_moments_pdf_and_interval() {

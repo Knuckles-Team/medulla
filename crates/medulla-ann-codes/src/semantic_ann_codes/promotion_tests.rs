@@ -59,7 +59,7 @@ fn seed_live_version_one(fixture: &S6Fixture) {
     codes.install_model_config(config(fixture, 1)).unwrap();
     let baseline = codes
         .record_probe_measurement(
-            PromotionStage::AnnIndex,
+            PromotionProbePoint::AnnIndex,
             1,
             PromotionModality::Text,
             &[vec![1, 2]],
@@ -106,7 +106,7 @@ fn activation_runs_gate() {
     // baseline is generation one's S5 receipt.
     let receipt = codes
         .record_probe_measurement(
-            PromotionStage::AnnIndex,
+            PromotionProbePoint::AnnIndex,
             2,
             PromotionModality::Text,
             &[vec![1, 7]],
@@ -151,7 +151,7 @@ fn activation_runs_gate() {
     // the commit that stores its verdict and tags its vectors.
     codes
         .record_probe_measurement(
-            PromotionStage::AnnIndex,
+            PromotionProbePoint::AnnIndex,
             2,
             PromotionModality::Text,
             &[vec![1, 2]],

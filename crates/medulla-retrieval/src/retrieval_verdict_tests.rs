@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use medulla_result_types::{
-    retrieval_verdict::ChunkScorePair, retrieval_verdict::DescentPolicy,
-    retrieval_verdict::DescentStage, retrieval_verdict::FallbackPolicy,
+    retrieval_verdict::ChunkScorePair, retrieval_verdict::DescentLevel,
+    retrieval_verdict::DescentPolicy, retrieval_verdict::FallbackPolicy,
     retrieval_verdict::HierarchyCommunity, retrieval_verdict::RepairStep,
     retrieval_verdict::ScoreNormalization, retrieval_verdict::ScoreRegion,
     retrieval_verdict::SelectionPolicy, retrieval_verdict::Verdict,
@@ -231,11 +231,11 @@ fn selection_refusals_fail_before_answer_assembly() {
 struct Fixture {
     scores: BTreeMap<String, f64>,
     tenants: BTreeMap<String, String>,
-    calls: Vec<(DescentStage, String)>,
+    calls: Vec<(DescentLevel, String)>,
 }
 
 impl HierarchySource for Fixture {
-    fn score(&mut self, stage: DescentStage, id: &str) -> StageScore {
+    fn score(&mut self, stage: DescentLevel, id: &str) -> StageScore {
         self.calls.push((stage, id.to_string()));
         StageScore {
             score: self.scores.get(id).copied().unwrap_or(0.0),
@@ -337,12 +337,12 @@ fn hierarchy_descent_has_exact_stages_paths_and_entities() {
     assert_eq!(
         stages,
         vec![
-            (DescentStage::Summary, "s-A"),
-            (DescentStage::Summary, "s-B"),
-            (DescentStage::Community, "s-A1"),
-            (DescentStage::Community, "s-A2"),
-            (DescentStage::Entity, "e1"),
-            (DescentStage::Entity, "e2"),
+            (DescentLevel::Summary, "s-A"),
+            (DescentLevel::Summary, "s-B"),
+            (DescentLevel::Community, "s-A1"),
+            (DescentLevel::Community, "s-A2"),
+            (DescentLevel::Entity, "e1"),
+            (DescentLevel::Entity, "e2"),
         ]
     );
     let entity_ids: Vec<_> = receipt.entities.iter().map(|v| v.id.as_str()).collect();

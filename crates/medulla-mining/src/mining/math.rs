@@ -43,18 +43,18 @@ pub(super) fn sq_dist(a: &[f64], b: &[f64]) -> f64 {
 /// algorithms. Keeping the generator here avoids each algorithm carrying a
 /// subtly different implementation while preserving reproducible seeds.
 pub(super) struct SplitMix64 {
-    state: u64,
+    word: u64,
 }
 
 impl SplitMix64 {
     pub(super) fn new(seed: u64) -> Self {
         SplitMix64 {
-            state: seed.wrapping_add(0x9E37_79B9_7F4A_7C15),
+            word: seed.wrapping_add(0x9E37_79B9_7F4A_7C15),
         }
     }
 
     pub(super) fn next_u64(&mut self) -> u64 {
-        medulla_compute::splitmix64_next(&mut self.state)
+        medulla_compute::splitmix64_next(&mut self.word)
     }
 
     pub(super) fn next_f64(&mut self) -> f64 {

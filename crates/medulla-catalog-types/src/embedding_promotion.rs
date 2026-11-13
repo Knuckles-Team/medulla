@@ -153,16 +153,16 @@ impl SemanticModelConfig {
     }
 }
 
-/// The S4 and S5 stages a probe measurement belongs to.
+/// The S4 and S5 points a probe measurement is taken at (a label, not a lifecycle).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum PromotionStage {
+pub enum PromotionProbePoint {
     #[serde(rename = "S4")]
     Vector,
     #[serde(rename = "S5")]
     AnnIndex,
 }
 
-impl PromotionStage {
+impl PromotionProbePoint {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Vector => "S4",
@@ -201,7 +201,9 @@ pub struct ModalityCheckRecord {
 pub struct StageReceipt {
     pub binding_id: String,
     pub generation: u64,
-    pub stage: PromotionStage,
+    /// Stored as `stage`: the text form of a stored receipt is unchanged.
+    #[serde(rename = "stage")]
+    pub probe_point: PromotionProbePoint,
     pub modality: PromotionModality,
     pub recall: f64,
     pub measured_at_ms: u64,
@@ -355,6 +357,30 @@ pub fn evaluate_promotion(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.15
+    #[test]
+    fn promotion_probe_point_is_a_label_not_a_lifecycle() {
+        // A receipt is written once, at the point it measured; nothing moves it. The stored
+        // text form (`stage`: `S4` / `S5`) is unchanged.
+        let receipt = StageReceipt {
+            binding_id: "b".into(),
+            generation: 2,
+            probe_point: PromotionProbePoint::AnnIndex,
+            modality: PromotionModality::Text,
+            recall: 0.9,
+            measured_at_ms: 5,
+        };
+        let json = serde_json::to_value(&receipt).unwrap();
+        assert_eq!(json["stage"], "S5");
+        assert!(json.get("probe_point").is_none());
+        let back: StageReceipt = serde_json::from_value(json).unwrap();
+        assert_eq!(back, receipt);
+        assert_eq!(PromotionProbePoint::Vector.as_str(), "S4");
+        let source = include_str!("embedding_promotion.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(concat!("Promotion", "Stage")));
+    }
 
     fn check(modality: PromotionModality, baseline: f64) -> ModalityCheck {
         ModalityCheck {

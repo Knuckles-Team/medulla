@@ -19,7 +19,7 @@ use std::cell::RefCell;
 
 use medulla_graph_core::graph::GraphView;
 use medulla_result_types::retrieval_verdict::{
-    DescentStage, HierarchyCommunity, RetrievalRefusal, RETRIEVAL_HIERARCHY_INVALID,
+    DescentLevel, HierarchyCommunity, RetrievalRefusal, RETRIEVAL_HIERARCHY_INVALID,
 };
 use medulla_retrieval::leanrag::{
     SectionGranularity, SectionRecord, SectionSpan, SectionTopology, TraversalLimit,
@@ -74,7 +74,7 @@ impl<'a> GraphHierarchySource<'a> {
 }
 
 impl HierarchySource for GraphHierarchySource<'_> {
-    fn score(&mut self, _stage: DescentStage, id: &str) -> StageScore {
+    fn score(&mut self, _stage: DescentLevel, id: &str) -> StageScore {
         let score = self
             .semantic
             .get_embedding(id)

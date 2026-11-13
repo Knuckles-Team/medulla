@@ -14,7 +14,7 @@ use medulla_exec::rowset::RowSet;
 use medulla_result_types::retrieval_round::{
     selection_policy_digest, sha256_hex_of, ActivationBenchmark, HierarchyPart, InferenceCounts,
     JointCoefficient, JointSelection, RetrievalPremise, RoundRequest, RoundResult, RoundRow,
-    SelectionMode, SelectionPart, SolverStatus, StopKnobs,
+    SelectionMode, SelectionPart, SolverOutcome, StopKnobs,
 };
 use medulla_result_types::retrieval_verdict::{
     ChunkScorePair, DescentPolicy, HierarchyRetrievalKind, HierarchyStage, HierarchyStageReceipt,
@@ -425,7 +425,7 @@ fn run_joint_selection(
         embedding_revision: embedding_revision.clone(),
         selected: positive,
         residual: solved.residual,
-        status: SolverStatus::Converged,
+        outcome: SolverOutcome::Converged,
         iterations: solved.iterations,
         lambda,
         tolerance,

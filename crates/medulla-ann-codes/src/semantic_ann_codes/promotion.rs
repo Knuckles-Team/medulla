@@ -24,8 +24,9 @@ use super::{kernel_error, refused, SemanticCodeError, SemanticCodeStore};
 use medulla_ann::{recall_at_k, EmbeddingVersion, EmbeddingVersionStore, PromotionApproval};
 use medulla_catalog_types::embedding_promotion::{
     decode_promotion_record, encode_promotion_record, evaluate_promotion, ModalityCheck,
-    ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality, PromotionStage,
-    PromotionVerdict, SemanticModelConfig, StageReceipt, DEFAULT_PROMOTION_TOLERANCE,
+    ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality,
+    PromotionProbePoint, PromotionVerdict, SemanticModelConfig, StageReceipt,
+    DEFAULT_PROMOTION_TOLERANCE,
 };
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_semantic_index::semantic::SemanticGenerationImage;
@@ -117,7 +118,7 @@ impl SemanticCodeStore {
     /// the ids the stage returned for each probe query, in query order.
     pub fn record_probe_measurement(
         &self,
-        stage: PromotionStage,
+        stage: PromotionProbePoint,
         generation: u64,
         modality: PromotionModality,
         retrieved: &[Vec<u64>],
@@ -277,13 +278,16 @@ impl SemanticCodeStore {
             let receipt = match self.read_stage_receipt_in(
                 read,
                 generation,
-                PromotionStage::AnnIndex,
+                PromotionProbePoint::AnnIndex,
                 modality,
             )? {
                 Some(receipt) => Some(receipt),
-                None => {
-                    self.read_stage_receipt_in(read, generation, PromotionStage::Vector, modality)?
-                }
+                None => self.read_stage_receipt_in(
+                    read,
+                    generation,
+                    PromotionProbePoint::Vector,
+                    modality,
+                )?,
             };
             if let Some(receipt) = receipt {
                 measured.insert(modality, receipt.recall);
@@ -458,7 +462,7 @@ impl SemanticCodeStore {
         &self,
         read: &ScopedRead<'_, SemanticIndexOwner>,
         generation: u64,
-        stage: PromotionStage,
+        stage: PromotionProbePoint,
         modality: PromotionModality,
     ) -> Result<Option<StageReceipt>, SemanticCodeError> {
         let table = read

@@ -471,12 +471,12 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
 - [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask/TaskStatus state machine: route 1 census findings through TaskStatus::apply
 - [ ] T443 [US1] MEDULLA-FEDERATED-QUERY-R738.9 HierarchyStageReceipt/HierarchyStage state machine: route 2 census findings through HierarchyStage::apply
-- [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentStage state machine: route 1 census findings through DescentStage::apply
-- [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverStatus state machine: route 1 census findings through SolverStatus::apply
-- [ ] T446 [US1] MEDULLA-FEDERATED-QUERY-R738.12 Non-lifecycle fields named `state`: the generator word of four `SplitMix64` pseudo-random generators
+- [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentLevel is a classification, not a lifecycle: rename DescentStage to DescentLevel
+- [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverOutcome is a classification, not a lifecycle: rename SolverStatus to SolverOutcome
+- [ ] T446 [US1] MEDULLA-FEDERATED-QUERY-R738.12 Non-lifecycle fields named `state`: the generator word of six `SplitMix64` pseudo-random generators
 - [ ] T447 [US1] MEDULLA-FEDERATED-QUERY-R738.13 Tag kind flags: `is_close` and `is_self_closing` in the GPX tag parser
-- [ ] T448 [US1] MEDULLA-FEDERATED-QUERY-R738.14 SourceQueryApprovalCheck/SourceQueryPhase state machine: route 1 census findings through SourceQueryPhase::apply
-- [ ] T449 [US1] MEDULLA-FEDERATED-QUERY-R738.15 StageReceipt/PromotionStage state machine: route 1 census findings through PromotionStage::apply
+- [ ] T448 [US1] MEDULLA-FEDERATED-QUERY-R738.14 SourceQueryApprovalCheck/SourceQueryBoundary is a classification, not a lifecycle: rename SourceQueryPhase to SourceQueryBoundary
+- [ ] T449 [US1] MEDULLA-FEDERATED-QUERY-R738.15 StageReceipt/PromotionProbePoint is a classification, not a lifecycle: rename PromotionStage to PromotionProbePoint
 - [x] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
 - [x] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
 - [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply

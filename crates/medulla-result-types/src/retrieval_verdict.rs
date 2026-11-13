@@ -569,11 +569,11 @@ impl RetrievalFeedback {
 // R081.9.1 — bounded typed hierarchy retrieval
 // ---------------------------------------------------------------------------
 
-/// The descent stage a receipt entry belongs to, in order.
+/// The hierarchy level a receipt entry belongs to, in order (a classification, not a lifecycle).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum DescentStage {
+pub enum DescentLevel {
     Summary,
     Community,
     Entity,
@@ -690,7 +690,9 @@ fn check_ancestry(
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct HierarchyVisit {
-    pub stage: DescentStage,
+    /// Stored and served as `stage`: the text form of a receipt is unchanged.
+    #[serde(rename = "stage")]
+    pub level: DescentLevel,
     pub id: String,
     pub score: f64,
     /// Which scorer produced `score`.
@@ -1268,6 +1270,39 @@ fn validate_parent_cycles(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R738.10
+    #[test]
+    fn descent_level_is_a_classification_not_a_lifecycle() {
+        // A visit is built once with the level it was scored at; nothing moves it. The type
+        // is named for that, the field is `level`, and the stored text form is unchanged.
+        let visit = HierarchyVisit {
+            level: DescentLevel::Community,
+            id: "c1".into(),
+            score: 0.5,
+            score_provenance: "summary_rerank".into(),
+            kept: true,
+            path: vec!["root".into()],
+        };
+        let json = serde_json::to_value(&visit).unwrap();
+        assert_eq!(json["stage"], "community");
+        assert!(json.get("level").is_none());
+        let back: HierarchyVisit = serde_json::from_value(json).unwrap();
+        assert_eq!(back, visit);
+        for (level, text) in [
+            (DescentLevel::Summary, "summary"),
+            (DescentLevel::Community, "community"),
+            (DescentLevel::Entity, "entity"),
+        ] {
+            assert_eq!(serde_json::to_value(level).unwrap(), text);
+        }
+        let source = include_str!("retrieval_verdict.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(
+            !production.contains(concat!("Descent", "Stage")),
+            "the lifecycle-sounding name is gone"
+        );
+    }
 
     fn policy() -> SelectionPolicy {
         SelectionPolicy {
