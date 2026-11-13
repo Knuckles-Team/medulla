@@ -39,3 +39,10 @@ One task per leaf row of `requirements.md`, producers first: shared terms and re
 - [ ] T033 [US5] MEDULLA-DATAPLAT-VOCAB-R008.1 Add an alignment table (package term -> `dp:` term, `rdfs:subClassOf` / `owl:equivalentProperty`) for sql and documentdb
 - [ ] T034 [US5] MEDULLA-DATAPLAT-VOCAB-R008.2 Add the alignment table for objectstore and vector
 - [ ] T035 [US5] MEDULLA-DATAPLAT-VOCAB-R008.3 Add the alignment table for kafka, openbao, clarity, data-science
+- [ ] T36 [US5] MEDULLA-DATAPLAT-VOCAB-R009 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T37 [US5] MEDULLA-DATAPLAT-VOCAB-R009.1 AccessRequest/AccessRequestState state machine: route 1 census findings through AccessRequestState::apply
+- [ ] T38 [US5] MEDULLA-DATAPLAT-VOCAB-R009.2 ChangeRequest/ChangeRequestState state machine: route 1 census findings through ChangeRequestState::apply
+- [ ] T39 [US5] MEDULLA-DATAPLAT-VOCAB-R009.3 DurableUnit/DurableUnitStatus state machine: route 1 census findings through DurableUnitStatus::apply
+- [ ] T40 [US5] MEDULLA-DATAPLAT-VOCAB-R009.4 GlossaryTerm/GlossaryTermStatus state machine: route 1 census findings through GlossaryTermStatus::apply
+- [ ] T41 [US5] MEDULLA-DATAPLAT-VOCAB-R009.5 OntologyProposal/ProposalState state machine: route 2 census findings through ProposalState::apply
+- [ ] T42 [US5] MEDULLA-DATAPLAT-VOCAB-R009.6 ProposedQualityRule/RuleState state machine: route 1 census findings through RuleState::apply
