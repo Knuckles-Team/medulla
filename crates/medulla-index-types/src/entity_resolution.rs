@@ -152,7 +152,7 @@ pub fn propose_links(
 /// A refused approval.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ApprovalRefusal {
-    /// `APPROVER_REQUIRED`
+    /// `LINK_APPROVER_MISSING`
     ApproverRequired,
     /// `ALREADY_APPROVED`
     AlreadyApproved,
@@ -161,7 +161,7 @@ pub enum ApprovalRefusal {
 impl ApprovalRefusal {
     pub fn code(&self) -> &'static str {
         match self {
-            Self::ApproverRequired => "APPROVER_REQUIRED",
+            Self::ApproverRequired => "LINK_APPROVER_MISSING",
             Self::AlreadyApproved => "ALREADY_APPROVED",
         }
     }
@@ -217,9 +217,6 @@ pub enum MergeDecision {
     NoMerge,
 }
 
-/// Above this many bits per character, a name is an opaque token.
-pub const HIGH_ENTROPY_BITS_PER_CHAR: f64 = 3.5;
-
 /// Shannon entropy of `text` in bits per character.
 pub fn entropy_bits_per_char(text: &str) -> f64 {
     let mut counts: BTreeMap<char, usize> = BTreeMap::new();
@@ -255,12 +252,28 @@ pub fn version_base(name: &str) -> (String, Option<String>) {
     (normalized, None)
 }
 
+/// The stable premise fact name of one evidence kind: `identity:<kind>`.
+impl IdentityEvidence {
+    pub fn premise_fact(&self) -> &'static str {
+        match self {
+            Self::ExactKey { .. } => "identity:exact_key",
+            Self::NormalizedName { .. } => "identity:normalized_name",
+            Self::VersionVariant { .. } => "identity:version_variant",
+            Self::EntropyQualifiedToken { .. } => "identity:entropy_qualified_token",
+            Self::Embedding { .. } => "identity:embedding",
+        }
+    }
+}
+
 /// Collect the identity evidence between two names and optional keys.
+/// `entropy_bits` is `knob entity_link.entropy_bits`: at or above it, an
+/// equal name is an opaque token rather than a normalized-name match.
 pub fn identity_evidence(
     left_name: &str,
     right_name: &str,
     left_key: Option<&str>,
     right_key: Option<&str>,
+    entropy_bits: f64,
 ) -> Vec<IdentityEvidence> {
     let mut evidence = Vec::new();
     if let (Some(a), Some(b)) = (left_key, right_key) {
@@ -279,7 +292,7 @@ pub fn identity_evidence(
     } else if normalize_name(left_name) == normalize_name(right_name) {
         let name = normalize_name(left_name);
         let bits = entropy_bits_per_char(&name);
-        if bits >= HIGH_ENTROPY_BITS_PER_CHAR {
+        if bits >= entropy_bits {
             evidence.push(IdentityEvidence::EntropyQualifiedToken {
                 token: name,
                 bits_per_char: bits,
@@ -293,17 +306,18 @@ pub fn identity_evidence(
 
 /// Decide from evidence: an exact key or a strong embedding with a name
 /// match proposes a merge; a version variant proposes a link; an opaque
-/// token alone never merges.
-pub fn decide_merge(evidence: &[IdentityEvidence]) -> MergeDecision {
-    let has = |f: fn(&IdentityEvidence) -> bool| evidence.iter().any(f);
-    if has(|e| matches!(e, IdentityEvidence::VersionVariant { .. })) {
+/// token alone never merges. `embedding_min` is `knob entity_link.embedding_min`.
+pub fn decide_merge(evidence: &[IdentityEvidence], embedding_min: f64) -> MergeDecision {
+    let has = |f: &dyn Fn(&IdentityEvidence) -> bool| evidence.iter().any(|e| f(e));
+    if has(&|e| matches!(e, IdentityEvidence::VersionVariant { .. })) {
         return MergeDecision::ProposeLink;
     }
-    if has(|e| matches!(e, IdentityEvidence::ExactKey { .. })) {
+    if has(&|e| matches!(e, IdentityEvidence::ExactKey { .. })) {
         return MergeDecision::ProposeMerge;
     }
-    let name = has(|e| matches!(e, IdentityEvidence::NormalizedName { .. }));
-    let embedding = has(|e| matches!(e, IdentityEvidence::Embedding { cosine } if *cosine >= 0.9));
+    let name = has(&|e| matches!(e, IdentityEvidence::NormalizedName { .. }));
+    let embedding =
+        has(&|e| matches!(e, IdentityEvidence::Embedding { cosine } if *cosine >= embedding_min));
     if name && embedding {
         MergeDecision::ProposeMerge
     } else if name {
@@ -411,7 +425,10 @@ mod tests {
         assert!(approved.assert_same_as().is_ok());
         let ambiguous = approve(&smith, "alice").unwrap();
         assert_eq!(ambiguous.assert_same_as(), Err(CannotAssert::NotAMatch));
-        assert_eq!(approve(&ada, " ").unwrap_err().code(), "APPROVER_REQUIRED");
+        assert_eq!(
+            approve(&ada, " ").unwrap_err().code(),
+            "LINK_APPROVER_MISSING"
+        );
         assert_eq!(
             approve(&approved, "bob").unwrap_err().code(),
             "ALREADY_APPROVED"
@@ -421,27 +438,33 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R030.700
     #[test]
     fn evidence_kinds_and_merge_decisions() {
-        let opaque = identity_evidence("x7Qp9ZkL2mWv", "x7Qp9ZkL2mWv", None, None);
+        let opaque = identity_evidence("x7Qp9ZkL2mWv", "x7Qp9ZkL2mWv", None, None, 3.5);
         assert!(matches!(
             opaque[0],
             IdentityEvidence::EntropyQualifiedToken { .. }
         ));
-        assert_eq!(decide_merge(&opaque), MergeDecision::NoMerge);
+        assert_eq!(decide_merge(&opaque, 0.9), MergeDecision::NoMerge);
 
-        let variant = identity_evidence("Report Builder v2", "Report Builder v3", None, None);
+        let variant = identity_evidence("Report Builder v2", "Report Builder v3", None, None, 3.5);
         assert!(matches!(
             variant[0],
             IdentityEvidence::VersionVariant { .. }
         ));
-        assert_eq!(decide_merge(&variant), MergeDecision::ProposeLink);
+        assert_eq!(decide_merge(&variant, 0.9), MergeDecision::ProposeLink);
 
-        let keyed = identity_evidence("Ada", "A. Lovelace", Some("ada@x.org"), Some("ada@x.org"));
-        assert_eq!(decide_merge(&keyed), MergeDecision::ProposeMerge);
+        let keyed = identity_evidence(
+            "Ada",
+            "A. Lovelace",
+            Some("ada@x.org"),
+            Some("ada@x.org"),
+            3.5,
+        );
+        assert_eq!(decide_merge(&keyed, 0.9), MergeDecision::ProposeMerge);
 
-        let mut named = identity_evidence("Ada Lovelace", "ada lovelace", None, None);
-        assert_eq!(decide_merge(&named), MergeDecision::ProposeLink);
+        let mut named = identity_evidence("Ada Lovelace", "ada lovelace", None, None, 3.5);
+        assert_eq!(decide_merge(&named, 0.9), MergeDecision::ProposeLink);
         named.push(IdentityEvidence::Embedding { cosine: 0.95 });
-        assert_eq!(decide_merge(&named), MergeDecision::ProposeMerge);
+        assert_eq!(decide_merge(&named, 0.9), MergeDecision::ProposeMerge);
 
         let json = serde_json::to_string(&named).unwrap();
         assert_eq!(

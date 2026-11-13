@@ -2039,6 +2039,12 @@ name = "ingest_source_governance"
 path = "benches/ingest_source_governance.rs"
 harness = false
 
+# Identity candidate blocking over 10,000 records (MEDULLA-UNIFIED-DATA-PLANE-R030.701): nightly budget.
+[[bench]]
+name = "identity_candidates"
+path = "benches/identity_candidates.rs"
+harness = false
+
 # Typed principal metadata admission (MEDULLA-IDENTITY-R023.12): nightly p95 budget.
 [[bench]]
 name = "identity_metadata_admit"

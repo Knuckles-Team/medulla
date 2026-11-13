@@ -233,3 +233,50 @@ async fn assemble_and_decide_text_use_the_registry() {
         QuestionKind::TemplateChoice
     );
 }
+
+fn text_option(id: &str, name: &str) -> DeclaredOption {
+    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    DeclaredOption {
+        option_id: id.into(),
+        classification: BoundedVec::default(),
+        numbers: BoundedVec::default(),
+        texts: BoundedVec::new(vec![DeclaredText {
+            key: "name".to_string(),
+            text: name.to_string(),
+        }])
+        .unwrap(),
+    }
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R030.701
+#[tokio::test]
+async fn resolve_entity_records_identity_premises_and_refuses_unapproved_links() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let mut request = declared_request(QuestionKind::ResolveEntity, &pin, None);
+    request.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![
+            text_option("a", "x7Qp9ZkL2mWv"),
+            text_option("b", "x7Qp9ZkL2mWv"),
+        ])
+        .unwrap(),
+    };
+    let batch = decide(&h, request.clone()).await.unwrap();
+    let facts: Vec<&str> = batch.records.as_slice()[0]
+        .premises
+        .iter()
+        .map(|premise| premise.fact.as_str())
+        .collect();
+    assert!(facts.contains(&"identity:entropy_qualified_token"));
+    assert!(facts.contains(&"identity:decision:no_merge"));
+    assert!(!facts.contains(&"identity:normalized_name"));
+
+    let mut approving = request;
+    approving.params = BoundedVec::new(vec![TypedParam {
+        name: "approve_link".to_string(),
+        value: TypedValue::Bool(true),
+    }])
+    .unwrap();
+    let refused = decide(&h, approving).await.unwrap_err();
+    assert!(refused.contains("LINK_APPROVER_MISSING"), "{refused}");
+}

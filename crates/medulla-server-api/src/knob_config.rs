@@ -384,6 +384,10 @@ knobs! {
     federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
     /// Longest a web metasearch result is served from the cache (MEDULLA-UNIFIED-DATA-PLANE-R038.7.2).
     federation_web_cache_ttl_s: u64 = "federation.web_cache_ttl_s", U64(900), [0, 86_400], "s", Tunable;
+    /// Bits per character at or above which a name is an opaque token that never merges on the name alone (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
+    entity_link_entropy_bits: f64 = "entity_link.entropy_bits", F64(3.5), [2.0, 6.0], "bits per character", Tunable;
+    /// Embedding cosine at or above which a name match plus the embedding proposes a merge (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
+    entity_link_embedding_min: f64 = "entity_link.embedding_min", F64(0.9), [0.5, 1.0], "cosine", Tunable;
     /// Longest a federated source statement may run.
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
