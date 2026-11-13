@@ -708,6 +708,15 @@ async fn discovered(
     h: &Harness,
     core: &Arc<medulla_graph_core::graph::GraphCore>,
 ) -> (String, Vec<String>) {
+    discovered_for(h, core, None).await
+}
+
+/// `discovered`, asking for the adapter of one capability's scope.
+async fn discovered_for(
+    h: &Harness,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
+    capability: Option<&str>,
+) -> (String, Vec<String>) {
     let authority = {
         let state = h.state.read().await;
         medulla_server_api::carrier::GraphReadAuthority::from_verified(
@@ -733,7 +742,7 @@ async fn discovered(
             mode: Default::default(),
             as_of: None,
             perspectives: None,
-            capability: None,
+            capability: capability.map(str::to_string),
         },
     )
     .await;
@@ -918,4 +927,81 @@ async fn outcome_adapter_lifts_and_reverts() {
     let (reverted_digest, reverted_rows) = discovered(&h, &core).await;
     assert_eq!(reverted_digest, "base");
     assert_eq!(reverted_rows, base_rows);
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R174.7.6 at capability scope: an adapter
+/// fitted from the outcomes of one task class lifts the rows `Discover` ranks
+/// for that capability only, and degrading outcomes roll it back.
+// spec: MEDULLA-DECISION-ENGINE-R174.7.6
+#[tokio::test]
+async fn capability_outcome_adapter_lifts_and_reverts() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    assert!(medulla_server_ops::api::admin::install_decide_seam(
+        &h.state.read().await.seams,
+        Arc::new(super::super::DecideSeam),
+    ));
+    let core = embedded_graph(&h).await;
+    let space = core.semantic_store.read().space().unwrap().digest.clone();
+    scoped_runs(&h, &space, "rec", 40, true).await;
+    let capability = template("sha256:schema-a").task_class;
+    let scope = || AdapterScope::Capability {
+        capability_iri: capability.clone(),
+    };
+
+    let (base_digest, base_rows) = discovered_for(&h, &core, Some(&capability)).await;
+    assert_eq!(base_digest, "base");
+
+    let fitted = fit_scoped_adapter(&h, scoped_request(&space, scope()))
+        .await
+        .unwrap();
+    assert!(fitted.receipt.passed, "{:?}", fitted.receipt);
+    assert_eq!(fitted.receipt.scope, scope());
+    pointer_state(
+        &h,
+        PointerRef::ScopedAdapter {
+            graph: GRAPH.to_string(),
+            scope: scope(),
+        },
+        activate(&fitted.adapter_digest, &fitted.receipt_digest),
+    )
+    .await
+    .unwrap();
+
+    // The capability's own read applies the adapter and lifts the cited rows.
+    let (lifted_digest, lifted_rows) = discovered_for(&h, &core, Some(&capability)).await;
+    assert_eq!(lifted_digest, fitted.adapter_digest);
+    let first_p = lifted_rows.iter().position(|id| id.starts_with('p'));
+    let first_n = lifted_rows.iter().position(|id| id.starts_with('n'));
+    assert!(first_p < first_n, "the adapter lifts: {lifted_rows:?}");
+    // A read that names no capability (graph scope) and another capability
+    // stay on the base order.
+    assert_eq!(
+        discovered(&h, &core).await,
+        (base_digest.clone(), base_rows.clone())
+    );
+    assert_eq!(
+        discovered_for(&h, &core, Some("urn:task:other")).await,
+        (base_digest.clone(), base_rows.clone())
+    );
+
+    scoped_runs(&h, &space, "deg", 120, false).await;
+    let write = LearningWrite::MonitorAdapter {
+        request: Box::new(AdapterMonitorRequest {
+            graph: GRAPH.to_string(),
+            scope: scope(),
+            window: RecordWindow {
+                from_ms: 0,
+                to_ms: u64::MAX,
+            },
+        }),
+    };
+    let monitored = match learn(&h, "decider", write).await.unwrap() {
+        LearningRecorded::Monitored(monitored) => *monitored,
+        other => panic!("monitor: {other:?}"),
+    };
+    assert_eq!(monitored.state, MonitorState::RolledBack, "{monitored:?}");
+    assert_eq!(
+        discovered_for(&h, &core, Some(&capability)).await,
+        (base_digest, base_rows)
+    );
 }
