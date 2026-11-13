@@ -6948,6 +6948,56 @@ class GraphOperationsClient:
             raise RuntimeError("ReadSpan must answer with an object")
         return result
 
+    async def viewport_query(
+        self,
+        request: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Bin one indexed series for a viewport (MEDULLA-FEDERATED-QUERY-R081.103.1).
+
+        ``request`` carries ``source_id``, ``kind`` (``scatter`` or ``line``), ``x_axis``,
+        ``y_axis``, ``domain`` (``x_min``, ``x_max``, ``y_min``, ``y_max``),
+        ``pixel_width``, ``pixel_height``, ``binning_revision`` (1) and ``byte_ceiling``;
+        ``source_revision`` pins a revision. The answer is a bounded bin set whatever
+        the source size: ``{bins, source_revision, viewport, binning_revision,
+        source_cardinality, query_digest}``. A scatter bin is ``[id, count, x_min, x_max,
+        y_min, y_max]`` and a line bin ``[col, first, last, min, max, count, gap_before]``.
+        A moved pinned revision is refused ``STALE_SOURCE_REVISION``.
+        """
+        result = await self._client._send(
+            "ViewportQuery", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("ViewportQuery must answer with an object")
+        return result
+
+    async def resolve_viewport_selection(
+        self,
+        request: dict[str, Any],
+        token: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Resolve one selection token of a viewport result to raw points
+        (MEDULLA-FEDERATED-QUERY-R081.103.3).
+
+        ``token`` is ``{"kind": "exact_point", point_id, point_revision}`` or
+        ``{"kind": "aggregate_bin", bin_id, source_revision, index_revision,
+        viewport_digest}``. At most 1000 points come back; ``truncated`` says when the
+        selection holds more. A token past its pinned revision is refused
+        ``STALE_SOURCE_REVISION``.
+        """
+        result = await self._client._send(
+            "ResolveViewportSelection",
+            {"request": request, "token": token},
+            None,
+            idempotency_key=None,
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("ResolveViewportSelection must answer with an object")
+        return result
+
     async def corpus_retrieve(
         self,
         mode: str,

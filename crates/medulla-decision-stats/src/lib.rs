@@ -13,3 +13,6 @@ pub mod conformal;
 pub mod decision;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod ope;
+/// MEDULLA-FEDERATED-QUERY-R081.103.2: viewport binning kernels.
+#[cfg(feature = "decision")]
+pub mod viewport;

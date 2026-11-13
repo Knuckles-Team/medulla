@@ -63,6 +63,8 @@ pub mod code_health;
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
 pub mod corpus_retrieval;
+// MEDULLA-FEDERATED-QUERY-R081.103.1 — viewport query wire types.
+pub mod viewport;
 pub mod evidence_class;
 pub mod external_schema;
 pub mod ontology_diff;

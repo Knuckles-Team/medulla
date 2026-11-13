@@ -112,3 +112,13 @@ Rows `MEDULLA-FEDERATED-QUERY-R736` to `MEDULLA-FEDERATED-QUERY-R736.5` adopt th
 - Decision: the flat baseline of a descent premise counts every distinct entity the stored communities name, each visited once. `flat_visits` and `flat_candidates` are therefore equal; they differ only when a later baseline prunes.
 - Decision: a section limit refusal returns no receipt. `retrieve_vector_free` stops before it reads past a limit and returns no partial path, so the refusal detail carries `incomplete: true`.
 - The section tree is read from stored `SectionNode` graph nodes. The round never takes inline nodes: a request with non-empty `section_nodes` refuses `RETRIEVAL_CONTRACT_INVALID`.
+
+## Viewport queries (R081.103, R725)
+
+- One method pair serves both rows: `ViewportQuery` and `ResolveViewportSelection`. R725 named a second pair (`ViewportBins`, `GraphSelectionResolve`) over the same kernels and handler; two pairs would be two doors for one capability, so R725 now names the one pair and adds its independent-reference test.
+- Sources are scoped time series. A `tsdb_series` answers line queries; a `point_table` is a series with two named numeric fields that answers scatter queries. The graph has no maintained x/y index for a scatter source, and the maintained spatial index holds geometry boxes, not table points, so a series with a bounded range read is the simplest source that is already tenant scoped, versioned and durable.
+- The source revision is the series store scope version of the caller's tenant and graph. It moves on any append in that scope, so a pin can only be too strict, never too loose. A request that pins nothing reads the current revision and the result pins it.
+- Bins are sparse: only non-empty cells and columns return. The scatter cap bounds the non-empty cell count, so an overflowing grid refuses `VIEWPORT_CAP_EXCEEDED` instead of truncating. The byte ceiling is checked on the encoded result; bins serialize as arrays so one stays under the 96-byte allowance.
+- Cell and column formulas multiply before they divide (`(v - lo) * n / (hi - lo)`), which keeps integer-valued sources exact; line columns use integer arithmetic on nanosecond timestamps.
+- `filter_digest` is part of the viewport identity and is not applied by the engine: a caller filters by choosing the source it reads.
+- Block aggregates for the 1,000,000,000-point nightly are a separate row (R081.103.5): the range scan serves the 1,000,000-point proof, and the nightly needs a store change.

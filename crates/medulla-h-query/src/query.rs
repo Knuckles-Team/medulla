@@ -174,6 +174,10 @@ pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]
 pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]
+mod viewport;
+#[cfg(feature = "query")]
+pub(crate) use viewport::{handle_resolve_viewport_selection, handle_viewport_query};
+#[cfg(feature = "query")]
 mod retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;

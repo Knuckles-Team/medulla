@@ -124,6 +124,17 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-FEDERATED-QUERY-R081.103.3: viewport bins and selection resolve over the caller's series.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::ViewportQuery { request } => {
+            return Ok(handle_viewport_query(hctx, *request).await)
+        }
+        Method::ResolveViewportSelection { request, token } => {
+            return Ok(handle_resolve_viewport_selection(hctx, *request, token).await)
+        }
+        other => other,
+    };
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;

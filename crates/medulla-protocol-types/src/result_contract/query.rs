@@ -65,6 +65,10 @@ method_results! {
     RetrievalRound(RetrievalRound) => Json<medulla_result_types::retrieval_round::RoundResult>;
     // MEDULLA-FEDERATED-QUERY-R653.3: the rows of one corpus mode.
     CorpusRetrieve(CorpusRetrieve) => Raw<medulla_types::corpus_retrieval::CorpusResult>;
+    // MEDULLA-FEDERATED-QUERY-R081.103.1: the bins of one viewport query.
+    ViewportQuery(ViewportQuery) => Raw<medulla_types::viewport::ViewportResult>;
+    // MEDULLA-FEDERATED-QUERY-R081.103.3: the raw points of one resolved selection token.
+    ResolveViewportSelection(ResolveViewportSelection) => Raw<medulla_types::viewport::ResolvedSelection>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.

@@ -95,6 +95,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ContextCompile",
     "RetrievalRound",
     "CorpusRetrieve",
+    "ViewportQuery",
+    "ResolveViewportSelection",
     "Discover",
     "DistributedCompute",
     "EdgeCount",

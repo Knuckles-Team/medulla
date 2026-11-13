@@ -329,6 +329,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T316 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.2 Binning kernel and caps
 - [ ] T317 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.3 Wiring of Viewport-bounded scatter and line queries over indexed sources
 - [ ] T318 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.4 Hot-path proof of Viewport-bounded scatter and line queries over indexed sources
+- [ ] T319a [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.5 Block aggregates for series viewport reads
 - [ ] T319 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.1 Model of Ordered n-ary inductive link prediction emits hypotheses only
 - [ ] T320 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.2 Behavior of Ordered n-ary inductive link prediction emits hypotheses only
 - [ ] T321 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.3 Wiring and refusal

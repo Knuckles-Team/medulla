@@ -422,6 +422,27 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RETRIEVAL_SCORE_PAIR_REQUIRED",
         ],
     ),
+    // MEDULLA-FEDERATED-QUERY-R081.103.3: the typed refusals of a viewport read.
+    (
+        "ViewportQuery",
+        &[
+            "ACCESS_DENIED",
+            "BYTE_CEILING_TOO_SMALL",
+            "INDEX_UNAVAILABLE",
+            "STALE_SOURCE_REVISION",
+            "VIEWPORT_CAP_EXCEEDED",
+            "VIEWPORT_INVALID",
+        ],
+    ),
+    (
+        "ResolveViewportSelection",
+        &[
+            "ACCESS_DENIED",
+            "INDEX_UNAVAILABLE",
+            "STALE_SOURCE_REVISION",
+            "VIEWPORT_INVALID",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R653.2: a grep pattern past the regex size limits.
     ("CorpusRetrieve", &["CORPUS_REGEX_TOO_COMPLEX"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.

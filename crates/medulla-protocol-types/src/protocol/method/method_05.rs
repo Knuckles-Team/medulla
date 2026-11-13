@@ -628,6 +628,19 @@ $($variants)*
         request: Box<medulla_result_types::retrieval_round::RoundRequest>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R081.103.1: bin one indexed source for a viewport. The
+    /// answer is a bounded bin set whatever the source size. A read; nothing is committed.
+    ViewportQuery {
+        request: Box<medulla_types::viewport::ViewportRequest>,
+    },
+
+    /// MEDULLA-FEDERATED-QUERY-R081.103.3: resolve one selection token of a viewport result
+    /// to raw points, inside the revisions it pins. A read; nothing is committed.
+    ResolveViewportSelection {
+        request: Box<medulla_types::viewport::ViewportRequest>,
+        token: medulla_types::viewport::SelectionToken,
+    },
+
     /// MEDULLA-FEDERATED-QUERY-R653.3: grep, entity, session or lineage rows over
     /// the caller's projected core. A read; nothing is committed.
     CorpusRetrieve {
