@@ -2052,6 +2052,13 @@ name = "ingest_source_governance"
 path = "benches/ingest_source_governance.rs"
 harness = false
 
+# Source permission sync at batch size (MEDULLA-INGEST-WORKER-R902.6): nightly budget.
+[[bench]]
+name = "ingest_permission_sync"
+path = "benches/ingest_permission_sync.rs"
+harness = false
+required-features = ["blob"]
+
 # Identity candidate blocking over 10,000 records (MEDULLA-UNIFIED-DATA-PLANE-R030.701): nightly budget.
 [[bench]]
 name = "identity_candidates"

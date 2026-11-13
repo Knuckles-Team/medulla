@@ -79,6 +79,13 @@ pub struct PreparedSourceIngestion {
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
 }
 
+impl PreparedSourceIngestion {
+    /// Records, relationships and permission updates this batch changes.
+    pub fn affected_count(&self) -> u64 {
+        self.affected_count
+    }
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub async fn status(
     request_id: u64,
@@ -2759,7 +2766,7 @@ fn insert_source_metadata(
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-fn source_node_id(
+pub fn source_node_id(
     tenant: &str,
     connector: &str,
     stream: &str,
