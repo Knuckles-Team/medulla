@@ -159,8 +159,9 @@ pub struct SyncMutation {
     pub properties: Map<String, Value>,
 }
 
-/// What one class of records supplies to a sync.
-pub trait SyncAdapter {
+/// What one class of records supplies to a sync. Adapters are shared data
+/// read from async handlers, so they are `Send + Sync`.
+pub trait SyncAdapter: Send + Sync {
     /// The stable key of a record, or `None` when it has none.
     fn record_key(&self, record: &Value) -> Option<String>;
     /// The digest of the fields the sync compares.
