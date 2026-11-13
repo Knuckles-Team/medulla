@@ -18,7 +18,8 @@ use medulla_decision_stats::decision::writeback::{
 };
 use medulla_decision_types::decision::statistical::writeback::{
     GovernedChangeSet, PreflightVerdict, ProposalInput, ProposalKind, ProposalRow,
-    WritebackApproval, WritebackOp, WritebackOutcome,
+    WritebackApproval, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows, WritebackOp,
+    WritebackOutcome,
 };
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{ResourceId, TenantId};
@@ -203,17 +204,97 @@ fn approve(
     Ok(WritebackOutcome::Approved { approval })
 }
 
+fn audit_key(owner: &str, change_set_id: &str) -> String {
+    format!("writeback_audit:{owner}:{change_set_id}")
+}
+
+/// The audit rows one release attempt leaves, one per queued proposal.
+fn audit_of(stored: &StoredQueue, outcome: &WritebackAuditOutcome) -> Vec<WritebackAudit> {
+    let change_set_id = change_set(stored).change_set_id;
+    stored
+        .queue
+        .proposals
+        .iter()
+        .map(|p| WritebackAudit {
+            proposal_id: p.id.as_str().to_string(),
+            risk_tier: p.risk_tier,
+            approver: stored
+                .approvals
+                .iter()
+                .find(|a| a.proposal_id == p.id.as_str())
+                .map(|a| a.approver.clone()),
+            change_set_id: change_set_id.clone(),
+            as_of_ms: p.as_of_ms,
+            outcome: outcome.clone(),
+        })
+        .collect()
+}
+
+/// Append `rows` to the releasing owner's audit of one change set. The audit
+/// is a decision artifact keyed by (owner, change set), so one owner never
+/// reads or extends another's rows; the append is a compare-and-swap.
+fn append_audit(
+    ctx: &ExecutionContext,
+    tenant: &str,
+    owner: &str,
+    change_set_id: &str,
+    rows: Vec<WritebackAudit>,
+) -> Result<(), String> {
+    let key = audit_key(owner, change_set_id);
+    let previous = ctx.store.decision_artifact(tenant, &key)?;
+    let mut all: Vec<WritebackAudit> = match &previous {
+        Some(bytes) => decode_artifact(bytes, "write-back audit")?,
+        None => Vec::new(),
+    };
+    all.extend(rows);
+    ctx.store
+        .swap_decision_artifact(tenant, &key, previous, encode_artifact(&all)?)
+}
+
+/// The caller's own audit rows of `change_set_id`, in commit order. Rows
+/// another owner wrote, and a change set nobody released, both read empty.
+pub(super) fn audit_rows(
+    ctx: &ExecutionContext,
+    reader: &LogReader,
+    tenant: &str,
+    change_set_id: &str,
+) -> Result<WritebackAuditRows, String> {
+    let rows = match ctx
+        .store
+        .decision_artifact(tenant, &audit_key(&reader.principal, change_set_id))?
+    {
+        Some(bytes) => decode_artifact(&bytes, "write-back audit")?,
+        None => Vec::new(),
+    };
+    Ok(WritebackAuditRows { rows })
+}
+
 fn release(
     ctx: &ExecutionContext,
+    reader: &LogReader,
     tenant: &str,
     queue_id: &str,
 ) -> Result<WritebackOutcome, String> {
     let (bytes, mut stored) = read_queue(ctx, tenant, queue_id)?;
     let before = stored.state;
+    let change_set_id = change_set(&stored).change_set_id;
     let event = QueueEvent::Release {
         fully_approved: fully_approved(&stored),
     };
-    stored.state = queue_transition(before, event).map_err(refused)?;
+    stored.state = match queue_transition(before, event) {
+        Ok(state) => state,
+        Err(error) => {
+            // A refused release leaves the queue untouched and its audit rows.
+            let rows = audit_of(
+                &stored,
+                &WritebackAuditOutcome::Refused {
+                    code: error.code.to_string(),
+                },
+            );
+            append_audit(ctx, tenant, &reader.principal, &change_set_id, rows)?;
+            return Err(refused(error));
+        }
+    };
     if stored.state != before {
         ctx.store.swap_decision_artifact(
             tenant,
@@ -221,6 +302,10 @@ fn release(
             Some(bytes),
             encode_artifact(&stored)?,
         )?;
+        // The queue's first release is the one that leaves audit rows; a
+        // repeated release returns the same set and adds none.
+        let rows = audit_of(&stored, &WritebackAuditOutcome::Released);
+        append_audit(ctx, tenant, &reader.principal, &change_set_id, rows)?;
     }
     Ok(WritebackOutcome::Released {
         change_set: change_set(&stored),
@@ -263,7 +348,7 @@ pub(super) fn serve(
             queue_id,
             proposal_id,
         } => approve(ctx, reader, tenant, &queue_id, &proposal_id),
-        WritebackOp::Release { queue_id } => release(ctx, tenant, &queue_id),
+        WritebackOp::Release { queue_id } => release(ctx, reader, tenant, &queue_id),
         computed => run(tenant, computed, knobs.writeback_queue_min_tier),
     }
 }

@@ -198,3 +198,40 @@ pub enum WritebackOutcome {
         change_set: GovernedChangeSet,
     },
 }
+
+/// How one release attempt ended for one proposal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "outcome", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WritebackAuditOutcome {
+    /// The proposal left in a released change set.
+    Released,
+    /// The release was refused under the registered `code`.
+    Refused { code: String },
+}
+
+/// The audit row one release attempt leaves for one proposal
+/// (MEDULLA-DECISION-ENGINE-R615.5). `approver` is the verified principal that
+/// approved the proposal; it is absent for a proposal that held no approval.
+/// `as_of_ms` is the source instant the proposal derives from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WritebackAudit {
+    pub proposal_id: String,
+    pub risk_tier: RiskTier,
+    #[serde(default)]
+    pub approver: Option<String>,
+    pub change_set_id: String,
+    pub as_of_ms: i64,
+    pub outcome: WritebackAuditOutcome,
+}
+
+/// The caller's own audit rows of one change set, in commit order. A change
+/// set the caller holds no rows for (unknown, or another owner's) reads empty.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WritebackAuditRows {
+    pub rows: Vec<WritebackAudit>,
+}

@@ -195,7 +195,10 @@ pub(super) fn surface_triples(
         }
         triples.extend(declared_links(ontologies)?);
     }
-    triples.extend(declared_individuals(ontologies)?);
+    triples.extend(super::capability::persist_descriptors(
+        &plan.tenant_id,
+        declared_individuals(ontologies)?,
+    )?);
     if triples.is_empty() {
         return Ok(None);
     }

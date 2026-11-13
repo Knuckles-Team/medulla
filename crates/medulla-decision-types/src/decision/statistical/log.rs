@@ -460,6 +460,13 @@ pub enum DecisionLogOp {
         #[serde(default)]
         model: Option<super::retrieval_generation::ModelRef>,
     },
+    /// Read the caller's own write-back audit rows of one change set, in
+    /// commit order (MEDULLA-DECISION-ENGINE-R615.5). Rows another owner
+    /// wrote read as absent.
+    WritebackAudit {
+        tenant_id: String,
+        change_set_id: String,
+    },
 }
 
 /// The result of a `PromoteRule` op.
@@ -513,7 +520,8 @@ impl DecisionLogOp {
             Self::Get { .. }
             | Self::Aggregate { .. }
             | Self::Verify { .. }
-            | Self::GenerationSpace { .. } => LogOpClass::Read,
+            | Self::GenerationSpace { .. }
+            | Self::WritebackAudit { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
@@ -552,7 +560,8 @@ impl DecisionLogOp {
             | Self::Writeback { tenant_id, .. }
             | Self::RunRecord { tenant_id, .. }
             | Self::CapabilityOutcome { tenant_id, .. }
-            | Self::GenerationSpace { tenant_id, .. } => tenant_id,
+            | Self::GenerationSpace { tenant_id, .. }
+            | Self::WritebackAudit { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

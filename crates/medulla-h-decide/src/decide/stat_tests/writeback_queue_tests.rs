@@ -7,7 +7,8 @@ use super::log_tests::log_op;
 use super::*;
 use medulla_decision_types::decision::statistical::writeback::{
     InventoryItemInput, PreflightVerdict, ProposalInput, ProposalKind, QueuedProposalInput,
-    RiskFindingInput, RiskTier, WritebackOp, WritebackOutcome,
+    RiskFindingInput, RiskTier, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows,
+    WritebackOp, WritebackOutcome,
 };
 use std::collections::BTreeMap;
 
@@ -332,10 +333,15 @@ async fn unapproved_release_refuses_without_partial_write() {
 
     let h = Harness::new().await;
     let queue_id = "q:unapproved";
+    // The queue and change-set rows; the refused release's audit rows
+    // (R615.5) are a separate family and are asserted by their own test.
     let stored_rows = || {
         h.store
             .decision_artifacts_with_prefix(TENANT, "", 100_000)
             .unwrap()
+            .into_iter()
+            .filter(|(key, _)| !key.starts_with("writeback_audit:"))
+            .collect::<Vec<_>>()
     };
     writeback(
         &h,
@@ -407,4 +413,115 @@ async fn unapproved_release_refuses_without_partial_write() {
         "{conflict}"
     );
     assert_eq!(stored_rows().len(), after.len());
+}
+
+async fn audit_rows(h: &Harness, who: &str, change_set_id: &str) -> Vec<WritebackAudit> {
+    let rows: WritebackAuditRows = decode(
+        log_op(
+            h,
+            who,
+            DecisionLogOp::WritebackAudit {
+                tenant_id: TENANT.to_string(),
+                change_set_id: change_set_id.to_string(),
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    rows.rows
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R615.5
+#[tokio::test]
+async fn release_and_refusal_leave_audit_rows() {
+    let h = Harness::new().await;
+    let queue_id = "q:audit";
+    let change_set_id = "changeset:q:audit";
+    let release = || WritebackOp::Release {
+        queue_id: queue_id.to_string(),
+    };
+    writeback(
+        &h,
+        WritebackOp::Queue {
+            queue_id: queue_id.to_string(),
+            proposals: vec![
+                queued("wp:1", "ext:1", RiskTier::High),
+                queued("wp:2", "ext:2", RiskTier::High),
+            ],
+        },
+    )
+    .await
+    .unwrap();
+    // Nothing released yet: the audit reads empty.
+    assert!(audit_rows(&h, "writer", change_set_id).await.is_empty());
+
+    writeback_as(
+        &h,
+        "approver-1",
+        WritebackOp::Approve {
+            queue_id: queue_id.to_string(),
+            proposal_id: "wp:1".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+
+    // A refused release leaves one refused row per proposal: the approved one
+    // names its approver, the unapproved one names none.
+    writeback(&h, release()).await.unwrap_err();
+    let refused = audit_rows(&h, "writer", change_set_id).await;
+    assert_eq!(refused.len(), 2);
+    let code = medulla_decision_types::decision::codes::PROPOSAL_UNAPPROVED
+        .as_str()
+        .to_string();
+    for row in &refused {
+        assert_eq!(row.change_set_id, change_set_id);
+        assert_eq!(row.risk_tier, RiskTier::High);
+        assert_eq!(
+            row.outcome,
+            WritebackAuditOutcome::Refused { code: code.clone() }
+        );
+    }
+    assert_eq!(refused[0].proposal_id, "wp:1");
+    assert!(refused[0]
+        .approver
+        .as_deref()
+        .unwrap()
+        .contains("approver-1"));
+    assert_eq!(refused[1].proposal_id, "wp:2");
+    assert_eq!(refused[1].approver, None);
+
+    // The release appends its released rows after the refused ones, in commit
+    // order, with each proposal's approver.
+    writeback_as(
+        &h,
+        "approver-2",
+        WritebackOp::Approve {
+            queue_id: queue_id.to_string(),
+            proposal_id: "wp:2".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    writeback(&h, release()).await.unwrap();
+    let all = audit_rows(&h, "writer", change_set_id).await;
+    assert_eq!(all.len(), 4);
+    assert_eq!(all[..2], refused[..]);
+    assert!(all[2..]
+        .iter()
+        .all(|r| r.outcome == WritebackAuditOutcome::Released));
+    assert!(all[2].approver.as_deref().unwrap().contains("approver-1"));
+    assert!(all[3].approver.as_deref().unwrap().contains("approver-2"));
+    assert_eq!(all[2].as_of_ms, 1_700_000_000_000);
+
+    // Releasing a released queue returns the same set and adds no rows.
+    writeback(&h, release()).await.unwrap();
+    assert_eq!(audit_rows(&h, "writer", change_set_id).await.len(), 4);
+
+    // Another owner reads nothing of the releaser's rows, exactly as for a
+    // change set nobody released.
+    assert!(audit_rows(&h, "approver-1", change_set_id).await.is_empty());
+    assert!(audit_rows(&h, "writer", "changeset:q:none")
+        .await
+        .is_empty());
 }

@@ -19,6 +19,23 @@ pub const CAPABILITY_DESCRIPTOR_VERSION: u16 = 1;
 /// The largest reliability, in basis points of 1.0 (1 = 0.01%).
 pub const MAX_CAPABILITY_RELIABILITY: u32 = 10_000;
 
+/// One in Q32 fixed point: the scale of a learned reward.
+const REWARD_ONE_Q32: i128 = 1 << 32;
+
+/// The reliability the descriptor projection carries for a capability whose
+/// learned reward is `reward_q32` (Q32 in `[0, 1]`), in basis points:
+/// `(reward_q32 * 10000) >> 32`, clamped to [`MAX_CAPABILITY_RELIABILITY`].
+/// A capability with no reward (`None`) is neutral (reward 0.5), so its
+/// reliability is 5000. Reliability is derived at projection time and never
+/// stored on the capability node (R650.2.1). The reward record itself lives in
+/// the decision plane, so the function takes its Q32 value.
+pub fn derived_reliability(reward_q32: Option<i64>) -> u32 {
+    let reward = reward_q32.map_or(REWARD_ONE_Q32 / 2, i128::from);
+    let basis_points = (reward * i128::from(MAX_CAPABILITY_RELIABILITY)) >> 32;
+    u32::try_from(basis_points.clamp(0, i128::from(MAX_CAPABILITY_RELIABILITY)))
+        .unwrap_or(MAX_CAPABILITY_RELIABILITY)
+}
+
 /// The side-effect class a capability declares.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -314,6 +331,31 @@ mod tests {
         assert!(request.validate().is_ok());
         assert!(designation.validate().is_ok());
         assert!(projection.validate().is_ok());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.1
+    #[test]
+    fn reliability_is_derived_from_reward_and_never_stored() {
+        // Neutral (no reward), zero and full reward.
+        assert_eq!(derived_reliability(None), 5_000);
+        assert_eq!(derived_reliability(Some(1 << 31)), 5_000);
+        assert_eq!(derived_reliability(Some(0)), 0);
+        assert_eq!(
+            derived_reliability(Some(1 << 32)),
+            MAX_CAPABILITY_RELIABILITY
+        );
+        // Out-of-range rewards clamp rather than wrap.
+        assert_eq!(derived_reliability(Some(-5)), 0);
+        assert_eq!(
+            derived_reliability(Some(i64::MAX)),
+            MAX_CAPABILITY_RELIABILITY
+        );
+        // A quarter reward is 2500 basis points.
+        assert_eq!(derived_reliability(Some(1 << 30)), 2_500);
+        // The derived value is always a valid descriptor reliability.
+        let mut descriptor = descriptor();
+        descriptor.reliability = derived_reliability(Some(1 << 32));
+        assert!(descriptor.validate().is_ok());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R650.1

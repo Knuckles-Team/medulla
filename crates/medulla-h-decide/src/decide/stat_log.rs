@@ -815,6 +815,17 @@ fn dispatch(
         DecisionLogOp::GenerationSpace { .. } => {
             Err("generation_space is served on the async path".to_string())
         }
+        DecisionLogOp::WritebackAudit {
+            tenant_id,
+            change_set_id,
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogWritebackAudit,
+        >(super::stat_writeback::audit_rows(
+            ctx,
+            reader,
+            &tenant_id,
+            &change_set_id,
+        )?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,

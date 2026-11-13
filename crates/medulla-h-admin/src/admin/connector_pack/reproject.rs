@@ -41,6 +41,8 @@ pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<String>> =
     std::sync::Mutex::new(None);
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+mod capability;
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 pub(crate) mod surface;
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
