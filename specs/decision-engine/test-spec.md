@@ -1359,7 +1359,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::decide_routes_mode`.
 - `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::other_tenant_modes_are_not_read`.
 - `MEDULLA-DECISION-ENGINE-R148.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::invalid_config_refuses`.
-- `MEDULLA-DECISION-ENGINE-R148.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::config_evidence_binds_schema`.
+- `MEDULLA-DECISION-ENGINE-R148.5`: L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::config_evidence_binds_schema`.
 - `MEDULLA-DECISION-ENGINE-R148.6`: planned L4 `tests/decide/test_command_config_served.py::test_mode_decision_and_replay`.
 - `MEDULLA-DECISION-ENGINE-R149.1`: planned L1 `crates/medulla-work-types/src/memory.rs::tests::search_state_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R149.1`: planned L3 `tests/memory_sync_served.rs::search_state_survives_context_eviction`.

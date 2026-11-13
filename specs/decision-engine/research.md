@@ -610,3 +610,14 @@ The served Python engine admits one deployment tenant, so the "another tenant" c
 - Invalid input refuses (DE-REFUSE-VS-ABSTAIN): every code in the row is a typed refusal; a missing record, a twice-planned branch, a changed input and an absent policy all refuse and record nothing.
 - Another tenant's record is never read because the family reads only the caller's tenant artifact keys; it is therefore `BRANCH_MISSING` there.
 - `BranchOutcome` now concludes through its own family, so it leaves the shared-matrix kinds list in `registry_tests.rs`.
+
+## R148.5: command config premises
+
+Decision: the premises are named as the row states and the family's one `premises` hook seals them. A premise's
+subject is a static name in the family's premise list, so the per-rule validation premises are listed under one
+internal subject (`command_config.validation`, fact `<rule>=<type>`) and the hook names each sealed premise
+`command_config.validation:<rule>`; no second premise type and no change to the shared premise struct. A rule is a
+schema field: the build refuses a setting the schema does not name, a wrong type and a missing setting, so a
+successful build applied one presence-and-type rule per schema field. `settings_hash` is the SHA-256 of the mode's
+settings map as canonical JSON (a map ordered by key); `config_digest` is the digest the built config carries
+(domain-separated), so the two differ and a reader can check either.

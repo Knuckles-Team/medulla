@@ -12,8 +12,8 @@
 //! nothing.
 
 use medulla_decision_types::decision::command_config::{
-    build_config, select_mode, CommandConfigSchema, CommandMode, ModeDecision, ModeRefusal,
-    COMMAND_CONFIG_SCHEMA_VERSION, KNOBS,
+    build_config, select_mode, CommandConfigSchema, CommandMode, FieldType, ModeDecision,
+    ModeRefusal, COMMAND_CONFIG_SCHEMA_VERSION, KNOBS,
 };
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::statistical::{
@@ -88,6 +88,28 @@ fn nodes_of<T: serde::de::DeserializeOwned>(
     found
 }
 
+/// A premise true by the definition of the stored mode or schema, bound to the policy in force.
+fn definition(subject: &'static str, fact: String) -> FamilyPremise {
+    FamilyPremise {
+        subject,
+        fact,
+        class: PremiseClass::Definition,
+        source: FamilyPremiseSource::Policy,
+    }
+}
+
+/// The subject of the per-rule validation premises; the hook appends `:<rule>`.
+const VALIDATION_SUBJECT: &str = "command_config.validation";
+
+/// The type name a validation rule checks a setting against.
+fn type_name(field: FieldType) -> &'static str {
+    match field {
+        FieldType::Int => "int",
+        FieldType::Text => "text",
+        FieldType::Bool => "bool",
+    }
+}
+
 fn observation(subject: &'static str, fact: String, node_id: &str) -> FamilyPremise {
     FamilyPremise {
         subject,
@@ -136,7 +158,7 @@ fn conclude_mode(
 
     // The newest revision of the mode's schema.
     let schemas = nodes_of::<CommandConfigSchema>(view, SCHEMA_LABEL, tenant);
-    let Some((schema_node, schema)) = schemas
+    let Some((_, schema)) = schemas
         .iter()
         .filter(|(_, schema)| schema.schema_id == mode.schema_id)
         .max_by_key(|(_, schema)| schema.revision)
@@ -173,22 +195,34 @@ fn conclude_mode(
         format!("mode:{}", decision.mode_id),
         format!("config:{digest}"),
     ])?;
+    let settings_hash =
+        Digest256::sha256(&serde_json::to_vec(&mode.settings).map_err(|e| e.to_string())?).to_hex();
     executed.family_premises = vec![
-        observation(
-            "command_mode",
+        definition(
+            "command_config.mode",
             format!(
                 "command_config:mode={}@{}",
                 decision.mode_id, decision.mode_revision
             ),
+        ),
+        definition(
+            "command_config.schema",
+            format!(
+                "command_config:schema={}@{}#{}",
+                schema.schema_id,
+                schema.revision,
+                decision.schema_digest.to_hex()
+            ),
+        ),
+        observation(
+            "command_config.config_digest",
+            format!("command_config:config_digest={digest}"),
             &mode_node,
         ),
         observation(
-            "command_schema",
-            format!(
-                "command_config:schema={}@{}",
-                schema.schema_id, schema.revision
-            ),
-            schema_node,
+            "command_config.settings_hash",
+            format!("command_config:settings_hash={settings_hash}"),
+            &mode_node,
         ),
         observation(
             "command_decision",
@@ -196,6 +230,16 @@ fn conclude_mode(
             &mode_node,
         ),
     ];
+    // One validation premise per schema rule the build applied: a setting's presence and its
+    // type, in field order (the build refused before this point if any rule failed).
+    executed
+        .family_premises
+        .extend(schema.fields.iter().map(|(field, expected)| FamilyPremise {
+            subject: VALIDATION_SUBJECT,
+            fact: format!("{field}={}", type_name(*expected)),
+            class: PremiseClass::Proof,
+            source: FamilyPremiseSource::Policy,
+        }));
     Ok(executed)
 }
 
@@ -239,7 +283,16 @@ impl DecisionFamily for CommandConfigFamily {
         executed
             .family_premises
             .iter()
-            .map(|premise| premise.seal(policy_digest))
+            .map(|premise| {
+                let mut sealed = premise.seal(policy_digest);
+                if premise.subject == VALIDATION_SUBJECT {
+                    // The internal fact is `<rule>=<type>`; the sealed premise is named by its rule.
+                    let (rule, _) = premise.fact.split_once('=').unwrap_or((&premise.fact, ""));
+                    sealed.subject = format!("{VALIDATION_SUBJECT}:{rule}");
+                    sealed.fact = format!("command_config:validation:{}", premise.fact);
+                }
+                sealed
+            })
             .collect()
     }
 

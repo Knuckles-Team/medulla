@@ -364,7 +364,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T353 [US4] MEDULLA-DECISION-ENGINE-R148.2 Mode selection and config build
 - [ ] T354 [US4] MEDULLA-DECISION-ENGINE-R148.3 Command config family wiring
 - [ ] T355 [US4] MEDULLA-DECISION-ENGINE-R148.4 Command config refusals
-- [ ] T356 [US4] MEDULLA-DECISION-ENGINE-R148.5 Command config premises
+- [x] T356 [US4] MEDULLA-DECISION-ENGINE-R148.5 Command config premises
 - [ ] T357 [US4] MEDULLA-DECISION-ENGINE-R148.6 Served proof of mode decision and replay
 - [ ] T358 [US7] MEDULLA-DECISION-ENGINE-R149.1 Search-state model
 - [ ] T359 [US7] MEDULLA-DECISION-ENGINE-R149.2 Search-state validation

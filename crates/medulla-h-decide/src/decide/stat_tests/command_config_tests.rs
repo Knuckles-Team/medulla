@@ -234,7 +234,9 @@ async fn decide_routes_mode() {
     assert_eq!(decision.config.config_digest.to_hex(), fast_digest);
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
     assert!(facts.contains(&"command_config:mode=fast@7"));
-    assert!(facts.contains(&"command_config:schema=schema:cmd@3"));
+    assert!(facts
+        .iter()
+        .any(|fact| fact.starts_with("command_config:schema=schema:cmd@3#")));
 
     // Without a request the default ordinal (0) names `safe`.
     let record = ask(&h, &schema_pin, default.clone(), vec![]).await;
@@ -382,4 +384,98 @@ async fn other_tenant_modes_are_not_read() {
     )
     .unwrap_err();
     assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R148.5: the served record carries the schema (id, revision,
+/// digest) and the mode (id, revision) as Definition premises bound to the policy, the config
+/// digest and the settings hash as observations of the mode node, and one Proof premise per
+/// schema rule applied.
+// spec: MEDULLA-DECISION-ENGINE-R148.5
+#[tokio::test]
+async fn config_evidence_binds_schema() {
+    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    let h = harness().await;
+    let (schema_pin, _) = publish_route_schema(&h);
+    let record = ask(
+        &h,
+        &schema_pin,
+        DecisionPolicyRef::Default,
+        vec![text("mode_id", "fast")],
+    )
+    .await;
+    let by_subject = |subject: &str| {
+        record
+            .premises
+            .iter()
+            .find(|premise| premise.subject == subject)
+            .unwrap_or_else(|| panic!("no premise named {subject}: {:?}", record.premises))
+    };
+
+    let schema_digest =
+        medulla_types::contract::Digest256::sha256(&serde_json::to_vec(&schema()).unwrap())
+            .to_hex();
+    let schema_premise = by_subject("command_config.schema");
+    assert_eq!(
+        schema_premise.fact,
+        format!("command_config:schema=schema:cmd@3#{schema_digest}")
+    );
+    assert_eq!(schema_premise.class, PremiseClass::Definition);
+    assert!(matches!(
+        schema_premise.provenance,
+        PremiseProvenance::Policy { .. }
+    ));
+
+    let mode_premise = by_subject("command_config.mode");
+    assert_eq!(mode_premise.fact, "command_config:mode=fast@7");
+    assert_eq!(mode_premise.class, PremiseClass::Definition);
+    assert!(matches!(
+        mode_premise.provenance,
+        PremiseProvenance::Policy { .. }
+    ));
+
+    let fast_digest = digest_of("fast", settings(5, "fast"));
+    let digest_premise = by_subject("command_config.config_digest");
+    assert_eq!(
+        digest_premise.fact,
+        format!("command_config:config_digest={fast_digest}")
+    );
+    assert_eq!(digest_premise.class, PremiseClass::Observation);
+
+    let settings_hash = medulla_types::contract::Digest256::sha256(
+        &serde_json::to_vec(&settings(5, "fast")).unwrap(),
+    )
+    .to_hex();
+    let hash_premise = by_subject("command_config.settings_hash");
+    assert_eq!(
+        hash_premise.fact,
+        format!("command_config:settings_hash={settings_hash}")
+    );
+    assert_eq!(hash_premise.class, PremiseClass::Observation);
+
+    // One validation premise per schema rule (every field of the schema), named by its rule.
+    let rules: Vec<(&str, &str, PremiseClass)> = record
+        .premises
+        .iter()
+        .filter_map(|premise| {
+            premise
+                .subject
+                .strip_prefix("command_config.validation:")
+                .map(|rule| (rule, premise.fact.as_str(), premise.class))
+        })
+        .collect();
+    assert_eq!(
+        rules,
+        vec![
+            (
+                "label",
+                "command_config:validation:label=text",
+                PremiseClass::Proof
+            ),
+            (
+                "retries",
+                "command_config:validation:retries=int",
+                PremiseClass::Proof
+            ),
+        ]
+    );
 }
