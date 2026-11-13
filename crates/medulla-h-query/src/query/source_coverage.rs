@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(validate(&classes, None, 3, 64), Ok(3));
         assert_eq!(validate(&classes, Some(0), 3, 64), Ok(0));
         assert_eq!(validate(&classes, Some(8), 3, 64), Ok(8));
-        let code = |result: Result<usize, (&str, String)>| result.unwrap_err().0;
+        let code = |result: Result<usize, (&'static str, String)>| result.unwrap_err().0;
         assert_eq!(code(validate(&[], None, 3, 64)), SOURCE_COVERAGE_NO_CLASSES);
         assert_eq!(
             code(validate(&["a".into(), "b".into()], None, 3, 1)),
