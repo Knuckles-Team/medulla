@@ -240,7 +240,7 @@ def test_repository_default_manifest_is_fully_specified():
     fa = _module()
     groups = fa.load_groups(fa.DEFAULT_MANIFEST)
     assert len(groups) == 1
-    assert groups[0].name == "r820"
-    assert groups[0].warm_target == "medulla-r820-warm"
+    assert groups[0].name == "primary"
+    assert groups[0].warm_target == "medulla-primary-warm"
     assert 0.0 < groups[0].headroom < 1.0
     assert groups[0].concurrency >= 1

@@ -1,7 +1,7 @@
 """Static contract checks for the bounded all-feature test lifecycle.
 
 These checks intentionally inspect source only.  They do not start cargo,
-spawn a process, send a signal, or exercise the full feature matrix; the R820
+spawn a process, send a signal, or exercise the full feature matrix; the build-host
 operator run owns that one expensive validation.  Keeping the lifecycle
 invariants here prevents a future edit from silently restoring an unbounded
 runner or an unscoped process kill.

@@ -41,8 +41,8 @@ fn every_entity_class_resolves_through_its_declared_key() {
             "otel.service",
         ),
         (
-            log_with(&[("host.name", "r820")]),
-            entity(EntityClass::Host, "host:r820"),
+            log_with(&[("host.name", "node-a")]),
+            entity(EntityClass::Host, "host:node-a"),
             "otel.host",
         ),
         (
@@ -93,7 +93,7 @@ fn resolution_does_not_depend_on_declaration_order() {
     let forward = EntityDirectory::build(&policy, &estate());
     let backward = EntityDirectory::build(&policy, &reversed);
     assert_eq!(forward, backward);
-    let signal = log_with(&[("service.name", "payments"), ("host.name", "r820")]);
+    let signal = log_with(&[("service.name", "payments"), ("host.name", "node-a")]);
     assert_eq!(forward.resolve(&signal), backward.resolve(&signal));
     assert_eq!(forward.resolve(&signal), forward.resolve(&signal));
 }
@@ -102,7 +102,7 @@ fn resolution_does_not_depend_on_declaration_order() {
 fn an_unknown_entity_is_unresolved_not_guessed_from_a_looser_key() {
     // The host IS known, but the deciding (service) rule names an unknown
     // service: the signal must not fall through to the host.
-    let signal = log_with(&[("service.name", "ghost"), ("host.name", "r820")]);
+    let signal = log_with(&[("service.name", "ghost"), ("host.name", "node-a")]);
     assert_eq!(
         directory().resolve(&signal),
         Resolution::Unresolved(Unresolved::UnknownEntity {

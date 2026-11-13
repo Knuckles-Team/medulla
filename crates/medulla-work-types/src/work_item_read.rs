@@ -334,7 +334,7 @@ impl EffectWriteResult {
 }
 
 /// The stored form of one admitted request: its digest and the payload ref,
-/// never the bytes (R820.1).
+/// never the bytes (MEDULLA-DURABLE-KERNEL-R820.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

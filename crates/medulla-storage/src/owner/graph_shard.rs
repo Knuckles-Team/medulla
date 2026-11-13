@@ -158,11 +158,11 @@ pub(crate) const CURRENT_PLANS: TableDefinition<'static, (&str, &str), &[u8]> =
 pub(crate) const RUN_CHECKPOINTS: TableDefinition<'static, (&str, &str), &[u8]> =
     TableDefinition::new("work_item_run_checkpoints");
 
-/// The one effect receipt per `(graph, work_item_id, attempt)` (R820.1).
+/// The one effect receipt per `(graph, work_item_id, attempt)` (MEDULLA-DURABLE-KERNEL-R820.1).
 pub(crate) const EFFECT_RECEIPTS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
     TableDefinition::new("work_item_effect_receipts");
 
-/// The admitted request per `(graph, work_item_id, attempt)` (R820.1).
+/// The admitted request per `(graph, work_item_id, attempt)` (MEDULLA-DURABLE-KERNEL-R820.1).
 pub(crate) const ADMITTED_REQUESTS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
     TableDefinition::new("work_item_admitted_requests");
 

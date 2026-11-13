@@ -14,10 +14,10 @@
 #
 # WHERE TO RUN: cargo-llvm-cov instrumented builds are substantially larger
 # and slower than normal ones, and this workspace's own convention is to
-# run heavy Rust builds on the R820 build host, never the interactive dev
+# run heavy Rust builds on the build host, never the interactive dev
 # host (see AGENTS.md "constrained-parallelism gate" / CLAUDE.md build-host
 # note). This script does not fail if run elsewhere, but the default
-# CARGO_TARGET_DIR below assumes R820's local scratch disk layout -- override
+# CARGO_TARGET_DIR below assumes the build host's local scratch disk layout -- override
 # it if that assumption is wrong for your host.
 #
 # REQUIREMENTS: `cargo install cargo-llvm-cov` on the toolchain in
@@ -66,7 +66,7 @@ OUT="${MEDULLA_COV_OUT:-${TMPDIR:-/tmp}/medulla-coverage-$(date +%Y%m%d)}"
 mkdir -p "$OUT/raw"
 
 # NEVER silently proceed on a starved fd table -- see AGENTS.md /
-# CLAUDE.md "ulimit -n 65536 is mandatory on R820" note; the default 1024
+# CLAUDE.md "ulimit -n 65536 is mandatory on the build host" note; the default 1024
 # produces ~86 phantom "Too many open files" failures across this suite.
 CURRENT_NOFILE="$(ulimit -n)"
 if [[ "$CURRENT_NOFILE" -lt 65536 ]]; then

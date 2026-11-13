@@ -209,7 +209,7 @@ pub const GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS: LayoutPredecessor = LayoutPredeces
 };
 
 // Frozen census of the last layout before work-item effect receipts and
-// admitted requests (R820.1).
+// admitted requests (MEDULLA-DURABLE-KERNEL-R820.1).
 const GRAPH_SHARD_TABLES_BEFORE_EFFECT_RECEIPTS: &[&str] = super::graph_shard::graph_shard_table_names!(
     "repository_enrichment_budgets",
     "repository_enrichment_policy_revisions",
