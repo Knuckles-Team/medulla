@@ -495,7 +495,6 @@ async fn prepare_permissions(
         governance: Default::default(),
         drift: Vec::new(),
         committed_graph_version: ctx.graph_version.saturating_add(1),
-        drift: Vec::new(),
     })
 }
 
