@@ -36,8 +36,7 @@ use super::stat_generation::{
 use super::stat_generation_cycle::{
     job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
 };
-use super::stat_log::store_once;
-use super::stat_log::LogReader;
+use super::stat_log::{store_once, LogReader};
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
@@ -373,6 +372,7 @@ async fn index_kernel(
     .await
     .map_err(|error| error.to_string())??;
     AdapterKernel::of(&fitted.body)
+}
 
 /// Request the background analytics lease a drift evaluation holds. The request is idempotent
 /// per graph and evaluation window, and expires with its ttl.
