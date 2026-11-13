@@ -390,6 +390,8 @@ knobs! {
     ingest_reconcile_sweep_interval_s: u64 = "ingest.reconcile_sweep_interval_s", U64(300), [10, 86_400], "s", Tunable;
     /// Most nodes one document delete cascade may remove (MEDULLA-UNIFIED-DATA-PLANE-R651.4).
     document_max_cascade_nodes: u64 = "document.max_cascade_nodes", U64(100_000), [1, 10_000_000], "nodes", Tunable;
+    /// Most containers one served architecture view may hold (MEDULLA-CQ-ORCH-R010.2).
+    architecture_view_max_containers: u64 = "architecture_view.max_containers", U64(512), [16, 4_096], "containers", Tunable;
     /// TOC maximum served span.
     toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Events each graph keeps in its change-feed ring; a cursor older than the window is `CURSOR_EXPIRED` (MEDULLA-ENGINE-PARITY-R015.2).

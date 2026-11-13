@@ -29,6 +29,8 @@ method_results! {
     SourceSync(SourceSync) => Json<medulla_source_types::source_sync::SyncReport>;
     DomainPackPreviewResult(DomainPack / "preview") => Raw<medulla_catalog_types::domain_pack::DomainPackPreview>;
     DomainPackRunResult(DomainPack / "run") => Raw<medulla_catalog_types::domain_pack::DomainPackRun>;
+    // MEDULLA-CQ-ORCH-R010.3: the served architecture view.
+    ArchitectureView(ArchitectureView) => Json<medulla_catalog_types::architecture_view::ArchitectureViewResponse>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_types::source_toc::ReadSpanResult>;

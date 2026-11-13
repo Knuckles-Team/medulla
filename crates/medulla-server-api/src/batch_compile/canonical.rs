@@ -598,6 +598,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-SRC-AUTH-R012.6: a sync commits as one request-graph `BatchUpdate`.
         | Method::SourceSync { .. }
         | Method::ArchitectureModelExport { .. }
+        | Method::ArchitectureView { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }
         | Method::BranchDiff { .. }

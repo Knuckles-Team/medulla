@@ -153,6 +153,14 @@ $($variants)*
         document: String,
         expected_version: Option<u32>,
     },
+    /// MEDULLA-CQ-ORCH-R010.3: the derived architecture view of one ingested
+    /// repository (containers, `calls` edges, support paths) with the snapshot
+    /// revision it was read at and its canonical digest. Reads only; refuses
+    /// `VIEW_NO_SUPPORTING_SOURCE`, `VIEW_UNKNOWN_REPOSITORY`,
+    /// `VIEW_STALE_REVISION` and `VIEW_TOO_LARGE`.
+    ArchitectureView {
+        scope: medulla_catalog_types::architecture_view::ViewScope,
+    },
     /// Export the visible architecture nodes as one Open Exchange Format
     /// document (MEDULLA-CQ-ORCH-R705.6). `scope` names an optional graph
     /// within the caller's tenant. Reads only.

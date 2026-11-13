@@ -127,6 +127,40 @@ struct Package {
     support: BTreeSet<String>,
 }
 
+/// The repository-snapshot digest of `repository_id` in this read view: SHA-256 (64 lowercase hex
+/// characters) over the sorted `(node id, file path, content digest)` of every node the
+/// repository's ingest committed. `None` when the view holds no node of the repository. Two reads
+/// of the same committed snapshot give the same digest; a newer committed snapshot changes it
+/// (MEDULLA-CQ-ORCH-R010.3).
+pub fn repository_revision(core: &GraphCore, repository_id: &str) -> Option<String> {
+    let mut rows: Vec<(String, String, String)> = Vec::new();
+    for (id, properties) in core.get_nodes() {
+        let props = decode(&properties);
+        if text(&props, "repository_id") != Some(repository_id) {
+            continue;
+        }
+        rows.push((
+            id,
+            path_of(&props).unwrap_or_default().to_owned(),
+            text(&props, "content_digest")
+                .unwrap_or_default()
+                .to_owned(),
+        ));
+    }
+    if rows.is_empty() {
+        return None;
+    }
+    rows.sort();
+    let mut material = b"eg/repository-snapshot/v1".to_vec();
+    for (id, path, digest) in &rows {
+        for part in [id, path, digest] {
+            material.extend((part.len() as u64).to_be_bytes());
+            material.extend(part.as_bytes());
+        }
+    }
+    Some(medulla_types::archimate_exchange::sha256_hex(&material))
+}
+
 /// Derive the view with the default rules.
 pub fn derive_architecture_view(
     core: &GraphCore,

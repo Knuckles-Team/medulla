@@ -7282,6 +7282,25 @@ class GraphOperationsClient:
             raise RuntimeError("RetrievalRound must answer with an object")
         return result
 
+    async def architecture_view(
+        self, repository_id: str, revision: str | None = None
+    ) -> dict[str, Any]:
+        """Read the derived architecture view of one ingested repository
+        (MEDULLA-CQ-ORCH-R010.3).
+
+        Returns ``{view: {containers, edges}, revision, digest}``. A stated
+        ``revision`` that is not the newest committed snapshot digest is refused
+        with ``VIEW_STALE_REVISION``; an invisible repository with
+        ``VIEW_UNKNOWN_REPOSITORY``.
+        """
+        scope: dict[str, Any] = {"repository_id": repository_id, "revision": revision}
+        result = await self._client._send(
+            "ArchitectureView", {"scope": scope}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ArchitectureView must answer with an object")
+        return result
+
     async def architecture_model_import(
         self, document: str, expected_version: int | None = None
     ) -> dict[str, Any]:

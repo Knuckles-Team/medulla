@@ -36,6 +36,7 @@ use medulla_protocol_types::protocol::TextSource;
 use medulla_protocol_types::protocol::TransactionSource;
 use medulla_protocol_types::protocol::VectorSource;
 
+mod architecture;
 mod association;
 mod classic;
 mod entity;
@@ -171,6 +172,14 @@ pub fn try_handle(
                 },
             ))
         }
+        // MEDULLA-CQ-ORCH-R010.3: the derived architecture view; a read of the
+        // caller's projected graph.
+        Method::ArchitectureView { scope } => Ok(architecture::handle_architecture_view(
+            req_id,
+            &core,
+            read_authority,
+            &scope,
+        )),
         other => Err(other),
     }
 }

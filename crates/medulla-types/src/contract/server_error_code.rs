@@ -132,6 +132,11 @@ closed_error_codes! {
         SyncNoSystemOfRecord => "SYNC_NO_SYSTEM_OF_RECORD",
         SyncAdapterMissing => "SYNC_ADAPTER_MISSING",
         SyncDirectionRefused => "SYNC_DIRECTION_REFUSED",
+        // MEDULLA-CQ-ORCH-R010.3: the ArchitectureView refusals.
+        ViewNoSupportingSource => "VIEW_NO_SUPPORTING_SOURCE",
+        ViewUnknownRepository => "VIEW_UNKNOWN_REPOSITORY",
+        ViewStaleRevision => "VIEW_STALE_REVISION",
+        ViewTooLarge => "VIEW_TOO_LARGE",
         SpanInverted => "SPAN_INVERTED",
         SpanOutOfBounds => "SPAN_OUT_OF_BOUNDS",
         SpanTooLarge => "SPAN_TOO_LARGE",

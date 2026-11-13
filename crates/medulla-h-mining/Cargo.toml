@@ -28,6 +28,7 @@ serde_json = "1.0"
 sha2 = "0.10"
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-core = { path = "../medulla-core" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-server-ops = { path = "../medulla-server-ops" }

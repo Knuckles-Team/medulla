@@ -794,6 +794,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SYNC_DIRECTION_REFUSED",
         ],
     ),
+    // MEDULLA-CQ-ORCH-R010.3/R010.4: a view the derivation refuses.
+    (
+        "ArchitectureView",
+        &[
+            "VIEW_NO_SUPPORTING_SOURCE",
+            "VIEW_UNKNOWN_REPOSITORY",
+            "VIEW_STALE_REVISION",
+            "VIEW_TOO_LARGE",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R153.4: a span the stored table cannot serve.
     (
         "ReadSpan",

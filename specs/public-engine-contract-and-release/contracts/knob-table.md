@@ -65,6 +65,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `pattern.doji_body_max` | f64 | 0.1 | [0.01, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_DOJI_BODY_MAX` |
 | `pattern.shadow_ratio_min` | f64 | 2.0 | [1.5, 4.0] | ratio | Tunable | `MEDULLA_PATTERN_SHADOW_RATIO_MIN` |
 | `pattern.wick_max` | f64 | 0.1 | [0.0, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_WICK_MAX` |
+| `architecture_view.max_containers` | u64 | 512 | [16, 4096] | containers | Tunable | none (registry knob only) |
 | `process.document_max_bytes` | u64 | 16777216 | [1024, 268435456] | bytes | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_BYTES` |
 | `process.document_max_depth` | u64 | 64 | [4, 256] | levels | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_DEPTH` |
 | `sync.max_records` | u64 | 50000 | [1, 1000000] | records | Tunable | `MEDULLA_SYNC_MAX_RECORDS` |

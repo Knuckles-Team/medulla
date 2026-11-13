@@ -88,6 +88,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ContextFacts",
     "ReadSpan",
     "ArchitectureModelExport",
+    // MEDULLA-CQ-ORCH-R010.3: `mining::architecture::handle_architecture_view` derives the view
+    // from the core `read_authority.project_core` projected.
+    "ArchitectureView",
     "OpenGraphSnapshot",
     "ReadGraphChanges",
     // MEDULLA-INGEST-WORKER-R001.1008: the handler reads declaration nodes only
