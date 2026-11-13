@@ -538,17 +538,26 @@ fn apply_set_pose(
     >(ok))
 }
 
-/// `AddEmbedding`: pure extract-method from `try_handle_gateway`'s closure,
-/// byte-identical behaviour, no signature change.
-fn apply_add_embedding(
+/// Where an `AddEmbedding` commit reports its vector to the drift monitors.
+pub(super) struct EmbeddingWriteScope {
+    pub(super) tenant: String,
+    pub(super) graph: String,
+    pub(super) shard: u32,
+}
+
+/// `AddEmbedding`: pure extract-method from `try_handle_gateway`'s closure. After the vector
+/// commits it is reported to the installed drift monitors (MEDULLA-DECISION-ENGINE-R174.8.3).
+pub(super) fn apply_add_embedding(
     core: &GraphCore,
     node_id: String,
     embedding: Vec<f32>,
+    scope: &EmbeddingWriteScope,
 ) -> Result<ResultPayload, String> {
     let source_version = core.version();
+    let written = embedding.clone();
     core.semantic_store
         .write()
-        .add_embedding(node_id, embedding)
+        .add_embedding(node_id.clone(), embedding)
         .map_err(|error| error.to_string())?;
     // Content-derived indexes are unchanged by a vector-only mutation, but their
     // completeness manifest must advance with the graph version that
@@ -559,7 +568,42 @@ fn apply_add_embedding(
         core.node_count(),
         core.edge_count(),
     );
+    report_embedding_write(
+        core,
+        &node_id,
+        &written,
+        source_version.saturating_add(1),
+        scope,
+    );
     Ok(ResultPayload::String("ok".to_string()))
+}
+
+/// Feed the committed vector and the node's text tokens to the drift monitors.
+fn report_embedding_write(
+    core: &GraphCore,
+    node_id: &str,
+    vector: &[f32],
+    version: u64,
+    scope: &EmbeddingWriteScope,
+) {
+    let Some(signals) = medulla_retrieval::discover_signals::discover_signals() else {
+        return;
+    };
+    let (name, description, node_type) = super::semantic::node_text(core, node_id);
+    let tokens: Vec<String> = format!("{name} {description}")
+        .split_whitespace()
+        .map(str::to_lowercase)
+        .collect();
+    signals.observe_write(&medulla_retrieval::discover_signals::WrittenVector {
+        tenant: &scope.tenant,
+        graph: &scope.graph,
+        shard: scope.shard,
+        node_id,
+        node_type: &node_type,
+        vector,
+        tokens: &tokens,
+        version,
+    });
 }
 
 /// `SupersedeEdge`: pure extract-method from `try_handle_gateway`'s closure,

@@ -12,7 +12,7 @@ const DISCOVER_KW_WEIGHT: f32 = 0.4;
 /// `name` falls back to the node id, `type` falls back to a `node_type` field, and
 /// a missing/undecodable blob yields `(id, "", "")` — so the op never fails on a
 /// text-less node, it just returns what it can.
-fn node_text(core: &GraphCore, node_id: &str) -> (String, String, String) {
+pub(super) fn node_text(core: &GraphCore, node_id: &str) -> (String, String, String) {
     let Some(blob) = core.get_node_properties(node_id) else {
         return (node_id.to_string(), String::new(), String::new());
     };
@@ -173,6 +173,10 @@ struct DiscoverCall<'a> {
     hops: u32,
     as_of: Option<i64>,
     graph_name: &'a str,
+    /// The verified carrier tenant; drift monitors are read under it.
+    tenant: Option<&'a str>,
+    /// Digest of the adapter that re-aimed this query, `None` for the base space.
+    adapter_digest: Option<&'a str>,
 }
 
 #[cfg(feature = "query")]
@@ -334,9 +338,15 @@ fn discover(
             store.embedded_through_version(),
         )
     };
-    let signals = medulla_retrieval::discover_signals::discover_signals()
-        .map(|source| source.read(call.graph_name))
-        .unwrap_or_default();
+    let mut signals = match (
+        medulla_retrieval::discover_signals::discover_signals(),
+        call.tenant,
+    ) {
+        (Some(source), Some(tenant)) => source.read(tenant, call.graph_name),
+        _ => Default::default(),
+    };
+    // The adapter digest is the one this very response was ranked with.
+    signals.adapter_digest = call.adapter_digest.map(str::to_string);
     let verdict = super::discover_quality::quality_verdict(
         &super::discover_quality::QualityInputs {
             hits: &results,
@@ -366,6 +376,21 @@ fn discover(
     )
 }
 
+/// The verified carrier tenant of a `Discover` read and the digest of the adapter that
+/// re-aims its query (MEDULLA-FEDERATED-QUERY-R089.7, MEDULLA-DECISION-ENGINE-R174.7.5).
+#[cfg(all(feature = "query", feature = "decide"))]
+async fn discover_served(ctx: &GraphOpsContext<'_>) -> (Option<String>, Option<String>) {
+    use medulla_server_ops::api::admin::served_adapter::{carrier_tenant, resolve_served};
+    let tenant = carrier_tenant(Some(ctx.read_authority)).map(str::to_string);
+    let adapter = resolve_served(ctx.state, tenant.as_deref(), ctx.graph_name, ctx.core).await;
+    (tenant, adapter.map(|a| a.digest().to_string()))
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+async fn discover_served(_ctx: &GraphOpsContext<'_>) -> (Option<String>, Option<String>) {
+    (None, None)
+}
+
 /// Serve `Discover`: plan off the reactor (the provider and embedder are blocking network
 /// clients; one provider call per request), then rank. A planner refusal returns its wire
 /// code, no rows and writes nothing.
@@ -382,7 +407,9 @@ async fn handle_discover(
     query_text: Option<String>,
     mode: medulla_types::ingestion_wire::DiscoverMode,
     as_of: Option<i64>,
+    served: (Option<String>, Option<String>),
 ) -> Response {
+    let (tenant, adapter_digest) = served;
     let request = medulla_types::ingestion_wire::DiscoverPlanRequest {
         query_text,
         mode,
@@ -411,6 +438,8 @@ async fn handle_discover(
             hops,
             as_of,
             graph_name,
+            tenant: tenant.as_deref(),
+            adapter_digest: adapter_digest.as_deref(),
         },
         deep,
         req_id,
@@ -556,6 +585,7 @@ pub(super) async fn try_handle_semantic_compute(
             as_of,
             ..
         } => {
+            let served = discover_served(&ctx).await;
             handle_discover(
                 req_id,
                 core,
@@ -567,6 +597,7 @@ pub(super) async fn try_handle_semantic_compute(
                 query_text,
                 mode,
                 as_of,
+                served,
             )
             .await
         }

@@ -36,6 +36,10 @@ pub fn install_seams(state: &ServerState) {
         std::sync::Arc::new(medulla_h_decide::decide::DecideSeam),
     );
 
+    // Drift monitors: the Discover signal source and the write observer.
+    #[cfg(feature = "decide")]
+    let _ = medulla_h_decide::decide::drift_registry::install();
+
     // L5 query, txn, wire.
     #[cfg(all(feature = "query", feature = "nl-query"))]
     medulla_h_query::query::expansion::install_expansion_provider();

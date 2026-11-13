@@ -23,6 +23,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval::PointerRef,
 };
 
+use super::drift_registry::registry;
 use super::stat_adapter::{
     adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
     scoped_adapter_pointer,
@@ -35,6 +36,7 @@ use super::stat_generation::{
 use super::stat_generation_cycle::{
     job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
 };
+use super::stat_log::store_once;
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
@@ -42,6 +44,11 @@ use super::stat_run_credit::record_run;
 use super::stat_support::invalid_parameter;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
+use medulla_decision_stats::decision::drift::DriftThresholds;
+use medulla_decision_types::decision::statistical::retrieval_drift::{
+    DriftEvaluated, FiringShard, RefreshPlan, RefreshPriority, ScheduledRefresh,
+};
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::Method;
@@ -60,6 +67,8 @@ pub(super) struct LearningInputs {
     graphs: Vec<GraphVectors>,
     /// What a generation cycle runs with; `None` for every other write.
     cycle: Option<CycleSupport>,
+    /// The background analytics lease of a drift evaluation; `None` for every other write.
+    drift_lease: Option<String>,
 }
 
 /// The background lease and embedder of one generation-cycle submission.
@@ -135,6 +144,60 @@ impl Serving<'_> {
             batch_nodes: medulla_server_api::knob_config::knobs().generation_batch_nodes as usize,
         };
         run_cycle(&run, request)
+    }
+
+    /// Evaluate the logical graph's drift monitors on the lease the write acquired and
+    /// schedule one refresh plan for the shards that fire (MEDULLA-DECISION-ENGINE-R174.8.3).
+    fn evaluate_drift(&self, logical: &str) -> Result<LearningRecorded, String> {
+        self.inputs
+            .drift_lease
+            .as_ref()
+            .ok_or("a drift evaluation holds no analytics lease")?;
+        let policy = DecisionPolicy::engine_default();
+        let thresholds = DriftThresholds::from_policy(&policy);
+        let (monitored_shards, firing) = registry().evaluate(self.tenant(), logical, &thresholds);
+        let mut regions = Vec::new();
+        let mut shards = Vec::new();
+        for (shard_id, kinds, shard_regions) in &firing {
+            regions.extend(shard_regions.iter().cloned());
+            shards.push(FiringShard {
+                shard_id: *shard_id,
+                kinds: kinds.clone(),
+            });
+        }
+        let scheduled = match shards.first().and_then(|s| s.kinds.first()).copied() {
+            None => None,
+            Some(reason) => {
+                let to = regions.iter().map(|r| r.revision_to).max().unwrap_or(0);
+                let plan = RefreshPlan::new(
+                    logical.to_string(),
+                    regions,
+                    reason,
+                    RefreshPriority::Downtime,
+                    format!("refresh-{logical}@{to}"),
+                )
+                .map_err(|detail| invalid(&detail))?;
+                let plan_digest = digest_text("eg/drift-refresh-plan/v1", &plan);
+                let record = ScheduledRefresh {
+                    plan_digest: plan_digest.clone(),
+                    plan,
+                    scheduled_at_ms: self.ctx.now_ms,
+                };
+                Some(store_once(
+                    self.ctx,
+                    format!("drift-plan:{plan_digest}"),
+                    "drift refresh plan",
+                    record,
+                    |existing, fresh| existing.plan == fresh.plan,
+                )?)
+            }
+        };
+        Ok(LearningRecorded::Drift(Box::new(DriftEvaluated {
+            logical_graph: logical.to_string(),
+            monitored_shards,
+            firing: shards,
+            scheduled,
+        })))
     }
 
     fn evaluate(&self, request: &GenerationEvalRequest) -> Result<LearningRecorded, String> {
@@ -221,6 +284,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         ],
         LearningWrite::RefreshFreshness { request } => vec![request.logical_graph.as_str()],
         LearningWrite::RecordOutcome { .. }
+        | LearningWrite::EvaluateDrift { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
@@ -309,6 +373,54 @@ async fn index_kernel(
     .await
     .map_err(|error| error.to_string())??;
     AdapterKernel::of(&fitted.body)
+
+/// Request the background analytics lease a drift evaluation holds. The request is idempotent
+/// per graph and evaluation window, and expires with its ttl.
+async fn acquire_drift_lease(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    tenant: &str,
+    logical: &str,
+    cell: &str,
+) -> Result<String, String> {
+    let persistence = state.read().await.persistence.clone().ok_or_else(|| {
+        "CAPACITY_UNAVAILABLE: a drift evaluation needs the durable capacity ledger".to_string()
+    })?;
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let id = format!(
+        "drift-eval:{}",
+        digest_text(
+            "eg/drift-eval-job/v1",
+            &(logical, now_ms / CYCLE_LEASE_TTL_MS)
+        )
+    );
+    let lease_id = format!("lease:{id}");
+    let acquire = CapacityAcquireRequest {
+        schema_version: NativeControlSchemaVersion::V1,
+        tenant_ref: tenant.to_string(),
+        work_item_id: id.clone(),
+        owner_digest: digest_text("eg/drift-eval-owner/v1", &verified.agent_id()),
+        idempotency_key: id,
+        priority: LeasePriority::BackgroundIngestion,
+        demands: vec![CapacityDemand {
+            cell_id: cell.to_string(),
+            resource_class: CapacityResourceClass::Cpu,
+            amount: 1,
+        }],
+        lease_id: Some(lease_id.clone()),
+        ttl_ms: CYCLE_LEASE_TTL_MS,
+        now_ms,
+        cost_budget_micros: None,
+        token_budget: None,
+    };
+    persistence
+        .commit_capacity_lease(
+            &medulla_kernel::persist::sanitize(logical),
+            Method::AcquireCapacity { request: acquire },
+        )
+        .await
+        .map_err(|error| format!("CAPACITY_UNAVAILABLE: {error}"))?;
+    Ok(lease_id)
 }
 
 /// Resolve the inputs of a learning write; `None` for every other log op.
@@ -350,10 +462,27 @@ pub(super) async fn prepare(
         }
         _ => None,
     };
+    let drift_lease = match write {
+        LearningWrite::EvaluateDrift {
+            logical_graph,
+            capacity_cell,
+        } => Some(
+            acquire_drift_lease(
+                state,
+                verified,
+                &served_tenant,
+                logical_graph,
+                capacity_cell,
+            )
+            .await?,
+        ),
+        _ => None,
+    };
     Ok(Some(LearningInputs {
         served_tenant,
         graphs,
         cycle,
+        drift_lease,
     }))
 }
 
@@ -387,6 +516,7 @@ pub(super) fn dispatch(
         LearningWrite::UploadDistilledScores { upload } => Ok(LearningRecorded::DistilledScores(
             Box::new(upload_scores(ctx, *upload)?),
         )),
+        LearningWrite::EvaluateDrift { logical_graph, .. } => s.evaluate_drift(&logical_graph),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

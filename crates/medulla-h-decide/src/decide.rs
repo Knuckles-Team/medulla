@@ -34,6 +34,8 @@ mod family;
 #[cfg(feature = "decide")]
 mod stat_adapter;
 #[cfg(feature = "decide")]
+pub mod drift_registry;
+#[cfg(feature = "decide")]
 mod stat_belief;
 mod stat_capability_outcome;
 #[cfg(feature = "decide")]

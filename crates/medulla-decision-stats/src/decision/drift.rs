@@ -72,6 +72,14 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(1_000_000_000),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "drift.reference_vectors",
+        unit: "vectors",
+        default: KnobValue::Integer(64),
+        min: KnobValue::Integer(2),
+        max: KnobValue::Integer(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The thresholds one evaluation compares against.

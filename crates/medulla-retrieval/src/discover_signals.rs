@@ -22,10 +22,36 @@ pub struct SignalsReading {
     pub adapter_digest: Option<String>,
 }
 
-/// Drift and adapter evidence, read once per `Discover` response.
+/// One written vector, as the commit path reports it to the drift monitors.
+#[derive(Debug, Clone, Copy)]
+pub struct WrittenVector<'a> {
+    /// The verified carrier's tenant scope; monitors are never shared across tenants.
+    pub tenant: &'a str,
+    /// The graph the vector was committed to.
+    pub graph: &'a str,
+    /// The shard that stores the graph.
+    pub shard: u32,
+    /// The node the vector belongs to.
+    pub node_id: &'a str,
+    /// The node's type.
+    pub node_type: &'a str,
+    /// The embedding that was committed.
+    pub vector: &'a [f32],
+    /// The text tokens of the node.
+    pub tokens: &'a [String],
+    /// The graph version the write committed at.
+    pub version: u64,
+}
+
+/// Drift and adapter evidence, read once per `Discover` response, and the write feed
+/// that keeps it current.
 pub trait DiscoverSignals: Send + Sync {
-    /// Read the evidence for the caller's graph.
-    fn read(&self, graph: &str) -> SignalsReading;
+    /// Read the evidence for the caller's graph under the caller's tenant.
+    fn read(&self, tenant: &str, graph: &str) -> SignalsReading;
+
+    /// One committed embedding write (the write commit path of
+    /// MEDULLA-DECISION-ENGINE-R174.8.3).
+    fn observe_write(&self, write: &WrittenVector<'_>);
 }
 
 static SIGNALS: OnceLock<Arc<dyn DiscoverSignals>> = OnceLock::new();

@@ -2004,6 +2004,11 @@ path = "tests/derive_golden.rs"
 required-features = ["numeric", "query", "promql"]
 
 [[test]]
+name = "discover_quality_verdict"
+path = "tests/discover_quality_verdict.rs"
+required-features = ["decide", "query"]
+
+[[test]]
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"
 

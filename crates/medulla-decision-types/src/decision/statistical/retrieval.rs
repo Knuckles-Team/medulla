@@ -327,6 +327,13 @@ pub enum LearningWrite {
     UploadDistilledScores {
         upload: Box<super::distilled::DistilledUpload>,
     },
+    /// Evaluate the drift monitors of a logical graph and schedule one refresh plan for the
+    /// shards that fire (MEDULLA-DECISION-ENGINE-R174.8.3).
+    EvaluateDrift {
+        logical_graph: String,
+        /// The capacity cell the background analytics lease is drawn from.
+        capacity_cell: String,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -346,6 +353,7 @@ impl LearningWrite {
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
             | Self::UploadDistilledScores { .. }
+            | Self::EvaluateDrift { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }
@@ -366,6 +374,7 @@ pub enum LearningRecorded {
     Refreshed(Box<super::retrieval_refresh::FreshnessReceipt>),
     /// The scorer manifest after a distilled score upload.
     DistilledScores(Box<super::distilled::DistilledScorerManifest>),
+    Drift(Box<super::retrieval_drift::DriftEvaluated>),
 }
 
 #[cfg(test)]

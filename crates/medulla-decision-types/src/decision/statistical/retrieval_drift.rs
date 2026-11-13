@@ -111,6 +111,43 @@ impl RefreshPlan {
     }
 }
 
+/// One shard whose drift signals are firing, with the kinds that fire.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FiringShard {
+    pub shard_id: u32,
+    pub kinds: Vec<DriftKind>,
+}
+
+/// A refresh plan scheduled for a firing drift (MEDULLA-DECISION-ENGINE-R174.8.3).
+///
+/// The record is keyed by the digest of its plan, so one drift schedules one plan: the same
+/// firing evaluated again finds the record and schedules nothing new.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduledRefresh {
+    pub plan_digest: String,
+    pub plan: RefreshPlan,
+    /// Recorded scheduling time in milliseconds since the epoch.
+    pub scheduled_at_ms: u64,
+}
+
+/// What one drift evaluation of a logical graph found.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DriftEvaluated {
+    pub logical_graph: String,
+    /// Shards with a monitor under the caller's tenant.
+    pub monitored_shards: u32,
+    /// Shards whose signals fire now.
+    pub firing: Vec<FiringShard>,
+    /// The scheduled plan; `None` when nothing fires.
+    pub scheduled: Option<ScheduledRefresh>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

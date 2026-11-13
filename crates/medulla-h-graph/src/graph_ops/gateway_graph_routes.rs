@@ -618,8 +618,15 @@ async fn try_handle_trajectory(
         }
         Method::AddEmbedding { node_id, embedding } => {
             let (node_id, embedding) = (node_id.clone(), embedding.clone());
+            let scope = super::gateway_graph::EmbeddingWriteScope {
+                tenant: ctx.tenant_scope.to_string(),
+                graph: ctx.graph_name.to_string(),
+                shard: ctx.persistence.map_or(0, |p| {
+                    p.shard_of(&medulla_kernel::persist::sanitize(ctx.graph_name))
+                }) as u32,
+            };
             commit_gateway(ctx, plan, method, move |core| {
-                apply_add_embedding(core, node_id, embedding)
+                super::gateway_graph::apply_add_embedding(core, node_id, embedding, &scope)
             })
             .await
         }
