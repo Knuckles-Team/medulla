@@ -28,11 +28,17 @@ pub const MAX_HYPOTHETICAL_BYTES: usize = 512;
 /// provider calls through, so the parse is testable without a network.
 pub trait ChatComplete: Send + Sync {
     fn complete(&self, system: &str, user: &str) -> Result<String, String>;
+    /// The model this client asks.
+    fn model(&self) -> String;
 }
 
 impl ChatComplete for UreqNlPlanner {
     fn complete(&self, system: &str, user: &str) -> Result<String, String> {
         UreqNlPlanner::complete(self, system, user)
+    }
+
+    fn model(&self) -> String {
+        UreqNlPlanner::model(self).to_string()
     }
 }
 
@@ -154,6 +160,14 @@ impl ExpansionProvider for HttpExpansionProvider {
             .map_err(|message| ExpansionError::ProviderFailed { message })?;
         parse_expansions(&raw, req)
     }
+
+    fn provider_id(&self) -> String {
+        format!("http-chat:{}", self.client.model())
+    }
+
+    fn provider_revision(&self) -> String {
+        expansion_digest(system_prompt())
+    }
 }
 
 /// Install the provider from the `nl_query` config section, once, at server start.
@@ -219,6 +233,9 @@ mod tests {
     impl ChatComplete for Scripted {
         fn complete(&self, _: &str, _: &str) -> Result<String, String> {
             self.0.clone()
+        }
+        fn model(&self) -> String {
+            "scripted".into()
         }
     }
 

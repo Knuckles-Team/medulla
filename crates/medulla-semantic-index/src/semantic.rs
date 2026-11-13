@@ -30,7 +30,12 @@ pub use medulla_numeric::cluster::{CancelToken, ClusterConfig, Progress, Progres
 /// clone keeps its source's stamp because it holds its source's content; its next mutation draws
 /// a new one. Rebuilding or warming an index over UNCHANGED vectors does not restamp.
 #[derive(Debug)]
-pub struct GenerationStamp(std::sync::atomic::AtomicU64);
+pub struct GenerationStamp(
+    std::sync::atomic::AtomicU64,
+    /// The graph version through which committed embeddings are published
+    /// (MEDULLA-FEDERATED-QUERY-R089.2, stale-index mode). Not part of the content stamp.
+    std::sync::atomic::AtomicU64,
+);
 
 static NEXT_EMBEDDING_GENERATION: std::sync::atomic::AtomicU64 =
     std::sync::atomic::AtomicU64::new(1);
@@ -38,9 +43,10 @@ static NEXT_EMBEDDING_GENERATION: std::sync::atomic::AtomicU64 =
 impl GenerationStamp {
     /// A stamp no other store state has carried.
     pub fn fresh() -> Self {
-        Self(std::sync::atomic::AtomicU64::new(
-            next_embedding_generation(),
-        ))
+        Self(
+            std::sync::atomic::AtomicU64::new(next_embedding_generation()),
+            std::sync::atomic::AtomicU64::new(0),
+        )
     }
 
     /// The current stamp.
@@ -51,7 +57,21 @@ impl GenerationStamp {
     /// A stamp for a copy of the store: the copy holds the same content, so it carries the same
     /// value (its next mutation draws a new one).
     pub fn carry(&self) -> Self {
-        Self(std::sync::atomic::AtomicU64::new(self.get()))
+        Self(
+            std::sync::atomic::AtomicU64::new(self.get()),
+            std::sync::atomic::AtomicU64::new(self.embedded_through()),
+        )
+    }
+
+    /// The graph version through which embeddings were last published.
+    pub fn embedded_through(&self) -> u64 {
+        self.1.load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    /// Record that embeddings are published through graph `version` (never moves back).
+    pub fn record_through(&self, version: u64) {
+        self.1
+            .fetch_max(version, std::sync::atomic::Ordering::AcqRel);
     }
 
     /// Restamp after a content change. Called while the store is being mutated (under its
@@ -72,6 +92,18 @@ impl SemanticStore {
     /// Equal stamps mean the same vectors, declared space and active index generation.
     pub fn generation(&self) -> u64 {
         self.generation.get()
+    }
+
+    /// The graph version through which committed embeddings are published
+    /// (MEDULLA-FEDERATED-QUERY-R089.2): the re-embedding frontier a verdict compares
+    /// the graph version against.
+    pub fn embedded_through_version(&self) -> u64 {
+        self.generation.embedded_through()
+    }
+
+    /// Record that every embedding write committed through graph `version` is published.
+    pub fn record_embedded_through(&self, version: u64) {
+        self.generation.record_through(version);
     }
 
     /// Create an empty store pinned to one exact model/preprocessing space.

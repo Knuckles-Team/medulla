@@ -129,6 +129,8 @@ fn publish_vectors(core: &GraphCore, vectors: StagedVectors<'_>) -> Result<(), S
         return Ok(());
     }
     let mut semantic = core.semantic_store.write();
+    // The frontier the Discover verdict measures staleness against.
+    semantic.record_embedded_through(core.version());
     for node_id in vectors.removed {
         semantic.remove_embedding(node_id);
     }

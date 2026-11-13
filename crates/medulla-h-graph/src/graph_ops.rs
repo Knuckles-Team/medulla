@@ -42,6 +42,8 @@ mod broker;
 pub mod bus;
 mod context_facts;
 mod discover_plan;
+#[cfg(feature = "query")]
+mod discover_quality;
 #[cfg(test)]
 mod context_facts_tests;
 mod edges;

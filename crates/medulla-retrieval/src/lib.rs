@@ -6,6 +6,8 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// The port `Discover` reads drift and adapter evidence through (MEDULLA-FEDERATED-QUERY-R089.7).
+pub mod discover_signals;
 /// Document boosts from retrieval feedback (MEDULLA-FEDERATED-QUERY-R705).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod feedback_boost;

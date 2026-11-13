@@ -334,6 +334,10 @@ impl std::error::Error for ExpansionError {}
 pub trait ExpansionProvider: Send + Sync {
     /// Produce at most `req.perspectives` expansions for `req.query`.
     fn expand(&self, req: &ExpansionRequest) -> Result<Vec<Expansion>, ExpansionError>;
+    /// Who produced the expansions (the model name), named in the plan evidence.
+    fn provider_id(&self) -> String;
+    /// The revision of the provider's prompt and settings, named in the plan evidence.
+    fn provider_revision(&self) -> String;
 }
 
 static EXPANSION_PROVIDER: std::sync::OnceLock<std::sync::Arc<dyn ExpansionProvider>> =

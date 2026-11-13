@@ -1134,6 +1134,22 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
 }
 
 fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
+    // MEDULLA-FEDERATED-QUERY-R090.4 / R651.4: the planner and expansion-port refusals.
+    if matches!(d.id.as_str(), "Discover" | "NlQuery") {
+        use medulla_types::ingestion_wire::{
+            DISCOVER_PLANNER_UNCONFIGURED, EXPANSION_FANOUT_EXCEEDED,
+            EXPANSION_PROVIDER_FAILED, EXPANSION_PROVIDER_UNCONFIGURED, QUERY_TEXT_TOO_LONG,
+        };
+        codes.extend([
+            QUERY_TEXT_TOO_LONG,
+            EXPANSION_FANOUT_EXCEEDED,
+            EXPANSION_PROVIDER_UNCONFIGURED,
+            EXPANSION_PROVIDER_FAILED,
+        ]);
+        if d.id.as_str() == "Discover" {
+            codes.insert(DISCOVER_PLANNER_UNCONFIGURED);
+        }
+    }
     let id = d.id.as_str();
     if matches!(
         id,

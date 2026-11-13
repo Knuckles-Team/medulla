@@ -458,6 +458,11 @@ pub struct UreqNlPlanner {
 
 #[cfg(feature = "nl-query")]
 impl UreqNlPlanner {
+    /// The model id this client sends (the expansion evidence names it).
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
     /// The default system prompt: pin the model to emit exactly one bare UQL query
     /// (no prose, no fences). GENERATED from the UQL grammar
     /// (`medulla_uql::grammar::nl_system_prompt`) so it can only advertise syntax the

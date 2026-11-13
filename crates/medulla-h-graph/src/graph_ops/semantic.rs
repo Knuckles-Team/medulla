@@ -78,109 +78,56 @@ fn normalized_keywords(keywords: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// The retrieval-quality verdict of one `Discover` answer (MEDULLA-FEDERATED-QUERY-R089.1).
-///
-/// Quality is the mean hit score and population is the returned-to-requested hit
-/// ratio, both in Q16 and judged against the registry knobs
-/// `discover.min_composite_quality` and `discover.min_population_ratio`. An answer
-/// below a threshold names its closed failure mode; an answer below the
-/// `retrieval.min_evidence` row count is a sparse index. The index generation is the
-/// resident semantic index's.
-fn discover_verdict(
-    core: &GraphCore,
-    hits: &[medulla_types::ingestion_wire::DiscoverHit],
-    k: usize,
-    has_emb: bool,
-) -> medulla_types::wire::RetrievalVerdict {
-    use medulla_types::wire::{DiscoverThresholds, RetrievalFailureMode, RetrievalVerdict};
-    fn q16(x: f64) -> u16 {
-        (x.clamp(0.0, 1.0) * 65_535.0).round() as u16
-    }
-    let knobs = medulla_server_api::knob_config::knobs();
-    let thresholds = DiscoverThresholds {
-        min_composite_quality_q16: q16(knobs.discover_min_composite_quality),
-        min_population_ratio_q16: q16(knobs.discover_min_population_ratio),
-    };
-    let quality = if hits.is_empty() {
-        0.0
-    } else {
-        hits.iter().map(|h| f64::from(h.score)).sum::<f64>() / hits.len() as f64
-    };
-    let population = if k == 0 {
-        1.0
-    } else {
-        (hits.len() as f64 / k as f64).min(1.0)
-    };
-    let (composite, ratio) = (q16(quality), q16(population));
-    let mut failure_modes = Vec::new();
-    if composite < thresholds.min_composite_quality_q16 {
-        failure_modes.push(RetrievalFailureMode::LowRelevanceTopk);
-    }
-    if ratio < thresholds.min_population_ratio_q16
-        || (hits.len() as u64) < knobs.retrieval_min_evidence
-    {
-        failure_modes.push(RetrievalFailureMode::SparseIndex);
-    }
-    let generation = if has_emb {
-        core.semantic_store.read().generation()
-    } else {
-        0
-    };
-    RetrievalVerdict {
-        gate_passed: failure_modes.is_empty(),
-        above_threshold: composite >= thresholds.min_composite_quality_q16,
-        failure_modes,
-        composite_quality_q16: composite,
-        index_population_ratio_q16: ratio,
-        total_candidates: hits.len(),
-        policy_revision: "discover-quality".to_string(),
-        index_generation: generation,
-        thresholds,
-        adapter_digest: None,
-        shard_generations: Vec::new(),
-    }
+/// A node's timestamp in unix seconds: `updated_at`, else `created_at`
+/// (MEDULLA-FEDERATED-QUERY-R090.2). Absent or non-numeric is `None`.
+fn node_time(core: &GraphCore, node_id: &str) -> Option<i64> {
+    let blob = core.get_node_properties(node_id)?;
+    let obj = super::gateway_graph::decode_json_object(&blob);
+    ["updated_at", "created_at"].iter().find_map(|key| {
+        let value = obj.get(*key)?;
+        value.as_i64().or_else(|| value.as_f64().map(|f| f as i64))
+    })
 }
 
-/// One-round-trip hybrid discovery (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
-///
-/// Ranks nodes by BOTH lexical keyword overlap (over `name`/`description`/`type`)
-/// AND semantic similarity to `query_embedding`, returning the top-`k` hydrated
-/// with their human-readable text as `[{id,name,description,type,score}, …]`.
-/// Complements [`Method::SemanticSearch`], which returns bare `(id, score)` and
-/// leaves keyword matching + text hydration to the caller.
-///
-/// Candidate generation reuses the HNSW batch primitive
-/// ([`SemanticStore::semantic_search`]) — over-fetched by [`DISCOVER_FANOUT`] so
-/// the keyword re-rank has headroom — rather than an O(N) scan. Only when
-/// `query_embedding` is empty (embedder/vLLM degraded) does it fall back to a
-/// keyword-only scan, and even then bounded by [`DISCOVER_LEX_SCAN_CAP`].
-///
-/// Scoring (all reads are cheap in-memory, so this runs inline):
-/// * both signals → `DISCOVER_SEM_WEIGHT · sim + DISCOVER_KW_WEIGHT · kw`;
-/// * embedding only → `sim`;
-/// * keywords only → `kw`.
-fn discover(
+/// The half life of a node type: the `recencyHalfLifeDays` annotation on the type's class
+/// node (the node whose id is the type name), else `knob discover.recency_half_life_days`.
+fn half_life_days(core: &GraphCore, node_type: &str, default_days: f64) -> f64 {
+    core.get_node_properties(node_type)
+        .and_then(|blob| {
+            super::gateway_graph::decode_json_object(&blob)
+                .get("recencyHalfLifeDays")
+                .and_then(serde_json::Value::as_f64)
+        })
+        .filter(|days| *days > 0.0)
+        .unwrap_or(default_days)
+}
+
+/// The candidates of one `Discover` call: every node the dense or keyword path reached,
+/// with its two raw signals.
+struct Candidate {
+    id: String,
+    sim: f32,
+    kw: f32,
+}
+
+struct Candidates {
+    list: Vec<Candidate>,
+    /// The keyword-only scan stopped at [`DISCOVER_LEX_SCAN_CAP`].
+    scan_capped: bool,
+}
+
+/// Dense candidates (over-fetched for the keyword re-rank) or, with no embedding, the
+/// bounded keyword-only scan.
+fn gather_candidates(
     core: &GraphCore,
-    keywords: &[String],
+    kws: &[String],
     query_embedding: &[f32],
     k: usize,
-    hops: u32,
-    req_id: u64,
-) -> Response {
-    // De-duplicate + lowercase the keyword set (order-independent).
-    let kws = normalized_keywords(keywords);
+) -> Candidates {
     let has_kw = !kws.is_empty();
-    let has_emb = !query_embedding.is_empty();
-
-    // Per-candidate score components, keyed by node id.
-    struct Hit {
-        sim: f32,
-        kw: f32,
-    }
-    let mut hits: std::collections::HashMap<String, Hit> = std::collections::HashMap::new();
-
-    // 1. Dense candidates via the HNSW batch primitive (over-fetched for re-rank).
-    if has_emb {
+    let mut list = Vec::new();
+    let mut scan_capped = false;
+    if !query_embedding.is_empty() {
         let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
         let raw = core
             .semantic_store
@@ -189,38 +136,160 @@ fn discover(
         for (id, sim) in raw {
             let kw = if has_kw {
                 let (name, desc, ntype) = node_text(core, &id);
-                keyword_overlap(&kws, &name, &desc, &ntype)
+                keyword_overlap(kws, &name, &desc, &ntype)
             } else {
                 0.0
             };
-            hits.insert(id, Hit { sim, kw });
+            list.push(Candidate { id, sim, kw });
         }
     } else if has_kw {
-        // 2. Embedding-absent fallback: bounded keyword-only scan (documented
-        //    degraded path — no HNSW batch primitive is usable without a vector).
-        for id in core.node_ids().into_iter().take(DISCOVER_LEX_SCAN_CAP) {
+        let ids = core.node_ids();
+        scan_capped = ids.len() > DISCOVER_LEX_SCAN_CAP;
+        for id in ids.into_iter().take(DISCOVER_LEX_SCAN_CAP) {
             let (name, desc, ntype) = node_text(core, &id);
-            let kw = keyword_overlap(&kws, &name, &desc, &ntype);
+            let kw = keyword_overlap(kws, &name, &desc, &ntype);
             if kw > 0.0 {
-                hits.insert(id, Hit { sim: 0.0, kw });
+                list.push(Candidate { id, sim: 0.0, kw });
             }
         }
     }
+    Candidates { list, scan_capped }
+}
 
-    // Combine, sort, take top-k, hydrate text.
-    let mut ranked: Vec<(String, f32)> = hits
-        .into_iter()
-        .map(|(id, h)| {
-            let score = if has_emb && has_kw {
-                DISCOVER_SEM_WEIGHT * h.sim.clamp(0.0, 1.0) + DISCOVER_KW_WEIGHT * h.kw
-            } else if has_emb {
-                h.sim.clamp(0.0, 1.0)
-            } else {
-                h.kw
-            };
-            (id, score)
-        })
-        .collect();
+/// One-round-trip hybrid discovery (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery),
+/// planned by [`discover_plan::plan_discover`] (MEDULLA-FEDERATED-QUERY-R090.2).
+///
+/// Mode `standard` ranks by the weighted blend: both signals give
+/// `DISCOVER_SEM_WEIGHT * sim + DISCOVER_KW_WEIGHT * kw`, one signal gives that signal.
+/// Mode `deep` fuses the semantic arm, the keyword arm and one semantic arm per
+/// expansion by reciprocal rank. A recency boost applies in `deep` mode or when `as_of`
+/// is set. Hits then expand over `hops` and hydrate. The verdict is
+/// [`discover_quality::quality_verdict`] and the plan carries the expansion evidence.
+#[cfg(feature = "query")]
+struct DiscoverCall<'a> {
+    keywords: &'a [String],
+    query_embedding: &'a [f32],
+    k: usize,
+    hops: u32,
+    as_of: Option<i64>,
+    graph_name: &'a str,
+}
+
+#[cfg(feature = "query")]
+fn discover(
+    core: &GraphCore,
+    call: &DiscoverCall<'_>,
+    deep: super::discover_plan::DeepArms,
+    req_id: u64,
+) -> Response {
+    use super::discover_plan::{fuse_arms, recency_boost, ArmList};
+    use medulla_types::ingestion_wire::{DiscoverArm, DiscoverPlan};
+
+    let k = call.k;
+    let knobs = medulla_server_api::knob_config::knobs();
+    let kws = normalized_keywords(call.keywords);
+    let has_emb = !call.query_embedding.is_empty();
+    let has_kw = !kws.is_empty();
+    let gathered = gather_candidates(core, &kws, call.query_embedding, k);
+    let is_deep = !deep.vectors.is_empty();
+
+    // Score: the weighted blend (standard) or reciprocal-rank fusion over the arms (deep).
+    let mut arm_ranks: std::collections::HashMap<
+        String,
+        Vec<medulla_types::ingestion_wire::ArmRank>,
+    > = std::collections::HashMap::new();
+    let mut ranked: Vec<(String, f32)> = if is_deep {
+        let by_score = |mut v: Vec<(String, f32)>| {
+            v.sort_by(|a, b| {
+                b.1.partial_cmp(&a.1)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| a.0.cmp(&b.0))
+            });
+            v
+        };
+        let mut arms = Vec::new();
+        if has_emb {
+            arms.push(ArmList {
+                arm: DiscoverArm::Semantic,
+                ranked: by_score(
+                    gathered
+                        .list
+                        .iter()
+                        .map(|c| (c.id.clone(), c.sim))
+                        .collect(),
+                ),
+            });
+        }
+        if has_kw {
+            arms.push(ArmList {
+                arm: DiscoverArm::Keyword,
+                ranked: by_score(
+                    gathered
+                        .list
+                        .iter()
+                        .filter(|c| c.kw > 0.0)
+                        .map(|c| (c.id.clone(), c.kw))
+                        .collect(),
+                ),
+            });
+        }
+        let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
+        for vector in &deep.vectors {
+            let raw = core.semantic_store.read().semantic_search(vector, fanout);
+            arms.push(ArmList {
+                arm: DiscoverArm::Expansion,
+                ranked: raw,
+            });
+        }
+        fuse_arms(&arms, knobs.discover_rrf_k)
+            .into_iter()
+            .map(|fused| {
+                arm_ranks.insert(fused.id.clone(), fused.arm_ranks);
+                (fused.id, fused.score)
+            })
+            .collect()
+    } else {
+        gathered
+            .list
+            .iter()
+            .map(|c| {
+                let score = if has_emb && has_kw {
+                    DISCOVER_SEM_WEIGHT * c.sim.clamp(0.0, 1.0) + DISCOVER_KW_WEIGHT * c.kw
+                } else if has_emb {
+                    c.sim.clamp(0.0, 1.0)
+                } else {
+                    c.kw
+                };
+                (c.id.clone(), score)
+            })
+            .collect()
+    };
+
+    // Recency: deep mode, or any request that names `as_of`.
+    let mut boosts: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
+    if is_deep || call.as_of.is_some() {
+        let as_of = call.as_of.unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+        });
+        for (id, score) in &mut ranked {
+            let (_, _, node_type) = node_text(core, id);
+            let half_life = half_life_days(
+                core,
+                &node_type,
+                knobs.discover_recency_half_life_days as f64,
+            );
+            let boost = recency_boost(
+                knobs.discover_recency_weight,
+                half_life,
+                as_of,
+                node_time(core, id),
+            );
+            *score *= boost;
+            boosts.insert(id.clone(), boost);
+        }
+    }
     ranked.sort_by(|a, b| {
         b.1.partial_cmp(&a.1)
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -229,7 +298,7 @@ fn discover(
     ranked.truncate(k);
 
     // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
-    let planned = super::discover_plan::plan_discover(core, ranked, hops, k);
+    let planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
 
     let results: Vec<medulla_types::ingestion_wire::DiscoverHit> = planned
         .into_iter()
@@ -246,27 +315,105 @@ fn discover(
                 } else {
                     Vec::new()
                 },
+                arm_ranks: arm_ranks.remove(&hit.id).unwrap_or_default(),
+                recency_boost: boosts.get(&hit.id).copied().unwrap_or(1.0),
                 id: hit.id,
                 name,
                 description,
                 node_type,
                 score: hit.score,
-                arm_ranks: Vec::new(),
-                recency_boost: 1.0,
             }
         })
         .collect();
 
-    let verdict = discover_verdict(core, &results, k, has_emb);
+    let (embedded_nodes, index_generation, embedded_through) = {
+        let store = core.semantic_store.read();
+        (
+            store.len(),
+            store.generation(),
+            store.embedded_through_version(),
+        )
+    };
+    let signals = medulla_retrieval::discover_signals::discover_signals()
+        .map(|source| source.read(call.graph_name))
+        .unwrap_or_default();
+    let verdict = super::discover_quality::quality_verdict(
+        &super::discover_quality::QualityInputs {
+            hits: &results,
+            has_embedding: has_emb,
+            keyword_scan_capped: gathered.scan_capped,
+            embedded_nodes,
+            candidate_nodes: core.node_count(),
+            graph_version: core.version(),
+            embedded_through,
+            index_generation,
+            signals,
+        },
+        &super::discover_quality::QualityKnobs::from_registry(),
+    );
     Response::ok(
         req_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(
             medulla_types::ingestion_wire::DiscoverResult {
                 hits: results,
                 verdict,
-                plan: Default::default(),
+                plan: DiscoverPlan {
+                    expansions: deep.evidence,
+                    degraded: deep.degraded,
+                },
             },
         ),
+    )
+}
+
+/// Serve `Discover`: plan off the reactor (the provider and embedder are blocking network
+/// clients; one provider call per request), then rank. A planner refusal returns its wire
+/// code, no rows and writes nothing.
+#[cfg(feature = "query")]
+#[allow(clippy::too_many_arguments)]
+async fn handle_discover(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    graph_name: &str,
+    keywords: Vec<String>,
+    query_embedding: Vec<f32>,
+    k: usize,
+    hops: u32,
+    query_text: Option<String>,
+    mode: medulla_types::ingestion_wire::DiscoverMode,
+    as_of: Option<i64>,
+) -> Response {
+    let request = medulla_types::ingestion_wire::DiscoverPlanRequest {
+        query_text,
+        mode,
+        as_of,
+        hops,
+    };
+    let expansions = medulla_server_api::knob_config::knobs().discover_expansions as usize;
+    let planned = match compute_off_lock(req_id, move || {
+        super::discover_plan::plan_discover(&request, expansions)
+    })
+    .await
+    {
+        Ok(planned) => planned,
+        Err(response) => return response,
+    };
+    let deep = match planned {
+        Ok(deep) => deep,
+        Err(refusal) => return Response::err(req_id, refusal.message()),
+    };
+    discover(
+        core,
+        &DiscoverCall {
+            keywords: &keywords,
+            query_embedding: &query_embedding,
+            k,
+            hops,
+            as_of,
+            graph_name,
+        },
+        deep,
+        req_id,
     )
 }
 
@@ -398,13 +545,36 @@ pub(super) async fn try_handle_semantic_compute(
             query_embedding,
             n_results,
         } => handle_semantic_search(req_id, core, query_embedding, n_results).await,
+        #[cfg(feature = "query")]
         Method::Discover {
             keywords,
             query_embedding,
             k,
             hops,
+            query_text,
+            mode,
+            as_of,
             ..
-        } => discover(core, &keywords, &query_embedding, k, hops, req_id),
+        } => {
+            handle_discover(
+                req_id,
+                core,
+                ctx.graph_name,
+                keywords,
+                query_embedding,
+                k,
+                hops,
+                query_text,
+                mode,
+                as_of,
+            )
+            .await
+        }
+        #[cfg(not(feature = "query"))]
+        Method::Discover { .. } => Response::err(
+            req_id,
+            "Discover requires the `query` feature (the retrieval stop rule)".to_string(),
+        ),
         // CONCEPT:MEDULLA-KG.compute.l2-normalize-batch-vectors — kernel-backed in-engine batch L2-normalize (compute-near-data).
         // The `numeric` feature links the pure medulla-numeric kernel (faer/ndarray, no Python-extension FFI);
         // a no-numeric build (e.g. `pi`) has no medulla-numeric, so the op reports it's absent.

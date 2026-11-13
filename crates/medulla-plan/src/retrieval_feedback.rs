@@ -206,6 +206,12 @@ mod tests {
                 }),
             }
         }
+        fn provider_id(&self) -> String {
+            "scripted".into()
+        }
+        fn provider_revision(&self) -> String {
+            "r1".into()
+        }
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R081.8.2

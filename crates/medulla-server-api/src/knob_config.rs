@@ -211,6 +211,16 @@ knobs! {
     discover_min_composite_quality: f64 = "discover.min_composite_quality", F64(0.25), [0.0, 1.0], "score", Tunable;
     /// Discover verdict: lowest returned-to-requested hit ratio that still passes the gate.
     discover_min_population_ratio: f64 = "discover.min_population_ratio", F64(0.5), [0.0, 1.0], "ratio", Tunable;
+    /// Discover verdict: most graph versions the index may trail the graph before it is stale.
+    discover_max_version_lag: u64 = "discover.max_version_lag", U64(1000), [1, 1_000_000_000], "versions", Tunable;
+    /// Discover deep mode: most expansions asked of the expansion port per request.
+    discover_expansions: u64 = "discover.expansions", U64(4), [1, 8], "items", Tunable;
+    /// Discover deep mode: reciprocal-rank-fusion damping constant.
+    discover_rrf_k: u64 = "discover.rrf_k", U64(60), [1, 1000], "rank", Tunable;
+    /// Discover recency: weight of the recency boost.
+    discover_recency_weight: f64 = "discover.recency_weight", F64(0.5), [0.0, 2.0], "ratio", Tunable;
+    /// Discover recency: default half life when the node type declares none.
+    discover_recency_half_life_days: u64 = "discover.recency_half_life_days", U64(30), [1, 3650], "days", Tunable;
     /// Context bundle: reciprocal-rank-fusion damping constant.
     context_rrf_k: u64 = "context.rrf_k", U64(60), [1, 1000], "rank", Tunable;
     /// Context bundle: fewest items kept by the gap cut.

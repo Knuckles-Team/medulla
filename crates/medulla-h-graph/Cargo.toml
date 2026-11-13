@@ -23,6 +23,8 @@ medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-retrieval = { path = "../medulla-retrieval" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
@@ -72,7 +74,7 @@ mining = ["query", "tsdb", "medulla-compute/mining", "medulla-kernel/mining", "m
 ml-pipeline = ["mining", "graphlearn", "medulla-kernel/ml-pipeline", "medulla-protocol-types/ml-pipeline", "medulla-result-types/ml-pipeline", "medulla-server-api/ml-pipeline", "medulla-server-mutation/ml-pipeline", "medulla-types/ml-pipeline"]
 numeric = ["dep:medulla-numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-raft/numeric", "medulla-server-api/numeric"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "sparql", "medulla-persistence/owl", "medulla-protocol-types/owl", "medulla-raft/owl", "medulla-server-api/owl", "medulla-server-cdc/owl", "medulla-server-ops/owl", "medulla-types/owl", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "redb", "medulla-kernel/query", "medulla-persistence-ops/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
+query = ["dep:medulla-plan", "medulla-plan/query", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "redb", "medulla-kernel/query", "medulla-persistence-ops/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence-ops/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 rdf = ["dep:medulla-rdf", "dep:medulla-virtual-graph", "medulla-virtual-graph/rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf", "medulla-kernel/rdf", "medulla-persistence-records/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-server-mutation/rdf", "medulla-types/rdf", "server"]
 reasoning = ["medulla-reasoner/reasoning", "medulla-compute/reasoning", "medulla-kernel/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-server-cdc/reasoning", "medulla-server-mutation/reasoning"]
