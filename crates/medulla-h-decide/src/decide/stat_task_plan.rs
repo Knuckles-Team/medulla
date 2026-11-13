@@ -31,7 +31,6 @@ use std::collections::BTreeMap;
 use super::stat_log::{
     context_digest_of, evaluations_of, visible_entries, visible_entry, LogReader,
 };
-use medulla_decision_stats::decision::skill_plan::{plan_over_skills, SkillDocument};
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::statistical::TypedParam;
 use medulla_decision_types::decision::task_plan::skill_plan::{
@@ -152,9 +151,6 @@ fn proposal_of(
         }),
         ("skill_query", TypedValue::SkillPlanQuery(query)) => {
             let (skills, _) = visible_skills(ctx)?;
-            plan_over_skills(query, &skills, &SkillPlanKnobs::from_policy(policy))
-                .map_err(invalid_parameter)
-            let skills = visible_skills(ctx)?;
             let planned = plan_over_skills(query, &skills, &SkillPlanKnobs::from_policy(policy));
             let relevance = planned
                 .as_ref()
@@ -397,7 +393,6 @@ pub(super) fn plan_of_request(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     principal: &str,
-) -> Result<Option<TaskPlan>, String> {
 ) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan
         && !request.params.iter().any(|p| is_plan_param(&p.value))
@@ -405,9 +400,13 @@ pub(super) fn plan_of_request(
         return Ok(None);
     }
     let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
-    task_plan(ctx, request, &resolved.policy)?
-        .map(|plan| with_skill_trees(ctx, request, principal, &resolved.policy, plan))
-        .transpose()
+    match task_plan(ctx, request, &resolved.policy)? {
+        Some(Planned::Plan(plan, notes)) => {
+            let plan = with_skill_trees(ctx, request, principal, &resolved.policy, plan)?;
+            Ok(Some(Planned::Plan(plan, notes)))
+        }
+        other => Ok(other),
+    }
 }
 
 pub(super) fn task_plan(
