@@ -87,3 +87,14 @@ Discovery runs before the catalog insert, so a source whose catalog cannot be re
 - The metastore client speaks the unauthenticated Thrift binary protocol; `auth_ref` is validated as a secret reference at registration and carried in the spec. A token-bearing metastore handshake is a separate connector concern.
 - The source contract is one `MetadataContract` per source: it folds each table's `MetastoreTable::content_hash`, so any table schema, partition or file change raises the schema version.
 - The scan returns its receipt through the query warnings (`QueryResult.warnings`), the single evidence channel of a served read.
+
+## Profile and quality jobs (R761.3, R762.3)
+
+- Decision: profile and quality jobs write their graph nodes in one engine-internal batch keyed by the job id (`data_plane_write.rs`), so a retried attempt replays instead of writing twice. Rejected: a seam call per node.
+- Decision: incidents opened by a failing rule streak are correlated with `IncidentAuthority` and written in the job's own batch through the shared `medulla_stream::telemetry::incident_nodes` module (moved from the router so one shape serves both). Rejected: a `DecideApi` seam to `medulla-h-decide`.
+- Decision: the verified plain tenant and agent are stamped into the `JobKind` at submit (client values replaced), because the worker claim has no request carrier.
+- Decision: R761.3 no longer depends on R803. R803.3 adds the sensitive scan to the profile executor; the old edge made a cycle.
+- Decision: SQL-source datasets are named `<source>.<table>` and need named columns; native tables profile through DataFusion.
+- Decision: rule and score node ids are tenant-private hashes; `QualityRulePut` stores the rule approved by the verified agent and resets its failure counter.
+- Deferred: shape and freshness measurement (R762.9) return `QUALITY_MEASURE_UNAVAILABLE`.
+- WIRE-REGEN: `QualityRulePut`, the new `JobKind` variants and `QualityRuleReceipt` were hand-edited into `medulla/generated/models.py`; regenerate models and wire vectors.

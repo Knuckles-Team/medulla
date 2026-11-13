@@ -15,6 +15,9 @@ pub mod column_lineage;
 pub mod mysql_introspect;
 #[cfg(feature = "federation-sql")]
 pub mod pg_introspect;
+/// Profile reads against attached SQL sources (MEDULLA-UNIFIED-DATA-PLANE-R761.3).
+#[cfg(feature = "federation-sql")]
+pub mod source_profile;
 /// Statement parsing and referenced-table analysis on the shared parser
 /// (MEDULLA-UNIFIED-DATA-PLANE-R763.2, R764.3.1).
 /// Query logs of attached SQL sources (MEDULLA-UNIFIED-DATA-PLANE-R764.7).

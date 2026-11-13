@@ -229,6 +229,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.1` | `crates/medulla-types/tests/quality.rs::rule_round_trips` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.2` | `crates/medulla-core/src/quality.rs::tests::three_failures_open_one_incident` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.3` | `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.9` | `tests/data_plane/test_quality_served.py::test_shape_and_freshness_scored` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.4` | `tests/data_plane/test_quality_served.py::test_quality_refusals` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.5` | `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.6` | `cargo bench --bench quality_evaluate` |
@@ -363,14 +364,15 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R761:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned). Proves the row: Dataset and column profiling (rollup).
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-h-jobs/src/jobs/executor_profile.rs::tests::sample_profile_counts_are_consistent` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
-- **MEDULLA-UNIFIED-DATA-PLANE-R761.3:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned). Proves the row: Wiring: the `DatasetProfile` job kind attaches profiles to the catalog.
+- **MEDULLA-UNIFIED-DATA-PLANE-R761.3:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog`. Proves the row: Wiring: the `DatasetProfile` job kind attaches profiles to the catalog.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.4:** `tests/data_plane/test_profile_served.py::test_profile_refusals` (planned). Proves the row: Refusal: out-of-scope dataset, unsupported source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.5:** `tests/data_plane/test_profile_served.py::test_profile_method_recorded` (planned). Proves the row: Evidence: each profile records its method and sample size.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.6:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned). Proves the row: Hot-path proof: profile ten columns of a native dataset.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned). Proves the row: Data quality rules, scores and quality incidents (rollup).
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.2:** `crates/medulla-core/src/quality.rs::tests::three_failures_open_one_incident` (planned). Proves the row: Behavior: compile each rule kind, score it, count consecutive failures.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.2:** `crates/medulla-core/src/quality.rs::tests::each_rule_kind_scores` (planned). Proves the row: Behavior: compile each rule kind, score it, count consecutive failures.
-- **MEDULLA-UNIFIED-DATA-PLANE-R762.3:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned). Proves the row: Wiring: `QualityRulePut` and the `QualityEvaluate` job kind.
+- **MEDULLA-UNIFIED-DATA-PLANE-R762.3:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident`. Proves the row: Wiring: `QualityRulePut` and the `QualityEvaluate` job kind.
+- **MEDULLA-UNIFIED-DATA-PLANE-R762.9:** `tests/data_plane/test_quality_served.py::test_shape_and_freshness_scored` (planned). Proves the row: Behavior: shape and freshness rules measured in the served job.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.4:** `tests/data_plane/test_quality_served.py::test_quality_refusals` (planned). Proves the row: Refusal: invalid rule, invalid threshold, unapproved rule.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.5:** `tests/data_plane/test_quality_served.py::test_score_evidence_reads_back` (planned). Proves the row: Evidence: each score records the compiled query digest and the row counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R762.6:** `tests/data_plane/test_quality_served.py::test_rule_scores_and_incident` (planned). Proves the row: Hot-path proof: evaluate 100 rules over a native dataset.

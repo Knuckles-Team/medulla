@@ -266,6 +266,9 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "IncidentCorrelate",
         "IncidentRecordAnomaly",
         "IncidentSetStatus",
+        # MEDULLA-UNIFIED-DATA-PLANE-R762.3: the quality rule write self-translates
+        # into one BatchUpdate, like the incident writes.
+        "QualityRulePut",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",

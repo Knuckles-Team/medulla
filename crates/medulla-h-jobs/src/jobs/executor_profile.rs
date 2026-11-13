@@ -3,10 +3,23 @@
 //! dialect allows them, a reservoir sample otherwise, a HyperLogLog sketch for
 //! distinct counts.
 
+//!
+//! The `DatasetProfile` claim (MEDULLA-UNIFIED-DATA-PLANE-R761.3) reads one native
+//! dataset from the verified tenant's own table store, profiles each requested column
+//! with [`profile_column`], and writes each `ColumnProfile` node with a `profileOf` edge
+//! to its catalog column node in ONE `MutationBatch`. The job result lists, per column,
+//! the method, the sampled row count and `profiled_at`.
+
 use std::collections::HashMap;
 
 use medulla_catalog_types::profile::{ColumnProfile, HistogramBucket, ProfileMethod, TopValue};
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
+
+use super::data_plane_write::{commit_job_methods, edge_method, node_method};
+use super::prelude_jobs::*;
+use super::prelude_std::*;
+use super::*;
+use crate::quality_rule::tenant_node_id;
 
 /// Refusal code: the source supports neither aggregate pushdown nor sampling
 /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
@@ -100,11 +113,37 @@ fn quote_ident(dialect: ProfileDialect, column: &str) -> String {
     }
 }
 
-/// The one pushed aggregate statement for `column` of `dataset`.
+/// The text type a pushed statement casts values to.
+fn text_type(dialect: ProfileDialect) -> &'static str {
+    match dialect {
+        ProfileDialect::Mysql => "CHAR",
+        _ => "TEXT",
+    }
+}
+
+/// The one pushed aggregate statement for `column` of `dataset`. `MIN` and `MAX` are
+/// cast to text on the source so any column type reads back.
 pub(super) fn aggregate_statement(dialect: ProfileDialect, dataset: &str, column: &str) -> String {
     let col = quote_ident(dialect, column);
+    let text = text_type(dialect);
     format!(
-        "SELECT COUNT(*), COUNT({col}), MIN({col}), MAX({col}) FROM {}",
+        "SELECT COUNT(*), COUNT({col}), CAST(MIN({col}) AS {text}), CAST(MAX({col}) AS {text}) FROM {}",
+        quote_ident(dialect, dataset)
+    )
+}
+
+/// The bounded sample statement for `column` of `dataset`: at most `limit` text-cast
+/// values.
+pub(super) fn sample_statement(
+    dialect: ProfileDialect,
+    dataset: &str,
+    column: &str,
+    limit: u64,
+) -> String {
+    format!(
+        "SELECT CAST({} AS {}) FROM {} LIMIT {limit}",
+        quote_ident(dialect, column),
+        text_type(dialect),
         quote_ident(dialect, dataset)
     )
 }
@@ -280,6 +319,513 @@ pub(super) fn profile_column(
     })
 }
 
+/// The node type of one column profile.
+pub(super) const COLUMN_PROFILE_LABEL: &str = "ColumnProfile";
+/// Profile → catalog column edge relation.
+pub(super) const PROFILE_OF: &str = "profileOf";
+
+/// The verified target of one profile claim.
+pub(super) struct ProfileTarget {
+    pub dataset: String,
+    pub columns: Vec<String>,
+    pub owner_scope: String,
+    pub tenant_scope: String,
+    pub tenant: String,
+    pub agent: String,
+}
+
+/// The profiling knobs, read from the registry.
+fn profile_config(profiled_at: i64) -> ProfileConfig {
+    let knobs = medulla_server_api::knob_config::knobs();
+    ProfileConfig {
+        sample_rows: knobs.profile_sample_rows,
+        top_k: knobs.profile_top_k as usize,
+        histogram_buckets: knobs.profile_histogram_buckets as usize,
+        profiled_at,
+    }
+}
+
+/// One native table of the tenant's table store, read once.
+#[cfg(feature = "query")]
+struct NativeTable {
+    dataset: String,
+    columns: Vec<String>,
+    rows: Vec<Vec<medulla_tables::schema::Cell>>,
+}
+
+#[cfg(feature = "query")]
+fn cell_text(cell: &medulla_tables::schema::Cell) -> Option<String> {
+    use medulla_tables::schema::Cell;
+    match cell {
+        Cell::Null => None,
+        Cell::Int(value) => Some(value.to_string()),
+        Cell::Float(value) => Some(value.to_string()),
+        Cell::Text(value) => Some(value.clone()),
+        Cell::Bool(value) => Some(value.to_string()),
+        Cell::Timestamp(value) => Some(value.to_string()),
+        Cell::Bytes(value) => Some(hex::encode(value)),
+        Cell::Json(value) => Some(value.to_string()),
+        Cell::Vector(value) => Some(format!("{value:?}")),
+    }
+}
+
+#[cfg(feature = "query")]
+impl ProfileSource for NativeTable {
+    fn dataset(&self) -> &str {
+        &self.dataset
+    }
+
+    fn dialect(&self) -> ProfileDialect {
+        ProfileDialect::Other
+    }
+
+    fn push_aggregate(&self, _statement: &str) -> Result<AggregateRow, String> {
+        Err("a native dataset takes no pushed statement".to_string())
+    }
+
+    fn supports_sampling(&self) -> bool {
+        true
+    }
+
+    fn scan_column(&self, column: &str, visit: &mut dyn FnMut(Option<&str>)) -> Result<(), String> {
+        let index = self
+            .columns
+            .iter()
+            .position(|name| name == column)
+            .ok_or_else(|| format!("column {column} is not a column of {}", self.dataset))?;
+        for row in &self.rows {
+            match row.get(index).and_then(cell_text) {
+                Some(text) => visit(Some(&text)),
+                None => visit(None),
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Profile the requested columns (every column when none is named) of one native
+/// dataset of the tenant. Refuses `PROFILE_UNSUPPORTED` for a dataset or column the
+/// tenant's table store does not hold.
+#[cfg(feature = "query")]
+fn profile_native(
+    persist_dir: &Path,
+    target: &ProfileTarget,
+    cfg: &ProfileConfig,
+) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    let store =
+        medulla_server_auth::sql_tables::tenant_table_store(&target.tenant_scope, persist_dir)
+            .map_err(|_| unsupported("the tenant table store cannot be opened"))?;
+    let schema = store
+        .get_schema(&target.dataset)
+        .map_err(unsupported)?
+        .ok_or_else(|| unsupported(format!("{} is not a dataset of the tenant", target.dataset)))?;
+    let all: Vec<String> = schema
+        .columns()
+        .iter()
+        .map(|column| column.name.clone())
+        .collect();
+    let wanted = if target.columns.is_empty() {
+        all.clone()
+    } else {
+        target.columns.clone()
+    };
+    if let Some(missing) = wanted.iter().find(|column| !all.contains(column)) {
+        return Err(unsupported(format!(
+            "{missing} is not a column of {}",
+            target.dataset
+        )));
+    }
+    let table = NativeTable {
+        dataset: target.dataset.clone(),
+        columns: all,
+        rows: store.scan(&target.dataset).map_err(unsupported)?,
+    };
+    wanted
+        .iter()
+        .map(|column| {
+            let profile = profile_column(&table, column, cfg)?;
+            profile
+                .validate()
+                .map_err(|error| unsupported(error.to_string()))?;
+            Ok(profile)
+        })
+        .collect()
+}
+
+#[cfg(not(feature = "query"))]
+fn profile_native(
+    _persist_dir: &Path,
+    _target: &ProfileTarget,
+    _cfg: &ProfileConfig,
+) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    Err(unsupported("this worker has no native table store"))
+}
+
+/// One table of an attached Postgres or MySQL-family source. The aggregate is pushed;
+/// the sample is a bounded text-cast read. Both run on the worker's runtime from the
+/// blocking profile thread.
+#[cfg(feature = "federation-sql")]
+struct SqlSourceTable {
+    dataset: String,
+    table: String,
+    dsn: String,
+    dialect: ProfileDialect,
+    sample_rows: u64,
+    timeout: Duration,
+    runtime: tokio::runtime::Handle,
+}
+
+#[cfg(feature = "federation-sql")]
+impl ProfileSource for SqlSourceTable {
+    fn dataset(&self) -> &str {
+        &self.dataset
+    }
+
+    fn dialect(&self) -> ProfileDialect {
+        self.dialect
+    }
+
+    fn push_aggregate(&self, statement: &str) -> Result<AggregateRow, String> {
+        let row =
+            self.runtime
+                .block_on(medulla_federation::source_profile::read_profile_aggregate(
+                    &self.dsn,
+                    statement,
+                    self.timeout,
+                ))?;
+        Ok(AggregateRow {
+            rows: row.rows,
+            non_null: row.non_null,
+            min: row.min,
+            max: row.max,
+        })
+    }
+
+    fn supports_sampling(&self) -> bool {
+        self.dialect.pushes_aggregates()
+    }
+
+    fn scan_column(&self, column: &str, visit: &mut dyn FnMut(Option<&str>)) -> Result<(), String> {
+        let statement = sample_statement(self.dialect, &self.table, column, self.sample_rows);
+        let values =
+            self.runtime
+                .block_on(medulla_federation::source_profile::read_column_sample(
+                    &self.dsn,
+                    &statement,
+                    self.timeout,
+                ))?;
+        for value in &values {
+            visit(value.as_deref());
+        }
+        Ok(())
+    }
+}
+
+/// The dialect of an attached source DSN.
+#[cfg(feature = "federation-sql")]
+fn dialect_of_dsn(dsn: &str) -> ProfileDialect {
+    if dsn.starts_with("postgres://") || dsn.starts_with("postgresql://") {
+        ProfileDialect::Postgres
+    } else if dsn.starts_with("mysql://") || dsn.starts_with("mariadb://") {
+        ProfileDialect::Mysql
+    } else {
+        ProfileDialect::Other
+    }
+}
+
+/// Profile the named columns of `<source>.<table>` on an attached SQL source. Every
+/// column must be named: a source table's column list is not read here.
+#[cfg(feature = "federation-sql")]
+fn profile_source(
+    source: SqlSourceTable,
+    columns: &[String],
+    cfg: &ProfileConfig,
+) -> Result<Vec<ColumnProfile>, ProfileRefusal> {
+    if columns.is_empty() {
+        return Err(unsupported(
+            "a dataset of an attached source needs its columns named",
+        ));
+    }
+    columns
+        .iter()
+        .map(|column| {
+            let mut profile = profile_column(&source, column, cfg)?;
+            profile.dataset = source.dataset.clone();
+            profile
+                .validate()
+                .map_err(|error| unsupported(error.to_string()))?;
+            Ok(profile)
+        })
+        .collect()
+}
+
+/// The attached SQL source a `<source>.<table>` dataset names, when the owner has
+/// registered one.
+#[cfg(feature = "federation-sql")]
+async fn resolve_sql_source(
+    state: &Arc<RwLock<ServerState>>,
+    owner_scope: &str,
+    dataset: &str,
+) -> Option<SqlSourceTable> {
+    use medulla_server_ops::api::query_txn::ForeignStateExt;
+    let (source, table) = dataset.split_once('.')?;
+    let catalog = state.read().await.foreign_sources();
+    let dsn = catalog.sql_source_dsn(owner_scope, source)?;
+    let knobs = medulla_server_api::knob_config::knobs();
+    Some(SqlSourceTable {
+        dataset: dataset.to_string(),
+        table: table.to_string(),
+        dialect: dialect_of_dsn(&dsn),
+        dsn,
+        sample_rows: knobs.profile_sample_rows,
+        timeout: Duration::from_millis(knobs.profile_source_timeout_ms),
+        runtime: tokio::runtime::Handle::current(),
+    })
+}
+
+/// The sampled row count of a profile: the reservoir size, or every row for a pushed
+/// aggregate.
+fn sampled_rows(profile: &ColumnProfile) -> u64 {
+    match profile.method {
+        ProfileMethod::Pushdown => profile.rows,
+        ProfileMethod::Sample { size } => size,
+    }
+}
+
+/// The graph id of the catalog column node of `dataset.column`.
+fn column_node(profile: &ColumnProfile) -> String {
+    medulla_catalog_types::lineage::column_node_id(&format!(
+        "{}.{}",
+        profile.dataset, profile.column
+    ))
+}
+
+/// The id of the one current profile node of a tenant's column.
+fn profile_node_id(tenant: &str, profile: &ColumnProfile) -> String {
+    tenant_node_id(
+        "column_profile",
+        tenant,
+        &[&profile.dataset, &profile.column],
+    )
+}
+
+/// The graph methods of one profile run: the catalog column node where the graph has
+/// none yet, each profile node, and each `profileOf` edge.
+fn profile_methods(
+    core: &medulla_graph_core::graph::GraphCore,
+    target: &ProfileTarget,
+    profiles: &[ColumnProfile],
+) -> Result<Vec<Method>, String> {
+    let mut methods = Vec::with_capacity(profiles.len() * 3);
+    for profile in profiles {
+        let column_id = column_node(profile);
+        if core.get_node_properties(&column_id).is_none() {
+            methods.push(node_method(
+                column_id.clone(),
+                &serde_json::json!({
+                    "type": medulla_catalog_types::lineage::COLUMN_LABEL,
+                    "name": format!("{}.{}", profile.dataset, profile.column),
+                    "tenant_id": target.tenant,
+                    "_owner": target.agent,
+                }),
+            )?);
+        }
+        let body = serde_json::to_string(profile)
+            .map_err(|_| "column profile encoding failed".to_string())?;
+        let profile_id = profile_node_id(&target.tenant, profile);
+        methods.push(node_method(
+            profile_id.clone(),
+            &serde_json::json!({
+                "type": COLUMN_PROFILE_LABEL,
+                "dataset": profile.dataset,
+                "column": profile.column,
+                "rows": profile.rows,
+                "nulls": profile.nulls,
+                "distinct_estimate": profile.distinct_estimate,
+                "min": profile.min,
+                "max": profile.max,
+                "top_k": profile.top_k,
+                "histogram": profile.histogram,
+                "profiled_at": profile.profiled_at,
+                "method": profile.method,
+                "sampled_rows": sampled_rows(profile),
+                "profile": body,
+                "tenant_id": target.tenant,
+                "_owner": target.agent,
+            }),
+        )?);
+        methods.push(edge_method(
+            profile_id,
+            column_id,
+            &serde_json::json!({
+                "relationship": PROFILE_OF,
+                "tenant_id": target.tenant,
+                "_owner": target.agent,
+            }),
+        )?);
+    }
+    Ok(methods)
+}
+
+pub(super) async fn execute_profile_claim(
+    state: &Arc<RwLock<ServerState>>,
+    store: &Arc<JobStore>,
+    job: &medulla_jobs::AnalyticsJob,
+    worker_ref: &str,
+    epoch: u64,
+    target: ProfileTarget,
+) -> Result<(), String> {
+    store
+        .checkpoint_fenced(
+            &job.job_id,
+            worker_ref,
+            epoch,
+            Checkpoint {
+                progress: 0.1,
+                stage: "profiling".to_string(),
+                state_blob: None,
+                updated_at_ms: unix_ms(),
+            },
+            unix_ms(),
+        )
+        .map_err(|error| error.to_string())?;
+    let (_, _, core) = resolve_core_ref(state, &job.input_snapshot.graph)
+        .await
+        .ok_or_else(|| "analytics target graph is unavailable".to_string())?;
+    let persist_dir = state
+        .read()
+        .await
+        .persist_dir
+        .clone()
+        .map(std::path::PathBuf::from);
+    let Some(persist_dir) = persist_dir else {
+        let _ = store.fail_attempt_fenced(
+            &job.job_id,
+            worker_ref,
+            epoch,
+            PROFILE_UNSUPPORTED,
+            unix_ms(),
+        );
+        return Ok(());
+    };
+    let cfg = profile_config(unix_ms());
+    #[cfg(feature = "federation-sql")]
+    let attached = resolve_sql_source(state, &target.owner_scope, &target.dataset).await;
+    let (profiled, target) = tokio::task::spawn_blocking(move || {
+        #[cfg(feature = "federation-sql")]
+        if let Some(source) = attached {
+            let profiled = profile_source(source, &target.columns, &cfg);
+            return (profiled, target);
+        }
+        let profiled = profile_native(&persist_dir, &target, &cfg);
+        (profiled, target)
+    })
+    .await
+    .map_err(|_| "profile kernel failed".to_string())?;
+    let profiles = match profiled {
+        Ok(profiles) => profiles,
+        Err(refusal) => {
+            let _ =
+                store.fail_attempt_fenced(&job.job_id, worker_ref, epoch, refusal.code, unix_ms());
+            return Ok(());
+        }
+    };
+    let methods = profile_methods(&core, &target, &profiles)?;
+    commit_job_methods(state, job, "dataset-profile", methods).await?;
+    let now = unix_ms();
+    store
+        .checkpoint_fenced(
+            &job.job_id,
+            worker_ref,
+            epoch,
+            Checkpoint {
+                progress: 0.9,
+                stage: "profiled".to_string(),
+                state_blob: None,
+                updated_at_ms: now,
+            },
+            now,
+        )
+        .map_err(|error| error.to_string())?;
+    let result = typed_profile_result(job, &target, &profiles)?;
+    let staged = store
+        .stage_result_fenced(&job.job_id, worker_ref, epoch, result, unix_ms())
+        .map_err(|error| error.to_string())?;
+    publish_staged_result(state, store, staged, worker_ref, epoch).await
+}
+
+/// One result row per profiled column: its method, sampled row count and `profiled_at`.
+fn typed_profile_result(
+    job: &medulla_jobs::AnalyticsJob,
+    target: &ProfileTarget,
+    profiles: &[ColumnProfile],
+) -> Result<TypedJobResult, String> {
+    let dataset = job.input_snapshot.dataset_ref.clone();
+    let rows = profiles
+        .iter()
+        .map(|profile| {
+            let method = match profile.method {
+                ProfileMethod::Pushdown => "pushdown",
+                ProfileMethod::Sample { .. } => "sample",
+            };
+            BTreeMap::from([
+                (
+                    "id".to_string(),
+                    serde_json::json!(profile_node_id(&target.tenant, profile)),
+                ),
+                ("kind".to_string(), serde_json::json!("column_profile")),
+                ("confidence".to_string(), serde_json::json!(1.0)),
+                ("evidence_refs".to_string(), serde_json::json!([dataset])),
+                ("source_refs".to_string(), serde_json::json!([dataset])),
+                ("proof_ids".to_string(), serde_json::json!([])),
+                ("contradiction_ids".to_string(), serde_json::json!([])),
+                ("dataset".to_string(), serde_json::json!(profile.dataset)),
+                ("column".to_string(), serde_json::json!(profile.column)),
+                ("method".to_string(), serde_json::json!(method)),
+                (
+                    "sampled_rows".to_string(),
+                    serde_json::json!(sampled_rows(profile)),
+                ),
+                ("rows".to_string(), serde_json::json!(profile.rows)),
+                (
+                    "profiled_at".to_string(),
+                    serde_json::json!(profile.profiled_at),
+                ),
+            ])
+        })
+        .collect();
+    TypedJobResult::new(
+        [
+            ("id", "string", false),
+            ("kind", "string", false),
+            ("confidence", "float64", false),
+            ("evidence_refs", "list<string>", false),
+            ("source_refs", "list<string>", false),
+            ("proof_ids", "list<string>", false),
+            ("contradiction_ids", "list<string>", false),
+            ("dataset", "string", false),
+            ("column", "string", false),
+            ("method", "string", false),
+            ("sampled_rows", "int64", false),
+            ("rows", "int64", false),
+            ("profiled_at", "int64", false),
+        ]
+        .into_iter()
+        .map(|(name, logical_type, nullable)| ResultColumn {
+            name: name.to_string(),
+            logical_type: logical_type.to_string(),
+            nullable,
+        })
+        .collect(),
+        rows,
+        vec![dataset],
+        Vec::new(),
+        None,
+        None,
+        reproducibility_manifest(&job.input_snapshot, &job.algo, &job.policy),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,11 +920,11 @@ mod tests {
         assert!(!ProfileDialect::Other.pushes_aggregates());
         assert_eq!(
             aggregate_statement(ProfileDialect::Mysql, "orders", "a`b"),
-            "SELECT COUNT(*), COUNT(`a``b`), MIN(`a``b`), MAX(`a``b`) FROM `orders`"
+            "SELECT COUNT(*), COUNT(`a``b`), CAST(MIN(`a``b`) AS CHAR), CAST(MAX(`a``b`) AS CHAR) FROM `orders`"
         );
         assert_eq!(
             aggregate_statement(ProfileDialect::Postgres, "orders", "a\"b"),
-            "SELECT COUNT(*), COUNT(\"a\"\"b\"), MIN(\"a\"\"b\"), MAX(\"a\"\"b\") FROM \"orders\""
+            "SELECT COUNT(*), COUNT(\"a\"\"b\"), CAST(MIN(\"a\"\"b\") AS TEXT), CAST(MAX(\"a\"\"b\") AS TEXT) FROM \"orders\""
         );
     }
 }

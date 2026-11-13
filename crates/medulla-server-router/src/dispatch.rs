@@ -46,6 +46,8 @@ pub mod seam;
 // incident authority of `medulla-stream`.
 #[cfg(any(feature = "obs", feature = "stream"))]
 pub mod incident;
+// MEDULLA-UNIFIED-DATA-PLANE-R762.3: the served quality rule write.
+pub mod quality;
 // EH-408 / EH-409: stored telemetry → ontology-bound facts. Needs the
 // observability store (`obs`) and the schema reasoner (`shacl`).
 #[cfg(all(feature = "obs", feature = "shacl"))]

@@ -20,6 +20,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-federation = { path = "../medulla-federation", optional = true }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality", optional = true }
@@ -31,7 +32,10 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-sql = { path = "../medulla-sql", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
+medulla-stream = { path = "../medulla-stream" }
+medulla-tables = { path = "../medulla-tables", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
@@ -61,7 +65,7 @@ ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medu
 jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "query", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch"]
 program-optimization = ["jobs", "medulla-agent-types/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
-query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
+query = ["medulla-table-store/sql", "dep:medulla-sql", "medulla-sql/sql", "dep:medulla-tables", "medulla-tables/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-work-types/statechart", "server"]
@@ -80,7 +84,7 @@ cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt", "medulla-raft/cost-opt"
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime", "medulla-raft/par-runtime", "medulla-server-api/par-runtime", "query", "redb"]
 text = ["dep:medulla-plan", "medulla-plan/text", "medulla-raft/text", "medulla-server-api/text", "medulla-server-ops/text", "medulla-types/text", "medulla-query-types/text", "query", "redb"]
 federation = ["dep:medulla-plan", "medulla-plan/federation", "medulla-protocol-types/federation", "medulla-raft/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation", "query", "redb", "server"]
-federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql", "medulla-raft/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql", "federation", "query", "redb", "server"]
+federation-sql = ["dep:medulla-federation", "medulla-federation/federation-sql", "dep:medulla-plan", "medulla-plan/federation-sql", "medulla-raft/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql", "federation", "query", "redb", "server"]
 geo = ["dep:medulla-plan", "medulla-plan/geo", "medulla-raft/geo", "medulla-server-api/geo", "medulla-types/geo", "medulla-query-types/geo", "query", "redb"]
 tensor = ["dep:medulla-plan", "medulla-plan/tensor", "medulla-raft/tensor", "medulla-server-api/tensor", "medulla-types/tensor", "medulla-query-types/tensor", "query", "redb"]
 stream = ["dep:medulla-plan", "medulla-plan/stream", "medulla-raft/stream", "medulla-server-api/stream", "medulla-server-ops/stream", "medulla-types/stream", "medulla-query-types/stream", "query", "redb"]

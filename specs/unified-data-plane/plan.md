@@ -342,3 +342,15 @@ the cursor, scope-stamping and refusal decisions.
 
 ### Discovery at registration (R038.2.1)
 `RegisterForeignSource` → `discover_source` (exhaustive `discoverer_for(SourceCategory)`) → catalog insert → `write_contract` (one durable `AddNode` of `vg:MetadataContract`). Live catalog read for PostgreSQL-wire and MySQL-family sources; declared-shape hash for the rest. See research.md.
+Projection read wiring (R026.4): `Method::ProjectionRead` is served by `handle_projection_read` in `crates/medulla-h-query/src/query/projection.rs` (types and pure evaluation in `crates/medulla-types/src/projection_read.rs`, codes `PROJECTION_MAPPING_UNAPPROVED`, `PROJECTION_MAPPING_STALE`, `PROJECTION_ACCESS_DENIED`, `PROJECTION_READ_ONLY` in `ServerErrorCode`). The pgwire session binds `medulla.mapping` through `WireSession::bind_mapping`; `refuse_projection_write` in `crates/medulla-wire-core/src/wire/projection.rs` refuses writes. Served tests: `tests/projection_read_served.rs`.
+
+## Profile and quality jobs (R761.3, R762.3)
+
+- Decision: profile and quality jobs write their graph nodes in one engine-internal batch keyed by the job id (`data_plane_write.rs`), so a retried attempt replays instead of writing twice. Rejected: a seam call per node.
+- Decision: incidents opened by a failing rule streak are correlated with `IncidentAuthority` and written in the job's own batch through the shared `medulla_stream::telemetry::incident_nodes` module (moved from the router so one shape serves both). Rejected: a `DecideApi` seam to `medulla-h-decide`.
+- Decision: the verified plain tenant and agent are stamped into the `JobKind` at submit (client values replaced), because the worker claim has no request carrier.
+- Decision: R761.3 no longer depends on R803. R803.3 adds the sensitive scan to the profile executor; the old edge made a cycle.
+- Decision: SQL-source datasets are named `<source>.<table>` and need named columns; native tables profile through DataFusion.
+- Decision: rule and score node ids are tenant-private hashes; `QualityRulePut` stores the rule approved by the verified agent and resets its failure counter.
+- Deferred: shape and freshness measurement (R762.9) return `QUALITY_MEASURE_UNAVAILABLE`.
+- WIRE-REGEN: `QualityRulePut`, the new `JobKind` variants and `QualityRuleReceipt` were hand-edited into `medulla/generated/models.py`; regenerate models and wire vectors.

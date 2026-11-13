@@ -282,6 +282,38 @@ pub enum JobKind {
         #[serde(default)]
         tenant_scope: String,
     },
+    /// Profile columns of one native dataset of the caller's tenant and attach each
+    /// `ColumnProfile` to its catalog column node (MEDULLA-UNIFIED-DATA-PLANE-R761.3).
+    /// An empty `columns` profiles every column. The verified owner scope, tenant scope,
+    /// tenant and agent are stamped by the server at submit; a client value is replaced.
+    DatasetProfile {
+        dataset: String,
+        #[serde(default)]
+        columns: Vec<String>,
+        #[serde(default)]
+        owner_scope: String,
+        #[serde(default)]
+        tenant_scope: String,
+        #[serde(default)]
+        tenant: String,
+        #[serde(default)]
+        agent: String,
+    },
+    /// Evaluate the approved quality rules of one target dataset, write one
+    /// `QualityScore` per rule and count consecutive failures
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R762.3). The verified scopes, tenant and agent are
+    /// stamped by the server at submit; a client value is replaced.
+    QualityEvaluate {
+        target: String,
+        #[serde(default)]
+        owner_scope: String,
+        #[serde(default)]
+        tenant_scope: String,
+        #[serde(default)]
+        tenant: String,
+        #[serde(default)]
+        agent: String,
+    },
     /// Governed graph-native program compilation. The nested MessagePack is a
     /// versioned `medulla_program::OptimizationRequest`; `medulla-types` remains the bottom
     /// of the crate DAG and the server decodes/rebinds it at the verified boundary.

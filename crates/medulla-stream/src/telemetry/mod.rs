@@ -28,6 +28,7 @@ pub mod conformance;
 pub mod derive;
 pub mod facts;
 pub mod incident_authority;
+pub mod incident_nodes;
 pub mod pipeline;
 pub mod rollup;
 pub mod signal;

@@ -9199,6 +9199,39 @@ class JobKindMineAssociateBody(BaseModel):
     transactions: list[list[str]]
 
 
+class JobKindDatasetProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    DatasetProfile: JobKindDatasetProfileBody
+
+
+class JobKindDatasetProfileBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent: str = ""
+    columns: list[str] = []
+    dataset: str
+    owner_scope: str = ""
+    tenant: str = ""
+    tenant_scope: str = ""
+
+
+class JobKindQualityEvaluate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    QualityEvaluate: JobKindQualityEvaluateBody
+
+
+class JobKindQualityEvaluateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent: str = ""
+    owner_scope: str = ""
+    target: str
+    tenant: str = ""
+    tenant_scope: str = ""
+
+
 class JobKindProgramOptimize(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14086,6 +14119,13 @@ class MethodIncidentSetStatus(BaseModel):
     params: MethodIncidentSetStatusParams
 
 
+class MethodQualityRulePut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["QualityRulePut"]
+    params: MethodQualityRulePutParams
+
+
 class MethodLineageIngest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15081,6 +15121,7 @@ Method = Annotated[
         MethodIncidentRecordAnomaly,
         MethodIncidentRelatedClaims,
         MethodIncidentSetStatus,
+        MethodQualityRulePut,
         MethodLineageIngest,
         MethodListMemorySnapshots,
         MethodLiveArtifactGet,
@@ -29273,7 +29314,13 @@ class JobKindSourceQueryLogIngestBody(BaseModel):
     tenant_scope: str = Field(default="")
 
 
-JobKind = JobKindMineAssociate | JobKindProgramOptimize | JobKindSourceQueryLogIngest
+JobKind = (
+    JobKindMineAssociate
+    | JobKindDatasetProfile
+    | JobKindQualityEvaluate
+    | JobKindProgramOptimize
+    | JobKindSourceQueryLogIngest
+)
 
 JobOp = (
     JobOpSubmit
@@ -30669,6 +30716,53 @@ class IncidentWriteReceipt(BaseModel):
     nodes_written: Annotated[int, Field(ge=0)]
 
 
+class QualityDimension(str, Enum):
+    COMPLETENESS = "completeness"
+    UNIQUENESS = "uniqueness"
+    VALIDITY = "validity"
+    CONSISTENCY = "consistency"
+    FRESHNESS = "freshness"
+    ACCURACY = "accuracy"
+
+
+class QualitySeverity(str, Enum):
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class QualityRule(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dimension: QualityDimension
+    expression: str
+    id: str
+    severity: QualitySeverity
+    target: str
+    threshold: float
+
+
+class RuleStateProposed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Literal["proposed"]
+
+
+class RuleStateApproved(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str
+    state: Literal["approved"]
+
+
+class QualityRuleReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+    rule_id: str
+    state: RuleStateProposed | RuleStateApproved
+
+
 class LifecycleTransition(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -31030,6 +31124,12 @@ class MethodIncidentSetStatusParams(BaseModel):
 
     incident_id: str
     status: IncidentStatus
+
+
+class MethodQualityRulePutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rule: QualityRule
 
 
 class MethodLineageIngestParams(BaseModel):
@@ -35312,6 +35412,12 @@ __all__ = [
     "IncidentSeverity",
     "IncidentStatus",
     "IncidentWriteReceipt",
+    "QualityDimension",
+    "QualityRule",
+    "QualityRuleReceipt",
+    "QualitySeverity",
+    "RuleStateApproved",
+    "RuleStateProposed",
     "Incumbent",
     "IndexBlock",
     "IndexBlockReason",
@@ -35365,6 +35471,10 @@ __all__ = [
     "JobKindMineAssociateBody",
     "JobKindProgramOptimize",
     "JobKindProgramOptimizeBody",
+    "JobKindDatasetProfile",
+    "JobKindDatasetProfileBody",
+    "JobKindQualityEvaluate",
+    "JobKindQualityEvaluateBody",
     "JobOp",
     "JobOpCancel",
     "JobOpCancelBody",
@@ -36153,6 +36263,8 @@ __all__ = [
     "MethodIncidentRelatedClaimsParams",
     "MethodIncidentSetStatus",
     "MethodIncidentSetStatusParams",
+    "MethodQualityRulePut",
+    "MethodQualityRulePutParams",
     "MethodIndexRepository",
     "MethodIndexRepositoryParams",
     "MethodInvalidateEdge",

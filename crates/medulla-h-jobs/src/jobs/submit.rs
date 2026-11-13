@@ -411,6 +411,86 @@ pub(super) fn submit_job_source_query_log(
     ))
 }
 
+/// A dataset, column or target name a data-plane job accepts: 1 to 256 characters,
+/// letters, digits, `_`, `.`, `:` and `-` only, the character set `compile_rule`
+/// accepts for a rule target.
+fn plain_identifier(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 256
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | ':' | '-'))
+}
+
+/// The `JobKind::DatasetProfile` arm of [`handle_submit`]'s kind-governance match
+/// (MEDULLA-UNIFIED-DATA-PLANE-R761.3): the client names the dataset and columns; the
+/// owner scope, tenant scope and tenant are the verified caller's, replacing anything
+/// the request carried. At most `knob profile.max_columns` columns per job.
+pub(super) fn submit_job_profile(
+    authority: &CarrierAuthority,
+    req_id: u64,
+    dataset: String,
+    columns: Vec<String>,
+) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    if !plain_identifier(&dataset) {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: the dataset must be a plain name of 1 to 256 characters",
+        ));
+    }
+    let max_columns = medulla_server_api::knob_config::knobs().profile_max_columns as usize;
+    if columns.len() > max_columns || !columns.iter().all(|column| plain_identifier(column)) {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: the columns must be plain names, at most profile.max_columns of them",
+        ));
+    }
+    let params = serde_json::json!({ "dataset": dataset, "columns": columns });
+    Ok((
+        JobKind::DatasetProfile {
+            dataset,
+            columns,
+            owner_scope: authority.owner_scope().to_string(),
+            tenant_scope: authority.tenant_scope().to_string(),
+            tenant: authority.log_owner().0.to_string(),
+            agent: authority.agent_id().to_string(),
+        },
+        "catalog.profile".to_string(),
+        "dataset_profile".to_string(),
+        params,
+    ))
+}
+
+/// The `JobKind::QualityEvaluate` arm of [`handle_submit`]'s kind-governance match
+/// (MEDULLA-UNIFIED-DATA-PLANE-R762.3): the client names the target; the owner scope,
+/// tenant scope and tenant are the verified caller's, replacing anything the request
+/// carried.
+pub(super) fn submit_job_quality(
+    authority: &CarrierAuthority,
+    req_id: u64,
+    target: String,
+) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    if !plain_identifier(&target) {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: the target must be a plain name of 1 to 256 characters",
+        ));
+    }
+    let params = serde_json::json!({ "target": target });
+    Ok((
+        JobKind::QualityEvaluate {
+            target,
+            owner_scope: authority.owner_scope().to_string(),
+            tenant_scope: authority.tenant_scope().to_string(),
+            tenant: authority.log_owner().0.to_string(),
+            agent: authority.agent_id().to_string(),
+        },
+        "catalog.quality".to_string(),
+        "quality_evaluate".to_string(),
+        params,
+    ))
+}
+
 /// Bounded-decode one program optimization request.
 #[cfg(feature = "program-optimization")]
 pub(super) fn decode_optimization_request(request_msgpack: &[u8]) -> Option<OptimizationRequest> {

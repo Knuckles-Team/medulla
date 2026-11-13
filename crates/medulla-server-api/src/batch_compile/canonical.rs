@@ -732,6 +732,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::IncidentEvidence { .. }
         | Method::IncidentRelatedClaims { .. }
         | Method::IncidentSetStatus { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R762.3: the quality rule write self-translates
+        // into a request-graph `BatchUpdate`.
+        | Method::QualityRulePut { .. }
         // MEDULLA-SDLC-R002.3: release and deployment records self-translate
         // into a request-graph `BatchUpdate`.
         | Method::RecordRelease { .. }

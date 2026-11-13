@@ -555,6 +555,28 @@ knobs! {
     profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
     /// Most steps plus flows of one imported canonical workflow (MEDULLA-CQ-ORCH-R701.2).
     process_import_max_elements: u64 = "process.import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
+    /// Most columns one `DatasetProfile` job profiles (MEDULLA-UNIFIED-DATA-PLANE-R761.3).
+    profile_max_columns: u64 = "profile.max_columns", U64(256), [1, 4_096], "columns", Tunable;
+    /// Connect and read timeout of a profile read on an attached SQL source
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R761.3).
+    profile_source_timeout_ms: u64 = "profile.source_timeout_ms", U64(10_000), [1_000, 300_000], "ms", Tunable;
+    /// Rows the reservoir of a sampled column profile keeps (MEDULLA-UNIFIED-DATA-PLANE-R761.2).
+    profile_sample_rows: u64 = "profile.sample_rows", U64(100_000), [1_000, 10_000_000], "rows", Tunable;
+    /// Most frequent values one column profile keeps (MEDULLA-UNIFIED-DATA-PLANE-R761.2).
+    profile_top_k: u64 = "profile.top_k", U64(10), [1, 1_000], "values", Tunable;
+    /// Equal-width histogram buckets of a numeric column profile (MEDULLA-UNIFIED-DATA-PLANE-R761.2).
+    profile_histogram_buckets: u64 = "profile.histogram_buckets", U64(20), [1, 1_000], "buckets", Tunable;
+    /// Consecutive failing scores of one quality rule that open an incident
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
+    quality_incident_after_failures: u64 = "quality.incident_after_failures", U64(3), [1, 100], "failures", Tunable;
+    /// Correlation window of the incident a failing quality rule records
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R762.3).
+    quality_incident_window_ms: u64 = "quality.incident_window_ms", U64(86_400_000), [60_000, 2_592_000_000], "ms", Tunable;
+    /// Most rules one `QualityEvaluate` job evaluates (MEDULLA-UNIFIED-DATA-PLANE-R762.3).
+    quality_max_rules: u64 = "quality.max_rules", U64(1_000), [1, 100_000], "rules", Tunable;
+    /// Most incidents one `QualityEvaluate` job loads for correlation
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R762.3).
+    quality_max_incidents: u64 = "quality.max_incidents", U64(100_000), [1_000, 1_000_000], "incidents", Tunable;
     /// Context facts kept per node.
     context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
     /// Bytes per token in the context facts estimate.

@@ -205,6 +205,99 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
 - [ ] T196 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
 - [ ] T197 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
+- [ ] T105a [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.8 Text columns: a `RowSet` carries typed text columns beside its value channels
+- [ ] T105b [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.9 Gateway provider: the engine reaches connector tools through the fleet gateway
+- [ ] T106 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.3 Every catalog route passes the carrier gate
+- [ ] T107 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.4 Partition spec and per-partition field summaries in emitted Iceberg metadata
+- [ ] T108 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.5 End-to-end external read through the authenticated catalog
+- [ ] T109 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.1 A per-modality retrieval gate blocks promotion of a shared embedding space: Model
+- [ ] T110 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.2 A per-modality retrieval gate blocks promotion of a shared embedding space: Behavior
+- [ ] T111 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
+- [ ] T112 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
+- [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
+- [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Hot-path proof: a regressed image check blocks a served promotion
+- [ ] T115 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.1 Projection read binds mapping and graph revisions
+- [ ] T116 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.2 Projected tables refuse every SQL write
+- [ ] T117 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.3 Graph changes reach the projection only through MutationBatch
+- [ ] T118 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.750 Model: Conversation history source, run audit rows and step store
+- [ ] T119 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.751 Behavior: Conversation history source, run audit rows and step store
+- [ ] T120 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.752 Refusal: Conversation history source, run audit rows and step store
+- [ ] T121 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.753 Hot-path proof: scoped history search over one million steps
+- [ ] T122 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.1 Model: cascade plan, orphan report and delete receipt
+- [ ] T123 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.2 Behavior: plan from back-references, apply as one batch, verify the orphan report
+- [ ] T124 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.3 Wiring: the served `DocumentDelete` method reaches the cascade
+- [ ] T125 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.4 Refusal: missing document, live external references, oversized or partial cascade
+- [ ] T126 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.5 Evidence: the delete receipt and a content-free deletion record
+- [ ] T127 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.6 Hot-path proof: a 500-chunk delete leaves no orphan
+- [ ] T128 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.1 Fetched web pages enrich through the one document path: Model
+- [ ] T129 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.2 Fetched web pages enrich through the one document path: Behavior
+- [ ] T130 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.3 Fetched web pages enrich through the one document path: Wiring
+- [ ] T131 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 Fetched web pages enrich through the one document path: Refusal
+- [ ] T132 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.5 Fetched web pages enrich through the one document path: Evidence
+- [ ] T133 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.6 Fetched web pages enrich through the one document path: Hot-path proof
+- [ ] T134 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.7 Extraction: a worker submits facts for the enriched chunks and the engine grounds them
+- [ ] T135 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.1 Governed Actions: typed parameters, submission criteria, effects and write-back: Model
+- [ ] T136 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.2 Behavior: parameters, ordered criteria, one-pass templates, one mutation batch
+- [ ] T137 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.3 Wiring: `ActionRegister` and `ActionSubmit` reach the apply path and the outbox
+- [ ] T138 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.4 Governed Actions: typed parameters, submission criteria, effects and write-back: Refusal
+- [ ] T139 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.5 Governed Actions: typed parameters, submission criteria, effects and write-back: Evidence
+- [ ] T140 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.6 Hot-path proof: a failed criterion applies no effect
+- [ ] T141 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.1 Standards conformance: cohorts, drift scores and consolidation recommendations: Model
+- [ ] T142 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.2 Standards conformance: cohorts, drift scores and consolidation recommendations: Behavior
+- [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Wiring: `StandardsDrift` reads the graph and stays a proposal across attached applications
+- [ ] T144 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
+- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
+- [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
+- [ ] T147 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.1 ETL runs record lineage and consume external lineage run events: Model
+- [ ] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.2 ETL runs record lineage and consume external lineage run events: Behavior
+- [ ] T149 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.3 Wiring: `LineageIngest` is called by the lake sweep and the arbora route; lineage reads are plain graph queries
+- [ ] T150 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.4 ETL runs record lineage and consume external lineage run events: Refusal
+- [ ] T151 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.5 ETL runs record lineage and consume external lineage run events: Evidence
+- [ ] T152 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.6 Hot-path proof: replay adds no edges and malformed events quarantine
+- [ ] T153 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
+- [ ] T154 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Message-stream records normalize into a `ChangeEnvelope`: refusal, evidence and hot-path proof
+- [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
+- [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
+- [ ] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
+- [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
+- [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
+- [ ] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
+- [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3 Avro scans project the reader schema
+- [ ] T163 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.754 Wiring: terminal commit writes audit rows and steps; `HistorySearch` reads them
+- [ ] T164 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
+- [ ] T165 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
+- [x] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
+- [ ] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
+- [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
+- [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
+- [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model
+- [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
+- [x] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
+- [ ] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
+- [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
+- [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
+- [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
+- [ ] T177a [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.9 Shape and freshness rules measured in the served job
+- [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
+- [ ] T178 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.1 Column-level lineage from SQL text: Model
+- [ ] T179 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.2 Derive column edges from SQL with the shared parser
+- [ ] T180 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.3 Wire column lineage into the catalog reader, the lineage drain and impact queries
+- [ ] T181 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.4 Quarantine SQL that does not parse
+- [ ] T182 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.5 Record query digest and parser version on each column edge
+- [ ] T183 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.6 Hot-path proof for column lineage
+- [ ] T184 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.7 Catalog carries view definitions
+- [ ] T185 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.1 Asset usage statistics and catalog search: Model
+- [ ] T186 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.2 Asset usage statistics and catalog search: Behavior
+- [ ] T187 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.3.1 Record asset usage from the server's own query dispatch
+- [ ] T188 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.4 Refuse unauthorized hits and oversized catalog queries
+- [ ] T189 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.5 List score components on each catalog hit
+- [ ] T190 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.6 Hot-path proof for catalog search
+- [ ] T191 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.7 Usage from attached-source query logs
+- [ ] T192 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.8 Frequent users and usage suggestions
+- [ ] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
+- [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
+- [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources
 - [ ] T198 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T199 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.1 Committed/DerivedState state machine: route 1 census findings through DerivedState::apply
 - [ ] T200 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.2 Wire status codes named `status`: HTTP, S3, key-value cache, TDS header and Iceberg manifest entry status values; one Python HTTP response status

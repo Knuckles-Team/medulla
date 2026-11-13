@@ -28,24 +28,16 @@ use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{timed_read, typed_response};
 use medulla_stream::telemetry::incident_authority::{IncidentAuthority, IncidentRefusal};
-use serde_json::{json, Map, Value};
-use sha2::{Digest, Sha256};
+use serde_json::Value;
 use tokio::sync::RwLock;
 
-/// The node type of a served incident.
-pub const INCIDENT_TYPE: &str = "Incident";
-/// The node type of one evidence reading.
-pub const HEALTH_ANOMALY_TYPE: &str = "HealthAnomaly";
-/// The property holding the canonical JSON of the [`IncidentRecord`]; an
-/// `Incident` node without it (a CEP-derived fact) is not a served incident.
-pub const INCIDENT_RECORD_PROPERTY: &str = "incident_record";
-/// Incident → evidence edge relation.
-pub const HAS_EVIDENCE: &str = "hasEvidence";
+use medulla_stream::telemetry::incident_nodes::{
+    incident_operations, incident_record, INCIDENT_TYPE,
+};
 /// Claim → entity edge relation `IncidentRelatedClaims` follows.
 pub const ABOUT: &str = "about";
 
 const MAX_INCIDENTS_READ: usize = 100_000;
-const MAX_BATCH_OPERATIONS: usize = 50_000;
 const DEFAULT_CLAIM_LIMIT: u32 = 100;
 const MAX_CLAIM_LIMIT: u32 = 1_000;
 
@@ -205,12 +197,6 @@ async fn load(
     ))
 }
 
-fn incident_record(properties: &[u8]) -> Option<IncidentRecord> {
-    let node = medulla_types::msgpack::decode_property_value(properties).ok()?;
-    let body = node.get(INCIDENT_RECORD_PROPERTY)?.as_str()?;
-    serde_json::from_str(body).ok()
-}
-
 fn related_claims(
     graph: &GraphCore,
     record: &IncidentRecord,
@@ -258,20 +244,6 @@ fn is_about(graph: &GraphCore, source: &str, target: &str) -> bool {
         .any(|edge| edge.get("relationship").and_then(Value::as_str) == Some(ABOUT))
 }
 
-fn hex_digest(text: &str) -> String {
-    let digest = Sha256::digest(text.as_bytes());
-    digest.iter().map(|b| format!("{b:02x}")).collect()
-}
-
-/// The `HealthAnomaly` node id of one reading of one incident.
-fn evidence_id(incident_id: &str, reading: &AnomalyReading) -> String {
-    let key = format!(
-        "{incident_id}|{}|{}|{}",
-        reading.entity_ref, reading.signal, reading.at_ms
-    );
-    format!("anom-{}", &hex_digest(&key)[..32])
-}
-
 /// Commit the incidents the call changed and the evidence it added as ONE
 /// `BatchUpdate`; `ids` is what the call answers. Evidence already committed
 /// is not rewritten, so a replayed batch writes nothing.
@@ -306,120 +278,4 @@ async fn commit(
         incident_ids: ids,
         nodes_written,
     })
-}
-
-fn stamp(properties: &mut Map<String, Value>, tenant: &str, agent: &str) {
-    properties.insert("tenant_id".into(), tenant.into());
-    properties.insert("_owner".into(), agent.into());
-}
-
-/// Upserts for each changed incident node, its added evidence nodes, then
-/// the edges.
-fn incident_operations<'a>(
-    records: impl Iterator<Item = (&'a IncidentRecord, &'a [AnomalyReading])>,
-    tenant: &str,
-    agent: &str,
-) -> Result<(Vec<Value>, u64), String> {
-    let mut nodes = Vec::new();
-    let mut edges = Vec::new();
-    for (record, added) in records {
-        let body = serde_json::to_string(record)
-            .map_err(|_| "incident record encoding failed".to_string())?;
-        let mut properties = Map::new();
-        properties.insert("type".into(), INCIDENT_TYPE.into());
-        properties.insert(INCIDENT_RECORD_PROPERTY.into(), body.into());
-        properties.insert("status".into(), json!(record.status));
-        properties.insert("severity".into(), json!(record.severity));
-        properties.insert(
-            "signature_digest".into(),
-            record.signature_digest.clone().into(),
-        );
-        stamp(&mut properties, tenant, agent);
-        nodes.push(json!({"op": "upsert_node", "id": record.id, "properties": properties}));
-        for reading in added {
-            let id = evidence_id(&record.id, reading);
-            let mut properties = Map::new();
-            properties.insert("type".into(), HEALTH_ANOMALY_TYPE.into());
-            properties.insert("entity_ref".into(), reading.entity_ref.clone().into());
-            properties.insert("signal".into(), reading.signal.clone().into());
-            properties.insert("observed".into(), json!(reading.observed));
-            properties.insert("baseline".into(), json!(reading.baseline));
-            properties.insert("at_ms".into(), reading.at_ms.into());
-            stamp(&mut properties, tenant, agent);
-            nodes.push(json!({"op": "upsert_node", "id": id, "properties": properties}));
-            let mut edge = Map::from_iter([("relationship".to_string(), HAS_EVIDENCE.into())]);
-            stamp(&mut edge, tenant, agent);
-            edges.push(json!({
-                "op": "upsert_edge",
-                "source": record.id,
-                "target": id,
-                "properties": edge,
-            }));
-        }
-    }
-    if nodes.len() + edges.len() > MAX_BATCH_OPERATIONS {
-        return Err("INVALID_ARGUMENT: the incident evidence exceeds one BatchUpdate".to_string());
-    }
-    let written = nodes.len() as u64;
-    nodes.extend(edges);
-    Ok((nodes, written))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use medulla_catalog_types::incident::{IncidentSeverity, IncidentStatus};
-
-    fn record() -> IncidentRecord {
-        IncidentRecord {
-            id: "inc-1".into(),
-            tenant: "acme".into(),
-            signature_digest: "0".repeat(64),
-            severity: IncidentSeverity::High,
-            status: IncidentStatus::Open,
-            opened_at_ms: 1,
-            evidence: vec![AnomalyReading {
-                entity_ref: "svc:a".into(),
-                signal: "cpu".into(),
-                observed: 300.0,
-                baseline: 100.0,
-                at_ms: 1,
-            }],
-            status_history: vec![IncidentStatus::Open],
-        }
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.3
-    #[test]
-    fn one_batch_carries_the_incident_and_its_evidence() {
-        let record = record();
-        let (operations, nodes) = incident_operations(
-            std::iter::once((&record, record.evidence.as_slice())),
-            "acme",
-            "agent-1",
-        )
-        .unwrap();
-        assert_eq!(nodes, 2);
-        assert_eq!(operations.len(), 3);
-        assert_eq!(operations[0]["properties"]["tenant_id"], "acme");
-        let body = operations[0]["properties"][INCIDENT_RECORD_PROPERTY]
-            .as_str()
-            .unwrap();
-        assert_eq!(
-            serde_json::from_str::<IncidentRecord>(body).unwrap(),
-            record
-        );
-        assert_eq!(operations[2]["op"], "upsert_edge");
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.6
-    #[test]
-    fn a_status_only_change_rewrites_no_evidence() {
-        let record = record();
-        let (operations, nodes) =
-            incident_operations(std::iter::once((&record, &[][..])), "acme", "agent-1").unwrap();
-        assert_eq!(nodes, 1);
-        assert_eq!(operations.len(), 1);
-        assert_eq!(operations[0]["id"], record.id.as_str());
-    }
 }

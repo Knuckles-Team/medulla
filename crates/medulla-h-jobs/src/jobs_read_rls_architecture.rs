@@ -54,12 +54,26 @@ use super::*;
 /// enforces exactly this ordering at runtime too).
 const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
     (
+        "DatasetProfile",
+        "names one native dataset; the worker reads that dataset from the \
+         verified tenant's own table store and writes ColumnProfile nodes -- \
+         no node/edge property is read from `core` (the catalog column node \
+         is only probed for presence by id)",
+    ),
+    (
         "MineAssociate",
         "mines only the `transactions` field the CALLER supplied inline in \
          the request; `handle_submit`'s JobKind::MineAssociate arm hashes \
          each caller-supplied item under the caller's own owner_scope before \
          it ever reaches durable jobs.redb storage -- no node/edge property \
          is read from `core`",
+    ),
+    (
+        "QualityEvaluate",
+        "names one target dataset; the worker reads only the QualityRule \
+         configuration nodes stamped with the job's verified tenant (written \
+         by QualityRulePut) and the target from that tenant's own table \
+         store -- no caller data row is read from `core`",
     ),
     (
         "SourceQueryLogIngest",
@@ -94,7 +108,13 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
     // Every kind this build actually ships must be classified -- an
     // undocumented variant is the hard failure, mirroring
     // `medulla_server::access::read_rls_coverage_tests`'s UNDOCUMENTED gate.
-    let shipped: &[&str] = &["MineAssociate", "ProgramOptimize", "SourceQueryLogIngest"];
+    let shipped: &[&str] = &[
+        "DatasetProfile",
+        "MineAssociate",
+        "ProgramOptimize",
+        "QualityEvaluate",
+        "SourceQueryLogIngest",
+    ];
     let undocumented: Vec<&str> = shipped
         .iter()
         .copied()
@@ -123,6 +143,29 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
          NON_ROW_SCOPED_JOB_KINDS entry (or move it to a routed bucket) and \
          verify handle_submit actually projects the row through \
          GraphReadAuthority before this assertion changes"
+    );
+    assert!(
+        !reads_graph_rows_server_side(&JobKind::DatasetProfile {
+            dataset: "orders".to_string(),
+            columns: Vec::new(),
+            owner_scope: String::new(),
+            tenant_scope: String::new(),
+            tenant: String::new(),
+            agent: String::new(),
+        }),
+        "DatasetProfile flipped to graph-row-reading -- see the MineAssociate \
+         assertion above for what must happen before this test may change"
+    );
+    assert!(
+        !reads_graph_rows_server_side(&JobKind::QualityEvaluate {
+            target: "orders".to_string(),
+            owner_scope: String::new(),
+            tenant_scope: String::new(),
+            tenant: String::new(),
+            agent: String::new(),
+        }),
+        "QualityEvaluate flipped to graph-row-reading -- see the MineAssociate \
+         assertion above for what must happen before this test may change"
     );
     assert!(
         !reads_graph_rows_server_side(&JobKind::SourceQueryLogIngest {

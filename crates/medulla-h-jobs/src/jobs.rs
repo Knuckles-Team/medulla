@@ -86,14 +86,14 @@ const MAX_JOB_PUBLICATION_PLAN_BYTES: usize = 16 * 1024 * 1024;
 #[cfg(test)]
 mod association_hash_tests;
 mod core;
+mod data_plane_write;
 mod executor_claim;
 mod executor_loop;
-mod executor_query_log;
-// The `DatasetProfile` claim arm (MEDULLA-UNIFIED-DATA-PLANE-R761.3) is its caller.
-#[cfg_attr(not(test), allow(dead_code))]
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
+mod executor_quality;
+mod executor_query_log;
 #[cfg(test)]
 mod graph_tests;
 mod helpers;
@@ -140,8 +140,10 @@ use core::{
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
+use executor_profile::{execute_profile_claim, ProfileTarget};
 #[cfg(feature = "program-optimization")]
 use executor_program::*;
+use executor_quality::{execute_quality_claim, QualityTarget};
 use executor_query_log::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
@@ -548,6 +550,11 @@ fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
         // `jobs` always compiles the variant in; built or refused, it reads
         // no rows.
         JobKind::ProgramOptimize { .. } => false,
+        // The dataset is read from the tenant's own table store by the worker.
+        JobKind::DatasetProfile { .. } => false,
+        // The worker reads only the tenant's QualityRule configuration nodes and the
+        // target from the tenant's own table store.
+        JobKind::QualityEvaluate { .. } => false,
         // The log is read from the attached source by the worker, never from graph rows.
         JobKind::SourceQueryLogIngest { .. } => false,
     }
@@ -738,6 +745,10 @@ pub fn govern_job_kind(
             min_confidence,
             algorithm,
         ),
+        JobKind::DatasetProfile {
+            dataset, columns, ..
+        } => submit_job_profile(authority, req_id, dataset, columns),
+        JobKind::QualityEvaluate { target, .. } => submit_job_quality(authority, req_id, target),
         JobKind::SourceQueryLogIngest { source, .. } => {
             submit_job_source_query_log(authority, req_id, source)
         }

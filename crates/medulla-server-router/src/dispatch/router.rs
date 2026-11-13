@@ -48,6 +48,7 @@ mod graph_lifecycle;
 mod identity_access;
 mod incident;
 mod lifecycle;
+mod quality;
 mod resource_cost;
 mod sdlc;
 mod service_control;
@@ -76,6 +77,7 @@ use incident::dispatch_incident_methods;
 use lifecycle::apply_rbac_admin;
 pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
 use lifecycle::{delete_graph, dispatch_get_identity, index_kind_label, index_validity_label};
+use quality::dispatch_quality_methods;
 use resource_cost::dispatch_resource_cost_methods;
 use sdlc::dispatch_sdlc_methods;
 use service_control::dispatch_service_control_methods;
@@ -138,6 +140,9 @@ pub(in crate::dispatch) fn method_handler_registry() -> &'static HandlerRegistry
         }));
         registry.register(PlaneHandler::new("incident", |ctx, method| {
             Box::pin(dispatch_incident_methods(ctx, method))
+        }));
+        registry.register(PlaneHandler::new("quality", |ctx, method| {
+            Box::pin(dispatch_quality_methods(ctx, method))
         }));
         registry.register(PlaneHandler::new("sdlc", |ctx, method| {
             Box::pin(dispatch_sdlc_methods(ctx, method))

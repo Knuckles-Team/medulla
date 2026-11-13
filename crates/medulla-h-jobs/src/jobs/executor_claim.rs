@@ -36,6 +36,53 @@ pub(super) async fn execute_claim(
                 min_confidence,
                 algorithm,
             } => (transactions, min_support, min_confidence, algorithm),
+            JobKind::DatasetProfile {
+                dataset,
+                columns,
+                owner_scope,
+                tenant_scope,
+                tenant,
+                agent,
+            } => {
+                return execute_profile_claim(
+                    state,
+                    store,
+                    &claim.job,
+                    &worker_ref,
+                    epoch,
+                    ProfileTarget {
+                        dataset,
+                        columns,
+                        owner_scope,
+                        tenant_scope,
+                        tenant,
+                        agent,
+                    },
+                )
+                .await;
+            }
+            JobKind::QualityEvaluate {
+                target,
+                tenant_scope,
+                tenant,
+                agent,
+                ..
+            } => {
+                return execute_quality_claim(
+                    state,
+                    store,
+                    &claim.job,
+                    &worker_ref,
+                    epoch,
+                    QualityTarget {
+                        target,
+                        tenant_scope,
+                        tenant,
+                        agent,
+                    },
+                )
+                .await;
+            }
             JobKind::SourceQueryLogIngest {
                 source,
                 owner_scope,

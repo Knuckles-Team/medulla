@@ -405,6 +405,11 @@ closed_error_codes! {
         PatternWindowShort => "PATTERN_WINDOW_SHORT",
         PresetUnavailable => "PRESET_UNAVAILABLE",
         PromotionBlocked => "PROMOTION_BLOCKED",
+        // MEDULLA-UNIFIED-DATA-PLANE-R761.3 / R762.3: data-plane profile and quality jobs.
+        ProfileUnsupported => "PROFILE_UNSUPPORTED",
+        QualityMeasureUnavailable => "QUALITY_MEASURE_UNAVAILABLE",
+        QualityRuleInvalid => "QUALITY_RULE_INVALID",
+        QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
         /// A chunk-encoding position mode the encoder does not serve (MEDULLA-FEDERATED-QUERY-R039.2.2).
         EncodePositionModeUnsupported => "ENCODE_POSITION_MODE_UNSUPPORTED",
         /// A chunk-encoding overlap that is not strictly below the window size (MEDULLA-FEDERATED-QUERY-R039.2.2).

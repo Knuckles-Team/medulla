@@ -34,6 +34,10 @@ pub mod mutation_outbox;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod native_write_authority;
 
+/// MEDULLA-UNIFIED-DATA-PLANE-R762.3: the stored shape of a quality rule and the write of
+/// `QualityRulePut`.
+pub mod quality_rule;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "statechart")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

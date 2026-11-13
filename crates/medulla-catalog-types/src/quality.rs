@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// The closed set of quality dimensions shared by native and outside scores.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum QualityDimension {
     Completeness,
     Uniqueness,
@@ -19,6 +20,7 @@ pub enum QualityDimension {
 /// How severe a failing rule is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum QualitySeverity {
     Info,
     Warning,
@@ -28,6 +30,7 @@ pub enum QualitySeverity {
 /// One quality rule. `threshold` is the minimum passing value in `[0, 1]`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct QualityRule {
     pub id: String,
     pub target: String,
@@ -109,9 +112,21 @@ impl QualityRule {
 /// Where a proposed rule stands in the change-request flow.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "state")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum RuleState {
     Proposed,
     Approved { approver: String },
+}
+
+/// What one `QualityRulePut` wrote (MEDULLA-UNIFIED-DATA-PLANE-R762.3): the rule, the
+/// tenant-private node that holds it and the state it entered.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QualityRuleReceipt {
+    pub rule_id: String,
+    pub node_id: String,
+    pub state: RuleState,
 }
 
 /// A rule proposed from a column profile (MEDULLA-UNIFIED-DATA-PLANE-R762.7).

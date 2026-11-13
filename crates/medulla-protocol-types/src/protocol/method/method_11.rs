@@ -254,6 +254,13 @@ $($variants)*
         status: medulla_catalog_types::incident::IncidentStatus,
     },
 
+    // ── Data quality rules (MEDULLA-UNIFIED-DATA-PLANE-R762.3) ─────────────
+    /// Store one quality rule in the caller's tenant (from the verified carrier),
+    /// approved by the caller. Refuses a rule that does not compile.
+    QualityRulePut {
+        rule: medulla_types::quality::QualityRule,
+    },
+
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
     /// Validate and register one action spec in the request graph's registry.
     ActionRegister {

@@ -132,6 +132,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
+    "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
     "ActionRegister",
@@ -460,6 +462,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
+    "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
     "ActionRegister",
@@ -657,6 +661,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
+    "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
     "ActionRegister",
@@ -805,6 +811,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
+    "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
     "ActionRegister",

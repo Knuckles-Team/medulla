@@ -1233,6 +1233,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "QualityRulePut",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "QUALITY_RULE_INVALID",
+            "QUALITY_THRESHOLD_INVALID",
+        ],
+    ),
+    (
         "TelemetryDerive",
         &[
             "TELEMETRY_UNAVAILABLE",
