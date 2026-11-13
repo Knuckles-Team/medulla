@@ -94,6 +94,59 @@ pub struct HeadCalibration {
     pub risk: Option<RiskStatement>,
     pub n_calibration: u64,
     pub synthetic: bool,
+    /// The monotone map from the positive-class score to its calibrated
+    /// probability, when the head was fitted with isotonic calibration
+    /// (MEDULLA-DECISION-ENGINE-R032.2.1). Omitted when absent, so the bytes
+    /// (and the content digest) of every other head are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isotonic: Option<IsotonicTable>,
+}
+
+/// One monotone block of an isotonic fit: scores in `[lower, upper]` map to
+/// `value`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IsotonicBlock {
+    pub lower: QuantisedValue,
+    pub upper: QuantisedValue,
+    pub value: QuantisedValue,
+}
+
+/// The blocks of an isotonic calibration in increasing score order, values
+/// non-decreasing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IsotonicTable {
+    pub blocks: BoundedVec<IsotonicBlock, 1024>,
+}
+
+impl IsotonicTable {
+    /// The table's shape is a monotone step function: non-empty, each block
+    /// ordered, blocks in increasing order, values non-decreasing.
+    pub fn check(&self) -> Result<(), String> {
+        let blocks = self.blocks.as_slice();
+        if blocks.is_empty() {
+            return Err("an isotonic table carries at least one block".to_string());
+        }
+        let mut previous: Option<&IsotonicBlock> = None;
+        for block in blocks {
+            if block.lower.value > block.upper.value {
+                return Err("an isotonic block's lower bound exceeds its upper".to_string());
+            }
+            if let Some(before) = previous {
+                if block.lower.value <= before.upper.value || block.value.value < before.value.value
+                {
+                    return Err(
+                        "isotonic blocks are increasing with non-decreasing values".to_string()
+                    );
+                }
+            }
+            previous = Some(block);
+        }
+        Ok(())
+    }
 }
 
 /// The body of a `DecisionHead` component, and of a fit job's draft.
@@ -143,6 +196,9 @@ impl DecisionHeadBody {
         }
         if self.regime == FittedRegime::BanditLabel && self.calibration.is_some() {
             return Err("a bandit-label head makes no coverage claim".to_string());
+        }
+        if let Some(table) = self.calibration.as_ref().and_then(|c| c.isotonic.as_ref()) {
+            table.check()?;
         }
         self.check_scorer()?;
         Ok(self)

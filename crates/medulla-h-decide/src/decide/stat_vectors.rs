@@ -38,6 +38,11 @@ impl GraphVectors {
         self.core.semantic_store.read().dim()
     }
 
+    /// The graph's mutation version when the view was opened.
+    pub(super) fn version(&self) -> u64 {
+        self.core.version()
+    }
+
     /// How many rows the store embeds.
     pub(super) fn embedded(&self) -> u64 {
         self.core.semantic_store.read().len() as u64

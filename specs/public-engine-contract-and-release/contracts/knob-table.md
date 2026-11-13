@@ -25,6 +25,10 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `schema_repair.shadow_sample_nodes` | u64 | 10000 | [100, 1000000] | nodes | Tunable | `MEDULLA_SCHEMA_REPAIR_SHADOW_SAMPLE_NODES` |
 | `ontology_diff.max_listed` | u64 | 100 | [10, 1000] | ids | Tunable | `MEDULLA_ONTOLOGY_DIFF_MAX_LISTED` |
 | `reputation.min_support` | u64 | 10 | [1, 1000] | observations | Tunable | `MEDULLA_REPUTATION_MIN_SUPPORT` |
+| `transfer.min_backbones` | u64 | 2 | [2, 16] | count | Tunable | `MEDULLA_TRANSFER_MIN_BACKBONES` |
+| `transfer.min_samples` | u64 | 30 | [10, 10000] | labels | Tunable | `MEDULLA_TRANSFER_MIN_SAMPLES` |
+| `transfer.skill_after_successes` | u64 | 3 | [1, 100] | labels | Tunable | `MEDULLA_TRANSFER_SKILL_AFTER_SUCCESSES` |
+| `transfer.min_rollouts` | u64 | 3 | [1, 100] | records | Tunable | `MEDULLA_TRANSFER_MIN_ROLLOUTS` |
 | `memory_sync.cursor_ttl_s` | u64 | 900 | [60, 86400] | seconds | Tunable | `MEDULLA_MEMORY_SYNC_CURSOR_TTL_S` |
 | `memory.search_state_max_bytes` | u64 | 1048576 | [65536, 1048576] | bytes | Tunable | `MEDULLA_MEMORY_SEARCH_STATE_MAX_BYTES` |
 | `toc.line_index_stride` | u64 | 64 | [16, 1024] | lines | Tunable | `MEDULLA_TOC_LINE_INDEX_STRIDE` |
@@ -57,6 +61,7 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `process.document_max_depth` | u64 | 64 | [4, 256] | levels | Tunable | `MEDULLA_PROCESS_DOCUMENT_MAX_DEPTH` |
 | `sync.max_records` | u64 | 50000 | [1, 1000000] | records | Tunable | `MEDULLA_SYNC_MAX_RECORDS` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
+| `context_budget.relevance_min` | f64 | 0.5 | [0.0, 1.0] | ratio | Tunable | - |
 | `generation.batch_nodes` | u64 | 256 | [16, 4096] | nodes | Tunable | `MEDULLA_GENERATION_BATCH_NODES` |
 | `adapter.rank` | u64 | 8 | [1, 8] | directions | Tunable | `MEDULLA_ADAPTER_RANK` |
 | `adapter.holdout_pct` | u64 | 20 | [5, 50] | percent | Tunable | `MEDULLA_ADAPTER_HOLDOUT_PCT` |

@@ -30,6 +30,7 @@ pub fn request() -> SourceIngestionRequest {
                 tool_schema_sha256: Digest256::from_bytes([7; 32]),
                 source_uri: "demo://items/item-1".into(),
             },
+            column_profiles: Default::default(),
         }])
         .expect("bounded source records"),
         relationships: BoundedVec::new(Vec::new()).expect("bounded source relationships"),

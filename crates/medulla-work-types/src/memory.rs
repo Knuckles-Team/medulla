@@ -13,7 +13,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::{contract::ResourceId, contract::TenantId};
+use sha2::{Digest, Sha256};
+
+use medulla_types::{contract::Digest256, contract::ResourceId, contract::TenantId};
 
 /// The largest number of nodes one memory prune step may remove.
 pub const MAX_MEMORY_PRUNE_STEP: u32 = 10_000;
@@ -290,6 +292,118 @@ impl<'de> Deserialize<'de> for ContextBudget {
     }
 }
 
+/// What one engine-held memory record is (MEDULLA-DECISION-ENGINE-R651.1). The
+/// discriminator is closed; `SearchState` (R149.1) and `SessionNote` (R150.1)
+/// carry the typed bodies below.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum MemoryKind {
+    Fact,
+    Episode,
+    ConversationTurn,
+    Rule,
+    SearchState,
+    SessionNote,
+}
+
+/// A search run's state, saved so it survives context eviction
+/// (MEDULLA-DECISION-ENGINE-R149.1). The four arrays hold opaque JSON values;
+/// medulla owns no item schema inside them. Digests are derived on read, never
+/// stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SearchStateEnvelope {
+    pub search_run_id: String,
+    pub state_revision: u64,
+    pub transcript: Vec<serde_json::Value>,
+    pub evidence: Vec<serde_json::Value>,
+    pub constraints: Vec<serde_json::Value>,
+    pub open_claims: Vec<serde_json::Value>,
+}
+
+/// SHA-256 of the canonical JSON of an array.
+fn array_digest(values: &[serde_json::Value]) -> Digest256 {
+    let bytes = serde_json::to_vec(values).unwrap_or_default();
+    Digest256::from_bytes(Sha256::digest(bytes).into())
+}
+
+impl SearchStateEnvelope {
+    pub fn transcript_digest(&self) -> Digest256 {
+        array_digest(&self.transcript)
+    }
+    pub fn evidence_digest(&self) -> Digest256 {
+        array_digest(&self.evidence)
+    }
+    pub fn constraints_digest(&self) -> Digest256 {
+        array_digest(&self.constraints)
+    }
+    pub fn open_claims_digest(&self) -> Digest256 {
+        array_digest(&self.open_claims)
+    }
+}
+
+/// One session note (MEDULLA-DECISION-ENGINE-R150.1). The tenant comes from
+/// the verified request, so it is not a field.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SessionNoteBody {
+    pub schema_version: u16,
+    pub note_id: String,
+    pub run_id: String,
+    pub session_id: String,
+    pub task_id: String,
+    pub user_id: String,
+    pub input_digest: Digest256,
+    pub output_digest: Digest256,
+    pub source_revision: u64,
+    pub content: String,
+}
+
+impl SessionNoteBody {
+    /// `user_id` is non-empty.
+    pub fn checked(self) -> Result<Self, MemoryError> {
+        if self.user_id.trim().is_empty() {
+            return Err(MemoryError::InvalidIdentifier("user_id: empty".into()));
+        }
+        Ok(self)
+    }
+
+    /// A note is content-addressed by its record digest.
+    pub fn record_digest(&self) -> Digest256 {
+        let bytes = serde_json::to_vec(self).unwrap_or_default();
+        Digest256::from_bytes(Sha256::digest(bytes).into())
+    }
+}
+
+/// How a recalled note is flagged (MEDULLA-DECISION-ENGINE-R150.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NoteView {
+    pub note_id: String,
+    pub revision: u64,
+    /// Relevance in `[0, 10000]`.
+    pub relevance_q4: u16,
+    pub stale: bool,
+    pub archived: bool,
+    pub conflict: bool,
+    pub applied: bool,
+}
+
+impl NoteView {
+    pub fn checked(self) -> Result<Self, MemoryError> {
+        if self.relevance_q4 > 10_000 {
+            return Err(MemoryError::InvalidBudget(
+                "relevance_q4 exceeds 10000".into(),
+            ));
+        }
+        Ok(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +496,95 @@ mod tests {
             r#"{"tenant":"tenant-a","policy_id":"policy:1","min_age_ms":0,"classes":[],"max_per_step":1}"#
         )
         .is_err());
+    }
+
+    fn digest_of(tag: &str) -> Digest256 {
+        Digest256::sha256(tag.as_bytes())
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R149.1
+    #[test]
+    fn search_state_round_trips() {
+        let envelope = SearchStateEnvelope {
+            search_run_id: "run:1".into(),
+            state_revision: 3,
+            transcript: vec![serde_json::json!({"turn": 1}), serde_json::json!("two")],
+            evidence: vec![serde_json::json!({"doc": "d1"})],
+            constraints: vec![serde_json::json!(["a", "b"])],
+            open_claims: vec![],
+        };
+        let json = serde_json::to_string(&envelope).unwrap();
+        let restored: SearchStateEnvelope = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored, envelope);
+        assert_eq!(restored.transcript.len(), 2);
+        assert_eq!(restored.evidence.len(), 1);
+        assert_eq!(restored.constraints.len(), 1);
+        assert!(restored.open_claims.is_empty());
+        // The digests are derived, stable and independent per array.
+        assert_eq!(envelope.transcript_digest(), restored.transcript_digest());
+        assert_ne!(envelope.transcript_digest(), envelope.evidence_digest());
+        assert_ne!(envelope.constraints_digest(), envelope.open_claims_digest());
+        assert_eq!(envelope.evidence_digest().to_hex().len(), 64);
+        assert!(
+            !json.contains("transcript_digest"),
+            "digests are never stored"
+        );
+        assert_eq!(
+            serde_json::to_string(&MemoryKind::SearchState).unwrap(),
+            "\"search_state\""
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R150.1
+    #[test]
+    fn notes_round_trip() {
+        let note = SessionNoteBody {
+            schema_version: 1,
+            note_id: "note:1".into(),
+            run_id: "run:1".into(),
+            session_id: "session:1".into(),
+            task_id: "task:1".into(),
+            user_id: "user:1".into(),
+            input_digest: digest_of("in"),
+            output_digest: digest_of("out"),
+            source_revision: 9,
+            content: "remember this".into(),
+        };
+        let checked = note.clone().checked().unwrap();
+        let json = serde_json::to_string(&checked).unwrap();
+        assert_eq!(
+            serde_json::from_str::<SessionNoteBody>(&json).unwrap(),
+            note
+        );
+        assert_eq!(note.record_digest(), checked.record_digest());
+        let mut other = note.clone();
+        other.content = "different".into();
+        assert_ne!(note.record_digest(), other.record_digest());
+        let mut empty = note.clone();
+        empty.user_id = String::new();
+        assert!(empty.checked().is_err());
+
+        let view = NoteView {
+            note_id: "note:1".into(),
+            revision: 2,
+            relevance_q4: 10_000,
+            stale: true,
+            archived: false,
+            conflict: true,
+            applied: false,
+        };
+        let json = serde_json::to_string(&view).unwrap();
+        assert_eq!(serde_json::from_str::<NoteView>(&json).unwrap(), view);
+        assert!(view.clone().checked().is_ok());
+        assert!(NoteView {
+            relevance_q4: 10_001,
+            ..view
+        }
+        .checked()
+        .is_err());
+        assert_eq!(
+            serde_json::to_string(&MemoryKind::SessionNote).unwrap(),
+            "\"session_note\""
+        );
     }
 }

@@ -45,10 +45,18 @@ impl DecisionFamily for PlacementFamily {
             harness_contrast: None,
             topology: None,
             thought: None,
+            context_selection: None,
+            family_premises: Vec::new(),
+            route: None,
         }))
     }
 
-    fn premises(&self, request: &DecideRequest) -> Vec<PremiseRef> {
+    fn premises(
+        &self,
+        request: &DecideRequest,
+        _executed: &Executed,
+        _policy_digest: &str,
+    ) -> Vec<PremiseRef> {
         premises(request)
     }
 }

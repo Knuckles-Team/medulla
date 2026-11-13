@@ -18,7 +18,8 @@ use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
     layout_predecessors, AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
-    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
+    GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
     GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, RBAC_BEFORE_PROFILE_GRANTS,
     SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
@@ -218,6 +219,17 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         RBAC_BEFORE_PROFILE_GRANTS,
         inspect_rbac_profile_grant_upgrade,
         upgrade_rbac_profile_grants
+    ),
+    offline_upgrade!(
+        GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
+        |path, identity, integrity, options| inspect_graph_shard_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            GraphShardSource::BeforeDecisionCertificates
+        ),
+        upgrade_graph_shard
     ),
 ];
 

@@ -73,6 +73,7 @@ async fn split(h: &Harness, method: SlateAttributionMethod) -> Result<SlateAttri
                 graph_digest: "g-ab".to_string(),
                 method,
             }),
+            transfer: None,
         },
     };
     let aggregate: OutcomeAggregate =

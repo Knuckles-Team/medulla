@@ -261,6 +261,7 @@ mod tests {
         assert_eq!(&serde_json::from_str::<T>(&wire).unwrap(), value);
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R137.7
     #[test]
     fn package_records_round_trip() {
         let good = request(vec![candidate("a", "u1", 0), candidate("b", "u1", 1)]);

@@ -6,7 +6,7 @@
 //! under the verified tenant and owns raw CAS admission, mapping, the cursor CAS,
 //! provenance and the terminal durable receipt.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -17,6 +17,7 @@ use medulla_types::{
 };
 
 pub mod batch_kind;
+pub mod column_profile;
 #[cfg(any(test, feature = "test-support"))]
 pub mod fixtures;
 #[cfg(test)]
@@ -61,6 +62,7 @@ pub const SOURCE_INGESTION_CANONICAL_JSON_PATHS: &[&str] = &[
 /// emits that field as MessagePack nil.
 pub const SOURCE_INGESTION_OMIT_NONE_PATHS: &[&str] = &[
     "records[*].updated_at",
+    "records[*].column_profiles",
     "relationships[*].properties",
     "provider_checkpoint.content_hash",
     "provider_checkpoint.watermark",
@@ -150,6 +152,10 @@ pub struct SourceRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
     pub provenance: SourceRecordProvenance,
+    /// What a SQL connector measured about each payload column
+    /// (MEDULLA-DECISION-ENGINE-R079.4); empty for every other source.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub column_profiles: BTreeMap<String, column_profile::SqlColumnProfile>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -469,6 +475,15 @@ pub struct SourceIngestionReceipt {
     /// has an approved contract.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub drift: Vec<StreamDrift>,
+    /// Every SQL column whose values stayed out of the embedding set, with
+    /// its reason (MEDULLA-DECISION-ENGINE-R079.4). Replayed from the
+    /// committed receipt; not part of the receipt digest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_exclusions: Vec<column_profile::ColumnExclusion>,
+    /// Every column value that entered the embedding set
+    /// (MEDULLA-DECISION-ENGINE-R079.6). Replayed; not part of the digest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub embedding_set: Vec<column_profile::EmbeddingSetEntry>,
     /// The stream's content-version object id (the live-set marker id): every
     /// batch to one stream advances this one object.
     pub stream_object_id: String,
@@ -593,8 +608,18 @@ fn validate_record(
     validate_required_text(&record.provenance.server, "provenance server")?;
     validate_required_text(&record.provenance.tool, "provenance tool")?;
     validate_required_text(&record.provenance.source_uri, "provenance source_uri")?;
-    if !record.payload.value()?.is_object() {
+    let payload = record.payload.value()?;
+    if !payload.is_object() {
         return Err("source record payload must be a JSON object".into());
+    }
+    for (column, profile) in &record.column_profiles {
+        profile.validate(column)?;
+        if payload.get(column).is_none() {
+            return Err(format!(
+                "{}: column `{column}` has a profile but no payload value",
+                medulla_types::contract::ServerErrorCode::SourceColumnProfileInvalid.as_str()
+            ));
+        }
     }
     if !identities.insert((record.stream.as_str().to_owned(), record.record_id.clone())) {
         return Err("source ingestion batch contains a duplicate source identity".into());

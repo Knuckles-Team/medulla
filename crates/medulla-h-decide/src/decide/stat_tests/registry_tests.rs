@@ -78,9 +78,6 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::ConnectorToolChoice,
     QuestionKind::ConnectorWriteBack,
     QuestionKind::Placement,
-    QuestionKind::ContextBudget,
-    QuestionKind::RoundVerdict,
-    QuestionKind::StageAllocation,
     QuestionKind::ProbeVerdict,
     QuestionKind::ItemRecommendation,
     QuestionKind::LoadSet,
@@ -88,7 +85,6 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::BranchOutcome,
     QuestionKind::EditConcentration,
     QuestionKind::ComparativeAnalysisPlan,
-    QuestionKind::ContextPackage,
 ];
 
 fn task_request(pin: &ComponentDependency) -> DecideRequest {
@@ -248,6 +244,23 @@ fn text_option(id: &str, name: &str) -> DeclaredOption {
     }
 }
 
+/// A `resolve_entity` pair option: a name plus the two IRIs of the pair.
+fn pair_text_option(id: &str, name: &str) -> DeclaredOption {
+    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    let mut option = text_option(id, name);
+    let mut texts: Vec<DeclaredText> = option.texts.iter().cloned().collect();
+    texts.push(DeclaredText {
+        key: "entity.left".to_string(),
+        text: format!("urn:entity:{id}"),
+    });
+    texts.push(DeclaredText {
+        key: "entity.right".to_string(),
+        text: format!("urn:entity:{id}-other"),
+    });
+    option.texts = BoundedVec::new(texts).unwrap();
+    option
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R030.701
 #[tokio::test]
 async fn resolve_entity_records_identity_premises_and_refuses_unapproved_links() {
@@ -256,8 +269,8 @@ async fn resolve_entity_records_identity_premises_and_refuses_unapproved_links()
     let mut request = declared_request(QuestionKind::ResolveEntity, &pin, None);
     request.candidates = CandidateSource::Declared {
         options: BoundedVec::new(vec![
-            text_option("a", "x7Qp9ZkL2mWv"),
-            text_option("b", "x7Qp9ZkL2mWv"),
+            pair_text_option("a", "x7Qp9ZkL2mWv"),
+            pair_text_option("b", "x7Qp9ZkL2mWv"),
         ])
         .unwrap(),
     };

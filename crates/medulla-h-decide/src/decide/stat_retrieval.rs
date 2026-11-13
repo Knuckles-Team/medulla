@@ -24,10 +24,7 @@ use super::stat_log::{
 };
 use super::stat_support::{default_statistical_policy, refusal};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
-use medulla_persistence_records::decision_jobs::decode_artifact;
-
-/// Key family of retrieval outcomes.
-const OUTCOME_PREFIX: &str = "retrieval:";
+use medulla_persistence_records::decision_jobs::{decode_artifact, RETRIEVAL_OUTCOME_PREFIX};
 
 fn invalid(detail: impl std::fmt::Display) -> String {
     refusal(StatisticalErrorCode::ParameterInvalid, detail)
@@ -94,7 +91,7 @@ pub(super) fn stored_outcome(
     record_id: &str,
 ) -> Result<Option<StoredRetrievalOutcome>, String> {
     store
-        .decision_artifact(tenant_id, &format!("{OUTCOME_PREFIX}{record_id}"))?
+        .decision_artifact(tenant_id, &format!("{RETRIEVAL_OUTCOME_PREFIX}{record_id}"))?
         .map(|bytes| decode_artifact(&bytes, "retrieval outcome"))
         .transpose()
 }
@@ -110,7 +107,7 @@ pub(super) fn record_outcome(
         visible_entry(ctx.store, reader, &outcome.record_id)?,
         reader,
     )?;
-    let key = format!("{OUTCOME_PREFIX}{}", outcome.record_id);
+    let key = format!("{RETRIEVAL_OUTCOME_PREFIX}{}", outcome.record_id);
     let stored = StoredRetrievalOutcome {
         outcome,
         producer: reader.principal.clone(),
@@ -129,9 +126,11 @@ pub(super) fn judged_outcomes(
 ) -> Result<Vec<JudgedOutcome>, String> {
     let floor = default_statistical_policy().min_outcome_fidelity;
     let mut out = Vec::new();
-    for (_, bytes) in
-        store.decision_artifacts_with_prefix(&reader.tenant_id, OUTCOME_PREFIX, MAX_LOG_ROWS)?
-    {
+    for (_, bytes) in store.decision_artifacts_with_prefix(
+        &reader.tenant_id,
+        RETRIEVAL_OUTCOME_PREFIX,
+        MAX_LOG_ROWS,
+    )? {
         let stored: StoredRetrievalOutcome = decode_artifact(&bytes, "retrieval outcome")?;
         let Some(entry) = visible_entry(store, reader, &stored.outcome.record_id)? else {
             continue;

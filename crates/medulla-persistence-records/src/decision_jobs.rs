@@ -227,6 +227,50 @@ impl AgentLibraryStore {
     }
 }
 
+/// Key family of retrieval outcomes (`retrieval:<record id>`), written once per
+/// committed retrieval-plan record by the decision log's outcome join.
+pub const RETRIEVAL_OUTCOME_PREFIX: &str = "retrieval:";
+
+/// Rows read per page while scanning retrieval outcomes.
+const OUTCOME_PAGE_ROWS: usize = 1_000;
+
+impl AgentLibraryStore {
+    /// The distinct span ids that retrieval outcomes of `tenant_id` recorded as
+    /// cited at or after `since_ms` (MEDULLA-DECISION-ENGINE-R079.5). Ids only:
+    /// the reader joins them to content classes and counts, never reads content.
+    pub fn cited_span_ids_since(
+        &self,
+        tenant_id: &str,
+        since_ms: u64,
+    ) -> Result<std::collections::BTreeSet<String>, String> {
+        let mut cited = std::collections::BTreeSet::new();
+        let mut after: Option<String> = None;
+        loop {
+            let page = self.decision_artifacts_page(
+                tenant_id,
+                RETRIEVAL_OUTCOME_PREFIX,
+                after.as_deref(),
+                OUTCOME_PAGE_ROWS,
+            )?;
+            let Some((last, _)) = page.last() else {
+                return Ok(cited);
+            };
+            after = Some(last.clone());
+            let full = page.len() == OUTCOME_PAGE_ROWS;
+            for (_, bytes) in &page {
+                let stored: medulla_decision_types::decision::statistical::retrieval::StoredRetrievalOutcome =
+                    decode_artifact(bytes, "retrieval outcome")?;
+                if stored.recorded_at_ms >= since_ms {
+                    cited.extend(stored.outcome.cited.as_slice().iter().cloned());
+                }
+            }
+            if !full {
+                return Ok(cited);
+            }
+        }
+    }
+}
+
 /// Decode one stored decision artifact.
 pub fn decode_artifact<T: serde::de::DeserializeOwned>(
     bytes: &[u8],

@@ -33,6 +33,7 @@ use medulla_server_auth::auth::dispatch_test_on_heap;
 
 mod admin;
 mod content_model;
+mod embedding_set;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 #[path = "import/contract_tests.rs"]
 mod contract_tests;
@@ -42,6 +43,7 @@ mod ontology;
 #[cfg(feature = "shacl")]
 mod outbox;
 mod scale;
+mod sql_columns;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_approval;

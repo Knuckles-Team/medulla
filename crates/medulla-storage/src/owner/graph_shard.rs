@@ -109,6 +109,12 @@ pub(crate) const XSHARD_PREPARE: TableDefinition<'static, (&str, u64), &[u8]> =
     TableDefinition::new("xshard_prepare");
 pub(crate) const XSHARD_DECISION: TableDefinition<'static, &str, u8> =
     TableDefinition::new("xshard_decision");
+/// The sealed coordinator-decision certificate of one cross-shard transaction,
+/// keyed by `txn_id`. A table of its own, never a reserved key of
+/// `xshard_prepare` or `xshard_decision`: a reserved key would leak into the
+/// prepare scan, backup and shard migration.
+pub(crate) const XSHARD_DECISION_CERTIFICATE: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("xshard_decision_certificate");
 
 // -- materialized views (store-private: keyed by view name) ----------------
 pub(crate) const MATVIEWS: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("matviews");
@@ -264,6 +270,7 @@ macro_rules! visit_graph_shard_tables {
         $visit!(shard::RUN_CHECKPOINTS);
         $visit!(shard::EFFECT_RECEIPTS);
         $visit!(shard::ADMITTED_REQUESTS);
+        $visit!(shard::XSHARD_DECISION_CERTIFICATE);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITIES);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITY_INVOCATIONS);
         $visit!(shard::NATIVE_WORK_ITEM_AUTHORITY);
@@ -367,6 +374,7 @@ pub(crate) const GRAPH_SHARD_TABLES: &[&str] = graph_shard_table_names!(
     "work_item_run_checkpoints",
     "work_item_effect_receipts",
     "work_item_admitted_requests",
+    "xshard_decision_certificate",
 );
 
 /// The eight tables of the shard's retired private mutation ledger.
@@ -406,6 +414,7 @@ fn key_type_scalar_or_narrow_tuple(name: &str) -> Option<&'static str> {
         | "graph_meta"
         | "work_item_command_sequence"
         | "xshard_decision"
+        | "xshard_decision_certificate"
         | "matviews"
         | "plan_matviews"
         | "matview_operator_state"
@@ -548,6 +557,7 @@ pub(crate) fn scope(name: &str) -> Option<TableScope> {
         | "raft_meta"
         | "xshard_prepare"
         | "xshard_decision"
+        | "xshard_decision_certificate"
         | "matviews"
         | "plan_matviews"
         | "matview_operator_state"

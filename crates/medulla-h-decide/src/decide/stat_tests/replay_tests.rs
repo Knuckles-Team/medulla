@@ -93,6 +93,7 @@ async fn fitted(h: &Harness) -> Fitted {
         penalty: None,
         features: Default::default(),
         parent_head: None,
+        calibration_method: None,
     };
     let op = DecisionFitOp::Submit {
         request: Box::new(fit),
@@ -163,6 +164,7 @@ fn replay_request(fitted: &Fitted, key: &str, spec: ReplaySpec) -> DecisionEvalR
         mode: EvalMode::Replay {
             spec: Box::new(spec),
         },
+        gold_guarantee: None,
     }
 }
 

@@ -133,6 +133,32 @@ fn text_column(
         .collect()
 }
 
+/// The nearest-neighbour similarity of each candidate, read from the question
+/// parameter the server filled (`candidate id -> Q32`, JSON); a candidate the
+/// server found no neighbour for is absent and follows the feature's missing rule.
+fn nearest_neighbour_column(
+    candidates: &[CandidateView],
+    inputs: &FeatureInputs,
+    graph_param: &str,
+) -> RefusalResult<Vec<Option<i64>>> {
+    let name =
+        medulla_decision_types::decision::paper_admission::nearest_neighbour_param(graph_param);
+    let TypedValue::Text(json) = param(inputs, &name)? else {
+        return Err(wrong_type(&name, "text"));
+    };
+    let known: std::collections::BTreeMap<String, i64> =
+        serde_json::from_str(json).map_err(|error| {
+            Refusal::new(
+                StatisticalErrorCode::ParameterInvalid,
+                format!("parameter {name} is not an id to Q32 map: {error}"),
+            )
+        })?;
+    Ok(candidates
+        .iter()
+        .map(|c| known.get(&c.id).copied())
+        .collect())
+}
+
 fn integer_column(values: impl Iterator<Item = Option<i64>>) -> RefusalResult<Vec<Option<i64>>> {
     values
         .map(|value| value.map(q32_integer).transpose())
@@ -180,6 +206,9 @@ fn column(
             Ok(number_column(candidates, &outcome_rate_key(question_id)))
         }
         FeatureKind::TextBm25 { key, param } => text_column(candidates, inputs, key, param),
+        FeatureKind::NearestNeighbourSimilarity { graph_param } => {
+            nearest_neighbour_column(candidates, inputs, graph_param)
+        }
     }
 }
 

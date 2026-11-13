@@ -248,6 +248,7 @@ async fn inline_human_labels_cannot_publish_threshold(
                     penalty: None,
                     features: Default::default(),
                     parent_head: None,
+                    calibration_method: None,
                 }),
             },
         )
@@ -287,6 +288,7 @@ async fn inline_human_labels_cannot_publish_threshold(
                         dataset: Box::new(heldout),
                     },
                     mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+                    gold_guarantee: None,
                 }),
             },
         )
@@ -426,6 +428,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         penalty: None,
         features: Default::default(),
         parent_head: None,
+        calibration_method: None,
     };
     let fit_op = || DecisionFitOp::Submit {
         request: Box::new(fit_request.clone()),
@@ -486,6 +489,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
             dataset: Box::new(data),
         },
         mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        gold_guarantee: None,
     };
     let job: DecisionJobRecord = decode(
         super::jobs::handle_decision_eval(
@@ -584,6 +588,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
             dataset: Box::new(human_data),
         },
         mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        gold_guarantee: None,
     };
     let human_job: DecisionJobRecord = decode(
         super::jobs::handle_decision_eval(
@@ -1052,9 +1057,29 @@ use log_tests::{retention_compacts_and_verifies, retention_retires};
 mod classes_tests;
 
 mod tool_subset_tests;
+mod route_tests;
+
+mod resolve_entity_tests;
+
+mod context_budget_tests;
 
 // MEDULLA-DECISION-ENGINE-R137.8: the served package selection journey.
 mod context_package_tests;
+
+// MEDULLA-DECISION-ENGINE-R136.4: served round verdict and stage allocation.
+mod evolution_round_tests;
+
+// MEDULLA-DECISION-ENGINE-R137.3: the served over-window plan.
+mod over_window_plan_tests;
+
+// MEDULLA-DECISION-ENGINE-R137.14: the served held-out replacement gate.
+mod context_replacement_tests;
+
+// MEDULLA-DECISION-ENGINE-R044.2.2: the served A2A routing family.
+mod a2a_route_tests;
+
+// MEDULLA-DECISION-ENGINE-R137.100: relevance-triggered instruction disclosure.
+mod instruction_disclosure_tests;
 
 mod scope_bound_tests;
 
@@ -1090,6 +1115,8 @@ mod attribution_tests;
 // EH-525: the learned reputation relation and SOURCE RELIABILITY.
 #[cfg(feature = "query")]
 mod reputation_tests;
+#[cfg(test)]
+mod transfer_tests;
 
 mod nl_tests;
 
@@ -1106,6 +1133,9 @@ mod writeback_queue_tests;
 #[cfg(all(feature = "query", feature = "epistemic"))]
 mod belief_tests;
 mod scorer_tests;
+// MEDULLA-DECISION-ENGINE-R031.100: paper relevance admission.
+#[cfg(feature = "query")]
+mod paper_admission_tests;
 
 // MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.
 mod importance_penalty_tests;
@@ -1124,6 +1154,7 @@ mod exploration_pool_tests;
 mod replay_tests;
 
 mod registry_tests;
+mod rank_tests;
 mod task_plan_tests;
 mod concentration_tests;
 

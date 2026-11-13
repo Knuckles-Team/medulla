@@ -50,6 +50,7 @@ mod stat_generation_cycle;
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_concentration;
+mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_jobs;
 #[cfg(feature = "decide")]

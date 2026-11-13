@@ -308,6 +308,7 @@ pub fn evaluate(
         premises: Default::default(),
         passed: failed.is_empty(),
         synthetic: dataset.synthetic,
+        gold_guarantee: None,
     };
     seal_receipt(&mut receipt);
     Ok(receipt)

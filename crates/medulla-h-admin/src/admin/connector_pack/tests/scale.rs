@@ -46,7 +46,7 @@ fn show_refusals() {
 }
 
 /// The shared fixture request, as a first delta with no prior checkpoint.
-fn first_ingest() -> SourceIngestionRequest {
+pub(super) fn first_ingest() -> SourceIngestionRequest {
     let mut batch = medulla_source_types::source_ingestion::fixtures::request()
         .as_batch()
         .clone();
@@ -56,7 +56,7 @@ fn first_ingest() -> SourceIngestionRequest {
 
 /// A served engine with the demo pack imported under the test tenant and the
 /// ingest graph created. The guard keeps the graph persistence environment.
-async fn pack_graph(label: &str) -> (Served, medulla_kernel::crypto::TestEnvReadGuard) {
+pub(super) async fn pack_graph(label: &str) -> (Served, medulla_kernel::crypto::TestEnvReadGuard) {
     show_refusals();
     let served = Served::new();
     let guard = served.with_graph_persistence().await;
@@ -77,7 +77,7 @@ async fn pack_graph(label: &str) -> (Served, medulla_kernel::crypto::TestEnvRead
 }
 
 /// One served `SourceIngest` call on the ingest graph.
-async fn ingest(
+pub(super) async fn ingest(
     served: &Served,
     request_id: &str,
     request: &SourceIngestionRequest,

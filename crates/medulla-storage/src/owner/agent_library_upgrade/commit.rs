@@ -9,6 +9,7 @@ use crate::owner::graph_shard::{
     ADMITTED_REQUESTS, AUDIT_REQUESTS, CURRENT_PLANS, EFFECT_RECEIPTS,
     REPOSITORY_ENRICHMENT_BUDGETS, REPOSITORY_ENRICHMENT_PARKS,
     REPOSITORY_ENRICHMENT_POLICY_REVISIONS, REPOSITORY_ENRICHMENT_SUPERSESSIONS, RUN_CHECKPOINTS,
+    XSHARD_DECISION_CERTIFICATE,
 };
 use crate::owner::registry::{
     predecessor_evidence, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, RBAC_PROFILE_USE_GRANT,
@@ -95,6 +96,9 @@ fn open_graph_shard_tables(
     if source == GraphShardSource::BeforeEnrichment {
         open_enrichment_tables(write)?;
     }
+    write
+        .open_table(XSHARD_DECISION_CERTIFICATE)
+        .map_err(|error| error.to_string())?;
     write
         .open_table(EFFECT_RECEIPTS)
         .map_err(|error| error.to_string())?;

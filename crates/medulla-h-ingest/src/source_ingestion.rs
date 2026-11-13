@@ -77,6 +77,17 @@ pub struct PreparedSourceIngestion {
     committed_graph_version: u64,
     /// Drift of each approved stream of the batch (R714); empty on a replay.
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
+    /// The column values that entered the embedding set and the columns that
+    /// did not (R079.4, R079.6); replayed from the committed receipt.
+    embedding_set: crate::ingestion_admission::EmbeddingSet,
+}
+
+impl PreparedSourceIngestion {
+    /// The embedding set `prepare` built from the admitted columns
+    /// (MEDULLA-DECISION-ENGINE-R079.6).
+    pub fn embedding_set(&self) -> &crate::ingestion_admission::EmbeddingSet {
+        &self.embedding_set
+    }
 }
 
 impl PreparedSourceIngestion {
@@ -288,6 +299,7 @@ pub async fn prepare(
         &policy_subject,
         reconciliation.entry_revision,
     ));
+    let embedding_set = admitted_embedding_set(batch, &admitted.raw_admissions);
     admitted.methods.push(receipt_method(
         batch,
         &batch_id,
@@ -296,6 +308,7 @@ pub async fn prepare(
         &admitted.raw_admissions,
         &admitted.relationship_raw_admissions,
         admitted.governance,
+        &embedding_set,
     )?);
     admitted.policies.push(policy(
         &batch_id,
@@ -349,6 +362,7 @@ pub async fn prepare(
         governance: admitted.governance,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         drift,
+        embedding_set,
     })
 }
 
@@ -495,6 +509,7 @@ async fn prepare_permissions(
         governance: Default::default(),
         drift: Vec::new(),
         committed_graph_version: ctx.graph_version.saturating_add(1),
+        embedding_set: Default::default(),
     })
 }
 
@@ -600,6 +615,28 @@ fn permission_receipt_method(
         properties_msgpack: rmp_serde::to_vec_named(&properties)
             .map_err(|error| format!("permission receipt encoding failed: {error}"))?,
     })
+}
+
+/// The embedding set of the records this batch admitted (R079.6): a record
+/// governance refused contributes no column value.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn admitted_embedding_set(
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    raw_admissions: &[RawAdmissionReceipt],
+) -> crate::ingestion_admission::EmbeddingSet {
+    let admitted: BTreeSet<(&str, &str)> = raw_admissions
+        .iter()
+        .map(|raw| (raw.stream.as_str(), raw.record_id.as_str()))
+        .collect();
+    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
+        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
+    );
+    crate::ingestion_admission::build_embedding_set(
+        batch.records.iter().filter(|record| {
+            admitted.contains(&(record.stream.as_str(), record.record_id.as_str()))
+        }),
+        &knobs,
+    )
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2007,6 +2044,7 @@ fn receipt_method(
     raw_admissions: &[RawAdmissionReceipt],
     relationship_raw_admissions: &[RawRelationshipAdmissionReceipt],
     governance: medulla_types::source_governance::GovernanceReport,
+    embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
     let properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -2023,6 +2061,8 @@ fn receipt_method(
         "withdrawals": reconciliation.tombstones,
         "relationship_tombstones": relationship_tombstone_receipts(&reconciliation.relationship_tombstones),
         "governance": governance,
+        "column_exclusions": embedding_set.exclusions,
+        "embedding_set": embedding_set.entries,
         "record_count": batch.records.len() - governance.refused as usize,
         "relationship_count": batch.relationships.len(),
         "tombstoned_count": reconciliation.tombstones.len(),
@@ -2275,6 +2315,8 @@ fn build_terminal_receipt(
         governance: prepared.governance,
         committed_graph_version: prepared.committed_graph_version,
         drift: prepared.drift,
+        column_exclusions: prepared.embedding_set.exclusions,
+        embedding_set: prepared.embedding_set.entries,
         stream_object_id,
         previous_content_digest,
         receipt_digest,
@@ -2350,7 +2392,26 @@ fn prepared_replay(
         governance: replay_governance(&receipt)?,
         committed_graph_version,
         drift: Vec::new(),
+        embedding_set: crate::ingestion_admission::EmbeddingSet {
+            entries: replay_optional_receipt_value(&receipt, "embedding_set")?,
+            exclusions: replay_optional_receipt_value(&receipt, "column_exclusions")?,
+        },
     })
+}
+
+/// A receipt member older receipts do not carry replays as empty.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn replay_optional_receipt_value<T: serde::de::DeserializeOwned>(
+    receipt: &serde_json::Value,
+    key: &str,
+) -> Result<Vec<T>, String> {
+    receipt
+        .get(key)
+        .cloned()
+        .map(serde_json::from_value)
+        .transpose()
+        .map(Option::unwrap_or_default)
+        .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: {key}: {error}"))
 }
 
 /// Receipts committed before governance counting carry no `governance` member.
@@ -2901,6 +2962,7 @@ mod tests {
                 tool_schema_sha256: Digest256::from_bytes([3; 32]),
                 source_uri: "demo:items:item-1".into(),
             },
+            column_profiles: Default::default(),
         }
     }
 

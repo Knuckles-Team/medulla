@@ -15,6 +15,7 @@ use super::replay::{EvalMode, EvaluationRun};
 use super::request::DecisionPolicyRef;
 use super::statistical::dataset::LabelledDataset;
 use super::statistical::head::DecisionHeadBody;
+use super::statistical::CalibrationMethod;
 use super::statistical::CalibrationStatement;
 
 pub use super::statistical::head::HeadKind;
@@ -78,6 +79,11 @@ pub struct DecisionFitRequest {
     /// The published head the penalty anchors to.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_head: Option<ComponentDependency>,
+    /// The calibration method the fit applies (MEDULLA-DECISION-ENGINE-R032.2.1).
+    /// `None` keeps the ladder's current choice (conformal over temperature
+    /// scaling); only `Conformal`, `Temperature` and `Isotonic` are accepted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calibration_method: Option<CalibrationMethod>,
 }
 
 impl DecisionFitRequest {
@@ -100,6 +106,7 @@ impl DecisionFitRequest {
         window: RecordWindow,
         optimiser: OptimiserSpec,
         source: DatasetSource,
+        calibration_method: Option<CalibrationMethod>,
     ) -> Result<Self, HeadKindRefusal> {
         StatisticalHeadKind::from_head_kind(head_kind).ok_or_else(|| {
             HeadKindRefusal::NotAStatisticalHead {
@@ -119,6 +126,7 @@ impl DecisionFitRequest {
             penalty: None,
             features: ImportanceFeatures::default(),
             parent_head: None,
+            calibration_method,
         })
     }
 }
@@ -179,6 +187,42 @@ pub struct DecisionEvalRequest {
     /// Off-policy (the default) or a walk-forward replay (EH-528).
     #[serde(default)]
     pub mode: EvalMode,
+    /// The gold-set guarantee the evaluation must also meet before the head
+    /// may be promoted (MEDULLA-DECISION-ENGINE-R032.2.3). Omitted when none
+    /// is asked, so existing requests keep their bytes and digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gold_guarantee: Option<GoldGuarantee>,
+}
+
+/// A guarantee a gold-labelled evaluation is held to, by the question the head
+/// serves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GoldGuarantee {
+    /// The `resolve_entity` pair decision: empirical coverage of at least
+    /// `1 - resolve_entity.alpha` over at least `resolve_entity.gold_min_pairs`
+    /// gold-labelled pairs.
+    ResolveEntity,
+}
+
+/// What a gold-guarantee evaluation measured, recorded on the receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GoldGuaranteeEvidence {
+    pub guarantee: GoldGuarantee,
+    /// The miscoverage level the coverage was held to: `resolve_entity.alpha`
+    /// of the evaluation's policy.
+    pub alpha: UnitRationalWire,
+    /// Gold-labelled pairs the evaluation read.
+    pub n_gold: u64,
+    /// The pairs floor of the evaluation's policy.
+    pub min_pairs: u64,
+    /// Pairs whose prediction set held an acceptable option.
+    pub covered: u64,
+    /// `sha256:<hex>` of the gold set the request pinned.
+    pub gold_set_digest: String,
 }
 
 /// Ask after one submitted job.
@@ -392,6 +436,11 @@ pub struct DecisionEvalReceipt {
     pub premises: BoundedVec<String, 8>,
     pub passed: bool,
     pub synthetic: bool,
+    /// The gold-set guarantee the evaluation was held to and what it measured
+    /// (MEDULLA-DECISION-ENGINE-R032.2.3). Omitted when none was asked, so
+    /// every other receipt keeps its bytes and digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gold_guarantee: Option<GoldGuaranteeEvidence>,
 }
 
 /// A bounded page of persisted receipts. Listing alone does not establish
@@ -652,6 +701,7 @@ mod tests {
             DatasetSource::Logged {
                 question_id: "question-a".to_string(),
             },
+            None,
         )
         .expect("ListwiseLogistic is a closed statistical head");
         assert_eq!(request.head_kind, HeadKind::ListwiseLogistic);
@@ -672,6 +722,7 @@ mod tests {
             DatasetSource::Logged {
                 question_id: "question-a".to_string(),
             },
+            None,
         )
         .unwrap_err();
         assert_eq!(

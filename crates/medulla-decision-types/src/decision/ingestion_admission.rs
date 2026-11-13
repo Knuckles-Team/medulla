@@ -59,6 +59,38 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(65_536),
         safety: KnobSafety::Tunable,
     },
+    KnobSpec {
+        name: "embedding.column_min_distinct_ratio",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.column_min_samples",
+        unit: "values",
+        default: KnobValue::Integer(100),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.demote_window",
+        unit: "ms",
+        default: KnobValue::DurationMs(30 * 86_400_000),
+        min: KnobValue::DurationMs(86_400_000),
+        max: KnobValue::DurationMs(365 * 86_400_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.demote_min_units",
+        unit: "units",
+        default: KnobValue::Integer(100),
+        min: KnobValue::Integer(10),
+        max: KnobValue::Integer(100_000),
+        safety: KnobSafety::Tunable,
+    },
 ];
 
 /// The resolved `embedding.*` admission thresholds.
@@ -70,6 +102,18 @@ pub struct AdmissionKnobs {
     pub min_entropy_bits: f64,
     pub min_unit_chars: usize,
     pub max_unit_chars: usize,
+    /// A text column whose distinct ratio is below this is an enumeration,
+    /// in millionths (R079.4).
+    pub column_min_distinct_micros: u64,
+    /// A free-text column is admitted only when measured over this many
+    /// values (R079.4).
+    pub column_min_samples: u32,
+    /// A content class with no citation inside this window is a demotion
+    /// candidate, in milliseconds (R079.5).
+    pub demote_window_ms: u64,
+    /// A class is demoted only when at least this many of its units are
+    /// embedded (R079.5).
+    pub demote_min_units: usize,
 }
 
 impl AdmissionKnobs {
@@ -88,6 +132,16 @@ impl AdmissionKnobs {
             min_entropy_bits: micros,
             min_unit_chars: int(&KNOBS[2]),
             max_unit_chars: int(&KNOBS[3]),
+            column_min_distinct_micros: match policy.knob(&KNOBS[4]) {
+                KnobValue::DecimalMicros(v) => v.max(0) as u64,
+                _ => 0,
+            },
+            column_min_samples: int(&KNOBS[5]).min(u32::MAX as usize) as u32,
+            demote_window_ms: match policy.knob(&KNOBS[6]) {
+                KnobValue::DurationMs(v) => v,
+                _ => 0,
+            },
+            demote_min_units: int(&KNOBS[7]),
         }
     }
 }
@@ -153,7 +207,7 @@ pub fn classify_unit(path_hint: &str, text: &str, knobs: &AdmissionKnobs) -> Con
 /// The fixed per-unit content-class taxonomy an ingestion admission
 /// decision classifies text into. Adding a class is a registry change
 /// here, not a new ad hoc check at each ingestion call site.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ContentClass {
@@ -219,6 +273,10 @@ mod tests {
         assert_eq!(k.minified_line_chars, 1000);
         assert_eq!(k.max_unit_chars, 8192);
         assert!((k.min_entropy_bits - 2.0).abs() < 1e-9);
+        assert_eq!(k.column_min_distinct_micros, 500_000);
+        assert_eq!(k.column_min_samples, 100);
+        assert_eq!(k.demote_window_ms, 30 * 86_400_000);
+        assert_eq!(k.demote_min_units, 100);
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R079.2

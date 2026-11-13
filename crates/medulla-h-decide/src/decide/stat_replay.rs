@@ -196,7 +196,14 @@ pub(super) fn replay(
     };
     let matrix = stored_matrix(record)?;
     let options = matrix.candidate_ids.len();
-    let replayed = run_on_matrix(&matrix_inputs, &pinned, &policy, matrix)?;
+    let replayed = super::family::for_kind(record.question.kind).refine(
+        None,
+        &pinned,
+        &[],
+        &policy.policy,
+        &policy.digest,
+        run_on_matrix(&matrix_inputs, &pinned, &policy, matrix)?,
+    )?;
     let explanation = recorded_explanation(&pinned, &replayed)? == record.explanation;
     let belief =
         points(&pinned, inputs.belief_slices.as_slice(), options)? == record.belief.as_slice();

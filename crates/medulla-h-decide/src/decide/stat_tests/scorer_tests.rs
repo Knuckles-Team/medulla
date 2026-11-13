@@ -25,6 +25,7 @@ pub(super) fn scorer_fit(fixture: &RouteFixture, data: &LabelledDataset) -> Deci
             penalty: None,
             features: Default::default(),
             parent_head: None,
+            calibration_method: None,
         }),
     }
 }
@@ -47,6 +48,7 @@ pub(super) async fn evaluated(
             dataset: Box::new(data),
         },
         mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        gold_guarantee: None,
     };
     let op = DecisionEvalOp::Submit {
         request: Box::new(eval),

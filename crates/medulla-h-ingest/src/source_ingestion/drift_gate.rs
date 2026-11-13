@@ -120,6 +120,7 @@ mod tests {
                 tool_schema_sha256: medulla_types::contract::Digest256::sha256(b"t"),
                 source_uri: "demo://r".to_string(),
             },
+            column_profiles: Default::default(),
         }
     }
 

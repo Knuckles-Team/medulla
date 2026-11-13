@@ -95,6 +95,7 @@ use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
 use medulla_store::redb_store::PLAN_MATVIEWS;
 use medulla_store::redb_store::RAFT_LOG;
 use medulla_store::redb_store::XSHARD_DECISION;
+use medulla_store::redb_store::XSHARD_DECISION_CERTIFICATE;
 use medulla_store::redb_store::XSHARD_PREPARE;
 use medulla_transaction::OwnerPayloadWrite;
 use redb::{ReadableTable, TableDefinition};
@@ -504,6 +505,7 @@ fn copy_shard_zero_rows(
     }
     report.global += copy_file_wide_table(read, control, XSHARD_PREPARE, |_| true)?;
     report.global += copy_file_wide_table(read, control, XSHARD_DECISION, |_| true)?;
+    report.global += copy_file_wide_table(read, control, XSHARD_DECISION_CERTIFICATE, |_| true)?;
     #[cfg(feature = "compute-dist")]
     {
         report.global += copy_file_wide_table(read, control, MATVIEWS, |_| true)?;

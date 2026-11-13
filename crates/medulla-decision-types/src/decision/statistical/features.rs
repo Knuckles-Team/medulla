@@ -46,6 +46,11 @@ pub enum FeatureKind {
     /// `nl.utterances` / `nl.labels`, or a graph row's text property) against
     /// the named `text` parameter.
     TextBm25 { key: String, param: String },
+    /// Cosine similarity of the candidate to its nearest other row in the graph
+    /// the text parameter `graph_param` names (MEDULLA-DECISION-ENGINE-R031.100).
+    /// The server reads the graph's stored vectors and records the similarities
+    /// in the question's own parameter before the matrix is computed.
+    NearestNeighbourSimilarity { graph_param: String },
 }
 
 /// What an absent fact means. Unknown is never silently zero.

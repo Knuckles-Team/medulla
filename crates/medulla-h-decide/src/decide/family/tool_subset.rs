@@ -38,7 +38,10 @@ impl DecisionFamily for ToolSubsetFamily {
                 seed: [0u8; 32],
                 harness_contrast: None,
                 topology: None,
+                context_selection: None,
                 thought: None,
+                family_premises: Vec::new(),
+                route: None,
             }),
             Err(detail) => Err(detail),
         })

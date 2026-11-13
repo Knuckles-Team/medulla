@@ -316,6 +316,14 @@ knobs! {
     ontology_diff_max_listed: u64 = "ontology_diff.max_listed", U64(100), [10, 1_000], "ids", Tunable;
     /// Reputation minimum independent labels.
     reputation_min_support: u64 = "reputation.min_support", U64(10), [5, 1_000], "labels", Tunable;
+    /// Fewest backbones a transfer estimate may declare (MEDULLA-DECISION-ENGINE-R059.1.2).
+    transfer_min_backbones: u64 = "transfer.min_backbones", U64(2), [2, 16], "count", Tunable;
+    /// Fewest independent labels per backbone in a transfer estimate (MEDULLA-DECISION-ENGINE-R059.1.2).
+    transfer_min_samples: u64 = "transfer.min_samples", U64(30), [10, 10_000], "labels", Tunable;
+    /// Independent successes of one option under one question before it is a skill candidate (MEDULLA-DECISION-ENGINE-R059.2).
+    transfer_skill_after_successes: u64 = "transfer.skill_after_successes", U64(3), [1, 100], "labels", Tunable;
+    /// Fewest distinct records behind a skill candidate's successes (MEDULLA-DECISION-ENGINE-R059.2).
+    transfer_min_rollouts: u64 = "transfer.min_rollouts", U64(3), [1, 100], "records", Tunable;
     /// Lifetime of a signed memory snapshot list cursor (MEDULLA-DURABLE-KERNEL-R085.2).
     memory_sync_cursor_ttl_s: u64 = "memory_sync.cursor_ttl_s", U64(900), [60, 86_400], "seconds", Tunable;
     /// Memory search-state size cap.
@@ -492,6 +500,8 @@ knobs! {
     entity_link_nonmatch_max: f64 = "entity_link.nonmatch_max", F64(0.05), [0.0, 0.5], "ratio", Tunable;
     /// Embedding cosine at or above which a name match plus the embedding proposes a merge (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
     entity_link_embedding_min: f64 = "entity_link.embedding_min", F64(0.9), [0.5, 1.0], "cosine", Tunable;
+    /// Relevance below which a context source is omitted as irrelevant (MEDULLA-DECISION-ENGINE-R029.2.1).
+    context_budget_relevance_min: f64 = "context_budget.relevance_min", F64(0.5), [0.0, 1.0], "ratio", Tunable;
     /// Longest a federated source statement may run.
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).

@@ -185,6 +185,7 @@ async fn task_plan_cannot_use_score_replay() {
         tenant_id: TENANT,
         now_ms: 1,
         server_secret: b"fixture",
+        matched: &[],
     };
     assert!(super::super::stat_replay::replay(&ctx, &record)
         .unwrap_err()

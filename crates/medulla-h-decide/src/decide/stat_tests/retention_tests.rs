@@ -49,6 +49,7 @@ async fn compact_at(
         tenant_id: TENANT,
         now_ms,
         server_secret: state.auth_secret.as_bytes(),
+        matched: &[],
     };
     super::super::stat_retention::compact(
         &ctx,

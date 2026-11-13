@@ -32,6 +32,17 @@ impl Refusal {
         }
     }
 
+    /// A refusal under a family's registered `REFUSALS` table.
+    pub fn registered(
+        code: medulla_decision_types::decision::record::outcome::RefusalCode,
+        detail: impl Into<String>,
+    ) -> Self {
+        Self {
+            code: code.as_str(),
+            detail: detail.into(),
+        }
+    }
+
     /// A refusal under the shared decision vocabulary.
     pub fn decision(code: DecisionErrorCode, detail: impl Into<String>) -> Self {
         Self {

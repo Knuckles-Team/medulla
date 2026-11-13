@@ -171,7 +171,8 @@ pub fn clear_xshard_prepare(shard: &Shard, txn_id: &str, gid: u64) -> Result<(),
     })
 }
 
-/// Clear a resolved txn's decision record.
+/// Clear a resolved txn's decision record and its certificate row in the same
+/// control write.
 pub fn clear_xshard_decision(shard: &Shard, txn_id: &str) -> Result<(), String> {
     let op_id = format!("xshard/decision-clear/{txn_id}");
     control_write!(shard, &op_id, |control| {
@@ -179,8 +180,47 @@ pub fn clear_xshard_decision(shard: &Shard, txn_id: &str) -> Result<(), String> 
             .open_table::<&str, u8>(XSHARD_DECISION)
             .map_err(|e| e.to_string())?;
         table.remove(txn_id).map_err(|e| e.to_string())?;
+        drop(table);
+        let mut certificates = control
+            .open_table::<&str, &[u8]>(XSHARD_DECISION_CERTIFICATE)
+            .map_err(|e| e.to_string())?;
+        certificates.remove(txn_id).map_err(|e| e.to_string())?;
         Ok(())
     })
+}
+
+/// Durably store the sealed decision certificate of one cross-shard transaction.
+/// `sealed` comes from `DecisionCertificate::seal`; the intent check
+/// (`CERTIFICATE_INTENT_CHANGED`) is the caller's, which can decode it.
+pub fn put_xshard_decision_certificate(
+    shard: &Shard,
+    txn_id: &str,
+    sealed: &[u8],
+) -> Result<(), String> {
+    let op_id = format!("xshard/certificate/{txn_id}");
+    control_write!(shard, &op_id, |control| {
+        let mut table = control
+            .open_table::<&str, &[u8]>(XSHARD_DECISION_CERTIFICATE)
+            .map_err(|e| e.to_string())?;
+        table.insert(txn_id, sealed).map_err(|e| e.to_string())?;
+        Ok(())
+    })
+}
+
+/// Read the sealed decision certificate of one cross-shard transaction.
+pub fn get_xshard_decision_certificate(
+    shard: &Shard,
+    txn_id: &str,
+) -> Result<Option<Vec<u8>>, String> {
+    let read = shard.control_read()?;
+    let table = read
+        .open_owner_table(XSHARD_DECISION_CERTIFICATE)
+        .map_err(|e| e.to_string())?;
+    let sealed = table
+        .get(txn_id)
+        .map_err(|e| e.to_string())?
+        .map(|value| value.value().to_vec());
+    Ok(sealed)
 }
 
 /// Scan every in-doubt prepare record `(txn_id, group_id, slice)` for recovery.

@@ -185,6 +185,11 @@ pub const XSHARD_PREPARE: TableDefinition<(&str, u64), &[u8]> =
 // value is the ATOMIC COMMIT POINT: once it reads COMMIT every participant applies on
 // recovery; absent/pending/ABORT ⇒ no new participant applies (presumed-abort).
 pub const XSHARD_DECISION: TableDefinition<&str, u8> = TableDefinition::new("xshard_decision");
+// The sealed coordinator-decision certificate of a cross-shard txn, keyed by `txn_id`
+// (MEDULLA-DECISION-ENGINE-R036.105.1). A table of its own, never a reserved key of
+// `xshard_prepare` or `xshard_decision`, so it cannot leak into the prepare scan.
+pub const XSHARD_DECISION_CERTIFICATE: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("xshard_decision_certificate");
 // Named distributed-compute MATERIALIZED VIEWS (CONCEPT:MEDULLA-KG.storage.feature). One row per matview
 // keyed by `name`, holding the MessagePack-serialized `MatView` (its definition +
 // current result rows). Durable so a matview survives restart; the handler reloads the

@@ -12,6 +12,7 @@
 //! The act rule and the calibration statement are answered here, once, for
 //! the ladder and for the promotion evaluation alike.
 
+use medulla_decision_types::decision::statistical::head::IsotonicTable;
 use medulla_decision_types::decision::QuantScaleTag;
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadCalibration,
@@ -104,6 +105,32 @@ pub fn scaled_softmax(logits: &[f64], inverse_temperature: f64) -> RefusalResult
     Ok(softmax(&scaled)?)
 }
 
+/// The calibrated probability an isotonic table gives a positive-class
+/// score: the value of the last block starting at or below the score, or of
+/// the first block when the score lies below every block. This is exactly
+/// `IsotonicFit::predict` over the table's blocks (MEDULLA-DECISION-ENGINE-R032.2.1).
+pub fn isotonic_value(table: &IsotonicTable, score: f64) -> f64 {
+    let blocks = table.blocks.as_slice();
+    let starts_at_or_below = blocks.partition_point(|block| value_of(block.lower) <= score);
+    value_of(blocks[starts_at_or_below.saturating_sub(1)].value)
+}
+
+/// Map a two-class distribution through the isotonic table: the first
+/// option is the positive class, so the served distribution is
+/// `[g(p0), 1 - g(p0)]`, with `p0` rounded to the Q32 grid the table was fitted on. Any other class count refuses with
+/// `ISOTONIC_REQUIRES_BINARY`.
+pub fn apply_isotonic(table: &IsotonicTable, probabilities: &[f64]) -> RefusalResult<Vec<f64>> {
+    let [positive, _] = probabilities else {
+        return Err(Refusal::new(
+            StatisticalErrorCode::IsotonicRequiresBinary,
+            "an isotonic head serves exactly two options",
+        ));
+    };
+    // The table is fitted on Q32 scores, so the score is read on the same grid.
+    let calibrated = isotonic_value(table, value_of(q32(*positive)?));
+    Ok(vec![calibrated, 1.0 - calibrated])
+}
+
 fn inverse_temperature(head: &DecisionHeadBody) -> f64 {
     head.calibration
         .as_ref()
@@ -129,7 +156,11 @@ fn read_linear(head: &DecisionHeadBody, rows: &[&[i64]]) -> RefusalResult<RowsRe
     }
     let logits: Vec<f64> = standardised.iter().map(|x| logit(&weights, x)).collect();
     let probabilities = if head.kind.is_listwise() {
-        Some(scaled_softmax(&logits, inverse_temperature(head))?)
+        let softmax = scaled_softmax(&logits, inverse_temperature(head))?;
+        match head.calibration.as_ref().and_then(|c| c.isotonic.as_ref()) {
+            Some(table) => Some(apply_isotonic(table, &softmax)?),
+            None => Some(softmax),
+        }
     } else {
         None
     };
@@ -245,7 +276,9 @@ pub fn conformal_claim(calibration: &HeadCalibration) -> bool {
 
 /// The calibration statement a head's calibration supports.
 pub fn calibration_statement(calibration: &HeadCalibration) -> CalibrationStatement {
-    let method = if conformal_claim(calibration) {
+    let method = if calibration.isotonic.is_some() {
+        CalibrationMethod::Isotonic
+    } else if conformal_claim(calibration) {
         CalibrationMethod::Conformal
     } else {
         CalibrationMethod::Temperature

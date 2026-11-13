@@ -48,6 +48,7 @@ fn plan_for<'a>(
         admissions: Vec::new(),
         digests: spans.iter().map(|_| String::new()).collect(),
         embedded_units: spans.len() as u32,
+        demoted_classes: Vec::new(),
     }
 }
 

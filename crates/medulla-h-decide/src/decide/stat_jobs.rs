@@ -246,6 +246,7 @@ fn run_fit(store: &AgentLibraryStore, reader: &LogReader, request: &DecisionFitR
         feature_schema_digest: &schema_digest,
         statistical: &policy.statistical,
         penalty: resolved.as_ref().map(|r| &r.penalty),
+        calibration_method: request.calibration_method,
     };
     let head = fit(&dataset, &admitted.items, &spec).map_err(|r| r.render())?;
     let bytes = canonical_body_bytes(&head)?;
@@ -464,6 +465,14 @@ fn run_eval(inputs: &EvalInputs, request: &DecisionEvalRequest) -> JobRun {
     }
     if receipt.policy_digest != inputs.policy.digest {
         return Err("CORRUPT_DECISION_ARTIFACT: evaluation policy digest mismatch".into());
+    }
+    if let Some(guarantee) = request.gold_guarantee {
+        super::stat_gold_guarantee::apply(
+            &mut receipt,
+            guarantee,
+            &inputs.policy.policy,
+            request.gold_set_digest.as_deref().unwrap_or_default(),
+        )?;
     }
     let mut rows = vec![(
         receipt_key(&receipt.receipt_digest),
@@ -1004,6 +1013,7 @@ mod threshold_tests {
             premises: BoundedVec::default(),
             passed: true,
             synthetic: false,
+            gold_guarantee: None,
         }
     }
 

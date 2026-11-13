@@ -58,7 +58,7 @@ fn validate(request: &ContextBundleRequest) -> Result<(), Refusal> {
         || request.tokenizer_version.trim().is_empty()
     {
         return Err(refuse(
-            "CONTEXT_BUDGET_MISSING",
+            medulla_decision_types::decision::context_source::CONTEXT_BUDGET_MISSING.as_str(),
             "a bundle needs a model window and the tokenizer that measures it",
         ));
     }

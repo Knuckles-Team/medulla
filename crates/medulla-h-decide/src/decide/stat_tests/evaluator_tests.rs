@@ -68,6 +68,7 @@ fn evaluation_of(record_id: &str, id: &str) -> DecisionLogOp {
             lease_holder: "retriever-worker".to_string(),
             fidelity: OutcomeFidelity::ToolCalls,
             success: Some(true),
+            backbone: None,
         },
     }
 }
@@ -176,6 +177,7 @@ async fn a_role_grant_admits_its_holders_but_never_the_committer() {
         tenant_id: TENANT,
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         server_secret: b"",
+        matched: &[],
     };
     let committer = principal_of("decider");
     let rows = super::super::stat_evaluator::grant_rows(

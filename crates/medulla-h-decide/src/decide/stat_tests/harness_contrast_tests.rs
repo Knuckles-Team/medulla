@@ -142,6 +142,7 @@ fn decide_contrast(
         tenant_id: TENANT,
         now_ms: 1_000,
         server_secret: b"decide-stat-test-secret",
+        matched: &[],
     };
     let batch = super::super::stat_decide::decide_blocking(
         &ctx,

@@ -14,21 +14,24 @@
 //! -- its fixed-point softmax over the scored options (EH-293). One core,
 //! [`calibrate_logits`], serves both.
 
+use medulla_decision_types::decision::statistical::{CalibrationMethod, StatisticalErrorCode};
 use medulla_decision_types::{
     decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
 };
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadCalibration,
+    decision::statistical::head::IsotonicBlock, decision::statistical::head::IsotonicTable,
 };
 use medulla_decision_types::{
     decision::statistical::RiskMethod, decision::statistical::RiskStatement,
 };
 use medulla_decision_types::{decision::QuantisedValue, decision::StatisticalPolicy};
+use medulla_types::contract::BoundedVec;
 
 use super::fit::Example;
-use super::head_eval::{logit, scaled_softmax, top_index};
+use super::head_eval::{apply_isotonic, logit, scaled_softmax, top_index};
 use super::quant::{item_rows, level, q32, unit_wire, value_of};
-use super::refusal::RefusalResult;
+use super::refusal::{Refusal, RefusalResult};
 use super::scorer::fixed::{to_f64, to_q32};
 use super::scorer::forward::{read, served_probabilities, EXCLUDED_LOGIT};
 use super::scorer::legal::LegalSet;
@@ -37,6 +40,7 @@ use crate::{
     conformal::acceptability_score, conformal::realised_coverage_interval,
     conformal::split_conformal, conformal::weighted_split_conformal, conformal::Threshold,
 };
+use medulla_numeric::calibration::isotonic::fit_isotonic_weighted;
 use medulla_numeric::{
     detkernel::optimise::minimise_convex_bounded, detkernel::optimise::DEFAULT_BISECTION_STEPS,
 };
@@ -144,6 +148,7 @@ fn held_out(
     logits: &[Vec<f64>],
     reader: Reader,
     beta: QuantisedValue,
+    isotonic: Option<&IsotonicTable>,
 ) -> RefusalResult<Held> {
     let mut held = Held {
         probabilities: Vec::new(),
@@ -154,6 +159,10 @@ fn held_out(
     };
     for (example, z) in examples.iter().zip(logits) {
         let p = served(reader, z, beta)?;
+        let p = match isotonic {
+            Some(table) => apply_isotonic(table, &p)?,
+            None => p,
+        };
         let nonconformity: Vec<f64> = p.iter().map(|pj| 1.0 - pj).collect();
         let good = acceptable(example);
         held.scores
@@ -204,14 +213,84 @@ fn certified_act(
 
 /// Calibrate a fitted linear listwise head on its held-out examples.
 /// `None` when there are no held-out examples to calibrate on.
+///
+/// `method` is the fit request's calibration method (MEDULLA-DECISION-ENGINE-R032.2.1):
+/// `None` and `Conformal`/`Temperature` keep the ladder's choice, `Isotonic`
+/// fits a monotone map over the positive-class score of a two-class head
+/// first and runs the split-conformal threshold over the mapped
+/// probabilities; any other method refuses with `CALIBRATION_METHOD_UNSUPPORTED`.
 pub(crate) fn calibrate(
     examples: &[Example],
     weights: &[f64],
     policy: &StatisticalPolicy,
     synthetic: bool,
+    method: Option<CalibrationMethod>,
 ) -> RefusalResult<Option<HeadCalibration>> {
+    let isotonic = checked_method(method)?;
     let logits = logits_of(examples, weights);
-    calibrate_logits(examples, &logits, Reader::Linear, policy, synthetic)
+    calibrate_logits(
+        examples,
+        &logits,
+        Reader::Linear,
+        policy,
+        synthetic,
+        isotonic,
+    )
+}
+
+/// Whether the requested method is isotonic; refuses any method the fit does
+/// not serve.
+pub(crate) fn checked_method(method: Option<CalibrationMethod>) -> RefusalResult<bool> {
+    match method {
+        None | Some(CalibrationMethod::Conformal) | Some(CalibrationMethod::Temperature) => {
+            Ok(false)
+        }
+        Some(CalibrationMethod::Isotonic) => Ok(true),
+        Some(other) => Err(Refusal::new(
+            StatisticalErrorCode::CalibrationMethodUnsupported,
+            format!("the fit does not serve the {other:?} calibration method"),
+        )),
+    }
+}
+
+/// The isotonic map from the positive-class score (the first option's
+/// temperature-scaled probability) to its observed target share, copied block
+/// by block in increasing order.
+fn isotonic_table(
+    examples: &[Example],
+    logits: &[Vec<f64>],
+    reader: Reader,
+    beta: QuantisedValue,
+) -> RefusalResult<IsotonicTable> {
+    if examples.iter().any(|example| example.targets.len() != 2) {
+        return Err(Refusal::new(
+            StatisticalErrorCode::IsotonicRequiresBinary,
+            "isotonic calibration applies to two-option items only",
+        ));
+    }
+    let mut scores = Vec::with_capacity(examples.len());
+    let mut targets = Vec::with_capacity(examples.len());
+    let mut weights = Vec::with_capacity(examples.len());
+    for (example, z) in examples.iter().zip(logits) {
+        scores.push(value_of(q32(served(reader, z, beta)?[0])?));
+        targets.push(example.targets[0]);
+        weights.push(example.weight);
+    }
+    let fit = fit_isotonic_weighted(&scores, &targets, &weights)?;
+    let blocks = fit
+        .blocks()
+        .into_iter()
+        .map(|(lower, upper, value)| {
+            Ok(IsotonicBlock {
+                lower: q32(lower)?,
+                upper: q32(upper)?,
+                value: q32(value)?,
+            })
+        })
+        .collect::<RefusalResult<Vec<_>>>()?;
+    let blocks = BoundedVec::new(blocks)
+        .map_err(|detail| Refusal::new(StatisticalErrorCode::HeadInvalid, detail))?;
+    Ok(IsotonicTable { blocks })
 }
 
 /// Calibrate the resident scorer on its own served outputs over the held-out
@@ -240,7 +319,14 @@ pub(crate) fn calibrate_scorer(
             weight: weight * audit_weight(item),
         });
     }
-    calibrate_logits(&examples, &logits, Reader::Fixed, policy, dataset.synthetic)
+    calibrate_logits(
+        &examples,
+        &logits,
+        Reader::Fixed,
+        policy,
+        dataset.synthetic,
+        false,
+    )
 }
 
 /// The calibration core over logits served through `reader`. `None` when
@@ -251,6 +337,7 @@ pub(crate) fn calibrate_logits(
     reader: Reader,
     policy: &StatisticalPolicy,
     synthetic: bool,
+    isotonic: bool,
 ) -> RefusalResult<Option<HeadCalibration>> {
     if examples.is_empty() {
         return Ok(None);
@@ -263,7 +350,12 @@ pub(crate) fn calibrate_logits(
         DEFAULT_BISECTION_STEPS,
     )?;
     let beta_q = q32(beta)?;
-    let held = held_out(examples, logits, reader, beta_q)?;
+    let table = if isotonic {
+        Some(isotonic_table(examples, logits, reader, beta_q)?)
+    } else {
+        None
+    };
+    let held = held_out(examples, logits, reader, beta_q, table.as_ref())?;
     let n = examples.len() as u64;
     let threshold = conformal_threshold(&held, policy)?;
     let (lower, upper) = realised_coverage_interval(level(policy.alpha)?, n, level(policy.delta)?)?
@@ -279,5 +371,171 @@ pub(crate) fn calibrate_logits(
         risk: act.map(|(_, risk)| risk),
         n_calibration: n,
         synthetic,
+        isotonic: table,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::decision::head_eval::isotonic_value;
+    use medulla_decision_types::decision::{QuantScaleTag, UnitRationalWire};
+    use medulla_numeric::calibration::isotonic::fit_isotonic_weighted;
+
+    fn policy() -> StatisticalPolicy {
+        let rational = |n, d| UnitRationalWire::new(n, d).expect("rational");
+        StatisticalPolicy {
+            alpha: rational(1, 10),
+            epsilon: rational(1, 10),
+            delta: rational(1, 10),
+            n_min: 20,
+            min_support: 5,
+            min_ess: QuantisedValue {
+                scale: QuantScaleTag::Q32,
+                value: 10 << 32,
+            },
+            min_outcome_fidelity: medulla_decision_types::decision::TraceFidelityLevel::ToolCalls,
+            tenant_public_features: false,
+            audit_sample: rational(1, 20),
+            approved_commit_principals: BoundedVec::new(vec!["approved".to_string()])
+                .expect("inside bound"),
+            compact_after_ms: None,
+            drop_blob_after_ms: None,
+        }
+    }
+
+    /// Two-option items: option 0 carries the feature, option 1 is the zero
+    /// reference; the positive label is a noisy function of the feature.
+    fn binary_examples(n: usize) -> Vec<Example> {
+        (0..n)
+            .map(|i| {
+                let x = (i as f64 - (n as f64) / 2.0) / 10.0;
+                let chance = 1.0 / (1.0 + (-x).exp());
+                let positive = ((i * 7) % 10) as f64 / 10.0 < chance;
+                let target = if positive { 1.0 } else { 0.0 };
+                Example {
+                    rows: vec![vec![x], vec![0.0]],
+                    targets: vec![target, 1.0 - target],
+                    weight: 1.0,
+                }
+            })
+            .collect()
+    }
+
+    fn three_option_examples() -> Vec<Example> {
+        (0..40)
+            .map(|i| Example {
+                rows: vec![vec![i as f64 / 10.0], vec![0.0], vec![1.0]],
+                targets: vec![1.0, 0.0, 0.0],
+                weight: 1.0,
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R032.2.1
+    #[test]
+    fn isotonic_calibration_is_monotone_and_reproducible() {
+        let examples = binary_examples(80);
+        let weights = [1.0];
+        let fitted = calibrate(
+            &examples,
+            &weights,
+            &policy(),
+            false,
+            Some(CalibrationMethod::Isotonic),
+        )
+        .expect("calibrates")
+        .expect("held-out items exist");
+        let table = fitted.isotonic.as_ref().expect("an isotonic table");
+        table.check().expect("a monotone step function");
+        let blocks = table.blocks.as_slice();
+        assert!(!blocks.is_empty());
+        assert!(
+            blocks
+                .windows(2)
+                .all(|pair| pair[0].value.value <= pair[1].value.value
+                    && pair[0].upper.value < pair[1].lower.value),
+            "blocks are increasing with non-decreasing values"
+        );
+
+        // Reproducible: the same inputs give the same calibration.
+        let again = calibrate(
+            &examples,
+            &weights,
+            &policy(),
+            false,
+            Some(CalibrationMethod::Isotonic),
+        )
+        .expect("calibrates")
+        .expect("held-out items exist");
+        assert_eq!(fitted, again);
+
+        // The served probability is the fitted map's prediction.
+        let logits = logits_of(&examples, &weights);
+        let scores: Vec<f64> = logits
+            .iter()
+            .map(|z| {
+                let p = scaled_softmax(z, value_of(fitted.inverse_temperature)).expect("softmax");
+                value_of(q32(p[0]).expect("quantises"))
+            })
+            .collect();
+        let targets: Vec<f64> = examples.iter().map(|e| e.targets[0]).collect();
+        let unit = vec![1.0; examples.len()];
+        let reference = fit_isotonic_weighted(&scores, &targets, &unit).expect("fits");
+        for score in &scores {
+            let served = isotonic_value(table, *score);
+            let predicted = reference.predict(*score).expect("predicts");
+            assert!(
+                (served - predicted).abs() < 1e-8,
+                "served {served} equals predicted {predicted}"
+            );
+            let mapped = apply_isotonic(table, &[*score, 1.0 - *score]).expect("two options");
+            assert!(
+                (mapped[0] - served).abs() < 1e-12 && (mapped[0] + mapped[1] - 1.0).abs() < 1e-12
+            );
+        }
+        // Monotone in the score.
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).expect("finite"));
+        let served: Vec<f64> = sorted.iter().map(|s| isotonic_value(table, *s)).collect();
+        assert!(served.windows(2).all(|pair| pair[0] <= pair[1]));
+
+        // The conformal threshold runs over the isotonic probabilities, and the
+        // statement names the method.
+        assert_eq!(
+            crate::decision::head_eval::calibration_statement(&fitted).method,
+            CalibrationMethod::Isotonic
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R032.2.1
+    #[test]
+    fn isotonic_refuses_more_than_two_options_and_unserved_methods() {
+        let refused = calibrate(
+            &three_option_examples(),
+            &[1.0],
+            &policy(),
+            false,
+            Some(CalibrationMethod::Isotonic),
+        )
+        .unwrap_err();
+        assert_eq!(refused.code, "ISOTONIC_REQUIRES_BINARY");
+
+        for method in [
+            CalibrationMethod::Vector,
+            CalibrationMethod::Dirichlet,
+            CalibrationMethod::None,
+        ] {
+            let refused = calibrate(&binary_examples(40), &[1.0], &policy(), false, Some(method))
+                .unwrap_err();
+            assert_eq!(refused.code, "CALIBRATION_METHOD_UNSUPPORTED");
+        }
+        let kept = calibrate(&binary_examples(40), &[1.0], &policy(), false, None)
+            .expect("calibrates")
+            .expect("held-out items exist");
+        assert!(
+            kept.isotonic.is_none(),
+            "no method keeps the ladder's choice"
+        );
+    }
 }

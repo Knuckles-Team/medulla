@@ -105,6 +105,7 @@ fn main() {
         feature_schema_digest: &corpus.feature_schema_digest,
         statistical: &stat,
         penalty: None,
+        calibration_method: None,
     };
     let head = fit(&train, &admitted.items, &spec).expect("the scorer fits");
     let head_digest = content_digest_of(&canonical_body_bytes(&head).expect("encodes"));

@@ -104,6 +104,7 @@ pub(super) fn grant(h: &Harness, record_id: &str, evaluator: &str, span: (u64, u
         tenant_id: TENANT,
         now_ms: span.0,
         server_secret: b"",
+        matched: &[],
     };
     let named = medulla_decision_types::decision::statistical::log::NamedEvaluator {
         principal: Some(principal_of(evaluator)),
@@ -176,6 +177,7 @@ pub(super) async fn evaluate_by(h: &Harness, who: &str, record_id: &str, success
             lease_holder: "retriever-worker".to_string(),
             fidelity: OutcomeFidelity::ToolCalls,
             success: Some(success),
+            backbone: None,
         },
     };
     let _: StoredEvaluation = decode(log_op(h, who, evaluation).await).unwrap();

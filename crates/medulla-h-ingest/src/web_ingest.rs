@@ -12,7 +12,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
-use medulla_decision_types::decision::ingestion_admission::{classify_unit, AdmissionKnobs};
+use medulla_decision_types::decision::ingestion_admission::{
+    classify_unit, AdmissionKnobs, ContentClass,
+};
 use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
 use medulla_source_types::{
     source_ingestion::web_document::AdmissionOutcome,
@@ -231,6 +233,7 @@ pub fn replay_receipt(
         chunk_ids,
         admissions: serde_json::from_value(record["admissions"].clone()).unwrap_or_default(),
         embedded_units: record["embedded_units"].as_u64().unwrap_or(0) as u32,
+        demoted_classes: string_list(&record["demoted_classes"]),
     }
 }
 
@@ -251,6 +254,9 @@ pub struct EnrichmentPlan<'a> {
     pub digests: Vec<String>,
     /// How many texts were sent to the embedder.
     pub embedded_units: u32,
+    /// The content classes retrieval feedback had demoted for this call
+    /// (R079.5), snake_case labels.
+    pub demoted_classes: Vec<String>,
 }
 
 fn encode(value: &Value) -> Result<Vec<u8>, String> {
@@ -350,6 +356,7 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
                 .collect::<BTreeMap<_, _>>(),
             "admissions": plan.admissions,
             "embedded_units": plan.embedded_units,
+            "demoted_classes": plan.demoted_classes,
             (crate::ingestion_rung::PRODUCING_RUNG):
                 crate::ingestion_rung::rung_label(PRODUCING_RUNG),
         }),
@@ -384,6 +391,7 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         chunk_ids,
         admissions: plan.admissions,
         embedded_units: plan.embedded_units,
+        demoted_classes: plan.demoted_classes,
     };
     Ok((write_set, receipt))
 }
@@ -418,12 +426,14 @@ impl DecidedSpan {
 /// Decide every span of `document` (MEDULLA-DECISION-ENGINE-R079.2, R079.3):
 /// the document-level class (lockfile, vendored, generated) applies to every
 /// span; a span is also classified on its own text. `known_exact` is the set
-/// of exact digests whose vectors are available for reuse.
+/// of exact digests whose vectors are available for reuse; `demoted` holds the
+/// classes retrieval feedback has demoted (R079.5).
 pub fn decide_spans(
     document: &HeldDocument,
     spans: Vec<ChunkSpan>,
     knobs: &AdmissionKnobs,
     known_exact: &BTreeSet<String>,
+    demoted: &BTreeSet<ContentClass>,
 ) -> Vec<DecidedSpan> {
     let hint = path_hint(document);
     let document_class = classify_unit(&hint, &document.text, knobs);
@@ -437,7 +447,15 @@ pub fn decide_spans(
             } else {
                 document_class
             };
-            let admission = admit_unit(span.ordinal, class, text, known_exact, &mut seen, knobs);
+            let admission = admit_unit(
+                span.ordinal,
+                class,
+                text,
+                known_exact,
+                demoted,
+                &mut seen,
+                knobs,
+            );
             DecidedSpan {
                 span,
                 admission,

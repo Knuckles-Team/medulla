@@ -276,6 +276,7 @@ async fn a_logged_abstention_takes_a_resolution_of_its_resolver_class() {
             lease_holder: "worker".to_string(),
             fidelity: OutcomeFidelity::ToolCalls,
             success: Some(true),
+            backbone: None,
         },
     };
     let refused = log_op(&h, "decider", evaluation).await;
@@ -510,6 +511,7 @@ pub(super) async fn evaluate_assembly(
                 lease_holder: "worker".to_string(),
                 fidelity: OutcomeFidelity::FullStep,
                 success: Some(*success),
+                backbone: None,
             },
         };
         let response = super::super::log::handle_decision_log(&h.state, 30, &evaluator, op).await;
@@ -552,6 +554,7 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             question_id: Some("assembly".to_string()),
             window: window(),
             attribution: None,
+            transfer: None,
         },
     };
     let rows: OutcomeAggregate =
@@ -728,6 +731,7 @@ mod topology_question {
             tenant_id: TENANT,
             now_ms: 1_000,
             server_secret: b"decide-stat-test-secret",
+            matched: &[],
         };
         crate::decide::stat_decide::decide_blocking(
             &ctx,

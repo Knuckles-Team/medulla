@@ -42,6 +42,7 @@ pub(super) async fn fit_from_the_engine_log(
         penalty: None,
         features: Default::default(),
         parent_head: None,
+        calibration_method: None,
     };
     let op = DecisionFitOp::Submit {
         request: Box::new(request),
@@ -105,6 +106,7 @@ pub(super) async fn decision_log_round_trip(h: &Harness, record: StatisticalDeci
         lease_holder: "worker-a".to_string(),
         fidelity: OutcomeFidelity::ToolCalls,
         success: Some(true),
+        backbone: None,
     };
     let op = DecisionLogOp::Evaluate {
         tenant_id: TENANT.to_string(),
@@ -128,6 +130,7 @@ pub(super) async fn decision_log_round_trip(h: &Harness, record: StatisticalDeci
         question_id: None,
         window: window(),
         attribution: None,
+        transfer: None,
     };
     let aggregate: OutcomeAggregate =
         decode(log_op(h, "evaluator", DecisionLogOp::Aggregate { request }).await).unwrap();
@@ -430,6 +433,7 @@ async fn add_independent_labels(
             lease_holder: "lease-holder".to_string(),
             fidelity: OutcomeFidelity::ToolCalls,
             success: Some(success),
+            backbone: None,
         };
         let _: StoredEvaluation = decode(
             log_op(
@@ -457,6 +461,7 @@ async fn outcome_rows(h: &Harness, question_id: Option<String>) -> OutcomeAggreg
                     question_id,
                     window: window(),
                     attribution: None,
+                    transfer: None,
                 },
             },
         )

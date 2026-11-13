@@ -10,6 +10,7 @@ pub mod belief;
 pub mod body;
 pub mod dataset;
 pub mod declared;
+pub mod distilled;
 pub mod enrichment_schedule;
 pub mod errors;
 pub mod execution_routing;
@@ -117,10 +118,19 @@ pub enum QuestionKind {
     /// why every other target was not chosen; it acquires no capacity and
     /// deploys nothing. See `statistical::placement`.
     Placement,
+    /// Which context sources fit a token budget, most relevant first
+    /// (MEDULLA-DECISION-ENGINE-R029.2.2). Evaluate-only. See
+    /// `decision::context_source`.
+    ContextBudget,
     /// Whether a prompt passes its window share and the bounded recursive
     /// split that makes it fit (MEDULLA-DECISION-ENGINE-R137). Evaluate-only. See
     /// `decision::context_budget`.
-    ContextBudget,
+    OverWindowPlan,
+    /// Which versions of the named instruction sets a run discloses now: the
+    /// initial ones before execution, a runtime refinement only once its
+    /// trigger has occurred (MEDULLA-DECISION-ENGINE-R137.100). Evaluate-only.
+    /// See `decision::instruction_disclosure`.
+    InstructionDisclosure,
     /// Whether an evolution round's observed flips verify or falsify its
     /// declaration (MEDULLA-DECISION-ENGINE-R136). See `decision::evolution_round`.
     RoundVerdict,
@@ -171,6 +181,32 @@ pub enum QuestionKind {
     /// The agents, tools or skills best able to do a job
     /// (MEDULLA-DECISION-ENGINE-R172). See `decision::capability_designation`.
     CapabilityDesignation,
+    /// Whether a candidate context may replace the raw one after a paired
+    /// held-out comparison (MEDULLA-DECISION-ENGINE-R137.14). See
+    /// `decision::context_replacement`.
+    ContextReplacement,
+    /// Command mode and settings choice (MEDULLA-DECISION-ENGINE-R148). See `decision::command_config`.
+    CommandConfig,
+    /// Model tier and width adjustment from a run error window (MEDULLA-DECISION-ENGINE-R158). See `decision::run_adjustment`.
+    RunAdjustment,
+    /// Which routing path to prefer, from per-path success rates (MEDULLA-DECISION-ENGINE-R159). See `decision::path_success`.
+    PathPreference,
+    /// Whether a correction is admitted, from its trace, fix and test receipts (MEDULLA-DECISION-ENGINE-R161). See `decision::trace_fix_binding`.
+    CorrectionAdmission,
+    /// Which fields a step may read (MEDULLA-DECISION-ENGINE-R162). See `decision::field_shielding`.
+    FieldShielding,
+    /// Resolution of mixed filesystem and graph intake sources (MEDULLA-DECISION-ENGINE-R163). See `decision::graph_intake`.
+    GraphIntake,
+    /// Measured tool necessity against a trace (MEDULLA-DECISION-ENGINE-R165). See `decision::tool_necessity`.
+    ToolNecessity,
+    /// Whether a checker feedback loop continues (MEDULLA-DECISION-ENGINE-R169). See `decision::checker_feedback`.
+    FeedbackLoop,
+    /// Whether a plan's features are wired in the architecture (MEDULLA-DECISION-ENGINE-R171). See `decision::planning_admission`.
+    PlanningAdmission,
+    /// The tenant's agent graph an inbound A2A task routes to (MEDULLA-DECISION-ENGINE-R044.2.2). See `decision::a2a_route`.
+    A2aRoute,
+    /// Staged papers admitted by calibrated relevance to platform goals and graph content (MEDULLA-DECISION-ENGINE-R031.100). See `decision::paper_admission`.
+    PaperAdmission,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -256,6 +292,25 @@ pub enum TypedValue {
     SkillUpgrade(Box<super::skill_upgrade_request::SkillUpgradeRequest>),
     /// What a caller observed about one channel (MEDULLA-DECISION-ENGINE-R170.1).
     ChannelSignal(super::team_coordination::ChannelSignal),
+    /// A paired held-out evaluation of a raw and a candidate context
+    /// (MEDULLA-DECISION-ENGINE-R137.14).
+    ContextReplacement(Box<super::context_replacement::PairedContextEvaluation>),
+    /// A time-windowed query with its three-clock context (MEDULLA-DECISION-ENGINE-R146.1).
+    TemporalQuery(super::temporal_query::TemporalQueryInput),
+    /// A stored distilled scorer to rank with (MEDULLA-DECISION-ENGINE-R147.1).
+    DistilledScorer {
+        scorer_id: String,
+        scorer_revision: u64,
+        top_k: u32,
+    },
+    /// A trace, fix, test and receipts to admit (MEDULLA-DECISION-ENGINE-R161.1).
+    CorrectionBinding(Box<super::trace_fix_binding::CorrectionBinding>),
+    /// A field-shielding request (MEDULLA-DECISION-ENGINE-R162.1).
+    FieldShielding(Box<super::field_shielding::FieldShieldingRequest>),
+    /// Mixed filesystem and graph intake sources (MEDULLA-DECISION-ENGINE-R163.1).
+    IntakeSources(BoundedVec<super::graph_intake::IntakeSource, 64>),
+    /// One round of a checker feedback loop (MEDULLA-DECISION-ENGINE-R169.1).
+    Feedback(Box<super::checker_feedback::FeedbackRecord>),
 }
 
 /// One named parameter of a question.

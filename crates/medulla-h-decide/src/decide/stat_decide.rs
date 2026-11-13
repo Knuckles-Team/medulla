@@ -109,6 +109,17 @@ async fn serve(
             super::stat_topology::with_read(state, store.as_ref(), verified, request),
         )
         .await?
+    } else if request.question.kind == QuestionKind::PaperAdmission {
+        // A `paper_admission` question reads the nearest-neighbour similarities
+        // and the graph version here, where the graph's vectors are reachable,
+        // and records them in its own parameters (MEDULLA-DECISION-ENGINE-R031.100).
+        telemetry::stage_async(
+            telemetry::Stage::Visibility,
+            &family,
+            verified.tenant(),
+            super::family::with_similarity(state, store.as_ref(), verified, request),
+        )
+        .await?
     } else {
         request
     };
@@ -143,13 +154,13 @@ async fn serve(
                 .await
                 .map(Some)
             } else if request.question.kind == QuestionKind::EditConcentration {
-                super::stat_concentration::concentration_view(
-                    state,
-                    verified.agent_id(),
-                    &request,
-                )
-                .await
-                .map(Some)
+                super::stat_concentration::concentration_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
+            } else if request.question.kind == QuestionKind::InstructionDisclosure {
+                super::family::disclosure_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(Some)
             } else {
                 super::candidates::filtered_graph_view(
                     state,
@@ -176,6 +187,7 @@ async fn serve(
                     tenant_id: &request.tenant_id,
                     now_ms,
                     server_secret: secret.as_bytes(),
+                    matched: &[],
                 };
                 decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
             })
@@ -228,6 +240,10 @@ pub(super) fn decide_blocking(
         matched = matched.len(),
         "decision context matched prior records"
     );
+    let ctx = &ExecutionContext {
+        matched: &matched,
+        ..*ctx
+    };
     fill_outcome_rates(
         ctx.store,
         &reader,
@@ -238,11 +254,17 @@ pub(super) fn decide_blocking(
     // The kind's family concludes its specialized answer; the shared
     // matrix ladder is the fall-through (R001.101).
     let executed = telemetry::stage(Stage::Solve, family, tenant, || {
-        Ok::<_, String>(
-            match registry.conclude(ctx, request, &policy.policy, graph_view) {
-                Some(result) => result?,
-                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
-            },
+        let executed = match registry.conclude(ctx, request, &policy.policy, graph_view) {
+            Some(result) => result?,
+            None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
+        };
+        registry.refine(
+            Some(request),
+            &pinned,
+            &candidates.views,
+            &policy.policy,
+            &policy.digest,
+            executed,
         )
     })?;
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
@@ -430,14 +452,26 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
 /// (MEDULLA-DECISION-ENGINE-R179.5). The decision reads the drift thresholds
 /// of the belief slices it consulted through `DriftThresholds::from_policy`.
 fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
-    let contrast: &[medulla_decision_types::decision::knobs::KnobSpec] =
-        match sealing.request.question.kind {
-            QuestionKind::HarnessContrast => {
-                medulla_decision_types::decision::harness_contrast::KNOBS
-            }
-            QuestionKind::ThoughtSearch => medulla_decision_types::decision::thought_search::KNOBS,
-            _ => &[],
-        };
+    let contrast: &[medulla_decision_types::decision::knobs::KnobSpec] = match sealing
+        .request
+        .question
+        .kind
+    {
+        QuestionKind::HarnessContrast => medulla_decision_types::decision::harness_contrast::KNOBS,
+        QuestionKind::ThoughtSearch => medulla_decision_types::decision::thought_search::KNOBS,
+        QuestionKind::RoundVerdict => {
+            medulla_decision_types::decision::knob_families::round_verdict::KNOBS
+        }
+        QuestionKind::Route => medulla_decision_types::decision::knob_families::route::KNOBS,
+        QuestionKind::ResolveEntity => {
+            medulla_decision_types::decision::knob_families::resolve_entity::KNOBS
+        }
+        QuestionKind::StageAllocation => medulla_decision_types::decision::harness_contrast::KNOBS,
+        QuestionKind::OverWindowPlan => {
+            medulla_decision_types::decision::knob_families::context::KNOBS
+        }
+        _ => &[],
+    };
     medulla_decision_stats::decision::drift::KNOBS
         .iter()
         .chain(contrast)
@@ -601,7 +635,11 @@ fn seal(
     if let Some(thought) = &executed.thought {
         premise_list.extend(thought.premises.iter().cloned());
     }
-    premise_list.extend(sealing.registry.premises(sealing.request));
+    premise_list.extend(sealing.registry.premises(
+        sealing.request,
+        executed,
+        &sealing.policy.digest,
+    ));
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
         .pinned
@@ -622,6 +660,8 @@ fn seal(
             ResolutionKind::Constraint
         } else if executed.topology.is_some() {
             ResolutionKind::Optimization
+        } else if let Some(route) = &executed.route {
+            route.resolution
         } else {
             sealing
                 .registry

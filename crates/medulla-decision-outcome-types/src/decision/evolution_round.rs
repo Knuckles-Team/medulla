@@ -6,7 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::numeric::UnitRationalWire;
+use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
 
 /// The named default round count.
 pub const DEFAULT_EVOLUTION_ROUNDS: u32 = 1;
@@ -82,6 +84,42 @@ pub struct RunBudget {
     pub max_stronger_stages: u32,
 }
 
+/// The registered refusal codes of the round verdict and stage allocation
+/// families (MEDULLA-DECISION-ENGINE-R136.5), in declaration order.
+pub const REFUSALS: &[RefusalCode] = &[
+    codes::ROUND_NO_PREDICTION,
+    codes::ALLOCATION_BUDGET_BELOW_MINIMUM,
+    codes::ALLOCATION_NO_ADEQUATE_MODEL,
+];
+
+/// Why a round verdict was refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoundRefusal {
+    /// The prediction declares no fixes and no regressions.
+    NoPrediction,
+}
+
+impl DecisionRefusal for RoundRefusal {
+    fn code(&self) -> RefusalCode {
+        match self {
+            Self::NoPrediction => codes::ROUND_NO_PREDICTION,
+        }
+    }
+
+    fn detail(&self) -> String {
+        "the prediction declares no fixes and no regressions".to_string()
+    }
+}
+
+/// The flips a verdict compared: how many declared tasks there are, how many
+/// flipped as declared and how many flipped the opposite way.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RoundTally {
+    pub declared_total: usize,
+    pub as_declared: usize,
+    pub opposite: usize,
+}
+
 fn meets(count: usize, total: usize, fraction: UnitRationalWire) -> bool {
     // count / total >= numerator / denominator, in exact integers.
     total > 0
@@ -97,6 +135,26 @@ pub fn decide_round_verdict(
     outcomes: &[RoundTaskOutcome],
     defaults: &EvolutionDefaults,
 ) -> RoundVerdict {
+    let tally = tally_round(prediction, outcomes);
+    match (
+        meets(
+            tally.as_declared,
+            tally.declared_total,
+            defaults.flip_fraction,
+        ),
+        meets(tally.opposite, tally.declared_total, defaults.flip_fraction),
+    ) {
+        (true, false) => RoundVerdict::Verified,
+        (false, true) => RoundVerdict::Falsified,
+        _ => RoundVerdict::Unverified,
+    }
+}
+
+/// Count the declared tasks and the flips as declared and the opposite way.
+pub fn tally_round(
+    prediction: &PredictionDeclaration,
+    outcomes: &[RoundTaskOutcome],
+) -> RoundTally {
     let flipped = |id: &str, to_pass: bool| {
         outcomes
             .iter()
@@ -108,16 +166,10 @@ pub fn decide_round_verdict(
         .map(|id| (id.as_str(), true))
         .chain(prediction.regressions.iter().map(|id| (id.as_str(), false)))
         .collect();
-    let as_declared = declared.iter().filter(|(id, up)| flipped(id, *up)).count();
-    let opposite = declared.iter().filter(|(id, up)| flipped(id, !*up)).count();
-    let total = declared.len();
-    match (
-        meets(as_declared, total, defaults.flip_fraction),
-        meets(opposite, total, defaults.flip_fraction),
-    ) {
-        (true, false) => RoundVerdict::Verified,
-        (false, true) => RoundVerdict::Falsified,
-        _ => RoundVerdict::Unverified,
+    RoundTally {
+        declared_total: declared.len(),
+        as_declared: declared.iter().filter(|(id, up)| flipped(id, *up)).count(),
+        opposite: declared.iter().filter(|(id, up)| flipped(id, !*up)).count(),
     }
 }
 
@@ -153,10 +205,61 @@ pub enum AllocationRefusal {
 
 impl AllocationRefusal {
     pub fn code(self) -> &'static str {
+        DecisionRefusal::code(&self).as_str()
+    }
+}
+
+impl DecisionRefusal for AllocationRefusal {
+    fn code(&self) -> RefusalCode {
         match self {
-            Self::BudgetBelowMinimum { .. } => "ALLOCATION_BUDGET_BELOW_MINIMUM",
-            Self::NoAdequateModel { .. } => "ALLOCATION_NO_ADEQUATE_MODEL",
+            Self::BudgetBelowMinimum { .. } => codes::ALLOCATION_BUDGET_BELOW_MINIMUM,
+            Self::NoAdequateModel { .. } => codes::ALLOCATION_NO_ADEQUATE_MODEL,
         }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::BudgetBelowMinimum { shortfall } => format!("shortfall={shortfall}"),
+            Self::NoAdequateModel { models } => format!("models={models}"),
+        }
+    }
+}
+
+/// What an allocation spends: the cost of every stage on its model and how
+/// many stages run on a model other than the base one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AllocationSummary {
+    pub cost: u128,
+    pub upgrades: u32,
+}
+
+/// Summarise `allocations` over the offered `models`. The base model is the
+/// cheapest adequate one, lowest `model_ref` on ties, as in
+/// [`allocate_stage_models`].
+pub fn summarize_allocation(
+    models: &[ModelOption],
+    allocations: &[StageAllocation],
+) -> AllocationSummary {
+    let base = models.iter().filter(|m| m.adequate).min_by(|a, b| {
+        a.cost
+            .cmp(&b.cost)
+            .then_with(|| a.model_ref.cmp(&b.model_ref))
+    });
+    let cost_of = |model_ref: &str| {
+        models
+            .iter()
+            .find(|m| m.model_ref == model_ref)
+            .map_or(0, |m| u128::from(m.cost))
+    };
+    AllocationSummary {
+        cost: allocations.iter().map(|a| cost_of(&a.model_ref)).sum(),
+        upgrades: u32::try_from(
+            allocations
+                .iter()
+                .filter(|a| base.is_some_and(|b| a.model_ref != b.model_ref))
+                .count(),
+        )
+        .unwrap_or(u32::MAX),
     }
 }
 

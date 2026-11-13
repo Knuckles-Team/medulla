@@ -335,6 +335,7 @@ pub(super) fn declared_candidates(
     principal: &str,
     family: &dyn DecisionFamily,
 ) -> Result<ReadCandidates, String> {
+    family.precheck_declared(options)?;
     check_declared(options)
         .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
     family.validate_candidates(options, principal)?;

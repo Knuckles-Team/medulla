@@ -101,6 +101,8 @@ mod writer_commands;
 pub mod writer_thread;
 #[cfg(feature = "raft")]
 mod xshard_api;
+#[cfg(feature = "raft")]
+pub mod xshard_certificate;
 
 pub use commands::{
     ChangeEnvelopePayload, ChangeEnvelopesPayload, Cmd, CrossModalBatchPayload, CrossModalPayload,

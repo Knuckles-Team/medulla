@@ -5,44 +5,62 @@
 //! exhaustive `match`, so a kind without a family fails to compile. Each
 //! family lives in its own `family/<kind>.rs` file.
 
+mod a2a_route;
 mod branch_outcome;
 mod capability_designation;
 mod classify;
+mod command_config;
 mod comparative_analysis_plan;
 mod connector_event_triage;
 mod connector_tool_choice;
 mod connector_write_back;
-mod context_budget;
+pub(super) mod context_budget;
 mod context_package;
+mod context_replacement;
+mod correction_admission;
 mod edit_concentration;
 mod enrichment_schedule;
+mod evolution_round;
+mod feedback_loop;
+mod field_shielding;
+mod graph_intake;
 mod harness_config;
 mod harness_contrast;
 mod ingestion_lane;
+mod instruction_disclosure;
 mod item_recommendation;
 mod load_set;
+mod over_window_plan;
+mod paper_admission;
+mod path_preference;
 mod placement;
+mod planning_admission;
 mod pre_tool_risk;
-mod program_store;
 mod probe_verdict;
+mod program_store;
 mod rank;
 mod resolve_entity;
 mod retrieval_plan;
-mod round_verdict;
 mod route;
+mod run_adjustment;
 mod schema_mapping;
-mod stage_allocation;
-mod task_plan;
-#[cfg(test)]
-mod template;
 mod skill_upgrade;
 mod skill_workflow;
+mod support;
+mod task_plan;
 mod team_coordination;
+#[cfg(test)]
+mod template;
 mod template_choice;
 mod thought_search;
+mod tool_necessity;
 mod tool_subset;
 mod topology;
 mod usage_guidance;
+
+pub(in crate::decide) use instruction_disclosure::disclosure_view;
+use medulla_decision_stats::decision::candidate::CandidateView;
+pub(in crate::decide) use paper_admission::with_similarity;
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -51,7 +69,7 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 
-use super::stat_executor::{Executed, ExecutionContext};
+use super::stat_executor::{Executed, ExecutionContext, Pinned};
 
 /// The stage hooks one question family carries. Every hook has a default
 /// that does nothing: a family overrides only the stages it owns.
@@ -62,6 +80,13 @@ pub trait DecisionFamily {
         _options: &[DeclaredOption],
         _principal: &str,
     ) -> Result<(), String> {
+        Ok(())
+    }
+
+    /// Candidates stage: the kind's gate over the declared option set, run
+    /// before the generic sorted-and-unique check so the kind's own duplicate
+    /// refusal is the one the caller sees.
+    fn precheck_declared(&self, _options: &[DeclaredOption]) -> Result<(), String> {
         Ok(())
     }
 
@@ -82,8 +107,32 @@ pub trait DecisionFamily {
         None
     }
 
-    /// Record stage: the kind's extra premises.
-    fn premises(&self, _request: &DecideRequest) -> Vec<PremiseRef> {
+    /// Solve stage, after `conclude` or the shared ladder: the kind's
+    /// refinement of the executed answer (the rank family orders and filters
+    /// an advisory answer; the context-budget family partitions the sources
+    /// by what the ladder's head read). `request` is `None` when a logged
+    /// record is replayed, which has only its stored inputs, and `views` is
+    /// then empty. The default keeps the answer unchanged.
+    fn refine(
+        &self,
+        _request: Option<&DecideRequest>,
+        _pinned: &Pinned,
+        _views: &[CandidateView],
+        _policy: &DecisionPolicy,
+        _policy_digest: &str,
+        executed: Executed,
+    ) -> Result<Executed, String> {
+        Ok(executed)
+    }
+
+    /// Record stage: the kind's extra premises, derived from the request, from
+    /// what was executed and from the digest of the policy in force.
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        _executed: &Executed,
+        _policy_digest: &str,
+    ) -> Vec<PremiseRef> {
         Vec::new()
     }
 
@@ -147,10 +196,14 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static PLACEMENTFAMILY: placement::PlacementFamily = placement::PlacementFamily;
     static CONTEXTBUDGETFAMILY: context_budget::ContextBudgetFamily =
         context_budget::ContextBudgetFamily;
-    static ROUNDVERDICTFAMILY: round_verdict::RoundVerdictFamily =
-        round_verdict::RoundVerdictFamily;
-    static STAGEALLOCATIONFAMILY: stage_allocation::StageAllocationFamily =
-        stage_allocation::StageAllocationFamily;
+    static OVERWINDOWPLANFAMILY: over_window_plan::OverWindowPlanFamily =
+        over_window_plan::OverWindowPlanFamily;
+    static INSTRUCTIONDISCLOSUREFAMILY: instruction_disclosure::InstructionDisclosureFamily =
+        instruction_disclosure::InstructionDisclosureFamily;
+    static ROUNDVERDICTFAMILY: evolution_round::RoundVerdictFamily =
+        evolution_round::RoundVerdictFamily;
+    static STAGEALLOCATIONFAMILY: evolution_round::StageAllocationFamily =
+        evolution_round::StageAllocationFamily;
     static PROBEVERDICTFAMILY: probe_verdict::ProbeVerdictFamily =
         probe_verdict::ProbeVerdictFamily;
     static ITEMRECOMMENDATIONFAMILY: item_recommendation::ItemRecommendationFamily =
@@ -171,13 +224,36 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static TOPOLOGYFAMILY: topology::TopologyFamily = topology::TopologyFamily;
     static SKILLWORKFLOWFAMILY: skill_workflow::SkillWorkflowFamily =
         skill_workflow::SkillWorkflowFamily;
-    static SKILLUPGRADEFAMILY: skill_upgrade::SkillUpgradeFamily = skill_upgrade::SkillUpgradeFamily;
+    static SKILLUPGRADEFAMILY: skill_upgrade::SkillUpgradeFamily =
+        skill_upgrade::SkillUpgradeFamily;
     static TEAMCOORDINATIONFAMILY: team_coordination::TeamCoordinationFamily =
         team_coordination::TeamCoordinationFamily;
     static CAPABILITYDESIGNATIONFAMILY: capability_designation::CapabilityDesignationFamily =
         capability_designation::CapabilityDesignationFamily;
     static PROGRAMLOOKUPFAMILY: program_store::ProgramLookupFamily =
         program_store::ProgramLookupFamily;
+    static CONTEXTREPLACEMENTFAMILY: context_replacement::ContextReplacementFamily =
+        context_replacement::ContextReplacementFamily;
+    static COMMANDCONFIGFAMILY: command_config::CommandConfigFamily =
+        command_config::CommandConfigFamily;
+    static RUNADJUSTMENTFAMILY: run_adjustment::RunAdjustmentFamily =
+        run_adjustment::RunAdjustmentFamily;
+    static PATHPREFERENCEFAMILY: path_preference::PathPreferenceFamily =
+        path_preference::PathPreferenceFamily;
+    static CORRECTIONADMISSIONFAMILY: correction_admission::CorrectionAdmissionFamily =
+        correction_admission::CorrectionAdmissionFamily;
+    static FIELDSHIELDINGFAMILY: field_shielding::FieldShieldingFamily =
+        field_shielding::FieldShieldingFamily;
+    static GRAPHINTAKEFAMILY: graph_intake::GraphIntakeFamily = graph_intake::GraphIntakeFamily;
+    static TOOLNECESSITYFAMILY: tool_necessity::ToolNecessityFamily =
+        tool_necessity::ToolNecessityFamily;
+    static FEEDBACKLOOPFAMILY: feedback_loop::FeedbackLoopFamily =
+        feedback_loop::FeedbackLoopFamily;
+    static PLANNINGADMISSIONFAMILY: planning_admission::PlanningAdmissionFamily =
+        planning_admission::PlanningAdmissionFamily;
+    static A2AROUTEFAMILY: a2a_route::A2aRouteFamily = a2a_route::A2aRouteFamily;
+    static PAPERADMISSIONFAMILY: paper_admission::PaperAdmissionFamily =
+        paper_admission::PaperAdmissionFamily;
     match kind {
         QuestionKind::Route => &ROUTEFAMILY,
         QuestionKind::Rank => &RANKFAMILY,
@@ -198,6 +274,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::HarnessContrast => &HARNESSCONTRASTFAMILY,
         QuestionKind::Placement => &PLACEMENTFAMILY,
         QuestionKind::ContextBudget => &CONTEXTBUDGETFAMILY,
+        QuestionKind::OverWindowPlan => &OVERWINDOWPLANFAMILY,
+        QuestionKind::InstructionDisclosure => &INSTRUCTIONDISCLOSUREFAMILY,
         QuestionKind::RoundVerdict => &ROUNDVERDICTFAMILY,
         QuestionKind::StageAllocation => &STAGEALLOCATIONFAMILY,
         QuestionKind::ProbeVerdict => &PROBEVERDICTFAMILY,
@@ -215,6 +293,18 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::SkillUpgrade => &SKILLUPGRADEFAMILY,
         QuestionKind::TeamCoordination => &TEAMCOORDINATIONFAMILY,
         QuestionKind::CapabilityDesignation => &CAPABILITYDESIGNATIONFAMILY,
+        QuestionKind::ContextReplacement => &CONTEXTREPLACEMENTFAMILY,
+        QuestionKind::CommandConfig => &COMMANDCONFIGFAMILY,
+        QuestionKind::RunAdjustment => &RUNADJUSTMENTFAMILY,
+        QuestionKind::PathPreference => &PATHPREFERENCEFAMILY,
+        QuestionKind::CorrectionAdmission => &CORRECTIONADMISSIONFAMILY,
+        QuestionKind::FieldShielding => &FIELDSHIELDINGFAMILY,
+        QuestionKind::GraphIntake => &GRAPHINTAKEFAMILY,
+        QuestionKind::ToolNecessity => &TOOLNECESSITYFAMILY,
+        QuestionKind::FeedbackLoop => &FEEDBACKLOOPFAMILY,
+        QuestionKind::PlanningAdmission => &PLANNINGADMISSIONFAMILY,
+        QuestionKind::A2aRoute => &A2AROUTEFAMILY,
+        QuestionKind::PaperAdmission => &PAPERADMISSIONFAMILY,
     }
 }
 
@@ -245,6 +335,8 @@ mod tests {
             QuestionKind::HarnessContrast,
             QuestionKind::Placement,
             QuestionKind::ContextBudget,
+            QuestionKind::OverWindowPlan,
+            QuestionKind::InstructionDisclosure,
             QuestionKind::RoundVerdict,
             QuestionKind::StageAllocation,
             QuestionKind::ProbeVerdict,
@@ -262,6 +354,18 @@ mod tests {
             QuestionKind::SkillUpgrade,
             QuestionKind::TeamCoordination,
             QuestionKind::CapabilityDesignation,
+            QuestionKind::ContextReplacement,
+            QuestionKind::CommandConfig,
+            QuestionKind::RunAdjustment,
+            QuestionKind::PathPreference,
+            QuestionKind::CorrectionAdmission,
+            QuestionKind::FieldShielding,
+            QuestionKind::GraphIntake,
+            QuestionKind::ToolNecessity,
+            QuestionKind::FeedbackLoop,
+            QuestionKind::PlanningAdmission,
+            QuestionKind::A2aRoute,
+            QuestionKind::PaperAdmission,
         ];
         let exhaustive = match kinds[0] {
             QuestionKind::Route
@@ -283,6 +387,8 @@ mod tests {
             | QuestionKind::HarnessContrast
             | QuestionKind::Placement
             | QuestionKind::ContextBudget
+            | QuestionKind::OverWindowPlan
+            | QuestionKind::InstructionDisclosure
             | QuestionKind::RoundVerdict
             | QuestionKind::StageAllocation
             | QuestionKind::ProbeVerdict
@@ -299,7 +405,19 @@ mod tests {
             | QuestionKind::SkillWorkflowCompile
             | QuestionKind::SkillUpgrade
             | QuestionKind::TeamCoordination
-            | QuestionKind::CapabilityDesignation => true,
+            | QuestionKind::CapabilityDesignation
+            | QuestionKind::ContextReplacement
+            | QuestionKind::CommandConfig
+            | QuestionKind::RunAdjustment
+            | QuestionKind::PathPreference
+            | QuestionKind::CorrectionAdmission
+            | QuestionKind::FieldShielding
+            | QuestionKind::GraphIntake
+            | QuestionKind::ToolNecessity
+            | QuestionKind::FeedbackLoop
+            | QuestionKind::PlanningAdmission
+            | QuestionKind::A2aRoute
+            | QuestionKind::PaperAdmission => true,
         };
         assert!(exhaustive);
         kinds
@@ -311,7 +429,7 @@ mod tests {
         let kinds = all_kinds();
         assert_eq!(
             kinds.len(),
-            36,
+            50,
             "one family registration per QuestionKind variant"
         );
         for kind in &kinds {

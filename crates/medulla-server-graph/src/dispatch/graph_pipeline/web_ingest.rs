@@ -61,11 +61,19 @@ async fn enrich(
             ),
         );
     }
+    let chunk_classes = medulla_h_ingest::ingestion_admission::chunk_classes(&records);
     let (current, prior) = web::prior_enrichments(&doc_id, &document.digest_hex, records);
     if let Some(record) = current {
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);
         return respond(req_id, receipt);
     }
+    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
+        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
+    );
+    let demoted = match demoted_classes(&ctx, &chunk_classes, &knobs).await {
+        Ok(demoted) => demoted,
+        Err(error) => return Response::err(req_id, error),
+    };
     let embedder = medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env();
     // Vectors already held for this Document's earlier spans, by exact span
     // digest: an identical span reuses its vector instead of re-embedding.
@@ -77,13 +85,14 @@ async fn enrich(
             .filter_map(|(digest, chunk)| Some((digest.clone(), store.get_embedding(chunk)?)))
             .collect()
     };
-    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
-        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
-    );
+    let demoted_labels: Vec<String> = demoted
+        .iter()
+        .map(|class| medulla_h_ingest::ingestion_admission::class_label(*class))
+        .collect();
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
         let spans = web::chunks(&document, &config)?;
         let known: std::collections::BTreeSet<String> = reusable.keys().cloned().collect();
-        let decided = web::decide_spans(&document, spans, &knobs, &known);
+        let decided = web::decide_spans(&document, spans, &knobs, &known, &demoted);
         let texts: Vec<&str> = decided
             .iter()
             .filter(|unit| {
@@ -126,11 +135,43 @@ async fn enrich(
         admissions,
         digests,
         embedded_units,
+        demoted_classes: demoted_labels,
     };
     match web::lower(plan) {
         Ok((write_set, receipt)) => commit(ctx, write_set, receipt).await,
         Err(error) => Response::err(req_id, error),
     }
+}
+
+/// The content classes retrieval feedback has demoted for this tenant
+/// (MEDULLA-DECISION-ENGINE-R079.5): the cited span ids the decision log
+/// recorded inside the window, joined to the class of each embedded chunk.
+/// With no Agent Library open there is no usage, so nothing is demoted.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
+async fn demoted_classes(
+    ctx: &GraphOpRouting<'_>,
+    chunk_classes: &std::collections::BTreeMap<
+        String,
+        medulla_decision_types::decision::ingestion_admission::ContentClass,
+    >,
+    knobs: &medulla_decision_types::decision::ingestion_admission::AdmissionKnobs,
+) -> Result<
+    std::collections::BTreeSet<medulla_decision_types::decision::ingestion_admission::ContentClass>,
+    String,
+> {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    let Some(store) = ctx.state.read().await.agent_library() else {
+        return Ok(Default::default());
+    };
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let cited = store.cited_span_ids_since(
+        ctx.verified_context.tenant(),
+        now_ms.saturating_sub(knobs.demote_window_ms),
+    )?;
+    let usage = medulla_h_ingest::ingestion_admission::class_usage(chunk_classes, &cited);
+    Ok(medulla_h_ingest::ingestion_admission::demoted_classes(
+        &usage, knobs,
+    ))
 }
 
 #[cfg(all(feature = "query", feature = "modality-serving"))]

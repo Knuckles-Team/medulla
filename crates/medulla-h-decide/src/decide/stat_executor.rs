@@ -41,11 +41,16 @@ use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 /// What the executor needs besides the request.
+#[derive(Clone, Copy)]
 pub(super) struct ExecutionContext<'a> {
     pub(super) store: &'a AgentLibraryStore,
     pub(super) tenant_id: &'a str,
     pub(super) now_ms: u64,
     pub(super) server_secret: &'a [u8],
+    /// The caller's own earlier executed decisions that share the question's
+    /// context (MEDULLA-DECISION-ENGINE-R020.1.1), where a decision reads them;
+    /// empty for every job that decides nothing.
+    pub(super) matched: &'a [super::stat_log::MatchedTrajectory],
 }
 
 /// The pinned inputs of one decision.
@@ -73,6 +78,87 @@ pub(super) struct Executed {
     /// (MEDULLA-DECISION-ENGINE-R750.754); `None` for every other kind and
     /// for a thought-search abstention.
     pub(super) thought: Option<ThoughtExecuted>,
+    /// The selected and omitted context sources a `ContextBudget` question
+    /// sealed (MEDULLA-DECISION-ENGINE-R029.2.2); `None` for every other kind
+    /// and when the head did not read.
+    pub(super) context_selection:
+        Option<medulla_decision_outcome_types::decision::context_budget::ContextSourceSelection>,
+    /// The premises a family computed while it concluded, where a family's
+    /// premises need what only the conclude stage reads (a profile lookup, the
+    /// pinned policy's knobs); the family's `premises` hook seals them.
+    pub(super) family_premises: Vec<FamilyPremise>,
+    /// The route stage that answered a `Route` question
+    /// (MEDULLA-DECISION-ENGINE-R035.750.1); `None` for every other kind and
+    /// when the shared ladder (the learned policy) answered.
+    pub(super) route: Option<RouteExecuted>,
+}
+
+/// Where a premise a family computed at conclude time came from; a policy
+/// premise is bound to the digest of the policy in force when it is sealed.
+pub(super) enum FamilyPremiseSource {
+    /// The request stated it in the named field.
+    Request(&'static str),
+    /// A component publisher's declaration at an exact revision.
+    Publisher {
+        component_id: String,
+        definition_digest: String,
+    },
+    /// The decision policy in force.
+    Policy,
+    /// A recorded fact read from the graph, by the node that holds it.
+    Observation(String),
+}
+
+/// One premise a family computed while it concluded.
+pub(super) struct FamilyPremise {
+    pub(super) subject: &'static str,
+    pub(super) fact: String,
+    pub(super) class: medulla_decision_types::decision::PremiseClass,
+    pub(super) source: FamilyPremiseSource,
+}
+
+impl FamilyPremise {
+    /// The sealed premise, bound to `policy_digest` when it came from the policy.
+    pub(super) fn seal(&self, policy_digest: &str) -> medulla_decision_types::decision::PremiseRef {
+        use medulla_decision_types::decision::{PremiseProvenance, PremiseRef};
+        PremiseRef {
+            subject: self.subject.to_string(),
+            fact: self.fact.clone(),
+            class: self.class,
+            provenance: match &self.source {
+                FamilyPremiseSource::Request(field) => PremiseProvenance::Request {
+                    field: (*field).to_string(),
+                },
+                FamilyPremiseSource::Publisher {
+                    component_id,
+                    definition_digest,
+                } => PremiseProvenance::Publisher {
+                    component_id: component_id.clone(),
+                    definition_digest: definition_digest.clone(),
+                },
+                FamilyPremiseSource::Policy => PremiseProvenance::Policy {
+                    policy_digest: policy_digest.to_string(),
+                },
+                FamilyPremiseSource::Observation(node_id) => PremiseProvenance::Observation {
+                    evaluation_id: node_id.clone(),
+                },
+            },
+        }
+    }
+}
+
+/// The rule stage that answered a route question.
+pub(super) struct RouteExecuted {
+    /// The stage name recorded in the `route_stage=<stage>` premise.
+    pub(super) stage: &'static str,
+    /// The option the stage chose.
+    pub(super) option_id: String,
+    /// How the answer was reached: a rule is a constraint, evaluated history
+    /// is statistical.
+    pub(super) resolution: medulla_decision_types::decision::ResolutionKind,
+    /// The matched earlier decisions that ran the chosen option, when the
+    /// stage reads history (team reuse); empty otherwise.
+    pub(super) matched_records: Vec<String>,
 }
 
 /// A thought-search answer with the premises it rests on.
@@ -213,7 +299,10 @@ pub(super) fn run_on_matrix(
                 seed,
                 harness_contrast: None,
                 topology: None,
+                context_selection: None,
                 thought: None,
+                family_premises: Vec::new(),
+                route: None,
             });
         }
         Some(Ok(evaluated)) => Some(evaluated),
@@ -236,7 +325,10 @@ pub(super) fn run_on_matrix(
         seed,
         harness_contrast: None,
         topology: None,
+        context_selection: None,
         thought: None,
+        family_premises: Vec::new(),
+        route: None,
     })
 }
 
@@ -269,7 +361,10 @@ pub(super) fn execute(
                 seed: [0u8; 32],
                 harness_contrast: None,
                 topology: None,
+                context_selection: None,
                 thought: None,
+                family_premises: Vec::new(),
+                route: None,
             });
         }
     };

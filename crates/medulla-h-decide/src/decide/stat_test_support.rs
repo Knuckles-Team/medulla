@@ -75,13 +75,23 @@ impl Harness {
         draft: medulla_agent_types::agent_component::AgentComponentDraft,
         receipt: Option<String>,
     ) -> Result<ComponentDependency, String> {
+        self.commit_in(TENANT, draft, receipt)
+    }
+
+    /// Publish `draft` into `tenant`'s library.
+    pub fn commit_in(
+        &self,
+        tenant: &str,
+        draft: medulla_agent_types::agent_component::AgentComponentDraft,
+        receipt: Option<String>,
+    ) -> Result<ComponentDependency, String> {
         let nonce = self.nonce.get();
         self.nonce.set(nonce + 1);
         let (id, kind) = (draft.component_id.clone(), draft.kind);
         let request = AgentComponentPublishRequest {
             context: mutation_context(
                 &self.store,
-                TENANT,
+                tenant,
                 &format!("publish-{id}-{nonce}"),
                 nonce,
                 0,
@@ -215,6 +225,60 @@ pub fn request(
             },
         ])
         .unwrap(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    }
+}
+
+/// A declared option with no features.
+pub fn declared_option(
+    id: &str,
+) -> medulla_decision_types::decision::statistical::declared::DeclaredOption {
+    medulla_decision_types::decision::statistical::declared::DeclaredOption {
+        option_id: id.to_string(),
+        classification: BoundedVec::default(),
+        numbers: BoundedVec::default(),
+        texts: BoundedVec::default(),
+    }
+}
+
+/// The route feature schema, published into `tenant`'s library.
+pub fn publish_route_schema_in(h: &Harness, tenant: &str) -> ComponentDependency {
+    let body = schema();
+    let encoded = encode_body(&body).unwrap();
+    let mut draft = test_component_draft(tenant, &format!("schema-route-{tenant}"));
+    draft.kind = AgentComponentKind::FeatureSchema;
+    draft.summary = "route features".to_string();
+    draft.classification = vec!["eg:capability/retrieval/web-search".to_string()];
+    draft.content_digest = encoded.content_digest;
+    draft.attributes = encoded.attributes;
+    h.commit_in(tenant, draft, None).unwrap()
+}
+
+/// A request for `kind` over one declared option and the given parameters.
+pub fn declared_request(
+    schema: &ComponentDependency,
+    tenant: &str,
+    kind: QuestionKind,
+    option: &str,
+    policy: DecisionPolicyRef,
+    mut params: Vec<TypedParam>,
+) -> DecideRequest {
+    params.sort_by(|a, b| a.name.cmp(&b.name));
+    DecideRequest {
+        tenant_id: tenant.to_string(),
+        question: StatisticalQuestion {
+            question_id: format!("{kind:?}.test"),
+            kind,
+            safety: QuestionSafety::Ordinary,
+        },
+        candidates: CandidateSource::Declared {
+            options: BoundedVec::new(vec![declared_option(option)]).unwrap(),
+        },
+        feature_schema: schema.clone(),
+        head: None,
+        policy,
+        params: BoundedVec::new(params).unwrap(),
         max_records: None,
         belief_as_of: BoundedVec::default(),
     }

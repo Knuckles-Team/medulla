@@ -736,3 +736,293 @@ async fn admission_bounds_run() {
     }
     assert!(verdicts.len() as u32 > admitted);
 }
+
+/// A page of `sections` distinct prose sections under one `tag`: each section
+/// is long enough that the chunker keeps it as one span, and no two sections
+/// share text, so no unit is a duplicate of another.
+fn distinct_page(tag: &str, sections: usize) -> String {
+    let words = [
+        "amber", "birch", "cedar", "dune", "ember", "fjord", "glade", "heath", "inlet", "jetty",
+        "knoll", "larch", "marsh", "nook", "oasis", "pine", "quarry", "ridge", "spruce", "tarn",
+    ];
+    let mut text = format!("# Notes {tag}\n\n");
+    for section in 0..sections {
+        text.push_str(&format!("## Entry {tag} {section}\n\n"));
+        for n in 0..9 {
+            text.push_str(&format!(
+                "{tag} entry {section} remark {n} pairs {} with {} near {} at mile {}. ",
+                words[(section + n) % 20],
+                words[(section * 3 + n * 7 + 1) % 20],
+                words[(section * 11 + n * 5 + 2) % 20],
+                section * 13 + n,
+            ));
+        }
+        text.push_str("\n\n");
+    }
+    text
+}
+
+async fn enrich_wide(
+    state: &test_support::SharedState,
+    id: u64,
+    node_id: &str,
+) -> EnrichDocumentReceipt {
+    let request = EnrichDocumentRequest {
+        document_id: node_id.into(),
+        text_property: None,
+        fetch_backend: Some(FetchBackend::Webarchiver),
+        max_chunk_bytes: Some(800),
+        overlap_bytes: Some(0),
+    };
+    raw(call(
+        state,
+        id,
+        Method::EnrichDocument {
+            request: Box::new(request),
+        },
+    )
+    .await)
+}
+
+/// Commit a retrieval-plan record through the served `Decide` and
+/// `DecisionLog` Commit, as the test principal, and rewrite its stored outcome
+/// to an executed option (the log join reads the stored entry; it does not
+/// replay). Returns the record id.
+async fn committed_executed_retrieval_record(state: &test_support::SharedState) -> String {
+    use medulla_agent_types::agent_component::AgentComponentKind;
+    use medulla_decision_types::decision::statistical::body::encode_body;
+    use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
+    use medulla_decision_types::decision::statistical::features::{
+        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+    };
+    use medulla_decision_types::decision::statistical::log::{
+        DecisionLogCommitted, DecisionLogEntry, DecisionLogOp,
+    };
+    use medulla_decision_types::decision::statistical::{
+        CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
+        StatisticalOutcome, StatisticalQuestion,
+    };
+    use medulla_decision_types::decision::{DecisionPolicyRef, UnitRationalWire};
+    use medulla_h_decide::decide::stat_test_support::Harness;
+    use medulla_persistence_records::agent_component::test_component_draft;
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    use medulla_types::contract::BoundedVec;
+
+    let store = state.write().await.ensure_agent_library().unwrap();
+    let harness = Harness {
+        _dir: tempfile::tempdir().unwrap(),
+        state: state.clone(),
+        store: store.clone(),
+        nonce: std::cell::Cell::new(1),
+    };
+    let tenant = common::TEST_TENANT;
+    let schema = FeatureSchemaBody {
+        schema_version: FEATURE_SCHEMA_VERSION,
+        features: BoundedVec::new(vec![FeatureSpec {
+            name: "score".to_string(),
+            kind: FeatureKind::Number {
+                key: "score".to_string(),
+            },
+            missing: MissingValue::Abstain,
+        }])
+        .unwrap(),
+    };
+    let encoded = encode_body(&schema).unwrap();
+    let mut draft = test_component_draft(tenant, "schema-retrieval-plan");
+    draft.kind = AgentComponentKind::FeatureSchema;
+    draft.summary = "declared-option features".to_string();
+    draft.classification = vec!["eg:capability/retrieval/web-search".to_string()];
+    draft.content_digest = encoded.content_digest;
+    draft.attributes = encoded.attributes;
+    let schema_pin = harness.commit_in(tenant, draft, None).unwrap();
+    let option = |id: &str, score: i64| DeclaredOption {
+        option_id: id.to_string(),
+        classification: BoundedVec::default(),
+        numbers: BoundedVec::new(vec![DeclaredNumber {
+            key: "score".to_string(),
+            q32: score,
+        }])
+        .unwrap(),
+        texts: BoundedVec::default(),
+    };
+    let asked = DecideRequest {
+        tenant_id: tenant.to_string(),
+        question: StatisticalQuestion {
+            question_id: "au.retrieval-plan".to_string(),
+            kind: QuestionKind::RetrievalPlan,
+            safety: QuestionSafety::Ordinary,
+        },
+        candidates: CandidateSource::Declared {
+            options: BoundedVec::new(vec![
+                option("plan-deep", 1 << 31),
+                option("plan-hyde", 1 << 32),
+            ])
+            .unwrap(),
+        },
+        feature_schema: schema_pin,
+        head: None,
+        policy: DecisionPolicyRef::Default,
+        params: BoundedVec::default(),
+        max_records: None,
+        belief_as_of: BoundedVec::default(),
+    };
+    let batch: DecisionBatch = raw(call(
+        state,
+        300,
+        Method::Decide {
+            request: Box::new(asked),
+        },
+    )
+    .await);
+    let record = batch.records.as_slice()[0].clone();
+    let committed: DecisionLogCommitted = raw(call(
+        state,
+        301,
+        Method::DecisionLog {
+            op: Box::new(DecisionLogOp::Commit {
+                record: Box::new(record),
+                evaluator: None,
+            }),
+        },
+    )
+    .await);
+    let key = medulla_persistence_records::decision_jobs::record_key(&committed.record_id);
+    let bytes = store.decision_artifact(tenant, &key).unwrap().unwrap();
+    let mut entry: DecisionLogEntry =
+        medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "entry").unwrap();
+    entry.record.outcome = StatisticalOutcome::Explored {
+        option_id: "plan-hyde".to_string(),
+        propensity: UnitRationalWire::new(1, 1).unwrap(),
+    };
+    let bytes = medulla_persistence_records::decision_jobs::encode_artifact(&entry).unwrap();
+    store
+        .put_decision_artifacts(tenant, &[(key, bytes)])
+        .unwrap();
+    committed.record_id
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R079.5
+#[test]
+fn retrieval_feedback_demotes_unused_content() {
+    test_support::on_engine(demotion_run);
+}
+
+async fn demotion_run() {
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use medulla_decision_types::decision::statistical::retrieval::{
+        LearningWrite, RetrievalOutcome, ReturnedEvidence,
+    };
+    use medulla_types::contract::BoundedVec;
+
+    let (_dir, _backend, state) = durable_graph().await;
+
+    // Page one: 150 distinct prose spans embed, enough to pass
+    // `embedding.demote_min_units`; nothing has been cited, but no class is
+    // demoted yet because the demotion reads the units already held.
+    add_document(
+        &state,
+        2,
+        "doc:p1",
+        &distinct_page("one", 150),
+        "https://example.org/p1",
+        NOW,
+        "sha256:p1",
+    )
+    .await;
+    let first = enrich_wide(&state, 3, "doc:p1").await;
+    assert!(
+        first.demoted_classes.is_empty(),
+        "{:?}",
+        first.demoted_classes
+    );
+    assert!(first.embedded_units >= 100, "{}", first.embedded_units);
+    assert!(
+        outcomes(&first)
+            .iter()
+            .all(|o| *o == AdmissionOutcome::Admitted),
+        "{:?}",
+        first.admissions
+    );
+
+    // Page two: the held prose has never been cited, so the class is demoted
+    // and no span of the new page embeds.
+    add_document(
+        &state,
+        4,
+        "doc:p2",
+        &distinct_page("two", 20),
+        "https://example.org/p2",
+        NOW,
+        "sha256:p2",
+    )
+    .await;
+    let second = enrich_wide(&state, 5, "doc:p2").await;
+    assert_eq!(second.demoted_classes, vec!["prose".to_string()]);
+    assert!(!second.admissions.is_empty());
+    assert!(
+        outcomes(&second)
+            .iter()
+            .all(|o| *o == AdmissionOutcome::Demoted),
+        "{:?}",
+        second.admissions
+    );
+    assert_eq!(
+        second.embedded_units, 0,
+        "a demoted class makes no embedding call"
+    );
+
+    // Retrieval cites one page-one chunk through the served decision log.
+    let cited = first.chunk_ids[0].clone();
+    let record_id = committed_executed_retrieval_record(&state).await;
+    let learn = Method::DecisionLog {
+        op: Box::new(DecisionLogOp::Learn {
+            tenant_id: common::TEST_TENANT.to_string(),
+            write: LearningWrite::RecordOutcome {
+                outcome: Box::new(RetrievalOutcome {
+                    record_id,
+                    returned: BoundedVec::new(
+                        first.chunk_ids[..3]
+                            .iter()
+                            .map(|id| ReturnedEvidence {
+                                evidence_id: id.clone(),
+                                content_class: Some("prose".to_string()),
+                            })
+                            .collect(),
+                    )
+                    .unwrap(),
+                    cited: BoundedVec::new(vec![cited]).unwrap(),
+                    query: None,
+                    path: None,
+                }),
+            },
+        }),
+    };
+    call(&state, 310, learn).await;
+
+    // Page three: one citation lifts the demotion; its spans embed again.
+    add_document(
+        &state,
+        6,
+        "doc:p3",
+        &distinct_page("three", 20),
+        "https://example.org/p3",
+        NOW,
+        "sha256:p3",
+    )
+    .await;
+    let third = enrich_wide(&state, 7, "doc:p3").await;
+    assert!(
+        third.demoted_classes.is_empty(),
+        "{:?}",
+        third.demoted_classes
+    );
+    assert!(
+        outcomes(&third)
+            .iter()
+            .all(|o| *o == AdmissionOutcome::Admitted),
+        "{:?}",
+        third.admissions
+    );
+    assert_eq!(third.embedded_units, third.chunk_count);
+    assert!(third.chunk_count > 0);
+}

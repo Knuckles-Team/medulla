@@ -57,6 +57,11 @@ pub struct DecisionOutcomeEvaluation {
     /// `None`: censored, neither success nor failure.
     #[serde(default)]
     pub success: Option<bool>,
+    /// The model backbone and skill the evaluation ran under (R059.1.1). Absent
+    /// evaluations never enter a transfer estimate; the field is omitted from
+    /// the stored row when absent, so existing rows keep their bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backbone: Option<super::super::transfer::BackboneBinding>,
 }
 
 /// Who a committer names to evaluate its record (EH-395): ONE principal, or
@@ -259,6 +264,9 @@ pub struct OutcomeAggregateRequest {
     /// Also split one slate's outcome across its components (EH-523).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attribution: Option<SlateAttributionRequest>,
+    /// Also report the robust transfer estimate of one skill (R059.1.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transfer: Option<super::super::transfer::TransferRequest>,
 }
 
 /// One component's share of a slate's success rate.
@@ -337,6 +345,12 @@ pub struct OutcomeAggregate {
     /// The requested slate split (EH-523); absent when none was asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attribution: Option<SlateAttribution>,
+    /// The requested robust transfer estimate (R059.1.1); absent when none was asked for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transfer: Option<super::super::transfer::TransferEstimate>,
+    /// Options with enough independent successes to become a skill (R059.2).
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub skill_candidates: BoundedVec<super::super::transfer::SkillCandidateRow, 1024>,
 }
 
 /// The durable identity of a committed record.

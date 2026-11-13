@@ -63,6 +63,8 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::HarnessContrast,
     QuestionKind::Placement,
     QuestionKind::ContextBudget,
+    QuestionKind::OverWindowPlan,
+    QuestionKind::InstructionDisclosure,
     QuestionKind::RoundVerdict,
     QuestionKind::StageAllocation,
     QuestionKind::ProbeVerdict,
@@ -74,6 +76,18 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::ThoughtSearch,
     QuestionKind::ComparativeAnalysisPlan,
     QuestionKind::ContextPackage,
+    QuestionKind::ContextReplacement,
+    QuestionKind::CommandConfig,
+    QuestionKind::RunAdjustment,
+    QuestionKind::PathPreference,
+    QuestionKind::CorrectionAdmission,
+    QuestionKind::FieldShielding,
+    QuestionKind::GraphIntake,
+    QuestionKind::ToolNecessity,
+    QuestionKind::FeedbackLoop,
+    QuestionKind::PlanningAdmission,
+    QuestionKind::A2aRoute,
+    QuestionKind::PaperAdmission,
 ];
 
 /// The samples the budget report takes per group.
@@ -101,6 +115,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::HarnessContrast => "harness_contrast",
         QuestionKind::Placement => "placement",
         QuestionKind::ContextBudget => "context_budget",
+        QuestionKind::OverWindowPlan => "over_window_plan",
+        QuestionKind::InstructionDisclosure => "instruction_disclosure",
         QuestionKind::RoundVerdict => "round_verdict",
         QuestionKind::StageAllocation => "stage_allocation",
         QuestionKind::ProbeVerdict => "probe_verdict",
@@ -112,6 +128,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ThoughtSearch => "thought_search",
         QuestionKind::ComparativeAnalysisPlan => "comparative_analysis_plan",
         QuestionKind::ContextPackage => "context_package",
+        QuestionKind::ContextReplacement => "context_replacement",
         // Needs a published template and a typed question, so it has its own
         // bench fixture, not the generic one `FAMILIES` is driven with.
         QuestionKind::Topology => "topology",
@@ -121,6 +138,17 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::SkillUpgrade => "skill_upgrade",
         QuestionKind::TeamCoordination => "team_coordination",
         QuestionKind::CapabilityDesignation => "capability_designation",
+        QuestionKind::CommandConfig => "command_config",
+        QuestionKind::RunAdjustment => "run_adjustment",
+        QuestionKind::PathPreference => "path_preference",
+        QuestionKind::CorrectionAdmission => "correction_admission",
+        QuestionKind::FieldShielding => "field_shielding",
+        QuestionKind::GraphIntake => "graph_intake",
+        QuestionKind::ToolNecessity => "tool_necessity",
+        QuestionKind::FeedbackLoop => "feedback_loop",
+        QuestionKind::PlanningAdmission => "planning_admission",
+        QuestionKind::A2aRoute => "a2a_route",
+        QuestionKind::PaperAdmission => "paper_admission",
     }
 }
 

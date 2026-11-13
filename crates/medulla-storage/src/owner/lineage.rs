@@ -232,6 +232,32 @@ pub const GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS: LayoutPredecessor = LayoutPredeces
     file_name: "graph-*.redb",
 };
 
+// Frozen census of the last layout before the sealed coordinator-decision
+// certificate table (MEDULLA-DECISION-ENGINE-R036.105.1).
+const GRAPH_SHARD_TABLES_BEFORE_DECISION_CERTIFICATES: &[&str] = super::graph_shard::graph_shard_table_names!(
+    "repository_enrichment_budgets",
+    "repository_enrichment_policy_revisions",
+    "repository_enrichment_supersessions",
+    "repository_enrichment_parks",
+    "audit_requests",
+    "work_item_current_plans",
+    "work_item_run_checkpoints",
+    "work_item_effect_receipts",
+    "work_item_admitted_requests",
+);
+/// The `f836...` digest every graph shard carried before the certificate table.
+pub const GRAPH_SHARD_PRE_DECISION_CERTIFICATES_DIGEST: [u8; 32] = [
+    0xf8, 0x36, 0x39, 0x59, 0xe3, 0xfb, 0xa4, 0x82, 0xe9, 0x8b, 0xe4, 0xe5, 0xcd, 0xa9, 0x1b, 0x82,
+    0xb2, 0x6e, 0x19, 0x58, 0xd2, 0x15, 0xbe, 0x02, 0x3a, 0x2a, 0xbe, 0xf6, 0x94, 0x4f, 0x71, 0xed,
+];
+pub const GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::GraphShard,
+    label: "graph shard before sealed coordinator-decision certificates",
+    owner_tables: GRAPH_SHARD_TABLES_BEFORE_DECISION_CERTIFICATES,
+    data_lost: "none; run `store-upgrade` (the explicit offline layout upgrade). Normal open refuses this predecessor.",
+    file_name: "graph-*.redb",
+};
+
 /// Earlier graph-shard layout before the node-payload scrub cursor (EH-384).
 const GRAPH_SHARD_TABLES_BEFORE_STORAGE_SCRUB: &[&str] = GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT
     .split_at(GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT.len() - 1)
@@ -377,6 +403,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             GRAPH_SHARD_BEFORE_CURRENT_PLANS,
             GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
             GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+            GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
         ],
     }
 }
@@ -447,7 +474,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "0561a2a2ae13f067bf01a4c94d6cbaeb280aaefa56c68036a1f01da92cba8431"
         }
         OwnerLayout::GraphShard => {
-            "f8363959e3fba482e98be4e5cda91b82b26e1958d215be023a2abef6944f71ed"
+            "c613d48af8649e05a3a0737ce6aba8d4edd58c88c0ca244d05fc11dd9edc52a5"
         }
         OwnerLayout::AgentLibrary => {
             "e112d8118e4e62b002799b84bba8c69162e477071861a81d3893277736727ea0"

@@ -200,6 +200,7 @@ mod tests {
                     tool_schema_sha256: Digest256::from_bytes([1; 32]),
                     source_uri: "chat://s1/m1".into(),
                 },
+                column_profiles: Default::default(),
             }])
             .unwrap(),
             relationships: BoundedVec::new(Vec::new()).unwrap(),

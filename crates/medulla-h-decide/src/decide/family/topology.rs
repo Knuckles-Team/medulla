@@ -37,7 +37,10 @@ fn executed(outcome: StatisticalOutcome, topology: Option<TopologyExecuted>) -> 
         seed: [0u8; 32],
         harness_contrast: None,
         topology,
+        context_selection: None,
         thought: None,
+        family_premises: Vec::new(),
+        route: None,
     }
 }
 

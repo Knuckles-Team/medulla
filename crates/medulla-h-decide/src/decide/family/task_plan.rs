@@ -38,7 +38,10 @@ impl DecisionFamily for TaskPlanFamily {
                 seed: [0u8; 32],
                 harness_contrast: None,
                 topology: None,
+                context_selection: None,
                 thought: None,
+                family_premises: Vec::new(),
+                route: None,
             })),
             Ok(None) => None,
         }

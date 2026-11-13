@@ -10,8 +10,8 @@
 //! caller claim.
 
 use medulla_agent_types::agent_topology::{TopologyInputs, TopologyRequirements};
-use serde::{Deserialize, Serialize};
 use medulla_agent_types::delegation::AgentGraphEntryRef;
+use serde::{Deserialize, Serialize};
 
 /// The name of the one parameter a topology question carries.
 pub const TOPOLOGY_PARAM: &str = "topology";

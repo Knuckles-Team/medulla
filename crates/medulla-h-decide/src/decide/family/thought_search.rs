@@ -46,7 +46,10 @@ impl DecisionFamily for ThoughtSearchFamily {
                     seed: [0u8; 32],
                     harness_contrast: None,
                     topology: None,
+                    context_selection: None,
                     thought,
+                    family_premises: Vec::new(),
+                    route: None,
                 },
             ),
         )

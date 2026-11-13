@@ -163,3 +163,86 @@ fn every_registered_upgrade_runs_once_and_reaches_the_current_layout() {
         ordinary_open(&path, predecessor.layout).unwrap();
     }
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R036.105.1
+#[test]
+fn graph_shard_upgrade_creates_empty_decision_certificate_table() {
+    use crate::owner::graph_shard::{NODES, XSHARD_DECISION, XSHARD_DECISION_CERTIFICATE};
+    use redb::{ReadableDatabase, ReadableTable, ReadableTableMetadata};
+
+    let predecessor = &GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES;
+    let upgrade = registered_offline_upgrade(predecessor).expect("a registered upgrade");
+
+    // Every pre-existing row survives, and a pre-upgrade decision row stays a
+    // row (it is legacy evidence, not certified evidence).
+    let directory = private_local_tempdir();
+    let path = directory.path().join("graph-upgrade");
+    create_predecessor_owner_file(&path, identity(), predecessor).unwrap();
+    {
+        let database = redb::Database::open(&path).unwrap();
+        let write = database.begin_write().unwrap();
+        write
+            .open_table(NODES)
+            .unwrap()
+            .insert(("graph-a", "node-a"), b"kept node".as_slice())
+            .unwrap();
+        write
+            .open_table(XSHARD_DECISION)
+            .unwrap()
+            .insert("txn-legacy", 1u8)
+            .unwrap();
+        write.commit().unwrap();
+    }
+    let inspected = upgrade
+        .inspect(&path, identity(), None, options(&path))
+        .unwrap();
+    inspected.apply().unwrap();
+    let database = redb::Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(
+        read.open_table(NODES)
+            .unwrap()
+            .get(("graph-a", "node-a"))
+            .unwrap()
+            .unwrap()
+            .value(),
+        b"kept node"
+    );
+    let decisions = read.open_table(XSHARD_DECISION).unwrap();
+    assert_eq!(decisions.len().unwrap(), 1);
+    assert_eq!(decisions.get("txn-legacy").unwrap().unwrap().value(), 1u8);
+    assert_eq!(
+        read.open_table(XSHARD_DECISION_CERTIFICATE)
+            .unwrap()
+            .len()
+            .unwrap(),
+        0,
+        "the new table is created empty"
+    );
+    drop(read);
+    drop(database);
+    ordinary_open(&path, predecessor.layout).unwrap();
+
+    // A source changed between inspection and apply refuses, and the file
+    // stays a predecessor.
+    let changed = directory.path().join("graph-changed");
+    create_predecessor_owner_file(&changed, identity(), predecessor).unwrap();
+    let inspected = upgrade
+        .inspect(&changed, identity(), None, options(&changed))
+        .unwrap();
+    {
+        let database = redb::Database::open(&changed).unwrap();
+        let write = database.begin_write().unwrap();
+        write
+            .open_table(NODES)
+            .unwrap()
+            .insert(
+                ("graph-a", "node-b"),
+                b"changed after inspection".as_slice(),
+            )
+            .unwrap();
+        write.commit().unwrap();
+    }
+    assert!(inspected.apply().is_err());
+    assert!(ordinary_open(&changed, predecessor.layout).is_err());
+}

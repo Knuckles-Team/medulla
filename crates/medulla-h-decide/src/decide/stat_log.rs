@@ -15,10 +15,14 @@ use tracing::Instrument;
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::features::outcome_rate_key;
+use medulla_decision_stats::decision::transfer::{
+    robust_transfer, skill_candidates, SkillKnobs, SkillRow, TransferKnobs, TransferRow,
+};
 use medulla_decision_stats::{
     decision::aggregate::aggregate, decision::aggregate::AggregateRules,
     decision::aggregate::JoinedRecord,
 };
+use medulla_decision_types::decision::transfer::{is_digest, TransferEstimate, TransferRequest};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
     decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
@@ -303,6 +307,11 @@ fn evaluate(
     reader: &LogReader,
     evaluation: DecisionOutcomeEvaluation,
 ) -> Result<StoredEvaluation, String> {
+    if let Some(binding) = &evaluation.backbone {
+        binding
+            .validate()
+            .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+    }
     check_evaluable(ctx, reader, &evaluation.record_id)?;
     let key = evaluation_key(&evaluation.record_id, &evaluation.evaluation_id);
     let stored = StoredEvaluation {
@@ -413,6 +422,11 @@ pub(super) fn aggregate_log(
         fidelity_floor: policy.min_outcome_fidelity,
         cross_question: request.question_id.is_none(),
     };
+    let transfer = request
+        .transfer
+        .as_ref()
+        .map(|asked| transfer_estimate(&rows, asked, policy.min_outcome_fidelity))
+        .transpose()?;
     let attribution = request
         .attribution
         .as_ref()
@@ -420,12 +434,124 @@ pub(super) fn aggregate_log(
             super::stat_slate_attribution::attribute_slate(store, reader, split, request.window)
         })
         .transpose()?;
+    let skills = skill_candidate_rows(&rows, policy.min_outcome_fidelity)?;
     Ok(OutcomeAggregate {
         schema_version: DECISION_LOG_SCHEMA_VERSION,
         min_support: policy.min_support,
         rows: aggregate(&records, &rules).map_err(|r| r.render())?,
         attribution,
+        transfer,
+        skill_candidates: skills,
     })
+}
+
+/// Options of the caller's visible, non-synthetic log that earned a skill
+/// (MEDULLA-DECISION-ENGINE-R059.2). Writes nothing; the knobs are the
+/// resolved registry values.
+fn skill_candidate_rows(
+    rows: &[(DecisionLogEntry, Vec<StoredEvaluation>)],
+    fidelity_floor: medulla_decision_types::decision::TraceFidelityLevel,
+) -> Result<BoundedVec<medulla_decision_types::decision::transfer::SkillCandidateRow, 1024>, String>
+{
+    let resolved = medulla_server_api::knob_config::knobs();
+    let knobs = SkillKnobs {
+        after_successes: resolved.transfer_skill_after_successes,
+        min_rollouts: resolved.transfer_min_rollouts,
+        fidelity_floor,
+    };
+    let evidence: Vec<SkillRow> = rows
+        .iter()
+        .filter(|(entry, _)| !entry.record.synthetic_evidence)
+        .filter_map(|(entry, evaluations)| {
+            let option_id = executed_option(&entry.record.outcome)?;
+            Some(evaluations.iter().map(move |stored| SkillRow {
+                question_id: &entry.record.question.question_id,
+                option_id,
+                decider: &entry.record.caller_principal,
+                stored,
+            }))
+        })
+        .flatten()
+        .collect();
+    BoundedVec::new(skill_candidates(&evidence, &knobs))
+        .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))
+}
+
+/// The robust transfer estimate of one skill over the caller's visible,
+/// non-synthetic log (MEDULLA-DECISION-ENGINE-R059.1.3). Writes nothing. The
+/// knobs are the resolved registry values; the refusals are the registered
+/// `transfer::REFUSALS` codes.
+fn transfer_estimate(
+    rows: &[(DecisionLogEntry, Vec<StoredEvaluation>)],
+    request: &TransferRequest,
+    fidelity_floor: medulla_decision_types::decision::TraceFidelityLevel,
+) -> Result<TransferEstimate, String> {
+    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
+    if !is_digest(&request.skill_key) {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            "transfer skill_key must be 64 lowercase hex characters",
+        ));
+    }
+    let resolved = medulla_server_api::knob_config::knobs();
+    let knobs = TransferKnobs {
+        min_backbones: resolved.transfer_min_backbones,
+        min_samples: resolved.transfer_min_samples,
+        fidelity_floor,
+    };
+    let evidence: Vec<TransferRow> = rows
+        .iter()
+        .filter(|(entry, _)| !entry.record.synthetic_evidence)
+        .flat_map(|(entry, evaluations)| {
+            evaluations.iter().map(move |stored| TransferRow {
+                decider: &entry.record.caller_principal,
+                stored,
+            })
+        })
+        .collect();
+    let mut estimate = robust_transfer(&evidence, request, &knobs).map_err(|r| r.render())?;
+    let class = match estimate.evidence_class {
+        medulla_decision_types::decision::EvidenceClass::Proof => PremiseClass::Proof,
+        _ => PremiseClass::Observation,
+    };
+    let evidence_key = format!("transfer:{}", request.skill_key);
+    let observed = |fact: String| PremiseRef {
+        subject: request.skill_key.clone(),
+        fact,
+        class,
+        provenance: PremiseProvenance::Observation {
+            evaluation_id: evidence_key.clone(),
+        },
+    };
+    let knob_facts = [
+        format!("knob:transfer.min_backbones={}", knobs.min_backbones),
+        format!("knob:transfer.min_samples={}", knobs.min_samples),
+    ];
+    let knob_digest = medulla_query_types::solve_scalar::digest_text(
+        "eg/transfer-knobs/v1",
+        &knob_facts.join(";"),
+    );
+    let mut premises = vec![
+        observed(format!(
+            "transfer.robust_rate={}",
+            estimate.robust_rate.value
+        )),
+        observed(format!(
+            "transfer.min_backbone={}",
+            estimate.min_backbone_id
+        )),
+    ];
+    premises.extend(knob_facts.into_iter().map(|fact| PremiseRef {
+        subject: "policy".to_string(),
+        fact,
+        class: PremiseClass::Definition,
+        provenance: PremiseProvenance::Policy {
+            policy_digest: knob_digest.clone(),
+        },
+    }));
+    estimate.premises = BoundedVec::new(premises)
+        .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+    Ok(estimate)
 }
 
 fn logged_item(
@@ -618,6 +744,7 @@ async fn serve(
             tenant_id: &reader.tenant_id,
             now_ms,
             server_secret: secret.as_bytes(),
+            matched: &[],
         };
         dispatch(&ctx, &reader, op, inputs.as_ref())
     })
@@ -675,6 +802,7 @@ pub(super) fn fill_outcome_rates(
                 to_ms: u64::MAX,
             },
             attribution: None,
+            transfer: None,
         };
         let key = outcome_rate_key(question_id);
         let mut best: BTreeMap<String, (u64, i64)> = BTreeMap::new();

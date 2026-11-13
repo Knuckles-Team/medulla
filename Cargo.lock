@@ -5296,6 +5296,7 @@ dependencies = [
  "medulla-exec",
  "medulla-federation",
  "medulla-graph-core",
+ "medulla-h-ingest",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-mutation-types",

@@ -255,6 +255,7 @@ async fn resume_activates_once() {
         tenant_id: TENANT,
         now_ms: 1_000,
         server_secret: b"cycle-test-secret",
+        matched: &[],
     };
     let embedder = Counting(AtomicUsize::new(0));
     let run = CycleRun {
@@ -477,6 +478,7 @@ async fn refusal_codes() {
         tenant_id: TENANT,
         now_ms: 1_000,
         server_secret: b"cycle-test-secret",
+        matched: &[],
     };
     let embedder = MovesPointer(&h.store);
     let run = CycleRun {

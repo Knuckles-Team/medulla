@@ -104,9 +104,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T098 [US5] MEDULLA-DECISION-ENGINE-R079.1 Typed content-class taxonomy and pure admission gate (producer slice of R079)
 - [ ] T099 [US5] MEDULLA-DECISION-ENGINE-R079.2 Content-class gate and exact-digest skip at enrichment
 - [ ] T100 [US5] MEDULLA-DECISION-ENGINE-R079.3 Duplicate, entropy and size admission at enrichment
-- [ ] T919 [US5] MEDULLA-DECISION-ENGINE-R079.6 Embedding set in SourceIngest prepare
-- [ ] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
-- [ ] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
+- [x] T919 [US5] MEDULLA-DECISION-ENGINE-R079.6 Embedding set in SourceIngest prepare
+- [x] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
+- [x] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
 - [ ] T103 [US5] MEDULLA-DECISION-ENGINE-R080.1 Typed provenance-rung model and overwrite-protection rule
 - [ ] T104 [US5] MEDULLA-DECISION-ENGINE-R080.2 Served producers record their rung and resist overwrite
 - [ ] T105 [US5] MEDULLA-DECISION-ENGINE-R081 Confidence-weighted community detection excluding similarity edges
@@ -299,7 +299,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T290 [US3] MEDULLA-DECISION-ENGINE-R059.1.1 Model: backbone binding and transfer estimate
 - [ ] T291 [US3] MEDULLA-DECISION-ENGINE-R059.1.2 Behaviour: minimum over backbones with complete independent rows
 - [ ] T292 [US3] MEDULLA-DECISION-ENGINE-R059.1.3 Wiring, refusals and evidence of the served transfer read
-- [ ] T293 [US3] MEDULLA-DECISION-ENGINE-R059.2 Skill candidates from repeated independent successes
+- [x] T293 [US3] MEDULLA-DECISION-ENGINE-R059.2 Skill candidates from repeated independent successes
 - [ ] T294 [US7] MEDULLA-DECISION-ENGINE-R134.12.1 Paired-comparison verdict record
 - [ ] T295 [US7] MEDULLA-DECISION-ENGINE-R134.13 Cited analyst synthesis with required abstention
 - [ ] T296 [US6] MEDULLA-DECISION-ENGINE-R029.1 Committed retrieval provider binding with no substitution
@@ -336,7 +336,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T327 [US7] MEDULLA-DECISION-ENGINE-R134.107 Refusal
 - [ ] T328 [US7] MEDULLA-DECISION-ENGINE-R134.108 Evidence: answer-ranking premises
 - [ ] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served
-- [ ] T330 [US6] MEDULLA-DECISION-ENGINE-R031.100 Paper relevance admission against platform goals and graph content
+- [x] T330 [US6] MEDULLA-DECISION-ENGINE-R031.100 Paper relevance admission against platform goals and graph content
 - [ ] T331 [US2] MEDULLA-DECISION-ENGINE-R036.100.1 Primitive types
 - [ ] T332 [US2] MEDULLA-DECISION-ENGINE-R036.100.2 Edge type-check and substitution rule
 - [ ] T333 [US2] MEDULLA-DECISION-ENGINE-R036.100.3 Wire primitive checks into AgentAssemble

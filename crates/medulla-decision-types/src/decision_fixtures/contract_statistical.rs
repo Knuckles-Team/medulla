@@ -199,6 +199,7 @@ pub fn fit_ops() -> Vec<(&'static str, DecisionFitOp)> {
                     penalty: None,
                     features: Default::default(),
                     parent_head: None,
+                    calibration_method: None,
                     optimiser: OptimiserSpec {
                         max_iterations: 500,
                         tolerance: QuantisedValue {
@@ -249,6 +250,7 @@ pub fn eval_ops() -> Vec<(&'static str, DecisionEvalOp)> {
                         question_id: "route.ingestion".to_string(),
                     },
                     mode: EvalMode::OffPolicy,
+                    gold_guarantee: None,
                 }),
             },
         ),
@@ -320,6 +322,7 @@ fn replay_request() -> DecisionEvalRequest {
                 supersedes: Some(digest_text(0xb6)),
             }),
         },
+        gold_guarantee: None,
     }
 }
 
@@ -397,6 +400,7 @@ pub fn log_ops() -> Vec<(
         lease_holder: "worker-b".to_string(),
         fidelity: OutcomeFidelity::ToolCalls,
         success: Some(true),
+        backbone: None,
     };
     vec![
         (
@@ -421,6 +425,7 @@ pub fn log_ops() -> Vec<(
                     question_id: None,
                     window: window(),
                     attribution: None,
+                    transfer: None,
                 },
             },
         ),

@@ -13,7 +13,7 @@
 
 use medulla_decision_types::decision::jobs::OptimiserSpec;
 use medulla_decision_types::decision::statistical::body::content_digest_of;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::{CalibrationMethod, StatisticalErrorCode};
 use medulla_decision_types::decision::StatisticalPolicy;
 use medulla_decision_types::{
     decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
@@ -27,7 +27,7 @@ use medulla_decision_types::{
 use medulla_query_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
-use super::fit_calibrate::{calibrate, calibrate_scorer};
+use super::fit_calibrate::{calibrate, calibrate_scorer, checked_method};
 use super::importance_penalty::ImportancePenalty;
 use super::quant::{q32, raw_value, value_of};
 use super::refusal::{bounded, Refusal, RefusalResult};
@@ -65,6 +65,9 @@ pub struct FitSpec<'a> {
     pub statistical: &'a StatisticalPolicy,
     /// The caller-supplied importance penalty (MEDULLA-DECISION-ENGINE-R151.2).
     pub penalty: Option<&'a ImportancePenalty>,
+    /// The calibration method the fit request names
+    /// (MEDULLA-DECISION-ENGINE-R032.2.1); `None` keeps the ladder's choice.
+    pub calibration_method: Option<CalibrationMethod>,
 }
 
 fn raw_rows(dataset: &LabelledDataset, item: &LabelledItem) -> Vec<Vec<f64>> {
@@ -250,9 +253,18 @@ fn calibration_of(
     dataset: &LabelledDataset,
     held_out: &[&LabelledItem],
     statistical: &StatisticalPolicy,
+    method: Option<CalibrationMethod>,
 ) -> RefusalResult<Option<HeadCalibration>> {
     match head.kind {
-        HeadKind::OptionAttention => calibrate_scorer(head, dataset, held_out, statistical),
+        HeadKind::OptionAttention => {
+            if checked_method(method)? {
+                return Err(Refusal::new(
+                    StatisticalErrorCode::CalibrationMethodUnsupported,
+                    "the scorer is calibrated on its served outputs, not isotonically",
+                ));
+            }
+            calibrate_scorer(head, dataset, held_out, statistical)
+        }
         HeadKind::WeightedFeatures | HeadKind::ListwiseLogistic => {
             let working: Vec<f64> = head.weights.iter().map(|w| value_of(*w)).collect();
             calibrate(
@@ -260,6 +272,7 @@ fn calibration_of(
                 &working,
                 statistical,
                 dataset.synthetic,
+                method,
             )
         }
     }
@@ -272,6 +285,7 @@ pub fn fit(
     items: &[&LabelledItem],
     spec: &FitSpec,
 ) -> RefusalResult<DecisionHeadBody> {
+    checked_method(spec.calibration_method)?;
     let (training, held_out) = if calibrates(spec) {
         split(items)
     } else {
@@ -318,7 +332,13 @@ pub fn fit(
         head.scorer = Some(Box::new(train(&head, dataset, &training, spec.optimiser)?));
     }
     if calibrates(spec) {
-        head.calibration = calibration_of(&head, dataset, &held_out, spec.statistical)?;
+        head.calibration = calibration_of(
+            &head,
+            dataset,
+            &held_out,
+            spec.statistical,
+            spec.calibration_method,
+        )?;
     }
     head.checked()
         .map_err(|detail| Refusal::new(StatisticalErrorCode::HeadInvalid, detail))
@@ -415,6 +435,7 @@ mod tests {
             feature_schema_digest: "sha256:schema",
             statistical: &stat,
             penalty,
+            calibration_method: None,
         };
         fit(data, &items, &spec).expect("fits")
     }
@@ -456,6 +477,7 @@ mod tests {
             feature_schema_digest: "sha256:schema",
             statistical: &stat,
             penalty: Some(&wrong),
+            calibration_method: None,
         };
         assert!(fit(&data, &items, &spec).is_err());
     }

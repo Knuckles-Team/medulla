@@ -178,6 +178,7 @@ mod tests {
                     tool_schema_sha256: digest(1),
                     source_uri: "wiki://docs/page-1".into(),
                 },
+                column_profiles: Default::default(),
             }])
             .unwrap(),
             relationships: BoundedVec::new(Vec::new()).unwrap(),
@@ -229,6 +230,8 @@ mod tests {
             governance: Default::default(),
             committed_graph_version: 9,
             drift: Vec::new(),
+            column_exclusions: Vec::new(),
+            embedding_set: Vec::new(),
             stream_object_id: "source-live-set:test".into(),
             previous_content_digest: None,
             receipt_digest: digest(5),

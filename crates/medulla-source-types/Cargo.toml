@@ -3,7 +3,7 @@ name = "medulla-source-types"
 version = "0.1.0"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
-description = "medulla-engine: Source ingestion, source documents and transcripts, ingest jobs and development-lifecycle record types (changeset review, pre-merge tests, standards drift, live artifacts, supply-chain reports)"
+description = "medulla-engine: Source ingestion, source documents and transcripts, ingest jobs and development-lifecycle record types (pre-merge tests, standards drift, live artifacts, supply-chain reports)"
 license = "MIT"
 publish = false
 

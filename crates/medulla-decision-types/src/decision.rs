@@ -21,24 +21,37 @@
 //! Every algorithm -- derivation, solving, verification, execution, fitting --
 //! lives above this module. These are data types and their bounds.
 
-pub mod codes;
+pub mod a2a_route;
 pub mod capability_designation;
+pub mod changeset_review;
+pub mod checker_feedback;
+pub mod codes;
+pub mod command_config;
 pub mod comparative_analysis;
 pub mod context_bundle;
 pub mod context_package;
+pub mod context_replacement;
+pub mod context_source;
+pub mod delegation_quality;
 pub mod digest;
 pub mod errors;
 pub mod feature_match;
+pub mod field_shielding;
+pub mod graph_intake;
 pub mod harness_contrast;
 pub mod importance_penalty;
 pub mod indexless_retrieval;
 pub mod ingestion_admission;
+pub mod instruction_disclosure;
 pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
 pub mod lifecycle;
 pub mod numeric;
 pub mod package_validation;
+pub mod paper_admission;
+pub mod path_success;
+pub mod planning_admission;
 pub mod policy;
 pub mod primitive;
 pub mod program_store;
@@ -48,13 +61,19 @@ pub mod replay;
 pub mod reputation;
 pub mod request;
 pub mod research_voi;
+pub mod run_adjustment;
 pub mod skill_upgrade_request;
 pub mod skill_workflow;
 pub mod statistical;
 pub mod task_plan;
 pub mod team_coordination;
+pub mod temporal_query;
 pub mod thought_search;
+pub mod tool_necessity;
+pub mod trace_fix_binding;
+pub mod transfer;
 pub mod usage;
+pub mod verifier_receipt;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.
 pub const DECISION_RECORD_SCHEMA_VERSION: u16 = 1;
@@ -90,8 +109,8 @@ pub use jobs::{
     DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobState,
     DecisionJobStatusRequest, DecisionReceiptGetRequest, DecisionReceiptListRequest,
     DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
-    DecisionReceiptTimelineRequest, EvalCandidate, HeadKind, LabelRegime, OpeEstimateView,
-    OpeEstimatorKind, OptimiserSpec, RecordWindow,
+    DecisionReceiptTimelineRequest, EvalCandidate, GoldGuarantee, GoldGuaranteeEvidence, HeadKind,
+    LabelRegime, OpeEstimateView, OpeEstimatorKind, OptimiserSpec, RecordWindow,
 };
 pub use numeric::{
     QuantScaleTag, QuantisedValue, UnitRationalFields, UnitRationalWire,

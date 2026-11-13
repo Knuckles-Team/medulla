@@ -25,6 +25,7 @@ fn request() -> SourceIngestionBatch {
                 tool_schema_sha256: digest(7),
                 source_uri: "demo://items/item-1".into(),
             },
+            column_profiles: Default::default(),
         }])
         .unwrap(),
         relationships: BoundedVec::new(Vec::new()).unwrap(),
@@ -850,4 +851,46 @@ fn digest_domain_names_the_kind_and_extension() {
         "eg/source-ingestion-batch/v3"
     );
     assert!(SOURCE_INGESTION_DIGEST_PROJECTION_FIELDS.ends_with(&["kind", "extension"]));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R079.4
+#[test]
+fn column_profiles_must_be_measurable_and_name_a_payload_column() {
+    use super::column_profile::{SqlColumnProfile, SqlColumnType, Q32_ONE};
+    let profile = |ratio: u64| SqlColumnProfile {
+        sql_type: SqlColumnType::Text,
+        is_foreign_key: false,
+        distinct_ratio_q32: ratio,
+        sample_count: 10,
+    };
+    let with = |column: &str, ratio: u64| {
+        let mut batch = request();
+        let mut records = batch.records.as_slice().to_vec();
+        records[0].column_profiles = [(column.to_string(), profile(ratio))].into();
+        batch.records = BoundedVec::new(records).unwrap();
+        SourceIngestionRequest::new(batch)
+    };
+    assert!(with("name", Q32_ONE).is_ok());
+    let over = with("name", Q32_ONE + 1).unwrap_err();
+    assert!(over.starts_with("SOURCE_COLUMN_PROFILE_INVALID:"), "{over}");
+    let absent = with("missing", 1).unwrap_err();
+    assert!(
+        absent.starts_with("SOURCE_COLUMN_PROFILE_INVALID:"),
+        "{absent}"
+    );
+    let unnamed = with(" ", 1).unwrap_err();
+    assert!(
+        unnamed.starts_with("SOURCE_COLUMN_PROFILE_INVALID:"),
+        "{unnamed}"
+    );
+}
+
+// An absent profile map does not change a batch digest.
+#[test]
+fn an_empty_profile_map_is_omitted_from_the_canonical_bytes() {
+    let bytes = SourceIngestionRequest::new(request())
+        .unwrap()
+        .canonical_bytes()
+        .unwrap();
+    assert!(!String::from_utf8_lossy(&bytes).contains("column_profiles"));
 }

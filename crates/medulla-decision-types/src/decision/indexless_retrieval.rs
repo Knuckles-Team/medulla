@@ -214,6 +214,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R144.1
     #[test]
     fn operations_and_budget_round_trip() {
         let ops = vec![

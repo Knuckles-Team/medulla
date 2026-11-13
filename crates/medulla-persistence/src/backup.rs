@@ -117,6 +117,7 @@ use sha2::{Digest, Sha256};
 use crate::shard_migrate;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::XSHARD_DECISION;
+use medulla_store::redb_store::XSHARD_DECISION_CERTIFICATE;
 use medulla_store::redb_store::XSHARD_PREPARE;
 
 /// The bundle manifest file name.
@@ -155,6 +156,8 @@ pub(crate) struct XshardRecoveryBoundary {
     pub(crate) prepares: u64,
     /// Retained cross-shard coordinator decisions.
     pub(crate) decisions: u64,
+    /// Sealed coordinator-decision certificates.
+    pub(crate) certificates: u64,
 }
 
 /// Read one shard file's cross-shard recovery boundary.
@@ -196,10 +199,21 @@ pub(crate) fn xshard_recovery_boundary(shard: &Shard) -> Result<XshardRecoveryBo
         decisions = decisions.saturating_add(1);
     }
     drop(decision);
+    let mut certificates = 0u64;
+    field(&mut hasher, b"certificate");
+    let certificate = read.open_owner_table(XSHARD_DECISION_CERTIFICATE)?;
+    for row in certificate.iter().map_err(|error| error.to_string())? {
+        let (key, value) = row.map_err(|error| error.to_string())?;
+        field(&mut hasher, key.value().as_bytes());
+        field(&mut hasher, value.value());
+        certificates = certificates.saturating_add(1);
+    }
+    drop(certificate);
     Ok(XshardRecoveryBoundary {
         fingerprint: hasher.finalize().into(),
         prepares,
         decisions,
+        certificates,
     })
 }
 

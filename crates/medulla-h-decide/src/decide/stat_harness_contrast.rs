@@ -311,6 +311,9 @@ fn compute(
         seed: [0u8; 32],
         harness_contrast: Some(decision),
         topology: None,
+        context_selection: None,
         thought: None,
+        family_premises: Vec::new(),
+        route: None,
     })
 }

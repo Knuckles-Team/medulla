@@ -93,6 +93,10 @@ pub struct EnrichDocumentReceipt {
     /// reports the original count.
     #[serde(default)]
     pub embedded_units: u32,
+    /// The content classes retrieval feedback had demoted when this call
+    /// ran (MEDULLA-DECISION-ENGINE-R079.5).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub demoted_classes: Vec<String>,
 }
 
 /// What admission decided for one span before any embedding call.
@@ -113,6 +117,10 @@ pub enum AdmissionOutcome {
     LowEntropy,
     /// The span is shorter or longer than the size bounds.
     SizeOutOfBounds,
+    /// The span's content class has been embedded at volume and never cited
+    /// by retrieval inside the demotion window; no embedding call is made
+    /// (MEDULLA-DECISION-ENGINE-R079.5).
+    Demoted,
 }
 
 /// The admission verdict of one span.

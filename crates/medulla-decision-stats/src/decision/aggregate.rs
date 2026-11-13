@@ -243,6 +243,7 @@ mod tests {
                 lease_holder: selected_agent.to_string(),
                 fidelity: OutcomeFidelity::FullStep,
                 success,
+                backbone: None,
             },
             producer: producer.to_string(),
             recorded_at_ms: 0,

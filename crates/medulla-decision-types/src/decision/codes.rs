@@ -127,7 +127,8 @@ pub const NO_CONCENTRATION_POLICY: RefusalCode = RefusalCode::new("NO_CONCENTRAT
 /// An edit concentration question whose edits were judged under different policy revisions.
 pub const MIXED_POLICY_REVISION: RefusalCode = RefusalCode::new("MIXED_POLICY_REVISION");
 /// The `edit_concentration` family's refusal table (MEDULLA-DECISION-ENGINE-R173.3).
-pub const CONCENTRATION_REFUSALS: &[RefusalCode] = &[NO_CONCENTRATION_POLICY, MIXED_POLICY_REVISION];
+pub const CONCENTRATION_REFUSALS: &[RefusalCode] =
+    &[NO_CONCENTRATION_POLICY, MIXED_POLICY_REVISION];
 
 /// Every folded code, in declaration order.
 pub const FOLDED: &[RefusalCode] = &[
@@ -204,14 +205,58 @@ pub const PROMOTION: &[RefusalCode] = &[
     CALIBRATION_TOO_FEW_PAIRS,
 ];
 
+// The `rank` family's refusals (MEDULLA-DECISION-ENGINE-R130.4).
+/// A ranked option has no calibrated probability; no likelihood substitutes.
+pub const UNCALIBRATED_CANDIDATE: RefusalCode = RefusalCode::new("UNCALIBRATED_CANDIDATE");
+
+/// Every `rank` family code, in declaration order.
+pub const RANK: &[RefusalCode] = &[UNCALIBRATED_CANDIDATE];
+
+// The `resolve_entity` family's refusals (MEDULLA-DECISION-ENGINE-R032.2.2).
+/// A pair option names no left or right IRI, or one that is not an IRI.
+pub const ENTITY_PAIR_INVALID: RefusalCode = RefusalCode::new("ENTITY_PAIR_INVALID");
+/// A pair option names the same entity on both sides.
+pub const ENTITY_PAIR_SELF: RefusalCode = RefusalCode::new("ENTITY_PAIR_SELF");
+
+/// Every `resolve_entity` family code, in declaration order.
+pub const RESOLVE_ENTITY: &[RefusalCode] = &[ENTITY_PAIR_INVALID, ENTITY_PAIR_SELF];
+
+// The `round_verdict` and `stage_allocation` families' refusals
+// (MEDULLA-DECISION-ENGINE-R136.5).
+/// A round declared no fixes and no regressions; there is nothing to verify.
+pub const ROUND_NO_PREDICTION: RefusalCode = RefusalCode::new("ROUND_NO_PREDICTION");
+/// Running every stage on the base model already exceeds the run budget.
+pub const ALLOCATION_BUDGET_BELOW_MINIMUM: RefusalCode =
+    RefusalCode::new("ALLOCATION_BUDGET_BELOW_MINIMUM");
+/// No offered model is adequate for the run.
+pub const ALLOCATION_NO_ADEQUATE_MODEL: RefusalCode =
+    RefusalCode::new("ALLOCATION_NO_ADEQUATE_MODEL");
+
+/// Every `round_verdict` family code, in declaration order.
+pub const ROUND_VERDICT: &[RefusalCode] = &[ROUND_NO_PREDICTION];
+
+/// Every `stage_allocation` family code, in declaration order.
+pub const STAGE_ALLOCATION: &[RefusalCode] = &[
+    ALLOCATION_BUDGET_BELOW_MINIMUM,
+    ALLOCATION_NO_ADEQUATE_MODEL,
+];
+
 /// The `REFUSALS` table of every registered family, keyed by its question
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
+    (QuestionKind::Rank, RANK),
+    (QuestionKind::ResolveEntity, RESOLVE_ENTITY),
+    (QuestionKind::RoundVerdict, ROUND_VERDICT),
+    (QuestionKind::StageAllocation, STAGE_ALLOCATION),
     (
         QuestionKind::RetrievalPlan,
         super::statistical::run_credit::REFUSALS,
     ),
     (QuestionKind::ThoughtSearch, super::thought_search::REFUSALS),
+    (
+        QuestionKind::ContextReplacement,
+        super::context_replacement::REFUSALS,
+    ),
     (
         QuestionKind::TaskPlan,
         super::task_plan::trajectory_budget::REFUSALS,
@@ -227,6 +272,16 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
     (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
     (QuestionKind::EditConcentration, CONCENTRATION_REFUSALS),
+    (QuestionKind::ContextBudget, super::context_source::REFUSALS),
+    (QuestionKind::A2aRoute, super::a2a_route::REFUSALS),
+    (
+        QuestionKind::PaperAdmission,
+        super::paper_admission::REFUSALS,
+    ),
+    (
+        QuestionKind::InstructionDisclosure,
+        super::instruction_disclosure::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

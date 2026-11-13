@@ -157,6 +157,9 @@ fn executed(outcome: StatisticalOutcome) -> Executed {
         harness_contrast: None,
         topology: None,
         thought: None,
+        context_selection: None,
+        family_premises: Vec::new(),
+        route: None,
     }
 }
 

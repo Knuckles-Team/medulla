@@ -131,6 +131,7 @@ fn oracle(candidates: &[ContextPackageCandidate], capacity: u64) -> (u64, u64) {
     best
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R137.7
 // spec: MEDULLA-DECISION-ENGINE-R137.8
 #[tokio::test]
 async fn package_journey() {

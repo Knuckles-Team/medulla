@@ -306,3 +306,33 @@ async fn migration_preserves_resource_lane_capacity_and_capability_tables() {
 
     let _ = std::fs::remove_dir_all(&root);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R036.105.1
+#[test]
+fn shard_migration_carries_decision_certificates() {
+    use medulla_store_apply::redb_store::control::{
+        get_xshard_decision_certificate, put_xshard_decision, put_xshard_decision_certificate,
+    };
+    let (root, src, dst) = fresh_migration_dirs("certificates", "src", "dst");
+    let source_path = src.join("graph-0.redb");
+    seed_graph(&source_path, "cert-graph", "cert");
+    {
+        let shard = Shard::open(&source_path).expect("open source shard");
+        put_xshard_decision(&shard, "txn-cert", true, false).unwrap();
+        put_xshard_decision_certificate(&shard, "txn-cert", b"sealed certificate bytes").unwrap();
+    }
+
+    migrate_shards(&src, &dst, 2).expect("migrate K=1 -> K=2");
+
+    // File-wide control rows land on destination shard 0.
+    let shard = Shard::open(&dst.join("graph-0.redb")).expect("open destination shard 0");
+    assert_eq!(
+        get_xshard_decision_certificate(&shard, "txn-cert")
+            .unwrap()
+            .as_deref(),
+        Some(&b"sealed certificate bytes"[..]),
+        "the certificate row survives the migration"
+    );
+    drop(shard);
+    let _ = std::fs::remove_dir_all(root);
+}

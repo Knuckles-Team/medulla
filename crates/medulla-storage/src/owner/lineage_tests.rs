@@ -7,6 +7,7 @@ use crate::owner::identity::PhysicalStoreIdentity;
 use crate::owner::layout::layout_digest_over;
 use crate::owner::persisted_layout::create_predecessor_owner_file;
 use crate::owner::registry::owner_table_names;
+use medulla_direct_state::direct_state::private_local_tempdir;
 use redb::ReadableDatabase;
 use sha2::{Digest, Sha256};
 
@@ -358,4 +359,46 @@ fn effect_receipt_predecessor_refuses_naming_store_upgrade() {
     assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
     assert!(error.contains(predecessor.label));
     assert!(error.contains("store-upgrade"), "{error}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R036.105.1
+#[test]
+fn graph_shard_before_decision_certificates_is_a_frozen_predecessor() {
+    let predecessor = &GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES;
+    assert_eq!(predecessor.owner_tables.len(), 63);
+    assert!(predecessor.owner_tables.contains(&"xshard_decision"));
+    assert!(predecessor
+        .owner_tables
+        .contains(&"work_item_admitted_requests"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"xshard_decision_certificate"));
+    assert!(owner_table_names(OwnerLayout::GraphShard).contains(&"xshard_decision_certificate"));
+    // The frozen digest is the layout digest of the table set it declares,
+    // not whatever the current census reduces to.
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(
+        manifest.layout_digest,
+        GRAPH_SHARD_PRE_DECISION_CERTIFICATES_DIGEST
+    );
+    assert_ne!(manifest.layout_digest, OwnerLayout::GraphShard.digest());
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
+    // An ordinary open of a file with that table list refuses by the same
+    // named refusal and writes nothing.
+    let directory = private_local_tempdir();
+    let path = directory.path().join("graph-before-certificates.redb");
+    create_predecessor_owner_file(&path, identity(), predecessor).unwrap();
+    let before = file_digest(&path);
+    let refused =
+        crate::StorageKernel::open_owner::<crate::GraphShardOwner>(&path, identity(), None)
+            .err()
+            .expect("ordinary open refuses the predecessor");
+    assert!(
+        refused.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"),
+        "{refused}"
+    );
+    assert_eq!(before, file_digest(&path), "a refused open writes nothing");
 }

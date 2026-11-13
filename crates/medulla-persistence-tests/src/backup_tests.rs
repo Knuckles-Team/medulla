@@ -773,3 +773,48 @@ async fn the_declared_census_is_what_a_backup_copies() {
 
     let _ = std::fs::remove_dir_all(&root);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R036.105.1
+#[tokio::test(flavor = "multi_thread")]
+async fn backup_census_includes_decision_certificates() {
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    use medulla_store::redb_layout::shard_filename;
+    use medulla_store::redb_store::XSHARD_DECISION_CERTIFICATE;
+    use medulla_store_apply::redb_store::control::{
+        put_xshard_decision, put_xshard_decision_certificate,
+    };
+
+    let root =
+        std::env::temp_dir().join(format!("medulla-backup-certificate-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let src = root.join("live");
+    let bundle = root.join("bundle");
+    std::fs::create_dir_all(&src).unwrap();
+    let src_s = src.to_string_lossy().to_string();
+    seed(&src_s, 1, &["alpha"]).await;
+    {
+        let shard = Shard::open(&src.join(shard_filename(0))).expect("open shard for seeding");
+        put_xshard_decision(&shard, "txn-cert", true, false).unwrap();
+        put_xshard_decision_certificate(&shard, "txn-cert", b"sealed certificate bytes").unwrap();
+    }
+
+    let backend = RedbBackend::open_with_shards(src_s, 256, 1).expect("reopen");
+    backend
+        .backup(&bundle, "test-engine", 1, "certificates", &[])
+        .expect("backup");
+    drop(backend);
+
+    // The bundle is inspected through a copy, never opened directly.
+    let census_copy = root.join("bundle-census");
+    std::fs::create_dir_all(&census_copy).unwrap();
+    let bundle_shard0 = bundle.join(shard_filename(0));
+    let census_shard0 = census_copy.join(shard_filename(0));
+    std::fs::copy(&bundle_shard0, &census_shard0).unwrap();
+    assert_eq!(
+        table_row_count(&census_shard0, XSHARD_DECISION_CERTIFICATE),
+        1,
+        "the certificate row is in the backup bundle"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}

@@ -49,6 +49,16 @@ closed_error_codes! {
         /// fixed registry (`IngestionLane::ALL`), refused before any
         /// decision runs (MEDULLA-DECISION-ENGINE-R030).
         UnsupportedIngestionLane => "UNSUPPORTED_INGESTION_LANE",
+        /// A fit request names a calibration method the fit does not serve:
+        /// only `Conformal`, `Temperature` and `Isotonic` are accepted
+        /// (MEDULLA-DECISION-ENGINE-R032.2.1).
+        CalibrationMethodUnsupported => "CALIBRATION_METHOD_UNSUPPORTED",
+        /// Every stage of a route pipeline declined the question
+        /// (MEDULLA-DECISION-ENGINE-R035.750).
+        RouteNoStage => "ROUTE_NO_STAGE",
+        /// An isotonic calibration was asked of a head over more than two
+        /// classes (MEDULLA-DECISION-ENGINE-R032.2.1).
+        IsotonicRequiresBinary => "ISOTONIC_REQUIRES_BINARY",
         /// A declared enrichment-schedule candidate names a negative
         /// `enrichment.cost_q32` (MEDULLA-DECISION-ENGINE-R031).
         UnsupportedEnrichmentCost => "UNSUPPORTED_ENRICHMENT_COST",
@@ -91,6 +101,27 @@ closed_error_codes! {
         /// A thought has a duplicate id, a missing parent or a depth that
         /// disagrees with its parent (MEDULLA-DECISION-ENGINE-R750.752).
         ThoughtNodeInvalid => "THOUGHT_NODE_INVALID",
+        /// A context source is named twice, in the declared options or in
+        /// `context.requested_sources` (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextSourceDuplicate => "CONTEXT_SOURCE_DUPLICATE",
+        /// A context-budget question carries no positive `context.token_budget`
+        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextBudgetMissing => "CONTEXT_BUDGET_MISSING",
+        /// A context source declares no usable `context.tokens`
+        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
+        ContextTokensUnknown => "CONTEXT_TOKENS_UNKNOWN",
+        /// An evaluation's gold-labelled set misses the empirical coverage the
+        /// decision acts at (MEDULLA-DECISION-ENGINE-R032.2.3).
+        ConformalCoverageUnmet => "CONFORMAL_COVERAGE_UNMET",
+        /// An evaluation's gold-labelled set holds fewer pairs than
+        /// `resolve_entity.gold_min_pairs` (MEDULLA-DECISION-ENGINE-R032.2.3).
+        GoldSetTooSmall => "GOLD_SET_TOO_SMALL",
+        /// A pinned instruction digest differs from the latest version of its
+        /// set (MEDULLA-DECISION-ENGINE-R137.100).
+        DisclosureVersionStale => "DISCLOSURE_VERSION_STALE",
+        /// A named instruction set has no version in the caller's tenant
+        /// graph (MEDULLA-DECISION-ENGINE-R137.100).
+        DisclosureUnauthorized => "DISCLOSURE_UNAUTHORIZED",
         /// A scoped adapter fit names a corpus or capability scope that none
         /// of the tenant's judged retrievals belongs to
         /// (MEDULLA-DECISION-ENGINE-R174.7.4).
