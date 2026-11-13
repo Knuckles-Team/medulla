@@ -854,7 +854,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
 - [ ] T838 [US6] MEDULLA-DECISION-ENGINE-R038.2 Tool-action admission is a served Decide question
 - [x] T839 [US6] MEDULLA-DECISION-ENGINE-R038.3 Held-item admission is a served Decide question
-- [ ] T840 [US6] MEDULLA-DECISION-ENGINE-R039.3 The Route question honours a caller-preferred option when it is legal
+- [x] T840 [US6] MEDULLA-DECISION-ENGINE-R039.3 The Route question honours a caller-preferred option when it is legal
 - [ ] T841 [US4] MEDULLA-DECISION-ENGINE-R804.4 Refusal: independent held-out evidence
 - [ ] T842 [US4] MEDULLA-DECISION-ENGINE-R805.1 Model
 - [ ] T843 [US4] MEDULLA-DECISION-ENGINE-R805.2 Behaviour: post-promotion regression rollback

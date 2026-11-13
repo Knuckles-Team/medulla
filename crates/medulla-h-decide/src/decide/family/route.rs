@@ -19,6 +19,7 @@ use medulla_decision_stats::decision::route::{
     route_pipeline, FastPath, OptionHistory, RouteChoice, RouteInput, RouteOption, RouteStage,
     TeamReuse, FAST_PATH_STAGE,
 };
+use medulla_decision_types::decision::codes::PREFERENCE_NOT_LEGAL;
 use medulla_decision_types::decision::knob_families::route::{
     cost_tie_epsilon_micros, fast_path_max_tokens, team_reuse_floors,
 };
@@ -50,6 +51,18 @@ const CHOSEN_SCORE: i64 = 1i64 << 32;
 /// The fact prefix of the premise that records one tie-set option's observed
 /// cost, `observed_cost:<option>=<micro-units>` (R039.2).
 const OBSERVED_COST_FACT: &str = "observed_cost:";
+
+/// The typed param naming the option the caller prefers (R039.3).
+const PREFERRED_OPTION_PARAM: &str = "route.preferred_option";
+
+/// The fact prefix of the premise that records a preferred option the route
+/// honoured, `preferred_option:<option>` (R039.3). The preference is a claim.
+const PREFERRED_FACT: &str = "preferred_option:";
+
+/// The fact prefix of the premise that records a preferred option the route
+/// could not honour, `preference_not_honoured:<option>` (R039.3). Its subject
+/// is the registered code `PREFERENCE_NOT_LEGAL`.
+const NOT_HONOURED_FACT: &str = "preference_not_honoured:";
 
 /// The family of the `route` question kind.
 pub struct RouteFamily;
@@ -159,6 +172,44 @@ fn costs_of_views(views: &[CandidateView]) -> BTreeMap<String, u64> {
         .collect()
 }
 
+/// The caller's preferred option, when the request states one (R039.3).
+fn preferred_option(request: &DecideRequest) -> Result<Option<String>, String> {
+    match request
+        .params
+        .iter()
+        .find(|param| param.name == PREFERRED_OPTION_PARAM)
+    {
+        None => Ok(None),
+        Some(param) => match &param.value {
+            TypedValue::Text(option) if !option.is_empty() => Ok(Some(option.clone())),
+            _ => Err(refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                "route.preferred_option must be a non-empty text",
+            )),
+        },
+    }
+}
+
+fn preference_premise(option_id: &str, honoured: bool) -> FamilyPremise {
+    FamilyPremise {
+        subject: if honoured {
+            "route_preference"
+        } else {
+            PREFERENCE_NOT_LEGAL.as_str()
+        },
+        fact: format!(
+            "{}{option_id}",
+            if honoured {
+                PREFERRED_FACT
+            } else {
+                NOT_HONOURED_FACT
+            }
+        ),
+        class: PremiseClass::Claim,
+        source: FamilyPremiseSource::Request(PREFERRED_OPTION_PARAM),
+    }
+}
+
 fn observed_cost_premise(option_id: &str, cost: u64) -> FamilyPremise {
     FamilyPremise {
         subject: "observed_cost",
@@ -168,15 +219,40 @@ fn observed_cost_premise(option_id: &str, cost: u64) -> FamilyPremise {
     }
 }
 
-/// Prefer the cheapest option among the near-tied advisory scores (R039.2).
+/// Move `option_id` to the front of an advisory score list.
+fn promote(
+    scores: &[ScoredOption],
+    option_id: &str,
+    calibrated: bool,
+) -> Result<StatisticalOutcome, String> {
+    let mut ordered: Vec<ScoredOption> = scores
+        .iter()
+        .filter(|score| score.option_id == option_id)
+        .cloned()
+        .collect();
+    ordered.extend(scores.iter().filter(|s| s.option_id != option_id).cloned());
+    Ok(StatisticalOutcome::Advisory {
+        scores: BoundedVec::new(ordered)
+            .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
+        calibrated,
+    })
+}
+
+/// Honour a caller-preferred option when it is legal, then prefer the
+/// cheapest option among the near-tied advisory scores (R039.2, R039.3).
 /// An answer a rule stage gave, and any outcome that is not an advisory
 /// score list, stand as they are: a calibrated act is licensed for its own
-/// top option and a rule stage chose by its own rule. A tie-set option with
-/// no observed cost abstains naming the missing fact.
+/// top option and a rule stage chose by its own rule. A preferred option is
+/// legal when the ladder scored it (the preference never widens the legal
+/// set) and its score lies within epsilon of the best; a legal preference
+/// wins the tie. An illegal one is recorded as `preference_not_honoured` and
+/// the options rank as before. A tie-set option with no observed cost
+/// abstains naming the missing fact.
 fn apply_cost_tie(
     mut executed: Executed,
     costs: &BTreeMap<String, u64>,
     epsilon_q32: i64,
+    preferred: Option<&str>,
 ) -> Result<Executed, String> {
     if executed.route.is_some() {
         return Ok(executed);
@@ -185,31 +261,40 @@ fn apply_cost_tie(
         return Ok(executed);
     };
     let (scores, calibrated) = (scores.as_slice().to_vec(), *calibrated);
+    let mut preference: Vec<FamilyPremise> = Vec::new();
+    if let Some(option_id) = preferred {
+        if tie_ids(&scores, epsilon_q32).contains(&option_id) {
+            executed.ladder.outcome = promote(&scores, option_id, calibrated)?;
+            executed.family_premises = vec![preference_premise(option_id, true)];
+            return Ok(executed);
+        }
+        preference.push(preference_premise(option_id, false));
+    }
     match cost_tie_break(&scores, costs, epsilon_q32) {
-        CostTie::NoTie => Ok(executed),
+        CostTie::NoTie => {
+            executed.family_premises = preference;
+            Ok(executed)
+        }
         CostTie::Chosen { option_id, tie_set } => {
-            let mut ordered: Vec<ScoredOption> = scores
-                .iter()
-                .filter(|score| score.option_id == option_id)
-                .cloned()
-                .collect();
-            ordered.extend(scores.iter().filter(|s| s.option_id != option_id).cloned());
-            executed.ladder.outcome = StatisticalOutcome::Advisory {
-                scores: BoundedVec::new(ordered)
-                    .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
-                calibrated,
-            };
-            executed.family_premises = tie_set
-                .iter()
-                .map(|(id, cost)| observed_cost_premise(id, *cost))
+            executed.ladder.outcome = promote(&scores, &option_id, calibrated)?;
+            executed.family_premises = preference
+                .into_iter()
+                .chain(
+                    tie_set
+                        .iter()
+                        .map(|(id, cost)| observed_cost_premise(id, *cost)),
+                )
                 .collect();
             Ok(executed)
         }
         CostTie::MissingCost { option_id } => {
-            executed.family_premises = tie_ids(&scores, epsilon_q32)
-                .into_iter()
-                .filter_map(|id| costs.get(id).map(|cost| observed_cost_premise(id, *cost)))
-                .collect();
+            executed.family_premises =
+                preference
+                    .into_iter()
+                    .chain(tie_ids(&scores, epsilon_q32).into_iter().filter_map(|id| {
+                        costs.get(id).map(|cost| observed_cost_premise(id, *cost))
+                    }))
+                    .collect();
             executed.ladder = LadderResult {
                 outcome: StatisticalOutcome::Abstained {
                     reasons: BoundedVec::new(vec![AbstainReason::UnknownFact {
@@ -229,7 +314,8 @@ fn apply_cost_tie(
 }
 
 /// The replay of the cost tie-break: a logged record has no ledger to read,
-/// so the observed costs it sealed as premises stand in for it.
+/// so the observed costs it sealed as premises stand in for it, and the
+/// preference the request stated is read back from its premise.
 pub(in crate::decide) fn replay_cost_tie(
     record: &StatisticalDecisionRecord,
     executed: Executed,
@@ -246,7 +332,13 @@ pub(in crate::decide) fn replay_cost_tie(
             Some((id.to_string(), cost.parse::<u64>().ok()?))
         })
         .collect();
-    apply_cost_tie(executed, &costs, epsilon_q32(policy))
+    let preferred = record.premises.iter().find_map(|premise| {
+        premise
+            .fact
+            .strip_prefix(PREFERRED_FACT)
+            .or_else(|| premise.fact.strip_prefix(NOT_HONOURED_FACT))
+    });
+    apply_cost_tie(executed, &costs, epsilon_q32(policy), preferred)
 }
 
 impl DecisionFamily for RouteFamily {
@@ -314,7 +406,16 @@ impl DecisionFamily for RouteFamily {
         if request.is_none() {
             return Ok(executed);
         }
-        apply_cost_tie(executed, &costs_of_views(views), epsilon_q32(policy))
+        let preferred = match request.map(preferred_option).transpose() {
+            Ok(preferred) => preferred.flatten(),
+            Err(detail) => return Err(detail),
+        };
+        apply_cost_tie(
+            executed,
+            &costs_of_views(views),
+            epsilon_q32(policy),
+            preferred.as_deref(),
+        )
     }
 
     fn premises(

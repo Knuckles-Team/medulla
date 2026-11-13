@@ -389,6 +389,14 @@ pub const NO_CATALOG_ENTRY_SELECTED: RefusalCode = RefusalCode::new("NO_CATALOG_
 /// Every `probe_selection` family code, in declaration order.
 pub const PROBE_SELECTION: &[RefusalCode] = &[NO_CATALOG_ENTRY_SELECTED];
 
+/// A caller-preferred route option is not legal: the ladder did not score it,
+/// or its score lies outside the tie epsilon of the best. Recorded as the
+/// subject of the `preference_not_honoured:<option>` premise
+/// (MEDULLA-DECISION-ENGINE-R039.3); the question still answers.
+pub const PREFERENCE_NOT_LEGAL: RefusalCode = RefusalCode::new("PREFERENCE_NOT_LEGAL");
+
+/// Every `route` family code, in declaration order.
+pub const ROUTE: &[RefusalCode] = &[PREFERENCE_NOT_LEGAL];
 /// Every `round_verdict` family code, in declaration order.
 pub const ROUND_VERDICT: &[RefusalCode] = &[ROUND_NO_PREDICTION];
 
@@ -439,6 +447,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (QuestionKind::ProbeVerdict, PROBE_VERDICT),
     (QuestionKind::ProbeSelection, PROBE_SELECTION),
+    (QuestionKind::Route, ROUTE),
     (QuestionKind::RoundVerdict, ROUND_VERDICT),
     (QuestionKind::StageAllocation, STAGE_ALLOCATION),
     (QuestionKind::CriterionReview, CRITERION_REVIEW),

@@ -542,3 +542,114 @@ async fn lower_cost_option_wins_within_the_tie_epsilon() {
     assert_eq!(scores.as_slice()[0].option_id, "opt-b");
     assert_eq!(observed_cost_facts(&batch.records.as_slice()[0]).len(), 2);
 }
+
+fn preferred_param(option: &str) -> TypedParam {
+    TypedParam {
+        name: "route.preferred_option".to_string(),
+        value: TypedValue::Text(option.to_string()),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R039.3
+#[tokio::test]
+async fn legal_preference_wins_and_illegal_is_recorded() {
+    use medulla_decision_types::decision::ColdStart;
+    let h = Harness::new().await;
+    let (schema, head) =
+        super::rank_tests::published_head(&h, HeadKind::WeightedFeatures, "head-route-pref").await;
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.cold_start = ColdStart::AdvisoryUncalibrated;
+    let policy = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-route-pref", &policy),
+    };
+    // opt-a and opt-b score alike; opt-c scores far lower (outside the epsilon).
+    let ask = |preferred: Option<&str>| {
+        let mut request = route_request(&schema, policy.clone(), None);
+        request.feature_schema = schema.clone();
+        request.head = Some(head.clone());
+        request.params =
+            BoundedVec::new(preferred.map(preferred_param).into_iter().collect()).unwrap();
+        request.candidates = CandidateSource::Declared {
+            options: BoundedVec::new(vec![
+                signal_option("opt-a", 1 << 32),
+                signal_option("opt-b", 1 << 32),
+                signal_option("opt-c", 0),
+            ])
+            .unwrap(),
+        };
+        request
+    };
+    // Priced so the cost rule alone picks opt-b over the lower id opt-a.
+    seed_model_cost(&h, TENANT, "opt-a", 5_000_000);
+    seed_model_cost(&h, TENANT, "opt-b", 1_000_000);
+    seed_model_cost(&h, TENANT, "opt-c", 100_000);
+    let top = |record: &StatisticalDecisionRecord| match &record.outcome {
+        StatisticalOutcome::Advisory { scores, .. } => scores.as_slice()[0].option_id.clone(),
+        other => panic!("expected an advisory answer, got {other:?}"),
+    };
+    let facts = |record: &StatisticalDecisionRecord, prefix: &str| -> Vec<(String, String)> {
+        record
+            .premises
+            .iter()
+            .filter(|premise| premise.fact.starts_with(prefix))
+            .map(|premise| (premise.subject.clone(), premise.fact.clone()))
+            .collect()
+    };
+
+    // No preference: the cost rule picks opt-b.
+    let batch = decide(&h, ask(None)).await.unwrap();
+    assert_eq!(top(&batch.records.as_slice()[0]), "opt-b");
+
+    // A legal preference (within the epsilon of the best) beats the cost rule.
+    let batch = decide(&h, ask(Some("opt-a"))).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(top(record), "opt-a");
+    assert_eq!(
+        facts(record, "preferred_option:"),
+        vec![(
+            "route_preference".to_string(),
+            "preferred_option:opt-a".to_string()
+        )]
+    );
+    assert!(facts(record, "preference_not_honoured:").is_empty());
+    assert!(record
+        .premises
+        .iter()
+        .filter(|premise| premise.fact.starts_with("preferred_option:"))
+        .all(|premise| premise.class == PremiseClass::Claim));
+
+    // A preferred option outside the epsilon is never legal: the options rank
+    // as before and the record names the code.
+    let batch = decide(&h, ask(Some("opt-c"))).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(top(record), "opt-b");
+    assert_eq!(
+        facts(record, "preference_not_honoured:"),
+        vec![(
+            "PREFERENCE_NOT_LEGAL".to_string(),
+            "preference_not_honoured:opt-c".to_string()
+        )]
+    );
+
+    // A preferred option that is not a declared option never widens the set.
+    let batch = decide(&h, ask(Some("opt-z"))).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(top(record), "opt-b");
+    assert_eq!(
+        facts(record, "preference_not_honoured:"),
+        vec![(
+            "PREFERENCE_NOT_LEGAL".to_string(),
+            "preference_not_honoured:opt-z".to_string()
+        )]
+    );
+
+    // A malformed preference is a refusal, not an abstention.
+    let mut bad = ask(None);
+    bad.params = BoundedVec::new(vec![TypedParam {
+        name: "route.preferred_option".to_string(),
+        value: TypedValue::Int(3),
+    }])
+    .unwrap();
+    let refused = decide(&h, bad).await.unwrap_err();
+    assert!(refused.contains("route.preferred_option"), "{refused}");
+}
