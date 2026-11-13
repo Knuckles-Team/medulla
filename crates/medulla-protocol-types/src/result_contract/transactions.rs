@@ -106,9 +106,11 @@ pub struct ChangeEnvelopeConflict {
     pub error: String,
 }
 
-/// One envelope's outcome within an `ApplyChangeEnvelopes` batch, tagged by `status`.
+/// One envelope's outcome within an `ApplyChangeEnvelopes` batch, tagged by `result`:
+/// what the envelope did in this call, final for the call, never a lifecycle
+/// (MEDULLA-DURABLE-KERNEL-R875.4).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
+#[serde(tag = "result", rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ChangeEnvelopeOutcome {
     Applied(ChangeEnvelopeApplied),
@@ -169,4 +171,35 @@ method_results! {
     MutationOutboxStatus(MutationOutbox / "status") => Raw<MutationOutboxStatusView>;
     MutationOutboxDeadLetters(MutationOutbox / "dead_letters") => Raw<OutboxDeadLetterPage>;
     MutationOutboxRewind(MutationOutbox / "rewind") => Raw<OutboxRewindReceipt>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R875.4
+    #[test]
+    fn change_envelope_result_tag_is_not_a_lifecycle_field() {
+        let conflict = ChangeEnvelopeOutcome::Conflict(ChangeEnvelopeConflict {
+            envelope_id: Some("env-1".into()),
+            error: "version expectation failed".into(),
+        });
+        let wire = serde_json::to_value(&conflict).unwrap();
+        // The tag names what the envelope did in this call; the words are unchanged.
+        assert_eq!(wire["result"], "conflict");
+        assert!(wire.get("status").is_none());
+        assert_eq!(
+            serde_json::from_value::<ChangeEnvelopeOutcome>(wire).unwrap(),
+            conflict
+        );
+        // Hard cutover: the old tag key does not decode.
+        assert!(
+            serde_json::from_value::<ChangeEnvelopeOutcome>(serde_json::json!({
+                "status": "conflict",
+                "envelope_id": "env-1",
+                "error": "version expectation failed",
+            }))
+            .is_err()
+        );
+    }
 }

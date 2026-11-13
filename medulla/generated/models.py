@@ -2537,26 +2537,26 @@ class ChangeEnvelopeDraft(BaseModel):
 class ChangeEnvelopeOutcomeApplied(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["applied"]
+    result: Literal["applied"]
 
 
 class ChangeEnvelopeOutcomeIdempotentSkip(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["idempotent_skip"]
+    result: Literal["idempotent_skip"]
 
 
 class ChangeEnvelopeOutcomeConflict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["conflict"]
+    result: Literal["conflict"]
 
 
 ChangeEnvelopeOutcome = Annotated[
     ChangeEnvelopeOutcomeApplied
     | ChangeEnvelopeOutcomeIdempotentSkip
     | ChangeEnvelopeOutcomeConflict,
-    Field(discriminator="status"),
+    Field(discriminator="result"),
 ]
 
 
@@ -23667,38 +23667,38 @@ class SemanticIndexOperation(str, Enum):
 class SemanticIndexOutcomeAccepted(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    disposition: Literal["accepted"]
     receipt_digest: SemanticDigest | None = None
     result: SemanticIndexResult
-    status: Literal["accepted"]
 
 
 class SemanticIndexOutcomeDeferredBackpressured(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    disposition: Literal["deferred_backpressured"]
     receipt_digest: SemanticDigest
-    status: Literal["deferred_backpressured"]
 
 
 class SemanticIndexOutcomePartial(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    disposition: Literal["partial"]
     receipt_digest: SemanticDigest | None = None
     result: SemanticIndexResult
-    status: Literal["partial"]
 
 
 class SemanticIndexOutcomeRejected(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    disposition: Literal["rejected"]
     error: SemanticIndexError
     receipt_digest: SemanticDigest | None = None
-    status: Literal["rejected"]
 
 
 class SemanticIndexOutcomeNotFound(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    status: Literal["not_found"]
+    disposition: Literal["not_found"]
 
 
 SemanticIndexOutcome = Annotated[
@@ -23707,7 +23707,7 @@ SemanticIndexOutcome = Annotated[
     | SemanticIndexOutcomePartial
     | SemanticIndexOutcomeRejected
     | SemanticIndexOutcomeNotFound,
-    Field(discriminator="status"),
+    Field(discriminator="disposition"),
 ]
 
 
@@ -26215,13 +26215,14 @@ class TermWeight(BaseModel):
 class TerminalEventReadUnavailable(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    availability: Literal["unavailable"]
     reason: TerminalEventUnavailable
-    status: Literal["unavailable"]
 
 
 class TerminalEventReadAvailable(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    availability: Literal["available"]
     batch_id: str
     commit_sequence: Annotated[int, Field(ge=0)]
     kind: str
@@ -26231,13 +26232,12 @@ class TerminalEventReadAvailable(BaseModel):
     result_ref: str | None = None
     run_id: str
     scope: MutationScopeIdentity
-    status: Literal["available"]
     tenant: str
 
 
 TerminalEventRead = Annotated[
     TerminalEventReadUnavailable | TerminalEventReadAvailable,
-    Field(discriminator="status"),
+    Field(discriminator="availability"),
 ]
 
 
@@ -31301,7 +31301,7 @@ class SyncOutcomeAcknowledged(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     outcome: Literal["acknowledged"]
-    state: SyncState
+    standing: SyncStanding
 
 
 class SyncOutcomeConflictRetained(BaseModel):
@@ -31318,7 +31318,7 @@ class SyncOutcomeObserved(BaseModel):
     head_digest: Digest256
     head_revision: Annotated[int, Field(ge=0)]
     outcome: Literal["observed"]
-    state: SyncState
+    standing: SyncStanding
 
 
 class SyncOutcomeRefused(BaseModel):
@@ -31351,7 +31351,7 @@ class SyncStamp(BaseModel):
     policy_digest: Digest256
 
 
-class SyncState(str, Enum):
+class SyncStanding(str, Enum):
     IN_SYNC = "in_sync"
     PENDING = "pending"
     CONFLICT = "conflict"
@@ -37542,7 +37542,7 @@ __all__ = [
     "SyncOutcomeResolved",
     "SyncRequest",
     "SyncStamp",
-    "SyncState",
+    "SyncStanding",
     "TaskPlan",
     "ApprovalSpec",
     "BranchArm",

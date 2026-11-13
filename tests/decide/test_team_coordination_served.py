@@ -55,7 +55,7 @@ def _write_team(clean_graph: Any) -> None:
     ]
     envelope = _envelope(_graph_name(clean_graph), "r170-3:team", "r170-3:team", 1, ops)
     results = clean_graph.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results
 
 
 def _ids(clean_graph: Any, text: str, params: dict[str, Any]) -> list[str]:

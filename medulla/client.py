@@ -6498,7 +6498,7 @@ class ChangeEnvelopeClient:
 
         The engine lands the whole group in ONE coalesced redb transaction and returns
         one result per envelope, in the SAME order as ``envelopes``. Each result carries
-        a ``status`` of ``applied`` / ``idempotent_skip`` / ``conflict`` (the same
+        a ``result`` of ``applied`` / ``idempotent_skip`` / ``conflict`` (the same
         outcome vocabulary the single :meth:`apply` produces), so a caller can advance a
         watermark through the contiguous success prefix.
 

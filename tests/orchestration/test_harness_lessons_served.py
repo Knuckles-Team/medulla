@@ -233,7 +233,7 @@ def test_contrast_lesson_and_retrieval_served(clean_graph):
         ],
     )
     results = clean_graph.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results
 
     # The query by deficiency reads the lesson back through its own
     # identity — the deficiency is part of that identity, and the stored

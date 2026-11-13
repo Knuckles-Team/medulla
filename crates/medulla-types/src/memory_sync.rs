@@ -352,11 +352,13 @@ impl SyncRequest {
     }
 }
 
-/// Whether the client's file matches the accepted head.
+/// Whether the client's file matches the accepted head: a reading computed on each
+/// request from the client's file and the accepted head, never a stored lifecycle
+/// (MEDULLA-DURABLE-KERNEL-R875.1).
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum SyncState {
+pub enum SyncStanding {
     InSync,
     Pending,
     Conflict,
@@ -379,12 +381,12 @@ pub enum SyncOutcome {
         head: MemorySnapshotHead,
     },
     Observed {
-        state: SyncState,
+        standing: SyncStanding,
         head_revision: u64,
         head_digest: Digest256,
     },
     Acknowledged {
-        state: SyncState,
+        standing: SyncStanding,
     },
     Refused {
         code: MemorySyncRefusal,
@@ -514,8 +516,8 @@ pub enum Decision {
         resolution: Resolution,
         new_revision: u64,
     },
-    /// R085.6: store the acknowledgment record with the computed state.
-    Acknowledge { state: SyncState },
+    /// R085.6: store the acknowledgment record with the computed standing.
+    Acknowledge { standing: SyncStanding },
 }
 
 /// The pure compare-and-set core. `head` is the accepted head of
@@ -534,10 +536,10 @@ pub fn decide(head: Option<&MemorySnapshotHead>, request: &SyncRequest) -> Decis
         SyncAction::ObserveFile { observed_digest } => match head {
             None => not_available(),
             Some(head) => Decision::Reply(SyncOutcome::Observed {
-                state: if head.content_digest == *observed_digest {
-                    SyncState::InSync
+                standing: if head.content_digest == *observed_digest {
+                    SyncStanding::InSync
                 } else {
-                    SyncState::Pending
+                    SyncStanding::Pending
                 },
                 head_revision: head.revision,
                 head_digest: head.content_digest,
@@ -595,12 +597,54 @@ pub fn decide(head: Option<&MemorySnapshotHead>, request: &SyncRequest) -> Decis
         } => match head {
             None => not_available(),
             Some(head) => Decision::Acknowledge {
-                state: if head.revision == *revision && head.content_digest == *content_digest {
-                    SyncState::InSync
+                standing: if head.revision == *revision && head.content_digest == *content_digest {
+                    SyncStanding::InSync
                 } else {
-                    SyncState::Pending
+                    SyncStanding::Pending
                 },
             },
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R875.1
+    #[test]
+    fn sync_standing_is_not_a_lifecycle_field() {
+        let observed = SyncOutcome::Observed {
+            standing: SyncStanding::Pending,
+            head_revision: 3,
+            head_digest: Digest256::sha256(b"head"),
+        };
+        let wire = serde_json::to_value(&observed).unwrap();
+        // The reading rides under `standing`, with the same wire words; no `state` key.
+        assert_eq!(wire["standing"], "pending");
+        assert!(wire.get("state").is_none());
+        assert_eq!(
+            serde_json::from_value::<SyncOutcome>(wire.clone()).unwrap(),
+            observed
+        );
+        let acknowledged = serde_json::to_value(SyncOutcome::Acknowledged {
+            standing: SyncStanding::InSync,
+        })
+        .unwrap();
+        assert_eq!(acknowledged["standing"], "in_sync");
+        // Hard cutover: the old key is refused, not aliased.
+        let mut old = wire;
+        let words = old.as_object_mut().unwrap();
+        let standing = words.remove("standing").unwrap();
+        words.insert("state".into(), standing);
+        assert!(serde_json::from_value::<SyncOutcome>(old).is_err());
+        for (standing, word) in [
+            (SyncStanding::InSync, "in_sync"),
+            (SyncStanding::Pending, "pending"),
+            (SyncStanding::Conflict, "conflict"),
+            (SyncStanding::Unavailable, "unavailable"),
+        ] {
+            assert_eq!(serde_json::to_value(standing).unwrap(), word);
+        }
     }
 }

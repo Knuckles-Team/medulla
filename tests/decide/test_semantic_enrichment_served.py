@@ -150,7 +150,7 @@ def _seed(clean_graph: Any) -> None:
         ],
     )
     results = clean_graph.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results
     for node_id, vector in [
         ("doc:1", [1.0, 0.0, 0.0, 0.0]),
         ("topic:a", [1.0, 0.1, 0.0, 0.0]),

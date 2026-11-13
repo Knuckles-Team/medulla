@@ -5,7 +5,7 @@
 use medulla_types::contract::{Digest256, ServerErrorCode};
 use medulla_types::memory_sync::{
     decide, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySyncConfig, MemorySyncRefusal,
-    RequestId, Resolution, SnapshotProvenance, SyncAction, SyncOutcome, SyncRequest, SyncState,
+    RequestId, Resolution, SnapshotProvenance, SyncAction, SyncOutcome, SyncRequest, SyncStanding,
     MAX_CONTENT_BYTES,
 };
 use serde::de::DeserializeOwned;
@@ -56,10 +56,10 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
     round_trip(&ListCursor::new("cursor-token").unwrap());
     round_trip(&MemorySyncConfig::default());
     for state in [
-        SyncState::InSync,
-        SyncState::Pending,
-        SyncState::Conflict,
-        SyncState::Unavailable,
+        SyncStanding::InSync,
+        SyncStanding::Pending,
+        SyncStanding::Conflict,
+        SyncStanding::Unavailable,
     ] {
         round_trip(&state);
     }
@@ -110,12 +110,12 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
             head: first.clone(),
         },
         SyncOutcome::Observed {
-            state: SyncState::InSync,
+            standing: SyncStanding::InSync,
             head_revision: 1,
             head_digest: first.content_digest,
         },
         SyncOutcome::Acknowledged {
-            state: SyncState::Pending,
+            standing: SyncStanding::Pending,
         },
         SyncOutcome::Refused {
             code: MemorySyncRefusal::NotAvailable,

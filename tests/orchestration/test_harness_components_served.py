@@ -133,7 +133,7 @@ def test_two_versions_and_bitemporal_read(clean_graph):
     )
 
     results = clean_graph.changes.apply_batch([first, second])
-    assert [result["status"] for result in results] == ["applied", "applied"], results
+    assert [result["result"] for result in results] == ["applied", "applied"], results
 
     # Both versions stay readable; v1's window is closed at v2's valid_from,
     # v2 names v1, and the supersession edge is in place (newer to older).

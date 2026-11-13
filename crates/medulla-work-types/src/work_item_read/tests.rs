@@ -308,3 +308,23 @@ fn admitted_request_refusals_are_registered_codes() {
     let error = oversized.admit().unwrap_err();
     assert!(error.starts_with("ADMITTED_REQUEST_TOO_LARGE:"), "{error}");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R875.3
+#[test]
+fn terminal_event_read_tag_is_not_a_lifecycle_field() {
+    let unavailable = serde_json::to_value(TerminalEventRead::default()).unwrap();
+    assert_eq!(
+        unavailable,
+        json!({"availability": "unavailable", "reason": "legacy_unbound"})
+    );
+    assert!(unavailable.get("status").is_none());
+    assert_eq!(
+        serde_json::from_value::<TerminalEventRead>(unavailable).unwrap(),
+        TerminalEventRead::default()
+    );
+    // Hard cutover: the old tag key is refused, not aliased.
+    assert!(serde_json::from_value::<TerminalEventRead>(
+        json!({"status": "unavailable", "reason": "legacy_unbound"})
+    )
+    .is_err());
+}

@@ -230,4 +230,4 @@ async def write_docs(client: MedullaClient, graph: str, count: int, key: str) ->
     ]
     envelope = draft_envelope(graph, key, key, 1, operations)
     results = await client.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results

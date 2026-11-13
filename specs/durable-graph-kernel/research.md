@@ -105,3 +105,11 @@ committed batch that faults while replaying is a `ReplayDivergence` (`REPLAY_DIV
 `durable_apply::apply` and `mutation_apply::apply`; the Raft apply and the embedded engine return it as
 their error, and the follower pull loop stops applying rather than advance past history it could not
 reproduce. LAYOUT-REGEN is not needed; WIRE-REGEN is (the generated `ServerErrorCode` list).
+
+## R875: census renames of non-lifecycle wire types (decision)
+
+`SyncState` is `SyncStanding` (field `standing`); the `TerminalEventRead` tag is `availability`; the
+`ChangeEnvelopeOutcome` tag is `result`; the `SemanticIndexOutcome` tag is `disposition`, because its
+`accepted` and `partial` variants already carry a `result` field that an internal tag of the same name
+would collide with. The wire words are unchanged; each key is a hard cutover, so the old key no longer
+decodes. WIRE-REGEN needed: the generated mirrors in `medulla/generated/models.py` were edited by hand.

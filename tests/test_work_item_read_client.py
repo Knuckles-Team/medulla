@@ -182,7 +182,7 @@ def test_get_outcome_returns_the_verified_provenance_view() -> None:
         "tool_call_refs": ["tc-1"],
         "outcome_ref": "oe-1",
         "outcome": {"status": "succeeded"},
-        "terminal_event": {"status": "unavailable", "reason": "legacy_unbound"},
+        "terminal_event": {"availability": "unavailable", "reason": "legacy_unbound"},
     }
     engine = FakeEngine(outcome)
     items = _work_items(engine)

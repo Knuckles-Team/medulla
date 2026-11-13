@@ -60,7 +60,7 @@ async def _write_nodes(client: Any, graph: str) -> None:
         key = f"r174-6:docs:{start}"
         envelope = draft_envelope(graph, key, key, 1, operations)
         results = await client.changes.apply_batch([envelope])
-        assert [result["status"] for result in results] == ["applied"], results
+        assert [result["result"] for result in results] == ["applied"], results
 
 
 async def _update_cell(client: Any, cell: str) -> None:

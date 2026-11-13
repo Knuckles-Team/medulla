@@ -11,7 +11,7 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_types::contract::Digest256;
 use medulla_types::memory_sync::{
     decide, Decision, DocId, MemorySnapshotHead, MemorySnapshotRead, MemorySyncRefusal, Resolution,
-    SnapshotProvenance, SyncOutcome, SyncRequest, SyncStamp, SyncState,
+    SnapshotProvenance, SyncOutcome, SyncRequest, SyncStamp, SyncStanding,
 };
 use serde::{Deserialize, Serialize};
 
@@ -221,7 +221,7 @@ fn resolve(
     SyncOutcome::Resolved { head }
 }
 
-fn acknowledge(core: &GraphCore, request: &SyncRequest, state: SyncState) -> SyncOutcome {
+fn acknowledge(core: &GraphCore, request: &SyncRequest, standing: SyncStanding) -> SyncOutcome {
     let medulla_types::memory_sync::SyncAction::Acknowledge {
         revision,
         content_digest,
@@ -234,10 +234,10 @@ fn acknowledge(core: &GraphCore, request: &SyncRequest, state: SyncState) -> Syn
     let unresolved = candidates(core, doc).iter().any(|(_, c)| !c.resolved);
     let stale = load_row::<AckRow>(core, &ack_node_id(doc))
         .is_some_and(|held| held.observation_generation > *observation_generation);
-    let state = match (unresolved, stale, state) {
-        (true, _, _) => SyncState::Conflict,
-        (false, true, _) => SyncState::Pending,
-        (false, false, state) => state,
+    let standing = match (unresolved, stale, standing) {
+        (true, _, _) => SyncStanding::Conflict,
+        (false, true, _) => SyncStanding::Pending,
+        (false, false, standing) => standing,
     };
     let row = AckRow {
         label: ACK_LABEL.to_string(),
@@ -246,7 +246,7 @@ fn acknowledge(core: &GraphCore, request: &SyncRequest, state: SyncState) -> Syn
         observation_generation: *observation_generation,
     };
     core.add_node(ack_node_id(doc), encode(&row));
-    SyncOutcome::Acknowledged { state }
+    SyncOutcome::Acknowledged { standing }
 }
 
 /// Decide `request` against the stored head and write what the decision
@@ -303,6 +303,6 @@ pub fn apply_sync(core: &GraphCore, request: &SyncRequest, stamp: &SyncStamp) ->
             resolution,
             new_revision,
         ),
-        Decision::Acknowledge { state } => acknowledge(core, request, state),
+        Decision::Acknowledge { standing } => acknowledge(core, request, standing),
     }
 }

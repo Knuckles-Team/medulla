@@ -5024,7 +5024,7 @@ fn terminal_extension_commits_rows_outbox_and_replays_after_reopen() {
     .unwrap()
     .unwrap();
     let event_json = serde_json::to_value(&terminal_view.terminal_event).unwrap();
-    assert_eq!(event_json["status"], "available");
+    assert_eq!(event_json["availability"], "available");
     assert_eq!(event_json["tenant"], "tenant-a");
     assert_eq!(
         event_json["scope"],

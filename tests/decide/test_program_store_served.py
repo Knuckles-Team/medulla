@@ -71,7 +71,7 @@ def _write_trace_node(clean_graph: Any, key: str, node_id: str, trace: dict) -> 
         ],
     )
     results = clean_graph.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results
 
 
 def _run_record_op(trace: dict[str, Any], graph: str, node_id: str) -> dict[str, Any]:

@@ -235,7 +235,11 @@ fn queue_capacity(class: SemanticQueueClass) -> u32 {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+/// What one semantic index request did, tagged by `disposition`: a per-request result,
+/// never a lifecycle; the index's staging lifecycle is `SemanticStageIntent`'s
+/// (MEDULLA-DURABLE-KERNEL-R875.5). The tag is not `result` because two variants carry
+/// a `result` field.
+#[serde(tag = "disposition", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SemanticIndexOutcome {
     Accepted {
@@ -408,5 +412,22 @@ mod tests {
             queue(SemanticQueueClass::SlowHeavy, SEMANTIC_SLOW_HEAVY_CAPACITY);
         heavy_overcommitted.inflight = SEMANTIC_HEAVY_CONCURRENCY + 1;
         assert!(validate_queue_results(&[heavy_overcommitted]).is_err());
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R875.5
+    #[test]
+    fn semantic_index_result_tag_is_not_a_lifecycle_field() {
+        let wire = serde_json::to_value(SemanticIndexOutcome::NotFound).unwrap();
+        // The tag names what the request did; the words are unchanged.
+        assert_eq!(wire, serde_json::json!({"disposition": "not_found"}));
+        assert_eq!(
+            serde_json::from_value::<SemanticIndexOutcome>(wire).unwrap(),
+            SemanticIndexOutcome::NotFound
+        );
+        // Hard cutover: the old tag key does not decode.
+        assert!(serde_json::from_value::<SemanticIndexOutcome>(
+            serde_json::json!({"status": "not_found"})
+        )
+        .is_err());
     }
 }

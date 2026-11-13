@@ -47,7 +47,7 @@ def edit_id(round_number: int) -> str:
 def _apply(clean_graph: Any, key: str, ops: list[dict[str, Any]]) -> None:
     envelope = _envelope(_graph_name(clean_graph), key, key, 1, ops)
     results = clean_graph.changes.apply_batch([envelope])
-    assert [result["status"] for result in results] == ["applied"], results
+    assert [result["result"] for result in results] == ["applied"], results
 
 
 def _write_edits(clean_graph: Any) -> None:

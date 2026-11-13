@@ -470,9 +470,11 @@ pub struct WorkItemOutcomeView {
     pub terminal_event: TerminalEventRead,
 }
 
-/// Safe readback of one committed terminal event, never worker authority.
+/// Safe readback of one committed terminal event, never worker authority. The tag
+/// `availability` says whether the event can be read back; a read never changes it, so
+/// it is not a lifecycle (MEDULLA-DURABLE-KERNEL-R875.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(tag = "availability", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum TerminalEventRead {
     Unavailable { reason: TerminalEventUnavailable },
