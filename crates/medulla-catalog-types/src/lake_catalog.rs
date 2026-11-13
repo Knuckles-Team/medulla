@@ -1015,7 +1015,7 @@ mod tests {
         let mut snap = snapshot();
         snap.quality = Some(QualityReportRef {
             report_id: "qr-2".to_string(),
-            status: QualityOutcome::Failing,
+            outcome: QualityOutcome::Failing,
             checked_at_ms: 999,
             failed_checks: Vec::new(),
         });

@@ -15,6 +15,7 @@ use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::{Digest256, ResourceId, ServerErrorCode};
+use redb::ReadableTable;
 
 use super::admitted::{PackWriteEffects, PackWriteIdentity};
 use super::ConnectorPackHeadRow;
