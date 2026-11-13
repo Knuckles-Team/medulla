@@ -197,6 +197,7 @@ fn sql_catalog_drop_kind(kind: &medulla_sql_lang::sql::classify::StatementKind) 
         K::DropTable(_)
             | K::DropView(_)
             | K::DropExtension { .. }
+            | K::DropSequence { .. }
             | K::DropFunction(_)
             | K::DropIndex { .. }
     )
@@ -209,6 +210,7 @@ fn sql_catalog_create_kind(kind: &medulla_sql_lang::sql::classify::StatementKind
         kind,
         K::CreateView(_)
             | K::CreateExtension { .. }
+            | K::CreateSequence { .. }
             | K::CreateFunction(_)
             | K::CreateAnnIndex(_)
             | K::CreateIndex(_)
@@ -386,6 +388,17 @@ async fn exec_sql_catalog_drop(
             )
             .await
         }
+        K::DropSequence { name, if_exists } => {
+            commit_catalog_op(
+                req_id,
+                scope,
+                sql_method,
+                store,
+                medulla_table_store::tables::TxnOp::DropSequence { name, if_exists },
+                "DROP SEQUENCE",
+            )
+            .await
+        }
         K::DropFunction(plan) => {
             commit_catalog_op(
                 req_id,
@@ -469,6 +482,17 @@ async fn exec_sql_catalog_create(
                     if_not_exists,
                 },
                 "CREATE EXTENSION",
+            )
+            .await
+        }
+        K::CreateSequence { def, if_not_exists } => {
+            commit_catalog_op(
+                req_id,
+                scope,
+                sql_method,
+                store,
+                medulla_table_store::tables::TxnOp::CreateSequence { def, if_not_exists },
+                "CREATE SEQUENCE",
             )
             .await
         }
@@ -581,6 +605,8 @@ fn classify_sql_catalog_terminal(
         | K::DeleteTable(_)
         | K::CreateExtension { .. }
         | K::DropExtension { .. }
+        | K::CreateSequence { .. }
+        | K::DropSequence { .. }
         | K::CreateAnnIndex(_)
         | K::CreateIndex(_)
         | K::DropIndex { .. }

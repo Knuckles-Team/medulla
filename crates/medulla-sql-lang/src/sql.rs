@@ -17,6 +17,7 @@ pub mod pgfamily;
 pub mod pgq;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pgvector_ddl;
+pub mod sequence_ddl;
 /// PL/pgSQL procedural interpreter (CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body/MEDULLA-341): parse + execute a
 /// `LANGUAGE plpgsql` body (DECLARE vars, BEGIN..END, `:=`, IF/ELSIF/ELSE, LOOP/WHILE/
 /// FOR, RETURN, RAISE, `SELECT … INTO`) against a variable environment, running embedded

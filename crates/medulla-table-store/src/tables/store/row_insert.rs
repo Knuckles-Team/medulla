@@ -16,19 +16,21 @@ pub(super) fn insert_rows_in<T, F, E>(
     mut encode: E,
 ) -> Result<Vec<Vec<Cell>>, String>
 where
-    F: FnMut(&TableSchema, &T, u64) -> Result<Vec<Cell>, String>,
+    F: FnMut(&TableSchema, &T, &RowAlloc) -> Result<Vec<Cell>, String>,
     E: FnMut(&Vec<Cell>) -> Result<Vec<u8>, String>,
 {
-    // Allocate the rowid block up front so SERIAL columns get stable, contiguous ids.
-    let first_rowid = alloc_rowids(wtx, table, rows.len() as u64)?;
+    // Allocate the rowid block and every SERIAL column's sequence values up front
+    // so the ids are stable and contiguous.
+    let allocs = alloc_rows(wtx, tenant_scope, table, &schema, rows.len() as u64)?;
+    let first_rowid = allocs.first().map(|a| a.rowid).unwrap_or(0);
 
     // Build each row's typed cells BEFORE writing so a coercion/constraint error never
     // leaves a half-applied INSERT (the txn is dropped on Err).
     let mut inserted: Vec<Vec<Cell>> = Vec::with_capacity(rows.len());
     let mut encoded: Vec<(u64, Vec<u8>)> = Vec::with_capacity(rows.len());
-    for (ri, row) in rows.iter().enumerate() {
-        let rowid = first_rowid + ri as u64;
-        let cells = build(&schema, row, rowid)?;
+    for (row, alloc) in rows.iter().zip(allocs.iter()) {
+        let rowid = alloc.rowid;
+        let cells = build(&schema, row, alloc)?;
         let blob = encode(&cells)?;
         if blob.len() > MAX_SQL_STORED_VALUE_BYTES {
             return Err("encoded SQL row exceeds storage value limit".to_string());

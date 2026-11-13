@@ -103,6 +103,112 @@ fn load(wtx: &SqlWrite<'_>, scope: &str, name: &str) -> Result<(Sequence, i64), 
     ))
 }
 
+const SEQUENCE_FIELDS: [Field; 4] = [
+    Field::Start,
+    Field::Increment,
+    Field::Cache,
+    Field::HighMark,
+];
+
+/// The sequence a `SERIAL` column of `table` allocates through
+/// (MEDULLA-ENGINE-PARITY-R013.2).
+pub(super) fn serial_sequence_name(table: &str, column: &str) -> String {
+    format!("{table}_{column}_seq")
+}
+
+/// Create a sequence inside `wtx`. `Ok(false)` is the `IF NOT EXISTS` result.
+pub(super) fn create_in(
+    wtx: &SqlWrite<'_>,
+    scope: &str,
+    def: &Sequence,
+    if_not_exists: bool,
+) -> Result<bool, String> {
+    let mut seq = wtx.open_table(SEQ)?;
+    if get_field(&seq, scope, &def.name, Field::HighMark)?.is_some() {
+        if if_not_exists {
+            return Ok(false);
+        }
+        return Err(format!("sequence `{}` already exists", def.name));
+    }
+    put_field(&mut seq, scope, &def.name, Field::Start, def.start as u64)?;
+    put_field(
+        &mut seq,
+        scope,
+        &def.name,
+        Field::Increment,
+        def.increment as u64,
+    )?;
+    put_field(&mut seq, scope, &def.name, Field::Cache, def.cache)?;
+    put_field(
+        &mut seq,
+        scope,
+        &def.name,
+        Field::HighMark,
+        def.start as u64,
+    )?;
+    Ok(true)
+}
+
+/// Drop a sequence inside `wtx`. `Ok(false)` is the `IF EXISTS` result.
+pub(super) fn drop_in(
+    wtx: &SqlWrite<'_>,
+    scope: &str,
+    name: &str,
+    if_exists: bool,
+) -> Result<bool, String> {
+    let mut seq = wtx.open_table(SEQ)?;
+    if get_field(&seq, scope, name, Field::HighMark)?.is_none() {
+        if if_exists {
+            return Ok(false);
+        }
+        return Err(unknown(name));
+    }
+    for field in SEQUENCE_FIELDS {
+        seq.remove(key(scope, name, field).as_str())
+            .map_err(map_err)?;
+    }
+    Ok(true)
+}
+
+/// Move a sequence to a new name inside `wtx`, keeping its definition and
+/// high mark (a table or column rename moves its serial sequences).
+pub(super) fn rename_in(
+    wtx: &SqlWrite<'_>,
+    scope: &str,
+    from: &str,
+    to: &str,
+) -> Result<(), String> {
+    let mut seq = wtx.open_table(SEQ)?;
+    for field in SEQUENCE_FIELDS {
+        let value = get_field(&seq, scope, from, field)?.ok_or_else(|| unknown(from))?;
+        seq.remove(key(scope, from, field).as_str())
+            .map_err(map_err)?;
+        put_field(&mut seq, scope, to, field, value)?;
+    }
+    Ok(())
+}
+
+/// Allocate `count` consecutive values of sequence `name` inside the caller's
+/// write transaction and return the first. The advance of the high mark commits
+/// or rolls back with the statement, so a refused statement leaves at most a
+/// gap and never a repeated value (MEDULLA-ENGINE-PARITY-R013.2).
+pub(super) fn alloc_in(
+    wtx: &SqlWrite<'_>,
+    scope: &str,
+    name: &str,
+    count: u64,
+) -> Result<i64, String> {
+    let (def, high) = load(wtx, scope, name)?;
+    let span = i64::try_from(count)
+        .ok()
+        .and_then(|count| count.checked_mul(def.increment))
+        .and_then(|span| high.checked_add(span))
+        .ok_or_else(|| format!("{SEQUENCE_REWIND}: sequence `{name}` is exhausted"))?;
+    let mut seq = wtx.open_table(SEQ)?;
+    put_field(&mut seq, scope, name, Field::HighMark, span as u64)?;
+    Ok(high)
+}
+
 impl TableStore {
     /// `CREATE SEQUENCE`. `Ok(false)` is the deterministic `IF NOT EXISTS`
     /// result.
@@ -117,30 +223,7 @@ impl TableStore {
                         def.name
                     ));
                 }
-                let mut seq = wtx.open_table(SEQ)?;
-                if get_field(&seq, &scope, &def.name, Field::HighMark)?.is_some() {
-                    if if_not_exists {
-                        return Ok(false);
-                    }
-                    return Err(format!("sequence `{}` already exists", def.name));
-                }
-                put_field(&mut seq, &scope, &def.name, Field::Start, def.start as u64)?;
-                put_field(
-                    &mut seq,
-                    &scope,
-                    &def.name,
-                    Field::Increment,
-                    def.increment as u64,
-                )?;
-                put_field(&mut seq, &scope, &def.name, Field::Cache, def.cache)?;
-                put_field(
-                    &mut seq,
-                    &scope,
-                    &def.name,
-                    Field::HighMark,
-                    def.start as u64,
-                )?;
-                Ok(true)
+                create_in(wtx, &scope, def, if_not_exists)
             })
     }
 
@@ -148,26 +231,16 @@ impl TableStore {
     pub fn drop_sequence(&self, name: &str, if_exists: bool) -> Result<bool, String> {
         let scope = self.index_scope().to_string();
         let dropped = self.authority.maintain("drop-sequence", name, |wtx| {
-            let mut seq = wtx.open_table(SEQ)?;
-            if get_field(&seq, &scope, name, Field::HighMark)?.is_none() {
-                if if_exists {
-                    return Ok(false);
-                }
-                return Err(unknown(name));
-            }
-            for field in [
-                Field::Start,
-                Field::Increment,
-                Field::Cache,
-                Field::HighMark,
-            ] {
-                seq.remove(key(&scope, name, field).as_str())
-                    .map_err(map_err)?;
-            }
-            Ok(true)
+            drop_in(wtx, &scope, name, if_exists)
         })?;
         self.blocks()?.remove(name);
         Ok(dropped)
+    }
+
+    /// Forget every in-memory block.
+    pub(super) fn forget_all_sequence_blocks(&self) -> Result<(), String> {
+        self.blocks()?.clear();
+        Ok(())
     }
 
     /// The reserved high mark of `name`: the first value never reserved.

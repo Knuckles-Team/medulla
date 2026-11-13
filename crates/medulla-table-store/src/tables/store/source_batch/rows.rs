@@ -3,7 +3,7 @@
 use super::super::row_insert::insert_rows_in;
 use super::super::{
     fill_omitted_insert_cells, get_schema_in, resolve_targets, schema_version_in,
-    validate_column_checks_in, Cell, Column, ColumnType, SqlWrite, TableSchema,
+    validate_column_checks_in, Cell, Column, ColumnType, RowAlloc, SqlWrite, TableSchema,
 };
 use medulla_protocol_types::{
     storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceCell, storage_wire::SqlSourceVector,
@@ -37,7 +37,7 @@ pub(super) fn apply(
         name,
         schema,
         submitted.rows.as_slice(),
-        |schema, row, rowid| build_source_cells(schema, &targets, row.as_slice(), rowid),
+        |schema, row, alloc| build_source_cells(schema, &targets, row.as_slice(), alloc),
         |cells| medulla_storage::encode_bounded(cells, "SQL source row"),
     )?;
     Ok(inserted.len())
@@ -49,7 +49,7 @@ fn build_source_cells(
     schema: &TableSchema,
     targets: &[usize],
     row: &[SqlSourceCell],
-    rowid: u64,
+    alloc: &RowAlloc,
 ) -> Result<Vec<Cell>, String> {
     let width = schema.columns().len();
     let mut cells = vec![Cell::Null; width];
@@ -58,7 +58,7 @@ fn build_source_cells(
         cells[index] = lower_cell(value, &schema.columns()[index])?;
         supplied[index] = true;
     }
-    fill_omitted_insert_cells(schema, &mut cells, &supplied, rowid)?;
+    fill_omitted_insert_cells(schema, &mut cells, &supplied, alloc)?;
     validate_column_checks_in(schema, &cells)?;
     Ok(cells)
 }

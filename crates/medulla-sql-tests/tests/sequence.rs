@@ -5,7 +5,9 @@
 
 use std::path::{Path, PathBuf};
 
+use medulla_sql_lang::sql::classify::{classify, StatementKind};
 use medulla_table_store::tables::TableStore;
+use medulla_tables::schema::{Cell, Column, ColumnType, TableSchema};
 use medulla_tables::sequence::{Sequence, SequenceSource};
 
 fn open(path: &Path) -> TableStore {
@@ -126,4 +128,84 @@ fn unknown_sequence_and_setval_rewind_are_refused() {
     assert!(!store.drop_sequence("s", true).unwrap());
     let error = store.sequence_next("s").unwrap_err();
     assert!(error.starts_with("SEQUENCE_UNKNOWN"), "{error}");
+}
+
+fn orders_schema() -> TableSchema {
+    let mut id = Column::new("id", ColumnType::BigInt, false, true);
+    id.serial = true;
+    TableSchema::new(
+        "orders",
+        vec![id, Column::new("note", ColumnType::Text, true, false)],
+    )
+}
+
+fn insert_notes(store: &TableStore, count: usize) {
+    let rows: Vec<Vec<serde_json::Value>> =
+        (0..count).map(|i| vec![format!("n{i}").into()]).collect();
+    store
+        .insert_rows("orders", &["note".to_string()], &rows)
+        .unwrap();
+}
+
+fn ids(store: &TableStore) -> Vec<i64> {
+    let mut ids: Vec<i64> = store
+        .scan("orders")
+        .unwrap()
+        .iter()
+        .map(|row| match &row[0] {
+            Cell::Int(v) => *v,
+            other => panic!("unexpected id cell {other:?}"),
+        })
+        .collect();
+    ids.sort_unstable();
+    ids
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R013.2
+#[test]
+fn classify_reads_create_and_drop_sequence() {
+    let StatementKind::CreateSequence { def, if_not_exists } =
+        classify("CREATE SEQUENCE IF NOT EXISTS ticket_seq START 100 INCREMENT BY 10 CACHE 8")
+            .unwrap()
+    else {
+        panic!("expected CreateSequence");
+    };
+    assert!(if_not_exists);
+    assert_eq!((def.start, def.increment, def.cache), (100, 10, 8));
+    let StatementKind::DropSequence { name, if_exists } =
+        classify("DROP SEQUENCE ticket_seq").unwrap()
+    else {
+        panic!("expected DropSequence");
+    };
+    assert_eq!((name.as_str(), if_exists), ("ticket_seq", false));
+}
+
+// spec: MEDULLA-ENGINE-PARITY-R013.2
+#[test]
+fn setval_below_high_mark_refuses() {
+    let path = fresh_path("serial");
+    let store = open(&path);
+    store.create_table(&orders_schema(), false).unwrap();
+    // The serial column allocates through `<table>_<column>_seq`.
+    insert_notes(&store, 3);
+    assert_eq!(ids(&store), vec![1, 2, 3]);
+    assert_eq!(store.sequence_high_mark("orders_id_seq").unwrap(), 4);
+    // setval below the high mark refuses; at or above it succeeds.
+    let error = store.sequence_set("orders_id_seq", 3).unwrap_err();
+    assert!(error.starts_with("SEQUENCE_REWIND"), "{error}");
+    assert_eq!(store.sequence_set("orders_id_seq", 20).unwrap(), 20);
+    insert_notes(&store, 1);
+    assert_eq!(ids(&store), vec![1, 2, 3, 21]);
+    // Values never repeat across a restart.
+    drop(store);
+    let store = open(&path);
+    insert_notes(&store, 1);
+    assert_eq!(ids(&store), vec![1, 2, 3, 21, 22]);
+    // An unknown sequence refuses, and dropping the table drops its sequence.
+    let error = store.sequence_next("nope_seq").unwrap_err();
+    assert!(error.starts_with("SEQUENCE_UNKNOWN"), "{error}");
+    store.drop_table("orders", false).unwrap();
+    let error = store.sequence_high_mark("orders_id_seq").unwrap_err();
+    assert!(error.starts_with("SEQUENCE_UNKNOWN"), "{error}");
+    let _ = std::fs::remove_file(&path);
 }

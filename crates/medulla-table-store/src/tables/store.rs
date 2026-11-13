@@ -362,6 +362,16 @@ pub enum TxnOp {
         name: String,
         if_exists: bool,
     },
+    /// `CREATE SEQUENCE` (MEDULLA-ENGINE-PARITY-R013.2).
+    CreateSequence {
+        def: medulla_tables::sequence::Sequence,
+        if_not_exists: bool,
+    },
+    /// `DROP SEQUENCE` (MEDULLA-ENGINE-PARITY-R013.2).
+    DropSequence {
+        name: String,
+        if_exists: bool,
+    },
     CreateFunction {
         function: StoredFunction,
         or_replace: bool,
@@ -772,16 +782,18 @@ impl TableStore {
     pub fn create_table(&self, schema: &TableSchema, if_not_exists: bool) -> Result<bool, String> {
         self.authority
             .maintain("create-table", &schema.name, |wtx| {
-                create_in(wtx, schema, if_not_exists)
+                create_in(wtx, self.index_scope(), schema, if_not_exists)
             })
     }
 
     /// `DROP TABLE`: remove the catalog entry, the sequence, and EVERY row.
     pub fn drop_table(&self, name: &str, if_exists: bool) -> Result<bool, String> {
         self.ensure_legacy_schema_ddl_allowed(name)?;
-        self.authority.maintain("drop-table", name, |wtx| {
+        let dropped = self.authority.maintain("drop-table", name, |wtx| {
             drop_in(wtx, self.index_scope(), name, if_exists)
-        })
+        })?;
+        self.forget_all_sequence_blocks()?;
+        Ok(dropped)
     }
 
     /// `ALTER TABLE ADD COLUMN`: append `column` to the table's schema.
@@ -2107,6 +2119,27 @@ impl TableStore {
             })
     }
 
+    /// A DDL op that drops, renames or recreates a sequence invalidates the
+    /// in-memory blocks of every sequence: the unused part of a block is a gap,
+    /// never a repeated value (MEDULLA-ENGINE-PARITY-R013.2).
+    fn forget_blocks_after_ddl(&self, txn: &TableTxn) -> Result<(), String> {
+        let ddl = txn.ops.iter().any(|op| {
+            matches!(
+                op,
+                TxnOp::CreateSequence { .. }
+                    | TxnOp::DropSequence { .. }
+                    | TxnOp::DropTable { .. }
+                    | TxnOp::DropColumn { .. }
+                    | TxnOp::RenameTable { .. }
+                    | TxnOp::RenameColumn { .. }
+            )
+        });
+        if ddl {
+            self.forget_all_sequence_blocks()?;
+        }
+        Ok(())
+    }
+
     /// Commit a SQL table/catalog transaction together with the universal durable
     /// MutationBatch record, OCC/fence, idempotency result and immutable outbox.
     /// One redb `WriteTransaction` is the only commit point; a retry after an
@@ -2272,6 +2305,7 @@ impl TableStore {
     ) -> Result<MutationBatchCommit, String> {
         let (commit, changes) =
             self.commit_with_changes(txn, batch, committed_at_ms, crashpoint, result_override)?;
+        self.forget_blocks_after_ddl(txn)?;
         self.publish_row_changes(batch, &changes);
         Ok(commit)
     }
@@ -2708,7 +2742,7 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
         TxnOp::CreateTable {
             schema,
             if_not_exists,
-        } => apply_txn_op_create_table(wtx, schema, *if_not_exists),
+        } => apply_txn_op_create_table(wtx, tenant_scope, schema, *if_not_exists),
         TxnOp::DropTable { name, if_exists } => {
             apply_txn_op_drop_table(wtx, tenant_scope, name, *if_exists)
         }
@@ -2764,6 +2798,12 @@ fn apply_txn_op(wtx: &SqlWrite<'_>, tenant_scope: &str, op: &TxnOp) -> Result<us
         } => apply_txn_op_create_extension(wtx, name, *if_not_exists),
         TxnOp::DropExtension { name, if_exists } => {
             apply_txn_op_drop_extension(wtx, name, *if_exists)
+        }
+        TxnOp::CreateSequence { def, if_not_exists } => {
+            apply_txn_op_create_sequence(wtx, tenant_scope, def, *if_not_exists)
+        }
+        TxnOp::DropSequence { name, if_exists } => {
+            apply_txn_op_drop_sequence(wtx, tenant_scope, name, *if_exists)
         }
         TxnOp::CreateFunction {
             function,
@@ -2940,10 +2980,11 @@ fn list_views_in(wtx: &SqlWrite<'_>) -> Result<Vec<(String, String)>, String> {
 
 fn apply_txn_op_create_table(
     wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
     schema: &TableSchema,
     if_not_exists: bool,
 ) -> Result<usize, String> {
-    create_in(wtx, schema, if_not_exists)?;
+    create_in(wtx, tenant_scope, schema, if_not_exists)?;
     Ok(0)
 }
 
@@ -3055,6 +3096,33 @@ fn apply_txn_op_drop_view(
     if_exists: bool,
 ) -> Result<usize, String> {
     drop_view_in(wtx, name, if_exists)?;
+    Ok(0)
+}
+
+fn apply_txn_op_create_sequence(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    def: &medulla_tables::sequence::Sequence,
+    if_not_exists: bool,
+) -> Result<usize, String> {
+    def.validate()?;
+    if get_schema_in(wtx, &def.name)?.is_some() {
+        return Err(format!(
+            "`{}` is a table; cannot create a sequence",
+            def.name
+        ));
+    }
+    sequence::create_in(wtx, tenant_scope, def, if_not_exists)?;
+    Ok(0)
+}
+
+fn apply_txn_op_drop_sequence(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    name: &str,
+    if_exists: bool,
+) -> Result<usize, String> {
+    sequence::drop_in(wtx, tenant_scope, name, if_exists)?;
     Ok(0)
 }
 
@@ -5233,6 +5301,7 @@ fn validate_existing_fk_children_in(
 
 fn create_in(
     wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
     schema: &TableSchema,
     if_not_exists: bool,
 ) -> Result<bool, String> {
@@ -5281,6 +5350,9 @@ fn create_in(
         let mut seq = wtx.open_table(SEQ)?;
         seq.insert(schema.name.as_str(), 0u64).map_err(map_err)?;
     }
+    for column in schema.columns().iter().filter(|c| c.serial) {
+        create_serial_sequence_in(wtx, tenant_scope, &schema.name, &column.name)?;
+    }
     Ok(true)
 }
 
@@ -5298,6 +5370,7 @@ fn drop_in(
     }
     ensure_no_child_fk_references_in(wtx, name)?;
     property_graph_persist::fence_base_relation_ddl_in(wtx, name)?;
+    drop_serial_sequences_in(wtx, tenant_scope, name)?;
     {
         let mut cat = wtx.open_table(CATALOG)?;
         cat.remove(name).map_err(map_err)?;
@@ -5389,6 +5462,9 @@ fn add_column_in(
         ));
     }
     schema.columns_mut().push(column.clone());
+    if column.serial {
+        create_serial_sequence_in(wtx, tenant_scope, table, &column.name)?;
+    }
     put_schema_in(wtx, tenant_scope, &schema)
 }
 
@@ -5570,6 +5646,14 @@ fn drop_column_in(
     }
     ensure_column_free_of_local_fks(&schema, table, column)?;
     ensure_column_free_of_child_fks_in(wtx, table, column)?;
+    if schema.columns()[idx].serial {
+        sequence::drop_in(
+            wtx,
+            tenant_scope,
+            &sequence::serial_sequence_name(table, column),
+            true,
+        )?;
+    }
     schema.columns_mut().remove(idx);
     put_schema_in(wtx, tenant_scope, &schema)?;
     // Splice the dropped cell out of each stored row (rows may be short if written before
@@ -5728,6 +5812,14 @@ fn rename_column_in(
         .ok_or_else(|| format!("column `{from}` does not exist in table `{table}`"))?;
     rename_column_in_child_fks_in(wtx, tenant_scope, table, from, to)?;
     rename_column_in_constraints(&mut schema, table, from, to);
+    if schema.columns()[idx].serial && from != to {
+        sequence::rename_in(
+            wtx,
+            tenant_scope,
+            &sequence::serial_sequence_name(table, from),
+            &sequence::serial_sequence_name(table, to),
+        )?;
+    }
     schema.columns_mut()[idx].name = to.to_string();
     put_schema_in(wtx, tenant_scope, &schema)?;
     rename_hypertable_time_column_in(wtx, table, from, to)
@@ -5786,6 +5878,14 @@ fn rename_table_in(
     rekey_table_catalog_entry_in(wtx, tenant_scope, table, new_name, &mut schema)?;
     // Sequence: carry the rowid allocator forward so SERIAL ids never collide/reuse.
     carry_forward_table_sequence_in(wtx, table, new_name)?;
+    for column in schema.columns().iter().filter(|c| c.serial) {
+        sequence::rename_in(
+            wtx,
+            tenant_scope,
+            &sequence::serial_sequence_name(table, &column.name),
+            &sequence::serial_sequence_name(new_name, &column.name),
+        )?;
+    }
     // Rows: re-key each (table, rowid) -> (new_name, rowid).
     rekey_table_rows_in(wtx, table, new_name)?;
     rename_hypertable_if_present_in(wtx, table, new_name)?;
@@ -6194,7 +6294,76 @@ fn parse_bool_text(s: &str) -> Option<bool> {
     }
 }
 
-/// Read+advance the per-table sequence (the `SERIAL`/rowid allocator) by `count`,
+/// Create the sequence a `SERIAL` column allocates through
+/// (MEDULLA-ENGINE-PARITY-R013.2): `<table>_<column>_seq`, start 1, increment 1.
+fn create_serial_sequence_in(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+    column: &str,
+) -> Result<(), String> {
+    let def = medulla_tables::sequence::Sequence::new(sequence::serial_sequence_name(table, column));
+    sequence::create_in(wtx, tenant_scope, &def, false)?;
+    Ok(())
+}
+
+/// Drop every serial sequence of `table` with the table.
+fn drop_serial_sequences_in(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+) -> Result<(), String> {
+    let schema =
+        get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
+    for column in schema.columns().iter().filter(|c| c.serial) {
+        sequence::drop_in(
+            wtx,
+            tenant_scope,
+            &sequence::serial_sequence_name(table, &column.name),
+            true,
+        )?;
+    }
+    Ok(())
+}
+
+/// One row's allocation: its physical rowid and one value per `SERIAL` column
+/// (column index, value), drawn from that column's sequence in the same write
+/// transaction (MEDULLA-ENGINE-PARITY-R013.2).
+#[derive(Debug, Clone)]
+struct RowAlloc {
+    rowid: u64,
+    serials: Vec<(usize, i64)>,
+}
+
+/// Allocate `count` rows: consecutive rowids plus, for every `SERIAL` column,
+/// `count` values from its sequence. A refused statement rolls the advance back
+/// with the transaction.
+fn alloc_rows(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+    schema: &TableSchema,
+    count: u64,
+) -> Result<Vec<RowAlloc>, String> {
+    let first_rowid = alloc_rowids(wtx, table, count)?;
+    let mut firsts = Vec::new();
+    for (ci, column) in schema.columns().iter().enumerate().filter(|(_, c)| c.serial) {
+        let name = sequence::serial_sequence_name(table, &column.name);
+        let first = sequence::alloc_in(wtx, tenant_scope, &name, count)?;
+        firsts.push((ci, first));
+    }
+    Ok((0..count)
+        .map(|offset| RowAlloc {
+            rowid: first_rowid + offset,
+            serials: firsts
+                .iter()
+                .map(|(ci, first)| (*ci, first + offset as i64))
+                .collect(),
+        })
+        .collect())
+}
+
+/// Read+advance the per-table rowid allocator (the physical row key) by `count`,
 /// returning the FIRST allocated value. The rowids `[first, first+count)` are the new
 /// rows' physical keys; a SERIAL column reads back `rowid + 1` (1-based, never reused).
 fn alloc_rowids(wtx: &SqlWrite<'_>, table: &str, count: u64) -> Result<u64, String> {
@@ -6269,7 +6438,7 @@ fn insert_plain_in(
         table,
         schema,
         rows,
-        |schema, row, rowid| build_insert_cells(schema, col_order, &targets, row, rowid),
+        |schema, row, alloc| build_insert_cells(schema, col_order, &targets, row, alloc),
         |cells| rmp_serde::to_vec_named(cells).map_err(|e| format!("encode row: {e}")),
     )
 }
@@ -6292,7 +6461,7 @@ fn resolve_targets(
 }
 
 /// Build one row's typed, schema-aligned cells: place supplied values, fill omitted
-/// columns (SERIAL → the allocated `rowid+1`; else DEFAULT; else NULL / reject if NOT
+/// columns (SERIAL → its sequence's allocated value; else DEFAULT; else NULL / reject if NOT
 /// NULL), and enforce per-column CHECK constraints. Shared by the plain and ON CONFLICT
 /// insert paths (CONCEPT:MEDULLA-KG.query.delete-returning-sees-row).
 fn build_insert_cells(
@@ -6300,7 +6469,7 @@ fn build_insert_cells(
     col_order: &[String],
     targets: &[usize],
     row: &[Value],
-    rowid: u64,
+    alloc: &RowAlloc,
 ) -> Result<Vec<Cell>, String> {
     let width = schema.columns().len();
     if row.len() != col_order.len() {
@@ -6318,7 +6487,7 @@ fn build_insert_cells(
         cells[idx] = coerce_named(&col.name, val, col.ty, col.nullable)?;
         supplied[idx] = true;
     }
-    fill_omitted_insert_cells(schema, &mut cells, &supplied, rowid)?;
+    fill_omitted_insert_cells(schema, &mut cells, &supplied, alloc)?;
     validate_column_checks_in(schema, &cells)?;
     Ok(cells)
 }
@@ -6330,14 +6499,20 @@ fn fill_omitted_insert_cells(
     schema: &TableSchema,
     cells: &mut [Cell],
     supplied: &[bool],
-    rowid: u64,
+    alloc: &RowAlloc,
 ) -> Result<(), String> {
     for (ci, col) in schema.columns().iter().enumerate() {
         if supplied[ci] {
             continue;
         }
         if col.serial {
-            cells[ci] = Cell::coerce(&Value::Number((rowid as i64 + 1).into()), col.ty, false)?;
+            let value = alloc
+                .serials
+                .iter()
+                .find(|(index, _)| *index == ci)
+                .map(|(_, value)| *value)
+                .ok_or_else(|| format!("serial column `{}` has no allocated value", col.name))?;
+            cells[ci] = Cell::coerce(&Value::Number(value.into()), col.ty, false)?;
         } else if let Some(def) = &col.default {
             validate_mutation_value(def)?;
             cells[ci] = Cell::coerce(def, col.ty, col.nullable)?;
@@ -6382,6 +6557,7 @@ fn insert_on_conflict_in(
     )?;
 
     let spec = ConflictRowSpec {
+        tenant_scope,
         table,
         col_order,
         targets: &ctx.targets,
@@ -6413,6 +6589,7 @@ fn insert_on_conflict_in(
 /// [`insert_on_conflict_in`] and threaded down unchanged -- the same
 /// bundle-the-parameters shape as `medulla_server::mutation::MutationCtx`.
 struct ConflictRowSpec<'a> {
+    tenant_scope: &'a str,
     table: &'a str,
     col_order: &'a [String],
     targets: &'a [usize],
@@ -6808,6 +6985,7 @@ fn apply_conflict_fresh_insert(
     state: &mut ConflictScanState,
 ) -> Result<(u64, Vec<Cell>), String> {
     let ConflictRowSpec {
+        tenant_scope,
         table,
         col_order,
         targets,
@@ -6816,8 +6994,11 @@ fn apply_conflict_fresh_insert(
         composite_cols,
         ..
     } = *spec;
-    let rowid = alloc_rowids(wtx, table, 1)?;
-    let cells = build_insert_cells(schema, col_order, targets, row, rowid)?;
+    let alloc = alloc_rows(wtx, tenant_scope, table, schema, 1)?
+        .pop()
+        .ok_or_else(|| "row allocation produced no row".to_string())?;
+    let rowid = alloc.rowid;
+    let cells = build_insert_cells(schema, col_order, targets, row, &alloc)?;
     write_conflict_row(rows_t, table, rowid, &cells)?;
     state.row_slot.insert(rowid, state.existing.len());
     insert_row_into_conflict_index(rowid, &cells, schema, unique_cols, composite_cols, state);

@@ -592,6 +592,8 @@ fn authorize_table_txn_op(
         | TxnOp::DropView { .. }
         | TxnOp::CreateExtension { .. }
         | TxnOp::DropExtension { .. }
+        | TxnOp::CreateSequence { .. }
+        | TxnOp::DropSequence { .. }
         | TxnOp::CreateFunction { .. }
         | TxnOp::DropFunction { .. } => authority
             .require_admin(
@@ -2138,6 +2140,20 @@ impl WireSession {
                 },
                 WireOutcome::command("DROP EXTENSION"),
             ),
+            StatementKind::CreateSequence { def, if_not_exists } => (
+                TxnOp::CreateSequence {
+                    def: def.clone(),
+                    if_not_exists: *if_not_exists,
+                },
+                WireOutcome::command("CREATE SEQUENCE"),
+            ),
+            StatementKind::DropSequence { name, if_exists } => (
+                TxnOp::DropSequence {
+                    name: name.clone(),
+                    if_exists: *if_exists,
+                },
+                WireOutcome::command("DROP SEQUENCE"),
+            ),
             StatementKind::CreateFunction(plan) => (
                 TxnOp::CreateFunction {
                     function: plan.func.clone(),
@@ -2290,6 +2306,14 @@ impl WireSession {
             }
             StatementKind::DropExtension { name, if_exists } => {
                 self.run_drop_extension(graph, sql, name, if_exists).await
+            }
+            // MEDULLA-ENGINE-PARITY-R013.2 — CREATE/DROP SEQUENCE over the durable allocator.
+            StatementKind::CreateSequence { def, if_not_exists } => {
+                self.run_create_sequence(graph, sql, def, if_not_exists)
+                    .await
+            }
+            StatementKind::DropSequence { name, if_exists } => {
+                self.run_drop_sequence(graph, sql, name, if_exists).await
             }
             // CONCEPT:MEDULLA-KG.query.create-drop-function — CREATE/DROP FUNCTION over the durable function catalog.
             StatementKind::CreateFunction(plan) => self.run_create_function(graph, sql, plan).await,
@@ -3231,6 +3255,34 @@ impl WireSession {
         });
         self.commit_table_txn(graph, sql, txn).await?;
         Ok(WireOutcome::command("CREATE EXTENSION"))
+    }
+
+    /// MEDULLA-ENGINE-PARITY-R013.2 — `CREATE SEQUENCE [IF NOT EXISTS] name …`.
+    async fn run_create_sequence(
+        &self,
+        graph: &str,
+        sql: &str,
+        def: medulla_tables::sequence::Sequence,
+        if_not_exists: bool,
+    ) -> WireResult<WireOutcome> {
+        let mut txn = TableTxn::new();
+        txn.push(TxnOp::CreateSequence { def, if_not_exists });
+        self.commit_table_txn(graph, sql, txn).await?;
+        Ok(WireOutcome::command("CREATE SEQUENCE"))
+    }
+
+    /// MEDULLA-ENGINE-PARITY-R013.2 — `DROP SEQUENCE [IF EXISTS] name`.
+    async fn run_drop_sequence(
+        &self,
+        graph: &str,
+        sql: &str,
+        name: String,
+        if_exists: bool,
+    ) -> WireResult<WireOutcome> {
+        let mut txn = TableTxn::new();
+        txn.push(TxnOp::DropSequence { name, if_exists });
+        self.commit_table_txn(graph, sql, txn).await?;
+        Ok(WireOutcome::command("DROP SEQUENCE"))
     }
 
     /// CONCEPT:MEDULLA-KG.query.create-drop-extension-over — `DROP EXTENSION [IF EXISTS] name`.

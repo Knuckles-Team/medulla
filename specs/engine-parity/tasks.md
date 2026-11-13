@@ -39,7 +39,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T033 [US3] MEDULLA-ENGINE-PARITY-R012.2 Triggers as statechart rules: wiring and refusal
 - [ ] T034 [P] [US3] MEDULLA-ENGINE-PARITY-R012.3 Triggers as statechart rules: hot-path proof
 - [ ] T035 [US3] MEDULLA-ENGINE-PARITY-R013.1 Named sequences: model and behavior
-- [ ] T036 [US3] MEDULLA-ENGINE-PARITY-R013.2 Named sequences: wiring and refusal
+- [x] T036 [US3] MEDULLA-ENGINE-PARITY-R013.2 Named sequences: wiring and refusal
 - [ ] T037 [P] [US3] MEDULLA-ENGINE-PARITY-R013.3 Named sequences: hot-path proof
 - [ ] T038 [US3] MEDULLA-ENGINE-PARITY-R014.1 Views and materialized views over tables: model and behavior
 - [ ] T039 [US3] MEDULLA-ENGINE-PARITY-R014.2 Views and materialized views over tables: wiring and refusal

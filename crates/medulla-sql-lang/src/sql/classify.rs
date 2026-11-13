@@ -191,6 +191,15 @@ pub enum StatementKind {
     /// `DROP EXTENSION [IF EXISTS] name [CASCADE|RESTRICT]` — remove a catalog entry.
     DropExtension { name: String, if_exists: bool },
 
+    // ── named sequences (MEDULLA-ENGINE-PARITY-R013.2) ────────────────────────
+    /// `CREATE SEQUENCE [IF NOT EXISTS] name [START n] [INCREMENT n] [CACHE n]`.
+    CreateSequence {
+        def: medulla_tables::sequence::Sequence,
+        if_not_exists: bool,
+    },
+    /// `DROP SEQUENCE [IF EXISTS] name`.
+    DropSequence { name: String, if_exists: bool },
+
     // ── Postgres-family extension parity (wave 19) ─────────────────────────────
     /// `CREATE INDEX … USING hnsw|ivfflat (col opclass)` (CONCEPT:MEDULLA-KG.query.real-ann-top-k) — register a
     /// pgvector ANN index so a `ORDER BY col <-> $1 LIMIT k` query pushes down to medulla-ann.
@@ -248,6 +257,8 @@ impl StatementKind {
         "copy_out",
         "create_extension",
         "drop_extension",
+        "create_sequence",
+        "drop_sequence",
         "create_ann_index",
         "create_index",
         "drop_index",
@@ -287,6 +298,8 @@ impl StatementKind {
             Self::CopyOut(_) => "copy_out",
             Self::CreateExtension { .. } => "create_extension",
             Self::DropExtension { .. } => "drop_extension",
+            Self::CreateSequence { .. } => "create_sequence",
+            Self::DropSequence { .. } => "drop_sequence",
             Self::CreateAnnIndex(_) => "create_ann_index",
             Self::CreateIndex(_) => "create_index",
             Self::DropIndex { .. } => "drop_index",
@@ -737,10 +750,13 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     // `ObjectType::Extension`), so recognize it textually and route it to the extension
     // catalog. SQL/PGQ shares this existing first precheck branch, preserving the
     // dispatcher's measured complexity.
-    if let Some(result) = classify_pgq_precheck(sql).or_else(|| {
-        parse_drop_extension(sql)
-            .map(|(name, if_exists)| Ok(StatementKind::DropExtension { name, if_exists }))
-    }) {
+    if let Some(result) = classify_pgq_precheck(sql)
+        .or_else(|| classify_sequence_precheck(sql))
+        .or_else(|| {
+            parse_drop_extension(sql)
+                .map(|(name, if_exists)| Ok(StatementKind::DropExtension { name, if_exists }))
+        })
+    {
         return Some(result);
     }
     // CONCEPT:MEDULLA-KG.query.create-drop-function — `CREATE [OR REPLACE] FUNCTION … LANGUAGE sql` and `DROP FUNCTION`.
@@ -774,6 +790,19 @@ fn classify_textual_precheck(sql: &str) -> Option<Result<StatementKind, String>>
     super::pgfamily::parse_continuous_aggregate(sql)
         .map(StatementKind::CreateContinuousAggregate)
         .map(Ok)
+}
+
+/// `CREATE SEQUENCE` and `DROP SEQUENCE` (MEDULLA-ENGINE-PARITY-R013.2).
+fn classify_sequence_precheck(sql: &str) -> Option<Result<StatementKind, String>> {
+    if let Some(parsed) = super::sequence_ddl::parse_create_sequence(sql) {
+        return Some(parsed.map(|(def, if_not_exists)| StatementKind::CreateSequence {
+            def,
+            if_not_exists,
+        }));
+    }
+    super::sequence_ddl::parse_drop_sequence(sql).map(|parsed| {
+        parsed.map(|(name, if_exists)| StatementKind::DropSequence { name, if_exists })
+    })
 }
 
 fn classify_pgq_precheck(sql: &str) -> Option<Result<StatementKind, String>> {

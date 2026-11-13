@@ -107,6 +107,8 @@ pub const SERVED_STATEMENT_FORMS: &[(&str, SqlFormState)] = &[
     ("copy_out", SqlFormState::Supported),
     ("create_extension", SqlFormState::Partial),
     ("drop_extension", SqlFormState::Partial),
+    ("create_sequence", SqlFormState::Supported),
+    ("drop_sequence", SqlFormState::Supported),
     ("create_ann_index", SqlFormState::Supported),
     ("create_index", SqlFormState::Supported),
     ("drop_index", SqlFormState::Supported),
