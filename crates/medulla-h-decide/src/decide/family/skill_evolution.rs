@@ -13,6 +13,16 @@
 //!   embeddings the engine reads through the caller's graph access
 //!   (`with_skill_embeddings`) from the graph named by `skill_embedding_graph`.
 //!
+//! * a named pair (`pair_a`, `pair_b`) narrows the merge proposals to that
+//!   pair and is refused with `MERGE_PAIR_NOT_VISIBLE` when either skill is not
+//!   visible to the tenant (the same refusal as an absent skill) or with
+//!   `MERGE_CLASS_MISMATCH` when their side-effect classes differ
+//!   (MEDULLA-DECISION-ENGINE-R703.4);
+//! * `candidate_traces` maps each requested skill, used term or skill id to the
+//!   run-trace ids it was read from; every candidate cites them in a `Claim`
+//!   premise and each cited library row adds a `Definition` premise bound to
+//!   its publisher (MEDULLA-DECISION-ENGINE-R703.5).
+//!
 //! The answer is `Advisory` (options `gap:<id>`, `neologism:<term>`,
 //! `merge:<a>+<b>`) and writes nothing; publishing a change uses the guarded
 //! promotion.
@@ -26,9 +36,11 @@ use medulla_decision_stats::decision::skill_evolution::{
     merge_candidates, MergeParams, SkillEntry,
 };
 use medulla_decision_types::decision::knob_families::skill::{integer, NEOLOGISM_MIN_USES};
+use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::skill_evolution::{
-    SkillGap, SkillMergeCandidate, SkillNeologism, PARAM_EMBEDDING_GRAPH, PARAM_REQUESTED_SKILLS,
-    PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
+    SkillGap, SkillMergeCandidate, SkillNeologism, MAX_MERGE_EVIDENCE, MERGE_CLASS_MISMATCH,
+    MERGE_PAIR_NOT_VISIBLE, PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A,
+    PARAM_PAIR_B, PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
 };
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, TypedParam, TypedValue,
@@ -153,6 +165,82 @@ fn skill_entry(entry: &AgentComponentEntry, embeddings: &BTreeMap<String, Vec<i3
     }
 }
 
+/// A refusal as the wire error: `PARAMETER_INVALID` naming the registered code.
+fn refused(code: RefusalCode, detail: &str) -> String {
+    invalid(format!("{}: {detail}", code.as_str()))
+}
+
+/// The named pair of a question, when it names one. Both ids or neither.
+fn named_pair(request: &DecideRequest) -> Result<Option<(String, String)>, String> {
+    let a = text_param(request, PARAM_PAIR_A)?;
+    let b = text_param(request, PARAM_PAIR_B)?;
+    match (a, b) {
+        (None, None) => Ok(None),
+        (Some(a), Some(b)) if a != b && !a.trim().is_empty() && !b.trim().is_empty() => {
+            Ok(Some((a.to_string(), b.to_string())))
+        }
+        _ => Err(invalid(format!(
+            "parameters {PARAM_PAIR_A} and {PARAM_PAIR_B} name two different skills together"
+        ))),
+    }
+}
+
+/// Refuse a named pair that is not visible or that spans two side-effect
+/// classes. Visibility is checked first and answers alike for an absent skill.
+fn check_pair(entries: &[AgentComponentEntry], a: &str, b: &str) -> Result<(), String> {
+    let find = |id: &str| entries.iter().find(|e| e.component_id == id);
+    let (Some(first), Some(second)) = (find(a), find(b)) else {
+        return Err(refused(
+            MERGE_PAIR_NOT_VISIBLE,
+            "the named pair is not visible to this tenant",
+        ));
+    };
+    if first.side_effect_class() != second.side_effect_class() {
+        return Err(refused(
+            MERGE_CLASS_MISMATCH,
+            "the named skills differ in side-effect class",
+        ));
+    }
+    Ok(())
+}
+
+/// The run-trace ids the caller read each requested skill, term or skill from.
+fn candidate_traces(request: &DecideRequest) -> Result<BTreeMap<String, Vec<String>>, String> {
+    match param(request, PARAM_CANDIDATE_TRACES)? {
+        None => Ok(BTreeMap::new()),
+        Some(TypedValue::Text(text)) => serde_json::from_str(text)
+            .map_err(|e| invalid(format!("parameter {PARAM_CANDIDATE_TRACES}: {e}"))),
+        Some(_) => Err(invalid(format!(
+            "parameter {PARAM_CANDIDATE_TRACES} is not JSON text"
+        ))),
+    }
+}
+
+/// The distinct trace ids cited for `keys`, in first-seen order, at most
+/// `MAX_MERGE_EVIDENCE`.
+fn cited_traces(traces: &BTreeMap<String, Vec<String>>, keys: &[&str]) -> Vec<String> {
+    let mut cited: Vec<String> = Vec::new();
+    for key in keys {
+        for id in traces.get(*key).into_iter().flatten() {
+            if !cited.contains(id) && cited.len() < MAX_MERGE_EVIDENCE {
+                cited.push(id.clone());
+            }
+        }
+    }
+    cited
+}
+
+/// The `Claim` premise of one candidate: its option id and the run traces it
+/// rests on.
+fn candidate_premise(option_id: &str, cited: &[String]) -> FamilyPremise {
+    FamilyPremise {
+        subject: "skill_evolution",
+        fact: format!("candidate:{option_id}:traces={}", cited.join(",")),
+        class: PremiseClass::Claim,
+        source: FamilyPremiseSource::Request(PARAM_CANDIDATE_TRACES),
+    }
+}
+
 /// The Q32 score of an overlap in parts per million.
 fn overlap_q32(overlap_ppm: u32) -> i64 {
     i64::from(overlap_ppm) * FULL_SCORE / PPM
@@ -180,7 +268,12 @@ fn evolve(
             )))
         }
     };
+    let traces = candidate_traces(request)?;
+    let pair = named_pair(request)?;
     let read = library_candidates(ctx.store, ctx.tenant_id, scope)?;
+    if let Some((a, b)) = &pair {
+        check_pair(&read.entries, a, b)?;
+    }
     let visible: BTreeSet<&str> = read
         .entries
         .iter()
@@ -193,13 +286,20 @@ fn evolve(
         .collect();
     let gaps = gaps(requested, &visible);
     let neologisms = neologisms(used, integer(policy, &NEOLOGISM_MIN_USES));
-    let merges: Vec<SkillMergeCandidate> =
+    let mut merges: Vec<SkillMergeCandidate> =
         merge_candidates(&skills, &MergeParams::from_policy(policy)).candidates;
+    if let Some((a, b)) = &pair {
+        merges.retain(|m| (&m.a == a && &m.b == b) || (&m.a == b && &m.b == a));
+    }
 
     let mut options: Vec<(String, i64)> = Vec::new();
     let mut premises: Vec<FamilyPremise> = Vec::new();
+    let mut cited_rows: BTreeSet<String> = BTreeSet::new();
     for gap in &gaps {
-        options.push((format!("gap:{}", gap.skill_id), FULL_SCORE));
+        let option_id = format!("gap:{}", gap.skill_id);
+        let cited = cited_traces(&traces, &[gap.skill_id.as_str()]);
+        premises.push(candidate_premise(&option_id, &cited));
+        options.push((option_id, FULL_SCORE));
         premises.push(FamilyPremise {
             subject: "skill_evolution",
             fact: format!("gap:{}:{}", gap.skill_id, gap.requested_by_runs),
@@ -208,7 +308,10 @@ fn evolve(
         });
     }
     for neologism in &neologisms {
-        options.push((format!("neologism:{}", neologism.term), FULL_SCORE));
+        let option_id = format!("neologism:{}", neologism.term);
+        let cited = cited_traces(&traces, &[neologism.term.as_str()]);
+        premises.push(candidate_premise(&option_id, &cited));
+        options.push((option_id, FULL_SCORE));
         let iri = match resolver_rejects(&neologism.term) {
             Some(AbstainReason::UnresolvedCapabilityIri { iri }) => iri,
             _ => neologism.term.clone(),
@@ -221,22 +324,22 @@ fn evolve(
         });
     }
     for merge in &merges {
-        options.push((
-            format!("merge:{}+{}", merge.a, merge.b),
-            overlap_q32(merge.overlap_ppm),
-        ));
+        let option_id = format!("merge:{}+{}", merge.a, merge.b);
+        let cited = cited_traces(&traces, &[merge.a.as_str(), merge.b.as_str()]);
+        premises.push(candidate_premise(&option_id, &cited));
+        options.push((option_id, overlap_q32(merge.overlap_ppm)));
         for id in [&merge.a, &merge.b] {
+            if !cited_rows.insert(id.clone()) {
+                continue;
+            }
             if let Some(entry) = read.entries.iter().find(|e| &e.component_id == id) {
                 premises.push(FamilyPremise {
                     subject: "skill_evolution",
-                    fact: format!(
-                        "merge:{}+{}:overlap={}:cosine={}",
-                        merge.a, merge.b, merge.overlap_ppm, merge.cosine_ppm
-                    ),
-                    class: PremiseClass::Observation,
+                    fact: format!("library:{}", entry.component_id),
+                    class: PremiseClass::Definition,
                     source: FamilyPremiseSource::Publisher {
                         component_id: entry.component_id.clone(),
-                        definition_digest: entry.content_digest.clone(),
+                        definition_digest: entry.definition_digest.clone(),
                     },
                 });
             }

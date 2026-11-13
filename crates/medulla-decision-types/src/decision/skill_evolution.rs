@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
+use super::record::outcome::RefusalCode;
+
 /// Most rollouts one set may carry.
 pub const MAX_ROLLOUTS: usize = 4096;
 /// Most run-trace and library ids one merge candidate may cite.
@@ -34,6 +36,25 @@ pub const PARAM_EMBEDDING_GRAPH: &str = "skill_embedding_graph";
 /// from skill id to its stored embedding, read through the caller's graph
 /// access. A request that carries it is refused as a duplicate.
 pub const PARAM_SKILL_EMBEDDINGS: &str = "skill_embeddings";
+/// The optional text parameter naming one pair of skills, first id
+/// (MEDULLA-DECISION-ENGINE-R703.4). It is given together with
+/// [`PARAM_PAIR_B`]; the merge proposals then concern that pair only.
+pub const PARAM_PAIR_A: &str = "pair_a";
+/// The second skill of the named pair.
+pub const PARAM_PAIR_B: &str = "pair_b";
+/// The optional JSON text parameter that maps a requested skill id, a used
+/// term or a skill id to the run-trace ids the caller read it from
+/// (MEDULLA-DECISION-ENGINE-R703.5). Every candidate cites the traces it rests
+/// on in its sealed premise.
+pub const PARAM_CANDIDATE_TRACES: &str = "candidate_traces";
+/// A named pair whose skills differ in side-effect class: two skills of
+/// different classes never merge (MEDULLA-DECISION-ENGINE-R703.4).
+pub const MERGE_CLASS_MISMATCH: RefusalCode = RefusalCode::new("MERGE_CLASS_MISMATCH");
+/// A named pair of which a skill is not visible to the tenant. The refusal is
+/// the same for an absent skill, so it never confirms that one exists.
+pub const MERGE_PAIR_NOT_VISIBLE: RefusalCode = RefusalCode::new("MERGE_PAIR_NOT_VISIBLE");
+/// The `SkillEvolution` family's refusal table.
+pub const REFUSALS: &[RefusalCode] = &[MERGE_CLASS_MISMATCH, MERGE_PAIR_NOT_VISIBLE];
 /// Format identity of a [`RolloutSet`].
 pub const ROLLOUT_SET_SCHEMA_VERSION: u16 = 1;
 

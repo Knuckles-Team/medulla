@@ -7,8 +7,10 @@
 
 use super::*;
 use medulla_decision_types::decision::skill_evolution::{
-    PARAM_EMBEDDING_GRAPH, PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
+    PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A, PARAM_PAIR_B,
+    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
 };
+use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 const OTHER_TENANT: &str = "tenant-other";
@@ -19,6 +21,23 @@ fn publish_skill(h: &Harness, tenant: &str, id: &str, capabilities: &[&str]) {
     draft.kind = AgentComponentKind::Skill;
     draft.declared_capabilities = capabilities.iter().map(|c| (*c).to_string()).collect();
     h.commit_in(tenant, draft, None).unwrap();
+}
+
+/// Publish a skill classified under the action root, so its side-effect class
+/// differs from a plain skill's.
+fn publish_acting_skill(h: &Harness, tenant: &str, id: &str, capabilities: &[&str]) {
+    let mut draft = test_component_draft(tenant, id);
+    draft.kind = AgentComponentKind::Skill;
+    draft.declared_capabilities = capabilities.iter().map(|c| (*c).to_string()).collect();
+    draft.classification = vec!["eg:capability/action".to_string()];
+    h.commit_in(tenant, draft, None).unwrap();
+}
+
+fn text(name: &str, value: &str) -> TypedParam {
+    TypedParam {
+        name: name.to_string(),
+        value: TypedValue::Text(value.to_string()),
+    }
 }
 
 fn list(values: &[&str]) -> TypedValue {
@@ -174,4 +193,150 @@ async fn decide_routes_skill_evolution() {
     assert!(seen.iter().any(|(id, _)| id == "gap:skill-missing"));
     assert!(seen.iter().all(|(id, _)| id != "gap:skill-x"));
     assert!(seen.iter().all(|(id, _)| !id.starts_with("merge:")));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R703.4
+#[tokio::test]
+async fn merge_pair_refusals() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    publish_skill(&h, TENANT, "skill-a", &["cap-1", "cap-2", "cap-3"]);
+    publish_skill(&h, TENANT, "skill-b", &["cap-1", "cap-2", "cap-3", "cap-4"]);
+    publish_acting_skill(&h, TENANT, "skill-w", &["cap-1", "cap-2", "cap-3"]);
+    publish_skill(&h, OTHER_TENANT, "skill-x", &["cap-1", "cap-2", "cap-3"]);
+    let revisions = |id: &str| h.store.revisions(TENANT, id).unwrap().len();
+    let before = ["skill-a", "skill-b", "skill-w"].map(revisions);
+
+    let pair = |a: &str, b: &str| vec![text(PARAM_PAIR_A, a), text(PARAM_PAIR_B, b)];
+    let refusal = |a: &str, b: &str| {
+        let request = evolution_request(&schema, TENANT, pair(a, b));
+        decide(&h, request)
+    };
+
+    // Two skills of different side-effect classes never merge.
+    let mismatch = refusal("skill-a", "skill-w").await.unwrap_err();
+    assert!(mismatch.contains("MERGE_CLASS_MISMATCH"), "{mismatch}");
+
+    // A skill of another tenant and a skill nobody published refuse alike, so
+    // the refusal never confirms that a skill exists.
+    let foreign = refusal("skill-a", "skill-x").await.unwrap_err();
+    let absent = refusal("skill-a", "skill-nowhere").await.unwrap_err();
+    assert!(foreign.contains("MERGE_PAIR_NOT_VISIBLE"), "{foreign}");
+    assert_eq!(foreign, absent);
+    // An invisible skill is judged before any class comparison.
+    let both = refusal("skill-w", "skill-x").await.unwrap_err();
+    assert!(both.contains("MERGE_PAIR_NOT_VISIBLE"), "{both}");
+
+    // One id alone, or the same id twice, is not a pair.
+    let lone = decide(
+        &h,
+        evolution_request(&schema, TENANT, vec![text(PARAM_PAIR_A, "skill-a")]),
+    )
+    .await
+    .unwrap_err();
+    assert!(lone.contains("PARAMETER_INVALID"), "{lone}");
+    assert!(refusal("skill-a", "skill-a").await.is_err());
+
+    // A valid pair is answered, and no candidate mutated the library.
+    assert!(refusal("skill-a", "skill-b").await.is_ok());
+    assert_eq!(["skill-a", "skill-b", "skill-w"].map(revisions), before);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R703.5
+#[tokio::test]
+async fn candidate_cites_traces_and_library_rows() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    let a = h
+        .commit_in(
+            TENANT,
+            skill_draft(TENANT, "skill-a", &["cap-1", "cap-2", "cap-3"]),
+            None,
+        )
+        .unwrap();
+    let b = h
+        .commit_in(
+            TENANT,
+            skill_draft(TENANT, "skill-b", &["cap-1", "cap-2", "cap-3", "cap-4"]),
+            None,
+        )
+        .unwrap();
+    super::learning_tests::graph_with(
+        &h,
+        VECTORS,
+        "m1",
+        3,
+        vec![
+            ("skill-a".to_string(), vec![1.0, 0.0, 0.0]),
+            ("skill-b".to_string(), vec![0.99, 0.1, 0.0]),
+        ],
+    )
+    .await;
+    let traces = r#"{"skill-missing":["trace-1","trace-2"],"frobnicate":["trace-3"],"skill-a":["trace-4"],"skill-b":["trace-4","trace-5"]}"#;
+    let batch = decide(
+        &h,
+        evolution_request(
+            &schema,
+            TENANT,
+            vec![
+                embedding_graph_param(),
+                text(PARAM_CANDIDATE_TRACES, traces),
+            ],
+        ),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let fact = |name: &str| {
+        record
+            .premises
+            .iter()
+            .find(|p| p.fact.starts_with(name))
+            .unwrap_or_else(|| panic!("no premise {name}: {:?}", record.premises))
+    };
+
+    // Every candidate cites the run traces it rests on, as a claim.
+    for (name, cited) in [
+        ("candidate:gap:skill-missing:", "trace-1,trace-2"),
+        ("candidate:neologism:frobnicate:", "trace-3"),
+        ("candidate:merge:skill-a+skill-b:", "trace-4,trace-5"),
+    ] {
+        let premise = fact(name);
+        assert_eq!(premise.fact, format!("{name}traces={cited}"));
+        assert_eq!(premise.class, PremiseClass::Claim);
+    }
+    // Every cited library row is a definition bound to its publisher.
+    for (id, dependency) in [("skill-a", &a), ("skill-b", &b)] {
+        let premise = fact(&format!("library:{id}"));
+        assert_eq!(premise.class, PremiseClass::Definition);
+        assert_eq!(
+            premise.provenance,
+            PremiseProvenance::Publisher {
+                component_id: id.to_string(),
+                definition_digest: dependency.definition_digest.clone(),
+            }
+        );
+    }
+    // The weakest class is claim: the answer is advisory.
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+
+    // The trace map is typed: text that is not a trace map is refused.
+    let bad = decide(
+        &h,
+        evolution_request(&schema, TENANT, vec![text(PARAM_CANDIDATE_TRACES, "[1]")]),
+    )
+    .await
+    .unwrap_err();
+    assert!(bad.contains("PARAMETER_INVALID"), "{bad}");
+}
+
+fn skill_draft(
+    tenant: &str,
+    id: &str,
+    capabilities: &[&str],
+) -> medulla_agent_types::agent_component::AgentComponentDraft {
+    let mut draft = test_component_draft(tenant, id);
+    draft.kind = AgentComponentKind::Skill;
+    draft.declared_capabilities = capabilities.iter().map(|c| (*c).to_string()).collect();
+    draft
 }

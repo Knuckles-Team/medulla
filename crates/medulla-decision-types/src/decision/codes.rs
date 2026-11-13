@@ -525,6 +525,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::BranchOutcome, super::branch_fusion::REFUSALS),
     (QuestionKind::AutonomyVerdict, super::autonomy::REFUSALS),
     (
+        QuestionKind::SkillEvolution,
+        super::skill_evolution::REFUSALS,
+    ),
+    (
         QuestionKind::FanoutAggregate,
         super::task_plan::fanout::REFUSALS,
     ),
