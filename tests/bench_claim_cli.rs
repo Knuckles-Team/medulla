@@ -158,3 +158,65 @@ fn each_missing_or_invalid_field_is_refused_with_its_code() {
         );
     }
 }
+
+// The wire benchmark's receipt writer and summary, included from the bench tree
+// so the benchmark and this proof share one definition.
+#[allow(dead_code)]
+#[path = "../benches/common/claim.rs"]
+mod claim;
+#[allow(dead_code)]
+#[path = "../benches/common/wire_receipt.rs"]
+mod wire_receipt;
+
+// spec: MEDULLA-DURABLE-KERNEL-R042.5
+#[test]
+fn one_receipt_per_protocol_with_session_count() {
+    use wire_receipt::{write_wire_receipts, WireCase};
+
+    let case = |protocol: &'static str, budget: f64, base: f64| WireCase {
+        protocol,
+        operation: "point read",
+        sessions: 64,
+        p99_budget_ms: budget,
+        // 100 ascending samples: p50 is sample 50, p99 is sample 99.
+        samples_ms: (1..=100).map(|i| base * i as f64 / 100.0).collect(),
+    };
+    let cases = [
+        case("pgwire", 2.0, 1.0),
+        case("bolt", 3.0, 1.0),
+        case("resp", 1.0, 1.0),
+        case("s3", 10.0, 20.0),
+    ];
+    let root = tempfile::tempdir().unwrap();
+    let paths = write_wire_receipts(root.path(), "3.3.0", &cases).expect("write receipts");
+    assert_eq!(paths.len(), 4, "one receipt per protocol");
+
+    for (path, name) in paths.iter().zip(["pgwire", "bolt", "resp", "s3"]) {
+        assert_eq!(
+            path,
+            &root.path().join("3.3.0").join(format!("{name}.json"))
+        );
+        let receipt: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        assert_eq!(receipt["case"], name);
+        assert_eq!(
+            receipt["session_count"], 64,
+            "{name} records the session count"
+        );
+        assert!(receipt["p50_ms"].is_f64() && receipt["p99_ms"].is_f64());
+        assert!(receipt["p50_ms"].as_f64() <= receipt["p99_ms"].as_f64());
+    }
+    // The s3 case misses its 10 ms budget and says so; the others hold.
+    let verdicts: Vec<bool> = cases.iter().map(WireCase::within_budget).collect();
+    assert_eq!(verdicts, vec![true, true, true, false]);
+
+    // A receipt path segment that would leave the root is refused.
+    assert!(claim::write_receipt(root.path(), "..", "x", &serde_json::json!({})).is_err());
+    assert!(claim::write_receipt(root.path(), "3.3.0", "a/b", &serde_json::json!({})).is_err());
+    // A case with no samples never reports a held budget.
+    let empty = WireCase {
+        samples_ms: vec![],
+        ..case("pgwire", 2.0, 1.0)
+    };
+    assert!(!empty.within_budget());
+}

@@ -2013,6 +2013,13 @@ name = "attached_mysql_served"
 path = "tests/attached_mysql_served.rs"
 required-features = ["federation-sql"]
 
+# Wire protocol latency at 64 concurrent sessions (MEDULLA-DURABLE-KERNEL-R042.5): nightly budget.
+[[bench]]
+name = "wire_protocols"
+path = "benches/wire_protocols.rs"
+harness = false
+required-features = ["pgwire", "bolt-wire", "redis-wire", "s3-api"]
+
 # Engine parity write workloads W1 to W5 (MEDULLA-ENGINE-PARITY-R005.1): nightly suite.
 [[bench]]
 name = "engine_parity"
