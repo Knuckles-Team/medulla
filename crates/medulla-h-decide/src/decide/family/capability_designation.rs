@@ -42,7 +42,7 @@ use medulla_types::contract::{BoundedVec, OpaqueId, ResourceId};
 use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_designation::{coded, question_of, DesignationRuntime};
-use crate::decide::stat_executor::{FamilyExecuted, Executed, ExecutionContext};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;
 
 use super::DecisionFamily;

@@ -34,7 +34,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, TenantId};
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
-use crate::decide::stat_executor::{FamilyExecuted, Executed, ExecutionContext};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_load_set::question_of;
 use crate::decide::stat_support::invalid_parameter;
 

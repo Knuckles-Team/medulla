@@ -30,7 +30,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, OpaqueId, TenantId};
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
-use crate::decide::stat_executor::{FamilyExecuted, Executed, ExecutionContext};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;
 use crate::decide::stat_usage_guidance::{
     question_of, step_tool, Fact, PackFacts, StepFact, ToolFact, UsageGuidanceRead,

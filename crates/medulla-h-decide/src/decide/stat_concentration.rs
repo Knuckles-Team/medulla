@@ -25,7 +25,7 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
-use super::stat_executor::{FamilyExecuted, Executed};
+use super::stat_executor::{Executed, FamilyExecuted};
 use super::stat_support::{filtered_view, invalid_parameter};
 
 const PARAM_GRAPH: &str = "graph";
