@@ -64,6 +64,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `failure.context_steps` | u64 | 2 | [0, 8] | steps | Tunable | `MEDULLA_FAILURE_CONTEXT_STEPS` |
 | `failure.min_count` | u64 | 3 | [2, 1000] | records | Tunable | `MEDULLA_FAILURE_MIN_COUNT` |
 | `usage.min_trials` | u64 | 5 | [1, 1000] | outcomes | Tunable | `MEDULLA_USAGE_MIN_TRIALS` |
+| `research.node_budget` | u64 | 1000 | [10, 100000] | nodes | Tunable | `MEDULLA_RESEARCH_NODE_BUDGET` |
+| `research.depth_limit` | u64 | 3 | [1, 10] | links | Tunable | `MEDULLA_RESEARCH_DEPTH_LIMIT` |
+| `research.value_floor_micro` | u64 | 0 | [0, 1000000] | micro-units | Tunable | `MEDULLA_RESEARCH_VALUE_FLOOR_MICRO` |
 
 ## Wire shape
 

@@ -177,3 +177,5 @@ Scoped adapter wiring (R174.7.3, R174.7.4): `stat_adapter.rs` fits graph-scope r
 
 Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualified_index` checks the receipt for a cycle's `index_adapter`, `stat_learning::prepare` decodes the kernel and gives the cycle a `NoEndpoint` embedder and a CPU lease, and `stat_generation_cycle::materialize_batch` applies the kernel to stored vectors batch by batch under the same checkpoint and state machine as a re-embed.
 Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
+
+Research frontier (R705.2): `expand_frontier` in `medulla-decision-stats` is a binary-heap walk over caller-supplied source nodes (Q32 expected value, id tie-break); the family `research_voi` (R705.3) supplies the nodes from the graph and reads `research.*` knobs through the registry.

@@ -352,6 +352,12 @@ knobs! {
     failure_min_count: u64 = "failure.min_count", U64(3), [2, 1_000], "records", Tunable;
     /// Fewest outcomes a tool needs before its success rate orders usage guidance steps (MEDULLA-DECISION-ENGINE-R177.2).
     usage_min_trials: u64 = "usage.min_trials", U64(5), [1, 1_000], "outcomes", Tunable;
+    /// Most sources a research citation walk reads (MEDULLA-DECISION-ENGINE-R705.2).
+    research_node_budget: u64 = "research.node_budget", U64(1_000), [10, 100_000], "nodes", Tunable;
+    /// Most citation links a research walk follows from a seed.
+    research_depth_limit: u64 = "research.depth_limit", U64(3), [1, 10], "links", Tunable;
+    /// A research walk stops when the best expected value is at or below this.
+    research_value_floor_micro: u64 = "research.value_floor_micro", U64(0), [0, 1_000_000], "micro-units", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.
