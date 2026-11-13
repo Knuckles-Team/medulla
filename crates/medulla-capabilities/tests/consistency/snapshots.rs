@@ -51,6 +51,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "WorkOfferPut",
     "RetireSealedRecord",
     "ClaimNext",
+    "Batch",
     "DecisionCommit",
     "ClaimWorkItem",
     "KgDelegate",
@@ -299,6 +300,7 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     // `durable_apply::apply_argument_map`.
     "ArgumentMapPut",
     "ClaimNext",
+    "Batch",
     "ClaimWorkItem",
     "ClearGraph",
     "CompareAndSetNodeFields",
@@ -557,6 +559,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "WorkOfferPut",
     "RetireSealedRecord",
     "ClaimNext",
+    "Batch",
     "ClaimWorkItem",
     "KgDelegate",
     "SubmitWorkItem",

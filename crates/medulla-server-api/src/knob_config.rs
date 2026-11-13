@@ -231,6 +231,8 @@ knobs! {
     tables_occ_max_retries: u64 = "tables.occ_max_retries", U64(3), [0, 10], "retries", Tunable;
     /// Trace critique read: most nodes one page returns (MEDULLA-DECISION-ENGINE-R133.7.3).
     trace_critique_page_limit: u64 = "trace.critique_page_limit", U64(64), [1, 256], "rows", Tunable;
+    /// Batch: most operations one served `Batch` carries; a larger batch refuses `BATCH_TOO_LARGE` before any operation runs (MEDULLA-DURABLE-KERNEL-R871).
+    batch_max_operations: u64 = "batch.max_operations", U64(64), [1, 1024], "operations", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Retrieval round: fewest rows a sufficiency verdict accepts.
@@ -782,5 +784,34 @@ mod tests {
         let refusal =
             load_knobs(&["xshard.decision_deadline_ms=soon".to_string()], none).unwrap_err();
         assert_eq!(refusal.code, ServerErrorCode::KnobInvalid);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R871
+    #[test]
+    fn batch_max_operations_knob_bounds() {
+        let spec = KNOB_TABLE
+            .iter()
+            .find(|spec| spec.name == "batch.max_operations")
+            .expect("the batch operation cap is a registry knob");
+        assert_eq!(spec.default, KnobValue::U64(64));
+        assert_eq!(spec.min, KnobValue::U64(1));
+        assert_eq!(spec.max, KnobValue::U64(1024));
+        assert_eq!(spec.unit, "operations");
+        assert_eq!(spec.class, KnobClass::Tunable);
+        let none = |_: &str| None;
+        assert_eq!(load_knobs(&[], none).unwrap().batch_max_operations, 64);
+        for (value, expected) in [("1", 1), ("1024", 1024), ("8", 8)] {
+            let args = vec![format!("batch.max_operations={value}")];
+            assert_eq!(
+                load_knobs(&args, none).unwrap().batch_max_operations,
+                expected
+            );
+        }
+        for value in ["0", "1025"] {
+            let args = vec![format!("batch.max_operations={value}")];
+            let refusal = load_knobs(&args, none).unwrap_err();
+            assert_eq!(refusal.code, ServerErrorCode::KnobOutOfRange);
+            assert_eq!(refusal.knob, "batch.max_operations");
+        }
     }
 }

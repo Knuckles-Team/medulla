@@ -41,7 +41,7 @@ fn is_node_state(method: &Method) -> bool {
 fn is_node_creation(method: &Method) -> bool {
     matches!(
         method,
-        Method::CreateNodeIfAbsent { .. } | Method::ClaimNext { .. }
+        Method::CreateNodeIfAbsent { .. } | Method::ClaimNext { .. } | Method::Batch { .. }
     )
 }
 
@@ -410,6 +410,22 @@ async fn try_handle_node_state(
             let (label, updates_msgpack) = (label.clone(), updates_msgpack.clone());
             commit_gateway(ctx, plan, method, move |core| {
                 apply_claim_next(core, &label, &updates_msgpack)
+            })
+            .await
+        }
+        Method::Batch { operations } => {
+            // MEDULLA-DURABLE-KERNEL-R871: refused whole before any operation runs.
+            let max_operations =
+                usize::try_from(medulla_server_api::knob_config::knobs().batch_max_operations)
+                    .unwrap_or(usize::MAX);
+            if let Err(refusal) =
+                medulla_core::batch_apply::validate_batch(operations, max_operations)
+            {
+                return Some(Response::err(ctx.req_id, refusal.message()));
+            }
+            let operations = operations.clone();
+            commit_gateway(ctx, plan, method, move |core| {
+                apply_batch(core, &operations)
             })
             .await
         }

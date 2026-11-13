@@ -283,6 +283,10 @@ pub(super) async fn try_handle_node_gateway_claims(
             "CompareAndSetNodeFields is mutation::GATEWAY_ROUTED; dispatch_graph_op must \
                  route it through try_handle_gateway before it ever reaches this terminal handler"
         ),
+        Method::Batch { .. } => unreachable!(
+            "Batch is mutation::GATEWAY_ROUTED; dispatch_graph_op must route it \
+             through the gateway"
+        ),
         Method::ClaimNext { .. } => unreachable!(
             "ClaimNext is mutation::GATEWAY_ROUTED; dispatch_graph_op must route it \
                  through try_handle_gateway before it ever reaches this terminal handler"

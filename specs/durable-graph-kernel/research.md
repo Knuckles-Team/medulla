@@ -84,3 +84,24 @@ Decisions made while building:
 - LAYOUT-REGEN needed: the Agent Library layout digest pin in `owner/lineage.rs` is replaced by the
   compiled digest (the foundation commit already declares the predecessor and upgrade).
 - WIRE-REGEN needed: `ConceptLineage` is a new method; the wire vectors are refreshed by the gate.
+## R871: the served Batch method (decision)
+
+`Batch` is one closed `BatchOperation` set (create-if-absent, compare-and-set, claim-next,
+reinforce, and the read `GetNodeProperties`) so every inner operation has exactly one served
+method whose scope it needs. The request boundary checks every inner scope (through the policy of
+the method each operation stands for) before the handler runs, and the handler validates size and
+blobs before the first operation: a refusal writes nothing. The commit is the existing staged
+gateway commit, so a read fault inside the batch (a durable-tier error) aborts it whole.
+Durable replay, the Raft state machine and the embedded engine run the same
+`apply_batch_operations`. The latency budgets are two report groups, because they are two
+budgets: `decide/agent_loop` (a served read and write, p99 2 ms) and `decide/agent_loop_batch`
+(a served 64-operation batch, p99 10 ms). Wire vectors and the generated Python senders need
+the WIRE-REGEN refresh at the gate.
+
+R871 review calls: the operation cap is the registry knob `batch.max_operations` (default 64,
+[1, 1024]); the wire crate no longer holds a constant, and `validate_batch` takes the resolved value
+from the handler that reads the knobs (KNOB-SWEEP-NOMOVE). Replay never drops a read fault: a
+committed batch that faults while replaying is a `ReplayDivergence` (`REPLAY_DIVERGED`), returned by
+`durable_apply::apply` and `mutation_apply::apply`; the Raft apply and the embedded engine return it as
+their error, and the follower pull loop stops applying rather than advance past history it could not
+reproduce. LAYOUT-REGEN is not needed; WIRE-REGEN is (the generated `ServerErrorCode` list).

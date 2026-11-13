@@ -460,6 +460,7 @@ pub(super) fn edge_audit_line(method: &Method) -> Option<String> {
             ..
         } => Some(format!("SUPERSEDE_EDGE|{source_id}|{target_id}")),
         Method::ClaimNext { label, .. } => Some(format!("CLAIM_NEXT|{label}")),
+        Method::Batch { operations } => Some(format!("BATCH|{}", operations.len())),
         _ => None,
     }
 }

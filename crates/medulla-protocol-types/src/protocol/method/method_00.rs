@@ -88,6 +88,16 @@ macro_rules! __eg_method_chunk_0 {
         updates_msgpack: Vec<u8>,
     },
 
+    /// One transaction of at most `batch.max_operations` (default 64) mixed operations of the served
+    /// node, memory and claim methods (MEDULLA-DURABLE-KERNEL-R871). Every operation is
+    /// validated and access-checked before the first runs; the operations then commit
+    /// together in order as one durable record, or not at all. An empty batch refuses
+    /// `INVALID_ARGUMENT`, a batch over the cap refuses `BATCH_TOO_LARGE`. Separate from
+    /// `BatchUpdate`, whose bulk-ingest limits are unchanged.
+    Batch {
+        operations: Vec<medulla_types::wire::BatchOperation>,
+    },
+
     // ── Message broker (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges) ──────────────────────────────
     // Exchange/binding admin + publish DATA ops for the RabbitMQ-class broker built
     // on the KG-2.303 work-queue (queues are pending nodes; consume/ack REUSE

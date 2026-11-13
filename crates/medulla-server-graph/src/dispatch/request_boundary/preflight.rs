@@ -79,6 +79,27 @@ fn preflight_graph_write_msgpack(method: &Method) -> Option<Result<(), &'static 
         Method::ClaimNext {
             updates_msgpack, ..
         } => Some(preflight_nested_msgpack(updates_msgpack)),
+        // MEDULLA-DURABLE-KERNEL-R871: every blob of every inner operation, in order.
+        Method::Batch { operations } => Some(operations.iter().try_for_each(|operation| {
+            use medulla_types::wire::BatchOperation;
+            match operation {
+                BatchOperation::CreateNodeIfAbsent {
+                    properties_msgpack, ..
+                } => preflight_nested_msgpack(properties_msgpack),
+                BatchOperation::CompareAndSetNodeFields {
+                    conditions_msgpack,
+                    updates_msgpack,
+                    ..
+                } => preflight_nested_msgpack(conditions_msgpack)
+                    .and_then(|()| preflight_nested_msgpack(updates_msgpack)),
+                BatchOperation::ClaimNext {
+                    updates_msgpack, ..
+                } => preflight_nested_msgpack(updates_msgpack),
+                BatchOperation::Reinforce { .. } | BatchOperation::GetNodeProperties { .. } => {
+                    Ok(())
+                }
+            }
+        })),
         _ => None,
     }
 }

@@ -351,6 +351,37 @@ fn ledger_allows(
     verified_context.allows_method(action, mutates)
 }
 
+/// A `Batch` is admitted only when the caller holds the scope of every inner operation, the
+/// same scope that operation's own method requires (MEDULLA-DURABLE-KERNEL-R871). The refusal
+/// names the first operation that is not allowed; nothing has run.
+fn check_batch_inner_scopes(
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+    authority: DispatchAuthority,
+) -> Result<(), Response> {
+    let Method::Batch { operations } = &req.method else {
+        return Ok(());
+    };
+    if authority.state_machine_authorized || authority.identity_bootstrap {
+        return Ok(());
+    }
+    for (index, operation) in operations.iter().enumerate() {
+        let inner = Method::from(operation);
+        let policy = medulla_capabilities::policy(&inner);
+        if !verified_context.allows_method(policy.authz_action, policy.mutates) {
+            medulla_kernel::metrics::process().access_denied();
+            return Err(Response::err(
+                req.id,
+                format!(
+                    "ACCESS_DENIED: batch operation {index} requires scope '{}'",
+                    policy.authz_action
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub async fn check_scope_and_admin_authority(
     state: &Arc<RwLock<ServerState>>,
     req: &Request,
@@ -381,6 +412,7 @@ pub async fn check_scope_and_admin_authority(
             format!("ACCESS_DENIED: verified request context lacks required scope '{action}'"),
         ));
     }
+    check_batch_inner_scopes(req, verified_context, authority)?;
     if !authority.state_machine_authorized
         && is_admin_authz_action(action)
         && !authority.identity_bootstrap

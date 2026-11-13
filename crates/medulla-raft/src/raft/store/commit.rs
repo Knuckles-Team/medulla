@@ -319,7 +319,8 @@ impl MedullaStore {
                 Some(ResultPayload::Bool(applied))
             }
             _ => {
-                medulla_server_api::mutation_apply::apply(staged, method);
+                medulla_server_api::mutation_apply::apply(staged, method)
+                    .map_err(|divergence| divergence.message())?;
                 None
             }
         };

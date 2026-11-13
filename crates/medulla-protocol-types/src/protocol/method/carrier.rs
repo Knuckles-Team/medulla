@@ -157,3 +157,48 @@ pub(crate) mod tests {
         assert!(node.is_wire_callable() && node.carrier_refusal().is_none());
     }
 }
+
+/// The served method one `Batch` operation stands for (MEDULLA-DURABLE-KERNEL-R871): its
+/// policy supplies the scope the caller must hold for that operation.
+impl From<&medulla_types::wire::BatchOperation> for Method {
+    fn from(operation: &medulla_types::wire::BatchOperation) -> Self {
+        use medulla_types::wire::BatchOperation;
+        match operation {
+            BatchOperation::CreateNodeIfAbsent {
+                node_id,
+                properties_msgpack,
+            } => Self::CreateNodeIfAbsent {
+                node_id: node_id.clone(),
+                properties_msgpack: properties_msgpack.clone(),
+            },
+            BatchOperation::CompareAndSetNodeFields {
+                node_id,
+                conditions_msgpack,
+                updates_msgpack,
+            } => Self::CompareAndSetNodeFields {
+                node_id: node_id.clone(),
+                conditions_msgpack: conditions_msgpack.clone(),
+                updates_msgpack: updates_msgpack.clone(),
+            },
+            BatchOperation::ClaimNext {
+                label,
+                updates_msgpack,
+            } => Self::ClaimNext {
+                label: label.clone(),
+                updates_msgpack: updates_msgpack.clone(),
+            },
+            BatchOperation::Reinforce {
+                node_id,
+                now_ms,
+                weight,
+            } => Self::Reinforce {
+                node_id: node_id.clone(),
+                now_ms: *now_ms,
+                weight: *weight,
+            },
+            BatchOperation::GetNodeProperties { node_id } => Self::GetNodeProperties {
+                node_id: node_id.clone(),
+            },
+        }
+    }
+}

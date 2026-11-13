@@ -20,6 +20,7 @@ pub mod architecture_exchange;
 pub mod architecture_view;
 #[cfg(feature = "broker")]
 pub mod broker;
+pub mod batch_apply;
 /// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
 pub mod data_product;
 /// Pure document-chunk encoding steps: windows, per-chunk encode calls, mean aggregation

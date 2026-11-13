@@ -64,6 +64,7 @@ method_results! {
     visit_coordination;
     // The claimed node's id and its updated properties, or nil when nothing matched.
     ClaimNext(ClaimNext) => Raw<Option<(String, serde_json::Value)>>;
+    Batch(Batch) => Raw<medulla_types::wire::BatchResult>;
     ClaimWorkItem(ClaimWorkItem) => Raw<ClaimWorkItemResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the registered action name; the stored run.
     ActionRegister(ActionRegister) => Raw<String>;

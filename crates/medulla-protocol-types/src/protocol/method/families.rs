@@ -41,6 +41,7 @@ impl Method {
             | Self::CreateNodeIfAbsent { .. }
             | Self::RemoveNode { .. }
             | Self::CompareAndSetNodeFields { .. }
+            | Self::Batch { .. }
             | Self::AddEdge { .. }
             | Self::RemoveEdge { .. }
             | Self::InvalidateEdge { .. }

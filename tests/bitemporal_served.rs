@@ -281,7 +281,8 @@ async fn engine_stamps_tx_time_and_refuses_an_inverted_interval() {
                     target_id: target.to_string(),
                     properties_msgpack: hex::decode(hex).unwrap(),
                 },
-            ),
+            )
+            .unwrap(),
             ["INVALIDATE_EDGE", source, target, relationship, invalid_at, tx_now] => {
                 medulla_server_api::mutation_apply::apply(
                     &replayed,
@@ -293,6 +294,7 @@ async fn engine_stamps_tx_time_and_refuses_an_inverted_interval() {
                         tx_now: tx_now.parse().unwrap(),
                     },
                 )
+                .unwrap()
             }
             _ => {}
         }

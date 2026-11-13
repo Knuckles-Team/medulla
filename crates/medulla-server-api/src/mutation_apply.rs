@@ -192,7 +192,10 @@ fn stamp_edge_blob(
 /// The base+`broker` set is handled by `medulla_core::durable_apply::apply` (this
 /// function's `_` arm) — see this module's doc comment for why the arms below
 /// (needing `medulla-compute`/`medulla-rdf`/`src/server`) could not move with it.
-pub fn apply(core: &GraphCore, m: &Method) {
+pub fn apply(
+    core: &GraphCore,
+    m: &Method,
+) -> Result<(), medulla_core::durable_apply::ReplayDivergence> {
     match m {
         Method::BatchUpdate { operations_msgpack } => {
             let _ = medulla_graph_algos::algorithms::batch_update(core, operations_msgpack);
@@ -246,7 +249,7 @@ pub fn apply(core: &GraphCore, m: &Method) {
         | Method::MineOntologyGap { .. }
         | Method::MineRetrievalQuality { .. }
         | Method::MineCommunity { .. } => {
-            medulla_kernel::kernel::persistence::replay_mining(core, m)
+            medulla_kernel::kernel::persistence::replay_mining(core, m)?;
         }
         // Graph-learning write-back (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): re-run the
         // fit/predict + re-materialize the `:EdgeFunction` / `:PredictedEdge` nodes.
@@ -255,8 +258,9 @@ pub fn apply(core: &GraphCore, m: &Method) {
         Method::GraphLearnFit { .. } | Method::GraphLearnPredict { .. } => {
             crate::handlers::graphlearn::replay(core, m)
         }
-        _ => medulla_core::durable_apply::apply(core, m),
+        _ => return medulla_core::durable_apply::apply(core, m),
     }
+    Ok(())
 }
 
 /// Re-parse a recorded `AddTriples`/`RemoveTriples` source for replay.

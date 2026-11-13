@@ -239,6 +239,7 @@ closed_error_codes! {
         SizingAbstain => "SIZING_ABSTAIN",
         RegimeModelNotFound => "REGIME_MODEL_NOT_FOUND",
         FinanceRecordVersionUnknown => "FINANCE_RECORD_VERSION_UNKNOWN",
+        BatchTooLarge => "BATCH_TOO_LARGE",
         ForeignReadColumnCollision => "FOREIGN_READ_COLUMN_COLLISION",
         ForeignReadExpired => "FOREIGN_READ_EXPIRED",
         ForeignReadNotComplete => "FOREIGN_READ_NOT_COMPLETE",
@@ -394,6 +395,8 @@ closed_error_codes! {
         ReplicaLagExceeded => "REPLICA_LAG_EXCEEDED",
         RegistryCursorStale => "REGISTRY_CURSOR_STALE",
         RegistryLimit => "REGISTRY_LIMIT",
+        /// A committed mutation faulted when its replay re-ran it, so the replaying store would diverge from the committed history (MEDULLA-DURABLE-KERNEL-R871).
+        ReplayDiverged => "REPLAY_DIVERGED",
         ReplayNonceConsumed => "REPLAY_NONCE_CONSUMED",
         RepositoryBatchTooLarge => "REPOSITORY_BATCH_TOO_LARGE",
         ReservedGraphName => "RESERVED_GRAPH_NAME",

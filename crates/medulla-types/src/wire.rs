@@ -116,6 +116,9 @@ pub use wire_query_kinds::*;
     feature = "federation"
 ))]
 pub use wire_query_modalities::*;
+#[path = "wire_batch.rs"]
+mod wire_batch;
+pub use wire_batch::*;
 #[cfg(all(feature = "query", any(test, feature = "test-support")))]
 pub use wire_query_samples::{uql_sample_op, uql_sample_pred};
 #[cfg(feature = "query")]

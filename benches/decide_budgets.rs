@@ -18,6 +18,15 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
+// The served dispatch kit of the other served benches: the agent-loop group needs a durable
+// graph behind the real dispatch entry (MEDULLA-DURABLE-KERNEL-R871).
+#[allow(dead_code)]
+#[path = "../tests/common/mod.rs"]
+mod common;
+#[allow(dead_code)]
+#[path = "../tests/common/test_support.rs"]
+mod test_support;
+
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_topology::{
@@ -701,6 +710,121 @@ fn bench_program_lookup(
     );
 }
 
+const AGENT_LOOP_SECRET: &str = "agent-loop-bench-secret";
+const AGENT_LOOP_ENCRYPTION_KEY: &str = "agent-loop-bench-encryption-key-0123456789";
+const AGENT_LOOP_GRAPH: &str = "agentloop";
+
+fn loop_blob(value: serde_json::Value) -> Vec<u8> {
+    rmp_serde::to_vec_named(&value).expect("agent-loop bench blob")
+}
+
+/// One mixed batch of 64 operations: creates, compare-and-sets, reinforcements and reads of
+/// nodes this same batch wrote.
+fn agent_loop_batch(round: u64) -> Method {
+    use medulla_types::wire::BatchOperation;
+    let mut operations = Vec::with_capacity(
+        usize::try_from(medulla_server_api::knob_config::knobs().batch_max_operations)
+            .expect("the batch cap fits usize"),
+    );
+    for slot in 0..32u64 {
+        operations.push(BatchOperation::CreateNodeIfAbsent {
+            node_id: format!("loop-{round}-{slot}"),
+            properties_msgpack: loop_blob(serde_json::json!({"label": "step", "n": slot})),
+        });
+    }
+    for slot in 0..16u64 {
+        operations.push(BatchOperation::CompareAndSetNodeFields {
+            node_id: format!("loop-{round}-{slot}"),
+            conditions_msgpack: loop_blob(serde_json::json!({"n": slot})),
+            updates_msgpack: loop_blob(serde_json::json!({"done": true})),
+        });
+    }
+    for slot in 0..8u64 {
+        operations.push(BatchOperation::Reinforce {
+            node_id: format!("loop-{round}-{slot}"),
+            now_ms: 1_800_000_000_000 + round,
+            weight: 1.0,
+        });
+    }
+    for slot in 0..8u64 {
+        operations.push(BatchOperation::GetNodeProperties {
+            node_id: format!("loop-{round}-{slot}"),
+        });
+    }
+    Method::Batch { operations }
+}
+
+/// The `decide/agent_loop` groups (MEDULLA-DURABLE-KERNEL-R871 and
+/// MEDULLA-DECISION-ENGINE-R178): one served read plus one served write per sample
+/// (`decide/agent_loop`, p99 at most 2 ms) and one served `Batch` of 64 operations per sample
+/// (`decide/agent_loop_batch`, p99 at most 10 ms), through the real dispatch entry over a
+/// durable graph. Budgets: `group_budgets` in `benches/baselines/decide.json`.
+fn bench_agent_loop(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    let (_dir, _backend, state) = rt.block_on(test_support::durable_graph_state(
+        AGENT_LOOP_SECRET,
+        AGENT_LOOP_ENCRYPTION_KEY,
+        "agent-loop-bench",
+        common::current_isolation(),
+        AGENT_LOOP_GRAPH,
+    ));
+    let mut next_id = 1_000u64;
+    let mut call = |method: Method| {
+        next_id += 1;
+        let request = test_support::request(AGENT_LOOP_SECRET, next_id, AGENT_LOOP_GRAPH, method);
+        let start = Instant::now();
+        let response = rt.block_on(test_support::dispatch(&state, request));
+        let elapsed = start.elapsed();
+        assert!(
+            response.error.is_none(),
+            "agent_loop bench fixture: {:?}",
+            response.error
+        );
+        elapsed
+    };
+    let mut single = |round: u64| {
+        let write = call(Method::CreateNodeIfAbsent {
+            node_id: format!("single-{round}"),
+            properties_msgpack: loop_blob(serde_json::json!({"label": "step", "n": round})),
+        });
+        let read = call(Method::GetNodeProperties {
+            node_id: format!("single-{round}"),
+        });
+        write.max(read)
+    };
+    let mut measure = |name: &str, run: &mut dyn FnMut(u64) -> Duration| {
+        let group_name = format!("decide/{name}");
+        let mut group = c.benchmark_group(&group_name);
+        let mut round = 0u64;
+        group.bench_function("served", |b| {
+            b.iter(|| {
+                round += 1;
+                black_box(run(round))
+            })
+        });
+        group.finish();
+        let before = high_water_mib();
+        let mut samples: Vec<Duration> = (0..REPORT_SAMPLES as u64)
+            .map(|index| run(1_000_000 + index))
+            .collect();
+        samples.sort();
+        report.insert(
+            group_name,
+            serde_json::json!({
+                "p50_ms": percentile_ms(&samples, 0.50),
+                "p99_ms": percentile_ms(&samples, 0.99),
+                "peak_mib": (high_water_mib() - before).max(0.0),
+            }),
+        );
+    };
+    measure("agent_loop", &mut single);
+    let mut batch = |round: u64| call(agent_loop_batch(round));
+    measure("agent_loop_batch", &mut batch);
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -736,6 +860,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_tool_relevance_cap(c, &rt, &mut report);
     bench_program_lookup(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
+    bench_agent_loop(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");

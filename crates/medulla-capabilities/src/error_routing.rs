@@ -152,6 +152,8 @@ const HARNESS_RECORD_ADMISSION_ERRORS: &[&str] = &[
 ];
 
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-DURABLE-KERNEL-R871: a Batch over the operation cap is refused whole.
+    ("Batch", &["BATCH_TOO_LARGE", "INVALID_ARGUMENT"]),
     // MEDULLA-CONTRACT-R054: the served contract read's pagination refusals.
     (
         "DescribeContract",

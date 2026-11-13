@@ -52,7 +52,7 @@ pub(super) fn stamp_owner_id_if_applicable(
     // only the nesting depth (and so the cognitive complexity) differs.
     if !matches!(
         method,
-        Method::AddNode { .. } | Method::CreateNodeIfAbsent { .. }
+        Method::AddNode { .. } | Method::CreateNodeIfAbsent { .. } | Method::Batch { .. }
     ) {
         return method;
     }
@@ -64,6 +64,14 @@ pub(super) fn stamp_owner_id_if_applicable(
     // A `System`-role caller is not a real per-agent owner.
     if isolation.is_system(caller_id) {
         return method;
+    }
+    if let Method::Batch { operations } = method {
+        return Method::Batch {
+            operations: operations
+                .into_iter()
+                .map(|operation| stamp_batch_operation(operation, caller_id))
+                .collect(),
+        };
     }
     let blob = match &method {
         Method::AddNode {
@@ -90,6 +98,30 @@ pub(super) fn stamp_owner_id_if_applicable(
         _ => unreachable!("matched above"),
     }
     method
+}
+
+/// A `Batch`'s created nodes carry the caller's owner id exactly as a top-level
+/// `CreateNodeIfAbsent` does (MEDULLA-DURABLE-KERNEL-R871).
+#[cfg(feature = "security")]
+fn stamp_batch_operation(
+    operation: medulla_types::wire::BatchOperation,
+    caller_id: &str,
+) -> medulla_types::wire::BatchOperation {
+    use medulla_types::wire::BatchOperation;
+    match operation {
+        BatchOperation::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack,
+        } => BatchOperation::CreateNodeIfAbsent {
+            node_id,
+            properties_msgpack: medulla_isolation::isolation::stamp_owner_id_if_absent(
+                &properties_msgpack,
+                caller_id,
+            )
+            .unwrap_or(properties_msgpack),
+        },
+        other => other,
+    }
 }
 
 /// `ApplyMutation` (SPARQL UPDATE): pure extract-method from `try_handle_gateway`'s
@@ -459,6 +491,19 @@ fn apply_claim_next(
     };
     let claimed = core.claim_next_fields(label, &updates);
     ResultPayload::of::<medulla_protocol_types::result_contract::coordination::ClaimNext>(claimed)
+}
+
+/// `Batch`: the shared `medulla-core` application; a read fault aborts the staged commit, so
+/// nothing the batch wrote is committed.
+fn apply_batch(
+    core: &GraphCore,
+    operations: &[medulla_types::wire::BatchOperation],
+) -> Result<ResultPayload, String> {
+    let results = medulla_core::batch_apply::apply_batch_operations(core, operations)
+        .map_err(|error| error.message())?;
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::Batch>(
+        medulla_types::wire::BatchResult { results },
+    )
 }
 
 /// `AddSceneObject`: pure extract-method from `try_handle_gateway`'s closure,

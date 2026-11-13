@@ -2908,6 +2908,47 @@ class NodeClient:
             return None
         return raw_val[0], raw_val[1]
 
+    async def batch(self, operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Run up to 64 mixed node, memory and claim operations as ONE transaction
+        (MEDULLA-DURABLE-KERNEL-R871).
+
+        Each operation is a mapping with an ``op`` key naming a served method and that
+        method's fields, with property objects given as plain dicts:
+        ``{"op": "CreateNodeIfAbsent", "node_id": ..., "properties": {...}}``,
+        ``{"op": "CompareAndSetNodeFields", "node_id": ..., "conditions": {...},
+        "updates": {...}}``, ``{"op": "ClaimNext", "label": ..., "updates": {...}}``,
+        ``{"op": "Reinforce", "node_id": ..., "now_ms": ..., "weight": ...}`` and
+        ``{"op": "GetNodeProperties", "node_id": ...}``. The operations commit together
+        in order or not at all; a read sees the writes before it. The result is one
+        mapping per operation, in order. An empty batch is refused ``INVALID_ARGUMENT``
+        and a batch over 64 operations ``BATCH_TOO_LARGE``, both before anything runs."""
+        packed: list[dict[str, Any]] = []
+        for operation in operations:
+            wire = {
+                key: value
+                for key, value in operation.items()
+                if key not in ("properties", "conditions", "updates")
+            }
+            for field in ("properties", "conditions", "updates"):
+                if field in operation:
+                    wire[f"{field}_msgpack"] = _pack_binary_msgpack(operation[field])
+            packed.append(wire)
+        raw_val = (
+            await _gen.coordination.send_batch(self._client, {"operations": packed})
+        ).payload
+        if isinstance(raw_val, bytes):
+            raw_val = msgpack.unpackb(raw_val, raw=False)
+        results: list[dict[str, Any]] = raw_val["results"]
+        for result in results:
+            if "properties_msgpack" in result:
+                blob = result.pop("properties_msgpack")
+                result["properties"] = (
+                    msgpack.unpackb(blob, raw=False)
+                    if isinstance(blob, bytes)
+                    else None
+                )
+        return results
+
     async def list(self) -> builtins.list[tuple[str, str]]:
         """Dump EVERY node in the graph (unbounded full-graph read).
 

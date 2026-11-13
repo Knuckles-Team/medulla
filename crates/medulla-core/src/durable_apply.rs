@@ -106,27 +106,70 @@ pub fn is_durable_mutation(m: &Method) -> bool {
 /// BYTE-IDENTICALLY to how a replayed durable mutation does. Deterministic
 /// (replaying the same Method over the same pre-image yields the same state), which
 /// is the Raft state-machine contract.
-pub fn apply(core: &GraphCore, m: &Method) {
+///
+/// A committed `Batch` re-runs the same operations in order over the same pre-image (the one
+/// shared `batch_apply`). A read fault on replay means the replaying store cannot reproduce
+/// the committed history, so it is returned as a [`ReplayDivergence`] for the caller to
+/// surface; it is never dropped.
+pub fn apply(core: &GraphCore, m: &Method) -> Result<(), ReplayDivergence> {
+    if let Method::Batch { operations } = m {
+        return crate::batch_apply::apply_batch_operations(core, operations)
+            .map(|_| ())
+            .map_err(|error| ReplayDivergence {
+                method: "Batch",
+                detail: error.message(),
+            });
+    }
     if apply_base_graph(core, m) {
-        return;
+        return Ok(());
     }
     if apply_argument_map(core, m) {
-        return;
+        return Ok(());
     }
     if apply_broker_exchange(core, m) {
-        return;
+        return Ok(());
     }
     if apply_broker_streams(core, m) {
-        return;
+        return Ok(());
     }
     if apply_agent_bus(core, m) {
-        return;
+        return Ok(());
     }
     if apply_memory_snapshot(core, m) {
-        return;
+        return Ok(());
     }
     let _ = apply_memory(core, m);
+    Ok(())
 }
+
+/// A committed mutation faulted when replay re-ran it (registered code `REPLAY_DIVERGED`).
+/// The replaying store refuses to continue: its state would silently differ from the
+/// committed history.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayDivergence {
+    /// The served method whose replay faulted.
+    pub method: &'static str,
+    /// What faulted, with the operation index.
+    pub detail: String,
+}
+
+impl ReplayDivergence {
+    /// The registered wire code, then the detail.
+    pub fn message(&self) -> String {
+        format!(
+            "REPLAY_DIVERGED: replaying committed {} faulted: {}",
+            self.method, self.detail
+        )
+    }
+}
+
+impl std::fmt::Display for ReplayDivergence {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message())
+    }
+}
+
+impl std::error::Error for ReplayDivergence {}
 
 /// Memory snapshot rows (MEDULLA-DURABLE-KERNEL-R085.3): the logged method
 /// carries the engine stamp, so replay rebuilds the same rows.
@@ -896,14 +939,16 @@ mod tests {
                 node_id: "n1".into(),
                 properties_msgpack: rmp_serde::to_vec(&serde_json::json!({})).unwrap(),
             },
-        );
+        )
+        .unwrap();
         assert!(core.has_node("n1"));
         apply(
             &core,
             &Method::RemoveNode {
                 node_id: "n1".into(),
             },
-        );
+        )
+        .unwrap();
         assert!(!core.has_node("n1"));
     }
 
@@ -920,7 +965,8 @@ mod tests {
             &Method::BatchUpdate {
                 operations_msgpack: vec![],
             },
-        );
+        )
+        .unwrap();
         assert_eq!(core.node_count(), 0);
     }
 }

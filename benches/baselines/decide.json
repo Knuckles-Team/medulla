@@ -19,6 +19,14 @@
     "decide/topology_admit": {
       "p50_ms": 0.2,
       "p99_ms": 0.8
+    },
+    "decide/agent_loop": {
+      "p99_ms": 2.0,
+      "peak_mib": 16.0
+    },
+    "decide/agent_loop_batch": {
+      "p99_ms": 10.0,
+      "peak_mib": 16.0
     }
   },
   "groups": {}

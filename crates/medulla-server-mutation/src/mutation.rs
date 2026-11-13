@@ -355,6 +355,11 @@ mod tests {
                 label: "x".into(),
                 updates_msgpack: Vec::new(),
             },
+            Method::Batch {
+                operations: vec![medulla_types::wire::BatchOperation::GetNodeProperties {
+                    node_id: "x".into(),
+                }],
+            },
             Method::DecayNode {
                 node_id: "x".into(),
                 now_ms: 0,

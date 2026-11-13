@@ -26,9 +26,12 @@ pub fn install_mining_replay(hook: ReplayHook) {
 pub fn replay_mining(
     core: &medulla_graph_core::graph::GraphCore,
     method: &medulla_protocol_types::protocol::Method,
-) {
+) -> Result<(), medulla_core::durable_apply::ReplayDivergence> {
     match MINING_REPLAY.get() {
-        Some(hook) => hook(core, method),
+        Some(hook) => {
+            hook(core, method);
+            Ok(())
+        }
         None => medulla_core::durable_apply::apply(core, method),
     }
 }

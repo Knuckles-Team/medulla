@@ -473,7 +473,7 @@ pub async fn apply_replicated_batch(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     ops: &[ReplicationOp],
     cursor: u64,
-) -> u64 {
+) -> Result<u64, medulla_core::durable_apply::ReplayDivergence> {
     let mut max_lsn = cursor;
     for op in ops {
         let core = {
@@ -484,12 +484,14 @@ pub async fn apply_replicated_batch(
             s.registry.get(&op.graph_name).map(|e| e.core.clone())
         };
         if let Some(core) = core {
-            medulla_server_api::mutation_apply::apply(&core, &op.method);
+            // A committed op that faults on replay stops the batch: the follower must not
+            // advance past history it could not reproduce.
+            medulla_server_api::mutation_apply::apply(&core, &op.method)?;
             core.mark_dirty();
             max_lsn = max_lsn.max(op.lsn);
         }
     }
-    max_lsn
+    Ok(max_lsn)
 }
 
 /// Pull one tail batch from the primary's `/replicate?since=<cursor>` endpoint
@@ -548,7 +550,15 @@ pub async fn run_replica_follower(
             Ok(Ok(ops)) => {
                 breaker.on_success(Instant::now());
                 if !ops.is_empty() {
-                    cursor = apply_replicated_batch(&state, &ops, cursor).await;
+                    match apply_replicated_batch(&state, &ops, cursor).await {
+                        Ok(next) => cursor = next,
+                        Err(divergence) => {
+                            tracing::error!(
+                                "replica follower diverged from the primary and stops applying: {divergence}"
+                            );
+                            return;
+                        }
+                    }
                 }
             }
             Ok(Err(e)) => {

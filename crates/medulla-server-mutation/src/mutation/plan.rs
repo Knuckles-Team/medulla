@@ -68,6 +68,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // handled in `graph_ops.rs` already. ──
     "CompareAndSetNodeFields",
     "ClaimNext",
+    "Batch",
     "DecayNode",
     "DecayMemories",
     "EvictBelow",
@@ -243,6 +244,7 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::Reinforce { .. } => Some("Reinforce"),
         Method::CompareAndSetNodeFields { .. } => Some("CompareAndSetNodeFields"),
         Method::ClaimNext { .. } => Some("ClaimNext"),
+        Method::Batch { .. } => Some("Batch"),
         Method::DecayNode { .. } => Some("DecayNode"),
         Method::DecayMemories { .. } => Some("DecayMemories"),
         Method::EvictBelow { .. } => Some("EvictBelow"),

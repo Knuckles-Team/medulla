@@ -445,6 +445,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetContextView { .. }
         | Method::CloseChannel { .. }
         | Method::ClaimNext { .. }
+        | Method::Batch { .. }
         | Method::FinanceMaxDrawdown { .. }
         | Method::MintWorkItemClaimCapability { .. }
         | Method::ClusterHierarchyClusters { .. }
