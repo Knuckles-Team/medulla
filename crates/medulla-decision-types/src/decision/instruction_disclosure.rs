@@ -172,8 +172,6 @@ impl InstructionSetDisclosure {
 // question family (MEDULLA-DECISION-ENGINE-R137.100).
 // ---------------------------------------------------------------------------
 
-use super::record::outcome::RefusalCode;
-
 /// Engine-owned marker property of a stored instruction version.
 pub const INSTRUCTION_VERSION_MARKER: &str = "_instruction_version";
 
@@ -182,9 +180,6 @@ pub const DISCLOSURE_VERSION_STALE: RefusalCode = RefusalCode::new("DISCLOSURE_V
 /// The named set has no version in the caller's tenant graph: a set that does
 /// not exist and a set held by another tenant answer the same way.
 pub const DISCLOSURE_UNAUTHORIZED: RefusalCode = RefusalCode::new("DISCLOSURE_UNAUTHORIZED");
-
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
-pub const REFUSALS: &[RefusalCode] = &[DISCLOSURE_VERSION_STALE, DISCLOSURE_UNAUTHORIZED];
 
 /// When a stored version is disclosed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

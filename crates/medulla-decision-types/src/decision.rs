@@ -64,7 +64,6 @@ pub mod reputation;
 pub mod request;
 pub mod research_voi;
 pub mod run_adjustment;
-pub mod run_adjustment;
 pub mod skill_upgrade_request;
 pub mod skill_workflow;
 pub mod statistical;

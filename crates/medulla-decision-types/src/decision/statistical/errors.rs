@@ -153,21 +153,6 @@ closed_error_codes! {
         /// The logical graph has no registered search source
         /// (MEDULLA-DECISION-ENGINE-R174.9.4).
         SearchSourceUnregistered => "SEARCH_SOURCE_UNREGISTERED",
-        /// A context source is named twice, in the declared options or in
-        /// `context.requested_sources` (MEDULLA-DECISION-ENGINE-R029.2.2).
-        ContextSourceDuplicate => "CONTEXT_SOURCE_DUPLICATE",
-        /// A context-budget question carries no positive `context.token_budget`
-        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
-        ContextBudgetMissing => "CONTEXT_BUDGET_MISSING",
-        /// A context source declares no usable `context.tokens`
-        /// (MEDULLA-DECISION-ENGINE-R029.2.2).
-        ContextTokensUnknown => "CONTEXT_TOKENS_UNKNOWN",
-        /// A pinned instruction digest differs from the latest version of its
-        /// set (MEDULLA-DECISION-ENGINE-R137.100).
-        DisclosureVersionStale => "DISCLOSURE_VERSION_STALE",
-        /// A named instruction set has no version in the caller's tenant
-        /// graph (MEDULLA-DECISION-ENGINE-R137.100).
-        DisclosureUnauthorized => "DISCLOSURE_UNAUTHORIZED",
         /// A changeset review names no base or head revision
         /// (MEDULLA-DECISION-ENGINE-R138.101.2).
         ReviewRevisionMissing => "REVIEW_REVISION_MISSING",

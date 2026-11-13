@@ -69,7 +69,6 @@ pub mod track_record;
 pub mod trajectory;
 pub mod transfer;
 pub mod usage_guidance;
-pub mod usage_guidance;
 pub mod verifier_receipt;
 pub mod web_fetch_selection;
 pub mod writeback;

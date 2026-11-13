@@ -40,7 +40,6 @@ mod planning_admission;
 mod pre_tool_risk;
 mod probe_verdict;
 mod program_store;
-mod program_store;
 mod rank;
 mod resolve_entity;
 mod retrieval_plan;
@@ -50,14 +49,11 @@ mod schema_mapping;
 mod skill_upgrade;
 mod skill_workflow;
 mod support;
-mod support;
-mod task_plan;
 mod task_plan;
 mod team_coordination;
 #[cfg(test)]
 mod template;
 #[cfg(test)]
-mod template;
 mod template_choice;
 mod temporal_basis;
 mod thought_search;
