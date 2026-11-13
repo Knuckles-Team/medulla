@@ -740,3 +740,9 @@ The rewrite proposal names the graph that holds the record's snapshot head (`gra
 - The ledger observation (unit, headroom, epoch) is read by the engine in `stat_capacity::with_read`, the same pre-read seam topology and placement use, and filled into one `observation` param. A caller-supplied observation is refused so observed facts are never a claim.
 - The cell read is the proposal's `resource_class_iri`, at `Orchestration` priority: a capacity change is governance work, not background ingestion, so it may spend what orchestration may.
 - A refusal code is a decided verdict (`refuse:<CODE>`) sealed in the record, because the proposal itself is well formed and answerable; only an unreadable request refuses on the wire.
+
+## Corpus from score rows (R813.2)
+
+- The corpus builder is a pure function over typed `ScoreRow`s under a caller-bound `CorpusPolicy`; it writes nothing. A value outside its declared range is refused rather than clamped, so a bad score row never trains silently.
+- Every grader kind may train. Only kinds whose `decides_promotion()` holds, on a held-out split, count as promotion evidence (R804.4), reported in `promotion_deciding`.
+- The job path stages the built corpus; the served end-to-end proof is the root slice test of the R813 rollup, which lands with the rollup.

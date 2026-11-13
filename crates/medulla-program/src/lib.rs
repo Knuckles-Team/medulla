@@ -9,6 +9,7 @@
 
 mod commit;
 mod contracts;
+pub mod corpus;
 pub mod optimize;
 mod optimizer;
 mod plan;
