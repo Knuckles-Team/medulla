@@ -201,6 +201,26 @@ impl OwnedForeignRegistry {
             ),
         ));
     }
+    /// Make every name in `names` that this caller's registry cannot resolve read as an
+    /// empty source, and report for each name whether it is readable
+    /// (MEDULLA-CQ-CONN-R090). A name is unreadable when it is absent from the caller's
+    /// owner-scoped catalog and not shared to the caller; an unknown name and another
+    /// owner's name are the same case, so the report never confirms that a source the
+    /// caller cannot see exists. The empty source adds no rows, so the plan keeps its shape.
+    pub fn exclude_unreadable(&mut self, names: &[String]) -> Vec<(String, bool)> {
+        names
+            .iter()
+            .map(|name| {
+                let readable = self.registry.get(name).is_some();
+                if !readable {
+                    self.registry
+                        .register_table(name.clone(), std::iter::empty());
+                }
+                (name.clone(), readable)
+            })
+            .collect()
+    }
+
     /// The verified owner (tenant+principal) scope this registry was built for.
     pub fn owner_scope(&self) -> &str {
         &self.owner_scope

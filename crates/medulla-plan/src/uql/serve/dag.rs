@@ -47,6 +47,7 @@ pub(super) fn run(
         warnings,
         snapshot_revision: 0,
         knowledge_revision: 0,
+        source_coverage: Vec::new(),
     })
 }
 

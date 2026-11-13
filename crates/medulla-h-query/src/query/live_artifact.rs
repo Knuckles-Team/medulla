@@ -313,9 +313,15 @@ async fn run_source(ctx: &QueryHandlerCtx<'_>, source: &QuerySource) -> Result<V
 }
 
 async fn run_uql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, String> {
-    let response = handle_uql(ctx, text.to_string(), UqlParams::new(), false, None)
-        .await
-        .map_err(|_| "UQL is not served in this build".to_string())?;
+    let response = handle_uql(
+        ctx,
+        text.to_string(),
+        UqlParams::new(),
+        false,
+        Default::default(),
+    )
+    .await
+    .map_err(|_| "UQL is not served in this build".to_string())?;
     match response_body::<UqlResult>(response)? {
         UqlResult::Rows { columns, rows, .. } => Ok(Value::Array(
             rows.into_iter()

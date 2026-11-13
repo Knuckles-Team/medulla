@@ -484,8 +484,8 @@ fn legacy_query_body(method: &Method) -> Option<Vec<u8>> {
             text,
             params,
             prepare,
-            foreign_execution: None,
-        } => LegacyQuery::Uql {
+            foreign_executions,
+        } if foreign_executions.is_empty() => LegacyQuery::Uql {
             text,
             params,
             prepare: *prepare,
@@ -2077,7 +2077,7 @@ mod tests {
                 text: "MATCH (n) RETURN n".into(),
                 params: Default::default(),
                 prepare: false,
-                foreign_execution: None,
+                foreign_executions: Default::default(),
             },
             Method::UnifiedQuery {
                 plan: medulla_exec::algebra::Plan::new(vec![]),
@@ -2125,8 +2125,11 @@ mod tests {
             };
             match &mut req.method {
                 Method::Uql {
-                    foreign_execution, ..
-                } => *foreign_execution = Some(execution),
+                    foreign_executions, ..
+                } => {
+                    *foreign_executions =
+                        medulla_types::contract::BoundedVec::new(vec![execution]).unwrap();
+                }
                 Method::UnifiedQuery {
                     foreign_executions, ..
                 } => {

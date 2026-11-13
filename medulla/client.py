@@ -12348,7 +12348,7 @@ class QueryClient:
         params: dict[str, Any] | None = None,
         *,
         prepare: bool = False,
-        foreign_execution: dict[str, Any] | None = None,
+        foreign_executions: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Run a UQL statement (CONCEPT:AU-KG.query.top-nodes-by-degree; UQL-07/08/09).
 
@@ -12369,16 +12369,18 @@ class QueryClient:
         query's structure. The grammar is ``docs/uql.md``; errors carry a stable
         ``UQL_*`` code and a caret diagnostic.
 
-        ``foreign_execution`` is an optional server-issued execution reference from
-        the bounded ``ForeignReadOpen``/``Complete`` lifecycle. It is forwarded
-        unchanged so the server can bind the completed, approved source pages to
-        this exact text and typed parameter map; the client does not compute or
-        guess either digest.
+        ``foreign_executions`` is an optional list of server-issued execution
+        references, one per source the statement reads, each from the bounded
+        ``ForeignReadOpen``/``Complete`` lifecycle. They are forwarded unchanged so
+        the server can bind the completed, approved source pages to this exact text
+        and typed parameter map; the client does not compute or guess either
+        digest. A source the caller cannot read is absent from the executions: it
+        adds no rows and the answer's ``"coverage"`` lists it as not used.
 
         Set ``prepare=True`` to ask the authenticated server to plan this exact
         executable text without running it and return the server-owned pins in
         the ``explain`` result. Use those pins with ``ForeignReadOpen`` before
-        repeating the same text with ``foreign_execution``.
+        repeating the same text with ``foreign_executions``.
 
         Returns one dict whose ``"kind"`` says what ran:
 
@@ -12402,11 +12404,11 @@ class QueryClient:
         }
         if prepare:
             body["prepare"] = True
-        if foreign_execution is not None:
-            # The generated sender validates the server-issued execution shape.
-            # Keep the opaque reference byte-for-byte; digest calculation belongs
+        if foreign_executions:
+            # The generated sender validates the server-issued execution shapes.
+            # Keep the opaque references byte-for-byte; digest calculation belongs
             # to the authenticated engine query binder.
-            body["foreign_execution"] = foreign_execution
+            body["foreign_executions"] = foreign_executions
         result = (await _gen.query.send_uql(self._client, body)).payload
         return _uql_result(result)
 

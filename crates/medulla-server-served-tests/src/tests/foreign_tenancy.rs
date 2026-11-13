@@ -92,7 +92,7 @@ fn uql(text: impl Into<String>) -> Method {
         text: text.into(),
         params: Default::default(),
         prepare: false,
-        foreign_execution: None,
+        foreign_executions: Default::default(),
     }
 }
 

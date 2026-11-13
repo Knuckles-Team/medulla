@@ -592,6 +592,10 @@ pub(crate) struct ServedPlanLegs {
     #[cfg(feature = "federation")]
     pub(crate) foreign:
         Option<medulla_server_ops::api::query_txn::foreign_catalog::OwnedForeignRegistry>,
+    /// MEDULLA-CQ-CONN-R090 — per-source coverage of a host-driven foreign read: every
+    /// named source, and whether the caller could read it.
+    #[cfg(feature = "federation")]
+    pub(crate) foreign_coverage: Vec<medulla_types::wire::UqlSourceCoverage>,
     /// EH-066 — the caller's visible decision log, bound when the plan reads it.
     #[cfg(feature = "decide")]
     pub(crate) decisions: Option<Arc<dyn medulla_exec::exec::DecisionSource>>,
@@ -622,18 +626,22 @@ impl ServedPlanLegs {
         let _ = state;
         #[cfg(not(any(feature = "tsdb", feature = "federation", feature = "decide")))]
         let _ = (read_authority, plan, foreign_execution, foreign_executions);
+        #[cfg(feature = "federation")]
+        let foreign_leg = served_foreign_leg(
+            state,
+            plan,
+            read_authority,
+            foreign_execution,
+            foreign_executions,
+        )
+        .await?;
         Ok(Self {
             #[cfg(feature = "tsdb")]
             tsdb_scope: served_tsdb_scope(plan, graph_name, read_authority)?,
             #[cfg(feature = "federation")]
-            foreign: served_foreign_leg(
-                state,
-                plan,
-                read_authority,
-                foreign_execution,
-                foreign_executions,
-            )
-            .await?,
+            foreign: foreign_leg.registry,
+            #[cfg(feature = "federation")]
+            foreign_coverage: foreign_leg.coverage,
             #[cfg(feature = "decide")]
             decisions: served_decision_leg(state, plan, read_authority).await?,
             #[cfg(feature = "result-cache")]
@@ -834,15 +842,6 @@ mod foreign_query_digest_tests {
 
 #[cfg(feature = "query")]
 impl QueryHandlerCtx<'_> {
-    pub(crate) async fn served_legs_with_foreign_execution(
-        &self,
-        plan: &medulla_exec::algebra::Plan,
-        foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
-    ) -> Result<ServedPlanLegs, Response> {
-        self.served_legs_with_foreign_executions(plan, foreign_execution, &[])
-            .await
-    }
-
     pub(crate) async fn served_legs_with_foreign_executions(
         &self,
         plan: &medulla_exec::algebra::Plan,

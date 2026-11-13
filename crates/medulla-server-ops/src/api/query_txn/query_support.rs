@@ -185,6 +185,37 @@ pub fn plan_needs_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
     })
 }
 
+/// The distinct foreign source names a plan reads, in plan order (MEDULLA-CQ-CONN-R090).
+#[cfg(all(feature = "query", feature = "federation"))]
+pub fn plan_foreign_names(ops: &[medulla_exec::algebra::Op]) -> Vec<String> {
+    fn collect(ops: &[medulla_exec::algebra::Op], names: &mut Vec<String>) {
+        for op in ops {
+            let name = match op {
+                medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
+                medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
+                    medulla_types::wire::ForeignSourceSpec::Named { name } => Some(name.as_str()),
+                    _ => None,
+                },
+                medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+                    for branch in branches {
+                        collect(branch, names);
+                    }
+                    None
+                }
+                _ => None,
+            };
+            if let Some(name) = name {
+                if !names.iter().any(|known| known == name) {
+                    names.push(name.to_string());
+                }
+            }
+        }
+    }
+    let mut names = Vec::new();
+    collect(ops, &mut names);
+    names
+}
+
 /// The plan pin shared by explain and foreign-read binding, also available
 /// in query-only builds without the federation feature.
 #[cfg(feature = "query")]

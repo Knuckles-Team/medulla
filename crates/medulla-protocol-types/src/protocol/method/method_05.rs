@@ -135,10 +135,11 @@ $($variants)*
         /// the same text and typed parameters when presenting the execution ref.
         #[serde(default, skip_serializing_if = "is_false")]
         prepare: bool,
-        /// Optional host-driven foreign-read execution bound to this exact text
-        /// and parameter map.
-        #[serde(default)]
-        foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
+        /// Host-driven foreign-read executions bound to this exact text and
+        /// parameter map: one per approved source the statement reads, so one
+        /// statement can join several sources (DECISIONS FQ-UQL-MULTI).
+        #[serde(default, skip_serializing_if = "medulla_types::contract::BoundedVec::is_empty")]
+        foreign_executions: medulla_types::contract::BoundedVec<medulla_catalog_types::foreign_read::ForeignReadExecutionRef, 16>,
     },
 
 

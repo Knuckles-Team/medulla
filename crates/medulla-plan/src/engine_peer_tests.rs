@@ -334,7 +334,7 @@ fn the_envelope_binds_the_secret_the_statement_the_graph_and_the_request_id() {
         text: "MATCH (:Doc)".into(),
         params: Default::default(),
         prepare: false,
-        foreign_execution: None,
+        foreign_executions: Default::default(),
     };
     assert!(
         verified_claims(&peer.secret, &widened).is_none(),

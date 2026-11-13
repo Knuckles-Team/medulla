@@ -165,7 +165,7 @@ async fn second_step_corrects_parse_error() {
                 text: "MATCH (:Doc) |> LIMIT 2".into(),
                 params: Default::default(),
                 prepare: false,
-                foreign_execution: None,
+                foreign_executions: Default::default(),
             },
         ),
     )

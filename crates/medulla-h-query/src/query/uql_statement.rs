@@ -19,12 +19,15 @@ pub(crate) async fn handle_uql(
     text: String,
     params: UqlParams,
     prepare: bool,
-    foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
+    foreign_executions: medulla_types::contract::BoundedVec<
+        medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
+        16,
+    >,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     // MEDULLA-FEDERATED-QUERY-R708.3: `CALL STORED name(args)` is the stored-query call.
     if let Some(parsed) = medulla_uql::parse_call_stored(&text) {
-        if prepare || foreign_execution.is_some() {
+        if prepare || !foreign_executions.is_empty() {
             return Ok(Response::err(
                 req_id,
                 "INVALID_ARGUMENT: CALL STORED carries neither prepare nor a foreign-read execution",
@@ -38,12 +41,12 @@ pub(crate) async fn handle_uql(
         });
     }
     // MEDULLA-ORCH-VOCAB-R010.1: a named harness metric statement.
-    if !prepare && foreign_execution.is_none() {
+    if !prepare && foreign_executions.is_empty() {
         if let Some(query) = medulla_types::harness_metrics::harness_query(&text) {
             return Ok(super::harness_metrics::handle_harness_metric(ctx, query));
         }
     }
-    if prepare && foreign_execution.is_some() {
+    if prepare && !foreign_executions.is_empty() {
         return Ok(Response::err(
             req_id,
             "INVALID_ARGUMENT: prepare cannot carry a foreign-read execution",
@@ -56,13 +59,15 @@ pub(crate) async fn handle_uql(
         Ok(digest) => digest,
         Err(error) => return Ok(Response::err(req_id, error)),
     };
-    if let Some(execution) = foreign_execution.as_ref() {
-        if execution.query_digest != query_digest {
-            return Ok(Response::err(
-                req_id,
-                "FOREIGN_READ_QUERY_MISMATCH: query digest differs",
-            ));
-        }
+    if foreign_executions
+        .as_slice()
+        .iter()
+        .any(|execution| execution.query_digest != query_digest)
+    {
+        return Ok(Response::err(
+            req_id,
+            "FOREIGN_READ_QUERY_MISMATCH: query digest differs",
+        ));
     }
     let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params) {
         Ok(bound) => bound,
@@ -95,12 +100,17 @@ pub(crate) async fn handle_uql(
             Err(error) => return Ok(Response::err(req_id, error)),
         };
     let legs = match ctx
-        .served_legs_with_foreign_execution(&binding, foreign_execution.as_ref())
+        .served_legs_with_foreign_executions(&binding, None, foreign_executions.as_slice())
         .await
     {
         Ok(legs) => legs,
         Err(resp) => return Ok(resp),
     };
+    // MEDULLA-CQ-CONN-R090: the per-source coverage of the host-driven read.
+    #[cfg(feature = "federation")]
+    let source_coverage = legs.foreign_coverage.clone();
+    #[cfg(not(feature = "federation"))]
+    let source_coverage: Vec<medulla_types::wire::UqlSourceCoverage> = Vec::new();
     #[cfg(feature = "result-cache")]
     let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs) {
         Ok(key) => key,
@@ -156,6 +166,13 @@ pub(crate) async fn handle_uql(
             {
                 *snapshot_revision = version;
                 *reported_knowledge_revision = knowledge_revision;
+            }
+            if let medulla_types::wire::UqlResult::Rows {
+                source_coverage: reported_coverage,
+                ..
+            } = &mut result
+            {
+                *reported_coverage = source_coverage;
             }
             #[cfg(feature = "federation")]
             if let medulla_types::wire::UqlResult::Explain {
@@ -315,7 +332,7 @@ mod served_tests {
             text: text.into(),
             params,
             prepare: false,
-            foreign_execution: None,
+            foreign_executions: Default::default(),
         };
         dispatch_on_heap(state, req(id, method)).await
     }
@@ -407,7 +424,7 @@ mod served_tests {
                     text: text.into(),
                     params: Default::default(),
                     prepare: true,
-                    foreign_execution: None,
+                    foreign_executions: Default::default(),
                 },
             ),
         )

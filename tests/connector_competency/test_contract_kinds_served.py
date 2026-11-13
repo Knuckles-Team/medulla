@@ -291,7 +291,7 @@ async def _journey(
             )
             held = await client._send(
                 "Uql",
-                {"text": text, "params": {}, "foreign_execution": held["execution"]},
+                {"text": text, "params": {}, "foreign_executions": [held["execution"]]},
                 None,
             )
         except Exception as refusal:
@@ -366,7 +366,7 @@ async def _journey(
     assert completed["total_rows"] == len(items), completed
 
     # The served Uql answers from the bound driver.
-    answer = await client.query.uql(text, foreign_execution=execution)
+    answer = await client.query.uql(text, foreign_executions=[execution])
     assert answer["kind"] == "rows", answer
     assert {row["id"] for row in answer["rows"]} == {item["id"] for item in items}, (
         answer

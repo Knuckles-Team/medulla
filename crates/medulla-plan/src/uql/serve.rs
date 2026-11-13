@@ -200,6 +200,7 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
             warnings,
             snapshot_revision: 0,
             knowledge_revision: 0,
+            source_coverage: Vec::new(),
         });
     }
     let traced = traced(plan, ctx)?;
@@ -209,6 +210,7 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
         warnings,
         snapshot_revision: 0,
         knowledge_revision: 0,
+        source_coverage: Vec::new(),
     })
 }
 

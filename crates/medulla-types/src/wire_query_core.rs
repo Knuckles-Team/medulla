@@ -954,6 +954,23 @@ pub struct UqlRow {
     pub provenance: std::collections::BTreeMap<String, String>,
 }
 
+/// One foreign source's part in a served statement (MEDULLA-CQ-CONN-R090).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UqlSourceCoverage {
+    /// The source name the statement used.
+    pub source: String,
+    /// Whether the source was read for this caller.
+    pub used: bool,
+    /// Why an unused source was not read: the snake_case form of the
+    /// source-authority `NotUsedReason` (`unconnected` for a source absent from the
+    /// caller's owner-scoped catalog, which is also how a source another owner holds
+    /// appears, so the entry never confirms that it exists). `None` when used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
 /// A row's knowledge-frame state on the wire (EH-450 row contract,
 /// MEDULLA-FEDERATED-QUERY-R028.1): the wire form of
 /// `medulla_retrieval::knowledge::FrameState`. `resolved` is the only servable
@@ -1088,6 +1105,12 @@ pub enum UqlResult {
         /// snapshot; 0 when the build has no epistemic layer.
         #[serde(default)]
         knowledge_revision: u64,
+        /// MEDULLA-CQ-CONN-R090: one entry per foreign source the statement names, in
+        /// plan order, when it ran against host-driven foreign reads. A source the
+        /// caller cannot read adds no rows and is listed here as not used. Empty (and
+        /// omitted on the wire) for a statement that names no foreign source.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        source_coverage: Vec<UqlSourceCoverage>,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1142,6 +1165,18 @@ mod tests {
                 warnings: vec![],
                 snapshot_revision: 7,
                 knowledge_revision: 3,
+                source_coverage: vec![
+                    UqlSourceCoverage {
+                        source: "a".into(),
+                        used: true,
+                        reason: None,
+                    },
+                    UqlSourceCoverage {
+                        source: "b".into(),
+                        used: false,
+                        reason: Some("unconnected".into()),
+                    },
+                ],
             },
             UqlResult::Profile {
                 columns: vec![],
@@ -1170,6 +1205,7 @@ mod tests {
                 warnings: vec![],
                 snapshot_revision: 0,
                 knowledge_revision: 0,
+                source_coverage: vec![],
             }
         );
     }

@@ -206,6 +206,7 @@ where
     #[cfg(feature = "federation")]
     let foreign = served_foreign_leg(state, &plan, read_authority, None, &[])
         .await
+        .map(|leg| leg.registry)
         .map_err(|denied| Response::err(req_id, denied))?;
     // CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your — the in-txn tsdb read-your-own-writes overlay: seed a `StagedSeries`
     // from the txn's OWN staged, uncommitted `GraphTxnState.measurements` so an in-txn

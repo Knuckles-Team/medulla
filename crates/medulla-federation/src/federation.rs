@@ -629,7 +629,7 @@ impl RemoteEngineSource<'_> {
             text: text.to_string(),
             params: std::collections::BTreeMap::new(),
             prepare: false,
-            foreign_execution: None,
+            foreign_executions: Default::default(),
         })?;
         let raw = self.round_trip(&request)?;
         let result: medulla_types::wire::UqlResult = medulla_types::msgpack::decode_bounded(

@@ -48,6 +48,7 @@ pub(crate) fn handle_harness_metric(ctx: &QueryHandlerCtx<'_>, query: &HarnessQu
         warnings,
         snapshot_revision: version,
         knowledge_revision: 0,
+        source_coverage: Vec::new(),
     };
     served_response::<query_results::Uql>(
         ctx.req_id,

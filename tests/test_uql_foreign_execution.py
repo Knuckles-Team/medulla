@@ -35,7 +35,7 @@ async def test_uql_forwards_server_issued_foreign_execution() -> None:
     result = await QueryClient(fake).uql(
         "MATCH (:Issue) WHERE state = $state",
         {"state": "open"},
-        foreign_execution=execution,
+        foreign_executions=[execution],
     )
 
     assert result == {"kind": "rows", "columns": [], "rows": [], "warnings": []}
@@ -45,7 +45,7 @@ async def test_uql_forwards_server_issued_foreign_execution() -> None:
             {
                 "text": "MATCH (:Issue) WHERE state = $state",
                 "params": {"state": {"Str": "open"}},
-                "foreign_execution": execution,
+                "foreign_executions": [execution],
             },
         )
     ]

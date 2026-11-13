@@ -152,10 +152,14 @@ async fn dispatch_query_family(
             hop_budget,
             needs_current_state,
         } => {
-            return Ok(
-                handle_source_coverage(hctx, classes, facets, hop_budget, needs_current_state)
-                    .await,
+            return Ok(handle_source_coverage(
+                hctx,
+                classes,
+                facets,
+                hop_budget,
+                needs_current_state,
             )
+            .await)
         }
         other => other,
     };
@@ -247,8 +251,8 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             text,
             params,
             prepare,
-            foreign_execution,
-        } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
+            foreign_executions,
+        } => handle_uql(ctx, text, params, prepare, foreign_executions).await,
         // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
         Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         // MEDULLA-UNIFIED-DATA-PLANE-R030.3: approving one entity link writes its owl:sameAs edge.

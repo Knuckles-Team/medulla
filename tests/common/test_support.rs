@@ -519,7 +519,7 @@ pub fn uql(text: &str) -> Method {
         text: text.into(),
         params: Default::default(),
         prepare: false,
-        foreign_execution: None,
+        foreign_executions: Default::default(),
     }
 }
 

@@ -1875,7 +1875,7 @@ mod txn_ryow_dispatch_tests {
             text: text.into(),
             params: Default::default(),
             prepare: false,
-            foreign_execution: None,
+            foreign_executions: Default::default(),
         }
     }
 

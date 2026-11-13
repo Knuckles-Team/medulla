@@ -1044,7 +1044,7 @@ async fn test_uql_text_equals_structured_plan_and_oracle() {
                 text: uql.into(),
                 params: Default::default(),
                 prepare: false,
-                foreign_execution: None,
+                foreign_executions: Default::default(),
             },
         ),
     )
@@ -1111,7 +1111,7 @@ async fn test_uql_text_bad_syntax_is_clear_error() {
                 text: "MATCH (:Doc) |> FROBNICATE".into(),
                 params: Default::default(),
                 prepare: false,
-                foreign_execution: None,
+                foreign_executions: Default::default(),
             },
         ),
     )
@@ -1159,7 +1159,7 @@ async fn test_served_scan_reads_node_type_labels() {
                 text: "MATCH (:Paper)".into(),
                 params: Default::default(),
                 prepare: false,
-                foreign_execution: None,
+                foreign_executions: Default::default(),
             },
         ),
     )
