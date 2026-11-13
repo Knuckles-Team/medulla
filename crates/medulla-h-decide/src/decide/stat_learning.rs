@@ -38,6 +38,7 @@ use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
+use super::stat_support::invalid_parameter;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
@@ -285,7 +286,7 @@ async fn index_kernel(
     let eval = &request.evaluation;
     let active = graphs.first().ok_or("a cycle resolved no active graph")?;
     if !active.admits_space(&eval.active_space) {
-        return Err(invalid(
+        return Err(invalid_parameter(
             "the active generation's store declares another embedding space",
         ));
     }
