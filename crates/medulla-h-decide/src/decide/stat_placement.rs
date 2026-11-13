@@ -11,8 +11,9 @@
 use medulla_agent_types::agent_topology::{CapacityHeadroom, CapacityScope};
 use medulla_decision_types::decision::knob_families::placement::policy_from_knobs;
 use medulla_decision_types::decision::statistical::placement::{
-    place, PlacementQuestion, PlacementRead, PlacementTarget, TargetFacts, TargetFactsEntry,
-    PLACEMENT_PARAM,
+    cpu_cell, effective_cost_cap, memory_cell, place, PlacementQuestion, PlacementRead,
+    PlacementReason, PlacementRequestBody, PlacementTarget, TargetFacts, TargetFactsEntry,
+    PLACEMENT_FACTS_INVALID, PLACEMENT_PARAM,
 };
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, ScoredOption, StatisticalOutcome, TypedValue,
@@ -33,9 +34,6 @@ const SUPPORTS_HA: &str = medulla_types::ontology_iri!("placement#supportsHa");
 const SUPPORTS_VOLUMES: &str = medulla_types::ontology_iri!("placement#supportsVolumes");
 const MAX_REPLICAS: &str = medulla_types::ontology_iri!("placement#maxReplicas");
 const RELATIVE_COST: &str = medulla_types::ontology_iri!("placement#relativeCost");
-
-/// The refusal code of a target node whose declared facts are malformed.
-pub(crate) const PLACEMENT_FACTS_INVALID: &str = "PLACEMENT_FACTS_INVALID";
 
 /// The most target nodes one graph read returns: the registry is closed, so a
 /// graph holding more has a foreign node under the label.
@@ -196,9 +194,38 @@ fn rank_score(rank: usize, count: usize) -> QuantisedValue {
     }
 }
 
+/// The binding constraint of one eliminated target, named the way the record
+/// names its premises: a short capacity cell as `lease:<cell>:<class>`, every
+/// other rule as its `placement:*` property (MEDULLA-PLACEMENT-R001.10).
+fn binding_constraint(
+    body: &PlacementRequestBody,
+    read: &PlacementRead,
+    target: PlacementTarget,
+    reason: &PlacementReason,
+) -> String {
+    if *reason != PlacementReason::NoHeadroom {
+        return format!("{}: {}", target.option_id(), reason.as_why_not());
+    }
+    let replicas = u64::from(body.subject.replicas);
+    let (cpu, _) = read
+        .headroom_by_target()
+        .by_target
+        .get(&target)
+        .copied()
+        .unwrap_or((0, 0));
+    if body.subject.cpu_millis.saturating_mul(replicas) > cpu {
+        format!("lease:{}:cpu", cpu_cell(target))
+    } else {
+        format!("lease:{}:memory", memory_cell(target))
+    }
+}
+
 /// `Some` only for a `Placement` question: the outcome to seal in place of the
 /// ordinary scored ladder. The feasible targets are the `Advisory` scores,
-/// cheapest first; none feasible abstains naming each binding constraint.
+/// cheapest first. Nothing feasible abstains with typed reasons, never a
+/// guessed target: a request that loosens a policy cap is `PolicyLoosening`, a
+/// target with no declared facts is `UnknownFact`, and every other elimination
+/// is one `Infeasible` constraint naming what bound it.
 pub(super) fn placement_outcome(
     request: &DecideRequest,
     policy: &DecisionPolicy,
@@ -207,23 +234,49 @@ pub(super) fn placement_outcome(
     let read = question.read.as_ref().ok_or_else(|| {
         invalid_parameter("the placement read is missing: the engine fills it before deciding")
     })?;
+    let caps = policy_from_knobs(policy);
+    let abstain = |reasons: Vec<AbstainReason>| -> Result<StatisticalOutcome, String> {
+        Ok(StatisticalOutcome::Abstained {
+            reasons: BoundedVec::new(reasons).map_err(invalid_parameter)?,
+        })
+    };
+    if effective_cost_cap(
+        question.body.constraints.max_relative_cost,
+        caps.max_relative_cost,
+    )
+    .is_err()
+    {
+        return abstain(vec![AbstainReason::PolicyLoosening {
+            field: "max_relative_cost".to_string(),
+        }]);
+    }
     let verdict = place(
         &question.body,
-        &read.facts(policy_from_knobs(policy)),
+        &read.facts(caps),
         &read.headroom_by_target(),
     )?;
     if verdict.feasible.is_empty() {
-        let constraints = verdict
+        let mut reasons: Vec<AbstainReason> = verdict
             .eliminated
             .iter()
-            .map(|(target, reason)| format!("{}: {}", target.option_id(), reason.as_why_not()))
+            .filter(|(_, reason)| *reason == PlacementReason::NoFacts)
+            .map(|(target, _)| AbstainReason::UnknownFact {
+                component_id: target.option_id().to_string(),
+                field: "placement:facts".to_string(),
+            })
             .collect();
-        return Ok(StatisticalOutcome::Abstained {
-            reasons: BoundedVec::new(vec![AbstainReason::Infeasible {
+        let constraints: Vec<String> = verdict
+            .eliminated
+            .iter()
+            .filter(|(_, reason)| *reason != PlacementReason::NoFacts)
+            .map(|(target, reason)| binding_constraint(&question.body, read, *target, reason))
+            .collect();
+        if !constraints.is_empty() {
+            reasons.push(AbstainReason::Infeasible {
                 constraints: BoundedVec::new(constraints).map_err(invalid_parameter)?,
-            }])
-            .map_err(invalid_parameter)?,
-        });
+            });
+        }
+        return abstain(reasons);
     }
     let count = verdict.feasible.len();
     let scores = verdict

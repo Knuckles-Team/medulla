@@ -55,6 +55,42 @@ pub const KNOBS: &[KnobSpec] = &[
     },
 ];
 
+/// The `placement_plan` solver knobs (MEDULLA-PLACEMENT-R700.2): the node budget
+/// of the exact 0-1 search that assigns services to hosts.
+pub const PLAN_KNOBS: &[KnobSpec] = &[KnobSpec {
+    name: "placement.node_budget",
+    unit: "nodes",
+    default: KnobValue::Integer(200_000),
+    min: KnobValue::Integer(1_000),
+    max: KnobValue::Integer(5_000_000),
+    safety: KnobSafety::Tunable,
+}];
+
+/// The solver settings of one placement plan, read from the pinned policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlanKnobs {
+    /// Most search nodes the exact solve may expand.
+    pub node_budget: u64,
+}
+
+/// The plan solver knobs the pinned policy sets.
+pub fn plan_knobs(policy: &DecisionPolicy) -> PlanKnobs {
+    let spec = &PLAN_KNOBS[0];
+    // A pinned value is range-checked when the policy is pinned; the spec
+    // default stands for a value of the wrong type.
+    let integer = |value: KnobValue| match value {
+        KnobValue::Integer(value) => Some(value),
+        _ => None,
+    };
+    let value = integer(policy.knob(spec))
+        .filter(|value| spec.admits(&KnobValue::Integer(*value)))
+        .or_else(|| integer(spec.default))
+        .unwrap_or_default();
+    PlanKnobs {
+        node_budget: u64::try_from(value).unwrap_or_default(),
+    }
+}
+
 /// The policy caps the pinned policy sets, read through the knobs.
 pub fn policy_from_knobs(policy: &DecisionPolicy) -> PlacementPolicy {
     let max_relative_cost = match policy.knob(&KNOBS[0]) {

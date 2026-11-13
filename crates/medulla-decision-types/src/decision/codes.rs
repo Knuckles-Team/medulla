@@ -457,6 +457,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::RunAdjustment, super::run_adjustment::REFUSALS),
     (QuestionKind::PathPreference, super::path_success::REFUSALS),
     (
+        QuestionKind::Placement,
+        super::statistical::placement::REFUSALS,
+    ),
+    (
         QuestionKind::CorrectionAdmission,
         super::trace_fix_binding::REFUSALS,
     ),

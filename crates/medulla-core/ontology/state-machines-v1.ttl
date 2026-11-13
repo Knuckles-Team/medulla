@@ -1958,6 +1958,392 @@
     :toState :ShardDrainMachine_RecoveryRequired ;
     :firedBy :ShardDrainMachine_Event_Restart .
 
+# spec: MEDULLA-PLACEMENT-R783.7
+# The MovePhase machine. The Rust edge table MOVE_PHASE_MACHINE is the same table; the ontology
+# test asserts equal edge sets. A hydrate move enters at Hydrate; every other move enters at Snapshot.
+
+:MovePhaseState a owl:Class ;
+    rdfs:label "MovePhase State" ;
+    rdfs:comment "A state of the MovePhase machine." ;
+    rdfs:subClassOf :State .
+
+:MovePhaseTerminalState a owl:Class ;
+    rdfs:label "MovePhase Terminal State" ;
+    rdfs:comment "A terminal state of the MovePhase machine." ;
+    rdfs:subClassOf :TerminalState, :MovePhaseState .
+
+:MovePhaseTransition a owl:Class ;
+    rdfs:label "MovePhase Transition" ;
+    rdfs:comment "A transition of the MovePhase machine." ;
+    rdfs:subClassOf :Transition .
+
+:MovePhaseEvent a owl:Class ;
+    rdfs:label "MovePhase Event" ;
+    rdfs:comment "An event of the MovePhase machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MovePhaseGuard a owl:Class ;
+    rdfs:label "MovePhase Guard" ;
+    rdfs:comment "A guard of the MovePhase machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MovePhaseMachine a :StateMachine ;
+    rdfs:label "MovePhase machine" ;
+    :initialState :MovePhaseMachine_Snapshot ;
+    :hasState :MovePhaseMachine_Snapshot, :MovePhaseMachine_DeltaCatchUp, :MovePhaseMachine_FencedCutover, :MovePhaseMachine_Hydrate, :MovePhaseMachine_Complete, :MovePhaseMachine_Aborted .
+
+:MovePhaseMachine_Snapshot a :MovePhaseState ;
+    rdfs:label "MovePhase Snapshot" ;
+    :storedForm "snapshot" .
+
+:MovePhaseMachine_DeltaCatchUp a :MovePhaseState ;
+    rdfs:label "MovePhase DeltaCatchUp" ;
+    :storedForm "delta_catch_up" .
+
+:MovePhaseMachine_FencedCutover a :MovePhaseState ;
+    rdfs:label "MovePhase FencedCutover" ;
+    :storedForm "fenced_cutover" .
+
+:MovePhaseMachine_Hydrate a :MovePhaseState ;
+    rdfs:label "MovePhase Hydrate" ;
+    :storedForm "hydrate" .
+
+:MovePhaseMachine_Complete a :MovePhaseTerminalState ;
+    rdfs:label "MovePhase Complete" ;
+    :storedForm "complete" .
+
+:MovePhaseMachine_Aborted a :MovePhaseTerminalState ;
+    rdfs:label "MovePhase Aborted" ;
+    :storedForm "aborted" .
+
+:MovePhaseMachine_Event_SnapshotCopied a :MovePhaseEvent ;
+    rdfs:label "MovePhase SnapshotCopied" .
+
+:MovePhaseMachine_Event_DeltaCaughtUp a :MovePhaseEvent ;
+    rdfs:label "MovePhase DeltaCaughtUp" .
+
+:MovePhaseMachine_Event_CutoverCommitted a :MovePhaseEvent ;
+    rdfs:label "MovePhase CutoverCommitted" .
+
+:MovePhaseMachine_Event_Hydrated a :MovePhaseEvent ;
+    rdfs:label "MovePhase Hydrated" .
+
+:MovePhaseMachine_Event_Abort a :MovePhaseEvent ;
+    rdfs:label "MovePhase Abort" .
+
+:MovePhaseMachine_MP01 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP01" ;
+    :edgeId "MP01" ;
+    :fromState :MovePhaseMachine_Snapshot ;
+    :toState :MovePhaseMachine_DeltaCatchUp ;
+    :firedBy :MovePhaseMachine_Event_SnapshotCopied .
+
+:MovePhaseMachine_MP02 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP02" ;
+    :edgeId "MP02" ;
+    :fromState :MovePhaseMachine_DeltaCatchUp ;
+    :toState :MovePhaseMachine_FencedCutover ;
+    :firedBy :MovePhaseMachine_Event_DeltaCaughtUp .
+
+:MovePhaseMachine_MP03 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP03" ;
+    :edgeId "MP03" ;
+    :fromState :MovePhaseMachine_FencedCutover ;
+    :toState :MovePhaseMachine_Complete ;
+    :firedBy :MovePhaseMachine_Event_CutoverCommitted .
+
+:MovePhaseMachine_MP04 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP04" ;
+    :edgeId "MP04" ;
+    :fromState :MovePhaseMachine_Hydrate ;
+    :toState :MovePhaseMachine_Complete ;
+    :firedBy :MovePhaseMachine_Event_Hydrated .
+
+:MovePhaseMachine_MP05 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP05" ;
+    :edgeId "MP05" ;
+    :fromState :MovePhaseMachine_Snapshot ;
+    :toState :MovePhaseMachine_Aborted ;
+    :firedBy :MovePhaseMachine_Event_Abort .
+
+:MovePhaseMachine_MP06 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP06" ;
+    :edgeId "MP06" ;
+    :fromState :MovePhaseMachine_DeltaCatchUp ;
+    :toState :MovePhaseMachine_Aborted ;
+    :firedBy :MovePhaseMachine_Event_Abort .
+
+:MovePhaseMachine_MP07 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP07" ;
+    :edgeId "MP07" ;
+    :fromState :MovePhaseMachine_FencedCutover ;
+    :toState :MovePhaseMachine_Aborted ;
+    :firedBy :MovePhaseMachine_Event_Abort .
+
+:MovePhaseMachine_MP08 a :MovePhaseTransition ;
+    rdfs:label "MovePhase MP08" ;
+    :edgeId "MP08" ;
+    :fromState :MovePhaseMachine_Hydrate ;
+    :toState :MovePhaseMachine_Aborted ;
+    :firedBy :MovePhaseMachine_Event_Abort .
+
+# spec: MEDULLA-PLACEMENT-R783.11
+# The ShardPlacement machine. The Rust edge table SHARD_PLACEMENT_MACHINE is the same table; the ontology
+# test asserts equal edge sets. The machine has no terminal state.
+
+:ShardPlacementState a owl:Class ;
+    rdfs:label "ShardPlacement State" ;
+    rdfs:comment "A state of the ShardPlacement machine." ;
+    rdfs:subClassOf :State .
+
+:ShardPlacementTerminalState a owl:Class ;
+    rdfs:label "ShardPlacement Terminal State" ;
+    rdfs:comment "A terminal state of the ShardPlacement machine." ;
+    rdfs:subClassOf :TerminalState, :ShardPlacementState .
+
+:ShardPlacementTransition a owl:Class ;
+    rdfs:label "ShardPlacement Transition" ;
+    rdfs:comment "A transition of the ShardPlacement machine." ;
+    rdfs:subClassOf :Transition .
+
+:ShardPlacementEvent a owl:Class ;
+    rdfs:label "ShardPlacement Event" ;
+    rdfs:comment "An event of the ShardPlacement machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ShardPlacementGuard a owl:Class ;
+    rdfs:label "ShardPlacement Guard" ;
+    rdfs:comment "A guard of the ShardPlacement machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ShardPlacementMachine a :StateMachine ;
+    rdfs:label "ShardPlacement machine" ;
+    :initialState :ShardPlacementMachine_Resident ;
+    :hasState :ShardPlacementMachine_Resident, :ShardPlacementMachine_Follower, :ShardPlacementMachine_Cold, :ShardPlacementMachine_Hydrating, :ShardPlacementMachine_Snapshotting, :ShardPlacementMachine_DeltaCatchUp, :ShardPlacementMachine_FencedCutover, :ShardPlacementMachine_Draining, :ShardPlacementMachine_Quarantined .
+
+:ShardPlacementMachine_Resident a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Resident" ;
+    :storedForm "resident" .
+
+:ShardPlacementMachine_Follower a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Follower" ;
+    :storedForm "follower" .
+
+:ShardPlacementMachine_Cold a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Cold" ;
+    :storedForm "cold" .
+
+:ShardPlacementMachine_Hydrating a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Hydrating" ;
+    :storedForm "hydrating" .
+
+:ShardPlacementMachine_Snapshotting a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Snapshotting" ;
+    :storedForm "snapshotting" .
+
+:ShardPlacementMachine_DeltaCatchUp a :ShardPlacementState ;
+    rdfs:label "ShardPlacement DeltaCatchUp" ;
+    :storedForm "delta_catch_up" .
+
+:ShardPlacementMachine_FencedCutover a :ShardPlacementState ;
+    rdfs:label "ShardPlacement FencedCutover" ;
+    :storedForm "fenced_cutover" .
+
+:ShardPlacementMachine_Draining a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Draining" ;
+    :storedForm "draining" .
+
+:ShardPlacementMachine_Quarantined a :ShardPlacementState ;
+    rdfs:label "ShardPlacement Quarantined" ;
+    :storedForm "quarantined" .
+
+:ShardPlacementMachine_Event_Demote a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Demote" .
+
+:ShardPlacementMachine_Event_Promote a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Promote" .
+
+:ShardPlacementMachine_Event_StartSnapshot a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement StartSnapshot" .
+
+:ShardPlacementMachine_Event_SnapshotCopied a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement SnapshotCopied" .
+
+:ShardPlacementMachine_Event_DeltaCaughtUp a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement DeltaCaughtUp" .
+
+:ShardPlacementMachine_Event_CutoverCommitted a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement CutoverCommitted" .
+
+:ShardPlacementMachine_Event_AbortMove a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement AbortMove" .
+
+:ShardPlacementMachine_Event_StartDrain a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement StartDrain" .
+
+:ShardPlacementMachine_Event_Offload a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Offload" .
+
+:ShardPlacementMachine_Event_StartHydrate a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement StartHydrate" .
+
+:ShardPlacementMachine_Event_Hydrated a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Hydrated" .
+
+:ShardPlacementMachine_Event_Quarantine a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Quarantine" .
+
+:ShardPlacementMachine_Event_Release a :ShardPlacementEvent ;
+    rdfs:label "ShardPlacement Release" .
+
+:ShardPlacementMachine_SP01 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP01" ;
+    :edgeId "SP01" ;
+    :fromState :ShardPlacementMachine_Resident ;
+    :toState :ShardPlacementMachine_Follower ;
+    :firedBy :ShardPlacementMachine_Event_Demote .
+
+:ShardPlacementMachine_SP02 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP02" ;
+    :edgeId "SP02" ;
+    :fromState :ShardPlacementMachine_Follower ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_Promote .
+
+:ShardPlacementMachine_SP03 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP03" ;
+    :edgeId "SP03" ;
+    :fromState :ShardPlacementMachine_Resident ;
+    :toState :ShardPlacementMachine_Snapshotting ;
+    :firedBy :ShardPlacementMachine_Event_StartSnapshot .
+
+:ShardPlacementMachine_SP04 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP04" ;
+    :edgeId "SP04" ;
+    :fromState :ShardPlacementMachine_Follower ;
+    :toState :ShardPlacementMachine_Snapshotting ;
+    :firedBy :ShardPlacementMachine_Event_StartSnapshot .
+
+:ShardPlacementMachine_SP05 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP05" ;
+    :edgeId "SP05" ;
+    :fromState :ShardPlacementMachine_Snapshotting ;
+    :toState :ShardPlacementMachine_DeltaCatchUp ;
+    :firedBy :ShardPlacementMachine_Event_SnapshotCopied .
+
+:ShardPlacementMachine_SP06 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP06" ;
+    :edgeId "SP06" ;
+    :fromState :ShardPlacementMachine_DeltaCatchUp ;
+    :toState :ShardPlacementMachine_FencedCutover ;
+    :firedBy :ShardPlacementMachine_Event_DeltaCaughtUp .
+
+:ShardPlacementMachine_SP07 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP07" ;
+    :edgeId "SP07" ;
+    :fromState :ShardPlacementMachine_FencedCutover ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_CutoverCommitted .
+
+:ShardPlacementMachine_SP08 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP08" ;
+    :edgeId "SP08" ;
+    :fromState :ShardPlacementMachine_Snapshotting ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_AbortMove .
+
+:ShardPlacementMachine_SP09 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP09" ;
+    :edgeId "SP09" ;
+    :fromState :ShardPlacementMachine_DeltaCatchUp ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_AbortMove .
+
+:ShardPlacementMachine_SP10 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP10" ;
+    :edgeId "SP10" ;
+    :fromState :ShardPlacementMachine_FencedCutover ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_AbortMove .
+
+:ShardPlacementMachine_SP11 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP11" ;
+    :edgeId "SP11" ;
+    :fromState :ShardPlacementMachine_Hydrating ;
+    :toState :ShardPlacementMachine_Cold ;
+    :firedBy :ShardPlacementMachine_Event_AbortMove .
+
+:ShardPlacementMachine_SP12 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP12" ;
+    :edgeId "SP12" ;
+    :fromState :ShardPlacementMachine_Resident ;
+    :toState :ShardPlacementMachine_Draining ;
+    :firedBy :ShardPlacementMachine_Event_StartDrain .
+
+:ShardPlacementMachine_SP13 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP13" ;
+    :edgeId "SP13" ;
+    :fromState :ShardPlacementMachine_Follower ;
+    :toState :ShardPlacementMachine_Draining ;
+    :firedBy :ShardPlacementMachine_Event_StartDrain .
+
+:ShardPlacementMachine_SP14 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP14" ;
+    :edgeId "SP14" ;
+    :fromState :ShardPlacementMachine_Draining ;
+    :toState :ShardPlacementMachine_Cold ;
+    :firedBy :ShardPlacementMachine_Event_Offload .
+
+:ShardPlacementMachine_SP15 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP15" ;
+    :edgeId "SP15" ;
+    :fromState :ShardPlacementMachine_Resident ;
+    :toState :ShardPlacementMachine_Cold ;
+    :firedBy :ShardPlacementMachine_Event_Offload .
+
+:ShardPlacementMachine_SP16 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP16" ;
+    :edgeId "SP16" ;
+    :fromState :ShardPlacementMachine_Cold ;
+    :toState :ShardPlacementMachine_Hydrating ;
+    :firedBy :ShardPlacementMachine_Event_StartHydrate .
+
+:ShardPlacementMachine_SP17 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP17" ;
+    :edgeId "SP17" ;
+    :fromState :ShardPlacementMachine_Hydrating ;
+    :toState :ShardPlacementMachine_Resident ;
+    :firedBy :ShardPlacementMachine_Event_Hydrated .
+
+:ShardPlacementMachine_SP18 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP18" ;
+    :edgeId "SP18" ;
+    :fromState :ShardPlacementMachine_Resident ;
+    :toState :ShardPlacementMachine_Quarantined ;
+    :firedBy :ShardPlacementMachine_Event_Quarantine .
+
+:ShardPlacementMachine_SP19 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP19" ;
+    :edgeId "SP19" ;
+    :fromState :ShardPlacementMachine_Follower ;
+    :toState :ShardPlacementMachine_Quarantined ;
+    :firedBy :ShardPlacementMachine_Event_Quarantine .
+
+:ShardPlacementMachine_SP20 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP20" ;
+    :edgeId "SP20" ;
+    :fromState :ShardPlacementMachine_Draining ;
+    :toState :ShardPlacementMachine_Quarantined ;
+    :firedBy :ShardPlacementMachine_Event_Quarantine .
+
+:ShardPlacementMachine_SP21 a :ShardPlacementTransition ;
+    rdfs:label "ShardPlacement SP21" ;
+    :edgeId "SP21" ;
+    :fromState :ShardPlacementMachine_Quarantined ;
+    :toState :ShardPlacementMachine_Follower ;
+    :firedBy :ShardPlacementMachine_Event_Release .
+
+
 # spec: MEDULLA-PLACEMENT-R782.2
 # The CapacityLease machine. The Rust edge table CAPACITY_LEASE_MACHINE is the same table; the ontology
 # test asserts equal edge sets.

@@ -53,9 +53,9 @@ use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
-use medulla_jobs::schedule_run::ScheduleEvent;
 use medulla_jobs::store::{JobStore, SubmitSpec};
 use medulla_types::contract::Nonce;
+use medulla_types::schedule_machine::ScheduleEvent;
 use medulla_work_types::jobs::JobKind;
 use medulla_work_types::jobs::JobOp;
 use medulla_work_types::jobs::SubmitJobSpec;

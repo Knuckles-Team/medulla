@@ -26,6 +26,7 @@ pub mod versioning;
 // MEDULLA-ORCH-VOCAB-R811 — the core state-machine contract: machine definition,
 // the one generic transition function and the typed `TransitionRefused`.
 pub mod profile_grant_machine;
+pub mod schedule_machine;
 pub mod refusal_code;
 pub mod reservation_machine;
 pub mod transition_refused;

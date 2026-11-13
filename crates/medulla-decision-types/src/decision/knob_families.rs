@@ -33,6 +33,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     memory::KNOBS,
     participant::KNOBS,
     placement::KNOBS,
+    placement::PLAN_KNOBS,
     profile::KNOBS,
     prompt_candidate::KNOBS,
     task_plan::KNOBS,

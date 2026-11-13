@@ -887,3 +887,46 @@ mod topology_question {
         );
     }
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R112
+/// The capacity premise reads headroom at the requesting priority: capacity a
+/// background request may not spend (the reserved floor) leaves it a typed
+/// `Infeasible` answer naming the lease cell, while an interactive request at
+/// the same ledger is served.
+#[cfg(all(feature = "decide", feature = "redb"))]
+#[tokio::test]
+async fn exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result() {
+    use super::placement_tests::{
+        abstain_reasons, body, placement_harness_with_floor, placement_request, CPU_HEADROOM,
+    };
+    use medulla_decision_types::decision::AbstainReason;
+    use medulla_mutation_types::capacity_lease::LeasePriority;
+
+    // Every CPU cell keeps all but 100 millicores in reserve.
+    let h = placement_harness_with_floor(CPU_HEADROOM - 100).await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+
+    let interactive = decide(&h, placement_request(&schema_pin, body(true, 2)))
+        .await
+        .unwrap();
+    assert!(matches!(
+        interactive.records.as_slice()[0].outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+
+    let mut background = body(true, 2);
+    background.constraints.priority = LeasePriority::BackgroundIngestion;
+    let batch = decide(&h, placement_request(&schema_pin, background))
+        .await
+        .unwrap();
+    let reasons = abstain_reasons(&batch);
+    let [AbstainReason::Infeasible { constraints }] = reasons.as_slice() else {
+        panic!("expected one typed Infeasible reason: {reasons:?}")
+    };
+    assert!(
+        constraints
+            .iter()
+            .any(|c| c == "lease:placement:swarm:cpu:cpu"),
+        "{constraints:?}"
+    );
+}

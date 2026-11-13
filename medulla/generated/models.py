@@ -3286,6 +3286,13 @@ class ControlLeaseTransitionOutcome(str, Enum):
     NOT_FOUND = "not_found"
 
 
+class ControlLeaseStatus(str, Enum):
+    ACTIVE = "active"
+    CONSUMED = "consumed"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+
 class ControlLeaseView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -28546,9 +28553,6 @@ ContextViewEdgesItem = Annotated[
         max_length=3,
     ),
 ]
-
-
-ControlLeaseStatus = str | Literal["consumed"]
 
 
 CreateUserRequestGroups = Annotated[list[str], AfterValidator(_eg_unique_items)]

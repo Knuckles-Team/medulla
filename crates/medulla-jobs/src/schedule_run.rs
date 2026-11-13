@@ -8,9 +8,7 @@
 //! budget usage of the current period). [`ScheduleState`] is the explicit pause machine; its
 //! transition function [`ScheduleState::apply`] is the only writer of the state.
 
-use medulla_types::transition_refused::{
-    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
-};
+use medulla_types::schedule_machine::ScheduleState;
 use serde::{Deserialize, Serialize};
 
 use crate::model::AnalyticsJob;
@@ -22,87 +20,6 @@ pub const SCHEDULE_RUN_NODE_TYPE: &str = "ScheduleRun";
 pub const MAX_EXCLUSION_GROUP_CHARS: usize = 64;
 /// Largest minimum spacing between group runs, in seconds (seven days).
 pub const MAX_MIN_SPACING_S: u64 = 604_800;
-
-/// The closed state set of the schedule machine.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ScheduleState {
-    #[default]
-    Enabled,
-    Paused,
-}
-
-impl MachineState for ScheduleState {
-    fn stored(self) -> &'static str {
-        match self {
-            Self::Enabled => "enabled",
-            Self::Paused => "paused",
-        }
-    }
-}
-
-/// The closed event set of the schedule machine.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ScheduleEvent {
-    Pause,
-    Resume,
-}
-
-impl MachineEvent for ScheduleEvent {
-    fn name(self) -> &'static str {
-        match self {
-            Self::Pause => "pause",
-            Self::Resume => "resume",
-        }
-    }
-}
-
-/// The schedule machine has no guards.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ScheduleGuard {}
-
-/// The schedule machine: `Enabled` start, no terminal state. Pausing a paused schedule and
-/// resuming an enabled one are illegal transitions; the served methods answer them
-/// idempotently before calling the machine.
-pub const SCHEDULE_MACHINE: MachineDef<ScheduleState, ScheduleEvent, ScheduleGuard> = MachineDef {
-    name: "ScheduleMachine",
-    states: &[ScheduleState::Enabled, ScheduleState::Paused],
-    initial: ScheduleState::Enabled,
-    terminals: &[],
-    events: &[ScheduleEvent::Pause, ScheduleEvent::Resume],
-    guards: &[],
-    edges: &[
-        Edge {
-            id: "S01",
-            from: ScheduleState::Enabled,
-            event: ScheduleEvent::Pause,
-            guard: None,
-            to: ScheduleState::Paused,
-        },
-        Edge {
-            id: "S02",
-            from: ScheduleState::Paused,
-            event: ScheduleEvent::Resume,
-            guard: None,
-            to: ScheduleState::Enabled,
-        },
-    ],
-};
-
-impl ScheduleState {
-    /// The one transition function: the next state, or the typed refusal.
-    pub fn apply(self, event: ScheduleEvent) -> Result<Self, TransitionRefused> {
-        transition(&SCHEDULE_MACHINE, self, event, |guard| match guard {}).map(|edge| edge.to)
-    }
-
-    /// The state a pause or resume leaves the schedule in.
-    pub fn target(event: ScheduleEvent) -> Self {
-        match event {
-            ScheduleEvent::Pause => Self::Paused,
-            ScheduleEvent::Resume => Self::Enabled,
-        }
-    }
-}
 
 /// The budget of one schedule: most run seconds and most tokens its runs may use per budget
 /// period of `period_s` seconds.
@@ -349,4 +266,96 @@ pub fn validate_group(group: Option<&str>, min_spacing_s: u64) -> Result<(), Sch
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use medulla_types::schedule_machine::{ScheduleState, SCHEDULE_MACHINE};
+    use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
+
+    use super::ScheduleBudget;
+    use crate::schedule::{ScheduleRecord, ScheduleSpec};
+
+    fn record(state: ScheduleState) -> ScheduleRecord {
+        ScheduleRecord {
+            name: "nightly".into(),
+            owner: "alice".into(),
+            tenant: "t1".into(),
+            spec: ScheduleSpec::OneShot { at_ms: 1 },
+            task_kind: "association.refresh".into(),
+            state,
+            resumed_ms: 0,
+            budget: ScheduleBudget {
+                max_run_s: 10,
+                max_tokens: 100,
+                period_s: 60,
+            },
+            exclusion_group: None,
+            min_spacing_s: 0,
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R785.1
+    #[test]
+    fn every_legal_transition_applies() {
+        for edge in SCHEDULE_MACHINE.edges {
+            let mut holder = record(edge.from);
+            holder
+                .transition(edge.event)
+                .unwrap_or_else(|e| panic!("edge {} refused: {e}", edge.id));
+            assert_eq!(holder.state, edge.to, "edge {}", edge.id);
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R785.1
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        for &from in SCHEDULE_MACHINE.states {
+            for &event in SCHEDULE_MACHINE.events {
+                if SCHEDULE_MACHINE
+                    .edges
+                    .iter()
+                    .any(|e| e.from == from && e.event == event)
+                {
+                    continue;
+                }
+                let mut holder = record(from);
+                let before = holder.clone();
+                let refused = holder.transition(event).expect_err("illegal pair");
+                assert_eq!(refused.machine, "ScheduleMachine");
+                assert_eq!(refused.from, from.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
+                assert_eq!(holder, before, "a refused event changes nothing");
+            }
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R785.1
+    #[test]
+    fn no_writer_sets_state_outside_transition() {
+        // The record's `state` is assigned in exactly one place: `ScheduleRecord::transition`.
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let handler = root
+            .parent()
+            .expect("crates dir")
+            .join("medulla-h-jobs/src/jobs/schedules.rs");
+        // The needle is split so this test's own source does not match it.
+        let needle = [".state", " = "].concat();
+        let mut sites = Vec::new();
+        for path in [
+            root.join("src/schedule.rs"),
+            root.join("src/schedule_run.rs"),
+            handler,
+        ] {
+            let text = std::fs::read_to_string(&path).expect("read source");
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if !trimmed.starts_with("//") && trimmed.contains(&needle) {
+                    sites.push(trimmed.to_string());
+                }
+            }
+        }
+        assert_eq!(sites, vec![format!("self{needle}next;")]);
+    }
 }

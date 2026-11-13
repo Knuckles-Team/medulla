@@ -22,8 +22,12 @@ use medulla_raft::raft::NodeId;
 // dispatches to (and the `MoveBudget` they thread through) live in this
 // submodule rather than as further items in this already-oversized file --
 // see `plan.rs`'s module doc for why.
+mod move_phase_machine;
 mod plan;
+mod shard_placement_machine;
+pub use move_phase_machine::{MoveEvent, MOVE_PHASE_MACHINE};
 use plan::MoveBudget;
+pub use shard_placement_machine::{PlacementEvent, SHARD_PLACEMENT_MACHINE};
 
 /// Basis-point scale used by pressure and policy thresholds.
 pub const PRESSURE_SCALE_BP: u64 = 10_000;
@@ -408,7 +412,6 @@ impl MoveCheckpoint {
         source_node: NodeId,
         target_node: NodeId,
         kind: MoveKind,
-        phase: MovePhase,
         now_tick: u64,
     ) -> Self {
         let identity = MoveIdentity::for_placement(
@@ -428,7 +431,7 @@ impl MoveCheckpoint {
             target_node,
             placement_epoch: placement.placement_epoch,
             snapshot_epoch: placement.placement_epoch,
-            phase,
+            phase: MovePhase::entry_for(kind),
             delta_cursor: 0,
             copied_bytes: 0,
             applied_delta_count: 0,
@@ -1097,7 +1100,9 @@ mod tests {
         let proposal = &first.proposals[0];
         let mut resumed_input = first_input.clone();
         let mut checkpoint = proposal.checkpoint.clone();
-        checkpoint.phase = MovePhase::DeltaCatchUp;
+        checkpoint
+            .advance(MoveEvent::SnapshotCopied, first_input.now_tick)
+            .expect("snapshot copied");
         checkpoint.delta_cursor = 42;
         resumed_input.active_moves = vec![checkpoint];
         let resumed = planner.plan(&resumed_input).expect("valid resumed plan");
@@ -1144,7 +1149,9 @@ mod tests {
     #[test]
     fn quarantined_state_has_no_safe_target() {
         let mut p = placement("graph-a", 80);
-        p.state = PlacementState::Quarantined;
+        let tick = p.last_transition_tick;
+        p.transition(PlacementEvent::Quarantine, tick)
+            .expect("legal");
         let i = input(p);
         let result = CrossNodeElasticityPlanner.plan(&i).expect("valid plan");
         assert_eq!(result.proposals.len(), 0);
@@ -1154,7 +1161,10 @@ mod tests {
     #[test]
     fn in_flight_lifecycle_state_is_duplicate_in_flight() {
         let mut p = placement("graph-a", 80);
-        p.state = PlacementState::Hydrating;
+        let tick = p.last_transition_tick;
+        p.transition(PlacementEvent::Offload, tick).expect("legal");
+        p.transition(PlacementEvent::StartHydrate, tick)
+            .expect("legal");
         let i = input(p);
         let result = CrossNodeElasticityPlanner.plan(&i).expect("valid plan");
         assert_eq!(result.proposals.len(), 0);
@@ -1164,7 +1174,8 @@ mod tests {
     #[test]
     fn cold_state_without_enough_reads_is_hysteresis_not_crossed() {
         let mut p = placement("graph-a", 0);
-        p.state = PlacementState::Cold;
+        let tick = p.last_transition_tick;
+        p.transition(PlacementEvent::Offload, tick).expect("legal");
         p.load.read_ops_per_sec = 0;
         let i = input(p);
         let result = CrossNodeElasticityPlanner.plan(&i).expect("valid plan");

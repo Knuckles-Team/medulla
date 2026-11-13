@@ -180,8 +180,8 @@ pub struct ScheduleView {
     pub tenant: String,
     pub spec: serde_json::Value,
     pub task_kind: String,
-    /// The pause machine state: `enabled` or `paused`.
-    pub state: String,
+    /// The pause machine state (`ScheduleMachine`), read from the stored record.
+    pub state: medulla_types::schedule_machine::ScheduleState,
     /// The instant of the last resume, 0 when never resumed.
     pub resumed_ms: u64,
     pub max_run_s: u64,

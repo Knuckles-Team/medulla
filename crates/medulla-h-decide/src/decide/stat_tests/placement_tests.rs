@@ -9,7 +9,7 @@ use medulla_decision_types::decision::statistical::placement::{
     cpu_cell, memory_cell, PlacementConstraints, PlacementQuestion, PlacementRead,
     PlacementRequestBody, PlacementSubject, PlacementTarget, PLACEMENT_PARAM,
 };
-use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::{AbstainReason, EvidenceClass, ResolutionKind};
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass, LeasePriority};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
@@ -19,7 +19,7 @@ use medulla_work_types::native_control::{CapacityCellUpdateRequest, NativeContro
 use super::*;
 
 const GRAPH: &str = "placement";
-const CPU_HEADROOM: u64 = 4_000;
+pub(super) const CPU_HEADROOM: u64 = 4_000;
 /// Memory headroom in bytes; a ledger cell holds at most
 /// `MAX_CAPACITY_AMOUNT` (10^9) units, so the fixture stays under it.
 const MEMORY_HEADROOM: u64 = 512 << 20;
@@ -34,7 +34,12 @@ fn declared_facts(target: PlacementTarget) -> (bool, bool, u32, u64) {
     }
 }
 
-async fn cell(backend: &RedbBackend, cell_id: String, class: CapacityResourceClass, capacity: u64) {
+async fn cell(
+    backend: &RedbBackend,
+    cell_id: String,
+    class: CapacityResourceClass,
+    (capacity, reserved_floor): (u64, u64),
+) {
     backend
         .commit_capacity_lease(
             GRAPH,
@@ -46,7 +51,7 @@ async fn cell(backend: &RedbBackend, cell_id: String, class: CapacityResourceCla
                         parent_id: None,
                         resource_class: class,
                         capacity,
-                        reserved_floor: 0,
+                        reserved_floor,
                         epoch: 1,
                         policy_digest: "d".repeat(64),
                         updated_at_ms: 0,
@@ -64,6 +69,12 @@ async fn cell(backend: &RedbBackend, cell_id: String, class: CapacityResourceCla
 /// A harness whose graph holds the four `placement:Target` nodes and whose
 /// ledger holds one CPU and one memory cell per target.
 async fn placement_harness() -> Harness {
+    placement_harness_with_floor(0).await
+}
+
+/// [`placement_harness`] whose CPU cells keep `cpu_floor` millicores in reserve
+/// for every priority but `BackgroundIngestion`.
+pub(super) async fn placement_harness_with_floor(cpu_floor: u64) -> Harness {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let backend = Arc::new(
         RedbBackend::open_with_shards(h._dir.path().to_string_lossy().into_owned(), 16, 1).unwrap(),
@@ -73,14 +84,14 @@ async fn placement_harness() -> Harness {
             &backend,
             cpu_cell(target),
             CapacityResourceClass::Cpu,
-            CPU_HEADROOM,
+            (CPU_HEADROOM, cpu_floor),
         )
         .await;
         cell(
             &backend,
             memory_cell(target),
             CapacityResourceClass::Memory,
-            MEMORY_HEADROOM,
+            (MEMORY_HEADROOM, 0),
         )
         .await;
     }
@@ -113,7 +124,7 @@ async fn placement_harness() -> Harness {
     h
 }
 
-fn body(requires_ha: bool, replicas: u32) -> PlacementRequestBody {
+pub(super) fn body(requires_ha: bool, replicas: u32) -> PlacementRequestBody {
     PlacementRequestBody {
         subject: PlacementSubject {
             workload_iri: "urn:workload:api".into(),
@@ -145,7 +156,10 @@ fn body(requires_ha: bool, replicas: u32) -> PlacementRequestBody {
     }
 }
 
-fn placement_request(schema: &ComponentDependency, body: PlacementRequestBody) -> DecideRequest {
+pub(super) fn placement_request(
+    schema: &ComponentDependency,
+    body: PlacementRequestBody,
+) -> DecideRequest {
     let options = body
         .candidate_targets
         .iter()
@@ -278,4 +292,176 @@ async fn placement_request_returns_cheapest_feasible_target() {
             .is_some_and(|error| error.starts_with("ACCESS_DENIED")),
         "{response:?}"
     );
+}
+
+/// Every cell's headroom at `priority`, read straight from the ledger.
+async fn ledger(h: &Harness, priority: LeasePriority) -> Vec<(String, u64, u64)> {
+    let backend = h.state.read().await.persistence.clone().unwrap();
+    let cells: Vec<String> = PlacementTarget::ALL
+        .iter()
+        .flat_map(|target| [cpu_cell(*target), memory_cell(*target)])
+        .collect();
+    backend
+        .read_capacity_headroom(GRAPH, &cells, priority)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.cell_id, row.available, row.epoch))
+        .collect()
+}
+
+pub(super) fn premise_facts(batch: &DecisionBatch) -> Vec<String> {
+    batch.records.as_slice()[0]
+        .premises
+        .iter()
+        .map(|p| p.fact.clone())
+        .collect()
+}
+
+// spec: MEDULLA-PLACEMENT-R001.8
+#[tokio::test]
+async fn placement_reads_headroom_without_lease() {
+    const FLOOR: u64 = 1_500;
+    let h = placement_harness_with_floor(FLOOR).await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+    let before = ledger(&h, LeasePriority::Interactive).await;
+
+    // An interactive request sees the whole cell, as one `lease:<cell>:<class>`
+    // observation premise per cell read.
+    let batch = decide(&h, placement_request(&schema_pin, body(false, 2)))
+        .await
+        .unwrap();
+    let facts = premise_facts(&batch);
+    assert!(
+        facts.contains(&format!("lease:placement:compose:cpu:cpu={CPU_HEADROOM}")),
+        "{facts:?}"
+    );
+    let record = &batch.records.as_slice()[0];
+    assert!(record
+        .premises
+        .iter()
+        .filter(|p| p.fact.starts_with("lease:"))
+        .all(|p| p.class == medulla_decision_types::decision::PremiseClass::Observation));
+
+    // A lower-priority request sees less: the reserved floor is not its to spend.
+    let mut background = body(false, 2);
+    background.constraints.priority = LeasePriority::BackgroundIngestion;
+    let batch = decide(&h, placement_request(&schema_pin, background))
+        .await
+        .unwrap();
+    let facts = premise_facts(&batch);
+    assert!(
+        facts.contains(&format!(
+            "lease:placement:compose:cpu:cpu={}",
+            CPU_HEADROOM - FLOOR
+        )),
+        "{facts:?}"
+    );
+
+    // Nothing was acquired: the ledger reads the same after both decisions.
+    assert_eq!(ledger(&h, LeasePriority::Interactive).await, before);
+}
+
+pub(super) fn abstain_reasons(batch: &DecisionBatch) -> Vec<AbstainReason> {
+    let StatisticalOutcome::Abstained { reasons } = &batch.records.as_slice()[0].outcome else {
+        panic!(
+            "expected an abstention: {:?}",
+            batch.records.as_slice()[0].outcome
+        )
+    };
+    reasons.as_slice().to_vec()
+}
+
+// spec: MEDULLA-PLACEMENT-R001.10
+#[tokio::test]
+async fn placement_abstains_with_typed_reasons() {
+    let h = placement_harness().await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+
+    // Infeasible: a demand above every cell's headroom names the binding cell
+    // as `lease:<cell>:<class>`; a property rule names its `placement:*` property.
+    let mut heavy = body(true, 2);
+    heavy.subject.cpu_millis = CPU_HEADROOM;
+    let batch = decide(&h, placement_request(&schema_pin, heavy))
+        .await
+        .unwrap();
+    let reasons = abstain_reasons(&batch);
+    let [AbstainReason::Infeasible { constraints }] = reasons.as_slice() else {
+        panic!("expected one Infeasible reason: {reasons:?}")
+    };
+    let constraints: Vec<&str> = constraints.iter().map(String::as_str).collect();
+    assert!(
+        constraints.contains(&"lease:placement:swarm:cpu:cpu"),
+        "{constraints:?}"
+    );
+    assert!(
+        constraints.contains(&"lease:placement:helm:cpu:cpu"),
+        "{constraints:?}"
+    );
+    assert!(
+        constraints.contains(&"placement:compose: placement:supportsHa=false"),
+        "{constraints:?}"
+    );
+
+    // PolicyLoosening: a request cap above the pinned policy cap abstains.
+    let mut capped_policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    capped_policy.knobs.insert(
+        medulla_decision_types::decision::knob_families::placement::KNOBS[0].knob_name(),
+        medulla_decision_types::decision::knobs::KnobValue::Integer(2),
+    );
+    let mut loosening = body(false, 2);
+    loosening.constraints.max_relative_cost = Some(5);
+    let mut request = placement_request(&schema_pin, loosening);
+    request.policy = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-placement-cap", &capped_policy),
+    };
+    let batch = decide(&h, request).await.unwrap();
+    assert_eq!(
+        abstain_reasons(&batch),
+        vec![AbstainReason::PolicyLoosening {
+            field: "max_relative_cost".to_string()
+        }]
+    );
+
+    // UnknownFact: a target with no declared facts is named, never guessed.
+    {
+        let guard = h.state.read().await;
+        let core = guard.registry.get(GRAPH).unwrap().core.clone();
+        for target in PlacementTarget::ALL {
+            core.remove_node(target.option_id().to_string());
+        }
+    }
+    let batch = decide(&h, placement_request(&schema_pin, body(false, 2)))
+        .await
+        .unwrap();
+    let reasons = abstain_reasons(&batch);
+    assert_eq!(reasons.len(), PlacementTarget::ALL.len(), "{reasons:?}");
+    for (reason, target) in reasons.iter().zip(PlacementTarget::ALL) {
+        assert_eq!(
+            *reason,
+            AbstainReason::UnknownFact {
+                component_id: target.option_id().to_string(),
+                field: "placement:facts".to_string(),
+            }
+        );
+    }
+
+    // CAPACITY_UNAVAILABLE: no durable ledger is an error, never a guess.
+    h.state.write().await.persistence = None;
+    let refused = decide(&h, placement_request(&schema_pin, body(false, 2)))
+        .await
+        .unwrap_err();
+    assert!(refused.starts_with("CAPACITY_UNAVAILABLE"), "{refused}");
+
+    // Every code the family raises is registered in its table or the fixed set.
+    let table = medulla_decision_types::decision::statistical::placement::REFUSALS;
+    for code in ["PLACEMENT_FACTS_INVALID", "CAPACITY_UNAVAILABLE"] {
+        assert!(table.iter().any(|c| c.as_str() == code), "{code}");
+    }
+    for code in ["INFEASIBLE", "UNKNOWN_FACT", "POLICY_LOOSENING"] {
+        assert!(
+            medulla_decision_types::decision::codes::resolve(code).is_some(),
+            "{code}"
+        );
+    }
 }

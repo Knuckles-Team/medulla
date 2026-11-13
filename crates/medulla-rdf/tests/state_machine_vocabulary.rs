@@ -815,6 +815,20 @@ fn shard_drain_machine_classes_extend_core() {
     sm::assert_extends_core("ShardDrain");
 }
 
+// spec: MEDULLA-PLACEMENT-R783.7
+#[test]
+fn move_phase_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_raft_xshard::cross_node_elasticity::MOVE_PHASE_MACHINE);
+    sm::assert_extends_core("MovePhase");
+}
+
+// spec: MEDULLA-PLACEMENT-R783.11
+#[test]
+fn shard_placement_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_raft_xshard::cross_node_elasticity::SHARD_PLACEMENT_MACHINE);
+    sm::assert_extends_core("ShardPlacement");
+}
+
 // spec: MEDULLA-PLACEMENT-R782.2
 #[test]
 fn capacity_lease_machine_matches_edge_table() {
@@ -886,9 +900,10 @@ fn cluster_run_machine_classes_extend_core() {
 }
 
 // spec: MEDULLA-PLACEMENT-R751.756
+// spec: MEDULLA-PLACEMENT-R785.1
 #[test]
 fn schedule_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_jobs::schedule_run::SCHEDULE_MACHINE);
+    sm::assert_matches(&medulla_types::schedule_machine::SCHEDULE_MACHINE);
 }
 // spec: MEDULLA-PLACEMENT-R751.756
 #[test]

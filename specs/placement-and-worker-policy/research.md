@@ -21,3 +21,18 @@ Unknown: who owns the typed capacity adjustment proposal and verdict. Status: DE
 **Why.** One function with one input record keeps the rules testable without a server and keeps every skip reason in one place; the run record carries the only mutable schedule state outside the owner-written `Schedule` node, so the owner's updates and the tick never write the same node.
 ## Placement decide wiring (MEDULLA-PLACEMENT-R001.7)
 Decision: the placement question is a typed `PlacementQuestion` parameter (graph, body, engine-filled `read`), the same shape as the standalone topology question, so the facts and headroom the decision used are recorded in its inputs and replay reads the same values. Policy caps are `placement.*` policy knobs (the policy digest is already in the record), not a policy node. Capacity headroom is per target and dimension (`placement:<target>:cpu`, `placement:<target>:memory`) in the existing capacity ledger, which gains the `memory` resource class; no second ledger and no capacity in the target facts. A target with no cell named in the request has zero headroom and is eliminated as `capacity:headroom<demand`.
+
+## Move and shard placement machines (R783.7, R783.11)
+Decision: `MovePhaseMachine` and `ShardPlacementMachine` live beside their enums in `cross_node_elasticity/`; each holder has one writer (`MoveCheckpoint::advance`, `ShardPlacement::transition`). The census writer lists named `drain.rs` (writes `DrainPhase`) and `Cluster.kill`/`restart` (writes the harness member state); those are other types and are not routed (SM-CENSUS-WRITERS). A move's entry state follows its kind (`MovePhase::entry_for`), so `MoveCheckpoint::new` takes no phase.
+
+## Schedule machine location (R785.1)
+Decision: the schedule machine moves to `medulla-types::schedule_machine` so the stored `ScheduleRecord` and the served `ScheduleView` carry one closed enum; `medulla-protocol-types` cannot depend on `medulla-jobs`. Wire text is unchanged (`enabled`/`paused`); the contract schema now names the enum (WIRE-REGEN needed for the schema vectors).
+
+## Control lease mirror (R785.2)
+Decision: `ControlLeaseStatus` in the hand-maintained `medulla/generated/models.py` becomes a `str` enum of the four Rust variants (WIRE-REGEN needed).
+
+## Placement abstentions (R001.10)
+Decision: a cost cap above the pinned `placement.max_relative_cost` abstains `PolicyLoosening{field: max_relative_cost}` instead of failing the request; a target with no declared facts is `UnknownFact` (never guessed); every other elimination is one `Infeasible` constraint, a short capacity cell named `lease:<cell>:<class>` (the same name the headroom premise carries). The family's own codes (`PLACEMENT_FACTS_INVALID`, `CAPACITY_UNAVAILABLE`) live in the decision-types placement module so `codes::resolve` knows them.
+
+## Placement plan scale (R700.2)
+Decision: the exact solver holds at most 4,096 binaries, so the plan is solved by an exact decomposition, not by a heuristic: services that can all stay on their declared, capable current hosts stay (the move level is then at its lower bound and the host level cannot fall by moving them), and only the rest enter the 0-1 program. A larger program, or an exhausted node budget, abstains `BudgetExhausted`. The node budget is the decision-policy knob `placement.node_budget`.

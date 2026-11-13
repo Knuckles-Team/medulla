@@ -175,6 +175,20 @@ pub struct PlacementVerdict {
 /// The stable code of a request that loosens a policy cap.
 pub const POLICY_LOOSENING: &str = "POLICY_LOOSENING";
 
+/// The refusal code of a target node whose declared facts are malformed.
+pub const PLACEMENT_FACTS_INVALID: &str = "PLACEMENT_FACTS_INVALID";
+
+/// The refusal code of a placement whose capacity ledger cannot be read.
+pub const CAPACITY_UNAVAILABLE: &str = "CAPACITY_UNAVAILABLE";
+
+/// The `placement` family's refusal table (MEDULLA-PLACEMENT-R001.10), registered in
+/// `codes::FAMILY_TABLES`. The abstentions (`INFEASIBLE`, `UNKNOWN_FACT`,
+/// `POLICY_LOOSENING`) are the fixed `AbstainReason` codes.
+pub const REFUSALS: &[crate::decision::record::outcome::RefusalCode] = &[
+    crate::decision::record::outcome::RefusalCode::new(PLACEMENT_FACTS_INVALID),
+    crate::decision::record::outcome::RefusalCode::new(CAPACITY_UNAVAILABLE),
+];
+
 fn eliminate(
     subject: &PlacementSubject,
     constraints: &PlacementConstraints,
@@ -209,7 +223,10 @@ fn eliminate(
 
 /// The tighter of the policy cap and the request cap; a request cap above the
 /// policy cap is refused (`POLICY_LOOSENING`).
-fn effective_cost_cap(request: Option<u64>, policy: Option<u64>) -> Result<Option<u64>, String> {
+pub fn effective_cost_cap(
+    request: Option<u64>,
+    policy: Option<u64>,
+) -> Result<Option<u64>, String> {
     match (request, policy) {
         (Some(asked), Some(cap)) if asked > cap => Err(format!(
             "{POLICY_LOOSENING}: max_relative_cost {asked} exceeds the policy cap {cap}"

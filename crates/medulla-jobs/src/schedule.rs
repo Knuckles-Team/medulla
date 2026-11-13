@@ -11,7 +11,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::schedule_run::{validate_group, ScheduleBudget, ScheduleState};
+use crate::schedule_run::{validate_group, ScheduleBudget};
+use medulla_types::schedule_machine::{ScheduleEvent, ScheduleState};
+use medulla_types::transition_refused::TransitionRefused;
 
 pub const TICK_REPLAYED_AFTER_ACK: &str = "TICK_REPLAYED_AFTER_ACK";
 pub const LEADER_FENCE_EXPIRED: &str = "LEADER_FENCE_EXPIRED";
@@ -371,6 +373,15 @@ pub struct ScheduleRecord {
 }
 
 impl ScheduleRecord {
+    /// The only writer of [`ScheduleRecord::state`] (MEDULLA-PLACEMENT-R785.1): applies
+    /// `event` through `ScheduleState::apply`. An illegal event changes nothing and returns
+    /// the typed refusal.
+    pub fn transition(&mut self, event: ScheduleEvent) -> Result<(), TransitionRefused> {
+        let next = self.state.apply(event)?;
+        self.state = next;
+        Ok(())
+    }
+
     /// The graph node id of a tenant's schedule.
     pub fn node_id(tenant: &str, name: &str) -> String {
         format!("schedule:{tenant}:{name}")

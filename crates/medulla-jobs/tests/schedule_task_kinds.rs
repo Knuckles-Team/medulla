@@ -3,7 +3,8 @@
 use medulla_jobs::schedule::{
     job_for_task_kind, ScheduleRecord, ScheduleSpec, INVALID_SCHEDULE, SCHEDULE_TASK_KINDS,
 };
-use medulla_jobs::schedule_run::{ScheduleBudget, ScheduleState};
+use medulla_jobs::schedule_run::ScheduleBudget;
+use medulla_types::schedule_machine::ScheduleState;
 
 fn record(task_kind: &str) -> ScheduleRecord {
     ScheduleRecord {

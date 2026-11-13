@@ -15,6 +15,7 @@
 pub mod certificate;
 pub mod context_package;
 pub mod model;
+pub mod placement;
 pub mod scalar;
 mod search;
 pub mod verify;

@@ -188,11 +188,6 @@ impl CrossNodeElasticityPlanner {
             placement.primary_node,
             target.node_id,
             kind,
-            if kind == MoveKind::Hydrate {
-                MovePhase::Hydrate
-            } else {
-                MovePhase::Snapshot
-            },
             input.now_tick,
         );
         let proposal = Self::proposal(

@@ -10,7 +10,7 @@ use medulla_jobs::schedule::{
     ScheduleError, ScheduleRecord, ScheduleSpec, INVALID_SCHEDULE, SCHEDULE_EXISTS,
     SCHEDULE_NOT_FOUND,
 };
-use medulla_jobs::schedule_run::{ScheduleBudget, ScheduleEvent, ScheduleState};
+use medulla_jobs::schedule_run::ScheduleBudget;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::result_contract::coordination::{
     JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobSchedulePause,
@@ -19,7 +19,7 @@ use medulla_protocol_types::result_contract::coordination::{
 use medulla_protocol_types::result_contract::MethodResult;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_types::transition_refused::MachineState;
+use medulla_types::schedule_machine::{ScheduleEvent, ScheduleState};
 use serde_json::{json, Map, Value};
 
 use super::prelude_server::*;
@@ -56,7 +56,7 @@ fn view(record: ScheduleRecord) -> Result<ScheduleView, String> {
         owner: record.owner,
         tenant: record.tenant,
         task_kind: record.task_kind,
-        state: record.state.stored().to_string(),
+        state: record.state,
         resumed_ms: record.resumed_ms,
         max_run_s: record.budget.max_run_s,
         max_tokens: record.budget.max_tokens,
@@ -298,7 +298,7 @@ pub(super) async fn set_state(
             return view(existing);
         }
         let mut record = existing;
-        record.state = record.state.apply(event).map_err(|e| e.to_string())?;
+        record.transition(event).map_err(|e| e.to_string())?;
         if event == ScheduleEvent::Resume {
             record.resumed_ms = unix_ms() as u64;
         }

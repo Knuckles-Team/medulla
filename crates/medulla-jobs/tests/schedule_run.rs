@@ -2,10 +2,10 @@
 
 use medulla_jobs::schedule::{ScheduleRecord, ScheduleSpec, INVALID_SCHEDULE};
 use medulla_jobs::schedule_run::{
-    decide_window, usage_of, validate_group, RunUsage, ScheduleBudget, ScheduleEvent, ScheduleRun,
-    ScheduleState, SkipReason, TickOutcome, WindowFacts, MAX_EXCLUSION_GROUP_CHARS,
-    MAX_MIN_SPACING_S, SCHEDULE_MACHINE,
+    decide_window, usage_of, validate_group, RunUsage, ScheduleBudget, ScheduleRun, SkipReason,
+    TickOutcome, WindowFacts, MAX_EXCLUSION_GROUP_CHARS, MAX_MIN_SPACING_S,
 };
+use medulla_types::schedule_machine::{ScheduleEvent, ScheduleState, SCHEDULE_MACHINE};
 use medulla_types::transition_refused::TransitionRefusalReason;
 
 const BUDGET: ScheduleBudget = ScheduleBudget {
@@ -130,12 +130,12 @@ fn pause_machine_has_two_legal_edges_and_refuses_every_other_pair() {
 fn paused_windows_and_windows_before_the_resume_skip() {
     let mut record = record();
     let run = ScheduleRun::default();
-    record.state = ScheduleState::Paused;
+    record.transition(ScheduleEvent::Pause).expect("pause");
     assert_eq!(
         decide_window(&record, &run, &facts(5_000)),
         skipped(SkipReason::Paused)
     );
-    record.state = ScheduleState::Enabled;
+    record.transition(ScheduleEvent::Resume).expect("resume");
     record.resumed_ms = 9_000;
     assert_eq!(
         decide_window(&record, &run, &facts(8_999)),
