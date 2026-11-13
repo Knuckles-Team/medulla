@@ -53,4 +53,9 @@ pub struct SyncReport {
     /// Write-back proposal ids queued for them; empty until the router queues.
     #[serde(default)]
     pub queued: Vec<String>,
+    /// The write-back queue the proposals were stored under; the id an
+    /// approver names to approve and release them. `None` until the router
+    /// queues, and when nothing is proposed.
+    #[serde(default)]
+    pub queue_id: Option<String>,
 }

@@ -10,3 +10,7 @@
 ## Decision: the native graph is the individual `vg:NativeGraph`
 
 **Decision.** "Only the native graph may hold `system_of_record`" is checked by naming the native graph as one fixed `vg:SourceConnection` individual, `vg:NativeGraph`, declared in `virtual_graph-v1.ttl`. A `vg:SourceAuthority` row with `vg:recordRole "system_of_record"` must name it as its `vg:authoritativeSource`; a connected source cannot. The native graph's contract and mapping are ordinary data, so every other authority shape applies to its row unchanged. The role sets (`recordRole`, `syncDirection`, `conflictRule`) are closed by `sh:in`. One class has at most one `system_of_record` row per `vg:scopeTenant`.
+
+## Decision: where the served sync proof runs, and how an approver finds the queue
+
+**Decision.** The L3 proof of `SourceSync` runs in `medulla-h-admin`'s served connector-pack harness, not in `medulla-h-graph`: it needs the real signed dispatch, a pack import, source approval and the bounded foreign read, and that harness already hosts them with the full server. The test file sits at `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs`. The router names the write-back queue in `SyncReport.queue_id` next to the queued proposal ids, because an approver must name the queue to approve and release it. A conflict is recorded as a `vg:SyncConflict` node (a `vg:SyncState` subclass carrying `vg:graphDigest`, `vg:sourceDigest` and `vg:conflictRuleApplied`) written inside the sync batch, so a failed batch leaves neither the state nor the conflict.

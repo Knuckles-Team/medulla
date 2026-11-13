@@ -6,7 +6,14 @@ use super::{SyncAction, SyncMutation};
 use medulla_types::contract::Digest256;
 
 /// The `vg:SyncState` class IRI.
-pub const SYNC_STATE_CLASS: &str = "https://knuckles-team.github.io/ontology/virtual-graph#SyncState";
+pub const SYNC_STATE_CLASS: &str =
+    "https://knuckles-team.github.io/ontology/virtual-graph#SyncState";
+/// The `vg:SyncConflict` class IRI: a sync state record that also holds both
+/// digests of a record both sides changed (MEDULLA-SRC-AUTH-R012.8).
+pub const SYNC_CONFLICT_CLASS: &str =
+    "https://knuckles-team.github.io/ontology/virtual-graph#SyncConflict";
+/// Domain separator of the sync-conflict node id.
+const CONFLICT_DOMAIN: &str = "eg/source-sync-conflict/v1";
 /// Domain separator of the sync-state node id.
 const NODE_DOMAIN: &str = "eg/source-sync-state/v1";
 
@@ -19,6 +26,8 @@ pub struct SyncOutcome {
     pub action: SyncAction,
     /// The base digest before this sync (`None` for a record never synced).
     pub base_digest: Option<String>,
+    /// The graph value digest read in this sync (`None` when absent there).
+    pub graph_digest: Option<String>,
     /// The source digest read in this sync (`None` when absent there).
     pub source_digest: Option<String>,
     /// The source revision read in this sync (`None` when absent there).
@@ -26,12 +35,58 @@ pub struct SyncOutcome {
 }
 
 fn node_id(connection: &str, class: &str, record_key: &str) -> String {
+    keyed_id("sync-state", NODE_DOMAIN, connection, class, record_key)
+}
+
+fn keyed_id(prefix: &str, domain: &str, connection: &str, class: &str, record_key: &str) -> String {
     let mut framed = Vec::new();
-    for part in [NODE_DOMAIN, connection, class, record_key] {
+    for part in [domain, connection, class, record_key] {
         framed.extend_from_slice(part.as_bytes());
         framed.push(0);
     }
-    format!("sync-state:{}", Digest256::sha256(&framed).to_hex())
+    format!("{prefix}:{}", Digest256::sha256(&framed).to_hex())
+}
+
+/// One `vg:SyncConflict` upsert per record both sides changed, keyed by
+/// connection, class and record key, holding both digests and the rule applied.
+/// The node rides the same batch as the sync state, so a failed batch leaves
+/// neither (MEDULLA-SRC-AUTH-R012.8).
+pub fn sync_conflict_mutations(
+    connection: &str,
+    class: &str,
+    rule_literal: &str,
+    outcomes: &[SyncOutcome],
+    now_ms: u64,
+) -> Vec<SyncMutation> {
+    outcomes
+        .iter()
+        .filter(|outcome| matches!(outcome.action, SyncAction::Conflict { .. }))
+        .map(|outcome| {
+            let mut properties = Map::new();
+            properties.insert("type".into(), json!(SYNC_CONFLICT_CLASS));
+            properties.insert("syncConnection".into(), json!(connection));
+            properties.insert("syncClass".into(), json!(class));
+            properties.insert("syncRecordKey".into(), json!(outcome.record_key));
+            if let Some(digest) = &outcome.graph_digest {
+                properties.insert("graphDigest".into(), json!(digest));
+            }
+            if let Some(digest) = &outcome.source_digest {
+                properties.insert("sourceDigest".into(), json!(digest));
+            }
+            properties.insert("conflictRuleApplied".into(), json!(rule_literal));
+            properties.insert("syncedAtMs".into(), json!(now_ms));
+            SyncMutation {
+                node_id: keyed_id(
+                    "sync-conflict",
+                    CONFLICT_DOMAIN,
+                    connection,
+                    class,
+                    &outcome.record_key,
+                ),
+                properties,
+            }
+        })
+        .collect()
 }
 
 /// One `vg:SyncState` upsert per applied or proposed record, keyed by

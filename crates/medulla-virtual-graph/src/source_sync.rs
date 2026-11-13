@@ -15,7 +15,10 @@ mod state;
 use serde_json::{Map, Value};
 
 pub use plan::{base_digests, plan_sync, GraphNodes, SyncPlan};
-pub use state::{sync_state_mutations, SyncOutcome, SYNC_STATE_CLASS};
+pub use state::{
+    sync_conflict_mutations, sync_state_mutations, SyncOutcome, SYNC_CONFLICT_CLASS,
+    SYNC_STATE_CLASS,
+};
 
 /// What happens when both sides changed a record (`vg:conflictRule`). The set
 /// is closed.

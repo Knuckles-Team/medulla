@@ -10,8 +10,8 @@ use medulla_types::contract::Digest256;
 use serde_json::{Map, Value};
 
 use super::{
-    reconcile, sync_batch, sync_state_mutations, ConflictRule, SyncAction, SyncAdapter,
-    SyncMutation, SyncOutcome, SYNC_STATE_CLASS,
+    reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule, SyncAction,
+    SyncAdapter, SyncMutation, SyncOutcome, SYNC_STATE_CLASS,
 };
 
 /// Every visible graph node: id to its decoded property map.
@@ -93,6 +93,7 @@ pub fn plan_sync(
         conflicts: Vec::new(),
         outbound: Vec::new(),
         queued: Vec::new(),
+        queue_id: None,
     };
     for key in keys {
         let base = bases.get(key).map(String::as_str);
@@ -132,6 +133,7 @@ pub fn plan_sync(
             record_key: key.clone(),
             action,
             base_digest: base.map(str::to_string),
+            graph_digest: graph_digest.map(str::to_string),
             source_digest: source_digest.map(str::to_string),
             source_revision: source
                 .get(key)
@@ -140,7 +142,14 @@ pub fn plan_sync(
                 .map(str::to_string),
         });
     }
-    let state = sync_state_mutations(connection, class, &outcomes, now_ms);
+    let mut state = sync_state_mutations(connection, class, &outcomes, now_ms);
+    state.extend(sync_conflict_mutations(
+        connection,
+        class,
+        rule_literal,
+        &outcomes,
+        now_ms,
+    ));
     Ok(SyncPlan {
         outcomes,
         batch: sync_batch(inbound, state),

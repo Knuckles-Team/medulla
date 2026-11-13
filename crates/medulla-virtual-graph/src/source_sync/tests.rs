@@ -100,6 +100,7 @@ fn outcome(key: &str, action: SyncAction, base: Option<&str>, source: Option<&st
         record_key: key.to_string(),
         action,
         base_digest: base.map(str::to_string),
+        graph_digest: None,
         source_digest: source.map(str::to_string),
         source_revision: Some("r7".to_string()),
     }
@@ -240,4 +241,37 @@ fn plan_sync_refuses_duplicate_and_keyless_source_records() {
     assert!(run(&[serde_json::json!({"title": "x"})])
         .unwrap_err()
         .contains("no key"));
+}
+
+// spec: MEDULLA-SRC-AUTH-R012.8
+#[test]
+fn conflict_nodes_hold_both_digests_and_ride_the_batch() {
+    let mut conflict = outcome(
+        "T-9",
+        SyncAction::Conflict {
+            kept: Some(Side::Graph),
+            held: vec![Side::Source],
+        },
+        Some("base"),
+        Some("src"),
+    );
+    conflict.graph_digest = Some("gph".to_string());
+    let outcomes = [
+        conflict,
+        outcome("T-1", SyncAction::ApplyInbound, None, Some("a")),
+    ];
+    let nodes =
+        super::sync_conflict_mutations("conn", "cls", "system_of_record_wins", &outcomes, 7);
+    assert_eq!(nodes.len(), 1, "only a conflict writes a conflict node");
+    let props = &nodes[0].properties;
+    assert_eq!(props["type"], json!(super::SYNC_CONFLICT_CLASS));
+    assert_eq!(props["graphDigest"], json!("gph"));
+    assert_eq!(props["sourceDigest"], json!("src"));
+    assert_eq!(props["conflictRuleApplied"], json!("system_of_record_wins"));
+    assert_eq!(props["syncRecordKey"], json!("T-9"));
+    assert_ne!(
+        nodes[0].node_id,
+        sync_state_mutations("conn", "cls", &outcomes[..1], 7)[0].node_id,
+        "a conflict node never shares the sync state node id"
+    );
 }

@@ -5332,6 +5332,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-version",
+ "medulla-virtual-graph",
  "medulla-work-types",
  "rmp-serde",
  "rustls",

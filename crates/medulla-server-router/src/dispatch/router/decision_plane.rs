@@ -176,7 +176,7 @@ async fn queue_outbound(
         DecisionLogOp::Writeback {
             tenant_id: verified.tenant().to_string(),
             computation: WritebackOp::Queue {
-                queue_id,
+                queue_id: queue_id.clone(),
                 proposals,
             },
         },
@@ -188,6 +188,7 @@ async fn queue_outbound(
         }
     }
     report.queued = proposal_ids;
+    report.queue_id = Some(queue_id);
     match ResultPayload::of::<SourceSync>(report) {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => Response::err(req_id, error),

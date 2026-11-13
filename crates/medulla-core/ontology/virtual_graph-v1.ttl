@@ -218,6 +218,22 @@ vg:syncedAtMs a owl:DatatypeProperty ;
     rdfs:domain vg:SyncState ;
     rdfs:range xsd:nonNegativeInteger .
 
+vg:graphDigest a owl:DatatypeProperty ;
+    rdfs:comment "The digest of the graph-side value of a record both sides changed." ;
+    rdfs:domain vg:SyncConflict ;
+    rdfs:range xsd:string .
+vg:sourceDigest a owl:DatatypeProperty ;
+    rdfs:comment "The digest of the source-side value of a record both sides changed." ;
+    rdfs:domain vg:SyncConflict ;
+    rdfs:range xsd:string .
+vg:conflictRuleApplied a owl:DatatypeProperty ;
+    rdfs:comment "The vg:conflictRule literal that settled one SyncConflict." ;
+    rdfs:domain vg:SyncConflict ;
+    rdfs:range xsd:string .
+vg:SyncConflict a owl:Class ;
+    rdfs:subClassOf vg:SyncState ;
+    rdfs:comment "A record both sides changed since the last sync: the sync state of that record with both digests and the rule applied. Written inside the sync batch (MEDULLA-SRC-AUTH-R012.8)." .
+
 vg:SyncState a owl:Class ;
     rdfs:comment "The sync state of one record of one class synced with one connection: the base digest the next reconcile compares against. Sync state is graph data and rides the same mutation batch as the inbound changes (MEDULLA-SRC-AUTH-R012.4)." .
 

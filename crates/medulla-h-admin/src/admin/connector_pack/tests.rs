@@ -47,6 +47,8 @@ mod scale;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_approval;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod source_sync;
 mod sql_columns;
 mod storage_acceptance;
 #[cfg(all(feature = "owl", feature = "shacl"))]
