@@ -55,3 +55,7 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T049 [P] [US5] MEDULLA-ENGINE-PARITY-R019.3 Outside PostgreSQL databases are sources only: hot-path proof
 - [ ] T050 [US5] MEDULLA-ENGINE-PARITY-R020.1 Capability report: model and behavior
 - [ ] T051 [US5] MEDULLA-ENGINE-PARITY-R020.2 Capability report: wiring and refusal
+- [ ] T52 [US5] MEDULLA-ENGINE-PARITY-R021 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T53 [US5] MEDULLA-ENGINE-PARITY-R021.1 MachineInstance/InstanceStatus state machine: route 1 census findings through InstanceStatus::apply
+- [ ] T54 [US5] MEDULLA-ENGINE-PARITY-R021.2 SqlFormEntry/SqlFormState state machine: route 1 census findings through SqlFormState::apply
+- [ ] T55 [US5] MEDULLA-ENGINE-PARITY-R021.3 StatechartInstance/StatechartInstanceStatus state machine: route 1 census findings through StatechartInstanceStatus::apply
