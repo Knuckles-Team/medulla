@@ -109,7 +109,7 @@ impl Store {
     }
 
     fn line(&self, seq: u64) -> String {
-        let proof = operation_audit_read(&self.shard, GRAPH, TENANT, seq).unwrap();
+        let proof = operation_audit_read(&self.shard, GRAPH, &[TENANT], seq).unwrap();
         assert!(proof.chain_verified);
         proof.event_line
     }

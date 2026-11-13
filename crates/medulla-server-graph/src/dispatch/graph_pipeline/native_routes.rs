@@ -735,10 +735,13 @@ async fn route_graph_audit_and_modality(
     #[cfg(feature = "security")]
     let method = match method {
         Method::AuditReadEvent { seq } => {
+            // The caller's tenant in both spellings the chain records: the
+            // carrier's opaque scope and the verified tenant id.
+            let verified_tenant = ctx.verified_context.tenant();
             return Ok(dispatch_op_audit_read_event(
                 ctx.req_id,
                 ctx.graph_name,
-                ctx.tenant_scope,
+                &[ctx.tenant_scope, verified_tenant],
                 ctx.persistence.clone(),
                 seq,
             )

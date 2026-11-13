@@ -82,7 +82,7 @@ impl ReadScope {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_nanos());
-        let outcome = medulla_store::redb_store::OperationAuditEvent {
+        let event = medulla_store::redb_store::OperationAuditEvent {
             tenant: line.tenant,
             principal: line.principal,
             op: format!("SegmentReadAudit.hidden-{}", line.hidden_count),
@@ -94,21 +94,10 @@ impl ReadScope {
             subject_iri: None,
             policy_iri: None,
         };
-        // The operation audit is two-phase: an outcome closes a reservation made
-        // under the same request identity, and an outcome with no reservation is
-        // refused `AUDIT_RESERVATION_REQUIRED` (which the drain only logs, so the
-        // read line would never land). Queue the pair as one write, in order.
-        let reservation = medulla_store::redb_store::OperationAuditEvent {
-            status: "reserved".to_owned(),
-            ..outcome.clone()
-        };
         let graph = medulla_kernel::persist::sanitize(&self.graph_name);
         medulla_server_api::read_audit::ReadAuditSink::global().enqueue(Box::pin(async move {
             match persistence.as_redb() {
-                Some(redb) => {
-                    redb.audit_append(&graph, reservation).await?;
-                    redb.audit_append(&graph, outcome).await.map(|_| ())
-                }
+                Some(redb) => redb.audit_append(&graph, event).await.map(|_| ()),
                 None => Ok(()),
             }
         }))

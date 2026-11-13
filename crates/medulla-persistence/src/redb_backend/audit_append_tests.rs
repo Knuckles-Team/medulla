@@ -52,7 +52,7 @@ async fn an_append_the_writer_cannot_take_is_refused_and_leaves_no_trace() {
 
     let reopened = RedbBackend::open_with_shards(dir_s, 64, 1).expect("reopen");
     let proof = reopened
-        .audit_read_event(GRAPH, TENANT, kept.seq)
+        .audit_read_event(GRAPH, &[TENANT], kept.seq)
         .await
         .expect("the acknowledged reservation is durable");
     assert!(proof.chain_verified);

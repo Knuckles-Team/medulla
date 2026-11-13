@@ -453,11 +453,13 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
         .unwrap_err()
         .contains("AUDIT_IDEMPOTENCY_CONFLICT"));
     assert!(
-        operation_audit_read(&db, "g", "tenant-a", outcome.seq)
+        operation_audit_read(&db, "g", &["tenant-a"], outcome.seq)
             .unwrap()
             .chain_verified
     );
-    assert!(operation_audit_read(&db, "g", "tenant-b", outcome.seq).is_err());
+    assert!(operation_audit_read(&db, "g", &["tenant-b"], outcome.seq).is_err());
+    // Either spelling of the caller's one verified tenant reads its event.
+    assert!(operation_audit_read(&db, "g", &["tenant-b", "tenant-a"], outcome.seq).is_ok());
     drop(db);
     let reopened = open_db(&dir);
     let mut cold_tail = AuditTailCache::new();
@@ -467,7 +469,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
             .unwrap()
             .replayed
     );
-    let proof = operation_audit_read(&reopened, "g", "tenant-a", reserved.seq).unwrap();
+    let proof = operation_audit_read(&reopened, "g", &["tenant-a"], reserved.seq).unwrap();
     assert!(proof.chain_verified);
     assert!(proof.event_line.contains("status=reserved"));
     event.request_id = "never-reserved".into();

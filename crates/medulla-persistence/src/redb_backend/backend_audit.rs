@@ -8,13 +8,14 @@ impl RedbBackend {
     pub async fn audit_read_event(
         &self,
         graph_fname: &str,
-        verified_tenant: &str,
+        verified_tenants: &[&str],
         seq: u64,
     ) -> Result<medulla_protocol_types::protocol::AuditEventProof, String> {
         let graph = graph_fname.to_string();
-        let tenant = verified_tenant.to_string();
+        let tenants: Vec<String> = verified_tenants.iter().map(|t| (*t).to_string()).collect();
         self.read_snapshot(graph_fname, move |shard, _| {
-            medulla_store::redb_store::operation_audit_read(shard, &graph, &tenant, seq)
+            let tenants: Vec<&str> = tenants.iter().map(String::as_str).collect();
+            medulla_store::redb_store::operation_audit_read(shard, &graph, &tenants, seq)
         })
         .await
     }

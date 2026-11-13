@@ -163,13 +163,13 @@ pub async fn dispatch_op_tsdb_ops(
 pub async fn dispatch_op_audit_read_event(
     req_id: u64,
     graph_name: &str,
-    verified_tenant: &str,
+    verified_tenants: &[&str],
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     seq: u64,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
-        Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
+        Some(redb) => match redb.audit_read_event(&fname, verified_tenants, seq).await {
             Ok(proof) => Response::ok(
                 req_id,
                 ResultPayload::of::<

@@ -296,6 +296,11 @@ pub fn unauthenticated_carrier_denied(carrier: Option<&CarrierAuthority>) -> boo
 #[derive(Clone)]
 pub struct GraphReadAuthority {
     carrier: Option<CarrierAuthority>,
+    /// The verified request principal (the delegating subject), which the
+    /// knowledge-unit visibility rules and the read audit name
+    /// (MEDULLA-IDENTITY-R023.3, R023.5). Distinct from `actor`, the agent that
+    /// carries the request.
+    principal: String,
     #[cfg(feature = "security")]
     actor: String,
     #[cfg(feature = "security")]
@@ -322,15 +327,24 @@ impl GraphReadAuthority {
             }
             Ok(Self {
                 carrier,
+                principal: context.principal().to_string(),
                 actor,
                 isolation: Arc::new(isolation.clone()),
             })
         }
         #[cfg(not(feature = "security"))]
         {
-            let _ = (context, isolation);
-            Ok(Self { carrier })
+            let _ = isolation;
+            Ok(Self {
+                carrier,
+                principal: context.principal().to_string(),
+            })
         }
+    }
+
+    /// The verified request principal (MEDULLA-IDENTITY-R023.3).
+    pub fn verified_principal(&self) -> &str {
+        &self.principal
     }
 
     /// Verified tenant+actor authority for non-graph legs fused into a graph read.
