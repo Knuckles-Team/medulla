@@ -1,9 +1,9 @@
 //! Proofs of the clustering kernel through its public API (MEDULLA-CLUSTER).
 
 use medulla_numeric::cluster::{
-    fit, fit_simple, kmeans, nearest, seed_centers, sq_dist, AssignBackend, CancelToken,
-    CentroidTracker, ClusterConfig, ClusterRefusal, CpuBackend, End, FitArgs, NoProgress, Progress,
-    ProgressSink, Rows,
+    fit, fit_simple, kmeans, nearest, plan, seed_centers, sq_dist, training_bytes, AssignBackend,
+    CancelToken, CentroidTracker, ClusterConfig, ClusterRefusal, CpuBackend, End, FitArgs,
+    NoProgress, Progress, ProgressSink, Rows,
 };
 use ndarray::array;
 use rand::{Rng, SeedableRng};
@@ -459,6 +459,43 @@ fn over_budget_refuses_before_allocating() {
     assert!(
         matches!(err, ClusterRefusal::MemoryBudget { budget: 1024, .. }),
         "{err:?}"
+    );
+}
+
+// spec: MEDULLA-CLUSTER-R006
+
+#[test]
+fn peak_memory_within_formula() {
+    // The formula at the spec's example: 39.6 MiB plus 64 KiB.
+    let need = training_bytes(65_536, 128, 4096);
+    assert_eq!(
+        need,
+        4 * 65_536 * 128 + 120 * 65_536 + 32_768 + 16 * 4096 + 8 * 128
+    );
+    assert!(need < 40 * 1024 * 1024 + 64 * 1024);
+    // The same formula governs a real run: a budget equal to it admits the run, one
+    // byte less refuses it and names the need.
+    let (data, dim, _) = three_blobs();
+    let n = data.len() / dim;
+    let base = ClusterConfig::default();
+    let batch = plan(n, 3, dim, &base).batch;
+    let need = training_bytes(3, dim, batch);
+    let at = ClusterConfig {
+        memory_budget_bytes: need,
+        ..base.clone()
+    };
+    assert!(fit_simple(Rows::new(&data, n, dim), 3, &at).is_ok());
+    let below = ClusterConfig {
+        memory_budget_bytes: need - 1,
+        ..base
+    };
+    let err = fit_simple(Rows::new(&data, n, dim), 3, &below).unwrap_err();
+    assert_eq!(
+        err,
+        ClusterRefusal::MemoryBudget {
+            need,
+            budget: need - 1
+        }
     );
 }
 
