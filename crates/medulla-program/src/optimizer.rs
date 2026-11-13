@@ -1274,11 +1274,14 @@ fn evaluation_plan(
     request: &OptimizationRequest,
     candidates: &[ProgramCandidate],
 ) -> Result<OptimizationPlan, ProgramError> {
-    let input_refs = candidates
+    let mut input_refs = candidates
         .iter()
         .filter(|candidate| candidate.evaluation.is_none())
         .map(|candidate| candidate.candidate_ref.clone())
         .collect::<Vec<_>>();
+    // The evaluator scores candidates on the validation split only; the test split
+    // is never named in a plan (MEDULLA-DECISION-ENGINE-R810.2).
+    input_refs.extend(validation_example_refs(request, input_refs.len()));
     let modalities = candidates
         .iter()
         .flat_map(|candidate| candidate.modalities.iter().copied())
@@ -1359,6 +1362,22 @@ fn derived_ref(
     digest.update((index as u64).to_le_bytes());
     OpaqueRef::new(format!("eg:{namespace}:{}", hex::encode(digest.finalize())))
         .map_err(|_| ProgramError::InvalidPlan)
+}
+
+/// Validation-split example refs, in ref order, bounded so a plan step stays within
+/// `MAX_PLAN_REFS` next to `taken` refs already in it.
+fn validation_example_refs(request: &OptimizationRequest, taken: usize) -> Vec<OpaqueRef> {
+    let mut refs = request
+        .corpus
+        .examples
+        .iter()
+        .filter(|example| example.split == ExampleSplit::Validation)
+        .map(|example| example.example_ref.clone())
+        .collect::<Vec<_>>();
+    refs.sort();
+    refs.dedup();
+    refs.truncate(crate::MAX_PLAN_REFS.saturating_sub(taken));
+    refs
 }
 
 fn eligible_examples(request: &OptimizationRequest) -> Vec<&TrainingExample> {

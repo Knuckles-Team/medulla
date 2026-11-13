@@ -2067,11 +2067,11 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::winner_by_margin_tie_and_abstain_codes` |
 | `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips` |
 | `MEDULLA-DECISION-ENGINE-R810` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
-| `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate` |
+| `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-program/tests/native_program.rs::compile_reads_train_for_candidates_and_validation_only_for_scoring` |
 | `MEDULLA-DECISION-ENGINE-R810.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_job_refusals` |
 | `MEDULLA-DECISION-ENGINE-R810.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::rerun_with_one_seed_gives_one_revision_digest` |
 | `MEDULLA-DECISION-ENGINE-R810.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_program_job_journey` |
-| `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses` |
+| `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses`; `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::held_out_list_is_bounded_at_4096` |
 | `MEDULLA-DECISION-ENGINE-R811.4` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::policy_evolution_refusals` |
 | `MEDULLA-DECISION-ENGINE-R811.5` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::receipts_read_back_field_for_field` |
 | `MEDULLA-DECISION-ENGINE-R811.6` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::served_policy_evolution_journey` |

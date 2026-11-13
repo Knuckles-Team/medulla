@@ -39,6 +39,8 @@ use medulla_types::{contract::Digest256, contract::OpaqueId};
 pub const POLICY_EVOLUTION_SCHEMA_VERSION: u16 = 1;
 /// Most captures one training run may name.
 pub const MAX_TRAINING_INPUTS: usize = 256;
+/// Most held-out trajectory ids one evaluation may name.
+pub const MAX_HELD_OUT_TRAJECTORIES: usize = 4096;
 /// Parts-per-million denominator of every ratio.
 pub const PPM_SCALE: u32 = 1_000_000;
 const RECORD_DOMAIN: &[u8] = b"eg/policy-evolution-record/v1";
@@ -291,6 +293,9 @@ pub enum PolicyRefusal {
     RunNotSucceeded,
     CaptureIneligible(String),
     RecordTampered(String),
+    /// An evaluation names a held-out trajectory the evaluated version trained on;
+    /// the detail is that trajectory id.
+    EvaluationOverlapsTraining(String),
     /// A generic graph write touched a policy-evolution row: only
     /// `PolicyEvolution` (through the kernel's `PolicyEvolutionStore`) may.
     NativeAuthorityRequired,
@@ -317,6 +322,7 @@ impl PolicyRefusal {
             Self::RunNotSucceeded => "POLICY_RUN_NOT_SUCCEEDED",
             Self::CaptureIneligible(_) => "POLICY_CAPTURE_INELIGIBLE",
             Self::RecordTampered(_) => "POLICY_RECORD_TAMPERED",
+            Self::EvaluationOverlapsTraining(_) => "POLICY_EVALUATION_OVERLAPS_TRAINING",
             Self::NativeAuthorityRequired => "POLICY_NATIVE_AUTHORITY_REQUIRED",
         }
     }
@@ -327,7 +333,8 @@ impl PolicyRefusal {
             | Self::BlobMissing(detail)
             | Self::RecordMissing(detail)
             | Self::CaptureIneligible(detail)
-            | Self::RecordTampered(detail) => detail,
+            | Self::RecordTampered(detail)
+            | Self::EvaluationOverlapsTraining(detail) => detail,
             Self::CapabilityMissing
             | Self::CaptureDisabled
             | Self::TrainDisabled

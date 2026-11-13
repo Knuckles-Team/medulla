@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::capture::HeldBlobRef;
-use super::{PolicyRefusal, MAX_TRAINING_INPUTS, PPM_SCALE};
+use super::{PolicyRefusal, MAX_HELD_OUT_TRAJECTORIES, MAX_TRAINING_INPUTS, PPM_SCALE};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
 };
@@ -306,6 +306,10 @@ pub struct PolicyEvaluation {
     pub baseline_version_id: Option<OpaqueId>,
     pub evaluation_set_digest: Digest256,
     pub evaluator_digest: Digest256,
+    /// The `:Trajectory` ids the evaluation holds out. None may be a trajectory
+    /// the evaluated version's training run captured (MEDULLA-DECISION-ENGINE-R811.2).
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub held_out_trajectory_ids: BoundedVec<OpaqueId, MAX_HELD_OUT_TRAJECTORIES>,
     pub metrics: EvaluationMetrics,
     pub safety: SafetyOutcome,
     pub verdict: EvaluationVerdict,

@@ -606,3 +606,54 @@ fn example_round_trips_per_grader_kind() {
     json.as_object_mut().expect("object").remove("grader_kind");
     assert!(serde_json::from_value::<TrainingExample>(json).is_err());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R810.2
+#[test]
+fn cancel_stops_within_one_candidate() {
+    let mut request = request(OptimizerKind::BootstrapFewShotWithRandomSearch);
+    request.budget.max_demonstrations = 6;
+    let cancelled = std::sync::atomic::AtomicBool::new(true);
+    let outcome = NativeCompiler::compile_cancellable(&request, &cancelled);
+    assert_eq!(outcome, Err(medulla_program::ProgramError::Cancelled));
+
+    // A run that is not cancelled completes with the same request.
+    let running = std::sync::atomic::AtomicBool::new(false);
+    let done = NativeCompiler::compile_cancellable(&request, &running).expect("uncancelled run");
+    assert!(!done.candidates.is_empty());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R810.2
+#[test]
+fn compile_reads_train_for_candidates_and_validation_only_for_scoring() {
+    let mut request = request(OptimizerKind::BootstrapFewShotWithRandomSearch);
+    request.budget.max_demonstrations = 6;
+    request.budget.max_evaluator_calls = 4;
+    let mut validation = request.corpus.examples[0].clone();
+    validation.example_ref = opaque("example", "validation:0");
+    validation.split = ExampleSplit::Validation;
+    let mut held_out = request.corpus.examples[0].clone();
+    held_out.example_ref = opaque("example", "test:0");
+    held_out.split = ExampleSplit::Test;
+    request.corpus.examples.push(validation.clone());
+    request.corpus.examples.push(held_out.clone());
+
+    let result = NativeCompiler::compile(&request).expect("compile");
+    for candidate in &result.candidates {
+        assert!(!candidate
+            .demonstration_refs
+            .contains(&validation.example_ref));
+        assert!(!candidate.demonstration_refs.contains(&held_out.example_ref));
+    }
+    let step_inputs = result
+        .plans
+        .iter()
+        .flat_map(|plan| plan.steps.iter())
+        .filter(|step| step.kind == PlanStepKind::EvaluateCandidates)
+        .flat_map(|step| step.input_refs.iter())
+        .collect::<Vec<_>>();
+    assert!(step_inputs.contains(&&validation.example_ref));
+    assert!(!step_inputs.contains(&&held_out.example_ref));
+
+    // A seeded run is deterministic over the same corpus.
+    assert_eq!(result, NativeCompiler::compile(&request).expect("rerun"));
+}

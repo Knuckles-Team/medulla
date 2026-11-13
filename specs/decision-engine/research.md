@@ -1021,3 +1021,11 @@ A pack states a capability as a `cp:Capability` individual in its ontology (prop
 ## Agent Library layout chain: concept lineage, then capability reward (R172.5.1)
 
 The learned capability reward table (`capability_reward`) is the next step after the concept id and lineage edge tables in the one Agent Library layout chain: `AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD` declares the layout that already carries the concept tables, its offline upgrade creates only the reward table, and the two earlier upgrades (MCP catalog, concept lineage) now end at the current layout with all three table groups. LAYOUT-REGEN needed: the digest pin of the layout before the reward table and the current Agent Library pin are recomputed by the digest-printing test.
+
+## R810.2 seeded compile: which split each stage reads
+
+Candidate demonstrations come from the train split only (`eligible_examples`). Scoring is the evaluator's job; the compile emits an `EvaluateCandidates` plan step whose inputs are the unevaluated candidates plus the validation-split example refs (sorted, bounded by `MAX_PLAN_REFS`). The test split is never named in a candidate or a plan; it is read only by the held-out gate (R810.7). A cancel flag is checked before every candidate and every example ranking, so a cancelled run stops before the next candidate.
+
+## R811.2 held-out isolation: where the overlap check reads
+
+`PolicyEvaluation.held_out_trajectory_ids` is `BoundedVec<OpaqueId, 4096>`, serialized only when non-empty so existing evaluation record ids are unchanged. `admit_evaluation` resolves the evaluated version (never the baseline), follows a `VersionOrigin::Trained` run to its `input_capture_ids` and compares each capture's `trajectory_id` with the held-out list; the first match refuses with `POLICY_EVALUATION_OVERLAPS_TRAINING` naming the trajectory. A base version has no run, so nothing can overlap. Wire note: WIRE-REGEN needed (models.py edited by hand; wire vectors refresh at the gate).

@@ -118,6 +118,9 @@ pub const POLICY_RUN_NOT_SUCCEEDED: RefusalCode = RefusalCode::new("POLICY_RUN_N
 pub const POLICY_CAPTURE_INELIGIBLE: RefusalCode = RefusalCode::new("POLICY_CAPTURE_INELIGIBLE");
 /// Policy-evolution refusal record tampered.
 pub const POLICY_RECORD_TAMPERED: RefusalCode = RefusalCode::new("POLICY_RECORD_TAMPERED");
+/// Policy-evolution refusal: a held-out trajectory is one the evaluated version trained on.
+pub const POLICY_EVALUATION_OVERLAPS_TRAINING: RefusalCode =
+    RefusalCode::new("POLICY_EVALUATION_OVERLAPS_TRAINING");
 /// Policy-evolution refusal native authority required.
 pub const POLICY_NATIVE_AUTHORITY_REQUIRED: RefusalCode =
     RefusalCode::new("POLICY_NATIVE_AUTHORITY_REQUIRED");
@@ -209,6 +212,7 @@ pub const FOLDED: &[RefusalCode] = &[
     POLICY_RUN_NOT_SUCCEEDED,
     POLICY_CAPTURE_INELIGIBLE,
     POLICY_RECORD_TAMPERED,
+    POLICY_EVALUATION_OVERLAPS_TRAINING,
     POLICY_NATIVE_AUTHORITY_REQUIRED,
     PRIMITIVE_EDGE_MISMATCH,
     PRIMITIVE_KIND_MISMATCH,

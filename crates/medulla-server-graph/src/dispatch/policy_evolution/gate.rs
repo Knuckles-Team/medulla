@@ -147,14 +147,44 @@ fn admit_training_run(run: &TrainingRun, lookup: &dyn RecordLookup) -> Result<()
     Ok(())
 }
 
-/// An evaluation names versions that exist.
+/// An evaluation names versions that exist, and its held-out trajectories are
+/// disjoint from the captures the evaluated version's training run read: a
+/// version trained on a trajectory is never evaluated on it.
 fn admit_evaluation(
     evaluation: &PolicyEvaluation,
     lookup: &dyn RecordLookup,
 ) -> Result<(), PolicyRefusal> {
+    let mut evaluated: Option<ModelPolicyVersion> = None;
     let versions = std::iter::once(&evaluation.version_id).chain(&evaluation.baseline_version_id);
     for version_id in versions {
-        fetch::<ModelPolicyVersion>(lookup, version_id.as_str(), record_missing)?;
+        let version: ModelPolicyVersion = fetch(lookup, version_id.as_str(), record_missing)?;
+        if evaluated.is_none() {
+            evaluated = Some(version);
+        }
+    }
+    if evaluation.held_out_trajectory_ids.is_empty() {
+        return Ok(());
+    }
+    let Some(ModelPolicyVersion {
+        origin: VersionOrigin::Trained { training_run_id },
+        ..
+    }) = evaluated
+    else {
+        return Ok(());
+    };
+    let run: TrainingRun = fetch(lookup, training_run_id.as_str(), record_missing)?;
+    for capture_id in run.input_capture_ids.iter() {
+        let capture: PolicyCapture = fetch(lookup, capture_id.as_str(), record_missing)?;
+        let trained_on = capture.trajectory_id.as_str();
+        if evaluation
+            .held_out_trajectory_ids
+            .iter()
+            .any(|held_out| held_out.as_str() == trained_on)
+        {
+            return Err(PolicyRefusal::EvaluationOverlapsTraining(
+                trained_on.to_string(),
+            ));
+        }
     }
     Ok(())
 }

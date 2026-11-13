@@ -202,6 +202,7 @@ class PolicyEvaluation(BaseModel):
     baseline_version_id: str | None = None
     evaluation_set_digest: Digest256
     evaluator_digest: Digest256
+    held_out_trajectory_ids: list[str] = Field(default_factory=list, max_length=4096)
     metrics: EvaluationMetrics
     report: HeldBlobRef | None = None
     safety: SafetyOutcome

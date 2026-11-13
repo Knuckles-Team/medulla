@@ -228,3 +228,70 @@ fn an_evaluation_names_existing_versions() {
         Err(PolicyRefusal::RecordMissing(absent.clone()))
     );
 }
+
+fn evaluation_of(version_id: &str, held_out: &[&str]) -> PolicyEvolutionRecord {
+    let record = typed(json!({
+        "version_id": version_id, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "held_out_trajectory_ids": held_out,
+        "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
+                    "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
+                    "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
+        "safety": "passed", "verdict": "accepted",
+    }));
+    PolicyEvolutionRecord::PolicyEvaluation { record }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.2
+#[test]
+fn evaluation_overlapping_training_refuses() {
+    let mut graph = graph_with_trajectory();
+    let (base_id, run) = training_run(&mut graph, true, succeeded());
+    let run_id = graph.put(PolicyEvolutionRecord::TrainingRun { record: run });
+    let trained_id = graph.put(trained_version(&run_id, &base_id, 12));
+
+    // The capture the run read is trajectory:0001: holding it out is refused.
+    let overlap = evaluation_of(&trained_id, &["trajectory:0002", "trajectory:0001"]);
+    assert_eq!(
+        admit(&overlap, &graph),
+        Err(PolicyRefusal::EvaluationOverlapsTraining(
+            "trajectory:0001".into()
+        ))
+    );
+    assert_eq!(
+        PolicyRefusal::EvaluationOverlapsTraining("t".into()).code(),
+        "POLICY_EVALUATION_OVERLAPS_TRAINING"
+    );
+
+    // A disjoint held-out set is admitted, and so is none at all.
+    assert_eq!(
+        admit(&evaluation_of(&trained_id, &["trajectory:0002"]), &graph),
+        Ok(())
+    );
+    assert_eq!(admit(&evaluation_of(&trained_id, &[]), &graph), Ok(()));
+
+    // A base version has no training run, so nothing overlaps.
+    assert_eq!(
+        admit(&evaluation_of(&base_id, &["trajectory:0001"]), &graph),
+        Ok(())
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.2
+#[test]
+fn held_out_list_is_bounded_at_4096() {
+    let ids = (0..4097)
+        .map(|index| format!("trajectory:{index:05}"))
+        .collect::<Vec<_>>();
+    let body = json!({
+        "version_id": "polver:x", "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "held_out_trajectory_ids": ids,
+        "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
+                    "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
+                    "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
+        "safety": "passed", "verdict": "accepted",
+    });
+    assert!(serde_json::from_value::<
+        medulla_decision_outcome_types::policy_evolution::PolicyEvaluation,
+    >(body)
+    .is_err());
+}
