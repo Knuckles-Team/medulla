@@ -39,6 +39,8 @@ pub mod pre_merge_test_module;
 // MEDULLA-SDLC — release, deployment, defect, derived status and lifecycle trace records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lifecycle;
+// MEDULLA-SDLC-R019.2 — delivery records.
+pub mod delivery;
 // MEDULLA-SDLC-R030.1 — the defect machine: edge table D01 to D09 and its one transition function.
 pub mod defect_machine;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
