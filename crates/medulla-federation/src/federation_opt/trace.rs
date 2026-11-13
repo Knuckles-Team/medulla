@@ -95,11 +95,9 @@ pub struct SearchReceipt {
 }
 
 impl FragmentTrace {
-    pub(crate) fn new(
-        source: String,
-        strategy: FetchStrategy,
-        mode: FragmentExecutionMode,
-    ) -> Self {
+    /// A fresh trace for one fragment; callers outside the crate (EXPLAIN of a
+    /// graph-view read) fill the pushed statement and mapping digest after.
+    pub fn new(source: String, strategy: FetchStrategy, mode: FragmentExecutionMode) -> Self {
         Self {
             source,
             strategy,
