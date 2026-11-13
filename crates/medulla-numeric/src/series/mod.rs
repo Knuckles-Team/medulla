@@ -24,13 +24,14 @@ pub mod distance;
 #[cfg(feature = "motif")]
 mod fft;
 pub mod kalman;
-mod state_space;
 mod kernel;
+pub mod limits;
 #[cfg(feature = "motif")]
 pub mod mass;
 #[cfg(feature = "motif")]
 pub mod matrix_profile;
 pub mod stampi;
+pub mod state_space;
 pub mod streaming;
 pub mod window;
 

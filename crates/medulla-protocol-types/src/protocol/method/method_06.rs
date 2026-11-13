@@ -397,6 +397,17 @@ $($variants)*
         source: String,
         expr: String,
     },
+    /// Define a STATE-SPACE SERIES (R002.9): `series_id` is the filtered level of the
+    /// versioned `model` over `source` (a series in the caller's own scope). Source field
+    /// `v0..` carry the measurement and, but for the volatility profile, the design row.
+    /// Points are `[value, revision, known_at_ms]`; the checkpoint persists with the
+    /// series. Idempotent for the same model (the call then catches the series up); a
+    /// different model, a source too narrow for the layout or a missing source is refused.
+    TsDefineStateSpace {
+        series_id: String,
+        source: String,
+        model: medulla_types::series_expr::StateSpaceModel,
+    },
 
 
     // ── Blob (CONCEPT:MEDULLA-KG.storage.blob-namespace — streamed content-addressed media substrate) ──

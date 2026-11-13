@@ -306,6 +306,15 @@ pub struct DerivedSeriesReceipt {
     pub caught_up: bool,
     /// The last source timestamp reflected.
     pub last_ts: Option<i64>,
+    /// State-space series only: the sequence of the last applied observation.
+    #[serde(default)]
+    pub cursor: u64,
+    /// State-space series only: the model revision the checkpoint belongs to.
+    #[serde(default)]
+    pub model_revision: Option<u64>,
+    /// State-space series only: digest of the stored checkpoint.
+    #[serde(default)]
+    pub checkpoint_digest: Option<String>,
 }
 
 /// The kernel revision every state-space model and checkpoint pins.
@@ -362,7 +371,12 @@ pub struct StateSpaceObservation {
     pub event_time_ms: i64,
     pub known_at_ms: i64,
     pub source_revision: String,
+    /// The measurement `z` (`obs_dim` values).
     pub values: Vec<f64>,
+    /// The design row `H` (`obs_dim x state_dim`, row-major) of every profile but
+    /// volatility, which observes the state directly and carries none.
+    #[serde(default)]
+    pub design: Vec<f64>,
 }
 
 /// The filter state a derived checkpoint carries (rides in `DerivedState.checkpoints`).
@@ -483,10 +497,15 @@ impl StateSpaceModel {
 impl StateSpaceObservation {
     /// Admit the observation against its model: width and finiteness.
     pub fn check(&self, model: &StateSpaceModel) -> Result<(), StateSpaceRefusal> {
-        if self.values.len() != model.obs_dim as usize {
+        let (n, m) = (model.state_dim as usize, model.obs_dim as usize);
+        let design = match model.profile {
+            StateSpaceProfile::Volatility => 0,
+            _ => m * n,
+        };
+        if self.values.len() != m || self.design.len() != design {
             return Err(StateSpaceRefusal::DimensionMismatch);
         }
-        if !all_finite(&self.values) {
+        if !all_finite(&self.values) || !all_finite(&self.design) {
             return Err(StateSpaceRefusal::InputNonfinite);
         }
         Ok(())
@@ -614,6 +633,7 @@ mod tests {
             event_time_ms: 1_000 * sequence as i64,
             known_at_ms: 1_000 * sequence as i64 + 5,
             source_revision: "r1".into(),
+            design: Vec::new(),
             values,
         }
     }
@@ -644,7 +664,10 @@ mod tests {
                 serde_json::from_str::<StateSpaceCheckpoint>(&json).unwrap(),
                 checkpoint
             );
-            let obs = state_space_observation(1, vec![0.25; m]);
+            let mut obs = state_space_observation(1, vec![0.25; m]);
+            if profile != StateSpaceProfile::Volatility {
+                obs.design = vec![1.0; m * n];
+            }
             assert_eq!(obs.check(&model), Ok(()));
             let json = serde_json::to_string(&obs).unwrap();
             assert_eq!(
@@ -685,10 +708,13 @@ mod tests {
             state_space_observation(8, vec![1.0, 2.0]).check(&model),
             Err(R::DimensionMismatch)
         );
-        assert_eq!(
-            state_space_observation(8, vec![f64::INFINITY]).check(&model),
-            Err(R::InputNonfinite)
-        );
+        let mut infinite = state_space_observation(8, vec![f64::INFINITY]);
+        infinite.design = vec![1.0, 1.0];
+        assert_eq!(infinite.check(&model), Err(R::InputNonfinite));
+        let mut no_design = state_space_observation(8, vec![1.0]);
+        assert_eq!(no_design.check(&model), Err(R::DimensionMismatch));
+        no_design.design = vec![1.0, 1.0];
+        assert_eq!(no_design.check(&model), Ok(()));
 
         let mut checkpoint = model.initial_checkpoint();
         checkpoint.model_revision = 2;

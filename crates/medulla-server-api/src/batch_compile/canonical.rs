@@ -84,7 +84,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         Method::TsAppend { .. }
         | Method::TsEvict { .. }
         | Method::TsDeleteSeries { .. }
-        | Method::TsDefineSeries { .. } => DurabilityDomain::TimeSeries,
+        | Method::TsDefineSeries { .. }
+        | Method::TsDefineStateSpace { .. } => DurabilityDomain::TimeSeries,
         #[cfg(feature = "jobs")]
         Method::AnalyticsJob { .. } => DurabilityDomain::AnalyticsJob,
         _ => return service_owner_domain(method),
@@ -816,6 +817,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TsEvict { .. }
         | Method::TsDeleteSeries { .. }
         | Method::TsDefineSeries { .. }
+        | Method::TsDefineStateSpace { .. }
         | Method::KgDelegate { .. }
         | Method::SubmitWorkItem { .. }
         | Method::SubmitWorkItems { .. }

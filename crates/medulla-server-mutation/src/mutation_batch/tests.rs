@@ -446,6 +446,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("TsEvict", "TimeSeries"),
     ("TsDeleteSeries", "TimeSeries"),
     ("TsDefineSeries", "TimeSeries"),
+    ("TsDefineStateSpace", "TimeSeries"),
     ("AnalyticsJob", "AnalyticsJob"),
     ("KgDelegate", "ControlPlane"),
     ("SubmitWorkItem", "ControlPlane"),

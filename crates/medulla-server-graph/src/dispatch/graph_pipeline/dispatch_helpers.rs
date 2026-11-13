@@ -32,6 +32,7 @@ pub async fn dispatch_op_tsdb_write_fence(
             | Method::TsEvict { .. }
             | Method::TsDeleteSeries { .. }
             | Method::TsDefineSeries { .. }
+            | Method::TsDefineStateSpace { .. }
     ) {
         return None;
     }

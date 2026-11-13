@@ -65,7 +65,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T059 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.4 Complete caller coverage verification
 - [ ] T060 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.2.5 Served NumericEvaluate method and kernel registry
 - [x] T061 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.3 Client bindings for NumericEvaluate and retired-method absence
-- [ ] T062 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.4 Bound original regime derivations and streaming work
+- [x] T062 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.4 Bound original regime derivations and streaming work
 - [ ] T063 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.5 Define versioned state-space inputs and checkpoints
 - [ ] T064 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.6.1 Shared causal linear recurrence
 - [ ] T065 [US4] MEDULLA-FINANCE-PRIMITIVES-R002.6.2 Volatility regime profile

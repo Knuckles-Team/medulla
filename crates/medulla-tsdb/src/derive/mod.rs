@@ -20,6 +20,9 @@ use serde::{Deserialize, Serialize};
 /// Materialised derived series: definition, checkpoints, advance and revision replay.
 pub mod maintain;
 
+/// State-space derived series: a versioned model advanced by the shared filter (R002.9).
+pub mod state_space;
+
 /// The kernel generation a digest binds: bump when any kernel's output changes.
 pub const KERNEL_VERSION: &str = "eg-series-kernels/2";
 

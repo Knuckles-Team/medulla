@@ -116,6 +116,8 @@ macro_rules! native_method_catalog {
             record TsDeleteSeries => TimeSeries,
             #[cfg(feature = "tsdb")]
             record TsDefineSeries => TimeSeries,
+            #[cfg(feature = "tsdb")]
+            record TsDefineStateSpace => TimeSeries,
 
             #[cfg(feature = "jobs")]
             record AnalyticsJob => AnalyticsJob,

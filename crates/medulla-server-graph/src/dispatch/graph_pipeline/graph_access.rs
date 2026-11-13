@@ -158,6 +158,7 @@ pub fn graph_op_access_level(method: &Method) -> AccessLevel {
                 | Method::TsEvict { .. }
                 | Method::TsDeleteSeries { .. }
                 | Method::TsDefineSeries { .. }
+                | Method::TsDefineStateSpace { .. }
         )
     {
         AccessLevel::Write

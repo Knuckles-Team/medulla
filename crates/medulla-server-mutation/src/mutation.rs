@@ -806,6 +806,7 @@ mod tests {
         ("TsEvict", "self-routes via dispatch.rs's tsdb block to timeseries.rs, like TsAppend above; one series.redb WTX via SeriesStore::evict_before_scoped -- no medulla_transaction idempotency batch, because retention is content-idempotent (re-evicting an already-past cutoff is a safe no-op), unlike TsAppend"),
         ("TsDeleteSeries", "self-routes via dispatch.rs's tsdb block to timeseries.rs, like TsAppend above; one series.redb WTX via SeriesStore::delete_scoped -- no medulla_transaction idempotency batch, because deletion is content-idempotent (re-deleting an already-gone series is a safe no-op), unlike TsAppend"),
         ("TsDefineSeries", "native MutationBatch in series.redb, like TsAppend: the derived points plus the definition/checkpoint in the series metadata in one WTX (EH-524)"),
+        ("TsDefineStateSpace", "native MutationBatch in series.redb, like TsDefineSeries: the filtered points plus the model/checkpoint in the series metadata in one WTX (R002.9)"),
         #[cfg(feature = "jobs")]
         ("AnalyticsJob", "native MutationBatch in jobs.redb; asynchronous claim writeback uses a staged graph MutationBatch"),
         // `Statechart` self-routes in dispatch.rs BEFORE dispatch_graph_op (see the

@@ -16,18 +16,20 @@
 //! and in the series metadata.
 
 use medulla_tsdb::derive::maintain::{latest_versions, DerivedState, Step, DERIVED_FIELDS};
+use medulla_tsdb::derive::state_space::{self, Advance, SeriesRefusal, StateSpaceState};
 use medulla_tsdb::derive::KERNEL_VERSION;
 use medulla_tsdb::point::{Point, Ts};
 use medulla_tsdb::store::{DerivedWrite, ScopedAppendBatch, SeriesKey, SeriesMeta, SeriesStore};
-use medulla_types::series_expr::{DerivedSeriesReceipt, SeriesExpr};
+use medulla_types::series_expr::{DerivedSeriesReceipt, SeriesExpr, StateSpaceModel};
 
 use super::{compute_off_lock, results, store_of, BatchScope, TsRequestContext};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
-/// Source points one maintenance step may consume: the per-call work budget.
-const WORK_BUDGET: usize = 100_000;
+/// Source points one maintenance step may consume: the per-call work budget (the one
+/// definition is the replay ceiling of the state-space limits).
+const WORK_BUDGET: usize = medulla_tsdb::derive::kernels::limits::MAX_REPLAY_POINTS;
 
 /// How long a derived-from-derived chain may be (the cycle guard's bound).
 const MAX_DERIVATION_DEPTH: usize = 16;
@@ -65,6 +67,122 @@ pub(super) async fn handle_define(
             medulla_protocol_types::error_registry::classify_refusal("INTERNAL", "", &error),
         ),
         Err(response) => response,
+    }
+}
+
+pub(super) async fn handle_define_state_space(
+    context: &TsRequestContext<'_>,
+    series_id: String,
+    source: String,
+    model: StateSpaceModel,
+) -> Response {
+    let store = match store_of(context.state, context.req_id).await {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let scope = context.batch_scope();
+    let outcome = compute_off_lock(context.req_id, move || {
+        define_state_space(&store, &scope, &series_id, &source, &model)
+    })
+    .await;
+    match outcome {
+        Ok(Ok(receipt)) => Response::ok(
+            context.req_id,
+            ResultPayload::of_ref::<results::TsDefineStateSpace>(&receipt),
+        ),
+        Ok(Err(error)) => Response::err(
+            context.req_id,
+            medulla_protocol_types::error_registry::classify_refusal("INTERNAL", "", &error),
+        ),
+        Err(response) => response,
+    }
+}
+
+fn define_state_space(
+    store: &SeriesStore,
+    scope: &BatchScope,
+    series_id: &str,
+    source: &str,
+    model: &StateSpaceModel,
+) -> Result<DerivedSeriesReceipt, String> {
+    if series_id == source {
+        return Err("INVALID_ARGUMENT: a derived series cannot derive from itself".into());
+    }
+    let refuse = |r: SeriesRefusal| r.render();
+    let source_key = scope.key(source)?;
+    let source_meta = meta(store, &source_key)?.ok_or_else(|| {
+        refuse(SeriesRefusal::SchemaUnavailable(format!(
+            "the source series `{source}` does not exist"
+        )))
+    })?;
+    let fresh = StateSpaceState::define(source, model.clone()).map_err(refuse)?;
+    let width = state_space::input_width(model);
+    if source_meta.n_fields < width {
+        return Err(refuse(SeriesRefusal::SchemaUnavailable(format!(
+            "the source has {} fields; the model reads {width}",
+            source_meta.n_fields
+        ))));
+    }
+    check_no_cycle(store, scope, source, series_id)?;
+    let key = scope.key(series_id)?;
+    let existing =
+        match meta(store, &key)? {
+            None => None,
+            Some(m) => match m.derived.as_deref() {
+                Some(bytes) if state_space::is_state_space(bytes) => {
+                    Some(StateSpaceState::decode(bytes)?)
+                }
+                _ => return Err(
+                    "INVALID_ARGUMENT: the series already exists and is not a state-space series"
+                        .into(),
+                ),
+            },
+        };
+    let start = match existing {
+        None => fresh,
+        Some(prior) => {
+            prior.same_definition(source, model).map_err(refuse)?;
+            prior
+        }
+    };
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let source_points = latest_versions(&range(
+        store,
+        &source_key,
+        start.last_ts.map_or(Ts::MIN, |t| t + 1),
+    )?);
+    let (next, step) = start
+        .advance(&source_points, now, Advance::CatchUp)
+        .map_err(refuse)?;
+    commit_bytes(
+        store,
+        scope,
+        &key,
+        &next.source,
+        &next.encode().map_err(refuse)?,
+        &step.points,
+        now,
+    )?;
+    Ok(state_space_receipt(series_id, &next, &step))
+}
+
+fn state_space_receipt(
+    series_id: &str,
+    state: &StateSpaceState,
+    step: &Step,
+) -> DerivedSeriesReceipt {
+    DerivedSeriesReceipt {
+        series_id: series_id.to_string(),
+        derived_from: state.source.clone(),
+        expr: format!("state_space({:?})", state.model.profile).to_lowercase(),
+        digest: state.digest.clone(),
+        kernel_version: state.model.kernel_revision.clone(),
+        appended: step.points.len() as u64,
+        caught_up: step.caught_up,
+        last_ts: state.last_ts,
+        cursor: state.checkpoint.cursor,
+        model_revision: Some(state.model.model_revision),
+        checkpoint_digest: Some(state.checkpoint_digest()),
     }
 }
 
@@ -123,6 +241,9 @@ fn define(
         appended: committed.step.points.len() as u64,
         caught_up: committed.step.caught_up,
         last_ts: committed.state.last_ts,
+        cursor: 0,
+        model_revision: None,
+        checkpoint_digest: None,
     })
 }
 
@@ -151,15 +272,15 @@ fn check_no_cycle(
 ) -> Result<(), String> {
     let mut current = source.to_string();
     for _ in 0..MAX_DERIVATION_DEPTH {
-        let Some(state) = derived_state(store, &scope.key(&current)?)? else {
+        let Some(upstream) = derived_source(store, &scope.key(&current)?)? else {
             return Ok(());
         };
-        if state.source == target {
+        if upstream == target {
             return Err(format!(
                 "INVALID_ARGUMENT: defining `{target}` over `{source}` would make a cycle"
             ));
         }
-        current = state.source;
+        current = upstream;
     }
     Err(format!(
         "INVALID_ARGUMENT: the derivation chain under `{source}` is deeper than {MAX_DERIVATION_DEPTH}"
@@ -201,11 +322,17 @@ fn maintain_dependents(
     };
     for dependent in &source_meta.dependents {
         let key = scope.key(dependent)?;
-        let Some(state) = derived_state(store, &key)? else {
+        let earliest = if let Some(bytes) = derived_bytes(store, &key)? {
+            if state_space::is_state_space(&bytes) {
+                maintain_state_space(store, scope, &key, StateSpaceState::decode(&bytes)?, min_ts)?
+            } else {
+                let state = DerivedState::decode(&bytes)?;
+                let committed = maintain_one(store, scope, &key, state, min_ts)?;
+                committed.step.points.iter().map(|p| p.ts).min()
+            }
+        } else {
             continue;
         };
-        let committed = maintain_one(store, scope, &key, state, min_ts)?;
-        let earliest = committed.step.points.iter().map(|p| p.ts).min();
         if earliest.is_some() {
             maintain_dependents(store, scope, dependent, earliest, depth + 1)?;
         }
@@ -257,13 +384,33 @@ fn commit(
     step: &Step,
     now: u64,
 ) -> Result<(), String> {
-    let source_key = scope.key(&state.source)?;
+    commit_bytes(
+        store,
+        scope,
+        key,
+        &state.source,
+        &state.encode()?,
+        &step.points,
+        now,
+    )
+}
+
+/// Commit derived points and an already-encoded state as ONE MutationBatch.
+fn commit_bytes(
+    store: &SeriesStore,
+    scope: &BatchScope,
+    key: &SeriesKey,
+    source: &str,
+    bytes: &[u8],
+    points: &[Point],
+    now: u64,
+) -> Result<(), String> {
+    let source_key = scope.key(source)?;
     let bucket_ns = meta(store, &source_key)?
         .ok_or("the source series disappeared")?
         .bucket_ns;
     let field_names: Vec<String> = DERIVED_FIELDS.iter().map(|f| (*f).to_string()).collect();
-    let bytes = state.encode()?;
-    let event = maintenance_event(key, &step.points, &bytes)?;
+    let event = maintenance_event(key, points, bytes)?;
     let batch = scope
         .follow_on(&event)?
         .series_batch(store, &maintenance_method(event), now)?;
@@ -275,11 +422,11 @@ fn commit(
                 n_fields: DERIVED_FIELDS.len(),
                 bucket_ns,
                 field_names: &field_names,
-                points: &step.points,
+                points,
                 batch: &batch,
                 committed_at_ms: now,
                 derived: Some(DerivedWrite {
-                    state: &bytes,
+                    state: bytes,
                     source_key: &source_storage,
                     dependent: &key.series,
                 }),
@@ -314,11 +461,50 @@ fn meta(store: &SeriesStore, key: &SeriesKey) -> Result<Option<SeriesMeta>, Stri
     store.meta_scoped(key).map_err(|error| error.to_string())
 }
 
-fn derived_state(store: &SeriesStore, key: &SeriesKey) -> Result<Option<DerivedState>, String> {
-    meta(store, key)?
-        .and_then(|m| m.derived)
-        .map(|bytes| DerivedState::decode(&bytes))
-        .transpose()
+fn derived_bytes(store: &SeriesStore, key: &SeriesKey) -> Result<Option<Vec<u8>>, String> {
+    Ok(meta(store, key)?.and_then(|m| m.derived))
+}
+
+/// The source series an ordinary or state-space derived series reads, if it is derived.
+fn derived_source(store: &SeriesStore, key: &SeriesKey) -> Result<Option<String>, String> {
+    let Some(bytes) = derived_bytes(store, key)? else {
+        return Ok(None);
+    };
+    if state_space::is_state_space(&bytes) {
+        Ok(Some(StateSpaceState::decode(&bytes)?.source))
+    } else {
+        Ok(Some(DerivedState::decode(&bytes)?.source))
+    }
+}
+
+/// Advance one state-space series after a source append: a refusal commits nothing, so
+/// the prior checkpoint, cursor and points stay and the series lags.
+fn maintain_state_space(
+    store: &SeriesStore,
+    scope: &BatchScope,
+    key: &SeriesKey,
+    state: StateSpaceState,
+    min_ts: Option<Ts>,
+) -> Result<Option<Ts>, String> {
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let source_key = scope.key(&state.source)?;
+    let from = min_ts
+        .map_or(state.last_ts, |m| state.last_ts.map(|l| l.min(m)))
+        .unwrap_or(Ts::MIN);
+    let source = latest_versions(&range(store, &source_key, from)?);
+    let (next, step) = state
+        .advance(&source, now, Advance::Append)
+        .map_err(|r| r.render())?;
+    commit_bytes(
+        store,
+        scope,
+        key,
+        &next.source,
+        &next.encode().map_err(|r| r.render())?,
+        &step.points,
+        now,
+    )?;
+    Ok(step.points.iter().map(|p| p.ts).min())
 }
 
 fn range(store: &SeriesStore, key: &SeriesKey, from: Ts) -> Result<Vec<Point>, String> {

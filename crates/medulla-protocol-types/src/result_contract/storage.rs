@@ -79,6 +79,7 @@ method_results! {
     TsDeleteSeries(TsDeleteSeries) => Count<u64>;
     TsListSeries(TsListSeries) => Raw<Vec<String>>;
     TsDefineSeries(TsDefineSeries) => Raw<DerivedSeriesReceipt>;
+    TsDefineStateSpace(TsDefineStateSpace) => Raw<DerivedSeriesReceipt>;
     BlobBegin(BlobBegin) => Count<u64>;
     BlobChunkPut(BlobChunkPut) => Count<u64>;
     BlobCommit(BlobCommit) => Text<String>;

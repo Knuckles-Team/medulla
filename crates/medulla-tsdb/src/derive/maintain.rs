@@ -30,7 +30,7 @@ pub const CHECKPOINT_EVERY: u64 = 256;
 pub const MAX_CHECKPOINTS: usize = 16;
 
 /// The largest encoded state a derived series may keep in its metadata.
-pub const MAX_STATE_BYTES: usize = 1 << 20;
+pub const MAX_STATE_BYTES: usize = medulla_numeric::series::limits::MAX_CHECKPOINT_BYTES;
 
 /// The program state right after consuming the source point at `ts`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

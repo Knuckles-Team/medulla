@@ -738,6 +738,11 @@ pub async fn try_handle_with_nonce(
             source,
             expr,
         } => Ok(derived::handle_define(&context, series_id, source, expr).await),
+        Method::TsDefineStateSpace {
+            series_id,
+            source,
+            model,
+        } => Ok(derived::handle_define_state_space(&context, series_id, source, model).await),
         other => Err(other),
     }
 }

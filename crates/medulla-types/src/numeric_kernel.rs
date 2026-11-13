@@ -322,6 +322,8 @@ pub enum KernelCode {
     Singular,
     #[serde(rename = "KERNEL_STATE_BUDGET")]
     StateBudget,
+    #[serde(rename = "KERNEL_WORK_BUDGET")]
+    WorkBudget,
     #[serde(rename = "KERNEL_OP_UNKNOWN")]
     OpUnknown,
 }
@@ -336,6 +338,7 @@ impl KernelCode {
             Self::ParamInvalid => "KERNEL_PARAM_INVALID",
             Self::Singular => "KERNEL_SINGULAR",
             Self::StateBudget => "KERNEL_STATE_BUDGET",
+            Self::WorkBudget => "KERNEL_WORK_BUDGET",
             Self::OpUnknown => "KERNEL_OP_UNKNOWN",
         }
     }
