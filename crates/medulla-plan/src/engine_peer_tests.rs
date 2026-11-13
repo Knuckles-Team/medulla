@@ -281,6 +281,7 @@ fn ids(names: &[&str]) -> Vec<String> {
 const EVERY_ROW: &[&str] = &["d1", "d2", "d4", "d5"];
 
 // spec: MEDULLA-FEDERATED-QUERY-R052
+// spec: MEDULLA-FEDERATED-QUERY-R020
 #[test]
 fn a_verified_pushdown_narrows_the_transfer_without_changing_the_answer() {
     let peer = Peer::spawn(Policy::granting(EVERY_ROW));

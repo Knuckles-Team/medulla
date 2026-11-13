@@ -267,3 +267,32 @@ fn variant_descriptor_parity_fails_in_both_directions() {
     assert!(no_descriptor.is_empty());
     assert_eq!(no_variant, vec!["GhostDescriptor"]);
 }
+
+/// Query-text method names that were retired and must never be served again.
+const RETIRED_METHODS: &[&str] = &["UnifiedQueryText", "TxnUnifiedQueryText"];
+
+// spec: MEDULLA-FEDERATED-QUERY-R020
+#[test]
+fn retired_methods_never_reappear() {
+    let registry: Vec<&str> = method_policy_entries().map(|(name, _, _)| name).collect();
+    // `Uql` is the one query-text method and stays served.
+    assert!(registry.contains(&"Uql"), "Method::Uql must be served");
+    let served: serde_json::Value =
+        serde_json::from_str(&catalog_json()).expect("the served catalog is JSON");
+    let served_ids: Vec<&str> = served["methods"]
+        .as_array()
+        .expect("methods array")
+        .iter()
+        .map(|row| row["id"].as_str().expect("method row carries an id"))
+        .collect();
+    for retired in RETIRED_METHODS {
+        assert!(
+            !registry.contains(retired),
+            "retired method {retired} is back in the registry"
+        );
+        assert!(
+            !served_ids.contains(retired),
+            "retired method {retired} is back in the served catalog"
+        );
+    }
+}
