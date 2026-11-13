@@ -99,12 +99,15 @@
     rdfs:domain :Team ;
     rdfs:range :TeamTask .
 
+# spec: MEDULLA-DECISION-ENGINE-R170.3
+# A TeamTask and a TeamMember each name the one Team they are bound to. The domain is the
+# union of the two classes, so a TeamMember is not inferred to be a TeamTask: the inverse of
+# hasTask is not claimed. The shapes companion a2a-v1.shapes.ttl requires the binding.
 :boundToTeam a owl:ObjectProperty ;
     rdfs:label "bound to team" ;
-    rdfs:comment "Links a TeamTask to the Team it is bound to. Inverse of hasTask." ;
-    rdfs:domain :TeamTask ;
-    rdfs:range :Team ;
-    owl:inverseOf :hasTask .
+    rdfs:comment "Links a TeamTask or a TeamMember to the Team it is bound to." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :TeamTask :TeamMember ) ] ;
+    rdfs:range :Team .
 
 :taskStatus a owl:ObjectProperty ;
     rdfs:label "task status" ;

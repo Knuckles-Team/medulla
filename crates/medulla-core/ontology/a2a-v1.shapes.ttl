@@ -1,0 +1,17 @@
+# SHACL shapes for the team records (MEDULLA-DECISION-ENGINE-R170.3).
+#
+# A team member names the team it is bound to; the team coordination family selects the
+# team only through a member that carries this explicit binding.
+
+@prefix :   <https://knuckles-team.github.io/ontology/core#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+:TeamMemberShape a sh:NodeShape ;
+    sh:targetClass :TeamMember ;
+    sh:property [
+        sh:path :boundToTeam ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "A team member must name the team it is bound to in boundToTeam."
+    ] .

@@ -4765,6 +4765,11 @@ dependencies = [
 [[package]]
 name = "medulla-decision-plan"
 version = "0.1.0"
+dependencies = [
+ "medulla-catalog-types",
+ "medulla-decision-types",
+ "medulla-types",
+]
 
 [[package]]
 name = "medulla-decision-policy"

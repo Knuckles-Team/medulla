@@ -992,7 +992,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "a2a",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/a2a-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!("../../../medulla-core/ontology/a2a-v1.ttl")),
         },
         CoreSpec {
