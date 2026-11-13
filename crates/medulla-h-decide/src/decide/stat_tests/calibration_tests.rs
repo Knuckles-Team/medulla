@@ -109,8 +109,8 @@ async fn isotonic_fit_is_monotone_and_promoted() {
         .knots
         .iter()
         .any(|k| k.score_ppm == 545_000 && k.relevant_ppm == 50_000));
-    assert_eq!(curve.knots.first().unwrap().relevant_ppm, 0);
-    assert_eq!(curve.knots.last().unwrap().relevant_ppm, PPM);
+    assert_eq!(curve.knots.as_slice().first().unwrap().relevant_ppm, 0);
+    assert_eq!(curve.knots.as_slice().last().unwrap().relevant_ppm, PPM);
     assert!(curve.calibrate(900_000) > curve.calibrate(300_000));
 
     // Nothing serves before the pointer moves, and only with its own receipt.
