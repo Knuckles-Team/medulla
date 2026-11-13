@@ -191,3 +191,5 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T186 [US9] MEDULLA-ORCH-VOCAB-R815.7 WorkItemDeferral/WorkItemDeferStatus state machine: route 1 census findings through WorkItemDeferStatus::apply
 - [ ] T187 [US9] MEDULLA-ORCH-VOCAB-R815.8 WorkOfferView/OfferStage state machine: route 1 census findings through OfferStage::apply
 - [ ] T188 [US9] MEDULLA-ORCH-VOCAB-R815.9 WorkflowRegistrationEntry/WorkflowLifecycle state machine: route 1 census findings through WorkflowLifecycle::apply
+- [ ] T189 [US9] MEDULLA-ORCH-VOCAB-R816 Census debt of the incident wire mirror is closed (rollup)
+- [ ] T190 [US9] MEDULLA-ORCH-VOCAB-R816.1 Incident status wire parameters follow `IncidentStatus`: Python mirror follows the Rust machine
