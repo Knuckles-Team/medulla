@@ -618,6 +618,15 @@ $($variants)*
         args: std::collections::BTreeMap<String, serde_json::Value>,
     },
 
+    // ── Entity-link approval (MEDULLA-UNIFIED-DATA-PLANE-R030.3) ──────────────────────────────
+    /// Approve the proposed link between two attached records. The server rebuilds the
+    /// proposal from the two nodes (never from the caller), refuses a pair that is not a
+    /// `Match`, records the verified caller as approver and writes one `owl:sameAs` edge.
+    ApproveEntityLink {
+        left: medulla_types::entity_link_proposal::EntityRef,
+        right: medulla_types::entity_link_proposal::EntityRef,
+    },
+
     // ── Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview) ───────
     // GENERALIZES the algo-only matview above: a matview is a NAMED, DURABLE `wire::Plan`
     // (the same cross-modal AST `UnifiedQuery` carries) over ONE `graph`. Defining it

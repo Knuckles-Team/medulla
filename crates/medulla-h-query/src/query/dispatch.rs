@@ -189,6 +189,7 @@ fn is_sql_query_method(method: &Method) -> bool {
             | Method::Uql { .. }
             | Method::SchemaProjections { .. }
             | Method::StoredQueryPut { .. }
+            | Method::ApproveEntityLink { .. }
             | Method::StoredQueryCall { .. }
             | Method::EncodeDocument { .. }
     )
@@ -234,6 +235,10 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
         // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
         Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
+        // MEDULLA-UNIFIED-DATA-PLANE-R030.3: approving one entity link writes its owl:sameAs edge.
+        Method::ApproveEntityLink { left, right } => {
+            Ok(super::entity_link::handle_approve(ctx, left, right))
+        }
         // MEDULLA-FEDERATED-QUERY-R708.3: stored, versioned queries.
         other @ (Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }) => {
             super::stored_query::dispatch_stored_query(ctx, other).await

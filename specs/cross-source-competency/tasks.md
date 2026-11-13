@@ -17,7 +17,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T011 [US1] MEDULLA-CQ-XSRC-R003.5 Virtual mapping fixture: container-manager deployment to `:Workload` and its image
 - [ ] T012 [US4] MEDULLA-CQ-XSRC-R004.1 Add `:usesComponent` (service to component version) and `:suppliesService`
 - [ ] T013 [US4] MEDULLA-CQ-XSRC-R004.3 Resolve a vendor in erpnext, leanix and dockerhub to one `:Supplier`
-- [ ] T014 [US4] MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`
+- [x] T014 [US4] MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`
 - [ ] T015 [US4] MEDULLA-CQ-XSRC-R004.5 Query-time link: a join may only cross an approved `owl:sameAs`
 - [ ] T016 [US1] MEDULLA-CQ-XSRC-R005.1 Row: `select_sources` orders candidate mappings by `vg:authorityRank`
 - [ ] T017 [US1] MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only

@@ -59,6 +59,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     // MEDULLA-FEDERATED-QUERY-R708.4.
     ("StoredQuery", &["STORED_QUERY_"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R030.3.
+    ("ApproveEntityLink", &["LINK_"]),
     (
         "Source",
         &[

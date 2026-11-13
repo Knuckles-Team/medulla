@@ -645,6 +645,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::LiveArtifactRefresh { .. }
         // MEDULLA-FEDERATED-QUERY-R708.3: stored-query records through the staged query gateway.
         | Method::StoredQueryPut { .. }
+        | Method::ApproveEntityLink { .. }
         // MEDULLA-FEDERATED-QUERY-R039.2.5: document-vector nodes through the staged query gateway.
         | Method::EncodeDocument { .. }
         | Method::StoredQueryCall { .. }

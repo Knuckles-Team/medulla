@@ -166,6 +166,11 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::StoredQueryPut { query } => {
             Some(format!("STORED_QUERY_PUT|{}|{}", query.name, query.version))
         }
+        Method::ApproveEntityLink { left, right } => Some(format!(
+            "APPROVE_ENTITY_LINK|{}|{}",
+            left.node_id(),
+            right.node_id()
+        )),
         Method::StoredQueryCall { name, version, .. } => Some(format!(
             "STORED_QUERY_CALL|{name}|{}",
             version.map_or_else(|| "latest".to_string(), |v| v.to_string())

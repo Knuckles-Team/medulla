@@ -44,6 +44,7 @@ method_results! {
     EncodeDocument(EncodeDocument) => Json<medulla_types::retrieval::EncodedDocument>;
     EncodedDocumentSearch(EncodedDocumentSearch) => Json<medulla_types::retrieval::EncodedSearchResult>;
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
+    ApproveEntityLink(ApproveEntityLink) => Json<medulla_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;

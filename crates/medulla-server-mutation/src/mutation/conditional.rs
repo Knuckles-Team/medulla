@@ -524,6 +524,7 @@ pub fn is_query_gateway_method(m: &Method) -> bool {
             | "LiveArtifactPut"
             | "LiveArtifactRefresh"
             | "StoredQueryPut"
+            | "ApproveEntityLink"
             | "EncodeDocument"
             | "StoredQueryCall"
     )

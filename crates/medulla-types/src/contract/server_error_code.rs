@@ -289,6 +289,8 @@ closed_error_codes! {
         LiveArtifactSizeExceeded => "LIVE_ARTIFACT_SIZE_EXCEEDED",
         LiveArtifactTemplateUnsafe => "LIVE_ARTIFACT_TEMPLATE_UNSAFE",
         LiveArtifactVersionConflict => "LIVE_ARTIFACT_VERSION_CONFLICT",
+        LinkNotApprovable => "LINK_NOT_APPROVABLE",
+        LinkProposalUnknown => "LINK_PROPOSAL_UNKNOWN",
         StoredQueryImmutable => "STORED_QUERY_IMMUTABLE",
         StoredQueryInvalid => "STORED_QUERY_INVALID",
         StoredQueryNotFound => "STORED_QUERY_NOT_FOUND",

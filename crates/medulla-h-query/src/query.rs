@@ -242,6 +242,8 @@ mod harness_metrics;
 #[cfg(feature = "query")]
 mod live_artifact;
 #[cfg(feature = "query")]
+mod entity_link;
+#[cfg(feature = "query")]
 mod stored_query;
 #[cfg(feature = "query")]
 mod uql_statement;

@@ -419,6 +419,10 @@ knobs! {
     federation_web_cache_ttl_s: u64 = "federation.web_cache_ttl_s", U64(900), [0, 86_400], "s", Tunable;
     /// Bits per character at or above which a name is an opaque token that never merges on the name alone (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
     entity_link_entropy_bits: f64 = "entity_link.entropy_bits", F64(3.5), [2.0, 6.0], "bits per character", Tunable;
+    /// Calibrated probability at or above which an entity pair is a Match (MEDULLA-UNIFIED-DATA-PLANE-R030).
+    entity_link_match_min: f64 = "entity_link.match_min", F64(0.95), [0.5, 1.0], "ratio", Tunable;
+    /// Calibrated probability at or below which an entity pair is a NonMatch (MEDULLA-UNIFIED-DATA-PLANE-R030).
+    entity_link_nonmatch_max: f64 = "entity_link.nonmatch_max", F64(0.05), [0.0, 0.5], "ratio", Tunable;
     /// Embedding cosine at or above which a name match plus the embedding proposes a merge (MEDULLA-UNIFIED-DATA-PLANE-R030.701).
     entity_link_embedding_min: f64 = "entity_link.embedding_min", F64(0.9), [0.5, 1.0], "cosine", Tunable;
     /// Longest a federated source statement may run.

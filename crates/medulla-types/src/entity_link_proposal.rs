@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 
 /// The attached application an entity reference names. Closed per
 /// R030's defined application set; R004.3 adds the supplier-resolution
-/// sources (ERPNext, LeanIX and DockerHub).
+/// sources (ERPNext, LeanIX and DockerHub) and R004.4 the service-resolution
+/// sources (uptime, container-manager and the ServiceNow CMDB).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AttachedApplication {
@@ -22,6 +23,27 @@ pub enum AttachedApplication {
     Erpnext,
     Leanix,
     Dockerhub,
+    Uptime,
+    ContainerManager,
+    ServiceNow,
+}
+
+impl AttachedApplication {
+    /// The stable name used in node ids and on the wire.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Gramps => "gramps",
+            Self::Immich => "immich",
+            Self::Twenty => "twenty",
+            Self::Firefly => "firefly",
+            Self::Erpnext => "erpnext",
+            Self::Leanix => "leanix",
+            Self::Dockerhub => "dockerhub",
+            Self::Uptime => "uptime",
+            Self::ContainerManager => "container_manager",
+            Self::ServiceNow => "servicenow",
+        }
+    }
 }
 
 /// One entity reference: which application and its local entity id.
@@ -29,6 +51,13 @@ pub enum AttachedApplication {
 pub struct EntityRef {
     pub application: AttachedApplication,
     pub entity_id: String,
+}
+
+impl EntityRef {
+    /// The graph node id of the attached record: `<application>:<entity id>`.
+    pub fn node_id(&self) -> String {
+        format!("{}:{}", self.application.as_str(), self.entity_id)
+    }
 }
 
 /// A Fellegi-Sunter-style classification of a candidate pair.
@@ -54,6 +83,16 @@ pub struct EntityLinkProposal {
     pub approved_by: Option<String>,
 }
 
+/// The result of one served `ApproveEntityLink` (MEDULLA-UNIFIED-DATA-PLANE-R030.3): the
+/// approved proposal and the `owl:sameAs` edge the approval wrote between the two nodes.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntityLinkApproval {
+    pub proposal: EntityLinkProposal,
+    pub source: String,
+    pub target: String,
+    pub predicate: String,
+}
+
 /// A proposal cannot be asserted as `owl:sameAs` for the stated reason.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CannotAssert {
@@ -70,6 +109,19 @@ pub fn supplier_blocking_key(name: &str, domain: &str) -> String {
         "{}\u{0}{1}",
         normalize_blocking_part(name),
         normalize_blocking_part(domain)
+    )
+}
+
+/// The service-resolution blocking key (MEDULLA-CQ-XSRC-R004.4): the
+/// normalized service name plus the hostname of its URL, the first two rows of
+/// the `infra:Service` key set in `supply_chain_blocking_keys.ttl`. As with
+/// suppliers the key only blocks; a proposed `owl:sameAs` stays inactive until
+/// approved.
+pub fn service_blocking_key(name: &str, url_hostname: &str) -> String {
+    format!(
+        "{}\u{0}{}",
+        normalize_blocking_part(name),
+        normalize_blocking_part(url_hostname)
     )
 }
 
@@ -223,5 +275,42 @@ mod tests {
             approved_by: Some("ops@local".to_string()),
         };
         assert_eq!(ambiguous.assert_same_as(), Err(CannotAssert::NotAMatch));
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R004.4
+    #[test]
+    fn service_kinds_refuse_unapproved() {
+        use AttachedApplication::{ContainerManager, ServiceNow, Uptime};
+        // The three records of one service block together on name and host.
+        let uptime = service_blocking_key("Grafana ", "Grafana.example.com");
+        let workload = service_blocking_key("grafana", "grafana.EXAMPLE.com");
+        let cmdb = service_blocking_key(" GRAFANA", "grafana.example.com");
+        assert_eq!(uptime, workload);
+        assert_eq!(workload, cmdb);
+        assert_ne!(uptime, service_blocking_key("loki", "loki.example.com"));
+        assert_eq!(ServiceNow.as_str(), "servicenow");
+        assert_eq!(
+            entity(ContainerManager, "g-1").node_id(),
+            "container_manager:g-1"
+        );
+        // No link asserts before an approver is recorded, for any pair.
+        for (left, right) in [
+            (Uptime, ContainerManager),
+            (ContainerManager, ServiceNow),
+            (Uptime, ServiceNow),
+        ] {
+            let mut proposal = EntityLinkProposal {
+                left: entity(left, "a"),
+                right: entity(right, "b"),
+                match_class: MatchClass::Match,
+                match_score_milli: 980,
+                approved_by: None,
+            };
+            assert_eq!(proposal.assert_same_as(), Err(CannotAssert::NotApproved));
+            proposal.approved_by = Some("   ".to_string());
+            assert_eq!(proposal.assert_same_as(), Err(CannotAssert::NotApproved));
+            proposal.approved_by = Some("ops@local".to_string());
+            assert!(proposal.assert_same_as().is_ok());
+        }
     }
 }
