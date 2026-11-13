@@ -170,3 +170,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T162 [US5] MEDULLA-FINANCE-PRIMITIVES-R902 Probabilistic forecast evidence is never a deterministic input
 - [ ] T163 [US3] MEDULLA-FINANCE-PRIMITIVES-R903 Typed OHLCV bar-series contract
 - [ ] T164 [US1] MEDULLA-FINANCE-PRIMITIVES-R904 Wallet key trust record and read method
+- [ ] T167 [US1] MEDULLA-FINANCE-PRIMITIVES-R905 Remaining lifecycles are explicit state machines (rollup)
+- [ ] T168 [US1] MEDULLA-FINANCE-PRIMITIVES-R905.1 BarRecord/BarStatus state machine: route 1 census findings through BarStatus::apply
+- [ ] T169 [US1] MEDULLA-FINANCE-PRIMITIVES-R905.2 FlipRecord/FlipRecordStatus state machine: route 1 census findings through FlipRecordStatus::apply
+- [ ] T170 [US1] MEDULLA-FINANCE-PRIMITIVES-R905.3 Projection/SignalState state machine: route 3 census findings through SignalState::apply
