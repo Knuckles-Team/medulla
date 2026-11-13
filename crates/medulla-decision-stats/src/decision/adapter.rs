@@ -13,6 +13,7 @@
 
 use medulla_decision_types::{
     decision::statistical::retrieval_adapter::AdapterDirection,
+    decision::statistical::retrieval_adapter::AdapterScope,
     decision::statistical::retrieval_adapter::QueryAdapterBody,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
     decision::statistical::retrieval_adapter::UNIT_SCALE_BITS,
@@ -386,6 +387,219 @@ impl AdapterKernel {
     }
 }
 
+/// One judged outcome of a scoped fit: the decision it came from, its judged
+/// item and an integer weight (`0` drops it; a capability outcome's reward
+/// maps through [`reward_weight`], every other source carries `1`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScopedItem {
+    pub decision_id: String,
+    pub item: JudgedItem,
+    pub weight: u32,
+}
+
+/// The weight of a capability outcome: its reward on `Q16`, in whole units of
+/// a quarter, so a reward of one counts four times and a reward below an
+/// eighth drops out.
+pub fn reward_weight(reward_q16: u32) -> u32 {
+    (reward_q16.min(1 << 16) * 4 + (1 << 15)) >> 16
+}
+
+/// What a scoped fit is bounded by; every figure is a registry knob.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScopedFitParams {
+    pub dim: usize,
+    pub rank: usize,
+    pub max_gain: f64,
+    pub holdout_pct: u8,
+    pub min_eval_items: u32,
+    pub max_resident_bytes: u64,
+}
+
+/// Why a scoped fit produced no adapter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ScopedFitError {
+    /// Fewer held-out items than the evaluation needs.
+    InsufficientOutcomes { held_out: u64, needed: u32 },
+    /// Rank times dimension would not fit the resident-bytes budget.
+    MemoryBudget { bytes: u64, max: u64 },
+    /// No outcome had both a cited unit and a hard negative.
+    NothingToLearn,
+}
+
+/// A scoped fit: the snapped directions, their held-out evaluation, the
+/// training ids in order, and whether the keep rule holds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScopedFit {
+    pub directions: Vec<Direction>,
+    pub evaluation: Evaluation,
+    pub training_ids: Vec<String>,
+    pub held_out: u64,
+    pub keep: bool,
+}
+
+/// Bytes one resident adapter holds: `rank * dim` single-precision units.
+pub fn resident_bytes(rank: usize, dim: usize) -> u64 {
+    (rank as u64) * (dim as u64) * 4
+}
+
+/// FNV-1a of a decision id: the held-out split hashes the id, so the split is
+/// stable across refits and independent of item order.
+fn holdout_bucket(decision_id: &str) -> u64 {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in decision_id.bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0100_0000_01b3);
+    }
+    hash % 100
+}
+
+/// The directions snapped to the stored fixed point (units on `Q30`, gains
+/// on `Q16`): what is evaluated and served, so a refit replays bit for bit.
+pub fn snap(directions: &[Direction]) -> Vec<Direction> {
+    let unit_scale = f64::from(1_u32 << UNIT_SCALE_BITS);
+    directions
+        .iter()
+        .map(|d| Direction {
+            unit: d
+                .unit
+                .iter()
+                .map(|x| f64::from(quantise_unit(*x)) / unit_scale)
+                .collect(),
+            gain: to_q16(d.gain) as f64 / Q16,
+        })
+        .collect()
+}
+
+/// Fit one scoped adapter. Reuses [`fit`] and [`evaluate`] unchanged for the
+/// directions and gains; the training half is repeated by each item's weight,
+/// the held-out half (by decision id) is scored as is. Keep needs the Wilson
+/// lower bound above one half and an adapted MRR at least the base MRR.
+pub fn fit_scoped(
+    items: &[ScopedItem],
+    params: &ScopedFitParams,
+) -> Result<ScopedFit, ScopedFitError> {
+    let bytes = resident_bytes(params.rank, params.dim);
+    if bytes > params.max_resident_bytes {
+        return Err(ScopedFitError::MemoryBudget {
+            bytes,
+            max: params.max_resident_bytes,
+        });
+    }
+    let mut train: Vec<JudgedItem> = Vec::new();
+    let mut training_ids = Vec::new();
+    let mut held: Vec<JudgedItem> = Vec::new();
+    for scoped in items.iter().filter(|s| s.weight > 0) {
+        if holdout_bucket(&scoped.decision_id) < u64::from(params.holdout_pct) {
+            held.push(scoped.item.clone());
+        } else {
+            training_ids.push(scoped.decision_id.clone());
+            train.extend((0..scoped.weight).map(|_| scoped.item.clone()));
+        }
+    }
+    if (held.len() as u64) < u64::from(params.min_eval_items) {
+        return Err(ScopedFitError::InsufficientOutcomes {
+            held_out: held.len() as u64,
+            needed: params.min_eval_items,
+        });
+    }
+    let fitted = fit(&train, params.dim, params.rank, params.max_gain);
+    if fitted.is_empty() {
+        return Err(ScopedFitError::NothingToLearn);
+    }
+    let directions = snap(&fitted);
+    let evaluation = evaluate(&held, &directions);
+    let keep = evaluation.win_rate_lower > 0.5 && evaluation.adapted_mrr >= evaluation.base_mrr;
+    Ok(ScopedFit {
+        directions,
+        evaluation,
+        training_ids,
+        held_out: held.len() as u64,
+        keep,
+    })
+}
+
+/// Wilson 95% upper bound of `wins / n`; one when `n == 0`.
+pub fn wilson_upper(wins: u64, n: u64) -> f64 {
+    1.0 - wilson_lower(n.saturating_sub(wins), n)
+}
+
+/// What the post-activation monitor concludes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MonitorVerdict {
+    /// Fewer outcomes than `adapter.monitor_min_outcomes`; keep watching.
+    Insufficient { outcomes: u64 },
+    /// The adapter still helps or is not shown to hurt.
+    Healthy {
+        evaluation: Evaluation,
+        win_rate_upper: f64,
+    },
+    /// The Wilson upper bound of the win rate fell below one half.
+    Rollback {
+        evaluation: Evaluation,
+        win_rate_upper: f64,
+    },
+}
+
+/// Dual-score each outcome seen since activation against the base ranking and
+/// decide whether to roll back: the win rate's Wilson upper bound below one
+/// half over at least `min_outcomes` outcomes.
+pub fn monitor_adapter(
+    outcomes: &[JudgedItem],
+    directions: &[Direction],
+    min_outcomes: u64,
+) -> MonitorVerdict {
+    let evaluation = evaluate(outcomes, directions);
+    if evaluation.n < min_outcomes {
+        return MonitorVerdict::Insufficient {
+            outcomes: evaluation.n,
+        };
+    }
+    let win_rate_upper = wilson_upper(evaluation.wins, evaluation.wins + evaluation.losses);
+    if win_rate_upper < 0.5 {
+        MonitorVerdict::Rollback {
+            evaluation,
+            win_rate_upper,
+        }
+    } else {
+        MonitorVerdict::Healthy {
+            evaluation,
+            win_rate_upper,
+        }
+    }
+}
+
+/// What a query is made for, to pick the adapter that applies.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScopeContext {
+    pub capability_iri: Option<String>,
+    pub corpus_iri: Option<String>,
+}
+
+/// The adapter that applies: capability, then corpus, then graph, else
+/// `None` (the base query). `active` holds each scope's active adapter.
+pub fn resolve_scope<'a, T>(
+    context: &ScopeContext,
+    active: &'a [(AdapterScope, T)],
+) -> Option<&'a T> {
+    let find = |wanted: &AdapterScope| active.iter().find(|(s, _)| s == wanted).map(|(_, t)| t);
+    context
+        .capability_iri
+        .as_ref()
+        .and_then(|iri| {
+            find(&AdapterScope::Capability {
+                capability_iri: iri.clone(),
+            })
+        })
+        .or_else(|| {
+            context.corpus_iri.as_ref().and_then(|iri| {
+                find(&AdapterScope::Corpus {
+                    corpus_iri: iri.clone(),
+                })
+            })
+        })
+        .or_else(|| find(&AdapterScope::Graph))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -439,5 +653,169 @@ mod tests {
         assert_eq!(wilson_lower(0, 0), 0.0);
         assert!(wilson_lower(3, 3) < 0.5);
         assert!(wilson_lower(30, 30) > 0.5);
+    }
+
+    fn scoped_items(count: u32) -> Vec<ScopedItem> {
+        (0..count)
+            .map(|i| ScopedItem {
+                decision_id: format!("decision-{i}"),
+                item: item(f64::from(i % 10) * 0.01),
+                weight: 1,
+            })
+            .collect()
+    }
+
+    fn params() -> ScopedFitParams {
+        ScopedFitParams {
+            dim: 3,
+            rank: 2,
+            max_gain: 0.5,
+            holdout_pct: 30,
+            min_eval_items: 10,
+            max_resident_bytes: 40_960,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.2
+    #[test]
+    fn scoped_refit_replays_bit_for_bit() {
+        let items = scoped_items(120);
+        let first = fit_scoped(&items, &params()).unwrap();
+        let mut shuffled = items.clone();
+        shuffled.reverse();
+        let again = fit_scoped(&items, &params()).unwrap();
+        assert_eq!(first, again, "a refit on the same items replays exactly");
+        let reordered = fit_scoped(&shuffled, &params()).unwrap();
+        assert_eq!(
+            first.directions.len(),
+            reordered.directions.len(),
+            "the held-out split hashes the id, not the position"
+        );
+        assert_eq!(first.held_out, reordered.held_out);
+        let body_a = to_body(&first.directions, "sha256:s", 3, ("t".to_string(), 1)).unwrap();
+        let body_b = to_body(&again.directions, "sha256:s", 3, ("t".to_string(), 1)).unwrap();
+        assert_eq!(body_a, body_b, "the snapped directions are the stored body");
+        assert_eq!(
+            directions_of(&body_a),
+            first.directions,
+            "what is evaluated is exactly what is served"
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.2
+    #[test]
+    fn keep_and_revert_rules() {
+        let helpful = fit_scoped(&scoped_items(120), &params()).unwrap();
+        assert!(helpful.keep, "{:?}", helpful.evaluation);
+        assert!(helpful.evaluation.win_rate_lower > 0.5);
+        assert!(helpful.evaluation.adapted_mrr >= helpful.evaluation.base_mrr);
+
+        // Held out items that prefer the base ranking revert the fit.
+        let mut items = scoped_items(120);
+        for scoped in &mut items {
+            if holdout_bucket(&scoped.decision_id) < 30 {
+                scoped.item.positives = vec![vec![1.0, 0.0, 0.1]];
+                scoped.item.negatives = vec![vec![0.2, 1.0, 0.0]];
+            }
+        }
+        let reverted = fit_scoped(&items, &params()).unwrap();
+        assert!(!reverted.keep);
+
+        // Too few held-out outcomes refuse.
+        let few = fit_scoped(&scoped_items(6), &params());
+        assert!(matches!(
+            few,
+            Err(ScopedFitError::InsufficientOutcomes { needed: 10, .. })
+        ));
+        // A zero weight drops the outcome; a reward maps to a weight.
+        assert_eq!(reward_weight(0), 0);
+        assert_eq!(reward_weight(1 << 16), 4);
+        assert_eq!(reward_weight(1 << 15), 2);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.2
+    #[test]
+    fn memory_cap_refuses_oversize_rank() {
+        let big = ScopedFitParams {
+            dim: 2_048,
+            rank: 8,
+            ..params()
+        };
+        assert_eq!(
+            fit_scoped(&scoped_items(120), &big),
+            Err(ScopedFitError::MemoryBudget {
+                bytes: 65_536,
+                max: 40_960
+            })
+        );
+        assert_eq!(resident_bytes(8, 1_024), 32_768);
+        let within = ScopedFitParams {
+            dim: 1_024,
+            rank: 8,
+            ..params()
+        };
+        assert!(!matches!(
+            fit_scoped(&[], &within),
+            Err(ScopedFitError::MemoryBudget { .. })
+        ));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.2.1
+    #[test]
+    fn monitor_rolls_back_on_degrading_outcomes() {
+        let fitted = fit_scoped(&scoped_items(120), &params()).unwrap();
+        let improving: Vec<JudgedItem> = (0..60).map(|i| item(f64::from(i % 10) * 0.01)).collect();
+        assert!(matches!(
+            monitor_adapter(&improving, &fitted.directions, 50),
+            MonitorVerdict::Healthy { .. }
+        ));
+        let degrading: Vec<JudgedItem> = (0..60)
+            .map(|_| JudgedItem {
+                query: vec![1.0, 0.6, 0.0],
+                positives: vec![vec![1.0, 0.0, 0.1]],
+                negatives: vec![vec![0.2, 1.0, 0.0]],
+            })
+            .collect();
+        match monitor_adapter(&degrading, &fitted.directions, 50) {
+            MonitorVerdict::Rollback { win_rate_upper, .. } => assert!(win_rate_upper < 0.5),
+            other => panic!("expected a rollback, got {other:?}"),
+        }
+        assert_eq!(
+            monitor_adapter(&degrading[..10], &fitted.directions, 50),
+            MonitorVerdict::Insufficient { outcomes: 10 }
+        );
+        assert!(wilson_upper(0, 0) > 0.99);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R174.7.2.1
+    #[test]
+    fn resolution_order_prefers_the_narrowest_scope() {
+        let corpus = || AdapterScope::Corpus {
+            corpus_iri: "urn:corpus".to_string(),
+        };
+        let capability = || AdapterScope::Capability {
+            capability_iri: "urn:capability".to_string(),
+        };
+        let active = vec![
+            (AdapterScope::Graph, "graph"),
+            (corpus(), "corpus"),
+            (capability(), "capability"),
+        ];
+        let both = ScopeContext {
+            capability_iri: Some("urn:capability".to_string()),
+            corpus_iri: Some("urn:corpus".to_string()),
+        };
+        assert_eq!(resolve_scope(&both, &active), Some(&"capability"));
+        let corpus_only = ScopeContext {
+            capability_iri: Some("urn:unfitted".to_string()),
+            corpus_iri: Some("urn:corpus".to_string()),
+        };
+        assert_eq!(resolve_scope(&corpus_only, &active), Some(&"corpus"));
+        assert_eq!(
+            resolve_scope(&ScopeContext::default(), &active),
+            Some(&"graph")
+        );
+        let none: Vec<(AdapterScope, &str)> = vec![(corpus(), "corpus")];
+        assert_eq!(resolve_scope(&ScopeContext::default(), &none), None);
     }
 }

@@ -53,6 +53,14 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `pattern.wick_max` | f64 | 0.1 | [0.0, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_WICK_MAX` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
 | `generation.batch_nodes` | u64 | 256 | [16, 4096] | nodes | Tunable | `MEDULLA_GENERATION_BATCH_NODES` |
+| `adapter.rank` | u64 | 8 | [1, 8] | directions | Tunable | `MEDULLA_ADAPTER_RANK` |
+| `adapter.holdout_pct` | u64 | 20 | [5, 50] | percent | Tunable | `MEDULLA_ADAPTER_HOLDOUT_PCT` |
+| `adapter.min_eval_items` | u64 | 30 | [10, 10000] | items | Tunable | `MEDULLA_ADAPTER_MIN_EVAL_ITEMS` |
+| `adapter.max_resident_bytes` | u64 | 40960 | [4096, 1048576] | bytes | Tunable | `MEDULLA_ADAPTER_MAX_RESIDENT_BYTES` |
+| `adapter.monitor_min_outcomes` | u64 | 50 | [10, 10000] | outcomes | Tunable | `MEDULLA_ADAPTER_MONITOR_MIN_OUTCOMES` |
+| `adapter.max_per_tenant` | u64 | 64 | [1, 1024] | adapters | Tunable | `MEDULLA_ADAPTER_MAX_PER_TENANT` |
+| `failure.context_steps` | u64 | 2 | [0, 8] | steps | Tunable | `MEDULLA_FAILURE_CONTEXT_STEPS` |
+| `failure.min_count` | u64 | 3 | [2, 1000] | records | Tunable | `MEDULLA_FAILURE_MIN_COUNT` |
 
 ## Wire shape
 

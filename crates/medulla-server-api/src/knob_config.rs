@@ -334,6 +334,22 @@ knobs! {
     writeback_queue_max_proposals: u64 = "writeback.queue_max_proposals", U64(256), [1, 4_096], "proposals", Tunable;
     /// Nodes re-embedded per generation-cycle batch (MEDULLA-DECISION-ENGINE-R174.2).
     generation_batch_nodes: u64 = "generation.batch_nodes", U64(256), [16, 4_096], "nodes", Tunable;
+    /// Directions a scoped query adapter fits (MEDULLA-DECISION-ENGINE-R174.7.2).
+    adapter_rank: u64 = "adapter.rank", U64(8), [1, 8], "directions", Tunable;
+    /// Share of judged decisions held out when fitting an adapter.
+    adapter_holdout_pct: u64 = "adapter.holdout_pct", U64(20), [5, 50], "percent", Tunable;
+    /// Fewest held-out items a scoped adapter fit needs.
+    adapter_min_eval_items: u64 = "adapter.min_eval_items", U64(30), [10, 10_000], "items", Tunable;
+    /// Most bytes one resident adapter may hold.
+    adapter_max_resident_bytes: u64 = "adapter.max_resident_bytes", U64(40_960), [4_096, 1_048_576], "bytes", Tunable;
+    /// Fewest post-activation outcomes before the monitor may roll back (MEDULLA-DECISION-ENGINE-R174.7.2.1).
+    adapter_monitor_min_outcomes: u64 = "adapter.monitor_min_outcomes", U64(50), [10, 10_000], "outcomes", Tunable;
+    /// Most adapters active per tenant (MEDULLA-DECISION-ENGINE-R174.7.4).
+    adapter_max_per_tenant: u64 = "adapter.max_per_tenant", U64(64), [1, 1_024], "adapters", Tunable;
+    /// Steps kept before the failing step when a failure pattern is reduced (MEDULLA-DECISION-ENGINE-R701.2).
+    failure_context_steps: u64 = "failure.context_steps", U64(2), [0, 8], "steps", Tunable;
+    /// Records a failure pattern needs before it files a gap.
+    failure_min_count: u64 = "failure.min_count", U64(3), [2, 1_000], "records", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.

@@ -30,6 +30,8 @@ pub mod antonyms;
 pub mod belief_revision;
 // MEDULLA-DECISION-ENGINE-R652 — claim lifecycle, evidence, arbitration and sealing kernels.
 pub mod claims;
+// MEDULLA-DECISION-ENGINE-R701.2 — failure signatures, clustering and step reduction.
+pub mod failure_patterns;
 #[cfg(feature = "epistemic-tms")]
 mod incremental;
 mod model;
