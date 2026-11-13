@@ -688,3 +688,146 @@ async fn index_adapter_materializes_without_an_endpoint_call() {
     let error = run_cycle(&run, &plain).unwrap_err();
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
 }
+
+// --- evidence: fit receipt, rollback receipt and the Discover verdict field ---
+
+use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterMonitored;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_protocol_types::protocol::{Method, ResultPayload};
+
+/// Serve `Discover` through the graph operations and return the verdict's adapter digest.
+async fn verdict_adapter(h: &Harness, core: &Arc<medulla_graph_core::graph::GraphCore>) -> String {
+    let authority = {
+        let state = h.state.read().await;
+        medulla_server_api::carrier::GraphReadAuthority::from_verified(
+            &verified(),
+            &state.isolation,
+        )
+        .unwrap()
+    };
+    let response = medulla_h_graph::graph_ops::try_handle(
+        &h.state,
+        7,
+        None,
+        GRAPH,
+        &authority,
+        core.clone(),
+        Method::Discover {
+            keywords: vec!["p1".into()],
+            query_embedding: vec![1.0, 0.9, 0.0],
+            k: 5,
+            quality_policy_ref: None,
+            hops: 0,
+            query_text: None,
+            mode: Default::default(),
+            as_of: None,
+        },
+    )
+    .await;
+    assert!(response.error.is_none(), "{:?}", response.error);
+    match response.result.expect("a Discover result") {
+        ResultPayload::Json(serde_json::Value::Object(envelope)) => envelope["verdict"]
+            ["adapter_digest"]
+            .as_str()
+            .expect("the verdict names an adapter digest")
+            .to_string(),
+        other => panic!("expected the Discover envelope, got {other:?}"),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R174.7.5
+#[tokio::test]
+async fn fit_and_rollback_receipts_and_verdict_field() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    assert!(medulla_server_ops::api::admin::install_decide_seam(
+        &h.state.read().await.seams,
+        Arc::new(super::super::DecideSeam),
+    ));
+    let core = embedded_graph(&h).await;
+    let space = core.semantic_store.read().space().unwrap().digest.clone();
+    scoped_runs(&h, &space, "rec", 40, true).await;
+
+    // The fit receipt of a corpus scope holds scope, side and each source with its count.
+    let corpus_fit = fit_scoped_adapter(&h, scoped_request(&space, corpus()))
+        .await
+        .unwrap();
+    assert_eq!(corpus_fit.receipt.scope, corpus());
+    assert_eq!(corpus_fit.receipt.side, AdapterSide::Query);
+    assert_eq!(corpus_fit.receipt.sources.len(), 1);
+    assert_eq!(
+        corpus_fit.receipt.sources[0].source,
+        OutcomeSource::RetrievalOutcome
+    );
+    assert_eq!(corpus_fit.receipt.sources[0].count, 40);
+
+    // The graph-scope fit holds the evidence of the keep rule.
+    let fitted = fit_scoped_adapter(&h, scoped_request(&space, AdapterScope::Graph))
+        .await
+        .unwrap();
+    let receipt = &fitted.receipt;
+    assert!(receipt.passed, "{receipt:?}");
+    assert_eq!(receipt.scope, AdapterScope::Graph);
+    assert_eq!(receipt.side, AdapterSide::Query);
+    assert_eq!(receipt.sources[0].count, 40);
+    assert!(!receipt.training_digest.is_empty());
+    assert!(
+        receipt.adapted_mrr_q16 > receipt.base_mrr_q16,
+        "{receipt:?}"
+    );
+    assert!(receipt.win_rate_lower_q16 > 32_768, "{receipt:?}");
+    assert!(receipt.win_rate_upper_q16 >= receipt.win_rate_lower_q16);
+    assert_eq!(receipt.parent_digest, None);
+    assert_eq!(receipt.revision, 1);
+    assert_eq!(receipt.adapter_digest, fitted.adapter_digest);
+
+    // With no adapter active the served verdict names the base space.
+    assert_eq!(verdict_adapter(&h, &core).await, "base");
+
+    // Activation: the verdict names the applied adapter digest.
+    let pointer = || PointerRef::ScopedAdapter {
+        graph: GRAPH.to_string(),
+        scope: AdapterScope::Graph,
+    };
+    pointer_state(
+        &h,
+        pointer(),
+        activate(&fitted.adapter_digest, &fitted.receipt_digest),
+    )
+    .await
+    .unwrap();
+    assert_eq!(verdict_adapter(&h, &core).await, fitted.adapter_digest);
+
+    // Degrading outcomes roll the adapter back and leave a rollback receipt.
+    scoped_runs(&h, &space, "deg", 120, false).await;
+    let window = RecordWindow {
+        from_ms: 0,
+        to_ms: u64::MAX,
+    };
+    let write = LearningWrite::MonitorAdapter {
+        request: Box::new(AdapterMonitorRequest {
+            graph: GRAPH.to_string(),
+            scope: AdapterScope::Graph,
+            window,
+        }),
+    };
+    let monitored = match learn(&h, "decider", write).await.unwrap() {
+        LearningRecorded::Monitored(monitored) => *monitored,
+        other => panic!("monitor: {other:?}"),
+    };
+    assert_eq!(monitored.state, MonitorState::RolledBack, "{monitored:?}");
+    let prefix = format!("adapter-monitor:{}:", fitted.adapter_digest);
+    let stored = h
+        .store
+        .decision_artifacts_with_prefix(&served_tenant(), &prefix, 8)
+        .unwrap();
+    assert_eq!(stored.len(), 1, "one rollback receipt");
+    let rollback: AdapterMonitored = decode_artifact(&stored[0].1, "rollback receipt").unwrap();
+    assert_eq!(rollback, monitored);
+    assert_eq!(rollback.window, window);
+    assert!(rollback.win_rate_upper_q16 < 32_768);
+    assert!(rollback.losses > rollback.wins);
+    assert!(rollback.outcomes >= rollback.min_outcomes);
+
+    // After the rollback the verdict names the base space again.
+    assert_eq!(verdict_adapter(&h, &core).await, "base");
+}
