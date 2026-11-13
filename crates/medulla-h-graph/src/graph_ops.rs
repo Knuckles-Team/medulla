@@ -38,6 +38,8 @@ mod discover_plan;
 #[cfg(test)]
 mod context_facts_tests;
 mod edges;
+#[cfg(feature = "finance")]
+mod finance_accounting;
 mod finance_alerts;
 mod finance_factors;
 mod finance_records;

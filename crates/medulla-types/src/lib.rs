@@ -272,6 +272,9 @@ pub mod finance_research;
 // MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
 // `Method::WalletKeyTrustGet`.
 pub mod finance_wallet_trust;
+// MEDULLA-FINANCE-PRIMITIVES-R013.2.6 — the accounting projection read by
+// `Method::FinanceAccountProject`.
+pub mod finance_accounting;
 // Typed RDF input and the ontology inspection view, so orchestration callers
 // never build or parse RDF text themselves.
 pub mod ontology_inspection;

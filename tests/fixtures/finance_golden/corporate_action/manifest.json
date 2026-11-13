@@ -1,0 +1,12 @@
+{
+  "as_of": "2026-03-15T00:00:00Z",
+  "currency": "USD",
+  "expected_values": "computed in the test by an independent integer oracle of the split and dividend formulas (FIN-R013.2.6)",
+  "family": "corporate_action",
+  "rounding": "half_up",
+  "scale": 100000000,
+  "session": "regular",
+  "sha256": "3625c77d85c512bc0e250bf96e6e7fe33a4ae0b0490407323898cf5773f8dff6",
+  "source_url": "urn:medulla:oracle:split-and-dividend-formula",
+  "version": "1"
+}

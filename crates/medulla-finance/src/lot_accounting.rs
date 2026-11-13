@@ -188,8 +188,23 @@ pub fn apply_activities(
     activities: &[LotActivity],
     method: LotMethod,
 ) -> Result<LotLedger, LotError> {
-    let mut open: Vec<Lot> = Vec::new();
-    let mut closed: Vec<ClosedLot> = Vec::new();
+    apply_activities_from(LotLedger::default(), activities, method)
+}
+
+/// Continue a replay from an existing ledger (its open lots and closings), so a
+/// corporate action such as a split can adjust the open lots between two
+/// segments of one ordered stream (MEDULLA-FINANCE-PRIMITIVES-R013.2.2). The
+/// same engine as [`apply_activities`]; the sequence order is checked within
+/// `activities` only, and the caller supplies segments in ascending order.
+pub fn apply_activities_from(
+    opening: LotLedger,
+    activities: &[LotActivity],
+    method: LotMethod,
+) -> Result<LotLedger, LotError> {
+    let LotLedger {
+        open: mut open,
+        closed: mut closed,
+    } = opening;
     let mut last_sequence: Option<u64> = None;
 
     for activity in activities {

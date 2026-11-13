@@ -247,7 +247,23 @@
             sh:maxCount 1 ;
             sh:message "Activity must have exactly one activityTradeDate." ;
             sh:minCount 1 ;
-            sh:path :activityTradeDate ] ;
+            sh:path :activityTradeDate ],
+        [ sh:maxCount 1 ;
+            sh:message "Activity names at most one account (activityAccount)." ;
+            sh:nodeKind sh:IRI ;
+            sh:path :activityAccount ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:message "Activity has at most one activityPrice." ;
+            sh:path :activityPrice ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Activity has at most one activityCurrency." ;
+            sh:path :activityCurrency ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Activity has at most one activitySession." ;
+            sh:path :activitySession ] ;
     sh:targetClass :Activity .
 
 :LotShape a sh:NodeShape ;

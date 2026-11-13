@@ -1,0 +1,27 @@
+{
+  "as_of": "2026-03-15T00:00:00Z",
+  "buy": {
+    "at": "2026-01-05T15:00:00Z",
+    "price": "50.00",
+    "quantity": "100"
+  },
+  "dividend": {
+    "effective": "2026-03-01T14:30:00Z",
+    "known_at": "2026-02-15T00:00:00Z",
+    "per_share": "0.25"
+  },
+  "known_after_correction": "2026-04-02T00:00:00Z",
+  "known_before_correction": "2026-03-31T00:00:00Z",
+  "listing": "ACME",
+  "split": {
+    "effective": "2026-02-10T14:30:00Z",
+    "from": 1,
+    "known_at": "2026-02-01T00:00:00Z",
+    "to": 2
+  },
+  "split_correction": {
+    "known_at": "2026-04-01T00:00:00Z",
+    "revision": 1,
+    "to": 4
+  }
+}

@@ -71,6 +71,7 @@ method_results! {
     FinanceRecordPut(FinanceRecordPut) => Count<u64>;
     // The stored finance record node properties; `null` when absent.
     #[cfg(feature = "finance")]
+    FinanceAccountProject(FinanceAccountProject) => Json<medulla_types::finance_accounting::FinanceAccountProjection>;
     FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
     // The event id of a raised finance alert.
     #[cfg(feature = "finance")]

@@ -691,6 +691,20 @@ $($variants)*
         record_id: String,
     },
 
+    // ── Served accounting projection (MEDULLA-FINANCE-PRIMITIVES-R013.2.6) ───
+    /// Project one account's lots, corporate actions and valuation at
+    /// `(as_of, known_at)` under `basis_policy` (`fifo`, `lifo` or
+    /// `average_cost`). Every returned figure carries source, as-of and session.
+    /// Reads only; the projection is a discardable read model.
+    #[cfg(feature = "finance")]
+    FinanceAccountProject {
+        account: String,
+        as_of: String,
+        known_at: String,
+        basis_policy: String,
+        base_currency: String,
+    },
+
     // ── Served finance alerts (MEDULLA-FINANCE-PRIMITIVES-R011.2.3) ──────────
     /// Raise one finance alert: the envelope is validated, then its event node and
     /// its `finance.events.v1` outbox fact commit in one owner transaction. The

@@ -1,0 +1,89 @@
+{
+  "as_of": "2026-12-01T00:00:00Z",
+  "boundaries": [
+    {
+      "at": "2026-03-06T14:29:59Z",
+      "label": "pre"
+    },
+    {
+      "at": "2026-03-06T14:30:00Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-03-06T20:59:59Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-03-06T21:00:00Z",
+      "label": "post"
+    },
+    {
+      "at": "2026-03-08T12:00:00Z",
+      "label": "closed"
+    },
+    {
+      "at": "2026-03-09T13:29:59Z",
+      "label": "pre"
+    },
+    {
+      "at": "2026-03-09T13:30:00Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-03-09T19:59:59Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-03-09T20:00:00Z",
+      "label": "post"
+    },
+    {
+      "at": "2026-10-30T13:29:59Z",
+      "label": "pre"
+    },
+    {
+      "at": "2026-10-30T13:30:00Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-11-02T14:29:59Z",
+      "label": "pre"
+    },
+    {
+      "at": "2026-11-02T14:30:00Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-11-02T20:59:59Z",
+      "label": "regular"
+    },
+    {
+      "at": "2026-11-02T21:00:00Z",
+      "label": "post"
+    }
+  ],
+  "calendar": {
+    "early_closes": [],
+    "holidays": [],
+    "id": "US-EQUITY-GOLDEN",
+    "offsets": [
+      {
+        "from": 0,
+        "offset_minutes": -300
+      },
+      {
+        "from": 1772953200000000000,
+        "offset_minutes": -240
+      },
+      {
+        "from": 1793512800000000000,
+        "offset_minutes": -300
+      }
+    ],
+    "post_market_close_minute": 1200,
+    "pre_market_open_minute": 240,
+    "session_close_minute": 960,
+    "session_open_minute": 570,
+    "trading_weekdays": 31
+  }
+}

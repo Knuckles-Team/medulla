@@ -487,6 +487,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FinanceProfitAttribution",
         &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R013.2.6: a figure without provenance, an unsupported basis policy.
+    ("FinanceAccountProject", &["FIGURE_PROVENANCE_MISSING", "BASIS_POLICY_UNSUPPORTED"]),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     // MEDULLA-FEDERATED-QUERY-R724: a put with bad bounds, an unregistered scope or

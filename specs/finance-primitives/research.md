@@ -29,3 +29,33 @@ Decision: the wrapper `quant::brier_score` (truncate to the shorter array, zero 
 deleted. The retained `Method::FinanceBrierScore` arm calls the registry's `brier` op and
 maps a kernel refusal to `INVALID_ARGUMENT` with the stable code first. Removing the Method
 itself is R002.2.2.10 (a wire change with generated clients), which keeps its own test.
+
+## Golden fixtures name published data (R013.2.2, R013.2.3, R013.2.5)
+
+Decision (owner rule FIN-R013.2.6): a golden fixture is either computed in the test by an
+independent oracle that implements the published formula, or typed from a published table
+with its source cited here. Each family's `manifest.json` records the source identifier,
+version, as-of time, session, currency, scale and rounding; its SHA-256 digest is computed
+over `vectors.json` at test time.
+
+- `corporate_action`: oracle of the split and dividend formulas (source id
+  `urn:medulla:oracle:split-and-dividend-formula`, version 1). Quantity scales by `to/from`,
+  basis is preserved, dividend cash is open quantity times the per-share amount; a corrected
+  split is a higher revision known later, so the `known_at` filter picks the revision.
+- `dst_session`: expected labels typed from the published regular hours (09:30 to 16:00
+  local, pre-market from 04:00, post-market to 20:00) and the 2026 United States daylight-saving
+  transition instants (source id `urn:medulla:published:us-equity-regular-hours`, version 1).
+- `futures_roll`: oracle of the roll formula (source id
+  `urn:medulla:oracle:futures-roll-formula`, version 1): roll cash is quantity times multiplier
+  times the settlement difference; position value is quantity times multiplier times the
+  successor settlement.
+
+## Accounting projection (R013.2.6)
+
+Decisions: the projection supports `fifo` and `lifo`; average cost and specific lot answer
+`BASIS_POLICY_UNSUPPORTED` until a policy row defines their election input. Corporate actions
+are `Activity` records of kind `split` or `dividend` resolved with `corporate_actions::resolve`
+(identity is listing and effective time; a higher revision known later supersedes). At one
+instant a corporate action applies before a trade. A futures roll is a `transfer_out`
+`Activity` that names its successor contract and carries both contracts' settlement, expiry,
+tick size and multiplier; it adds roll figures and does not alter the lot ledger.

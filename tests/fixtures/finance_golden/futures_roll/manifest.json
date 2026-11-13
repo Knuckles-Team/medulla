@@ -1,0 +1,12 @@
+{
+  "as_of": "2026-12-11T00:00:00Z",
+  "currency": "USD",
+  "expected_values": "computed in the test by an independent integer oracle of the roll formula (FIN-R013.2.6)",
+  "family": "futures_roll",
+  "rounding": "half_up",
+  "scale": 100000000,
+  "session": "regular",
+  "sha256": "2b578bfc52c6d3b87db9a4cfc9326574a63a3ebea0092e9b1de41deaebc98e71",
+  "source_url": "urn:medulla:oracle:futures-roll-formula",
+  "version": "1"
+}

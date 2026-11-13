@@ -1,0 +1,12 @@
+{
+  "as_of": "2026-12-01T00:00:00Z",
+  "currency": "USD",
+  "expected_values": "session labels typed from the published regular hours 09:30-16:00 local, pre-market from 04:00, post-market to 20:00, and the US daylight-saving transition instants of 2026",
+  "family": "dst_session",
+  "rounding": "half_up",
+  "scale": 100000000,
+  "session": "per-boundary",
+  "sha256": "ed9400a9fdfc30ea70bc7189112f419003a4005ec601b952af5cb95dd4c6da46",
+  "source_url": "urn:medulla:published:us-equity-regular-hours",
+  "version": "1"
+}

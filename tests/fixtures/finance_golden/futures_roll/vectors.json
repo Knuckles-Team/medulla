@@ -1,0 +1,15 @@
+{
+  "as_of": "2026-12-11T00:00:00Z",
+  "expiring": {
+    "expiry": "2026-12-18T14:30:00Z",
+    "settlement": "4500.00"
+  },
+  "multiplier": 50,
+  "quantity": "2",
+  "roll_at": "2026-12-10T21:00:00Z",
+  "successor": {
+    "expiry": "2027-03-19T14:30:00Z",
+    "settlement": "4505.25"
+  },
+  "tick_size": "0.25"
+}
