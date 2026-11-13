@@ -35,7 +35,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R009.3` | `tests/test_sql_compat_conformance.py::test_supported_entries_pass` | planned |
 | `MEDULLA-ENGINE-PARITY-R010.1` | `crates/medulla-sql-tests/tests/index.rs::partial_index_holds_only_matching_rows`; `tests/pgwire_roundtrip.rs::create_partial_index_over_wire_is_used` | planned |
 | `MEDULLA-ENGINE-PARITY-R010.2` | `crates/medulla-sql-tests/tests/index.rs::planner_uses_partial_index`; `crates/medulla-sql-tests/tests/index.rs::nondeterministic_expression_refuses` | bound |
-| `MEDULLA-ENGINE-PARITY-R010.3` | `tests/pgwire_roundtrip.rs::create_partial_index_over_wire_is_used`; bench group `engine_parity/index_probe` | planned |
+| `MEDULLA-ENGINE-PARITY-R010.3` | `tests/pgwire_roundtrip.rs::create_partial_index_over_wire_is_used`; bench group `engine_parity/index_probe` | existing |
 | `MEDULLA-ENGINE-PARITY-R011.1` | `crates/medulla-sql-tests/tests/constraint.rs::deferred_foreign_key_checks_at_commit`; `crates/medulla-sql-tests/tests/constraint.rs::immediate_foreign_key_checks_per_statement`; `crates/medulla-sql-tests/tests/constraint.rs::violations_carry_the_four_codes`; `crates/medulla-sql-tests/tests/constraint.rs::classify_parses_deferrable_initially_deferred`; `crates/medulla-sql-tests/tests/constraint.rs::deferred_check_touches_only_the_keys_the_transaction_wrote`; `crates/medulla-sql-tests/tests/constraint.rs::deferred_pending_set_is_bounded_by_the_knob`, `crates/medulla-sql-tests/tests/constraint.rs::ephemeral_store_without_an_installed_bound_commits_a_deferred_foreign_key` | existing |
 | `MEDULLA-ENGINE-PARITY-R011.2` | `tests/pgwire_roundtrip.rs::constraint_violations_return_sqlstate` | planned |
 | `MEDULLA-ENGINE-PARITY-R011.3` | `tests/pgwire_roundtrip.rs::constraints_hold_under_concurrent_sessions`; bench group `engine_parity/constraints` | planned |
@@ -44,7 +44,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R012.3` | `tests/pgwire_roundtrip.rs::after_insert_trigger_runs_once_per_row`; bench group `engine_parity/trigger_after_insert` | planned |
 | `MEDULLA-ENGINE-PARITY-R013.1` | `crates/medulla-sql-tests/tests/sequence.rs::values_never_repeat_after_crash`; `tests/pgwire_roundtrip.rs::serial_column_uses_sequence` | planned |
 | `MEDULLA-ENGINE-PARITY-R013.2` | `crates/medulla-sql-tests/tests/sequence.rs::setval_below_high_mark_refuses`; `crates/medulla-storage/src/owner/sql_checkpoint_upgrade/tests.rs::named_sequence_upgrade_seeds_serial_sequences_above_the_old_high_mark`; `::named_sequence_upgrade_seeds_every_served_tenant_scope`; `::named_sequence_upgrade_refuses_serial_columns_without_a_served_scope` | existing |
-| `MEDULLA-ENGINE-PARITY-R013.3` | `tests/pgwire_roundtrip.rs::serial_column_uses_sequence`; bench group `engine_parity/sequence_nextval` | planned |
+| `MEDULLA-ENGINE-PARITY-R013.3` | `tests/pgwire_roundtrip.rs::serial_column_uses_sequence`; bench group `engine_parity/sequence_nextval` | existing |
 | `MEDULLA-ENGINE-PARITY-R014.1` | `crates/medulla-sql-tests/tests/matview.rs::refresh_recomputes_and_records_input_versions`; `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` | planned |
 | `MEDULLA-ENGINE-PARITY-R014.2` | `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` | planned |
 | `MEDULLA-ENGINE-PARITY-R014.3` | `tests/pgwire_roundtrip.rs::matview_refresh_checksum`; bench group `engine_parity/matview_refresh` | planned |

@@ -20,6 +20,12 @@
 //! * `pgwire_login` (R007.3): login plus principal resolution through the warm
 //!   lookup cache, one login of each kind, p99 <= 5 ms.
 //!
+//! * `index_probe` (R010.3): a point probe on a non-key column served by a partial
+//!   index over 10 million rows, p99 <= 2 ms, and index upkeep adding at most
+//!   20 percent to insert cost (fixed-seed rows).
+//!
+//! * `sequence_nextval` (R013.3): `nextval` served from a reserved block, p99 <= 2 us.
+//!
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
@@ -27,6 +33,8 @@
 // spec: MEDULLA-ENGINE-PARITY-R002.3
 // spec: MEDULLA-ENGINE-PARITY-R004.3
 // spec: MEDULLA-ENGINE-PARITY-R007.3
+// spec: MEDULLA-ENGINE-PARITY-R010.3
+// spec: MEDULLA-ENGINE-PARITY-R013.3
 //!
 //! Run: cargo bench --features full --bench engine_parity
 
@@ -74,6 +82,16 @@ const DISJOINT_WAIT_P99_BUDGET_US: u64 = 200;
 const LOGIN_SAMPLES_PER_KIND: usize = 5_000;
 const LOGIN_CACHE_TTL_S: u64 = 60;
 const LOGIN_P99_BUDGET_US: u64 = 5_000;
+const INDEX_PROBE_ROWS: usize = 10_000_000;
+const INDEX_PROBE_BATCH: usize = 10_000;
+const INDEX_PROBE_SAMPLES: usize = 2_000;
+const INDEX_PROBE_P99_BUDGET_US: u64 = 2_000;
+const INDEX_UPKEEP_INSERT_ROWS: usize = 200_000;
+const INDEX_UPKEEP_LIMIT_PERCENT: u128 = 20;
+const INDEX_PROBE_SEED: u64 = 0x5eed_1d3c;
+const NEXTVAL_SAMPLES: usize = 60_000;
+const NEXTVAL_BLOCK: u64 = 65_536;
+const NEXTVAL_P99_BUDGET_NS: u128 = 2_000;
 
 /// One workload result line.
 struct Record {
@@ -581,6 +599,162 @@ fn pgwire_login() -> Record {
     record
 }
 
+/// A small fixed-seed generator: the same rows on every run (xorshift64).
+fn next_random(state: &mut u64) -> u64 {
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state
+}
+
+fn accounts_schema(name: &str) -> TableSchema {
+    TableSchema::new(
+        name,
+        vec![
+            Column::new("id", ColumnType::BigInt, false, false),
+            Column::new("email", ColumnType::Text, false, false),
+            Column::new("status", ColumnType::Text, false, false),
+        ],
+    )
+}
+
+/// Insert `rows` rows with ids from `first_id`: one in ten is `active`, the rest
+/// `closed`, with fixed-seed email values. Returns the elapsed time.
+fn insert_accounts(store: &TableStore, table: &str, first_id: usize, rows: usize) -> Duration {
+    let mut seed = INDEX_PROBE_SEED ^ first_id as u64;
+    let columns = ["id".to_string(), "email".to_string(), "status".to_string()];
+    let started = Instant::now();
+    let mut done = 0;
+    while done < rows {
+        let batch = INDEX_PROBE_BATCH.min(rows - done);
+        let values: Vec<Vec<serde_json::Value>> = (0..batch)
+            .map(|offset| {
+                let id = first_id + done + offset;
+                let status = if next_random(&mut seed) % 10 == 0 {
+                    "active"
+                } else {
+                    "closed"
+                };
+                vec![json!(id as i64), json!(format!("u{id}@x")), json!(status)]
+            })
+            .collect();
+        store
+            .insert_rows(table, &columns, &values)
+            .expect("insert accounts");
+        done += batch;
+    }
+    started.elapsed()
+}
+
+fn create_partial_index(store: &TableStore, sql: &str) {
+    let plan = match medulla_sql_lang::sql::classify::classify(sql).expect("classify index") {
+        medulla_sql_lang::sql::classify::StatementKind::CreateIndex(plan) => plan,
+        other => panic!("not an index statement: {other:?}"),
+    };
+    let mut txn = TableTxn::new();
+    txn.push(TxnOp::IndexCatalog(
+        medulla_table_store::tables::IndexCatalogTxnOp::PutSecondaryIndex { plan },
+    ));
+    store.commit_txn(&txn).expect("create index");
+}
+
+/// R010.3: a probe on a non-key column through the partial index over
+/// `INDEX_PROBE_ROWS` rows at p99 <= 2 ms, and index upkeep adding at most
+/// 20 percent to insert cost.
+fn index_probe() -> Record {
+    use medulla_graph_core::graph::GraphCore;
+    let store = open_table_store("index_probe");
+    store
+        .create_table(&accounts_schema("accounts"), false)
+        .expect("create accounts");
+    insert_accounts(&store, "accounts", 0, INDEX_PROBE_ROWS);
+    create_partial_index(
+        &store,
+        "CREATE INDEX accounts_active_email ON accounts (email) WHERE status = 'active'",
+    );
+    let view = GraphCore::new().analysis_snapshot();
+    let mut seed = INDEX_PROBE_SEED;
+    let mut samples = Vec::with_capacity(INDEX_PROBE_SAMPLES);
+    let started = Instant::now();
+    for _ in 0..INDEX_PROBE_SAMPLES {
+        let id = next_random(&mut seed) as usize % INDEX_PROBE_ROWS;
+        let sql = format!("SELECT id FROM accounts WHERE status = 'active' AND email = 'u{id}@x'");
+        let begun = Instant::now();
+        medulla_sql::sql::exec_sql_typed_with_tables(&view, &store, &sql).expect("probe");
+        samples.push(begun.elapsed());
+    }
+    let wall = started.elapsed();
+    samples.sort();
+    let p99 = percentile(&samples, 99);
+
+    // Upkeep: the same rows into a table with the index and one without.
+    let plain = open_table_store("index_upkeep_plain");
+    plain
+        .create_table(&accounts_schema("accounts"), false)
+        .expect("create plain accounts");
+    let plain_time = insert_accounts(&plain, "accounts", 0, INDEX_UPKEEP_INSERT_ROWS);
+    let indexed = open_table_store("index_upkeep_indexed");
+    indexed
+        .create_table(&accounts_schema("accounts"), false)
+        .expect("create indexed accounts");
+    create_partial_index(
+        &indexed,
+        "CREATE INDEX accounts_active_email ON accounts (email) WHERE status = 'active'",
+    );
+    let indexed_time = insert_accounts(&indexed, "accounts", 0, INDEX_UPKEEP_INSERT_ROWS);
+    assert!(
+        indexed_time.as_nanos() * 100 <= plain_time.as_nanos() * (100 + INDEX_UPKEEP_LIMIT_PERCENT),
+        "index upkeep added more than {INDEX_UPKEEP_LIMIT_PERCENT} percent to insert cost: {indexed_time:?} against {plain_time:?}"
+    );
+    assert!(
+        p99 <= INDEX_PROBE_P99_BUDGET_US,
+        "index_probe p99 {p99} us over the {INDEX_PROBE_P99_BUDGET_US} us budget"
+    );
+    Record {
+        workload: "index_probe",
+        parameters: format!(
+            "rows={INDEX_PROBE_ROWS};samples={INDEX_PROBE_SAMPLES};seed={INDEX_PROBE_SEED}"
+        ),
+        p50_us: percentile(&samples, 50),
+        p99_us: p99,
+        throughput: samples.len() as f64 / wall.as_secs_f64(),
+    }
+}
+
+/// R013.3: `nextval` inside a cached block at p99 <= 2 us. The block holds more
+/// values than the sample count, so only the first call reserves.
+fn sequence_nextval() -> Record {
+    use medulla_tables::sequence::{Sequence, SequenceSource};
+    let store = open_table_store("sequence_nextval");
+    let mut sequence = Sequence::new("bench_seq");
+    sequence.cache = NEXTVAL_BLOCK;
+    store
+        .create_sequence(&sequence, false)
+        .expect("create sequence");
+    store.sequence_next("bench_seq").expect("reserve the block");
+    let mut samples = Vec::with_capacity(NEXTVAL_SAMPLES);
+    let started = Instant::now();
+    for _ in 0..NEXTVAL_SAMPLES {
+        let begun = Instant::now();
+        store.sequence_next("bench_seq").expect("nextval");
+        samples.push(begun.elapsed());
+    }
+    let wall = started.elapsed();
+    samples.sort();
+    let p99_ns = samples[(samples.len() * 99 / 100).min(samples.len() - 1)].as_nanos();
+    assert!(
+        p99_ns <= NEXTVAL_P99_BUDGET_NS,
+        "sequence_nextval p99 {p99_ns} ns over the {NEXTVAL_P99_BUDGET_NS} ns budget"
+    );
+    Record {
+        workload: "sequence_nextval",
+        parameters: format!("samples={NEXTVAL_SAMPLES};cache={NEXTVAL_BLOCK}"),
+        p50_us: percentile(&samples, 50),
+        p99_us: percentile(&samples, 99),
+        throughput: samples.len() as f64 / wall.as_secs_f64(),
+    }
+}
+
 /// Run W1 to W5 and the OCC and login budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -602,6 +776,8 @@ fn emit_workload_records() {
     emit(&occ_validate());
     emit(&disjoint_writers());
     emit(&pgwire_login());
+    emit(&index_probe());
+    emit(&sequence_nextval());
 }
 
 fn main() {

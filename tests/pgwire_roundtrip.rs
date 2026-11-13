@@ -2212,3 +2212,174 @@ async fn refused_form_returns_0a000() {
         .expect("the connection still serves supported forms");
     assert_eq!(simple_ids(rows), vec!["n2".to_string(), "n3".to_string()]);
 }
+
+/// Every text cell of a simple-query answer joined with newlines (an `EXPLAIN` plan is
+/// one row per plan line).
+fn simple_text(msgs: &[tokio_postgres::SimpleQueryMessage]) -> String {
+    msgs.iter()
+        .filter_map(|message| match message {
+            tokio_postgres::SimpleQueryMessage::Row(row) => Some(
+                (0..row.len())
+                    .filter_map(|index| row.get(index))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            ),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// A partial index created over the wire serves the point query whose `WHERE` carries
+/// the index predicate: the rows inside and outside the predicate answer correctly,
+/// `EXPLAIN` names the index, and a query that does not carry the predicate scans.
+// spec: MEDULLA-ENGINE-PARITY-R010.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn create_partial_index_over_wire_is_used() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    let index = format!("{table}_active_email");
+
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, email TEXT NOT NULL, status TEXT NOT NULL)"
+        ))
+        .await
+        .expect("CREATE TABLE");
+    client
+        .simple_query(&format!(
+            "INSERT INTO {table} VALUES (1, 'a@x', 'active'), (2, 'b@x', 'closed'), (3, 'c@x', 'active')"
+        ))
+        .await
+        .expect("seed rows before the index");
+    client
+        .simple_query(&format!(
+            "CREATE INDEX {index} ON {table} (email) WHERE status = 'active'"
+        ))
+        .await
+        .expect("CREATE INDEX over the wire");
+    // Rows inserted after the index exists, inside and outside its predicate.
+    client
+        .simple_query(&format!(
+            "INSERT INTO {table} VALUES (4, 'd@x', 'active'), (5, 'e@x', 'closed')"
+        ))
+        .await
+        .expect("insert after the index");
+
+    let point = format!("SELECT id FROM {table} WHERE status = 'active' AND email = 'd@x'");
+    let plan = client
+        .simple_query(&format!("EXPLAIN {point}"))
+        .await
+        .expect("EXPLAIN");
+    let text = simple_text(&plan);
+    assert!(
+        text.contains(&format!("IndexScanExec: index={index}")),
+        "{text}"
+    );
+    let rows = client.simple_query(&point).await.expect("point query");
+    assert_eq!(simple_ids(rows), vec!["4".to_string()]);
+
+    let inside = format!("SELECT id FROM {table} WHERE status = 'active' ORDER BY id");
+    let rows = client.simple_query(&inside).await.expect("inside rows");
+    assert_eq!(
+        simple_ids(rows),
+        vec!["1".to_string(), "3".to_string(), "4".to_string()]
+    );
+
+    // A query that does not carry the predicate scans, and still finds closed rows.
+    let outside = format!("SELECT id FROM {table} WHERE status = 'closed' ORDER BY id");
+    let plan = client
+        .simple_query(&format!("EXPLAIN {outside}"))
+        .await
+        .expect("EXPLAIN outside");
+    assert!(!simple_text(&plan).contains("IndexScanExec"));
+    let rows = client.simple_query(&outside).await.expect("outside rows");
+    assert_eq!(simple_ids(rows), vec!["2".to_string(), "5".to_string()]);
+}
+
+/// 10,000 rows from 8 concurrent sessions into a serial table: every id is distinct,
+/// ids increase within each session, and the sequence reserved its blocks with at
+/// most `ceil(10000 / cache)` plus one write per session.
+// spec: MEDULLA-ENGINE-PARITY-R013.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn serial_column_uses_sequence() {
+    const SESSIONS: usize = 8;
+    const ROWS: usize = 10_000;
+    const STATEMENT_ROWS: usize = 125;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let admin = connect(&addr).await;
+    let table = unique_table();
+    admin
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id SERIAL PRIMARY KEY, session BIGINT NOT NULL)"
+        ))
+        .await
+        .expect("CREATE TABLE with a serial column");
+
+    let per_session = ROWS / SESSIONS;
+    let mut sessions = Vec::new();
+    for session in 0..SESSIONS {
+        let addr = addr.clone();
+        let table = table.clone();
+        sessions.push(tokio::spawn(async move {
+            let client = connect(&addr).await;
+            let mut ids: Vec<i64> = Vec::with_capacity(per_session);
+            for _ in 0..per_session / STATEMENT_ROWS {
+                let values = (0..STATEMENT_ROWS)
+                    .map(|_| format!("({session})"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let rows = client
+                    .simple_query(&format!(
+                        "INSERT INTO {table} (session) VALUES {values} RETURNING id"
+                    ))
+                    .await
+                    .expect("serial INSERT RETURNING");
+                ids.extend(
+                    simple_ids(rows)
+                        .iter()
+                        .map(|id| id.parse::<i64>().expect("serial id")),
+                );
+            }
+            ids
+        }));
+    }
+    let mut every_id = Vec::with_capacity(ROWS);
+    for session in sessions {
+        let ids = session.await.expect("session task");
+        assert_eq!(ids.len(), per_session);
+        assert!(
+            ids.windows(2).all(|pair| pair[0] < pair[1]),
+            "ids must increase within a session"
+        );
+        every_id.extend(ids);
+    }
+    every_id.sort_unstable();
+    every_id.dedup();
+    assert_eq!(every_id.len(), ROWS, "every id is distinct");
+
+    // `setval` below the reserved high mark refuses and names the mark, which
+    // counts the reservation writes: one per block of `cache` values.
+    let rewind = admin
+        .simple_query(&format!("SELECT setval('{table}_id_seq', 1)"))
+        .await
+        .expect_err("setval below the high mark refuses");
+    let message = rewind.as_db_error().map(|db| db.message()).unwrap_or("");
+    assert!(message.contains("SEQUENCE_REWIND"), "{message}");
+    let high_mark: u64 = message
+        .split("high mark ")
+        .nth(1)
+        .and_then(|rest| rest.split(|c: char| !c.is_ascii_digit()).next())
+        .and_then(|digits| digits.parse().ok())
+        .unwrap_or_else(|| panic!("the refusal names the high mark: {message}"));
+    let cache = medulla_storage::SERIAL_SEQUENCE_CACHE;
+    let reservations = (high_mark - medulla_storage::SERIAL_SEQUENCE_START) / cache;
+    let bound = (ROWS as u64).div_ceil(cache) + SESSIONS as u64;
+    assert!(
+        reservations <= bound,
+        "{reservations} reservation writes over the bound {bound}"
+    );
+}
