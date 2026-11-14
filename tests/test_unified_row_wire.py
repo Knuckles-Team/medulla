@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import msgpack
 import pytest
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from medulla.client import _unified_rows
 from medulla.generated import models
@@ -35,13 +35,18 @@ def test_unified_rows_take_both_shapes() -> None:
         assert parsed[1][2].values == {"monitorId": 7.0}, parsed
     assert _unified_rows(rows) == [
         {"id": "n1", "score": 0.5},
-        {"id": "m1", "score": None, "texts": {"status": "up"}, "values": {"monitorId": 7.0}},
+        {
+            "id": "m1",
+            "score": None,
+            "texts": {"status": "up"},
+            "values": {"monitorId": 7.0},
+        },
     ]
 
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R003.4")
 def test_a_four_element_row_is_refused() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         TypeAdapter(models.UnifiedQueryResult).validate_python([["a", None, {}, 1]])
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         TypeAdapter(models.UnifiedQueryResult).validate_python([["a", None, {"x": {}}]])

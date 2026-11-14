@@ -80,13 +80,6 @@ def _usage_points(client: Any, graph: str, asset: str) -> int:
     )
 
 
-def _series_total(client: Any, graph: str, series: str) -> int:
-    rows = _decode(
-        client._send("TsRange", {"series_id": series, "from": 0, "to": 2**62}, graph)
-    )
-    return sum(int(sum(values)) for _ts, values in rows)
-
-
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.3.1")
 def test_usage_counts_come_from_served_queries(start_medulla_server) -> None:
     """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.3.1: two served reads count two."""
@@ -242,9 +235,27 @@ class _Log:
         for _ in range(times):
             self.run_as(self.bob, [f"SELECT id FROM {self.orders} WHERE total > 10"])
 
-    def series(self, base: str, user: str, asset: str, tail: str = "") -> int:
-        name = f"{base}|principal=source:{self.source}:{user}|asset={asset}{tail}"
-        return _series_total(self.client, self.graph, name)
+    def reads(self, user: str, asset: str) -> int:
+        """The reads of `asset` by the source user, from the served usage answer."""
+        principal = f"source:{self.source}:{user}"
+        return sum(
+            int(row["reads"])
+            for row in self._usage(asset)["frequent_users"]
+            if row["principal"] == principal
+        )
+
+    def suggestion(self, kind: str, target: str, asset: str) -> int:
+        """The served count of one join or filter suggestion of `asset`, else 0."""
+        return sum(
+            int(row["count"])
+            for row in self._usage(asset)["suggestions"]
+            if (row["kind"], row["target"]) == (kind, target)
+        )
+
+    def _usage(self, asset: str) -> dict:
+        return _decode(
+            self.client._send("CatalogUsage", {"asset": asset, "top_n": 50}, self.graph)
+        )
 
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.7")
@@ -262,27 +273,26 @@ def test_source_query_log_feeds_usage(start_medulla_server, pg_log_source) -> No
         row = first["output"]["rows"][0]
         assert row["watermark_ms"] > 0 and row["statements"] >= 5
 
-        reads = "asset_usage.reads"
-        assert log.series(reads, log.alice, log.orders) == 3
-        assert log.series(reads, log.alice, log.customers) == 3
-        assert log.series(reads, log.bob, log.orders) == 2
-        join = f"|with={log.customers}"
-        assert log.series("asset_usage.join", log.alice, log.orders, join) == 3
-        assert log.series("asset_usage.join", log.bob, log.orders, join) == 0
-        flt = "asset_usage.filter"
-        assert log.series(flt, log.alice, log.orders, "|column=status") == 3
-        assert log.series(flt, log.bob, log.orders, "|column=total") == 2
+        # Usage is read through the served CatalogUsage answer: reads per principal,
+        # joins and filters summed over principals and listed from the minimum of 3.
+        assert log.reads(log.alice, log.orders) == 3
+        assert log.reads(log.alice, log.customers) == 3
+        assert log.reads(log.bob, log.orders) == 2
+        assert log.suggestion("join", log.customers, log.orders) == 3
+        assert log.suggestion("filter", "status", log.orders) == 3
+        # Two uses is under the minimum of 3.
+        assert log.suggestion("filter", "total", log.orders) == 0
 
         # A replay of the same log state adds nothing.
         _ingest(client, graph, log.source)
-        assert log.series(reads, log.alice, log.orders) == 3
-        assert log.series(reads, log.bob, log.orders) == 2
+        assert log.reads(log.alice, log.orders) == 3
+        assert log.reads(log.bob, log.orders) == 2
 
         # Only the growth since the watermark is counted.
         log.alice_joins(1)
         _ingest(client, graph, log.source)
-        assert log.series(reads, log.alice, log.orders) == 4
-        assert log.series("asset_usage.join", log.alice, log.orders, join) == 4
+        assert log.reads(log.alice, log.orders) == 4
+        assert log.suggestion("join", log.customers, log.orders) == 4
 
         # A source kind with no log refuses with its code.
         client.query.register_foreign_source(
