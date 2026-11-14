@@ -23,6 +23,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
+use redb::ReadableTable;
 use serde::{Deserialize, Serialize};
 
 use crate::agent_library::AgentLibraryStore;
