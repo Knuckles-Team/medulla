@@ -311,6 +311,13 @@ pub(crate) fn served_cache_hash(
     let _ = ctx;
     legs.salt_cache_key(&mut payload);
     legs.salt_watermarks(&mut payload);
+    // MEDULLA-IDENTITY-R023.3: the read is narrowed to the verified request
+    // principal's visible units, and one agent may carry several principals, so
+    // the answer is keyed by that principal as well as by the carrying agent.
+    if let Some(authority) = ctx.read_authority {
+        payload.extend_from_slice(b"\0principal\0");
+        payload.extend_from_slice(authority.verified_principal().as_bytes());
+    }
     rls_cache_hash(
         kind,
         &payload,
