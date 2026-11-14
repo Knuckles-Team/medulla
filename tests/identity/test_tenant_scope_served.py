@@ -79,12 +79,14 @@ def _unified_notes(client: SyncMedullaClient) -> set[str]:
 
 
 def _sql_notes(client: SyncMedullaClient) -> set[str]:
-    rows = client.query.sql("SELECT id FROM nodes WHERE type = 'Note'")
+    rows = client.query.sql("SELECT id FROM nodes WHERE node_type = 'Note'")
     return {row["id"] for row in rows}
 
 
 def _audit_lines(client: SyncMedullaClient) -> int:
-    return int(client.admin.audit_verify()["entries"])
+    # A served read is audited on the tenant's read-audit chain, which
+    # AuditVerify reports as `read_entries` (MEDULLA-IDENTITY-R023.5).
+    return int(client.admin.audit_verify()["read_entries"])
 
 
 def _audit_lines_after(client: SyncMedullaClient, expected: int) -> int:
