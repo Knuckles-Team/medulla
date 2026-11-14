@@ -90,7 +90,10 @@ def _declaration(connector: str, question: str) -> ConnectorPackEntryContent:
             "ontology_class": CORE + "Position",
         },
         "doc": {
-            "fields": {"id": CORE + "identifier", "title": "http://www.w3.org/2000/01/rdf-schema#label"},
+            "fields": {
+                "id": CORE + "identifier",
+                "title": "http://www.w3.org/2000/01/rdf-schema#label",
+            },
             "key_fields": ["id"],
             "ontology_class": CORE + "Document",
         },
