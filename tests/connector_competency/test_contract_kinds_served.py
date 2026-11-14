@@ -645,8 +645,8 @@ def _materialisation_journey(
     # Either way the engine stores no source row: the cache is not the record.
     stored = _stored_nodes(clean_graph)
     assert [row for row in stored if "item-1" in str(row)] == [], stored
-    # The SELECT answers one row per triple; the watermark node holds several.
-    subjects = {row["s"] for row in stored} - {row["s"] for row in before}
+    # Only node ids new since the journey began count; the watermark is one node.
+    subjects = set(stored) - set(before)
     assert subjects <= {f"eg:foreign-source:{MAT_SOURCE}"}, (
         "only the watermark node may be stored"
     )

@@ -4193,6 +4193,7 @@ components:
       - "tests/test_universal_read_rls_gate.py"
       - "tests/test_upgrade_store_listing.py"
       - "tests/test_uql_client_result.py"
+      - "tests/test_unified_row_wire.py"
       - "tests/test_change_envelope_draft_e2e.py"
       - "tests/test_verified_change_client.py"
       - "tests/test_viz_client.py"
