@@ -3851,6 +3851,7 @@ components:
       - "tests/data_plane"
       - "tests/ingest"
       - "tests/durable"
+      - "tests/usage"
       - "tests/lifecycle"
       - "tests/_client_fixtures.py"
       - "tests/_decision_resident_fixture.py"
