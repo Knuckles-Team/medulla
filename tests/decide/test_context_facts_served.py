@@ -38,7 +38,7 @@ def test_context_facts_after_discover(clean_graph):
     gc = clean_graph
     _seed(gc)
 
-    ranked = gc.graph.discover(["deploy", "runbook"], [], k=5)
+    ranked = gc.graph.discover(["deploy", "runbook"], [], k=5)["hits"]
     ids = [row["id"] for row in ranked if row["id"].startswith("ctx-")]
     assert ids, "discover must rank the seeded nodes"
 

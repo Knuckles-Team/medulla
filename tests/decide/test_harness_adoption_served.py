@@ -152,7 +152,7 @@ def test_adoption_logged_and_lesson_retrieved(clean_graph):
     # A well-formed read nothing matches abstains with the registered code.
     abstained = HarnessLessonsFound.model_validate(before)
     assert abstained.lessons == []
-    assert abstained.abstain_reason == "NO_LESSONS"
+    assert abstained.abstain_reason == "NoLessons"
 
     # The adoption stores once; the identical repeat answers the same refs.
     first = HarnessAdoptionStored.model_validate(stored)

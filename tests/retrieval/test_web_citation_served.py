@@ -65,6 +65,8 @@ def _discover(cl: Any, graph: str) -> list[dict[str, Any]]:
     )
     if isinstance(hits, (bytes, bytearray)):
         hits = msgpack.unpackb(hits, raw=False)
+    # Discover answers with an envelope: hits, verdict and plan.
+    hits = hits["hits"]
     return [h if isinstance(h, dict) else h.model_dump() for h in hits]
 
 

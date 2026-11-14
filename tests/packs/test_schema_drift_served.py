@@ -373,7 +373,13 @@ def delivery_batch(
         "expected_previous_checkpoint": (
             None
             if previous is None
-            else {"stream": DELIVERY_STREAM, "position": {"page": previous}}
+            # The accepted checkpoint exactly as committed, watermark included:
+            # the cursor compare-and-set binds its whole digest.
+            else {
+                "stream": DELIVERY_STREAM,
+                "position": {"page": previous},
+                "watermark": "2026-09-20T00:00:00Z",
+            }
         ),
     }
 

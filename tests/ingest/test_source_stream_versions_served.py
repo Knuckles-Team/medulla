@@ -99,7 +99,13 @@ def _batch(
         "expected_previous_checkpoint": (
             None
             if previous_page is None
-            else {"stream": STREAM, "position": {"page": previous_page}}
+            # The accepted checkpoint exactly as committed, watermark included:
+            # the cursor compare-and-set binds its whole digest.
+            else {
+                "stream": STREAM,
+                "position": {"page": previous_page},
+                "watermark": "2026-09-20T00:00:00Z",
+            }
         ),
     }
 

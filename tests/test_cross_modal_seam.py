@@ -33,7 +33,7 @@ def test_add_embedding_then_reason_then_discover(clean_graph):
     assert "Animal" in inferred_objs, f"rex inferred as Animal, got {inferred_objs}"
 
     # Discover: the fresh node surfaces via hybrid keyword + vector retrieval.
-    out = gc.graph.discover(["dog", "rex"], [1.0, 0.0, 0.0], k=5)
+    out = gc.graph.discover(["dog", "rex"], [1.0, 0.0, 0.0], k=5)["hits"]
     ids = {row["id"] for row in out}
     assert "rex" in ids, f"the freshly written node must be discoverable, got {ids}"
 
@@ -88,7 +88,7 @@ def test_sparql_update_then_hybrid_retrieve(clean_graph):
 
     # AFTER — VECTOR/HYBRID: a hybrid discover over the changed set still surfaces rex,
     # so the new knowledge affects the vector-reranked retrieval too.
-    out = gc.graph.discover(["animal"], [1.0, 0.0, 0.0], k=5)
+    out = gc.graph.discover(["animal"], [1.0, 0.0, 0.0], k=5)["hits"]
     assert any(row["id"] == "<http://ex/rex>" for row in out), (
         "the re-parented node must still be vector-discoverable after the update"
     )

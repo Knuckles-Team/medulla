@@ -33,6 +33,15 @@ def _decode(value: Any) -> Any:
     return value
 
 
+def _add_node(client: Any, graph: str, node_id: str, props: dict[str, Any]) -> None:
+    # NodeClient.add writes to the connection's graph; this names the test graph.
+    client._send(
+        "AddNode",
+        {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
+        graph,
+    )
+
+
 def _ask(client: Any, graph: str, question: str) -> dict:
     return _decode(client._send("CrossSourceQuestion", {"question": question}, graph))
 
@@ -52,10 +61,11 @@ def test_unknown_question_refuses(start_medulla_server) -> None:
             assert report["question"] == question
             assert report["items"] == []
         # A subject node that names its source is one item carrying that source.
-        client.nodes.add(
+        _add_node(
+            client,
+            graph,
             "svc-checkout",
             {"type": "Service", "name": "checkout", "source": "uptime-mcp"},
-            graph=graph,
         )
         report = _ask(client, graph, "exposed_services")
         assert [(item["subject_iri"], item["source"]) for item in report["items"]] == [
@@ -65,9 +75,7 @@ def test_unknown_question_refuses(start_medulla_server) -> None:
             "related"
         ]
         # A subject node with no source refuses the answer; it is never defaulted.
-        client.nodes.add(
-            "svc-orphan", {"type": "Service", "name": "orphan"}, graph=graph
-        )
+        _add_node(client, graph, "svc-orphan", {"type": "Service", "name": "orphan"})
         with pytest.raises(Exception, match="CQ_XSRC_ITEM_WITHOUT_SOURCE"):
             _ask(client, graph, "exposed_services")
     finally:
