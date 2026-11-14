@@ -37,6 +37,7 @@ mod family;
 mod stat_adapter;
 #[cfg(feature = "decide")]
 mod stat_belief;
+#[cfg(feature = "decide")]
 mod stat_capability_outcome;
 #[cfg(feature = "decide")]
 mod stat_classes;
@@ -45,9 +46,11 @@ mod stat_concentration;
 #[cfg(feature = "decide")]
 #[allow(missing_docs)]
 pub mod stat_decide;
+#[cfg(feature = "decide")]
 mod stat_delegation;
 #[cfg(feature = "decide")]
 mod stat_designation;
+#[cfg(feature = "decide")]
 mod stat_distilled;
 #[cfg(feature = "decide")]
 mod stat_evaluator;
@@ -59,6 +62,7 @@ mod stat_generation;
 mod stat_generation_cycle;
 #[cfg(feature = "decide")]
 pub(crate) mod stat_generation_space;
+#[cfg(feature = "decide")]
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_harness_adoption;
