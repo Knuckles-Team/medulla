@@ -28,7 +28,7 @@ from _commons_generation import (
     publish_schema,
 )
 from conftest import TEST_TENANT
-from ontology_pack_support import attach_pack, import_entries
+from ontology_pack_support import import_entries
 from pack_generator import make_packs
 
 from medulla import decision_client as dc
@@ -88,7 +88,9 @@ def test_job_returns_bounded_tool_skill_agent_set() -> None:
             for connector, entries in packs:
                 imported = await import_entries(client, connector, entries)
                 assert imported["result"] == "imported", imported
-                await attach_pack(client, connector)
+                # Tool-only packs carry no ontology or shapes body, so there is no
+                # schema to attach (ATTACH_PACK_SCHEMA_UNAVAILABLE); R176.6 imports
+                # them and asks, and the loop below waits for the feed.
             connectors = {connector for connector, _ in packs}
 
             deadline = time.monotonic() + 240
