@@ -9,6 +9,7 @@ provenance keys, and keeps them across a restart.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import tempfile
@@ -52,6 +53,8 @@ OTHER_MEMBER = "usr:bob"
 OTHER_TENANT_MEMBER = "usr:carol"
 OTHER_TENANT = "tenant:elsewhere"
 DIGEST = "ab" * 32
+# Durable rows hold the verified principal's hashed identity, never the raw id.
+OWNER_ID = "principal:sha256:" + hashlib.sha256(OWNER.encode()).hexdigest()
 
 pytestmark = [
     pytest.mark.no_engine,  # each case owns its real engine and restarts it
@@ -140,7 +143,11 @@ def engine() -> Iterator[Engine]:
 
 
 def _register_peer(served: Engine) -> None:
-    """Create the peer principal in the identity store so it resolves."""
+    """Create the peer and the other member in the identity store so both resolve.
+
+    A subject that resolves but is not the writer is refused `ACCESS_DENIED`;
+    one that does not resolve is `METADATA_PRINCIPAL_UNKNOWN`.
+    """
     # Creating a user is a direct-only identity administration: the admin acts as
     # itself (no delegation chain), so it is registered as its own agent first.
     register_commons_agents(
@@ -166,18 +173,20 @@ def _register_peer(served: Engine) -> None:
         asyncio.run_coroutine_threadsafe(
             send_identity(admin._client, init_params), admin._loop
         ).result(timeout=30)
-        op = IdentityOpUserCreate(
-            family="user",
-            op="create",
-            request=CreateUserRequest(
-                kind=UserKind.SERVICE, username="peer", principal_id=PEER
-            ),
-        )
-        params = MethodIdentityParams(op=op).model_dump(mode="json", exclude_none=True)
-
-        asyncio.run_coroutine_threadsafe(
-            send_identity(admin._client, params), admin._loop
-        ).result(timeout=30)
+        for username, principal_id in (("peer", PEER), ("bob", OTHER_MEMBER)):
+            op = IdentityOpUserCreate(
+                family="user",
+                op="create",
+                request=CreateUserRequest(
+                    kind=UserKind.SERVICE, username=username, principal_id=principal_id
+                ),
+            )
+            params = MethodIdentityParams(op=op).model_dump(
+                mode="json", exclude_none=True
+            )
+            asyncio.run_coroutine_threadsafe(
+                send_identity(admin._client, params), admin._loop
+            ).result(timeout=30)
     finally:
         admin.close()
 
@@ -256,7 +265,7 @@ def test_typed_metadata_persists_without_file_authority():
             assert seen["ClientMetadata"] == {"client-1"}
             assert seen["InteractionNetwork"] == {"net-1"}
             second = owner.nodes.properties("pref-2")
-            assert second["owner"] == OWNER
+            assert second["owner"] == OWNER_ID
             assert second["revision"] == 2
             assert second["supersedes"] == "pref-1"
         finally:
@@ -286,7 +295,7 @@ def test_all_metadata_write_routes_reach_admission():
             owner.nodes.add(
                 "ok-1", _preference("theme", "private", owner="usr:mallory")
             )
-            assert owner.nodes.properties("ok-1")["owner"] == OWNER
+            assert owner.nodes.properties("ok-1")["owner"] == OWNER_ID
         finally:
             owner.close()
 
@@ -340,7 +349,7 @@ def test_metadata_import_provenance_survives_restart():
             stored = owner.nodes.properties("imp-1")
             assert stored["source_digest"] == DIGEST
             assert stored["mapping_version"] == "m1"
-            assert stored["actor"] == OWNER
+            assert stored["actor"] == OWNER_ID
             assert stored["schema_digest"]
             assert stored["parent_revision"] == 0
             # A digest that is not 64 lowercase hex is refused.

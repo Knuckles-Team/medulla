@@ -143,8 +143,48 @@ fn is_hex_digest(value: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
+/// The durable, hashed identity of a raw principal id: the same
+/// `principal:sha256:<hex>` form as `VerifiedRequestContext::principal_persistence_id`.
+pub fn principal_persistence_id(principal_id: &str) -> String {
+    format!(
+        "principal:sha256:{}",
+        hex::encode(Sha256::digest(principal_id.as_bytes()))
+    )
+}
+
+fn is_hashed_principal(value: &str) -> bool {
+    value
+        .strip_prefix("principal:sha256:")
+        .is_some_and(is_hex_digest)
+}
+
+/// Whether the raw `claimed` principal is the writing principal. A hashed
+/// writer is compared in the hashed domain; durable rows never hold the raw id.
+fn is_writer(claimed: &str, principal: &str) -> bool {
+    if is_hashed_principal(principal) {
+        principal_persistence_id(claimed) == principal
+    } else {
+        claimed == principal
+    }
+}
+
+/// Whether a record was already admitted for a hashed writer. The mutation
+/// gateway admits a node write with the hashed principal before it applies the
+/// write to the graph; a later compile of that same write under the carrying
+/// agent's id must keep that stamp rather than re-stamp the record with a
+/// different identity than the graph holds.
+fn already_admitted(props: &Map<String, Value>, principal: &str) -> bool {
+    !is_hashed_principal(principal)
+        && props
+            .get("owner")
+            .and_then(Value::as_str)
+            .is_some_and(is_hashed_principal)
+        && props.get("actor") == props.get("owner")
+        && props.get("schema_digest").and_then(Value::as_str) == Some(schema_digest().as_str())
+}
+
 fn resolves(principal_id: &str, caller: &MetadataCaller<'_>) -> bool {
-    if caller.principal == Some(principal_id) {
+    if caller.principal.is_some_and(|principal| is_writer(principal_id, principal)) {
         return true;
     }
     #[cfg(feature = "security")]
@@ -157,30 +197,9 @@ fn resolves(principal_id: &str, caller: &MetadataCaller<'_>) -> bool {
     }
 }
 
-/// Validate the body, stamp the server keys and return the stamped properties plus
-/// the typed record.
-fn admit_record(
-    label: &str,
-    mut props: Map<String, Value>,
-    caller: &MetadataCaller<'_>,
-) -> Result<(Map<String, Value>, TypedMetadata), MetadataRefusal> {
-    let Some(principal) = caller.principal.filter(|p| !p.is_empty()) else {
-        return Err(MetadataRefusal {
-            code: ACCESS_DENIED,
-            message: "metadata is written by a verified principal".into(),
-        });
-    };
-    // A caller-supplied owner is ignored: the verified principal replaces it.
-    let parent_revision = props
-        .get("parent_revision")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    for key in SERVER_KEYS {
-        props.remove(key);
-    }
-    let supersedes = props.get("supersedes").cloned();
-    let source_digest = props.get("source_digest").cloned();
-    let mapping_version = props.get("mapping_version").cloned();
+/// Parse and validate the typed body of a record: its node keys without the
+/// label, the provenance keys and the keys the admission step stamps.
+fn typed_body(label: &str, props: &Map<String, Value>) -> Result<TypedMetadata, MetadataRefusal> {
     let mut body = props.clone();
     for key in [
         "type",
@@ -189,7 +208,10 @@ fn admit_record(
         "supersedes",
         "source_digest",
         "mapping_version",
-    ] {
+    ]
+    .into_iter()
+    .chain(SERVER_KEYS)
+    {
         body.remove(key);
     }
     body.entry("schema_version")
@@ -208,6 +230,39 @@ fn admit_record(
             format!("{label}: {error}"),
         )
     })?;
+    Ok(typed)
+}
+
+/// Validate the body, stamp the server keys and return the stamped properties plus
+/// the typed record.
+fn admit_record(
+    label: &str,
+    mut props: Map<String, Value>,
+    caller: &MetadataCaller<'_>,
+) -> Result<(Map<String, Value>, TypedMetadata), MetadataRefusal> {
+    let Some(principal) = caller.principal.filter(|p| !p.is_empty()) else {
+        return Err(MetadataRefusal {
+            code: ACCESS_DENIED,
+            message: "metadata is written by a verified principal".into(),
+        });
+    };
+    if already_admitted(&props, principal) {
+        let typed = typed_body(label, &props)?;
+        return Ok((props, typed));
+    }
+    // A caller-supplied owner is ignored: the verified principal's hashed
+    // identity replaces it.
+    let parent_revision = props
+        .get("parent_revision")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    for key in SERVER_KEYS {
+        props.remove(key);
+    }
+    let supersedes = props.get("supersedes").cloned();
+    let source_digest = props.get("source_digest").cloned();
+    let mapping_version = props.get("mapping_version").cloned();
+    let typed = typed_body(label, &props)?;
     if let Some(supersedes) = &supersedes {
         if !supersedes.as_str().is_some_and(|id| !id.is_empty()) {
             return Err(refuse(
@@ -234,7 +289,13 @@ fn admit_record(
         }
     }
     if let TypedMetadata::InteractionNetwork(network) = &typed {
-        if network.subject.as_str() != principal {
+        if !is_writer(network.subject.as_str(), principal) {
+            if !resolves(network.subject.as_str(), caller) {
+                return Err(refuse(
+                    ServerErrorCode::MetadataPrincipalUnknown,
+                    "InteractionNetwork.subject does not resolve",
+                ));
+            }
             return Err(MetadataRefusal {
                 code: ACCESS_DENIED,
                 message: "InteractionNetwork.subject must be the writing principal".into(),
@@ -436,7 +497,9 @@ mod tests {
             ),
             &caller(),
         );
-        assert_eq!(foreign.unwrap_err().code, "ACCESS_DENIED");
+        // An unknown subject does not resolve; a known non-writer is ACCESS_DENIED
+        // (driven over the wire, where the identity store holds the peer).
+        assert_eq!(foreign.unwrap_err().code, "METADATA_PRINCIPAL_UNKNOWN");
         let unknown = admit(
             add_node(
                 "n2",
@@ -457,6 +520,50 @@ mod tests {
             },
         );
         assert_eq!(anonymous.unwrap_err().code, "ACCESS_DENIED");
+    }
+
+    // spec: MEDULLA-IDENTITY-R023.10
+    #[test]
+    fn a_hashed_writer_is_checked_and_stamped_in_the_hashed_domain() {
+        let hashed = principal_persistence_id("usr:alice");
+        let writer = MetadataCaller {
+            principal: Some(&hashed),
+            tenant: "acme",
+        };
+        let out = admit(
+            add_node(
+                "p1",
+                json!({"type": "Preference", "key": "theme", "value": "dark",
+                       "share": "private", "owner": "usr:mallory", "actor": "usr:mallory"}),
+            ),
+            &writer,
+        )
+        .unwrap();
+        let props = props_of_first(&out);
+        assert_eq!(props["owner"], hashed.as_str());
+        assert_eq!(props["actor"], hashed.as_str());
+        // A later compile under the carrying agent's id keeps the admitted stamp.
+        let recompiled = admit(out[0].clone(), &caller()).unwrap();
+        assert_eq!(props_of_first(&recompiled)["owner"], hashed.as_str());
+        // The writer's own raw id is the subject; another, unknown id does not resolve.
+        let own = admit(
+            add_node(
+                "n1",
+                json!({"type": "InteractionNetwork", "subject": "usr:alice",
+                       "peer": "usr:alice", "relation": "follows", "weight_milli": 5}),
+            ),
+            &writer,
+        );
+        assert!(own.is_ok(), "{own:?}");
+        let unknown = admit(
+            add_node(
+                "n2",
+                json!({"type": "InteractionNetwork", "subject": "usr:nobody",
+                       "peer": "usr:alice", "relation": "follows", "weight_milli": 5}),
+            ),
+            &writer,
+        );
+        assert_eq!(unknown.unwrap_err().code, "METADATA_PRINCIPAL_UNKNOWN");
     }
 
     // spec: MEDULLA-IDENTITY-R023.11
