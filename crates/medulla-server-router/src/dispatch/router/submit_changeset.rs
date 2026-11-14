@@ -128,6 +128,13 @@ mod served {
             }
         };
         let merge_store = Arc::clone(&store);
+        // A merged blob lands under the submitter's blob owner scope, the scope its
+        // own fetch of the landed bytes reads (MEDULLA-BRANCH-MERGE-R010).
+        let merge_owner =
+            match medulla_server_api::carrier::CarrierAuthority::from_verified(verified) {
+                Ok(authority) => authority.owner_scope().to_string(),
+                Err(error) => return Response::err(req.id, error),
+            };
         let checked = {
             let request = Arc::clone(&request);
             tokio::task::spawn_blocking(move || {
@@ -155,7 +162,7 @@ mod served {
         let appended = target
             .append_with(verified.tenant(), &batch_id, move |head, read| {
                 let chain = RegistryChain { head, read };
-                let blobs = ChunkStoreBlobs(merge_store.as_ref());
+                let blobs = ChunkStoreBlobs(merge_store.as_ref(), &merge_owner);
                 let ctx = AcceptContext {
                     author_principal: &author,
                     created_at_ms,
