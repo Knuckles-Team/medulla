@@ -128,6 +128,7 @@ mod tests {
         InstanceEvent::RemainFinal,
     ];
 
+    // spec: MEDULLA-ENGINE-PARITY-R021
     // spec: MEDULLA-ENGINE-PARITY-R021.1
     #[test]
     fn every_legal_transition_applies() {
