@@ -13,7 +13,7 @@ from typing import Any
 
 import msgpack
 import pytest
-from conftest import request_context
+from conftest import register_commons_agents, request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
@@ -25,25 +25,35 @@ SOURCE = {"Mcp": {"server": "role-test-mcp", "tool": "search"}}
 
 
 def _client() -> Any:
+    agent = f"role-{uuid.uuid4().hex[:8]}"
+    register_commons_agents(agent)
     return SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-        verified_context=request_context(agent_id=f"role-{uuid.uuid4().hex[:8]}"),
+        verified_context=request_context(agent_id=agent),
     )
 
 
-def _attach(client: Any, document: str) -> None:
-    client._send(
-        "GraphSchema",
-        {
-            "op": {
-                "op": "attach",
-                "source_id": "authority-roles",
-                "ontology_ttl": document,
-            }
-        },
-        GRAPH,
-        idempotency_key=f"attach-{uuid.uuid4().hex}",
+def _attach(document: str) -> None:
+    """Attach the schema source as the System identity: attaching is an admin action."""
+    client = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
     )
+    try:
+        client._send(
+            "GraphSchema",
+            {
+                "op": {
+                    "op": "attach",
+                    "source_id": "authority-roles",
+                    "ontology_ttl": document,
+                }
+            },
+            GRAPH,
+            idempotency_key=f"attach-{uuid.uuid4().hex}",
+        )
+    finally:
+        client.close()
 
 
 def _coverage(client: Any) -> dict[str, Any]:
@@ -65,7 +75,7 @@ def test_live_truth_wins_conflict() -> None:
             None,
             idempotency_key=f"register-{name}-{uuid.uuid4().hex}",
         )
-    _attach(owner, CONFLICT)
+    _attach(CONFLICT)
     verdict = next(v for v in _coverage(owner)["verdicts"] if v["class"] == INCIDENT)
     assert verdict["verdict"] == "covered"
     assert verdict["source"] == "live-incidents-mcp"
@@ -75,7 +85,6 @@ def test_live_truth_wins_conflict() -> None:
 
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R010.3")
 def test_unknown_source_role_is_refused_at_attach() -> None:
-    owner = _client()
     with pytest.raises(EngineResponseError) as refused:
-        _attach(owner, CONFLICT.replace('"live_truth"', '"primary"'))
+        _attach(CONFLICT.replace('"live_truth"', '"primary"'))
     assert "SOURCE_ROLE_UNKNOWN" in str(refused.value)

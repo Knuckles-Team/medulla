@@ -83,6 +83,40 @@ def bootstrap_context() -> dict[str, object]:
     return request_context(roles=[], scopes=["security:bootstrap"])
 
 
+def register_commons_agents(
+    *agent_ids: str, socket_path: str | None = None, auth_secret: str | None = None
+) -> None:
+    """Register each agent as an `Agent` identity that reads and writes the commons.
+
+    Under a provisioned identity policy an unregistered verified caller is denied
+    every graph, and the commons is reached only through an RBAC grant. A served
+    test that speaks as a principal other than the suite's System identity
+    registers it here first, through the System identity, with the
+    `commons-access` role (idempotent: the role and grants collapse duplicates).
+    """
+
+    system = SyncMedullaClient.connect(
+        socket_path=socket_path or os.environ["GRAPH_SERVICE_SOCKET"],
+        auth_secret=auth_secret,
+        verified_context=request_context(),
+    )
+    try:
+        system.rbac.add_role("commons-access")
+        for action in ("Read", "Write"):
+            system.rbac.add_grant("commons-access", {"Graph": "__commons__"}, action)
+        for agent_id in agent_ids:
+            system.consensus.register_identity(
+                agent_id,
+                "Agent",
+                [],
+                ["commons-access"],
+                signer_id=TEST_AGENT_ID,
+                signer_key=TEST_SIGNER_KEY,
+            )
+    finally:
+        system.close()
+
+
 def strict_server_env(
     state_dir: str, *, auth_secret: str, persist_dir: str | None = None
 ) -> dict[str, str]:

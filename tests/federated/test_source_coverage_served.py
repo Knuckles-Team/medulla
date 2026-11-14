@@ -14,7 +14,7 @@ from typing import Any
 
 import msgpack
 import pytest
-from conftest import request_context
+from conftest import register_commons_agents, request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
@@ -27,7 +27,18 @@ GRAPH = "__commons__"
 SOURCE = {"Mcp": {"server": "coverage-test-mcp", "tool": "search"}}
 
 
-def _client(agent: str) -> Any:
+def _client(agent: str | None = None) -> Any:
+    """A client for `agent`, registered first; with no agent, the System identity.
+
+    Attaching a schema source is an admin action, so the System identity attaches;
+    every other call speaks as the registered principal under test.
+    """
+    if agent is None:
+        return SyncMedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(),
+        )
+    register_commons_agents(agent)
     return SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         verified_context=request_context(agent_id=agent),
@@ -38,22 +49,26 @@ def _agent(tag: str) -> str:
     return f"cov-{tag}-{uuid.uuid4().hex[:8]}"
 
 
-def _attach(client: Any, servicenow: int, pagerduty: int) -> None:
+def _attach(servicenow: int, pagerduty: int) -> None:
+    client = _client()
     document = TEMPLATE.replace("RANK_SERVICENOW", str(servicenow)).replace(
         "RANK_PAGERDUTY", str(pagerduty)
     )
-    client._send(
-        "GraphSchema",
-        {
-            "op": {
-                "op": "attach",
-                "source_id": "authority-incident",
-                "ontology_ttl": document,
-            }
-        },
-        GRAPH,
-        idempotency_key=f"attach-{uuid.uuid4().hex}",
-    )
+    try:
+        client._send(
+            "GraphSchema",
+            {
+                "op": {
+                    "op": "attach",
+                    "source_id": "authority-incident",
+                    "ontology_ttl": document,
+                }
+            },
+            GRAPH,
+            idempotency_key=f"attach-{uuid.uuid4().hex}",
+        )
+    finally:
+        client.close()
 
 
 def _register(client: Any, *names: str) -> None:
@@ -83,7 +98,7 @@ def _incident(reply: dict[str, Any]) -> dict[str, Any]:
 def test_rank_one_wins_and_alternates_listed() -> None:
     owner = _client(_agent("a"))
     _register(owner, "servicenow-mcp", "pagerduty-mcp")
-    _attach(owner, 1, 2)
+    _attach(1, 2)
 
     verdict = _incident(_coverage(owner, [INCIDENT]))
     assert verdict["verdict"] == "covered"
@@ -95,7 +110,7 @@ def test_rank_one_wins_and_alternates_listed() -> None:
     used = [entry["source"] for entry in reply["audit"]["used"]]
     assert used == ["servicenow-mcp"]
 
-    _attach(owner, 2, 1)
+    _attach(2, 1)
     swapped = _incident(_coverage(owner, [INCIDENT]))
     assert swapped["source"] == "pagerduty-mcp"
     assert swapped["alternates"] == ["servicenow-mcp"]
@@ -116,7 +131,7 @@ def test_other_tenants_call_sees_no_verdict_from_these_sources() -> None:
     owner = _client(_agent("a"))
     other = _client(_agent("b"))
     _register(owner, "servicenow-mcp", "pagerduty-mcp")
-    _attach(owner, 1, 2)
+    _attach(1, 2)
     assert _incident(_coverage(owner, [INCIDENT]))["verdict"] == "covered"
     verdict = _incident(_coverage(other, [INCIDENT]))
     assert verdict["verdict"] != "covered"
@@ -127,7 +142,7 @@ def test_other_principals_source_is_unconnected() -> None:
     owner = _client(_agent("a"))
     other = _client(_agent("b"))
     _register(owner, "servicenow-mcp", "pagerduty-mcp")
-    _attach(owner, 1, 2)
+    _attach(1, 2)
 
     verdict = _incident(_coverage(other, [INCIDENT]))
     assert verdict["verdict"] == "abstained"

@@ -12,7 +12,7 @@ import hashlib
 import os
 
 import pytest
-from conftest import request_context
+from conftest import register_commons_agents, request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
@@ -77,6 +77,7 @@ def test_view_is_owner_scoped(clean_graph, pg_source):
         "Cy",
     ]
 
+    register_commons_agents("other-agent")
     other = SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         verified_context=request_context(agent_id="other-agent"),
