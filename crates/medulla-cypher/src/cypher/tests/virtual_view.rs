@@ -376,7 +376,7 @@ fn explain_names_mapping() {
         ),
         (
             "orgs".to_string(),
-            "SELECT \"id\" FROM \"orgs\" -- postgres://user:secret@host/db".to_string(),
+            "SELECT \"id\" FROM \"orgs\" -- postgres://user:secret@host/db".to_string(), // sanitizer:ignore - test placeholder DSN
         ),
     ];
     let fragments = explain_fragments(&plan, &pushed);

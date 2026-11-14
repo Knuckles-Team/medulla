@@ -523,7 +523,7 @@ mod tests {
     fn a_destination_the_outbound_gate_refuses_is_source_unavailable() {
         // `read_catalog` maps this refusal to `SOURCE_UNAVAILABLE` before any connection.
         let refusal = medulla_federation::federation_ssrf::check_sql_dsn(
-            "mysql://u:p@169.254.169.254:3306/db",
+            "mysql://u:p@169.254.169.254:3306/db", // sanitizer:ignore - test placeholder DSN
         );
         assert!(refusal.is_err());
         assert_eq!(

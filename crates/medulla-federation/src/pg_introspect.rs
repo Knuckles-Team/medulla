@@ -211,7 +211,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R013.1
     #[tokio::test]
     async fn an_unreachable_server_is_an_error_without_the_dsn() {
-        let error = read_pg_catalog("postgres://user:secret@127.0.0.1:1/db", &[], 1)
+        let error = read_pg_catalog("postgres://user:secret@127.0.0.1:1/db", &[], 1) // sanitizer:ignore - test placeholder DSN
             .await
             .unwrap_err();
         assert!(error.starts_with("federation: postgres connection"));

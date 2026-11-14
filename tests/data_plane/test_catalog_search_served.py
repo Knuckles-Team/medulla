@@ -146,7 +146,7 @@ def pg_log_source():
             check=True,
             capture_output=True,
         )
-        dsn = f"postgres://postgres:qlog-test@127.0.0.1:{_PG_PORT}/postgres"
+        dsn = f"postgres://postgres:qlog-test@127.0.0.1:{_PG_PORT}/postgres"  # sanitizer:ignore - test placeholder DSN
     try:
         deadline = time.monotonic() + 60
         while True:
