@@ -128,7 +128,16 @@ def _pack(connector: str, question: str) -> list[ConnectorPackEntryContent]:
                 PackEntryKind.PROMPT,
                 f"prompt://{connector}-doc-prompt",
                 f"{connector}-doc-prompt",
-                json.dumps({"name": "doc-prompt", "description": "A prompt."}).encode(),
+                # A packaged prompt follows the canonical blueprint (R814.8).
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "task": "doc-prompt",
+                        "type": "prompt",
+                        "source": connector,
+                        "instructions": {"core_directive": "Answer from documents."},
+                    }
+                ).encode(),
                 "application/json",
             ),
             _entry(
@@ -247,15 +256,30 @@ def _requires(question: str, connector: str) -> list[str]:
     return [line for line in text.splitlines() if line.strip()]
 
 
+async def _sparql_once_visible(client, query: str, requires: list[str]) -> Any:
+    """Run the query once the imported pack is visible.
+
+    An import commits at once, but a pack with an ontology stays dark until its
+    graph projection applies; until then the question abstains by name.
+    """
+    deadline = time.monotonic() + 180
+    while True:
+        try:
+            return await client.rdf.sparql(query, requires_packs=requires)
+        except EngineResponseError as error:
+            if "PACK_NOT_IMPORTED" not in str(error):
+                raise
+            assert time.monotonic() < deadline, str(error)
+            await asyncio.sleep(0.5)
+
+
 async def _answer(client, question: str, connector: str) -> list[str]:
     stable, expected = _expected(question)
     query = _fixture(question, "query.rq", connector=connector)
     columns = _columns(query)
     deadline = time.monotonic() + 180
     while True:
-        rows = await client.rdf.sparql(
-            query, requires_packs=_requires(question, connector)
-        )
+        rows = await _sparql_once_visible(client, query, _requires(question, connector))
         for row in rows:
             for column in columns[stable:]:
                 assert row.get(column), (column, row)
@@ -319,9 +343,7 @@ def test_pack_question_abstains_when_its_pack_is_not_imported(question: str) -> 
                 client, connector, _pack(connector, question)
             )
             assert imported["result"] == "imported", imported
-            await client.rdf.sparql(
-                query, requires_packs=_requires(question, connector)
-            )
+            await _sparql_once_visible(client, query, _requires(question, connector))
         finally:
             await client.close()
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import uuid
 
 import pytest
 from _decision_resident_fixture import publish
@@ -41,6 +42,7 @@ from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.models import HarnessAdoptionStored, RevisionProposalPage
 
 OTHER_TENANT = "tenant:other-revisions"
+OTHER_GRAPH = f"r817-other-{uuid.uuid4().hex[:8]}"
 FIRST_AGENT = "agent:r817-first"
 SECOND_AGENT = "agent:r817-second"
 BAD_CURSOR = "not-a-cursor"
@@ -72,9 +74,20 @@ async def _journey(
     owner = await MedullaClient.connect(
         socket_path=socket_path, verified_context=request_context()
     )
+    # A request names its own tenant's graph: the second tenant reads through a
+    # graph it created, never the first tenant's default graph.
+    other_context = dict(request_context(), tenant=OTHER_TENANT)
+    creator = await MedullaClient.connect(
+        socket_path=socket_path, verified_context=other_context
+    )
+    try:
+        await creator.tenants.create(OTHER_GRAPH)
+    finally:
+        await creator.close()
     stranger = await MedullaClient.connect(
         socket_path=socket_path,
-        verified_context=dict(request_context(), tenant=OTHER_TENANT),
+        verified_context=other_context,
+        graph_name=OTHER_GRAPH,
     )
     try:
         mine = dc.DecisionClient(client=owner)
