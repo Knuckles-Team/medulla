@@ -5,7 +5,6 @@
 METHOD_IDS = frozenset(
     {
         "MeasureIngestThroughput",
-        "RecordRelease",
         "ArgumentMapPut",
         "ArgumentMapGet",
         "ArgumentMapEvaluate",
