@@ -2026,15 +2026,32 @@ fn admit_raw(
     let blob_method = Method::BlobRef {
         digest: raw_digest_hex.clone(),
     };
-    let (holder_batch, admitted_at_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
-        blob.store.as_ref(),
-        ctx.request_id,
-        authority,
-        &blob_method,
-    )?;
-    blob.store
-        .holder_batch(&holder, &holder_batch, admitted_at_ms)?;
-    Ok(raw_digest_hex)
+    // The blob-owner scope version is engine-owned: a concurrent ingest that
+    // advanced it between the compile and the commit is a WRITE_CONFLICT to
+    // retry with a fresh compile, never a refusal of this batch. The holder
+    // change is set-like, so a retry acquires nothing twice.
+    const MAX_ATTEMPTS: usize = 4;
+    let mut attempt = 1;
+    loop {
+        let (holder_batch, admitted_at_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
+            blob.store.as_ref(),
+            ctx.request_id,
+            authority,
+            &blob_method,
+        )?;
+        match blob
+            .store
+            .holder_batch(&holder, &holder_batch, admitted_at_ms)
+        {
+            Err(error) if error.contains("WRITE_CONFLICT:") && attempt < MAX_ATTEMPTS => {
+                attempt += 1;
+            }
+            other => {
+                other?;
+                return Ok(raw_digest_hex);
+            }
+        }
+    }
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]

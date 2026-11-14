@@ -730,10 +730,6 @@ async fn apply_one_change_envelope_inner(
     };
     let committed = match committed_result {
         Ok(committed) => committed,
-        Err(error) if error.contains("WRITE_CONFLICT:") => {
-            let error = stale_content_or(backend.as_ref(), &fname, &envelope, error).await;
-            return Response::err(req_id, error);
-        }
         Err(error) => {
             // Keep a declared admission code (e.g. INVALID_ARGUMENT from
             // `ChangeEnvelope::validate`) first so `Response::err` keeps it and its
@@ -768,7 +764,7 @@ async fn apply_one_change_envelope_inner(
 /// precondition runs. When the committed stream version no longer chains from
 /// the envelope's previous digest, the writer is owed `STALE_CONTENT_VERSION`
 /// instead: a retry of the same envelope cannot succeed.
-async fn stale_content_or(
+pub(crate) async fn stale_content_or(
     backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     fname: &str,
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
