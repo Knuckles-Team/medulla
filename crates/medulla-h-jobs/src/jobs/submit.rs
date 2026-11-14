@@ -23,8 +23,7 @@ fn build_submit_policy(
     spec: &SubmitJobSpec,
     policy_fingerprint: &str,
 ) -> JobPolicy {
-    let tenant = authority.tenant_scope().to_string();
-    let actor = authority.actor_scope().to_string();
+    let (tenant, actor) = job_owner(authority, spec);
     let purpose = medulla_server_api::batch_compile::opaque_coordinator_key(
         "job-purpose",
         "native",
@@ -57,6 +56,27 @@ fn build_submit_policy(
             required_capabilities,
         },
     }
+}
+
+/// The verified actor of the engine's own scheduler service.
+pub(super) const SCHEDULER_SERVICE_ACTOR: &str = "service:scheduler";
+
+/// The tenant and actor scope that own a submitted job. A caller owns what it
+/// submits, except that the scheduler service submits a fired window on behalf
+/// of the schedule's owner: it signs the submission,
+/// but the owner named by the spec's `tenant` and `actor` is who may read and
+/// cancel the work. Any other caller's `tenant` and `actor` are ignored.
+fn job_owner(authority: &CarrierAuthority, spec: &SubmitJobSpec) -> (String, String) {
+    if authority.agent_id() == SCHEDULER_SERVICE_ACTOR && !spec.actor.is_empty() {
+        return (
+            medulla_server_api::carrier::tenant_scope_of(&spec.tenant),
+            spec.actor.clone(),
+        );
+    }
+    (
+        authority.tenant_scope().to_string(),
+        authority.actor_scope().to_string(),
+    )
 }
 
 pub(super) fn build_submit_spec(authority: &CarrierAuthority, build: SubmitBuild) -> SubmitSpec {

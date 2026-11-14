@@ -171,6 +171,12 @@ async fn tick_pass(
             continue;
         };
         cache.followed.insert(graph.clone());
+        // The exclusion groups whose member fired earlier in this pass. The run
+        // record that names that work item is committed through the graph and is
+        // not yet guaranteed to be readable by the next member's check, so the
+        // pass carries it itself: a later member of the group is skipped, never
+        // fired beside it (MEDULLA-PLACEMENT-R751.760).
+        let mut fired_groups: std::collections::BTreeMap<(String, String), String> = BTreeMap::new();
         for (window, record) in due {
             let tick = ScheduleTick {
                 schedule_id: ScheduleRecord::node_id(&record.tenant, &record.name),
@@ -192,8 +198,15 @@ async fn tick_pass(
             let mut run = load_run(&core, &record);
             settle(&mut run, &store);
             run.roll_period(window, &record.budget);
-            let (group_run_active, group_last_fired_ms) =
+            let (mut group_run_active, group_last_fired_ms) =
                 group_facts(&core, &store, &record, &schedules);
+            if let Some(group) = record.exclusion_group.as_deref() {
+                if let Some(fired) = fired_groups.get(&(record.tenant.clone(), group.to_string())) {
+                    if fired != &record.name {
+                        group_run_active = true;
+                    }
+                }
+            }
             let facts = WindowFacts {
                 window_ms: window,
                 live_from_ms: from_ms,
@@ -210,6 +223,9 @@ async fn tick_pass(
                 job_id = submit_scheduled_job(state, &graph, &record, window).await?;
                 run.active_job = Some(job_id.clone());
                 run.last_fired_ms = Some(window);
+                if let Some(group) = record.exclusion_group.clone() {
+                    fired_groups.insert((record.tenant.clone(), group), record.name.clone());
+                }
             }
             run.cursor_ms = Some(window);
             ledger.acknowledge(&tick);
@@ -384,8 +400,9 @@ async fn submit_scheduled_job(
     let job = job_for_task_kind(&record.task_kind).map_err(|e| e.to_string())?;
     let spec = SubmitJobSpec {
         graph: graph.to_string(),
-        tenant: String::new(),
-        actor: String::new(),
+        // The fired job belongs to the schedule's owner, not to this service.
+        tenant: record.tenant.clone(),
+        actor: record.owner.clone(),
         purpose: format!("schedule:{}", record.name),
         priority: 0,
         deadline_unix_ms: None,

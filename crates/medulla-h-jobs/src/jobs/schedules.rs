@@ -182,7 +182,8 @@ pub(super) async fn create(
         }
         let record = ScheduleRecord {
             name,
-            owner: call.authority.agent_id().to_string(),
+            // The owner's hashed principal scope: the key its fired jobs are owned by.
+            owner: call.authority.actor_scope().to_string(),
             tenant,
             spec: parse_spec(spec)?,
             task_kind,
@@ -221,7 +222,7 @@ pub(super) async fn update(
         let core = core_of(&call, &graph).await?;
         let existing = load(&core, call.verified_context.tenant(), &name)?;
         existing
-            .authorize_write(call.authority.agent_id())
+            .authorize_write(call.authority.actor_scope())
             .map_err(refuse)?;
         let record = ScheduleRecord {
             spec: parse_spec(spec)?,
@@ -244,7 +245,7 @@ pub(super) async fn delete(call: ScheduleCall<'_>, graph: String, name: String) 
         let core = core_of(&call, &graph).await?;
         let existing = load(&core, call.verified_context.tenant(), &name)?;
         existing
-            .authorize_write(call.authority.agent_id())
+            .authorize_write(call.authority.actor_scope())
             .map_err(refuse)?;
         let id = ScheduleRecord::node_id(&existing.tenant, &existing.name);
         commit(&call, &graph, json!({"op": "remove_node", "id": id})).await?;
@@ -291,7 +292,7 @@ pub(super) async fn set_state(
         let core = core_of(&call, &graph).await?;
         let existing = load(&core, call.verified_context.tenant(), &name)?;
         existing
-            .authorize_write(call.authority.agent_id())
+            .authorize_write(call.authority.actor_scope())
             .map_err(refuse)?;
         if existing.state == ScheduleState::target(event) {
             return view(existing);
