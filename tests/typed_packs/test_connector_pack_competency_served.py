@@ -41,7 +41,8 @@ QUESTIONS = [
     "q4_record_governance",
 ]
 STREAM = "items"
-# R101.2: a declaration's `ontology_class` is an IRI of the composed schema.
+# R101.2: a declaration's `ontology_class` and field predicates are IRIs of
+# the composed schema.
 CORE = "https://knuckles-team.github.io/ontology/core#"
 
 
@@ -81,15 +82,15 @@ def _declaration(connector: str, question: str) -> ConnectorPackEntryContent:
     mappings: dict[str, Any] = {
         "position": {
             "fields": {
-                "id": "identifier",
-                "instrument": "positionInstrument",
-                "quantity": "positionQuantity",
+                "id": CORE + "identifier",
+                "instrument": CORE + "positionInstrument",
+                "quantity": CORE + "positionQuantity",
             },
             "key_fields": ["id"],
             "ontology_class": CORE + "Position",
         },
         "doc": {
-            "fields": {"id": "identifier", "title": "label"},
+            "fields": {"id": CORE + "identifier", "title": "http://www.w3.org/2000/01/rdf-schema#label"},
             "key_fields": ["id"],
             "ontology_class": CORE + "Document",
         },
