@@ -116,12 +116,6 @@ pub(crate) async fn handle_uql(
         Ok(key) => key,
         Err(error) => return Ok(Response::err(req_id, error)),
     };
-    #[cfg(feature = "result-cache")]
-    if let Some(response) =
-        cached_served_response::<query_results::Uql>(req_id, ctx.core, ctx.graph_name, &key)
-    {
-        return Ok(response);
-    }
     let (snap, version) = sql_read_snapshot(
         ctx.core,
         #[cfg(feature = "security")]
@@ -138,9 +132,29 @@ pub(crate) async fn handle_uql(
     } else {
         0
     };
+    let scope = ReadScope::resolve(ctx.state, ctx.read_authority, ctx.graph_name).await;
+    // MEDULLA-IDENTITY-R610.5: no read goes unaudited, a cached answer included.
+    // A hit is still narrowed to the caller (which queues the reservation) and
+    // its outcome is queued before the cached rows are returned.
+    #[cfg(feature = "result-cache")]
+    if let Some(response) =
+        cached_served_response::<query_results::Uql>(req_id, ctx.core, ctx.graph_name, &key)
+    {
+        if let Err(refused) = scope.narrow(
+            req_id,
+            ctx.core.version(),
+            snap,
+            &medulla_server_api::read_scope::bound_variables(&binding),
+        ) {
+            return Ok(refused);
+        }
+        return Ok(match scope.close(response.error.is_none()) {
+            Ok(()) => response,
+            Err(code) => Response::err(req_id, code.as_str()),
+        });
+    }
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
-    let scope = ReadScope::resolve(ctx.state, ctx.read_authority, ctx.graph_name).await;
     let result = run_unified_off_lock_with(
         ctx.state,
         req_id,
@@ -188,7 +202,7 @@ pub(crate) async fn handle_uql(
         },
     )
     .await;
-    Ok(served_response::<query_results::Uql>(
+    let response = served_response::<query_results::Uql>(
         req_id,
         result,
         "UQL",
@@ -202,7 +216,12 @@ pub(crate) async fn handle_uql(
             tenant: ctx.graph_name.to_string(),
             started,
         }),
-    ))
+    );
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    Ok(match scope.close(response.error.is_none()) {
+        Ok(()) => response,
+        Err(code) => Response::err(req_id, code.as_str()),
+    })
 }
 
 /// MEDULLA-FEDERATED-QUERY-R078.3: the caller scope a served statement's plan

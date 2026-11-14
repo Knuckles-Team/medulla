@@ -736,5 +736,9 @@ async fn handle_cross_modal_with_lease(
         ),
         Err(resp) => resp,
     };
-    Ok(resp)
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    Ok(match scope.close(resp.error.is_none()) {
+        Ok(()) => resp,
+        Err(code) => Response::err(req_id, code.as_str()),
+    })
 }

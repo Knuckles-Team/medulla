@@ -174,7 +174,7 @@ pub(crate) async fn handle_retrieval_round(
             },
         )
         .await;
-    match outcome {
+    let response = match outcome {
         Err(response) => response,
         Ok(Err(message)) => Response::err(req_id, message),
         Ok(Ok(Err(RoundError::Plan(message)))) => Response::err(req_id, message),
@@ -196,5 +196,10 @@ pub(crate) async fn handle_retrieval_round(
             Ok(payload) => Response::ok(req_id, payload),
             Err(error) => Response::err(req_id, format!("INTERNAL: {error}")),
         },
+    };
+    // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
+    match scope.close(response.error.is_none()) {
+        Ok(()) => response,
+        Err(code) => Response::err(req_id, code.as_str()),
     }
 }
