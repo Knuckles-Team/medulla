@@ -23,6 +23,30 @@ INCIDENT = "https://knuckles-team.github.io/ontology/core#Incident"
 GRAPH = "__commons__"
 SOURCE = {"Mcp": {"server": "role-test-mcp", "tool": "search"}}
 
+@pytest.fixture(autouse=True)
+def _detach_after() -> Any:
+    """Detach this module's schema source after each test.
+
+    The source's authority rows live in the shared commons graph; left attached,
+    they would rank for the same class in every later coverage test of the run.
+    """
+    yield
+    client = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        client._send(
+            "GraphSchema",
+            {"op": {"op": "detach", "source_id": "admin:authority-roles"}},
+            GRAPH,
+            idempotency_key=f"detach-{uuid.uuid4().hex}",
+        )
+    except EngineResponseError:
+        pass  # this test never attached the source
+    finally:
+        client.close()
+
 
 def _client() -> Any:
     agent = f"role-{uuid.uuid4().hex[:8]}"
@@ -45,7 +69,7 @@ def _attach(document: str) -> None:
             {
                 "op": {
                     "op": "attach",
-                    "source_id": "authority-roles",
+                    "source_id": "admin:authority-roles",
                     "ontology_ttl": document,
                 }
             },
@@ -54,7 +78,6 @@ def _attach(document: str) -> None:
         )
     finally:
         client.close()
-
 
 def _coverage(client: Any) -> dict[str, Any]:
     result = client._send(
