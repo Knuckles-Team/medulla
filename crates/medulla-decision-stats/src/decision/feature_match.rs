@@ -335,7 +335,7 @@ mod tests {
         let c = row("c", "p2", "vector index", "ret");
         assert_eq!(
             score_pair(&a, &c, 0, &PARAMS),
-            400_000 * 333_333 / PPM + 300_000
+            u32::try_from(400_000_u64 * 333_333 / u64::from(PPM)).unwrap() + 300_000
         );
         // A different label gets no label credit.
         let d = row("d", "p2", "vector search", "other");
