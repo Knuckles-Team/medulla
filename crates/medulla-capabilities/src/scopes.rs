@@ -78,6 +78,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("agent:graph-write", User, "engine"),
     entry("agent:library-read", User, "engine"),
     entry("agent:library-write", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R653.3: the Loops reads and the single loop-state writer.
+    entry("agent:loop-read", User, "engine"),
+    entry("agent:loop-write", User, "engine"),
     entry("agent:pack-control", User, "engine"),
     entry("agent:pack-read", User, "engine"),
     entry("agent:template-read", User, "engine"),
@@ -85,6 +88,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("analytics:worker", ServiceOnly, "engine"),
     entry("approvals:decide", Approver, "graph-os"),
     entry("approvals:read", Approver, "graph-os"),
+    entry("architecture:read", User, "engine"),
+    entry("architecture:write", User, "engine"),
     entry("asr:transcribe", User, "engine"),
     // MEDULLA-FEDERATED-QUERY-R724: sees a tenant's total schema boundary count.
     entry("audit:operator", Admin, "engine"),
@@ -290,6 +295,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
     entry("observation:state", User, "engine"),
     entry("profile:write", User, "engine"),
+    entry("query:retrieval", User, "engine"),
+    entry("source:sync", User, "engine"),
     entry("workflow:registry", User, "engine"),
     // MEDULLA-IDENTITY-R004.1: web interface workspace files under the configured root.
     entry("workspace:read", User, "graph-os"),
