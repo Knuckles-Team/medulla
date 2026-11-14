@@ -176,3 +176,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T170 [US1] MEDULLA-FINANCE-PRIMITIVES-R905.3 Projection/SignalState state machine: route 3 census findings through SignalState::apply
 - [ ] T171 [US1] MEDULLA-FINANCE-PRIMITIVES-R906 Census debt of the numeric series is closed (rollup)
 - [ ] T172 [US1] MEDULLA-FINANCE-PRIMITIVES-R906.1 ShiftDetector/ShiftPhase state machine: holder-level transition delegating to ShiftPhase::apply
+- [ ] T173 [US1] MEDULLA-FINANCE-PRIMITIVES-R906.2 `SignalAdvance.state` renamed to `checkpoint` (`SignalCheckpoint`)

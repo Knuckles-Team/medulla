@@ -129,3 +129,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T120 [US1] MEDULLA-CONTRACT-R062.3 HealthReport/HealthStatus state machine: route 1 census findings through HealthStatus::apply
 - [ ] T121 [US1] MEDULLA-CONTRACT-R062.4 Ranking fact flags: `is_clifford` and `noise_requested`
 - [ ] T122 [US1] MEDULLA-CONTRACT-R062.5 QuantumBackend/BackendState state machine: route 3 census findings through BackendState::apply
+- [ ] T123 [US1] MEDULLA-CONTRACT-R063 Clear the state-machine census and switch the hook to blocking

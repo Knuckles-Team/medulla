@@ -824,3 +824,4 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R810.5`: `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::no_writer_sets_content_outside_construction` (L1): proves: the seed plan content snapshot is set only at construction (renamed from SeedGraphState; no machine, MEDULLA-CONTRACT-R062.5).
 - `MEDULLA-TYPED-PACKS-R811`: see each child (rollup).
 - `MEDULLA-TYPED-PACKS-R811.1`: `tests/test_wire_mirror_state_words.py::test_conformance_evidence_types_state_as_the_rust_enum` (planned, L1): proves: Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine.
+- `MEDULLA-TYPED-PACKS-R811.2`: `crates/medulla-catalog-types/src/fleet_catalog/vocabulary.rs::tests::discovery_outcome_tag_is_probe_not_status` (planned, L1): proves: the discovery outcome tag is a probe-result tag, not a lifecycle.
