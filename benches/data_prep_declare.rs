@@ -90,8 +90,9 @@ fn main() {
                         visible: &all,
                     };
                     let started = Instant::now();
-                    let declared = declare_data_prep(&view, "tenant:bench", &payload)
-                        .expect("bench declarations are valid");
+                    let declared =
+                        declare_data_prep(&view, "tenant:bench", &payload, core.version())
+                            .expect("bench declarations are valid");
                     let elapsed = started.elapsed();
                     if let Declared::Write { write_set, .. } = declared {
                         commit(&core, write_set.methods());
