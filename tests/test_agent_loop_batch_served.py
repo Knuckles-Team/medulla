@@ -36,7 +36,7 @@ def _create(node_id: str, **properties: Any) -> dict[str, Any]:
 
 async def _refused(client: MedullaClient, operations: list[dict[str, Any]]) -> str:
     with pytest.raises(Exception) as raised:
-        await client.batch(operations)
+        await client.nodes.batch(operations)
     return str(raised.value)
 
 
@@ -45,7 +45,7 @@ async def _commits_once_and_refuses_oversize() -> None:
     client = await _client()
     try:
         first, second = f"loop-{tag}-a", f"loop-{tag}-b"
-        results = await client.batch(
+        results = await client.nodes.batch(
             [
                 _create(first, label=f"task-{tag}", status="pending", seq=1),
                 _create(second, label=f"task-{tag}", status="pending", seq=2),
@@ -76,7 +76,7 @@ async def _commits_once_and_refuses_oversize() -> None:
         assert results[4]["properties"]["seen"] is True
 
         # The batch committed as one: both nodes read back after it.
-        after = await client.batch(
+        after = await client.nodes.batch(
             [
                 {"op": "GetNodeProperties", "node_id": first},
                 {"op": "GetNodeProperties", "node_id": second},
@@ -90,13 +90,13 @@ async def _commits_once_and_refuses_oversize() -> None:
             for index in range(MAX_BATCH_OPERATIONS + 1)
         ]
         assert "BATCH_TOO_LARGE" in await _refused(client, oversize)
-        probe = await client.batch(
+        probe = await client.nodes.batch(
             [{"op": "GetNodeProperties", "node_id": f"over-{tag}-0"}]
         )
         assert probe[0]["properties"] is None
 
         # A batch at the cap commits.
-        at_cap = await client.batch(oversize[:MAX_BATCH_OPERATIONS])
+        at_cap = await client.nodes.batch(oversize[:MAX_BATCH_OPERATIONS])
         assert len(at_cap) == MAX_BATCH_OPERATIONS
 
         # Empty: invalid argument.
@@ -119,7 +119,7 @@ async def _denied_inner_operation_writes_nothing() -> None:
             ],
         )
         assert "ACCESS_DENIED" in message and "operation 1" in message
-        probe = await reader.batch([{"op": "GetNodeProperties", "node_id": node}])
+        probe = await reader.nodes.batch([{"op": "GetNodeProperties", "node_id": node}])
         assert probe[0]["properties"] is None
     finally:
         await reader.close()

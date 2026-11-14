@@ -70,7 +70,7 @@ async def _journey(tag: str, role: str) -> dict[str, Any]:
         outsider = await client_for(outsider_id)
 
         profile_id = f"profile-{tag}"
-        base = dict(
+        base: dict[str, Any] = dict(
             profile_id=profile_id,
             name="Research helper",
             owner_principal=owner_id,

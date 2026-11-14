@@ -51,13 +51,13 @@ def connect(
         return MedullaClient.connect(
             socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
             verified_context=verified,
-            graph_name=graph,
+            graph_name=graph if graph is not None else COMMONS,
         )
     return MedullaClient.connect(
         socket_path=engine.socket,
         auth_secret=engine.secret,
         verified_context=verified,
-        graph_name=graph,
+        graph_name=graph if graph is not None else COMMONS,
         timeout=server_timeout(),
     )
 

@@ -60,6 +60,7 @@ def _recording_for(server: str, tool: str) -> dict | None:
 @pytest.fixture(scope="module")
 def recorded_gateway() -> Iterator[None]:
     port = urlparse(os.environ["MEDULLA_CONNECTOR_GATEWAY_URL"]).port
+    assert port is not None, "MEDULLA_CONNECTOR_GATEWAY_URL names no port"
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self) -> None:

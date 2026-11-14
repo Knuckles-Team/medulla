@@ -15,7 +15,7 @@ below every declared cost (it is never treated as zero).
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -28,7 +28,7 @@ GENERATOR_VERSION = 1
 MAX_CANDIDATES = 24
 
 
-class Lifecycle(StrEnum):
+class Lifecycle(str, Enum):
     """The closed Agent Library lifecycle set (MEDULLA-TYPED-PACKS-R810.3).
 
     The members are the contract enum's: the Rust machine `AgentLibraryMachine` owns
@@ -39,6 +39,10 @@ class Lifecycle(StrEnum):
     PUBLISHED = "published"
     RETIRED = "retired"
     WITHDRAWN = "withdrawn"
+
+    def __str__(self) -> str:
+        # The value, as a 3.11 StrEnum prints; the package still supports 3.10.
+        return str(self.value)
 
 
 ItemKind = Literal[
