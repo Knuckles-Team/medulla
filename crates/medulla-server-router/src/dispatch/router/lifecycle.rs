@@ -98,6 +98,16 @@ impl GraphLifecycleRequest {
     }
 }
 
+impl GraphLifecycleRequest {
+    /// The same identity for a step the engine takes inside another request:
+    /// the caller's attempt nonce belongs to that request's own write, so the
+    /// step records none and replays under its own idempotency key.
+    pub fn without_attempt_nonce(mut self) -> Self {
+        self.attempt_nonce = None;
+        self
+    }
+}
+
 pub async fn create_graph(
     state: &Arc<RwLock<ServerState>>,
     request: GraphLifecycleRequest,

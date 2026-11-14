@@ -69,7 +69,10 @@ async fn ensure_target_graph(
         verified,
         TARGET_CREATE_KEY.to_string(),
     )
-    .map_err(|denied| Response::err(req.id, denied))?;
+    .map_err(|denied| Response::err(req.id, denied))?
+    // The caller's attempt nonce is the inner mutation's; creating the target
+    // graph must not consume it first (MEDULLA-BRANCH-MERGE-R002).
+    .without_attempt_nonce();
     let created = create_graph(
         state,
         request,
