@@ -214,6 +214,7 @@ pub(super) fn indexed_tool_candidates(source: &CandidateSource) -> Result<ReadCa
     Ok(ReadCandidates {
         views: Vec::new(),
         entries: Vec::new(),
+        graph_rows: Vec::new(),
         record: CandidateSourceRecord::AgentLibrary {
             kinds: scope.kinds.clone(),
             classification_under: scope.classification_under.clone(),
