@@ -168,7 +168,7 @@ pub(super) fn push_node_triples_terms(
             .or_else(|| obj.get("node_type"))
             .and_then(|x| x.as_str())
         {
-            if let Some(type_obj) = proj.type_object_iri(ty) {
+            if let Some(type_obj) = proj.node_type_iri(id, ty) {
                 out.push((subj_iri.clone(), RDF_TYPE_IRI.to_string(), type_obj, true));
             }
         }

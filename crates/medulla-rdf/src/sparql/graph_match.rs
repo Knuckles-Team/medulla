@@ -294,7 +294,7 @@ pub(super) fn match_triple_pattern_nodes(ctx: &Ctx, tp: &TriplePattern, out: &mu
         };
         let Some(obj) = v.as_object() else { continue };
         let subj_iri = proj.node_iri(id);
-        match_triple_pattern_type(ctx, tp, obj, &subj_iri, out);
+        match_triple_pattern_type(ctx, tp, obj, id, &subj_iri, out);
         match_triple_pattern_literals(ctx, tp, obj, &subj_iri, out);
     }
 }
@@ -307,6 +307,7 @@ pub(super) fn match_triple_pattern_type(
     ctx: &Ctx,
     tp: &TriplePattern,
     obj: &serde_json::Map<String, serde_json::Value>,
+    node_key: &str,
     subj_iri: &str,
     out: &mut Vec<Solution>,
 ) {
@@ -317,7 +318,7 @@ pub(super) fn match_triple_pattern_type(
     else {
         return;
     };
-    let Some(type_obj) = ctx.proj.type_object_iri(ty) else {
+    let Some(type_obj) = ctx.proj.node_type_iri(node_key, ty) else {
         return;
     };
     let mut sol = Solution::new();

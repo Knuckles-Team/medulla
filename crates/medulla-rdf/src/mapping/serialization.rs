@@ -300,7 +300,7 @@ pub fn export_view_projected(
         if let Some(class) = fields.get("type").and_then(serde_json::Value::as_str) {
             if !is_rdf_term(id) {
                 let class = projection
-                    .type_object_iri(class)
+                    .node_type_iri(id, class)
                     .ok_or("missing projection")?;
                 out.push(make_triple(
                     &subject,
